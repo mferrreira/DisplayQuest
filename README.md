@@ -12,7 +12,7 @@ Este sistema foi desenvolvido para otimizar a gestão de laboratórios educacion
 - **Next.js 15** - Framework React com App Router
 - **TypeScript** - Tipagem estática para maior robustez
 - **Tailwind CSS** - Framework CSS utilitário
-- **Radix UI** - Biblioteca de componentes acessíveis
+- **ShadCN UI** - Biblioteca de componentes acessíveis
 - **React Hook Form** - Gerenciamento de formulários
 
 ### Backend
