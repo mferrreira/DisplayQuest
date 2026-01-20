@@ -33,7 +33,6 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       setLoading(true)
       setError(null)
 
-      // Build query parameters
       const params = new URLSearchParams()
       if (user) {
         params.append('userId', user.id.toString())

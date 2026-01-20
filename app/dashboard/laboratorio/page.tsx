@@ -249,7 +249,7 @@ export default function LabResponsibilityPage() {
 
   const getTabsGridCols = () => {
     const canManageLab = hasAccess(user?.roles || [], 'MANAGE_LABORATORY')
-    const totalTabs = 2 + (canManageLab ? 1 : 0) // Agenda + Issues + (Responsabilidade se permitido)
+    const totalTabs = 2 + (canManageLab ? 1 : 0)
     
     switch (totalTabs) {
       case 2:
@@ -287,7 +287,7 @@ export default function LabResponsibilityPage() {
             {hasAccess(user?.roles || [], 'MANAGE_LABORATORY') && (
               <TabsTrigger value="responsibility">Responsabilidade</TabsTrigger>
             )}
-            <TabsTrigger value="issues">Issues</TabsTrigger>
+            <TabsTrigger value="issues">Reclamações</TabsTrigger>
           </TabsList>
 
           <TabsContent value="schedule" className="space-y-6">
@@ -537,7 +537,7 @@ export default function LabResponsibilityPage() {
           <TabsContent value="issues" className="space-y-6">
             <div className="flex justify-between items-center">
               <div>
-                <h2 className="text-xl font-semibold">Gerenciamento de Issues</h2>
+                <h2 className="text-xl font-semibold">Gerenciamento de Reclamações</h2>
                 <p className="text-sm text-muted-foreground">
                   {hasAccess(user?.roles || [], 'VIEW_ALL_DATA') 
                     ? "Gerencie e resolva problemas do laboratório"
@@ -546,7 +546,7 @@ export default function LabResponsibilityPage() {
               </div>
               <Button onClick={() => setShowIssueForm(true)}>
                 <Plus className="h-4 w-4 mr-2" />
-                Nova Issue
+                Nova Reclamação
               </Button>
             </div>
 
@@ -556,7 +556,7 @@ export default function LabResponsibilityPage() {
               <Dialog open={showIssueForm} onOpenChange={setShowIssueForm}>
                 <DialogContent className="max-w-2xl">
                   <DialogHeader>
-                    <DialogTitle>Reportar Nova Issue</DialogTitle>
+                    <DialogTitle>Reportar Nova Reclamação</DialogTitle>
                   </DialogHeader>
                   <IssueForm 
                     onSuccess={() => setShowIssueForm(false)}
@@ -590,7 +590,7 @@ export default function LabResponsibilityPage() {
           </DialogContent>
         </Dialog>
 
-        {/* Modal for adding/editing event */}
+        {/* Modal para add/editar evento */}
         <Dialog open={showEventDialog} onOpenChange={setShowEventDialog}>
           <DialogContent>
             <DialogHeader>

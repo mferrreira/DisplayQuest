@@ -330,7 +330,7 @@ export class UserService {
         if (!user) {
             throw new Error("Usuário não encontrado");
         }
-        
+
         if (data.name !== undefined) {
             user.updateName(data.name);
         }
@@ -346,16 +346,14 @@ export class UserService {
         if (data.weekHours !== undefined) {
             user.updateWeekHours(data.weekHours);
         }
-        if (data.password !== undefined) {
+        if (data.password) {
             if (data.password.trim()) {
                 await user.setPassword(data.password);
             }
-            // Se password é string vazia, não fazemos nada (mantém a senha atual)
         }
-        // Se password é undefined, não fazemos nada (mantém a senha atual)
 
         const updatedUser = await this.userRepo.update(user);
-        
+
         return updatedUser;
     }
 

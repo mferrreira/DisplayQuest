@@ -58,12 +58,10 @@ export function KanbanBoard() {
     loadTasks()
   }, [loadTasks])
 
-  // Update optimistic tasks when tasks change
   useEffect(() => {
     setOptimisticTasks(tasks || [])
   }, [tasks])
 
-  // Memoize overdue status for each task - optimized computation
   const overdueStatusMap = useMemo(() => {
     const map: { [id: string]: boolean } = {}
     if (optimisticTasks?.length > 0) {
@@ -76,7 +74,6 @@ export function KanbanBoard() {
     return map
   }, [optimisticTasks])
 
-  // Filter tasks based on overdue filter only (role-based filtering is now handled by backend)
   const filteredTasks = useMemo(() => {
     if (!optimisticTasks || !Array.isArray(optimisticTasks)) {
       return []
@@ -84,7 +81,6 @@ export function KanbanBoard() {
     return optimisticTasks.filter((task) => (showOverdueOnly ? overdueStatusMap[task.id] : true))
   }, [optimisticTasks, showOverdueOnly, overdueStatusMap])
 
-  // Count overdue tasks
   const overdueTasksCount = useMemo(() => {
     if (!optimisticTasks || !Array.isArray(optimisticTasks)) {
       return 0
@@ -92,18 +88,14 @@ export function KanbanBoard() {
     return optimisticTasks.filter((task) => overdueStatusMap[task.id]).length
   }, [optimisticTasks, overdueStatusMap])
 
-  // Check if user can create tasks
   const canCreateTasks = hasAccess(user?.roles || [], 'MANAGE_TASKS')
   
-  // Check if user can see project selector (managers and coordinators)
-  const canSeeProjectSelector = hasAccess(user?.roles || [], 'MANAGE_TASKS')
+  const canSeeProjectSelector = hasAccess(user?.roles || [], 'MANAGE_PROJECTS')
   
-  // Handle project selection change
   const handleProjectChange = useCallback((projectId: number | null) => {
     setSelectedProjectId(projectId)
   }, [])
 
-  // Handle view mode toggle
   const handleViewModeToggle = useCallback(() => {
     setIsCompactView(!isCompactView)
   }, [isCompactView])
@@ -111,15 +103,13 @@ export function KanbanBoard() {
   const handleDragEnd = async (result: DropResult) => {
     const { destination, source, draggableId } = result
 
-    // Early return if no destination or same position
     if (!destination || (destination.droppableId === source.droppableId && destination.index === source.index)) {
       return
     }
 
-    // Prevent dragging tasks out of 'done' unless user is a project leader
     const isLeader = hasAccess(user?.roles || [], 'MANAGE_TASKS')
+
     if (source.droppableId === "done" && !isLeader) {
-      // Optionally show a toast or message
       toast({
         title: "Ação não permitida",
         description: "Apenas líderes de projeto podem mover tarefas concluídas.",
@@ -128,9 +118,7 @@ export function KanbanBoard() {
       return;
     }
 
-    // Prevent default behavior that might cause page reload
     if (result.reason === 'DROP') {
-      // Add a small delay to ensure the drop animation completes
       await new Promise(resolve => setTimeout(resolve, 100))
     }
 
@@ -143,10 +131,11 @@ export function KanbanBoard() {
       const taskToUpdate = optimisticTasks.find((task) => task.id.toString() === draggableId)
       
       if (taskToUpdate) {
+
         const previousStatus = taskToUpdate.status
-        const newStatus = destination.droppableId as "to-do" | "in-progress" | "in-review" | "adjust" | "done"
-        
-        // Optimistically update the UI immediately
+        const draggedStatus = destination.droppableId as "to-do" | "in-progress" | "in-review" | "adjust" | "done"
+        const newStatus = draggedStatus === "done" && !isLeader ? "in-review" : draggedStatus
+
         const updatedTask = { ...taskToUpdate, status: newStatus }
         setOptimisticTasks(prev => {
           if (!prev || !Array.isArray(prev)) {
@@ -157,24 +146,19 @@ export function KanbanBoard() {
           )
         })
 
-        // Prepare update data
         const updateData: any = { status: newStatus }
         
-        // For public tasks being moved to done, assign to the current user if they're a volunteer
         if (newStatus === "done" && taskToUpdate.taskVisibility === "public" && !taskToUpdate.assignedTo && user && hasAccess(user.roles || [], 'COMPLETE_PUBLIC_TASKS')) {
           updateData.assignedTo = user.id.toString()
         }
         
-        // Then update the backend
         if (newStatus === "done") {
-          // Determine which user should get the points
           const userToAward = taskToUpdate.assignedTo || (taskToUpdate.taskVisibility === "public" && hasAccess(user?.roles || [], 'COMPLETE_PUBLIC_TASKS') ? user?.id : null)
           await completeTask(taskToUpdate.id, userToAward!)
         } else {
           await updateTask(taskToUpdate.id, updateData)
         }
         
-        // Show success message if points were awarded
         if (newStatus === "done" && previousStatus !== "done" && taskToUpdate.points > 0) {
           const userToAward = taskToUpdate.assignedTo || (taskToUpdate.taskVisibility === "public" && hasAccess(user?.roles || [], 'COMPLETE_PUBLIC_TASKS') ? user?.id : null)
           if (userToAward) {
@@ -188,7 +172,6 @@ export function KanbanBoard() {
       }
     } catch (error) {
       console.error("Erro ao atualizar status da tarefa:", error)
-      // Revert optimistic update on error by refreshing tasks
       await fetchTasks()
       toast({
         title: "Erro",
@@ -246,7 +229,7 @@ export function KanbanBoard() {
 
       <DragDropContext onDragEnd={handleDragEnd}>
         <div 
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4"
+          className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(300px,1fr))]"
           onDragOver={(e) => e.preventDefault()}
           onDrop={(e) => e.preventDefault()}
         >

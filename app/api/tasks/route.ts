@@ -39,16 +39,14 @@ export async function GET(request: Request) {
           return NextResponse.json({ tasks: [] })
         }
       }
-
-      const projectTasks = await taskService.getTasksByProject(projectId)
-      const globalTasks = (await taskService.getTasksForUser(userId, userRoles))
-        .filter(task => task.isGlobal || task.taskVisibility === 'public')
-      const merged = [...projectTasks, ...globalTasks]
-      tasks = merged.filter((task, index, self) => 
-        index === self.findIndex(t => t.id === task.id)
-      )
-    } else {
+      // o método retorna todas as tasks para admins
       tasks = await taskService.getTasksForUser(userId, userRoles)
+    
+    } else {
+      let userTasks = await taskService.getTasksForUser(userId, userRoles)
+      let globalTasks = await taskService.getGlobalTasks()
+
+      tasks = [...userTasks, ...globalTasks]
     }
     
     return NextResponse.json({ tasks: tasks.map(task => task.toJSON()) })

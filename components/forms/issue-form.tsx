@@ -67,7 +67,7 @@ export function IssueForm({ onSuccess, onCancel }: IssueFormProps) {
         updatedAt: new Date().toISOString()
       })
 
-      setSuccess("Issue criada com sucesso!")
+      setSuccess("Reclamação criada com sucesso!")
       
       // Reset form
       setFormData({
@@ -84,7 +84,7 @@ export function IssueForm({ onSuccess, onCancel }: IssueFormProps) {
         }, 1500)
       }
     } catch (err: any) {
-      console.error("Error creating issue:", err)
+      console.error("Erro ao criar reclamação:", err)
       setError(err.message || "Erro ao criar issue")
     } finally {
       setIsSubmitting(false)
@@ -100,7 +100,7 @@ export function IssueForm({ onSuccess, onCancel }: IssueFormProps) {
       <CardHeader>
         <CardTitle className="flex items-center space-x-2">
           <Plus className="h-5 w-5" />
-          <span>Reportar Nova Issue</span>
+          <span>Reportar Nova Reclamação</span>
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -200,7 +200,7 @@ export function IssueForm({ onSuccess, onCancel }: IssueFormProps) {
               </Button>
             )}
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Criando..." : "Criar Issue"}
+              {isSubmitting ? "Criando..." : "Criar Reclamação"}
             </Button>
           </div>
         </form>

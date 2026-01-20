@@ -17,6 +17,7 @@ export interface ITaskService {
   getTasksByUser(userId: number): Promise<Task[]>;
   getTasksForUser(userId: number, userRoles: string[]): Promise<Task[]>;
   getProjectsForUser(userId: number): Promise<{ id: number }[]>;
+  getGlobalTasks(): Promise<Task[]>;
   completeTask(taskId: number, userId: number): Promise<Task>;
   approveTask(taskId: number, leaderId: number): Promise<Task>;
   rejectTask(taskId: number, leaderId: number, reason?: string): Promise<Task>;
@@ -52,17 +53,14 @@ export class TaskService implements ITaskService {
       throw new Error('Criador não encontrado');
     }
 
-    // Verificar se é uma quest global e se o usuário tem permissão
     if (data.isGlobal) {
       if (!this.canCreateGlobalQuest(creator)) {
         throw new Error('Usuário não tem permissão para criar quests globais');
       }
-      // Para quests globais, não é necessário responsável ou projeto
       data.assignedTo = null;
       data.projectId = null;
       data.taskVisibility = 'public';
     } else {
-      // Para tasks normais, validar projeto e responsável
       if (data.projectId) {
         const project = await this.projectRepository.findById(data.projectId);
         if (!project) {
@@ -133,7 +131,6 @@ export class TaskService implements ITaskService {
       const oldStatus = existingTask.status;
       existingTask.setStatus(data.status);
       
-      // Se a tarefa foi movida para "in-review", enviar notificação para o líder do projeto
       if (oldStatus !== 'in-review' && data.status === 'in-review' && existingTask.projectId) {
         const project = await this.projectRepository.findById(existingTask.projectId);
         if (project && project.leaderId) {
@@ -194,21 +191,19 @@ export class TaskService implements ITaskService {
   }
 
   async getTasksForUser(userId: number, userRoles: string[]): Promise<Task[]> {
-    // Verifica se é gerente, colaborador ou administrador
-    const hasManageTasksPermission = userRoles.includes('COORDENADOR') || 
-                                   userRoles.includes('GERENTE') || 
-                                   userRoles.includes('GERENTE_PROJETO') || 
-                                   userRoles.includes('LABORATORISTA') ||
-                                   userRoles.includes('COLABORADOR') ||
-                                   userRoles.includes('VOLUNTARIO');
+    const hasManageTasksPermission = userRoles.includes('COORDENADOR') || userRoles.includes('GERENTE') || userRoles.includes('COLABORADOR')
 
     if (hasManageTasksPermission) {
-      // Busca todas as tarefas
       return await this.taskRepository.findAll();
     }
 
-    // Para outros usuários, busca apenas tarefas atribuídas a eles
     return await this.taskRepository.findByAssigneeId(userId);
+  }
+
+  async getGlobalTasks(): Promise<Task[]> {
+    const tasks = (await this.taskRepository.findAll()).filter((task => task.isGlobal || task.taskVisibility === 'public'))
+    if(!tasks) return []
+    return tasks
   }
 
   async completeTask(taskId: number, userId: number): Promise<Task> {
@@ -226,7 +221,6 @@ export class TaskService implements ITaskService {
       throw new Error('Usuário não encontrado');
     }
 
-    // Verificar se o usuário é líder do projeto e está tentando concluir sua própria task
     if (task.projectId && user.roles.includes('GERENTE_PROJETO')) {
       const project = await this.projectRepository.findById(task.projectId);
       if (project && project.leaderId === userId && task.assignedTo === userId) {
@@ -238,18 +232,14 @@ export class TaskService implements ITaskService {
     task.complete();
     const updatedTask = await this.taskRepository.update(taskId, task);
     
-    // Calcular penalização por atraso
     const latePenalty = this.calculateLatePenalty(task, new Date());
     const pointsToAward = task.points - latePenalty;
     
-    // Aplicar pontos ou penalização
     if (pointsToAward !== 0) {
       if (latePenalty > 0) {
-        // Aplicar penalização (permite pontos negativos)
         user.applyPenalty(pointsToAward);
         console.log(`Usuário ${user.id} perdeu ${latePenalty} pontos por atraso na task ${task.id}`);
       } else {
-        // Aplicar pontos normais
         user.addPoints(pointsToAward);
       }
       
@@ -272,16 +262,13 @@ export class TaskService implements ITaskService {
       throw new Error('Tarefa não está em revisão');
     }
 
-    // Verificar se o usuário pode aprovar a task
     const approver = await this.userRepository.findById(leaderId);
     if (!approver) {
       throw new Error('Usuário aprovador não encontrado');
     }
 
-    // Coordenadores e gerentes podem aprovar qualquer task
     const canApproveAnyTask = approver.roles.includes('COORDENADOR') || approver.roles.includes('GERENTE');
     
-    // Gerentes de projeto podem aprovar tasks do seu projeto
     const canApproveProjectTask = approver.roles.includes('GERENTE_PROJETO') && task.projectId;
     
     if (!canApproveAnyTask) {
@@ -296,25 +283,22 @@ export class TaskService implements ITaskService {
     }
 
     const oldTaskData = task.toJSON();
+    
     task.updateStatus('done');
-    // Marcar como completada sem validações (usado na aprovação)
     task.markAsCompleted();
+    
     const updatedTask = await this.taskRepository.update(taskId, task);
 
-    // Adicionar pontos ao usuário responsável (com penalização por atraso)
     if (task.assignedTo) {
       const user = await this.userRepository.findById(task.assignedTo);
       if (user && task.points > 0) {
-        // Calcular penalização por atraso
         const latePenalty = this.calculateLatePenalty(task, new Date());
         const pointsToAward = task.points - latePenalty;
         
         if (latePenalty > 0) {
-          // Aplicar penalização (permite pontos negativos)
           user.applyPenalty(pointsToAward);
           console.log(`Usuário ${user.id} perdeu ${latePenalty} pontos por atraso na task ${task.id} (aprovada)`);
         } else {
-          // Aplicar pontos normais
           user.addPoints(pointsToAward);
         }
         
@@ -322,7 +306,6 @@ export class TaskService implements ITaskService {
         await this.userRepository.update(user);
       }
 
-      // Enviar notificação de aprovação
       await this.notificationService.createTaskApproved(taskId, task.title, task.assignedTo);
     }
 
@@ -341,16 +324,13 @@ export class TaskService implements ITaskService {
       throw new Error('Tarefa não está em revisão');
     }
 
-    // Verificar se o usuário pode rejeitar a task
     const approver = await this.userRepository.findById(leaderId);
     if (!approver) {
       throw new Error('Usuário aprovador não encontrado');
     }
 
-    // Coordenadores e gerentes podem rejeitar qualquer task
     const canRejectAnyTask = approver.roles.includes('COORDENADOR') || approver.roles.includes('GERENTE');
     
-    // Gerentes de projeto podem rejeitar tasks do seu projeto
     const canRejectProjectTask = approver.roles.includes('GERENTE_PROJETO') && task.projectId;
     
     if (!canRejectAnyTask) {
@@ -368,7 +348,6 @@ export class TaskService implements ITaskService {
     task.updateStatus('adjust');
     const updatedTask = await this.taskRepository.update(taskId, task);
 
-    // Enviar notificação de rejeição
     if (task.assignedTo) {
       await this.notificationService.createTaskRejected(taskId, task.title, task.assignedTo, reason);
     }
@@ -382,32 +361,20 @@ export class TaskService implements ITaskService {
     return user.roles && (user.roles.includes('COORDENADOR') || user.roles.includes('GERENTE'));
   }
 
-  /**
-   * Calcula a penalização por atraso na entrega de uma task
-   * Penalização = dias de atraso × pontos originais da task
-   * 
-   * @param task - Task a ser verificada
-   * @param completionDate - Data de conclusão/aprovação
-   * @returns Pontos de penalização (número positivo)
-   */
   private calculateLatePenalty(task: Task, completionDate: Date): number {
-    // Se não há prazo definido, não há penalização
     if (!task.dueDate) {
       return 0;
     }
 
     const dueDate = new Date(task.dueDate);
     
-    // Calcular dias de atraso
     const timeDiff = completionDate.getTime() - dueDate.getTime();
     const daysLate = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
     
-    // Se não está atrasada, não há penalização
     if (daysLate <= 0) {
       return 0;
     }
 
-    // Penalização = dias de atraso × pontos originais
     const penalty = daysLate * task.points;
     
     console.log(`Task ${task.id} atrasada por ${daysLate} dias. Penalização: ${penalty} pontos (${daysLate} × ${task.points})`);

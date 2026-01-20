@@ -23,6 +23,7 @@ import {
 import { formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { Issue } from "@/contexts/types"
+import { hasAccess } from "@/lib/utils/access-control"
 
 interface IssueManagementProps {
   className?: string
@@ -39,7 +40,8 @@ export function IssueManagement({ className }: IssueManagementProps) {
     updateIssueStatus,
     resolveIssue,
     getAssignedIssues,
-    getOpenIssues
+    getOpenIssues,
+    deleteIssue,
   } = useIssues()
 
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null)
@@ -48,23 +50,32 @@ export function IssueManagement({ className }: IssueManagementProps) {
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [priorityFilter, setPriorityFilter] = useState<string>("all")
 
-  // Load issues on component mount
   useEffect(() => {
     if (user) {
       fetchIssues()
     }
   }, [user, fetchIssues])
 
-  // Filter issues based on current filters
   const filteredIssues = issues.filter(issue => {
     const statusMatch = statusFilter === "all" || issue.status === statusFilter
     const priorityMatch = priorityFilter === "all" || issue.priority === priorityFilter
     return statusMatch && priorityMatch
   })
 
-  // Get issues assigned to current user
   const myAssignedIssues = user ? getAssignedIssues(user.id) : []
   const openIssues = getOpenIssues()
+
+  const handleDeleteIssue = async (issueId: number) => {
+    //TODO: Validar se o usuário é coordenador ou gerente
+    if(!(user.roles.includes("COORDENADOR") || user.roles.includes("GERENTE"))){
+      alert("Apenas coordenadores ou gerentes podem remover reclamações!");
+      return;
+    }
+
+    await deleteIssue(issueId);
+
+    return;
+  }
 
   const handleAssignToMe = async (issueId: number) => {
     if (!user) return
@@ -140,7 +151,7 @@ export function IssueManagement({ className }: IssueManagementProps) {
       <Card className={className}>
         <CardContent className="flex items-center justify-center py-8">
           <RefreshCw className="h-6 w-6 animate-spin mr-2" />
-          <span>Carregando issues...</span>
+          <span>Carregando Reclamações...</span>
         </CardContent>
       </Card>
     )
@@ -154,10 +165,10 @@ export function IssueManagement({ className }: IssueManagementProps) {
             <div>
               <CardTitle className="flex items-center space-x-2">
                 <AlertCircle className="h-5 w-5" />
-                <span>Gerenciamento de Issues</span>
+                <span>Gerenciamento de Reclamações</span>
               </CardTitle>
               <p className="text-sm text-muted-foreground mt-1">
-                Gerencie e resolva issues do laboratório
+                Gerencie e resolva reclamações do laboratório
               </p>
             </div>
             <Button
@@ -216,7 +227,7 @@ export function IssueManagement({ className }: IssueManagementProps) {
               <CardContent className="p-4">
                 <div className="flex items-center space-x-2">
                   <AlertCircle className="h-4 w-4 text-red-500" />
-                  <span className="text-sm font-medium">Issues Abertas</span>
+                  <span className="text-sm font-medium">Reclamações Abertas</span>
                 </div>
                 <p className="text-2xl font-bold text-red-600">{openIssues.length}</p>
               </CardContent>
@@ -241,12 +252,11 @@ export function IssueManagement({ className }: IssueManagementProps) {
             </Card>
           </div>
 
-          {/* Issues List */}
           <div className="space-y-4">
             {filteredIssues.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <AlertCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>Nenhuma issue encontrada com os filtros aplicados.</p>
+                <p>Nenhuma reclamação encontrada com os filtros aplicados.</p>
               </div>
             ) : (
               filteredIssues.map((issue) => (
@@ -318,8 +328,8 @@ export function IssueManagement({ className }: IssueManagementProps) {
                               setShowResolveDialog(true)
                             }}
                           >
-                            Resolver Issue
-                          </Button>
+                            Resolver Reclamação
+                            </Button>
                         )}
 
                         {issue.status === "resolved" && (
@@ -331,6 +341,17 @@ export function IssueManagement({ className }: IssueManagementProps) {
                             Fechar
                           </Button>
                         )}
+
+                        { hasAccess(user.roles, "MANAGE_USERS") &&
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => handleDeleteIssue(issue.id)}
+                        >
+                          Cancelar
+                        </Button>
+
+                        } 
                       </div>
                     </div>
                   </CardContent>
@@ -341,11 +362,11 @@ export function IssueManagement({ className }: IssueManagementProps) {
         </CardContent>
       </Card>
 
-      {/* Resolve Issue Dialog */}
+      {/* Resolve Reclamação Dialog */}
       <Dialog open={showResolveDialog} onOpenChange={setShowResolveDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Resolver Issue</DialogTitle>
+            <DialogTitle>Resolver Reclamação</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
@@ -374,7 +395,7 @@ export function IssueManagement({ className }: IssueManagementProps) {
               onClick={handleResolveIssue}
               disabled={!resolution.trim()}
             >
-              Resolver Issue
+              Resolver Reclamação
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -34,7 +34,6 @@ export function UserProfileForm({ user, onUpdate, onCancel }: UserProfileFormPro
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
-  const { update: updateSession } = useSession()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -54,16 +53,11 @@ export function UserProfileForm({ user, onUpdate, onCancel }: UserProfileFormPro
         updateData.password = formData.password
 
       const result = await UserProfilesAPI.updateProfile(user.id, updateData)
+      const updatedData = result.user
+      console.log(updatedData)
       
-      const updatedUser = {
-        ...user,
-        ...updateData
-      }
+      onUpdate(updatedData)
       
-      // Update the session to reflect the changes
-      await updateSession()
-      
-      onUpdate(updatedUser)
       setSuccess("Perfil atualizado com sucesso!")
       
       // Clear password field

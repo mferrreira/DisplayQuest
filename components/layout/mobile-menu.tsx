@@ -94,12 +94,6 @@ export function MobileMenu() {
       label: "Perfil",
       show: true
     },
-    {
-      href: "/dashboard/settings",
-      icon: Settings,
-      label: "Configurações",
-      show: true
-    }
   ]
 
   return (

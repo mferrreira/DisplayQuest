@@ -1,5 +1,4 @@
 import { User, BaseUser } from '../user/User';
-import { UserRole } from '@prisma/client';
 
 export class Gerente extends User {
     constructor(baseUser: BaseUser) {

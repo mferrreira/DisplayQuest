@@ -41,7 +41,7 @@ export const authOptions: AuthOptions = {
     signIn: "/login",
   },
   callbacks: {
-    async jwt({ token, user }: { token: any; user?: any }) {
+    async jwt({ token, user, trigger, session }: { token: any; user?: any, trigger?: any, session?: any }) {
       if (user) {
         token.id = (user as any).id
         token.roles = (user as any).roles
@@ -51,23 +51,42 @@ export const authOptions: AuthOptions = {
         token.weekHours = (user as any).weekHours
         token.currentWeekHours = (user as any).currentWeekHours
       }
+
+      if (trigger === "update" && session?.user) {
+        token.name = session.user.name
+        token.email = session.user.email
+        token.avatar = session.user.avatar
+        token.weekHours = session.user.weekHours
+        token.currentWeekHours = session.user.currentWeekHours
+        token.roles = session.user.roles
+      }
+      
       return token
     },
     async session({ session, token }: { session: any; token: any }) {
-      if (token && session.user) {
-        session.user.name = token.name as string | undefined
-        session.user.email = token.email as string | undefined
-        // @ts-ignore: custom fields
-        session.user.roles = token.roles
-        // @ts-ignore: custom fields
-        session.user.id = token.id
-        // @ts-ignore: custom fields
-        session.user.avatar = token.avatar
-        // @ts-ignore: custom fields
-        session.user.weekHours = token.weekHours
-        // @ts-ignore: custom fields
-        session.user.currentWeekHours = token.currentWeekHours
+      if (!token?.id) return session
+
+      const dbUser = await prisma.users.findUnique({
+        where: { id: token.id },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          avatar: true,
+          weekHours: true,
+          currentWeekHours: true,
+          roles: true,
+          status: true,
+        },
+      })
+
+      if (!dbUser) return session
+
+      session.user = {
+        ...session.user,
+        ...dbUser,
       }
+
       return session
     },
   },

@@ -1,5 +1,4 @@
 import { User, BaseUser } from '../user/User';
-import { UserRole } from '@prisma/client';
 
 export class Colaborador extends User {
     constructor(baseUser: BaseUser) {
@@ -70,7 +69,6 @@ export class Colaborador extends User {
         ];
     }
 
-    // Colaborador-specific methods
     canAssignTasksToVolunteers(): boolean {
         return true;
     }
@@ -108,11 +106,11 @@ export class Colaborador extends User {
     }
 
     getRolePriority(): number {
-        return 6; // Sixth priority
+        return 6;
     }
 
     getRoleColor(): string {
-        return '#EA580C'; // Orange
+        return '#EA580C'; 
     }
 
     getRoleIcon(): string {

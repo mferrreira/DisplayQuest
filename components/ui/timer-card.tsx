@@ -44,13 +44,10 @@ export function TimerCard({ onSessionEnd }: TimerCardProps) {
   const [projects, setProjects] = useState<any[]>([])
   const [loadingProjects, setLoadingProjects] = useState(false)
 
-  // Always fetch sessions on mount
   useEffect(() => {
     if (user) fetchSessions(user.id)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user])
 
-  // Fetch user projects
   useEffect(() => {
     const fetchProjects = async () => {
       if (!user) return
@@ -72,7 +69,6 @@ export function TimerCard({ onSessionEnd }: TimerCardProps) {
     fetchProjects()
   }, [user])
 
-  // Start timer if session is active and belongs to current user
   useEffect(() => {
     if (activeSession && activeSession.startTime && activeSession.userId === user?.id) {
       const start = new Date(activeSession.startTime).getTime()
@@ -84,7 +80,6 @@ export function TimerCard({ onSessionEnd }: TimerCardProps) {
         setTimerInterval(interval)
       }
     } else {
-      // Clear timer when no active session or session doesn't belong to current user
       setTimer(0)
       if (timerInterval) {
         clearInterval(timerInterval)
@@ -92,17 +87,14 @@ export function TimerCard({ onSessionEnd }: TimerCardProps) {
       }
     }
     
-    // Cleanup function to clear interval when component unmounts or dependencies change
     return () => {
       if (timerInterval) {
         clearInterval(timerInterval)
         setTimerInterval(null)
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeSession, user?.id])
 
-  // Warn user about active session when closing browser
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (activeSession) {
@@ -121,10 +113,8 @@ export function TimerCard({ onSessionEnd }: TimerCardProps) {
     e.preventDefault()
     setError(null)
     
-    // Verificar se o usuário é coordenador ou gerente
     const isCoordinatorOrManager = user?.roles?.includes('COORDENADOR') || user?.roles?.includes('GERENTE')
     
-    // Validar se projeto foi selecionado (exceto para coordenadores/gerentes)
     if ((!selectedProjectId || selectedProjectId === "loading" || selectedProjectId === "no-projects") && !isCoordinatorOrManager) {
       setError("Por favor, selecione um projeto antes de iniciar a sessão")
       return
@@ -133,7 +123,6 @@ export function TimerCard({ onSessionEnd }: TimerCardProps) {
     try {
       if (!user) throw new Error("Usuário não autenticado")
       
-      // Para coordenadores/gerentes, projectId pode ser undefined
       const projectId = selectedProjectId && selectedProjectId !== "no-project" ? parseInt(selectedProjectId) : undefined
       
       await startSession({ userId: user.id, activity, location, projectId })
@@ -150,7 +139,6 @@ export function TimerCard({ onSessionEnd }: TimerCardProps) {
   const handleEndRequest = () => {
     if (!activeSession) return
     
-    // Calculate current duration
     const startTime = new Date(activeSession.startTime).getTime()
     const currentDuration = Math.floor((Date.now() - startTime) / 1000)
     setSessionDuration(currentDuration)
@@ -163,10 +151,8 @@ export function TimerCard({ onSessionEnd }: TimerCardProps) {
     
     setSubmittingLog(true)
     try {
-      // End the session first
       await endSession(activeSession.id, activity)
       
-      // Then create the log
       if (logNote.trim()) {
         const today = new Date().toISOString().split("T")[0]
         await createLog({
@@ -176,7 +162,6 @@ export function TimerCard({ onSessionEnd }: TimerCardProps) {
         })
       }
       
-      // Clear all session-related state
       setShowLogDialog(false)
       setLogNote("")
       setSessionDuration(0)
@@ -207,7 +192,6 @@ export function TimerCard({ onSessionEnd }: TimerCardProps) {
     try {
       await endSession(activeSession.id, activity)
       
-      // Clear all session-related state
       setShowLogDialog(false)
       setLogNote("")
       setSessionDuration(0)

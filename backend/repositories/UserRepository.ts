@@ -148,7 +148,6 @@ export class UserRepository implements IUserRepository {
             data,
             include: this.getIncludeOptions()
         });
-
         return User.fromPrisma(updated);
     }
 
