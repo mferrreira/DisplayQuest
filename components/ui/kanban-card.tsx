@@ -17,6 +17,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import type { Task, KanbanCardProps } from "@/contexts/types"
 import { useAuth } from "@/contexts/auth-context"
 import { useProject } from "@/contexts/project-context"
+import { useTask } from "@/contexts/task-context"
+import { useToast } from "@/contexts/use-toast"
 
 interface DraggableKanbanCardProps extends KanbanCardProps {
   index: number
@@ -26,6 +28,8 @@ export function KanbanCard({ task, onEdit, isOverdue, index }: DraggableKanbanCa
   const [isHovered, setIsHovered] = useState(false)
   const { user } = useAuth()
   const { projects } = useProject()
+  const { approveTask, rejectTask } = useTask()
+  const { toast } = useToast()
 
   // Verificar se o usuário pode aprovar/rejeitar tasks
   const canApproveRejectTask = () => {
@@ -47,23 +51,18 @@ export function KanbanCard({ task, onEdit, isOverdue, index }: DraggableKanbanCa
 
   const handleApproveTask = async (taskId: number) => {
     try {
-      const response = await fetch(`/api/tasks/${taskId}/approve`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+      await approveTask(taskId)
+      toast({
+        title: "Tarefa aprovada",
+        description: "A tarefa foi aprovada com sucesso.",
       })
-
-      if (response.ok) {
-        // Recarregar a página ou atualizar o estado
-        window.location.reload()
-      } else {
-        const error = await response.json()
-        alert(`Erro ao aprovar tarefa: ${error.error}`)
-      }
     } catch (error) {
       console.error('Erro ao aprovar tarefa:', error)
-      alert('Erro ao aprovar tarefa')
+      toast({
+        title: "Erro ao aprovar tarefa",
+        description: error instanceof Error ? error.message : "Falha ao aprovar tarefa.",
+        variant: "destructive",
+      })
     }
   }
 
@@ -71,24 +70,18 @@ export function KanbanCard({ task, onEdit, isOverdue, index }: DraggableKanbanCa
     const reason = prompt('Motivo da rejeição (opcional):')
     
     try {
-      const response = await fetch(`/api/tasks/${taskId}/reject`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ reason: reason || undefined }),
+      await rejectTask(taskId, reason || undefined)
+      toast({
+        title: "Tarefa rejeitada",
+        description: "A tarefa foi rejeitada com sucesso.",
       })
-
-      if (response.ok) {
-        // Recarregar a página ou atualizar o estado
-        window.location.reload()
-      } else {
-        const error = await response.json()
-        alert(`Erro ao rejeitar tarefa: ${error.error}`)
-      }
     } catch (error) {
       console.error('Erro ao rejeitar tarefa:', error)
-      alert('Erro ao rejeitar tarefa')
+      toast({
+        title: "Erro ao rejeitar tarefa",
+        description: error instanceof Error ? error.message : "Falha ao rejeitar tarefa.",
+        variant: "destructive",
+      })
     }
   }
 

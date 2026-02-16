@@ -302,22 +302,6 @@ export default function WeeklyReportsPage() {
         </CardContent>
       </Card>
 
-      {projectReport && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Relatório de Projeto</CardTitle>
-            <CardDescription>
-              {projects.find((project) => project.id === Number(selectedProject))?.name || "Projeto"} | {getWeekRange(weekStart, weekEnd)}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="text-sm">Horas totais: <strong>{Number(projectReport.totalHours || 0).toFixed(1)}h</strong></div>
-            <div className="text-sm">Sessões concluídas: <strong>{projectReport.sessionCount || 0}</strong></div>
-            <div className="text-sm">Contribuidores: <strong>{Array.isArray(projectReport.hoursByUser) ? projectReport.hoursByUser.length : 0}</strong></div>
-          </CardContent>
-        </Card>
-      )}
-
       <div className="space-y-4">
         <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">Relatórios por Projeto</h2>
         {projectReports.length === 0 ? (

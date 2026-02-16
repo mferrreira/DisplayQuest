@@ -146,6 +146,7 @@ export interface Task {
   dueDate?: string | null
   points: number
   completed: boolean
+  completedAt?: string | null
   taskVisibility?: string
   isGlobal?: boolean
 }

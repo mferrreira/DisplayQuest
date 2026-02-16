@@ -13,6 +13,7 @@ export interface ITask {
   dueDate?: string | null;
   points: number;
   completed: boolean;
+  completedAt?: Date | string | null;
   taskVisibility: TaskVisibility;
   isGlobal?: boolean;
 }
@@ -28,6 +29,7 @@ export class Task {
   public dueDate?: string | null;
   public points: number;
   public completed: boolean;
+  public completedAt?: Date | null;
   public taskVisibility: TaskVisibility;
   public isGlobal: boolean;
 
@@ -42,6 +44,7 @@ export class Task {
     this.dueDate = data.dueDate;
     this.points = data.points;
     this.completed = data.completed;
+    this.completedAt = data.completedAt ? new Date(data.completedAt) : null;
     this.taskVisibility = data.taskVisibility;
     this.isGlobal = data.isGlobal || false;
   }
@@ -65,6 +68,7 @@ export class Task {
       dueDate: data.dueDate || null,
       points: data.points || 0,
       completed: data.completed || false,
+      completedAt: data.completed || data.status === "done" ? new Date() : null,
       taskVisibility: data.taskVisibility || 'delegated',
       isGlobal: data.isGlobal || false,
     });
@@ -82,6 +86,7 @@ export class Task {
       dueDate: data.dueDate,
       points: data.points,
       completed: data.completed,
+      completedAt: data.completedAt,
       taskVisibility: data.taskVisibility,
       isGlobal: data.isGlobal || false,
     });
@@ -98,6 +103,7 @@ export class Task {
       dueDate: this.dueDate,
       points: this.points,
       completed: this.completed,
+      completedAt: this.completedAt || null,
       taskVisibility: this.taskVisibility,
       isGlobal: this.isGlobal,
     };
@@ -115,6 +121,7 @@ export class Task {
       dueDate: this.dueDate,
       points: this.points,
       completed: this.completed,
+      completedAt: this.completedAt ? this.completedAt.toISOString() : null,
       taskVisibility: this.taskVisibility,
       isGlobal: this.isGlobal,
     };

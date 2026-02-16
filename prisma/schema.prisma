@@ -83,6 +83,7 @@ model tasks {
   dueDate        String?
   points         Int       @default(0)
   completed      Boolean   @default(false)
+  completedAt    DateTime?
   taskVisibility String    @default("delegated")
   isGlobal       Boolean   @default(false)
   assignee       users?    @relation("UserTasks", fields: [assignedTo], references: [id])

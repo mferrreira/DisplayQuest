@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -20,6 +20,8 @@ import {
 import { useProject } from "@/contexts/project-context"
 import { fetchAPI } from "@/contexts/api-client"
 import type { ProjectMember } from "@/contexts/types"
+import { addProjectMember, listProjectMembers, removeProjectMember } from "@/lib/api/project-members"
+import { useToast } from "@/contexts/use-toast"
 
 interface User {
   id: number
@@ -39,6 +41,7 @@ interface VolunteerActionsProps {
 
 export function VolunteerActions({ projectId, onVolunteerAdded, onVolunteerRemoved }: VolunteerActionsProps) {
   const { projects } = useProject()
+  const { toast } = useToast()
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [isRemoveDialogOpen, setIsRemoveDialogOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
@@ -103,15 +106,13 @@ export function VolunteerActions({ projectId, onVolunteerAdded, onVolunteerRemov
     }
   }
 
-  // Buscar usuários quando o termo de busca mudar
-  const handleSearchChange = (value: string) => {
-    setSearchTerm(value)
-    // Debounce da busca
+  useEffect(() => {
+    if (!isAddDialogOpen) return
     const timeoutId = setTimeout(() => {
-      loadAvailableUsers(value)
-    }, 300)
+      void loadAvailableUsers(searchTerm)
+    }, 250)
     return () => clearTimeout(timeoutId)
-  }
+  }, [searchTerm, isAddDialogOpen])
 
   // Usuários já filtrados pela API
   const filteredUsers = availableUsers
@@ -132,22 +133,23 @@ export function VolunteerActions({ projectId, onVolunteerAdded, onVolunteerRemov
 
     setLoading(true)
     try {
-      // TODO: Implementar chamada para API
-      console.log("Adicionando voluntário:", {
-        userId: selectedUser.id,
-        projectId,
-        role: selectedRole
-      })
-      
-      // Simular sucesso
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
+      await addProjectMember(projectId, selectedUser.id, [selectedRole])
       onVolunteerAdded?.(selectedUser.id)
+      toast({
+        title: "Voluntário adicionado",
+        description: `${selectedUser.name} foi adicionado ao projeto.`,
+      })
       setIsAddDialogOpen(false)
       setSelectedUser(null)
       setSearchTerm("")
+      await loadAvailableUsers("")
     } catch (error) {
       console.error("Erro ao adicionar voluntário:", error)
+      toast({
+        title: "Erro ao adicionar voluntário",
+        description: error instanceof Error ? error.message : "Falha ao adicionar voluntário no projeto.",
+        variant: "destructive",
+      })
     } finally {
       setLoading(false)
     }
@@ -156,15 +158,25 @@ export function VolunteerActions({ projectId, onVolunteerAdded, onVolunteerRemov
   const handleRemoveVolunteer = async (userId: number) => {
     setLoading(true)
     try {
-      // TODO: Implementar chamada para API
-      console.log("Removendo voluntário:", { userId, projectId })
-      
-      // Simular sucesso
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
+      const members = await listProjectMembers(projectId)
+      const targetMembership = members.find((member) => member.userId === userId)
+      if (!targetMembership) {
+        throw new Error("Membro do projeto não encontrado para remoção")
+      }
+
+      await removeProjectMember(projectId, targetMembership.id)
       onVolunteerRemoved?.(userId)
+      toast({
+        title: "Voluntário removido",
+        description: "Membro removido do projeto com sucesso.",
+      })
     } catch (error) {
       console.error("Erro ao remover voluntário:", error)
+      toast({
+        title: "Erro ao remover voluntário",
+        description: error instanceof Error ? error.message : "Falha ao remover voluntário do projeto.",
+        variant: "destructive",
+      })
     } finally {
       setLoading(false)
     }
@@ -196,7 +208,7 @@ export function VolunteerActions({ projectId, onVolunteerAdded, onVolunteerRemov
                 <Input
                   placeholder="Buscar usuários..."
                   value={searchTerm}
-                  onChange={(e) => handleSearchChange(e.target.value)}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
                 />
               </div>

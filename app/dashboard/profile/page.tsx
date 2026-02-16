@@ -210,8 +210,7 @@ export default function ProfilePage() {
               </Card>
 
               {/* Timer Card */}
-              <TimerCard onSessionEnd={(updatedUser) => {
-                if (updatedUser) setUser(updatedUser)
+              <TimerCard onSessionEnd={() => {
                 if (user?.id) fetchSessions(user.id)
               }} />
             </TabsContent>

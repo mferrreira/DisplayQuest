@@ -135,7 +135,14 @@ export class TaskServiceGateway implements TaskManagementGateway {
     if (data.status !== undefined) {
       const oldStatus = existingTask.status
       existingTask.status = data.status as any
-      existingTask.completed = data.status === "done"
+      const isDone = data.status === "done"
+      existingTask.completed = isDone
+      if (isDone && oldStatus !== "done") {
+        existingTask.completedAt = new Date()
+      }
+      if (!isDone && oldStatus === "done") {
+        existingTask.completedAt = null
+      }
 
       if (oldStatus !== "in-review" && data.status === "in-review" && existingTask.projectId) {
         const project = await this.projectRepository.findById(existingTask.projectId)
@@ -207,6 +214,9 @@ export class TaskServiceGateway implements TaskManagementGateway {
     }
     task.status = task.isGlobal || task.taskVisibility === "public" ? "done" : "in-review"
     task.completed = true
+    if (task.status === "done") {
+      task.completedAt = new Date()
+    }
     const updatedTask = await this.taskRepository.update(command.taskId, task)
 
     const latePenalty = this.calculateLatePenalty(task, new Date())
@@ -255,6 +265,7 @@ export class TaskServiceGateway implements TaskManagementGateway {
 
     task.status = "done"
     task.completed = true
+    task.completedAt = new Date()
 
     const updatedTask = await this.taskRepository.update(command.taskId, task)
 
@@ -309,6 +320,7 @@ export class TaskServiceGateway implements TaskManagementGateway {
 
     task.status = "adjust"
     task.completed = false
+    task.completedAt = null
     const updatedTask = await this.taskRepository.update(command.taskId, task)
 
     if (task.assignedTo) {

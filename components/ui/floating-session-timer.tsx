@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useAuth } from "@/contexts/auth-context"
 import { useWorkSessions } from "@/hooks/use-work-sessions"
 import { Button } from "@/components/ui/button"
@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Clock, Pause, PlayCircle, StopCircle } from "lucide-react"
+import { Clock, Pause, PlayCircle, StopCircle, ChevronDown } from "lucide-react"
 import { useProject } from "@/contexts/project-context"
 
 function formatTime(seconds: number) {
@@ -19,7 +19,7 @@ function formatTime(seconds: number) {
 }
 
 export function FloatingSessionTimer() {
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const {
     currentSession,
     activeSession,
@@ -32,6 +32,7 @@ export function FloatingSessionTimer() {
     loading,
   } = useWorkSessions()
   const { projects } = useProject()
+  const panelRef = useRef<HTMLDivElement | null>(null)
 
   const [expanded, setExpanded] = useState(false)
   const [seconds, setSeconds] = useState(0)
@@ -68,24 +69,42 @@ export function FloatingSessionTimer() {
     return () => clearInterval(interval)
   }, [currentSession, user?.id, getElapsedSeconds])
 
-  if (!user) {
-    return null
-  }
+  useEffect(() => {
+    if (!expanded) return
+    const handleOutsideClick = (event: MouseEvent) => {
+      const target = event.target as HTMLElement | null
+      if (!target) return
+      if (!panelRef.current) return
+      if (panelRef.current.contains(target)) return
+      if (target.closest("[data-floating-timer-select-content='true']")) return
+      if (target.closest("[data-radix-popper-content-wrapper]")) return
+      setExpanded(false)
+    }
+
+    document.addEventListener("mousedown", handleOutsideClick)
+    return () => document.removeEventListener("mousedown", handleOutsideClick)
+  }, [expanded])
+
+  useEffect(() => {
+    const openHandler = () => setExpanded(true)
+    window.addEventListener("floating-session-timer:open", openHandler as EventListener)
+    return () => window.removeEventListener("floating-session-timer:open", openHandler as EventListener)
+  }, [])
 
   const handlePause = async () => {
-    if (!activeSession) return
+    if (!activeSession || !user?.id) return
     await pauseSession(activeSession.id)
     await fetchSessions(user.id)
   }
 
   const handleResume = async () => {
-    if (!currentSession || currentSession.status !== "paused") return
+    if (!currentSession || currentSession.status !== "paused" || !user?.id) return
     await resumeSession(currentSession.id)
     await fetchSessions(user.id)
   }
 
   const handleStop = async (withLog: boolean) => {
-    if (!currentSession) return
+    if (!currentSession || !user?.id) return
     setSubmitting(true)
     try {
       await endSession(currentSession.id, currentSession.activity || undefined, {
@@ -128,22 +147,28 @@ export function FloatingSessionTimer() {
   return (
     <>
       <div
+        ref={panelRef}
         className={`fixed bottom-[6em] left-[6em] z-50 rounded-lg border bg-background/95 shadow-lg backdrop-blur transition-all duration-200 ${
-          expanded ? "w-80 p-4" : "w-14 h-14 p-0"
+          expanded ? "w-80 p-4" : "w-16 h-16 p-0"
         }`}
-        onMouseEnter={() => setExpanded(true)}
-        onMouseLeave={() => setExpanded(false)}
       >
         {!expanded ? (
-          <div className="w-full h-full flex items-center justify-center">
+          <Button
+            variant="ghost"
+            className="w-full h-full rounded-lg flex items-center justify-center"
+            onClick={() => setExpanded(true)}
+            aria-label="Abrir timer de sessão"
+          >
             <Clock className="h-5 w-5" />
-          </div>
+          </Button>
         ) : (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <p className="text-sm font-medium">Sessão de Trabalho</p>
               <span className="text-xs text-muted-foreground">
-                {!currentSession
+                {!user && authLoading
+                  ? "Carregando..."
+                  : !currentSession
                   ? "Sem sessão"
                   : currentSession.status === "paused"
                     ? "Pausada"
@@ -153,13 +178,13 @@ export function FloatingSessionTimer() {
 
             <p className="font-mono text-2xl font-bold">{formatTime(seconds)}</p>
 
-            {!currentSession && (
+            {!currentSession && user && (
               <div className="space-y-2">
                 <Select value={startProjectId} onValueChange={setStartProjectId}>
                   <SelectTrigger className="h-8">
                     <SelectValue placeholder="Projeto" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent data-floating-timer-select-content="true">
                     {(user.roles?.includes("COORDENADOR") || user.roles?.includes("GERENTE")) && (
                       <SelectItem value="no-project">Sem projeto específico</SelectItem>
                     )}
@@ -214,6 +239,10 @@ export function FloatingSessionTimer() {
                   Parar
                 </Button>
               )}
+
+              <Button size="sm" variant="ghost" onClick={() => setExpanded(false)}>
+                <ChevronDown className="h-4 w-4" />
+              </Button>
             </div>
           </div>
         )}

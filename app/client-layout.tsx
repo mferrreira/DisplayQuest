@@ -10,10 +10,16 @@ import { FloatingSessionTimer } from "@/components/ui/floating-session-timer"
 import { usePathname } from "next/navigation"
 
 function DashboardProviders({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname()
+  const shouldProvideTasks =
+    pathname === "/dashboard" ||
+    pathname.startsWith("/dashboard/projetos") ||
+    pathname.startsWith("/dashboard/admin")
+
   return (
     <UserProvider>
       <ProjectProvider>
-        <TaskProvider>{children}</TaskProvider>
+        {shouldProvideTasks ? <TaskProvider>{children}</TaskProvider> : children}
       </ProjectProvider>
     </UserProvider>
   )

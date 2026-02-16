@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -52,6 +53,7 @@ interface ModernAdminPanelProps {
 
 export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: ModernAdminPanelProps) {
   const { user } = useAuth()
+  const router = useRouter()
   
   const [searchTerm, setSearchTerm] = useState("")
   const [filterRole, setFilterRole] = useState("all")
@@ -75,8 +77,7 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
   const handleRefresh = async () => {
     setRefreshing(true)
     try {
-      // Recarregar dados
-      window.location.reload()
+      router.refresh()
     } finally {
       setRefreshing(false)
     }
@@ -103,7 +104,7 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
       const payload = await response.json().catch(() => ({}))
       throw new Error(payload?.error || "Erro ao atualizar status")
     }
-    window.location.reload()
+    router.refresh()
   }
 
   const saveUserSettings = async () => {
@@ -137,7 +138,7 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
       }
 
       setSelectedUserForSettings(null)
-      window.location.reload()
+      router.refresh()
     } finally {
       setSavingUserSettings(false)
     }

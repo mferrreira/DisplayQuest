@@ -3,30 +3,50 @@
 // Função genérica para fazer requisições
 export async function fetchAPI<T>(url: string, options: RequestInit = {}): Promise<T> {
   console.log(`🔍 API Call: ${options.method || 'GET'} ${url}`)
-  
+
+  const headers = new Headers(options.headers || {})
+  const isFormDataBody = typeof FormData !== "undefined" && options.body instanceof FormData
+  if (!isFormDataBody && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json")
+  }
+
   const response = await fetch(url, {
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...options.headers,
-    },
     ...options,
+    headers,
   })
 
-  const data = await response.json()
+  const contentType = response.headers.get("content-type") || ""
+  const isJson = contentType.includes("application/json")
+  let data: any = null
+
+  if (response.status !== 204) {
+    if (isJson) {
+      data = await response.json()
+    } else {
+      const text = await response.text()
+      if (text) {
+        try {
+          data = JSON.parse(text)
+        } catch {
+          data = text
+        }
+      }
+    }
+  }
 
   if (!response.ok) {
     console.error(`❌ API Error: ${options.method || 'GET'} ${url}`, {
       status: response.status,
       statusText: response.statusText,
-      error: data.error,
+      error: data?.error,
       data
     })
-    throw new Error(data.error || "Ocorreu um erro na requisição")
+    throw new Error((typeof data?.error === "string" && data.error) || "Ocorreu um erro na requisição")
   }
 
   console.log(`✅ API Success: ${options.method || 'GET'} ${url}`)
-  return data.data || data
+  return (data?.data || data || {}) as T
 }
 
 // API de Tarefas
@@ -593,4 +613,3 @@ export const UserProfilesAPI = {
       body: avatarData,
     }),
 }
-

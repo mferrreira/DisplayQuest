@@ -13,6 +13,7 @@ import type { ProjectMember, Task } from "@/contexts/types"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useToast } from "@/contexts/use-toast"
 import { hasAccess } from "@/lib/utils/utils"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 const COLUMNS = [
   { id: "to-do", status: "to-do" },
@@ -34,28 +35,31 @@ export function KanbanBoard() {
   const [optimisticTasks, setOptimisticTasks] = useState<Task[]>([])
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null)
   const [isCompactView, setIsCompactView] = useState(false)
+  const canAccessAllProjects = hasAccess(user?.roles || [], "MANAGE_TASKS")
+  const archiveThreshold = useMemo(() => {
+    const date = new Date()
+    date.setDate(date.getDate() - 14)
+    return date
+  }, [])
 
-  const loadTasks = useCallback(() => {
-    if (!user) return
-
-    const canAccessAllProjects = hasAccess(user.roles || [], 'MANAGE_TASKS')
-    if (!canAccessAllProjects) {
-      const membershipProject = projects?.find((project) =>
-        project.members?.some((member: ProjectMember) => member.userId === user.id)
-      )
-      if (membershipProject) {
-        setSelectedProjectId(membershipProject.id)
-      } else {
-        setSelectedProjectId(null)
-      }
-    }
-
-    fetchTasks(selectedProjectId)
-  }, [user, fetchTasks, selectedProjectId, projects])
+  const membershipProjectId = useMemo(() => {
+    if (!user || canAccessAllProjects) return null
+    const membershipProject = projects?.find((project) =>
+      project.members?.some((member: ProjectMember) => member.userId === user.id)
+    )
+    return membershipProject?.id ?? null
+  }, [user, canAccessAllProjects, projects])
 
   useEffect(() => {
-    loadTasks()
-  }, [loadTasks])
+    if (!user) return
+
+    const effectiveProjectId = canAccessAllProjects ? selectedProjectId : membershipProjectId
+    if (!canAccessAllProjects && selectedProjectId !== effectiveProjectId) {
+      setSelectedProjectId(effectiveProjectId)
+    }
+
+    fetchTasks(effectiveProjectId)
+  }, [user, canAccessAllProjects, membershipProjectId, selectedProjectId, fetchTasks])
 
   useEffect(() => {
     setOptimisticTasks(tasks || [])
@@ -79,6 +83,23 @@ export function KanbanBoard() {
     }
     return optimisticTasks.filter((task) => (showOverdueOnly ? overdueStatusMap[task.id] : true))
   }, [optimisticTasks, showOverdueOnly, overdueStatusMap])
+
+  const archivedCompletedTasks = useMemo(() => {
+    return optimisticTasks.filter((task) => {
+      if (!task || task.status !== "done" || !task.completed) return false
+      const completionReference = task.completedAt || task.dueDate
+      if (!completionReference) return false
+      const referenceDate = new Date(completionReference)
+      if (Number.isNaN(referenceDate.getTime())) return false
+      return referenceDate < archiveThreshold
+    })
+  }, [optimisticTasks, archiveThreshold])
+
+  const boardTasks = useMemo(() => {
+    if (!filteredTasks.length || !archivedCompletedTasks.length) return filteredTasks
+    const archivedIds = new Set(archivedCompletedTasks.map((task) => task.id))
+    return filteredTasks.filter((task) => !archivedIds.has(task.id))
+  }, [filteredTasks, archivedCompletedTasks])
 
   const overdueTasksCount = useMemo(() => {
     if (!optimisticTasks || !Array.isArray(optimisticTasks)) {
@@ -233,7 +254,7 @@ export function KanbanBoard() {
           onDrop={(e) => e.preventDefault()}
         >
               {COLUMNS.map((column) => {
-            const columnTasks = filteredTasks.filter((task) => task.status === column.status)
+            const columnTasks = boardTasks.filter((task) => task.status === column.status)
             return (
               <KanbanColumn
                 key={column.id}
@@ -248,6 +269,38 @@ export function KanbanBoard() {
           })}
         </div>
       </DragDropContext>
+
+      {archivedCompletedTasks.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">
+              Tarefas Antigas Concluídas (mais de 2 semanas)
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {archivedCompletedTasks
+              .slice()
+              .sort((a, b) => {
+                const aDate = a.completedAt ? new Date(a.completedAt).getTime() : a.dueDate ? new Date(a.dueDate).getTime() : 0
+                const bDate = b.completedAt ? new Date(b.completedAt).getTime() : b.dueDate ? new Date(b.dueDate).getTime() : 0
+                return bDate - aDate
+              })
+              .map((task) => {
+                const projectName = task.projectId
+                  ? projects.find((project) => project.id === task.projectId)?.name || `Projeto #${task.projectId}`
+                  : "Sem projeto"
+                return (
+                  <div key={task.id} className="rounded-md border px-3 py-2 text-sm">
+                    <div className="font-medium">{task.title}</div>
+                    <div className="text-muted-foreground">
+                      {projectName} • Concluida em: {task.completedAt ? new Date(task.completedAt).toLocaleDateString("pt-BR") : "N/A"} • {task.points} pts
+                    </div>
+                  </div>
+                )
+              })}
+          </CardContent>
+        </Card>
+      )}
 
       <TaskDialog
         open={isDialogOpen}
