@@ -1,33 +1,25 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth/server-auth"
-import { NotificationController } from "@/backend/controllers/NotificationController"
+import { createNotificationsModule } from "@/backend/modules/notifications"
+import { ensurePermission, requireApiActor } from "@/lib/auth/api-guard"
 
-const notificationController = new NotificationController()
+const notificationsModule = createNotificationsModule()
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user) {
-      return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
-    }
+    const auth = await requireApiActor()
+    if (auth.error) return auth.error
 
     const { searchParams } = new URL(request.url)
-    const unreadOnly = searchParams.get('unread') === 'true'
-    const countOnly = searchParams.get('count') === 'true'
+    const unreadOnly = searchParams.get("unread") === "true"
+    const countOnly = searchParams.get("count") === "true"
 
     if (countOnly) {
-      const result = await notificationController.getUnreadCount(session.user.id)
-      return NextResponse.json(result, { status: 200 })
+      const count = await notificationsModule.getUnreadCount(auth.actor.id)
+      return NextResponse.json({ success: true, count }, { status: 200 })
     }
 
-    if (unreadOnly) {
-      const result = await notificationController.getUnreadNotifications(session.user.id)
-      return NextResponse.json(result, { status: 200 })
-    }
-
-    const result = await notificationController.getNotifications(session.user.id)
-    return NextResponse.json(result, { status: 200 })
+    const notifications = await notificationsModule.listUserNotifications(auth.actor.id, unreadOnly)
+    return NextResponse.json({ success: true, notifications }, { status: 200 })
   } catch (error) {
     console.error("Erro ao buscar notificações:", error)
     return NextResponse.json({ error: "Erro ao buscar notificações" }, { status: 500 })
@@ -36,38 +28,62 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user) {
-      return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
-    }
+    const auth = await requireApiActor()
+    if (auth.error) return auth.error
+
+    const permissionError = ensurePermission(
+      auth.actor,
+      "MANAGE_NOTIFICATIONS",
+      "Sem permissão para criar notificações",
+    )
+    if (permissionError) return permissionError
 
     const body = await request.json()
-    const { type, title, message, data, userId } = body
+    const title = typeof body.title === "string" ? body.title.trim() : ""
+    const message = typeof body.message === "string" ? body.message.trim() : ""
+    const type = typeof body.type === "string" && body.type.trim().length > 0
+      ? body.type.trim()
+      : "SYSTEM_ANNOUNCEMENT"
 
-    if (!type || !title || !message || !userId) {
-      return NextResponse.json({ error: "Dados obrigatórios não fornecidos" }, { status: 400 })
+    if (!title || !message) {
+      return NextResponse.json({ error: "Título e mensagem são obrigatórios" }, { status: 400 })
     }
 
-    const userRoles = session.user.roles || []
-    const canCreateNotifications = userRoles.includes('COORDENADOR') || userRoles.includes('GERENTE') || userRoles.includes('GERENTE_PROJETO')
+    const sendToAll = body.sendToAll === true
+    const userIds = Array.isArray(body.userIds)
+      ? body.userIds.map((value: unknown) => Number(value)).filter((id: number) => Number.isInteger(id) && id > 0)
+      : typeof body.userId === "number" && Number.isInteger(body.userId) && body.userId > 0
+        ? [body.userId]
+        : []
 
-    if (!canCreateNotifications) {
-      return NextResponse.json({ error: "Sem permissão para criar notificações" }, { status: 403 })
+    const audience = sendToAll
+      ? { mode: "ALL_ACTIVE_USERS" as const }
+      : { mode: "USER_IDS" as const, userIds }
+
+    if (!sendToAll && userIds.length === 0) {
+      return NextResponse.json({ error: "Informe ao menos um destinatário" }, { status: 400 })
     }
 
-    const result = await notificationController.create({
-      userId,
-      type,
+    const result = await notificationsModule.publishEvent({
+      eventType: type,
       title,
       message,
-      data
+      data: body.data,
+      triggeredByUserId: auth.actor.id,
+      audience,
     })
 
-    return NextResponse.json(result, { status: 201 })
+    return NextResponse.json(
+      {
+        success: true,
+        message: "Notificação enviada com sucesso",
+        createdCount: result.createdCount,
+      },
+      { status: 201 },
+    )
   } catch (error) {
     console.error("Erro ao criar notificação:", error)
-    return NextResponse.json({ error: "Erro ao criar notificação" }, { status: 500 })
+    const message = error instanceof Error ? error.message : "Erro ao criar notificação"
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }
-
-

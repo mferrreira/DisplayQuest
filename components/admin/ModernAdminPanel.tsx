@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { 
+import {
   Users, 
   BarChart3, 
   Clock, 
@@ -27,10 +27,6 @@ import {
   RefreshCw
 } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
-import { useProject } from "@/contexts/project-context"
-import { useTask } from "@/contexts/task-context"
-import { useWorkSessions } from "@/contexts/work-session-context"
-import { useNotification } from "@/contexts/notification-context"
 import { UserApproval } from "@/components/features/user-approval"
 import { ProjectMembersManagement } from "@/components/features/project-members-management"
 import { ProjectHoursStats } from "@/components/features/project-hours-stats"
@@ -39,6 +35,7 @@ import { AdminStatsCards } from "@/components/admin/AdminStatsCards"
 import { AdminWeeklyHoursTable } from "@/components/admin/AdminWeeklyHoursTable"
 import { AdminProjectManagement } from "@/components/admin/AdminProjectManagement"
 import { AdminHoursManagement } from "@/components/admin/AdminHoursManagement"
+import { AdminNotificationsCenter } from "@/components/admin/AdminNotificationsCenter"
 import { ScheduleGrid } from "@/components/admin/ScheduleGrid"
 import { NotificationsPanel } from "@/components/ui/notifications-panel"
 import { hasAccess } from "@/lib/utils/access-control"
@@ -53,10 +50,6 @@ interface ModernAdminPanelProps {
 
 export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: ModernAdminPanelProps) {
   const { user } = useAuth()
-  const { projects: contextProjects, createProject, updateProject, deleteProject } = useProject()
-  const { tasks: contextTasks, createTask, updateTask, deleteTask } = useTask()
-  const { sessions: contextSessions } = useWorkSessions()
-  const { notifications, markAsRead, markAllAsRead } = useNotification()
   
   const [searchTerm, setSearchTerm] = useState("")
   const [filterRole, setFilterRole] = useState("all")
@@ -276,7 +269,7 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <AdminWeeklyHoursTable users={users} />
+              <AdminWeeklyHoursTable users={users} sessions={sessions} />
             </CardContent>
           </Card>
         </TabsContent>
@@ -481,14 +474,15 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
 
         {/* Tab Notificações */}
         <TabsContent value="notifications" className="space-y-6">
+          <AdminNotificationsCenter users={users} />
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Bell className="h-5 w-5" />
-                Gestão de Notificações
+                Minha Caixa de Notificações
               </CardTitle>
               <CardDescription>
-                Gerencie notificações do sistema
+                Visualize e gerencie suas notificações pessoais
               </CardDescription>
             </CardHeader>
             <CardContent>

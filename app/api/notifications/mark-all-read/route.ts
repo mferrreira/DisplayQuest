@@ -1,23 +1,25 @@
-import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth/server-auth"
-import { NotificationController } from "@/backend/controllers/NotificationController"
+import { NextResponse } from "next/server"
+import { createNotificationsModule } from "@/backend/modules/notifications"
+import { requireApiActor } from "@/lib/auth/api-guard"
 
-const notificationController = new NotificationController()
+const notificationsModule = createNotificationsModule()
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user) {
-      return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
-    }
+    const auth = await requireApiActor()
+    if (auth.error) return auth.error
 
-    const result = await notificationController.markAllAsRead(session.user.id)
-    return NextResponse.json(result, { status: 200 })
+    const updatedCount = await notificationsModule.markAllAsRead(auth.actor.id)
+    return NextResponse.json(
+      {
+        success: true,
+        message: "Todas as notificações foram marcadas como lidas",
+        updatedCount,
+      },
+      { status: 200 },
+    )
   } catch (error) {
     console.error("Erro ao marcar todas as notificações como lidas:", error)
     return NextResponse.json({ error: "Erro ao marcar todas as notificações como lidas" }, { status: 500 })
   }
 }
-
-

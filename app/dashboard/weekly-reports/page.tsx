@@ -112,7 +112,7 @@ export default function WeeklyReportsPage() {
         <div>
           <h1 className="text-3xl font-bold text-foreground">Relatórios Semanais</h1>
           <p className="text-muted-foreground mt-2">
-            Visualize e gere relatórios semanais baseados nos logs diários dos usuários
+            Visualize e gere relatórios semanais baseados nas sessões de trabalho concluídas
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -224,7 +224,7 @@ export default function WeeklyReportsPage() {
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-lg">{report.userName}</CardTitle>
                     <Badge variant="outline">
-                      {report.totalLogs} logs
+                      {report.totalLogs} sessões
                     </Badge>
                   </div>
                   <CardDescription className="flex items-center gap-1">

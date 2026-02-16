@@ -4,10 +4,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { useWorkSessions } from "@/contexts/work-session-context"
-import { useDailyLogs } from "@/contexts/daily-log-context"
+import { useWorkSessions } from "@/hooks/use-work-sessions"
 import { useAuth } from "@/contexts/auth-context"
-import { Loader2, Play, StopCircle, Clock, MapPin, AlertTriangle, Info } from "lucide-react"
+import { Loader2, Play, StopCircle, Clock, MapPin, AlertTriangle } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -17,7 +16,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { UsersAPI } from "@/contexts/api-client"
 import type { User } from "@/contexts/types"
 
 interface TimerCardProps {
@@ -26,8 +24,7 @@ interface TimerCardProps {
 
 export function TimerCard({ onSessionEnd }: TimerCardProps) {
   const { user } = useAuth()
-  const { activeSession, startSession, endSession, loading, fetchSessions, sessions } = useWorkSessions()
-  const { createLog } = useDailyLogs()
+  const { activeSession, startSession, endSession, loading, fetchSessions } = useWorkSessions()
   const [activity, setActivity] = useState("")
   const [location, setLocation] = useState("")
   const [timer, setTimer] = useState(0)
@@ -38,8 +35,6 @@ export function TimerCard({ onSessionEnd }: TimerCardProps) {
   const [submittingLog, setSubmittingLog] = useState(false)
   const [sessionDuration, setSessionDuration] = useState(0)
   const [pendingSessionEnd, setPendingSessionEnd] = useState(false)
-  const [showManualLogDialog, setShowManualLogDialog] = useState(false)
-  const [manualLogNote, setManualLogNote] = useState("")
   const [selectedProjectId, setSelectedProjectId] = useState<string>("")
   const [projects, setProjects] = useState<any[]>([])
   const [loadingProjects, setLoadingProjects] = useState(false)
@@ -151,16 +146,9 @@ export function TimerCard({ onSessionEnd }: TimerCardProps) {
     
     setSubmittingLog(true)
     try {
-      await endSession(activeSession.id, activity)
-      
-      if (logNote.trim()) {
-        const today = new Date().toISOString().split("T")[0]
-        await createLog({
-          userId: user.id,
-          date: today,
-          note: logNote.trim()
-        })
-      }
+      await endSession(activeSession.id, activity, {
+        dailyLogNote: logNote.trim() ? logNote.trim() : undefined,
+      })
       
       setShowLogDialog(false)
       setLogNote("")
@@ -206,34 +194,6 @@ export function TimerCard({ onSessionEnd }: TimerCardProps) {
     } finally {
       setSubmittingLog(false)
     }
-  }
-
-  const handleManualLogSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!user || !manualLogNote.trim()) return
-    
-    setSubmittingLog(true)
-    try {
-      const today = new Date().toISOString().split("T")[0]
-      await createLog({
-        userId: user.id,
-        date: today,
-        note: manualLogNote.trim()
-      })
-      
-      setShowManualLogDialog(false)
-      setManualLogNote("")
-    } catch (err) {
-      console.error("Erro ao criar log:", err)
-      setError("Erro ao criar log")
-    } finally {
-      setSubmittingLog(false)
-    }
-  }
-
-  const handleManualLogCancel = () => {
-    setShowManualLogDialog(false)
-    setManualLogNote("")
   }
 
   const formatTime = (seconds: number) => {
@@ -367,19 +327,6 @@ export function TimerCard({ onSessionEnd }: TimerCardProps) {
             </form>
           )}
           
-          {/* Add Log Button when no active session */}
-          {!activeSession && (
-            <div className="mt-4">
-              <Button
-                variant="outline"
-                onClick={() => setShowManualLogDialog(true)}
-                className="w-full border-green-300 text-green-700 hover:bg-green-50"
-              >
-                <Clock className="h-4 w-4 mr-2" />
-                Adicionar Log Manual
-              </Button>
-            </div>
-          )}
         </CardContent>
       </Card>
 
@@ -460,70 +407,6 @@ export function TimerCard({ onSessionEnd }: TimerCardProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Manual Log Dialog */}
-      <Dialog open={showManualLogDialog} onOpenChange={setShowManualLogDialog}>
-        <DialogContent className="sm:max-w-xl max-h-[80vh] overflow-hidden flex flex-col">
-          <DialogHeader className="flex-shrink-0">
-            <DialogTitle className="flex items-center space-x-2">
-              <Clock className="h-5 w-5 text-green-600" />
-              <span>Adicionar Log Manual</span>
-            </DialogTitle>
-            <DialogDescription>
-              Registre uma atividade realizada sem usar o timer de trabalho.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <form onSubmit={handleManualLogSubmit} className="flex-1 flex flex-col space-y-4 min-h-0">
-            <div className="flex-1 space-y-2 min-h-0">
-              <label htmlFor="manualLogNote" className="text-sm font-medium text-gray-700">
-                Descrição da atividade
-              </label>
-              <Textarea
-                id="manualLogNote"
-                placeholder="Descreva as tarefas realizadas, projetos trabalhados, ou atividades desenvolvidas..."
-                value={manualLogNote}
-                onChange={(e) => setManualLogNote(e.target.value)}
-                className="min-h-[120px] max-h-[200px] border-green-300 focus:border-green-500 resize-none"
-                autoFocus
-                required
-              />
-            </div>
-            
-            <Alert className="flex-shrink-0">
-              <Info className="h-4 w-4" />
-              <AlertDescription>
-                Este log será adicionado aos seus registros diários e incluído no relatório semanal.
-              </AlertDescription>
-            </Alert>
-            
-            <DialogFooter className="flex-shrink-0 flex flex-col sm:flex-row gap-2 pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleManualLogCancel}
-                disabled={submittingLog}
-                className="w-full sm:w-auto"
-              >
-                Cancelar
-              </Button>
-              <Button
-                type="submit"
-                disabled={submittingLog || !manualLogNote.trim()}
-                className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
-              >
-                {submittingLog ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Salvando...
-                  </>
-                ) : (
-                  "Adicionar Log"
-                )}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
     </>
   )
 } 

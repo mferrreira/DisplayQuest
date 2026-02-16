@@ -3,10 +3,9 @@ import { ProjectMembership, IProjectMembership } from '../models/ProjectMembersh
 import { ProjectRepository, IProjectRepository } from '../repositories/ProjectRepository';
 import { ProjectMembershipRepository, IProjectMembershipRepository } from '../repositories/ProjectMembershipRepository';
 import { UserRepository } from '../repositories/UserRepository';
-import { HistoryService } from './HistoryService';
-import { HistoryRepository } from '../repositories/HistoryRepository';
 import { UserRole } from '@prisma/client';
 import { prisma } from '@/lib/database/prisma';
+import { createIdentityAccessModule, IdentityAccessModule } from '@/backend/modules/identity-access';
 
 interface CreateProjectOptions {
     volunteerIds?: number[];
@@ -28,15 +27,14 @@ export interface IProjectService {
 
 export class ProjectService implements IProjectService {
     private userRepository: UserRepository;
-    private historyService: HistoryService;
+    private identityAccess: IdentityAccessModule;
 
     constructor(
         private projectRepository: IProjectRepository,
         private membershipRepository: IProjectMembershipRepository
     ) {
         this.userRepository = new UserRepository();
-        const historyRepository = new HistoryRepository();
-        this.historyService = new HistoryService(historyRepository, this.userRepository);
+        this.identityAccess = createIdentityAccessModule();
     }
 
     async findById(id: number): Promise<Project | null> {
@@ -101,9 +99,6 @@ export class ProjectService implements IProjectService {
             }
         }
 
-        await this.historyService.recordEntityCreation('PROJECT', createdProject.id!, creatorId, createdProject.toJSON());
-        await this.historyService.recordAction('PROJECT', createdProject.id!, 'CREATE', creatorId, 'Projeto criado');
-        
         return createdProject;
     }
 
@@ -162,11 +157,8 @@ export class ProjectService implements IProjectService {
             project.updateLeader(data.leaderId);
         }
         
-        const oldProjectData = project.toJSON();
         const updatedProject = await this.projectRepository.update(project);
-        
-        await this.historyService.recordEntityUpdate('PROJECT', id, userId, oldProjectData, updatedProject.toJSON());
-        
+
         return updatedProject;
     }
 
@@ -185,10 +177,7 @@ export class ProjectService implements IProjectService {
             throw new Error('Projeto não pode ser excluído no status atual');
         }
 
-        const projectData = project.toJSON();
         await this.projectRepository.delete(id);
-        
-        await this.historyService.recordEntityDeletion('PROJECT', id, userId, projectData);
     }
 
     async canUserManageProject(projectId: number, userId: number): Promise<boolean> {
@@ -199,7 +188,7 @@ export class ProjectService implements IProjectService {
         
         const user = await this.userRepository.findById(userId);
         if (user) {
-            return user.hasAnyRole(['COORDENADOR', 'GERENTE']);
+            return this.identityAccess.hasPermission(user.roles, 'MANAGE_USERS');
         }
         
         return false;
@@ -232,11 +221,7 @@ export class ProjectService implements IProjectService {
             roles
         });
 
-        const createdMembership = await this.membershipRepository.create(membership);
-        
-        await this.historyService.recordAction('PROJECT', projectId, 'CREATE', addedBy, 'Membro adicionado ao projeto');
-        
-        return createdMembership;
+        return await this.membershipRepository.create(membership);
     }
 
     async removeMemberFromProject(projectId: number, userId: number, removedBy: number): Promise<void> {
@@ -263,8 +248,6 @@ export class ProjectService implements IProjectService {
         }
 
         await this.membershipRepository.deleteByProjectAndUser(projectId, userId);
-        
-        await this.historyService.recordAction('PROJECT', projectId, 'REMOVE_MEMBER', removedBy, 'Membro removido do projeto');
     }
 
     async getProjectMembers(projectId: number): Promise<ProjectMembership[]> {

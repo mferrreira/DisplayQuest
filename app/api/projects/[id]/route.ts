@@ -1,80 +1,88 @@
 import { NextResponse } from "next/server"
-//import { ProjectController } from "@/backend/controllers/ProjectController"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
-import { ProjectService } from "@/backend/services/ProjectService";
-import { ProjectRepository } from "@/backend/repositories/ProjectRepository";
-import { ProjectMembershipRepository } from "@/backend/repositories/ProjectMembershipRepository";
+import { createProjectManagementModule } from "@/backend/modules/project-management"
+import { requireApiActor } from "@/lib/auth/api-guard"
 
-const projectService = new ProjectService(
-  new ProjectRepository(),
-  new ProjectMembershipRepository()
-)
+const projectManagementModule = createProjectManagementModule()
 
-export async function GET(request: Request, context: { params: Promise<{ id: number }> }) {
+function toHttpStatus(error: unknown) {
+  const message = error instanceof Error ? error.message : "Erro interno do servidor"
+  if (message.includes("não encontrado")) return 404
+  if (message.includes("Acesso negado") || message.includes("permissão")) return 403
+  if (message.includes("Dados inválidos") || message.includes("inválido")) return 400
+  return 500
+}
+
+export async function GET(_request: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    const params = await context.params;
-    const id = Number(params.id);
-    const project = await projectService.findById(id)
+    const auth = await requireApiActor()
+    if (auth.error) return auth.error
+
+    const params = await context.params
+    const projectId = Number(params.id)
+    if (!Number.isInteger(projectId) || projectId <= 0) {
+      return NextResponse.json({ error: "Projeto inválido" }, { status: 400 })
+    }
+
+    const project = await projectManagementModule.getProjectForActor({
+      projectId,
+      actorId: auth.actor.id,
+      actorRoles: auth.actor.roles,
+    })
+
     return NextResponse.json({ project }, { status: 200 })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Erro ao buscar projeto:", error)
-    if (error.message === 'Projeto não encontrado') {
-      return NextResponse.json({ error: "Projeto não encontrado" }, { status: 404 })
-    }
-    return NextResponse.json({ error: "Erro ao buscar projeto" }, { status: 500 })
+    const message = error instanceof Error ? error.message : "Erro ao buscar projeto"
+    return NextResponse.json({ error: message }, { status: toHttpStatus(error) })
   }
 }
 
-export async function PUT(request: Request, context: { params: Promise<{ id: number }> }) {
+export async function PUT(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    const params = await context.params;
-    const id = Number(params.id);
+    const auth = await requireApiActor()
+    if (auth.error) return auth.error
+
+    const params = await context.params
+    const projectId = Number(params.id)
+    if (!Number.isInteger(projectId) || projectId <= 0) {
+      return NextResponse.json({ error: "Projeto inválido" }, { status: 400 })
+    }
+
     const body = await request.json()
-    
-    // Get user ID from session
-    const session = await getServerSession(authOptions)
-    const sessionUser = session?.user as any
-    if (!sessionUser?.id) {
-      return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
-    }
-    
-    const updatedProject = await projectService.update(id, body, sessionUser.id)
-    return NextResponse.json({ project: updatedProject }, { status: 200 })
-  } catch (error: any) {
+    const project = await projectManagementModule.updateProject({
+      projectId,
+      actorId: auth.actor.id,
+      data: body,
+    })
+
+    return NextResponse.json({ project }, { status: 200 })
+  } catch (error: unknown) {
     console.error("Erro ao atualizar projeto:", error)
-    if (error.message === 'Projeto não encontrado') {
-      return NextResponse.json({ error: "Projeto não encontrado" }, { status: 404 })
-    }
-    if (error.message.includes('permissão')) {
-      return NextResponse.json({ error: error.message }, { status: 403 })
-    }
-    return NextResponse.json({ error: "Erro ao atualizar projeto" }, { status: 500 })
+    const message = error instanceof Error ? error.message : "Erro ao atualizar projeto"
+    return NextResponse.json({ error: message }, { status: toHttpStatus(error) })
   }
 }
 
-export async function DELETE(request: Request, context: { params: Promise<{ id: number }> }) {
+export async function DELETE(_request: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    const params = await context.params;
-    const id = Number(params.id);
-    
-    // Get user ID from session
-    const session = await getServerSession(authOptions)
-    const sessionUser = session?.user as any
-    if (!sessionUser?.id) {
-      return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
+    const auth = await requireApiActor()
+    if (auth.error) return auth.error
+
+    const params = await context.params
+    const projectId = Number(params.id)
+    if (!Number.isInteger(projectId) || projectId <= 0) {
+      return NextResponse.json({ error: "Projeto inválido" }, { status: 400 })
     }
-    
-    await projectService.delete(id, sessionUser.id)
+
+    await projectManagementModule.deleteProject({
+      projectId,
+      actorId: auth.actor.id,
+    })
+
     return NextResponse.json({ success: true }, { status: 200 })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Erro ao excluir projeto:", error)
-    if (error.message === 'Projeto não encontrado') {
-      return NextResponse.json({ error: "Projeto não encontrado" }, { status: 404 })
-    }
-    if (error.message.includes('permissão')) {
-      return NextResponse.json({ error: error.message }, { status: 403 })
-    }
-    return NextResponse.json({ error: "Erro ao excluir projeto" }, { status: 500 })
+    const message = error instanceof Error ? error.message : "Erro ao excluir projeto"
+    return NextResponse.json({ error: message }, { status: toHttpStatus(error) })
   }
 }

@@ -1,7 +1,7 @@
 import { LabResponsibility } from '../models/LabResponsibility';
 import { LabResponsibilityRepository, ILabResponsibilityRepository } from '../repositories/LabResponsibilityRepository';
 import { UserRepository } from '../repositories/UserRepository';
-import { HistoryService } from './HistoryService';
+import { createIdentityAccessModule, IdentityAccessModule } from '@/backend/modules/identity-access';
 
 export interface ILabResponsibilityService {
     findById(id: number): Promise<LabResponsibility | null>;
@@ -19,11 +19,14 @@ export interface ILabResponsibilityService {
 }
 
 export class LabResponsibilityService implements ILabResponsibilityService {
+    private identityAccess: IdentityAccessModule;
+
     constructor(
         private labResponsibilityRepo: ILabResponsibilityRepository,
         private userRepo: UserRepository,
-        private historyService?: HistoryService
-    ) {}
+    ) {
+        this.identityAccess = createIdentityAccessModule();
+    }
 
     async findById(id: number): Promise<LabResponsibility | null> {
         return await this.labResponsibilityRepo.findById(id);
@@ -50,20 +53,7 @@ export class LabResponsibilityService implements ILabResponsibilityService {
         }
 
         const labResponsibility = LabResponsibility.create(data);
-        const created = await this.labResponsibilityRepo.create(labResponsibility);
-
-        if (this.historyService) {
-            await this.historyService.recordAction(
-                "LAB_RESPONSIBILITY",
-                created.id!,
-                "CREATE",
-                data.userId,
-                `Responsabilidade iniciada por ${data.userName}`,
-                { responsibility: created.toJSON() }
-            );
-        }
-
-        return created;
+        return await this.labResponsibilityRepo.create(labResponsibility);
     }
 
     async update(id: number, data: Partial<LabResponsibility>): Promise<LabResponsibility> {
@@ -72,25 +62,10 @@ export class LabResponsibilityService implements ILabResponsibilityService {
             throw new Error("Responsabilidade não encontrada");
         }
 
-        const oldData = existingResponsibility.toJSON();
-
         if (data.notes !== undefined) {
             existingResponsibility.updateNotes(data.notes!);
         }
-
-        const updated = await this.labResponsibilityRepo.update(existingResponsibility);
-
-        if (this.historyService && data.userId!) {
-            await this.historyService.recordEntityUpdate(
-                "LAB_RESPONSIBILITY",
-                id,
-                data.userId!,
-                oldData,
-                updated.toJSON()
-            );
-        }
-
-        return updated;
+        return await this.labResponsibilityRepo.update(existingResponsibility);
     }
 
     async delete(id: number): Promise<void> {
@@ -99,17 +74,7 @@ export class LabResponsibilityService implements ILabResponsibilityService {
             throw new Error("Responsabilidade não encontrada");
         }
 
-        const responsibilityData = existingResponsibility.toJSON();
         await this.labResponsibilityRepo.delete(id);
-
-        if (this.historyService) {
-            await this.historyService.recordEntityDeletion(
-                "LAB_RESPONSIBILITY",
-                id,
-                existingResponsibility.userId!,
-                responsibilityData
-            );
-        }
     }
 
     async getResponsibilitiesByUser(userId: number): Promise<LabResponsibility[]> {
@@ -144,35 +109,15 @@ export class LabResponsibilityService implements ILabResponsibilityService {
             throw new Error("Responsabilidade já foi finalizada");
         }
 
-        const oldData = existingResponsibility.toJSON();
         existingResponsibility.endResponsibility(notes);
-        const updated = await this.labResponsibilityRepo.update(existingResponsibility);
-
-        if (this.historyService) {
-            await this.historyService.recordAction(
-                "LAB_RESPONSIBILITY",
-                id,
-                "UPDATE",
-                existingResponsibility.userId,
-                `Responsabilidade finalizada por ${existingResponsibility.userName}`,
-                { 
-                    oldData, 
-                    newData: updated.toJSON(),
-                    duration: updated.getDurationInMinutes()
-                }
-            );
-        }
-
-        return updated;
+        return await this.labResponsibilityRepo.update(existingResponsibility);
     }
 
     async canUserStartResponsibility(userId: number): Promise<boolean> {
         const user = await this.userRepo.findById(userId);
         if (!user) return false;
 
-        const hasPermission = user.roles.some(role => 
-            ['COORDENADOR', 'GERENTE'].includes(role)
-        );
+        const hasPermission = this.identityAccess.hasAnyRole(user.roles, ['COORDENADOR', 'GERENTE']);
 
         return hasPermission;
     }
@@ -186,11 +131,8 @@ export class LabResponsibilityService implements ILabResponsibilityService {
 
         if (responsibility.userId === userId) return true;
 
-        const hasAdminRole = user.roles.some(role => 
-            ['COORDENADOR', 'GERENTE', 'LABORATORISTA'].includes(role)
-        );
+        const hasAdminRole = this.identityAccess.hasAnyRole(user.roles, ['COORDENADOR', 'GERENTE', 'LABORATORISTA']);
 
         return hasAdminRole;
     }
 }
-

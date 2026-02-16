@@ -2,6 +2,7 @@ import { WeeklyReport } from '../models/WeeklyReport';
 import { WeeklyReportRepository, IWeeklyReportRepository } from '../repositories/WeeklyReportRepository';
 import { UserRepository } from '../repositories/UserRepository';
 import { DailyLogRepository } from '../repositories/DailyLogRepository';
+import { createIdentityAccessModule, IdentityAccessModule } from '@/backend/modules/identity-access';
 
 export interface IWeeklyReportService {
   findById(id: number): Promise<WeeklyReport | null>;
@@ -23,6 +24,8 @@ export interface IWeeklyReportService {
 }
 
 export class WeeklyReportService implements IWeeklyReportService {
+  private identityAccess: IdentityAccessModule;
+
   constructor(
     private weeklyReportRepository: IWeeklyReportRepository,
     private userRepository: UserRepository,
@@ -31,6 +34,7 @@ export class WeeklyReportService implements IWeeklyReportService {
     this.weeklyReportRepository = weeklyReportRepository || new WeeklyReportRepository();
     this.userRepository = userRepository || new UserRepository();
     this.dailyLogRepository = dailyLogRepository || new DailyLogRepository();
+    this.identityAccess = createIdentityAccessModule();
 
   }
 
@@ -201,7 +205,7 @@ export class WeeklyReportService implements IWeeklyReportService {
     const user = await this.userRepository.findById(userId);
     if (!user) return false;
 
-    if (user.hasAnyRole(['COORDENADOR', 'GERENTE'])) {
+    if (this.identityAccess.hasPermission(user.roles, 'MANAGE_USERS')) {
       return true;
     }
 
@@ -219,7 +223,7 @@ export class WeeklyReportService implements IWeeklyReportService {
     const user = await this.userRepository.findById(userId);
     if (!user) return false;
 
-    if (user.hasAnyRole(['COORDENADOR', 'GERENTE'])) {
+    if (this.identityAccess.hasPermission(user.roles, 'MANAGE_USERS')) {
       return true;
     }
 
@@ -227,11 +231,10 @@ export class WeeklyReportService implements IWeeklyReportService {
       return true;
     }
 
-    if (user.hasAnyRole(['LABORATORISTA'])) {
+    if (this.identityAccess.hasAnyRole(user.roles, ['LABORATORISTA'])) {
       return true;
     }
 
     return false;
   }
 }
-

@@ -1,25 +1,15 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
+import { requireApiActor } from "@/lib/auth/api-guard"
+import { createTaskManagementModule } from "@/backend/modules/task-management"
 
-import { TaskService } from "@/backend/services/TaskService"
-import { TaskRepository } from "@/backend/repositories/TaskRepository"
-import { UserRepository } from "@/backend/repositories/UserRepository"
-import { ProjectRepository } from "@/backend/repositories/ProjectRepository"
+const taskManagementModule = createTaskManagementModule()
 
-const taskService = new TaskService(
-  new TaskRepository(),
-  new UserRepository(),
-  new ProjectRepository(),
-); 
-
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user) {
-      return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
-    }
+    const auth = await requireApiActor()
+    if (auth.error) return auth.error
 
+    const params = await context.params
     const taskId = parseInt(params.id)
     if (isNaN(taskId)) {
       return NextResponse.json({ error: "ID de tarefa inválido" }, { status: 400 })
@@ -28,7 +18,11 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     const body = await request.json()
     const { reason } = body
 
-    const task = await taskService.rejectTask(taskId, session.user.id, reason)
+    const task = await taskManagementModule.rejectTask({
+      taskId,
+      approverId: auth.actor.id,
+      reason,
+    })
     
     return NextResponse.json({ 
       success: true, 
@@ -42,5 +36,3 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     }, { status: 500 })
   }
 }
-
-

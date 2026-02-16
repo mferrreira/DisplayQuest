@@ -1,7 +1,7 @@
 import { LabEvent } from '../models/LabEvent';
 import { LabEventRepository, ILabEventRepository } from '../repositories/LabEventRepository';
 import { UserRepository } from '../repositories/UserRepository';
-import { HistoryService } from './HistoryService';
+import { createIdentityAccessModule, IdentityAccessModule } from '@/backend/modules/identity-access';
 
 export interface ILabEventService {
     findById(id: number): Promise<LabEvent | null>;
@@ -17,11 +17,14 @@ export interface ILabEventService {
 }
 
 export class LabEventService implements ILabEventService {
+    private identityAccess: IdentityAccessModule;
+
     constructor(
         private labEventRepo: ILabEventRepository,
         private userRepo: UserRepository,
-        private historyService?: HistoryService
-    ) {}
+    ) {
+        this.identityAccess = createIdentityAccessModule();
+    }
 
     async findById(id: number): Promise<LabEvent | null> {
         return await this.labEventRepo.findById(id);
@@ -43,18 +46,7 @@ export class LabEventService implements ILabEventService {
         }
 
         const labEvent = LabEvent.create(data);
-        const created = await this.labEventRepo.create(labEvent);
-
-        if (this.historyService) {
-            await this.historyService.recordEntityCreation(
-                "LAB_EVENT",
-                created.id!,
-                data.userId,
-                created.toJSON()
-            );
-        }
-
-        return created;
+        return await this.labEventRepo.create(labEvent);
     }
 
     async update(id: number, data: Partial<LabEvent>): Promise<LabEvent> {
@@ -68,8 +60,6 @@ export class LabEventService implements ILabEventService {
             throw new Error("Usuário não tem permissão para atualizar este evento");
         }
 
-        const oldData = existingEvent.toJSON();
-
         if (data.note !== undefined) {
             existingEvent.updateNote(data.note);
         }
@@ -77,19 +67,7 @@ export class LabEventService implements ILabEventService {
             existingEvent.updateDate(data.date);
         }
 
-        const updated = await this.labEventRepo.update(existingEvent);
-
-        if (this.historyService) {
-            await this.historyService.recordEntityUpdate(
-                "LAB_EVENT",
-                id,
-                data.userId || existingEvent.userId,
-                oldData,
-                updated.toJSON()
-            );
-        }
-
-        return updated;
+        return await this.labEventRepo.update(existingEvent);
     }
 
     async delete(id: number): Promise<void> {
@@ -98,17 +76,7 @@ export class LabEventService implements ILabEventService {
             throw new Error("Evento não encontrado");
         }
 
-        const eventData = existingEvent.toJSON();
         await this.labEventRepo.delete(id);
-
-        if (this.historyService) {
-            await this.historyService.recordEntityDeletion(
-                "LAB_EVENT",
-                id,
-                existingEvent.userId,
-                eventData
-            );
-        }
     }
 
     async getEventsByDate(date: Date): Promise<LabEvent[]> {
@@ -139,11 +107,8 @@ export class LabEventService implements ILabEventService {
 
         if (event.userId === userId) return true;
 
-        const hasAdminRole = user.roles.some(role => 
-            ['COORDENADOR', 'GERENTE', 'LABORATORISTA'].includes(role)
-        );
+        const hasAdminRole = this.identityAccess.hasAnyRole(user.roles, ['COORDENADOR', 'GERENTE', 'LABORATORISTA']);
 
         return hasAdminRole;
     }
 }
-

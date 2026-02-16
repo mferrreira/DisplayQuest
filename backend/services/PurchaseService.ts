@@ -2,6 +2,7 @@ import { PurchaseRepository } from '../repositories/PurchaseRepository';
 import { RewardRepository } from '../repositories/RewardRepository';
 import { Purchase } from '../models/Purchase';
 import { Reward } from '../models/Reward';
+import { prisma } from '@/lib/database/prisma';
 
 export class PurchaseService {
     constructor(
@@ -18,19 +19,23 @@ export class PurchaseService {
     }
 
     async create(data: any): Promise<Purchase> {
-
         if (!data.userId || !data.rewardId) {
             throw new Error("userId e rewardId são obrigatórios");
         }
 
+        const userId = Number(data.userId);
+        const rewardId = Number(data.rewardId);
+        if (!Number.isInteger(userId) || !Number.isInteger(rewardId)) {
+            throw new Error("userId e rewardId inválidos");
+        }
 
-        const user = await this.purchaseRepo.findUserById(data.userId);
+        const user = await this.purchaseRepo.findUserById(userId);
         if (!user) {
             throw new Error("Usuário não encontrado");
         }
 
 
-        const reward = await this.rewardRepo.findById(data.rewardId);
+        const reward = await this.rewardRepo.findById(rewardId);
         if (!reward) {
             throw new Error("Recompensa não encontrada");
         }
@@ -42,8 +47,8 @@ export class PurchaseService {
 
 
         const purchase = Purchase.create({
-            userId: data.userId,
-            rewardId: data.rewardId,
+            userId,
+            rewardId,
             rewardName: reward.name,
             price: reward.price,
             purchaseDate: new Date(),
@@ -54,7 +59,36 @@ export class PurchaseService {
             throw new Error("Dados inválidos para a compra");
         }
 
-        return await this.purchaseRepo.create(purchase);
+        const created = await prisma.$transaction(async (tx) => {
+            const currentUser = await tx.users.findUnique({
+                where: { id: userId },
+                select: { id: true, points: true },
+            });
+
+            if (!currentUser) {
+                throw new Error("Usuário não encontrado");
+            }
+
+            if (currentUser.points < reward.price) {
+                throw new Error(reward.getPurchaseValidationMessage(currentUser.points));
+            }
+
+            await tx.users.update({
+                where: { id: userId },
+                data: {
+                    points: {
+                        decrement: reward.price,
+                    },
+                },
+            });
+
+            return await tx.purchases.create({
+                data: purchase.toPrisma(),
+                include: { user: true, reward: true },
+            });
+        });
+
+        return Purchase.fromPrisma(created);
     }
 
     async update(id: number, data: Partial<Purchase>): Promise<Purchase> {
@@ -135,11 +169,13 @@ export class PurchaseService {
             throw new Error("Apenas compras pendentes podem ser rejeitadas");
         }
 
+        const shouldRefund = purchase.status === 'pending';
         purchase.reject();
         const updatedPurchase = await this.purchaseRepo.update(purchase);
 
-
-        await this.refundPoints(purchase.userId, purchase.price);
+        if (shouldRefund) {
+            await this.refundPoints(purchase.userId, purchase.price);
+        }
 
         return updatedPurchase;
     }
@@ -168,40 +204,26 @@ export class PurchaseService {
             throw new Error("Compras completadas não podem ser canceladas");
         }
 
+        const shouldRefund = purchase.status === 'pending' || purchase.status === 'approved';
         purchase.cancel();
         const updatedPurchase = await this.purchaseRepo.update(purchase);
 
-
-        if (purchase.isApproved()) {
+        if (shouldRefund) {
             await this.refundPoints(purchase.userId, purchase.price);
         }
 
         return updatedPurchase;
     }
 
-
-    private async deductPoints(userId: number, points: number): Promise<void> {
-        const user = await this.purchaseRepo.findUserById(userId);
-        if (!user) {
-            throw new Error("Usuário não encontrado");
-        }
-
-        if (user.points < points) {
-            throw new Error("Pontos insuficientes");
-        }
-    }
-
     private async refundPoints(userId: number, points: number): Promise<void> {
-        const user = await this.purchaseRepo.findUserById(userId);
-        if (!user) {
-            throw new Error("Usuário não encontrado");
-        }
-        const purchase = await this.purchaseRepo.findById(userId);
-        if (!purchase || purchase.status !== 'approved') {
-            throw new Error("Compra não encontrada");
-        }
-        user.points -= points;
-        await this.purchaseRepo.update(purchase);
+        await prisma.users.update({
+            where: { id: userId },
+            data: {
+                points: {
+                    increment: points,
+                },
+            },
+        });
     }
 
     async getPurchaseStatistics(): Promise<{
@@ -329,4 +351,3 @@ export class PurchaseService {
         };
     }
 }
-

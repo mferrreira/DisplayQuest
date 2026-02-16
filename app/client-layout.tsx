@@ -1,36 +1,36 @@
 "use client"
 
 import { ThemeProvider } from "@/components/layout/theme-provider"
-import { AuthProvider } from "@/contexts/auth-context"
 import { UserProvider } from "@/contexts/user-context"
 import { ProjectProvider } from "@/contexts/project-context"
 import { TaskProvider } from "@/contexts/task-context"
-import { RewardProvider } from "@/contexts/reward-context"
-import { ResponsibilityProvider } from "@/contexts/responsibility-context"
-import { DailyLogProvider } from "@/contexts/daily-log-context"
-import { ScheduleProvider } from "@/contexts/schedule-context"
-import { LaboratoryScheduleProvider } from "@/contexts/laboratory-schedule-context"
-import { WeeklyReportProvider } from "@/contexts/weekly-report-context"
-import { WorkSessionProvider } from "@/contexts/work-session-context"
 import { SessionProvider } from "next-auth/react"
-import { LabEventsProvider } from "@/contexts/lab-events-context"
-import { IssueProvider } from "@/contexts/issue-context"
-import { NotificationProvider } from "@/contexts/notification-context"
 import { AppHeader } from "@/components/layout/app-header"
 import { usePathname } from "next/navigation"
 
+function DashboardProviders({ children }: { children: React.ReactNode }) {
+  return (
+    <UserProvider>
+      <ProjectProvider>
+        <TaskProvider>{children}</TaskProvider>
+      </ProjectProvider>
+    </UserProvider>
+  )
+}
+
 function LayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  
-  // Páginas que NÃO devem mostrar o header
-  const authPages = ['/login', '/register']
-  const shouldShowHeader = !authPages.includes(pathname)
-  
+  const isDashboardRoute = pathname.startsWith("/dashboard")
+
+  if (!isDashboardRoute) {
+    return <>{children}</>
+  }
+
   return (
-    <>
-      {shouldShowHeader && <AppHeader />}
+    <DashboardProviders>
+      <AppHeader />
       {children}
-    </>
+    </DashboardProviders>
   )
 }
 
@@ -42,35 +42,7 @@ export default function ClientLayout({
   return (
     <SessionProvider>
       <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
-        <AuthProvider>
-          <LabEventsProvider>
-            <IssueProvider>
-              <NotificationProvider>
-                <UserProvider>
-                  <ProjectProvider>
-                    <TaskProvider>
-                      <RewardProvider>
-                        <ResponsibilityProvider>
-                          <DailyLogProvider>
-                            <ScheduleProvider>
-                              <LaboratoryScheduleProvider>
-                                <WorkSessionProvider>
-                                  <WeeklyReportProvider>
-                                    <LayoutContent>{children}</LayoutContent>
-                                  </WeeklyReportProvider>
-                                </WorkSessionProvider>
-                              </LaboratoryScheduleProvider>
-                            </ScheduleProvider>
-                          </DailyLogProvider>
-                        </ResponsibilityProvider>
-                      </RewardProvider>
-                    </TaskProvider>
-                  </ProjectProvider>
-                </UserProvider>
-              </NotificationProvider>
-            </IssueProvider>
-          </LabEventsProvider>
-        </AuthProvider>
+        <LayoutContent>{children}</LayoutContent>
       </ThemeProvider>
     </SessionProvider>
   )

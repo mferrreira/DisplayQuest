@@ -1,15 +1,16 @@
 import { NextResponse } from "next/server"
-import { RewardService } from "@/backend/services/RewardService";
-import { RewardRepository } from "@/backend/repositories/RewardRepository";
+import { ensurePermission, requireApiActor } from "@/lib/auth/api-guard";
+import { createStoreModule } from "@/backend/modules/store";
 
-const rewardService = new RewardService(
-  new RewardRepository(),
-)
+const storeModule = createStoreModule()
 
 export async function GET(context: { params: Promise<{ id: string }> }) {
   try {
+    const auth = await requireApiActor();
+    if (auth.error) return auth.error;
+
     const params = await context.params;
-    const reward = await rewardService.findById(Number(params.id));
+    const reward = await storeModule.getReward(Number(params.id));
     if (!reward) {
       return NextResponse.json({ error: "Recompensa não encontrada" }, { status: 404 });
     }
@@ -22,9 +23,14 @@ export async function GET(context: { params: Promise<{ id: string }> }) {
 
 export async function PUT(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    const auth = await requireApiActor();
+    if (auth.error) return auth.error;
+    const deny = ensurePermission(auth.actor, "MANAGE_REWARDS");
+    if (deny) return deny;
+
     const params = await context.params;
     const data = await request.json();
-    const reward = await rewardService.update(Number(params.id), data);
+    const reward = await storeModule.updateReward(Number(params.id), data);
     return NextResponse.json({ reward });
   } catch (error: any) {
     console.error('Erro ao atualizar recompensa:', error);
@@ -35,28 +41,19 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
 // PATCH: Atualizar campos específicos de uma recompensa
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    const auth = await requireApiActor();
+    if (auth.error) return auth.error;
+    const deny = ensurePermission(auth.actor, "MANAGE_REWARDS");
+    if (deny) return deny;
+
     const params = await context.params;
     const data = await request.json();
     const { action, ...updateData } = data;
-
-    let reward;
-    
-    switch (action) {
-      case 'toggle-availability':
-        reward = await rewardService.toggleAvailability(Number(params.id));
-        break;
-      case 'update-price':
-        reward = await rewardService.updatePrice(Number(params.id), updateData.price);
-        break;
-      case 'update-name':
-        reward = await rewardService.updateName(Number(params.id), updateData.name);
-        break;
-      case 'update-description':
-        reward = await rewardService.updateDescription(Number(params.id), updateData.description);
-        break;
-      default:
-        reward = await rewardService.update(Number(params.id), updateData);
-    }
+    const reward = await storeModule.patchReward({
+      rewardId: Number(params.id),
+      action,
+      updateData,
+    });
 
     return NextResponse.json({ reward });
   } catch (error: any) {
@@ -68,8 +65,13 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 // DELETE: Excluir uma recompensa
 export async function DELETE(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    const auth = await requireApiActor();
+    if (auth.error) return auth.error;
+    const deny = ensurePermission(auth.actor, "MANAGE_REWARDS");
+    if (deny) return deny;
+
     const params = await context.params;
-    await rewardService.delete(Number(params.id));
+    await storeModule.deleteReward(Number(params.id));
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error('Erro ao excluir recompensa:', error);

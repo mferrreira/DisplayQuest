@@ -1,14 +1,14 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { useUser } from "@/contexts/user-context"
 import { useProject } from "@/contexts/project-context"
 import { useTask } from "@/contexts/task-context"
-import { useWorkSessions } from "@/contexts/work-session-context"
-import { AppHeader } from "@/components/layout/app-header"
 import { ModernAdminPanel } from "@/components/admin/ModernAdminPanel"
+import { WorkSessionsAPI } from "@/contexts/api-client"
+import type { WorkSession } from "@/contexts/types"
 
 export default function AdminDashboardPage() {
   const { user, loading } = useAuth()
@@ -16,7 +16,26 @@ export default function AdminDashboardPage() {
   const { users } = useUser()
   const { projects } = useProject()
   const { tasks } = useTask()
-  const { sessions } = useWorkSessions()
+  const [sessions, setSessions] = useState<WorkSession[]>([])
+
+  useEffect(() => {
+    const fetchSessions = async () => {
+      if (!user) {
+        setSessions([])
+        return
+      }
+
+      try {
+        const response = await WorkSessionsAPI.getAll()
+        setSessions(Array.isArray(response) ? response : [])
+      } catch (error) {
+        console.error("Erro ao carregar sessões de trabalho:", error)
+        setSessions([])
+      }
+    }
+
+    fetchSessions()
+  }, [user])
 
   useEffect(() => {
     if (!loading && !user) {

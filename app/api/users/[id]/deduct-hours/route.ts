@@ -1,50 +1,39 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth/server-auth"
+import { requireApiActor } from "@/lib/auth/api-guard"
+import { createUserManagementModule } from "@/backend/modules/user-management"
 
-import { UserService } from '@/backend/services/UserService'
-import { UserRepository } from '@/backend/repositories/UserRepository'
-import { BadgeRepository, UserBadgeRepository } from '@/backend/repositories/BadgeRepository'
+const userManagementModule = createUserManagementModule()
 
-const userService = new UserService(
-  new UserRepository(),
-  new BadgeRepository(),
-  new UserBadgeRepository(),
-)
-
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user) {
-      return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
-    }
+    const auth = await requireApiActor()
+    if (auth.error) return auth.error
 
-    const userId = parseInt(params.id)
-    if (isNaN(userId)) {
+    const userId = Number(params.id)
+    if (!Number.isInteger(userId) || userId <= 0) {
       return NextResponse.json({ error: "ID do usuário inválido" }, { status: 400 })
     }
 
     const body = await request.json()
-    const { hours, reason, projectId } = body
+    const hours = Number(body?.hours)
+    const reason = typeof body?.reason === "string" ? body.reason : ""
+    const projectId = body?.projectId !== undefined && body?.projectId !== null ? Number(body.projectId) : undefined
 
-    if (!hours || hours <= 0) {
+    if (!Number.isFinite(hours) || hours <= 0) {
       return NextResponse.json({ error: "Quantidade de horas inválida" }, { status: 400 })
     }
 
-    if (!reason || reason.trim() === "") {
+    if (!reason.trim()) {
       return NextResponse.json({ error: "Motivo é obrigatório" }, { status: 400 })
     }
 
-    //TODO: Atualizar session para incluir todos os campos de interesse
-    const result = await userService.deductHours(userId, {
+    const result = await userManagementModule.deductUserHours({
+      userId,
       hours,
       reason,
       projectId,
-      deductedBy: session.user.id!,
-      deductedByRoles: session.user.roles || []
+      deductedBy: auth.actor.id,
+      deductedByRoles: auth.actor.roles,
     })
 
     return NextResponse.json(result, { status: 200 })
@@ -53,5 +42,3 @@ export async function POST(
     return NextResponse.json({ error: "Erro ao retirar horas" }, { status: 500 })
   }
 }
-
-

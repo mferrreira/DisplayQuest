@@ -1,25 +1,21 @@
 import { NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
-import { LabResponsibilityService } from "@/backend/services/LabResponsibilityService";
-import { UserRepository } from "@/backend/repositories/UserRepository";
-import { LabResponsibilityRepository } from "@/backend/repositories/LabResponsibilityRepository";
+import { createLabOperationsModule } from "@/backend/modules/lab-operations";
+import { ensureAnyRole, requireApiActor } from "@/lib/auth/api-guard";
 
-const labResponsibilityService = new LabResponsibilityService(
-  new LabResponsibilityRepository(),
-  new UserRepository(),
-);
+const labOperationsModule = createLabOperationsModule();
 
 export async function GET(request: Request) {
   try {
+    const auth = await requireApiActor();
+    if (auth.error) return auth.error;
+
     const { searchParams } = new URL(request.url)
     const startDate = searchParams.get("startDate")
     const endDate = searchParams.get("endDate")
     const active = searchParams.get("active")
 
     if (active === "true") {
-      // Obter apenas a responsabilidade ativa
-      const activeResponsibility = await labResponsibilityService.getActiveResponsibility()
+      const { activeResponsibility } = await labOperationsModule.listResponsibilities({ activeOnly: true })
       if (activeResponsibility) {
         return NextResponse.json({
           activeResponsibility: activeResponsibility.toJSON()
@@ -28,19 +24,17 @@ export async function GET(request: Request) {
         return NextResponse.json({ activeResponsibility: null }, { status: 200 })
       }
     } else if (startDate && endDate) {
-      // Filtrar por período
-      const responsibilities = await labResponsibilityService.getResponsibilitiesByDateRange(
-        new Date(startDate),
-        new Date(endDate)
-      )
+      const { responsibilities } = await labOperationsModule.listResponsibilities({
+        startDate: new Date(startDate),
+        endDate: new Date(endDate),
+      })
       return NextResponse.json({ 
-        responsibilities: responsibilities.map(r => r.toJSON()) 
+        responsibilities: (responsibilities || []).map(r => r.toJSON()) 
       }, { status: 200 })
     } else {
-      // Obter todas
-      const responsibilities = await labResponsibilityService.findAll()
+      const { responsibilities } = await labOperationsModule.listResponsibilities()
       return NextResponse.json({ 
-        responsibilities: responsibilities.map(r => r.toJSON()) 
+        responsibilities: (responsibilities || []).map(r => r.toJSON()) 
       }, { status: 200 })
     }
   } catch (error: any) {
@@ -54,21 +48,22 @@ export async function GET(request: Request) {
 // POST: Iniciar uma nova responsabilidade
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
-    }
+    const auth = await requireApiActor();
+    if (auth.error) return auth.error;
+    const deny = ensureAnyRole(
+      auth.actor,
+      ["COORDENADOR", "GERENTE", "LABORATORISTA"],
+      "Sem permissão para iniciar responsabilidade do laboratório",
+    );
+    if (deny) return deny;
 
     const body = await request.json()
-    if (!body.userId || !body.userName) {
-      return NextResponse.json({ error: "ID do usuário e nome são obrigatórios" }, { status: 400 })
-    }
 
-    const responsibility = await labResponsibilityService.startResponsibility(
-      Number(body.userId),
-      body.userName,
-      body.notes || ""
-    )
+    const responsibility = await labOperationsModule.startResponsibility({
+      actorUserId: auth.actor.id,
+      actorName: auth.actor.name ?? "Usuário",
+      notes: body.notes || "",
+    })
     
     return NextResponse.json({ 
       responsibility: responsibility.toJSON() 

@@ -1,52 +1,38 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { ImageProcessor } from "@/lib/utils/image-processor"
+import { requireApiActor } from "@/lib/auth/api-guard"
+import { createUserManagementModule } from "@/backend/modules/user-management"
 
-import { UserService } from '@/backend/services/UserService'
-import { UserRepository } from '@/backend/repositories/UserRepository'
-import { BadgeRepository, UserBadgeRepository } from '@/backend/repositories/BadgeRepository'
+const userManagementModule = createUserManagementModule()
 
-const userService = new UserService(
-  new UserRepository(),
-  new BadgeRepository(),
-  new UserBadgeRepository(),
-)
-
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user || !(session.user as any).id) {
-      return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
+    const auth = await requireApiActor()
+    if (auth.error) return auth.error
+
+    const userId = Number(params.id)
+    if (!Number.isInteger(userId) || userId <= 0) {
+      return NextResponse.json({ error: "Usuário inválido" }, { status: 400 })
     }
 
-    const userId = parseInt(params.id)
-    if (userId !== (session.user as any).id) {
+    if (userId !== auth.actor.id) {
       return NextResponse.json({ error: "Usuário não autorizado" }, { status: 403 })
     }
 
-    const currentUser = await userService.findById(userId)
-    
-    if (currentUser?.avatar) {
-      await ImageProcessor.deleteImage(currentUser.avatar)
+    const currentUser = await userManagementModule.findUserById(userId)
+
+    if ((currentUser as any)?.avatar) {
+      await ImageProcessor.deleteImage((currentUser as any).avatar)
     }
-    
-    await userService.updateProfile(userId, { avatar: null })
 
-    return NextResponse.json({ 
-      success: true, 
-      message: "Avatar removido com sucesso" 
+    await userManagementModule.updateUserProfile(userId, { avatar: null })
+
+    return NextResponse.json({
+      success: true,
+      message: "Avatar removido com sucesso",
     })
-
   } catch (error) {
     console.error("Erro ao remover avatar:", error)
-    return NextResponse.json(
-      { error: "Erro interno do servidor" }, 
-      { status: 500 }
-    )
+    return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 })
   }
 }
-

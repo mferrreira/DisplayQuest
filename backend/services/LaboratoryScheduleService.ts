@@ -1,7 +1,7 @@
 import { LaboratorySchedule } from '../models/LaboratorySchedule';
 import { LaboratoryScheduleRepository, ILaboratoryScheduleRepository } from '../repositories/LaboratoryScheduleRepository';
 import { UserRepository } from '../repositories/UserRepository';
-import { HistoryService } from './HistoryService';
+import { createIdentityAccessModule, IdentityAccessModule } from '@/backend/modules/identity-access';
 
 export interface ILaboratoryScheduleService {
     findById(id: number): Promise<LaboratorySchedule | null>;
@@ -15,11 +15,14 @@ export interface ILaboratoryScheduleService {
 }
 
 export class LaboratoryScheduleService implements ILaboratoryScheduleService {
+    private identityAccess: IdentityAccessModule;
+
     constructor(
         private laboratoryScheduleRepo: ILaboratoryScheduleRepository,
         private userRepo: UserRepository,
-        private historyService?: HistoryService
-    ) {}
+    ) {
+        this.identityAccess = createIdentityAccessModule();
+    }
 
     async findById(id: number): Promise<LaboratorySchedule | null> {
         return await this.laboratoryScheduleRepo.findById(id);
@@ -36,18 +39,7 @@ export class LaboratoryScheduleService implements ILaboratoryScheduleService {
         }
 
         const laboratorySchedule = LaboratorySchedule.create(data);
-        const created = await this.laboratoryScheduleRepo.create(laboratorySchedule);
-
-        if (this.historyService && data.userId!) {
-            await this.historyService.recordEntityCreation(
-                "LABORATORY_SCHEDULE",
-                created.id!,
-                data.userId!,
-                created.toJSON()
-            );
-        }
-
-        return created;
+        return await this.laboratoryScheduleRepo.create(laboratorySchedule);
     }
 
     async update(id: number, data: Partial<LaboratorySchedule>): Promise<LaboratorySchedule> {
@@ -61,8 +53,6 @@ export class LaboratoryScheduleService implements ILaboratoryScheduleService {
             throw new Error("Usuário não tem permissão para gerenciar horários do laboratório");
         }
 
-        const oldData = existingSchedule.toJSON();
-
         if (data.startTime !== undefined || data.endTime !== undefined || data.notes !== undefined) {
             existingSchedule.updateSchedule(
                 data.startTime || existingSchedule.startTime,
@@ -71,19 +61,7 @@ export class LaboratoryScheduleService implements ILaboratoryScheduleService {
             );
         }
 
-        const updated = await this.laboratoryScheduleRepo.update(existingSchedule);
-
-        if (this.historyService && data.userId!) {
-            await this.historyService.recordEntityUpdate(
-                "LABORATORY_SCHEDULE",
-                id,
-                data.userId!,
-                oldData,
-                updated.toJSON()
-            );
-        }
-
-        return updated;
+        return await this.laboratoryScheduleRepo.update(existingSchedule);
     }
 
     async delete(id: number): Promise<void> {
@@ -92,17 +70,7 @@ export class LaboratoryScheduleService implements ILaboratoryScheduleService {
             throw new Error("Horário do laboratório não encontrado");
         }
 
-        const scheduleData = existingSchedule.toJSON();
         await this.laboratoryScheduleRepo.delete(id);
-
-        if (this.historyService) {
-            await this.historyService.recordEntityDeletion(
-                "LABORATORY_SCHEDULE",
-                id,
-                0,
-                scheduleData
-            );
-        }
     }
 
     async getSchedulesByDay(dayOfWeek: number): Promise<LaboratorySchedule[]> {
@@ -119,11 +87,8 @@ export class LaboratoryScheduleService implements ILaboratoryScheduleService {
         const user = await this.userRepo.findById(userId);
         if (!user) return false;
 
-        const hasPermission = user.roles.some(role => 
-            ['COORDENADOR', 'GERENTE', 'LABORATORISTA'].includes(role)
-        );
+        const hasPermission = this.identityAccess.hasAnyRole(user.roles, ['COORDENADOR', 'GERENTE', 'LABORATORISTA']);
 
         return hasPermission;
     }
 }
-

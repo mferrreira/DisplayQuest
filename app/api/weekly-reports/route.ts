@@ -1,73 +1,88 @@
 import { NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
-import { createApiResponse, createApiError } from "@/lib/utils/utils"
+import { createApiError, createApiResponse } from "@/lib/utils/utils"
+import { requireApiActor } from "@/lib/auth/api-guard"
+import { hasPermission, hasRole } from "@/lib/auth/rbac"
+import { createReportingModule } from "@/backend/modules/reporting"
 
-import { WeeklyReportService } from "@/backend/services/WeeklyReportService"
-import { WeeklyReportRepository } from "@/backend/repositories/WeeklyReportRepository"
-import { UserRepository } from "@/backend/repositories/UserRepository"
-import { DailyLogRepository } from "@/backend/repositories/DailyLogRepository"
+const reportingModule = createReportingModule()
 
-const weeklyReportService = new WeeklyReportService(
-  new WeeklyReportRepository(),
-  new UserRepository(),
-  new DailyLogRepository(),
-);
-
-// GET: Obter relatórios semanais
 export async function GET(request: Request) {
   try {
+    const auth = await requireApiActor()
+    if (auth.error) return auth.error
+
+    const actor = auth.actor
     const { searchParams } = new URL(request.url)
-    const userId = searchParams.get("userId")
-    const weekStart = searchParams.get("weekStart")
-    const weekEnd = searchParams.get("weekEnd")
-    const session = await getServerSession(authOptions)
-    const currentUser = session?.user as any
+    const userIdParam = searchParams.get("userId")
+    const weekStart = searchParams.get("weekStart") || undefined
+    const weekEnd = searchParams.get("weekEnd") || undefined
 
-    let reports = await weeklyReportService.findAll();
+    const canViewAllReports =
+      hasPermission(actor.roles, "MANAGE_USERS") ||
+      hasRole(actor.roles, "LABORATORISTA")
 
-    if (userId) reports = reports.filter((r: any) => r.userId === Number(userId));
-    if (weekStart) reports = reports.filter((r: any) => new Date(r.weekStart) >= new Date(weekStart));
-    if (weekEnd) reports = reports.filter((r: any) => new Date(r.weekEnd) <= new Date(weekEnd));
-    
-    return NextResponse.json({ weeklyReports: reports })
+    let userId: number | undefined
+    if (userIdParam) {
+      const parsed = Number(userIdParam)
+      if (!Number.isInteger(parsed) || parsed <= 0) {
+        return createApiError("userId inválido", 400)
+      }
+      if (!canViewAllReports && parsed !== actor.id) {
+        return createApiError("Sem permissão", 403)
+      }
+      userId = parsed
+    } else if (!canViewAllReports) {
+      userId = actor.id
+    }
+
+    const weeklyReports = await reportingModule.listWeeklyReports({
+      userId,
+      weekStart,
+      weekEnd,
+    })
+
+    return NextResponse.json({ weeklyReports })
   } catch (error) {
     console.error("Erro ao buscar relatórios semanais:", error)
     return createApiError("Erro ao buscar relatórios semanais")
   }
 }
 
-// POST: Criar um novo relatório semanal
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user) {
-      return createApiError("Não autenticado", 401)
-    }
+    const auth = await requireApiActor()
+    if (auth.error) return auth.error
+
+    const actor = auth.actor
     const body = await request.json()
-    const { userId, weekStart, weekEnd, summary } = body
-    if (!userId || !weekStart || !weekEnd) {
+    const userId = Number(body.userId)
+    const weekStart = typeof body.weekStart === "string" ? body.weekStart : ""
+    const weekEnd = typeof body.weekEnd === "string" ? body.weekEnd : ""
+    const summary = typeof body.summary === "string" ? body.summary : undefined
+
+    if (!Number.isInteger(userId) || userId <= 0 || !weekStart || !weekEnd) {
       return createApiError("userId, weekStart e weekEnd são obrigatórios", 400)
     }
-    const user = session.user as any
-    if (user.role !== "administrador_laboratorio" && user.role !== "laboratorista" && user.id !== userId) {
+
+    const canCreateForOthers =
+      hasPermission(actor.roles, "MANAGE_USERS") ||
+      hasRole(actor.roles, "LABORATORISTA")
+
+    if (!canCreateForOthers && actor.id !== userId) {
       return createApiError("Sem permissão", 403)
     }
-    
-    const weeklyReport = await weeklyReportService.create({
-      userId: Number(userId),
-      userName: user.name,
-      weekStart: new Date(weekStart),
-      weekEnd: new Date(weekEnd),
-      summary: summary || null,
-    }, Number(userId));
+
+    const weeklyReport = await reportingModule.upsertWeeklyReport({
+      userId,
+      weekStart,
+      weekEnd,
+      summary,
+    })
 
     return createApiResponse({ weeklyReport }, 201)
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Erro ao criar relatório semanal:", error)
-    if (error.message.includes("obrigatório") || error.message.includes("inválido")) {
-      return createApiError(error.message, 400)
-    }
-    return createApiError("Erro ao criar relatório semanal")
+    const message = error instanceof Error ? error.message : "Erro ao criar relatório semanal"
+    return createApiError(message, 500)
   }
-} 
+}

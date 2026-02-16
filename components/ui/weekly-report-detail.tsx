@@ -52,7 +52,7 @@ Data de Criação: ${formatDate(report.createdAt)}
 ${report.summary || "Nenhum resumo disponível"}
 
 ${report.logs && report.logs.length > 0 ? `
-LOGS DIÁRIOS:
+SESSÕES CONSOLIDADAS:
 ${report.logs.map((log, index) => `
 ${index + 1}. ${formatDate(log.date)} - ${formatTime(log.date)}
    ${log.note || "Sem descrição"}
@@ -204,10 +204,10 @@ ${index + 1}. ${formatDate(log.date)} - ${formatTime(log.date)}
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <CalendarDays className="h-5 w-5" />
-                  Logs Diários ({report.totalLogs})
+                  Sessões Consolidadas ({report.totalLogs})
                 </CardTitle>
                 <CardDescription>
-                  Registros detalhados de cada dia da semana
+                  Registros derivados das sessões concluídas no período
                 </CardDescription>
               </CardHeader>
               <CardContent>

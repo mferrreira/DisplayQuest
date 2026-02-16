@@ -1,19 +1,13 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { cronService } from "@/lib/services/cron-service";
+import { ensureAnyRole, requireApiActor } from "@/lib/auth/api-guard";
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
-    }
-
-    const user = session.user as any;
-    if (!user.roles?.includes('COORDENADOR')) {
-      return NextResponse.json({ error: 'Apenas coordenadores podem acessar.' }, { status: 403 });
-    }
+    const auth = await requireApiActor()
+    if (auth.error) return auth.error
+    const accessError = ensureAnyRole(auth.actor, ["COORDENADOR"], "Apenas coordenadores podem acessar.")
+    if (accessError) return accessError
 
     const status = cronService.getStatus();
     return NextResponse.json({ status });
@@ -28,15 +22,10 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
-    }
-
-    const user = session.user as any;
-    if (!user.roles?.includes('COORDENADOR')) {
-      return NextResponse.json({ error: 'Apenas coordenadores podem acessar.' }, { status: 403 });
-    }
+    const auth = await requireApiActor()
+    if (auth.error) return auth.error
+    const accessError = ensureAnyRole(auth.actor, ["COORDENADOR"], "Apenas coordenadores podem acessar.")
+    if (accessError) return accessError
 
     const body = await request.json();
     const { action } = body;

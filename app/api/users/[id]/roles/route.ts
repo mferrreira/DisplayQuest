@@ -1,51 +1,54 @@
-import { NextResponse } from "next/server";
+import { NextResponse } from "next/server"
+import type { UserRole } from "@prisma/client"
+import { ensurePermission, requireApiActor } from "@/lib/auth/api-guard"
+import { normalizeRoles } from "@/lib/auth/rbac"
+import { createUserManagementModule } from "@/backend/modules/user-management"
 
-import { UserService } from '@/backend/services/UserService'
-import { UserRepository } from '@/backend/repositories/UserRepository'
-import { BadgeRepository, UserBadgeRepository } from '@/backend/repositories/BadgeRepository'
+const userManagementModule = createUserManagementModule()
 
-const userService = new UserService(
-  new UserRepository(),
-  new BadgeRepository(),
-  new UserBadgeRepository(),
-)
-
-// PATCH: Atualizar roles do usuário
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    const params = await context.params;
-    const id = parseInt(params.id);
-    const body = await request.json();
-    const { action, role, roles } = body;
+    const auth = await requireApiActor()
+    if (auth.error) return auth.error
 
-    let user;
-    switch (action) {
-      case "add":
-        if (!role) {
-          return NextResponse.json({ error: "Role é obrigatório para adicionar" }, { status: 400 });
-        }
-        user = await userService.addRole(id, role);
-        break;
-      case "remove":
-        if (!role) {
-          return NextResponse.json({ error: "Role é obrigatório para remover" }, { status: 400 });
-        }
-        user = await userService.removeRole(id, role);
-        break;
-      case "set":
-        if (!roles || !Array.isArray(roles)) {
-          return NextResponse.json({ error: "Roles array é obrigatório para definir" }, { status: 400 });
-        }
-        user = await userService.setRoles(id, roles);
-        break;
-      default:
-        return NextResponse.json({ error: "Ação inválida" }, { status: 400 });
+    const deny = ensurePermission(auth.actor, "MANAGE_USERS")
+    if (deny) return deny
+
+    const params = await context.params
+    const id = Number(params.id)
+    if (!Number.isInteger(id) || id <= 0) {
+      return NextResponse.json({ error: "Usuário inválido" }, { status: 400 })
     }
 
-    return NextResponse.json({ user });
-  } catch (error: any) {
-    console.error("Erro ao atualizar roles do usuário:", error);
-    return NextResponse.json({ error: error.message || "Erro ao atualizar roles do usuário" }, { status: 500 });
+    const body = await request.json()
+    const action = body?.action
+
+    if (!["add", "remove", "set"].includes(action)) {
+      return NextResponse.json({ error: "Ação inválida" }, { status: 400 })
+    }
+
+    const role = typeof body?.role === "string" ? body.role : undefined
+    const normalizedRoles = normalizeRoles(body?.roles) as UserRole[]
+
+    if (action !== "set" && !role) {
+      return NextResponse.json({ error: "Role é obrigatório" }, { status: 400 })
+    }
+
+    if (action === "set" && !Array.isArray(body?.roles)) {
+      return NextResponse.json({ error: "Roles array é obrigatório para definir" }, { status: 400 })
+    }
+
+    const user = await userManagementModule.updateUserRoles({
+      userId: id,
+      action,
+      role: role as UserRole | undefined,
+      roles: normalizedRoles,
+    })
+
+    return NextResponse.json({ user })
+  } catch (error: unknown) {
+    console.error("Erro ao atualizar roles do usuário:", error)
+    const message = error instanceof Error ? error.message : "Erro ao atualizar roles do usuário"
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }
-

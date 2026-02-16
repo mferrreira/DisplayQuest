@@ -1,14 +1,15 @@
 import { NextResponse } from "next/server"
-import { RewardService } from "@/backend/services/RewardService";
-import { RewardRepository } from "@/backend/repositories/RewardRepository";
+import { ensurePermission, requireApiActor } from "@/lib/auth/api-guard";
+import { createStoreModule } from "@/backend/modules/store";
 
-const rewardService = new RewardService(
-  new RewardRepository(),
-)
+const storeModule = createStoreModule()
 
 export async function GET() {
   try {
-    const rewards = await rewardService.findAll();
+    const auth = await requireApiActor();
+    if (auth.error) return auth.error;
+
+    const rewards = await storeModule.listRewards();
     return NextResponse.json({ rewards });
   } catch (error: any) {
     console.error('Erro ao buscar recompensas:', error);
@@ -18,8 +19,13 @@ export async function GET() {
 
 export async function POST(request: Request) {
     try {
+      const auth = await requireApiActor();
+      if (auth.error) return auth.error;
+      const deny = ensurePermission(auth.actor, "MANAGE_REWARDS");
+      if (deny) return deny;
+
       const data = await request.json();
-      const reward = await rewardService.create(data);
+      const reward = await storeModule.createReward(data);
       return new Response(JSON.stringify({ reward: reward.toPrisma() }), { 
         status: 201, 
         headers: { 'Content-Type': 'application/json' } 

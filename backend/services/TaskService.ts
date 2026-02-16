@@ -2,10 +2,10 @@ import { Task, ITask } from '../models/Task';
 import { TaskRepository, ITaskRepository } from '../repositories/TaskRepository';
 import { UserRepository } from '../repositories/UserRepository';
 import { ProjectRepository } from '../repositories/ProjectRepository';
-import { HistoryService } from './HistoryService';
-import { HistoryRepository } from '../repositories/HistoryRepository';
-import { NotificationService } from './NotificationService';
-import { NotificationRepository } from '../repositories/NotificationRepository';
+import { createNotificationsModule, NotificationsModule } from '@/backend/modules/notifications';
+import { createIdentityAccessModule, IdentityAccessModule } from '@/backend/modules/identity-access';
+import { createTaskProgressEvents } from './infrastructure/gamification-task-progress.events';
+import type { TaskProgressEvents } from './ports/task-progress.events';
 
 export interface ITaskService {
   findById(id: number): Promise<Task | null>;
@@ -24,19 +24,19 @@ export interface ITaskService {
 }
 
 export class TaskService implements ITaskService {
-  private historyService: HistoryService;
-  private notificationService: NotificationService;
+  private notificationsModule: NotificationsModule;
+  private taskProgressEvents: TaskProgressEvents;
+  private identityAccess: IdentityAccessModule;
 
   constructor(
     private taskRepository: ITaskRepository,
     private userRepository: UserRepository,
-    private projectRepository: ProjectRepository
+    private projectRepository: ProjectRepository,
+    taskProgressEvents?: TaskProgressEvents,
   ) {
-    const historyRepository = new HistoryRepository();
-    this.historyService = new HistoryService(historyRepository, userRepository);
-    
-    const notificationRepository = new NotificationRepository();
-    this.notificationService = new NotificationService(notificationRepository);
+    this.notificationsModule = createNotificationsModule();
+    this.taskProgressEvents = taskProgressEvents || createTaskProgressEvents();
+    this.identityAccess = createIdentityAccessModule();
   }
 
   async findById(id: number): Promise<Task | null> {
@@ -78,9 +78,7 @@ export class TaskService implements ITaskService {
 
     const task = Task.create(data);
     const createdTask = await this.taskRepository.create(task);
-    
-    await this.historyService.recordEntityCreation('TASK', createdTask.id!, creatorId, createdTask.toJSON());
-    
+
     return createdTask;
   }
 
@@ -96,9 +94,12 @@ export class TaskService implements ITaskService {
     }
 
     const userRoles = user.roles || [];
-    let canModifyCompleted = userRoles.some(role => 
-      ['COORDENADOR', 'LABORATORISTA', 'GERENTE_PROJETO', "GERENTE"].includes(role)
-    );
+    let canModifyCompleted = this.identityAccess.hasAnyRole(userRoles, [
+      'COORDENADOR',
+      'LABORATORISTA',
+      'GERENTE_PROJETO',
+      'GERENTE',
+    ]);
 
     if (!canModifyCompleted && existingTask.projectId) {
       const project = await this.projectRepository.findById(existingTask.projectId);
@@ -134,11 +135,11 @@ export class TaskService implements ITaskService {
       if (oldStatus !== 'in-review' && data.status === 'in-review' && existingTask.projectId) {
         const project = await this.projectRepository.findById(existingTask.projectId);
         if (project && project.leaderId) {
-          await this.notificationService.createTaskReviewRequest(
+          await this.publishTaskReviewRequest(
             existingTask.id!,
             existingTask.title,
             userId,
-            project.leaderId
+            project.leaderId,
           );
         }
       }
@@ -153,11 +154,8 @@ export class TaskService implements ITaskService {
       existingTask.setDueDate(data.dueDate);
     }
 
-    const oldTaskData = existingTask.toJSON();
     const updatedTask = await this.taskRepository.update(id, existingTask);
-    
-    await this.historyService.recordEntityUpdate('TASK', id, userId, oldTaskData, updatedTask.toJSON());
-    
+
     return updatedTask;
   }
 
@@ -167,10 +165,7 @@ export class TaskService implements ITaskService {
       throw new Error('Tarefa não encontrada');
     }
 
-    const taskData = task.toJSON();
     await this.taskRepository.delete(id);
-    
-    await this.historyService.recordEntityDeletion('TASK', id, userId, taskData);
   }
 
   async findByAssigneeId(userId: number): Promise<Task[]> {
@@ -191,7 +186,11 @@ export class TaskService implements ITaskService {
   }
 
   async getTasksForUser(userId: number, userRoles: string[]): Promise<Task[]> {
-    const hasManageTasksPermission = userRoles.includes('COORDENADOR') || userRoles.includes('GERENTE') || userRoles.includes('COLABORADOR')
+    const hasManageTasksPermission = this.identityAccess.hasAnyRole(userRoles, [
+      'COORDENADOR',
+      'GERENTE',
+      'COLABORADOR',
+    ]);
 
     if (hasManageTasksPermission) {
       return await this.taskRepository.findAll();
@@ -221,14 +220,13 @@ export class TaskService implements ITaskService {
       throw new Error('Usuário não encontrado');
     }
 
-    if (task.projectId && user.roles.includes('GERENTE_PROJETO')) {
+    if (task.projectId && this.identityAccess.hasAnyRole(user.roles, ['GERENTE_PROJETO'])) {
       const project = await this.projectRepository.findById(task.projectId);
       if (project && project.leaderId === userId && task.assignedTo === userId) {
         throw new Error('Líderes de projeto não podem concluir suas próprias tasks. Delegue para outro membro da equipe.');
       }
     }
 
-    const oldTaskData = task.toJSON();
     task.complete();
     const updatedTask = await this.taskRepository.update(taskId, task);
     
@@ -236,18 +234,11 @@ export class TaskService implements ITaskService {
     const pointsToAward = task.points - latePenalty;
     
     if (pointsToAward !== 0) {
-      if (latePenalty > 0) {
-        user.applyPenalty(pointsToAward);
-        console.log(`Usuário ${user.id} perdeu ${latePenalty} pontos por atraso na task ${task.id}`);
-      } else {
-        user.addPoints(pointsToAward);
-      }
-      
       user.incrementCompletedTasks();
       await this.userRepository.update(user);
     }
     
-    await this.historyService.recordEntityUpdate('TASK', taskId, userId, oldTaskData, updatedTask.toJSON());
+    await this.publishTaskCompletionAward(userId, taskId, pointsToAward);
     
     return updatedTask;
   }
@@ -267,13 +258,16 @@ export class TaskService implements ITaskService {
       throw new Error('Usuário aprovador não encontrado');
     }
 
-    const canApproveAnyTask = approver.roles.includes('COORDENADOR') || approver.roles.includes('GERENTE');
+    const canApproveAnyTask = this.identityAccess.hasPermission(approver.roles, 'MANAGE_USERS');
     
-    const canApproveProjectTask = approver.roles.includes('GERENTE_PROJETO') && task.projectId;
+    const canApproveProjectTask =
+      this.identityAccess.hasAnyRole(approver.roles, ['GERENTE_PROJETO']) &&
+      task.projectId !== null &&
+      task.projectId !== undefined;
     
     if (!canApproveAnyTask) {
       if (canApproveProjectTask) {
-        const project = await this.projectRepository.findById(task.projectId);
+        const project = await this.projectRepository.findById(task.projectId!);
         if (!project || project.leaderId !== leaderId) {
           throw new Error('Usuário não é líder do projeto');
         }
@@ -282,8 +276,6 @@ export class TaskService implements ITaskService {
       }
     }
 
-    const oldTaskData = task.toJSON();
-    
     task.updateStatus('done');
     task.markAsCompleted();
     
@@ -294,22 +286,14 @@ export class TaskService implements ITaskService {
       if (user && task.points > 0) {
         const latePenalty = this.calculateLatePenalty(task, new Date());
         const pointsToAward = task.points - latePenalty;
-        
-        if (latePenalty > 0) {
-          user.applyPenalty(pointsToAward);
-          console.log(`Usuário ${user.id} perdeu ${latePenalty} pontos por atraso na task ${task.id} (aprovada)`);
-        } else {
-          user.addPoints(pointsToAward);
-        }
-        
+
         user.incrementCompletedTasks();
         await this.userRepository.update(user);
+        await this.publishTaskCompletionAward(task.assignedTo, taskId, pointsToAward);
       }
 
-      await this.notificationService.createTaskApproved(taskId, task.title, task.assignedTo);
+      await this.publishTaskApproved(taskId, task.title, task.assignedTo);
     }
-
-    await this.historyService.recordEntityUpdate('TASK', taskId, leaderId, oldTaskData, updatedTask.toJSON());
 
     return updatedTask;
   }
@@ -329,13 +313,16 @@ export class TaskService implements ITaskService {
       throw new Error('Usuário aprovador não encontrado');
     }
 
-    const canRejectAnyTask = approver.roles.includes('COORDENADOR') || approver.roles.includes('GERENTE');
+    const canRejectAnyTask = this.identityAccess.hasPermission(approver.roles, 'MANAGE_USERS');
     
-    const canRejectProjectTask = approver.roles.includes('GERENTE_PROJETO') && task.projectId;
+    const canRejectProjectTask =
+      this.identityAccess.hasAnyRole(approver.roles, ['GERENTE_PROJETO']) &&
+      task.projectId !== null &&
+      task.projectId !== undefined;
     
     if (!canRejectAnyTask) {
       if (canRejectProjectTask) {
-        const project = await this.projectRepository.findById(task.projectId);
+        const project = await this.projectRepository.findById(task.projectId!);
         if (!project || project.leaderId !== leaderId) {
           throw new Error('Usuário não é líder do projeto');
         }
@@ -344,21 +331,87 @@ export class TaskService implements ITaskService {
       }
     }
 
-    const oldTaskData = task.toJSON();
     task.updateStatus('adjust');
     const updatedTask = await this.taskRepository.update(taskId, task);
 
     if (task.assignedTo) {
-      await this.notificationService.createTaskRejected(taskId, task.title, task.assignedTo, reason);
+      await this.publishTaskRejected(taskId, task.title, task.assignedTo, reason);
     }
-
-    await this.historyService.recordEntityUpdate('TASK', taskId, leaderId, oldTaskData, updatedTask.toJSON());
 
     return updatedTask;
   }
 
   private canCreateGlobalQuest(user: any): boolean {
-    return user.roles && (user.roles.includes('COORDENADOR') || user.roles.includes('GERENTE'));
+    return this.identityAccess.hasPermission(user?.roles, 'MANAGE_USERS');
+  }
+
+  private async publishTaskReviewRequest(taskId: number, taskTitle: string, userId: number, projectLeaderId: number) {
+    try {
+      const user = await this.userRepository.findById(userId)
+      const userName = user?.name || 'Um usuário'
+      await this.notificationsModule.publishEvent({
+        eventType: 'TASK_REVIEW_REQUEST',
+        title: 'Tarefa em Revisão',
+        message: `${userName} marcou a tarefa "${taskTitle}" como "Em Revisão"`,
+        data: {
+          taskId,
+          taskTitle,
+          userId,
+          userName,
+        },
+        triggeredByUserId: userId,
+        audience: {
+          mode: 'USER_IDS',
+          userIds: [projectLeaderId],
+        },
+      })
+    } catch (error) {
+      console.error('Erro ao publicar notificação TASK_REVIEW_REQUEST:', error)
+    }
+  }
+
+  private async publishTaskApproved(taskId: number, taskTitle: string, userId: number) {
+    try {
+      await this.notificationsModule.publishEvent({
+        eventType: 'TASK_APPROVED',
+        title: 'Tarefa Aprovada',
+        message: `Sua tarefa "${taskTitle}" foi aprovada! Você recebeu os pontos.`,
+        data: {
+          taskId,
+          taskTitle,
+        },
+        audience: {
+          mode: 'USER_IDS',
+          userIds: [userId],
+        },
+      })
+    } catch (error) {
+      console.error('Erro ao publicar notificação TASK_APPROVED:', error)
+    }
+  }
+
+  private async publishTaskRejected(taskId: number, taskTitle: string, userId: number, reason?: string) {
+    const message = reason
+      ? `Sua tarefa "${taskTitle}" precisa de ajustes. Motivo: ${reason}`
+      : `Sua tarefa "${taskTitle}" precisa de ajustes.`
+    try {
+      await this.notificationsModule.publishEvent({
+        eventType: 'TASK_REJECTED',
+        title: 'Tarefa Rejeitada',
+        message,
+        data: {
+          taskId,
+          taskTitle,
+          reason,
+        },
+        audience: {
+          mode: 'USER_IDS',
+          userIds: [userId],
+        },
+      })
+    } catch (error) {
+      console.error('Erro ao publicar notificação TASK_REJECTED:', error)
+    }
   }
 
   private calculateLatePenalty(task: Task, completionDate: Date): number {
@@ -380,5 +433,17 @@ export class TaskService implements ITaskService {
     console.log(`Task ${task.id} atrasada por ${daysLate} dias. Penalização: ${penalty} pontos (${daysLate} × ${task.points})`);
     
     return penalty;
+  }
+
+  private async publishTaskCompletionAward(userId: number, taskId: number, taskPoints: number) {
+    try {
+      await this.taskProgressEvents.onTaskCompleted({
+        userId,
+        taskId,
+        taskPoints,
+      });
+    } catch (error) {
+      console.error('Erro ao publicar progressão de gamificação para conclusão de task:', error);
+    }
   }
 }

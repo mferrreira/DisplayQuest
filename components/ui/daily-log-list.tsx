@@ -10,8 +10,8 @@ import type { DailyLog, User } from "@/contexts/types"
 interface DailyLogListProps {
   logs: DailyLog[]
   currentUser: User | null
-  onEdit: (log: DailyLog) => void
-  onDelete: (id: number) => void
+  onEdit?: (log: DailyLog) => void
+  onDelete?: (id: number) => void
   isSubmitting: boolean
 }
 
@@ -106,7 +106,7 @@ export function DailyLogList({ logs, currentUser, onEdit, onDelete, isSubmitting
                 </div>
               </div>
 
-              {currentUser && log.userId === currentUser.id && (
+              {currentUser && log.userId === currentUser.id && onEdit && onDelete && (
                 <div className="flex gap-2 ml-4">
                   <Button
                     variant="ghost"

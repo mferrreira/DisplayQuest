@@ -1,6 +1,7 @@
 import { UserSchedule } from '../models/UserSchedule';
 import { UserScheduleRepository, IUserScheduleRepository } from '../repositories/UserScheduleRepository';
 import { UserRepository } from '../repositories/UserRepository';
+import { createIdentityAccessModule, IdentityAccessModule } from '@/backend/modules/identity-access';
 
 export interface IUserScheduleService {
     findById(id: number): Promise<UserSchedule | null>;
@@ -12,10 +13,14 @@ export interface IUserScheduleService {
 }
 
 export class UserScheduleService implements IUserScheduleService {
+    private identityAccess: IdentityAccessModule;
+
     constructor(
         private userScheduleRepo: IUserScheduleRepository,
         private userRepo: UserRepository,
-    ) {}
+    ) {
+        this.identityAccess = createIdentityAccessModule();
+    }
 
     async findById(id: number): Promise<UserSchedule | null> {
         return await this.userScheduleRepo.findById(id);
@@ -89,7 +94,7 @@ export class UserScheduleService implements IUserScheduleService {
             return false;
         }
 
-        if (user.hasAnyRole(['COORDENADOR'])) {
+        if (this.identityAccess.hasAnyRole(user.roles, ['COORDENADOR'])) {
             return true;
         }
 

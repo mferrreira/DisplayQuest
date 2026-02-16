@@ -1,10 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { AppHeader } from "@/components/layout/app-header"
-import { useDailyLogs } from "@/contexts/daily-log-context"
+import { useDailyLogs } from "@/hooks/use-daily-logs"
 import { useAuth } from "@/contexts/auth-context"
-import { DailyLogForm } from "@/components/forms/daily-log-form"
 import { DailyLogList } from "@/components/ui/daily-log-list"
 import { UserApproval } from "@/components/features/user-approval"
 import { UserSearch } from "@/components/ui/user-search"
@@ -17,26 +15,21 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Calendar, CalendarDays, User as UserIcon, Settings, Trophy, Target } from "lucide-react"
-import type { DailyLog, DailyLogFormData, User } from "@/contexts/types"
+import type { User } from "@/contexts/types"
 import { TimerCard } from "@/components/ui/timer-card"
-import { useWorkSessions } from "@/contexts/work-session-context"
+import { useWorkSessions } from "@/hooks/use-work-sessions"
 import { UserBadges } from "@/components/ui/user-badges"
 
 export default function ProfilePage() {
   const { user: authUser } = useAuth()
-  const { logs, loading, error, createLog, updateLog, deleteLog } = useDailyLogs()
-  const [submitting, setSubmitting] = useState(false)
-  const [showForm, setShowForm] = useState(false)
-  const [editingLog, setEditingLog] = useState<DailyLog | null>(null)
-  const [formError, setFormError] = useState<string | null>(null)
-  const { sessions, getWeeklyHours, endSession } = useWorkSessions()
+  const { logs } = useDailyLogs()
+  const { sessions, getWeeklyHours, fetchSessions } = useWorkSessions()
   const [user, setUser] = useState<User | null>(authUser)
   const [weeklyHours, setWeeklyHours] = useState<number>(0)
   const [viewingUser, setViewingUser] = useState<User | null>(null)
   const [showProfileForm, setShowProfileForm] = useState(false)
 
   const today = new Date()
-  const isoToday = today.toISOString().split("T")[0]
 
   const dayOfWeek = today.getDay()
   const monday = new Date(today)
@@ -45,16 +38,6 @@ export default function ProfilePage() {
   const sunday = new Date(monday)
   sunday.setDate(monday.getDate() + 6)
   sunday.setHours(23, 59, 59, 999)
-
-  const hasCompletedSessionToday =
-    Array.isArray(sessions) &&
-    sessions.filter(Boolean).some(
-      (s) =>
-        typeof s?.status === "string" &&
-        s.status === "completed" &&
-        s.startTime &&
-        new Date(s.startTime).toISOString().split("T")[0] === isoToday
-    )
 
   useEffect(() => {
     if (authUser) {
@@ -68,52 +51,6 @@ export default function ProfilePage() {
       getWeeklyHours(user.id, monday.toISOString(), sunday.toISOString()).then(setWeeklyHours)
     }
   }, [user, sessions, getWeeklyHours, monday, sunday])
-
-
-  const handleSubmit = async (formData: DailyLogFormData) => {
-    if (!user) return
-    
-    setSubmitting(true)
-    setFormError(null)
-
-    try {
-      if (editingLog) {
-        await updateLog(editingLog.id, formData)
-        setEditingLog(null)
-      } else {
-        await createLog(formData)
-      }
-      setShowForm(false)
-    } catch (err: any) {
-      setFormError(err.message || "Erro ao salvar log")
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  const handleUpdate = async (formData: DailyLogFormData) => {
-    if (!editingLog) return
-    await handleSubmit(formData)
-  }
-
-  const handleDelete = async (logId: number) => {
-    try {
-      await deleteLog(logId)
-    } catch (err: any) {
-      console.error("Error deleting log:", err)
-    }
-  }
-
-  const handleCancel = () => {
-    setShowForm(false)
-    setEditingLog(null)
-    setFormError(null)
-  }
-
-  const handleEdit = (log: DailyLog) => {
-    setEditingLog(log)
-    setShowForm(true)
-  }
 
   const handleUserSelect = (selectedUser: User) => {
     setViewingUser(selectedUser)
@@ -275,6 +212,7 @@ export default function ProfilePage() {
               {/* Timer Card */}
               <TimerCard onSessionEnd={(updatedUser) => {
                 if (updatedUser) setUser(updatedUser)
+                if (user?.id) fetchSessions(user.id)
               }} />
             </TabsContent>
 
@@ -287,31 +225,16 @@ export default function ProfilePage() {
                       <Calendar className="h-5 w-5" />
                       <span>Registros Diários</span>
                     </CardTitle>
-                    {!showForm && (
-                      <Button onClick={() => setShowForm(true)} disabled={!hasCompletedSessionToday}>
-                        Adicionar Log
-                      </Button>
-                    )}
                   </div>
                 </CardHeader>
                 <CardContent>
-                  {showForm && (
-                    <DailyLogForm
-                      initialNote={editingLog?.note || ""}
-                      onSubmit={handleSubmit}
-                      onCancel={handleCancel}
-                      isSubmitting={submitting}
-                      error={formError}
-                      userId={user.id}
-                      date={isoToday}
-                    />
-                  )}
+                  <div className="mb-4 rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+                    Registros diários agora são gerados no encerramento da Work Session.
+                  </div>
                   <DailyLogList
                     logs={logs}
                     currentUser={user}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
-                    isSubmitting={submitting}
+                    isSubmitting={false}
                   />
                 </CardContent>
               </Card>

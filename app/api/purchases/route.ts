@@ -1,16 +1,16 @@
 import { NextResponse } from "next/server"
-import { PurchaseService } from "@/backend/services/PurchaseService";
-import { PurchaseRepository } from "@/backend/repositories/PurchaseRepository";
-import { RewardRepository } from "@/backend/repositories/RewardRepository";
+import { requireApiActor } from "@/lib/auth/api-guard";
+import { hasPermission } from "@/lib/auth/rbac";
+import { createStoreModule } from "@/backend/modules/store";
 
-const purchaseService = new PurchaseService(
-  new PurchaseRepository(),
-  new RewardRepository(),
-)
+const storeModule = createStoreModule()
 
 // GET: Obter todas as compras
 export async function GET(request: Request) {
   try {
+    const auth = await requireApiActor();
+    if (auth.error) return auth.error;
+
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get("userId");
     const rewardId = searchParams.get("rewardId");
@@ -18,21 +18,28 @@ export async function GET(request: Request) {
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
 
+    const actor = auth.actor;
+    const canManagePurchases = hasPermission(actor.roles, "MANAGE_PURCHASES");
     let purchases;
     
     if (userId) {
-      purchases = await purchaseService.findByUserId(Number(userId));
+      if (!canManagePurchases && Number(userId) !== actor.id) {
+        return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
+      }
+      purchases = await storeModule.listPurchases({ userId: Number(userId) });
     } else if (rewardId) {
-      purchases = await purchaseService.findByRewardId(Number(rewardId));
+      purchases = await storeModule.listPurchases({ rewardId: Number(rewardId) });
     } else if (status) {
-      purchases = await purchaseService.findByStatus(status);
+      purchases = await storeModule.listPurchases({ status });
     } else if (startDate && endDate) {
-      purchases = await purchaseService.searchPurchases({
+      purchases = await storeModule.listPurchases({
         startDate: new Date(startDate),
         endDate: new Date(endDate)
       });
+    } else if (canManagePurchases) {
+      purchases = await storeModule.listPurchases({});
     } else {
-      purchases = await purchaseService.findAll();
+      purchases = await storeModule.listPurchases({ userId: actor.id });
     }
 
     return NextResponse.json({ purchases });
@@ -45,8 +52,23 @@ export async function GET(request: Request) {
 // POST: Criar uma nova compra (resgatar recompensa)
 export async function POST(request: Request) {
   try {
+    const auth = await requireApiActor();
+    if (auth.error) return auth.error;
+
+    const actor = auth.actor;
+    const canManagePurchases = hasPermission(actor.roles, "MANAGE_PURCHASES");
     const data = await request.json();
-    const purchase = await purchaseService.create(data);
+    const targetUserId = Number(data.userId);
+
+    if (!Number.isInteger(targetUserId)) {
+      return NextResponse.json({ error: "userId inválido" }, { status: 400 });
+    }
+
+    if (!canManagePurchases && targetUserId !== actor.id) {
+      return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
+    }
+
+    const purchase = await storeModule.createPurchase(data);
     return NextResponse.json({ purchase }, { status: 201 });
   } catch (error: any) {
     console.error('Erro ao criar compra:', error);

@@ -1,17 +1,8 @@
 import { DailyLogRepository } from '../repositories/DailyLogRepository';
 import { DailyLog } from '../models/DailyLog';
-import { HistoryService } from './HistoryService';
-import { HistoryRepository } from '../repositories/HistoryRepository';
-import { UserRepository } from '../repositories/UserRepository';
 
 export class DailyLogService {
-    private historyService: HistoryService;
-
-    constructor(private repo: DailyLogRepository) {
-        const historyRepository = new HistoryRepository();
-        const userRepository = new UserRepository();
-        this.historyService = new HistoryService(historyRepository, userRepository);
-    }
+    constructor(private repo: DailyLogRepository) {}
 
     async findById(id: number): Promise<DailyLog | null> {
         return await this.repo.findById(id);
@@ -44,10 +35,7 @@ export class DailyLogService {
         }
 
         const createdLog = await this.repo.create(dailyLog);
-        
 
-        await this.historyService.recordEntityCreation('DAILY_LOG', createdLog.id!, data.userId, createdLog.toJSON());
-        
         return createdLog;
     }
 
@@ -57,7 +45,6 @@ export class DailyLogService {
             throw new Error("Log diário não encontrado");
         }
 
-        const oldLogData = currentLog.toJSON();
         Object.assign(currentLog, data);
 
         if (!currentLog.isValid()) {
@@ -65,10 +52,7 @@ export class DailyLogService {
         }
 
         const updatedLog = await this.repo.update(currentLog);
-        
 
-        await this.historyService.recordEntityUpdate('DAILY_LOG', id, currentLog.userId, oldLogData, updatedLog.toJSON());
-        
         return updatedLog;
     }
 
@@ -78,11 +62,7 @@ export class DailyLogService {
             throw new Error("Log diário não encontrado");
         }
 
-        const logData = log.toJSON();
         await this.repo.delete(id);
-        
-
-        await this.historyService.recordEntityDeletion('DAILY_LOG', id, log.userId, logData);
     }
 
     async findByUserId(userId: number): Promise<DailyLog[]> {
@@ -163,4 +143,3 @@ export class DailyLogService {
         };
     }
 }
-

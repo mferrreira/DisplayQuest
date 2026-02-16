@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -7,6 +7,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { Trash2, UserPlus } from "lucide-react"
 import { useUser } from "@/contexts/user-context"
 import { useAuth } from "@/contexts/auth-context"
+import { useProjectMembers } from "@/hooks/use-project-members"
 
 interface ProjectMembersManagerProps {
   projectId: number
@@ -14,12 +15,17 @@ interface ProjectMembersManagerProps {
 
 export function ProjectMembersManager({ projectId }: ProjectMembersManagerProps) {
   const { user } = useAuth()
-  const [members, setMembers] = useState<any[]>([])
-  const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [addUserId, setAddUserId] = useState("")
   const [addRoles, setAddRoles] = useState<string[]>(["VOLUNTARIO"])
   const { users, loading: usersLoading } = useUser()
+  const {
+    members,
+    loading,
+    error: membersError,
+    addMember,
+    removeMember,
+  } = useProjectMembers(projectId)
 
   const canManageMembers = user && user.roles && user.roles.some((r: string) => ["GERENTE", "GERENTE_PROJETO", "COORDENADOR"].includes(r))
 
@@ -27,67 +33,24 @@ export function ProjectMembersManager({ projectId }: ProjectMembersManagerProps)
     return null
   }
 
-  const fetchMembers = async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const res = await fetch(`/api/projects/${projectId}/members`)
-      const data = await res.json()
-      setMembers(data.members || [])
-    } catch (e) {
-      setError("Erro ao buscar membros do projeto")
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    fetchMembers()
-    // eslint-disable-next-line
-  }, [projectId])
-
   const handleAddMember = async () => {
     if (!addUserId || !addRoles.length) return
-    setLoading(true)
     setError(null)
     try {
-      const res = await fetch(`/api/projects/${projectId}/members`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: addUserId, roles: addRoles }),
-      })
-      if (!res.ok) {
-        const data = await res.json()
-        setError(data.error || "Erro ao adicionar membro")
-      } else {
-        setAddUserId("")
-        setAddRoles(["VOLUNTARIO"])
-        fetchMembers()
-      }
+      await addMember(Number(addUserId), addRoles)
+      setAddUserId("")
+      setAddRoles(["VOLUNTARIO"])
     } catch (e) {
-      setError("Erro ao adicionar membro")
-    } finally {
-      setLoading(false)
+      setError(e instanceof Error ? e.message : "Erro ao adicionar membro")
     }
   }
 
-  const handleRemoveMember = async (userId: number) => {
-    setLoading(true)
+  const handleRemoveMember = async (membershipId: number) => {
     setError(null)
     try {
-      const res = await fetch(`/api/projects/${projectId}/members?userId=${userId}`, {
-        method: "DELETE",
-      })
-      if (!res.ok) {
-        const data = await res.json()
-        setError(data.error || "Erro ao remover membro")
-      } else {
-        fetchMembers()
-      }
+      await removeMember(membershipId)
     } catch (e) {
-      setError("Erro ao remover membro")
-    } finally {
-      setLoading(false)
+      setError(e instanceof Error ? e.message : "Erro ao remover membro")
     }
   }
 
@@ -105,7 +68,7 @@ export function ProjectMembersManager({ projectId }: ProjectMembersManagerProps)
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {error && <div className="text-red-600 mb-2">{error}</div>}
+        {(error || membersError) && <div className="text-red-600 mb-2">{error || membersError}</div>}
         <div className="mb-4">
           <div className="flex gap-2 items-end">
             <div className="flex-1">
@@ -145,17 +108,15 @@ export function ProjectMembersManager({ projectId }: ProjectMembersManagerProps)
             <div className="text-muted-foreground">Nenhum membro neste projeto.</div>
           ) : (
             members.map((member) => (
-              <div key={member.userId} className="flex items-center justify-between p-2 border rounded">
+              <div key={member.id} className="flex items-center justify-between p-2 border rounded">
                 <div className="flex items-center gap-2">
-                  <span className="font-medium">{member.user.name} ({member.user.email})</span>
-                  {Array.isArray(member.roles)
-                    ? member.roles.map((r: string) => <Badge key={r}>{r}</Badge>)
-                    : <Badge>{member.role}</Badge>}
+                  <span className="font-medium">{member.userName} ({member.userEmail})</span>
+                  {member.roles.map((r: string) => <Badge key={r}>{r}</Badge>)}
                 </div>
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => handleRemoveMember(member.userId)}
+                  onClick={() => handleRemoveMember(member.id)}
                   disabled={loading}
                   title="Remover do projeto"
                 >

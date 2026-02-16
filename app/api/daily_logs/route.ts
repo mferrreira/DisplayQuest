@@ -1,95 +1,68 @@
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { DailyLogController } from "@/backend/controllers/DailyLogController";
+import { NextResponse } from "next/server"
+import { DailyLogRepository } from "@/backend/repositories/DailyLogRepository"
+import { DailyLogService } from "@/backend/services/DailyLogService"
+import { hasPermission, hasRole } from "@/lib/auth/rbac"
+import { requireApiActor } from "@/lib/auth/api-guard"
 
-const dailyLogController = new DailyLogController();
+const dailyLogService = new DailyLogService(new DailyLogRepository())
 
 export async function GET(request: Request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get("userId");
-    const date = searchParams.get("date");
-    const projectId = searchParams.get("projectId");
-    const session = await getServerSession(authOptions);
-    const currentUser = session?.user as any;
+    const auth = await requireApiActor()
+    if (auth.error) return auth.error
 
-    let logs;
-    
+    const { searchParams } = new URL(request.url)
+    const userId = searchParams.get("userId")
+    const date = searchParams.get("date")
+    const projectId = searchParams.get("projectId")
+    const currentUser = auth.actor
+    const canViewAllLogs =
+      hasPermission(currentUser.roles, "MANAGE_USERS") ||
+      hasRole(currentUser.roles, "LABORATORISTA")
+
+    let logs
+
     if (userId) {
+      if (!canViewAllLogs && Number(userId) !== currentUser.id) {
+        return NextResponse.json({ error: "Acesso negado." }, { status: 403 })
+      }
       if (date) {
-        logs = await dailyLogController.getLogsByDateRange(
-          Number(userId), 
-          new Date(date), 
-          new Date(date)
-        );
+        logs = await dailyLogService.findByDateRange(
+          Number(userId),
+          new Date(date),
+          new Date(date),
+        )
       } else {
-        logs = await dailyLogController.getLogsByUser(Number(userId));
+        logs = await dailyLogService.findByUserId(Number(userId))
       }
     } else if (projectId) {
-      logs = await dailyLogController.getLogsByProject(Number(projectId));
+      if (!canViewAllLogs) {
+        return NextResponse.json({ error: "Acesso negado." }, { status: 403 })
+      }
+      logs = await dailyLogService.findByProjectId(Number(projectId))
     } else {
-      if (currentUser) {
-        if (currentUser.role === "voluntario") {
-          logs = await dailyLogController.getLogsByUser(currentUser.id);
-        } else {
-          logs = await dailyLogController.getAllLogs();
-        }
+      if (canViewAllLogs) {
+        logs = await dailyLogService.findAll()
       } else {
-        logs = await dailyLogController.getAllLogs();
+        logs = await dailyLogService.findByUserId(currentUser.id)
       }
     }
 
-    return NextResponse.json({ logs });
+    return NextResponse.json({ logs })
   } catch (error) {
-    console.error("Erro ao buscar logs diários:", error);
-    return NextResponse.json({ error: "Erro ao buscar logs diários" }, { status: 500 });
+    console.error("Erro ao buscar logs diários:", error)
+    return NextResponse.json({ error: "Erro ao buscar logs diários" }, { status: 500 })
   }
 }
 
 export async function POST(request: Request) {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
-    }
-    
-    const body = await request.json();
-    const { userId, date, note, projectId, workSessionId } = body;
-    
-    if (!userId) {
-      return NextResponse.json({ error: "userId é obrigatório" }, { status: 400 });
-    }
-    
-    let logDate: Date;
-    if (!date) {
-      logDate = new Date();
-    } else if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      const [year, month, day] = date.split('-').map(Number);
-      logDate = new Date(year, month - 1, day, 0, 0, 0, 0);
-    } else {
-      logDate = new Date(date);
-    }
-    
-    const user = session.user as any;
-    if (user.roles.includes('COLABORADOR')) {
-      return NextResponse.json({ error: 'Acesso negado.' }, { status: 403 });
-    }
-    if (!user.roles.includes('COORDENADOR') && user.id !== userId) {
-      return NextResponse.json({ error: 'Acesso negado.' }, { status: 403 });
-    }
-    
-    const log = await dailyLogController.createLog({ 
-      userId, 
-      date: logDate, 
-      note: note || null,
-      projectId: projectId || null,
-      workSessionId: workSessionId || null
-    });
-    
-    return NextResponse.json({ log });
-  } catch (error) {
-    console.error("Erro ao criar log diário:", error);
-    return NextResponse.json({ error: "Erro ao criar log diário" }, { status: 500 });
-  }
-} 
+  void request
+  return NextResponse.json(
+    {
+      error: "Criação manual de daily log foi descontinuada. Finalize a work session para registrar o log.",
+      deprecated: true,
+      replacement: "PATCH /api/work-sessions/:id com status=completed e dailyLogNote",
+    },
+    { status: 410 },
+  )
+}

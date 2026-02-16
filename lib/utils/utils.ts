@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { isRole } from "@/lib/auth/rbac"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -46,8 +47,7 @@ export function validateEmail(email: string): { valid: boolean; error?: string }
 
 // Refatorar validateRole para aceitar array de roles e validar todos os papéis.
 export function validateRole(role: string): { valid: boolean; error?: string } {
-  const validRoles = ["administrador_laboratorio", "laboratorista", "gerente_projeto", "voluntario"]
-  if (!validRoles.includes(role)) {
+  if (!isRole(role)) {
     return { valid: false, error: "Função inválida" }
   }
   return { valid: true }
@@ -55,9 +55,8 @@ export function validateRole(role: string): { valid: boolean; error?: string } {
 
 // Nova função para validar múltiplos papéis
 export function validateRoles(roles: string[]): { valid: boolean; error?: string } {
-  const validRoles = ['COORDENADOR', 'GERENTE', 'LABORATORISTA', 'PESQUISADOR', 'GERENTE_PROJETO', 'COLABORADOR'];
   for (const role of roles) {
-    if (!validRoles.includes(role)) {
+    if (!isRole(role)) {
       return { valid: false, error: `Papel inválido: ${role}` };
     }
   }

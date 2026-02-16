@@ -1,19 +1,15 @@
 import { Issue, IssueStatus, IssuePriority } from '../models/Issue';
 import { IssueRepository } from '../repositories/IssueRepository';
 import { UserRepository } from '../repositories/UserRepository';
-import { HistoryService } from './HistoryService';
 
 export class IssueService {
     private userRepo?: UserRepository;
-    private historyService?: HistoryService;
 
     constructor(
         private issueRepo: IssueRepository,
         userRepo?: UserRepository,
-        historyService?: HistoryService
     ) {
         this.userRepo = userRepo;
-        this.historyService = historyService;
     }
 
 
@@ -98,15 +94,8 @@ export class IssueService {
             }
         }
 
-        const oldData = issue.toJSON();
         issue.assignTo(assigneeId);
-        const updatedIssue = await this.issueRepo.update(issue);
-
-        if (this.historyService) {
-            await this.historyService.recordEntityUpdate('ISSUE', issueId, issueId, oldData, updatedIssue.toJSON());
-        }
-
-        return updatedIssue;
+        return await this.issueRepo.update(issue);
     }
 
     async unassignIssue(issueId: number): Promise<Issue> {
@@ -115,15 +104,8 @@ export class IssueService {
             throw new Error("Issue não encontrado");
         }
 
-        const oldData = issue.toJSON();
         issue.unassign();
-        const updatedIssue = await this.issueRepo.update(issue);
-
-        if (this.historyService) {
-            await this.historyService.recordEntityUpdate('ISSUE', issueId, issueId, oldData, updatedIssue.toJSON());
-        }
-
-        return updatedIssue;
+        return await this.issueRepo.update(issue);
     }
 
     async startProgress(issueId: number): Promise<Issue> {
@@ -132,15 +114,8 @@ export class IssueService {
             throw new Error("Issue não encontrado");
         }
 
-        const oldData = issue.toJSON();
         issue.startProgress();
-        const updatedIssue = await this.issueRepo.update(issue);
-
-        if (this.historyService) {
-            await this.historyService.recordEntityUpdate('ISSUE', issueId, issueId, oldData, updatedIssue.toJSON());
-        }
-
-        return updatedIssue;
+        return await this.issueRepo.update(issue);
     }
 
     async resolveIssue(issueId: number, resolution?: string): Promise<Issue> {
@@ -149,20 +124,13 @@ export class IssueService {
             throw new Error("Issue não encontrado");
         }
 
-        const oldData = issue.toJSON();
         issue.resolve();
         
         if (resolution) {
             issue.setResolution(resolution);
         }
 
-        const updatedIssue = await this.issueRepo.update(issue);
-
-        if (this.historyService) {
-            await this.historyService.recordEntityUpdate('ISSUE', issueId, issueId, oldData, updatedIssue.toJSON());
-        }
-
-        return updatedIssue;
+        return await this.issueRepo.update(issue);
     }
 
     async closeIssue(issueId: number): Promise<Issue> {
@@ -171,15 +139,8 @@ export class IssueService {
             throw new Error("Issue não encontrado");
         }
 
-        const oldData = issue.toJSON();
         issue.close();
-        const updatedIssue = await this.issueRepo.update(issue);
-
-        if (this.historyService) {
-            await this.historyService.recordEntityUpdate('ISSUE', issueId, issueId, oldData, updatedIssue.toJSON());
-        }
-
-        return updatedIssue;
+        return await this.issueRepo.update(issue);
     }
 
     async reopenIssue(issueId: number): Promise<Issue> {
@@ -188,15 +149,8 @@ export class IssueService {
             throw new Error("Issue não encontrado");
         }
 
-        const oldData = issue.toJSON();
         issue.reopen();
-        const updatedIssue = await this.issueRepo.update(issue);
-
-        if (this.historyService) {
-            await this.historyService.recordEntityUpdate('ISSUE', issueId, issueId, oldData, updatedIssue.toJSON());
-        }
-
-        return updatedIssue;
+        return await this.issueRepo.update(issue);
     }
 
     async searchIssues(query: {

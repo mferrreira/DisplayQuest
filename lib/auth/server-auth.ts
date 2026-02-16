@@ -2,99 +2,98 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import type { NextRequest } from "next/server"
 import { createApiError } from "../utils/utils"
+import {
+  hasPermission as canAccessPermission,
+  hasRole as hasRbacRole,
+  type Permission,
+  type Role,
+  ROLE_VALUES,
+} from "./rbac"
+import { FEATURE_ACCESS, hasFeatureAccess } from "./features"
 
-export async function getUserFromRequest(req: NextRequest) {
+export async function getUserFromRequest(_req: NextRequest) {
   const session = await getServerSession(authOptions)
   return session?.user || null
 }
 
-export function hasRole(user: any, roles: string | string[]): boolean {
-  if (!user || !user.roles) return false;
-  if (Array.isArray(roles)) {
-    return user.roles.some((r: string) => roles.includes(r));
-  }
-  return user.roles.includes(roles);
+export function hasRole(user: any, roles: Role | Role[]): boolean {
+  if (!user || !user.roles) return false
+  return hasRbacRole(user.roles, roles)
 }
-
 
 export async function requireAuth(): Promise<{ user: any; error?: Response }> {
   const session = await getServerSession(authOptions)
-  
+
   if (!session?.user) {
     return { user: null, error: createApiError("Não autorizado", 401) }
   }
-  
+
   return { user: session.user }
 }
 
-export async function requireRole(roles: string | string[]): Promise<{ user: any; error?: Response }> {
+export async function requireRole(roles: Role | Role[]): Promise<{ user: any; error?: Response }> {
   const authResult = await requireAuth()
   if (authResult.error) return authResult
-  
+
   if (!hasRole(authResult.user, roles)) {
     return { user: null, error: createApiError("Acesso negado", 403) }
   }
-  
+
+  return { user: authResult.user }
+}
+
+export async function requirePermission(permission: Permission): Promise<{ user: any; error?: Response }> {
+  const authResult = await requireAuth()
+  if (authResult.error) return authResult
+
+  if (!canAccessPermission(authResult.user?.roles, permission)) {
+    return { user: null, error: createApiError("Acesso negado", 403) }
+  }
+
   return { user: authResult.user }
 }
 
 export async function requireActiveUser(): Promise<{ user: any; error?: Response }> {
   const authResult = await requireAuth()
   if (authResult.error) return authResult
-  
+
   if (authResult.user.status !== "active") {
     return { user: null, error: createApiError("Usuário não está ativo", 403) }
   }
-  
+
   return { user: authResult.user }
 }
 
-
 export const ROLES = {
-  COORDENADOR: 'COORDENADOR',
-  GERENTE: 'GERENTE',
-  LABORATORISTA: 'LABORATORISTA',
-  PESQUISADOR: 'PESQUISADOR',
-  GERENTE_PROJETO: 'GERENTE_PROJETO',
-  COLABORADOR: 'COLABORADOR',
-};
+  COORDENADOR: "COORDENADOR",
+  GERENTE: "GERENTE",
+  LABORATORISTA: "LABORATORISTA",
+  PESQUISADOR: "PESQUISADOR",
+  GERENTE_PROJETO: "GERENTE_PROJETO",
+  COLABORADOR: "COLABORADOR",
+  VOLUNTARIO: "VOLUNTARIO",
+} as const
 
-export function canManageUsers(userRoles: string[]): boolean {
-  return userRoles.includes(ROLES.COORDENADOR) || userRoles.includes(ROLES.GERENTE);
+export function canManageUsers(userRoles: unknown): boolean {
+  return canAccessPermission(userRoles, "MANAGE_USERS")
 }
 
-export function canManageProjects(userRoles: string[]): boolean {
-  return userRoles.includes(ROLES.COORDENADOR) || userRoles.includes(ROLES.GERENTE) || userRoles.includes(ROLES.GERENTE_PROJETO);
+export function canManageProjects(userRoles: unknown): boolean {
+  return canAccessPermission(userRoles, "MANAGE_PROJECTS")
 }
 
-export function canManageTasks(userRoles: string[]): boolean {
-  return userRoles.includes(ROLES.COORDENADOR) || userRoles.includes(ROLES.GERENTE) || userRoles.includes(ROLES.GERENTE_PROJETO);
+export function canManageTasks(userRoles: unknown): boolean {
+  return canAccessPermission(userRoles, "MANAGE_TASKS")
 }
 
-export function canViewAllData(userRoles: string[]): boolean {
-  return userRoles.includes(ROLES.COORDENADOR) || userRoles.includes(ROLES.GERENTE);
-} 
+export function canViewAllData(userRoles: unknown): boolean {
+  return hasFeatureAccess(userRoles, "VIEW_ALL_DATA")
+}
 
-export const ACCESS_CONTROL = {
+export const ACCESS_CONTROL = FEATURE_ACCESS
 
-  DASHBOARD_ADMIN: ['COORDENADOR', 'GERENTE'],
-  DASHBOARD_WEEKLY_REPORTS: ['COORDENADOR', 'GERENTE', 'LABORATORISTA'],
-  DASHBOARD_PROJETOS: ['COORDENADOR', 'GERENTE', 'GERENTE_PROJETO', 'COLABORADOR', 'VOLUNTARIO'],
-  MANAGE_REWARDS: ['GERENTE_PROJETO', 'COORDENADOR', 'GERENTE'],
-  MANAGE_USERS: ['COORDENADOR', 'GERENTE'],
-  MANAGE_PROJECTS: ['COORDENADOR', 'GERENTE'],
-  MANAGE_TASKS: ['COORDENADOR', 'GERENTE', 'GERENTE_PROJETO', 'COLABORADOR'],
-  VIEW_ALL_DATA: ['COORDENADOR', 'GERENTE', 'LABORATORISTA'],
-  EDIT_PROJECT: ['COORDENADOR', 'GERENTE', 'GERENTE_PROJETO'],
-  CREATE_TASK: ['COORDENADOR', 'GERENTE', 'GERENTE_PROJETO', 'COLABORADOR'],
-  MANAGE_PROJECT_MEMBERS: ['COORDENADOR', 'GERENTE', 'GERENTE_PROJETO'],
+export function hasAccess(userRoles: unknown, feature: keyof typeof ACCESS_CONTROL): boolean {
+  return hasFeatureAccess(userRoles, feature)
+}
 
-};
-
-
-export function hasAccess(userRoles: string[], feature: keyof typeof ACCESS_CONTROL): boolean {
-  const allowedRoles = ACCESS_CONTROL[feature];
-  return userRoles.some((role) => allowedRoles.includes(role));
-} 
-
-export { authOptions }
+export { authOptions, ROLE_VALUES }

@@ -2,11 +2,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
 import { useState, useEffect } from "react";
-import { useWorkSessions } from "@/contexts/work-session-context";
-import type { User } from "@/contexts/types";
+import type { User, WorkSession } from "@/contexts/types";
 
 interface UserWeeklyHoursTableProps {
   users: User[];
+  sessions: WorkSession[];
 }
 
 interface WeeklyHistory {
@@ -17,8 +17,7 @@ interface WeeklyHistory {
   weekEnd: string;
 }
 
-export function UserWeeklyHoursTable({ users }: UserWeeklyHoursTableProps) {
-  const { sessions } = useWorkSessions();
+export function UserWeeklyHoursTable({ users, sessions }: UserWeeklyHoursTableProps) {
   const [currentWeekStart, setCurrentWeekStart] = useState<Date>(() => {
     // Inicializar com a segunda-feira da semana atual
     const today = new Date();

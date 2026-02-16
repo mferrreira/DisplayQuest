@@ -1,27 +1,15 @@
 import { User } from '../models/user/User';
 import { UserRepository } from '../repositories/UserRepository';
-import { BadgeService } from './BadgeService';
-import { BadgeRepository, UserBadgeRepository } from '../repositories/BadgeRepository';
-import { HistoryRepository } from '../repositories/HistoryRepository';
-import { BadgeEvaluationService } from './BadgeEvaluationService';
 import { UserRole } from '@prisma/client';
+import { createIdentityAccessModule, IdentityAccessModule } from '@/backend/modules/identity-access';
 
 export class UserService {
-    private badgeService?: BadgeService;
-    private badgeEvaluationService?: BadgeEvaluationService;
+    private identityAccess: IdentityAccessModule;
 
     constructor(
         private userRepo: UserRepository,
-        badgeRepo?: BadgeRepository,
-        userBadgeRepo?: UserBadgeRepository
     ) {
-
-        if (badgeRepo && userBadgeRepo) {
-            this.badgeService = new BadgeService(badgeRepo, userBadgeRepo);
-        }
-        
-
-        this.badgeEvaluationService = new BadgeEvaluationService();
+        this.identityAccess = createIdentityAccessModule();
     }
 
 
@@ -383,7 +371,7 @@ export class UserService {
         }
 
         // Se for líder de projeto, verificar se o usuário pertence ao projeto
-        if (data.projectId && data.deductedByRoles.includes('GERENTE_PROJETO')) {
+        if (data.projectId && this.identityAccess.hasAnyRole(data.deductedByRoles, ['GERENTE_PROJETO'])) {
             const isUserInProject = await this.isUserInProject(userId, data.projectId);
             if (!isUserInProject) {
                 throw new Error("Usuário não pertence ao projeto");
@@ -415,12 +403,12 @@ export class UserService {
 
     private canDeductHours(roles: string[], projectId?: number): boolean {
         // Coordenadores e Gerentes podem retirar horas de qualquer usuário
-        if (roles.includes('COORDENADOR') || roles.includes('GERENTE')) {
+        if (this.identityAccess.hasPermission(roles, 'MANAGE_USERS')) {
             return true;
         }
 
         // Líderes de projeto podem retirar horas apenas de usuários do seu projeto
-        if (roles.includes('GERENTE_PROJETO') && projectId) {
+        if (this.identityAccess.hasAnyRole(roles, ['GERENTE_PROJETO']) && projectId) {
             return true;
         }
 

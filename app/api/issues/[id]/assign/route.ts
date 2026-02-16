@@ -1,13 +1,28 @@
 import { NextResponse } from "next/server";
-import { IssueController } from "@/backend/controllers/IssueController";
+import { createLabOperationsModule } from "@/backend/modules/lab-operations";
+import { requireApiActor } from "@/lib/auth/api-guard";
+import { hasPermission } from "@/lib/auth/rbac";
 
-const issueController = new IssueController();
+const labOperationsModule = createLabOperationsModule();
 
 // POST: Atribuir issue a um usuário
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    const auth = await requireApiActor();
+    if (auth.error) return auth.error;
+
     const params = await context.params;
     const issueId = parseInt(params.id);
+    const currentIssue = await labOperationsModule.getIssue(issueId);
+    if (!currentIssue) {
+      return NextResponse.json({ error: "Issue não encontrado" }, { status: 404 });
+    }
+    const canAssign =
+      hasPermission(auth.actor.roles, "MANAGE_USERS") || currentIssue.reporterId === auth.actor.id;
+    if (!canAssign) {
+      return NextResponse.json({ error: "Sem permissão para atribuir issue" }, { status: 403 });
+    }
+
     const body = await request.json();
     const { assigneeId } = body;
 
@@ -15,7 +30,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       return NextResponse.json({ error: "assigneeId é obrigatório" }, { status: 400 });
     }
 
-    const issue = await issueController.assignIssue(issueId, assigneeId);
+    const issue = await labOperationsModule.assignIssue(issueId, assigneeId);
     return NextResponse.json({ issue });
   } catch (error: any) {
     console.error("Erro ao atribuir issue:", error);

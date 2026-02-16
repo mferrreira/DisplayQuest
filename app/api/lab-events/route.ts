@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import { LabEventController } from '@/backend/controllers/LabEventController';
+import { createLabOperationsModule } from '@/backend/modules/lab-operations';
+import { requireApiActor } from '@/lib/auth/api-guard';
 
-const labEventController = new LabEventController();
+const labOperationsModule = createLabOperationsModule();
 
 export async function GET(request: Request) {
   try {
+    const auth = await requireApiActor();
+    if (auth.error) return auth.error;
+
     const { searchParams } = new URL(request.url);
     const day = searchParams.get('day');
     const month = searchParams.get('month');
@@ -17,7 +19,7 @@ export async function GET(request: Request) {
     }
     
     const date = new Date(Number(year), Number(month) - 1, Number(day));
-    const events = await labEventController.getEventsByDate(date);
+    const events = await labOperationsModule.listLabEventsByDate(date);
     
     return NextResponse.json({ events: events.map(event => event.toJSON()) });
   } catch (error: any) {
@@ -28,10 +30,8 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
-    }
+    const auth = await requireApiActor();
+    if (auth.error) return auth.error;
     
     const body = await request.json();
     const { date, note } = body;
@@ -40,10 +40,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'date e note são obrigatórios' }, { status: 400 });
     }
     
-    const user = session.user as any;
-    const event = await labEventController.createEvent({
-      userId: user.id,
-      userName: user.name,
+    const event = await labOperationsModule.createLabEvent({
+      userId: auth.actor.id,
+      userName: auth.actor.name ?? 'Usuário',
       date: new Date(date),
       note,
     });
