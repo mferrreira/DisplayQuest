@@ -7,6 +7,7 @@ export interface StartWorkSessionCommand {
   activity?: string
   location?: string
   projectId?: number
+  startTime?: string
 }
 
 export interface CompleteWorkSessionCommand {
@@ -33,6 +34,12 @@ export interface ListWorkSessionsQuery {
   status?: string
 }
 
+export interface ListDailyLogsQuery {
+  userId?: number
+  projectId?: number
+  date?: string
+}
+
 export interface DeleteWorkSessionCommand {
   sessionId: number
   actorUserId: number
@@ -45,6 +52,8 @@ export interface UpdateWorkSessionCommand {
   location?: string
   status?: string
   endTime?: string
+  startTime?: string
+  duration?: number
   projectId?: number | null
   completedTaskIds?: number[]
 }

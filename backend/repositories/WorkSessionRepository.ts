@@ -76,6 +76,7 @@ export class WorkSessionRepository implements IWorkSessionRepository {
         
         if (updates.activity !== undefined) updateData.activity = updates.activity;
         if (updates.location !== undefined) updateData.location = updates.location;
+        if (updates.startTime !== undefined) updateData.startTime = updates.startTime;
         if (updates.endTime !== undefined) updateData.endTime = updates.endTime;
         if (updates.duration !== undefined) updateData.duration = updates.duration;
         if (updates.status !== undefined) updateData.status = updates.status;

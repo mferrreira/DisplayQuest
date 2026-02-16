@@ -28,7 +28,7 @@ export class Purchase {
         price: number,
         purchaseDate: Date,
         status: PurchaseStatus = 'pending',
-        id?: number
+        id?: number,
     ) {
         this.id = id;
         this.userId = userId;
@@ -40,16 +40,15 @@ export class Purchase {
     }
 
     static fromPrisma(data: purchases): Purchase {
-        const purchase = new Purchase(
+        return new Purchase(
             data.userId,
             data.rewardId,
             data.rewardName,
             data.price,
             new Date(data.purchaseDate),
             data.status as PurchaseStatus,
-            data.id
+            data.id,
         );
-        return purchase;
     }
 
     toPrisma(): any {
@@ -59,13 +58,10 @@ export class Purchase {
             rewardName: this.rewardName,
             price: this.price,
             purchaseDate: this.purchaseDate.toISOString(),
-            status: this.status
+            status: this.status,
         };
-        
-        if (this.id !== undefined) {
-            data.id = this.id;
-        }
-        
+
+        if (this.id !== undefined) data.id = this.id;
         return data;
     }
 
@@ -77,119 +73,7 @@ export class Purchase {
             data.price,
             data.purchaseDate,
             data.status,
-            data.id
+            data.id,
         );
     }
-
-    // Business logic methods
-    approve(): Purchase {
-        if (this.status !== 'pending') {
-            throw new Error("Apenas compras pendentes podem ser aprovadas");
-        }
-        this.status = 'approved';
-        return this;
-    }
-
-    reject(): Purchase {
-        if (this.status !== 'pending') {
-            throw new Error("Apenas compras pendentes podem ser rejeitadas");
-        }
-        this.status = 'rejected';
-        return this;
-    }
-
-    complete(): Purchase {
-        if (this.status !== 'approved') {
-            throw new Error("Apenas compras aprovadas podem ser completadas");
-        }
-        this.status = 'completed';
-        return this;
-    }
-
-    cancel(): Purchase {
-        if (this.status === 'completed') {
-            throw new Error("Compras completadas não podem ser canceladas");
-        }
-        this.status = 'cancelled';
-        return this;
-    }
-
-    isValid(): boolean {
-        return !!(this.userId && this.rewardId && this.rewardName && this.price >= 0);
-    }
-
-    isPending(): boolean {
-        return this.status === 'pending';
-    }
-
-    isApproved(): boolean {
-        return this.status === 'approved';
-    }
-
-    isCompleted(): boolean {
-        return this.status === 'completed';
-    }
-
-    isRejected(): boolean {
-        return this.status === 'rejected';
-    }
-
-    isCancelled(): boolean {
-        return this.status === 'cancelled';
-    }
-
-    canBeApproved(): boolean {
-        return this.status === 'pending';
-    }
-
-    canBeRejected(): boolean {
-        return this.status === 'pending';
-    }
-
-    canBeCompleted(): boolean {
-        return this.status === 'approved';
-    }
-
-    canBeCancelled(): boolean {
-        return this.status !== 'completed';
-    }
-
-    getFormattedDate(): string {
-        return this.purchaseDate.toLocaleDateString('pt-BR');
-    }
-
-    getFormattedPrice(): string {
-        return `${this.price} pontos`;
-    }
-
-    getStatusDisplayName(): string {
-        const statusMap = {
-            'pending': 'Pendente',
-            'approved': 'Aprovada',
-            'rejected': 'Rejeitada',
-            'completed': 'Completada',
-            'cancelled': 'Cancelada'
-        };
-        return statusMap[this.status] || this.status;
-    }
-
-    getStatusColor(): string {
-        const colorMap = {
-            'pending': 'yellow',
-            'approved': 'green',
-            'rejected': 'red',
-            'completed': 'blue',
-            'cancelled': 'gray'
-        };
-        return colorMap[this.status] || 'gray';
-    }
-
-    shouldRefundPoints(): boolean {
-        return this.status === 'rejected' || this.status === 'cancelled';
-    }
-
-    getRefundAmount(): number {
-        return this.shouldRefundPoints() ? this.price : 0;
-    }
 }
-

@@ -40,6 +40,20 @@ export interface Project {
   leaderId?: number | null
   status: "active" | "completed" | "archived"
   links?: { label: string; url: string }[]
+  members?: ProjectMember[]
+}
+
+export interface ProjectMember {
+  id?: number
+  userId: number
+  joinedAt: string
+  roles: UserRole[]
+  user?: {
+    id: number
+    name: string
+    email: string
+    avatar?: string | null
+  } | null
 }
 
 export interface ProjectFormData {
@@ -94,10 +108,12 @@ export interface Issue {
   description: string
   status: "open" | "in_progress" | "resolved" | "closed"
   priority: "low" | "medium" | "high" | "urgent"
+  category?: "equipment" | "software" | "network" | "other" | null
   reporterId: number
   assigneeId?: number | null
-  createdAt: Date
-  updatedAt: Date
+  resolution?: string | null
+  createdAt: Date | string
+  updatedAt: Date | string
   reporter?: User
   assignee?: User | null
 }
@@ -552,23 +568,4 @@ export interface WorkSessionContextType {
   deleteSession: (id: number) => Promise<void>
   getActiveSession: (userId: number) => WorkSession | null
   getWeeklyHours: (userId: number, weekStart: string, weekEnd: string) => Promise<number>
-}
-
-// User Schedule types
-export interface UserSchedule {
-  id: number
-  userId: number
-  dayOfWeek: number // 0 = Sunday, 1 = Monday, etc.
-  startTime: string // HH:MM format
-  endTime: string // HH:MM format
-  isActive: boolean
-  createdAt: string
-  updatedAt: string
-}
-
-export interface UserScheduleFormData {
-  dayOfWeek: number
-  startTime: string
-  endTime: string
-  isActive: boolean
 }

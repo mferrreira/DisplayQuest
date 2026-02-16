@@ -62,6 +62,9 @@ export async function POST(request: Request) {
     const canManageSessions = !ensurePermission(actor, "MANAGE_WORK_SESSIONS");
     const data = await request.json();
     const targetUserId = Number(data.userId);
+    const startTime = typeof data.startTime === "string" ? data.startTime : undefined;
+    const endTime = typeof data.endTime === "string" ? data.endTime : undefined;
+    const status = typeof data.status === "string" ? data.status : undefined;
 
     if (!Number.isInteger(targetUserId)) {
       return new Response(JSON.stringify({ error: "userId inválido" }), {
@@ -81,7 +84,27 @@ export async function POST(request: Request) {
       activity: data.activity,
       location: data.location,
       projectId: data.projectId,
+      startTime,
     });
+
+    const shouldCompleteOnCreate = status === "completed" && Boolean(endTime);
+    if (shouldCompleteOnCreate && session?.id) {
+      const completedSession = await workExecutionModule.completeWorkSession({
+        sessionId: session.id,
+        actorUserId: targetUserId,
+        activity: data.activity,
+        location: data.location,
+        endTime,
+        projectId: data.projectId,
+        dailyLogNote: typeof data.dailyLogNote === "string" ? data.dailyLogNote : undefined,
+        dailyLogDate: typeof data.dailyLogDate === "string" ? data.dailyLogDate : undefined,
+      });
+
+      return new Response(JSON.stringify({ data: completedSession }), {
+        status: 201,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
     
     return new Response(JSON.stringify({ data: session }), {
       status: 201,

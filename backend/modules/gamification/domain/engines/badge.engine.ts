@@ -64,29 +64,29 @@ export class BadgeEngine {
     }
 
     if (data.name !== undefined) {
-      currentBadge.updateName(data.name)
+      const name = String(data.name || "").trim()
+      if (!name) throw new Error("Nome do badge é obrigatório")
+      currentBadge.name = name
     }
     if (data.description !== undefined) {
-      currentBadge.updateDescription(data.description)
+      const description = String(data.description || "").trim()
+      if (!description) throw new Error("Descrição do badge é obrigatória")
+      currentBadge.description = description
     }
     if (data.icon !== undefined) {
-      currentBadge.updateIcon(data.icon)
+      currentBadge.icon = data.icon
     }
     if (data.color !== undefined) {
-      currentBadge.updateColor(data.color)
+      currentBadge.color = data.color
     }
     if (data.category !== undefined) {
-      currentBadge.updateCategory(data.category)
+      currentBadge.category = data.category
     }
     if (data.criteria !== undefined) {
-      currentBadge.updateCriteria(data.criteria)
+      currentBadge.criteria = data.criteria
     }
     if (data.isActive !== undefined) {
-      if (data.isActive) {
-        currentBadge.activate()
-      } else {
-        currentBadge.deactivate()
-      }
+      currentBadge.isActive = Boolean(data.isActive)
     }
 
     return await this.badgeRepo.update(currentBadge)

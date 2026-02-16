@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server"
-import { DailyLogRepository } from "@/backend/repositories/DailyLogRepository"
-import { DailyLogService } from "@/backend/services/DailyLogService"
+import { createWorkExecutionModule } from "@/backend/modules/work-execution"
 import { hasPermission, hasRole } from "@/lib/auth/rbac"
 import { requireApiActor } from "@/lib/auth/api-guard"
 
-const dailyLogService = new DailyLogService(new DailyLogRepository())
+const workExecutionModule = createWorkExecutionModule()
 
 export async function GET(request: Request) {
   try {
@@ -26,25 +25,24 @@ export async function GET(request: Request) {
       if (!canViewAllLogs && Number(userId) !== currentUser.id) {
         return NextResponse.json({ error: "Acesso negado." }, { status: 403 })
       }
-      if (date) {
-        logs = await dailyLogService.findByDateRange(
-          Number(userId),
-          new Date(date),
-          new Date(date),
-        )
-      } else {
-        logs = await dailyLogService.findByUserId(Number(userId))
-      }
+      logs = await workExecutionModule.listDailyLogs({
+        userId: Number(userId),
+        date: date || undefined,
+      })
     } else if (projectId) {
       if (!canViewAllLogs) {
         return NextResponse.json({ error: "Acesso negado." }, { status: 403 })
       }
-      logs = await dailyLogService.findByProjectId(Number(projectId))
+      logs = await workExecutionModule.listDailyLogs({
+        projectId: Number(projectId),
+      })
     } else {
       if (canViewAllLogs) {
-        logs = await dailyLogService.findAll()
+        logs = await workExecutionModule.listDailyLogs({})
       } else {
-        logs = await dailyLogService.findByUserId(currentUser.id)
+        logs = await workExecutionModule.listDailyLogs({
+          userId: currentUser.id,
+        })
       }
     }
 

@@ -9,7 +9,7 @@ import { Loader2, AlertTriangle } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { useTask } from "@/contexts/task-context"
 import { useProject } from "@/contexts/project-context"
-import type { Task } from "@/contexts/types"
+import type { ProjectMember, Task } from "@/contexts/types"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useToast } from "@/contexts/use-toast"
 import { hasAccess } from "@/lib/utils/utils"
@@ -40,10 +40,9 @@ export function KanbanBoard() {
 
     const canAccessAllProjects = hasAccess(user.roles || [], 'MANAGE_TASKS')
     if (!canAccessAllProjects) {
-      const membershipProject = projects
-        ?.find(project =>
-          project.members?.some(member => member.userId === user.id)
-        )
+      const membershipProject = projects?.find((project) =>
+        project.members?.some((member: ProjectMember) => member.userId === user.id)
+      )
       if (membershipProject) {
         setSelectedProjectId(membershipProject.id)
       } else {

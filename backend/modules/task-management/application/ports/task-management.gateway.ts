@@ -4,14 +4,14 @@ import type {
   CompleteTaskCommand,
   CreateTaskCommand,
   DeleteTaskCommand,
-  ListTasksForActorQuery,
   RejectTaskCommand,
   UpdateTaskCommand,
 } from "@/backend/modules/task-management/application/contracts"
 
 export interface TaskManagementGateway {
   getTaskById(taskId: number): Promise<Task | null>
-  listTasksForActor(query: ListTasksForActorQuery): Promise<Task[]>
+  listTasksForUser(actorId: number, actorRoles: string[]): Promise<Task[]>
+  listGlobalTasks(): Promise<Task[]>
   listActorProjectIds(actorId: number): Promise<number[]>
   createTask(command: CreateTaskCommand, actorId: number): Promise<Task>
   updateTask(command: UpdateTaskCommand): Promise<Task>

@@ -32,7 +32,7 @@ export class LaboratoryScheduleRepository implements ILaboratoryScheduleReposito
     }
 
     async create(laboratorySchedule: LaboratorySchedule): Promise<LaboratorySchedule> {
-        const errors = laboratorySchedule.validate();
+        const errors = this.validateLaboratorySchedule(laboratorySchedule);
         if (errors.length > 0) {
             throw new Error(`Dados inválidos: ${errors.join(', ')}`);
         }
@@ -57,7 +57,7 @@ export class LaboratoryScheduleRepository implements ILaboratoryScheduleReposito
             throw new Error("ID do horário é obrigatório para atualização");
         }
 
-        const errors = laboratorySchedule.validate();
+        const errors = this.validateLaboratorySchedule(laboratorySchedule);
         if (errors.length > 0) {
             throw new Error(`Dados inválidos: ${errors.join(', ')}`);
         }
@@ -106,5 +106,19 @@ export class LaboratoryScheduleRepository implements ILaboratoryScheduleReposito
 
         return schedules.map(schedule => LaboratorySchedule.fromPrisma(schedule));
     }
-}
 
+    private validateLaboratorySchedule(laboratorySchedule: LaboratorySchedule): string[] {
+        const errors: string[] = [];
+        const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
+
+        if (laboratorySchedule.dayOfWeek < 0 || laboratorySchedule.dayOfWeek > 6) errors.push("Dia da semana inválido");
+        if (!laboratorySchedule.startTime || !timeRegex.test(laboratorySchedule.startTime)) errors.push("Horário de início inválido");
+        if (!laboratorySchedule.endTime || !timeRegex.test(laboratorySchedule.endTime)) errors.push("Horário de fim inválido");
+
+        const [sh, sm] = laboratorySchedule.startTime.split(':').map(Number);
+        const [eh, em] = laboratorySchedule.endTime.split(':').map(Number);
+        if (sh * 60 + sm >= eh * 60 + em) errors.push("Horário de início deve ser anterior ao fim");
+
+        return errors;
+    }
+}

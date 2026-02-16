@@ -32,6 +32,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
     // Verificar se o usuário tem permissão para ver outros usuários
     const canViewUsers = user.roles?.includes('COORDENADOR') || 
                         user.roles?.includes('GERENTE') || 
+                        user.roles?.includes('GERENTE_PROJETO') ||
+                        user.roles?.includes('PESQUISADOR') ||
                         user.roles?.includes('VOLUNTARIO') || 
                         user.roles?.includes('COLABORADOR') || 
                         user.roles?.includes('LABORATORISTA')

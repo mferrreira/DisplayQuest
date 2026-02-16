@@ -1,131 +1,67 @@
-import type {
-  CreateLabEventCommand,
-  CreateLaboratoryScheduleCommand,
-  CreateUserScheduleCommand,
-  DeleteUserScheduleCommand,
-  LabIssueQuery,
-  ListUserSchedulesQuery,
-  ListResponsibilitiesQuery,
-  StartResponsibilityCommand,
-  UpdateUserScheduleCommand,
-  UpdateLaboratoryScheduleCommand,
-} from "@/backend/modules/lab-operations/application/contracts"
 import type { LabOperationsGateway } from "@/backend/modules/lab-operations/application/ports/lab-operations.gateway"
 import { createLabOperationsGateway } from "@/backend/modules/lab-operations/infrastructure/lab-operations.gateway"
 
+type GatewayCall<T> = T extends (...args: infer A) => infer R ? (...args: A) => R : never
+
 export class LabOperationsModule {
-  constructor(private readonly gateway: LabOperationsGateway) {}
+  readonly listIssues: GatewayCall<LabOperationsGateway["listIssues"]>
+  readonly getIssue: GatewayCall<LabOperationsGateway["getIssue"]>
+  readonly createIssue: GatewayCall<LabOperationsGateway["createIssue"]>
+  readonly updateIssue: GatewayCall<LabOperationsGateway["updateIssue"]>
+  readonly deleteIssue: GatewayCall<LabOperationsGateway["deleteIssue"]>
+  readonly assignIssue: GatewayCall<LabOperationsGateway["assignIssue"]>
+  readonly unassignIssue: GatewayCall<LabOperationsGateway["unassignIssue"]>
+  readonly startIssueProgress: GatewayCall<LabOperationsGateway["startIssueProgress"]>
+  readonly resolveIssue: GatewayCall<LabOperationsGateway["resolveIssue"]>
+  readonly closeIssue: GatewayCall<LabOperationsGateway["closeIssue"]>
+  readonly reopenIssue: GatewayCall<LabOperationsGateway["reopenIssue"]>
+  readonly listLabEventsByDate: GatewayCall<LabOperationsGateway["listLabEventsByDate"]>
+  readonly createLabEvent: GatewayCall<LabOperationsGateway["createLabEvent"]>
+  readonly listLaboratorySchedules: GatewayCall<LabOperationsGateway["listLaboratorySchedules"]>
+  readonly createLaboratorySchedule: GatewayCall<LabOperationsGateway["createLaboratorySchedule"]>
+  readonly updateLaboratorySchedule: GatewayCall<LabOperationsGateway["updateLaboratorySchedule"]>
+  readonly deleteLaboratorySchedule: GatewayCall<LabOperationsGateway["deleteLaboratorySchedule"]>
+  readonly listResponsibilities: GatewayCall<LabOperationsGateway["listResponsibilities"]>
+  readonly startResponsibility: GatewayCall<LabOperationsGateway["startResponsibility"]>
+  readonly canEndResponsibility: GatewayCall<LabOperationsGateway["canEndResponsibility"]>
+  readonly endResponsibility: GatewayCall<LabOperationsGateway["endResponsibility"]>
+  readonly updateResponsibilityNotes: GatewayCall<LabOperationsGateway["updateResponsibilityNotes"]>
+  readonly deleteResponsibility: GatewayCall<LabOperationsGateway["deleteResponsibility"]>
+  readonly listUserSchedules: GatewayCall<LabOperationsGateway["listUserSchedules"]>
+  readonly getUserSchedule: GatewayCall<LabOperationsGateway["getUserSchedule"]>
+  readonly createUserSchedule: GatewayCall<LabOperationsGateway["createUserSchedule"]>
+  readonly updateUserSchedule: GatewayCall<LabOperationsGateway["updateUserSchedule"]>
+  readonly deleteUserSchedule: GatewayCall<LabOperationsGateway["deleteUserSchedule"]>
 
-  async listIssues(query?: LabIssueQuery) {
-    return await this.gateway.listIssues(query)
-  }
-
-  async getIssue(issueId: number) {
-    return await this.gateway.getIssue(issueId)
-  }
-
-  async createIssue(command: Record<string, unknown>) {
-    return await this.gateway.createIssue(command)
-  }
-
-  async updateIssue(issueId: number, command: Record<string, unknown>) {
-    return await this.gateway.updateIssue(issueId, command)
-  }
-
-  async deleteIssue(issueId: number) {
-    await this.gateway.deleteIssue(issueId)
-  }
-
-  async assignIssue(issueId: number, assigneeId: number) {
-    return await this.gateway.assignIssue(issueId, assigneeId)
-  }
-
-  async unassignIssue(issueId: number) {
-    return await this.gateway.unassignIssue(issueId)
-  }
-
-  async startIssueProgress(issueId: number) {
-    return await this.gateway.startIssueProgress(issueId)
-  }
-
-  async resolveIssue(issueId: number, resolution?: string) {
-    return await this.gateway.resolveIssue(issueId, resolution)
-  }
-
-  async closeIssue(issueId: number) {
-    return await this.gateway.closeIssue(issueId)
-  }
-
-  async reopenIssue(issueId: number) {
-    return await this.gateway.reopenIssue(issueId)
-  }
-
-  async listLabEventsByDate(date: Date) {
-    return await this.gateway.listLabEventsByDate(date)
-  }
-
-  async createLabEvent(command: CreateLabEventCommand) {
-    return await this.gateway.createLabEvent(command)
-  }
-
-  async listLaboratorySchedules() {
-    return await this.gateway.listLaboratorySchedules()
-  }
-
-  async createLaboratorySchedule(command: CreateLaboratoryScheduleCommand) {
-    return await this.gateway.createLaboratorySchedule(command)
-  }
-
-  async updateLaboratorySchedule(scheduleId: number, command: UpdateLaboratoryScheduleCommand) {
-    return await this.gateway.updateLaboratorySchedule(scheduleId, command)
-  }
-
-  async deleteLaboratorySchedule(scheduleId: number) {
-    await this.gateway.deleteLaboratorySchedule(scheduleId)
-  }
-
-  async listResponsibilities(query?: ListResponsibilitiesQuery) {
-    return await this.gateway.listResponsibilities(query)
-  }
-
-  async startResponsibility(command: StartResponsibilityCommand) {
-    return await this.gateway.startResponsibility(command)
-  }
-
-  async canEndResponsibility(actorUserId: number, responsibilityId: number) {
-    return await this.gateway.canEndResponsibility(actorUserId, responsibilityId)
-  }
-
-  async endResponsibility(responsibilityId: number, notes?: string) {
-    return await this.gateway.endResponsibility(responsibilityId, notes)
-  }
-
-  async updateResponsibilityNotes(responsibilityId: number, actorUserId: number, notes: string) {
-    return await this.gateway.updateResponsibilityNotes(responsibilityId, actorUserId, notes)
-  }
-
-  async deleteResponsibility(responsibilityId: number) {
-    await this.gateway.deleteResponsibility(responsibilityId)
-  }
-
-  async listUserSchedules(query: ListUserSchedulesQuery) {
-    return await this.gateway.listUserSchedules(query)
-  }
-
-  async getUserSchedule(scheduleId: number) {
-    return await this.gateway.getUserSchedule(scheduleId)
-  }
-
-  async createUserSchedule(command: CreateUserScheduleCommand) {
-    return await this.gateway.createUserSchedule(command)
-  }
-
-  async updateUserSchedule(command: UpdateUserScheduleCommand) {
-    return await this.gateway.updateUserSchedule(command)
-  }
-
-  async deleteUserSchedule(command: DeleteUserScheduleCommand) {
-    await this.gateway.deleteUserSchedule(command)
+  constructor(private readonly gateway: LabOperationsGateway) {
+    this.listIssues = this.gateway.listIssues.bind(this.gateway)
+    this.getIssue = this.gateway.getIssue.bind(this.gateway)
+    this.createIssue = this.gateway.createIssue.bind(this.gateway)
+    this.updateIssue = this.gateway.updateIssue.bind(this.gateway)
+    this.deleteIssue = this.gateway.deleteIssue.bind(this.gateway)
+    this.assignIssue = this.gateway.assignIssue.bind(this.gateway)
+    this.unassignIssue = this.gateway.unassignIssue.bind(this.gateway)
+    this.startIssueProgress = this.gateway.startIssueProgress.bind(this.gateway)
+    this.resolveIssue = this.gateway.resolveIssue.bind(this.gateway)
+    this.closeIssue = this.gateway.closeIssue.bind(this.gateway)
+    this.reopenIssue = this.gateway.reopenIssue.bind(this.gateway)
+    this.listLabEventsByDate = this.gateway.listLabEventsByDate.bind(this.gateway)
+    this.createLabEvent = this.gateway.createLabEvent.bind(this.gateway)
+    this.listLaboratorySchedules = this.gateway.listLaboratorySchedules.bind(this.gateway)
+    this.createLaboratorySchedule = this.gateway.createLaboratorySchedule.bind(this.gateway)
+    this.updateLaboratorySchedule = this.gateway.updateLaboratorySchedule.bind(this.gateway)
+    this.deleteLaboratorySchedule = this.gateway.deleteLaboratorySchedule.bind(this.gateway)
+    this.listResponsibilities = this.gateway.listResponsibilities.bind(this.gateway)
+    this.startResponsibility = this.gateway.startResponsibility.bind(this.gateway)
+    this.canEndResponsibility = this.gateway.canEndResponsibility.bind(this.gateway)
+    this.endResponsibility = this.gateway.endResponsibility.bind(this.gateway)
+    this.updateResponsibilityNotes = this.gateway.updateResponsibilityNotes.bind(this.gateway)
+    this.deleteResponsibility = this.gateway.deleteResponsibility.bind(this.gateway)
+    this.listUserSchedules = this.gateway.listUserSchedules.bind(this.gateway)
+    this.getUserSchedule = this.gateway.getUserSchedule.bind(this.gateway)
+    this.createUserSchedule = this.gateway.createUserSchedule.bind(this.gateway)
+    this.updateUserSchedule = this.gateway.updateUserSchedule.bind(this.gateway)
+    this.deleteUserSchedule = this.gateway.deleteUserSchedule.bind(this.gateway)
   }
 }
 

@@ -42,7 +42,7 @@ export class UserScheduleRepository implements IUserScheduleRepository {
     }
 
     async create(userSchedule: UserSchedule): Promise<UserSchedule> {
-        const errors = userSchedule.validate();
+        const errors = this.validateUserSchedule(userSchedule);
         if (errors.length > 0) {
             throw new Error(`Dados inválidos: ${errors.join(', ')}`);
         }
@@ -66,7 +66,7 @@ export class UserScheduleRepository implements IUserScheduleRepository {
             throw new Error("ID do horário é obrigatório para atualização");
         }
 
-        const errors = userSchedule.validate();
+        const errors = this.validateUserSchedule(userSchedule);
         if (errors.length > 0) {
             throw new Error(`Dados inválidos: ${errors.join(', ')}`);
         }
@@ -132,5 +132,20 @@ export class UserScheduleRepository implements IUserScheduleRepository {
 
         return userSchedules.map(userSchedule => UserSchedule.fromPrisma(userSchedule));
     }
-}
 
+    private validateUserSchedule(userSchedule: UserSchedule): string[] {
+        const errors: string[] = [];
+        const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
+
+        if (!userSchedule.userId || userSchedule.userId <= 0) errors.push("ID do usuário é obrigatório");
+        if (userSchedule.dayOfWeek < 0 || userSchedule.dayOfWeek > 6) errors.push("Dia da semana inválido");
+        if (!userSchedule.startTime || !timeRegex.test(userSchedule.startTime)) errors.push("Horário de início inválido");
+        if (!userSchedule.endTime || !timeRegex.test(userSchedule.endTime)) errors.push("Horário de fim inválido");
+
+        const [sh, sm] = userSchedule.startTime.split(':').map(Number);
+        const [eh, em] = userSchedule.endTime.split(':').map(Number);
+        if (sh * 60 + sm >= eh * 60 + em) errors.push("Horário de início deve ser anterior ao fim");
+
+        return errors;
+    }
+}

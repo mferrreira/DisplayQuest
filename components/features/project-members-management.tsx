@@ -94,7 +94,7 @@ export function ProjectMembersManagement({ project, onUpdate }: ProjectMembersMa
       await updateMemberRoles(member.userId, [role])
       toast({
         title: "Sucesso",
-        description: `Papéis de ${member.userName || "usuário"} atualizados`,
+        description: `Papéis de ${member.userName || `usuário #${member.userId}`} atualizados`,
       })
       onUpdate?.()
     } catch (error) {
@@ -193,6 +193,13 @@ export function ProjectMembersManagement({ project, onUpdate }: ProjectMembersMa
     }
 
     try {
+      const startDate = new Date(`${hoursDate}T09:00:00`)
+      const endDate = new Date(startDate.getTime() + manualHours * 60 * 60 * 1000)
+
+      if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+        throw new Error("Data/hora inválida para lançamento manual")
+      }
+
       const response = await fetch('/api/work-sessions', {
         method: 'POST',
         headers: {
@@ -200,13 +207,12 @@ export function ProjectMembersManagement({ project, onUpdate }: ProjectMembersMa
         },
         body: JSON.stringify({
           userId: selectedMember.userId,
-          userName: selectedMember.userName,
+          userName: selectedMember.userName || `Usuário #${selectedMember.userId}`,
           activity: "Horas adicionadas manualmente",
           location: "Sistema",
           projectId: project.id,
-          startTime: new Date(`${hoursDate}T09:00:00.000Z`),
-          endTime: new Date(`${hoursDate}T${9 + manualHours}:00:00.000Z`),
-          duration: manualHours,
+          startTime: startDate.toISOString(),
+          endTime: endDate.toISOString(),
           status: "completed"
         })
       })
@@ -369,7 +375,7 @@ export function ProjectMembersManagement({ project, onUpdate }: ProjectMembersMa
                     Liderança do Projeto
                   </CardTitle>
                   <CardDescription>
-                    Líder atual: {members.find((member) => member.userId === currentLeaderId)?.userName || "Sem líder"}
+                    Líder atual: {members.find((member) => member.userId === currentLeaderId)?.userName || (currentLeaderId ? `Usuário #${currentLeaderId}` : "Sem líder")}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -382,7 +388,7 @@ export function ProjectMembersManagement({ project, onUpdate }: ProjectMembersMa
                         <SelectItem value="none">Sem líder</SelectItem>
                         {members.map((member) => (
                           <SelectItem key={member.userId} value={String(member.userId)}>
-                            {member.userName || "Usuário"}
+                            {member.userName || `Usuário #${member.userId}`}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -408,11 +414,11 @@ export function ProjectMembersManagement({ project, onUpdate }: ProjectMembersMa
                     <div className="flex items-center gap-3">
                         <Avatar className="h-10 w-10">
                           <AvatarFallback>
-                            {(member.userName || "Usuário").split(' ').map(n => n[0]).join('').toUpperCase()}
+                            {(member.userName || `Usuário #${member.userId}`).split(' ').map(n => n[0]).join('').toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                       <div>
-                        <div className="font-medium">{member.userName || "Usuário"}</div>
+                        <div className="font-medium">{member.userName || `Usuário #${member.userId}`}</div>
                         <div className="text-sm text-muted-foreground">{member.userEmail || "Sem email"}</div>
                         <div className="flex gap-1 mt-1">
                           {member.roles.map((role) => (
@@ -487,11 +493,11 @@ export function ProjectMembersManagement({ project, onUpdate }: ProjectMembersMa
                       <div className="flex items-center gap-3">
                         <Avatar className="h-8 w-8">
                           <AvatarFallback className="text-xs">
-                            {(member.userName || "Usuário").split(' ').map(n => n[0]).join('').toUpperCase()}
+                            {(member.userName || `Usuário #${member.userId}`).split(' ').map(n => n[0]).join('').toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <div className="font-medium">{member.userName || "Usuário"}</div>
+                          <div className="font-medium">{member.userName || `Usuário #${member.userId}`}</div>
                           <div className="text-sm text-muted-foreground">
                             {member.roles.map(getRoleDisplayName).join(', ')}
                           </div>

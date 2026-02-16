@@ -19,6 +19,7 @@ import {
 } from "lucide-react"
 import { useProject } from "@/contexts/project-context"
 import { fetchAPI } from "@/contexts/api-client"
+import type { ProjectMember } from "@/contexts/types"
 
 interface User {
   id: number
@@ -57,7 +58,7 @@ export function VolunteerActions({ projectId, onVolunteerAdded, onVolunteerRemov
     try {
       const response = await fetchAPI<{ users: any[] }>("/api/users")
       const normalizedSearch = search.trim().toLowerCase()
-      const existingMemberIds = new Set(currentProject.members?.map(member => member.userId))
+      const existingMemberIds = new Set(currentProject.members?.map((member: ProjectMember) => member.userId))
 
       const users = (response.users || response || []).filter((user: any) => {
         if (!user || existingMemberIds.has(user.id)) {
@@ -116,7 +117,7 @@ export function VolunteerActions({ projectId, onVolunteerAdded, onVolunteerRemov
   const filteredUsers = availableUsers
 
   // Buscar membros atuais do projeto
-  const currentMembers = currentProject.members?.map(member => ({
+  const currentMembers = currentProject.members?.map((member: ProjectMember) => ({
     id: member.userId,
     name: member.user?.name || 'Usuário',
     email: member.user?.email || '',
@@ -225,14 +226,14 @@ export function VolunteerActions({ projectId, onVolunteerAdded, onVolunteerRemov
                       <Avatar className="h-8 w-8">
                         <AvatarImage src={user.avatar} />
                         <AvatarFallback>
-                          {user.name.split(' ').map(n => n[0]).join('')}
+                          {user.name.split(' ').map((n: string) => n[0]).join('')}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1">
                         <p className="font-medium">{user.name}</p>
                         <p className="text-sm text-muted-foreground">{user.email}</p>
                         <div className="flex gap-1 mt-1">
-                          {user.roles.map(role => (
+                          {user.roles.map((role: string) => (
                             <Badge key={role} variant="secondary" className="text-xs">
                               {role}
                             </Badge>
@@ -308,9 +309,9 @@ export function VolunteerActions({ projectId, onVolunteerAdded, onVolunteerRemov
                   >
                     <div className="flex items-center gap-3">
                       <Avatar className="h-8 w-8">
-                        <AvatarImage src={member.avatar} />
+                        <AvatarImage src={member.avatar || undefined} />
                         <AvatarFallback>
-                          {member.name.split(' ').map(n => n[0]).join('')}
+                          {member.name.split(' ').map((n: string) => n[0]).join('')}
                         </AvatarFallback>
                       </Avatar>
                       <div>
@@ -361,9 +362,9 @@ export function VolunteerActions({ projectId, onVolunteerAdded, onVolunteerRemov
               >
                 <div className="flex items-center gap-3">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src={member.avatar} />
+                    <AvatarImage src={member.avatar || undefined} />
                     <AvatarFallback>
-                      {member.name.split(' ').map(n => n[0]).join('')}
+                      {member.name.split(' ').map((n: string) => n[0]).join('')}
                     </AvatarFallback>
                   </Avatar>
                   <div>

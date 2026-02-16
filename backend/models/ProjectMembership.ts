@@ -1,4 +1,4 @@
-import { project_members, UserRole } from '@prisma/client';
+import { UserRole } from '@prisma/client';
 
 export interface IProjectMembership {
     id?: number;
@@ -6,188 +6,41 @@ export interface IProjectMembership {
     userId: number;
     joinedAt?: Date;
     roles: UserRole[];
-    user?: any; // User data from include
-    project?: any; // Project data from include
+    user?: any;
+    project?: any;
 }
 
 export class ProjectMembership {
-    private _id?: number;
-    private _projectId: number;
-    private _userId: number;
-    private _joinedAt: Date;
-    private _roles: UserRole[];
-    private _user?: any; // User data from include
-    private _project?: any; // Project data from include
+    public id?: number;
+    public projectId: number;
+    public userId: number;
+    public joinedAt: Date;
+    public roles: UserRole[];
+    public user?: any;
+    public project?: any;
 
     constructor(data: IProjectMembership) {
-        this._id = data.id;
-        this._projectId = data.projectId;
-        this._userId = data.userId;
-        this._joinedAt = data.joinedAt || new Date();
-        this._roles = data.roles || [];
-        this._user = data.user;
-        this._project = data.project;
+        this.id = data.id;
+        this.projectId = data.projectId;
+        this.userId = data.userId;
+        this.joinedAt = data.joinedAt || new Date();
+        this.roles = data.roles || [];
+        this.user = data.user;
+        this.project = data.project;
     }
 
-    // Getters
-    get id(): number | undefined {
-        return this._id;
-    }
-
-    get projectId(): number {
-        return this._projectId;
-    }
-
-    get userId(): number {
-        return this._userId;
-    }
-
-    get joinedAt(): Date {
-        return this._joinedAt;
-    }
-
-    get roles(): UserRole[] {
-        return [...this._roles]; // Return a copy to prevent external modification
-    }
-
-    get user(): any {
-        return this._user;
-    }
-
-    get project(): any {
-        return this._project;
-    }
-
-    // Business Logic Methods
-    addRole(role: UserRole): void {
-        if (!this.isValidProjectRole(role)) {
-            throw new Error(`Papel de projeto inválido: ${role}`);
-        }
-        if (!this._roles.includes(role)) {
-            this._roles.push(role);
-        }
-    }
-
-    removeRole(role: UserRole): void {
-        this._roles = this._roles.filter(r => r !== role);
-    }
-
-    hasRole(role: UserRole): boolean {
-        return this._roles.includes(role);
-    }
-
-    hasAnyRole(roles: UserRole[]): boolean {
-        return roles.some(role => this._roles.includes(role));
-    }
-
-    setRoles(roles: UserRole[]): void {
-        // Validate all roles
-        for (const role of roles) {
-            if (!this.isValidProjectRole(role)) {
-                throw new Error(`Papel de projeto inválido: ${role}`);
-            }
-        }
-        this._roles = [...roles];
-    }
-
-    isProjectManager(): boolean {
-        return this.hasRole('GERENTE_PROJETO');
-    }
-
-    isCoordinator(): boolean {
-        return this.hasRole('COORDENADOR');
-    }
-
-    isManager(): boolean {
-        return this.hasRole('GERENTE');
-    }
-
-    isLaboratorist(): boolean {
-        return this.hasRole('LABORATORISTA');
-    }
-
-    isResearcher(): boolean {
-        return this.hasRole('PESQUISADOR');
-    }
-
-    isCollaborator(): boolean {
-        return this.hasRole('COLABORADOR');
-    }
-
-    isVolunteer(): boolean {
-        return this.hasRole('VOLUNTARIO');
-    }
-
-    canManageProject(): boolean {
-        return this.hasAnyRole(['COORDENADOR', 'GERENTE', 'GERENTE_PROJETO']);
-    }
-
-    canManageTasks(): boolean {
-        return this.hasAnyRole(['COORDENADOR', 'GERENTE', 'GERENTE_PROJETO', 'LABORATORISTA']);
-    }
-
-    canViewProject(): boolean {
-        return this._roles.length > 0; // Any role can view
-    }
-
-    getDaysSinceJoined(): number {
-        const now = new Date();
-        const diffTime = Math.abs(now.getTime() - this._joinedAt.getTime());
-        return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    }
-
-    // Validation Methods
-    private isValidProjectRole(role: UserRole): boolean {
-        const validProjectRoles: UserRole[] = [
-            'COORDENADOR',
-            'GERENTE',
-            'LABORATORISTA',
-            'PESQUISADOR',
-            'GERENTE_PROJETO',
-            'COLABORADOR',
-            'VOLUNTARIO',
-        ];
-        return validProjectRoles.includes(role);
-    }
-
-    validate(): string[] {
-        const errors: string[] = [];
-
-        if (!this._projectId || this._projectId <= 0) {
-            errors.push('ID do projeto é obrigatório');
-        }
-
-        if (!this._userId || this._userId <= 0) {
-            errors.push('ID do usuário é obrigatório');
-        }
-
-        if (!this._roles || this._roles.length === 0) {
-            errors.push('Pelo menos um papel deve ser atribuído');
-        }
-
-        for (const role of this._roles) {
-            if (!this.isValidProjectRole(role)) {
-                errors.push(`Papel de projeto inválido: ${role}`);
-            }
-        }
-
-        return errors;
-    }
-
-    // Serialization
     toJSON(): any {
         return {
-            id: this._id,
-            projectId: this._projectId,
-            userId: this._userId,
-            joinedAt: this._joinedAt,
-            roles: this._roles,
-            user: this._user,
-            project: this._project,
+            id: this.id,
+            projectId: this.projectId,
+            userId: this.userId,
+            joinedAt: this.joinedAt,
+            roles: this.roles,
+            user: this.user,
+            project: this.project,
         };
     }
 
-    // Static factory methods
     static fromPrisma(data: any): ProjectMembership {
         return new ProjectMembership({
             id: data.id,
@@ -207,4 +60,3 @@ export class ProjectMembership {
         });
     }
 }
-

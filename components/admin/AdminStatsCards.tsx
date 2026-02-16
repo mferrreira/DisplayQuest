@@ -15,6 +15,8 @@ interface AdminStatsCardsProps {
   };
   users: any[];
   projects: any[];
+  tasks?: any[];
+  sessions?: any[];
 }
 
 export const AdminStatsCards: React.FC<AdminStatsCardsProps> = ({ stats, users, projects }) => (

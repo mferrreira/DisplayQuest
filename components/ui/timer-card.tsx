@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useWorkSessions } from "@/hooks/use-work-sessions"
 import { useAuth } from "@/contexts/auth-context"
-import { Loader2, Play, StopCircle, Clock, MapPin, AlertTriangle } from "lucide-react"
+import { Loader2, Play, StopCircle, Clock, MapPin, AlertTriangle, Pause, PlayCircle } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -24,7 +24,17 @@ interface TimerCardProps {
 
 export function TimerCard({ onSessionEnd }: TimerCardProps) {
   const { user } = useAuth()
-  const { activeSession, startSession, endSession, loading, fetchSessions } = useWorkSessions()
+  const {
+    activeSession,
+    currentSession,
+    startSession,
+    endSession,
+    pauseSession,
+    resumeSession,
+    loading,
+    fetchSessions,
+    getElapsedSeconds,
+  } = useWorkSessions()
   const [activity, setActivity] = useState("")
   const [location, setLocation] = useState("")
   const [timer, setTimer] = useState(0)
@@ -38,6 +48,17 @@ export function TimerCard({ onSessionEnd }: TimerCardProps) {
   const [selectedProjectId, setSelectedProjectId] = useState<string>("")
   const [projects, setProjects] = useState<any[]>([])
   const [loadingProjects, setLoadingProjects] = useState(false)
+
+  const verifyIfSessionWasClosed = async (sessionId: number) => {
+    try {
+      const response = await fetch("/api/work-sessions?active=true")
+      const payload = await response.json()
+      const activeSessions = Array.isArray(payload?.data) ? payload.data : []
+      return !activeSessions.some((session: any) => session.id === sessionId)
+    } catch {
+      return false
+    }
+  }
 
   useEffect(() => {
     if (user) fetchSessions(user.id)
@@ -65,14 +86,18 @@ export function TimerCard({ onSessionEnd }: TimerCardProps) {
   }, [user])
 
   useEffect(() => {
-    if (activeSession && activeSession.startTime && activeSession.userId === user?.id) {
-      const start = new Date(activeSession.startTime).getTime()
-      setTimer(Math.floor((Date.now() - start) / 1000))
-      if (!timerInterval) {
+    if (currentSession && currentSession.userId === user?.id) {
+      setTimer(getElapsedSeconds(currentSession))
+      if (currentSession.status === "active" && !timerInterval) {
         const interval = setInterval(() => {
-          setTimer(Math.floor((Date.now() - start) / 1000))
+          setTimer(getElapsedSeconds(currentSession))
         }, 1000)
         setTimerInterval(interval)
+      }
+
+      if (currentSession.status !== "active" && timerInterval) {
+        clearInterval(timerInterval)
+        setTimerInterval(null)
       }
     } else {
       setTimer(0)
@@ -81,18 +106,18 @@ export function TimerCard({ onSessionEnd }: TimerCardProps) {
         setTimerInterval(null)
       }
     }
-    
+
     return () => {
       if (timerInterval) {
         clearInterval(timerInterval)
         setTimerInterval(null)
       }
     }
-  }, [activeSession, user?.id])
+  }, [currentSession, user?.id, getElapsedSeconds])
 
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (activeSession) {
+      if (currentSession) {
         e.preventDefault()
         e.returnValue = "Você tem uma sessão ativa. Tem certeza que deseja sair?"
         return "Você tem uma sessão ativa. Tem certeza que deseja sair?"
@@ -101,7 +126,7 @@ export function TimerCard({ onSessionEnd }: TimerCardProps) {
 
     window.addEventListener('beforeunload', handleBeforeUnload)
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
-  }, [activeSession])
+  }, [currentSession])
 
 
   const handleStart = async (e: React.FormEvent) => {
@@ -132,21 +157,39 @@ export function TimerCard({ onSessionEnd }: TimerCardProps) {
   }
 
   const handleEndRequest = () => {
-    if (!activeSession) return
-    
-    const startTime = new Date(activeSession.startTime).getTime()
-    const currentDuration = Math.floor((Date.now() - startTime) / 1000)
+    if (!currentSession) return
+    const currentDuration = getElapsedSeconds(currentSession)
     setSessionDuration(currentDuration)
     setShowLogDialog(true)
   }
 
+  const handlePause = async () => {
+    if (!activeSession) return
+    try {
+      await pauseSession(activeSession.id)
+      await fetchSessions(user?.id)
+    } catch (err: any) {
+      setError(err?.message || "Erro ao pausar sessão")
+    }
+  }
+
+  const handleResume = async () => {
+    if (!currentSession || currentSession.status !== "paused") return
+    try {
+      await resumeSession(currentSession.id)
+      await fetchSessions(user?.id)
+    } catch (err: any) {
+      setError(err?.message || "Erro ao retomar sessão")
+    }
+  }
+
   const handleLogSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!user || !activeSession) return
+    if (!user || !currentSession) return
     
     setSubmittingLog(true)
     try {
-      await endSession(activeSession.id, activity, {
+      await endSession(currentSession.id, activity, {
         dailyLogNote: logNote.trim() ? logNote.trim() : undefined,
       })
       
@@ -158,9 +201,20 @@ export function TimerCard({ onSessionEnd }: TimerCardProps) {
       
       if (onSessionEnd) onSessionEnd()
       await fetchSessions(user?.id)
-    } catch (err) {
+    } catch (err: any) {
       console.error("Erro ao finalizar sessão:", err)
-      setError("Erro ao finalizar sessão")
+      const closed = await verifyIfSessionWasClosed(currentSession.id)
+      if (closed) {
+        setShowLogDialog(false)
+        setLogNote("")
+        setSessionDuration(0)
+        setPendingSessionEnd(false)
+        setTimer(0)
+        if (onSessionEnd) onSessionEnd()
+        await fetchSessions(user?.id)
+        return
+      }
+      setError(err?.message || "Erro ao finalizar sessão")
     } finally {
       setSubmittingLog(false)
     }
@@ -174,11 +228,11 @@ export function TimerCard({ onSessionEnd }: TimerCardProps) {
   }
 
   const handleEndWithoutLog = async () => {
-    if (!user || !activeSession) return
+    if (!user || !currentSession) return
     
     setSubmittingLog(true)
     try {
-      await endSession(activeSession.id, activity)
+      await endSession(currentSession.id, activity)
       
       setShowLogDialog(false)
       setLogNote("")
@@ -188,9 +242,20 @@ export function TimerCard({ onSessionEnd }: TimerCardProps) {
       
       if (onSessionEnd) onSessionEnd()
       await fetchSessions(user?.id)
-    } catch (err) {
+    } catch (err: any) {
       console.error("Erro ao finalizar sessão:", err)
-      setError("Erro ao finalizar sessão")
+      const closed = await verifyIfSessionWasClosed(currentSession.id)
+      if (closed) {
+        setShowLogDialog(false)
+        setLogNote("")
+        setSessionDuration(0)
+        setPendingSessionEnd(false)
+        setTimer(0)
+        if (onSessionEnd) onSessionEnd()
+        await fetchSessions(user?.id)
+        return
+      }
+      setError(err?.message || "Erro ao finalizar sessão")
     } finally {
       setSubmittingLog(false)
     }
@@ -224,7 +289,7 @@ export function TimerCard({ onSessionEnd }: TimerCardProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {activeSession && activeSession.userId === user?.id ? (
+          {currentSession && currentSession.userId === user?.id ? (
             <div className="flex flex-col items-start space-y-4 w-full">
               <div className="text-3xl font-mono text-blue-900 font-bold">
                 {formatTime(timer)}
@@ -234,24 +299,50 @@ export function TimerCard({ onSessionEnd }: TimerCardProps) {
                 <div className="flex items-center space-x-2 text-sm text-gray-700">
                   <Clock className="h-4 w-4 text-blue-600" />
                   <span className="font-medium">Atividade:</span> 
-                  <span>{activeSession.activity || "Trabalho geral"}</span>
+                  <span>{currentSession.activity || "Trabalho geral"}</span>
                 </div>
                 <div className="flex items-center space-x-2 text-sm text-gray-700">
                   <MapPin className="h-4 w-4 text-blue-600" />
                   <span className="font-medium">Local:</span> 
-                  <span>{activeSession.location || "Não especificado"}</span>
+                  <span>{currentSession.location || "Não especificado"}</span>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Status: {currentSession.status === "paused" ? "Pausada" : "Em andamento"}
                 </div>
               </div>
               
-              <Button
-                variant="destructive"
-                className="mt-4 w-full h-12 text-lg font-bold bg-red-600 hover:bg-red-700"
-                onClick={handleEndRequest}
-                disabled={loading}
-              >
-                <StopCircle className="h-5 w-5 mr-2" />
-                Encerrar Sessão
-              </Button>
+              <div className="grid grid-cols-2 gap-2 w-full">
+                {currentSession.status === "active" ? (
+                  <Button
+                    variant="outline"
+                    className="h-10"
+                    onClick={handlePause}
+                    disabled={loading}
+                  >
+                    <Pause className="h-4 w-4 mr-2" />
+                    Pausar
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    className="h-10"
+                    onClick={handleResume}
+                    disabled={loading}
+                  >
+                    <PlayCircle className="h-4 w-4 mr-2" />
+                    Continuar
+                  </Button>
+                )}
+                <Button
+                  variant="destructive"
+                  className="h-10 text-lg font-bold bg-red-600 hover:bg-red-700"
+                  onClick={handleEndRequest}
+                  disabled={loading}
+                >
+                  <StopCircle className="h-5 w-5 mr-2" />
+                  Encerrar
+                </Button>
+              </div>
               
               {error && (
                 <div className="text-red-500 text-sm mt-2 p-2 bg-red-50 rounded">

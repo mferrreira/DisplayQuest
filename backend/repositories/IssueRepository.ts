@@ -177,7 +177,7 @@ export class IssueRepository implements IIssueRepository {
 
     async findOverdue(): Promise<Issue[]> {
         const allIssues = await this.findAll();
-        return allIssues.filter(issue => issue.isOverdue());
+        return allIssues.filter(issue => this.isIssueOverdue(issue));
     }
 
     async findRecent(limit: number = 10): Promise<Issue[]> {
@@ -205,16 +205,16 @@ export class IssueRepository implements IIssueRepository {
         const allIssues = await this.findAll();
         
         const total = allIssues.length;
-        const open = allIssues.filter(i => i.isOpen()).length;
-        const inProgress = allIssues.filter(i => i.isInProgress()).length;
+        const open = allIssues.filter(i => i.status === 'open').length;
+        const inProgress = allIssues.filter(i => i.status === 'in_progress').length;
         const resolved = allIssues.filter(i => i.status === 'resolved').length;
-        const closed = allIssues.filter(i => i.isClosed()).length;
-        const overdue = allIssues.filter(i => i.isOverdue()).length;
+        const closed = allIssues.filter(i => i.status === 'closed').length;
+        const overdue = allIssues.filter(i => this.isIssueOverdue(i)).length;
 
         // Calculate average resolution time
         const resolvedIssues = allIssues.filter(i => i.resolvedAt && i.createdAt);
         const totalResolutionTime = resolvedIssues.reduce((sum, issue) => {
-            const resolutionTime = issue.getTimeToResolution();
+            const resolutionTime = this.getIssueResolutionTimeInDays(issue);
             return sum + (resolutionTime || 0);
         }, 0);
         const averageResolutionTime = resolvedIssues.length > 0 
@@ -230,5 +230,26 @@ export class IssueRepository implements IIssueRepository {
             overdue,
             averageResolutionTime: Math.round(averageResolutionTime)
         };
+    }
+
+    private getIssueResolutionTimeInDays(issue: Issue): number | null {
+        if (!issue.resolvedAt || !issue.createdAt) return null;
+        return Math.floor((issue.resolvedAt.getTime() - issue.createdAt.getTime()) / (1000 * 60 * 60 * 24));
+    }
+
+    private getIssueAgeInDays(issue: Issue): number {
+        if (!issue.createdAt) return 0;
+        return Math.floor((Date.now() - issue.createdAt.getTime()) / (1000 * 60 * 60 * 24));
+    }
+
+    private isIssueOverdue(issue: Issue): boolean {
+        if (issue.status === 'resolved' || issue.status === 'closed') return false;
+        const thresholds: Record<IssuePriority, number> = {
+            low: 30,
+            medium: 14,
+            high: 7,
+            urgent: 2,
+        };
+        return this.getIssueAgeInDays(issue) > thresholds[issue.priority];
     }
 }

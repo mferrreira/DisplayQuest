@@ -19,6 +19,11 @@ interface DeductHoursDialogProps {
   children: React.ReactNode
 }
 
+interface DeductHoursResponse {
+  success: boolean
+  message: string
+}
+
 export function DeductHoursDialog({ 
   userId, 
   userName, 
@@ -58,7 +63,7 @@ export function DeductHoursDialog({
         return
       }
 
-      const response = await fetchAPI(`/api/users/${userId}/deduct-hours`, {
+      const response = await fetchAPI<DeductHoursResponse>(`/api/users/${userId}/deduct-hours`, {
         method: "POST",
         body: JSON.stringify({
           hours: hoursNumber,
@@ -192,5 +197,4 @@ export function DeductHoursDialog({
     </Dialog>
   )
 }
-
 

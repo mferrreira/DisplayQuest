@@ -33,7 +33,13 @@ export function IssueProvider({ children }: { children: ReactNode }) {
     try {
       setLoading(true)
       setError(null)
-      const response = await IssuesAPI.getAll(status, priority, assignedTo)
+      const params = new URLSearchParams()
+      if (status) params.set("status", status)
+      if (priority) params.set("priority", priority)
+      if (typeof assignedTo === "number") params.set("assignedTo", String(assignedTo))
+
+      const query = params.toString()
+      const response = await IssuesAPI.getAll(query ? `?${query}` : "")
       setIssues(response.issues || [])
     } catch (err: any) {
       setError(err.message || 'Erro ao buscar issues')

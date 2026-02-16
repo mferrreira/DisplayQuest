@@ -12,6 +12,13 @@ import { useProject } from "@/contexts/project-context"
 import { useUser } from "@/contexts/user-context"
 import type { Project, ProjectFormData } from "@/contexts/types"
 import { Checkbox } from "@/components/ui/checkbox"
+import {
+  addProjectMember,
+  listProjectMembers,
+  removeProjectMember,
+  setProjectMemberRoles,
+  type ProjectMember,
+} from "@/lib/api/project-members"
 
 interface ProjectDialogProps {
   open: boolean
@@ -46,6 +53,17 @@ export function ProjectDialog({ open, onOpenChange, project = null }: ProjectDia
         volunteerIds: [],
         links: project.links || [],
       })
+      void (async () => {
+        try {
+          const members = await listProjectMembers(project.id)
+          const volunteerIds = members
+            .filter((member) => member.roles.includes("VOLUNTARIO"))
+            .map((member) => member.userId)
+          setFormData((prev) => ({ ...prev, volunteerIds }))
+        } catch (error) {
+          console.error("Erro ao carregar voluntários do projeto:", error)
+        }
+      })()
     } else if (open) {
       setFormData({
         name: "",
@@ -58,6 +76,39 @@ export function ProjectDialog({ open, onOpenChange, project = null }: ProjectDia
     }
     setError(null)
   }, [open, project])
+
+  const syncProjectVolunteers = async (projectId: number, volunteerIds: number[]) => {
+    const members = await listProjectMembers(projectId)
+    const selectedVolunteerIds = new Set(volunteerIds)
+    const memberByUserId = new Map<number, ProjectMember>(
+      members.map((member) => [member.userId, member]),
+    )
+
+    for (const volunteerId of selectedVolunteerIds) {
+      const existingMember = memberByUserId.get(volunteerId)
+      if (!existingMember) {
+        await addProjectMember(projectId, volunteerId, ["VOLUNTARIO"])
+        continue
+      }
+
+      if (!existingMember.roles.includes("VOLUNTARIO")) {
+        const mergedRoles = Array.from(new Set([...existingMember.roles, "VOLUNTARIO"]))
+        await setProjectMemberRoles(projectId, volunteerId, mergedRoles)
+      }
+    }
+
+    const volunteerMembers = members.filter((member) => member.roles.includes("VOLUNTARIO"))
+    for (const volunteerMember of volunteerMembers) {
+      if (selectedVolunteerIds.has(volunteerMember.userId)) continue
+
+      const remainingRoles = volunteerMember.roles.filter((role) => role !== "VOLUNTARIO")
+      if (remainingRoles.length === 0) {
+        await removeProjectMember(projectId, volunteerMember.id)
+      } else {
+        await setProjectMemberRoles(projectId, volunteerMember.userId, remainingRoles)
+      }
+    }
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -102,6 +153,7 @@ export function ProjectDialog({ open, onOpenChange, project = null }: ProjectDia
 
       if (project) {
         await updateProject(project.id, payloadForUpdate)
+        await syncProjectVolunteers(project.id, volunteerIds)
       } else {
         await createProject({
           ...formData,

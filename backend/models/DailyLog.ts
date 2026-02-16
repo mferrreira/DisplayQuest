@@ -30,16 +30,15 @@ export class DailyLog {
     }
 
     static fromPrisma(data: daily_logs): DailyLog {
-        const dailyLog = new DailyLog(
+        return new DailyLog(
             data.userId,
             new Date(data.date),
             data.projectId,
             data.note,
             data.workSessionId || null,
             data.id,
-            new Date(data.createdAt)
+            new Date(data.createdAt),
         );
-        return dailyLog;
     }
 
     toPrisma(): any {
@@ -48,16 +47,11 @@ export class DailyLog {
             projectId: this.projectId,
             date: this.date,
             note: this.note,
-            workSessionId: this.workSessionId
+            workSessionId: this.workSessionId,
         };
-        
-        if (this.id !== undefined) {
-            data.id = this.id;
-        }
-        if (this.createdAt !== undefined) {
-            data.createdAt = this.createdAt;
-        }
-        
+
+        if (this.id !== undefined) data.id = this.id;
+        if (this.createdAt !== undefined) data.createdAt = this.createdAt;
         return data;
     }
 
@@ -69,35 +63,8 @@ export class DailyLog {
             data.note,
             data.workSessionId,
             data.id,
-            data.createdAt
+            data.createdAt,
         );
-    }
-
-    updateNote(note: string): DailyLog {
-        this.note = note;
-        return this;
-    }
-
-    updateProject(projectId: number | null): DailyLog {
-        this.projectId = projectId;
-        return this;
-    }
-
-    linkToWorkSession(workSessionId: number): DailyLog {
-        this.workSessionId = workSessionId;
-        return this;
-    }
-
-    isValid(): boolean {
-        return !!(this.userId && this.date);
-    }
-
-    getFormattedDate(): string {
-        return this.date.toISOString().split('T')[0];
-    }
-
-    getFormattedDateTime(): string {
-        return this.date.toISOString();
     }
 
     toJSON(): any {
@@ -108,7 +75,7 @@ export class DailyLog {
             date: this.date,
             note: this.note,
             workSessionId: this.workSessionId,
-            createdAt: this.createdAt
+            createdAt: this.createdAt,
         };
     }
 }

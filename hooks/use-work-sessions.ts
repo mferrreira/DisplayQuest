@@ -50,6 +50,36 @@ export function useWorkSessions() {
     return sessions.find((session) => session?.status === "active" && session?.userId === user.id) || null
   }, [sessions, user?.id])
 
+  const pausedSession = useMemo(() => {
+    if (!user?.id) return null
+    return sessions.find((session) => session?.status === "paused" && session?.userId === user.id) || null
+  }, [sessions, user?.id])
+
+  const currentSession = useMemo(() => {
+    if (!user?.id) return null
+    return (
+      sessions.find(
+        (session) =>
+          session?.userId === user.id &&
+          (session?.status === "active" || session?.status === "paused"),
+      ) || null
+    )
+  }, [sessions, user?.id])
+
+  const getElapsedSeconds = useCallback((session?: WorkSession | null) => {
+    if (!session) return 0
+
+    const accumulated = typeof session.duration === "number" ? session.duration : 0
+    if (session.status === "active" && session.startTime) {
+      const start = new Date(session.startTime).getTime()
+      const now = Date.now()
+      const running = Math.max(0, (now - start) / 1000)
+      return Math.floor(accumulated + running)
+    }
+
+    return Math.floor(accumulated)
+  }, [])
+
   const startSession = useCallback(async (payload: StartSessionPayload): Promise<WorkSession> => {
     if (!user) throw new Error("Usuário não autenticado")
     setLoading(true)
@@ -102,6 +132,53 @@ export function useWorkSessions() {
   },
   [user, fetchSessions])
 
+  const pauseSession = useCallback(async (id: number): Promise<WorkSession> => {
+    if (!user) throw new Error("Usuário não autenticado")
+    const session = sessions.find((candidate) => candidate.id === id)
+    if (!session) throw new Error("Sessão não encontrada")
+
+    setLoading(true)
+    setError(null)
+    try {
+      const elapsed = getElapsedSeconds(session)
+      const response = await WorkSessionsAPI.update(id, {
+        status: "paused",
+        duration: elapsed,
+      })
+      const updatedSession = response?.data || response
+      await fetchSessions(user.id)
+      return updatedSession
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Erro ao pausar sessão"
+      setError(message)
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }, [user, sessions, getElapsedSeconds, fetchSessions])
+
+  const resumeSession = useCallback(async (id: number): Promise<WorkSession> => {
+    if (!user) throw new Error("Usuário não autenticado")
+
+    setLoading(true)
+    setError(null)
+    try {
+      const response = await WorkSessionsAPI.update(id, {
+        status: "active",
+        startTime: new Date().toISOString(),
+      })
+      const updatedSession = response?.data || response
+      await fetchSessions(user.id)
+      return updatedSession
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Erro ao retomar sessão"
+      setError(message)
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }, [user, fetchSessions])
+
   const getWeeklyHours = useCallback(async (userId: number, weekStart: string, weekEnd: string): Promise<number> => {
     const weekStartDate = new Date(weekStart)
     const weekEndDate = new Date(weekEnd)
@@ -123,11 +200,16 @@ export function useWorkSessions() {
   return {
     sessions,
     activeSession,
+    pausedSession,
+    currentSession,
     loading,
     error,
     fetchSessions,
     startSession,
     endSession,
+    pauseSession,
+    resumeSession,
+    getElapsedSeconds,
     getWeeklyHours,
   }
 }

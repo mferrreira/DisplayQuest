@@ -1,6 +1,5 @@
 import { prisma } from '@/lib/database/prisma';
-import { Task } from '../models/Task';
-import { TaskStatus, TaskPriority, TaskVisibility } from '@prisma/client';
+import { Task, TaskStatus, TaskPriority, TaskVisibility } from '../models/Task';
 
 export interface ITaskRepository {
   findById(id: number): Promise<Task | null>;
@@ -217,4 +216,3 @@ export class TaskRepository implements ITaskRepository {
     });
   }
 }
-

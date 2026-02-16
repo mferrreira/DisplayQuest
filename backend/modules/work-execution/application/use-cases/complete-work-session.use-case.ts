@@ -10,7 +10,7 @@ export class CompleteWorkSessionUseCase {
 
   async execute(command: CompleteWorkSessionCommand) {
     const session = await this.gateway.completeWorkSession(command)
-    if (this.events && session.isCompleted()) {
+    if (this.events && session.status === "completed") {
       try {
         await this.events.onWorkSessionCompleted({
           session,

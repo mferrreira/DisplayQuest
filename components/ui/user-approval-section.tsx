@@ -1,4 +1,4 @@
-import { UserApproval } from "@/components/user-approval";
+import { UserApproval } from "@/components/features/user-approval";
 
 export function UserApprovalSection() {
   return <UserApproval />;

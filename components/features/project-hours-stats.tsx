@@ -52,6 +52,20 @@ export function ProjectHoursStats({ project }: ProjectHoursStatsProps) {
       // Buscar horas do projeto
       const hoursResponse = await fetch(`/api/projects/${project.id}/hours`)
       const hoursData = await hoursResponse.json()
+
+      const now = new Date()
+      const weekStartDate = new Date(now)
+      weekStartDate.setDate(now.getDate() - ((now.getDay() + 6) % 7))
+      weekStartDate.setHours(0, 0, 0, 0)
+
+      const weekEndDate = new Date(weekStartDate)
+      weekEndDate.setDate(weekStartDate.getDate() + 6)
+      weekEndDate.setHours(23, 59, 59, 999)
+
+      const currentWeekResponse = await fetch(
+        `/api/projects/${project.id}/hours?weekStart=${encodeURIComponent(weekStartDate.toISOString())}&weekEnd=${encodeURIComponent(weekEndDate.toISOString())}`,
+      )
+      const currentWeekData = await currentWeekResponse.json()
       
       if (hoursResponse.ok && hoursData.hours) {
         const hours = hoursData.hours
@@ -62,14 +76,16 @@ export function ProjectHoursStats({ project }: ProjectHoursStatsProps) {
         
         const projectStats: ProjectStats = {
           totalHours: hours.totalHours || 0,
-          currentWeekHours: 0, // Será calculado
+          currentWeekHours: currentWeekData?.hours?.totalHours || 0,
           memberCount: hours.hoursByUser?.length || 0,
-          topContributors: hours.hoursByUser?.slice(0, 5).map((user: any) => ({
+          topContributors: hours.hoursByUser?.slice(0, 5).map((user: any) => {
+            const currentWeekContributor = currentWeekData?.hours?.hoursByUser?.find((entry: any) => entry.userId === user.userId)
+            return ({
             userId: user.userId,
             userName: user.userName,
             totalHours: user.totalHours || 0,
-            currentWeekHours: 0 // Será calculado
-          })) || [],
+            currentWeekHours: currentWeekContributor?.totalHours || 0
+          })}) || [],
           weeklyHistory: historyData.history?.weeks?.slice(0, 8) || []
         }
         

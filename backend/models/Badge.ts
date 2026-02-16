@@ -1,4 +1,4 @@
-import { badges, user_badges, users } from '@prisma/client';
+import { badges, user_badges } from '@prisma/client';
 
 export interface IBadge {
     id?: number;
@@ -67,7 +67,7 @@ export class Badge {
     }
 
     static fromPrisma(data: badges): Badge {
-        const badge = new Badge({
+        return new Badge({
             id: data.id,
             name: data.name,
             description: data.description,
@@ -79,83 +79,19 @@ export class Badge {
             createdAt: data.createdAt,
             createdBy: data.createdBy,
         });
-        return badge;
     }
 
     toPrisma(): Omit<badges, 'id' | 'createdAt'> {
         return {
             name: this.name,
             description: this.description,
-            icon: this.icon,
-            color: this.color,
+            icon: this.icon ?? null,
+            color: this.color ?? null,
             category: this.category,
             criteria: this.criteria as any,
             isActive: this.isActive,
             createdBy: this.createdBy,
         };
-    }
-
-    updateName(name: string): Badge {
-        if (!name || name.trim().length === 0) {
-            throw new Error("Nome do badge é obrigatório");
-        }
-        this.name = name.trim();
-        return this;
-    }
-
-    updateDescription(description: string): Badge {
-        if (!description || description.trim().length === 0) {
-            throw new Error("Descrição do badge é obrigatória");
-        }
-        this.description = description.trim();
-        return this;
-    }
-
-    updateIcon(icon: string | null): Badge {
-        this.icon = icon;
-        return this;
-    }
-
-    updateColor(color: string | null): Badge {
-        this.color = color;
-        return this;
-    }
-
-    updateCategory(category: BadgeCategory): Badge {
-        const validCategories: BadgeCategory[] = ['achievement', 'milestone', 'special', 'social'];
-        if (!validCategories.includes(category)) {
-            throw new Error("Categoria de badge inválida");
-        }
-        this.category = category;
-        return this;
-    }
-
-    updateCriteria(criteria: IBadgeCriteria | null): Badge {
-        this.criteria = criteria;
-        return this;
-    }
-
-    activate(): Badge {
-        this.isActive = true;
-        return this;
-    }
-
-    deactivate(): Badge {
-        this.isActive = false;
-        return this;
-    }
-
-    isValid(): boolean {
-        return !!(
-            this.name &&
-            this.description &&
-            this.category &&
-            this.createdBy
-        );
-    }
-
-    canBeAwarded(): boolean {
-        return this.isActive && this.isValid();
     }
 
     checkCriteria(userStats: {
@@ -170,65 +106,14 @@ export class Badge {
 
         const criteria = this.criteria;
 
-        if (criteria.points && (userStats.points || 0) < criteria.points) {
-            return false;
-        }
-
-        if (criteria.tasks && (userStats.completedTasks || 0) < criteria.tasks) {
-            return false;
-        }
-
-        if (criteria.projects && (userStats.completedProjects || 0) < criteria.projects) {
-            return false;
-        }
-
-        if (criteria.workSessions && (userStats.workSessions || 0) < criteria.workSessions) {
-            return false;
-        }
-
-        if (criteria.weeklyHours && (userStats.weeklyHours || 0) < criteria.weeklyHours) {
-            return false;
-        }
-
-        if (criteria.consecutiveDays && (userStats.consecutiveDays || 0) < criteria.consecutiveDays) {
-            return false;
-        }
+        if (criteria.points && (userStats.points || 0) < criteria.points) return false;
+        if (criteria.tasks && (userStats.completedTasks || 0) < criteria.tasks) return false;
+        if (criteria.projects && (userStats.completedProjects || 0) < criteria.projects) return false;
+        if (criteria.workSessions && (userStats.workSessions || 0) < criteria.workSessions) return false;
+        if (criteria.weeklyHours && (userStats.weeklyHours || 0) < criteria.weeklyHours) return false;
+        if (criteria.consecutiveDays && (userStats.consecutiveDays || 0) < criteria.consecutiveDays) return false;
 
         return true;
-    }
-
-    getDisplayName(): string {
-        return this.name;
-    }
-
-    getDisplayDescription(): string {
-        return this.description;
-    }
-
-    getIconUrl(): string | null | undefined {
-        return this.icon;
-    }
-
-    getColorCode(): string {
-        return this.color || '#3B82F6';
-    }
-
-    getCategoryDisplayName(): string {
-        const categoryNames: Record<BadgeCategory, string> = {
-            achievement: 'Conquista',
-            milestone: 'Marco',
-            special: 'Especial',
-            social: 'Social'
-        };
-        return categoryNames[this.category];
-    }
-
-    isAutomatic(): boolean {
-        return this.criteria !== null && this.criteria !== undefined;
-    }
-
-    isManual(): boolean {
-        return !this.isAutomatic();
     }
 }
 
@@ -269,36 +154,8 @@ export class UserBadge {
             userId: this.userId,
             badgeId: this.badgeId,
             earnedAt: this.earnedAt,
-            earnedBy: this.earnedBy,
+            earnedBy: this.earnedBy ?? null,
         };
     }
 
-    isValid(): boolean {
-        return !!(this.userId && this.badgeId);
-    }
-
-    isEarnedByUser(): boolean {
-        return this.earnedBy === null;
-    }
-
-    isAwardedByAdmin(): boolean {
-        return this.earnedBy !== null;
-    }
-
-    getEarnedDate(): string {
-        return this.earnedAt.toLocaleDateString('pt-BR');
-    }
-
-    getEarnedTimeAgo(): string {
-        const now = new Date();
-        const diffInMs = now.getTime() - this.earnedAt.getTime();
-        const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
-        
-        if (diffInDays === 0) return 'Hoje';
-        if (diffInDays === 1) return 'Ontem';
-        if (diffInDays < 7) return `${diffInDays} dias atrás`;
-        if (diffInDays < 30) return `${Math.floor(diffInDays / 7)} semanas atrás`;
-        if (diffInDays < 365) return `${Math.floor(diffInDays / 30)} meses atrás`;
-        return `${Math.floor(diffInDays / 365)} anos atrás`;
-    }
 }

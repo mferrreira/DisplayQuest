@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server"
-import { DailyLogRepository } from "@/backend/repositories/DailyLogRepository"
-import { DailyLogService } from "@/backend/services/DailyLogService"
+import { createWorkExecutionModule } from "@/backend/modules/work-execution"
 import { ensureSelfOrPermission, requireApiActor } from "@/lib/auth/api-guard"
 import { hasRole } from "@/lib/auth/rbac"
 
-const dailyLogService = new DailyLogService(new DailyLogRepository())
+const workExecutionModule = createWorkExecutionModule()
 
 export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
@@ -12,7 +11,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     if (auth.error) return auth.error
 
     const params = await context.params
-    const log = await dailyLogService.findById(Number(params.id))
+    const log = await workExecutionModule.getDailyLogById(Number(params.id))
     if (!log) return NextResponse.json({ error: "Log não encontrado" }, { status: 404 })
 
     const actor = auth.actor

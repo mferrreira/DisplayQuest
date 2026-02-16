@@ -38,7 +38,7 @@ export class LabEventRepository implements ILabEventRepository {
     }
 
     async create(labEvent: LabEvent): Promise<LabEvent> {
-        const errors = labEvent.validate();
+        const errors = this.validateLabEvent(labEvent);
         if (errors.length > 0) {
             throw new Error(`Dados inválidos: ${errors.join(', ')}`);
         }
@@ -63,7 +63,7 @@ export class LabEventRepository implements ILabEventRepository {
             throw new Error("ID do evento é obrigatório para atualização");
         }
 
-        const errors = labEvent.validate();
+        const errors = this.validateLabEvent(labEvent);
         if (errors.length > 0) {
             throw new Error(`Dados inválidos: ${errors.join(', ')}`);
         }
@@ -134,5 +134,13 @@ export class LabEventRepository implements ILabEventRepository {
 
         return labEvents.map(labEvent => LabEvent.fromPrisma(labEvent));
     }
-}
 
+    private validateLabEvent(labEvent: LabEvent): string[] {
+        const errors: string[] = [];
+        if (!labEvent.userId || labEvent.userId <= 0) errors.push("ID do usuário é obrigatório");
+        if (!labEvent.userName || labEvent.userName.trim().length === 0) errors.push("Nome do usuário é obrigatório");
+        if (!labEvent.date || isNaN(labEvent.date.getTime())) errors.push("Data do evento inválida");
+        if (!labEvent.note || labEvent.note.trim().length === 0) errors.push("Nota do evento é obrigatória");
+        return errors;
+    }
+}

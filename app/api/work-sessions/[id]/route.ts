@@ -55,7 +55,9 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
           activity: data.activity,
           location: data.location,
           status: data.status,
+          startTime: data.startTime,
           endTime: data.endTime,
+          duration: data.duration,
           projectId: data.projectId,
           completedTaskIds,
         });

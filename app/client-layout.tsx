@@ -6,6 +6,7 @@ import { ProjectProvider } from "@/contexts/project-context"
 import { TaskProvider } from "@/contexts/task-context"
 import { SessionProvider } from "next-auth/react"
 import { AppHeader } from "@/components/layout/app-header"
+import { FloatingSessionTimer } from "@/components/ui/floating-session-timer"
 import { usePathname } from "next/navigation"
 
 function DashboardProviders({ children }: { children: React.ReactNode }) {
@@ -29,6 +30,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
   return (
     <DashboardProviders>
       <AppHeader />
+      <FloatingSessionTimer />
       {children}
     </DashboardProviders>
   )

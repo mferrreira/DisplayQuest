@@ -24,6 +24,7 @@ import { useTask } from "@/contexts/task-context"
 import { TaskDialog } from "@/components/features/task-dialog"
 import type { Project, Task } from "@/contexts/types"
 import { useAuth } from "@/contexts/auth-context"
+import { useUser } from "@/contexts/user-context"
 import { ProjectMembersManager } from "@/components/forms/project-members-manager"
 import { ProjectMembersManagement } from "@/components/features/project-members-management"
 import { ProjectHoursStats } from "@/components/features/project-hours-stats"
@@ -46,6 +47,7 @@ export function ProjectDetailDialog({
 }: ProjectDetailDialogProps) {
   const { tasks, createTask } = useTask()
   const { user } = useAuth()
+  const { users } = useUser()
   const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false)
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
 
@@ -106,6 +108,11 @@ export function ProjectDetailDialog({
   const handleAddLink = (e: any) => {
     e.preventDefault()
     console.log("Adicionou os link")
+  }
+
+  const getUserNameById = (userId?: number | null) => {
+    if (!userId) return "Não atribuído"
+    return users.find((u) => u.id === Number(userId))?.name || `Usuário #${userId}`
   }
 
   return (
@@ -278,7 +285,7 @@ export function ProjectDetailDialog({
                             </p>
                           )}
                           <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                            <span>Responsável: {task.assignedTo || "Não atribuído"}</span>
+                            <span>Responsável: {getUserNameById(task.assignedTo)}</span>
                             <span>Pontos: {task.points}</span>
                           </div>
                         </div>
@@ -311,7 +318,7 @@ export function ProjectDetailDialog({
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Criado por:</span>
-                        <span>{project.createdBy}</span>
+                        <span>{getUserNameById(project.createdBy)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Data de criação:</span>

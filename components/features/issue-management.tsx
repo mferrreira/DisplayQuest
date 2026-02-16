@@ -67,7 +67,7 @@ export function IssueManagement({ className }: IssueManagementProps) {
 
   const handleDeleteIssue = async (issueId: number) => {
     //TODO: Validar se o usuário é coordenador ou gerente
-    if(!(user.roles.includes("COORDENADOR") || user.roles.includes("GERENTE"))){
+    if (!user || !(user.roles.includes("COORDENADOR") || user.roles.includes("GERENTE"))) {
       alert("Apenas coordenadores ou gerentes podem remover reclamações!");
       return;
     }
@@ -342,7 +342,7 @@ export function IssueManagement({ className }: IssueManagementProps) {
                           </Button>
                         )}
 
-                        { hasAccess(user.roles, "MANAGE_USERS") &&
+                        { user && hasAccess(user.roles, "MANAGE_USERS") &&
                         <Button
                           size="sm"
                           variant="destructive"

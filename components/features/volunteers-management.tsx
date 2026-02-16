@@ -22,7 +22,7 @@ import {
   Target,
   Minus
 } from "lucide-react"
-import { Project } from "@/contexts/types"
+import { Project, ProjectMember } from "@/contexts/types"
 import { useProject } from "@/contexts/project-context"
 import { useAuth } from "@/contexts/auth-context"
 import { VolunteerActions } from "./volunteer-actions"
@@ -46,7 +46,7 @@ interface Volunteer {
   id: number
   name: string
   email: string
-  avatar?: string
+  avatar?: string | null
   role: string
   joinedAt: string
   hoursWorked: number
@@ -54,6 +54,12 @@ interface Volunteer {
   pointsEarned: number
   status: 'active' | 'inactive' | 'on_leave'
   lastActivity: string
+}
+
+interface ProjectVolunteersResponse {
+  success?: boolean
+  volunteers: Volunteer[]
+  stats: VolunteerStats
 }
 
 export function VolunteersManagement() {
@@ -84,7 +90,7 @@ export function VolunteersManagement() {
     
     // Gerentes de Projeto veem apenas seus projetos
     if (user.roles.includes('GERENTE_PROJETO')) {
-      return project.leaderId === user.id || project.members?.some(member => member.userId === user.id)
+      return project.leaderId === user.id || project.members?.some((member: ProjectMember) => member.userId === user.id)
     }
     
     return false
@@ -108,16 +114,16 @@ export function VolunteersManagement() {
     setLoading(true)
     try {
       // Buscar dados reais via API
-      const response = await fetchAPI(`/api/projects/${projectId}/volunteers`)
+      const response = await fetchAPI<ProjectVolunteersResponse>(`/api/projects/${projectId}/volunteers`)
       
-      if (response.success) {
+      if (Array.isArray(response.volunteers)) {
         setVolunteers(response.volunteers)
         setStats(response.stats)
       } else {
         // Fallback para dados do projeto local
         const project = projects.find(p => p.id === projectId)
         if (project) {
-          const volunteers: Volunteer[] = project.members?.map(member => ({
+          const volunteers: Volunteer[] = project.members?.map((member: ProjectMember) => ({
             id: member.userId,
             name: member.user?.name || 'Usuário',
             email: member.user?.email || '',
@@ -426,7 +432,7 @@ export function VolunteersManagement() {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-4">
                             <Avatar className="h-12 w-12">
-                              <AvatarImage src={volunteer.avatar} />
+                              <AvatarImage src={volunteer.avatar || undefined} />
                               <AvatarFallback>
                                 {volunteer.name.split(' ').map(n => n[0]).join('')}
                               </AvatarFallback>

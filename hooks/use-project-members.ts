@@ -40,7 +40,9 @@ export function useProjectMembers(projectId: number, options: UseProjectMembersO
 
       const users = Array.isArray(payload?.users) ? payload.users : []
       const available = users.filter(
-        (user: AvailableUser) => !memberIds.includes(user.id) && user.status === "active",
+        (user: AvailableUser) =>
+          !memberIds.includes(user.id) &&
+          (typeof user.status !== "string" || user.status === "active"),
       )
       setAvailableUsers(available)
     } catch {
