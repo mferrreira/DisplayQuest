@@ -41,6 +41,11 @@ model users {
   weekly_reports       weekly_reports[]       @relation("UserWeeklyReports")
   work_sessions        work_sessions[]        @relation("UserWorkSessions")
   notifications        notifications[]        @relation("UserNotifications")
+  gamificationProfile  gamification_profiles? @relation("UserGamificationProfile")
+  gamificationWallet   gamification_wallets?  @relation("UserGamificationWallet")
+  inventoryItems       gamification_inventory_items[] @relation("UserInventoryItems")
+  questProgress        gamification_quest_progress[]  @relation("UserQuestProgress")
+  storyProgress        gamification_story_progress[]  @relation("UserStoryProgress")
 }
 
 model projects {
@@ -341,4 +346,159 @@ model notifications {
   user      users     @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
   
   @@map("notifications")
+}
+
+model gamification_profiles {
+  id            Int      @id @default(autoincrement())
+  userId         Int      @unique
+  displayName    String?
+  archetype      String?
+  title          String?
+  bioRpg         String?
+  lore           String?
+  level          Int      @default(1)
+  xpTotal        Int      @default(0)
+  elo            String   @default("MADEIRA_II")
+  trophies       Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user users @relation("UserGamificationProfile", fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model gamification_wallets {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @unique
+  coins     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user users @relation("UserGamificationWallet", fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model gamification_inventory_items {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  itemKey     String
+  itemName    String
+  rarity      String   @default("common")
+  quantity    Int      @default(1)
+  metadata    Json?
+  acquiredAt  DateTime @default(now())
+  sourceType  String?
+  sourceRefId String?
+
+  user users @relation("UserInventoryItems", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, itemKey])
+  @@index([userId, rarity])
+}
+
+model gamification_quest_definitions {
+  id             Int      @id @default(autoincrement())
+  code           String   @unique
+  title          String
+  description    String?
+  questType      String   @default("DAILY")
+  scope          String   @default("PROJECT")
+  minElo         String?
+  minLevel       Int?
+  visibilityRule Json?
+  requirements   Json?
+  rewards        Json?
+  active         Boolean  @default(true)
+  startsAt       DateTime?
+  endsAt         DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  progress gamification_quest_progress[] @relation("QuestDefinitionProgress")
+}
+
+model gamification_quest_progress {
+  id            Int      @id @default(autoincrement())
+  userId        Int
+  questId       Int
+  status        String   @default("IN_PROGRESS")
+  progressValue Int      @default(0)
+  targetValue   Int      @default(1)
+  startedAt     DateTime @default(now())
+  completedAt   DateTime?
+  claimedAt     DateTime?
+  expiresAt     DateTime?
+  metadata      Json?
+
+  user  users                         @relation("UserQuestProgress", fields: [userId], references: [id], onDelete: Cascade)
+  quest gamification_quest_definitions @relation("QuestDefinitionProgress", fields: [questId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, questId])
+  @@index([userId, status])
+}
+
+model gamification_story_arcs {
+  id          Int      @id @default(autoincrement())
+  code        String   @unique
+  title       String
+  description String?
+  chapter     Int      @default(1)
+  active      Boolean  @default(true)
+  startsAt    DateTime?
+  endsAt      DateTime?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  progress gamification_story_progress[] @relation("StoryArcProgress")
+}
+
+model gamification_story_progress {
+  id             Int      @id @default(autoincrement())
+  userId         Int
+  storyArcId     Int
+  status         String   @default("LOCKED")
+  currentStep    Int      @default(0)
+  completedSteps Int      @default(0)
+  startedAt      DateTime?
+  completedAt    DateTime?
+  metadata       Json?
+
+  user  users                   @relation("UserStoryProgress", fields: [userId], references: [id], onDelete: Cascade)
+  story gamification_story_arcs @relation("StoryArcProgress", fields: [storyArcId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, storyArcId])
+  @@index([userId, status])
+}
+
+model gamification_chest_definitions {
+  id          String   @id
+  name        String
+  description String?
+  rarity      String   @default("common")
+  priceCoins  Int      @default(100)
+  minDrops    Int      @default(1)
+  maxDrops    Int      @default(1)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  drops gamification_chest_drop_entries[] @relation("ChestDefinitionDrops")
+}
+
+model gamification_chest_drop_entries {
+  id        Int      @id @default(autoincrement())
+  chestId   String
+  itemKey   String
+  itemName  String
+  rarity    String   @default("common")
+  weight    Int      @default(1)
+  qtyMin    Int      @default(1)
+  qtyMax    Int      @default(1)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  chest gamification_chest_definitions @relation("ChestDefinitionDrops", fields: [chestId], references: [id], onDelete: Cascade)
+
+  @@unique([chestId, itemKey])
+  @@index([chestId, active])
 }

@@ -39,6 +39,7 @@ import { AdminWeeklyHoursTable } from "@/components/admin/AdminWeeklyHoursTable"
 import { AdminProjectManagement } from "@/components/admin/AdminProjectManagement"
 import { AdminHoursManagement } from "@/components/admin/AdminHoursManagement"
 import { AdminNotificationsCenter } from "@/components/admin/AdminNotificationsCenter"
+import { AdminGamificationPanel } from "@/components/admin/AdminGamificationPanel"
 import { ScheduleGrid } from "@/components/admin/ScheduleGrid"
 import { NotificationsPanel } from "@/components/ui/notifications-panel"
 import { hasAccess } from "@/lib/utils/access-control"
@@ -73,6 +74,7 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
   const canManageTasks = hasAccess(user?.roles || [], 'MANAGE_TASKS')
   const canManageSchedule = hasAccess(user?.roles || [], 'MANAGE_SCHEDULE')
   const canManageBadges = hasAccess(user?.roles || [], 'MANAGE_BADGES')
+  const canManageGamification = hasAccess(user?.roles || [], 'MANAGE_REWARDS')
 
   const handleRefresh = async () => {
     setRefreshing(true)
@@ -203,7 +205,7 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
 
       {/* Tabs principais */}
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-8">
+        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-9">
           <TabsTrigger value="overview" className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4" />
             <span className="hidden sm:inline">Visão Geral</span>
@@ -231,6 +233,10 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
           <TabsTrigger value="badges" className="flex items-center gap-2">
             <Award className="h-4 w-4" />
             <span className="hidden sm:inline">Badges</span>
+          </TabsTrigger>
+          <TabsTrigger value="gamification" className="flex items-center gap-2">
+            <Shield className="h-4 w-4" />
+            <span className="hidden sm:inline">Gamificação</span>
           </TabsTrigger>
           <TabsTrigger value="settings" className="flex items-center gap-2">
             <Settings className="h-4 w-4" />
@@ -618,6 +624,18 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
         {/* Tab Badges */}
         <TabsContent value="badges" className="space-y-6">
           {canManageBadges && <BadgeManager />}
+        </TabsContent>
+
+        <TabsContent value="gamification" className="space-y-6">
+          {canManageGamification ? (
+            <AdminGamificationPanel />
+          ) : (
+            <Card>
+              <CardContent className="pt-6 text-sm text-muted-foreground">
+                Você não possui permissão para gerenciar configurações de gamificação.
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         {/* Tab Configurações */}
