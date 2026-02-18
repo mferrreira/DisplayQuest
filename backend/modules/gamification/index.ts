@@ -2,10 +2,7 @@ import type {
   AwardBadgeCommand,
   AwardFromTaskCompletionCommand,
   AwardFromWorkSessionCommand,
-  ClaimQuestRewardCommand,
   CreateBadgeCommand,
-  OpenChestCommand,
-  UpdateUserGamificationProfileCommand,
   UpdateBadgeCommand,
 } from "@/backend/modules/gamification/application/contracts"
 import { TaskCompletionProgressionEngine } from "@/backend/modules/gamification/application/use-cases/award-from-task-completion.use-case"
@@ -34,42 +31,6 @@ export class GamificationModule {
 
   async getUserProgression(userId: number) {
     return await this.userProgressionEngine.execute(userId)
-  }
-
-  async getUserWallet(userId: number) {
-    return await this._gateway.getUserWallet(userId)
-  }
-
-  async getUserProfile(userId: number) {
-    return await this._gateway.getUserProfile(userId)
-  }
-
-  async updateUserProfile(command: UpdateUserGamificationProfileCommand) {
-    return await this._gateway.updateUserProfile(command)
-  }
-
-  async listAvailableQuestsForUser(userId: number) {
-    return await this._gateway.listAvailableQuestsForUser(userId)
-  }
-
-  async claimQuestReward(command: ClaimQuestRewardCommand) {
-    return await this._gateway.claimQuestReward(command)
-  }
-
-  async listUserInventory(userId: number) {
-    return await this._gateway.listUserInventory(userId)
-  }
-
-  async listUserStoryArcs(userId: number) {
-    return await this._gateway.listUserStoryArcs(userId)
-  }
-
-  async listChestCatalog() {
-    return await this._gateway.listChestCatalog()
-  }
-
-  async openChest(command: OpenChestCommand) {
-    return await this._gateway.openChest(command)
   }
 
   async listBadges() {
