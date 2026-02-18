@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react"
+import { useState, useEffect, useCallback, type ReactNode } from "react"
 import { useAuth } from "@/contexts/auth-context"
 
 export interface Notification {
@@ -26,9 +26,11 @@ interface NotificationContextType {
   deleteNotification: (id: number) => Promise<void>
 }
 
-const NotificationContext = createContext<NotificationContextType | undefined>(undefined)
-
 export function NotificationProvider({ children }: { children: ReactNode }) {
+  return <>{children}</>
+}
+
+export function useNotification(): NotificationContextType {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -42,11 +44,11 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       setLoading(true)
       setError(null)
 
-      const response = await fetch('/api/notifications')
+      const response = await fetch("/api/notifications")
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'Erro ao buscar notificações')
+        throw new Error(data.error || "Erro ao buscar notificações")
       }
 
       setNotifications(data.notifications || [])
@@ -62,75 +64,73 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     if (!user) return
 
     try {
-      const response = await fetch('/api/notifications?count=true')
+      const response = await fetch("/api/notifications?count=true")
       const data = await response.json()
 
       if (response.ok) {
         setUnreadCount(data.count || 0)
       }
     } catch (err) {
-      console.error('Erro ao buscar contagem de notificações:', err)
+      console.error("Erro ao buscar contagem de notificações:", err)
     }
   }, [user])
 
   const markAsRead = useCallback(async (id: number) => {
     try {
       const response = await fetch(`/api/notifications/${id}`, {
-        method: 'PUT',
+        method: "PUT",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify({ action: 'markAsRead' })
+        body: JSON.stringify({ action: "markAsRead" }),
       })
 
       if (response.ok) {
-        setNotifications(prev => 
-          prev.map(notification => 
-            notification.id === id 
-              ? { ...notification, read: true, readAt: new Date().toISOString() }
-              : notification
-          )
+        setNotifications((prev) =>
+          prev.map((notification) =>
+            notification.id === id ? { ...notification, read: true, readAt: new Date().toISOString() } : notification,
+          ),
         )
-        setUnreadCount(prev => Math.max(0, prev - 1))
+        setUnreadCount((prev) => Math.max(0, prev - 1))
       }
     } catch (err) {
-      console.error('Erro ao marcar notificação como lida:', err)
+      console.error("Erro ao marcar notificação como lida:", err)
     }
   }, [])
 
   const markAllAsRead = useCallback(async () => {
     try {
-      const response = await fetch('/api/notifications/mark-all-read', {
-        method: 'POST'
+      const response = await fetch("/api/notifications/mark-all-read", {
+        method: "POST",
       })
 
       if (response.ok) {
-        setNotifications(prev => 
-          prev.map(notification => ({
+        setNotifications((prev) =>
+          prev.map((notification) => ({
             ...notification,
             read: true,
-            readAt: new Date().toISOString()
-          }))
+            readAt: new Date().toISOString(),
+          })),
         )
         setUnreadCount(0)
       }
     } catch (err) {
-      console.error('Erro ao marcar todas as notificações como lidas:', err)
+      console.error("Erro ao marcar todas as notificações como lidas:", err)
     }
   }, [])
 
   const deleteNotification = useCallback(async (id: number) => {
     try {
       const response = await fetch(`/api/notifications/${id}`, {
-        method: 'DELETE'
+        method: "DELETE",
       })
 
       if (response.ok) {
-        setNotifications(prev => prev.filter(notification => notification.id !== id))
-        setUnreadCount(prev => Math.max(0, prev - 1))
+        setNotifications((prev) => prev.filter((notification) => notification.id !== id))
+        setUnreadCount((prev) => Math.max(0, prev - 1))
       }
     } catch (err) {
-      console.error('Erro ao excluir notificação:', err)
+      console.error("Erro ao excluir notificação:", err)
     }
   }, [])
 
@@ -144,30 +144,15 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     }
   }, [user, fetchNotifications, fetchUnreadCount])
 
-  return (
-    <NotificationContext.Provider
-      value={{
-        notifications,
-        unreadCount,
-        loading,
-        error,
-        fetchNotifications,
-        markAsRead,
-        markAllAsRead,
-        deleteNotification,
-      }}
-    >
-      {children}
-    </NotificationContext.Provider>
-  )
-}
-
-export function useNotification() {
-  const context = useContext(NotificationContext)
-  if (context === undefined) {
-    throw new Error("useNotification deve ser usado dentro de um NotificationProvider")
+  return {
+    notifications,
+    unreadCount,
+    loading,
+    error,
+    fetchNotifications,
+    markAsRead,
+    markAllAsRead,
+    deleteNotification,
   }
-  return context
 }
-
 

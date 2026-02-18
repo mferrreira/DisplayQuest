@@ -13,189 +13,53 @@ export interface ITask {
   dueDate?: string | null;
   points: number;
   completed: boolean;
+  completedAt?: Date | string | null;
   taskVisibility: TaskVisibility;
   isGlobal?: boolean;
 }
 
 export class Task {
-  private _id?: number;
-  private _title: string;
-  private _description?: string | null;
-  private _status: TaskStatus;
-  private _priority: TaskPriority;
-  private _assignedTo?: number | null;
-  private _projectId?: number | null;
-  private _dueDate?: string | null;
-  private _points: number;
-  private _completed: boolean;
-  private _taskVisibility: TaskVisibility;
-  private _isGlobal: boolean;
+  public id?: number;
+  public title: string;
+  public description?: string | null;
+  public status: TaskStatus;
+  public priority: TaskPriority;
+  public assignedTo?: number | null;
+  public projectId?: number | null;
+  public dueDate?: string | null;
+  public points: number;
+  public completed: boolean;
+  public completedAt?: Date | null;
+  public taskVisibility: TaskVisibility;
+  public isGlobal: boolean;
 
   constructor(data: ITask) {
-    this._id = data.id;
-    this._title = data.title;
-    this._description = data.description;
-    this._status = data.status;
-    this._priority = data.priority;
-    this._assignedTo = data.assignedTo;
-    this._projectId = data.projectId;
-    this._dueDate = data.dueDate;
-    this._points = data.points;
-    this._completed = data.completed;
-    this._taskVisibility = data.taskVisibility;
-    this._isGlobal = data.isGlobal || false;
-  }
-
-  get id(): number | undefined { return this._id; }
-  get title(): string { return this._title; }
-  get description(): string | null | undefined { return this._description; }
-  get status(): TaskStatus { return this._status; }
-  get priority(): TaskPriority { return this._priority; }
-  get assignedTo(): number | null | undefined { return this._assignedTo; }
-  get projectId(): number | null | undefined { return this._projectId; }
-  get dueDate(): string | null | undefined { return this._dueDate; }
-  get points(): number { return this._points; }
-  get completed(): boolean { return this._completed; }
-  get taskVisibility(): TaskVisibility { return this._taskVisibility; }
-  get isGlobal(): boolean { return this._isGlobal; }
-
-  assignTo(userId: number): void {
-    this._assignedTo = userId;
-  }
-
-  unassign(): void {
-    this._assignedTo = null;
-  }
-
-  updateStatus(status: TaskStatus): void {
-    this._status = status;
-    if (status === 'done') {
-      this._completed = true;
-    } else {
-      this._completed = false;
-    }
-  }
-
-  updatePriority(priority: TaskPriority): void {
-    this._priority = priority;
-  }
-
-  updatePoints(points: number): void {
-    if (points < 0) {
-      throw new Error('Pontos não podem ser negativos');
-    }
-    this._points = points;
-  }
-
-  setDueDate(dueDate: string | null): void {
-    this._dueDate = dueDate;
-  }
-
-  updateVisibility(visibility: TaskVisibility): void {
-    this._taskVisibility = visibility;
-  }
-
-  isOverdue(): boolean {
-    if (!this._dueDate) return false;
-    const dueDate = new Date(this._dueDate);
-    const now = new Date();
-    return dueDate < now && !this._completed;
-  }
-
-  canBeCompleted(): boolean {
-    if (this._status === 'done') {
-      return false;
-    }
-    
-    if (this._taskVisibility === 'public') {
-      return true;
-    }
-    
-    return this._assignedTo !== null;
-  }
-
-  setTitle(title: string): void {
-    this._title = title;
-  }
-
-  setDescription(description: string): void {
-    this._description = description;
-  }
-
-  setPriority(priority: TaskPriority): void {
-    this._priority = priority;
-  }
-
-  setStatus(status: TaskStatus): void {
-    this._status = status;
-    // Sincronizar o campo completed com o status
-    if (status === 'done') {
-      this._completed = true;
-    } else {
-      this._completed = false;
-    }
-  }
-
-  setAssignedTo(assignedTo: number): void {
-    this._assignedTo = assignedTo;
-  }
-
-  setProjectId(projectId: number): void {
-    this._projectId = projectId;
-  }
-
-  setVisibility(visibility: TaskVisibility): void {
-    this._taskVisibility = visibility;
-  }
-
-  setGlobal(isGlobal: boolean): void {
-    this._isGlobal = isGlobal;
-  }
-
-  complete(): void {
-    if (!this.canBeCompleted()) {
-      throw new Error('Tarefa não pode ser completada');
-    }
-    
-    // Tasks globais vão direto para 'done' (sem necessidade de aprovação)
-    // Tasks delegadas vão para 'in-review' (precisam de aprovação do líder)
-    if (this._isGlobal || this._taskVisibility === 'public') {
-      this._status = 'done';
-    } else {
-      this._status = 'in-review';
-    }
-    
-    this._completed = true;
-  }
-
-  reopen(): void {
-    this._status = 'to-do';
-    this._completed = false;
-  }
-
-  // Método para marcar como completada sem validações (usado na aprovação)
-  markAsCompleted(): void {
-    this._completed = true;
-  }
-
-  validate(): void {
-    if (!this._title || this._title.trim().length === 0) {
-      throw new Error('Título da tarefa é obrigatório');
-    }
-    if (this._title.length > 200) {
-      throw new Error('Título da tarefa não pode ter mais de 200 caracteres');
-    }
-    if (this._description && this._description.length > 1000) {
-      throw new Error('Descrição da tarefa não pode ter mais de 1000 caracteres');
-    }
-    if (this._points < 0) {
-      throw new Error('Pontos da tarefa não podem ser negativos');
-    }
+    this.id = data.id;
+    this.title = data.title;
+    this.description = data.description;
+    this.status = data.status;
+    this.priority = data.priority;
+    this.assignedTo = data.assignedTo;
+    this.projectId = data.projectId;
+    this.dueDate = data.dueDate;
+    this.points = data.points;
+    this.completed = data.completed;
+    this.completedAt = data.completedAt ? new Date(data.completedAt) : null;
+    this.taskVisibility = data.taskVisibility;
+    this.isGlobal = data.isGlobal || false;
   }
 
   static create(data: Omit<ITask, 'id'>): Task {
-    const task = new Task({
-      title: data.title || '',
+    const title = String(data.title || '').trim();
+    if (!title) throw new Error('Título da tarefa é obrigatório');
+    if (title.length > 200) throw new Error('Título da tarefa não pode ter mais de 200 caracteres');
+    if (data.description && data.description.length > 1000) {
+      throw new Error('Descrição da tarefa não pode ter mais de 1000 caracteres');
+    }
+    if ((data.points || 0) < 0) throw new Error('Pontos da tarefa não podem ser negativos');
+
+    return new Task({
+      title,
       description: data.description || null,
       status: data.status,
       priority: data.priority,
@@ -204,11 +68,10 @@ export class Task {
       dueDate: data.dueDate || null,
       points: data.points || 0,
       completed: data.completed || false,
+      completedAt: data.completed || data.status === "done" ? new Date() : null,
       taskVisibility: data.taskVisibility || 'delegated',
-      isGlobal: data.isGlobal || false
+      isGlobal: data.isGlobal || false,
     });
-    task.validate();
-    return task;
   }
 
   static fromPrisma(data: any): Task {
@@ -223,42 +86,44 @@ export class Task {
       dueDate: data.dueDate,
       points: data.points,
       completed: data.completed,
+      completedAt: data.completedAt,
       taskVisibility: data.taskVisibility,
-      isGlobal: data.isGlobal || false
+      isGlobal: data.isGlobal || false,
     });
   }
 
   toPrisma(): any {
     return {
-      title: this._title,
-      description: this._description,
-      status: this._status,
-      priority: this._priority,
-      assignedTo: this._assignedTo,
-      projectId: this._projectId,
-      dueDate: this._dueDate,
-      points: this._points,
-      completed: this._completed,
-      taskVisibility: this._taskVisibility,
-      isGlobal: this._isGlobal
+      title: this.title,
+      description: this.description,
+      status: this.status,
+      priority: this.priority,
+      assignedTo: this.assignedTo,
+      projectId: this.projectId,
+      dueDate: this.dueDate,
+      points: this.points,
+      completed: this.completed,
+      completedAt: this.completedAt || null,
+      taskVisibility: this.taskVisibility,
+      isGlobal: this.isGlobal,
     };
   }
 
   toJSON(): any {
     return {
-      id: this._id,
-      title: this._title,
-      description: this._description,
-      status: this._status,
-      priority: this._priority,
-      assignedTo: this._assignedTo,
-      projectId: this._projectId,
-      dueDate: this._dueDate,
-      points: this._points,
-      completed: this._completed,
-      taskVisibility: this._taskVisibility,
-      isGlobal: this._isGlobal
+      id: this.id,
+      title: this.title,
+      description: this.description,
+      status: this.status,
+      priority: this.priority,
+      assignedTo: this.assignedTo,
+      projectId: this.projectId,
+      dueDate: this.dueDate,
+      points: this.points,
+      completed: this.completed,
+      completedAt: this.completedAt ? this.completedAt.toISOString() : null,
+      taskVisibility: this.taskVisibility,
+      isGlobal: this.isGlobal,
     };
   }
 }
-

@@ -125,7 +125,7 @@ export class ProjectMembershipRepository implements IProjectMembershipRepository
     }
 
     async create(membership: ProjectMembership): Promise<ProjectMembership> {
-        const errors = membership.validate();
+        const errors = this.validateMembership(membership);
         if (errors.length > 0) {
             throw new Error(`Dados inválidos: ${errors.join(', ')}`);
         }
@@ -149,7 +149,7 @@ export class ProjectMembershipRepository implements IProjectMembershipRepository
             throw new Error('ID da participação é obrigatório para atualização');
         }
 
-        const errors = membership.validate();
+        const errors = this.validateMembership(membership);
         if (errors.length > 0) {
             throw new Error(`Dados inválidos: ${errors.join(', ')}`);
         }
@@ -186,10 +186,8 @@ export class ProjectMembershipRepository implements IProjectMembershipRepository
     async exists(projectId: number, userId: number): Promise<boolean> {
         const count = await prisma.project_members.count({
             where: {
-                projectId_userId: {
-                    projectId,
-                    userId
-                }
+                projectId,
+                userId
             }
         });
         return count > 0;
@@ -240,6 +238,24 @@ export class ProjectMembershipRepository implements IProjectMembershipRepository
         });
 
         return memberships.map(membership => ProjectMembership.fromPrisma(membership));
+    }
+
+    private validateMembership(membership: ProjectMembership): string[] {
+        const errors: string[] = [];
+
+        if (!membership.projectId || membership.projectId <= 0) {
+            errors.push('ID do projeto é obrigatório');
+        }
+
+        if (!membership.userId || membership.userId <= 0) {
+            errors.push('ID do usuário é obrigatório');
+        }
+
+        if (!membership.roles || membership.roles.length === 0) {
+            errors.push('Pelo menos um papel deve ser atribuído');
+        }
+
+        return errors;
     }
 
     async getProjectStatistics(projectId: number): Promise<{
@@ -310,4 +326,3 @@ export class ProjectMembershipRepository implements IProjectMembershipRepository
         };
     }
 }
-

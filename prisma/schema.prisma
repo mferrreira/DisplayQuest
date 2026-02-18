@@ -83,10 +83,12 @@ model tasks {
   dueDate        String?
   points         Int       @default(0)
   completed      Boolean   @default(false)
+  completedAt    DateTime?
   taskVisibility String    @default("delegated")
   isGlobal       Boolean   @default(false)
   assignee       users?    @relation("UserTasks", fields: [assignedTo], references: [id])
   projectObj     projects? @relation("ProjectTasks", fields: [projectId], references: [id])
+  workSessions   work_session_tasks[] @relation("TaskWorkSessions")
 }
 
 model rewards {
@@ -200,6 +202,19 @@ model work_sessions {
   dailyLog  daily_logs? @relation("WorkSessionDailyLog")
   user      users       @relation("UserWorkSessions", fields: [userId], references: [id], onDelete: Cascade)
   project   projects?   @relation("WorkSessionProject", fields: [projectId], references: [id])
+  tasks     work_session_tasks[] @relation("WorkSessionTasks")
+}
+
+model work_session_tasks {
+  id            Int           @id @default(autoincrement())
+  workSessionId Int
+  taskId        Int
+  createdAt     DateTime      @default(now())
+  workSession   work_sessions @relation("WorkSessionTasks", fields: [workSessionId], references: [id], onDelete: Cascade)
+  task          tasks         @relation("TaskWorkSessions", fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@unique([workSessionId, taskId])
+  @@index([taskId])
 }
 
 model kanban_boards {
@@ -327,4 +342,3 @@ model notifications {
   
   @@map("notifications")
 }
-

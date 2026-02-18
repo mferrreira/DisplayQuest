@@ -63,8 +63,6 @@ export function IssueForm({ onSuccess, onCancel }: IssueFormProps) {
         reporterId: user.id,
         assigneeId: null,
         resolution: null,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
       })
 
       setSuccess("Reclamação criada com sucesso!")

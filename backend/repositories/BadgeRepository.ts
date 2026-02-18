@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/database/prisma';
+import { Prisma } from '@prisma/client';
 import { Badge, UserBadge } from '../models/Badge';
 import { BadgeCategory } from '../models/Badge';
 
@@ -104,7 +105,12 @@ export class BadgeRepository implements IBadgeRepository {
     async create(badge: Badge): Promise<Badge> {
         const data = badge.toPrisma();
         const created = await prisma.badges.create({
-            data,
+            data: {
+                ...data,
+                criteria: data.criteria == null
+                    ? Prisma.JsonNull
+                    : (data.criteria as Prisma.InputJsonValue),
+            },
             include: {
                 creator: true,
                 userBadges: {
@@ -127,7 +133,12 @@ export class BadgeRepository implements IBadgeRepository {
         const data = badge.toPrisma();
         const updated = await prisma.badges.update({
             where: { id: badge.id },
-            data,
+            data: {
+                ...data,
+                criteria: data.criteria == null
+                    ? Prisma.JsonNull
+                    : (data.criteria as Prisma.InputJsonValue),
+            },
             include: {
                 creator: true,
                 userBadges: {
@@ -170,7 +181,7 @@ export class BadgeRepository implements IBadgeRepository {
         const badges = await prisma.badges.findMany({
             where: {
                 isActive: true,
-                criteria: { not: null }
+                criteria: { not: Prisma.AnyNull }
             },
             include: {
                 creator: true,
@@ -191,7 +202,7 @@ export class BadgeRepository implements IBadgeRepository {
         const badges = await prisma.badges.findMany({
             where: {
                 isActive: true,
-                criteria: null
+                criteria: { equals: Prisma.AnyNull }
             },
             include: {
                 creator: true,

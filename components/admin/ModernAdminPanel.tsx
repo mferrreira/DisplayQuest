@@ -1,13 +1,16 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { 
+import { Label } from "@/components/ui/label"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import {
   Users, 
   BarChart3, 
   Clock, 
@@ -27,10 +30,6 @@ import {
   RefreshCw
 } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
-import { useProject } from "@/contexts/project-context"
-import { useTask } from "@/contexts/task-context"
-import { useWorkSessions } from "@/contexts/work-session-context"
-import { useNotification } from "@/contexts/notification-context"
 import { UserApproval } from "@/components/features/user-approval"
 import { ProjectMembersManagement } from "@/components/features/project-members-management"
 import { ProjectHoursStats } from "@/components/features/project-hours-stats"
@@ -39,6 +38,7 @@ import { AdminStatsCards } from "@/components/admin/AdminStatsCards"
 import { AdminWeeklyHoursTable } from "@/components/admin/AdminWeeklyHoursTable"
 import { AdminProjectManagement } from "@/components/admin/AdminProjectManagement"
 import { AdminHoursManagement } from "@/components/admin/AdminHoursManagement"
+import { AdminNotificationsCenter } from "@/components/admin/AdminNotificationsCenter"
 import { ScheduleGrid } from "@/components/admin/ScheduleGrid"
 import { NotificationsPanel } from "@/components/ui/notifications-panel"
 import { hasAccess } from "@/lib/utils/access-control"
@@ -53,16 +53,19 @@ interface ModernAdminPanelProps {
 
 export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: ModernAdminPanelProps) {
   const { user } = useAuth()
-  const { projects: contextProjects, createProject, updateProject, deleteProject } = useProject()
-  const { tasks: contextTasks, createTask, updateTask, deleteTask } = useTask()
-  const { sessions: contextSessions } = useWorkSessions()
-  const { notifications, markAsRead, markAllAsRead } = useNotification()
+  const router = useRouter()
   
   const [searchTerm, setSearchTerm] = useState("")
   const [filterRole, setFilterRole] = useState("all")
   const [filterStatus, setFilterStatus] = useState("all")
   const [selectedProject, setSelectedProject] = useState<string>("")
   const [refreshing, setRefreshing] = useState(false)
+  const [selectedUserForSettings, setSelectedUserForSettings] = useState<any | null>(null)
+  const [userRoleDraft, setUserRoleDraft] = useState<string>("")
+  const [userWeekHoursDraft, setUserWeekHoursDraft] = useState<string>("0")
+  const [savingUserSettings, setSavingUserSettings] = useState(false)
+  const [globalTasksProgress, setGlobalTasksProgress] = useState<any[]>([])
+  const [loadingGlobalTasks, setLoadingGlobalTasks] = useState(false)
 
   // Verificar permissões do usuário
   const canManageUsers = hasAccess(user?.roles || [], 'MANAGE_USERS')
@@ -74,8 +77,7 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
   const handleRefresh = async () => {
     setRefreshing(true)
     try {
-      // Recarregar dados
-      window.location.reload()
+      router.refresh()
     } finally {
       setRefreshing(false)
     }
@@ -85,6 +87,81 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
     // Implementar exportação de dados
     console.log(`Exportando dados: ${type}`)
   }
+
+  const openUserSettings = (targetUser: any) => {
+    setSelectedUserForSettings(targetUser)
+    setUserRoleDraft(targetUser?.roles?.[0] || "COLABORADOR")
+    setUserWeekHoursDraft(String(targetUser?.weekHours ?? 0))
+  }
+
+  const updateUserStatus = async (targetUserId: number, action: "approve" | "reject" | "suspend" | "activate") => {
+    const response = await fetch(`/api/users/${targetUserId}/status`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action }),
+    })
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}))
+      throw new Error(payload?.error || "Erro ao atualizar status")
+    }
+    router.refresh()
+  }
+
+  const saveUserSettings = async () => {
+    if (!selectedUserForSettings) return
+
+    setSavingUserSettings(true)
+    try {
+      const rolesResponse = await fetch(`/api/users/${selectedUserForSettings.id}/roles`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "set",
+          roles: [userRoleDraft],
+        }),
+      })
+      if (!rolesResponse.ok) {
+        const payload = await rolesResponse.json().catch(() => ({}))
+        throw new Error(payload?.error || "Erro ao atualizar papel do usuário")
+      }
+
+      const updateResponse = await fetch(`/api/users/${selectedUserForSettings.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          weekHours: Number(userWeekHoursDraft),
+        }),
+      })
+      if (!updateResponse.ok) {
+        const payload = await updateResponse.json().catch(() => ({}))
+        throw new Error(payload?.error || "Erro ao atualizar usuário")
+      }
+
+      setSelectedUserForSettings(null)
+      router.refresh()
+    } finally {
+      setSavingUserSettings(false)
+    }
+  }
+
+  useEffect(() => {
+    const fetchGlobalTasksProgress = async () => {
+      setLoadingGlobalTasks(true)
+      try {
+        const response = await fetch("/api/tasks/global-progress")
+        const payload = await response.json()
+        setGlobalTasksProgress(Array.isArray(payload?.globalTasks) ? payload.globalTasks : [])
+      } catch (error) {
+        setGlobalTasksProgress([])
+      } finally {
+        setLoadingGlobalTasks(false)
+      }
+    }
+
+    if (canManageUsers) {
+      fetchGlobalTasksProgress()
+    }
+  }, [canManageUsers, tasks.length])
 
   return (
     <div className="space-y-6">
@@ -276,7 +353,7 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <AdminWeeklyHoursTable users={users} />
+              <AdminWeeklyHoursTable users={users} sessions={sessions} />
             </CardContent>
           </Card>
         </TabsContent>
@@ -387,7 +464,7 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
                             >
                               {user.status}
                             </Badge>
-                            <Button variant="outline" size="sm">
+                            <Button variant="outline" size="sm" onClick={() => openUserSettings(user)}>
                               <Settings className="h-4 w-4" />
                             </Button>
                           </div>
@@ -412,6 +489,7 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
               projects={projects}
               users={users}
               tasks={tasks}
+              sessions={sessions}
               onProjectUpdate={() => {
                 // Recarregar dados se necessário
                 console.log('Projeto atualizado')
@@ -444,51 +522,91 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
         {/* Tab Tarefas */}
         <TabsContent value="tasks" className="space-y-6">
           {canManageTasks && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Activity className="h-5 w-5" />
-                  Gestão de Tarefas
-                </CardTitle>
-                <CardDescription>
-                  Gerencie tarefas e aprovações
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {tasks.slice(0, 10).map((task) => (
-                    <div key={task.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div>
-                        <h3 className="font-medium">{task.title}</h3>
-                        <p className="text-sm text-muted-foreground">{task.description}</p>
-                        <div className="flex gap-2 mt-2">
-                          <Badge variant="outline">{task.status}</Badge>
-                          <Badge variant="outline">{task.priority}</Badge>
+            <>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Activity className="h-5 w-5" />
+                    Gestão de Tarefas
+                  </CardTitle>
+                  <CardDescription>
+                    Gerencie tarefas e aprovações
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {tasks.slice(0, 10).map((task) => (
+                      <div key={task.id} className="flex items-center justify-between p-4 border rounded-lg">
+                        <div>
+                          <h3 className="font-medium">{task.title}</h3>
+                          <p className="text-sm text-muted-foreground">{task.description}</p>
+                          <div className="flex gap-2 mt-2">
+                            <Badge variant="outline">{task.status}</Badge>
+                            <Badge variant="outline">{task.priority}</Badge>
+                            {task.isGlobal && <Badge>Global</Badge>}
+                          </div>
                         </div>
                       </div>
-                      <div className="flex gap-2">
-                        <Button variant="outline" size="sm">
-                          <Settings className="h-4 w-4" />
-                        </Button>
-                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Tarefas Globais (Coordenador)</CardTitle>
+                  <CardDescription>
+                    Progresso de conclusão por aluno em tarefas globais reais
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {loadingGlobalTasks ? (
+                    <p className="text-sm text-muted-foreground">Carregando progresso...</p>
+                  ) : globalTasksProgress.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Nenhuma tarefa global cadastrada.</p>
+                  ) : (
+                    <div className="space-y-4">
+                      {globalTasksProgress.map((task) => (
+                        <div key={task.id} className="rounded-lg border p-4 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="font-medium">{task.title}</p>
+                              <p className="text-xs text-muted-foreground">{task.description || "Sem descrição"}</p>
+                            </div>
+                            <Badge variant="outline">
+                              {task.completedCount}/{task.audienceSize} concluíram
+                            </Badge>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div className="bg-green-600 h-2 rounded-full" style={{ width: `${Math.round(task.completionRate)}%` }} />
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            Concluíram: {task.completedUsers.map((u: any) => u.name).join(", ") || "Ninguém"}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            Pendentes: {task.pendingUsers.map((u: any) => u.name).join(", ") || "Nenhum"}
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+                  )}
+                </CardContent>
+              </Card>
+            </>
           )}
         </TabsContent>
 
         {/* Tab Notificações */}
         <TabsContent value="notifications" className="space-y-6">
+          <AdminNotificationsCenter users={users} />
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Bell className="h-5 w-5" />
-                Gestão de Notificações
+                Minha Caixa de Notificações
               </CardTitle>
               <CardDescription>
-                Gerencie notificações do sistema
+                Visualize e gerencie suas notificações pessoais
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -527,6 +645,70 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
           </Card>
         </TabsContent>
       </Tabs>
+
+      <Dialog open={Boolean(selectedUserForSettings)} onOpenChange={(open) => !open && setSelectedUserForSettings(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Configurar Usuário</DialogTitle>
+            <DialogDescription>
+              Ajuste função, status e carga horária do usuário.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedUserForSettings && (
+            <div className="space-y-4">
+              <div>
+                <Label>Usuário</Label>
+                <p className="text-sm text-muted-foreground">
+                  {selectedUserForSettings.name} ({selectedUserForSettings.email})
+                </p>
+              </div>
+
+              <div>
+                <Label>Função principal</Label>
+                <Select value={userRoleDraft} onValueChange={setUserRoleDraft}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="COORDENADOR">Coordenador</SelectItem>
+                    <SelectItem value="GERENTE">Gerente</SelectItem>
+                    <SelectItem value="LABORATORISTA">Laboratorista</SelectItem>
+                    <SelectItem value="GERENTE_PROJETO">Gerente de Projeto</SelectItem>
+                    <SelectItem value="PESQUISADOR">Pesquisador</SelectItem>
+                    <SelectItem value="COLABORADOR">Colaborador</SelectItem>
+                    <SelectItem value="VOLUNTARIO">Voluntário</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label>Carga horária semanal</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  value={userWeekHoursDraft}
+                  onChange={(e) => setUserWeekHoursDraft(e.target.value)}
+                />
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" onClick={() => updateUserStatus(selectedUserForSettings.id, "approve")}>Aprovar</Button>
+                <Button variant="outline" onClick={() => updateUserStatus(selectedUserForSettings.id, "activate")}>Ativar</Button>
+                <Button variant="outline" onClick={() => updateUserStatus(selectedUserForSettings.id, "suspend")}>Suspender</Button>
+                <Button variant="destructive" onClick={() => updateUserStatus(selectedUserForSettings.id, "reject")}>Rejeitar</Button>
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setSelectedUserForSettings(null)}>Cancelar</Button>
+                <Button onClick={saveUserSettings} disabled={savingUserSettings}>
+                  {savingUserSettings ? "Salvando..." : "Salvar alterações"}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

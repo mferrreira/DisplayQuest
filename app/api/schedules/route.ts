@@ -1,62 +1,72 @@
 import { NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
+import { requireApiActor } from "@/lib/auth/api-guard"
+import { createLabOperationsModule } from "@/backend/modules/lab-operations"
 
-import { UserScheduleService } from "@/backend/services/UserScheduleService";
-import { UserScheduleRepository } from "@/backend/repositories/UserScheduleRepository";
-import { UserRepository } from "@/backend/repositories/UserRepository";
+const labOperationsModule = createLabOperationsModule()
 
-const userScheduleService = new UserScheduleService(
-  new UserScheduleRepository(),
-  new UserRepository(),
-)
-// GET: Obter todos os horários ou filtrar por usuário
+function toHttpStatus(error: unknown) {
+  const message = error instanceof Error ? error.message : "Erro interno do servidor"
+  if (message.includes("Acesso negado")) return 403
+  if (message.includes("inválid") || message.includes("Dados inválidos")) return 400
+  return 500
+}
+
 export async function GET(request: Request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-    
-    let schedules;
-    if (userId) {
-      schedules = await userScheduleService.getSchedulesByUser(parseInt(userId));
-    } else {
-      schedules = await userScheduleService.findAll();
+    const auth = await requireApiActor()
+    if (auth.error) return auth.error
+
+    const { searchParams } = new URL(request.url)
+    const userIdParam = searchParams.get("userId")
+    const targetUserId = userIdParam ? Number(userIdParam) : undefined
+
+    if (userIdParam && (!Number.isInteger(targetUserId) || targetUserId! <= 0)) {
+      return NextResponse.json({ error: "userId inválido" }, { status: 400 })
     }
-    
-    return NextResponse.json({ 
-      schedules: schedules.map(schedule => schedule.toJSON()) 
-    });
-  } catch (error: any) {
-    console.error('Erro ao buscar horários:', error);
-    return NextResponse.json({ 
-      error: error.message || 'Erro ao buscar horários' 
-    }, { status: 500 });
+
+    const schedules = await labOperationsModule.listUserSchedules({
+      actorUserId: auth.actor.id,
+      actorRoles: auth.actor.roles,
+      targetUserId,
+    })
+
+    return NextResponse.json({
+      schedules: schedules.map((schedule: any) => schedule.toJSON()),
+    })
+  } catch (error: unknown) {
+    console.error("Erro ao buscar horários:", error)
+    const message = error instanceof Error ? error.message : "Erro ao buscar horários"
+    return NextResponse.json({ error: message }, { status: toHttpStatus(error) })
   }
 }
 
-// POST: Criar um novo horário
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+    const auth = await requireApiActor()
+    if (auth.error) return auth.error
+
+    const data = await request.json()
+    const targetUserId = data?.userId ? Number(data.userId) : auth.actor.id
+
+    if (!Number.isInteger(targetUserId) || targetUserId <= 0) {
+      return NextResponse.json({ error: "userId inválido" }, { status: 400 })
     }
 
-    const data = await request.json();
-    const user = session.user as any;
-    
-    const schedule = await userScheduleService.create({
-      ...data,
-      userId: data.userId || user.id
-    });
-    
-    return NextResponse.json({ 
-      schedule: schedule.toJSON() 
-    }, { status: 201 });
-  } catch (error: any) {
-    console.error('Erro ao criar horário:', error);
-    return NextResponse.json({ 
-      error: error.message || 'Erro ao criar horário' 
-    }, { status: 400 });
+    const schedule = await labOperationsModule.createUserSchedule({
+      actorUserId: auth.actor.id,
+      actorRoles: auth.actor.roles,
+      targetUserId,
+      dayOfWeek: Number(data?.dayOfWeek),
+      startTime: data?.startTime,
+      endTime: data?.endTime,
+    })
+
+    return NextResponse.json({
+      schedule: (schedule as any).toJSON(),
+    }, { status: 201 })
+  } catch (error: unknown) {
+    console.error("Erro ao criar horário:", error)
+    const message = error instanceof Error ? error.message : "Erro ao criar horário"
+    return NextResponse.json({ error: message }, { status: toHttpStatus(error) })
   }
-} 
+}

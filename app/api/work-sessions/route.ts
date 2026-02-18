@@ -1,25 +1,42 @@
-import { WorkSessionService } from "@/backend/services/WorkSessionService";
+import { createWorkExecutionModule } from "@/backend/modules/work-execution";
+import { ensurePermission, ensureSelfOrPermission, requireApiActor } from "@/lib/auth/api-guard";
 
-const workSessionService = new WorkSessionService();
+const workExecutionModule = createWorkExecutionModule();
 
 export async function GET(request: Request) {
   try {
+    const auth = await requireApiActor();
+    if (auth.error) return auth.error;
+
+    const actor = auth.actor;
+    const canManageSessions = !ensurePermission(actor, "MANAGE_WORK_SESSIONS");
     const url = new URL(request.url);
     const userId = url.searchParams.get("userId");
-    const managerId = url.searchParams.get("managerId");
     const status = url.searchParams.get("status");
     const active = url.searchParams.get("active");
     
     let sessions;
+    const targetUserId = userId ? Number(userId) : actor.id;
+
+    const accessError = ensureSelfOrPermission(actor, targetUserId, "MANAGE_WORK_SESSIONS");
+    if (accessError) {
+      return accessError;
+    }
 
     if (active === "true") {
-      sessions = await workSessionService.getSessionsByStatus('active');
-    } else if (userId) {
-      sessions = await workSessionService.getUserSessions(Number(userId));
+      sessions = canManageSessions
+        ? await workExecutionModule.listWorkSessions({ status: "active" })
+        : await workExecutionModule.listWorkSessions({ userId: actor.id });
+    } else if (userId || !canManageSessions) {
+      sessions = await workExecutionModule.listWorkSessions({ userId: targetUserId });
     } else if (status) {
-      sessions = await workSessionService.getSessionsByStatus(status);
+      sessions = canManageSessions
+        ? await workExecutionModule.listWorkSessions({ status })
+        : await workExecutionModule.listWorkSessions({ userId: actor.id });
     } else {
-      sessions = await workSessionService.getAllSessions();
+      sessions = canManageSessions
+        ? await workExecutionModule.listWorkSessions({})
+        : await workExecutionModule.listWorkSessions({ userId: actor.id });
     }
     
     return new Response(JSON.stringify({ data: sessions }), {
@@ -38,15 +55,56 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const data = await request.json();
+    const auth = await requireApiActor();
+    if (auth.error) return auth.error;
 
-    const session = await workSessionService.createSession(
-      data.userId, 
-      data.userName, 
-      data.activity, 
-      data.location, 
-      data.projectId
-    );
+    const actor = auth.actor;
+    const canManageSessions = !ensurePermission(actor, "MANAGE_WORK_SESSIONS");
+    const data = await request.json();
+    const targetUserId = Number(data.userId);
+    const startTime = typeof data.startTime === "string" ? data.startTime : undefined;
+    const endTime = typeof data.endTime === "string" ? data.endTime : undefined;
+    const status = typeof data.status === "string" ? data.status : undefined;
+
+    if (!Number.isInteger(targetUserId)) {
+      return new Response(JSON.stringify({ error: "userId inválido" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    const accessError = ensureSelfOrPermission(actor, targetUserId, "MANAGE_WORK_SESSIONS");
+    if (accessError) {
+      return accessError;
+    }
+
+    const session = await workExecutionModule.startWorkSession({
+      userId: targetUserId,
+      userName: canManageSessions ? String(data.userName || actor.name || "") : String(actor.name || ""),
+      activity: data.activity,
+      location: data.location,
+      projectId: data.projectId,
+      startTime,
+    });
+
+    const shouldCompleteOnCreate = status === "completed" && Boolean(endTime);
+    if (shouldCompleteOnCreate && session?.id) {
+      const completedSession = await workExecutionModule.completeWorkSession({
+        sessionId: session.id,
+        actorUserId: targetUserId,
+        activity: data.activity,
+        location: data.location,
+        endTime,
+        projectId: data.projectId,
+        dailyLogNote: typeof data.dailyLogNote === "string" ? data.dailyLogNote : undefined,
+        dailyLogDate: typeof data.dailyLogDate === "string" ? data.dailyLogDate : undefined,
+      });
+
+      return new Response(JSON.stringify({ data: completedSession }), {
+        status: 201,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
     
     return new Response(JSON.stringify({ data: session }), {
       status: 201,

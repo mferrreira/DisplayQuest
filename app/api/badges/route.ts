@@ -1,59 +1,36 @@
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth/server-auth";
-import { BadgeController } from "@/backend/controllers/BadgeController";
+import { NextResponse } from "next/server"
+import { createGamificationModule } from "@/backend/modules/gamification"
+import { ensurePermission, requireApiActor } from "@/lib/auth/api-guard"
 
-const badgeController = new BadgeController();
+const gamificationModule = createGamificationModule()
 
-// GET: Obter todos os badges
 export async function GET() {
   try {
-    const badges = await badgeController.getAllBadges();
-    return NextResponse.json({ badges });
+    const badges = await gamificationModule.listBadges()
+    return NextResponse.json({ badges })
   } catch (error) {
-    console.error("Erro ao buscar badges:", error);
-    return NextResponse.json({ error: "Erro ao buscar badges" }, { status: 500 });
+    console.error("Erro ao buscar badges:", error)
+    return NextResponse.json({ error: "Erro ao buscar badges" }, { status: 500 })
   }
 }
 
-// POST: Criar um novo badge
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user) {
-      return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
-    }
+    const auth = await requireApiActor()
+    if (auth.error) return auth.error
 
-    // If session exists but userId is missing, get user from database
-    let userId = (session.user as any).id;
-    if (!userId && session.user.email) {
-      const { prisma } = await import("@/lib/database/prisma");
-      const user = await prisma.users.findUnique({
-        where: { email: session.user.email.toLowerCase() },
-        select: { id: true, roles: true }
-      });
-      
-      if (!user) {
-        return NextResponse.json({ error: "Usuário não encontrado" }, { status: 401 });
-      }
-      
-      userId = user.id;
-    }
+    const deny = ensurePermission(auth.actor, "MANAGE_REWARDS", "Sem permissão para criar badges")
+    if (deny) return deny
 
-    if (!userId) {
-      return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
-    }
+    const body = await request.json()
+    const badge = await gamificationModule.createBadge({
+      ...body,
+      createdBy: auth.actor.id,
+    })
 
-    const body = await request.json();
-    
-    // Set the authenticated user as the creator
-    body.createdBy = userId;
-    
-    const badge = await badgeController.createBadge(body);
-    return NextResponse.json({ badge }, { status: 201 });
+    return NextResponse.json({ badge }, { status: 201 })
   } catch (error: any) {
-    console.error("Erro ao criar badge:", error);
-    return NextResponse.json({ error: error.message || "Erro ao criar badge" }, { status: 500 });
+    console.error("Erro ao criar badge:", error)
+    return NextResponse.json({ error: error.message || "Erro ao criar badge" }, { status: 500 })
   }
 }

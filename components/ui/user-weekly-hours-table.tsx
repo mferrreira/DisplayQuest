@@ -2,11 +2,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
 import { useState, useEffect } from "react";
-import { useWorkSessions } from "@/contexts/work-session-context";
-import type { User } from "@/contexts/types";
+import type { User, WorkSession } from "@/contexts/types";
 
 interface UserWeeklyHoursTableProps {
   users: User[];
+  sessions: WorkSession[];
 }
 
 interface WeeklyHistory {
@@ -17,8 +17,7 @@ interface WeeklyHistory {
   weekEnd: string;
 }
 
-export function UserWeeklyHoursTable({ users }: UserWeeklyHoursTableProps) {
-  const { sessions } = useWorkSessions();
+export function UserWeeklyHoursTable({ users, sessions }: UserWeeklyHoursTableProps) {
   const [currentWeekStart, setCurrentWeekStart] = useState<Date>(() => {
     // Inicializar com a segunda-feira da semana atual
     const today = new Date();
@@ -175,8 +174,13 @@ export function UserWeeklyHoursTable({ users }: UserWeeklyHoursTableProps) {
       if (response.ok) {
         const data = await response.json();
         alert(`Horas semanais resetadas com sucesso! ${data.results.length} usuários processados.`);
-        // Refresh the page to update current week hours
-        window.location.reload();
+        if (!isCurrentWeek) {
+          const retryResponse = await fetch(`/api/weekly-hours-history?weekStart=${currentWeekStart.toISOString()}`);
+          const retryData = await retryResponse.json();
+          setWeeklyHistory(retryData.history || []);
+        } else {
+          setWeeklyHistory([]);
+        }
       } else {
         const error = await response.json();
         alert(`Erro ao resetar horas: ${error.error}`);

@@ -1,44 +1,39 @@
 import { NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
-import { LabResponsibilityService } from "@/backend/services/LabResponsibilityService";
-import { UserRepository } from "@/backend/repositories/UserRepository";
-import { LabResponsibilityRepository } from "@/backend/repositories/LabResponsibilityRepository";
+import { createLabOperationsModule } from "@/backend/modules/lab-operations";
+import { ensureAnyRole, requireApiActor } from "@/lib/auth/api-guard";
 
-const labResponsibilityService = new LabResponsibilityService(
-  new LabResponsibilityRepository(),
-  new UserRepository(),
-);
+const labOperationsModule = createLabOperationsModule();
 
 // PATCH: Encerrar uma responsabilidade ou atualizar notas
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
-    }
+    const auth = await requireApiActor();
+    if (auth.error) return auth.error;
 
     const params = await context.params
     const id = parseInt(params.id)
     const body = await request.json()
-    const user = session.user as any
 
     if (body.action === "end") {
       // Check if user can end this responsibility
-      const canEnd = await labResponsibilityService.canUserEndResponsibility(user.id, id);
+      const canEnd = await labOperationsModule.canEndResponsibility(auth.actor.id, id);
       if (!canEnd) {
         return NextResponse.json({ 
           error: "Apenas o laboratorista atual ou um administrador pode encerrar a responsabilidade" 
         }, { status: 403 });
       }
 
-      const responsibility = await labResponsibilityService.endResponsibility(id, body.notes);
+      const responsibility = await labOperationsModule.endResponsibility(id, body.notes);
       return NextResponse.json({ responsibility: responsibility.toJSON() }, { status: 200 });
     } else if (body.action === "updateNotes" && body.notes !== undefined) {
-      const responsibility = await labResponsibilityService.update(id, {
-        userId: user.id,
-        notes: body.notes
-      });
+      const canUpdate = await labOperationsModule.canEndResponsibility(auth.actor.id, id);
+      if (!canUpdate) {
+        return NextResponse.json(
+          { error: "Sem permissão para atualizar notas desta responsabilidade" },
+          { status: 403 },
+        );
+      }
+      const responsibility = await labOperationsModule.updateResponsibilityNotes(id, auth.actor.id, body.notes);
       return NextResponse.json({ responsibility: responsibility.toJSON() }, { status: 200 });
     }
 
@@ -54,15 +49,19 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 // DELETE: Excluir uma responsabilidade
 export async function DELETE(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
-    }
+    const auth = await requireApiActor();
+    if (auth.error) return auth.error;
+    const deny = ensureAnyRole(
+      auth.actor,
+      ["COORDENADOR", "GERENTE", "LABORATORISTA"],
+      "Sem permissão para excluir responsabilidade",
+    );
+    if (deny) return deny;
 
     const params = await context.params
     const id = parseInt(params.id)
 
-    await labResponsibilityService.delete(id);
+    await labOperationsModule.deleteResponsibility(id);
     return NextResponse.json({ success: true }, { status: 200 })
   } catch (error: any) {
     console.error("Erro ao excluir responsabilidade:", error)

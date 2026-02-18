@@ -1,53 +1,40 @@
-import { NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/app/api/auth/[...nextauth]/route'
-import { prisma } from '@/lib/database/prisma'
-import { getUserProjectHours } from '@/backend/services/ProjectHoursService'
+import { NextResponse } from "next/server"
+import { ensureSelfOrPermission, requireApiActor } from "@/lib/auth/api-guard"
+import { createReportingModule } from "@/backend/modules/reporting"
+
+const reportingModule = createReportingModule()
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> },
 ) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+    const auth = await requireApiActor()
+    if (auth.error) return auth.error
+
+    const params = await context.params
+    const targetUserId = Number(params.id)
+    if (!Number.isInteger(targetUserId) || targetUserId <= 0) {
+      return NextResponse.json({ error: "Usuário inválido" }, { status: 400 })
     }
 
-    const user = await prisma.users.findUnique({
-      where: { email: session.user.email }
+    const accessError = ensureSelfOrPermission(auth.actor, targetUserId, "MANAGE_USERS")
+    if (accessError) return accessError
+
+    const { searchParams } = new URL(request.url)
+    const weekStart = searchParams.get("weekStart") || undefined
+    const weekEnd = searchParams.get("weekEnd") || undefined
+
+    const hours = await reportingModule.getUserProjectHours({
+      userId: targetUserId,
+      weekStart,
+      weekEnd,
     })
 
-    if (!user) {
-      return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 })
-    }
-
-    const targetUserId = parseInt(params.id)
-    const { searchParams } = new URL(request.url)
-    const weekStartParam = searchParams.get('weekStart')
-    const weekEndParam = searchParams.get('weekEnd')
-
-    // Verificar se o usuário pode acessar os dados do outro usuário
-    const canAccess = user.id === targetUserId || 
-                     user.roles.includes('COORDENADOR') || 
-                     user.roles.includes('GERENTE')
-
-    if (!canAccess) {
-      return NextResponse.json({ error: 'Acesso negado' }, { status: 403 })
-    }
-    //TODO: Refatorar ProjectHour
-    const hours = await getUserProjectHours(
-      targetUserId,
-      weekStartParam ? new Date(weekStartParam) : undefined,
-      weekEndParam ? new Date(weekEndParam) : undefined
-    )
-
     return NextResponse.json({ hours }, { status: 200 })
-  } catch (error: any) {
-    console.error('Erro na API de horas dos projetos do usuário:', error)
-    return NextResponse.json(
-      { error: error.message || 'Erro interno do servidor' },
-      { status: 500 }
-    )
+  } catch (error: unknown) {
+    console.error("Erro na API de horas dos projetos do usuário:", error)
+    const message = error instanceof Error ? error.message : "Erro interno do servidor"
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }

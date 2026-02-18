@@ -1,55 +1,56 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth/server-auth"
-import { NotificationController } from "@/backend/controllers/NotificationController"
+import { createNotificationsModule } from "@/backend/modules/notifications"
+import { requireApiActor } from "@/lib/auth/api-guard"
 
-const notificationController = new NotificationController()
+const notificationsModule = createNotificationsModule()
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user) {
-      return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
-    }
+    const auth = await requireApiActor()
+    if (auth.error) return auth.error
 
-    const notificationId = parseInt(params.id)
-    if (isNaN(notificationId)) {
+    const params = await context.params
+    const notificationId = Number(params.id)
+    if (!Number.isInteger(notificationId) || notificationId <= 0) {
       return NextResponse.json({ error: "ID de notificação inválido" }, { status: 400 })
     }
 
     const body = await request.json()
-    const { action } = body
-
-    if (action === 'markAsRead') {
-      const result = await notificationController.markAsRead(notificationId, session.user.id)
-      return NextResponse.json(result, { status: 200 })
+    if (body.action !== "markAsRead") {
+      return NextResponse.json({ error: "Ação não suportada" }, { status: 400 })
     }
 
-    return NextResponse.json({ error: "Ação não suportada" }, { status: 400 })
+    const updated = await notificationsModule.markAsRead(auth.actor.id, notificationId)
+    if (!updated) {
+      return NextResponse.json({ error: "Notificação não encontrada" }, { status: 404 })
+    }
+
+    return NextResponse.json({ success: true, message: "Notificação marcada como lida" }, { status: 200 })
   } catch (error) {
     console.error("Erro ao atualizar notificação:", error)
     return NextResponse.json({ error: "Erro ao atualizar notificação" }, { status: 500 })
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(_request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user) {
-      return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
-    }
+    const auth = await requireApiActor()
+    if (auth.error) return auth.error
 
-    const notificationId = parseInt(params.id)
-    if (isNaN(notificationId)) {
+    const params = await context.params
+    const notificationId = Number(params.id)
+    if (!Number.isInteger(notificationId) || notificationId <= 0) {
       return NextResponse.json({ error: "ID de notificação inválido" }, { status: 400 })
     }
 
-    const result = await notificationController.deleteNotification(notificationId, session.user.id)
-    return NextResponse.json(result, { status: 200 })
+    const removed = await notificationsModule.deleteUserNotification(auth.actor.id, notificationId)
+    if (!removed) {
+      return NextResponse.json({ error: "Notificação não encontrada" }, { status: 404 })
+    }
+
+    return NextResponse.json({ success: true, message: "Notificação excluída" }, { status: 200 })
   } catch (error) {
     console.error("Erro ao excluir notificação:", error)
     return NextResponse.json({ error: "Erro ao excluir notificação" }, { status: 500 })
   }
 }
-
-

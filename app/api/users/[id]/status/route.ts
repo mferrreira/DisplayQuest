@@ -1,45 +1,39 @@
-import { NextResponse } from "next/server";
+import { NextResponse } from "next/server"
+import { ensurePermission, requireApiActor } from "@/lib/auth/api-guard"
+import { createUserManagementModule } from "@/backend/modules/user-management"
 
-import { UserService } from '@/backend/services/UserService'
-import { UserRepository } from '@/backend/repositories/UserRepository'
-import { BadgeRepository, UserBadgeRepository } from '@/backend/repositories/BadgeRepository'
+const userManagementModule = createUserManagementModule()
 
-const userService = new UserService(
-  new UserRepository(),
-  new BadgeRepository(),
-  new UserBadgeRepository(),
-)
-
-// PATCH: Atualizar status do usuário
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    const params = await context.params;
-    const id = parseInt(params.id);
-    const body = await request.json();
-    const { action } = body;
+    const auth = await requireApiActor()
+    if (auth.error) return auth.error
 
-    let user;
-    switch (action) {
-      case "approve":
-        user = await userService.approveUser(id);
-        break;
-      case "reject":
-        user = await userService.rejectUser(id);
-        break;
-      case "suspend":
-        user = await userService.suspendUser(id);
-        break;
-      case "activate":
-        user = await userService.activateUser(id);
-        break;
-      default:
-        return NextResponse.json({ error: "Ação inválida" }, { status: 400 });
+    const deny = ensurePermission(auth.actor, "MANAGE_USERS")
+    if (deny) return deny
+
+    const params = await context.params
+    const id = Number(params.id)
+    if (!Number.isInteger(id) || id <= 0) {
+      return NextResponse.json({ error: "Usuário inválido" }, { status: 400 })
     }
 
-    return NextResponse.json({ user });
-  } catch (error: any) {
-    console.error("Erro ao atualizar status do usuário:", error);
-    return NextResponse.json({ error: error.message || "Erro ao atualizar status do usuário" }, { status: 500 });
+    const body = await request.json()
+    const action = body?.action
+
+    if (!["approve", "reject", "suspend", "activate"].includes(action)) {
+      return NextResponse.json({ error: "Ação inválida" }, { status: 400 })
+    }
+
+    const user = await userManagementModule.updateUserStatus({
+      userId: id,
+      action,
+    })
+
+    return NextResponse.json({ user })
+  } catch (error: unknown) {
+    console.error("Erro ao atualizar status do usuário:", error)
+    const message = error instanceof Error ? error.message : "Erro ao atualizar status do usuário"
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }
-

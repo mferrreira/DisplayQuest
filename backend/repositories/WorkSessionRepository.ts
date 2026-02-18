@@ -16,6 +16,8 @@ export interface IWorkSessionRepository {
     getUserTotalHours(userId: number): Promise<number>;
     getUserTotalHoursInPeriod(userId: number, startDate: Date, endDate: Date): Promise<number>;
     getActiveSessionsCount(): Promise<number>;
+    replaceSessionTasks(sessionId: number, taskIds: number[]): Promise<void>;
+    getSessionTaskIds(sessionId: number): Promise<number[]>;
 }
 
 export class WorkSessionRepository implements IWorkSessionRepository {
@@ -74,9 +76,11 @@ export class WorkSessionRepository implements IWorkSessionRepository {
         
         if (updates.activity !== undefined) updateData.activity = updates.activity;
         if (updates.location !== undefined) updateData.location = updates.location;
+        if (updates.startTime !== undefined) updateData.startTime = updates.startTime;
         if (updates.endTime !== undefined) updateData.endTime = updates.endTime;
         if (updates.duration !== undefined) updateData.duration = updates.duration;
         if (updates.status !== undefined) updateData.status = updates.status;
+        if (updates.projectId !== undefined) updateData.projectId = updates.projectId;
 
         const updated = await prisma.work_sessions.update({
             where: { id },
@@ -116,7 +120,7 @@ export class WorkSessionRepository implements IWorkSessionRepository {
 
         for (const session of activeSessions) {
             const diffMs = endTime.getTime() - session.startTime.getTime();
-            const duration = diffMs / (1000 * 60 * 60); // Convert to hours
+            const duration = diffMs / 1000;
 
             await prisma.work_sessions.update({
                 where: { id: session.id },
@@ -166,5 +170,32 @@ export class WorkSessionRepository implements IWorkSessionRepository {
         return await prisma.work_sessions.count({
             where: { status: 'active' }
         });
+    }
+
+    async replaceSessionTasks(sessionId: number, taskIds: number[]): Promise<void> {
+        await prisma.$transaction(async (tx) => {
+            await tx.work_session_tasks.deleteMany({
+                where: { workSessionId: sessionId }
+            });
+
+            if (taskIds.length > 0) {
+                await tx.work_session_tasks.createMany({
+                    data: taskIds.map(taskId => ({
+                        workSessionId: sessionId,
+                        taskId
+                    })),
+                    skipDuplicates: true
+                });
+            }
+        });
+    }
+
+    async getSessionTaskIds(sessionId: number): Promise<number[]> {
+        const sessionTasks = await prisma.work_session_tasks.findMany({
+            where: { workSessionId: sessionId },
+            select: { taskId: true }
+        });
+
+        return sessionTasks.map(item => item.taskId);
     }
 }

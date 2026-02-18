@@ -3,7 +3,6 @@
 import { useEffect, useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
-import { AppHeader } from "@/components/layout/app-header"
 import { useUser } from "@/contexts/user-context"
 import { useReward } from "@/contexts/reward-context"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"

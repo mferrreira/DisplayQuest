@@ -3,9 +3,8 @@
 import { useEffect, useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
-import { AppHeader } from "@/components/layout/app-header"
 import { useResponsibility } from "@/contexts/responsibility-context"
-import { useDailyLogs } from "@/contexts/daily-log-context"
+import { useDailyLogs } from "@/hooks/use-daily-logs"
 import { useLaboratorySchedule } from "@/contexts/laboratory-schedule-context"
 import { useLabEvents } from "@/contexts/lab-events-context";
 import { useIssues } from "@/contexts/issue-context";
@@ -45,10 +44,11 @@ export default function LabResponsibilityPage() {
     updateNotes,
   } = useResponsibility()
 
-  const { logs: dailyLogs, loading: logsLoading, createLog, fetchAllLogs, fetchProjectLogs, fetchLogs } = useDailyLogs()
+  const { logs: dailyLogs, fetchAllLogs, fetchLogs } = useDailyLogs()
   const { schedules: labSchedules, getSchedulesByDay } = useLaboratorySchedule()
   const { events: labEvents, fetchEvents, createEvent, loading: eventsLoading, error: eventsError } = useLabEvents();
   const { issues, loading: issuesLoading, error: issuesError } = useIssues();
+  const canAddEvents = hasAccess(user?.roles || [], "VIEW_ALL_DATA")
 
   const [date, setDate] = useState<Date | null>(null)
   const [showIssueForm, setShowIssueForm] = useState(false)
@@ -307,10 +307,11 @@ export default function LabResponsibilityPage() {
                     date={date || new Date()}
                     events={events}
                     labSchedules={labSchedules}
-                    onAddEvent={hasAccess(user?.roles || [], 'VIEW_ALL_DATA') ? (slot) => {
+                    onAddEvent={(slot) => {
+                      if (!canAddEvents) return
                       setEventDialogTime(slot)
                       setShowEventDialog(true)
-                    } : undefined}
+                    }}
                     onDateChange={handleDateChange}
                   />
                 </CardContent>

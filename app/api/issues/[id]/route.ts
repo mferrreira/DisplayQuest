@@ -1,15 +1,25 @@
 import { NextResponse } from "next/server";
-import { IssueController } from "@/backend/controllers/IssueController";
+import { createLabOperationsModule } from "@/backend/modules/lab-operations";
+import { requireApiActor } from "@/lib/auth/api-guard";
+import { hasPermission } from "@/lib/auth/rbac";
 
-const issueController = new IssueController();
+const labOperationsModule = createLabOperationsModule();
+
+function canManageIssue(actor: { id: number; roles: unknown }, issue: { reporterId: number; assigneeId?: number | null }) {
+  if (hasPermission(actor.roles, "MANAGE_USERS")) return true;
+  return issue.reporterId === actor.id || issue.assigneeId === actor.id;
+}
 
 // GET: Obter um issue específico
 export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    const auth = await requireApiActor();
+    if (auth.error) return auth.error;
+
     const params = await context.params;
     const id = parseInt(params.id);
 
-    const issue = await issueController.getIssue(id);
+    const issue = await labOperationsModule.getIssue(id);
     if (!issue) {
       return NextResponse.json({ error: "Issue não encontrado" }, { status: 404 });
     }
@@ -24,11 +34,21 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
 // PUT: Atualizar um issue
 export async function PUT(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    const auth = await requireApiActor();
+    if (auth.error) return auth.error;
+
     const params = await context.params;
     const id = parseInt(params.id);
+    const currentIssue = await labOperationsModule.getIssue(id);
+    if (!currentIssue) {
+      return NextResponse.json({ error: "Issue não encontrado" }, { status: 404 });
+    }
+    if (!canManageIssue(auth.actor, currentIssue)) {
+      return NextResponse.json({ error: "Sem permissão para atualizar issue" }, { status: 403 });
+    }
     const body = await request.json();
 
-    const issue = await issueController.updateIssue(id, body);
+    const issue = await labOperationsModule.updateIssue(id, body);
     return NextResponse.json({ issue });
   } catch (error: any) {
     console.error("Erro ao atualizar issue:", error);
@@ -39,10 +59,20 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
 // DELETE: Excluir um issue
 export async function DELETE(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    const auth = await requireApiActor();
+    if (auth.error) return auth.error;
+
     const params = await context.params;
     const id = parseInt(params.id);
+    const currentIssue = await labOperationsModule.getIssue(id);
+    if (!currentIssue) {
+      return NextResponse.json({ error: "Issue não encontrado" }, { status: 404 });
+    }
+    if (!canManageIssue(auth.actor, currentIssue)) {
+      return NextResponse.json({ error: "Sem permissão para excluir issue" }, { status: 403 });
+    }
 
-    await issueController.deleteIssue(id);
+    await labOperationsModule.deleteIssue(id);
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error("Erro ao excluir issue:", error);

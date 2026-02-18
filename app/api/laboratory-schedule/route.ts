@@ -1,13 +1,15 @@
 import { NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
-import { LaboratoryScheduleController } from "@/backend/controllers/LaboratoryScheduleController"
+import { createLabOperationsModule } from "@/backend/modules/lab-operations"
+import { requireApiActor } from "@/lib/auth/api-guard"
 
-const laboratoryScheduleController = new LaboratoryScheduleController();
+const labOperationsModule = createLabOperationsModule();
 
 export async function GET() {
   try {
-    const schedules = await laboratoryScheduleController.getAllSchedules();
+    const auth = await requireApiActor();
+    if (auth.error) return auth.error;
+
+    const schedules = await labOperationsModule.listLaboratorySchedules();
     return NextResponse.json({ 
       schedules: schedules.map(schedule => schedule.toJSON()) 
     });
@@ -21,17 +23,14 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
-    }
+    const auth = await requireApiActor();
+    if (auth.error) return auth.error;
 
     const data = await request.json();
-    const user = session.user as any;
     
-    const schedule = await laboratoryScheduleController.createSchedule({
+    const schedule = await labOperationsModule.createLaboratorySchedule({
       ...data,
-      userId: user.id
+      userId: auth.actor.id
     });
     
     return NextResponse.json({ schedule: schedule.toJSON() }, { status: 201 });

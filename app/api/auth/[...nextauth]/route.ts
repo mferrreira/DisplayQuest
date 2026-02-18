@@ -48,17 +48,27 @@ export const authOptions: AuthOptions = {
         token.name = (user as any).name
         token.email = (user as any).email
         token.avatar = (user as any).avatar
+        token.bio = (user as any).bio
+        token.profileVisibility = (user as any).profileVisibility
+        token.points = (user as any).points
+        token.completedTasks = (user as any).completedTasks
         token.weekHours = (user as any).weekHours
         token.currentWeekHours = (user as any).currentWeekHours
+        token.status = (user as any).status
       }
 
       if (trigger === "update" && session?.user) {
         token.name = session.user.name
         token.email = session.user.email
         token.avatar = session.user.avatar
+        token.bio = session.user.bio
+        token.profileVisibility = session.user.profileVisibility
+        token.points = session.user.points
+        token.completedTasks = session.user.completedTasks
         token.weekHours = session.user.weekHours
         token.currentWeekHours = session.user.currentWeekHours
         token.roles = session.user.roles
+        token.status = session.user.status
       }
       
       return token
@@ -73,6 +83,10 @@ export const authOptions: AuthOptions = {
           name: true,
           email: true,
           avatar: true,
+          bio: true,
+          profileVisibility: true,
+          points: true,
+          completedTasks: true,
           weekHours: true,
           currentWeekHours: true,
           roles: true,

@@ -1,26 +1,17 @@
 import { NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
-import { TaskService } from "@/backend/services/TaskService"
-import { TaskRepository } from "@/backend/repositories/TaskRepository"
-import { UserRepository } from "@/backend/repositories/UserRepository"
-import { ProjectRepository } from "@/backend/repositories/ProjectRepository"
+import { createTaskManagementModule } from "@/backend/modules/task-management"
+import { ensurePermission, requireApiActor } from "@/lib/auth/api-guard"
+import { hasPermission } from "@/lib/auth/rbac"
 
-const taskService = new TaskService(
-  new TaskRepository(),
-  new UserRepository(),
-  new ProjectRepository(),
-);
+const taskManagementModule = createTaskManagementModule()
 
 export async function GET(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user || !(session.user as any).id) {
-      return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
-    }
+    const auth = await requireApiActor()
+    if (auth.error) return auth.error
 
-    const userId = parseInt((session.user as any).id);
-    const userRoles = (session.user as any).roles || [];
+    const userId = auth.actor.id
+    const userRoles = auth.actor.roles
     const { searchParams } = new URL(request.url)
     const projectIdParam = searchParams.get('projectId')
     let tasks
@@ -31,22 +22,24 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: "projectId inválido" }, { status: 400 })
       }
 
-      const canAccessAllProjects = userRoles.includes('COORDENADOR') || userRoles.includes('GERENTE')
+      const canAccessAllProjects = hasPermission(userRoles, "MANAGE_USERS")
       if (!canAccessAllProjects) {
-        const projectMemberships = await taskService.getProjectsForUser(userId)
-        const allowedProjectIds = new Set(projectMemberships.map(project => project.id))
+        const allowedProjectIds = new Set(await taskManagementModule.listActorProjectIds(userId))
         if (!allowedProjectIds.has(projectId)) {
           return NextResponse.json({ tasks: [] })
         }
       }
-      // o método retorna todas as tasks para admins
-      tasks = await taskService.getTasksForUser(userId, userRoles)
+      tasks = await taskManagementModule.listTasksForActor({
+        actorId: userId,
+        actorRoles: userRoles,
+        projectId,
+      })
     
     } else {
-      let userTasks = await taskService.getTasksForUser(userId, userRoles)
-      let globalTasks = await taskService.getGlobalTasks()
-
-      tasks = [...userTasks, ...globalTasks]
+      tasks = await taskManagementModule.listTasksForActor({
+        actorId: userId,
+        actorRoles: userRoles,
+      })
     }
     
     return NextResponse.json({ tasks: tasks.map(task => task.toJSON()) })
@@ -58,10 +51,11 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user || !(session.user as any).id) {
-      return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
-    }
+    const auth = await requireApiActor()
+    if (auth.error) return auth.error
+
+    const permissionError = ensurePermission(auth.actor, "MANAGE_TASKS", "Sem permissão para criar tarefa")
+    if (permissionError) return permissionError
 
     const body = await request.json()
 
@@ -79,7 +73,7 @@ export async function POST(request: Request) {
       isGlobal
     } = body
 
-    const task = await taskService.create({
+    const task = await taskManagementModule.createTask({
       title,
       description,
       status,
@@ -90,8 +84,8 @@ export async function POST(request: Request) {
       points,
       completed,
       taskVisibility,
-      isGlobal
-    }, parseInt((session.user as any).id));
+      isGlobal,
+    }, auth.actor.id);
 
     return NextResponse.json({ task: task.toJSON() }, { status: 201 })
   } catch (error: any) {

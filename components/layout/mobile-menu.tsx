@@ -38,7 +38,7 @@ export function MobileMenu() {
   }, [])
 
   // Encontrar usuário atual para obter pontos
-  const currentUserData = user ? users.find((u) => u.id === parseInt(user.id)) : null
+  const currentUserData = user ? users.find((u) => u.id === user.id) : null
 
   const handleLogout = () => {
     logout()

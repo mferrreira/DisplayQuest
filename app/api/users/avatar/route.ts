@@ -1,34 +1,25 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { ImageProcessor } from "@/lib/utils/image-processor"
+import { requireApiActor } from "@/lib/auth/api-guard"
+import { createUserManagementModule } from "@/backend/modules/user-management"
 
-import { UserService } from '@/backend/services/UserService'
-import { UserRepository } from '@/backend/repositories/UserRepository'
-import { BadgeRepository, UserBadgeRepository } from '@/backend/repositories/BadgeRepository'
-
-const userService = new UserService(
-  new UserRepository(),
-  new BadgeRepository(),
-  new UserBadgeRepository(),
-)
+const userManagementModule = createUserManagementModule()
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user || !(session.user as any).id) {
-      return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
-    }
+    const auth = await requireApiActor()
+    if (auth.error) return auth.error
 
     const formData = await request.formData()
     const file = formData.get("avatar") as File
-    const userId = formData.get("userId") as string
+    const userIdRaw = formData.get("userId") as string
+    const userId = Number(userIdRaw)
 
     if (!file) {
       return NextResponse.json({ error: "Nenhum arquivo enviado" }, { status: 400 })
     }
 
-    if (!userId || Number(userId) !== (session.user as any).id) {
+    if (!Number.isInteger(userId) || userId !== auth.actor.id) {
       return NextResponse.json({ error: "Usuário não autorizado" }, { status: 403 })
     }
 
@@ -37,33 +28,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: validation.error }, { status: 400 })
     }
 
-    const currentUser = await userService.findById(Number(userId));
-    
-    if (currentUser?.avatar) {
-      await ImageProcessor.deleteImage(currentUser.avatar)
+    const currentUser = await userManagementModule.findUserById(userId)
+
+    if ((currentUser as any)?.avatar) {
+      await ImageProcessor.deleteImage((currentUser as any).avatar)
     }
 
-    const avatarUrl = await ImageProcessor.processAndSave(file, Number(userId), {
+    const avatarUrl = await ImageProcessor.processAndSave(file, userId, {
       width: 300,
       height: 300,
       quality: 85,
-      format: 'webp'
+      format: "webp",
     })
 
-    await userService.updateProfile(Number(userId), { avatar: avatarUrl })
+    await userManagementModule.updateUserProfile(userId, { avatar: avatarUrl })
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       avatarUrl,
-      message: "Avatar atualizado com sucesso" 
+      message: "Avatar atualizado com sucesso",
     })
-
   } catch (error) {
     console.error("Erro ao fazer upload do avatar:", error)
-    return NextResponse.json(
-      { error: "Erro interno do servidor" }, 
-      { status: 500 }
-    )
+    return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 })
   }
 }
-

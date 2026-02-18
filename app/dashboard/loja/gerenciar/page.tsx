@@ -3,7 +3,6 @@
 import { useEffect, useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
-import { AppHeader } from "@/components/layout/app-header"
 import { useReward } from "@/contexts/reward-context"
 import { useUser } from "@/contexts/user-context"
 import type { rewards as Reward, purchases as Purchase } from "@prisma/client"

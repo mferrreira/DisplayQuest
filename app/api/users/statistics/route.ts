@@ -1,42 +1,25 @@
-import { NextResponse } from "next/server";
+import { NextResponse } from "next/server"
+import { ensurePermission, requireApiActor } from "@/lib/auth/api-guard"
+import { createUserManagementModule } from "@/backend/modules/user-management"
 
-import { UserService } from '@/backend/services/UserService'
-import { UserRepository } from '@/backend/repositories/UserRepository'
-import { BadgeRepository, UserBadgeRepository } from '@/backend/repositories/BadgeRepository'
+const userManagementModule = createUserManagementModule()
 
-const userService = new UserService(
-  new UserRepository(),
-  new BadgeRepository(),
-  new UserBadgeRepository(),
-)
-
-
-
-// GET: Obter estatísticas dos usuários
 export async function GET(request: Request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const type = searchParams.get("type");
+    const auth = await requireApiActor()
+    if (auth.error) return auth.error
 
-    let statistics;
-    switch (type) {
-      case "general":
-        statistics = await userService.getUserStatistics();
-        break;
-      case "roles":
-        statistics = await userService.getUsersByRole();
-        break;
-      case "status":
-        statistics = await userService.getUserByStatus();
-        break;
-      default:
-        statistics = await userService.getUserStatistics();
-    }
+    const deny = ensurePermission(auth.actor, "MANAGE_USERS")
+    if (deny) return deny
 
-    return NextResponse.json({ statistics });
-  } catch (error) {
-    console.error("Erro ao buscar estatísticas dos usuários:", error);
-    return NextResponse.json({ error: "Erro ao buscar estatísticas dos usuários" }, { status: 500 });
+    const { searchParams } = new URL(request.url)
+    const type = searchParams.get("type")
+    const statistics = await userManagementModule.listUserStatistics(type)
+
+    return NextResponse.json({ statistics })
+  } catch (error: unknown) {
+    console.error("Erro ao buscar estatísticas dos usuários:", error)
+    const message = error instanceof Error ? error.message : "Erro ao buscar estatísticas dos usuários"
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }
-

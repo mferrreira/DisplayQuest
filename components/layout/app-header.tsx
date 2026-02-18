@@ -25,7 +25,7 @@ export function AppHeader() {
   const { users } = useUser()
   const pathname = usePathname()
 
-  const currentUserData = user ? users.find((u) => u.id === parseInt(user.id)) : null
+  const currentUserData = user ? users.find((u) => u.id === user.id) : null
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">

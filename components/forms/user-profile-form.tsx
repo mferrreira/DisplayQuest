@@ -20,6 +20,7 @@ interface UserProfileFormProps {
 }
 
 export function UserProfileForm({ user, onUpdate, onCancel }: UserProfileFormProps) {
+  const { update: updateSession } = useSession()
   const [formData, setFormData] = useState<UserFormData>({
     name: user.name || "",
     email: user.email || "",
@@ -57,6 +58,11 @@ export function UserProfileForm({ user, onUpdate, onCancel }: UserProfileFormPro
       console.log(updatedData)
       
       onUpdate(updatedData)
+      await updateSession({
+        user: {
+          ...updatedData,
+        },
+      })
       
       setSuccess("Perfil atualizado com sucesso!")
       
@@ -198,4 +204,3 @@ export function UserProfileForm({ user, onUpdate, onCancel }: UserProfileFormPro
     </Card>
   )
 }
-

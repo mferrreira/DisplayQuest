@@ -33,10 +33,11 @@ interface AdminProjectManagementProps {
   projects: any[]
   users: any[]
   tasks: any[]
+  sessions: any[]
   onProjectUpdate?: () => void
 }
 
-export function AdminProjectManagement({ projects, users, tasks, onProjectUpdate }: AdminProjectManagementProps) {
+export function AdminProjectManagement({ projects, users, tasks, sessions, onProjectUpdate }: AdminProjectManagementProps) {
   const { toast } = useToast()
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
@@ -188,6 +189,13 @@ export function AdminProjectManagement({ projects, users, tasks, onProjectUpdate
     if (projectTasks.length === 0) return 0
     const completedTasks = projectTasks.filter(t => t.status === 'done').length
     return Math.round((completedTasks / projectTasks.length) * 100)
+  }
+
+  const getProjectTotalHours = (projectId: number) => {
+    const totalSeconds = (sessions || [])
+      .filter((session: any) => session.projectId === projectId && session.status === "completed")
+      .reduce((sum: number, session: any) => sum + (session.duration || 0), 0)
+    return totalSeconds / 3600
   }
 
   return (
@@ -366,7 +374,7 @@ export function AdminProjectManagement({ projects, users, tasks, onProjectUpdate
                   <div className="flex items-center gap-2">
                     <Clock className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm">
-                      <strong>0h</strong> trabalhadas
+                      <strong>{getProjectTotalHours(project.id).toFixed(1)}h</strong> trabalhadas
                     </span>
                   </div>
                   <div className="flex items-center gap-2">

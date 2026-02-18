@@ -38,7 +38,7 @@ export class LabResponsibilityRepository implements ILabResponsibilityRepository
     }
 
     async create(labResponsibility: LabResponsibility): Promise<LabResponsibility> {
-        const errors = labResponsibility.validate();
+        const errors = this.validateLabResponsibility(labResponsibility);
         if (errors.length > 0) {
             throw new Error(`Dados inválidos: ${errors.join(', ')}`);
         }
@@ -63,7 +63,7 @@ export class LabResponsibilityRepository implements ILabResponsibilityRepository
             throw new Error("ID da responsabilidade é obrigatório para atualização");
         }
 
-        const errors = labResponsibility.validate();
+        const errors = this.validateLabResponsibility(labResponsibility);
         if (errors.length > 0) {
             throw new Error(`Dados inválidos: ${errors.join(', ')}`);
         }
@@ -121,5 +121,16 @@ export class LabResponsibilityRepository implements ILabResponsibilityRepository
         });
 
         return labResponsibilities.map(labResponsibility => LabResponsibility.fromPrisma(labResponsibility));
+    }
+
+    private validateLabResponsibility(labResponsibility: LabResponsibility): string[] {
+        const errors: string[] = [];
+        if (!labResponsibility.userId || labResponsibility.userId <= 0) errors.push("ID do usuário é obrigatório");
+        if (!labResponsibility.userName || labResponsibility.userName.trim().length === 0) errors.push("Nome do usuário é obrigatório");
+        if (!labResponsibility.startTime || isNaN(labResponsibility.startTime.getTime())) errors.push("Horário de início inválido");
+        if (labResponsibility.endTime && labResponsibility.endTime <= labResponsibility.startTime) {
+            errors.push("Horário de fim deve ser posterior ao início");
+        }
+        return errors;
     }
 }

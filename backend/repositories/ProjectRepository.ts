@@ -140,7 +140,7 @@ export class ProjectRepository implements IProjectRepository {
     }
 
     async create(project: Project): Promise<Project> {
-        const errors = project.validate();
+        const errors = this.validateProject(project);
         if (errors.length > 0) {
             throw new Error(`Dados inválidos: ${errors.join(', ')}`);
         }
@@ -167,7 +167,7 @@ export class ProjectRepository implements IProjectRepository {
             throw new Error('ID do projeto é obrigatório para atualização');
         }
 
-        const errors = project.validate();
+        const errors = this.validateProject(project);
         if (errors.length > 0) {
             throw new Error(`Dados inválidos: ${errors.join(', ')}`);
         }
@@ -293,5 +293,29 @@ export class ProjectRepository implements IProjectRepository {
         ]);
 
         return { total, active, completed, archived, onHold };
+    }
+
+    private validateProject(project: Project): string[] {
+        const errors: string[] = [];
+
+        if (!project.name || project.name.trim().length === 0) {
+            errors.push('Nome do projeto é obrigatório');
+        } else if (project.name.length > 100) {
+            errors.push('Nome do projeto não pode ter mais de 100 caracteres');
+        }
+
+        if (project.description && project.description.length > 500) {
+            errors.push('Descrição do projeto não pode ter mais de 500 caracteres');
+        }
+
+        if (!project.createdBy || project.createdBy <= 0) {
+            errors.push('ID do criador do projeto é obrigatório');
+        }
+
+        if (!Object.values(ProjectStatus).includes(project.status)) {
+            errors.push('Status do projeto inválido');
+        }
+
+        return errors;
     }
 }

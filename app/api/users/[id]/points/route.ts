@@ -1,46 +1,43 @@
-import { NextResponse } from "next/server";
+import { NextResponse } from "next/server"
+import { ensurePermission, requireApiActor } from "@/lib/auth/api-guard"
+import { createUserManagementModule } from "@/backend/modules/user-management"
 
-import { UserService } from '@/backend/services/UserService'
-import { UserRepository } from '@/backend/repositories/UserRepository'
-import { BadgeRepository, UserBadgeRepository } from '@/backend/repositories/BadgeRepository'
+const userManagementModule = createUserManagementModule()
 
-const userService = new UserService(
-  new UserRepository(),
-  new BadgeRepository(),
-  new UserBadgeRepository(),
-)
-
-// PATCH: Atualizar pontos do usuário
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    const params = await context.params;
-    const id = parseInt(params.id);
-    const body = await request.json();
-    const { action, points } = body;
+    const auth = await requireApiActor()
+    if (auth.error) return auth.error
+    const deny = ensurePermission(auth.actor, "MANAGE_USERS")
+    if (deny) return deny
 
-    if (points === undefined || points < 0) {
-      return NextResponse.json({ error: "Pontos devem ser um número não negativo" }, { status: 400 });
+    const params = await context.params
+    const id = Number(params.id)
+    if (!Number.isInteger(id) || id <= 0) {
+      return NextResponse.json({ error: "Usuário inválido" }, { status: 400 })
     }
 
-    let user;
-    switch (action) {
-      case "add":
-        user = await userService.addPoints(id, points);
-        break;
-      case "remove":
-        user = await userService.removePoints(id, points);
-        break;
-      case "set":
-        user = await userService.setPoints(id, points);
-        break;
-      default:
-        return NextResponse.json({ error: "Ação inválida" }, { status: 400 });
+    const body = await request.json()
+    const action = body?.action
+    const points = Number(body?.points)
+
+    if (!Number.isFinite(points) || points < 0) {
+      return NextResponse.json({ error: "Pontos devem ser um número não negativo" }, { status: 400 })
     }
 
-    return NextResponse.json({ user });
+    if (!["add", "remove", "set"].includes(action)) {
+      return NextResponse.json({ error: "Ação inválida" }, { status: 400 })
+    }
+
+    const user = await userManagementModule.updateUserPoints({
+      userId: id,
+      action,
+      points,
+    })
+
+    return NextResponse.json({ user })
   } catch (error: any) {
-    console.error("Erro ao atualizar pontos do usuário:", error);
-    return NextResponse.json({ error: error.message || "Erro ao atualizar pontos do usuário" }, { status: 500 });
+    console.error("Erro ao atualizar pontos do usuário:", error)
+    return NextResponse.json({ error: error.message || "Erro ao atualizar pontos do usuário" }, { status: 500 })
   }
 }
-

@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import type { Task } from "@/contexts/types"
+import { useUser } from "@/contexts/user-context"
 
 interface TaskCardProps {
   task: Task
@@ -32,6 +33,7 @@ export function TaskCard({
   className = "",
   variant = "default"
 }: TaskCardProps) {
+  const { users } = useUser()
   const [isHovered, setIsHovered] = useState(false)
 
   const isPublicTask = task.taskVisibility === "public"
@@ -86,6 +88,12 @@ export function TaskCard({
       case "adjust": return 90
       default: return 0
     }
+  }
+
+  const getAssigneeName = () => {
+    if (!task.assignedTo) return "Não atribuído"
+    const assignedUser = users.find((u) => u.id === Number(task.assignedTo))
+    return assignedUser?.name || `Usuário #${task.assignedTo}`
   }
 
   const getCardStyle = () => {
@@ -248,7 +256,7 @@ export function TaskCard({
                 </div>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Atribuído a: {task.assignedTo}</p>
+                <p>Atribuído a: {getAssigneeName()}</p>
               </TooltipContent>
             </Tooltip>
           )}

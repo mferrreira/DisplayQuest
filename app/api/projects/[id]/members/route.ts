@@ -1,208 +1,182 @@
-import { NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/app/api/auth/[...nextauth]/route'
-import { prisma } from '@/lib/database/prisma'
+import { NextResponse } from "next/server"
+import type { UserRole } from "@prisma/client"
+import { createProjectMembershipModule } from "@/backend/modules/project-membership"
+import { requireApiActor } from "@/lib/auth/api-guard"
+import { normalizeRoles } from "@/lib/auth/rbac"
+
+const projectMembershipModule = createProjectMembershipModule()
+
+type MemberAction = "add" | "remove" | "set_roles" | "set_leader"
+
+function toHttpStatus(error: unknown) {
+  const message = error instanceof Error ? error.message : "Erro interno do servidor"
+  if (message.includes("Não autorizado")) return 401
+  if (message.includes("Acesso negado") || message.includes("Apenas")) return 403
+  if (message.includes("não encontrado")) return 404
+  if (
+    message.includes("obrigatórios") ||
+    message.includes("já é membro") ||
+    message.includes("Nenhum papel válido") ||
+    message.includes("já é líder de outro projeto") ||
+    message.includes("último gerente")
+  ) {
+    return 400
+  }
+  return 500
+}
 
 export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+    const auth = await requireApiActor()
+    if (auth.error) return auth.error
+
+    const routeParams = await params
+    const projectId = Number(routeParams.id)
+    if (!Number.isInteger(projectId) || projectId <= 0) {
+      return NextResponse.json({ error: "Projeto inválido" }, { status: 400 })
     }
-    
-    //TODO: mover lógica para um repository
-    const user = await prisma.users.findUnique({
-      where: { email: session.user.email },
-      include: {
-        projectMemberships: {
-          include: {
-            project: true
-          }
-        }
-      }
+
+    const members = await projectMembershipModule.listProjectMembers({
+      projectId,
+      actorUserId: auth.actor.id,
+      actorRoles: auth.actor.roles,
     })
 
-    if (!user) {
-      return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 })
-    }
-
-    const projectId = parseInt(params.id)
-
-    const hasAccess = user.projectMemberships.some(
-      membership => membership.project.id === projectId
-    ) || user.roles.includes('COORDENADOR') || user.roles.includes('GERENTE')
-
-    if (!hasAccess) {
-      return NextResponse.json({ error: 'Acesso negado ao projeto' }, { status: 403 })
-    }
-
-    // Buscar membros do projeto
-    const members = await prisma.project_members.findMany({
-      where: { projectId },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true
-          }
-        }
-      },
-      orderBy: { joinedAt: 'desc' }
-    })
-
-    // Buscar horas trabalhadas por membro
-    const membersWithHours = await Promise.all(
-      members.map(async (member) => {
-        // Horas totais
-        const totalSessions = await prisma.work_sessions.findMany({
-          where: {
-            userId: member.userId,
-            projectId: projectId,
-            status: 'completed'
-          },
-          select: { duration: true }
-        })
-
-        const totalHours = totalSessions.reduce((sum, session) => sum + (session.duration || 0), 0)
-
-        // Horas da semana atual
-        const now = new Date()
-        const startOfWeek = new Date(now)
-        startOfWeek.setDate(now.getDate() - ((now.getDay() + 6) % 7))
-        startOfWeek.setHours(0, 0, 0, 0)
-        
-        const endOfWeek = new Date(startOfWeek)
-        endOfWeek.setDate(startOfWeek.getDate() + 6)
-        endOfWeek.setHours(23, 59, 59, 999)
-
-        const weekSessions = await prisma.work_sessions.findMany({
-          where: {
-            userId: member.userId,
-            projectId: projectId,
-            status: 'completed',
-            startTime: {
-              gte: startOfWeek,
-              lte: endOfWeek
-            }
-          },
-          select: { duration: true }
-        })
-
-        const currentWeekHours = weekSessions.reduce((sum, session) => sum + (session.duration || 0), 0)
-
-        return {
-          id: member.id,
-          userId: member.userId,
-          userName: member.user.name,
-          userEmail: member.user.email,
-          roles: member.roles,
-          joinedAt: member.joinedAt.toISOString(),
-          totalHours: Math.round(totalHours * 100) / 100,
-          currentWeekHours: Math.round(currentWeekHours * 100) / 100
-        }
-      })
-    )
-
-    return NextResponse.json({ members: membersWithHours }, { status: 200 })
-  } catch (error: any) {
-    console.error('Erro na API de membros do projeto:', error)
-    return NextResponse.json(
-      { error: error.message || 'Erro interno do servidor' },
-      { status: 500 }
-    )
+    return NextResponse.json({ members }, { status: 200 })
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Erro interno do servidor"
+    console.error("Erro na API de membros do projeto:", error)
+    return NextResponse.json({ error: message }, { status: toHttpStatus(error) })
   }
 }
 
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> },
+) {
+  return await handleMutation(request, params, false)
+}
+
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  return await handleMutation(request, params, true)
+}
+
+async function handleMutation(
+  request: Request,
+  params: Promise<{ id: string }>,
+  strictAction: boolean,
 ) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+    const auth = await requireApiActor()
+    if (auth.error) return auth.error
+
+    const routeParams = await params
+    const projectId = Number(routeParams.id)
+    if (!Number.isInteger(projectId) || projectId <= 0) {
+      return NextResponse.json({ error: "Projeto inválido" }, { status: 400 })
     }
 
-    const user = await prisma.users.findUnique({
-      where: { email: session.user.email }
-    })
-
-    if (!user) {
-      return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 })
+    const body = await request.json()
+    const action = resolveAction(body, strictAction)
+    if (!action) {
+      return NextResponse.json({ error: "Ação inválida" }, { status: 400 })
     }
 
-    // Verificar se o usuário tem permissão para adicionar membros
-    const canManage = user.roles.includes('COORDENADOR') || user.roles.includes('GERENTE')
+    if (action === "add") {
+      const targetUserId = Number(body?.userId)
+      const roles = normalizeRoles(body?.roles) as UserRole[]
+      if (!Number.isInteger(targetUserId) || targetUserId <= 0 || !Array.isArray(body?.roles)) {
+        return NextResponse.json({ error: "userId e roles são obrigatórios" }, { status: 400 })
+      }
 
-    if (!canManage) {
-      return NextResponse.json({ error: 'Apenas coordenadores e gerentes podem adicionar membros' }, { status: 403 })
-    }
-
-    const projectId = parseInt(params.id)
-    const { userId, roles } = await request.json()
-
-    if (!userId || !roles || !Array.isArray(roles)) {
-      return NextResponse.json({ error: 'userId e roles são obrigatórios' }, { status: 400 })
-    }
-
-    // Verificar se o usuário existe
-    const targetUser = await prisma.users.findUnique({
-      where: { id: parseInt(userId) }
-    })
-
-    if (!targetUser) {
-      return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 })
-    }
-
-    // Verificar se já é membro do projeto
-    const existingMembership = await prisma.project_members.findFirst({
-      where: {
+      const membership = await projectMembershipModule.addProjectMember({
         projectId,
-        userId: parseInt(userId)
-      }
-    })
+        actorUserId: auth.actor.id,
+        actorRoles: auth.actor.roles,
+        targetUserId,
+        roles,
+      })
 
-    if (existingMembership) {
-      return NextResponse.json({ error: 'Usuário já é membro deste projeto' }, { status: 400 })
+      return NextResponse.json({ membership }, { status: 201 })
     }
 
-    // Adicionar membro ao projeto
-    const membership = await prisma.project_members.create({
-      data: {
-        projectId,
-        userId: parseInt(userId),
-        roles: roles
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true
-          }
-        }
+    if (action === "remove") {
+      const membershipId = Number(body?.membershipId)
+      if (!Number.isInteger(membershipId) || membershipId <= 0) {
+        return NextResponse.json({ error: "membershipId é obrigatório" }, { status: 400 })
       }
+
+      const result = await projectMembershipModule.removeProjectMember({
+        projectId,
+        actorUserId: auth.actor.id,
+        actorRoles: auth.actor.roles,
+        membershipId,
+      })
+
+      return NextResponse.json(
+        { message: `Membro ${result.memberName || ""} removido do projeto com sucesso` },
+        { status: 200 },
+      )
+    }
+
+    if (action === "set_roles") {
+      const targetUserId = Number(body?.userId)
+      const roles = normalizeRoles(body?.roles) as UserRole[]
+      if (!Number.isInteger(targetUserId) || targetUserId <= 0 || !Array.isArray(body?.roles)) {
+        return NextResponse.json({ error: "userId e roles são obrigatórios" }, { status: 400 })
+      }
+
+      const membership = await projectMembershipModule.upsertProjectMemberRoles({
+        projectId,
+        actorUserId: auth.actor.id,
+        actorRoles: auth.actor.roles,
+        targetUserId,
+        roles,
+      })
+
+      return NextResponse.json({ membership }, { status: 200 })
+    }
+
+    const targetUserId =
+      body?.userId === null || body?.userId === undefined || body?.userId === ""
+        ? null
+        : Number(body?.userId)
+
+    if (targetUserId !== null && (!Number.isInteger(targetUserId) || targetUserId <= 0)) {
+      return NextResponse.json({ error: "userId inválido para líder" }, { status: 400 })
+    }
+
+    const leader = await projectMembershipModule.assignProjectLeader({
+      projectId,
+      actorUserId: auth.actor.id,
+      actorRoles: auth.actor.roles,
+      targetUserId,
     })
 
-    return NextResponse.json({ 
-      membership: {
-        id: membership.id,
-        userId: membership.userId,
-        userName: membership.user.name,
-        userEmail: membership.user.email,
-        roles: membership.roles,
-        joinedAt: membership.joinedAt.toISOString()
-      }
-    }, { status: 201 })
-  } catch (error: any) {
-    console.error('Erro na API de adicionar membro:', error)
-    return NextResponse.json(
-      { error: error.message || 'Erro interno do servidor' },
-      { status: 500 }
-    )
+    return NextResponse.json({ leader }, { status: 200 })
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Erro interno do servidor"
+    console.error("Erro na API de membros do projeto (mutação):", error)
+    return NextResponse.json({ error: message }, { status: toHttpStatus(error) })
   }
+}
+
+function resolveAction(body: any, strictAction: boolean): MemberAction | null {
+  const action = typeof body?.action === "string" ? (body.action as MemberAction) : null
+  if (action && ["add", "remove", "set_roles", "set_leader"].includes(action)) {
+    return action
+  }
+
+  if (strictAction) return null
+
+  // Compatibilidade com POST legado
+  if (body?.membershipId !== undefined) return "remove"
+  if (Array.isArray(body?.roles)) return "add"
+  return null
 }

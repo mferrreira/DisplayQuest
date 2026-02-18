@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -19,6 +19,9 @@ import {
 } from "lucide-react"
 import { useProject } from "@/contexts/project-context"
 import { fetchAPI } from "@/contexts/api-client"
+import type { ProjectMember } from "@/contexts/types"
+import { addProjectMember, listProjectMembers, removeProjectMember } from "@/lib/api/project-members"
+import { useToast } from "@/contexts/use-toast"
 
 interface User {
   id: number
@@ -38,6 +41,7 @@ interface VolunteerActionsProps {
 
 export function VolunteerActions({ projectId, onVolunteerAdded, onVolunteerRemoved }: VolunteerActionsProps) {
   const { projects } = useProject()
+  const { toast } = useToast()
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [isRemoveDialogOpen, setIsRemoveDialogOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
@@ -57,7 +61,7 @@ export function VolunteerActions({ projectId, onVolunteerAdded, onVolunteerRemov
     try {
       const response = await fetchAPI<{ users: any[] }>("/api/users")
       const normalizedSearch = search.trim().toLowerCase()
-      const existingMemberIds = new Set(currentProject.members?.map(member => member.userId))
+      const existingMemberIds = new Set(currentProject.members?.map((member: ProjectMember) => member.userId))
 
       const users = (response.users || response || []).filter((user: any) => {
         if (!user || existingMemberIds.has(user.id)) {
@@ -102,21 +106,19 @@ export function VolunteerActions({ projectId, onVolunteerAdded, onVolunteerRemov
     }
   }
 
-  // Buscar usuários quando o termo de busca mudar
-  const handleSearchChange = (value: string) => {
-    setSearchTerm(value)
-    // Debounce da busca
+  useEffect(() => {
+    if (!isAddDialogOpen) return
     const timeoutId = setTimeout(() => {
-      loadAvailableUsers(value)
-    }, 300)
+      void loadAvailableUsers(searchTerm)
+    }, 250)
     return () => clearTimeout(timeoutId)
-  }
+  }, [searchTerm, isAddDialogOpen])
 
   // Usuários já filtrados pela API
   const filteredUsers = availableUsers
 
   // Buscar membros atuais do projeto
-  const currentMembers = currentProject.members?.map(member => ({
+  const currentMembers = currentProject.members?.map((member: ProjectMember) => ({
     id: member.userId,
     name: member.user?.name || 'Usuário',
     email: member.user?.email || '',
@@ -131,22 +133,23 @@ export function VolunteerActions({ projectId, onVolunteerAdded, onVolunteerRemov
 
     setLoading(true)
     try {
-      // TODO: Implementar chamada para API
-      console.log("Adicionando voluntário:", {
-        userId: selectedUser.id,
-        projectId,
-        role: selectedRole
-      })
-      
-      // Simular sucesso
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
+      await addProjectMember(projectId, selectedUser.id, [selectedRole])
       onVolunteerAdded?.(selectedUser.id)
+      toast({
+        title: "Voluntário adicionado",
+        description: `${selectedUser.name} foi adicionado ao projeto.`,
+      })
       setIsAddDialogOpen(false)
       setSelectedUser(null)
       setSearchTerm("")
+      await loadAvailableUsers("")
     } catch (error) {
       console.error("Erro ao adicionar voluntário:", error)
+      toast({
+        title: "Erro ao adicionar voluntário",
+        description: error instanceof Error ? error.message : "Falha ao adicionar voluntário no projeto.",
+        variant: "destructive",
+      })
     } finally {
       setLoading(false)
     }
@@ -155,15 +158,25 @@ export function VolunteerActions({ projectId, onVolunteerAdded, onVolunteerRemov
   const handleRemoveVolunteer = async (userId: number) => {
     setLoading(true)
     try {
-      // TODO: Implementar chamada para API
-      console.log("Removendo voluntário:", { userId, projectId })
-      
-      // Simular sucesso
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
+      const members = await listProjectMembers(projectId)
+      const targetMembership = members.find((member) => member.userId === userId)
+      if (!targetMembership) {
+        throw new Error("Membro do projeto não encontrado para remoção")
+      }
+
+      await removeProjectMember(projectId, targetMembership.id)
       onVolunteerRemoved?.(userId)
+      toast({
+        title: "Voluntário removido",
+        description: "Membro removido do projeto com sucesso.",
+      })
     } catch (error) {
       console.error("Erro ao remover voluntário:", error)
+      toast({
+        title: "Erro ao remover voluntário",
+        description: error instanceof Error ? error.message : "Falha ao remover voluntário do projeto.",
+        variant: "destructive",
+      })
     } finally {
       setLoading(false)
     }
@@ -195,7 +208,7 @@ export function VolunteerActions({ projectId, onVolunteerAdded, onVolunteerRemov
                 <Input
                   placeholder="Buscar usuários..."
                   value={searchTerm}
-                  onChange={(e) => handleSearchChange(e.target.value)}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
                 />
               </div>
@@ -225,14 +238,14 @@ export function VolunteerActions({ projectId, onVolunteerAdded, onVolunteerRemov
                       <Avatar className="h-8 w-8">
                         <AvatarImage src={user.avatar} />
                         <AvatarFallback>
-                          {user.name.split(' ').map(n => n[0]).join('')}
+                          {user.name.split(' ').map((n: string) => n[0]).join('')}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1">
                         <p className="font-medium">{user.name}</p>
                         <p className="text-sm text-muted-foreground">{user.email}</p>
                         <div className="flex gap-1 mt-1">
-                          {user.roles.map(role => (
+                          {user.roles.map((role: string) => (
                             <Badge key={role} variant="secondary" className="text-xs">
                               {role}
                             </Badge>
@@ -308,9 +321,9 @@ export function VolunteerActions({ projectId, onVolunteerAdded, onVolunteerRemov
                   >
                     <div className="flex items-center gap-3">
                       <Avatar className="h-8 w-8">
-                        <AvatarImage src={member.avatar} />
+                        <AvatarImage src={member.avatar || undefined} />
                         <AvatarFallback>
-                          {member.name.split(' ').map(n => n[0]).join('')}
+                          {member.name.split(' ').map((n: string) => n[0]).join('')}
                         </AvatarFallback>
                       </Avatar>
                       <div>
@@ -361,9 +374,9 @@ export function VolunteerActions({ projectId, onVolunteerAdded, onVolunteerRemov
               >
                 <div className="flex items-center gap-3">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src={member.avatar} />
+                    <AvatarImage src={member.avatar || undefined} />
                     <AvatarFallback>
-                      {member.name.split(' ').map(n => n[0]).join('')}
+                      {member.name.split(' ').map((n: string) => n[0]).join('')}
                     </AvatarFallback>
                   </Avatar>
                   <div>

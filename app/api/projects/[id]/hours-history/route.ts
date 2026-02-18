@@ -1,56 +1,43 @@
-import { NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/app/api/auth/[...nextauth]/route'
-import { prisma } from '@/lib/database/prisma'
-import { getProjectHoursHistory } from '@/backend/services/ProjectHoursService'
+import { NextResponse } from "next/server"
+import { requireApiActor } from "@/lib/auth/api-guard"
+import { createReportingModule } from "@/backend/modules/reporting"
+import { createProjectManagementModule } from "@/backend/modules/project-management"
 
-export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+const reportingModule = createReportingModule()
+const projectManagementModule = createProjectManagementModule()
+
+export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+    const auth = await requireApiActor()
+    if (auth.error) return auth.error
+
+    const params = await context.params
+    const projectId = Number(params.id)
+    if (!Number.isInteger(projectId) || projectId <= 0) {
+      return NextResponse.json({ error: "Projeto inválido" }, { status: 400 })
     }
 
-    //TODO: mover lógica para um repository
-    const user = await prisma.users.findUnique({
-      where: { email: session.user.email },
-      include: {
-        projectMemberships: {
-          include: {
-            project: true
-          }
-        }
-      }
+    const allowed = await projectManagementModule.canActorAccessProject(
+      projectId,
+      auth.actor.id,
+      auth.actor.roles,
+    )
+    if (!allowed) {
+      return NextResponse.json({ error: "Acesso negado ao projeto" }, { status: 403 })
+    }
+
+    const { searchParams } = new URL(request.url)
+    const months = Number(searchParams.get("months") || "4")
+
+    const history = await reportingModule.getProjectHoursHistory({
+      projectId,
+      months: Number.isFinite(months) && months > 0 ? months : 4,
     })
 
-    if (!user) {
-      return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 })
-    }
-
-    const projectId = parseInt(params.id)
-    const { searchParams } = new URL(request.url)
-    const months = parseInt(searchParams.get('months') || '4')
-
-    // Verificar se o usuário tem acesso ao projeto
-    const hasAccess = user.projectMemberships.some(
-      membership => membership.project.id === projectId
-    ) || user.roles.includes('COORDENADOR') || user.roles.includes('GERENTE')
-
-    if (!hasAccess) {
-      return NextResponse.json({ error: 'Acesso negado ao projeto' }, { status: 403 })
-    }
-
-    const history = await getProjectHoursHistory(projectId, months)
-
     return NextResponse.json({ history }, { status: 200 })
-  } catch (error: any) {
-    console.error('Erro na API de histórico de horas do projeto:', error)
-    return NextResponse.json(
-      { error: error.message || 'Erro interno do servidor' },
-      { status: 500 }
-    )
+  } catch (error: unknown) {
+    console.error("Erro na API de histórico de horas do projeto:", error)
+    const message = error instanceof Error ? error.message : "Erro interno do servidor"
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }

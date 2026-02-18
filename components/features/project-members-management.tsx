@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
@@ -17,24 +17,13 @@ import {
   UserMinus, 
   UserPlus, 
   Clock, 
-  TrendingUp,
-  AlertTriangle,
-  CheckCircle,
-  Calendar,
-  BarChart3
+  Crown
 } from "lucide-react"
 import type { Project } from "@/contexts/types"
-
-interface ProjectMember {
-  id: number
-  userId: number
-  userName: string
-  userEmail: string
-  roles: string[]
-  joinedAt: string
-  totalHours?: number
-  currentWeekHours?: number
-}
+import {
+  type ProjectMember,
+} from "@/lib/api/project-members"
+import { useProjectMembers } from "@/hooks/use-project-members"
 
 interface ProjectMembersManagementProps {
   project: Project
@@ -44,110 +33,128 @@ interface ProjectMembersManagementProps {
 export function ProjectMembersManagement({ project, onUpdate }: ProjectMembersManagementProps) {
   const { user } = useAuth()
   const { toast } = useToast()
-  const [members, setMembers] = useState<ProjectMember[]>([])
-  const [availableUsers, setAvailableUsers] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [showRemoveDialog, setShowRemoveDialog] = useState(false)
   const [showHoursDialog, setShowHoursDialog] = useState(false)
   const [selectedMember, setSelectedMember] = useState<ProjectMember | null>(null)
   const [newMemberUserId, setNewMemberUserId] = useState<string>("")
   const [newMemberRole, setNewMemberRole] = useState<string>("COLABORADOR")
+  const [memberRoleDrafts, setMemberRoleDrafts] = useState<Record<number, string>>({})
+  const [currentLeaderId, setCurrentLeaderId] = useState<number | null>(project.leaderId ?? null)
+  const [leaderSelection, setLeaderSelection] = useState<string>(project.leaderId ? String(project.leaderId) : "none")
   const [manualHours, setManualHours] = useState<number>(0)
   const [hoursDate, setHoursDate] = useState<string>("")
 
-  const isCoordinatorOrManager = user?.roles?.includes('COORDENADOR') || user?.roles?.includes('GERENTE')
+  const canManageMembers = Boolean(
+    user?.roles?.includes('COORDENADOR') ||
+    user?.roles?.includes('GERENTE') ||
+    user?.roles?.includes('GERENTE_PROJETO')
+  )
+  const {
+    members,
+    availableUsers,
+    loading,
+    error: membersError,
+    reload,
+    addMember,
+    removeMember,
+    updateMemberRoles,
+    updateLeader,
+  } = useProjectMembers(project.id, { includeAvailableUsers: canManageMembers })
 
-  // Buscar membros do projeto
   useEffect(() => {
-    fetchProjectMembers()
-    if (isCoordinatorOrManager) {
-      fetchAvailableUsers()
-    }
-  }, [project.id])
+    const leaderId = project.leaderId ?? null
+    setCurrentLeaderId(leaderId)
+    setLeaderSelection(leaderId ? String(leaderId) : "none")
+  }, [project.id, project.leaderId])
 
-  const fetchProjectMembers = async () => {
+  useEffect(() => {
+    setMemberRoleDrafts(
+      members.reduce((acc: Record<number, string>, member: ProjectMember) => {
+        acc[member.userId] = member.roles?.[0] || "COLABORADOR"
+        return acc
+      }, {}),
+    )
+  }, [members])
+
+  useEffect(() => {
+    if (!membersError) return
+    toast({
+      title: "Erro",
+      description: membersError,
+      variant: "destructive",
+    })
+  }, [membersError, toast])
+
+  const handleSetMemberRole = async (member: ProjectMember) => {
+    const role = memberRoleDrafts[member.userId]
+    if (!role) return
+
     try {
-      setLoading(true)
-      const response = await fetch(`/api/projects/${project.id}/members`)
-      const data = await response.json()
-      
-      if (response.ok) {
-        setMembers(data.members || [])
-      } else {
-        toast({
-          title: "Erro",
-          description: data.error || "Erro ao carregar membros",
-          variant: "destructive"
-        })
-      }
+      await updateMemberRoles(member.userId, [role])
+      toast({
+        title: "Sucesso",
+        description: `Papéis de ${member.userName || `usuário #${member.userId}`} atualizados`,
+      })
+      onUpdate?.()
     } catch (error) {
-      console.error('Erro ao buscar membros:', error)
+      console.error("Erro ao atualizar papel do membro:", error)
       toast({
         title: "Erro",
-        description: "Erro ao carregar membros do projeto",
-        variant: "destructive"
+        description: error instanceof Error ? error.message : "Erro ao atualizar papel do membro",
+        variant: "destructive",
       })
-    } finally {
-      setLoading(false)
     }
   }
 
-  const fetchAvailableUsers = async () => {
+  const handleSetLeader = async () => {
+    const userId = leaderSelection === "none" ? null : Number(leaderSelection)
+
+    if (userId !== null && (!Number.isInteger(userId) || userId <= 0)) {
+      toast({
+        title: "Erro",
+        description: "Selecione um líder válido",
+        variant: "destructive",
+      })
+      return
+    }
+
     try {
-      const response = await fetch('/api/users')
-      const data = await response.json()
-      
-      if (response.ok) {
-        // Filtrar usuários que não estão no projeto
-        const currentMemberIds = members.map(m => m.userId)
-        const available = data.users.filter((user: any) => 
-          !currentMemberIds.includes(user.id) && user.status === 'active'
-        )
-        setAvailableUsers(available)
-      }
+      const leader = await updateLeader(userId)
+      const leaderId = leader?.leaderId ?? null
+      setCurrentLeaderId(leaderId)
+      setLeaderSelection(leaderId ? String(leaderId) : "none")
+      toast({
+        title: "Sucesso",
+        description: leaderId ? "Líder do projeto atualizado" : "Líder removido do projeto",
+      })
+      onUpdate?.()
     } catch (error) {
-      console.error('Erro ao buscar usuários disponíveis:', error)
+      console.error("Erro ao definir líder do projeto:", error)
+      toast({
+        title: "Erro",
+        description: error instanceof Error ? error.message : "Erro ao definir líder do projeto",
+        variant: "destructive",
+      })
     }
   }
 
   const handleAddMember = async () => {
     try {
-      const response = await fetch(`/api/projects/${project.id}/members`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId: parseInt(newMemberUserId),
-          roles: [newMemberRole]
-        })
+      await addMember(parseInt(newMemberUserId), [newMemberRole])
+      toast({
+        title: "Sucesso",
+        description: "Membro adicionado ao projeto com sucesso!",
       })
-
-      const data = await response.json()
-
-      if (response.ok) {
-        toast({
-          title: "Sucesso",
-          description: "Membro adicionado ao projeto com sucesso!",
-        })
-        setShowAddDialog(false)
-        setNewMemberUserId("")
-        setNewMemberRole("COLABORADOR")
-        fetchProjectMembers()
-        onUpdate?.()
-      } else {
-        toast({
-          title: "Erro",
-          description: data.error || "Erro ao adicionar membro",
-          variant: "destructive"
-        })
-      }
+      setShowAddDialog(false)
+      setNewMemberUserId("")
+      setNewMemberRole("COLABORADOR")
+      onUpdate?.()
     } catch (error) {
       console.error('Erro ao adicionar membro:', error)
       toast({
         title: "Erro",
-        description: "Erro ao adicionar membro ao projeto",
+        description: error instanceof Error ? error.message : "Erro ao adicionar membro ao projeto",
         variant: "destructive"
       })
     }
@@ -157,32 +164,19 @@ export function ProjectMembersManagement({ project, onUpdate }: ProjectMembersMa
     if (!selectedMember) return
 
     try {
-      const response = await fetch(`/api/projects/${project.id}/members/${selectedMember.id}`, {
-        method: 'DELETE'
+      await removeMember(selectedMember.id)
+      toast({
+        title: "Sucesso",
+        description: "Membro removido do projeto com sucesso!",
       })
-
-      if (response.ok) {
-        toast({
-          title: "Sucesso",
-          description: "Membro removido do projeto com sucesso!",
-        })
-        setShowRemoveDialog(false)
-        setSelectedMember(null)
-        fetchProjectMembers()
-        onUpdate?.()
-      } else {
-        const data = await response.json()
-        toast({
-          title: "Erro",
-          description: data.error || "Erro ao remover membro",
-          variant: "destructive"
-        })
-      }
+      setShowRemoveDialog(false)
+      setSelectedMember(null)
+      onUpdate?.()
     } catch (error) {
       console.error('Erro ao remover membro:', error)
       toast({
         title: "Erro",
-        description: "Erro ao remover membro do projeto",
+        description: error instanceof Error ? error.message : "Erro ao remover membro do projeto",
         variant: "destructive"
       })
     }
@@ -199,6 +193,13 @@ export function ProjectMembersManagement({ project, onUpdate }: ProjectMembersMa
     }
 
     try {
+      const startDate = new Date(`${hoursDate}T09:00:00`)
+      const endDate = new Date(startDate.getTime() + manualHours * 60 * 60 * 1000)
+
+      if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+        throw new Error("Data/hora inválida para lançamento manual")
+      }
+
       const response = await fetch('/api/work-sessions', {
         method: 'POST',
         headers: {
@@ -206,13 +207,12 @@ export function ProjectMembersManagement({ project, onUpdate }: ProjectMembersMa
         },
         body: JSON.stringify({
           userId: selectedMember.userId,
-          userName: selectedMember.userName,
+          userName: selectedMember.userName || `Usuário #${selectedMember.userId}`,
           activity: "Horas adicionadas manualmente",
           location: "Sistema",
           projectId: project.id,
-          startTime: new Date(`${hoursDate}T09:00:00.000Z`),
-          endTime: new Date(`${hoursDate}T${9 + manualHours}:00:00.000Z`),
-          duration: manualHours,
+          startTime: startDate.toISOString(),
+          endTime: endDate.toISOString(),
           status: "completed"
         })
       })
@@ -228,7 +228,7 @@ export function ProjectMembersManagement({ project, onUpdate }: ProjectMembersMa
         setSelectedMember(null)
         setManualHours(0)
         setHoursDate("")
-        fetchProjectMembers()
+        reload()
         onUpdate?.()
       } else {
         toast({
@@ -297,7 +297,7 @@ export function ProjectMembersManagement({ project, onUpdate }: ProjectMembersMa
             <Users className="h-5 w-5" />
             Membros do Projeto
           </CardTitle>
-          {isCoordinatorOrManager && (
+          {canManageMembers && (
             <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
               <DialogTrigger asChild>
                 <Button size="sm">
@@ -367,6 +367,38 @@ export function ProjectMembersManagement({ project, onUpdate }: ProjectMembersMa
           </TabsList>
           
           <TabsContent value="members" className="space-y-4">
+            {canManageMembers && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Crown className="h-4 w-4" />
+                    Liderança do Projeto
+                  </CardTitle>
+                  <CardDescription>
+                    Líder atual: {members.find((member) => member.userId === currentLeaderId)?.userName || (currentLeaderId ? `Usuário #${currentLeaderId}` : "Sem líder")}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-col gap-2 md:flex-row">
+                    <Select value={leaderSelection} onValueChange={setLeaderSelection}>
+                      <SelectTrigger className="w-full md:w-72">
+                        <SelectValue placeholder="Selecione o líder" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Sem líder</SelectItem>
+                        {members.map((member) => (
+                          <SelectItem key={member.userId} value={String(member.userId)}>
+                            {member.userName || `Usuário #${member.userId}`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button onClick={handleSetLeader}>Salvar líder</Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {members.length === 0 ? (
               <div className="text-center py-8">
                 <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
@@ -380,14 +412,14 @@ export function ProjectMembersManagement({ project, onUpdate }: ProjectMembersMa
                 {members.map((member) => (
                   <div key={member.id} className="flex items-center justify-between p-3 border rounded-lg">
                     <div className="flex items-center gap-3">
-                      <Avatar className="h-10 w-10">
-                        <AvatarFallback>
-                          {member.userName.split(' ').map(n => n[0]).join('').toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
+                        <Avatar className="h-10 w-10">
+                          <AvatarFallback>
+                            {(member.userName || `Usuário #${member.userId}`).split(' ').map(n => n[0]).join('').toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
                       <div>
-                        <div className="font-medium">{member.userName}</div>
-                        <div className="text-sm text-muted-foreground">{member.userEmail}</div>
+                        <div className="font-medium">{member.userName || `Usuário #${member.userId}`}</div>
+                        <div className="text-sm text-muted-foreground">{member.userEmail || "Sem email"}</div>
                         <div className="flex gap-1 mt-1">
                           {member.roles.map((role) => (
                             <Badge key={role} variant={getRoleBadgeVariant(role)} className="text-xs">
@@ -397,8 +429,31 @@ export function ProjectMembersManagement({ project, onUpdate }: ProjectMembersMa
                         </div>
                       </div>
                     </div>
-                    {isCoordinatorOrManager && (
+                    {canManageMembers && (
                       <div className="flex gap-2">
+                        <Select
+                          value={memberRoleDrafts[member.userId] || member.roles?.[0] || "COLABORADOR"}
+                          onValueChange={(value) =>
+                            setMemberRoleDrafts((prev) => ({ ...prev, [member.userId]: value }))
+                          }
+                        >
+                          <SelectTrigger className="w-48">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="COLABORADOR">Colaborador</SelectItem>
+                            <SelectItem value="PESQUISADOR">Pesquisador</SelectItem>
+                            <SelectItem value="GERENTE_PROJETO">Gerente de Projeto</SelectItem>
+                            <SelectItem value="VOLUNTARIO">Voluntário</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => handleSetMemberRole(member)}
+                        >
+                          Salvar papel
+                        </Button>
                         <Button
                           variant="outline"
                           size="sm"
@@ -438,11 +493,11 @@ export function ProjectMembersManagement({ project, onUpdate }: ProjectMembersMa
                       <div className="flex items-center gap-3">
                         <Avatar className="h-8 w-8">
                           <AvatarFallback className="text-xs">
-                            {member.userName.split(' ').map(n => n[0]).join('').toUpperCase()}
+                            {(member.userName || `Usuário #${member.userId}`).split(' ').map(n => n[0]).join('').toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <div className="font-medium">{member.userName}</div>
+                          <div className="font-medium">{member.userName || `Usuário #${member.userId}`}</div>
                           <div className="text-sm text-muted-foreground">
                             {member.roles.map(getRoleDisplayName).join(', ')}
                           </div>
