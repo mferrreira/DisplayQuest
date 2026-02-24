@@ -112,7 +112,7 @@ Criar/atualizar docs quando houver:
 - documentar API por dominio (opcional)
 - criar observabilidade/healthchecks mais formais para producao
 
-## 8. Entregaveis de documentacao (TCC)
+## 8. Entregaveis de documentacao
 
 Para avaliacao e continuidade, os documentos principais recomendados sao:
 
