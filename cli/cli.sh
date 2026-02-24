@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# CLI Wrapper para o Sistema Jogos
+# CLI Wrapper para o DisplayQuest
 # Uso: ./cli.sh [comando] ou ./cli.sh (modo interativo)
 
-echo "🚀 CLI do Sistema Jogos"
+echo "🚀 CLI do DisplayQuest"
 echo "======================"
 
 # Verificar se Docker está rodando
