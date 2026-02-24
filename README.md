@@ -42,6 +42,18 @@ docs/                # Documentacao complementar
 - `docs/backend-clean-architecture.md`: padrao arquitetural backend adotado
 - `docs/database-workflow.md`: fluxo operacional de banco/migrations
 
+## Documentacao formal (TCC / handover)
+
+Os READMEs sao referencia rapida de manutencao. A documentacao formal (entregavel) fica em `docs/`:
+
+- `docs/01-visao-geral-sistema.md`
+- `docs/02-manual-do-usuario.md`
+- `docs/03-regras-de-negocio.md`
+- `docs/04-arquitetura-tecnica.md`
+- `docs/05-operacao-deploy.md`
+- `docs/06-guia-de-manutencao-handover.md`
+- `docs/07-modelo-de-dados.md`
+
 ## Modulos do sistema (backend)
 
 - `identity-access`
@@ -70,7 +82,9 @@ docs/                # Documentacao complementar
 
 ## API (resumo)
 
-As rotas ficam em `app/api/*` e usam `getBackendComposition()` para resolver modulos do backend.
+As rotas de dominio da aplicacao ficam em `app/api/*` e, em regra, usam `getBackendComposition()` para resolver modulos do backend.
+
+Obs.: rotas de autenticacao/registro e algumas rotas utilitarias podem acessar Prisma/lib diretamente.
 
 Dominios principais expostos:
 

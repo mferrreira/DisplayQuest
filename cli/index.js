@@ -198,7 +198,7 @@ async function resetPassword() {
 // Menu principal
 async function showMenu() {
     while (true) {
-        log('magenta', '\n🚀 CLI de Gerenciamento - Sistema Jogos');
+        log('magenta', '\n🚀 CLI de Gerenciamento - DisplayQuest');
         log('magenta', '=====================================\n');
         
         log('cyan', '1. 👤 Criar usuário administrador');
