@@ -45,6 +45,7 @@ Contextos principais:
 - `user-context.tsx`: usuarios, atualizacao, pontuacao
 - `project-context.tsx`: CRUD e lista de projetos
 - `task-context.tsx`: tarefas, aprovacao/rejeicao/conclusao
+  - inclui criacao em lote de backlog, tasks publicas com progresso individual e multiatribuicao (`assigneeIds`)
 - `reward-context.tsx`: loja/recompensas/compras
 - `issue-context.tsx`: issues do laboratorio
 - `responsibility-context.tsx`: responsabilidades e responsabilidade ativa
@@ -101,6 +102,7 @@ Mais comuns no projeto:
 ### Dashboard
 
 - `app/dashboard/page.tsx`: painel principal (Kanban de tarefas)
+  - cards exibem delegados e tarefas concluidas antigas vao para "Historico de tarefas" abaixo do quadro
 - `app/dashboard/admin/page.tsx`: painel administrativo (usuarios, projetos, tarefas, metricas)
 - `app/dashboard/projetos/page.tsx`: projetos, detalhes, gestao e acompanhamento
 - `app/dashboard/laboratorio/page.tsx`: responsabilidades, issues, eventos e horarios
@@ -117,6 +119,7 @@ Pastas principais:
 - `components/features/`: blocos funcionais por dominio
 - `components/admin/`: UI administrativa
 - `components/forms/`: formularios e dialogs de entrada
+  - `TaskForm` / `TaskDialog` suportam backlog em lote e multiatribuicao
 
 ## Como adicionar/editar funcionalidades na UI
 
@@ -142,4 +145,3 @@ Apesar de estarem na pasta `app/`, pertencem ao backend de aplicacao.
 
 - manutencao arquitetural: ver `backend/README.md`
 - regra atual: usar `getBackendComposition()` (sem `createXModule()` direto nas rotas)
-

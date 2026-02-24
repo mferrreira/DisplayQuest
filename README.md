@@ -81,6 +81,12 @@ Dominios principais expostos:
 - `issues`, `responsibilities`, `schedules`, `laboratory-schedule`, `lab-events`
 - `notifications`
 
+## Tasks (resumo de comportamento atual)
+
+- `public`: visivel no escopo (projeto/laboratorio) com progresso individual por usuario
+- `delegated` / `private`: visivel no projeto, com manipulacao restrita aos atribuídos (suporta multiatribuicao)
+- `isGlobal=true`: representa task publica de laboratorio (quest global) no modelo atual
+
 ## Setup rapido (local)
 
 ### 1. Instalar dependencias
@@ -94,7 +100,7 @@ npm install
 Criar `.env.local` com pelo menos:
 
 ```env
-DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/displayquest"
+DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/display-quest"
 NEXTAUTH_SECRET="troque-isto"
 NEXTAUTH_URL="http://localhost:3000"
 ```
@@ -104,9 +110,11 @@ NEXTAUTH_URL="http://localhost:3000"
 ```bash
 npm run db:generate
 npm run db:migrate:dev
-# opcional
+# opcional (dev/test only)
 npm run db:seed
 ```
+
+Observacao: seed e manual e voltada para desenvolvimento/teste. Nao roda automaticamente em startup/deploy.
 
 ### 4. Rodar aplicacao
 
@@ -148,4 +156,3 @@ O backend foi padronizado com composicao central em `backend/composition/root.ts
 - visao geral do sistema (raiz)
 - arquitetura e contribuicao backend (`backend/README.md`)
 - estrutura e manutencao da UI (`app/README.md`)
-

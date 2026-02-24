@@ -1,6 +1,6 @@
-# 🚀 CLI do Sistema Jogos
+# CLI do DisplayQuest
 
-Sistema de linha de comando para gerenciar usuários em produção.
+Sistema de linha de comando para operacoes administrativas (principalmente usuarios).
 
 ## Comandos Disponíveis
 
@@ -24,7 +24,7 @@ Sistema de linha de comando para gerenciar usuários em produção.
 ./cli/cli.sh reset-password
 ```
 
-## 🔧 Uso em Produção
+## Uso em Producao
 
 ### **1. Após o primeiro deploy:**
 ```bash

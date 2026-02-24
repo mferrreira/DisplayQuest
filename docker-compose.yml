@@ -43,8 +43,6 @@ services:
         sleep 5 &&
         echo '🗄️ Aplicando migrations versionadas...' &&
         ./node_modules/.bin/prisma migrate deploy &&
-        echo '🌱 Executando seed...' &&
-        (npx prisma db seed || echo 'ℹ️ Seed falhou ou já foi executado') &&
         echo '✅ Iniciando aplicação...' &&
         node server.js
       "

@@ -18,7 +18,7 @@ npm run db:migrate:dev -- --name your_change_name
 ```bash
 npm run db:generate
 ```
-4. Seed (optional):
+4. Seed (optional, dev/test only):
 ```bash
 npm run db:seed
 ```
@@ -32,12 +32,12 @@ npm run db:safe-deploy
 Optional env flags:
 - `BACKUP_BEFORE_MIGRATE=1` to create SQL dump with `pg_dump`
 - `BACKUP_DIR=./backups` to control backup folder
-- `RUN_SEED_AFTER_DEPLOY=1` to run seed after deploy
 
 ## Docker flow
 `docker-compose.yml` now runs:
 - `prisma migrate deploy`
-- optional seed
+
+Seed is not executed automatically on startup/deploy (dev-only manual action).
 
 This avoids destructive schema drift from `db push`.
 

@@ -130,6 +130,14 @@ Exemplos:
 - Dependencias cruzadas sao injetadas no composition root
 - Refatoracao incremental: nem todo modulo precisa ter o mesmo nivel de use case/abstracao para evoluir
 
+## Semantica atual de tasks (importante)
+
+- `taskVisibility = public`: task visivel no escopo com progresso individual por usuario
+- `taskVisibility = delegated/private`: task visivel no projeto, mas manipulacao restrita a atribuídos (ou gestao)
+- multiatribuicao suportada via `task_assignees` (mantendo `assignedTo` como compatibilidade)
+- progresso individual suportado via `task_user_progress`
+- `isGlobal = true`: task publica de laboratorio (quest global) no modelo legado/atual
+
 ## Banco e migracoes
 
 Arquivos relacionados:
@@ -148,6 +156,11 @@ npm run db:migrate:deploy
 npm run db:safe-deploy
 ```
 
+Seed:
+
+- `npm run db:seed` e apenas para dev/teste (execucao manual)
+- deploy/startup nao devem rodar seed automaticamente
+
 ## Checklist de PR / manutencao (recomendado)
 
 - mudou rota? continua usando `getBackendComposition()`
@@ -155,4 +168,3 @@ npm run db:safe-deploy
 - mudou contrato? atualizou chamada da rota/consumidor
 - mudou persistencia? validou impacto no Prisma/schema/migration
 - documentou comportamento novo (README da pasta ou `docs/` quando relevante)
-

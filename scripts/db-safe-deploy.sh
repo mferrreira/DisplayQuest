@@ -19,9 +19,4 @@ fi
 echo "==> Running prisma migrate deploy"
 npx prisma migrate deploy
 
-if [[ "${RUN_SEED_AFTER_DEPLOY:-0}" == "1" ]]; then
-  echo "==> Running prisma db seed"
-  npx prisma db seed
-fi
-
 echo "==> Done"
