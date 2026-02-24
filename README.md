@@ -42,9 +42,9 @@ docs/                # Documentacao complementar
 - `docs/backend-clean-architecture.md`: padrao arquitetural backend adotado
 - `docs/database-workflow.md`: fluxo operacional de banco/migrations
 
-## Documentacao formal (TCC / handover)
+## Documentacao formal
 
-Os READMEs sao referencia rapida de manutencao. A documentacao formal (entregavel) fica em `docs/`:
+Os READMEs sao referencia rapida de manutencao. A documentacao formal fica em `docs/`:
 
 - `docs/01-visao-geral-sistema.md`
 - `docs/02-manual-do-usuario.md`
@@ -80,7 +80,7 @@ Os READMEs sao referencia rapida de manutencao. A documentacao formal (entregave
 - `/dashboard/profile`
 - `/dashboard/leaderboard`
 
-## API (resumo)
+## API
 
 As rotas de dominio da aplicacao ficam em `app/api/*` e, em regra, usam `getBackendComposition()` para resolver modulos do backend.
 
@@ -95,7 +95,7 @@ Dominios principais expostos:
 - `issues`, `responsibilities`, `schedules`, `laboratory-schedule`, `lab-events`
 - `notifications`
 
-## Tasks (resumo de comportamento atual)
+## Tasks
 
 - `public`: visivel no escopo (projeto/laboratorio) com progresso individual por usuario
 - `delegated` / `private`: visivel no projeto, com manipulacao restrita aos atribuídos (suporta multiatribuicao)
@@ -149,15 +149,14 @@ npm run dev
 - `npm run db:reset:local`
 - `npm run db:safe-deploy`
 
-## Docker (local)
-
+## Docker 
 ```bash
 docker-compose up -d
 docker-compose ps
 docker-compose logs -f
 ```
 
-## Manutencao (ponto importante)
+## Manutencao
 
 O backend foi padronizado com composicao central em `backend/composition/root.ts`.
 
@@ -165,8 +164,4 @@ O backend foi padronizado com composicao central em `backend/composition/root.ts
 - use `getBackendComposition()` nas rotas
 - dependencias entre modulos devem ser resolvidas no composition root
 
-## Entregaveis de documentacao (atual)
 
-- visao geral do sistema (raiz)
-- arquitetura e contribuicao backend (`backend/README.md`)
-- estrutura e manutencao da UI (`app/README.md`)
