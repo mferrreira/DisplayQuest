@@ -100,7 +100,7 @@ Para usuarios com permissao:
 - relatorio de usuario e visualizado em modal com exportacao
 - relatorio de projeto segue fluxo semelhante (visualizacao + exportacao)
 
-## Problemas comuns (FAQ rapido)
+## Problemas comuns
 
 ### "Nao consigo entrar"
 
