@@ -6,12 +6,24 @@ export class ListTasksForActorUseCase {
 
   async execute(query: ListTasksForActorQuery) {
     const scopedTasks = await this.gateway.listTasksForUser(query.actorId, query.actorRoles)
+    const sharedTasks = await this.gateway.listGlobalTasks()
 
     if (query.projectId) {
-      return scopedTasks.filter((task) => task.projectId === query.projectId)
+      const projectScoped = scopedTasks.filter((task) => task.projectId === query.projectId)
+      const projectShared = sharedTasks.filter((task) => task.projectId === query.projectId && task.taskVisibility === "public")
+      return dedupeTasksById([...projectScoped, ...projectShared])
     }
 
-    const globalTasks = await this.gateway.listGlobalTasks()
-    return [...scopedTasks, ...globalTasks]
+    return dedupeTasksById([...scopedTasks, ...sharedTasks])
   }
+}
+
+function dedupeTasksById<T extends { id?: number }>(tasks: T[]) {
+  const seen = new Set<number>()
+  return tasks.filter((task) => {
+    if (!task.id) return true
+    if (seen.has(task.id)) return false
+    seen.add(task.id)
+    return true
+  })
 }

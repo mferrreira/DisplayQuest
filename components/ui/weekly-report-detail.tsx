@@ -11,8 +11,39 @@ import { Label } from "@/components/ui/label"
 import { useAuth } from "@/contexts/auth-context"
 import { useWeeklyReports } from "@/contexts/weekly-report-context"
 
+interface ProjectReportLog {
+  id: number
+  date: Date | string
+  note?: string | null
+  project?: {
+    id: number
+    name: string
+  } | null
+  userName?: string | null
+  location?: string | null
+  durationSeconds?: number | null
+}
+
+export interface ProjectWeeklyDetailReport {
+  reportType: "project"
+  id: string | number
+  projectId: number
+  projectName: string
+  weekStart: Date | string
+  weekEnd: Date | string
+  totalLogs: number
+  totalHours: number
+  contributorCount: number
+  summary?: string | null
+  createdAt: Date | string
+  logs: ProjectReportLog[]
+}
+
+type UserWeeklyDetailReport = WeeklyReport & { reportType?: "user" }
+type WeeklyReportDetailModel = UserWeeklyDetailReport | ProjectWeeklyDetailReport
+
 interface WeeklyReportDetailProps {
-  report: WeeklyReport
+  report: WeeklyReportDetailModel
   onClose: () => void
   loading?: boolean
   onDelete?: (id: number) => void
@@ -23,6 +54,7 @@ export function WeeklyReportDetail({ report, onClose, loading, onDelete }: Weekl
   const { deleteWeeklyReport } = useWeeklyReports()
   const [isExporting, setIsExporting] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const isProjectReport = report.reportType === "project"
 
   const formatDate = (date: Date | string) => {
     return new Date(date).toLocaleDateString('pt-BR')
@@ -42,23 +74,40 @@ export function WeeklyReportDetail({ report, onClose, loading, onDelete }: Weekl
   const handleExport = async () => {
     setIsExporting(true)
     try {
-      // Create a simple text report
+      const logs = Array.isArray(report.logs) ? report.logs : []
+      const header = isProjectReport
+        ? `RELATÓRIO SEMANAL DO PROJETO - ${report.projectName}`
+        : `RELATÓRIO SEMANAL - ${report.userName}`
+      const totals = isProjectReport
+        ? `Total de Sessões: ${report.totalLogs}\nTotal de Horas: ${report.totalHours.toFixed(1)}\nContribuidores: ${report.contributorCount}`
+        : `Total de Logs: ${report.totalLogs}`
+
+      const sessionsText = logs.length > 0
+        ? `SESSÕES CONSOLIDADAS:\n${logs.map((log: any, index: number) => {
+            const lines = [
+              `${index + 1}. ${formatDate(log.date)} - ${formatTime(log.date)}`,
+              isProjectReport && log.userName ? `   Usuário: ${log.userName}` : "",
+              `   ${log.note || "Sem descrição"}`,
+              log.project ? `   Projeto: ${log.project.name}` : "",
+              isProjectReport && typeof log.durationSeconds === "number"
+                ? `   Duração: ${(log.durationSeconds / 3600).toFixed(2)}h`
+                : "",
+              isProjectReport && log.location ? `   Local: ${log.location}` : "",
+            ].filter(Boolean)
+
+            return lines.join("\n")
+          }).join("\n\n")}`
+        : "Nenhum log encontrado para este período."
+
       const reportText = `
-RELATÓRIO SEMANAL - ${report.userName}
+${header}
 Período: ${getWeekRange(report.weekStart, report.weekEnd)}
-Total de Logs: ${report.totalLogs}
+${totals}
 Data de Criação: ${formatDate(report.createdAt)}
 
 ${report.summary || "Nenhum resumo disponível"}
 
-${report.logs && report.logs.length > 0 ? `
-SESSÕES CONSOLIDADAS:
-${report.logs.map((log, index) => `
-${index + 1}. ${formatDate(log.date)} - ${formatTime(log.date)}
-   ${log.note || "Sem descrição"}
-   ${log.project ? `Projeto: ${log.project.name}` : ""}
-`).join('\n')}
-` : "Nenhum log encontrado para este período."}
+${sessionsText}
       `.trim()
 
       // Create and download file
@@ -66,7 +115,9 @@ ${index + 1}. ${formatDate(log.date)} - ${formatTime(log.date)}
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `relatorio-semanal-${report.userName}-${formatDate(report.weekStart)}.txt`
+      a.download = isProjectReport
+        ? `relatorio-projeto-${report.projectId}-${formatDate(report.weekStart)}.txt`
+        : `relatorio-semanal-${report.userName}-${formatDate(report.weekStart)}.txt`
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
@@ -78,14 +129,15 @@ ${index + 1}. ${formatDate(log.date)} - ${formatTime(log.date)}
     }
   }
 
-  const canDelete = user && (user.roles?.includes("COORDENADOR") || user.id === report.userId)
+  const canDelete = !isProjectReport && user && (user.roles?.includes("COORDENADOR") || user.id === report.userId)
 
   const handleDelete = async () => {
     if (!canDelete) return
     setIsDeleting(true)
     try {
-      await deleteWeeklyReport(report.id)
-      if (onDelete) onDelete(report.id)
+      if (isProjectReport) return
+      await deleteWeeklyReport(Number(report.id))
+      if (onDelete) onDelete(Number(report.id))
       onClose()
     } catch (err) {
       // Optionally show error
@@ -116,7 +168,11 @@ ${index + 1}. ${formatDate(log.date)} - ${formatTime(log.date)}
               </div>
               <div>
                 <h3 className="text-xl font-semibold">Relatório Detalhado</h3>
-                <p className="text-sm text-gray-500">Relatório semanal de {report.userName}</p>
+                <p className="text-sm text-gray-500">
+                  {isProjectReport
+                    ? `Relatório semanal do projeto ${report.projectName}`
+                    : `Relatório semanal de ${report.userName}`}
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -170,18 +226,24 @@ ${index + 1}. ${formatDate(log.date)} - ${formatTime(log.date)}
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label className="text-sm font-medium text-gray-500">Usuário</Label>
-                    <p className="text-lg font-medium">{report.userName}</p>
+                    <Label className="text-sm font-medium text-gray-500">
+                      {isProjectReport ? "Projeto" : "Usuário"}
+                    </Label>
+                    <p className="text-lg font-medium">
+                      {isProjectReport ? report.projectName : report.userName}
+                    </p>
                   </div>
                   <div>
                     <Label className="text-sm font-medium text-gray-500">Período</Label>
                     <p className="text-lg font-medium">{getWeekRange(report.weekStart, report.weekEnd)}</p>
                   </div>
                   <div>
-                    <Label className="text-sm font-medium text-gray-500">Total de Logs</Label>
+                    <Label className="text-sm font-medium text-gray-500">
+                      {isProjectReport ? "Total de Sessões" : "Total de Logs"}
+                    </Label>
                     <div className="flex items-center gap-2">
                       <p className="text-lg font-medium">{report.totalLogs}</p>
-                      <Badge variant="outline">logs</Badge>
+                      <Badge variant="outline">{isProjectReport ? "sessões" : "logs"}</Badge>
                     </div>
                   </div>
                   <div>
@@ -189,6 +251,19 @@ ${index + 1}. ${formatDate(log.date)} - ${formatTime(log.date)}
                     <p className="text-lg font-medium">{formatDate(report.createdAt)}</p>
                   </div>
                 </div>
+
+                {isProjectReport && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                    <div>
+                      <Label className="text-sm font-medium text-gray-500">Horas Totais</Label>
+                      <p className="text-lg font-medium">{report.totalHours.toFixed(1)}h</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-gray-500">Contribuidores</Label>
+                      <p className="text-lg font-medium">{report.contributorCount}</p>
+                    </div>
+                  </div>
+                )}
                 
                 {report.summary && (
                   <div className="mt-4">
@@ -213,8 +288,8 @@ ${index + 1}. ${formatDate(log.date)} - ${formatTime(log.date)}
               <CardContent>
                 {report.logs && report.logs.length > 0 ? (
                   <div className="space-y-4">
-                    {report.logs.map((log, index) => (
-                      <div key={log.id} className="border rounded-lg p-4">
+                    {report.logs.map((log: any, index) => (
+                      <div key={`${log.id}-${index}`} className="border rounded-lg p-4">
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex items-center gap-2">
                             <Badge variant="secondary">
@@ -230,9 +305,20 @@ ${index + 1}. ${formatDate(log.date)} - ${formatTime(log.date)}
                             </Badge>
                           )}
                         </div>
+                        {isProjectReport && log.userName && (
+                          <p className="text-sm text-gray-500 mb-1">Usuário: {log.userName}</p>
+                        )}
                         <p className="text-gray-700 dark:text-gray-300">
                           {log.note || "Sem descrição"}
                         </p>
+                        {isProjectReport && (
+                          <div className="mt-2 flex flex-wrap gap-2 text-xs text-gray-500">
+                            {typeof log.durationSeconds === "number" && (
+                              <span>Duração: {(log.durationSeconds / 3600).toFixed(2)}h</span>
+                            )}
+                            {log.location && <span>Local: {log.location}</span>}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>

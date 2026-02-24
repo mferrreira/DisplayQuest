@@ -23,6 +23,7 @@ export class TaskManagementModule {
   readonly listTasksForActor: UseCaseExecute<ListTasksForActorUseCase>
   readonly listActorProjectIds: UseCaseExecute<ListActorProjectIdsUseCase>
   readonly createTask: UseCaseExecute<CreateTaskUseCase>
+  readonly createTaskBacklog: (tasks: Parameters<UseCaseExecute<CreateTaskUseCase>>[0][], actorId: number) => Promise<any[]>
   readonly updateTask: UseCaseExecute<UpdateTaskUseCase>
   readonly deleteTask: UseCaseExecute<DeleteTaskUseCase>
   readonly completeTask: UseCaseExecute<CompleteTaskUseCase>
@@ -44,6 +45,9 @@ export class TaskManagementModule {
     this.listTasksForActor = this.listTasksForActorUseCase.execute.bind(this.listTasksForActorUseCase)
     this.listActorProjectIds = this.listActorProjectIdsUseCase.execute.bind(this.listActorProjectIdsUseCase)
     this.createTask = this.createTaskUseCase.execute.bind(this.createTaskUseCase)
+    this.createTaskBacklog = async (tasks, actorId) => {
+      return await Promise.all(tasks.map((task) => this.createTaskUseCase.execute(task as any, actorId)))
+    }
     this.updateTask = this.updateTaskUseCase.execute.bind(this.updateTaskUseCase)
     this.deleteTask = this.deleteTaskUseCase.execute.bind(this.deleteTaskUseCase)
     this.completeTask = this.completeTaskUseCase.execute.bind(this.completeTaskUseCase)

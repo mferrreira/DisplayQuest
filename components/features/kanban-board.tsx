@@ -167,8 +167,15 @@ export function KanbanBoard() {
         })
 
         const updateData: any = { status: newStatus }
-        
-        if (newStatus === "done" && taskToUpdate.taskVisibility === "public" && !taskToUpdate.assignedTo && user && hasAccess(user.roles || [], 'COMPLETE_PUBLIC_TASKS')) {
+
+        const shouldAutoAssignPublicTask =
+          taskToUpdate.taskVisibility === "public" &&
+          !taskToUpdate.assignedTo &&
+          newStatus !== "to-do" &&
+          !!user &&
+          hasAccess(user.roles || [], 'COMPLETE_PUBLIC_TASKS')
+
+        if (shouldAutoAssignPublicTask) {
           updateData.assignedTo = user.id.toString()
         }
         

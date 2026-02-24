@@ -203,6 +203,7 @@ export function TaskForm({
     dueDate: "",
     points: 50, // Default para medium priority
     completed: false,
+    taskVisibility: "delegated",
     isGlobal: false,
   })
   const [isPastDate, setIsPastDate] = useState(false)
@@ -254,6 +255,7 @@ export function TaskForm({
         dueDate: task.dueDate || "",
         points: task.points,
         completed: task.completed || false,
+        taskVisibility: (task.taskVisibility as TaskFormData["taskVisibility"]) || "delegated",
       }
       setFormData(formDataToSet)
       checkIfPastDate(task.dueDate || null)
@@ -268,6 +270,7 @@ export function TaskForm({
         dueDate: "",
         points: 10,
         completed: false,
+        taskVisibility: "delegated",
         isGlobal: false,
       })
       setIsPastDate(false)
@@ -305,8 +308,10 @@ export function TaskForm({
     
     // For global quests, assignedTo and project are not required
     if (!formData.isGlobal) {
-      if (!formData.assignedTo) errors.assignedTo = "Selecione um responsável."
       if (!formData.project) errors.project = "Selecione um projeto."
+      if (formData.taskVisibility !== "public" && !formData.assignedTo) {
+        errors.assignedTo = "Selecione um responsável para tarefa atribuída."
+      }
     }
     
     setFieldErrors(errors)
@@ -326,6 +331,11 @@ export function TaskForm({
     { value: "low" as const, label: "Baixa" },
     { value: "medium" as const, label: "Média" },
     { value: "high" as const, label: "Alta" },
+  ]
+  const visibilityOptions = [
+    { value: "delegated", label: "Atribuída" },
+    { value: "public", label: "Geral (membros podem pegar)" },
+    { value: "private", label: "Privada" },
   ]
   // Only show volunteers for task delegation
   const userOptions = users
@@ -387,6 +397,15 @@ export function TaskForm({
         />
       </div>
 
+      {!formData.isGlobal && (
+        <SelectField
+          label="Tipo da Task"
+          value={formData.taskVisibility || "delegated"}
+          onValueChange={(value) => handleSelectChange("taskVisibility", value)}
+          options={visibilityOptions}
+        />
+      )}
+
       <div className="grid grid-cols-2 gap-4">
         <SelectField
           label="Projeto"
@@ -401,12 +420,23 @@ export function TaskForm({
           label="Responsável"
           value={formData.assignedTo}
           onValueChange={(value) => handleSelectChange("assignedTo", value)}
-          placeholder={formData.isGlobal ? "Não aplicável para quest global" : "Selecione um responsável"}
+          placeholder={
+            formData.isGlobal
+              ? "Não aplicável para quest global"
+              : (formData.taskVisibility === "public"
+                ? "Opcional para task geral"
+                : "Selecione um responsável")
+          }
           options={userOptions}
           error={fieldErrors.assignedTo}
           disabled={formData.isGlobal}
         />
       </div>
+      {!formData.isGlobal && formData.taskVisibility === "public" && (
+        <p className="text-xs text-amber-700 bg-amber-50 p-2 rounded">
+          ℹ️ Tasks gerais ficam visíveis para membros do projeto e podem ser assumidas ao serem movidas no quadro.
+        </p>
+      )}
       {formData.isGlobal && (
         <p className="text-xs text-blue-600 bg-blue-50 p-2 rounded">
           ℹ️ Quest globais não precisam de projeto ou responsável específico - são visíveis para todos os usuários.

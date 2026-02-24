@@ -19,7 +19,6 @@ import {
 } from "lucide-react"
 import { useProject } from "@/contexts/project-context"
 import { fetchAPI } from "@/contexts/api-client"
-import type { ProjectMember } from "@/contexts/types"
 import { addProjectMember, listProjectMembers, removeProjectMember } from "@/lib/api/project-members"
 import { useToast } from "@/contexts/use-toast"
 
@@ -49,11 +48,31 @@ export function VolunteerActions({ projectId, onVolunteerAdded, onVolunteerRemov
   const [selectedRole, setSelectedRole] = useState<string>("COLABORADOR")
   const [loading, setLoading] = useState(false)
   const [availableUsers, setAvailableUsers] = useState<User[]>([])
+  const [currentMembers, setCurrentMembers] = useState<User[]>([])
   const [searchLoading, setSearchLoading] = useState(false)
 
   // Buscar projeto atual
   const currentProject = projects.find(p => p.id === projectId)
   if (!currentProject) return null
+
+  const loadCurrentMembers = async () => {
+    try {
+      const members = await listProjectMembers(projectId)
+      setCurrentMembers(
+        members.map((member) => ({
+          id: member.userId,
+          name: member.userName || "Usuário",
+          email: member.userEmail || "",
+          roles: member.roles || [],
+          isMember: true,
+          isLeader: currentProject.leaderId === member.userId,
+        })),
+      )
+    } catch (error) {
+      console.error("Erro ao buscar membros atuais do projeto:", error)
+      setCurrentMembers([])
+    }
+  }
 
   // Buscar usuários disponíveis
   const loadAvailableUsers = async (search: string = "") => {
@@ -61,7 +80,7 @@ export function VolunteerActions({ projectId, onVolunteerAdded, onVolunteerRemov
     try {
       const response = await fetchAPI<{ users: any[] }>("/api/users")
       const normalizedSearch = search.trim().toLowerCase()
-      const existingMemberIds = new Set(currentProject.members?.map((member: ProjectMember) => member.userId))
+      const existingMemberIds = new Set(currentMembers.map((member) => member.id))
 
       const users = (response.users || response || []).filter((user: any) => {
         if (!user || existingMemberIds.has(user.id)) {
@@ -98,6 +117,10 @@ export function VolunteerActions({ projectId, onVolunteerAdded, onVolunteerRemov
     }
   }
 
+  useEffect(() => {
+    void loadCurrentMembers()
+  }, [projectId])
+
   // Carregar usuários quando o dialog abrir
   const handleAddDialogOpen = (open: boolean) => {
     setIsAddDialogOpen(open)
@@ -117,23 +140,13 @@ export function VolunteerActions({ projectId, onVolunteerAdded, onVolunteerRemov
   // Usuários já filtrados pela API
   const filteredUsers = availableUsers
 
-  // Buscar membros atuais do projeto
-  const currentMembers = currentProject.members?.map((member: ProjectMember) => ({
-    id: member.userId,
-    name: member.user?.name || 'Usuário',
-    email: member.user?.email || '',
-    avatar: member.user?.avatar,
-    roles: member.roles || [],
-    isMember: true,
-    isLeader: currentProject.leaderId === member.userId
-  })) || []
-
   const handleAddVolunteer = async () => {
     if (!selectedUser) return
 
     setLoading(true)
     try {
       await addProjectMember(projectId, selectedUser.id, [selectedRole])
+      await loadCurrentMembers()
       onVolunteerAdded?.(selectedUser.id)
       toast({
         title: "Voluntário adicionado",
@@ -165,6 +178,7 @@ export function VolunteerActions({ projectId, onVolunteerAdded, onVolunteerRemov
       }
 
       await removeProjectMember(projectId, targetMembership.id)
+      await loadCurrentMembers()
       onVolunteerRemoved?.(userId)
       toast({
         title: "Voluntário removido",

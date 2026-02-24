@@ -161,6 +161,7 @@ export interface TaskFormData {
   dueDate: string
   points: number
   completed: boolean
+  taskVisibility?: "public" | "delegated" | "private"
   isGlobal?: boolean
 }
 

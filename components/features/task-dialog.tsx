@@ -6,10 +6,14 @@ import { useUser } from "@/contexts/user-context"
 import { useProject } from "@/contexts/project-context"
 import { useTask } from "@/contexts/task-context"
 import { useAuth } from "@/contexts/auth-context"
-import { useState, useCallback } from "react"
+import { useState, useCallback, useMemo, useEffect } from "react"
 import type { Task, TaskFormData } from "@/contexts/types"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Trash2, AlertCircle } from "lucide-react"
 import { hasAccess } from "@/lib/utils/utils"
 
@@ -35,12 +39,21 @@ const transformFormData = (formData: TaskFormData) => ({
 export function TaskDialog({ open, onOpenChange, task, projectId }: TaskDialogProps) {
   const { users } = useUser()
   const { projects } = useProject()
-  const { createTask, updateTask, deleteTask } = useTask()
+  const { createTask, createBacklog, updateTask, deleteTask } = useTask()
   const { user: currentUser } = useAuth()
   
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [creationMode, setCreationMode] = useState<"single" | "backlog">("single")
+  const [backlogText, setBacklogText] = useState("")
+  const [backlogProjectId, setBacklogProjectId] = useState<string>(projectId || "")
+  const [backlogAssignedTo, setBacklogAssignedTo] = useState<string>("")
+  const [backlogPriority, setBacklogPriority] = useState<"low" | "medium" | "high">("medium")
+  const [backlogDueDate, setBacklogDueDate] = useState("")
+  const [backlogPoints, setBacklogPoints] = useState(50)
+  const [backlogTaskVisibility, setBacklogTaskVisibility] = useState<"public" | "delegated" | "private">("delegated")
+  const [backlogIsGlobal, setBacklogIsGlobal] = useState(false)
 
   // Check if user can edit tasks
   const canEditTasks = currentUser && hasAccess(currentUser.roles, 'MANAGE_TASKS')
@@ -84,6 +97,99 @@ export function TaskDialog({ open, onOpenChange, task, projectId }: TaskDialogPr
   }, [isSubmitting, onOpenChange])
 
   const canDelete = !!task && currentUser && hasAccess(currentUser.roles, 'MANAGE_TASKS');
+  const canCreateGlobal = !!currentUser && (currentUser.roles.includes("COORDENADOR") || currentUser.roles.includes("GERENTE"))
+
+  useEffect(() => {
+    if (!open) return
+    setCreationMode("single")
+    setBacklogText("")
+    setBacklogProjectId(projectId || "")
+    setBacklogAssignedTo(currentUser?.roles?.includes("GERENTE_PROJETO") ? String(currentUser.id) : "")
+    setBacklogPriority("medium")
+    setBacklogDueDate("")
+    setBacklogPoints(50)
+    setBacklogTaskVisibility("delegated")
+    setBacklogIsGlobal(false)
+  }, [open, projectId, currentUser])
+
+  const backlogUserOptions = useMemo(
+    () =>
+      users
+        .filter((user) => hasAccess(user.roles || [], "COMPLETE_PUBLIC_TASKS"))
+        .map((user) => ({ value: String(user.id), label: user.name })),
+    [users],
+  )
+
+  const backlogProjectOptions = useMemo(
+    () => projects.map((project) => ({ value: String(project.id), label: project.name })),
+    [projects],
+  )
+
+  const handleBacklogSubmit = useCallback(async () => {
+    try {
+      setIsSubmitting(true)
+      setError(null)
+
+      const lines = backlogText
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean)
+
+      if (lines.length === 0) {
+        throw new Error("Informe ao menos uma task no backlog (1 por linha).")
+      }
+
+      const normalizedAssignedTo = backlogAssignedTo === "__none__" ? "" : backlogAssignedTo
+
+      if (!backlogIsGlobal && !backlogProjectId) {
+        throw new Error("Selecione um projeto para inserir backlog.")
+      }
+
+      if (!backlogIsGlobal && backlogTaskVisibility !== "public" && !normalizedAssignedTo) {
+        throw new Error("Selecione um responsável para tasks atribuídas/privadas.")
+      }
+
+      const tasks = lines.map((line) => {
+        const [titlePart, ...descriptionParts] = line.split("|")
+        const title = titlePart.trim()
+        const description = descriptionParts.join("|").trim()
+
+        return {
+          title,
+          description,
+          status: "to-do",
+          priority: backlogPriority,
+          assignedTo: backlogIsGlobal ? null : (normalizedAssignedTo ? Number(normalizedAssignedTo) : null),
+          projectId: backlogIsGlobal ? null : Number(backlogProjectId),
+          dueDate: backlogDueDate || null,
+          points: backlogPoints,
+          completed: false,
+          taskVisibility: backlogIsGlobal ? "public" : backlogTaskVisibility,
+          isGlobal: backlogIsGlobal,
+        }
+      })
+
+      await createBacklog(tasks)
+      onOpenChange(false)
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Erro ao criar backlog"
+      setError(errorMessage)
+      console.error("TaskDialog - Error creating backlog:", err)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }, [
+    backlogAssignedTo,
+    backlogDueDate,
+    backlogIsGlobal,
+    backlogPoints,
+    backlogPriority,
+    backlogProjectId,
+    backlogTaskVisibility,
+    backlogText,
+    createBacklog,
+    onOpenChange,
+  ])
 
   const handleDelete = useCallback(async () => {
     if (!task) return
@@ -145,19 +251,174 @@ export function TaskDialog({ open, onOpenChange, task, projectId }: TaskDialogPr
             </Button>
           </div>
         ) : (
-          <TaskForm
-            key={open ? (task?.id ?? 'new') : 'closed'}
-            task={task}
-            users={users}
-            projects={projects}
-            currentUser={currentUser}
-            onSubmit={handleSubmit}
-            onCancel={handleCancel}
-            isSubmitting={isSubmitting}
-            error={error}
-            projectId={projectId}
-            open={open}
-          />
+          <>
+            {!task && (
+              <div className="flex gap-2 mb-2">
+                <Button
+                  type="button"
+                  variant={creationMode === "single" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setCreationMode("single")}
+                  disabled={isSubmitting}
+                >
+                  Tarefa Única
+                </Button>
+                <Button
+                  type="button"
+                  variant={creationMode === "backlog" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setCreationMode("backlog")}
+                  disabled={isSubmitting}
+                >
+                  Inserção de Backlog
+                </Button>
+              </div>
+            )}
+
+            {task || creationMode === "single" ? (
+              <TaskForm
+                key={open ? (task?.id ?? 'new') : 'closed'}
+                task={task}
+                users={users}
+                projects={projects}
+                currentUser={currentUser}
+                onSubmit={handleSubmit}
+                onCancel={handleCancel}
+                isSubmitting={isSubmitting}
+                error={error}
+                projectId={projectId}
+                open={open}
+              />
+            ) : (
+              <div className="space-y-4">
+                <Alert>
+                  <AlertDescription>
+                    Cole uma task por linha. Opcionalmente use `Título | Descrição`.
+                  </AlertDescription>
+                </Alert>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label>Projeto</Label>
+                    <Select
+                      value={backlogProjectId}
+                      onValueChange={setBacklogProjectId}
+                      disabled={backlogIsGlobal}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={backlogIsGlobal ? "Não aplicável (global)" : "Selecione um projeto"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {backlogProjectOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label>Tipo da Task</Label>
+                    <Select
+                      value={backlogTaskVisibility}
+                      onValueChange={(v) => setBacklogTaskVisibility(v as any)}
+                      disabled={backlogIsGlobal}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="delegated">Atribuída</SelectItem>
+                        <SelectItem value="public">Geral (membros podem pegar)</SelectItem>
+                        <SelectItem value="private">Privada</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label>Responsável (opcional em task geral)</Label>
+                    <Select
+                      value={backlogAssignedTo}
+                      onValueChange={setBacklogAssignedTo}
+                      disabled={backlogIsGlobal}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione um responsável" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">Sem responsável</SelectItem>
+                        {backlogUserOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label>Prioridade</Label>
+                    <Select value={backlogPriority} onValueChange={(v) => setBacklogPriority(v as any)}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="low">Baixa</SelectItem>
+                        <SelectItem value="medium">Média</SelectItem>
+                        <SelectItem value="high">Alta</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label>Data de vencimento</Label>
+                    <Input type="date" value={backlogDueDate} onChange={(e) => setBacklogDueDate(e.target.value)} />
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label>Pontos</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={backlogPoints}
+                      onChange={(e) => setBacklogPoints(Number(e.target.value) || 0)}
+                    />
+                  </div>
+                </div>
+
+                {canCreateGlobal && (
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={backlogIsGlobal}
+                      onChange={(e) => {
+                        setBacklogIsGlobal(e.target.checked)
+                        if (e.target.checked) {
+                          setBacklogTaskVisibility("public")
+                          setBacklogAssignedTo("")
+                        }
+                      }}
+                    />
+                    Criar como Quest Global (uma por linha)
+                  </label>
+                )}
+
+                <div className="grid gap-2">
+                  <Label>Backlog (uma task por linha)</Label>
+                  <Textarea
+                    rows={10}
+                    value={backlogText}
+                    onChange={(e) => setBacklogText(e.target.value)}
+                    placeholder={"Ex.:\\nRefatorar tela de projetos | alinhar cards e filtros\\nRevisar rotas de tarefas\\nCriar documentação de onboarding"}
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2">
+                  <Button type="button" variant="outline" onClick={handleCancel} disabled={isSubmitting}>
+                    Cancelar
+                  </Button>
+                  <Button type="button" onClick={handleBacklogSubmit} disabled={isSubmitting}>
+                    {isSubmitting ? "Criando..." : "Criar Backlog"}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </>
         )}
 
         {/* Botão de remover tarefa, só aparece para papéis permitidos e se for edição */}

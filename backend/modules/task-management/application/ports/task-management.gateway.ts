@@ -14,6 +14,7 @@ export interface TaskManagementGateway {
   listGlobalTasks(): Promise<Task[]>
   listActorProjectIds(actorId: number): Promise<number[]>
   createTask(command: CreateTaskCommand, actorId: number): Promise<Task>
+  createTaskBacklog(tasks: CreateTaskCommand[], actorId: number): Promise<Task[]>
   updateTask(command: UpdateTaskCommand): Promise<Task>
   deleteTask(command: DeleteTaskCommand): Promise<void>
   completeTask(command: CompleteTaskCommand): Promise<Task>

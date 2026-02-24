@@ -64,6 +64,12 @@ export const TasksAPI = {
       body: JSON.stringify(task),
     }),
 
+  createBacklog: (tasks: any[]) =>
+    fetchAPI<{ tasks: any[]; createdCount: number }>("/api/tasks", {
+      method: "POST",
+      body: JSON.stringify({ tasks }),
+    }),
+
   // Atualizar uma tarefa
   update: (id: number, task: any, userId?: number) =>
     fetchAPI<{ task: any }>(`/api/tasks/${id}`, {

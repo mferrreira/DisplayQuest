@@ -88,6 +88,14 @@ export class TaskServiceGateway implements TaskManagementGateway {
     return await this.taskRepository.create(task)
   }
 
+  async createTaskBacklog(tasks: CreateTaskCommand[], actorId: number) {
+    const createdTasks: Task[] = []
+    for (const task of tasks) {
+      createdTasks.push(await this.createTask(task, actorId))
+    }
+    return createdTasks
+  }
+
   async updateTask(command: UpdateTaskCommand) {
     const existingTask = await this.taskRepository.findById(command.taskId)
     if (!existingTask) {
@@ -198,6 +206,14 @@ export class TaskServiceGateway implements TaskManagementGateway {
       throw new Error("Usuário não encontrado")
     }
 
+    if (task.taskVisibility !== "public" && task.assignedTo && task.assignedTo !== command.userId) {
+      const canManageTasks = this.identityAccess.hasPermission(user.roles, "MANAGE_TASKS")
+      const canManageUsers = this.identityAccess.hasPermission(user.roles, "MANAGE_USERS")
+      if (!canManageTasks && !canManageUsers) {
+        throw new Error("Usuário não pode concluir tarefa atribuída a outro usuário")
+      }
+    }
+
     if (task.projectId && this.identityAccess.hasAnyRole(user.roles, ["GERENTE_PROJETO"])) {
       const project = await this.projectRepository.findById(task.projectId)
       if (project && project.leaderId === command.userId && task.assignedTo === command.userId) {
@@ -211,6 +227,11 @@ export class TaskServiceGateway implements TaskManagementGateway {
     if (!canBeCompleted) {
       throw new Error("Tarefa não pode ser completada")
     }
+
+    if (task.taskVisibility === "public" && !task.assignedTo) {
+      task.assignedTo = command.userId
+    }
+
     task.status = task.isGlobal || task.taskVisibility === "public" ? "done" : "in-review"
     task.completed = true
     if (task.status === "done") {
