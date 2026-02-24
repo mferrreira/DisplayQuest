@@ -94,24 +94,6 @@ export default function ProfilePage() {
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
 
-          {/* <div className="mb-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <UserIcon className="h-5 w-5" />
-                  <span>Buscar Usuários</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <UserSearch
-                  onUserSelect={handleUserSelect}
-                  placeholder="Digite o nome ou email do usuário..."
-                />
-              </CardContent>
-            </Card>
-          </div> */}
-
-
           <div className="mb-8">
             <Card className={showProfileForm ? "border-blue-200 bg-blue-50/50" : ""}>
               <CardHeader className={showProfileForm ? "bg-blue-50/30" : ""}>

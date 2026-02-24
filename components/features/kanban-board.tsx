@@ -5,7 +5,7 @@ import { DragDropContext, type DropResult } from "@hello-pangea/dnd"
 import { KanbanColumn } from "@/components/ui/kanban-column"
 import { KanbanHeader } from "@/components/ui/kanban-header"
 import { TaskDialog } from "@/components/features/task-dialog"
-import { Loader2, AlertTriangle } from "lucide-react"
+import { Loader2, AlertTriangle, ChevronDown, ChevronRight } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { useTask } from "@/contexts/task-context"
 import { useProject } from "@/contexts/project-context"
@@ -14,6 +14,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useToast } from "@/contexts/use-toast"
 import { hasAccess } from "@/lib/utils/utils"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 
 const COLUMNS = [
   { id: "to-do", status: "to-do" },
@@ -35,10 +36,11 @@ export function KanbanBoard() {
   const [optimisticTasks, setOptimisticTasks] = useState<Task[]>([])
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null)
   const [isCompactView, setIsCompactView] = useState(false)
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false)
   const canAccessAllProjects = hasAccess(user?.roles || [], "MANAGE_TASKS")
   const archiveThreshold = useMemo(() => {
     const date = new Date()
-    date.setDate(date.getDate() - 14)
+    date.setDate(date.getDate() - 7)
     return date
   }, [])
 
@@ -279,33 +281,45 @@ export function KanbanBoard() {
 
       {archivedCompletedTasks.length > 0 && (
         <Card>
-          <CardHeader>
-            <CardTitle className="text-base">
-              Tarefas Antigas Concluídas (mais de 2 semanas)
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {archivedCompletedTasks
-              .slice()
-              .sort((a, b) => {
-                const aDate = a.completedAt ? new Date(a.completedAt).getTime() : a.dueDate ? new Date(a.dueDate).getTime() : 0
-                const bDate = b.completedAt ? new Date(b.completedAt).getTime() : b.dueDate ? new Date(b.dueDate).getTime() : 0
-                return bDate - aDate
-              })
-              .map((task) => {
-                const projectName = task.projectId
-                  ? projects.find((project) => project.id === task.projectId)?.name || `Projeto #${task.projectId}`
-                  : "Sem projeto"
-                return (
-                  <div key={task.id} className="rounded-md border px-3 py-2 text-sm">
-                    <div className="font-medium">{task.title}</div>
-                    <div className="text-muted-foreground">
-                      {projectName} • Concluida em: {task.completedAt ? new Date(task.completedAt).toLocaleDateString("pt-BR") : "N/A"} • {task.points} pts
-                    </div>
-                  </div>
-                )
-              })}
-          </CardContent>
+          <Collapsible open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
+            <CardHeader className="pb-3">
+              <CollapsibleTrigger className="w-full text-left">
+                <div className="flex items-center justify-between gap-3">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    {isHistoryOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                    Histórico de tarefas
+                  </CardTitle>
+                  <span className="text-xs text-muted-foreground">
+                    {archivedCompletedTasks.length} concluída(s) há mais de 1 semana
+                  </span>
+                </div>
+              </CollapsibleTrigger>
+            </CardHeader>
+            <CollapsibleContent>
+              <CardContent className="space-y-3 pt-0 max-h-[320px] overflow-y-auto">
+                {archivedCompletedTasks
+                  .slice()
+                  .sort((a, b) => {
+                    const aDate = a.completedAt ? new Date(a.completedAt).getTime() : a.dueDate ? new Date(a.dueDate).getTime() : 0
+                    const bDate = b.completedAt ? new Date(b.completedAt).getTime() : b.dueDate ? new Date(b.dueDate).getTime() : 0
+                    return bDate - aDate
+                  })
+                  .map((task) => {
+                    const projectName = task.projectId
+                      ? projects.find((project) => project.id === task.projectId)?.name || `Projeto #${task.projectId}`
+                      : "Sem projeto"
+                    return (
+                      <div key={task.id} className="rounded-md border px-3 py-2 text-sm">
+                        <div className="font-medium">{task.title}</div>
+                        <div className="text-muted-foreground">
+                          {projectName} • Concluída em: {task.completedAt ? new Date(task.completedAt).toLocaleDateString("pt-BR") : "N/A"} • {task.points} pts
+                        </div>
+                      </div>
+                    )
+                  })}
+              </CardContent>
+            </CollapsibleContent>
+          </Collapsible>
         </Card>
       )}
 
