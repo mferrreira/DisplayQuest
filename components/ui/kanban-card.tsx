@@ -18,6 +18,7 @@ import type { Task, KanbanCardProps } from "@/contexts/types"
 import { useAuth } from "@/contexts/auth-context"
 import { useProject } from "@/contexts/project-context"
 import { useTask } from "@/contexts/task-context"
+import { useUser } from "@/contexts/user-context"
 import { useToast } from "@/contexts/use-toast"
 
 interface DraggableKanbanCardProps extends KanbanCardProps {
@@ -29,6 +30,7 @@ export function KanbanCard({ task, onEdit, isOverdue, index }: DraggableKanbanCa
   const { user } = useAuth()
   const { projects } = useProject()
   const { approveTask, rejectTask } = useTask()
+  const { users } = useUser()
   const { toast } = useToast()
 
   // Verificar se o usuário pode aprovar/rejeitar tasks
@@ -129,6 +131,13 @@ export function KanbanCard({ task, onEdit, isOverdue, index }: DraggableKanbanCa
     if (!dateString) return null
     return new Date(dateString).toLocaleDateString("pt-BR")
   }
+
+  const assigneeIds = (task.assigneeIds?.length ? task.assigneeIds : (task.assignedTo ? [task.assignedTo] : []))
+    .filter((id): id is number => typeof id === "number")
+  const assigneeNames = assigneeIds
+    .map((id) => users.find((u) => u.id === id)?.name || `Usuário #${id}`)
+    .slice(0, 3)
+  const remainingAssignees = Math.max(0, assigneeIds.length - assigneeNames.length)
 
   return (
     <Draggable draggableId={task.id.toString()} index={index} isDragDisabled={task.status === 'done'}>
@@ -268,6 +277,19 @@ export function KanbanCard({ task, onEdit, isOverdue, index }: DraggableKanbanCa
                       </Badge>
                     )}
                   </div>
+
+                  {assigneeIds.length > 0 && (
+                    <div className="mb-3 rounded-md border border-slate-200/70 dark:border-slate-700/70 bg-white/60 dark:bg-slate-900/30 px-2 py-1.5">
+                      <div className="flex items-center gap-1 text-[11px] font-medium text-slate-600 dark:text-slate-300">
+                        <User className="h-3 w-3" />
+                        <span>{assigneeIds.length > 1 ? "Delegados" : "Delegado"}</span>
+                      </div>
+                      <p className="mt-1 text-xs text-slate-700 dark:text-slate-200 line-clamp-2">
+                        {assigneeNames.join(", ")}
+                        {remainingAssignees > 0 ? ` +${remainingAssignees}` : ""}
+                      </p>
+                    </div>
+                  )}
 
                   {/* Botões de aprovação/rejeição para tarefas em revisão */}
                   {task.status === "in-review" && canApproveRejectTask() && (

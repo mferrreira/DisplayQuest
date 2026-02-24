@@ -18,7 +18,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
 
     const actor = auth.actor
     if (!hasPermission(actor.roles, "MANAGE_USERS")) {
-      const isOwner = task.assignedTo === actor.id
+      const isOwner = task.assignedTo === actor.id || task.assigneeIds?.includes(actor.id)
       if (!isOwner) {
         const allowedProjectIds = new Set(await taskManagementModule.listActorProjectIds(actor.id))
         if (task.projectId && !allowedProjectIds.has(task.projectId)) {
@@ -39,12 +39,22 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
     const auth = await requireApiActor()
     if (auth.error) return auth.error
 
-    const permissionError = ensurePermission(auth.actor, "MANAGE_TASKS", "Sem permissão para editar tarefa")
-    if (permissionError) return permissionError
-
     const params = await context.params
     const id = parseInt(params.id)
     const body = await request.json()
+    const canManageTasks = hasPermission(auth.actor.roles, "MANAGE_TASKS")
+
+    if (!canManageTasks) {
+      const nonEmptyKeys = Object.keys(body ?? {})
+      const onlyPublicProgressFields =
+        nonEmptyKeys.length > 0 &&
+        nonEmptyKeys.every((key) => key === "status" || key === "assignedTo")
+
+      if (!onlyPublicProgressFields) {
+        const permissionError = ensurePermission(auth.actor, "MANAGE_TASKS", "Sem permissão para editar tarefa")
+        if (permissionError) return permissionError
+      }
+    }
 
     const allowedFields = [
       "title", 
@@ -52,6 +62,7 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
       "status", 
       "priority", 
       "assignedTo", 
+      "assigneeIds",
       "projectId", 
       "dueDate", 
       "points", 

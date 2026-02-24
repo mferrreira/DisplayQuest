@@ -29,6 +29,13 @@ interface TaskDialogProps {
  */
 const transformFormData = (formData: TaskFormData) => ({
   ...formData,
+  assigneeIds: Array.from(
+    new Set(
+      (formData.assigneeIds || [])
+        .map((id) => parseInt(id))
+        .filter((id) => Number.isInteger(id) && id > 0),
+    ),
+  ),
   assignedTo: formData.assignedTo ? parseInt(formData.assignedTo) : null,
   projectId: formData.project ? parseInt(formData.project) : null,
 })
@@ -48,7 +55,7 @@ export function TaskDialog({ open, onOpenChange, task, projectId }: TaskDialogPr
   const [creationMode, setCreationMode] = useState<"single" | "backlog">("single")
   const [backlogText, setBacklogText] = useState("")
   const [backlogProjectId, setBacklogProjectId] = useState<string>(projectId || "")
-  const [backlogAssignedTo, setBacklogAssignedTo] = useState<string>("")
+  const [backlogAssigneeIds, setBacklogAssigneeIds] = useState<string[]>([])
   const [backlogPriority, setBacklogPriority] = useState<"low" | "medium" | "high">("medium")
   const [backlogDueDate, setBacklogDueDate] = useState("")
   const [backlogPoints, setBacklogPoints] = useState(50)
@@ -104,7 +111,7 @@ export function TaskDialog({ open, onOpenChange, task, projectId }: TaskDialogPr
     setCreationMode("single")
     setBacklogText("")
     setBacklogProjectId(projectId || "")
-    setBacklogAssignedTo(currentUser?.roles?.includes("GERENTE_PROJETO") ? String(currentUser.id) : "")
+    setBacklogAssigneeIds(currentUser?.roles?.includes("GERENTE_PROJETO") ? [String(currentUser.id)] : [])
     setBacklogPriority("medium")
     setBacklogDueDate("")
     setBacklogPoints(50)
@@ -139,14 +146,20 @@ export function TaskDialog({ open, onOpenChange, task, projectId }: TaskDialogPr
         throw new Error("Informe ao menos uma task no backlog (1 por linha).")
       }
 
-      const normalizedAssignedTo = backlogAssignedTo === "__none__" ? "" : backlogAssignedTo
+      const normalizedAssigneeIds = Array.from(
+        new Set(
+          backlogAssigneeIds
+            .map((value) => Number(value))
+            .filter((value) => Number.isInteger(value) && value > 0),
+        ),
+      )
 
       if (!backlogIsGlobal && !backlogProjectId) {
         throw new Error("Selecione um projeto para inserir backlog.")
       }
 
-      if (!backlogIsGlobal && backlogTaskVisibility !== "public" && !normalizedAssignedTo) {
-        throw new Error("Selecione um responsável para tasks atribuídas/privadas.")
+      if (!backlogIsGlobal && backlogTaskVisibility !== "public" && normalizedAssigneeIds.length === 0) {
+        throw new Error("Selecione ao menos um responsável para tasks atribuídas/privadas.")
       }
 
       const tasks = lines.map((line) => {
@@ -159,7 +172,8 @@ export function TaskDialog({ open, onOpenChange, task, projectId }: TaskDialogPr
           description,
           status: "to-do",
           priority: backlogPriority,
-          assignedTo: backlogIsGlobal ? null : (normalizedAssignedTo ? Number(normalizedAssignedTo) : null),
+          assignedTo: backlogIsGlobal ? null : (normalizedAssigneeIds[0] ?? null),
+          assigneeIds: backlogIsGlobal ? [] : normalizedAssigneeIds,
           projectId: backlogIsGlobal ? null : Number(backlogProjectId),
           dueDate: backlogDueDate || null,
           points: backlogPoints,
@@ -179,7 +193,7 @@ export function TaskDialog({ open, onOpenChange, task, projectId }: TaskDialogPr
       setIsSubmitting(false)
     }
   }, [
-    backlogAssignedTo,
+    backlogAssigneeIds,
     backlogDueDate,
     backlogIsGlobal,
     backlogPoints,
@@ -334,23 +348,34 @@ export function TaskDialog({ open, onOpenChange, task, projectId }: TaskDialogPr
                     </Select>
                   </div>
 
-                  <div className="grid gap-2">
-                    <Label>Responsável (opcional em task geral)</Label>
-                    <Select
-                      value={backlogAssignedTo}
-                      onValueChange={setBacklogAssignedTo}
-                      disabled={backlogIsGlobal}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione um responsável" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none__">Sem responsável</SelectItem>
-                        {backlogUserOptions.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                  <div className="grid gap-2 col-span-2">
+                    <Label>
+                      Responsáveis (múltiplos) {backlogTaskVisibility === "public" ? "(opcional)" : "(obrigatório)"}
+                    </Label>
+                    <div className={`max-h-40 overflow-y-auto rounded-md border p-2 space-y-2 ${backlogIsGlobal ? "opacity-60" : ""}`}>
+                      {backlogUserOptions.map((option) => {
+                        const checked = backlogAssigneeIds.includes(option.value)
+                        return (
+                          <label key={option.value} className="flex items-center gap-2 text-sm">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              disabled={backlogIsGlobal}
+                              onChange={(e) => {
+                                setBacklogAssigneeIds((prev) => {
+                                  if (e.target.checked) return Array.from(new Set([...prev, option.value]))
+                                  return prev.filter((id) => id !== option.value)
+                                })
+                              }}
+                            />
+                            <span>{option.label}</span>
+                          </label>
+                        )
+                      })}
+                      {backlogUserOptions.length === 0 && (
+                        <p className="text-xs text-muted-foreground">Nenhum usuário elegível encontrado.</p>
+                      )}
+                    </div>
                   </div>
 
                   <div className="grid gap-2">
@@ -390,7 +415,7 @@ export function TaskDialog({ open, onOpenChange, task, projectId }: TaskDialogPr
                         setBacklogIsGlobal(e.target.checked)
                         if (e.target.checked) {
                           setBacklogTaskVisibility("public")
-                          setBacklogAssignedTo("")
+                          setBacklogAssigneeIds([])
                         }
                       }}
                     />

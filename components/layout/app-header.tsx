@@ -24,6 +24,7 @@ export function AppHeader() {
   const { user, logout } = useAuth()
   const { users } = useUser()
   const pathname = usePathname()
+  const userRoles = user?.roles ?? []
 
   const currentUserData = user ? users.find((u) => u.id === user.id) : null
 
@@ -148,7 +149,7 @@ export function AppHeader() {
                     <span>{user?.name}</span>
                     <span className="text-xs text-muted-foreground">{user?.email}</span>
                     <span className="text-xs font-normal mt-1 capitalize">
-                      {user?.roles.includes("GERENTE_PROJETO") ? "Gerente de Projeto" : user?.roles.includes("COORDENADOR") ? "Coordenador" : user?.roles.includes("LABORATORISTA") ? "Laboratorista" : user?.roles.includes("VOLUNTARIO") ? "Voluntário" : "Usuário"}
+                      {userRoles.includes("GERENTE_PROJETO") ? "Gerente de Projeto" : userRoles.includes("COORDENADOR") ? "Coordenador" : userRoles.includes("LABORATORISTA") ? "Laboratorista" : userRoles.includes("VOLUNTARIO") ? "Voluntário" : "Usuário"}
                     </span>
                     {currentUserData && (
                       <span className="text-xs font-medium mt-1 bg-gradient-to-r from-amber-400 to-orange-400 dark:from-emerald-400 dark:to-teal-400 bg-clip-text text-transparent">

@@ -11,10 +11,12 @@ export class ListTasksForActorUseCase {
     if (query.projectId) {
       const projectScoped = scopedTasks.filter((task) => task.projectId === query.projectId)
       const projectShared = sharedTasks.filter((task) => task.projectId === query.projectId && task.taskVisibility === "public")
-      return dedupeTasksById([...projectScoped, ...projectShared])
+      const tasks = dedupeTasksById([...projectScoped, ...projectShared])
+      return await this.gateway.applyActorProgress(tasks, query.actorId)
     }
 
-    return dedupeTasksById([...scopedTasks, ...sharedTasks])
+    const tasks = dedupeTasksById([...scopedTasks, ...sharedTasks])
+    return await this.gateway.applyActorProgress(tasks, query.actorId)
   }
 }
 

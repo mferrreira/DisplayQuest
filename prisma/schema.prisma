@@ -34,6 +34,8 @@ model users {
   ledProjects          projects[]             @relation("UserProjectLeadership")
   purchases            purchases[]            @relation("UserPurchases")
   tasks                tasks[]                @relation("UserTasks")
+  taskAssignments      task_assignees[]       @relation("UserTaskAssignments")
+  taskProgress         task_user_progress[]   @relation("UserTaskProgress")
   awardedBadges        user_badges[]          @relation("UserAwardedBadges")
   badges               user_badges[]          @relation("UserBadges")
   schedules            user_schedules[]       @relation("UserSchedules")
@@ -88,7 +90,42 @@ model tasks {
   isGlobal       Boolean   @default(false)
   assignee       users?    @relation("UserTasks", fields: [assignedTo], references: [id])
   projectObj     projects? @relation("ProjectTasks", fields: [projectId], references: [id])
+  assignees      task_assignees[] @relation("TaskAssignees")
   workSessions   work_session_tasks[] @relation("TaskWorkSessions")
+  taskProgress   task_user_progress[] @relation("TaskUserProgress")
+}
+
+model task_assignees {
+  id         Int      @id @default(autoincrement())
+  taskId      Int
+  userId      Int
+  assignedBy  Int?
+  assignedAt  DateTime @default(now())
+  task        tasks    @relation("TaskAssignees", fields: [taskId], references: [id], onDelete: Cascade)
+  user        users    @relation("UserTaskAssignments", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, userId])
+  @@index([taskId])
+  @@index([userId])
+}
+
+model task_user_progress {
+  id           Int      @id @default(autoincrement())
+  taskId        Int
+  userId        Int
+  status        String   @default("to-do")
+  pickedAt      DateTime?
+  completedAt   DateTime?
+  awardedPoints Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  task          tasks    @relation("TaskUserProgress", fields: [taskId], references: [id], onDelete: Cascade)
+  user          users    @relation("UserTaskProgress", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, userId])
+  @@index([taskId])
+  @@index([userId])
+  @@index([taskId, status])
 }
 
 model rewards {

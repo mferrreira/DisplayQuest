@@ -199,6 +199,7 @@ export function TaskForm({
     status: "to-do",
     priority: "medium",
     assignedTo: "",
+    assigneeIds: [],
     project: "",
     dueDate: "",
     points: 50, // Default para medium priority
@@ -251,11 +252,13 @@ export function TaskForm({
         status: (task.status as TaskFormData["status"]) || "to-do",
         priority: (task.priority as TaskFormData["priority"]) || "medium",
         assignedTo: task.assignedTo?.toString() || "",
+        assigneeIds: (task.assigneeIds?.length ? task.assigneeIds : (task.assignedTo ? [task.assignedTo] : [])).map(String),
         project: task.projectId?.toString() || "",
         dueDate: task.dueDate || "",
         points: task.points,
         completed: task.completed || false,
         taskVisibility: (task.taskVisibility as TaskFormData["taskVisibility"]) || "delegated",
+        isGlobal: task.isGlobal || false,
       }
       setFormData(formDataToSet)
       checkIfPastDate(task.dueDate || null)
@@ -266,6 +269,7 @@ export function TaskForm({
         status: "to-do",
         priority: "medium",
         assignedTo: currentUser?.roles?.includes("GERENTE_PROJETO") ? currentUser.id.toString() : "",
+        assigneeIds: currentUser?.roles?.includes("GERENTE_PROJETO") ? [currentUser.id.toString()] : [],
         project: projectId || "",
         dueDate: "",
         points: 10,
@@ -290,6 +294,19 @@ export function TaskForm({
     setFormData((prev) => ({ ...prev, [name]: value }))
   }, [])
 
+  const handleAssigneeToggle = useCallback((userId: string, checked: boolean) => {
+    setFormData((prev) => {
+      const nextAssigneeIds = checked
+        ? Array.from(new Set([...(prev.assigneeIds || []), userId]))
+        : (prev.assigneeIds || []).filter((id) => id !== userId)
+      return {
+        ...prev,
+        assigneeIds: nextAssigneeIds,
+        assignedTo: nextAssigneeIds[0] || "",
+      }
+    })
+  }, [])
+
   const handleNumberChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: parseInt(value) || 0 }))
@@ -309,8 +326,8 @@ export function TaskForm({
     // For global quests, assignedTo and project are not required
     if (!formData.isGlobal) {
       if (!formData.project) errors.project = "Selecione um projeto."
-      if (formData.taskVisibility !== "public" && !formData.assignedTo) {
-        errors.assignedTo = "Selecione um responsável para tarefa atribuída."
+      if (formData.taskVisibility !== "public" && (formData.assigneeIds?.length || 0) === 0) {
+        errors.assignedTo = "Selecione ao menos um responsável para tarefa atribuída."
       }
     }
     
@@ -416,21 +433,33 @@ export function TaskForm({
           error={fieldErrors.project}
           disabled={formData.isGlobal}
         />
-        <SelectField
-          label="Responsável"
-          value={formData.assignedTo}
-          onValueChange={(value) => handleSelectChange("assignedTo", value)}
-          placeholder={
-            formData.isGlobal
-              ? "Não aplicável para quest global"
-              : (formData.taskVisibility === "public"
-                ? "Opcional para task geral"
-                : "Selecione um responsável")
-          }
-          options={userOptions}
-          error={fieldErrors.assignedTo}
-          disabled={formData.isGlobal}
-        />
+        <div className="grid gap-2">
+          <Label>
+            Responsáveis {formData.taskVisibility === "public" ? "(opcional)" : "(múltiplos)"}
+          </Label>
+          <div className={`max-h-40 overflow-y-auto rounded-md border p-2 space-y-2 ${formData.isGlobal ? "opacity-60" : ""}`}>
+            {userOptions.map((option) => {
+              const checked = (formData.assigneeIds || []).includes(option.value)
+              return (
+                <label key={option.value} className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    disabled={formData.isGlobal}
+                    onChange={(e) => handleAssigneeToggle(option.value, e.target.checked)}
+                  />
+                  <span>{option.label}</span>
+                </label>
+              )
+            })}
+            {userOptions.length === 0 && (
+              <p className="text-xs text-muted-foreground">Nenhum usuário elegível encontrado.</p>
+            )}
+          </div>
+          {fieldErrors.assignedTo && (
+            <p className="text-xs text-red-600">{fieldErrors.assignedTo}</p>
+          )}
+        </div>
       </div>
       {!formData.isGlobal && formData.taskVisibility === "public" && (
         <p className="text-xs text-amber-700 bg-amber-50 p-2 rounded">

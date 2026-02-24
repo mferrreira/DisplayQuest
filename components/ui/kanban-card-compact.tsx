@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ChevronDown, ChevronRight, Crown, AlertTriangle } from "lucide-react"
 import type { Task, KanbanCardProps } from "@/contexts/types"
+import { useUser } from "@/contexts/user-context"
 
 interface DraggableKanbanCardCompactProps extends KanbanCardProps {
   index: number
@@ -14,9 +15,18 @@ interface DraggableKanbanCardCompactProps extends KanbanCardProps {
 export function KanbanCardCompact({ task, onEdit, isOverdue, index }: DraggableKanbanCardCompactProps) {
   const [isExpanded, setIsExpanded] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
+  const { users } = useUser()
 
   const isPublicTask = task.taskVisibility === "public"
   const isHighPriority = task.priority === "high"
+  const assigneeIds = (task.assigneeIds?.length ? task.assigneeIds : (task.assignedTo ? [task.assignedTo] : []))
+    .filter((id): id is number => typeof id === "number")
+  const assigneeLabel = assigneeIds.length === 0
+    ? null
+    : assigneeIds
+        .map((id) => users.find((u) => u.id === id)?.name || `#${id}`)
+        .slice(0, 2)
+        .join(", ") + (assigneeIds.length > 2 ? ` +${assigneeIds.length - 2}` : "")
 
   const getCardStyle = () => {
     if (isPublicTask) {
@@ -124,6 +134,12 @@ export function KanbanCardCompact({ task, onEdit, isOverdue, index }: DraggableK
                       {task.description}
                     </p>
                   )}
+
+                  {assigneeLabel && (
+                    <p className="text-xs text-gray-600 dark:text-gray-300 mb-2 line-clamp-1">
+                      Delegado{assigneeIds.length > 1 ? "s" : ""}: {assigneeLabel}
+                    </p>
+                  )}
                   
                   <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
                     <div className="flex items-center space-x-2">
@@ -156,6 +172,5 @@ export function KanbanCardCompact({ task, onEdit, isOverdue, index }: DraggableK
     </Draggable>
   )
 }
-
 
 
