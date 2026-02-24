@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server"
 import type { UserRole } from "@prisma/client"
-import { createProjectMembershipModule } from "@/backend/modules/project-membership"
 import { requireApiActor } from "@/lib/auth/api-guard"
 import { normalizeRoles } from "@/lib/auth/rbac"
+import { getBackendComposition } from "@/backend/composition/root"
 
-const projectMembershipModule = createProjectMembershipModule()
-
+const { projectMembership: projectMembershipModule } = getBackendComposition()
 type MemberAction = "add" | "remove" | "set_roles" | "set_leader"
 
 function toHttpStatus(error: unknown) {

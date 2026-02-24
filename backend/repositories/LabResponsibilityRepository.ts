@@ -111,10 +111,20 @@ export class LabResponsibilityRepository implements ILabResponsibilityRepository
     }
 
     async findByDateRange(startDate: Date, endDate: Date): Promise<LabResponsibility[]> {
+        const startIso = startDate.toISOString();
+        const endIso = endDate.toISOString();
+
         const labResponsibilities = await prisma.lab_responsibilities.findMany({
             where: {
-                startTime: { gte: startDate.toISOString() },
-                endTime: { lte: endDate.toISOString() }
+                AND: [
+                    { startTime: { lte: endIso } },
+                    {
+                        OR: [
+                            { endTime: null },
+                            { endTime: { gte: startIso } }
+                        ]
+                    }
+                ]
             },
             include: this.getIncludeOptions(),
             orderBy: { startTime: 'desc' }

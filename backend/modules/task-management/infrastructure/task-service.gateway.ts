@@ -1,10 +1,11 @@
 import { Task } from "@/backend/models/Task"
 import { TaskRepository } from "@/backend/repositories/TaskRepository"
+import { TaskAssigneeRepository } from "@/backend/repositories/TaskAssigneeRepository"
+import { TaskUserProgressRepository } from "@/backend/repositories/TaskUserProgressRepository"
 import { UserRepository } from "@/backend/repositories/UserRepository"
 import { ProjectRepository } from "@/backend/repositories/ProjectRepository"
-import { createNotificationsModule, type NotificationsModule } from "@/backend/modules/notifications"
-import { createIdentityAccessModule, type IdentityAccessModule } from "@/backend/modules/identity-access"
-import { createTaskProgressEvents } from "@/backend/modules/task-management/infrastructure/gamification-task-progress.events"
+import type { NotificationsModule } from "@/backend/modules/notifications"
+import type { IdentityAccessModule } from "@/backend/modules/identity-access"
 import type { TaskProgressEvents } from "@/backend/modules/task-management/application/ports/task-progress.events"
 import type {
   ApproveTaskCommand,
@@ -19,6 +20,8 @@ import type { TaskManagementGateway } from "@/backend/modules/task-management/ap
 export class TaskServiceGateway implements TaskManagementGateway {
   constructor(
     private readonly taskRepository: TaskRepository,
+    private readonly taskAssigneeRepository: TaskAssigneeRepository,
+    private readonly taskUserProgressRepository: TaskUserProgressRepository,
     private readonly userRepository: UserRepository,
     private readonly projectRepository: ProjectRepository,
     private readonly notificationsModule: NotificationsModule,
@@ -27,7 +30,9 @@ export class TaskServiceGateway implements TaskManagementGateway {
   ) {}
 
   async getTaskById(taskId: number) {
-    return await this.taskRepository.findById(taskId)
+    const task = await this.taskRepository.findById(taskId)
+    if (!task) return null
+    return await this.attachAssigneeIds(task)
   }
 
   async listTasksForUser(actorId: number, actorRoles: string[]) {
@@ -41,12 +46,27 @@ export class TaskServiceGateway implements TaskManagementGateway {
       return await this.taskRepository.findAll()
     }
 
-    return await this.taskRepository.findByAssigneeId(actorId)
+    const [assignedTasks, memberships, assignedTaskIds] = await Promise.all([
+      this.taskRepository.findByAssigneeId(actorId),
+      this.userRepository.getUserProjectMemberships(actorId),
+      this.taskAssigneeRepository.isAvailable()
+        ? this.taskAssigneeRepository.listTaskIdsByUserId(actorId)
+        : Promise.resolve([]),
+    ])
+
+    const allTasks = await this.taskRepository.findAll()
+    const projectIds = new Set(memberships.map((membership) => membership.projectId))
+    const assignedTaskIdSet = new Set(assignedTaskIds)
+
+    const visibleProjectTasks = allTasks.filter((task) => task.projectId && projectIds.has(task.projectId))
+    const explicitlyAssignedTasks = allTasks.filter((task) => task.id && assignedTaskIdSet.has(task.id))
+
+    return dedupeTasksById([...assignedTasks, ...explicitlyAssignedTasks, ...visibleProjectTasks])
   }
 
   async listGlobalTasks() {
     const tasks = await this.taskRepository.findAll()
-    return tasks.filter((task) => task.isGlobal || task.taskVisibility === "public")
+    return tasks.filter((task) => task.isGlobal || (task.taskVisibility === "public" && !task.projectId))
   }
 
   async listActorProjectIds(actorId: number) {
@@ -61,6 +81,7 @@ export class TaskServiceGateway implements TaskManagementGateway {
     }
 
     const data = { ...command }
+    const normalizedAssigneeIds = this.normalizeAssigneeIds(data)
 
     if (data.isGlobal) {
       if (!this.identityAccess.hasPermission(creator.roles, "MANAGE_USERS")) {
@@ -69,6 +90,7 @@ export class TaskServiceGateway implements TaskManagementGateway {
       data.assignedTo = null
       data.projectId = null
       data.taskVisibility = "public"
+      data.assigneeIds = []
     } else {
       if (data.projectId) {
         const project = await this.projectRepository.findById(data.projectId)
@@ -77,16 +99,37 @@ export class TaskServiceGateway implements TaskManagementGateway {
         }
       }
 
-      if (data.assignedTo) {
-        const assignee = await this.userRepository.findById(data.assignedTo)
-        if (!assignee) {
-          throw new Error("Usuário não encontrado")
-        }
+      await this.ensureAssigneesExist(normalizedAssigneeIds.length > 0 ? normalizedAssigneeIds : (data.assignedTo ? [data.assignedTo] : []))
+      if (normalizedAssigneeIds.length > 0) {
+        data.assignedTo = normalizedAssigneeIds[0]
+        data.assigneeIds = normalizedAssigneeIds
       }
     }
 
     const task = Task.create(data)
-    return await this.taskRepository.create(task)
+    const createdTask = await this.taskRepository.create(task)
+
+    if (!data.isGlobal) {
+      const assigneeIdsToPersist = normalizedAssigneeIds.length > 0
+        ? normalizedAssigneeIds
+        : (createdTask.assignedTo ? [createdTask.assignedTo] : [])
+      await this.syncTaskAssignees(createdTask.id!, assigneeIdsToPersist, actorId)
+      createdTask.assigneeIds = assigneeIdsToPersist
+      createdTask.assignedTo = assigneeIdsToPersist[0] ?? null
+    } else {
+      createdTask.assigneeIds = []
+      createdTask.assignedTo = null
+    }
+
+    return createdTask
+  }
+
+  async createTaskBacklog(tasks: CreateTaskCommand[], actorId: number) {
+    const createdTasks: Task[] = []
+    for (const task of tasks) {
+      createdTasks.push(await this.createTask(task, actorId))
+    }
+    return createdTasks
   }
 
   async updateTask(command: UpdateTaskCommand) {
@@ -102,6 +145,82 @@ export class TaskServiceGateway implements TaskManagementGateway {
 
     const data = command.data
     const userRoles = user.roles || []
+    const canManageTasks = this.identityAccess.hasPermission(userRoles, "MANAGE_TASKS")
+    const canManageUsers = this.identityAccess.hasPermission(userRoles, "MANAGE_USERS")
+
+    if (
+      existingTask.taskVisibility === "public"
+      && this.taskUserProgressRepository.isAvailable()
+      && isPublicProgressOnlyUpdate(data)
+    ) {
+      const requestedAssignee = data.assignedTo === undefined ? undefined : (data.assignedTo === null ? null : Number(data.assignedTo))
+      if (requestedAssignee !== undefined && requestedAssignee !== null && requestedAssignee !== command.actorId && !canManageTasks && !canManageUsers) {
+        throw new Error("Usuário não pode mover task pública em nome de outro usuário")
+      }
+
+      if (existingTask.projectId && !canManageTasks && !canManageUsers) {
+        const memberships = await this.userRepository.getUserProjectMemberships(command.actorId)
+        const isMember = memberships.some((membership) => membership.projectId === existingTask.projectId)
+        if (!isMember) {
+          throw new Error("Usuário não pertence ao projeto desta tarefa")
+        }
+      }
+
+      const actorProgressUserId =
+        requestedAssignee && requestedAssignee > 0 ? requestedAssignee : command.actorId
+
+      const status = String(data.status || "to-do") as Task["status"]
+      const currentProgress = await this.taskUserProgressRepository.findByTaskAndUser(existingTask.id!, actorProgressUserId)
+      const now = new Date()
+
+      await this.taskUserProgressRepository.upsertForTaskUser({
+        taskId: existingTask.id!,
+        userId: actorProgressUserId,
+        status,
+        pickedAt: currentProgress?.pickedAt ?? (status !== "to-do" ? now : null),
+        completedAt: status === "done" ? now : null,
+        awardedPoints: currentProgress?.awardedPoints ?? 0,
+      })
+
+      return this.withActorProgress(existingTask, {
+        status,
+        completedAt: status === "done" ? now : null,
+      }, actorProgressUserId)
+    }
+
+    if (!canManageTasks && !canManageUsers && isStatusOnlyUpdate(data)) {
+      const canManipulate =
+        existingTask.taskVisibility !== "public"
+        && await this.isActorAllowedToManipulateDelegatedTask(existingTask, command.actorId)
+      if (!canManipulate) {
+        throw new Error("Usuário não pode manipular esta tarefa")
+      }
+
+      const nextStatus = String(data.status) as Task["status"]
+      if (!nextStatus) {
+        throw new Error("Status inválido")
+      }
+
+      const oldStatus = existingTask.status
+      existingTask.status = nextStatus
+      existingTask.completed = nextStatus === "done"
+      existingTask.completedAt = nextStatus === "done" ? new Date() : null
+
+      if (oldStatus !== "in-review" && nextStatus === "in-review" && existingTask.projectId) {
+        const project = await this.projectRepository.findById(existingTask.projectId)
+        if (project && project.leaderId) {
+          await this.publishTaskReviewRequest(
+            existingTask.id!,
+            existingTask.title,
+            command.actorId,
+            project.leaderId,
+          )
+        }
+      }
+
+      const updatedTask = await this.taskRepository.update(command.taskId, existingTask)
+      return await this.attachAssigneeIds(updatedTask)
+    }
 
     let canModifyCompleted = this.identityAccess.hasAnyRole(userRoles, [
       "COORDENADOR",
@@ -121,11 +240,13 @@ export class TaskServiceGateway implements TaskManagementGateway {
       throw new Error("Não é possível modificar tarefas concluídas sem permissões adequadas")
     }
 
-    if (data.assignedTo !== undefined && data.assignedTo !== null) {
-      const assignee = await this.userRepository.findById(Number(data.assignedTo))
-      if (!assignee) {
-        throw new Error("Usuário não encontrado")
-      }
+    const normalizedAssigneeIds = data.assigneeIds !== undefined
+      ? this.normalizeAssigneeIds(data)
+      : undefined
+    if (normalizedAssigneeIds !== undefined) {
+      await this.ensureAssigneesExist(normalizedAssigneeIds)
+    } else if (data.assignedTo !== undefined && data.assignedTo !== null) {
+      await this.ensureAssigneesExist([Number(data.assignedTo)])
     }
 
     if (data.title !== undefined) existingTask.title = String(data.title)
@@ -165,6 +286,13 @@ export class TaskServiceGateway implements TaskManagementGateway {
       }
     }
 
+    if (normalizedAssigneeIds !== undefined) {
+      existingTask.assigneeIds = normalizedAssigneeIds
+      existingTask.assignedTo = normalizedAssigneeIds[0] ?? null
+    } else if (data.assignedTo !== undefined) {
+      existingTask.assigneeIds = existingTask.assignedTo ? [existingTask.assignedTo] : []
+    }
+
     if (data.points !== undefined) {
       const points = Number(data.points)
       if (points < 0) throw new Error("Pontos não podem ser negativos")
@@ -172,7 +300,19 @@ export class TaskServiceGateway implements TaskManagementGateway {
     }
     if (data.dueDate !== undefined) existingTask.dueDate = data.dueDate ? String(data.dueDate) : null
 
-    return await this.taskRepository.update(command.taskId, existingTask)
+    const updatedTask = await this.taskRepository.update(command.taskId, existingTask)
+
+    if (normalizedAssigneeIds !== undefined) {
+      await this.syncTaskAssignees(command.taskId, normalizedAssigneeIds, command.actorId)
+    } else if (data.assignedTo !== undefined) {
+      await this.syncTaskAssignees(
+        command.taskId,
+        updatedTask.assignedTo ? [updatedTask.assignedTo] : [],
+        command.actorId,
+      )
+    }
+
+    return await this.attachAssigneeIds(updatedTask)
   }
 
   async deleteTask(command: DeleteTaskCommand) {
@@ -199,9 +339,50 @@ export class TaskServiceGateway implements TaskManagementGateway {
       throw new Error("Usuário não encontrado")
     }
 
+    if (task.taskVisibility !== "public") {
+      const canManageTasks = this.identityAccess.hasPermission(user.roles, "MANAGE_TASKS")
+      const canManageUsers = this.identityAccess.hasPermission(user.roles, "MANAGE_USERS")
+      const isAssigned = await this.isActorAssignedToTask(task, command.userId)
+      if (!isAssigned && !canManageTasks && !canManageUsers) {
+        throw new Error("Usuário não pode concluir tarefa atribuída a outro usuário")
+      }
+    }
+
+    if (task.taskVisibility === "public" && this.taskUserProgressRepository.isAvailable()) {
+      const existingProgress = await this.taskUserProgressRepository.findByTaskAndUser(task.id!, command.userId)
+      if (existingProgress?.completedAt || existingProgress?.status === "done") {
+        throw new Error("Tarefa pública já concluída por este usuário")
+      }
+
+      const now = new Date()
+      const latePenalty = this.calculateLatePenalty(task, now)
+      const pointsToAward = task.points - latePenalty
+
+      await this.taskUserProgressRepository.upsertForTaskUser({
+        taskId: task.id!,
+        userId: command.userId,
+        status: "done",
+        pickedAt: existingProgress?.pickedAt ?? now,
+        completedAt: now,
+        awardedPoints: pointsToAward,
+      })
+
+      if (pointsToAward !== 0) {
+        user.completedTasks += 1
+        await this.userRepository.update(user)
+      }
+
+      await this.publishTaskCompletionAward(command.userId, command.taskId, pointsToAward)
+      return this.withActorProgress(task, {
+        status: "done",
+        completedAt: now,
+      }, command.userId)
+    }
+
     if (task.projectId && this.identityAccess.hasAnyRole(user.roles, ["GERENTE_PROJETO"])) {
       const project = await this.projectRepository.findById(task.projectId)
-      if (project && project.leaderId === command.userId && task.assignedTo === command.userId) {
+      const leaderIsAssigned = await this.isActorAssignedToTask(task, command.userId)
+      if (project && project.leaderId === command.userId && leaderIsAssigned) {
         throw new Error("Líderes de projeto não podem concluir suas próprias tasks. Delegue para outro membro da equipe.")
       }
     }
@@ -212,12 +393,18 @@ export class TaskServiceGateway implements TaskManagementGateway {
     if (!canBeCompleted) {
       throw new Error("Tarefa não pode ser completada")
     }
+
+    if (task.taskVisibility === "public" && !task.assignedTo) {
+      task.assignedTo = command.userId
+    }
+
     task.status = task.isGlobal || task.taskVisibility === "public" ? "done" : "in-review"
     task.completed = true
     if (task.status === "done") {
       task.completedAt = new Date()
     }
     const updatedTask = await this.taskRepository.update(command.taskId, task)
+    const updatedTaskWithAssignees = await this.attachAssigneeIds(updatedTask)
 
     const latePenalty = this.calculateLatePenalty(task, new Date())
     const pointsToAward = task.points - latePenalty
@@ -228,7 +415,7 @@ export class TaskServiceGateway implements TaskManagementGateway {
     }
 
     await this.publishTaskCompletionAward(command.userId, command.taskId, pointsToAward)
-    return updatedTask
+    return updatedTaskWithAssignees
   }
 
   async approveTask(command: ApproveTaskCommand) {
@@ -402,15 +589,159 @@ export class TaskServiceGateway implements TaskManagementGateway {
       console.error("Erro ao publicar progressão de gamificação para conclusão de task:", error)
     }
   }
+
+  async applyActorProgress(tasks: Task[], actorId: number) {
+    if (!this.taskUserProgressRepository.isAvailable()) {
+    return await Promise.all(tasks.map((task) => this.attachAssigneeIds(task)))
+    }
+
+    const publicTasks = tasks.filter((task) => task.id && task.taskVisibility === "public")
+    if (publicTasks.length === 0) {
+      return await Promise.all(tasks.map((task) => this.attachAssigneeIds(task)))
+    }
+
+    const progressRows = await this.taskUserProgressRepository.findByTaskIdsAndUser(
+      publicTasks.map((task) => task.id!),
+      actorId,
+    )
+
+    const progressByTaskId = new Map(progressRows.map((row) => [row.taskId, row]))
+    const withProgress = tasks.map((task) => {
+      if (!task.id || task.taskVisibility !== "public") {
+        return task
+      }
+      const progress = progressByTaskId.get(task.id)
+      if (!progress) {
+        return this.withActorProgress(task, {
+          status: "to-do",
+          completedAt: null,
+        }, null)
+      }
+
+      return this.withActorProgress(task, {
+        status: progress.status,
+        completedAt: progress.completedAt,
+      }, progress.userId)
+    })
+    return await Promise.all(withProgress.map((task) => this.attachAssigneeIds(task)))
+  }
+
+  private withActorProgress(
+    task: Task,
+    progress: { status: Task["status"]; completedAt: Date | null },
+    actorId: number | null,
+  ) {
+    const cloned = new Task({
+      ...task.toJSON(),
+      status: progress.status,
+      completed: progress.status === "done",
+      completedAt: progress.completedAt,
+      assignedTo: actorId,
+    })
+    return cloned
+  }
+
+  private normalizeAssigneeIds(data: Record<string, unknown>) {
+    const raw = data.assigneeIds
+    if (!Array.isArray(raw)) return []
+    return Array.from(
+      new Set(
+        raw
+          .map((value) => Number(value))
+          .filter((value) => Number.isInteger(value) && value > 0),
+      ),
+    )
+  }
+
+  private async ensureAssigneesExist(userIds: number[]) {
+    for (const userId of userIds) {
+      const assignee = await this.userRepository.findById(userId)
+      if (!assignee) {
+        throw new Error("Usuário não encontrado")
+      }
+    }
+  }
+
+  private async syncTaskAssignees(taskId: number, userIds: number[], actorId: number) {
+    if (!this.taskAssigneeRepository.isAvailable()) {
+      return
+    }
+    await this.taskAssigneeRepository.replaceAssignees(taskId, userIds, actorId)
+  }
+
+  private async attachAssigneeIds(task: Task) {
+    if (!task.id || !this.taskAssigneeRepository.isAvailable()) {
+      task.assigneeIds = task.assignedTo ? [task.assignedTo] : []
+      return task
+    }
+    const assigneeIds = await this.taskAssigneeRepository.listUserIdsByTaskId(task.id)
+    task.assigneeIds = assigneeIds
+    task.assignedTo = assigneeIds[0] ?? task.assignedTo ?? null
+    return task
+  }
+
+  private async isActorAssignedToTask(task: Task, actorId: number) {
+    if (task.assignedTo === actorId) return true
+    if (!task.id || !this.taskAssigneeRepository.isAvailable()) return false
+    return await this.taskAssigneeRepository.isUserAssigned(task.id, actorId)
+  }
+
+  private async isActorAllowedToManipulateDelegatedTask(task: Task, actorId: number) {
+    if (task.taskVisibility === "public") {
+      return true
+    }
+    return await this.isActorAssignedToTask(task, actorId)
+  }
 }
 
-export function createTaskManagementGateway() {
+export interface TaskManagementGatewayDependencies {
+  taskRepository: TaskRepository
+  taskAssigneeRepository: TaskAssigneeRepository
+  taskUserProgressRepository: TaskUserProgressRepository
+  userRepository: UserRepository
+  projectRepository: ProjectRepository
+  notificationsModule: NotificationsModule
+  identityAccess: IdentityAccessModule
+  taskProgressEvents: TaskProgressEvents
+}
+
+export function createTaskManagementGateway(
+  dependencies: Partial<TaskManagementGatewayDependencies> = {},
+) {
+  if (!dependencies.notificationsModule || !dependencies.identityAccess || !dependencies.taskProgressEvents) {
+    throw new Error("TaskManagementGateway requer notificationsModule, identityAccess e taskProgressEvents")
+  }
+
   return new TaskServiceGateway(
-    new TaskRepository(),
-    new UserRepository(),
-    new ProjectRepository(),
-    createNotificationsModule(),
-    createIdentityAccessModule(),
-    createTaskProgressEvents(),
+    dependencies.taskRepository ?? new TaskRepository(),
+    dependencies.taskAssigneeRepository ?? new TaskAssigneeRepository(),
+    dependencies.taskUserProgressRepository ?? new TaskUserProgressRepository(),
+    dependencies.userRepository ?? new UserRepository(),
+    dependencies.projectRepository ?? new ProjectRepository(),
+    dependencies.notificationsModule,
+    dependencies.identityAccess,
+    dependencies.taskProgressEvents,
   )
+}
+
+function dedupeTasksById<T extends { id?: number }>(tasks: T[]) {
+  const seen = new Set<number>()
+  return tasks.filter((task) => {
+    if (!task.id) return true
+    if (seen.has(task.id)) return false
+    seen.add(task.id)
+    return true
+  })
+}
+
+function isPublicProgressOnlyUpdate(data: Record<string, unknown>) {
+  const keys = Object.keys(data)
+  if (keys.length === 0) return false
+  return keys.every((key) => key === "status" || key === "assignedTo")
+}
+
+function isStatusOnlyUpdate(data: Record<string, unknown>) {
+  const keys = Object.keys(data)
+  if (keys.length === 0) return false
+  return keys.every((key) => key === "status")
 }

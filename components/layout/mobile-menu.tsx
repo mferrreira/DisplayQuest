@@ -29,6 +29,7 @@ export function MobileMenu() {
   const { user, logout } = useAuth()
   const { users } = useUser()
   const [isOpen, setIsOpen] = useState(false)
+  const userRoles = user?.roles ?? []
 
   // Fechar o menu quando uma rota muda
   useEffect(() => {
@@ -56,7 +57,7 @@ export function MobileMenu() {
       href: "/dashboard/projetos",
       icon: FolderKanban,
       label: "Projetos",
-              show: user?.roles?.includes("GERENTE_PROJETO") || user?.roles?.includes("LABORATORISTA") || user?.roles?.includes("COORDENADOR")
+              show: userRoles.includes("GERENTE_PROJETO") || userRoles.includes("LABORATORISTA") || userRoles.includes("COORDENADOR")
     },
     {
       href: "/dashboard/leaderboard",
@@ -80,13 +81,13 @@ export function MobileMenu() {
       href: "/dashboard/weekly-reports",
       icon: FileText,
       label: "Relatórios Semanais",
-      show: user?.roles?.includes("COORDENADOR") || user?.roles?.includes("LABORATORISTA")
+      show: userRoles.includes("COORDENADOR") || userRoles.includes("LABORATORISTA")
     },
     {
       href: "/dashboard/admin",
       icon: User,
       label: "Painel Administrativo",
-      show: user?.roles?.includes("COORDENADOR")
+      show: userRoles.includes("COORDENADOR")
     },
     {
       href: "/dashboard/profile",
@@ -127,7 +128,7 @@ export function MobileMenu() {
                   <p className="font-medium text-sm truncate">{user.name}</p>
                   <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                   <p className="text-xs text-muted-foreground capitalize">
-                    {user?.roles.includes("GERENTE_PROJETO") ? "Gerente de Projeto" : user?.roles.includes("COORDENADOR") ? "Coordenador" : user?.roles.includes("LABORATORISTA") ? "Laboratorista" : user?.roles.includes("VOLUNTARIO") ? "Voluntário" : "Usuário"}
+                    {userRoles.includes("GERENTE_PROJETO") ? "Gerente de Projeto" : userRoles.includes("COORDENADOR") ? "Coordenador" : userRoles.includes("LABORATORISTA") ? "Laboratorista" : userRoles.includes("VOLUNTARIO") ? "Voluntário" : "Usuário"}
                   </p>
                 </div>
               </div>

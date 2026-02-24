@@ -1,7 +1,7 @@
 import type { UserRole } from "@prisma/client"
 import { prisma } from "@/lib/database/prisma"
 import { hasRole } from "@/lib/auth/rbac"
-import { createIdentityAccessModule, type IdentityAccessModule } from "@/backend/modules/identity-access"
+import type { IdentityAccessModule } from "@/backend/modules/identity-access"
 import { UserRepository } from "@/backend/repositories/UserRepository"
 import type {
   DeductUserHoursCommand,
@@ -281,9 +281,20 @@ export class UserServiceGateway implements UserManagementGateway {
   }
 }
 
-export function createUserManagementGateway() {
+export interface UserManagementGatewayDependencies {
+  userRepository: UserRepository
+  identityAccess: IdentityAccessModule
+}
+
+export function createUserManagementGateway(
+  dependencies: Partial<UserManagementGatewayDependencies> = {},
+) {
+  if (!dependencies.identityAccess) {
+    throw new Error("UserManagementGateway requer identityAccess")
+  }
+
   return new UserServiceGateway(
-    new UserRepository(),
-    createIdentityAccessModule(),
+    dependencies.userRepository ?? new UserRepository(),
+    dependencies.identityAccess,
   )
 }

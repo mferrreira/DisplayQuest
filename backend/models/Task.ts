@@ -9,6 +9,7 @@ export interface ITask {
   status: TaskStatus;
   priority: TaskPriority;
   assignedTo?: number | null;
+  assigneeIds?: number[];
   projectId?: number | null;
   dueDate?: string | null;
   points: number;
@@ -25,6 +26,7 @@ export class Task {
   public status: TaskStatus;
   public priority: TaskPriority;
   public assignedTo?: number | null;
+  public assigneeIds?: number[];
   public projectId?: number | null;
   public dueDate?: string | null;
   public points: number;
@@ -40,6 +42,7 @@ export class Task {
     this.status = data.status;
     this.priority = data.priority;
     this.assignedTo = data.assignedTo;
+    this.assigneeIds = data.assigneeIds ? [...data.assigneeIds] : (data.assignedTo ? [data.assignedTo] : []);
     this.projectId = data.projectId;
     this.dueDate = data.dueDate;
     this.points = data.points;
@@ -64,6 +67,7 @@ export class Task {
       status: data.status,
       priority: data.priority,
       assignedTo: data.assignedTo || null,
+      assigneeIds: data.assigneeIds || (data.assignedTo ? [data.assignedTo] : []),
       projectId: data.projectId || null,
       dueDate: data.dueDate || null,
       points: data.points || 0,
@@ -82,6 +86,9 @@ export class Task {
       status: data.status,
       priority: data.priority,
       assignedTo: data.assignedTo,
+      assigneeIds: Array.isArray(data.taskAssignees)
+        ? data.taskAssignees.map((item: any) => Number(item.userId)).filter((id: number) => !Number.isNaN(id))
+        : (data.assignedTo ? [data.assignedTo] : []),
       projectId: data.projectId,
       dueDate: data.dueDate,
       points: data.points,
@@ -117,6 +124,7 @@ export class Task {
       status: this.status,
       priority: this.priority,
       assignedTo: this.assignedTo,
+      assigneeIds: this.assigneeIds || [],
       projectId: this.projectId,
       dueDate: this.dueDate,
       points: this.points,

@@ -142,6 +142,7 @@ export interface Task {
   status: "to-do" | "in-progress" | "in-review" | "adjust" | "done"
   priority: string
   assignedTo?: number | null
+  assigneeIds?: number[]
   projectId?: number | null
   dueDate?: string | null
   points: number
@@ -157,10 +158,12 @@ export interface TaskFormData {
   status: "to-do" | "in-progress" | "in-review" | "adjust" | "done"
   priority: "low" | "medium" | "high"
   assignedTo: string
+  assigneeIds: string[]
   project: string
   dueDate: string
   points: number
   completed: boolean
+  taskVisibility?: "public" | "delegated" | "private"
   isGlobal?: boolean
 }
 

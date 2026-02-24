@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server"
 import { ensureSelfOrPermission, requireApiActor } from "@/lib/auth/api-guard"
-import { createReportingModule } from "@/backend/modules/reporting"
-
-const reportingModule = createReportingModule()
-
+import { getBackendComposition } from "@/backend/composition/root"
+const { reporting: reportingModule } = getBackendComposition()
 export async function GET(
   request: Request,
   context: { params: Promise<{ id: string }> },

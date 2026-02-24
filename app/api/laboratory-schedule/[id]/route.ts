@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server"
-import { createLabOperationsModule } from "@/backend/modules/lab-operations"
 import { requireApiActor } from "@/lib/auth/api-guard"
+import { getBackendComposition } from "@/backend/composition/root"
 
-const labOperationsModule = createLabOperationsModule();
+const { labOperations: labOperationsModule } = getBackendComposition();
 
 // PUT: Update a laboratory schedule
 export async function PUT(

@@ -77,8 +77,12 @@ export class ReportingModule {
   }
 }
 
-export function createReportingModule() {
-  const gateway = createReportingGateway()
+export interface ReportingModuleFactoryOptions {
+  gateway?: PrismaReportingGateway
+}
+
+export function createReportingModule(options: ReportingModuleFactoryOptions = {}) {
+  const gateway = options.gateway ?? createReportingGateway()
 
   return new ReportingModule(
     new ListWeeklyReportsUseCase(gateway),

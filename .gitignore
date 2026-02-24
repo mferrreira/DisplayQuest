@@ -5,7 +5,6 @@
 /.pnp
 .pnp.js
 
-docs/*.md
 # Testing
 /coverage
 
@@ -43,7 +42,6 @@ lerna-debug.log*
 next-env.d.ts
 
 # Prisma
-/prisma/migrations/
 /lib/generated/prisma
 
 # Database
@@ -88,7 +86,6 @@ coverage
 # Dependency directories
 node_modules/
 jspm_packages/
-package-lock.json
 
 # Optional npm cache directory
 .npm

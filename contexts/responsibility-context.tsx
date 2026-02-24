@@ -37,6 +37,25 @@ export function ResponsibilityProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null)
   const { user } = useAuth()
 
+  const toActiveResponsibility = useCallback((responsibility: any): ActiveResponsibility | null => {
+    if (!responsibility) return null
+
+    const startTimeMs = new Date(responsibility.startTime).getTime()
+    const nowMs = Date.now()
+    const durationSeconds = Number.isFinite(startTimeMs)
+      ? Math.max(0, Math.floor((nowMs - startTimeMs) / 1000))
+      : 0
+
+    return {
+      id: responsibility.id,
+      userId: responsibility.userId,
+      userName: responsibility.userName,
+      startTime: responsibility.startTime,
+      duration: durationSeconds,
+      userRole: responsibility.userRole,
+    }
+  }, [])
+
   // Atualizar o tempo de duração da responsabilidade ativa a cada segundo
   useEffect(() => {
     if (!activeResponsibility) return
@@ -75,14 +94,14 @@ export function ResponsibilityProvider({ children }: { children: ReactNode }) {
       setError(null)
 
       const { activeResponsibility } = await ResponsibilitiesAPI.getActive()
-      setActiveResponsibility(activeResponsibility)
+      setActiveResponsibility(toActiveResponsibility(activeResponsibility))
     } catch (err) {
       setError("Erro ao carregar responsabilidade ativa")
       console.error(err)
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [toActiveResponsibility])
 
   // Carregar dados quando o componente montar ou o usuário mudar
   useEffect(() => {
@@ -112,17 +131,7 @@ export function ResponsibilityProvider({ children }: { children: ReactNode }) {
       setResponsibilities((prev) => [responsibility, ...prev])
 
       // Atualizar a responsabilidade ativa
-      const startTime = new Date(responsibility.startTime).getTime()
-      const now = new Date().getTime()
-      const duration = Math.floor((now - startTime) / 1000)
-
-      setActiveResponsibility({
-        id: responsibility.id,
-        userId: responsibility.userId,
-        userName: responsibility.userName,
-        startTime: responsibility.startTime,
-        duration,
-      })
+      setActiveResponsibility(toActiveResponsibility(responsibility))
     } catch (err) {
       setError("Erro ao iniciar responsabilidade")
       console.error(err)

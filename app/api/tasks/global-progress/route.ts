@@ -45,7 +45,22 @@ export async function GET() {
     )
 
     const taskIds = globalTasks.map((task) => task.id)
-    const completionRows =
+    const taskUserProgressTable = (prisma as any).task_user_progress
+    const progressCompletionRows =
+      taskIds.length === 0 || !taskUserProgressTable
+        ? []
+        : await taskUserProgressTable.findMany({
+            where: {
+              taskId: { in: taskIds },
+              completedAt: { not: null },
+            },
+            select: {
+              taskId: true,
+              userId: true,
+            },
+          })
+
+    const legacyCompletionRows =
       taskIds.length === 0
         ? []
         : await prisma.work_session_tasks.findMany({
@@ -66,7 +81,15 @@ export async function GET() {
           })
 
     const completedByTask = new Map<number, Set<number>>()
-    for (const row of completionRows) {
+    for (const row of progressCompletionRows) {
+      const set = completedByTask.get(row.taskId) ?? new Set<number>()
+      if (row.userId) {
+        set.add(row.userId)
+      }
+      completedByTask.set(row.taskId, set)
+    }
+
+    for (const row of legacyCompletionRows) {
       const set = completedByTask.get(row.taskId) ?? new Set<number>()
       if (row.workSession?.userId) {
         set.add(row.workSession.userId)

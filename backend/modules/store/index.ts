@@ -33,6 +33,10 @@ export class StoreModule {
   }
 }
 
-export function createStoreModule() {
-  return new StoreModule(createStoreGateway())
+export interface StoreModuleFactoryOptions {
+  gateway?: StoreGateway
+}
+
+export function createStoreModule(options: StoreModuleFactoryOptions = {}) {
+  return new StoreModule(options.gateway ?? createStoreGateway())
 }

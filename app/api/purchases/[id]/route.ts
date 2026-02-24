@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server"
 import { requireApiActor } from "@/lib/auth/api-guard";
 import { hasPermission } from "@/lib/auth/rbac";
-import { createStoreModule } from "@/backend/modules/store";
+import { getBackendComposition } from "@/backend/composition/root"
 
-const storeModule = createStoreModule()
-
+const { store: storeModule } = getBackendComposition()
 // GET: Obter uma compra específica
 export async function GET(context: { params: Promise<{ id: string }> }) {
   try {

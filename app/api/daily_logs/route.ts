@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server"
-import { createWorkExecutionModule } from "@/backend/modules/work-execution"
 import { hasPermission, hasRole } from "@/lib/auth/rbac"
 import { requireApiActor } from "@/lib/auth/api-guard"
+import { getBackendComposition } from "@/backend/composition/root"
 
-const workExecutionModule = createWorkExecutionModule()
-
+const { workExecution: workExecutionModule } = getBackendComposition()
 export async function GET(request: Request) {
   try {
     const auth = await requireApiActor()

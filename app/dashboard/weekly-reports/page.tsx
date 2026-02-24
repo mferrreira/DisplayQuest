@@ -17,7 +17,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, AlertTriangle } from "lucide-react"
 import { useToast } from "@/contexts/use-toast"
 import type { WeeklyReport } from "@/contexts/types"
-import { WeeklyReportDetail } from "@/components/ui/weekly-report-detail"
+import { WeeklyReportDetail, type ProjectWeeklyDetailReport } from "@/components/ui/weekly-report-detail"
 
 export default function WeeklyReportsPage() {
   const { user } = useAuth()
@@ -32,10 +32,53 @@ export default function WeeklyReportsPage() {
   const [weekEnd, setWeekEnd] = useState<string>("")
   const [isGenerating, setIsGenerating] = useState(false)
   const [isGeneratingProjectReport, setIsGeneratingProjectReport] = useState(false)
-  const [projectReport, setProjectReport] = useState<any | null>(null)
-  const [projectReports, setProjectReports] = useState<any[]>([])
+  const [projectReports, setProjectReports] = useState<ProjectWeeklyDetailReport[]>([])
   const [selectedReport, setSelectedReport] = useState<WeeklyReport | null>(null)
+  const [selectedProjectReport, setSelectedProjectReport] = useState<ProjectWeeklyDetailReport | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
+
+  const buildProjectDetailReport = (
+    projectId: number,
+    weekStartValue: string,
+    weekEndValue: string,
+    hours: any,
+  ): ProjectWeeklyDetailReport => {
+    const projectInfo = projects.find((project) => project.id === projectId)
+    const sessions = Array.isArray(hours?.sessions) ? hours.sessions : []
+    const contributors = Array.isArray(hours?.hoursByUser) ? hours.hoursByUser.length : 0
+    const totalHours = Number(hours?.totalHours || 0)
+    const totalLogs = Number(hours?.sessionCount || sessions.length || 0)
+
+    return {
+      reportType: "project",
+      id: `${projectId}-${weekStartValue}-${weekEndValue}`,
+      projectId,
+      projectName: projectInfo?.name || `Projeto ${projectId}`,
+      weekStart: weekStartValue,
+      weekEnd: weekEndValue,
+      totalLogs,
+      totalHours,
+      contributorCount: contributors,
+      createdAt: new Date().toISOString(),
+      summary: [
+        `Projeto com ${totalHours.toFixed(1)}h registradas no período.`,
+        `${totalLogs} sessão(ões) concluída(s).`,
+        `${contributors} colaborador(es) com registro no projeto.`,
+      ].join(" "),
+      logs: sessions.map((session: any) => ({
+        id: session.id,
+        date: session.endTime || session.startTime,
+        note: session.activity || "Sessão finalizada sem observações",
+        project: {
+          id: projectId,
+          name: projectInfo?.name || `Projeto ${projectId}`,
+        },
+        userName: session.userName || "Usuário",
+        location: session.location || null,
+        durationSeconds: typeof session.duration === "number" ? session.duration : null,
+      })),
+    }
+  }
 
   // Set default week (current week)
   useEffect(() => {
@@ -110,20 +153,17 @@ export default function WeeklyReportsPage() {
         throw new Error(payload?.error || "Erro ao gerar relatório por projeto")
       }
 
-      setProjectReport(payload?.hours || null)
-      const projectInfo = projects.find((project) => project.id === Number(selectedProject))
+      const reportDetail = buildProjectDetailReport(
+        Number(selectedProject),
+        weekStart,
+        weekEnd,
+        payload?.hours || null,
+      )
       setProjectReports((prev) => [
-        {
-          id: `${selectedProject}-${weekStart}-${weekEnd}-${Date.now()}`,
-          projectId: Number(selectedProject),
-          projectName: projectInfo?.name || `Projeto ${selectedProject}`,
-          weekStart,
-          weekEnd,
-          createdAt: new Date().toISOString(),
-          data: payload?.hours || null,
-        },
+        { ...reportDetail, id: `${reportDetail.id}-${Date.now()}` },
         ...prev,
       ])
+      setSelectedProjectReport(reportDetail)
       toast({
         title: "Sucesso",
         description: "Relatório por projeto gerado com sucesso!",
@@ -145,19 +185,6 @@ export default function WeeklyReportsPage() {
 
   const getWeekRange = (start: Date | string, end: Date | string) => {
     return `${formatDate(start)} - ${formatDate(end)}`
-  }
-
-  const downloadProjectReport = (report: any) => {
-    const filename = `relatorio-projeto-${report.projectId}-${report.weekStart}-${report.weekEnd}.json`
-    const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" })
-    const url = window.URL.createObjectURL(blob)
-    const anchor = document.createElement("a")
-    anchor.href = url
-    anchor.download = filename
-    document.body.appendChild(anchor)
-    anchor.click()
-    document.body.removeChild(anchor)
-    window.URL.revokeObjectURL(url)
   }
 
   if (!user || !hasAccess(user.roles || [], 'VIEW_WEEKLY_REPORTS')) {
@@ -313,12 +340,16 @@ export default function WeeklyReportsPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {projectReports.map((report) => (
-              <Card key={report.id}>
+              <Card
+                key={report.id}
+                className="cursor-pointer hover:shadow-md transition-shadow"
+                onClick={() => setSelectedProjectReport(report)}
+              >
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-lg">{report.projectName}</CardTitle>
                     <Badge variant="outline">
-                      {Number(report?.data?.totalHours || 0).toFixed(1)}h
+                      {Number(report.totalHours || 0).toFixed(1)}h
                     </Badge>
                   </div>
                   <CardDescription className="flex items-center gap-1">
@@ -328,14 +359,21 @@ export default function WeeklyReportsPage() {
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-muted-foreground">
-                    Sessões: <strong>{report?.data?.sessionCount || 0}</strong> | Contribuidores: <strong>{Array.isArray(report?.data?.hoursByUser) ? report.data.hoursByUser.length : 0}</strong>
+                    Sessões: <strong>{report.totalLogs || 0}</strong> | Contribuidores: <strong>{report.contributorCount || 0}</strong>
                   </p>
                   <div className="flex items-center justify-between mt-3">
                     <span className="text-xs text-gray-500">
                       {formatDate(report.createdAt)}
                     </span>
-                    <Button variant="ghost" size="sm" onClick={() => downloadProjectReport(report)}>
-                      <Download className="h-4 w-4" />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setSelectedProjectReport(report)
+                      }}
+                    >
+                      <FileText className="h-4 w-4" />
                     </Button>
                   </div>
                 </CardContent>
@@ -408,6 +446,13 @@ export default function WeeklyReportsPage() {
             await fetchWeeklyReports()
             setSelectedReport(null)
           }}
+        />
+      )}
+
+      {selectedProjectReport && (
+        <WeeklyReportDetail
+          report={selectedProjectReport}
+          onClose={() => setSelectedProjectReport(null)}
         />
       )}
     </div>

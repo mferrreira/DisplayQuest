@@ -41,10 +41,8 @@ services:
       sh -c "
         echo '🚀 Aguardando banco estar pronto...' &&
         sleep 5 &&
-        echo '🗄️ Executando migrations...' &&
-        ./node_modules/.bin/prisma db push --skip-generate &&
-        echo '🌱 Executando seed...' &&
-        (npx prisma db seed || echo 'ℹ️ Seed falhou ou já foi executado') &&
+        echo '🗄️ Aplicando migrations versionadas...' &&
+        ./node_modules/.bin/prisma migrate deploy &&
         echo '✅ Iniciando aplicação...' &&
         node server.js
       "

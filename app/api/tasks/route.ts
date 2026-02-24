@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server"
-import { createTaskManagementModule } from "@/backend/modules/task-management"
+import { getBackendComposition } from "@/backend/composition/root"
 import { ensurePermission, requireApiActor } from "@/lib/auth/api-guard"
 import { hasPermission } from "@/lib/auth/rbac"
 
-const taskManagementModule = createTaskManagementModule()
+const { taskManagement: taskManagementModule } = getBackendComposition()
 
 export async function GET(request: Request) {
   try {
@@ -59,12 +59,42 @@ export async function POST(request: Request) {
 
     const body = await request.json()
 
+    if (Array.isArray(body?.tasks)) {
+      if (body.tasks.length === 0) {
+        return NextResponse.json({ error: "Nenhuma task informada para backlog" }, { status: 400 })
+      }
+
+      const createdTasks = await taskManagementModule.createTaskBacklog(
+        body.tasks.map((task: any) => ({
+          title: task.title,
+          description: task.description ?? "",
+          status: task.status ?? "to-do",
+          priority: task.priority ?? "medium",
+          assignedTo: task.assignedTo ?? null,
+          assigneeIds: Array.isArray(task.assigneeIds) ? task.assigneeIds : undefined,
+          projectId: task.projectId ?? null,
+          dueDate: task.dueDate ?? null,
+          points: task.points ?? 0,
+          completed: task.completed ?? false,
+          taskVisibility: task.taskVisibility ?? "delegated",
+          isGlobal: task.isGlobal ?? false,
+        })),
+        auth.actor.id,
+      )
+
+      return NextResponse.json({
+        tasks: createdTasks.map((task) => task.toJSON()),
+        createdCount: createdTasks.length,
+      }, { status: 201 })
+    }
+
     const {
       title,
       description,
       status,
       priority,
       assignedTo,
+      assigneeIds,
       projectId,
       dueDate,
       points,
@@ -79,6 +109,7 @@ export async function POST(request: Request) {
       status,
       priority,
       assignedTo,
+      assigneeIds,
       projectId,
       dueDate,
       points,

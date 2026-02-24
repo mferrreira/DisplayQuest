@@ -8,9 +8,12 @@ import { UpdateWorkSessionUseCase } from "@/backend/modules/work-execution/appli
 import { GetWorkSessionByIdUseCase } from "@/backend/modules/work-execution/application/use-cases/get-work-session-by-id.use-case"
 import { GetDailyLogByIdUseCase } from "@/backend/modules/work-execution/application/use-cases/get-daily-log-by-id.use-case"
 import { createWorkExecutionEventsPublisher } from "@/backend/modules/work-execution/infrastructure/work-execution-events.publisher"
+import type { WorkExecutionEvents } from "@/backend/modules/work-execution/application/ports/work-execution.events"
+import type { WorkExecutionGateway } from "@/backend/modules/work-execution/application/ports/work-execution.gateway"
 import {
   createWorkExecutionGateway,
 } from "@/backend/modules/work-execution/infrastructure/work-session-service.gateway"
+import { createGamificationModule } from "@/backend/modules/gamification"
 
 type UseCaseExecute<T> = T extends { execute: (...args: infer A) => infer R } ? (...args: A) => R : never
 
@@ -48,9 +51,16 @@ export class WorkExecutionModule {
   }
 }
 
-export function createWorkExecutionModule() {
-  const gateway = createWorkExecutionGateway()
-  const eventsPublisher = createWorkExecutionEventsPublisher()
+export interface WorkExecutionModuleFactoryOptions {
+  gateway?: WorkExecutionGateway
+  eventsPublisher?: WorkExecutionEvents
+}
+
+export function createWorkExecutionModule(options: WorkExecutionModuleFactoryOptions = {}) {
+  const gateway = options.gateway ?? createWorkExecutionGateway()
+  const eventsPublisher = options.eventsPublisher ?? createWorkExecutionEventsPublisher({
+    gamificationModule: createGamificationModule(),
+  })
 
   return new WorkExecutionModule(
     new StartWorkSessionUseCase(gateway),

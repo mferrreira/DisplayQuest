@@ -65,11 +65,11 @@ export function KanbanColumn({ status, tasks, onEdit, onAddTask, canAddTask, isC
   }
 
   return (
-    <Card className={`${config.color} ${config.borderColor} h-fit shadow-lg hover:shadow-xl transition-all duration-300 group relative overflow-hidden`}>
+    <Card className={`${config.color} ${config.borderColor} h-[min(78vh,860px)] min-h-[460px] shadow-lg hover:shadow-xl transition-all duration-300 group relative overflow-hidden flex flex-col`}>
       {/* Animated background effect */}
       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-pulse pointer-events-none" />
       
-      <CardHeader className={`${config.headerColor} pb-3 relative z-10`}>
+      <CardHeader className={`${config.headerColor} sticky top-0 pb-3 relative z-20 border-b border-white/10 backdrop-blur supports-[backdrop-filter]:bg-black/10`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <div className="p-1.5 bg-white/20 rounded-lg">
@@ -93,13 +93,13 @@ export function KanbanColumn({ status, tasks, onEdit, onAddTask, canAddTask, isC
         </div>
       </CardHeader>
       
-      <CardContent className="pt-0 relative z-10">
+      <CardContent className="pt-0 relative z-10 flex-1 min-h-0 overflow-hidden">
         <Droppable droppableId={status}>
           {(provided, snapshot) => (
             <div
               ref={provided.innerRef}
               {...provided.droppableProps}
-              className={`min-h-[200px] space-y-2 transition-all duration-300 ${
+              className={`h-full min-h-[200px] overflow-y-auto pr-1 pb-2 space-y-2 transition-all duration-300 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-300/70 dark:[&::-webkit-scrollbar-thumb]:bg-slate-600/70 [&::-webkit-scrollbar-track]:bg-transparent ${
                 snapshot.isDraggingOver 
                   ? "bg-gradient-to-br from-blue-100/50 to-cyan-100/50 dark:from-blue-900/20 dark:to-cyan-900/10 rounded-lg p-2" 
                   : ""

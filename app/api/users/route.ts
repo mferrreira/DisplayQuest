@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server'
 import { requireApiActor } from '@/lib/auth/api-guard'
 import { createUserManagementModule } from '@/backend/modules/user-management'
+import { getBackendComposition } from "@/backend/composition/root"
 
-const userManagementModule = createUserManagementModule()
-
+const { userManagement: userManagementModule } = getBackendComposition()
 export async function GET() {
   try {
     const auth = await requireApiActor()

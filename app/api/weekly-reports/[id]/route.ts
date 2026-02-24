@@ -2,10 +2,8 @@ import { NextRequest } from "next/server"
 import { createApiError, createApiResponse } from "@/lib/utils/utils"
 import { requireApiActor } from "@/lib/auth/api-guard"
 import { hasPermission, hasRole } from "@/lib/auth/rbac"
-import { createReportingModule } from "@/backend/modules/reporting"
-
-const reportingModule = createReportingModule()
-
+import { getBackendComposition } from "@/backend/composition/root"
+const { reporting: reportingModule } = getBackendComposition()
 export async function GET(
   _request: NextRequest,
   context: { params: Promise<{ id: string }> },

@@ -108,6 +108,11 @@ export default function LabResponsibilityPage() {
     try {
       setIsStarting(true)
       await startResponsibility(notes)
+      if (date) {
+        const start = startOfMonth(date).toISOString()
+        const end = endOfMonth(date).toISOString()
+        await fetchResponsibilities(start, end)
+      }
       setNotes("")
     } catch (err) {
       console.error("Erro ao iniciar responsabilidade:", err)
@@ -120,6 +125,11 @@ export default function LabResponsibilityPage() {
     try {
       setIsEnding(true)
       await endResponsibility()
+      if (date) {
+        const start = startOfMonth(date).toISOString()
+        const end = endOfMonth(date).toISOString()
+        await fetchResponsibilities(start, end)
+      }
     } catch (err) {
       console.error("Erro ao encerrar responsabilidade:", err)
     } finally {

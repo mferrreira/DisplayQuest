@@ -3,7 +3,7 @@ import { prisma } from "@/lib/database/prisma"
 import { hasPermission } from "@/lib/auth/rbac"
 import { Project } from "@/backend/models/Project"
 import { ProjectMembership } from "@/backend/models/ProjectMembership"
-import { createIdentityAccessModule, type IdentityAccessModule } from "@/backend/modules/identity-access"
+import type { IdentityAccessModule } from "@/backend/modules/identity-access"
 import { ProjectRepository } from "@/backend/repositories/ProjectRepository"
 import { ProjectMembershipRepository } from "@/backend/repositories/ProjectMembershipRepository"
 import { UserRepository } from "@/backend/repositories/UserRepository"
@@ -261,11 +261,24 @@ export class ProjectServiceGateway implements ProjectManagementGateway {
   }
 }
 
-export function createProjectManagementGateway() {
+export interface ProjectManagementGatewayDependencies {
+  projectRepository: ProjectRepository
+  membershipRepository: ProjectMembershipRepository
+  userRepository: UserRepository
+  identityAccess: IdentityAccessModule
+}
+
+export function createProjectManagementGateway(
+  dependencies: Partial<ProjectManagementGatewayDependencies> = {},
+) {
+  if (!dependencies.identityAccess) {
+    throw new Error("ProjectManagementGateway requer identityAccess")
+  }
+
   return new ProjectServiceGateway(
-    new ProjectRepository(),
-    new ProjectMembershipRepository(),
-    new UserRepository(),
-    createIdentityAccessModule(),
+    dependencies.projectRepository ?? new ProjectRepository(),
+    dependencies.membershipRepository ?? new ProjectMembershipRepository(),
+    dependencies.userRepository ?? new UserRepository(),
+    dependencies.identityAccess,
   )
 }

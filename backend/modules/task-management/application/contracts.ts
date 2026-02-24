@@ -8,6 +8,10 @@ export interface ListTasksForActorQuery {
 
 export type CreateTaskCommand = Omit<ITask, "id">
 
+export interface CreateTaskBacklogCommand {
+  tasks: CreateTaskCommand[]
+}
+
 export interface UpdateTaskCommand {
   taskId: number
   actorId: number

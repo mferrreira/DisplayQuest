@@ -1,11 +1,8 @@
 import { NextResponse } from "next/server"
 import { requireApiActor } from "@/lib/auth/api-guard"
-import { createReportingModule } from "@/backend/modules/reporting"
-import { createProjectManagementModule } from "@/backend/modules/project-management"
-
-const reportingModule = createReportingModule()
-const projectManagementModule = createProjectManagementModule()
-
+import { getBackendComposition } from "@/backend/composition/root"
+const { reporting: reportingModule } = getBackendComposition()
+const { projectManagement: projectManagementModule } = getBackendComposition()
 export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const auth = await requireApiActor()

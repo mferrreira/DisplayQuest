@@ -12,6 +12,7 @@ interface TaskContextType {
   error: string | null
   fetchTasks: (projectId?: number | null) => Promise<void>
   createTask: (task: any) => Promise<Task>
+  createBacklog: (tasks: any[]) => Promise<Task[]>
   updateTask: (id: number, task: Partial<Task>) => Promise<Task>
   completeTask: (id: number, userId?: number) => Promise<Task>
   approveTask: (id: number) => Promise<Task>
@@ -79,6 +80,26 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       throw new Error("Erro ao criar tarefa: resposta inválida")
     } catch (err) {
       setError("Erro ao criar tarefa")
+      console.error(err)
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const createBacklog = async (taskItems: any[]) => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      const response = await TasksAPI.createBacklog(taskItems)
+      const createdTasks = Array.isArray(response?.tasks) ? response.tasks : []
+      if (createdTasks.length > 0) {
+        setTasks((prevTasks) => [...createdTasks, ...prevTasks])
+      }
+      return createdTasks
+    } catch (err) {
+      setError("Erro ao criar backlog")
       console.error(err)
       throw err
     } finally {
@@ -230,6 +251,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
         error,
         fetchTasks,
         createTask,
+        createBacklog,
         updateTask,
         completeTask,
         approveTask,
