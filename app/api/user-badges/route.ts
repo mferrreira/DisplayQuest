@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server"
 import { requireApiActor } from "@/lib/auth/api-guard"
 import { hasPermission } from "@/lib/auth/rbac"
-import { createGamificationModule } from "@/backend/modules/gamification"
-
-const gamificationModule = createGamificationModule()
-
+import { getBackendComposition } from "@/backend/composition/root"
+const { gamification: gamificationModule } = getBackendComposition()
 export async function GET(request: Request) {
   try {
     const auth = await requireApiActor()

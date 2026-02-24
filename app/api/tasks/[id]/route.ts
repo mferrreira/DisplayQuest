@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server"
-import { createTaskManagementModule } from "@/backend/modules/task-management"
+import { getBackendComposition } from "@/backend/composition/root"
 import { ensurePermission, requireApiActor } from "@/lib/auth/api-guard"
 import { hasPermission } from "@/lib/auth/rbac"
 
-const taskManagementModule = createTaskManagementModule()
+const { taskManagement: taskManagementModule } = getBackendComposition()
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {

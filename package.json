@@ -8,8 +8,12 @@
     "start": "next start",
     "lint": "next lint",
     "db:seed": "tsx prisma/seed.ts",
-    "db:push": "prisma db push",
-    "db:generate": "prisma generate"
+    "db:generate": "prisma generate",
+    "db:migrate:dev": "prisma migrate dev",
+    "db:migrate:deploy": "prisma migrate deploy",
+    "db:migrate:status": "prisma migrate status",
+    "db:reset:local": "prisma migrate reset --force",
+    "db:safe-deploy": "bash scripts/db-safe-deploy.sh"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

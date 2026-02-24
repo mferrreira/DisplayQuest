@@ -1,9 +1,7 @@
 import { createApiError, createApiResponse } from "@/lib/utils/utils"
 import { ensureSelfOrPermission, requireApiActor } from "@/lib/auth/api-guard"
-import { createReportingModule } from "@/backend/modules/reporting"
-
-const reportingModule = createReportingModule()
-
+import { getBackendComposition } from "@/backend/composition/root"
+const { reporting: reportingModule } = getBackendComposition()
 export async function POST(request: Request) {
   try {
     const auth = await requireApiActor()

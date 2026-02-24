@@ -1,7 +1,7 @@
-import { createWorkExecutionModule } from "@/backend/modules/work-execution";
 import { ensurePermission, ensureSelfOrPermission, requireApiActor } from "@/lib/auth/api-guard";
+import { getBackendComposition } from "@/backend/composition/root"
 
-const workExecutionModule = createWorkExecutionModule();
+const { workExecution: workExecutionModule } = getBackendComposition();
 
 export async function GET(request: Request) {
   try {

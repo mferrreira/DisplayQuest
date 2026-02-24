@@ -7,7 +7,14 @@ import { DeleteTaskUseCase } from "@/backend/modules/task-management/application
 import { CompleteTaskUseCase } from "@/backend/modules/task-management/application/use-cases/complete-task.use-case"
 import { ApproveTaskUseCase } from "@/backend/modules/task-management/application/use-cases/approve-task.use-case"
 import { RejectTaskUseCase } from "@/backend/modules/task-management/application/use-cases/reject-task.use-case"
-import { createTaskManagementGateway } from "@/backend/modules/task-management/infrastructure/task-service.gateway"
+import type { TaskManagementGateway } from "@/backend/modules/task-management/application/ports/task-management.gateway"
+import {
+  createTaskManagementGateway,
+  type TaskManagementGatewayDependencies,
+} from "@/backend/modules/task-management/infrastructure/task-service.gateway"
+import { createNotificationsModule } from "@/backend/modules/notifications"
+import { createIdentityAccessModule } from "@/backend/modules/identity-access"
+import { createTaskProgressEvents } from "@/backend/modules/task-management/infrastructure/gamification-task-progress.events"
 
 type UseCaseExecute<T> = T extends { execute: (...args: infer A) => infer R } ? (...args: A) => R : never
 
@@ -45,8 +52,18 @@ export class TaskManagementModule {
   }
 }
 
-export function createTaskManagementModule() {
-  const gateway = createTaskManagementGateway()
+export interface TaskManagementModuleFactoryOptions {
+  gateway?: TaskManagementGateway
+  gatewayDependencies?: Partial<TaskManagementGatewayDependencies>
+}
+
+export function createTaskManagementModule(options: TaskManagementModuleFactoryOptions = {}) {
+  const gateway = options.gateway ?? createTaskManagementGateway({
+    notificationsModule: createNotificationsModule(),
+    identityAccess: createIdentityAccessModule(),
+    taskProgressEvents: createTaskProgressEvents(),
+    ...options.gatewayDependencies,
+  })
   return new TaskManagementModule(
     new GetTaskByIdUseCase(gateway),
     new ListTasksForActorUseCase(gateway),

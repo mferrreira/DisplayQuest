@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server"
-import { createNotificationsModule } from "@/backend/modules/notifications"
 import { requireApiActor } from "@/lib/auth/api-guard"
+import { getBackendComposition } from "@/backend/composition/root"
 
-const notificationsModule = createNotificationsModule()
-
+const { notifications: notificationsModule } = getBackendComposition()
 export async function POST() {
   try {
     const auth = await requireApiActor()

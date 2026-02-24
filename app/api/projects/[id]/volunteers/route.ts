@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createProjectManagementModule } from "@/backend/modules/project-management"
 import { requireApiActor } from "@/lib/auth/api-guard"
+import { getBackendComposition } from "@/backend/composition/root"
 
-const projectManagementModule = createProjectManagementModule()
-
+const { projectManagement: projectManagementModule } = getBackendComposition()
 function toHttpStatus(error: unknown) {
   const message = error instanceof Error ? error.message : "Erro interno do servidor"
   if (message.includes("não encontrado")) return 404

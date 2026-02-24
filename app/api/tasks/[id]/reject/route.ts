@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireApiActor } from "@/lib/auth/api-guard"
-import { createTaskManagementModule } from "@/backend/modules/task-management"
+import { getBackendComposition } from "@/backend/composition/root"
 
-const taskManagementModule = createTaskManagementModule()
+const { taskManagement: taskManagementModule } = getBackendComposition()
 
 export async function POST(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {

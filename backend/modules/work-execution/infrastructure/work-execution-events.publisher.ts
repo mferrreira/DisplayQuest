@@ -28,6 +28,8 @@ export class WorkExecutionEventsPublisher implements WorkExecutionEvents {
   }
 }
 
-export function createWorkExecutionEventsPublisher() {
-  return new WorkExecutionEventsPublisher(createGamificationModule())
+export function createWorkExecutionEventsPublisher(
+  dependencies: { gamificationModule?: GamificationModule } = {},
+) {
+  return new WorkExecutionEventsPublisher(dependencies.gamificationModule ?? createGamificationModule())
 }

@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server"
 import { requireApiActor } from "@/lib/auth/api-guard"
-import { createLabOperationsModule } from "@/backend/modules/lab-operations"
-
-const labOperationsModule = createLabOperationsModule()
-
+import { getBackendComposition } from "@/backend/composition/root"
+const { labOperations: labOperationsModule } = getBackendComposition()
 function toHttpStatus(error: unknown) {
   const message = error instanceof Error ? error.message : "Erro interno do servidor"
   if (message.includes("Horário não encontrado")) return 404

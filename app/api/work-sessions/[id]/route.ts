@@ -1,7 +1,7 @@
-import { createWorkExecutionModule } from "@/backend/modules/work-execution";
 import { ensureSelfOrPermission, requireApiActor } from "@/lib/auth/api-guard";
+import { getBackendComposition } from "@/backend/composition/root"
 
-const workExecutionModule = createWorkExecutionModule();
+const { workExecution: workExecutionModule } = getBackendComposition();
 
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   try {

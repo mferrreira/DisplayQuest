@@ -46,8 +46,12 @@ export class NotificationsModule {
   }
 }
 
-export function createNotificationsModule() {
-  const gateway = createNotificationsGateway()
+export interface NotificationsModuleFactoryOptions {
+  gateway?: PrismaNotificationsGateway
+}
+
+export function createNotificationsModule(options: NotificationsModuleFactoryOptions = {}) {
+  const gateway = options.gateway ?? createNotificationsGateway()
   return new NotificationsModule(
     new PublishNotificationEventUseCase(gateway),
     new ListUserNotificationsUseCase(gateway),

@@ -1,5 +1,9 @@
 import type { UserManagementGateway } from "@/backend/modules/user-management/application/ports/user-management.gateway"
-import { createUserManagementGateway } from "@/backend/modules/user-management/infrastructure/user-service.gateway"
+import {
+  createUserManagementGateway,
+  type UserManagementGatewayDependencies,
+} from "@/backend/modules/user-management/infrastructure/user-service.gateway"
+import { createIdentityAccessModule } from "@/backend/modules/identity-access"
 
 type GatewayCall<T> = T extends (...args: infer A) => infer R ? (...args: A) => R : never
 
@@ -37,6 +41,16 @@ export class UserManagementModule {
   }
 }
 
-export function createUserManagementModule() {
-  return new UserManagementModule(createUserManagementGateway())
+export interface UserManagementModuleFactoryOptions {
+  gateway?: UserManagementGateway
+  gatewayDependencies?: Partial<UserManagementGatewayDependencies>
+}
+
+export function createUserManagementModule(options: UserManagementModuleFactoryOptions = {}) {
+  const gateway = options.gateway ?? createUserManagementGateway({
+    identityAccess: createIdentityAccessModule(),
+    ...options.gatewayDependencies,
+  })
+
+  return new UserManagementModule(gateway)
 }

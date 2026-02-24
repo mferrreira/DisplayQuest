@@ -20,6 +20,6 @@ class GamificationTaskProgressEvents implements TaskProgressEvents {
   }
 }
 
-export function createTaskProgressEvents(): TaskProgressEvents {
-  return new GamificationTaskProgressEvents(createGamificationModule())
+export function createTaskProgressEvents(dependencies: { gamificationModule?: GamificationModule } = {}): TaskProgressEvents {
+  return new GamificationTaskProgressEvents(dependencies.gamificationModule ?? createGamificationModule())
 }

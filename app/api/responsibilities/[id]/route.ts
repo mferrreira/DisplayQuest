@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server"
-import { createLabOperationsModule } from "@/backend/modules/lab-operations";
 import { ensureAnyRole, requireApiActor } from "@/lib/auth/api-guard";
+import { getBackendComposition } from "@/backend/composition/root"
 
-const labOperationsModule = createLabOperationsModule();
+const { labOperations: labOperationsModule } = getBackendComposition();
 
 // PATCH: Encerrar uma responsabilidade ou atualizar notas
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {

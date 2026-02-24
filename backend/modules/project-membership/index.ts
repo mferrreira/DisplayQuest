@@ -46,8 +46,12 @@ export class ProjectMembershipModule {
   }
 }
 
-export function createProjectMembershipModule() {
-  const gateway = createProjectMembershipGateway()
+export interface ProjectMembershipModuleFactoryOptions {
+  gateway?: PrismaProjectMembershipGateway
+}
+
+export function createProjectMembershipModule(options: ProjectMembershipModuleFactoryOptions = {}) {
+  const gateway = options.gateway ?? createProjectMembershipGateway()
 
   return new ProjectMembershipModule(
     new ListProjectMembersUseCase(gateway),

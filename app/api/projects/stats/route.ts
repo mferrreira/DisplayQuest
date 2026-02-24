@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server"
 import { ensurePermission, requireApiActor } from "@/lib/auth/api-guard"
-import { createReportingModule } from "@/backend/modules/reporting"
-
-const reportingModule = createReportingModule()
-
+import { getBackendComposition } from "@/backend/composition/root"
+const { reporting: reportingModule } = getBackendComposition()
 export async function GET() {
   try {
     const auth = await requireApiActor()

@@ -16,7 +16,7 @@ sleep 10
 
 # Run database migrations
 echo "🗄️ Running database migrations..."
-docker-compose exec app npx prisma db push
+docker-compose exec app npx prisma migrate deploy
 
 # Wait for app to be ready
 echo "⏳ Waiting for application to be ready..."

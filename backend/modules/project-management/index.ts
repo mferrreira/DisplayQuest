@@ -6,7 +6,12 @@ import { CreateProjectUseCase } from "@/backend/modules/project-management/appli
 import { UpdateProjectUseCase } from "@/backend/modules/project-management/application/use-cases/update-project.use-case"
 import { DeleteProjectUseCase } from "@/backend/modules/project-management/application/use-cases/delete-project.use-case"
 import { GetProjectVolunteersUseCase } from "@/backend/modules/project-management/application/use-cases/get-project-volunteers.use-case"
-import { createProjectManagementGateway } from "@/backend/modules/project-management/infrastructure/project-management.gateway"
+import type { ProjectManagementGateway } from "@/backend/modules/project-management/application/ports/project-management.gateway"
+import {
+  createProjectManagementGateway,
+  type ProjectManagementGatewayDependencies,
+} from "@/backend/modules/project-management/infrastructure/project-management.gateway"
+import { createIdentityAccessModule } from "@/backend/modules/identity-access"
 
 type UseCaseExecute<T> = T extends { execute: (...args: infer A) => infer R } ? (...args: A) => R : never
 
@@ -41,8 +46,16 @@ export class ProjectManagementModule {
   }
 }
 
-export function createProjectManagementModule() {
-  const gateway = createProjectManagementGateway()
+export interface ProjectManagementModuleFactoryOptions {
+  gateway?: ProjectManagementGateway
+  gatewayDependencies?: Partial<ProjectManagementGatewayDependencies>
+}
+
+export function createProjectManagementModule(options: ProjectManagementModuleFactoryOptions = {}) {
+  const gateway = options.gateway ?? createProjectManagementGateway({
+    identityAccess: createIdentityAccessModule(),
+    ...options.gatewayDependencies,
+  })
   return new ProjectManagementModule(
     new ListProjectsForActorUseCase(gateway),
     new GetProjectByIdUseCase(gateway),

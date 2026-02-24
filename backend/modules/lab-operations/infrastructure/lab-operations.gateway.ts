@@ -1,5 +1,5 @@
-import { createNotificationsModule, type NotificationsModule } from "@/backend/modules/notifications"
-import { createIdentityAccessModule, type IdentityAccessModule } from "@/backend/modules/identity-access"
+import type { NotificationsModule } from "@/backend/modules/notifications"
+import type { IdentityAccessModule } from "@/backend/modules/identity-access"
 import { Issue } from "@/backend/models/Issue"
 import { LabEvent } from "@/backend/models/LabEvent"
 import { LaboratorySchedule } from "@/backend/models/LaboratorySchedule"
@@ -456,17 +456,32 @@ export class DefaultLabOperationsGateway implements LabOperationsGateway {
   }
 }
 
-export function createLabOperationsGateway() {
-  const userRepository = new UserRepository()
+export interface LabOperationsGatewayDependencies {
+  issueRepository: IssueRepository
+  notificationsModule: NotificationsModule
+  identityAccess: IdentityAccessModule
+  userRepository: UserRepository
+  labEventRepository: LabEventRepository
+  laboratoryScheduleRepository: LaboratoryScheduleRepository
+  labResponsibilityRepository: LabResponsibilityRepository
+  userScheduleRepository: UserScheduleRepository
+}
+
+export function createLabOperationsGateway(
+  dependencies: Partial<LabOperationsGatewayDependencies> = {},
+) {
+  if (!dependencies.notificationsModule || !dependencies.identityAccess) {
+    throw new Error("LabOperationsGateway requer notificationsModule e identityAccess")
+  }
 
   return new DefaultLabOperationsGateway(
-    new IssueRepository(),
-    createNotificationsModule(),
-    createIdentityAccessModule(),
-    userRepository,
-    new LabEventRepository(),
-    new LaboratoryScheduleRepository(),
-    new LabResponsibilityRepository(),
-    new UserScheduleRepository(),
+    dependencies.issueRepository ?? new IssueRepository(),
+    dependencies.notificationsModule,
+    dependencies.identityAccess,
+    dependencies.userRepository ?? new UserRepository(),
+    dependencies.labEventRepository ?? new LabEventRepository(),
+    dependencies.laboratoryScheduleRepository ?? new LaboratoryScheduleRepository(),
+    dependencies.labResponsibilityRepository ?? new LabResponsibilityRepository(),
+    dependencies.userScheduleRepository ?? new UserScheduleRepository(),
   )
 }

@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { ImageProcessor } from "@/lib/utils/image-processor"
 import { requireApiActor } from "@/lib/auth/api-guard"
-import { createUserManagementModule } from "@/backend/modules/user-management"
-
-const userManagementModule = createUserManagementModule()
-
+import { getBackendComposition } from "@/backend/composition/root"
+const { userManagement: userManagementModule } = getBackendComposition()
 export async function POST(request: NextRequest) {
   try {
     const auth = await requireApiActor()

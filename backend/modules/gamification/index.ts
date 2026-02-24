@@ -74,8 +74,12 @@ export class GamificationModule {
   }
 }
 
-export function createGamificationModule() {
-  const gateway = createGamificationGateway()
+export interface GamificationModuleFactoryOptions {
+  gateway?: PrismaGamificationGateway
+}
+
+export function createGamificationModule(options: GamificationModuleFactoryOptions = {}) {
+  const gateway = options.gateway ?? createGamificationGateway()
   return new GamificationModule(
     new WorkSessionProgressionEngine(gateway),
     new TaskCompletionProgressionEngine(gateway),

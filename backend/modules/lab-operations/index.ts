@@ -1,5 +1,10 @@
 import type { LabOperationsGateway } from "@/backend/modules/lab-operations/application/ports/lab-operations.gateway"
-import { createLabOperationsGateway } from "@/backend/modules/lab-operations/infrastructure/lab-operations.gateway"
+import {
+  createLabOperationsGateway,
+  type LabOperationsGatewayDependencies,
+} from "@/backend/modules/lab-operations/infrastructure/lab-operations.gateway"
+import { createNotificationsModule } from "@/backend/modules/notifications"
+import { createIdentityAccessModule } from "@/backend/modules/identity-access"
 
 type GatewayCall<T> = T extends (...args: infer A) => infer R ? (...args: A) => R : never
 
@@ -65,6 +70,17 @@ export class LabOperationsModule {
   }
 }
 
-export function createLabOperationsModule() {
-  return new LabOperationsModule(createLabOperationsGateway())
+export interface LabOperationsModuleFactoryOptions {
+  gateway?: LabOperationsGateway
+  gatewayDependencies?: Partial<LabOperationsGatewayDependencies>
+}
+
+export function createLabOperationsModule(options: LabOperationsModuleFactoryOptions = {}) {
+  const gateway = options.gateway ?? createLabOperationsGateway({
+    notificationsModule: createNotificationsModule(),
+    identityAccess: createIdentityAccessModule(),
+    ...options.gatewayDependencies,
+  })
+
+  return new LabOperationsModule(gateway)
 }

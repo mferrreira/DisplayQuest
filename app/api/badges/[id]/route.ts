@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server"
-import { createGamificationModule } from "@/backend/modules/gamification"
 import { ensurePermission, requireApiActor } from "@/lib/auth/api-guard"
+import { getBackendComposition } from "@/backend/composition/root"
 
-const gamificationModule = createGamificationModule()
-
+const { gamification: gamificationModule } = getBackendComposition()
 export async function GET(_request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const params = await context.params

@@ -2,9 +2,8 @@ import { Task } from "@/backend/models/Task"
 import { TaskRepository } from "@/backend/repositories/TaskRepository"
 import { UserRepository } from "@/backend/repositories/UserRepository"
 import { ProjectRepository } from "@/backend/repositories/ProjectRepository"
-import { createNotificationsModule, type NotificationsModule } from "@/backend/modules/notifications"
-import { createIdentityAccessModule, type IdentityAccessModule } from "@/backend/modules/identity-access"
-import { createTaskProgressEvents } from "@/backend/modules/task-management/infrastructure/gamification-task-progress.events"
+import type { NotificationsModule } from "@/backend/modules/notifications"
+import type { IdentityAccessModule } from "@/backend/modules/identity-access"
 import type { TaskProgressEvents } from "@/backend/modules/task-management/application/ports/task-progress.events"
 import type {
   ApproveTaskCommand,
@@ -404,13 +403,28 @@ export class TaskServiceGateway implements TaskManagementGateway {
   }
 }
 
-export function createTaskManagementGateway() {
+export interface TaskManagementGatewayDependencies {
+  taskRepository: TaskRepository
+  userRepository: UserRepository
+  projectRepository: ProjectRepository
+  notificationsModule: NotificationsModule
+  identityAccess: IdentityAccessModule
+  taskProgressEvents: TaskProgressEvents
+}
+
+export function createTaskManagementGateway(
+  dependencies: Partial<TaskManagementGatewayDependencies> = {},
+) {
+  if (!dependencies.notificationsModule || !dependencies.identityAccess || !dependencies.taskProgressEvents) {
+    throw new Error("TaskManagementGateway requer notificationsModule, identityAccess e taskProgressEvents")
+  }
+
   return new TaskServiceGateway(
-    new TaskRepository(),
-    new UserRepository(),
-    new ProjectRepository(),
-    createNotificationsModule(),
-    createIdentityAccessModule(),
-    createTaskProgressEvents(),
+    dependencies.taskRepository ?? new TaskRepository(),
+    dependencies.userRepository ?? new UserRepository(),
+    dependencies.projectRepository ?? new ProjectRepository(),
+    dependencies.notificationsModule,
+    dependencies.identityAccess,
+    dependencies.taskProgressEvents,
   )
 }
