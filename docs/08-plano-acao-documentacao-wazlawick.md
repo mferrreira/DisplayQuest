@@ -4,7 +4,7 @@
 
 Este documento e um guia operacional para produzir a documentacao formal do sistema `DisplayQuest` segundo uma estrutura inspirada na abordagem de Raul Wazlawick para Analise e Projeto Orientado a Objetos.
 
-Ele existe para permitir que qualquer mantenedor ou outra LLM:
+Ele existe para permitir que qualquer mantenedor:
 
 - entenda rapidamente o escopo da documentacao
 - saiba quais artefatos devem ser escritos
@@ -107,7 +107,7 @@ A proposta foi baseada na leitura dos seguintes pontos do repositorio:
 
 ### 5.1 Estrutura proposta dos arquivos
 
-Sugestao de organizacao em `docs/wazlawick/`:
+Sugestao de organizacao em `docs/APOO/`:
 
 1. `00-guia-de-leitura.md`
 2. `01-sumario-executivo.md`
@@ -280,7 +280,7 @@ Os identificadores abaixo sao provisorios e podem ser refinados durante a escrit
 - `UC-46` Consultar notificacoes. Prioridade: baixa.
 - `UC-47` Marcar notificacoes como lidas. Prioridade: baixa.
 
-## 9. Casos de uso candidatos a expansao completa na primeira onda
+## 9. Casos de uso candidatos a expansao completa na etapa inicial
 
 Se a documentacao for feita por etapas, estes devem vir primeiro:
 
@@ -343,7 +343,7 @@ Para cada secao, usar sempre esta ordem de verificacao:
 
 Nunca inventar fluxo apenas com base na interface. Confirmar no backend quando houver duvida sobre permissao, estado ou persistencia.
 
-## 13. Forma de trabalho recomendada para outra LLM
+## 13. Forma de trabalho recomendada para continuidade da escrita
 
 ### 13.1 Metodo por iteracoes
 
@@ -395,15 +395,15 @@ Status permitidos:
 
 | Dominio | Status | Observacoes |
 | --- | --- | --- |
-| Acesso e usuarios | em andamento | Catalogo inicial e requisitos criados |
-| Projetos e membros | em andamento | Catalogo inicial e requisitos criados |
-| Tarefas | em andamento | Catalogo inicial e requisitos criados; dominio mais critico e transversal |
-| Execucao de trabalho | em andamento | Catalogo inicial e requisitos criados |
-| Relatorios | em andamento | Catalogo inicial e requisitos criados |
-| Operacoes do laboratorio | em andamento | Catalogo inicial e requisitos criados |
-| Gamificacao | em andamento | Catalogo inicial e requisitos criados |
-| Loja e compras | em andamento | Catalogo inicial e requisitos criados |
-| Notificacoes | em andamento | Catalogo inicial e requisitos criados |
+| Acesso e usuarios | concluido | Escopo principal consolidado nos artefatos da pasta `docs/APOO/` |
+| Projetos e membros | concluido | Escopo principal consolidado nos artefatos da pasta `docs/APOO/` |
+| Tarefas | concluido | Escopo principal consolidado; segue como dominio mais critico e transversal |
+| Execucao de trabalho | concluido | Escopo principal consolidado nos artefatos da pasta `docs/APOO/` |
+| Relatorios | concluido | Escopo principal consolidado nos artefatos da pasta `docs/APOO/` |
+| Operacoes do laboratorio | concluido | Escopo principal consolidado nos artefatos da pasta `docs/APOO/` |
+| Gamificacao | concluido | Escopo principal consolidado nos artefatos da pasta `docs/APOO/` |
+| Loja e compras | concluido | Escopo principal consolidado nos artefatos da pasta `docs/APOO/` |
+| Notificacoes | concluido | Escopo principal consolidado nos artefatos da pasta `docs/APOO/` |
 
 ## 15. Fontes externas consultadas para alinhar o formato
 

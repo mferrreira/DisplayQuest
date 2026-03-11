@@ -2,7 +2,7 @@
 
 ## 1. Convencoes
 
-- Este documento expande apenas os casos de uso mais impactantes da primeira onda.
+- Este documento detalha os casos de uso considerados mais relevantes para a compreensao do sistema.
 - Os fluxos foram escritos com base no comportamento observado na codebase atual.
 - Quando houver diferenca entre interface e backend, o backend foi tratado como fonte de verdade.
 - Numeracao adotada:
@@ -488,10 +488,10 @@
 13x.1. O sistema registra o erro.
 13x.2. A sessao permanece concluida, pois a falha nao desfaz a finalizacao.
 
-## 13. Observacoes desta primeira onda
+## 13. Observacoes sobre esta versao
 
-- Esta etapa expandiu os casos mais centrais para acesso, projeto, tarefas e sessao de trabalho.
-- A lista prioritaria inicial foi concluida nesta versao do documento.
+- Esta versao expandiu os casos mais centrais para acesso, projeto, tarefas e sessao de trabalho.
+- A lista prioritaria definida para este documento foi concluida.
 - Os proximos documentos complementares mais importantes sao:
   - consolidacao de regras de negocio
   - maquinas de estado

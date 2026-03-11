@@ -1,8 +1,8 @@
 # Manual do Usuario
 
-## Perfis de usuario (visao pratica)
+## Perfis de usuario
 
-Perfis usados no sistema:
+O sistema trabalha com os seguintes perfis:
 
 - `COORDENADOR`
 - `GERENTE`
@@ -12,7 +12,7 @@ Perfis usados no sistema:
 - `COLABORADOR`
 - `VOLUNTARIO`
 
-Obs.: a permissao final depende das regras RBAC configuradas no backend.
+As permissoes efetivas dependem das regras aplicadas no backend.
 
 ## Acesso ao sistema
 
@@ -21,7 +21,7 @@ Obs.: a permissao final depende das regras RBAC configuradas no backend.
 1. Acesse `/register`
 2. Informe nome, email e senha
 3. A conta sera criada com status `pending`
-4. Aguarde aprovacao de coordenacao/gerencia
+4. Aguarde a aprovacao da coordenacao ou da gerencia
 
 ### Login
 
@@ -41,7 +41,7 @@ Obs.: a permissao final depende das regras RBAC configuradas no backend.
 
 ## Projetos
 
-### O que e possivel fazer
+### O que pode ser feito
 
 - visualizar projetos acessiveis
 - ver membros e detalhes
@@ -55,7 +55,7 @@ Obs.: a permissao final depende das regras RBAC configuradas no backend.
 
 ## Tarefas (Kanban)
 
-## Tipos de task (visao do usuario)
+### Tipos de task
 
 - `public`: visivel no escopo (projeto/laboratorio) e com progresso individual
 - `delegated`: visivel no projeto, mas manipulacao restrita a atribuídos
@@ -92,15 +92,15 @@ Para usuarios com permissao:
 ## Loja e gamificacao
 
 - tarefas concluidas geram pontos (conforme regras)
-- badges podem ser atribuuidos automaticamente/manualmente (conforme fluxo)
+- badges podem ser atribuidos automaticamente ou manualmente, conforme o fluxo adotado
 - pontos podem ser usados na loja para resgates
 
 ## Relatorios semanais
 
-- relatorio de usuario e visualizado em modal com exportacao
-- relatorio de projeto segue fluxo semelhante (visualizacao + exportacao)
+- relatorio de usuario pode ser visualizado em modal e exportado
+- relatorio de projeto segue fluxo semelhante
 
-## Problemas comuns (FAQ rapido)
+## Problemas comuns
 
 ### "Nao consigo entrar"
 
