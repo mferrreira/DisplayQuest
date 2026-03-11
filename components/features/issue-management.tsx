@@ -279,12 +279,12 @@ export function IssueManagement({ className }: IssueManagementProps) {
                         <div className="flex items-center space-x-4 text-sm text-muted-foreground">
                           <div className="flex items-center space-x-1">
                             <User className="h-4 w-4" />
-                            <span>Reportado por: {issue.reporter?.name || issue.reporterId}</span>
+                            <span>Reportado por: {issue.reporter?.name}</span>
                           </div>
                           {issue.assigneeId && (
                             <div className="flex items-center space-x-1">
                               <User className="h-4 w-4" />
-                              <span>Atribuído a: {issue.assignee?.name || issue.assigneeId}</span>
+                              <span>Atribuído a: {issue.assignee?.name}</span>
                             </div>
                           )}
                           <div className="flex items-center space-x-1">

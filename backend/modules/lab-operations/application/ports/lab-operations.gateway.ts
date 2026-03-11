@@ -7,6 +7,7 @@ import type {
   CreateLabEventCommand,
   CreateLaboratoryScheduleCommand,
   CreateUserScheduleCommand,
+  DeleteLabEventCommand,
   DeleteUserScheduleCommand,
   LabIssueQuery,
   ListUserSchedulesQuery,
@@ -31,6 +32,7 @@ export interface LabOperationsGateway {
 
   listLabEventsByDate(date: Date): Promise<LabEvent[]>
   createLabEvent(command: CreateLabEventCommand): Promise<LabEvent>
+  deleteLabEvent(command: DeleteLabEventCommand): Promise<void>
 
   listLaboratorySchedules(): Promise<LaboratorySchedule[]>
   createLaboratorySchedule(command: CreateLaboratoryScheduleCommand): Promise<LaboratorySchedule>

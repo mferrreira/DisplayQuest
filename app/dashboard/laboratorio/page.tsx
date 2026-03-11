@@ -6,20 +6,19 @@ import { useAuth } from "@/contexts/auth-context"
 import { useResponsibility } from "@/contexts/responsibility-context"
 import { useDailyLogs } from "@/hooks/use-daily-logs"
 import { useLaboratorySchedule } from "@/contexts/laboratory-schedule-context"
-import { useLabEvents } from "@/contexts/lab-events-context";
-import { useIssues } from "@/contexts/issue-context";
+import { useLabEvents } from "@/contexts/lab-events-context"
+import { useIssues } from "@/contexts/issue-context"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Calendar } from "@/components/ui/calendar"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Loader2, Clock, Play, Square, AlertCircle, FileText, Bug, Plus, Calendar as CalendarIcon } from "lucide-react"
+import { Loader2, Clock, Play, Square, AlertCircle, FileText, Plus, Calendar as CalendarIcon } from "lucide-react"
 import { IssueManagement } from "@/components/features/issue-management"
 import { IssueForm } from "@/components/forms/issue-form"
-import { format, parseISO, startOfMonth, endOfMonth, isWithinInterval, isSameDay } from "date-fns"
+import { format, startOfMonth, endOfMonth, isSameDay } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import DayViewCalendar from "@/components/ui/day-view-calendar"
 import { Input } from "@/components/ui/input"
@@ -27,6 +26,17 @@ import { LaboratorySchedule } from "@/components/features/laboratory-schedule"
 import { hasAccess } from "@/lib/utils/utils"
 import { useUser } from "@/contexts/user-context"
 import { ScheduleGrid } from "@/components/admin/ScheduleGrid"
+import type { UserRole } from "@/contexts/types"
+
+const ROLE_PRIORITY: Record<UserRole, number> = {
+  GERENTE: 5,
+  COORDENADOR: 4,
+  LABORATORISTA: 3,
+  GERENTE_PROJETO: 2,
+  PESQUISADOR: 2,
+  COLABORADOR: 1,
+  VOLUNTARIO: 1,
+}
 
 export default function LabResponsibilityPage() {
   const { user, loading: authLoading } = useAuth()
@@ -44,10 +54,10 @@ export default function LabResponsibilityPage() {
     updateNotes,
   } = useResponsibility()
 
-  const { logs: dailyLogs, fetchAllLogs, fetchLogs } = useDailyLogs()
-  const { schedules: labSchedules, getSchedulesByDay } = useLaboratorySchedule()
-  const { events: labEvents, fetchEvents, createEvent, loading: eventsLoading, error: eventsError } = useLabEvents();
-  const { issues, loading: issuesLoading, error: issuesError } = useIssues();
+  const { fetchAllLogs, fetchLogs } = useDailyLogs()
+  const { schedules: labSchedules } = useLaboratorySchedule()
+  const { events: labEvents, fetchEvents, createEvent, deleteEvent } = useLabEvents()
+  const { error: issuesError } = useIssues()
   const canAddEvents = hasAccess(user?.roles || [], "VIEW_ALL_DATA")
 
   const [date, setDate] = useState<Date | null>(null)
@@ -59,9 +69,23 @@ export default function LabResponsibilityPage() {
   const [selectedResponsibility, setSelectedResponsibility] = useState<string | null>(null)
   const [showEventDialog, setShowEventDialog] = useState(false)
   const [eventDialogTime, setEventDialogTime] = useState<string>("")
-  const [eventDialogType, setEventDialogType] = useState<"log"|"responsibility">("log")
   const [eventDialogNote, setEventDialogNote] = useState("")
-  const [editingEvent, setEditingEvent] = useState<any|null>(null)
+
+  const getHighestRolePriority = (roles: UserRole[] = []) =>
+    roles.reduce((highest, role) => Math.max(highest, ROLE_PRIORITY[role] ?? 0), 0)
+
+  const canManageTargetEvent = (targetUserId?: number) => {
+    if (!user || !targetUserId) return false
+    if (user.id === targetUserId) return true
+
+    const canManageOthers = user.roles.some((role) => ["GERENTE", "COORDENADOR", "LABORATORISTA"].includes(role))
+    if (!canManageOthers) return false
+
+    const targetUser = labUsers.find((labUser) => labUser.id === targetUserId)
+    if (!targetUser) return false
+
+    return getHighestRolePriority(user.roles) > getHighestRolePriority(targetUser.roles)
+  }
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -177,22 +201,6 @@ export default function LabResponsibilityPage() {
     return formatDuration(durationInSeconds)
   }
 
-  // Função para destacar dias no calendário com responsabilidades ou daily log
-  const isDayWithResponsibility = (day: Date) => {
-    // Guard against undefined/null day
-    if (!day || !(day instanceof Date)) {
-      return { hasResponsibility: false, hasDailyLog: false }
-    }
-    
-    const hasResponsibility = responsibilities.some((resp) => {
-      const start = parseISO(resp.startTime)
-      const end = resp.endTime ? parseISO(resp.endTime) : new Date()
-      return isWithinInterval(day, { start, end }) || isSameDay(day, start) || (resp.endTime && isSameDay(day, end))
-    })
-    const hasDailyLog = dailyLogs.some((log) => isSameDay(day, new Date(log.date)))
-    return { hasResponsibility, hasDailyLog }
-  }
-
   // Memoize formatted active responsibility start time
   const formattedActiveStartTime = useMemo(() =>
     activeResponsibility ? format(new Date(activeResponsibility.startTime), "dd/MM/yyyy HH:mm") : ""
@@ -217,31 +225,14 @@ export default function LabResponsibilityPage() {
         return eventDate.toDateString() === currentDate.toDateString();
       })
       .map(event => ({
+        id: event.id,
         time: new Date(event.date).toTimeString().slice(0, 5),
         note: event.note,
         type: "event" as const,
+        userId: event.userId,
         userName: event.userName,
       }));
   }, [labEvents, date]);
-
-  // Handle add event
-  const handleAddEvent = async (time: string, note: string) => {
-    if (!user) return
-    const eventDate = new Date(date || new Date())
-    const [h, m] = time.split(":").map(Number)
-    eventDate.setHours(h, m, 0, 0)
-    await createEvent({ date: eventDate.toISOString(), note })
-    await fetchEvents(eventDate)
-    setShowEventDialog(false)
-  }
-
-  // const handleEditEvent = (event: DayViewEvent) => {
-  //   setEventDialogTime(event.time)
-  //   setEventDialogType(event.type || "log")
-  //   setEventDialogNote(event.note || "")
-  //   setEditingEvent(event)
-  //   setShowEventDialog(true)
-  // }
 
   const handleSaveEvent = async () => {
     if (!user) return
@@ -250,7 +241,28 @@ export default function LabResponsibilityPage() {
     eventDate.setHours(h, m, 0, 0)
     await createEvent({ date: eventDate.toISOString(), note: eventDialogNote })
     await fetchEvents(eventDate)
+    setEventDialogNote("")
     setShowEventDialog(false)
+  }
+
+  const openNewEventDialog = (time?: string) => {
+    const selectedDate = date || new Date()
+    const defaultTime = time ?? (isSameDay(selectedDate, new Date()) ? format(new Date(), "HH:mm") : "08:00")
+    setEventDialogTime(defaultTime)
+    setEventDialogNote("")
+    setShowEventDialog(true)
+  }
+
+  const handleDeleteEvent = async (event: { id?: number; userId?: number; note?: string }) => {
+    if (!event.id || !canManageTargetEvent(event.userId)) return
+
+    const confirmed = window.confirm(`Remover o evento "${event.note || "sem descricao"}"?`)
+    if (!confirmed) return
+
+    await deleteEvent(event.id)
+    if (date) {
+      await fetchEvents(date)
+    }
   }
 
   const handleDateChange = (newDate: Date) => {
@@ -258,8 +270,7 @@ export default function LabResponsibilityPage() {
   }
 
   const getTabsGridCols = () => {
-    const canManageLab = hasAccess(user?.roles || [], 'MANAGE_LABORATORY')
-    const totalTabs = 2 + (canManageLab ? 1 : 0)
+    const totalTabs = 3
     
     switch (totalTabs) {
       case 2:
@@ -294,9 +305,7 @@ export default function LabResponsibilityPage() {
         <Tabs defaultValue="schedule" className="space-y-6">
           <TabsList className={`grid w-full ${getTabsGridCols()}`}>
             <TabsTrigger value="schedule">Agenda</TabsTrigger>
-            {hasAccess(user?.roles || [], 'MANAGE_LABORATORY') && (
-              <TabsTrigger value="responsibility">Responsabilidade</TabsTrigger>
-            )}
+            <TabsTrigger value="responsibility">Responsabilidade</TabsTrigger>
             <TabsTrigger value="issues">Reclamações</TabsTrigger>
           </TabsList>
 
@@ -317,11 +326,14 @@ export default function LabResponsibilityPage() {
                     date={date || new Date()}
                     events={events}
                     labSchedules={labSchedules}
+                    canAddEvent={canAddEvents}
+                    onAddEventFromHeader={() => openNewEventDialog()}
                     onAddEvent={(slot) => {
                       if (!canAddEvents) return
-                      setEventDialogTime(slot)
-                      setShowEventDialog(true)
+                      openNewEventDialog(slot)
                     }}
+                    onDeleteEvent={handleDeleteEvent}
+                    canDeleteEvent={(event) => canManageTargetEvent(event.userId)}
                     onDateChange={handleDateChange}
                   />
                 </CardContent>
@@ -357,8 +369,7 @@ export default function LabResponsibilityPage() {
             )}
           </TabsContent>
 
-          {hasAccess(user?.roles || [], 'MANAGE_LABORATORY') && (
-            <TabsContent value="responsibility" className="space-y-6">
+          <TabsContent value="responsibility" className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Coluna 1: Status atual e controles */}
           <div className="space-y-4">
@@ -465,10 +476,13 @@ export default function LabResponsibilityPage() {
                   date={date || new Date()}
                   events={events}
                   labSchedules={labSchedules}
+                  canAddEvent={canAddEvents}
+                  onAddEventFromHeader={() => openNewEventDialog()}
                   onAddEvent={(slot) => {
-                    setEventDialogTime(slot)
-                    setShowEventDialog(true)
+                    openNewEventDialog(slot)
                   }}
+                  onDeleteEvent={handleDeleteEvent}
+                  canDeleteEvent={(event) => canManageTargetEvent(event.userId)}
                   onDateChange={handleDateChange}
                 />
               </CardContent>
@@ -542,8 +556,7 @@ export default function LabResponsibilityPage() {
             </CardContent>
           </Card>
             </div>
-            </TabsContent>
-          )}
+          </TabsContent>
 
           <TabsContent value="issues" className="space-y-6">
             <div className="flex justify-between items-center">
@@ -601,67 +614,36 @@ export default function LabResponsibilityPage() {
           </DialogContent>
         </Dialog>
 
-        {/* Modal para add/editar evento */}
         <Dialog open={showEventDialog} onOpenChange={setShowEventDialog}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>{editingEvent ? "Editar Evento" : "Adicionar Evento"}</DialogTitle>
+              <DialogTitle>Adicionar Evento</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Horário</label>
+                <label className="mb-1 block text-sm font-medium text-gray-700">Horário</label>
                 <Input type="time" value={eventDialogTime} onChange={e => setEventDialogTime(e.target.value)} className="w-32" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nota</label>
-                <Input
+                <label className="mb-1 block text-sm font-medium text-gray-700">Descrição</label>
+                <Textarea
                   value={eventDialogNote}
                   onChange={e => setEventDialogNote(e.target.value)}
-                  placeholder="Digite uma nota (opcional)"
+                  placeholder="Descreva o evento"
+                  rows={4}
                 />
               </div>
             </div>
             <DialogFooter>
-              <button
-                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-                onClick={handleSaveEvent}
-              >
-                Salvar
-              </button>
-              <button
-                className="ml-2 px-4 py-2 rounded border"
-                onClick={() => setShowEventDialog(false)}
-              >
+              <Button variant="outline" onClick={() => setShowEventDialog(false)}>
                 Cancelar
-              </button>
+              </Button>
+              <Button onClick={handleSaveEvent} disabled={!eventDialogNote.trim() || !eventDialogTime}>
+                Adicionar
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
-        {showEventDialog && (
-          <Dialog open={showEventDialog} onOpenChange={setShowEventDialog}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Adicionar Evento Público</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <Input
-                  type="time"
-                  value={eventDialogTime}
-                  onChange={e => setEventDialogTime(e.target.value)}
-                />
-                <Textarea
-                  placeholder="Descrição do evento"
-                  value={eventDialogNote}
-                  onChange={e => setEventDialogNote(e.target.value)}
-                />
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setShowEventDialog(false)}>Cancelar</Button>
-                <Button onClick={() => handleAddEvent(eventDialogTime, eventDialogNote)} disabled={!eventDialogNote.trim()}>Adicionar</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        )}
       </main>
     </div>
   )

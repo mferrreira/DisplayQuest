@@ -16,6 +16,7 @@ interface LabEventsContextType {
   error: string | null;
   fetchEvents: (date: Date) => Promise<void>;
   createEvent: (event: { date: string; note: string }) => Promise<LabEvent>;
+  deleteEvent: (eventId: number) => Promise<void>;
 }
 
 const LabEventsContext = createContext<LabEventsContextType | undefined>(undefined);
@@ -57,8 +58,22 @@ export function LabEventsProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const deleteEvent = useCallback(async (eventId: number) => {
+    setLoading(true);
+    setError(null);
+    try {
+      await LabEventsAPI.deleteEvent(eventId);
+      setEvents((prev) => prev.filter((event) => event.id !== eventId));
+    } catch (err) {
+      setError("Erro ao remover evento do laboratório");
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   return (
-    <LabEventsContext.Provider value={{ events, loading, error, fetchEvents, createEvent }}>
+    <LabEventsContext.Provider value={{ events, loading, error, fetchEvents, createEvent, deleteEvent }}>
       {children}
     </LabEventsContext.Provider>
   );

@@ -484,6 +484,10 @@ export const LabEventsAPI = {
       method: "POST",
       body: JSON.stringify(event),
     }),
+  deleteEvent: (id: number) =>
+    fetchAPI<{ success: boolean }>(`/api/lab-events/${id}`, {
+      method: "DELETE",
+    }),
 }
 
 // API de Issues

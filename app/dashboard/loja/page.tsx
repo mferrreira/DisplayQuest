@@ -276,21 +276,22 @@ export default function StorePage() {
                       <CardTitle>{reward.name}</CardTitle>
                       <CardDescription>{reward.description}</CardDescription>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="space-y-4">
                       <div className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
                         <span className="text-lg font-bold">{reward.price}</span>
                         <span className="text-sm text-muted-foreground">pontos</span>
                       </div>
+                      <div className="flex justify-end pt-1">
+                        <Button
+                          onClick={() => handlePurchase(reward)}
+                          disabled={userPoints < reward.price}
+                          variant={userPoints >= reward.price ? "default" : "outline"}
+                          className="min-w-36 rounded-full px-5"
+                        >
+                          {userPoints >= reward.price ? "Resgatar" : "Pontos insuficientes"}
+                        </Button>
+                      </div>
                     </CardContent>
-                    <div className="flex justify-between">
-                      <Button
-                        onClick={() => handlePurchase(reward)}
-                        disabled={userPoints < reward.price}
-                        variant={userPoints >= reward.price ? "default" : "outline"}
-                      >
-                        {userPoints >= reward.price ? "Resgatar" : "Pontos insuficientes"}
-                      </Button>
-                    </div>
                   </Card>
                 ))}
               </div>

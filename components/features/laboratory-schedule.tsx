@@ -41,7 +41,10 @@ export function LaboratorySchedule() {
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Check if user can manage schedules
-  const canManage = user?.roles?.includes("COORDENADOR") || user?.roles?.includes("LABORATORISTA")
+  const canManage =
+    user?.roles?.includes("COORDENADOR") ||
+    user?.roles?.includes("GERENTE") ||
+    user?.roles?.includes("LABORATORISTA")
 
   const handleOpenDialog = (schedule?: any) => {
     if (schedule) {
@@ -126,19 +129,6 @@ export function LaboratorySchedule() {
     return DAYS_OF_WEEK.find(day => day.value === dayOfWeek)?.label || "Desconhecido"
   }
 
-  if (!canManage) {
-    return (
-      <Card>
-        <CardContent className="p-6">
-          <div className="text-center text-muted-foreground">
-            <Calendar className="h-8 w-8 mx-auto mb-2" />
-            <p>Você não tem permissão para gerenciar horários do laboratório</p>
-          </div>
-        </CardContent>
-      </Card>
-    )
-  }
-
   return (
     <>
       <Card>
@@ -153,10 +143,12 @@ export function LaboratorySchedule() {
                 Horários padrão de funcionamento do laboratório
               </CardDescription>
             </div>
-            <Button onClick={() => handleOpenDialog()}>
-              <Plus className="h-4 w-4 mr-2" />
-              Adicionar Horário
-            </Button>
+            {canManage ? (
+              <Button onClick={() => handleOpenDialog()}>
+                <Plus className="h-4 w-4 mr-2" />
+                Adicionar Horário
+              </Button>
+            ) : null}
           </div>
         </CardHeader>
         <CardContent>
@@ -181,7 +173,7 @@ export function LaboratorySchedule() {
                   <TableHead>Dia da Semana</TableHead>
                   <TableHead>Horário</TableHead>
                   <TableHead>Notas</TableHead>
-                  <TableHead>Ações</TableHead>
+                  {canManage ? <TableHead>Ações</TableHead> : null}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -205,24 +197,26 @@ export function LaboratorySchedule() {
                         <span className="text-sm text-muted-foreground">-</span>
                       )}
                     </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleOpenDialog(schedule)}
-                        >
-                          <Edit className="h-3 w-3" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => handleDelete(schedule.id)}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </TableCell>
+                    {canManage ? (
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleOpenDialog(schedule)}
+                          >
+                            <Edit className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => handleDelete(schedule.id)}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    ) : null}
                   </TableRow>
                 ))}
               </TableBody>
@@ -231,76 +225,77 @@ export function LaboratorySchedule() {
         </CardContent>
       </Card>
 
-      {/* Dialog for adding/editing schedule */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {editingSchedule ? "Editar Horário" : "Adicionar Horário"}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="dayOfWeek">Dia da Semana</Label>
-              <Select
-                value={formData.dayOfWeek.toString()}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, dayOfWeek: parseInt(value) }))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {DAYS_OF_WEEK.map((day) => (
-                    <SelectItem key={day.value} value={day.value.toString()}>
-                      {day.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
+      {canManage ? (
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                {editingSchedule ? "Editar Horário" : "Adicionar Horário"}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
               <div>
-                <Label htmlFor="startTime">Horário de Início</Label>
+                <Label htmlFor="dayOfWeek">Dia da Semana</Label>
+                <Select
+                  value={formData.dayOfWeek.toString()}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, dayOfWeek: parseInt(value) }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DAYS_OF_WEEK.map((day) => (
+                      <SelectItem key={day.value} value={day.value.toString()}>
+                        {day.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="startTime">Horário de Início</Label>
+                  <Input
+                    id="startTime"
+                    type="time"
+                    value={formData.startTime}
+                    onChange={(e) => setFormData(prev => ({ ...prev, startTime: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="endTime">Horário de Fim</Label>
+                  <Input
+                    id="endTime"
+                    type="time"
+                    value={formData.endTime}
+                    onChange={(e) => setFormData(prev => ({ ...prev, endTime: e.target.value }))}
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <Label htmlFor="notes">Notas (opcional)</Label>
                 <Input
-                  id="startTime"
-                  type="time"
-                  value={formData.startTime}
-                  onChange={(e) => setFormData(prev => ({ ...prev, startTime: e.target.value }))}
+                  id="notes"
+                  placeholder="Ex: Horário de funcionamento normal"
+                  value={formData.notes}
+                  onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
                 />
               </div>
-              <div>
-                <Label htmlFor="endTime">Horário de Fim</Label>
-                <Input
-                  id="endTime"
-                  type="time"
-                  value={formData.endTime}
-                  onChange={(e) => setFormData(prev => ({ ...prev, endTime: e.target.value }))}
-                />
-              </div>
             </div>
-            
-            <div>
-              <Label htmlFor="notes">Notas (opcional)</Label>
-              <Input
-                id="notes"
-                placeholder="Ex: Horário de funcionamento normal"
-                value={formData.notes}
-                onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSubmit} disabled={isSubmitting}>
-              {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              {editingSchedule ? "Atualizar" : "Criar"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleSubmit} disabled={isSubmitting}>
+                {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                {editingSchedule ? "Atualizar" : "Criar"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      ) : null}
     </>
   )
 } 

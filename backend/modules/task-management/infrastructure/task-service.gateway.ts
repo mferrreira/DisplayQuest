@@ -505,13 +505,18 @@ export class TaskServiceGateway implements TaskManagementGateway {
       }
     }
 
+    const normalizedReason = command.reason?.trim()
+
     task.status = "adjust"
     task.completed = false
     task.completedAt = null
+    if (normalizedReason) {
+      task.description = this.appendFixInstruction(task.description, normalizedReason)
+    }
     const updatedTask = await this.taskRepository.update(command.taskId, task)
 
     if (task.assignedTo) {
-      await this.publishTaskRejected(command.taskId, task.title, task.assignedTo, command.reason)
+      await this.publishTaskRejected(command.taskId, task.title, task.assignedTo, normalizedReason)
     }
 
     return updatedTask
@@ -564,6 +569,15 @@ export class TaskServiceGateway implements TaskManagementGateway {
     } catch (error) {
       console.error("Erro ao publicar notificação TASK_REJECTED:", error)
     }
+  }
+
+  private appendFixInstruction(description: string | null | undefined, reason: string) {
+    const today = new Intl.DateTimeFormat("pt-BR", {
+      timeZone: "America/Sao_Paulo",
+    }).format(new Date())
+
+    const fixLine = `FIX (${today}): ${reason}`
+    return description?.trim() ? `${description.trim()}\n\n${fixLine}` : fixLine
   }
 
   private calculateLatePenalty(task: Task, completionDate: Date): number {

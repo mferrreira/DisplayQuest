@@ -14,6 +14,12 @@ export interface CreateLabEventCommand {
   note: string
 }
 
+export interface DeleteLabEventCommand {
+  eventId: number
+  actorUserId: number
+  actorRoles: string[]
+}
+
 export interface CreateLaboratoryScheduleCommand {
   dayOfWeek: number
   startTime: string

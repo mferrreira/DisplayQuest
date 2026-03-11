@@ -16,6 +16,7 @@ import type {
   CreateLabEventCommand,
   CreateLaboratoryScheduleCommand,
   CreateUserScheduleCommand,
+  DeleteLabEventCommand,
   DeleteUserScheduleCommand,
   LabIssueQuery,
   ListResponsibilitiesQuery,
@@ -209,6 +210,32 @@ export class DefaultLabOperationsGateway implements LabOperationsGateway {
     return await this.labEventRepository.create(event)
   }
 
+  async deleteLabEvent(command: DeleteLabEventCommand) {
+    const event = await this.labEventRepository.findById(command.eventId)
+    if (!event) throw new Error("Evento não encontrado")
+
+    const actor = await this.userRepository.findById(command.actorUserId)
+    if (!actor) throw new Error("Usuário não encontrado")
+
+    if (!this.canManageLabEvent(actor.roles, command.actorUserId, event.userId)) {
+      throw new Error("Usuário não tem permissão para remover este evento")
+    }
+
+    if (event.userId !== command.actorUserId) {
+      const targetUser = await this.userRepository.findById(event.userId)
+      if (!targetUser) throw new Error("Usuário do evento não encontrado")
+
+      const actorPriority = this.getHighestRolePriority(actor.roles)
+      const targetPriority = this.getHighestRolePriority(targetUser.roles)
+
+      if (actorPriority <= targetPriority) {
+        throw new Error("Usuário não tem permissão para remover eventos deste perfil")
+      }
+    }
+
+    await this.labEventRepository.delete(command.eventId)
+  }
+
   async listLaboratorySchedules() {
     return await this.laboratoryScheduleRepository.findAll()
   }
@@ -272,7 +299,7 @@ export class DefaultLabOperationsGateway implements LabOperationsGateway {
     const user = await this.userRepository.findById(command.actorUserId)
     if (!user) throw new Error("Usuário não encontrado")
 
-    const canStart = this.identityAccess.hasAnyRole(user.roles, ["COORDENADOR", "GERENTE"])
+    const canStart = this.identityAccess.hasAnyRole(user.roles, ["COORDENADOR", "GERENTE", "LABORATORISTA"])
     if (!canStart) {
       throw new Error("Usuário não tem permissão para iniciar responsabilidades")
     }
@@ -342,11 +369,7 @@ export class DefaultLabOperationsGateway implements LabOperationsGateway {
       return await this.userScheduleRepository.findByUserId(query.targetUserId)
     }
 
-    if (canManageSchedules) {
-      return await this.userScheduleRepository.findAll()
-    }
-
-    return await this.userScheduleRepository.findByUserId(query.actorUserId)
+    return await this.userScheduleRepository.findAll()
   }
 
   async getUserSchedule(scheduleId: number) {
@@ -408,6 +431,25 @@ export class DefaultLabOperationsGateway implements LabOperationsGateway {
     if (!user) return false
 
     return this.identityAccess.hasAnyRole(user.roles, ["COORDENADOR", "GERENTE", "LABORATORISTA"])
+  }
+
+  private canManageLabEvent(actorRoles: string[], actorUserId: number, targetUserId: number) {
+    if (actorUserId === targetUserId) return true
+    return this.identityAccess.hasAnyRole(actorRoles as any, ["COORDENADOR", "GERENTE", "LABORATORISTA"])
+  }
+
+  private getHighestRolePriority(roles: string[]) {
+    const rolePriority: Record<string, number> = {
+      GERENTE: 5,
+      COORDENADOR: 4,
+      LABORATORISTA: 3,
+      GERENTE_PROJETO: 2,
+      PESQUISADOR: 2,
+      COLABORADOR: 1,
+      VOLUNTARIO: 1,
+    }
+
+    return roles.reduce((highest, role) => Math.max(highest, rolePriority[role] ?? 0), 0)
   }
 
   private async notifyIssueRaised(issue: Issue) {

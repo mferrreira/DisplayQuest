@@ -222,6 +222,7 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
   }, 0)
   const totalScheduledHours = totalScheduledMinutes / 60
   const requiredHours = selectedUser?.weekHours || 0
+  const activeUsers = users.filter((user) => user.status === "active")
 
   return (
     <Card>
@@ -263,6 +264,24 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
               Definir Horários
             </Button>
           )}
+        </div>
+
+        <div className="mb-4 rounded-lg border bg-muted/20 p-3">
+          <div className="mb-2 flex items-center gap-2 text-sm font-medium">
+            <Users className="h-4 w-4" />
+            Membros visiveis na grade
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {activeUsers.map((user) => {
+              const hasAnySchedule = schedules.some((schedule) => schedule.userId === user.id)
+              return (
+                <Badge key={user.id} variant={hasAnySchedule ? "secondary" : "outline"} className="gap-1">
+                  <span>{user.name}</span>
+                  {!hasAnySchedule ? <span className="text-[10px]">(sem horario)</span> : null}
+                </Badge>
+              )
+            })}
+          </div>
         </div>
 
         {/* Dialog para definir horários */}
