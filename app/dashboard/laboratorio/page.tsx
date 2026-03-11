@@ -7,6 +7,7 @@ import { useResponsibility } from "@/contexts/responsibility-context"
 import { useDailyLogs } from "@/hooks/use-daily-logs"
 import { useLaboratorySchedule } from "@/contexts/laboratory-schedule-context"
 import { useLabEvents } from "@/contexts/lab-events-context"
+import { useLabNotices } from "@/contexts/lab-notices-context"
 import { useIssues } from "@/contexts/issue-context"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -15,7 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Loader2, Clock, Play, Square, AlertCircle, FileText, Plus, Calendar as CalendarIcon } from "lucide-react"
+import { Loader2, Clock, Play, Square, AlertCircle, FileText, Plus, Calendar as CalendarIcon, Megaphone, Trash2 } from "lucide-react"
 import { IssueManagement } from "@/components/features/issue-management"
 import { IssueForm } from "@/components/forms/issue-form"
 import { format, startOfMonth, endOfMonth, isSameDay } from "date-fns"
@@ -57,6 +58,7 @@ export default function LabResponsibilityPage() {
   const { fetchAllLogs, fetchLogs } = useDailyLogs()
   const { schedules: labSchedules } = useLaboratorySchedule()
   const { events: labEvents, fetchEvents, createEvent, deleteEvent } = useLabEvents()
+  const { notices, fetchNotices, createNotice, deleteNotice } = useLabNotices()
   const { error: issuesError } = useIssues()
   const canAddEvents = hasAccess(user?.roles || [], "VIEW_ALL_DATA")
 
@@ -68,8 +70,10 @@ export default function LabResponsibilityPage() {
   const [isNotesDialogOpen, setIsNotesDialogOpen] = useState(false)
   const [selectedResponsibility, setSelectedResponsibility] = useState<string | null>(null)
   const [showEventDialog, setShowEventDialog] = useState(false)
+  const [showNoticeDialog, setShowNoticeDialog] = useState(false)
   const [eventDialogTime, setEventDialogTime] = useState<string>("")
   const [eventDialogNote, setEventDialogNote] = useState("")
+  const [noticeDialogNote, setNoticeDialogNote] = useState("")
 
   const getHighestRolePriority = (roles: UserRole[] = []) =>
     roles.reduce((highest, role) => Math.max(highest, ROLE_PRIORITY[role] ?? 0), 0)
@@ -118,6 +122,12 @@ export default function LabResponsibilityPage() {
       fetchEvents(date)
     }
   }, [date, fetchEvents])
+
+  useEffect(() => {
+    if (user) {
+      fetchNotices()
+    }
+  }, [user, fetchNotices])
 
   // Quando o mês muda, buscar responsabilidades para o novo período
   useEffect(() => {
@@ -253,6 +263,11 @@ export default function LabResponsibilityPage() {
     setShowEventDialog(true)
   }
 
+  const openNewNoticeDialog = () => {
+    setNoticeDialogNote("")
+    setShowNoticeDialog(true)
+  }
+
   const handleDeleteEvent = async (event: { id?: number; userId?: number; note?: string }) => {
     if (!event.id || !canManageTargetEvent(event.userId)) return
 
@@ -267,6 +282,21 @@ export default function LabResponsibilityPage() {
 
   const handleDateChange = (newDate: Date) => {
     setDate(newDate)
+  }
+
+  const handleSaveNotice = async () => {
+    await createNotice({ note: noticeDialogNote })
+    setNoticeDialogNote("")
+    setShowNoticeDialog(false)
+  }
+
+  const handleDeleteNotice = async (notice: { id: number; userId: number; note: string }) => {
+    if (!canManageTargetEvent(notice.userId)) return
+
+    const confirmed = window.confirm(`Remover o aviso "${notice.note}"?`)
+    if (!confirmed) return
+
+    await deleteNotice(notice.id)
   }
 
   const getTabsGridCols = () => {
@@ -462,29 +492,68 @@ export default function LabResponsibilityPage() {
             </Card>
           </div>
 
-          {/* Coluna 2: Day View Calendar */}
+          {/* Coluna 2: Quadro de Avisos */}
           <div className="md:col-span-2">
             <Card>
               <CardHeader>
-                <CardTitle>Agenda do Dia</CardTitle>
-                <CardDescription>
-                  Slots padrão e eventos do dia selecionado. Clique em "+ Adicionar evento" para registrar um log ou responsabilidade.
-                </CardDescription>
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Megaphone className="h-5 w-5" />
+                      Quadro de Avisos
+                    </CardTitle>
+                    <CardDescription>
+                      Avisos persistentes do laboratório. Todos os usuários podem publicar avisos; laboratoristas, gerentes e coordenadores podem moderar avisos de qualquer membro.
+                    </CardDescription>
+                  </div>
+                  <Button onClick={openNewNoticeDialog} size="sm" className="shrink-0">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Novo aviso
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
-                <DayViewCalendar
-                  date={date || new Date()}
-                  events={events}
-                  labSchedules={labSchedules}
-                  canAddEvent={canAddEvents}
-                  onAddEventFromHeader={() => openNewEventDialog()}
-                  onAddEvent={(slot) => {
-                    openNewEventDialog(slot)
-                  }}
-                  onDeleteEvent={handleDeleteEvent}
-                  canDeleteEvent={(event) => canManageTargetEvent(event.userId)}
-                  onDateChange={handleDateChange}
-                />
+                {notices.length === 0 ? (
+                  <div className="rounded-lg border border-dashed p-6 text-center text-muted-foreground">
+                    Nenhum aviso publicado no momento.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {notices.map((notice) => (
+                      <div key={notice.id} className="rounded-xl border bg-card p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline">
+                                {new Date(notice.createdAt).toLocaleDateString("pt-BR")}
+                              </Badge>
+                              <Badge variant="secondary">
+                                {new Date(notice.createdAt).toLocaleTimeString("pt-BR", {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </Badge>
+                              {notice.userName ? (
+                                <span className="text-sm text-muted-foreground">{notice.userName}</span>
+                              ) : null}
+                            </div>
+                            <p className="text-sm leading-6">{notice.note}</p>
+                          </div>
+                          {canManageTargetEvent(notice.userId) ? (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteNotice(notice)}
+                              className="text-muted-foreground hover:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          ) : null}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -640,6 +709,32 @@ export default function LabResponsibilityPage() {
               </Button>
               <Button onClick={handleSaveEvent} disabled={!eventDialogNote.trim() || !eventDialogTime}>
                 Adicionar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        <Dialog open={showNoticeDialog} onOpenChange={setShowNoticeDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Novo Aviso</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">Aviso</label>
+                <Textarea
+                  value={noticeDialogNote}
+                  onChange={e => setNoticeDialogNote(e.target.value)}
+                  placeholder="Escreva o aviso para o laboratório"
+                  rows={5}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowNoticeDialog(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleSaveNotice} disabled={!noticeDialogNote.trim()}>
+                Publicar aviso
               </Button>
             </DialogFooter>
           </DialogContent>

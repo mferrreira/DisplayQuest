@@ -5,26 +5,26 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
 import { 
   Trophy, 
   Target, 
   Clock, 
   Mail, 
   Calendar,
-  Star,
   ArrowLeft,
   User as UserIcon
 } from "lucide-react"
-import { User as UserType, UserBadge } from "@/contexts/types"
+import { User as UserType } from "@/contexts/types"
 import { formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale"
+import { UserBadgesCard } from "@/components/ui/user-badges"
 
 interface UserProfileViewProps {
   user: UserType
   onBack: () => void
   canEdit?: boolean
   onEdit?: () => void
+  projectNames?: string[]
 }
 
 // Helper function to safely format dates
@@ -39,7 +39,7 @@ const safeFormatDistance = (date: string | Date | null | undefined, fallback: st
   }
 }
 
-export function UserProfileView({ user, onBack, canEdit = false, onEdit }: UserProfileViewProps) {
+export function UserProfileView({ user, onBack, canEdit = false, onEdit, projectNames = [] }: UserProfileViewProps) {
   const getInitials = (name: string) => {
     return name
       .split(' ')
@@ -154,38 +154,24 @@ export function UserProfileView({ user, onBack, canEdit = false, onEdit }: UserP
             </div>
           </div>
 
-          {/* Badges */}
-          {user.badges && user.badges.length > 0 && (
-            <div>
-              <h3 className="text-sm font-medium text-gray-900 mb-3">Conquistas</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {user.badges.map((userBadge) => (
-                  <div 
-                    key={userBadge.id} 
-                    className="flex items-center space-x-3 p-3 bg-yellow-50 rounded-lg border border-yellow-200"
-                  >
-                    <div className="flex-shrink-0">
-                      <Star className="h-6 w-6 text-yellow-600" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="text-sm font-medium text-yellow-900">
-                        {userBadge.badge.name}
-                      </div>
-                      <div className="text-xs text-yellow-700 mt-1">
-                        {userBadge.badge.description}
-                      </div>
-                      <div className="text-xs text-yellow-600 mt-1">
-                        Conquistado {safeFormatDistance(userBadge.earnedAt)}
-                      </div>
-                    </div>
-                  </div>
+          <div>
+            <h3 className="mb-3 text-sm font-medium text-gray-900">Projetos</h3>
+            {projectNames.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {projectNames.map((projectName) => (
+                  <Badge key={projectName} variant="secondary">
+                    {projectName}
+                  </Badge>
                 ))}
               </div>
-            </div>
-          )}
+            ) : (
+              <p className="text-sm text-muted-foreground">Nenhum projeto vinculado no momento.</p>
+            )}
+          </div>
         </CardContent>
       </Card>
+
+      <UserBadgesCard userId={user.id} />
     </div>
   )
 }
-

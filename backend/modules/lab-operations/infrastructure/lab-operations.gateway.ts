@@ -2,11 +2,13 @@ import type { NotificationsModule } from "@/backend/modules/notifications"
 import type { IdentityAccessModule } from "@/backend/modules/identity-access"
 import { Issue } from "@/backend/models/Issue"
 import { LabEvent } from "@/backend/models/LabEvent"
+import { LabNotice } from "@/backend/models/LabNotice"
 import { LaboratorySchedule } from "@/backend/models/LaboratorySchedule"
 import { LabResponsibility } from "@/backend/models/LabResponsibility"
 import { UserSchedule } from "@/backend/models/UserSchedule"
 import { IssueRepository } from "@/backend/repositories/IssueRepository"
 import { LabEventRepository } from "@/backend/repositories/LabEventRepository"
+import { LabNoticeRepository } from "@/backend/repositories/LabNoticeRepository"
 import { LaboratoryScheduleRepository } from "@/backend/repositories/LaboratoryScheduleRepository"
 import { LabResponsibilityRepository } from "@/backend/repositories/LabResponsibilityRepository"
 import { UserScheduleRepository } from "@/backend/repositories/UserScheduleRepository"
@@ -14,9 +16,11 @@ import { UserRepository } from "@/backend/repositories/UserRepository"
 import { hasPermission } from "@/lib/auth/rbac"
 import type {
   CreateLabEventCommand,
+  CreateLabNoticeCommand,
   CreateLaboratoryScheduleCommand,
   CreateUserScheduleCommand,
   DeleteLabEventCommand,
+  DeleteLabNoticeCommand,
   DeleteUserScheduleCommand,
   LabIssueQuery,
   ListResponsibilitiesQuery,
@@ -34,6 +38,7 @@ export class DefaultLabOperationsGateway implements LabOperationsGateway {
     private readonly identityAccess: IdentityAccessModule,
     private readonly userRepository: UserRepository,
     private readonly labEventRepository: LabEventRepository,
+    private readonly labNoticeRepository: LabNoticeRepository,
     private readonly laboratoryScheduleRepository: LaboratoryScheduleRepository,
     private readonly labResponsibilityRepository: LabResponsibilityRepository,
     private readonly userScheduleRepository: UserScheduleRepository,
@@ -234,6 +239,45 @@ export class DefaultLabOperationsGateway implements LabOperationsGateway {
     }
 
     await this.labEventRepository.delete(command.eventId)
+  }
+
+  async listLabNotices() {
+    return await this.labNoticeRepository.findAll()
+  }
+
+  async createLabNotice(command: CreateLabNoticeCommand) {
+    const user = await this.userRepository.findById(command.userId)
+    if (!user) throw new Error("Usuário não encontrado")
+    if (user.status !== "active") throw new Error("Usuário não tem permissão para criar avisos")
+
+    const notice = LabNotice.create(command)
+    return await this.labNoticeRepository.create(notice)
+  }
+
+  async deleteLabNotice(command: DeleteLabNoticeCommand) {
+    const notice = await this.labNoticeRepository.findById(command.noticeId)
+    if (!notice) throw new Error("Aviso não encontrado")
+
+    const actor = await this.userRepository.findById(command.actorUserId)
+    if (!actor) throw new Error("Usuário não encontrado")
+
+    if (!this.canManageLabEvent(actor.roles, command.actorUserId, notice.userId)) {
+      throw new Error("Usuário não tem permissão para remover este aviso")
+    }
+
+    if (notice.userId !== command.actorUserId) {
+      const targetUser = await this.userRepository.findById(notice.userId)
+      if (!targetUser) throw new Error("Usuário do aviso não encontrado")
+
+      const actorPriority = this.getHighestRolePriority(actor.roles)
+      const targetPriority = this.getHighestRolePriority(targetUser.roles)
+
+      if (actorPriority <= targetPriority) {
+        throw new Error("Usuário não tem permissão para remover avisos deste perfil")
+      }
+    }
+
+    await this.labNoticeRepository.delete(command.noticeId)
   }
 
   async listLaboratorySchedules() {
@@ -504,6 +548,7 @@ export interface LabOperationsGatewayDependencies {
   identityAccess: IdentityAccessModule
   userRepository: UserRepository
   labEventRepository: LabEventRepository
+  labNoticeRepository: LabNoticeRepository
   laboratoryScheduleRepository: LaboratoryScheduleRepository
   labResponsibilityRepository: LabResponsibilityRepository
   userScheduleRepository: UserScheduleRepository
@@ -522,6 +567,7 @@ export function createLabOperationsGateway(
     dependencies.identityAccess,
     dependencies.userRepository ?? new UserRepository(),
     dependencies.labEventRepository ?? new LabEventRepository(),
+    dependencies.labNoticeRepository ?? new LabNoticeRepository(),
     dependencies.laboratoryScheduleRepository ?? new LaboratoryScheduleRepository(),
     dependencies.labResponsibilityRepository ?? new LabResponsibilityRepository(),
     dependencies.userScheduleRepository ?? new UserScheduleRepository(),

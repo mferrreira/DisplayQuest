@@ -23,6 +23,9 @@ export class LabOperationsModule {
   readonly listLabEventsByDate: GatewayCall<LabOperationsGateway["listLabEventsByDate"]>
   readonly createLabEvent: GatewayCall<LabOperationsGateway["createLabEvent"]>
   readonly deleteLabEvent: GatewayCall<LabOperationsGateway["deleteLabEvent"]>
+  readonly listLabNotices: GatewayCall<LabOperationsGateway["listLabNotices"]>
+  readonly createLabNotice: GatewayCall<LabOperationsGateway["createLabNotice"]>
+  readonly deleteLabNotice: GatewayCall<LabOperationsGateway["deleteLabNotice"]>
   readonly listLaboratorySchedules: GatewayCall<LabOperationsGateway["listLaboratorySchedules"]>
   readonly createLaboratorySchedule: GatewayCall<LabOperationsGateway["createLaboratorySchedule"]>
   readonly updateLaboratorySchedule: GatewayCall<LabOperationsGateway["updateLaboratorySchedule"]>
@@ -54,6 +57,9 @@ export class LabOperationsModule {
     this.listLabEventsByDate = this.gateway.listLabEventsByDate.bind(this.gateway)
     this.createLabEvent = this.gateway.createLabEvent.bind(this.gateway)
     this.deleteLabEvent = this.gateway.deleteLabEvent.bind(this.gateway)
+    this.listLabNotices = this.gateway.listLabNotices.bind(this.gateway)
+    this.createLabNotice = this.gateway.createLabNotice.bind(this.gateway)
+    this.deleteLabNotice = this.gateway.deleteLabNotice.bind(this.gateway)
     this.listLaboratorySchedules = this.gateway.listLaboratorySchedules.bind(this.gateway)
     this.createLaboratorySchedule = this.gateway.createLaboratorySchedule.bind(this.gateway)
     this.updateLaboratorySchedule = this.gateway.updateLaboratorySchedule.bind(this.gateway)
