@@ -73,18 +73,12 @@ docs/                # Documentacao tecnica, funcional e de manutencao
 
 O projeto segue uma organizacao modular no backend, com composicao central em `backend/composition/root.ts`.
 
-<<<<<<< HEAD
 - `app/api/*` atua como camada HTTP
 - `getBackendComposition()` resolve os modulos e dependencias
 - `backend/modules/*` concentra regras de negocio por dominio
 - `repositories` e `models` encapsulam persistencia e entidades
 
 Isso evita espalhar regra de negocio nas rotas e facilita a evolucao por dominio.
-=======
-## Documentacao formal
-
-Os READMEs sao referencia rapida de manutencao. A documentacao formal fica em `docs/`:
->>>>>>> origin/main
 
 ## Modulos do Backend
 
@@ -112,21 +106,11 @@ Os READMEs sao referencia rapida de manutencao. A documentacao formal fica em `d
 - `/dashboard/leaderboard`
 - `/dashboard/admin`
 
-<<<<<<< HEAD
-## Comportamento Atual das Tasks
-=======
 ## API
->>>>>>> origin/main
 
-- `public`: visivel no escopo de projeto ou laboratorio, com progresso individual por usuario
-- `delegated`: visivel no projeto, com manipulacao restrita aos atribuídos
-- `private`: visivel no projeto, com restricao semelhante a `delegated`
-- `isGlobal=true`: representa task publica de laboratorio no modelo atual
+As rotas de dominio da aplicacao ficam em `app/api/*` e, em regra, usam `getBackendComposition()` para resolver modulos do backend.
 
-<<<<<<< HEAD
-## Setup Rapido (Local)
-=======
-Obs.: rotas de autenticacao/registro e algumas rotas utilitarias podem acessar Prisma/lib diretamente.
+Obs.: rotas de autenticacao, registro e algumas rotas utilitarias ainda podem acessar `Prisma` ou utilitarios de `lib/*` diretamente.
 
 Dominios principais expostos:
 
@@ -134,17 +118,17 @@ Dominios principais expostos:
 - `work-sessions`, `daily_logs`
 - `weekly-reports`, `weekly-hours-history`
 - `rewards`, `purchases`, `badges`, `user-badges`
-- `issues`, `responsibilities`, `schedules`, `laboratory-schedule`, `lab-events`
+- `issues`, `responsibilities`, `schedules`, `laboratory-schedule`, `lab-events`, `lab-notices`
 - `notifications`
 
-## Tasks
+## Comportamento Atual das Tasks
 
-- `public`: visivel no escopo (projeto/laboratorio) com progresso individual por usuario
-- `delegated` / `private`: visivel no projeto, com manipulacao restrita aos atribuídos (suporta multiatribuicao)
-- `isGlobal=true`: representa task publica de laboratorio (quest global) no modelo atual
+- `public`: visivel no escopo de projeto ou laboratorio, com progresso individual por usuario
+- `delegated`: visivel no projeto, com manipulacao restrita aos atribuídos
+- `private`: visivel no projeto, com restricao semelhante a `delegated`
+- `isGlobal=true`: representa task publica de laboratorio no modelo atual
 
-## Setup rapido (local)
->>>>>>> origin/main
+## Setup Rapido (Local)
 
 ### 1. Instalar dependencias
 
@@ -192,29 +176,20 @@ npm run dev
 - `npm run db:reset:local`
 - `npm run db:safe-deploy`
 
-<<<<<<< HEAD
-## Docker (Local)
+## Docker
 
-=======
-## Docker 
->>>>>>> origin/main
 ```bash
 docker-compose up -d
 docker-compose ps
 docker-compose logs -f
 ```
 
-<<<<<<< HEAD
 ## Documentacao
-=======
-## Manutencao
->>>>>>> origin/main
 
 O repositorio hoje esta documentado em tres camadas:
 
 ### 1. Guias rapidos de manutencao
 
-<<<<<<< HEAD
 - `README.md`: visao geral do projeto, setup local e mapa do repositorio
 - `app/README.md`: estrutura da interface, contextos, telas e manutencao do frontend
 - `backend/README.md`: arquitetura backend, composition root, modulos e diretrizes de extensao
@@ -246,7 +221,7 @@ O pacote em `docs/APOO/` organiza a documentacao formal no formato de Analise e 
 
 Arquivo de apoio do processo de escrita:
 
-- `docs/08-plano-acao-documentacao-wazlawick.md`
+- `docs/08-plano-acao-para-documentacao.md`
 
 ## Notas de Manutencao
 
@@ -254,6 +229,3 @@ Arquivo de apoio do processo de escrita:
 - use `getBackendComposition()` para resolver dependencias do backend
 - dependencias entre dominios devem ser centralizadas no composition root
 - alteracoes estruturais relevantes devem refletir na documentacao em `docs/`
-=======
-
->>>>>>> origin/main

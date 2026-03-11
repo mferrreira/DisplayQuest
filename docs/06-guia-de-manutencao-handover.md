@@ -150,14 +150,10 @@ Referencias principais:
 
 ## 9. Trabalhos futuros sugeridos
 
-<<<<<<< HEAD
 - consolidar melhor a modelagem de escopo de tasks, reduzindo dependencia de `isGlobal`
 - ampliar testes nos fluxos mais sensiveis, especialmente tarefas, laboratorio e permissoes
 - endurecer tipos temporais do schema onde hoje ainda existem `String`
 - evoluir observabilidade e verificacoes operacionais para ambientes alem do uso local
-=======
-## 8. Entregaveis de documentacao
->>>>>>> origin/main
 
 ## 10. Pacote documental recomendado para continuidade
 
