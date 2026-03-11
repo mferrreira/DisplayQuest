@@ -1,60 +1,86 @@
 # DisplayQuest
 
-Sistema web para gestao de laboratorio, projetos, tarefas, relatorios, horas de trabalho e gamificacao.
+<p align="center">
+  <img src="./public/LOGO.png" alt="DisplayQuest" width="140" />
+</p>
 
-## Objetivo
+<p align="center">
+  Plataforma web para gestao de laboratorio, projetos, tarefas, relatorios, carga horaria e gamificacao.
+</p>
 
-Centralizar operacao e acompanhamento do laboratorio em uma unica plataforma:
+<p align="center">
+  <img alt="Next.js" src="https://img.shields.io/badge/Next.js-15-black?logo=next.js" />
+  <img alt="React" src="https://img.shields.io/badge/React-19-149ECA?logo=react&logoColor=white" />
+  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white" />
+  <img alt="Prisma" src="https://img.shields.io/badge/Prisma-ORM-2D3748?logo=prisma&logoColor=white" />
+  <img alt="PostgreSQL" src="https://img.shields.io/badge/PostgreSQL-Database-4169E1?logo=postgresql&logoColor=white" />
+  <img alt="Docker" src="https://img.shields.io/badge/Docker-Local%20Infra-2496ED?logo=docker&logoColor=white" />
+</p>
 
-- usuarios e aprovacao de contas
-- projetos e membros
-- tarefas e fluxo de aprovacao
-- sessoes de trabalho e logs diarios
-- relatorios e estatisticas
-- gamificacao (pontos, badges, loja e compras)
-- operacoes de laboratorio (issues, responsabilidades, horarios, eventos)
+<p align="center">
+  <a href="#visao-geral">Visao Geral</a> •
+  <a href="#stack">Stack</a> •
+  <a href="#estrutura-do-repositorio">Estrutura</a> •
+  <a href="#setup-rapido-local">Setup</a> •
+  <a href="#documentacao">Documentacao</a>
+</p>
+
+## Visao Geral
+
+O `DisplayQuest` centraliza a rotina do laboratorio em uma unica aplicacao. O sistema combina acompanhamento de projetos, operacao diaria, registro de horas e mecanicas de gamificacao para reduzir dispersao entre ferramentas e facilitar a continuidade do trabalho por novos membros.
+
+Principais frentes cobertas pelo sistema:
+
+- gestao de usuarios e aprovacao de contas
+- projetos, membros e papeis de atuacao
+- tarefas com quadro Kanban e fluxo de revisao
+- sessoes de trabalho, logs diarios e relatorios
+- operacao do laboratorio: responsabilidades, horarios, eventos e issues
+- gamificacao com pontos, badges, leaderboard, loja e resgates
+- notificacoes e acompanhamento de atividade
+
+## Destaques do Sistema
+
+- `Dashboard operacional`: quadro principal de tarefas e acompanhamento diario
+- `Laboratorio`: horarios, agenda, responsabilidades, issues e avisos internos
+- `Projetos`: membros, acompanhamento e organizacao por escopo
+- `Relatorios`: consolidacao semanal de producao individual e por projeto
+- `Gamificacao`: pontos, badges, ranking e recompensas
 
 ## Stack
 
-- Frontend: `Next.js (App Router)`, `React 19`, `TypeScript`, `Tailwind`, `shadcn/ui`
-- Backend: `Next.js Route Handlers`, `Prisma`, `PostgreSQL`
-- Auth: `next-auth`
-- Infra local: `Docker` / `docker-compose`
+- `Frontend`: Next.js App Router, React 19, TypeScript, Tailwind CSS, shadcn/ui
+- `Backend`: Route Handlers no App Router + modulos em `backend/modules/*`
+- `Persistencia`: Prisma ORM + PostgreSQL
+- `Autenticacao`: next-auth
+- `Infra local`: Docker e docker compose
 
-## Estrutura (alto nivel)
+## Estrutura do Repositorio
 
 ```text
-app/                 # UI (paginas App Router + API routes)
-backend/             # Regras/modulos backend (Clean Architecture incremental)
-components/          # Componentes UI e features
-contexts/            # Estado global da UI por dominio
-hooks/               # Hooks de dados/efeitos de UI
-lib/                 # Auth, prisma, utilitarios e APIs do frontend
-prisma/              # Schema e migrations
-docs/                # Documentacao complementar
+app/                 # Paginas, layouts e API routes do App Router
+backend/             # Modulos, gateways, contratos, repositorios e composition root
+components/          # Componentes de UI e features reutilizaveis
+contexts/            # Contextos de estado e acesso aos dados no frontend
+hooks/               # Hooks de comportamento e integracao na interface
+lib/                 # Auth, prisma, utilitarios e funcoes compartilhadas
+prisma/              # Schema, migrations e seeds
+public/              # Arquivos estaticos, incluindo a identidade visual
+docs/                # Documentacao tecnica, funcional e de manutencao
 ```
 
-## Documentacao por pasta
+## Arquitetura em Alto Nivel
 
-- `README.md` (raiz): visao geral, setup e mapa do sistema
-- `app/README.md`: estrutura da UI, contextos, states/effects, telas e features
-- `backend/README.md`: arquitetura backend, composition root, como adicionar/editar funcionalidades
-- `docs/backend-clean-architecture.md`: padrao arquitetural backend adotado
-- `docs/database-workflow.md`: fluxo operacional de banco/migrations
+O projeto segue uma organizacao modular no backend, com composicao central em `backend/composition/root.ts`.
 
-## Documentacao formal (TCC / handover)
+- `app/api/*` atua como camada HTTP
+- `getBackendComposition()` resolve os modulos e dependencias
+- `backend/modules/*` concentra regras de negocio por dominio
+- `repositories` e `models` encapsulam persistencia e entidades
 
-Os READMEs sao referencia rapida de manutencao. A documentacao formal (entregavel) fica em `docs/`:
+Isso evita espalhar regra de negocio nas rotas e facilita a evolucao por dominio.
 
-- `docs/01-visao-geral-sistema.md`
-- `docs/02-manual-do-usuario.md`
-- `docs/03-regras-de-negocio.md`
-- `docs/04-arquitetura-tecnica.md`
-- `docs/05-operacao-deploy.md`
-- `docs/06-guia-de-manutencao-handover.md`
-- `docs/07-modelo-de-dados.md`
-
-## Modulos do sistema (backend)
+## Modulos do Backend
 
 - `identity-access`
 - `user-management`
@@ -68,40 +94,26 @@ Os READMEs sao referencia rapida de manutencao. A documentacao formal (entregave
 - `notifications`
 - `lab-operations`
 
-## Rotas principais da aplicacao (UI)
+## Rotas Principais da Aplicacao
 
-- `/login`, `/register`
+- `/login` e `/register`
 - `/dashboard`
-- `/dashboard/admin`
 - `/dashboard/projetos`
 - `/dashboard/laboratorio`
 - `/dashboard/weekly-reports`
 - `/dashboard/loja`
 - `/dashboard/profile`
 - `/dashboard/leaderboard`
+- `/dashboard/admin`
 
-## API (resumo)
+## Comportamento Atual das Tasks
 
-As rotas de dominio da aplicacao ficam em `app/api/*` e, em regra, usam `getBackendComposition()` para resolver modulos do backend.
+- `public`: visivel no escopo de projeto ou laboratorio, com progresso individual por usuario
+- `delegated`: visivel no projeto, com manipulacao restrita aos atribuídos
+- `private`: visivel no projeto, com restricao semelhante a `delegated`
+- `isGlobal=true`: representa task publica de laboratorio no modelo atual
 
-Obs.: rotas de autenticacao/registro e algumas rotas utilitarias podem acessar Prisma/lib diretamente.
-
-Dominios principais expostos:
-
-- `users`, `projects`, `tasks`
-- `work-sessions`, `daily_logs`
-- `weekly-reports`, `weekly-hours-history`
-- `rewards`, `purchases`, `badges`, `user-badges`
-- `issues`, `responsibilities`, `schedules`, `laboratory-schedule`, `lab-events`
-- `notifications`
-
-## Tasks (resumo de comportamento atual)
-
-- `public`: visivel no escopo (projeto/laboratorio) com progresso individual por usuario
-- `delegated` / `private`: visivel no projeto, com manipulacao restrita aos atribuídos (suporta multiatribuicao)
-- `isGlobal=true`: representa task publica de laboratorio (quest global) no modelo atual
-
-## Setup rapido (local)
+## Setup Rapido (Local)
 
 ### 1. Instalar dependencias
 
@@ -111,7 +123,7 @@ npm install
 
 ### 2. Configurar ambiente
 
-Criar `.env.local` com pelo menos:
+Crie um arquivo `.env.local` com pelo menos:
 
 ```env
 DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/display-quest"
@@ -119,24 +131,24 @@ NEXTAUTH_SECRET="troque-isto"
 NEXTAUTH_URL="http://localhost:3000"
 ```
 
-### 3. Banco de dados
+### 3. Preparar o banco
 
 ```bash
 npm run db:generate
 npm run db:migrate:dev
-# opcional (dev/test only)
+# opcional para dev/teste
 npm run db:seed
 ```
 
-Observacao: seed e manual e voltada para desenvolvimento/teste. Nao roda automaticamente em startup/deploy.
+Observacao: o seed e manual e voltado para desenvolvimento. Ele nao roda automaticamente no startup.
 
-### 4. Rodar aplicacao
+### 4. Subir a aplicacao
 
 ```bash
 npm run dev
 ```
 
-## Scripts uteis
+## Scripts Uteis
 
 - `npm run dev`
 - `npm run build`
@@ -149,7 +161,7 @@ npm run dev
 - `npm run db:reset:local`
 - `npm run db:safe-deploy`
 
-## Docker (local)
+## Docker (Local)
 
 ```bash
 docker-compose up -d
@@ -157,16 +169,30 @@ docker-compose ps
 docker-compose logs -f
 ```
 
-## Manutencao (ponto importante)
+## Documentacao
 
-O backend foi padronizado com composicao central em `backend/composition/root.ts`.
+Leitura recomendada por contexto:
 
-- rotas `app/api/*` nao devem instanciar `createXModule()` diretamente
-- use `getBackendComposition()` nas rotas
-- dependencias entre modulos devem ser resolvidas no composition root
+- `README.md`: visao geral do repositorio, setup e mapa do sistema
+- `app/README.md`: estrutura da UI, telas, contextos e manutencao do frontend
+- `backend/README.md`: arquitetura backend, composition root e extensao por modulo
+- `docs/backend-clean-architecture.md`: padrao arquitetural adotado no backend
+- `docs/database-workflow.md`: rotina de banco, migrations e deploy
 
-## Entregaveis de documentacao (atual)
+Documentacao funcional e tecnica mais completa:
 
-- visao geral do sistema (raiz)
-- arquitetura e contribuicao backend (`backend/README.md`)
-- estrutura e manutencao da UI (`app/README.md`)
+- `docs/01-visao-geral-sistema.md`
+- `docs/02-manual-do-usuario.md`
+- `docs/03-regras-de-negocio.md`
+- `docs/04-arquitetura-tecnica.md`
+- `docs/05-operacao-deploy.md`
+- `docs/06-guia-de-manutencao-handover.md`
+- `docs/07-modelo-de-dados.md`
+- `docs/APOO/`
+
+## Notas de Manutencao
+
+- rotas em `app/api/*` nao devem instanciar `createXModule()` diretamente
+- use `getBackendComposition()` para resolver dependencias do backend
+- dependencias entre dominios devem ser centralizadas no composition root
+- alteracoes estruturais relevantes devem refletir na documentacao em `docs/`

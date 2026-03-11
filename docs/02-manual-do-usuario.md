@@ -116,6 +116,6 @@ Para usuarios com permissao:
 
 ### "Nao vejo um projeto/task"
 
-- verifique membership no projeto
+- verifique se faz parte de um projeto
 - verifique perfil/permissoes
-- recarregue a tela apos alteracoes recentes
+- recarregue a tela apos alteracoes recentes (ctrl + shift + r)
