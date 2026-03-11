@@ -14,7 +14,7 @@ interface UserBadge {
   userId: number
   earnedAt: string
   earnedBy?: number | null
-  badge: {
+  badge?: {
     id: number
     name: string
     description: string
@@ -146,7 +146,9 @@ export function UserBadges({ userId, showAll = false, limit = 6, className = "" 
     )
   }
 
-  if (badges.length === 0) {
+  const safeBadges = badges.filter((userBadge) => userBadge.badge)
+
+  if (safeBadges.length === 0) {
     return (
       <div className={`space-y-2 ${className}`}>
         <div className="flex items-center gap-2">
@@ -163,13 +165,13 @@ export function UserBadges({ userId, showAll = false, limit = 6, className = "" 
       <div className="flex items-center gap-2">
         <Trophy className="h-4 w-4 text-muted-foreground" />
         <span className="text-sm font-medium text-muted-foreground">
-          Badges ({badges.length})
+          Badges ({safeBadges.length})
         </span>
       </div>
       
       <div className="flex flex-wrap gap-2">
         <TooltipProvider>
-          {badges.map((userBadge) => (
+          {safeBadges.map((userBadge) => (
             <Tooltip key={userBadge.id}>
               <TooltipTrigger asChild>
                 <Badge
@@ -325,7 +327,9 @@ export function UserBadgesCard({ userId, className = "" }: { userId: number; cla
     )
   }
 
-  if (badges.length === 0) {
+  const safeBadges = badges.filter((userBadge) => userBadge.badge)
+
+  if (safeBadges.length === 0) {
     return (
       <Card className={className}>
         <CardHeader>
@@ -354,12 +358,12 @@ export function UserBadgesCard({ userId, className = "" }: { userId: number; cla
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Trophy className="h-5 w-5" />
-          Badges ({badges.length})
+          Badges ({safeBadges.length})
         </CardTitle>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {badges.map((userBadge) => (
+          {safeBadges.map((userBadge) => (
             <div
               key={userBadge.id}
               className={`p-3 rounded-lg border transition-colors ${getCategoryColor(userBadge.badge.category)}`}
@@ -392,4 +396,3 @@ export function UserBadgesCard({ userId, className = "" }: { userId: number; cla
     </Card>
   )
 }
-

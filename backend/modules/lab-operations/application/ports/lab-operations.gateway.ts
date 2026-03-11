@@ -1,12 +1,16 @@
 import type { Issue } from "@/backend/models/Issue"
 import type { LabEvent } from "@/backend/models/LabEvent"
+import type { LabNotice } from "@/backend/models/LabNotice"
 import type { LaboratorySchedule } from "@/backend/models/LaboratorySchedule"
 import type { LabResponsibility } from "@/backend/models/LabResponsibility"
 import type { UserSchedule } from "@/backend/models/UserSchedule"
 import type {
   CreateLabEventCommand,
+  CreateLabNoticeCommand,
   CreateLaboratoryScheduleCommand,
   CreateUserScheduleCommand,
+  DeleteLabEventCommand,
+  DeleteLabNoticeCommand,
   DeleteUserScheduleCommand,
   LabIssueQuery,
   ListUserSchedulesQuery,
@@ -31,6 +35,10 @@ export interface LabOperationsGateway {
 
   listLabEventsByDate(date: Date): Promise<LabEvent[]>
   createLabEvent(command: CreateLabEventCommand): Promise<LabEvent>
+  deleteLabEvent(command: DeleteLabEventCommand): Promise<void>
+  listLabNotices(): Promise<LabNotice[]>
+  createLabNotice(command: CreateLabNoticeCommand): Promise<LabNotice>
+  deleteLabNotice(command: DeleteLabNoticeCommand): Promise<void>
 
   listLaboratorySchedules(): Promise<LaboratorySchedule[]>
   createLaboratorySchedule(command: CreateLaboratoryScheduleCommand): Promise<LaboratorySchedule>

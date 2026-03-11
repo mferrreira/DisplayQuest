@@ -80,6 +80,56 @@ export default function WeeklyReportsPage() {
     }
   }
 
+  const upsertProjectReport = (reportDetail: ProjectWeeklyDetailReport) => {
+    setProjectReports((prev) => {
+      const reportId = `${reportDetail.projectId}-${reportDetail.weekStart}-${reportDetail.weekEnd}`
+      const nextReport = { ...reportDetail, id: reportId }
+      const existingIndex = prev.findIndex((report) => report.id === reportId)
+
+      if (existingIndex === -1) {
+        return [nextReport, ...prev]
+      }
+
+      return prev.map((report, index) => (index === existingIndex ? nextReport : report))
+    })
+  }
+
+  const loadProjectReports = async (weekStartValue: string, weekEndValue: string) => {
+    if (!weekStartValue || !weekEndValue || projects.length === 0) {
+      setProjectReports([])
+      return
+    }
+
+    const results = await Promise.all(
+      projects.map(async (project) => {
+        try {
+          const response = await fetch(
+            `/api/projects/${project.id}/hours?weekStart=${encodeURIComponent(weekStartValue)}&weekEnd=${encodeURIComponent(weekEndValue)}`,
+          )
+          const payload = await response.json()
+
+          if (!response.ok) {
+            return null
+          }
+
+          const hours = payload?.hours || null
+          const totalLogs = Number(hours?.sessionCount || 0)
+          const totalHours = Number(hours?.totalHours || 0)
+          if (totalLogs <= 0 && totalHours <= 0) {
+            return null
+          }
+
+          return buildProjectDetailReport(project.id, weekStartValue, weekEndValue, hours)
+        } catch (error) {
+          console.error(`Erro ao carregar relatório do projeto ${project.id}:`, error)
+          return null
+        }
+      }),
+    )
+
+    setProjectReports(results.filter((report): report is ProjectWeeklyDetailReport => report !== null))
+  }
+
   // Set default week (current week)
   useEffect(() => {
     const now = new Date()
@@ -94,6 +144,15 @@ export default function WeeklyReportsPage() {
     setWeekStart(startOfWeek.toISOString().split('T')[0])
     setWeekEnd(endOfWeek.toISOString().split('T')[0])
   }, [])
+
+  useEffect(() => {
+    if (!user || !hasAccess(user.roles || [], 'VIEW_WEEKLY_REPORTS')) {
+      setProjectReports([])
+      return
+    }
+
+    void loadProjectReports(weekStart, weekEnd)
+  }, [projects, user, weekStart, weekEnd])
 
   const handleGenerateReport = async () => {
     if (!selectedUser || !weekStart || !weekEnd) {
@@ -159,10 +218,7 @@ export default function WeeklyReportsPage() {
         weekEnd,
         payload?.hours || null,
       )
-      setProjectReports((prev) => [
-        { ...reportDetail, id: `${reportDetail.id}-${Date.now()}` },
-        ...prev,
-      ])
+      upsertProjectReport(reportDetail)
       setSelectedProjectReport(reportDetail)
       toast({
         title: "Sucesso",

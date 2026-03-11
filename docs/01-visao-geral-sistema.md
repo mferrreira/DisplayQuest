@@ -2,9 +2,9 @@
 
 ## Objetivo
 
-O DisplayQuest e uma plataforma web para gestao de laboratorio, equipes, projetos, tarefas, carga horaria e gamificacao.
+O DisplayQuest e uma plataforma web voltada ao apoio da rotina do laboratorio. Ele reune, em um unico ambiente, a organizacao de projetos, tarefas, carga horaria, relatorios e elementos de gamificacao.
 
-O sistema foi pensado para:
+De forma pratica, o sistema busca:
 
 - centralizar operacao do laboratorio
 - organizar tarefas por quadro Kanban
@@ -15,6 +15,7 @@ O sistema foi pensado para:
 
 ## Publico-alvo
 
+- alunos e bolsistas que participam dos projetos do laboratorio
 - coordenacao e gerencia do laboratorio
 - lideres/gerentes de projeto
 - laboratoristas
@@ -42,12 +43,12 @@ O sistema foi pensado para:
 
 ## Fluxo geral de uso
 
-1. Usuario se cadastra.
-2. Conta fica `pending`.
-3. Coordenador/Gerente aprova.
-4. Usuario acessa dashboard e interage com projetos/tarefas.
-5. Sistema registra progresso, horas, logs e pontuacao.
-6. Gestao acompanha relatorios e operacao do laboratorio.
+1. O usuario realiza cadastro no sistema.
+2. A conta fica pendente ate a aprovacao.
+3. Coordenacao ou gerencia valida o acesso.
+4. Depois de aprovado, o usuario passa a utilizar o dashboard conforme seu papel.
+5. O sistema registra atividades, horas, logs, pontuacao e interacoes com os demais modulos.
+6. A equipe de gestao acompanha a execucao dos projetos e a rotina do laboratorio por meio de relatorios e paines de apoio.
 
 ## Documentos relacionados
 

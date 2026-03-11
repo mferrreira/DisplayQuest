@@ -484,6 +484,23 @@ export const LabEventsAPI = {
       method: "POST",
       body: JSON.stringify(event),
     }),
+  deleteEvent: (id: number) =>
+    fetchAPI<{ success: boolean }>(`/api/lab-events/${id}`, {
+      method: "DELETE",
+    }),
+}
+
+export const LabNoticesAPI = {
+  getAll: () => fetchAPI<{ notices: any[] }>(`/api/lab-notices`),
+  create: (notice: { note: string }) =>
+    fetchAPI<{ notice: any }>(`/api/lab-notices`, {
+      method: "POST",
+      body: JSON.stringify(notice),
+    }),
+  delete: (id: number) =>
+    fetchAPI<{ success: boolean }>(`/api/lab-notices/${id}`, {
+      method: "DELETE",
+    }),
 }
 
 // API de Issues

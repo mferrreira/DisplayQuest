@@ -1,99 +1,132 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
+import {
+  Clock,
+  FileText,
+  FolderKanban,
+  Home,
+  LogOut,
+  Menu,
+  Shield,
+  ShoppingBag,
+  Trophy,
+  User,
+} from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { useUser } from "@/contexts/user-context"
-import { Button } from "@/components/ui/button"
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
-import { 
-  Menu, 
-  X, 
-  KanbanSquare, 
-  User, 
-  FolderKanban, 
-  Trophy, 
-  ShoppingBag, 
-  Clock,
-  LogOut,
-  Settings,
-  Home,
-  FileText
-} from "lucide-react"
 import { ThemeToggle } from "@/components/layout/theme-toggle"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Button } from "@/components/ui/button"
+import { Separator } from "@/components/ui/separator"
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
+import { hasAccess } from "@/lib/utils/utils"
+
+type MobileNavItem = {
+  href: string
+  label: string
+  icon: typeof Home
+  visible: boolean
+  active: boolean
+}
+
+type MobileNavGroup = {
+  label: string
+  items: MobileNavItem[]
+}
 
 export function MobileMenu() {
   const { user, logout } = useAuth()
   const { users } = useUser()
+  const pathname = usePathname()
   const [isOpen, setIsOpen] = useState(false)
   const userRoles = user?.roles ?? []
+  const currentUserData = user ? users.find((registeredUser) => registeredUser.id === user.id) : null
 
-  // Fechar o menu quando uma rota muda
   useEffect(() => {
     const handleRouteChange = () => setIsOpen(false)
-    window.addEventListener('popstate', handleRouteChange)
-    return () => window.removeEventListener('popstate', handleRouteChange)
+    window.addEventListener("popstate", handleRouteChange)
+    return () => window.removeEventListener("popstate", handleRouteChange)
   }, [])
-
-  // Encontrar usuário atual para obter pontos
-  const currentUserData = user ? users.find((u) => u.id === user.id) : null
 
   const handleLogout = () => {
     logout()
     setIsOpen(false)
   }
 
-  const navigationItems = [
+  const navigationGroups: MobileNavGroup[] = [
     {
-      href: "/dashboard",
-      icon: Home,
-      label: "Dashboard",
-      show: true
-    },
-    {
-      href: "/dashboard/projetos",
-      icon: FolderKanban,
       label: "Projetos",
-              show: userRoles.includes("GERENTE_PROJETO") || userRoles.includes("LABORATORISTA") || userRoles.includes("COORDENADOR")
+      items: [
+        {
+          href: "/dashboard",
+          label: "Quadro de Tarefas",
+          icon: Home,
+          visible: true,
+          active: pathname === "/dashboard",
+        },
+        {
+          href: "/dashboard/projetos",
+          label: "Projetos",
+          icon: FolderKanban,
+          visible: hasAccess(userRoles, "VIEW_PROJECT_DASHBOARD"),
+          active: pathname.startsWith("/dashboard/projetos"),
+        },
+      ],
     },
     {
-      href: "/dashboard/leaderboard",
-      icon: Trophy,
-      label: "Ranking",
-      show: true
+      label: "Laboratorio",
+      items: [
+        {
+          href: "/dashboard/laboratorio",
+          label: "Laboratorio",
+          icon: Clock,
+          visible: true,
+          active: pathname.startsWith("/dashboard/laboratorio"),
+        },
+        {
+          href: "/dashboard/weekly-reports",
+          label: "Relatorios Semanais",
+          icon: FileText,
+          visible: hasAccess(userRoles, "DASHBOARD_WEEKLY_REPORTS"),
+          active: pathname.startsWith("/dashboard/weekly-reports"),
+        },
+        {
+          href: "/dashboard/admin",
+          label: "Painel Administrativo",
+          icon: Shield,
+          visible: hasAccess(userRoles, "DASHBOARD_ADMIN"),
+          active: pathname.startsWith("/dashboard/admin"),
+        },
+      ],
     },
     {
-      href: "/dashboard/loja",
-      icon: ShoppingBag,
-      label: "Loja",
-      show: true
-    },
-    {
-      href: "/dashboard/laboratorio",
-      icon: Clock,
-      label: "Laboratório",
-      show: true
-    },
-    {
-      href: "/dashboard/weekly-reports",
-      icon: FileText,
-      label: "Relatórios Semanais",
-      show: userRoles.includes("COORDENADOR") || userRoles.includes("LABORATORISTA")
-    },
-    {
-      href: "/dashboard/admin",
-      icon: User,
-      label: "Painel Administrativo",
-      show: userRoles.includes("COORDENADOR")
-    },
-    {
-      href: "/dashboard/profile",
-      icon: User,
-      label: "Perfil",
-      show: true
+      label: "Pessoal",
+      items: [
+        {
+          href: "/dashboard/profile",
+          label: "Perfil",
+          icon: User,
+          visible: true,
+          active: pathname.startsWith("/dashboard/profile"),
+        },
+        {
+          href: "/dashboard/loja",
+          label: "Loja",
+          icon: ShoppingBag,
+          visible: true,
+          active: pathname.startsWith("/dashboard/loja"),
+        },
+        {
+          href: "/dashboard/leaderboard",
+          label: "Ranking",
+          icon: Trophy,
+          visible: true,
+          active: pathname.startsWith("/dashboard/leaderboard"),
+        },
+      ],
     },
   ]
 
@@ -105,85 +138,109 @@ export function MobileMenu() {
           <span className="sr-only">Abrir menu</span>
         </Button>
       </SheetTrigger>
-      <SheetContent side="left" className="w-[280px] sm:w-[320px]">
+      <SheetContent side="left" className="w-[300px] sm:w-[340px]">
         <SheetHeader className="text-left">
-          <SheetTitle className="flex items-center gap-2">
-            <img src="/LOGO.png" className="h-10 w-10 text-primary" />
+          <SheetTitle className="flex items-center gap-3">
+            <img src="/LOGO.png" alt="Display Quest" className="h-10 w-10" />
             <span className="text-lg font-semibold">Display Quest</span>
           </SheetTitle>
         </SheetHeader>
 
         <div className="mt-6 space-y-6">
-          {/* User Info */}
-          {user && (
+          {user ? (
             <div className="space-y-3">
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+              <div className="flex items-center gap-3 rounded-xl bg-muted/50 p-3">
                 <Avatar className="h-10 w-10">
-                  <AvatarImage src={user?.avatar || undefined} alt={user?.name || ''} />
+                  <AvatarImage src={user.avatar || undefined} alt={user.name || ""} />
                   <AvatarFallback className="text-sm">
-                    {user?.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'U'}
+                    {user.name
+                      ? user.name
+                          .split(" ")
+                          .map((namePart) => namePart[0])
+                          .join("")
+                          .toUpperCase()
+                          .slice(0, 2)
+                      : "U"}
                   </AvatarFallback>
                 </Avatar>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-sm truncate">{user.name}</p>
-                  <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{user.name}</p>
+                  <p className="truncate text-xs text-muted-foreground">{user.email}</p>
                   <p className="text-xs text-muted-foreground capitalize">
-                    {userRoles.includes("GERENTE_PROJETO") ? "Gerente de Projeto" : userRoles.includes("COORDENADOR") ? "Coordenador" : userRoles.includes("LABORATORISTA") ? "Laboratorista" : userRoles.includes("VOLUNTARIO") ? "Voluntário" : "Usuário"}
+                    {userRoles.includes("GERENTE_PROJETO")
+                      ? "Gerente de Projeto"
+                      : userRoles.includes("COORDENADOR")
+                        ? "Coordenador"
+                        : userRoles.includes("LABORATORISTA")
+                          ? "Laboratorista"
+                          : userRoles.includes("VOLUNTARIO")
+                            ? "Voluntario"
+                            : "Usuario"}
                   </p>
                 </div>
               </div>
-              
-              {currentUserData && (
-                <div className="flex items-center justify-center gap-2 p-3 rounded-lg bg-gradient-to-r from-amber-50 to-orange-50 dark:from-emerald-900/20 dark:to-teal-900/20 border border-amber-200 dark:border-emerald-700">
+
+              {currentUserData ? (
+                <div className="flex items-center justify-center gap-2 rounded-xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 p-3 dark:border-emerald-700 dark:from-emerald-900/20 dark:to-teal-900/20">
                   <Trophy className="h-5 w-5 text-amber-500 dark:text-emerald-400" />
-                  <span className="font-semibold text-lg bg-gradient-to-r from-amber-600 to-orange-600 dark:from-emerald-400 dark:to-teal-400 bg-clip-text text-transparent">
+                  <span className="bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-lg font-semibold text-transparent dark:from-emerald-400 dark:to-teal-400">
                     {currentUserData.points}
                   </span>
                 </div>
-              )}
+              ) : null}
             </div>
-          )}
+          ) : null}
 
           <Separator />
 
-          {/* Navigation */}
-          <nav className="space-y-1">
-            {navigationItems
-              .filter(item => item.show)
-              .map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setIsOpen(false)}
-                  className="flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors hover:bg-accent hover:text-accent-foreground"
-                >
-                  <item.icon className="h-5 w-5" />
-                  {item.label}
-                </Link>
-              ))}
+          <nav className="space-y-5">
+            {navigationGroups.map((group) => {
+              const visibleItems = group.items.filter((item) => item.visible)
+
+              if (visibleItems.length === 0) {
+                return null
+              }
+
+              return (
+                <div key={group.label} className="space-y-2">
+                  <p className="px-3 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                    {group.label}
+                  </p>
+                  <div className="space-y-1">
+                    {visibleItems.map((item) => (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => setIsOpen(false)}
+                        className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition-colors ${
+                          item.active
+                            ? "bg-accent text-accent-foreground"
+                            : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                        }`}
+                      >
+                        <item.icon className="h-5 w-5" />
+                        <span>{item.label}</span>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
           </nav>
 
           <Separator />
 
-          {/* Theme Toggle */}
-          <div className="flex items-center justify-between px-3 py-2">
+          <div className="flex items-center justify-between rounded-xl bg-muted/40 px-3 py-2">
             <span className="text-sm font-medium">Tema</span>
             <ThemeToggle />
           </div>
 
-          {/* Logout */}
-          <div className="pt-4">
-            <Button
-              variant="outline"
-              onClick={handleLogout}
-              className="w-full justify-start gap-3"
-            >
-              <LogOut className="h-5 w-5" />
-              Sair
-            </Button>
-          </div>
+          <Button variant="outline" onClick={handleLogout} className="w-full justify-start gap-3">
+            <LogOut className="h-5 w-5" />
+            Sair
+          </Button>
         </div>
       </SheetContent>
     </Sheet>
   )
-} 
+}
