@@ -171,24 +171,42 @@ docker-compose logs -f
 
 ## Documentacao
 
-Leitura recomendada por contexto:
+O repositorio hoje esta documentado em tres camadas:
 
-- `README.md`: visao geral do repositorio, setup e mapa do sistema
-- `app/README.md`: estrutura da UI, telas, contextos e manutencao do frontend
-- `backend/README.md`: arquitetura backend, composition root e extensao por modulo
-- `docs/backend-clean-architecture.md`: padrao arquitetural adotado no backend
-- `docs/database-workflow.md`: rotina de banco, migrations e deploy
+### 1. Guias rapidos de manutencao
 
-Documentacao funcional e tecnica mais completa:
+- `README.md`: visao geral do projeto, setup local e mapa do repositorio
+- `app/README.md`: estrutura da interface, contextos, telas e manutencao do frontend
+- `backend/README.md`: arquitetura backend, composition root, modulos e diretrizes de extensao
 
-- `docs/01-visao-geral-sistema.md`
-- `docs/02-manual-do-usuario.md`
-- `docs/03-regras-de-negocio.md`
-- `docs/04-arquitetura-tecnica.md`
-- `docs/05-operacao-deploy.md`
-- `docs/06-guia-de-manutencao-handover.md`
-- `docs/07-modelo-de-dados.md`
-- `docs/APOO/`
+### 2. Documentacao tecnica e funcional base
+
+- `docs/01-visao-geral-sistema.md`: panorama geral do sistema
+- `docs/02-manual-do-usuario.md`: uso das funcionalidades principais
+- `docs/03-regras-de-negocio.md`: regras operacionais centrais
+- `docs/04-arquitetura-tecnica.md`: visao arquitetural e organizacao tecnica
+- `docs/05-operacao-deploy.md`: orientacoes de operacao e deploy
+- `docs/06-guia-de-manutencao-handover.md`: continuidade e manutencao do projeto
+- `docs/07-modelo-de-dados.md`: entidades e relacoes principais
+
+### 3. Documentacao APOO
+
+O pacote em `docs/APOO/` organiza a documentacao formal no formato de Analise e Projeto Orientado a Objetos, incluindo:
+
+- sumario executivo
+- visao geral e escopo
+- atores e glossario
+- requisitos funcionais e nao funcionais
+- catalogo e expansao de casos de uso
+- regras de negocio
+- maquinas de estado
+- modelo conceitual
+- projeto arquitetural
+- padroes de projeto e rastreabilidade
+
+Arquivo de apoio do processo de escrita:
+
+- `docs/08-plano-acao-documentacao-wazlawick.md`
 
 ## Notas de Manutencao
 
