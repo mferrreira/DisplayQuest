@@ -21,11 +21,6 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "userId inválido" }, { status: 400 })
     }
 
-    const canManageUsers = hasPermission(auth.actor.roles, "MANAGE_USERS")
-    if (!canManageUsers && userId !== auth.actor.id) {
-      return NextResponse.json({ error: "Acesso negado" }, { status: 403 })
-    }
-
     const badges = await gamificationModule.listUserBadges(userId)
     const limit = limitParam ? Number(limitParam) : undefined
     const recentBadges = await gamificationModule.listRecentUserBadges(

@@ -1,8 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { Suspense, useState, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import { useDailyLogs } from "@/hooks/use-daily-logs"
 import { useAuth } from "@/contexts/auth-context"
+import { useUser } from "@/contexts/user-context"
+import { useProject } from "@/contexts/project-context"
 import { DailyLogList } from "@/components/ui/daily-log-list"
 import { UserApproval } from "@/components/features/user-approval"
 import { UserSearch } from "@/components/ui/user-search"
@@ -20,8 +23,11 @@ import { TimerCard } from "@/components/ui/timer-card"
 import { useWorkSessions } from "@/hooks/use-work-sessions"
 import { UserBadges } from "@/components/ui/user-badges"
 
-export default function ProfilePage() {
+function ProfilePageContent() {
   const { user: authUser } = useAuth()
+  const { users } = useUser()
+  const { projects } = useProject()
+  const searchParams = useSearchParams()
   const { logs } = useDailyLogs()
   const { sessions, getWeeklyHours, fetchSessions } = useWorkSessions()
   const [user, setUser] = useState<User | null>(authUser)
@@ -43,8 +49,18 @@ export default function ProfilePage() {
     if (authUser) {
       setUser(authUser)
     }
-    console.log("authUser", authUser)
   }, [authUser])
+
+  useEffect(() => {
+    const selectedUserId = searchParams.get("userId")
+    if (!selectedUserId) {
+      setViewingUser(null)
+      return
+    }
+
+    const selectedUser = users.find((candidate) => candidate.id === Number(selectedUserId)) || null
+    setViewingUser(selectedUser)
+  }, [searchParams, users])
 
   useEffect(() => {
     if (user) {
@@ -52,12 +68,13 @@ export default function ProfilePage() {
     }
   }, [user, sessions, getWeeklyHours, monday, sunday])
 
-  const handleUserSelect = (selectedUser: User) => {
-    setViewingUser(selectedUser)
-  }
-
   const handleBackToProfile = () => {
     setViewingUser(null)
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href)
+      url.searchParams.delete("userId")
+      window.history.replaceState({}, "", url.toString())
+    }
   }
 
   const progressoSemanal = weeklyHours
@@ -75,6 +92,10 @@ export default function ProfilePage() {
   }
 
   if (viewingUser) {
+    const viewingUserProjects = projects
+      .filter((project) => project.members?.some((member) => member.userId === viewingUser.id) || project.leaderId === viewingUser.id)
+      .map((project) => project.name)
+
     return (
       <div className="min-h-screen bg-gray-50">
         <div className="container mx-auto px-4 py-8">
@@ -82,6 +103,7 @@ export default function ProfilePage() {
             user={viewingUser}
             onBack={handleBackToProfile}
             canEdit={false}
+            projectNames={viewingUserProjects}
           />
         </div>
       </div>
@@ -294,5 +316,24 @@ export default function ProfilePage() {
       {/* TODO: Adicionar edição de perfil */}
     </div>
 
+  )
+}
+
+function ProfilePageFallback() {
+  return (
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+        <p className="text-gray-600">Carregando perfil...</p>
+      </div>
+    </div>
+  )
+}
+
+export default function ProfilePage() {
+  return (
+    <Suspense fallback={<ProfilePageFallback />}>
+      <ProfilePageContent />
+    </Suspense>
   )
 }
