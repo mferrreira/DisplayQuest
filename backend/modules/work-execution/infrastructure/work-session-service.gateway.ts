@@ -1,6 +1,7 @@
 import { WorkSessionRepository } from "@/backend/repositories/WorkSessionRepository"
 import { DailyLogRepository } from "@/backend/repositories/DailyLogRepository"
 import { WorkSession } from "@/backend/models/WorkSession"
+import { DailyLog } from "@/backend/models/DailyLog"
 import type { WorkExecutionGateway } from "@/backend/modules/work-execution/application/ports/work-execution.gateway"
 import { prisma } from "@/lib/database/prisma"
 import type {
@@ -12,6 +13,8 @@ import type {
   DeleteWorkSessionCommand,
   UpdateWorkSessionCommand,
 } from "@/backend/modules/work-execution/application/contracts"
+
+const AUTO_PAUSE_AFTER_SECONDS = 60 * 60
 
 export class WorkSessionServiceGateway implements WorkExecutionGateway {
   constructor(
@@ -156,14 +159,14 @@ export class WorkSessionServiceGateway implements WorkExecutionGateway {
       throw new Error("Usuário não encontrado")
     }
 
-    return await this.dailyLogRepository.create({
+    return await this.dailyLogRepository.create(DailyLog.create({
       id: undefined,
       userId: session.userId,
       projectId: session.projectId || null,
       date: new Date(logDate),
       note: command.note || null,
       workSessionId: session.id,
-    } as any)
+    }))
   }
 
   async listWorkSessions(query: ListWorkSessionsQuery) {
@@ -172,14 +175,18 @@ export class WorkSessionServiceGateway implements WorkExecutionGateway {
     }
 
     if (query.userId !== undefined) {
-      return await this.workSessionRepository.findByUserId(query.userId)
+      const sessions = await this.workSessionRepository.findByUserId(query.userId)
+      return await this.normalizeExpiredActiveSessions(sessions)
     }
 
     if (query.status !== undefined) {
-      return await this.workSessionRepository.findByStatus(query.status)
+      const sessions = await this.workSessionRepository.findByStatus(query.status)
+      const normalizedSessions = await this.normalizeExpiredActiveSessions(sessions)
+      return normalizedSessions.filter((session) => session.status === query.status)
     }
 
-    return await this.workSessionRepository.findAll()
+    const sessions = await this.workSessionRepository.findAll()
+    return await this.normalizeExpiredActiveSessions(sessions)
   }
 
   async listDailyLogs(query: ListDailyLogsQuery) {
@@ -298,7 +305,10 @@ export class WorkSessionServiceGateway implements WorkExecutionGateway {
   }
 
   async getSessionById(sessionId: number) {
-    return await this.workSessionRepository.findById(sessionId)
+    const session = await this.workSessionRepository.findById(sessionId)
+    if (!session) return null
+
+    return await this.normalizeExpiredActiveSession(session)
   }
 
   async getDailyLogById(logId: number) {
@@ -325,13 +335,13 @@ export class WorkSessionServiceGateway implements WorkExecutionGateway {
       return
     }
 
-    await this.dailyLogRepository.create({
+    await this.dailyLogRepository.create(DailyLog.create({
       userId: session.userId,
       projectId: session.projectId || null,
       date: normalizedDate,
       note: normalizedNote,
       workSessionId: session.id,
-    } as any)
+    }))
   }
 
   private resolveLogDate(date?: string, fallbackDate?: Date | null) {
@@ -361,6 +371,29 @@ export class WorkSessionServiceGateway implements WorkExecutionGateway {
     ]
       .filter(Boolean)
       .join("\n")
+  }
+
+  private async normalizeExpiredActiveSessions(sessions: WorkSession[]) {
+    return await Promise.all(sessions.map((session) => this.normalizeExpiredActiveSession(session)))
+  }
+
+  private async normalizeExpiredActiveSession(session: WorkSession) {
+    if (!session.id || session.status !== "active") return session
+
+    const now = new Date()
+    const elapsedFromCurrentStart = Math.max(0, (now.getTime() - session.startTime.getTime()) / 1000)
+
+    if (elapsedFromCurrentStart < AUTO_PAUSE_AFTER_SECONDS) {
+      return session
+    }
+
+    const accumulatedDuration = session.duration || 0
+
+    return await this.workSessionRepository.update(session.id, {
+      status: "paused",
+      endTime: now,
+      duration: accumulatedDuration + elapsedFromCurrentStart,
+    })
   }
 
   private normalizeTaskIds(taskIds: number[]) {
