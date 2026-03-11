@@ -2,9 +2,9 @@
 
 ## Objetivo
 
-Facilitar a continuidade do projeto por outros alunos/equipe, reduzindo risco de regressao e perda de contexto.
+Facilitar a continuidade do projeto por novos alunos, bolsistas ou mantenedores, reduzindo perda de contexto e risco de regressao em mudancas futuras.
 
-## 1. Onde comecar (novo mantenedor)
+## 1. Por onde comecar
 
 Ordem recomendada de leitura:
 
@@ -12,114 +12,166 @@ Ordem recomendada de leitura:
 2. `docs/01-visao-geral-sistema.md`
 3. `docs/03-regras-de-negocio.md`
 4. `docs/04-arquitetura-tecnica.md`
-5. `backend/README.md`
-6. `app/README.md`
-7. `docs/07-modelo-de-dados.md`
+5. `docs/07-modelo-de-dados.md`
+6. `backend/README.md`
+7. `app/README.md`
+8. `docs/APOO/00-guia-de-leitura.md`
 
-## 2. Checklist de onboarding tecnico
+Observacao:
 
-- subir ambiente local (app + banco)
-- executar migrations
-- entender login/aprovacao
-- navegar pelos dashboards principais
+- a pasta `docs/APOO/` concentra a documentacao formal mais completa do sistema
+
+## 2. Primeiros passos do novo mantenedor
+
+- subir o ambiente local com aplicacao e banco
+- executar as migrations necessarias
+- validar login, cadastro e aprovacao de usuario
+- navegar pelas areas principais do dashboard
 - inspecionar `backend/composition/root.ts`
-- entender fluxo de `tasks` (principal dominio transversal)
+- entender o dominio de tarefas, que e o mais transversal do sistema
 
-## 3. Como alterar uma funcionalidade com baixo risco
+## 3. Como localizar uma mudanca
 
-### Passo 1: localizar a fonte de verdade
+### 3.1 Fonte de verdade por camada
 
-- UI/state: `contexts/*`, `hooks/*`
-- endpoint: `app/api/*`
+- interface e estado: `contexts/*`, `hooks/*`, componentes e paginas
+- HTTP: `app/api/*`
 - regra de negocio: `backend/modules/*`
-- persistencia: `backend/repositories/*` + `prisma/schema.prisma`
+- persistencia: `backend/repositories/*` e `prisma/schema.prisma`
 
-### Passo 2: alterar em camadas
+### 3.2 Sequencia recomendada de analise
 
-- rota: parse/auth/HTTP
-- modulo/use case: regra de negocio
-- repositorio: persistencia
-- frontend/context: consumo e estado
-- componente: exibicao
+1. identificar a tela ou fluxo onde o problema aparece
+2. localizar o provider, hook ou chamada em `contexts/api-client.ts`
+3. localizar a rota correspondente em `app/api/*`
+4. localizar o modulo backend responsavel
+5. confirmar o modelo de dados envolvido em `prisma/schema.prisma`
 
-### Passo 3: validar impactos
+## 4. Como alterar uma funcionalidade com menor risco
 
-- permissao/role (RBAC)
-- projeto vs laboratorio
-- task publica vs delegated/private
-- mobile/desktop (UI)
+### Passo 1. Confirmar o comportamento atual
 
-## 4. Pontos sensiveis do sistema (atencao)
+- validar o que a interface mostra
+- confirmar o que a rota realmente aceita
+- confirmar o que o backend efetivamente permite
 
-### 4.1 Tasks
+### Passo 2. Alterar em camadas
 
-Dominio mais sensivel por envolver:
+- rota: parse, autenticacao, autorizacao e resposta HTTP
+- modulo backend: regra de negocio e orquestracao
+- repositorio ou gateway: persistencia e integracao
+- provider, hook ou contexto: consumo no frontend
+- componente ou pagina: exibicao e interacao
+
+### Passo 3. Revisar impactos
+
+- papel e permissao do usuario
+- escopo de projeto vs escopo de laboratorio
+- estados e transicoes do fluxo
+- reflexo em mobile e desktop, quando houver interface responsiva
+
+## 5. Pontos mais sensiveis do sistema
+
+### 5.1 Tarefas
+
+Esse e o dominio com maior potencial de regressao porque cruza:
 
 - permissao
-- kanban
-- gamificacao/pontos
+- quadro Kanban
+- gamificacao e pontuacao
 - progresso individual
 - multiatribuicao
-- projetos e laboratorio
+- integracao com projetos, laboratorio e sessoes de trabalho
 
-Ao alterar tasks, revisar:
+Ao mexer em tarefas, revisar sempre:
 
 - `taskVisibility`
-- `isGlobal` (compatibilidade)
+- `isGlobal`
+- `assignedTo`
 - `task_assignees`
 - `task_user_progress`
 
-### 4.2 Permissoes
+### 5.2 Permissoes
 
-- frontend so esconde/mostra UI
-- backend e quem deve bloquear de fato
-- sempre validar rota + modulo
+- a UI pode esconder ou exibir acoes, mas nao e a fonte de verdade
+- a validacao real precisa existir no backend
+- sempre conferir rota, modulo e regra de RBAC em conjunto
 
-### 4.3 Banco de dados
+### 5.3 Laboratorio
 
-- evitar mudar schema sem migration
-- conferir impacto em seed dev
-- revisar relacoes e deletes em cascata
+O dominio de laboratorio mistura varias frentes:
 
-## 5. Convencoes de manutencao adotadas
+- responsabilidades
+- agenda e eventos
+- quadro de avisos
+- horarios do laboratorio
+- horarios individuais
+- issues
 
-- rotas `app/api/*` usam `getBackendComposition()`
-- modulos recebem dependencias via composition root (DIP)
-- refatoracao incremental (sem reescrever tudo)
-- manter compatibilidade quando possivel em mudancas grandes
+Ao alterar essa area, evitar misturar conceitos diferentes no mesmo fluxo ou na mesma persistencia.
 
-## 6. Quando criar documentacao nova
+### 5.4 Banco de dados
 
-Criar/atualizar docs quando houver:
+- nao alterar schema sem migration correspondente
+- revisar impacto em seeds e scripts operacionais
+- confirmar tipos, indices, relacoes e cascatas
+
+## 6. Convencoes de manutencao adotadas
+
+- rotas em `app/api/*` devem usar `getBackendComposition()`
+- dependencias entre modulos devem ser resolvidas no composition root
+- regra de negocio importante nao deve ficar presa ao route handler
+- compatibilidade pode ser mantida em evolucoes grandes, desde que fique explicita
+- alteracoes estruturais relevantes devem refletir na documentacao
+
+## 7. Quando atualizar a documentacao
+
+Atualize a documentacao sempre que houver:
 
 - nova regra de negocio relevante
 - mudanca de fluxo de usuario
-- mudanca de deploy/operacao
-- mudanca estrutural de schema/arquitetura
+- alteracao de permissao ou visibilidade
+- mudanca estrutural de schema
+- mudanca de arquitetura, deploy ou operacao
 
-## 7. Limitacoes e trabalhos futuros (estado atual)
+Referencias principais:
 
-### Limitacoes conhecidas
+- `docs/03-regras-de-negocio.md`
+- `docs/04-arquitetura-tecnica.md`
+- `docs/07-modelo-de-dados.md`
+- `docs/APOO/`
 
-- parte do dominio de tasks ainda usa compatibilidade com campos legados (`assignedTo`, `isGlobal`)
-- nem todos os modulos possuem o mesmo nivel de granularidade em use cases/domain services
-- cobertura de testes automatizados pode ser expandida
+## 8. Limitacoes e pontos de atencao atuais
 
-### Trabalhos futuros sugeridos
+- parte do dominio de tarefas ainda convive com campos de compatibilidade, como `assignedTo` e `isGlobal`
+- nem todos os modulos backend possuem o mesmo nivel de separacao interna entre contrato, use case e gateway
+- alguns campos do schema ainda usam `String` onde um modelo temporal mais forte seria desejavel
+- a cobertura de testes automatizados ainda pode ser ampliada
 
-- consolidar modelagem de escopo de task (projeto vs laboratorio) sem dependencia de `isGlobal`
-- ampliar testes de use case (mocks de ports)
-- documentar API por dominio (opcional)
-- criar observabilidade/healthchecks mais formais para producao
+## 9. Trabalhos futuros sugeridos
 
+<<<<<<< HEAD
+- consolidar melhor a modelagem de escopo de tasks, reduzindo dependencia de `isGlobal`
+- ampliar testes nos fluxos mais sensiveis, especialmente tarefas, laboratorio e permissoes
+- endurecer tipos temporais do schema onde hoje ainda existem `String`
+- evoluir observabilidade e verificacoes operacionais para ambientes alem do uso local
+=======
 ## 8. Entregaveis de documentacao
+>>>>>>> origin/main
 
-Para avaliacao e continuidade, os documentos principais recomendados sao:
+## 10. Pacote documental recomendado para continuidade
 
-- visao geral
-- manual do usuario
-- regras de negocio
-- arquitetura tecnica
-- operacao/deploy
-- guia de manutencao/handover
-- modelo de dados
+Para manutencao cotidiana:
+
+- `README.md`
+- `app/README.md`
+- `backend/README.md`
+- `docs/03-regras-de-negocio.md`
+- `docs/04-arquitetura-tecnica.md`
+- `docs/07-modelo-de-dados.md`
+
+Para leitura formal e institucional:
+
+- `docs/01-visao-geral-sistema.md`
+- `docs/02-manual-do-usuario.md`
+- `docs/APOO/`

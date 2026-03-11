@@ -2,18 +2,31 @@
 
 ## Objetivo
 
-Descrever como subir, atualizar e operar o sistema com seguranca (sem seed automatica em producao).
+Registrar o procedimento atual para subir, atualizar e operar o sistema em ambiente local ou containerizado, mantendo o uso de migrations versionadas e evitando seed automatica fora de cenarios de desenvolvimento.
 
-## 1. Requisitos
+## 1. Escopo atual
 
-- Node.js (versao compativel com o projeto)
+O projeto hoje esta preparado principalmente para:
+
+- execucao local com Node.js e PostgreSQL
+- execucao local com Docker Compose
+- aplicacao de migrations versionadas com Prisma
+
+Observacao:
+
+- o uso principal previsto ate aqui é em ambiente local ou rede interna do laboratorio
+- este documento nao presume uma esteira completa de producao com observabilidade, rollback automatizado ou orquestracao externa (CI/CD)
+
+## 2. Requisitos
+
+- Node.js em versao compativel com o projeto
 - npm
-- PostgreSQL (local ou container)
-- Docker / Docker Compose (opcional, recomendado para ambiente local)
+- PostgreSQL local ou via container
+- Docker e Docker Compose, quando a opcao for usar containers
 
-## 2. Variaveis de ambiente (minimas)
+## 3. Variaveis de ambiente minimas
 
-Exemplo:
+Exemplo funcional:
 
 ```env
 DATABASE_URL="postgresql://display-quest:display-quest123@localhost:5432/display-quest"
@@ -21,7 +34,14 @@ NEXTAUTH_SECRET="troque-isto"
 NEXTAUTH_URL="http://localhost:3000"
 ```
 
-## 3. Subida local (sem Docker)
+Observacoes:
+
+- em ambiente Docker, o host do banco muda para o nome do servico, hoje `postgres`
+- `NEXTAUTH_SECRET` nao deve permanecer com valor generico em ambiente compartilhado
+
+## 4. Subida local sem Docker
+
+Fluxo recomendado:
 
 ```bash
 npm install
@@ -30,7 +50,9 @@ npm run db:migrate:dev
 npm run dev
 ```
 
-### Seed (apenas dev/teste)
+### Seed em desenvolvimento
+
+Quando for necessario popular dados de apoio:
 
 ```bash
 npm run db:seed
@@ -39,9 +61,11 @@ npm run db:seed
 Importante:
 
 - seed e manual
-- seed nao deve ser executada automaticamente em producao
+- seed nao deve ser executada automaticamente em startup ou deploy
 
-## 4. Subida local com Docker
+## 5. Subida local com Docker Compose
+
+Comandos principais:
 
 ```bash
 docker-compose up -d
@@ -49,70 +73,121 @@ docker-compose ps
 docker-compose logs -f
 ```
 
-Fluxo atual do `docker-compose.yml`:
+Comportamento atual do `docker-compose.yml`:
 
-- sobe Postgres
-- aguarda healthcheck
-- roda `prisma migrate deploy`
-- inicia aplicacao
+- sobe o PostgreSQL
+- espera o healthcheck do banco
+- sobe a aplicacao
+- executa `prisma migrate deploy` antes de iniciar o servidor
+- nao executa seed automaticamente
 
-Nao executa seed automaticamente.
+## 6. Dockerfile e imagem da aplicacao
 
-## 5. Deploy de banco (caminho seguro)
+O `Dockerfile` atual:
 
-Comando:
+- usa build em duas etapas
+- gera o Prisma Client durante o build
+- compila a aplicacao Next.js
+- publica a aplicacao com `node server.js`
+- executa o processo final com usuario nao root
+
+Observacao:
+
+- a imagem final ainda instala dependencias completas com `npm install --legacy-peer-deps`, incluindo o necessario para rodar Prisma no container
+
+## 7. Banco de dados e migrations
+
+Fluxo recomendado com Prisma:
+
+- desenvolvimento: `npm run db:migrate:dev`
+- deploy com schema versionado: `npm run db:migrate:deploy`
+- verificacao de estado: `npm run db:migrate:status`
+
+Evitar como fluxo principal:
+
+- `prisma db push` em ambiente que precise manter historico versionado de schema
+
+## 8. Deploy de banco com caminho mais seguro
+
+Comando disponivel:
 
 ```bash
 npm run db:safe-deploy
 ```
 
-O script:
+Esse fluxo:
 
-- aplica `prisma migrate deploy`
-- opcionalmente cria backup (se flag habilitada)
+- executa `prisma migrate deploy`
+- pode criar backup antes da migracao, se configurado
 - nao executa seed
 
-Flags suportadas:
+Flags suportadas pelo script:
 
 - `BACKUP_BEFORE_MIGRATE=1`
 - `BACKUP_DIR=./backups`
 
-## 6. Prisma: fluxo recomendado
+## 9. Scripts operacionais do repositorio
 
-- desenvolvimento: `prisma migrate dev`
-- producao: `prisma migrate deploy`
-- evitar `prisma db push` como fluxo padrao de producao
+Scripts relevantes hoje:
 
-Obs.: `db push` pode ser util em ambiente local de desenvolvimento/ajuste rapido, mas nao substitui migrations versionadas.
+- `scripts/db-safe-deploy.sh`: aplicacao segura de migrations
+- `scripts/reset-weekly-hours.ts`: consolidacao e reset manual das horas semanais
+- `scripts/auto-reset-weekly-hours.ts`: variante automatizavel do reset semanal
+- `scripts/create-coordenador.ts`: apoio para criacao ou ajuste de usuario coordenador
+- `scripts/cleanup-avatars.ts`: limpeza de arquivos antigos de avatar
 
-## 7. Troubleshooting (operacao)
+Observacao importante:
 
-### Erro: `DATABASE_URL` nao definida
+- `scripts/docker-setup.sh` existe no repositorio, mas o texto dele esta desatualizado em relacao ao comportamento atual do projeto
+- esse script menciona seed automatica e credenciais padrao que nao refletem o fluxo real atual
+- se for mantido, ele deve ser revisado antes de ser tratado como referencia operacional
 
-- configure `.env.local` (dev)
-- ou exporte a variavel na shell antes do comando
+## 10. Troubleshooting
 
-### Erro: tabela nao existe (Prisma P2021)
+### `DATABASE_URL` nao definida
 
-- schema local e banco estao dessincronizados
-- rode migrations (`db:migrate:dev` ou `db:migrate:deploy`)
-- em dev, `prisma db push` pode ser usado para alinhar rapidamente
+- configure `.env.local` no ambiente local
+- ou exporte a variavel antes do comando
 
-### Erro de login com usuario pendente
+### Prisma acusa tabela ausente ou schema fora de sincronia
 
-- usuario precisa estar `active`
-- aprovar via fluxo administrativo/CLI
+- confirme se as migrations foram aplicadas
+- use `npm run db:migrate:dev` em desenvolvimento
+- use `npm run db:migrate:deploy` em ambiente de execucao padronizado
 
-### App sobe mas dados estao vazios
+### Usuario nao consegue entrar
 
-- seed e manual (nao automatica)
-- rode `npm run db:seed` somente em dev/teste
+- confirme se o status do usuario esta `active`
+- usuarios `pending` ainda dependem de aprovacao
 
-## 8. Checklist de deploy (resumo)
+### Aplicacao sobe, mas sem dados iniciais
 
-1. Backup (se aplicavel)
-2. `npm ci` / build
+- isso pode ser normal
+- o projeto nao executa seed automaticamente
+- rode `npm run db:seed` apenas se estiver preparando um ambiente de desenvolvimento ou demonstracao
+
+### Build do container falha
+
+- valide variaveis de ambiente necessarias para o build
+- confirme que o schema Prisma gera corretamente
+- confirme que a pagina e os componentes do App Router nao dependem de APIs de cliente fora do padrao de build
+
+## 11. Checklist de operacao
+
+Antes de atualizar ou subir o sistema:
+
+1. confirmar variaveis de ambiente
+2. confirmar acesso ao banco
+3. aplicar migrations necessarias
+4. subir a aplicacao
+5. verificar logs e acesso inicial
+6. validar login e rotas principais
+
+## 12. Checklist de deploy enxuto
+
+1. `npm ci` ou instalacao equivalente
+2. `npm run build`
 3. `npm run db:migrate:deploy`
-4. Subir app
-5. Verificar health/logs
-6. Validar login e rotas criticas
+4. iniciar a aplicacao
+5. verificar logs
+6. validar autenticacao, dashboard e uma rota critica do laboratorio ou de tarefas

@@ -1,78 +1,89 @@
 # Arquitetura Tecnica
 
-## 1. Visao de alto nivel
+## 1. Visao geral
+
+O `DisplayQuest` e um sistema web monolitico em `Next.js`, com frontend e backend mantidos no mesmo repositorio.
 
 Stack principal:
 
-- `Next.js` (App Router)
-- `React` + `TypeScript`
-- `Prisma`
+- `Next.js` com App Router
+- `React 19` e `TypeScript`
+- `Prisma ORM`
 - `PostgreSQL`
-- `next-auth` (credenciais + JWT session)
+- `next-auth`
 
-O projeto combina frontend e backend na mesma base:
+Organizacao geral:
 
-- UI em `app/*` + `components/*` + `contexts/*`
+- interface e navegacao em `app/*` e `components/*`
+- acesso a dados e estado compartilhado da UI em `contexts/*` e `hooks/*`
 - API HTTP em `app/api/*`
-- regras de negocio em `backend/*`
+- regras de negocio e integracoes backend em `backend/*`
 
-## 2. Arquitetura de frontend (medio nivel)
+## 2. Arquitetura do frontend
 
-### Estrutura
+### 2.1 Estrutura da interface
 
-- `app/`: paginas e layouts
+Pastas mais relevantes:
+
+- `app/`: paginas, layouts e route handlers
 - `components/ui/`: componentes base
-- `components/features/`: componentes por dominio
-- `components/admin/`: telas administrativas
+- `components/features/`: blocos funcionais por dominio
+- `components/admin/`: componentes administrativos
 - `components/forms/`: formularios e dialogs
-- `contexts/`: estado global por dominio
-- `hooks/`: hooks reutilizaveis de feature
+- `contexts/`: providers de dominio e acesso a API
+- `hooks/`: hooks reutilizaveis de fluxo
 
-### Estado e IO
+### 2.2 Providers e composicao da UI
 
-- `contexts/*` encapsulam chamadas REST e estado global da UI
-- `contexts/api-client.ts` centraliza wrappers de request
-- componentes de tela consomem contextos/hooks e mantem estado local de UI (filtros, dialogs, loading local)
+O layout global do cliente fica em `app/client-layout.tsx`.
 
-## 3. Arquitetura de backend (medio nivel)
+Fluxo principal:
 
-### Clean Architecture incremental
+1. `SessionProvider`
+2. `ThemeProvider`
+3. identificacao se a rota pertence ao dashboard
+4. injecao de providers de dominio quando necessario
+5. renderizacao do `AppHeader` e do `FloatingSessionTimer` nas rotas do dashboard
 
-Backend organizado por modulos em `backend/modules/*`, com separacao entre:
+Providers globais do dashboard:
 
-- `application` (contratos, ports, use cases)
-- `infrastructure` (implementacoes concretas)
-- `repositories` (Prisma-backed e reutilizados)
+- `UserProvider`
+- `ProjectProvider`
+- `TaskProvider` apenas em rotas que realmente consomem o dominio de tarefas, como `/dashboard`, `/dashboard/projetos` e `/dashboard/admin`
 
-### Composition Root (ponto central)
+Providers especificos por area:
 
-Arquivo:
+- em `/dashboard/laboratorio`, o layout local injeta `ResponsibilityProvider`, `LaboratoryScheduleProvider`, `LabEventsProvider`, `LabNoticesProvider` e `IssueProvider`
 
-- `backend/composition/root.ts`
+### 2.3 Estado, IO e fronteira com a API
 
-Responsabilidades:
+- `contexts/api-client.ts` concentra os wrappers de chamadas HTTP do frontend
+- cada provider de dominio encapsula carregamento, mutacoes e sincronizacao de estado
+- `hooks/` sao usados quando o fluxo e reutilizavel, mas nao precisa necessariamente viver em provider global
+- componentes de tela cuidam de filtro, dialog, selecao local e estados estritamente visuais
 
-- montar modulos
-- resolver dependencias cruzadas
-- garantir inversao de dependencia (DIP) de forma explicita
+### 2.4 Organizacao funcional das telas
 
-Rotas `app/api/*` devem usar:
+Rotas principais do dashboard:
 
-- `getBackendComposition()`
+- `/dashboard`: quadro principal de tarefas
+- `/dashboard/projetos`
+- `/dashboard/laboratorio`
+- `/dashboard/weekly-reports`
+- `/dashboard/loja`
+- `/dashboard/profile`
+- `/dashboard/leaderboard`
+- `/dashboard/admin`
 
-## 4. Fluxo de requisicao (baixo/medio nivel)
+## 3. Arquitetura do backend
 
-1. Cliente chama endpoint em `app/api/*`
-2. Route handler valida request e autenticacao/autorizacao
-3. Route handler resolve modulo via `getBackendComposition()`
-4. Modulo chama use case/gateway exposto
-5. Use case depende de `ports`
-6. Implementacao concreta em `infrastructure` usa repositorios/Prisma
-7. Resultado volta para a rota e e convertido em resposta HTTP/JSON
+### 3.1 Organizacao modular
 
-## 5. Dominios principais (backend)
+O backend foi organizado em modulos por dominio dentro de `backend/modules/*`.
 
-- `identity-access` (RBAC/autorizacao)
+Modulos atuais:
+
+- `identity-access`
 - `user-management`
 - `project-management`
 - `project-membership`
@@ -84,49 +95,122 @@ Rotas `app/api/*` devem usar:
 - `notifications`
 - `lab-operations`
 
-## 6. Banco de dados (visao arquitetural)
+### 3.2 Estrutura interna dos modulos
 
-Persistencia em PostgreSQL com Prisma.
+O projeto segue uma organizacao modular inspirada em Clean Architecture, mas aplicada de forma incremental.
 
-Entidades importantes:
+Elementos presentes conforme o modulo:
 
-- `users`, `projects`, `project_members`
-- `tasks`, `task_assignees`, `task_user_progress`
-- `work_sessions`, `work_session_tasks`, `daily_logs`
-- `weekly_reports`, `weekly_hours_history`
-- `lab_responsibilities`, `lab_events`, `laboratory_schedules`, `user_schedules`
-- `badges`, `user_badges`, `rewards`, `purchases`
-- `issues`, `notifications`, `history`
+- `application/contracts.ts`
+- `application/ports/*`
+- `application/use-cases/*` quando o dominio ja foi extraido nesse nivel
+- `infrastructure/*` para gateways, publishers e adaptadores
+- `index.ts` como factory do modulo
 
-Ver detalhes em `docs/07-modelo-de-dados.md`.
+Observacao importante:
 
-## 7. Seguranca (visao tecnica)
+- nem todos os modulos possuem o mesmo grau de detalhamento interno
+- em varios casos, o gateway da infraestrutura ainda concentra parte importante da orquestracao do dominio
 
-### Autenticacao
+### 3.3 Composition root
 
-- `next-auth` com `CredentialsProvider`
-- sessao com estrategia `JWT`
-- `maxAge` configurado (2 dias)
+Arquivo central:
 
-### Autorizacao
+- `backend/composition/root.ts`
 
-- RBAC baseado em `roles` + `permissions`
-- verificacoes em rotas e modulos
-- helpers de auth/guard em `lib/auth/*`
+Responsabilidades:
 
-### Senhas
+- instanciar todos os modulos
+- resolver dependencias cruzadas
+- montar publishers e integracoes auxiliares
+- expor o singleton via `getBackendComposition()`
 
-- hash com `bcryptjs`
-- validacao de credenciais no fluxo de login
+Dependencias cruzadas atuais incluem, por exemplo:
 
-### Observacoes
+- `task-management` usando `identityAccess`, `notifications` e eventos de progresso ligados a `gamification`
+- `lab-operations` usando `identityAccess` e `notifications`
+- `work-execution` usando publisher de eventos conectado a `gamification`
 
-- a sessao e reidratada com dados do usuario do banco no callback `session`
-- permissao nao deve ser inferida apenas pela UI; backend e a fonte de verdade
+### 3.4 Papel das rotas HTTP
 
-## 8. Decisoes arquiteturais relevantes para continuidade
+As rotas em `app/api/*` funcionam como adaptadores HTTP.
 
-- monorepo simples (frontend + backend no mesmo projeto)
-- composicao centralizada para evitar acoplamento escondido
-- evolucao incremental (sem reescrita total)
-- compatibilidade mantida em partes do dominio de tasks (`assignedTo` + `assigneeIds`, `isGlobal`)
+Responsabilidades esperadas:
+
+- autenticar o usuario
+- interpretar parametros e payload
+- aplicar validacoes HTTP imediatas
+- chamar o modulo adequado via `getBackendComposition()`
+- converter o resultado em resposta JSON
+
+Regra arquitetural:
+
+- rotas nao devem instanciar `createXModule()` diretamente
+- regra de negocio relevante nao deve ficar espalhada nos route handlers
+
+## 4. Fluxo de requisicao
+
+Fluxo tipico:
+
+1. a interface dispara uma chamada via `contexts/api-client.ts` ou provider de dominio
+2. a rota em `app/api/*` recebe a requisicao
+3. a rota autentica o usuario e valida o contexto da chamada
+4. a rota resolve o modulo pelo composition root
+5. o modulo delega para gateway, contrato ou use case correspondente
+6. a infraestrutura conversa com repositorios, Prisma e dependencias auxiliares
+7. o resultado retorna para a rota e depois para a UI
+
+## 5. Persistencia e modelo de dados
+
+A persistencia usa PostgreSQL com Prisma.
+
+Conjuntos principais de entidades:
+
+- usuarios e acesso: `users`
+- projetos e membership: `projects`, `project_members`
+- tarefas: `tasks`, `task_assignees`, `task_user_progress`
+- execucao de trabalho: `work_sessions`, `work_session_tasks`, `daily_logs`
+- relatorios e horas: `weekly_reports`, `weekly_hours_history`
+- laboratorio: `lab_responsibilities`, `lab_events`, `laboratory_schedules`, `user_schedules`, `issues`
+- gamificacao e loja: `badges`, `user_badges`, `rewards`, `purchases`
+- apoio transversal: `notifications`, `history`
+
+Detalhamento adicional:
+
+- ver `docs/07-modelo-de-dados.md`
+
+## 6. Autenticacao e autorizacao
+
+### 6.1 Autenticacao
+
+- o sistema usa `next-auth`
+- o login principal usa `CredentialsProvider`
+- a sessao adota estrategia `JWT`
+
+### 6.2 Autorizacao
+
+- o controle de acesso usa `UserRole` e mapeamento de permissoes em `lib/auth/rbac.ts`
+- verificacoes aparecem tanto no backend quanto em controles de apresentacao da UI
+- a decisao final sobre permissao deve ser sempre do backend
+
+Arquivos centrais:
+
+- `lib/auth/rbac.ts`
+- `lib/auth/api-guard.ts`
+- `lib/auth/server-auth.ts`
+
+## 7. Decisoes arquiteturais relevantes
+
+- monolito web com separacao logica clara entre interface, HTTP e dominio
+- composition root central para evitar dependencia cruzada escondida
+- modularizacao incremental, sem exigir que todos os dominios tenham a mesma maturidade interna
+- preservacao de compatibilidade em trechos legados, especialmente no dominio de tarefas
+- uso de providers por area no frontend para evitar espalhar IO por componentes visuais
+
+## 8. Pontos de atencao para manutencao
+
+- novas rotas devem passar pelo composition root
+- mudancas entre dominios precisam ser refletidas em `backend/composition/root.ts`
+- evolucoes no frontend devem priorizar reutilizacao de providers e hooks existentes
+- alteracoes no schema precisam atualizar a documentacao e ser avaliadas no impacto dos gateways e contexts
+- no dominio de tarefas, a convivencia entre `assignedTo`, `task_assignees`, `taskVisibility` e `task_user_progress` exige cuidado para evitar regressao funcional

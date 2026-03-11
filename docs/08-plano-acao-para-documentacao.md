@@ -1,17 +1,17 @@
-# Plano de Acao para Documentacao no Formato Wazlawick
+# Registro de Planejamento da Documentacao
 
 ## 1. Objetivo deste arquivo
 
-Este documento e um guia operacional para produzir a documentacao formal do sistema `DisplayQuest` segundo uma estrutura inspirada na abordagem de Raul Wazlawick para Analise e Projeto Orientado a Objetos.
+Este documento registra o planejamento adotado para estruturar a documentacao formal do sistema `DisplayQuest` segundo uma organizacao inspirada na abordagem de Raul Wazlawick para Analise e Projeto Orientado a Objetos.
 
-Ele existe para permitir que qualquer mantenedor:
+Seu papel e servir como referencia de acompanhamento durante a consolidacao dos artefatos, permitindo que a equipe:
 
 - entenda rapidamente o escopo da documentacao
 - saiba quais artefatos devem ser escritos
 - siga uma ordem de execucao objetiva
 - acompanhe o progresso sem recomecar a analise do zero
 
-Este arquivo e temporario e util enquanto a documentacao formal ainda estiver incompleta. Quando todos os artefatos estiverem concluidos e revisados, ele pode ser arquivado ou removido.
+Este arquivo faz sentido enquanto a documentacao formal estiver em consolidacao. Depois disso, pode ser apenas arquivado como registro do processo.
 
 ## 2. Resultado esperado
 
@@ -62,9 +62,9 @@ Esta documentacao deve descrever:
 - integracoes e dependencias entre modulos
 - decisoes arquiteturais que afetam manutencao futura
 
-## 4. Achados do sistema apos a varredura inicial
+## 4. Base utilizada para o planejamento
 
-A proposta foi baseada na leitura dos seguintes pontos do repositorio:
+O planejamento foi definido a partir da leitura dos seguintes pontos do repositorio:
 
 - `README.md`
 - `app/README.md`
@@ -103,7 +103,7 @@ A proposta foi baseada na leitura dos seguintes pontos do repositorio:
 - loja e compras
 - notificacoes
 
-## 5. Estrategia de documentacao
+## 5. Estrutura adotada para a documentacao
 
 ### 5.1 Estrutura proposta dos arquivos
 
@@ -126,7 +126,7 @@ Sugestao de organizacao em `docs/APOO/`:
 
 Nao e obrigatorio dividir exatamente assim, mas a separacao entre contexto executivo, analise funcional e projeto tecnico deve ser mantida.
 
-### 5.2 Ordem recomendada de escrita
+### 5.2 Sequencia adotada para consolidacao
 
 1. Sumario Executivo
 2. Visao geral, escopo e atores
@@ -140,7 +140,7 @@ Nao e obrigatorio dividir exatamente assim, mas a separacao entre contexto execu
 
 ## 6. Convencoes recomendadas para os casos de uso
 
-As convencoes abaixo seguem uma linha compativel com a forma de descricao expandida atribuida a Wazlawick: fluxo principal enumerado, fluxos alternativos ligados ao passo de origem e excecoes referenciadas pelo passo onde ocorrem.
+As convencoes abaixo seguem uma linha compativel com a forma de descricao expandida do PU: fluxo principal enumerado, fluxos alternativos ligados ao passo de origem e excecoes referenciadas pelo passo onde ocorrem.
 
 ### 6.1 Identificacao
 
@@ -330,9 +330,9 @@ Pontos obrigatorios:
 - uso de contextos frontend como adaptadores de consumo de API
 - fronteira entre regra de negocio, rota HTTP e persistencia
 
-## 12. Estrategia para escrever com fidelidade ao sistema atual
+## 12. Criterio de aderencia ao sistema atual
 
-Para cada secao, usar sempre esta ordem de verificacao:
+Para manter os documentos aderentes ao sistema implementado, a verificacao foi organizada nesta ordem:
 
 1. telas em `app/dashboard/*`
 2. componentes/contexts da feature
@@ -341,13 +341,13 @@ Para cada secao, usar sempre esta ordem de verificacao:
 5. schema Prisma e entidades envolvidas
 6. regras e restricoes observadas no codigo
 
-Nunca inventar fluxo apenas com base na interface. Confirmar no backend quando houver duvida sobre permissao, estado ou persistencia.
+Com isso, evita-se descrever fluxo apenas a partir da interface quando a regra efetiva depende do backend, do modelo de dados ou das validacoes de permissao.
 
-## 13. Forma de trabalho recomendada para continuidade da escrita
+## 13. Organizacao do trabalho de escrita
 
-### 13.1 Metodo por iteracoes
+### 13.1 Consolidacao por etapas
 
-Executar em lotes pequenos:
+A escrita foi organizada em etapas menores:
 
 1. escolher um dominio
 2. listar atores, entidades, regras e endpoints
@@ -356,9 +356,9 @@ Executar em lotes pequenos:
 5. registrar lacunas e decisoes em aberto
 6. seguir para o proximo dominio
 
-### 13.2 Regra de atualizacao deste arquivo
+### 13.2 Atualizacao deste registro
 
-Ao finalizar um bloco relevante de documentacao:
+Sempre que um bloco relevante foi concluido:
 
 - atualizar o status na secao 14
 - registrar os arquivos produzidos
@@ -377,13 +377,13 @@ Status permitidos:
 
 | Item | Status | Observacoes |
 | --- | --- | --- |
-| Sumario Executivo | concluido | Primeira versao criada em `docs/APOO/01-sumario-executivo.md` |
+| Sumario Executivo | concluido | Consolidado em `docs/APOO/01-sumario-executivo.md` |
 | Visao geral e escopo | concluido | Criado em `docs/APOO/02-visao-geral-e-escopo.md` |
 | Atores e glossario | concluido | Criado em `docs/APOO/03-atores-e-glossario.md` |
 | Requisitos funcionais | concluido | Criado em `docs/APOO/04-requisitos-funcionais.md` |
 | Requisitos nao funcionais | concluido | Criado em `docs/APOO/05-requisitos-nao-funcionais.md` |
-| Catalogo de casos de uso | concluido | Primeira versao criada em `docs/APOO/06-casos-de-uso-catalogo.md` |
-| Casos de uso expandidos prioritarios | concluido | Primeira onda prioritaria consolidada em `docs/APOO/07-casos-de-uso-expandidos.md` |
+| Catalogo de casos de uso | concluido | Consolidado em `docs/APOO/06-casos-de-uso-catalogo.md` |
+| Casos de uso expandidos prioritarios | concluido | Consolidado em `docs/APOO/07-casos-de-uso-expandidos.md` |
 | Regras de negocio consolidadas | concluido | Criado em `docs/APOO/08-regras-de-negocio.md` |
 | Maquinas de estado | concluido | Criado em `docs/APOO/09-maquinas-de-estado.md` |
 | Analise/modelo conceitual | concluido | Criado em `docs/APOO/10-analise-e-modelo-conceitual.md` |
