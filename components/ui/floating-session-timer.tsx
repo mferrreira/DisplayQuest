@@ -11,6 +11,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Clock, Pause, PlayCircle, StopCircle, ChevronDown } from "lucide-react"
 import { useProject } from "@/contexts/project-context"
 
+const AUTO_PAUSE_AFTER_SECONDS = 60 * 60
+
 function formatTime(seconds: number) {
   const h = Math.floor(seconds / 3600)
   const m = Math.floor((seconds % 3600) / 60)
@@ -37,12 +39,14 @@ export function FloatingSessionTimer() {
   const [expanded, setExpanded] = useState(false)
   const [seconds, setSeconds] = useState(0)
   const [showStopDialog, setShowStopDialog] = useState(false)
+  const [showAutoPauseDialog, setShowAutoPauseDialog] = useState(false)
   const [logNote, setLogNote] = useState("")
   const [submitting, setSubmitting] = useState(false)
   const [startProjectId, setStartProjectId] = useState("")
   const [startActivity, setStartActivity] = useState("")
   const [startLocation, setStartLocation] = useState("")
   const [startError, setStartError] = useState<string | null>(null)
+  const autoPausedSessionIdsRef = useRef<Set<number>>(new Set())
 
   useEffect(() => {
     if (!user?.id) return
@@ -68,6 +72,24 @@ export function FloatingSessionTimer() {
 
     return () => clearInterval(interval)
   }, [currentSession, user?.id, getElapsedSeconds])
+
+  useEffect(() => {
+    if (!currentSession?.id || currentSession.status !== "active" || !user?.id) return
+    if (seconds < AUTO_PAUSE_AFTER_SECONDS) return
+    if (autoPausedSessionIdsRef.current.has(currentSession.id)) return
+
+    autoPausedSessionIdsRef.current.add(currentSession.id)
+
+    void (async () => {
+      try {
+        await pauseSession(currentSession.id)
+        await fetchSessions(user.id)
+        setShowAutoPauseDialog(true)
+      } catch {
+        autoPausedSessionIdsRef.current.delete(currentSession.id)
+      }
+    })()
+  }, [currentSession, seconds, pauseSession, fetchSessions, user?.id])
 
   useEffect(() => {
     if (!expanded) return
@@ -101,6 +123,7 @@ export function FloatingSessionTimer() {
     if (!currentSession || currentSession.status !== "paused" || !user?.id) return
     await resumeSession(currentSession.id)
     await fetchSessions(user.id)
+    setShowAutoPauseDialog(false)
   }
 
   const handleStop = async (withLog: boolean) => {
@@ -111,6 +134,7 @@ export function FloatingSessionTimer() {
         dailyLogNote: withLog && logNote.trim() ? logNote.trim() : undefined,
       })
       setShowStopDialog(false)
+      setShowAutoPauseDialog(false)
       setLogNote("")
       await fetchSessions(user.id)
     } finally {
@@ -270,6 +294,32 @@ export function FloatingSessionTimer() {
             </Button>
             <Button onClick={() => handleStop(true)} disabled={submitting}>
               Encerrar com log
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showAutoPauseDialog} onOpenChange={setShowAutoPauseDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Sessão pausada automaticamente</DialogTitle>
+            <DialogDescription>
+              A work session ficou ativa por muito tempo e foi pausada automaticamente. Você pode continuar de onde parou ou encerrar a sessão.
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowAutoPauseDialog(false)
+                setShowStopDialog(true)
+              }}
+            >
+              Encerrar sessão
+            </Button>
+            <Button onClick={handleResume} disabled={loading || !currentSession}>
+              Continuar sessão
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -173,7 +173,7 @@ function ProfilePageContent() {
           </div>
 
           <Tabs defaultValue="activity" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="activity" className="flex items-center space-x-2">
                 <Calendar className="h-4 w-4" />
                 <span>Atividade</span>
@@ -186,10 +186,10 @@ function ProfilePageContent() {
                 <Settings className="h-4 w-4" />
                 <span>Configurações</span>
               </TabsTrigger>
-              <TabsTrigger value="admin" className="flex items-center space-x-2">
+              {/* <TabsTrigger value="admin" className="flex items-center space-x-2">
                 <Settings className="h-4 w-4" />
                 <span>Administração</span>
-              </TabsTrigger>
+              </TabsTrigger> */}
             </TabsList>
 
             <TabsContent value="activity" className="space-y-6">
@@ -247,13 +247,11 @@ function ProfilePageContent() {
               {/* Profile Edit Form */}
               {showProfileForm && user ? (
                 <div className="space-y-6">
-                  {/* Upload de Avatar - Agora dentro do modo de edição */}
                   <ProfilePictureUpload
                     user={user}
                     onUpdate={(updatedUser) => setUser(updatedUser)}
                   />
                   
-                  {/* Formulário de Edição */}
                   <UserProfileForm
                     user={user}
                     onUpdate={(updatedUser) => {
@@ -265,7 +263,6 @@ function ProfilePageContent() {
                 </div>
               ) : (
                 <div className="space-y-6">
-                  {/* Informações do Perfil - Modo visualização */}
                   {user && (
                     <Card>
                       <CardHeader>
@@ -303,17 +300,15 @@ function ProfilePageContent() {
               )}
             </TabsContent>
 
-            <TabsContent value="admin" className="space-y-6">
+            {/* <TabsContent value="admin" className="space-y-6"> */}
               {/* User Approval Section - Only for admins and laboratorists */}
-              {(user.roles?.includes("COORDENADOR") || user.roles?.includes("LABORATORISTA")) && (
+              {/* {(user.roles?.includes("COORDENADOR") || user.roles?.includes("LABORATORISTA")) && (
                 <UserApproval />
               )}
-            </TabsContent>
+            </TabsContent> */}
           </Tabs>
         </div>
       </div>
-
-      {/* TODO: Adicionar edição de perfil */}
     </div>
 
   )
