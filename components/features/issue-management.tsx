@@ -364,7 +364,7 @@ export function IssueManagement({ className }: IssueManagementProps) {
 
       {/* Resolve Reclamação Dialog */}
       <Dialog open={showResolveDialog} onOpenChange={setShowResolveDialog}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Resolver Reclamação</DialogTitle>
           </DialogHeader>

@@ -273,7 +273,7 @@ export function FloatingSessionTimer() {
       </div>
 
       <Dialog open={showStopDialog} onOpenChange={setShowStopDialog}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Finalizar Work Session</DialogTitle>
             <DialogDescription>
@@ -300,7 +300,7 @@ export function FloatingSessionTimer() {
       </Dialog>
 
       <Dialog open={showAutoPauseDialog} onOpenChange={setShowAutoPauseDialog}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Sessão pausada automaticamente</DialogTitle>
             <DialogDescription>

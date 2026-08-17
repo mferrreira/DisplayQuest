@@ -52,7 +52,7 @@ const STATUS_CONFIG = {
   }
 }
 
-export function KanbanColumn({ status, tasks, onEdit, onAddTask, canAddTask, isCompactView = false }: KanbanColumnProps) {
+export function KanbanColumn({ status, tasks, onEdit, onClick, onAddTask, canAddTask, isCompactView = false }: KanbanColumnProps) {
   const config = STATUS_CONFIG[status as keyof typeof STATUS_CONFIG]
   const Icon = config.icon
 
@@ -112,6 +112,7 @@ export function KanbanColumn({ status, tasks, onEdit, onAddTask, canAddTask, isC
                     key={task.id}
                     task={task}
                     onEdit={onEdit}
+                    onClick={onClick}
                     isOverdue={isTaskOverdue(task)}
                     index={index}
                   />

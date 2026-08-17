@@ -806,7 +806,7 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
       </Tabs>
 
       <Dialog open={Boolean(selectedUserForSettings)} onOpenChange={(open) => !open && setSelectedUserForSettings(null)}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Configurar Usuário</DialogTitle>
             <DialogDescription>

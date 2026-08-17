@@ -5,6 +5,7 @@ import { DragDropContext, type DropResult } from "@hello-pangea/dnd"
 import { KanbanColumn } from "@/components/ui/kanban-column"
 import { KanbanHeader } from "@/components/ui/kanban-header"
 import { TaskDialog } from "@/components/features/task-dialog"
+import { TaskDetailDialog } from "@/components/features/task-detail-dialog"
 import { BacklogDialog } from "@/components/features/backlog-dialog"
 import { Loader2, AlertTriangle, ChevronDown, ChevronRight } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
@@ -38,6 +39,8 @@ export function KanbanBoard() {
   const [optimisticTasks, setOptimisticTasks] = useState<Task[]>([])
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null)
   const [isCompactView, setIsCompactView] = useState(false)
+  const [viewingTask, setViewingTask] = useState<Task | null>(null)
+  const [isDetailOpen, setIsDetailOpen] = useState(false)
   const [isHistoryOpen, setIsHistoryOpen] = useState(false)
   const canAccessAllProjects = hasAccess(user?.roles || [], "MANAGE_TASKS")
   const archiveThreshold = useMemo(() => {
@@ -224,6 +227,11 @@ export function KanbanBoard() {
     setIsDialogOpen(true)
   }
 
+  const handleViewTask = (task: Task) => {
+    setViewingTask(task)
+    setIsDetailOpen(true)
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -274,6 +282,7 @@ export function KanbanBoard() {
                   status={column.status}
                   tasks={columnTasks}
                   onEdit={handleEditTask}
+                  onClick={handleViewTask}
                   onAddTask={handleAddTask}
                   canAddTask={canCreateTasks}
                   isCompactView={isCompactView}
@@ -336,6 +345,11 @@ export function KanbanBoard() {
       <BacklogDialog
         open={isBacklogDialogOpen}
         onOpenChange={setIsBacklogDialogOpen}
+      />
+      <TaskDetailDialog
+        task={viewingTask}
+        open={isDetailOpen}
+        onOpenChange={setIsDetailOpen}
       />
     </div>
   )
