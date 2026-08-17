@@ -235,13 +235,13 @@ export function TaskForm({
     currentUser.roles.includes('GERENTE')
   );
 
-  // Atualizar pontos quando prioridade mudar (apenas para usuários não-coordenadores/gerentes)
+  // Atualizar pontos quando prioridade mudar — apenas em criação (não em edição, para preservar pontos salvos)
   useEffect(() => {
-    if (!canSetCustomPoints) {
+    if (!canSetCustomPoints && !task) {
       const priorityPoints = PRIORITY_POINTS[formData.priority];
       setFormData(prev => ({ ...prev, points: priorityPoints }));
     }
-  }, [formData.priority, canSetCustomPoints]);
+  }, [formData.priority, canSetCustomPoints, task]);
 
   // Reset form when task changes
   useEffect(() => {
@@ -493,8 +493,8 @@ export function TaskForm({
         />
       </div>
 
-      {/* Quest Global Checkbox - Only show for managers and coordinators */}
-      {currentUser && (currentUser.roles.includes('GERENTE') || currentUser.roles.includes('COORDENADOR')) && (
+      {/* Quest Global Checkbox - Only show for managers/coordinators in creation mode */}
+      {!task && currentUser && (currentUser.roles.includes('GERENTE') || currentUser.roles.includes('COORDENADOR')) && (
         <div className="space-y-4 p-4 border rounded-lg bg-blue-50">
           <div className="flex items-center space-x-2">
             <input

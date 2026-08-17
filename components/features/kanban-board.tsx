@@ -5,6 +5,7 @@ import { DragDropContext, type DropResult } from "@hello-pangea/dnd"
 import { KanbanColumn } from "@/components/ui/kanban-column"
 import { KanbanHeader } from "@/components/ui/kanban-header"
 import { TaskDialog } from "@/components/features/task-dialog"
+import { BacklogDialog } from "@/components/features/backlog-dialog"
 import { Loader2, AlertTriangle, ChevronDown, ChevronRight } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { useTask } from "@/contexts/task-context"
@@ -31,6 +32,7 @@ export function KanbanBoard() {
   const { toast } = useToast()
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
+  const [isBacklogDialogOpen, setIsBacklogDialogOpen] = useState(false)
   const [showOverdueOnly, setShowOverdueOnly] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
   const [optimisticTasks, setOptimisticTasks] = useState<Task[]>([])
@@ -247,6 +249,7 @@ export function KanbanBoard() {
         onOverdueFilterChange={setShowOverdueOnly}
         canCreateTasks={canCreateTasks}
         onCreateTask={handleAddTask}
+        onCreateBacklog={() => setIsBacklogDialogOpen(true)}
         isUpdating={isUpdating}
         projects={projects}
         selectedProjectId={selectedProjectId}
@@ -257,25 +260,27 @@ export function KanbanBoard() {
       />
 
       <DragDropContext onDragEnd={handleDragEnd}>
-        <div 
-          className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(300px,1fr))]"
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={(e) => e.preventDefault()}
-        >
-              {COLUMNS.map((column) => {
-            const columnTasks = boardTasks.filter((task) => task.status === column.status)
-            return (
-              <KanbanColumn
-                key={column.id}
-                status={column.status}
-                tasks={columnTasks}
-                onEdit={handleEditTask}
-                onAddTask={handleAddTask}
-                canAddTask={canCreateTasks}
-                isCompactView={isCompactView}
-              />
-            )
-          })}
+        <div className="overflow-x-auto pb-2">
+          <div
+            className="grid min-w-[1180px] grid-cols-5 gap-3"
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => e.preventDefault()}
+          >
+            {COLUMNS.map((column) => {
+              const columnTasks = boardTasks.filter((task) => task.status === column.status)
+              return (
+                <KanbanColumn
+                  key={column.id}
+                  status={column.status}
+                  tasks={columnTasks}
+                  onEdit={handleEditTask}
+                  onAddTask={handleAddTask}
+                  canAddTask={canCreateTasks}
+                  isCompactView={isCompactView}
+                />
+              )
+            })}
+          </div>
         </div>
       </DragDropContext>
 
@@ -327,6 +332,10 @@ export function KanbanBoard() {
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
         task={editingTask}
+      />
+      <BacklogDialog
+        open={isBacklogDialogOpen}
+        onOpenChange={setIsBacklogDialogOpen}
       />
     </div>
   )

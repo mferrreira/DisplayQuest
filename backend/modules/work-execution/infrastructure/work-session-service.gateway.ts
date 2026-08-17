@@ -1,5 +1,6 @@
 import { WorkSessionRepository } from "@/backend/repositories/WorkSessionRepository"
 import { DailyLogRepository } from "@/backend/repositories/DailyLogRepository"
+import { hasPermission } from "@/lib/auth/rbac"
 import { WorkSession } from "@/backend/models/WorkSession"
 import { DailyLog } from "@/backend/models/DailyLog"
 import type { WorkExecutionGateway } from "@/backend/modules/work-execution/application/ports/work-execution.gateway"
@@ -24,7 +25,9 @@ export class WorkSessionServiceGateway implements WorkExecutionGateway {
 
   async startWorkSession(command: StartWorkSessionCommand) {
     if (command.projectId !== undefined && command.projectId !== null) {
-      await this.ensureUserIsProjectMember(command.userId, command.projectId)
+      if (!hasPermission(command.actorRoles ?? [], "MANAGE_WORK_SESSIONS")) {
+        await this.ensureUserIsProjectMember(command.userId, command.projectId)
+      }
     }
 
     const activeSession = await this.workSessionRepository.findActiveByUserId(command.userId)
@@ -69,7 +72,9 @@ export class WorkSessionServiceGateway implements WorkExecutionGateway {
     }
 
     if (command.projectId !== undefined && command.projectId !== null) {
-      await this.ensureUserIsProjectMember(command.actorUserId, command.projectId)
+      if (!hasPermission(command.actorRoles ?? [], "MANAGE_WORK_SESSIONS")) {
+        await this.ensureUserIsProjectMember(command.actorUserId, command.projectId)
+      }
     }
 
     const targetProjectId = command.projectId !== undefined
@@ -228,7 +233,9 @@ export class WorkSessionServiceGateway implements WorkExecutionGateway {
     }
 
     if (command.projectId !== undefined && command.projectId !== null) {
-      await this.ensureUserIsProjectMember(command.actorUserId, command.projectId)
+      if (!hasPermission(command.actorRoles ?? [], "MANAGE_WORK_SESSIONS")) {
+        await this.ensureUserIsProjectMember(command.actorUserId, command.projectId)
+      }
     }
 
     const targetProjectId = command.projectId !== undefined

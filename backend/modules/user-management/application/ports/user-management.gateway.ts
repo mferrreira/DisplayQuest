@@ -1,4 +1,5 @@
 import type {
+  CreateUserCommand,
   DeductUserHoursCommand,
   ListLeaderboardQuery,
   ListUserProfilesQuery,
@@ -9,6 +10,7 @@ import type {
 } from "@/backend/modules/user-management/application/contracts"
 
 export interface UserManagementGateway {
+  createUser(command: CreateUserCommand): Promise<unknown>
   listUsersForActor(query: ListUsersForActorQuery): Promise<unknown[]>
   findUserById(userId: number): Promise<unknown | null>
   updateUser(userId: number, data: Record<string, unknown>): Promise<unknown>

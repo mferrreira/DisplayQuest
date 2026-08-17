@@ -1,9 +1,11 @@
 import type { UserRole } from "@prisma/client"
 import { prisma } from "@/lib/database/prisma"
 import { hasRole } from "@/lib/auth/rbac"
+import bcrypt from "bcryptjs"
 import type { IdentityAccessModule } from "@/backend/modules/identity-access"
 import { UserRepository } from "@/backend/repositories/UserRepository"
 import type {
+  CreateUserCommand,
   DeductUserHoursCommand,
   ListLeaderboardQuery,
   ListUserProfilesQuery,
@@ -19,6 +21,35 @@ export class UserServiceGateway implements UserManagementGateway {
     private readonly userRepository: UserRepository,
     private readonly identityAccess: IdentityAccessModule,
   ) {}
+
+  async createUser(command: CreateUserCommand) {
+    if (!command.name?.trim()) throw new Error("Nome é obrigatório")
+    if (!command.email?.trim()) throw new Error("Email é obrigatório")
+    if (!command.password || command.password.length < 6) {
+      throw new Error("A senha deve ter pelo menos 6 caracteres")
+    }
+
+    const normalizedEmail = command.email.toLowerCase().trim()
+    const existing = await this.userRepository.findByEmail(normalizedEmail)
+    if (existing) throw new Error("Este email já está em uso")
+
+    const hashedPassword = await bcrypt.hash(command.password, 12)
+
+    const user = await this.userRepository.create({
+      name: command.name.trim(),
+      email: normalizedEmail,
+      password: hashedPassword,
+      status: "active",
+      roles: (command.roles || []) as UserRole[],
+      weekHours: command.weekHours ?? 0,
+      points: 0,
+      completedTasks: 0,
+      currentWeekHours: 0,
+      profileVisibility: "public",
+    })
+
+    return user.toJSON()
+  }
 
   async listUsersForActor(query: ListUsersForActorQuery): Promise<unknown[]> {
     const canViewFullUsers = hasRole(query.actorRoles, ["COORDENADOR", "GERENTE"])

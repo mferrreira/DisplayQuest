@@ -8,11 +8,13 @@ export interface StartWorkSessionCommand {
   location?: string
   projectId?: number
   startTime?: string
+  actorRoles?: string[]
 }
 
 export interface CompleteWorkSessionCommand {
   sessionId: number
   actorUserId: number
+  actorRoles?: string[]
   activity?: string
   location?: string
   endTime?: string
@@ -48,6 +50,7 @@ export interface DeleteWorkSessionCommand {
 export interface UpdateWorkSessionCommand {
   sessionId: number
   actorUserId: number
+  actorRoles?: string[]
   activity?: string
   location?: string
   status?: string
