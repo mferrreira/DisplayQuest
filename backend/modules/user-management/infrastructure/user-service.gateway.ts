@@ -4,6 +4,7 @@ import { hasRole } from "@/lib/auth/rbac"
 import bcrypt from "bcryptjs"
 import type { IdentityAccessModule } from "@/backend/modules/identity-access"
 import { UserRepository } from "@/backend/repositories/UserRepository"
+import { User } from "@/backend/models/user/User"
 import type {
   CreateUserCommand,
   DeductUserHoursCommand,
@@ -35,7 +36,7 @@ export class UserServiceGateway implements UserManagementGateway {
 
     const hashedPassword = await bcrypt.hash(command.password, 12)
 
-    const user = await this.userRepository.create({
+    const user = await this.userRepository.create(new User({
       name: command.name.trim(),
       email: normalizedEmail,
       password: hashedPassword,
@@ -46,7 +47,7 @@ export class UserServiceGateway implements UserManagementGateway {
       completedTasks: 0,
       currentWeekHours: 0,
       profileVisibility: "public",
-    })
+    }))
 
     return user.toJSON()
   }
