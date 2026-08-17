@@ -12,6 +12,7 @@ export interface ProjectManagementGateway {
   listAllProjects(): Promise<ProjectRecord[]>
   listProjectsByUser(actorId: number): Promise<ProjectRecord[]>
   listProjectsByCreator(actorId: number): Promise<ProjectRecord[]>
+  listProjectsByLeaderId(actorId: number): Promise<ProjectRecord[]>
   getProjectById(projectId: number): Promise<ProjectRecord | null>
   canActorAccessProject(projectId: number, actorId: number, actorRoles: unknown): Promise<boolean>
   createProject(command: CreateProjectCommand): Promise<ProjectRecord>

@@ -25,7 +25,7 @@ interface DraggableKanbanCardProps extends KanbanCardProps {
   index: number
 }
 
-export function KanbanCard({ task, onEdit, isOverdue, index }: DraggableKanbanCardProps) {
+export function KanbanCard({ task, onEdit, onClick, isOverdue, index }: DraggableKanbanCardProps) {
   const [isHovered, setIsHovered] = useState(false)
   const { user } = useAuth()
   const { projects } = useProject()
@@ -207,7 +207,7 @@ export function KanbanCard({ task, onEdit, isOverdue, index }: DraggableKanbanCa
                           className={`h-6 w-6 p-0 opacity-0 transition-opacity ${
                             isHovered ? "opacity-100" : ""
                           }`}
-                          onClick={(e) => e.stopPropagation()}
+                onClick={(e) => { e.stopPropagation(); onClick(task) }}
                           onMouseDown={(e) => e.stopPropagation()}
                         >
                           <MoreHorizontal className="h-4 w-4" />

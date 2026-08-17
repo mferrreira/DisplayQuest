@@ -34,6 +34,10 @@ export class ProjectServiceGateway implements ProjectManagementGateway {
     return await this.projectRepository.findByCreatorId(actorId) as unknown as ProjectRecord[]
   }
 
+  async listProjectsByLeaderId(actorId: number): Promise<ProjectRecord[]> {
+    return await this.projectRepository.findByLeaderId(actorId) as unknown as ProjectRecord[]
+  }
+
   async getProjectById(projectId: number) {
     return await this.projectRepository.findById(projectId) as unknown as ProjectRecord | null
   }

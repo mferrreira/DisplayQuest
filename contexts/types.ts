@@ -431,6 +431,7 @@ export interface KanbanColumnProps {
   status: string
   tasks: Task[]
   onEdit: (task: Task) => void
+  onClick: (task: Task) => void
   onAddTask: (status: string) => void
   canAddTask: boolean
   isCompactView?: boolean
@@ -439,6 +440,7 @@ export interface KanbanColumnProps {
 export interface KanbanCardProps {
   task: Task
   onEdit: (task: Task) => void
+  onClick: (task: Task) => void
   isOverdue: boolean
   index: number
 }

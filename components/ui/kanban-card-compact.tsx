@@ -12,7 +12,7 @@ interface DraggableKanbanCardCompactProps extends KanbanCardProps {
   index: number
 }
 
-export function KanbanCardCompact({ task, onEdit, isOverdue, index }: DraggableKanbanCardCompactProps) {
+export function KanbanCardCompact({ task, onEdit, onClick, isOverdue, index }: DraggableKanbanCardCompactProps) {
   const [isExpanded, setIsExpanded] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
   const { users } = useUser()
@@ -57,7 +57,7 @@ export function KanbanCardCompact({ task, onEdit, isOverdue, index }: DraggableK
             className={getCardStyle()}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) => { e.stopPropagation(); onClick(task) }}
             onDoubleClick={(e) => e.stopPropagation()}
           >
             {/* Public Task Special Effects */}

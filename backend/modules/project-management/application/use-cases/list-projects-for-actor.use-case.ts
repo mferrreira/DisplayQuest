@@ -12,7 +12,8 @@ export class ListProjectsForActorUseCase {
 
     const userProjects = await this.gateway.listProjectsByUser(query.actorId)
     const createdProjects = await this.gateway.listProjectsByCreator(query.actorId)
-    const allProjects = [...userProjects, ...createdProjects]
+    const ledProjects = await this.gateway.listProjectsByLeaderId(query.actorId)
+    const allProjects = [...userProjects, ...createdProjects, ...ledProjects]
 
     return allProjects.filter(
       (project, index, self) => index === self.findIndex((candidate) => candidate.id === project.id),
