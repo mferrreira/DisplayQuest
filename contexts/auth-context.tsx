@@ -29,7 +29,7 @@ export function useAuth(): AuthContextType {
   }
 
   const logout = () => {
-    signOut({ callbackUrl: "/login" })
+    signOut({ callbackUrl: `${window.location.origin}/login` })
   }
 
   const register = async (name: string, email: string, password: string) => {
