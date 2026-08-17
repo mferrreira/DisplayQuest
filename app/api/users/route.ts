@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { requireApiActor } from '@/lib/auth/api-guard'
+import { requireApiActor, ensurePermission } from '@/lib/auth/api-guard'
 import { createUserManagementModule } from '@/backend/modules/user-management'
 import { getBackendComposition } from "@/backend/composition/root"
 
@@ -22,6 +22,35 @@ export async function GET() {
     return NextResponse.json(
       { error: error.message || 'Erro interno do servidor' },
       { status: 500 }
+    )
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const auth = await requireApiActor()
+    if (auth.error) return auth.error
+
+    const permissionError = ensurePermission(auth.actor, "MANAGE_USERS", "Sem permissão para criar usuários")
+    if (permissionError) return permissionError
+
+    const body = await request.json()
+    const { name, email, password, roles, weekHours } = body
+
+    const user = await userManagementModule.createUser({
+      name,
+      email,
+      password,
+      roles: roles || [],
+      weekHours: weekHours ?? 0,
+    })
+
+    return NextResponse.json({ user }, { status: 201 })
+  } catch (error: any) {
+    console.error('Erro ao criar usuário:', error)
+    return NextResponse.json(
+      { error: error.message || 'Erro ao criar usuário' },
+      { status: 400 }
     )
   }
 }

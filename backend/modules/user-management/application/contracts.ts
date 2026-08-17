@@ -39,3 +39,11 @@ export interface ListLeaderboardQuery {
 export interface ListUserProfilesQuery {
   type: "public" | "members"
 }
+
+export interface CreateUserCommand {
+  name: string
+  email: string
+  password: string
+  roles: string[]
+  weekHours: number
+}

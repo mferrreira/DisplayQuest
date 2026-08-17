@@ -44,6 +44,7 @@ import { AdminHoursManagement } from "@/components/admin/AdminHoursManagement"
 import { AdminNotificationsCenter } from "@/components/admin/AdminNotificationsCenter"
 import { ScheduleGrid } from "@/components/admin/ScheduleGrid"
 import { NotificationsPanel } from "@/components/ui/notifications-panel"
+import { CreateUserDialog } from "@/components/admin/create-user-dialog"
 import { hasAccess } from "@/lib/utils/access-control"
 
 interface ModernAdminPanelProps {
@@ -75,6 +76,7 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
   const [savingUserSettings, setSavingUserSettings] = useState(false)
   const [globalTasksProgress, setGlobalTasksProgress] = useState<any[]>([])
   const [loadingGlobalTasks, setLoadingGlobalTasks] = useState(false)
+  const [createUserOpen, setCreateUserOpen] = useState(false)
 
   // Verificar permissões do usuário
   const canManageUsers = hasAccess(user?.roles || [], 'MANAGE_USERS')
@@ -402,6 +404,10 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
                         />
                       </div>
                     </div>
+                    <Button onClick={() => setCreateUserOpen(true)}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Novo Usuário
+                    </Button>
                     <Select value={filterRole} onValueChange={setFilterRole}>
                       <SelectTrigger className="w-40">
                         <SelectValue placeholder="Função" />
@@ -862,6 +868,12 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
           )}
         </DialogContent>
       </Dialog>
+
+      <CreateUserDialog
+        open={createUserOpen}
+        onOpenChange={setCreateUserOpen}
+        onCreated={handleRefresh}
+      />
     </div>
   )
 }

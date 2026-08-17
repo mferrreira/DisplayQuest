@@ -8,6 +8,7 @@ import { createIdentityAccessModule } from "@/backend/modules/identity-access"
 type GatewayCall<T> = T extends (...args: infer A) => infer R ? (...args: A) => R : never
 
 export class UserManagementModule {
+  readonly createUser: GatewayCall<UserManagementGateway["createUser"]>
   readonly listUsersForActor: GatewayCall<UserManagementGateway["listUsersForActor"]>
   readonly findUserById: GatewayCall<UserManagementGateway["findUserById"]>
   readonly updateUser: GatewayCall<UserManagementGateway["updateUser"]>
@@ -24,6 +25,7 @@ export class UserManagementModule {
   readonly listProfiles: GatewayCall<UserManagementGateway["listProfiles"]>
 
   constructor(private readonly gateway: UserManagementGateway) {
+    this.createUser = this.gateway.createUser.bind(this.gateway)
     this.listUsersForActor = this.gateway.listUsersForActor.bind(this.gateway)
     this.findUserById = this.gateway.findUserById.bind(this.gateway)
     this.updateUser = this.gateway.updateUser.bind(this.gateway)
