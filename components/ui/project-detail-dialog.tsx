@@ -18,10 +18,12 @@ import {
   Edit,
   Trash2,
   Plus,
+  Upload,
   Link
 } from "lucide-react"
 import { useTask } from "@/contexts/task-context"
 import { TaskDialog } from "@/components/features/task-dialog"
+import { BacklogDialog } from "@/components/features/backlog-dialog"
 import type { Project, Task } from "@/contexts/types"
 import { useAuth } from "@/contexts/auth-context"
 import { useUser } from "@/contexts/user-context"
@@ -50,6 +52,7 @@ export function ProjectDetailDialog({
   const { users } = useUser()
   const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false)
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
+  const [isBacklogDialogOpen, setIsBacklogDialogOpen] = useState(false)
 
   if (!project) return null
 
@@ -238,10 +241,16 @@ export function ProjectDetailDialog({
                     Tarefas do Projeto
                   </CardTitle>
                   {user && hasAccess(user.roles, "CREATE_TASK") && (
-                    <Button onClick={handleCreateTask} size="sm">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Nova Tarefa
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button variant="outline" onClick={() => setIsBacklogDialogOpen(true)} size="sm">
+                        <Upload className="h-4 w-4 mr-2" />
+                        Importar Backlog
+                      </Button>
+                      <Button onClick={handleCreateTask} size="sm">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Nova Tarefa
+                      </Button>
+                    </div>
                   )}
                 </div>
               </CardHeader>
@@ -431,6 +440,11 @@ export function ProjectDetailDialog({
         open={isTaskDialogOpen}
         onOpenChange={handleTaskDialogClose}
         task={selectedTask}
+        projectId={project.id.toString()}
+      />
+      <BacklogDialog
+        open={isBacklogDialogOpen}
+        onOpenChange={setIsBacklogDialogOpen}
         projectId={project.id.toString()}
       />
     </>

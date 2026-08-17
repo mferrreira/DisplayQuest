@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Plus, AlertTriangle, Filter, FolderOpen, LayoutGrid, List } from "lucide-react"
+import { Plus, Upload, AlertTriangle, Filter, FolderOpen, LayoutGrid, List } from "lucide-react"
 
 interface Project {
   id: number
@@ -30,6 +30,7 @@ interface KanbanHeaderProps {
   onOverdueFilterChange: (show: boolean) => void
   canCreateTasks?: boolean
   onCreateTask?: () => void
+  onCreateBacklog?: () => void
   isUpdating?: boolean
   // Project selector props
   projects?: Project[]
@@ -48,6 +49,7 @@ export function KanbanHeader({
   onOverdueFilterChange,
   canCreateTasks = false,
   onCreateTask,
+  onCreateBacklog,
   isUpdating = false,
   projects = [],
   selectedProjectId,
@@ -147,6 +149,13 @@ export function KanbanHeader({
             </DropdownMenuContent>
           </DropdownMenu>
 
+          {canCreateTasks && onCreateBacklog && (
+            <Button variant="outline" onClick={onCreateBacklog} disabled={isUpdating}>
+              <Upload className="h-4 w-4 mr-2" />
+              <span className="hidden sm:inline">Importar Backlog</span>
+              <span className="sm:hidden">Backlog</span>
+            </Button>
+          )}
           {canCreateTasks && onCreateTask && (
             <Button onClick={onCreateTask} disabled={isUpdating}>
               <Plus className="h-4 w-4 mr-2" />

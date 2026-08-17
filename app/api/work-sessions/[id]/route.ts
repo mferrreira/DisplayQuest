@@ -41,6 +41,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       ? await workExecutionModule.completeWorkSession({
           sessionId: id,
           actorUserId: existingSession.userId,
+          actorRoles: actor.roles,
           activity: data.activity,
           location: data.location,
           endTime: data.endTime,
@@ -52,6 +53,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       : await workExecutionModule.updateWorkSession({
           sessionId: id,
           actorUserId: existingSession.userId,
+          actorRoles: actor.roles,
           activity: data.activity,
           location: data.location,
           status: data.status,

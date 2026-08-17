@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -11,11 +11,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import {
-  Users, 
-  BarChart3, 
-  Clock, 
-  Target, 
-  Settings, 
+  Users,
+  BarChart3,
+  Clock,
+  Target,
+  Settings,
   Bell,
   TrendingUp,
   Activity,
@@ -27,9 +27,12 @@ import {
   Search,
   Filter,
   Download,
-  RefreshCw
+  RefreshCw,
+  CheckCircle2,
+  XCircle
 } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
+import { useTask } from "@/contexts/task-context"
 import { UserApproval } from "@/components/features/user-approval"
 import { ProjectMembersManagement } from "@/components/features/project-members-management"
 import { ProjectHoursStats } from "@/components/features/project-hours-stats"
@@ -53,11 +56,17 @@ interface ModernAdminPanelProps {
 
 export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: ModernAdminPanelProps) {
   const { user } = useAuth()
+  const { tasks: liveTasks, approveTask, rejectTask, fetchTasks } = useTask()
   const router = useRouter()
-  
+  // Ref para bloquear ações duplicadas antes do re-render (React state tem delay de ciclo)
+  const inFlightTaskIds = useRef<Set<number>>(new Set())
+
   const [searchTerm, setSearchTerm] = useState("")
   const [filterRole, setFilterRole] = useState("all")
   const [filterStatus, setFilterStatus] = useState("all")
+  const [taskStatusFilter, setTaskStatusFilter] = useState("all")
+  const [taskProjectFilter, setTaskProjectFilter] = useState("all")
+  const [taskActionLoading, setTaskActionLoading] = useState<number | null>(null)
   const [selectedProject, setSelectedProject] = useState<string>("")
   const [refreshing, setRefreshing] = useState(false)
   const [selectedUserForSettings, setSelectedUserForSettings] = useState<any | null>(null)
@@ -71,6 +80,13 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
   const canManageUsers = hasAccess(user?.roles || [], 'MANAGE_USERS')
   const canManageProjects = hasAccess(user?.roles || [], 'MANAGE_PROJECTS')
   const canManageTasks = hasAccess(user?.roles || [], 'MANAGE_TASKS')
+
+  // Garante que o admin vê TODAS as tasks, independente de filtros aplicados pelo kanban
+  useEffect(() => {
+    if (canManageTasks) {
+      fetchTasks()
+    }
+  }, [canManageTasks, fetchTasks])
   const canManageSchedule = hasAccess(user?.roles || [], 'MANAGE_SCHEDULE')
   const canManageBadges = hasAccess(user?.roles || [], 'MANAGE_BADGES')
 
@@ -203,7 +219,7 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
 
       {/* Tabs principais */}
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-8">
+        <TabsList className="flex w-full overflow-x-auto gap-1 h-auto flex-wrap">
           <TabsTrigger value="overview" className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4" />
             <span className="hidden sm:inline">Visão Geral</span>
@@ -523,73 +539,210 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
         <TabsContent value="tasks" className="space-y-6">
           {canManageTasks && (
             <>
+              {/* Filtros */}
               <Card>
-                <CardHeader>
+                <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2">
                     <Activity className="h-5 w-5" />
                     Gestão de Tarefas
                   </CardTitle>
                   <CardDescription>
-                    Gerencie tarefas e aprovações
+                    Visualize, filtre e aprove tarefas em revisão
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    {tasks.slice(0, 10).map((task) => (
-                      <div key={task.id} className="flex items-center justify-between p-4 border rounded-lg">
-                        <div>
-                          <h3 className="font-medium">{task.title}</h3>
-                          <p className="text-sm text-muted-foreground">{task.description}</p>
-                          <div className="flex gap-2 mt-2">
-                            <Badge variant="outline">{task.status}</Badge>
-                            <Badge variant="outline">{task.priority}</Badge>
-                            {task.isGlobal && <Badge>Global</Badge>}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <Select value={taskStatusFilter} onValueChange={setTaskStatusFilter}>
+                      <SelectTrigger className="w-full sm:w-44">
+                        <SelectValue placeholder="Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos os status</SelectItem>
+                        <SelectItem value="to-do">A Fazer</SelectItem>
+                        <SelectItem value="in-progress">Em Andamento</SelectItem>
+                        <SelectItem value="in-review">Em Revisão</SelectItem>
+                        <SelectItem value="adjust">Ajustes</SelectItem>
+                        <SelectItem value="done">Concluído</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Select value={taskProjectFilter} onValueChange={setTaskProjectFilter}>
+                      <SelectTrigger className="w-full sm:w-52">
+                        <SelectValue placeholder="Projeto" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos os projetos</SelectItem>
+                        <SelectItem value="global">Globais</SelectItem>
+                        {projects.map((p: any) => (
+                          <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </CardContent>
               </Card>
 
+              {/* Lista de tarefas */}
               <Card>
-                <CardHeader>
-                  <CardTitle>Tarefas Globais (Coordenador)</CardTitle>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base">Tarefas</CardTitle>
+                    <span className="text-xs text-muted-foreground">
+                      {liveTasks.filter((task) => {
+                        const matchStatus = taskStatusFilter === "all" || task.status === taskStatusFilter
+                        const matchProject = taskProjectFilter === "all"
+                          || (taskProjectFilter === "global" && task.isGlobal)
+                          || (!task.isGlobal && String(task.projectId) === taskProjectFilter)
+                        return matchStatus && matchProject
+                      }).length} tarefa(s)
+                    </span>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="max-h-[480px] overflow-y-auto divide-y">
+                    {liveTasks
+                      .filter((task) => {
+                        const matchStatus = taskStatusFilter === "all" || task.status === taskStatusFilter
+                        const matchProject = taskProjectFilter === "all"
+                          || (taskProjectFilter === "global" && task.isGlobal)
+                          || (!task.isGlobal && String(task.projectId) === taskProjectFilter)
+                        return matchStatus && matchProject
+                      })
+                      .map((task) => {
+                        const project = projects.find((p: any) => p.id === task.projectId)
+                        const isInReview = task.status === "in-review"
+                        const isLoading = taskActionLoading === task.id
+
+                        return (
+                          <div key={task.id} className="flex items-start justify-between p-4 gap-4">
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-medium truncate">{task.title}</h3>
+                              {task.description && (
+                                <p className="text-sm text-muted-foreground line-clamp-1 mt-0.5">{task.description}</p>
+                              )}
+                              <div className="flex flex-wrap gap-1.5 mt-2">
+                                <Badge variant="outline" className="text-xs">
+                                  {task.status === "to-do" ? "A Fazer"
+                                    : task.status === "in-progress" ? "Em Andamento"
+                                    : task.status === "in-review" ? "Em Revisão"
+                                    : task.status === "adjust" ? "Ajustes"
+                                    : task.status === "done" ? "Concluído"
+                                    : task.status}
+                                </Badge>
+                                <Badge variant="outline" className="text-xs">{task.priority}</Badge>
+                                {task.isGlobal && <Badge className="text-xs">Global</Badge>}
+                                {project && (
+                                  <Badge variant="secondary" className="text-xs">{project.name}</Badge>
+                                )}
+                              </div>
+                            </div>
+                            {isInReview && (
+                              <div className="flex gap-2 shrink-0">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-green-700 border-green-300 hover:bg-green-50 gap-1"
+                                  disabled={isLoading}
+                                  onClick={async () => {
+                                    if (inFlightTaskIds.current.has(task.id)) return
+                                    inFlightTaskIds.current.add(task.id)
+                                    setTaskActionLoading(task.id)
+                                    try {
+                                      await approveTask(task.id)
+                                    } catch {
+                                      await fetchTasks()
+                                    } finally {
+                                      inFlightTaskIds.current.delete(task.id)
+                                      setTaskActionLoading(null)
+                                    }
+                                  }}
+                                >
+                                  <CheckCircle2 className="h-4 w-4" />
+                                  Aprovar
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-red-700 border-red-300 hover:bg-red-50 gap-1"
+                                  disabled={isLoading}
+                                  onClick={async () => {
+                                    if (inFlightTaskIds.current.has(task.id)) return
+                                    inFlightTaskIds.current.add(task.id)
+                                    setTaskActionLoading(task.id)
+                                    try {
+                                      await rejectTask(task.id)
+                                    } catch {
+                                      await fetchTasks()
+                                    } finally {
+                                      inFlightTaskIds.current.delete(task.id)
+                                      setTaskActionLoading(null)
+                                    }
+                                  }}
+                                >
+                                  <XCircle className="h-4 w-4" />
+                                  Rejeitar
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    {liveTasks.filter((task) => {
+                      const matchStatus = taskStatusFilter === "all" || task.status === taskStatusFilter
+                      const matchProject = taskProjectFilter === "all"
+                        || (taskProjectFilter === "global" && task.isGlobal)
+                        || (!task.isGlobal && String(task.projectId) === taskProjectFilter)
+                      return matchStatus && matchProject
+                    }).length === 0 && (
+                      <div className="py-10 text-center text-sm text-muted-foreground">
+                        Nenhuma tarefa encontrada para os filtros selecionados.
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Tarefas Globais */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Tarefas Globais — Progresso por Usuário</CardTitle>
                   <CardDescription>
-                    Progresso de conclusão por aluno em tarefas globais reais
+                    Progresso de conclusão por usuário em quests globais
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
-                  {loadingGlobalTasks ? (
-                    <p className="text-sm text-muted-foreground">Carregando progresso...</p>
-                  ) : globalTasksProgress.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">Nenhuma tarefa global cadastrada.</p>
-                  ) : (
-                    <div className="space-y-4">
-                      {globalTasksProgress.map((task) => (
-                        <div key={task.id} className="rounded-lg border p-4 space-y-2">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="font-medium">{task.title}</p>
-                              <p className="text-xs text-muted-foreground">{task.description || "Sem descrição"}</p>
+                <CardContent className="p-0">
+                  <div className="max-h-[400px] overflow-y-auto divide-y">
+                    {loadingGlobalTasks ? (
+                      <p className="py-6 text-center text-sm text-muted-foreground">Carregando progresso...</p>
+                    ) : globalTasksProgress.length === 0 ? (
+                      <p className="py-6 text-center text-sm text-muted-foreground">Nenhuma tarefa global cadastrada.</p>
+                    ) : (
+                      globalTasksProgress.map((task) => (
+                        <div key={task.id} className="p-4 space-y-2">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="font-medium truncate">{task.title}</p>
+                              {task.description && (
+                                <p className="text-xs text-muted-foreground line-clamp-1">{task.description}</p>
+                              )}
                             </div>
-                            <Badge variant="outline">
+                            <Badge variant="outline" className="shrink-0 text-xs">
                               {task.completedCount}/{task.audienceSize} concluíram
                             </Badge>
                           </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div className="bg-green-600 h-2 rounded-full" style={{ width: `${Math.round(task.completionRate)}%` }} />
+                          <div className="w-full bg-gray-200 rounded-full h-1.5">
+                            <div
+                              className="bg-green-600 h-1.5 rounded-full"
+                              style={{ width: `${Math.round(task.completionRate)}%` }}
+                            />
                           </div>
-                          <div className="text-xs text-muted-foreground">
-                            Concluíram: {task.completedUsers.map((u: any) => u.name).join(", ") || "Ninguém"}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            Pendentes: {task.pendingUsers.map((u: any) => u.name).join(", ") || "Nenhum"}
+                          <div className="flex gap-4 text-xs text-muted-foreground">
+                            <span>✓ {task.completedUsers.map((u: any) => u.name).join(", ") || "Ninguém"}</span>
+                            <span>⏳ {task.pendingUsers.map((u: any) => u.name).join(", ") || "Nenhum"}</span>
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  )}
+                      ))
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             </>

@@ -1,4 +1,5 @@
-import { ensurePermission, ensureSelfOrPermission, requireApiActor } from "@/lib/auth/api-guard";
+import { ensureSelfOrPermission, requireApiActor } from "@/lib/auth/api-guard";
+import { hasPermission } from "@/lib/auth/rbac"
 import { getBackendComposition } from "@/backend/composition/root"
 
 const { workExecution: workExecutionModule } = getBackendComposition();
@@ -9,7 +10,7 @@ export async function GET(request: Request) {
     if (auth.error) return auth.error;
 
     const actor = auth.actor;
-    const canManageSessions = !ensurePermission(actor, "MANAGE_WORK_SESSIONS");
+    const canManageSessions = hasPermission(actor.roles, "MANAGE_WORK_SESSIONS");
     const url = new URL(request.url);
     const userId = url.searchParams.get("userId");
     const status = url.searchParams.get("status");
@@ -59,7 +60,7 @@ export async function POST(request: Request) {
     if (auth.error) return auth.error;
 
     const actor = auth.actor;
-    const canManageSessions = !ensurePermission(actor, "MANAGE_WORK_SESSIONS");
+    const canManageSessions = hasPermission(actor.roles, "MANAGE_WORK_SESSIONS");
     const data = await request.json();
     const targetUserId = Number(data.userId);
     const startTime = typeof data.startTime === "string" ? data.startTime : undefined;
@@ -85,6 +86,7 @@ export async function POST(request: Request) {
       location: data.location,
       projectId: data.projectId,
       startTime,
+      actorRoles: actor.roles,
     });
 
     const shouldCompleteOnCreate = status === "completed" && Boolean(endTime);
