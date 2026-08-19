@@ -10,6 +10,8 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Textarea } from "@/components/ui/textarea"
 import {
   Users,
   BarChart3,
@@ -29,7 +31,10 @@ import {
   Download,
   RefreshCw,
   CheckCircle2,
-  XCircle
+  XCircle,
+  User,
+  Zap,
+  AlertTriangle
 } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { useTask } from "@/contexts/task-context"
@@ -71,8 +76,13 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
   const [selectedProject, setSelectedProject] = useState<string>("")
   const [refreshing, setRefreshing] = useState(false)
   const [selectedUserForSettings, setSelectedUserForSettings] = useState<any | null>(null)
-  const [userRoleDraft, setUserRoleDraft] = useState<string>("")
+  const [userRolesDraft, setUserRolesDraft] = useState<string[]>([])
   const [userWeekHoursDraft, setUserWeekHoursDraft] = useState<string>("0")
+  const [userNameDraft, setUserNameDraft] = useState<string>("")
+  const [userEmailDraft, setUserEmailDraft] = useState<string>("")
+  const [userBioDraft, setUserBioDraft] = useState<string>("")
+  const [userPointsAction, setUserPointsAction] = useState<"set" | "add" | "remove">("set")
+  const [userPointsValue, setUserPointsValue] = useState<string>("0")
   const [savingUserSettings, setSavingUserSettings] = useState(false)
   const [globalTasksProgress, setGlobalTasksProgress] = useState<any[]>([])
   const [loadingGlobalTasks, setLoadingGlobalTasks] = useState(false)
@@ -108,8 +118,13 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
 
   const openUserSettings = (targetUser: any) => {
     setSelectedUserForSettings(targetUser)
-    setUserRoleDraft(targetUser?.roles?.[0] || "COLABORADOR")
+    setUserRolesDraft(targetUser?.roles || [])
     setUserWeekHoursDraft(String(targetUser?.weekHours ?? 0))
+    setUserNameDraft(targetUser?.name || "")
+    setUserEmailDraft(targetUser?.email || "")
+    setUserBioDraft(targetUser?.bio || "")
+    setUserPointsAction("set")
+    setUserPointsValue(String(targetUser?.points ?? 0))
   }
 
   const updateUserStatus = async (targetUserId: number, action: "approve" | "reject" | "suspend" | "activate") => {
@@ -135,18 +150,21 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "set",
-          roles: [userRoleDraft],
+          roles: userRolesDraft,
         }),
       })
       if (!rolesResponse.ok) {
         const payload = await rolesResponse.json().catch(() => ({}))
-        throw new Error(payload?.error || "Erro ao atualizar papel do usuário")
+        throw new Error(payload?.error || "Erro ao atualizar papéis do usuário")
       }
 
       const updateResponse = await fetch(`/api/users/${selectedUserForSettings.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          name: userNameDraft,
+          email: userEmailDraft,
+          bio: userBioDraft || null,
           weekHours: Number(userWeekHoursDraft),
         }),
       })
@@ -155,12 +173,46 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
         throw new Error(payload?.error || "Erro ao atualizar usuário")
       }
 
+      const pointsNum = Number(userPointsValue)
+      if (!isNaN(pointsNum) && pointsNum >= 0) {
+        const pointsResponse = await fetch(`/api/users/${selectedUserForSettings.id}/points`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: userPointsAction,
+            points: pointsNum,
+          }),
+        })
+        if (!pointsResponse.ok) {
+          const payload = await pointsResponse.json().catch(() => ({}))
+          throw new Error(payload?.error || "Erro ao atualizar pontos")
+        }
+      }
+
       setSelectedUserForSettings(null)
       router.refresh()
     } finally {
       setSavingUserSettings(false)
     }
   }
+
+  const handleRoleToggle = (role: string) => {
+    setUserRolesDraft(prev =>
+      prev.includes(role)
+        ? prev.filter(r => r !== role)
+        : [...prev, role]
+    )
+  }
+
+  const availableRoles = [
+    { value: 'VOLUNTARIO', label: 'Voluntário', description: 'Acesso básico ao sistema' },
+    { value: 'COLABORADOR', label: 'Colaborador', description: 'Pode trabalhar em projetos' },
+    { value: 'PESQUISADOR', label: 'Pesquisador', description: 'Acesso a funcionalidades de pesquisa' },
+    { value: 'GERENTE_PROJETO', label: 'Gerente de Projeto', description: 'Gerencia projetos específicos' },
+    { value: 'LABORATORISTA', label: 'Laboratorista', description: 'Acesso administrativo' },
+    { value: 'GERENTE', label: 'Gerente', description: 'Acesso total ao sistema' },
+    { value: 'COORDENADOR', label: 'Coordenador', description: 'Acesso completo e gestão de usuários' },
+  ]
 
   useEffect(() => {
     const fetchGlobalTasksProgress = async () => {
@@ -806,59 +858,173 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
       </Tabs>
 
       <Dialog open={Boolean(selectedUserForSettings)} onOpenChange={(open) => !open && setSelectedUserForSettings(null)}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-lg" style={{ maxHeight: "90vh", overflowY: "auto" }}>
           <DialogHeader>
             <DialogTitle>Configurar Usuário</DialogTitle>
             <DialogDescription>
-              Ajuste função, status e carga horária do usuário.
+              Gerencie perfil, funções, pontos e status do usuário.
             </DialogDescription>
           </DialogHeader>
           {selectedUserForSettings && (
-            <div className="space-y-4">
-              <div>
-                <Label>Usuário</Label>
-                <p className="text-sm text-muted-foreground">
-                  {selectedUserForSettings.name} ({selectedUserForSettings.email})
-                </p>
+            <div className="space-y-5">
+
+              {/* Perfil */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                  <Label className="text-sm font-semibold">Perfil</Label>
+                </div>
+                <div className="space-y-2 pl-6">
+                  <div className="space-y-1">
+                    <Label htmlFor="userName" className="text-xs">Nome</Label>
+                    <Input
+                      id="userName"
+                      value={userNameDraft}
+                      onChange={(e) => setUserNameDraft(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="userEmail" className="text-xs">Email</Label>
+                    <Input
+                      id="userEmail"
+                      type="email"
+                      value={userEmailDraft}
+                      onChange={(e) => setUserEmailDraft(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="userBio" className="text-xs">Bio</Label>
+                    <Textarea
+                      id="userBio"
+                      value={userBioDraft}
+                      onChange={(e) => setUserBioDraft(e.target.value)}
+                      placeholder="Biografia do usuário..."
+                      rows={2}
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div>
-                <Label>Função principal</Label>
-                <Select value={userRoleDraft} onValueChange={setUserRoleDraft}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="COORDENADOR">Coordenador</SelectItem>
-                    <SelectItem value="GERENTE">Gerente</SelectItem>
-                    <SelectItem value="LABORATORISTA">Laboratorista</SelectItem>
-                    <SelectItem value="GERENTE_PROJETO">Gerente de Projeto</SelectItem>
-                    <SelectItem value="PESQUISADOR">Pesquisador</SelectItem>
-                    <SelectItem value="COLABORADOR">Colaborador</SelectItem>
-                    <SelectItem value="VOLUNTARIO">Voluntário</SelectItem>
-                  </SelectContent>
-                </Select>
+              {/* Funções */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Shield className="h-4 w-4 text-muted-foreground" />
+                  <Label className="text-sm font-semibold">Funções</Label>
+                </div>
+                <div className="space-y-2 pl-6">
+                  {availableRoles.map((role) => (
+                    <div key={role.value} className="flex items-start space-x-2">
+                      <Checkbox
+                        id={role.value}
+                        checked={userRolesDraft.includes(role.value)}
+                        onCheckedChange={() => handleRoleToggle(role.value)}
+                      />
+                      <div className="flex-1">
+                        <Label htmlFor={role.value} className="text-sm font-medium cursor-pointer">
+                          {role.label}
+                        </Label>
+                        <p className="text-xs text-muted-foreground">{role.description}</p>
+                      </div>
+                    </div>
+                  ))}
+                  {userRolesDraft.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {userRolesDraft.map((role) => {
+                        const roleInfo = availableRoles.find(r => r.value === role)
+                        return (
+                          <Badge key={role} variant="secondary" className="text-xs">
+                            {roleInfo?.label || role}
+                          </Badge>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
 
-              <div>
-                <Label>Carga horária semanal</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  step="0.5"
-                  value={userWeekHoursDraft}
-                  onChange={(e) => setUserWeekHoursDraft(e.target.value)}
-                />
+              {/* Carga Horária */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <Label className="text-sm font-semibold">Carga Horária</Label>
+                </div>
+                <div className="pl-6">
+                  <Label htmlFor="weekHours" className="text-xs">Horas por semana (0–168)</Label>
+                  <Input
+                    id="weekHours"
+                    type="number"
+                    min="0"
+                    max="168"
+                    step="0.5"
+                    value={userWeekHoursDraft}
+                    onChange={(e) => setUserWeekHoursDraft(e.target.value)}
+                  />
+                </div>
               </div>
 
-              <div className="flex flex-wrap gap-2">
-                <Button variant="outline" onClick={() => updateUserStatus(selectedUserForSettings.id, "approve")}>Aprovar</Button>
-                <Button variant="outline" onClick={() => updateUserStatus(selectedUserForSettings.id, "activate")}>Ativar</Button>
-                <Button variant="outline" onClick={() => updateUserStatus(selectedUserForSettings.id, "suspend")}>Suspender</Button>
-                <Button variant="destructive" onClick={() => updateUserStatus(selectedUserForSettings.id, "reject")}>Rejeitar</Button>
+              {/* Pontos */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Zap className="h-4 w-4 text-muted-foreground" />
+                  <Label className="text-sm font-semibold">Pontos</Label>
+                </div>
+                <div className="pl-6">
+                  <div className="flex gap-2">
+                    <Select value={userPointsAction} onValueChange={(v) => setUserPointsAction(v as "set" | "add" | "remove")}>
+                      <SelectTrigger className="w-36">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="set">Definir</SelectItem>
+                        <SelectItem value="add">Adicionar</SelectItem>
+                        <SelectItem value="remove">Remover</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      type="number"
+                      min="0"
+                      value={userPointsValue}
+                      onChange={(e) => setUserPointsValue(e.target.value)}
+                      className="flex-1"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Atual: {selectedUserForSettings.points ?? 0} pontos
+                  </p>
+                </div>
               </div>
 
-              <div className="flex justify-end gap-2">
+              {/* Status */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Activity className="h-4 w-4 text-muted-foreground" />
+                  <Label className="text-sm font-semibold">Status</Label>
+                </div>
+                <div className="flex flex-wrap gap-2 pl-6">
+                  <Button variant="outline" size="sm" onClick={() => updateUserStatus(selectedUserForSettings.id, "approve")}>
+                    <CheckCircle2 className="h-3 w-3 mr-1" /> Aprovar
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => updateUserStatus(selectedUserForSettings.id, "activate")}>
+                    <CheckCircle2 className="h-3 w-3 mr-1" /> Ativar
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => {
+                    if (confirm("Tem certeza que deseja suspender este usuário?")) {
+                      updateUserStatus(selectedUserForSettings.id, "suspend")
+                    }
+                  }}>
+                    <AlertTriangle className="h-3 w-3 mr-1" /> Suspender
+                  </Button>
+                  <Button variant="destructive" size="sm" onClick={() => {
+                    if (confirm("Tem certeza que deseja rejeitar este usuário? Esta ação irá removê-lo do sistema.")) {
+                      updateUserStatus(selectedUserForSettings.id, "reject")
+                    }
+                  }}>
+                    <XCircle className="h-3 w-3 mr-1" /> Rejeitar
+                  </Button>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t">
                 <Button variant="outline" onClick={() => setSelectedUserForSettings(null)}>Cancelar</Button>
                 <Button onClick={saveUserSettings} disabled={savingUserSettings}>
                   {savingUserSettings ? "Salvando..." : "Salvar alterações"}
