@@ -1,5 +1,5 @@
 import { getServerSession } from "next-auth"
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
+import { authOptions } from "@/lib/auth/config"
 import type { NextRequest } from "next/server"
 import { createApiError } from "../utils/utils"
 import {

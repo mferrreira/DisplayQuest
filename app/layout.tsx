@@ -4,7 +4,7 @@ import "./globals.css"
 import ClientLayout from "./client-layout"
 import { initCronService } from "@/lib/services/init-cron"
 import { getServerSession } from "next-auth"
-import { authOptions } from "./api/auth/[...nextauth]/route"
+import { authOptions } from "@/lib/auth/config"
 
 // Inicializar o serviço de cron no servidor
 if (typeof window === 'undefined') {
