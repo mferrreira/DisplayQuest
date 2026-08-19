@@ -93,12 +93,8 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
   const canManageProjects = hasAccess(user?.roles || [], 'MANAGE_PROJECTS')
   const canManageTasks = hasAccess(user?.roles || [], 'MANAGE_TASKS')
 
-  // Garante que o admin vê TODAS as tasks, independente de filtros aplicados pelo kanban
-  useEffect(() => {
-    if (canManageTasks) {
-      fetchTasks()
-    }
-  }, [canManageTasks, fetchTasks])
+  // TaskProvider already fetches all tasks on mount; no need to re-fetch here
+
   const canManageSchedule = hasAccess(user?.roles || [], 'MANAGE_SCHEDULE')
   const canManageBadges = hasAccess(user?.roles || [], 'MANAGE_BADGES')
 

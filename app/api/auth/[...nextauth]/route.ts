@@ -3,6 +3,9 @@ import CredentialsProvider from "next-auth/providers/credentials"
 import { prisma } from "@/lib/database/prisma"
 import bcrypt from "bcryptjs"
 
+const SESSION_MAX_AGE = 60 * 60 * 48 // 2 days
+const SLIDING_WINDOW_THRESHOLD = 60 * 60 * 24 // refresh if less than 24h left
+
 export const authOptions: AuthOptions = {
   providers: [
     CredentialsProvider({
@@ -35,7 +38,7 @@ export const authOptions: AuthOptions = {
   ],
   session: {
     strategy: "jwt" as SessionStrategy,
-    maxAge: 60 * 60 * 48, // 2 dias
+    maxAge: SESSION_MAX_AGE,
   },
   pages: {
     signIn: "/login",
@@ -55,6 +58,7 @@ export const authOptions: AuthOptions = {
         token.weekHours = (user as any).weekHours
         token.currentWeekHours = (user as any).currentWeekHours
         token.status = (user as any).status
+        token.iat = Math.floor(Date.now() / 1000)
       }
 
       if (trigger === "update" && session?.user) {
@@ -70,35 +74,62 @@ export const authOptions: AuthOptions = {
         token.roles = session.user.roles
         token.status = session.user.status
       }
+
+      // Sliding window: extend token expiry if user is active
+      const now = Math.floor(Date.now() / 1000)
+      const tokenAge = now - (token.iat || 0)
+      const timeLeft = SESSION_MAX_AGE - tokenAge
+      if (timeLeft < SLIDING_WINDOW_THRESHOLD && token.id) {
+        token.iat = now
+      }
       
       return token
     },
     async session({ session, token }: { session: any; token: any }) {
       if (!token?.id) return session
 
-      const dbUser = await prisma.users.findUnique({
-        where: { id: token.id },
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          avatar: true,
-          bio: true,
-          profileVisibility: true,
-          points: true,
-          completedTasks: true,
-          weekHours: true,
-          currentWeekHours: true,
-          roles: true,
-          status: true,
-        },
-      })
+      try {
+        const dbUser = await prisma.users.findUnique({
+          where: { id: token.id },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatar: true,
+            bio: true,
+            profileVisibility: true,
+            points: true,
+            completedTasks: true,
+            weekHours: true,
+            currentWeekHours: true,
+            roles: true,
+            status: true,
+          },
+        })
 
-      if (!dbUser) return session
+        if (!dbUser) return session
 
-      session.user = {
-        ...session.user,
-        ...dbUser,
+        session.user = {
+          ...session.user,
+          ...dbUser,
+        }
+      } catch (err) {
+        console.error("Session callback: DB query failed, falling back to token data", err)
+        // Fall back to token data instead of returning empty session
+        session.user = {
+          id: token.id,
+          name: token.name,
+          email: token.email,
+          avatar: token.avatar,
+          bio: token.bio,
+          profileVisibility: token.profileVisibility,
+          points: token.points,
+          completedTasks: token.completedTasks,
+          weekHours: token.weekHours,
+          currentWeekHours: token.currentWeekHours,
+          roles: token.roles,
+          status: token.status,
+        }
       }
 
       return session

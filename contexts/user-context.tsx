@@ -21,22 +21,24 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const { user } = useAuth()
+  const userId = user?.id
+  const userRoles = user?.roles
 
   const fetchUsers = useCallback(async () => {
-    if (!user) {
+    if (!userId) {
       setUsers([])
       setLoading(false)
       return
     }
 
     // Verificar se o usuário tem permissão para ver outros usuários
-    const canViewUsers = user.roles?.includes('COORDENADOR') || 
-                        user.roles?.includes('GERENTE') || 
-                        user.roles?.includes('GERENTE_PROJETO') ||
-                        user.roles?.includes('PESQUISADOR') ||
-                        user.roles?.includes('VOLUNTARIO') || 
-                        user.roles?.includes('COLABORADOR') || 
-                        user.roles?.includes('LABORATORISTA')
+    const canViewUsers = userRoles?.includes('COORDENADOR') || 
+                        userRoles?.includes('GERENTE') || 
+                        userRoles?.includes('GERENTE_PROJETO') ||
+                        userRoles?.includes('PESQUISADOR') ||
+                        userRoles?.includes('VOLUNTARIO') || 
+                        userRoles?.includes('COLABORADOR') || 
+                        userRoles?.includes('LABORATORISTA')
 
     if (!canViewUsers) {
       setUsers([])
@@ -57,7 +59,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false)
     }
-  }, [user])
+  }, [userId, userRoles])
 
   useEffect(() => {
     fetchUsers()

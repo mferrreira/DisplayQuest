@@ -4,10 +4,12 @@ import { ThemeProvider } from "@/components/layout/theme-provider"
 import { UserProvider } from "@/contexts/user-context"
 import { ProjectProvider } from "@/contexts/project-context"
 import { TaskProvider } from "@/contexts/task-context"
+import { WorkSessionsProvider } from "@/contexts/work-sessions-context"
 import { SessionProvider } from "next-auth/react"
 import { AppHeader } from "@/components/layout/app-header"
 import { FloatingSessionTimer } from "@/components/ui/floating-session-timer"
 import { usePathname } from "next/navigation"
+import type { Session } from "next-auth"
 
 function DashboardProviders({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
@@ -19,7 +21,9 @@ function DashboardProviders({ children }: { children: React.ReactNode }) {
   return (
     <UserProvider>
       <ProjectProvider>
-        {shouldProvideTasks ? <TaskProvider>{children}</TaskProvider> : children}
+        <WorkSessionsProvider>
+          {shouldProvideTasks ? <TaskProvider>{children}</TaskProvider> : children}
+        </WorkSessionsProvider>
       </ProjectProvider>
     </UserProvider>
   )
@@ -44,11 +48,13 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
 
 export default function ClientLayout({
   children,
+  session,
 }: Readonly<{
   children: React.ReactNode
+  session?: Session | null
 }>) {
   return (
-    <SessionProvider>
+    <SessionProvider session={session} refetchOnWindowFocus={false} refetchInterval={0}>
       <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
         <LayoutContent>{children}</LayoutContent>
       </ThemeProvider>

@@ -54,7 +54,7 @@ export function FloatingSessionTimer() {
     void fetchSessions(user.id)
     const interval = setInterval(() => {
       void fetchSessions(user.id)
-    }, 5000)
+    }, 30000)
 
     return () => clearInterval(interval)
   }, [user?.id, fetchSessions])

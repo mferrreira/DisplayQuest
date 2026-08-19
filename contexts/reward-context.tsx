@@ -26,6 +26,8 @@ export function RewardProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const { user } = useAuth()
+  const userId = user?.id
+  const userRoles = user?.roles
 
   const fetchRewards = useCallback(async () => {
     try {
@@ -59,17 +61,17 @@ export function RewardProvider({ children }: { children: ReactNode }) {
 
   // Carregar recompensas e compras quando o componente montar ou o usuário mudar
   useEffect(() => {
-    if (user) {
+    if (userId) {
       fetchRewards()
       // Se o usuário pode gerenciar a loja, buscar todas as compras para aprovação
       // Caso contrário, buscar apenas as compras do usuário
-      const canManageStore = user?.roles?.includes('LABORATORISTA') || user?.roles?.includes('COORDENADOR');
-      fetchPurchases(canManageStore ? undefined : Number(user.id))
+      const canManageStore = userRoles?.includes('LABORATORISTA') || userRoles?.includes('COORDENADOR');
+      fetchPurchases(canManageStore ? undefined : userId)
     } else {
       setRewards([])
       setPurchases([])
     }
-  }, [user, fetchRewards, fetchPurchases])
+  }, [userId, userRoles, fetchRewards, fetchPurchases])
 
   const createReward = async (rewardData: Omit<Reward, "id">) => {
     try {

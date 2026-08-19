@@ -36,6 +36,7 @@ export function ResponsibilityProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const { user } = useAuth()
+  const userId = user?.id
 
   const toActiveResponsibility = useCallback((responsibility: any): ActiveResponsibility | null => {
     if (!responsibility) return null
@@ -105,14 +106,14 @@ export function ResponsibilityProvider({ children }: { children: ReactNode }) {
 
   // Carregar dados quando o componente montar ou o usuário mudar
   useEffect(() => {
-    if (user) {
+    if (userId) {
       fetchResponsibilities()
       fetchActiveResponsibility()
     } else {
       setResponsibilities([])
       setActiveResponsibility(null)
     }
-  }, [user, fetchResponsibilities, fetchActiveResponsibility])
+  }, [userId, fetchResponsibilities, fetchActiveResponsibility])
 
   const startResponsibility = async (notes?: string) => {
     try {
