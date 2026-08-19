@@ -21,14 +21,9 @@ function formatDuration(seconds: number): string {
 }
 
 export function LabResponsibilityStatus() {
-  const { activeResponsibility, loading, error, fetchActiveResponsibility } = useResponsibility()
+  const { activeResponsibility, loading, error } = useResponsibility()
   const { user } = useAuth()
   const [formattedStartTime, setFormattedStartTime] = useState("")
-
-  useEffect(() => {
-    fetchActiveResponsibility()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
 
   useEffect(() => {
     if (activeResponsibility?.startTime) {

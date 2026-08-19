@@ -22,6 +22,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const { user } = useAuth()
+  const userId = user?.id
 
   const fetchProjects = useCallback(async () => {
     try {
@@ -36,15 +37,15 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false)
     }
-  }, [user])
+  }, [])
 
   useEffect(() => {
-    if (user) {
+    if (userId) {
       fetchProjects()
     } else {
       setProjects([])
     }
-  }, [user, fetchProjects])
+  }, [userId, fetchProjects])
 
   const createProject = async (projectData: ProjectFormData) => {
     try {

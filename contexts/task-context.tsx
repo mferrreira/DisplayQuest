@@ -28,6 +28,8 @@ export function TaskProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null)
   const { user } = useAuth()
   const { fetchUsers } = useUser()
+  const userId = user?.id
+  const userRoles = user?.roles?.join(',')
 
   const fetchTasks = useCallback(async (projectId?: number | null) => {
     try {
@@ -35,9 +37,9 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       setError(null)
 
       const params = new URLSearchParams()
-      if (user) {
-        params.append('userId', user.id.toString())
-        params.append('roles', user.roles?.join(',') || '')
+      if (userId) {
+        params.append('userId', userId.toString())
+        params.append('roles', userRoles || '')
       }
       if (projectId !== undefined && projectId !== null) {
         params.append('projectId', projectId.toString())
@@ -56,15 +58,15 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false)
     }
-  }, [user])
+  }, [userId, userRoles])
 
   useEffect(() => {
-    if (user) {
+    if (userId) {
       fetchTasks()
     } else {
       setTasks([])
     }
-  }, [user, fetchTasks])
+  }, [userId, fetchTasks])
 
   const createTask = async (taskData: any) => {
     try {

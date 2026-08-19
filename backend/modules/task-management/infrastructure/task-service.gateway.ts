@@ -406,15 +406,20 @@ export class TaskServiceGateway implements TaskManagementGateway {
     const updatedTask = await this.taskRepository.update(command.taskId, task)
     const updatedTaskWithAssignees = await this.attachAssigneeIds(updatedTask)
 
-    const latePenalty = this.calculateLatePenalty(task, new Date())
-    const pointsToAward = task.points - latePenalty
+    // Only award points when task is actually "done" (public/global tasks).
+    // Delegated/project tasks go to "in-review" and get points on approval.
+    if (task.status === "done") {
+      const latePenalty = this.calculateLatePenalty(task, new Date())
+      const pointsToAward = task.points - latePenalty
 
-    if (pointsToAward !== 0) {
-      user.completedTasks += 1
-      await this.userRepository.update(user)
+      if (pointsToAward !== 0) {
+        user.completedTasks += 1
+        await this.userRepository.update(user)
+      }
+
+      await this.publishTaskCompletionAward(command.userId, command.taskId, pointsToAward)
     }
 
-    await this.publishTaskCompletionAward(command.userId, command.taskId, pointsToAward)
     return updatedTaskWithAssignees
   }
 
@@ -462,8 +467,13 @@ export class TaskServiceGateway implements TaskManagementGateway {
         const latePenalty = this.calculateLatePenalty(task, new Date())
         const pointsToAward = task.points - latePenalty
 
-        user.completedTasks += 1
-        await this.userRepository.update(user)
+        // For delegated tasks, completeTask did not award points (status was "in-review").
+        // Award them now on approval. completedTasks is incremented for delegated tasks
+        // only here; for public/global tasks it was already incremented in completeTask.
+        if (task.taskVisibility !== "public" && !task.isGlobal) {
+          user.completedTasks += 1
+          await this.userRepository.update(user)
+        }
         await this.publishTaskCompletionAward(task.assignedTo, command.taskId, pointsToAward)
       }
 

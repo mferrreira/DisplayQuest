@@ -196,9 +196,12 @@ export function KanbanBoard() {
         if (newStatus === "done" && previousStatus !== "done" && taskToUpdate.points > 0) {
           const userToAward = taskToUpdate.assignedTo || (taskToUpdate.taskVisibility === "public" && hasAccess(user?.roles || [], 'COMPLETE_PUBLIC_TASKS') ? user?.id : null)
           if (userToAward) {
+            const isDirectDone = taskToUpdate.isGlobal || taskToUpdate.taskVisibility === "public"
             toast({
-              title: "🎉 Tarefa Concluída!",
-              description: `${taskToUpdate.points} pontos foram adicionados ao perfil do responsável.`,
+              title: isDirectDone ? "🎉 Tarefa Concluída!" : "📋 Tarefa Enviada para Revisão",
+              description: isDirectDone
+                ? `${taskToUpdate.points} pontos foram adicionados ao perfil do responsável.`
+                : `A tarefa foi enviada para revisão. Os pontos serão adicionados após aprovação.`,
               variant: "default",
             })
           }

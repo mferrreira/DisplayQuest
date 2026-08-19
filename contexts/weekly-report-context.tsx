@@ -25,6 +25,8 @@ export function WeeklyReportProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const { user } = useAuth()
+  const userId = user?.id
+  const userRoles = user?.roles
 
   const fetchWeeklyReports = useCallback(async (userId?: number, weekStart?: string, weekEnd?: string) => {
     try {
@@ -133,12 +135,12 @@ export function WeeklyReportProvider({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
-    if (user && hasAccess(user.roles || [], 'VIEW_WEEKLY_REPORTS')) {
+    if (userId && userRoles && hasAccess(userRoles, 'VIEW_WEEKLY_REPORTS')) {
       fetchWeeklyReports()
     } else {
       setWeeklyReports([])
     }
-  }, [user, fetchWeeklyReports])
+  }, [userId, userRoles, fetchWeeklyReports])
 
   return (
     <WeeklyReportContext.Provider
