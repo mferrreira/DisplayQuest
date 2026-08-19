@@ -96,7 +96,7 @@ export function TaskDialog({ open, onOpenChange, task, projectId }: TaskDialogPr
 
   return (
     <Dialog open={open} onOpenChange={handleDialogChange}>
-      <DialogContent className="sm:max-w-[720px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[720px] max-h-[90vh]" style={{ overflowY: "auto" }}>
         <DialogHeader>
           <DialogTitle>{task ? "Editar Tarefa" : "Nova Tarefa"}</DialogTitle>
         </DialogHeader>
