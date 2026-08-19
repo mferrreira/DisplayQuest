@@ -142,7 +142,7 @@ export function BacklogDialog({ open, onOpenChange, projectId }: BacklogDialogPr
 
   return (
     <Dialog open={open} onOpenChange={(newOpen) => { if (!isSubmitting) onOpenChange(newOpen) }}>
-      <DialogContent className="sm:max-w-[720px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[720px] max-h-[90vh]" style={{ overflowY: "auto" }}>
         <DialogHeader>
           <DialogTitle>Inserção de Backlog</DialogTitle>
         </DialogHeader>
