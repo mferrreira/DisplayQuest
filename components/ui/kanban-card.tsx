@@ -170,7 +170,7 @@ export function KanbanCard({ task, onEdit, onClick, isOverdue, index }: Draggabl
                 className={getCardStyle()}
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
-                onClick={(e) => e.stopPropagation()}
+                onClick={(e) => { e.stopPropagation(); onClick(task) }}
                 onDoubleClick={(e) => e.stopPropagation()}
               >
                 {/* Public Task Special Effects */}
