@@ -16,18 +16,8 @@ import {
   Users
 } from "lucide-react"
 import { useToast } from "@/contexts/use-toast"
-
-const TIME_SLOTS = [
-  { start: "07:00", end: "09:00" },
-  { start: "09:00", end: "11:00" },
-  { start: "11:00", end: "13:00" },
-  { start: "13:00", end: "15:00" },
-  { start: "15:00", end: "17:00" },
-  { start: "17:00", end: "19:00" },
-  { start: "19:00", end: "21:00" },
-]
-
-const WEEK_DAYS = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta"]
+import { hasPermission } from "@/lib/auth/rbac"
+import { TIME_SLOTS, WEEK_DAYS, snapRange } from "@/lib/constants/schedule-grid"
 
 // Generate a subtle color for each user based on their id
 function getUserColor(userId: number) {
@@ -52,8 +42,6 @@ interface ScheduleGridProps {
   currentUser?: { id: number; roles?: string[] }
 }
 
-const ADMIN_ROLES = ['COORDENADOR', 'GERENTE']
-
 export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleGridProps) {
   const { toast } = useToast()
   const [schedules, setSchedules] = useState<any[]>([])
@@ -72,17 +60,7 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
     setUserSchedule([])
   }, [selectedUserId])
 
-  const canManageAllSchedules = currentUser?.roles?.some(role => ADMIN_ROLES.includes(role)) || false
-  const canEditSelectedUser = !readOnly && (
-    canManageAllSchedules ||
-    (currentUser && selectedUserId === currentUser.id?.toString())
-  )
-
-  useEffect(() => {
-    if (!canManageAllSchedules && currentUser?.id) {
-      setSelectedUserId(currentUser.id.toString())
-    }
-  }, [canManageAllSchedules, currentUser])
+  const canManageAllSchedules = hasPermission(currentUser?.roles ?? [], "MANAGE_USERS")
 
   const fetchSchedules = async () => {
     setLoading(true)
@@ -103,10 +81,10 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
   }
 
   const handleDelete = async (scheduleId: number) => {
-    if (!canEditSelectedUser) {
+    if (!canManageAllSchedules) {
       toast({
         title: "Sem permissão",
-        description: "Você só pode remover seus próprios horários.",
+        description: "Apenas coordenadores e gerentes podem remover horários.",
         variant: "destructive"
       })
       return
@@ -137,7 +115,7 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
 
   const handleDayChange = (dayIdx: number, checked: boolean) => {
     if (checked) {
-      setUserSchedule(prev => [...prev, { dayOfWeek: dayIdx, startTime: "09:00", endTime: "10:00" }])
+      setUserSchedule(prev => [...prev, { dayOfWeek: dayIdx, startTime: "09:00", endTime: "09:30" }])
     } else {
       setUserSchedule(prev => prev.filter(s => s.dayOfWeek !== dayIdx))
     }
@@ -148,10 +126,10 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
   }
 
   const handleSave = async () => {
-    if (!canEditSelectedUser) {
+    if (!canManageAllSchedules) {
       toast({
         title: "Sem permissão",
-        description: "Você só pode editar seus próprios horários.",
+        description: "Apenas coordenadores e gerentes podem definir horários.",
         variant: "destructive"
       })
       return
@@ -181,8 +159,7 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
         const payload = {
           userId: parseInt(selectedUserId),
           dayOfWeek: s.dayOfWeek,
-          startTime: s.startTime,
-          endTime: s.endTime
+          ...snapRange({ startTime: s.startTime, endTime: s.endTime })
         }
         
         await fetch("/api/schedules", {
@@ -232,7 +209,7 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
           Grade Semanal de Horários
         </CardTitle>
         <CardDescription>
-          Visualize e gerencie os horários dos usuários no laboratório
+          Visualize os horários dos usuários no laboratório. Apenas coordenadores e gerentes podem definir horários.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -243,20 +220,10 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
               {schedules.length} horários cadastrados
             </span>
           </div>
-          {!readOnly && (
-            <Button 
-              onClick={() => {
-                if (!canEditSelectedUser) {
-                  toast({
-                    title: "Sem permissão",
-                    description: "Você só pode editar o seu próprio horário.",
-                    variant: "destructive"
-                  })
-                  return
-                }
-                setDialogOpen(true)
-              }} 
-              variant="outline" 
+          {!readOnly && canManageAllSchedules && (
+            <Button
+              onClick={() => setDialogOpen(true)}
+              variant="outline"
               size="sm"
               disabled={!currentUser}
             >
@@ -309,7 +276,6 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
                   <SelectContent>
                     {users
                       .filter(u => u.status === 'active')
-                      .filter(u => canManageAllSchedules || u.id === currentUser?.id)
                       .map((user) => (
                         <SelectItem key={user.id} value={user.id.toString()}>
                           {user.name} ({user.email})
@@ -342,6 +308,7 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
                             <div className="flex items-center gap-2">
                               <Input
                                 type="time"
+                                step={1800}
                                 value={userSchedule.find(s => s.dayOfWeek === idx)?.startTime ?? ""}
                                 onChange={e => handleTimeChange(idx, "startTime", e.target.value)}
                                 className="w-32"
@@ -349,6 +316,7 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
                               <span className="text-muted-foreground">até</span>
                               <Input
                                 type="time"
+                                step={1800}
                                 value={userSchedule.find(s => s.dayOfWeek === idx)?.endTime ?? ""}
                                 onChange={e => handleTimeChange(idx, "endTime", e.target.value)}
                                 className="w-32"
@@ -386,7 +354,7 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
                 </Button>
                 <Button 
                   onClick={handleSave} 
-                  disabled={!selectedUserId || userSchedule.length === 0 || saving || !canEditSelectedUser}
+                  disabled={!selectedUserId || userSchedule.length === 0 || saving}
                 >
                   {saving ? "Salvando..." : "Salvar"}
                 </Button>
@@ -444,7 +412,7 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
                                     <span className="ml-1 text-[10px] text-muted-foreground whitespace-nowrap">
                                       ({s.startTime} - {s.endTime})
                                     </span>
-                                    {!readOnly && canEditSelectedUser && (
+                                    {!readOnly && canManageAllSchedules && (
                                       <button
                                         onClick={() => handleDelete(s.id)}
                                         className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 transition-opacity"

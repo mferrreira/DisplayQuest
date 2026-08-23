@@ -48,6 +48,11 @@ export interface UpdateLaboratoryScheduleCommand {
   userId?: number
 }
 
+export interface DeleteLaboratoryScheduleCommand {
+  scheduleId: number
+  userId?: number
+}
+
 export interface ListResponsibilitiesQuery {
   activeOnly?: boolean
   startDate?: Date

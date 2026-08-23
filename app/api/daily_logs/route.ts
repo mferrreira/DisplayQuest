@@ -18,11 +18,30 @@ export async function GET(request: Request) {
       hasPermission(currentUser.roles, "MANAGE_USERS") ||
       hasRole(currentUser.roles, "LABORATORISTA")
 
+    if (userId !== null && (!/^\d+$/.test(userId) || Number(userId) <= 0)) {
+      return NextResponse.json({ error: "userId inválido" }, { status: 400 })
+    }
+    if (projectId !== null && (!/^\d+$/.test(projectId) || Number(projectId) <= 0)) {
+      return NextResponse.json({ error: "projectId inválido" }, { status: 400 })
+    }
+
     let logs
 
     if (userId) {
       if (!canViewAllLogs && Number(userId) !== currentUser.id) {
-        return NextResponse.json({ error: "Acesso negado." }, { status: 403 })
+        // Caminho do líder: membro lê apenas dentro dos projetos que lidera (auditoria no gateway)
+        try {
+          const result = await workExecutionModule.listProjectLogsForLeader({
+            leaderId: currentUser.id,
+            memberUserId: Number(userId),
+          })
+          if (result.ledProjectIds.length === 0) {
+            return NextResponse.json({ error: "Acesso negado." }, { status: 403 })
+          }
+          return NextResponse.json({ logs: result.logs })
+        } catch {
+          return NextResponse.json({ error: "Acesso negado." }, { status: 403 })
+        }
       }
       logs = await workExecutionModule.listDailyLogs({
         userId: Number(userId),
@@ -30,7 +49,22 @@ export async function GET(request: Request) {
       })
     } else if (projectId) {
       if (!canViewAllLogs) {
-        return NextResponse.json({ error: "Acesso negado." }, { status: 403 })
+        try {
+          const result = await workExecutionModule.listProjectLogsForLeader({
+            leaderId: currentUser.id,
+            projectId: Number(projectId),
+          })
+          if (result.ledProjectIds.length === 0) {
+            return NextResponse.json({ error: "Acesso negado." }, { status: 403 })
+          }
+          return NextResponse.json({ logs: result.logs })
+        } catch (error) {
+          const message = error instanceof Error ? error.message : ""
+          if (message.includes("Acesso negado")) {
+            return NextResponse.json({ error: "Acesso negado." }, { status: 403 })
+          }
+          return NextResponse.json({ error: "Erro ao buscar logs diários" }, { status: 500 })
+        }
       }
       logs = await workExecutionModule.listDailyLogs({
         projectId: Number(projectId),

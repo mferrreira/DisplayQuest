@@ -146,7 +146,7 @@ export function UserBadges({ userId, showAll = false, limit = 6, className = "" 
     )
   }
 
-  const safeBadges = badges.filter((userBadge) => userBadge.badge)
+  const safeBadges = badges.filter((userBadge): userBadge is typeof userBadge & { badge: NonNullable<typeof userBadge.badge> } => Boolean(userBadge.badge))
 
   if (safeBadges.length === 0) {
     return (
@@ -327,7 +327,7 @@ export function UserBadgesCard({ userId, className = "" }: { userId: number; cla
     )
   }
 
-  const safeBadges = badges.filter((userBadge) => userBadge.badge)
+  const safeBadges = badges.filter((userBadge): userBadge is typeof userBadge & { badge: NonNullable<typeof userBadge.badge> } => Boolean(userBadge.badge))
 
   if (safeBadges.length === 0) {
     return (

@@ -4,6 +4,13 @@ import { getBackendComposition } from "@/backend/composition/root"
 
 const { labOperations: labOperationsModule } = getBackendComposition();
 
+function toHttpStatus(error: unknown) {
+  const message = error instanceof Error ? error.message : "Erro interno do servidor"
+  if (message.includes("não tem permissão")) return 403
+  if (message.includes("inválid") || message.includes("Dados inválidos")) return 400
+  return 500
+}
+
 export async function GET() {
   try {
     const auth = await requireApiActor();
@@ -26,8 +33,13 @@ export async function POST(request: Request) {
     const auth = await requireApiActor();
     if (auth.error) return auth.error;
 
-    const data = await request.json();
-    
+    let data: any;
+    try {
+      data = await request.json();
+    } catch {
+      return NextResponse.json({ error: 'JSON inválido' }, { status: 400 });
+    }
+
     const schedule = await labOperationsModule.createLaboratorySchedule({
       ...data,
       userId: auth.actor.id
@@ -36,8 +48,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ schedule: schedule.toJSON() }, { status: 201 });
   } catch (error: any) {
     console.error('Erro ao criar horário do laboratório:', error);
-    return NextResponse.json({ 
-      error: error.message || 'Erro ao criar horário do laboratório' 
-    }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Erro ao criar horário do laboratório';
+    return NextResponse.json({
+      error: message
+    }, { status: toHttpStatus(error) });
   }
 } 

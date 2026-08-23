@@ -13,10 +13,56 @@ export async function GET(request: Request) {
     const canManageSessions = hasPermission(actor.roles, "MANAGE_WORK_SESSIONS");
     const url = new URL(request.url);
     const userId = url.searchParams.get("userId");
+    const projectIdParam = url.searchParams.get("projectId");
     const status = url.searchParams.get("status");
     const active = url.searchParams.get("active");
-    
+
+    if (projectIdParam !== null && (!/^\d+$/.test(projectIdParam) || Number(projectIdParam) <= 0)) {
+      return new Response(JSON.stringify({ error: 'projectId inválido' }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+
     let sessions;
+
+    if (projectIdParam !== null) {
+      const targetProjectId = Number(projectIdParam);
+      if (!canManageSessions && actor.id !== undefined) {
+        try {
+          const result = await workExecutionModule.listProjectLogsForLeader({
+            leaderId: actor.id,
+            projectId: targetProjectId,
+          });
+          if (result.ledProjectIds.length === 0) {
+            return new Response(JSON.stringify({ error: 'Acesso negado' }), {
+              status: 403,
+              headers: { "Content-Type": "application/json" }
+            });
+          }
+          const filteredByUser = userId
+            ? result.sessions.filter((s: any) => s.userId === Number(userId))
+            : result.sessions;
+          return new Response(JSON.stringify({ data: filteredByUser }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" }
+          });
+        } catch (error: any) {
+          const message = error?.message || "";
+          return new Response(JSON.stringify({ error: message.includes('Acesso negado') ? 'Acesso negado' : 'Erro ao buscar sessões de trabalho' }), {
+            status: message.includes('Acesso negado') ? 403 : 500,
+            headers: { "Content-Type": "application/json" }
+          });
+        }
+      }
+      sessions = await workExecutionModule.listWorkSessions({});
+      sessions = (sessions as any[]).filter((s: any) => s.projectId === targetProjectId);
+      return new Response(JSON.stringify({ data: sessions }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+
     const targetUserId = userId ? Number(userId) : actor.id;
 
     const accessError = ensureSelfOrPermission(actor, targetUserId, "MANAGE_WORK_SESSIONS");

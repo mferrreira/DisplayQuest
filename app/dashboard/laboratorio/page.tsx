@@ -300,16 +300,9 @@ export default function LabResponsibilityPage() {
   }
 
   const getTabsGridCols = () => {
-    const totalTabs = 3
-    
-    switch (totalTabs) {
-      case 2:
-        return 'grid-cols-2'
-      case 3:
-        return 'grid-cols-3'
-      default:
-        return 'grid-cols-2'
-    }
+    const totalTabs: number = 3
+
+    return totalTabs === 2 ? 'grid-cols-2' : 'grid-cols-3'
   }
 
   if (authLoading) {
@@ -389,7 +382,7 @@ export default function LabResponsibilityPage() {
                     Grade Semanal do Laboratório
                   </CardTitle>
                   <CardDescription>
-                    Visualize e edite seus horários de presença. Coordenadores e gerentes podem editar os horários de todos os usuários.
+                    Visualize os horários de presença de todos os usuários. Apenas coordenadores e gerentes podem definir horários.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -430,7 +423,7 @@ export default function LabResponsibilityPage() {
 
                     <div className="flex items-center justify-center">
                       <Clock className="h-5 w-5 mr-2 text-primary" />
-                      <span className="text-2xl font-mono">{activeResponsibility.duration}</span>
+                      <span className="text-2xl font-mono">{formatDuration(activeResponsibility.duration)}</span>
                     </div>
 
                             {/* Only show control buttons for COORDENADOR and LABORATORISTA */}

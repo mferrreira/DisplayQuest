@@ -56,7 +56,12 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
       return NextResponse.json({ error: "Horário inválido" }, { status: 400 })
     }
 
-    const body = await request.json()
+    let body: any
+    try {
+      body = await request.json()
+    } catch {
+      return NextResponse.json({ error: "JSON inválido" }, { status: 400 })
+    }
     const schedule = await labOperationsModule.updateUserSchedule({
       actorUserId: auth.actor.id,
       actorRoles: auth.actor.roles,

@@ -43,7 +43,13 @@ export async function POST(request: Request) {
     const auth = await requireApiActor()
     if (auth.error) return auth.error
 
-    const data = await request.json()
+    const raw = await request.text()
+    let data: any
+    try {
+      data = JSON.parse(raw)
+    } catch {
+      return NextResponse.json({ error: "JSON inválido" }, { status: 400 })
+    }
     const targetUserId = data?.userId ? Number(data.userId) : auth.actor.id
 
     if (!Number.isInteger(targetUserId) || targetUserId <= 0) {
