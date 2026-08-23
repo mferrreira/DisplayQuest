@@ -31,6 +31,7 @@ import { ProjectMembersManager } from "@/components/forms/project-members-manage
 import { ProjectMembersManagement } from "@/components/features/project-members-management"
 import { ProjectHoursStats } from "@/components/features/project-hours-stats"
 import { ProjectLeaderLogs } from "@/components/features/project-leader-logs"
+import { ProjectReportsPanel } from "@/components/features/project-reports-panel"
 import { hasAccess } from "@/lib/utils/utils"
 
 interface ProjectDetailDialogProps {
@@ -423,10 +424,16 @@ export function ProjectDetailDialog({
             {/* Project Hours Statistics */}
             <ProjectHoursStats project={project} />
 
-            {/* Logs do Projeto (apenas para o líder) */}
+                        {/* Logs do Projeto (apenas para o líder) */}
             {user && project.leaderId === user.id && (
               <ProjectLeaderLogs projectId={project.id} />
             )}
+
+            {/* Relatórios de Projeto (líder ou gerência) */}
+            {user && (project.leaderId === user.id || hasAccess(user.roles, "MANAGE_USERS")) && (
+              <ProjectReportsPanel projectId={project.id} />
+            )
+}
             
             {/* Project Membership Management (only for allowed roles) */}
             {(user && (hasAccess(user.roles, "MANAGE_PROJECT_MEMBERS") || user.roles.includes('COORDENADOR') || user.roles.includes('GERENTE'))) && (

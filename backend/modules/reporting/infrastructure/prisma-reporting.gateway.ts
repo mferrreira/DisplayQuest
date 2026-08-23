@@ -1,9 +1,26 @@
 import { endOfWeek, format, startOfWeek, subWeeks } from "date-fns"
 import { prisma } from "@/lib/database/prisma"
+import { hasPermission } from "@/lib/auth/rbac"
+import type { NotificationsModule } from "@/backend/modules/notifications"
+import {
+  computePeriod,
+  isReportPeriodType,
+  type ReportPeriodType as ReportPeriodTypeLib,
+} from "@/lib/constants/report-periods"
+import { removeStoredReportFile, sweepStaleReportUploads } from "@/lib/storage/report-uploads"
 import type {
+  CreateProjectReportCommand,
+  DeleteProjectReportCommand,
+  DeleteReportAttachmentCommand,
+  ListProjectReportsQuery,
   ProjectHoursHistoryQuery,
   ProjectHoursQuery,
   ProjectHoursResult,
+  ProjectReportAggregateResult,
+  ProjectReportPeriodType,
+  ProjectReportReadModel,
+  RegisterReportAttachmentCommand,
+  UpdateProjectReportCommand,
   UpsertWeeklyReportCommand,
   UserProjectHoursQuery,
   WeeklyHoursHistoryItem,
@@ -17,6 +34,8 @@ import type { ReportingGateway } from "@/backend/modules/reporting/application/p
 type SessionWithRelations = any
 
 export class PrismaReportingGateway implements ReportingGateway {
+  constructor(private readonly notificationsModule?: NotificationsModule) {}
+
   async listWeeklyReports(query: WeeklyReportListQuery): Promise<WeeklyReportReadModel[]> {
     const reports = await prisma.weekly_reports.findMany({
       where: {
@@ -635,8 +654,346 @@ export class PrismaReportingGateway implements ReportingGateway {
 
     return text
   }
+
+  // ===================== Project Reports (4b) =====================
+
+  private isManagementRole(actorRoles: string[]): boolean {
+    return hasPermission(actorRoles, "MANAGE_USERS")
+  }
+
+  private async isProjectLeader(projectId: number, userId: number): Promise<boolean> {
+    const project = await prisma.projects.findFirst({
+      where: { id: projectId, leaderId: userId },
+      select: { id: true },
+    })
+    return Boolean(project)
+  }
+
+  private async assertCanCreateOnProject(projectId: number, actorUserId: number, actorRoles: string[]) {
+    const project = await prisma.projects.findUnique({ where: { id: projectId }, select: { id: true } })
+    if (!project) throw new Error("Projeto não encontrado")
+    if (this.isManagementRole(actorRoles)) return
+    if (await this.isProjectLeader(projectId, actorUserId)) return
+    throw new Error("Acesso negado")
+  }
+
+  private async assertCanViewProjectReports(projectId: number, actorUserId: number, actorRoles: string[]) {
+    if (this.isManagementRole(actorRoles)) return
+    if (await this.isProjectLeader(projectId, actorUserId)) return
+    throw new Error("Acesso negado")
+  }
+
+  private async buildProjectReportReadModel(reportId: number): Promise<ProjectReportReadModel | null> {
+    const report = await prisma.project_reports.findUnique({
+      where: { id: reportId },
+      include: {
+        project: { select: { name: true } },
+        author: { select: { name: true } },
+        attachments: { orderBy: { createdAt: "asc" } },
+      },
+    })
+    if (!report) return null
+
+    return {
+      id: report.id,
+      projectId: report.projectId,
+      projectName: report.project.name,
+      authorId: report.authorId,
+      authorName: report.author.name,
+      periodType: report.periodType as ProjectReportPeriodType,
+      periodLabel: report.periodType === "weekly"
+        ? `Semana ${format(report.periodStart, "dd/MM")}–${format(report.periodEnd, "dd/MM")}`
+        : computePeriod(report.periodType as ProjectReportPeriodType, report.periodStart).label,
+      periodStart: report.periodStart.toISOString(),
+      periodEnd: report.periodEnd.toISOString(),
+      title: report.title,
+      content: report.content,
+      createdAt: report.createdAt.toISOString(),
+      updatedAt: report.updatedAt.toISOString(),
+      attachments: report.attachments.map((a) => ({
+        id: a.id,
+        fileName: a.fileName,
+        storedPath: a.storedPath,
+        mimeType: a.mimeType,
+        sizeBytes: a.sizeBytes,
+        createdAt: a.createdAt.toISOString(),
+      })),
+    }
+  }
+
+  private async notifyManagersOfSubmission(
+    report: { id: number; projectId: number; authorId: number; label: string; projectName: string },
+  ) {
+    try {
+      const recipients = await prisma.users.findMany({
+        where: {
+          status: "active",
+          roles: { hasSome: ["COORDENADOR", "GERENTE"] as any[] },
+          NOT: { id: report.authorId },
+        },
+        select: { id: true },
+      })
+      const userIds = recipients.map((u) => u.id)
+      if (userIds.length === 0) return
+
+      await this.notificationsModule?.publishEvent({
+        eventType: "PROJECT_REPORT_SUBMITTED",
+        title: "Novo relatório de projeto",
+        message: `${report.label} · ${report.projectName}`,
+        data: { reportId: report.id, projectId: report.projectId },
+        audience: { mode: "USER_IDS", userIds },
+        triggeredByUserId: report.authorId,
+      } as never)
+    } catch (error) {
+      console.error("Erro ao notificar gerência sobre relatório:", error)
+    }
+  }
+
+  async createProjectReport(
+    command: CreateProjectReportCommand,
+  ): Promise<{ report: ProjectReportReadModel; created: boolean }> {
+    await this.assertCanCreateOnProject(command.projectId, command.actorUserId, command.actorRoles)
+
+    if (!command.content || !command.content.trim()) {
+      throw new Error("Dados inválidos: conteúdo obrigatório")
+    }
+    if (!isReportPeriodType(command.periodType)) {
+      throw new Error("Dados inválidos: periodicidade inválida")
+    }
+
+    const reference = command.reference ? new Date(command.reference) : new Date()
+    if (Number.isNaN(reference.getTime())) throw new Error("Dados inválidos: referência inválida")
+
+    const period = computePeriod(command.periodType, reference)
+
+    const existing = await prisma.project_reports.findUnique({
+      where: {
+        projectId_periodType_periodStart_authorId: {
+          projectId: command.projectId,
+          periodType: command.periodType,
+          periodStart: period.start,
+          authorId: command.actorUserId,
+        },
+      },
+      select: { id: true },
+    })
+
+    const saved = existing
+      ? await prisma.project_reports.update({
+          where: { id: existing.id },
+          data: {
+            title: command.title ?? null,
+            content: command.content,
+            periodEnd: period.end,
+          },
+        })
+      : await prisma.project_reports.create({
+          data: {
+            projectId: command.projectId,
+            authorId: command.actorUserId,
+            periodType: command.periodType,
+            periodStart: period.start,
+            periodEnd: period.end,
+            title: command.title ?? null,
+            content: command.content,
+          },
+        })
+
+    if (!existing) {
+      const projectName = (
+        await prisma.projects.findUnique({ where: { id: command.projectId }, select: { name: true } })
+      )?.name ?? ""
+      await this.notifyManagersOfSubmission({
+        id: saved.id,
+        projectId: saved.projectId,
+        authorId: saved.authorId,
+        label: period.label,
+        projectName,
+      })
+    }
+
+    const report = await this.buildProjectReportReadModel(saved.id)
+    return { report: report!, created: !existing }
+  }
+
+  async updateProjectReport(command: UpdateProjectReportCommand): Promise<ProjectReportReadModel> {
+    const existing = await prisma.project_reports.findUnique({ where: { id: command.reportId } })
+    if (!existing) throw new Error("Relatório não encontrado")
+
+    const canManage = this.isManagementRole(command.actorRoles)
+    if (!canManage && existing.authorId !== command.actorUserId) {
+      throw new Error("Acesso negado")
+    }
+
+    await prisma.project_reports.update({
+      where: { id: command.reportId },
+      data: {
+        ...(command.title !== undefined ? { title: command.title } : {}),
+        ...(command.content !== undefined ? { content: command.content } : {}),
+      },
+    })
+
+    const report = await this.buildProjectReportReadModel(command.reportId)
+    return report!
+  }
+
+  async deleteProjectReport(command: DeleteProjectReportCommand): Promise<void> {
+    if (!this.isManagementRole(command.actorRoles)) {
+      throw new Error("Acesso negado")
+    }
+    const existing = await prisma.project_reports.findUnique({ where: { id: command.reportId } })
+    if (!existing) throw new Error("Relatório não encontrado")
+
+    for (const attachment of await prisma.report_attachments.findMany({
+      where: { reportId: command.reportId },
+    })) {
+      await removeStoredReportFile(attachment.storedPath).catch(() => undefined)
+    }
+    await prisma.project_reports.delete({ where: { id: command.reportId } })
+  }
+
+  async getProjectReport(
+    actorUserId: number,
+    actorRoles: string[],
+    reportId: number,
+  ): Promise<ProjectReportReadModel | null> {
+    const existing = await prisma.project_reports.findUnique({
+      where: { id: reportId },
+      select: { projectId: true },
+    })
+    if (!existing) throw new Error("Relatório não encontrado")
+    await this.assertCanViewProjectReports(existing.projectId, actorUserId, actorRoles)
+    return await this.buildProjectReportReadModel(reportId)
+  }
+
+  async listProjectReports(query: ListProjectReportsQuery): Promise<ProjectReportReadModel[]> {
+    const isManager = this.isManagementRole(query.actorRoles)
+    let projectFilter: number[] | undefined = query.projectId ? [query.projectId] : undefined
+
+    if (!isManager) {
+      const ledProjects = await prisma.projects.findMany({
+        where: { leaderId: query.actorUserId },
+        select: { id: true },
+      })
+      const ledIds = ledProjects.map((p) => p.id)
+      if (query.projectId) {
+        if (!ledIds.includes(query.projectId)) throw new Error("Acesso negado")
+      }
+      if (ledIds.length === 0) throw new Error("Acesso negado")
+      projectFilter = ledIds
+    }
+
+    const rows = await prisma.project_reports.findMany({
+      where: {
+        ...(projectFilter ? { projectId: { in: projectFilter } } : {}),
+        ...(query.periodType ? { periodType: query.periodType } : {}),
+        ...(query.authorId ? { authorId: query.authorId } : {}),
+        ...(query.from ? { periodStart: { gte: new Date(query.from) } } : {}),
+        ...(query.to ? { periodStart: { lte: new Date(query.to) } } : {}),
+      },
+      orderBy: { periodStart: "desc" },
+      select: { id: true },
+    })
+
+    const models = await Promise.all(rows.map((row) => this.buildProjectReportReadModel(row.id)))
+    return models.filter(Boolean) as ProjectReportReadModel[]
+  }
+
+  async aggregateProjectReport(
+    actorUserId: number,
+    actorRoles: string[],
+    reportId: number,
+  ): Promise<ProjectReportAggregateResult> {
+    const report = await this.getProjectReport(actorUserId, actorRoles, reportId)
+    if (!report) throw new Error("Relatório não encontrado")
+
+    const windowStart = new Date(report.periodStart)
+    const windowEnd = new Date(report.periodEnd)
+
+    const [logRows, sessionRows] = await Promise.all([
+      prisma.daily_logs.findMany({
+        where: { projectId: report.projectId, date: { gte: windowStart, lte: windowEnd } },
+        include: { user: { select: { name: true } }, project: { select: { name: true } } },
+        orderBy: { date: "desc" },
+      }),
+      prisma.work_sessions.findMany({
+        where: { projectId: report.projectId, startTime: { gte: windowStart, lte: windowEnd } },
+        orderBy: { startTime: "desc" },
+      }),
+    ])
+
+    const totalHours =
+      sessionRows.reduce((sum, s) => sum + (s.duration ?? 0), 0) / 3600
+
+    return {
+      report,
+      logs: logRows.map((log) => ({
+        id: log.id,
+        userId: log.userId,
+        userName: log.user?.name ?? null,
+        date: log.date.toISOString(),
+        note: log.note,
+        projectName: log.project?.name ?? null,
+      })),
+      sessions: sessionRows.map((session) => ({
+        id: session.id,
+        userId: session.userId,
+        userName: session.userName,
+        startTime: session.startTime.toISOString(),
+        endTime: session.endTime ? session.endTime.toISOString() : null,
+        durationHours: session.duration != null ? session.duration / 3600 : null,
+        activity: session.activity,
+        location: session.location,
+      })),
+      totals: {
+        logCount: logRows.length,
+        sessionCount: sessionRows.length,
+        totalHours,
+      },
+    }
+  }
+
+  async registerReportAttachment(command: RegisterReportAttachmentCommand): Promise<ProjectReportReadModel> {
+    const existing = await prisma.project_reports.findUnique({ where: { id: command.reportId } })
+    if (!existing) throw new Error("Relatório não encontrado")
+    const canManage = this.isManagementRole(command.actorRoles)
+    if (!canManage && existing.authorId !== command.actorUserId) {
+      throw new Error("Acesso negado")
+    }
+    await prisma.report_attachments.create({
+      data: {
+        reportId: command.reportId,
+        fileName: command.fileName,
+        storedPath: command.storedPath,
+        mimeType: command.mimeType,
+        sizeBytes: command.sizeBytes,
+        uploadedBy: command.actorUserId,
+      },
+    })
+    const report = await this.buildProjectReportReadModel(command.reportId)
+    return report!
+  }
+
+  async deleteReportAttachment(command: DeleteReportAttachmentCommand): Promise<void> {
+    const attachment = await prisma.report_attachments.findUnique({ where: { id: command.attachmentId } })
+    if (!attachment) throw new Error("Anexo não encontrado")
+    const canManage = this.isManagementRole(command.actorRoles)
+    if (!canManage && attachment.uploadedBy !== command.actorUserId) {
+      throw new Error("Acesso negado")
+    }
+    await removeStoredReportFile(attachment.storedPath).catch(() => undefined)
+    await prisma.report_attachments.delete({ where: { id: command.attachmentId } })
+  }
+
+  async sweepStaleReportUploads(maxAgeMs?: number): Promise<number> {
+    const referenced = await prisma.report_attachments.findMany({ select: { storedPath: true } })
+    return await sweepStaleReportUploads(
+      referenced.map((r) => r.storedPath),
+      maxAgeMs,
+    )
+  }
 }
 
-export function createReportingGateway() {
-  return new PrismaReportingGateway()
+export function createReportingGateway(deps: { notificationsModule?: NotificationsModule } = {}) {
+  return new PrismaReportingGateway(deps.notificationsModule)
 }

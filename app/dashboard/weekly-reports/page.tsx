@@ -13,11 +13,13 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Calendar, FileText, Users, CalendarDays, Plus, Download } from "lucide-react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, AlertTriangle } from "lucide-react"
 import { useToast } from "@/contexts/use-toast"
 import type { WeeklyReport } from "@/contexts/types"
 import { WeeklyReportDetail, type ProjectWeeklyDetailReport } from "@/components/ui/weekly-report-detail"
+import { ProjectReportsPanel } from "@/components/features/project-reports-panel"
 
 export default function WeeklyReportsPage() {
   const { user } = useAuth()
@@ -271,6 +273,13 @@ export default function WeeklyReportsPage() {
         </div>
       </div>
 
+      <Tabs defaultValue="usuarios" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="usuarios">Usuários (semanal)</TabsTrigger>
+          <TabsTrigger value="projetos">Relatórios de Projeto</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="usuarios" className="space-y-6">
       {error && (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
@@ -491,6 +500,13 @@ export default function WeeklyReportsPage() {
           </div>
         )}
       </div>
+
+        </TabsContent>
+
+        <TabsContent value="projetos" className="space-y-6">
+          <ProjectReportsPanel />
+        </TabsContent>
+      </Tabs>
 
       {/* WeeklyReportDetail Dialog */}
       {selectedReport && (
