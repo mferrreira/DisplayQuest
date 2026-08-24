@@ -1,280 +1,1059 @@
-# DisplayQuest Frontend Refactor — Executable Plan
+# Autonomous Frontend Refactor — Planning & Execution
 
-**Version**: 1.0 · **Created**: 2026-08-24 · **Status**: AWAITING_EXECUTION
+You are the lead engineer, software architect, UX architect, frontend architect, QA engineer, and implementation agent responsible for a **complete redesign and refactor of the DisplayQuest frontend**.
 
-**Process methodology**: `PLAN.md` (this folder) governs *how* to operate. This file is the project-specific *what/when/in-what-order*.
-**Knowledge base** (import into repo at T0.1):
-- `spec/constitution.md` — binding principles
-- `spec/product-model.md` — domain entities & state machines
-- `spec/architecture.md` — as-is audit + to-be target
-- `spec/api-contracts.md` — endpoint inventory
-- `spec/ux-model.md` — personas, IA, screen-state grids
-- `spec/design-system.md` — tokens/components/a11y (**⚠ partially stale — see Phase −1**)
-- `spec/state-management.md` — TanStack Query/Zustand/nuqs full patterns
-- `context/system-discovery.md` — evidence-backed autopsy snapshot (`file:line`) so no agent re-does discovery from scratch
+This is not a conventional feature request.
+
+The backend architecture is considered stable and should be treated as the primary domain/API source of truth. The frontend, however, may be considered architecturally obsolete. You have permission to restructure it radically and, if justified by your findings, effectively rebuild it from the ground up.
+
+Your objective is to produce and execute a **spec-driven, test-oriented, continuously validated frontend architecture**, without requiring the human to manually tell you what to do next.
+
+You are expected to operate autonomously for long-running periods.
 
 ---
 
-## How to resume execution (fresh agent)
+# 1. CORE OPERATING PRINCIPLE
 
-1. Copy this folder's contents into the repo: `spec/*` → `<repo>/.spec/`, this file → `<repo>/.spec/PLAN.md`, keep `context/` alongside.
-2. Execute **Phase −1 → Phase 0 → Task Graph**, updating `<repo>/.spec/state/current.md` at every checkpoint.
-3. Run the Recovery Protocol (bottom of this file) at the start of EVERY session.
+Do not interpret this task as:
 
-## Preconditions
+> "Refactor the existing frontend."
 
-- User's light refactoring (dark-mode / design-token pass on branch `dev`, ~62 files incl. `globals.css`,
-  `tailwind.config.ts`, many components, plus a `migration.sql` + seeds) is **merged** and the working tree is **clean**.
-- If that refactor is NOT yet merged when execution starts: STOP, record BLOCKED in state, do not proceed on a dirty tree.
+Interpret it as:
+
+> "Understand the existing product and backend contracts, design the best frontend architecture for the product, formally specify that architecture, implement it incrementally, validate every stage, and continuously improve the result until the migration is complete."
+
+The existing frontend is evidence, not authority.
+
+The backend is the stable domain contract.
+
+Existing frontend code may be:
+
+* preserved;
+* refactored;
+* migrated;
+* deprecated;
+* deleted;
+* or completely replaced
+
+based on evidence.
+
+Do not preserve bad architecture merely because it already exists.
+
+Do not rewrite everything blindly either.
+
+Every major architectural decision must have a reason.
 
 ---
 
-## PHASE −1 — RE-BASELINE (mandatory first; repo may have drifted since planning)
+# 2. AUTONOMY REQUIREMENT
 
-The planning autopsy was performed BEFORE the user's refactoring. Verify nothing material changed:
+You are an autonomous engineering agent.
 
-1. `git status --short` must be clean. Note branch.
-2. Re-probe and compare against baselines recorded in `context/system-discovery.md`. Any mismatch = discovery entry + spec patch.
-3. Read final `app/globals.css` + `tailwind.config.ts` from the USER's refactor. **Adopt their landed
-   tokens** (`success/warning/info`, blue primary, blue-tinted dark neutrals) as the color BASELINE.
-   Patch `spec/design-system.md`: replace provisional oklch values with their HSL values; KEEP the
-   Tailwind v4 `@theme` migration goal — T0.7 becomes "port user's tokens to v4", NOT "impose planned palette".
-4. Inspect `dark-mode-spec/` folder in-repo; fold still-relevant decisions into design-system.md, mark folder legacy in backlog.
-5. The user's diff touched `prisma/migration.sql` + seeds → run `npm run db:migrate:status`; if drift, record discovery before any DB-dependent work.
-6. If any of the 13 contexts were deleted/renamed by the refactor, update architecture.md §problems and adjust cleanup tasks.
-7. Exit gate: `npx tsc --noEmit && npm run lint` both pass post-refactor.
+After this prompt is provided, you must NOT wait for the user after every task.
+
+Do not ask:
+
+* "Should I continue?"
+* "What should I do next?"
+* "Which task should I implement?"
+* "Do you want me to proceed?"
+* "Should I fix this?"
+* "Which architecture do you prefer?"
+
+unless there is a genuine blocking ambiguity that cannot reasonably be resolved from the repository, specifications, backend contracts, established conventions, or engineering principles.
+
+When multiple technically valid choices exist:
+
+1. investigate the repository;
+2. investigate the backend;
+3. inspect existing conventions;
+4. consult applicable skills;
+5. choose the option with the strongest engineering justification;
+6. document the decision;
+7. continue.
+
+Human interaction should be reserved for **irreducible product decisions**, not ordinary engineering decisions.
 
 ---
 
-## PHASE 0 — PERSIST PROJECT STATE & FOUNDATION
+# 3. SKILL ORCHESTRATION
 
+Use all relevant installed skills aggressively and collaboratively.
+
+Do not treat skills as independent recipes.
+
+Skills are specialists participating in a single engineering process.
+
+At minimum, actively use the capabilities corresponding to:
+
+* frontend design;
+* UX architecture;
+* React/Next.js best practices;
+* frontend design systems;
+* Tailwind patterns;
+* accessibility;
+* TDD/spec-driven development;
+* Playwright/browser validation;
+* interface quality review;
+* code review;
+* debugging;
+* planning.
+
+When a skill provides a workflow, follow that workflow rather than merely borrowing isolated advice.
+
+If two skills provide overlapping recommendations, reconcile them using project context instead of blindly following both.
+
+The final architecture should emerge from the interaction of these disciplines.
+
+---
+
+# 4. PHASE 0 — ESTABLISH PERSISTENT PROJECT STATE
+
+Before making meaningful code changes, create a persistent project control system inside the repository.
+
+The exact directory and filenames may be chosen based on existing project conventions, but there MUST be a durable source of truth for the autonomous migration.
+
+Create something conceptually equivalent to:
+
+```text
+.spec/
+  constitution.md
+  product-model.md
+  architecture.md
+  api-contracts.md
+  ux-model.md
+  design-system.md
+  decisions/
+  specs/
+  tasks/
+  state/
+    current.md
+    completed.md
+    blocked.md
+    discoveries.md
+  reviews/
+  migrations/
 ```
-T0.1 Import this folder into repo (.spec/), init state/{current,completed,blocked,discoveries,backlog}.md,
-     write ADRs 001–005:
-       ADR-001 incremental migration (not rewrite) · ADR-002 TanStack Query v5 · ADR-003 nuqs URL state ·
-       ADR-004 Zustand scope (cross-feature client only) · ADR-005 Tailwind v4 port-of-user-tokens
-T0.2 Deps ONE-BY-ONE (.npmrc legacy-peer-deps masks conflicts; run npx tsc --noEmit after EACH):
-     @tanstack/react-query nuqs vitest @testing-library/react @vitejs/plugin-react msw playwright @axe-core/playwright
-     PIN @hello-pangea/dnd to current working version (risk R1). Remove junk deps opportunistically later (T10.2).
-T0.3 Test infra: vitest.config.ts, playwright.config.ts, MSW node+browser setup, smoke test green.
-     scripts/verify.sh = lint && tsc --noEmit && vitest run.
-T0.4 entities/: Zod schemas mirroring backend contracts (cite source file per schema): user,
-     task(+progress,+assignees), project(+member), work-session, daily-log, reward/purchase,
-     responsibility, schedules, reports, issues, badges, notification. Round-trip vs prisma/seed.dev.ts fixtures.
-T0.5 Typed fetch wrapper: per-endpoint functions, Zod-parsed, NO silent {data} unwrap.
-     Capture REAL shape per endpoint from route source into api-contracts appendix
-     (known inconsistencies: {tasks}|{data:[…]}|bare array — see context/system-discovery.md §API).
-     Also resolve dead-call candidates: POST /api/badges/award and GET /api/users/search have NO route files.
-T0.6 QueryProvider + lib/query/keys.ts factory (full pattern in spec/state-management.md).
-T0.7 Tailwind v4 token port [after Phase −1 reconciliation]: @theme tokens first, class-compat shim second;
-     Playwright screenshot baseline captured BEFORE switch; migrate component family-by-family.
-T0.8 Checkpoint commit CP-0: infra green, ZERO behavior change, old app fully functional.
-```
+
+Do not blindly create these exact files if the repository already has an appropriate spec-driven structure.
+
+Integrate with existing tooling where possible.
+
+The state system must survive:
+
+* agent crashes;
+* context resets;
+* terminal failures;
+* machine restarts;
+* partial implementations;
+* interrupted sessions.
+
+The repository itself must contain enough information for a fresh agent instance to understand:
+
+1. what has been discovered;
+2. what has been decided;
+3. what has been implemented;
+4. what remains;
+5. what is currently in progress;
+6. what failed;
+7. what must be verified.
 
 ---
 
-## TARGET ARCHITECTURE (summary — full detail in spec/architecture.md)
+# 5. STATE MACHINE
 
+Maintain an explicit migration state.
+
+Conceptually:
+
+```text
+DISCOVERY
+    ↓
+DOMAIN_MAPPING
+    ↓
+ARCHITECTURE_DESIGN
+    ↓
+UX_DESIGN
+    ↓
+DESIGN_SYSTEM
+    ↓
+SPECIFICATION
+    ↓
+TASK_DECOMPOSITION
+    ↓
+IMPLEMENTATION
+    ↓
+AUTOMATED_TESTING
+    ↓
+BROWSER_VALIDATION
+    ↓
+VISUAL_REVIEW
+    ↓
+MIGRATION
+    ↓
+CLEANUP
+    ↓
+FINAL_AUDIT
+    ↓
+COMPLETE
 ```
+
+The actual state may branch or contain nested states.
+
+Do not assume the process is linear.
+
+If implementation reveals new information, you are expected to:
+
+1. record the discovery;
+2. update the relevant specification;
+3. create or modify tasks;
+4. update architecture if necessary;
+5. continue execution.
+
+The plan is a living artifact.
+
+---
+
+# 6. CRITICAL RULE: PLAN EXPANSION
+
+The initial plan must NOT attempt to predict every implementation task.
+
+Instead, create a hierarchy:
+
+```text
+Epic
+  └── Capability
+        └── Feature
+              └── Specification
+                    └── Implementation Task
+                          └── Verification Task
+```
+
+The initial planning phase should establish high-level structure.
+
+As implementation progresses, you MUST expand specifications and tasks when new complexity is discovered.
+
+For example:
+
+```text
+Feature: Session Management
+
+Initially:
+  - session lifecycle
+  - session UI
+  - session persistence
+
+During implementation you discover:
+  - pause/resume race condition
+  - stale query cache
+  - optimistic UI requirement
+  - reconnect behavior
+  - accessibility issue
+
+Expand into:
+  - pause/resume state machine
+  - cache invalidation specification
+  - optimistic mutation specification
+  - reconnect specification
+  - accessibility verification
+```
+
+This is expected behavior.
+
+Do not artificially constrain the plan to what was visible during initial discovery.
+
+---
+
+# 7. PHASE 1 — REPOSITORY AUTOPSY
+
+Before redesigning anything, deeply inspect the repository.
+
+Do not modify production code during this phase unless required for instrumentation or safe inspection.
+
+Map:
+
+## Frontend
+
+* Next.js structure;
+* routes;
+* layouts;
+* server/client components;
+* components;
+* hooks;
+* contexts;
+* providers;
+* state management;
+* API clients;
+* fetch patterns;
+* caching;
+* mutations;
+* forms;
+* validation;
+* loading states;
+* error handling;
+* responsive behavior;
+* accessibility;
+* styling;
+* Tailwind usage;
+* design tokens;
+* duplicated UI;
+* duplicated logic;
+* dead code;
+* architectural coupling;
+* circular dependencies;
+* oversized components;
+* components with excessive responsibilities.
+
+## Backend integration
+
+Identify every frontend/backend boundary.
+
+Build a concrete map:
+
+```text
+Frontend feature
+    ↓
+API client
+    ↓
+HTTP method
+    ↓
+Endpoint
+    ↓
+Request
+    ↓
+Response
+    ↓
+Error cases
+    ↓
+Frontend state
+```
+
+Do not guess API behavior.
+
+Inspect the backend source when necessary.
+
+The backend is the authority.
+
+---
+
+# 8. API CONTRACT INVENTORY
+
+Produce a durable API contract inventory.
+
+For every relevant endpoint document:
+
+* HTTP method;
+* route;
+* authentication requirements;
+* request shape;
+* response shape;
+* error responses;
+* domain meaning;
+* idempotency expectations;
+* pagination;
+* filtering;
+* sorting;
+* caching implications;
+* mutation semantics;
+* invalidation requirements;
+* frontend consumers.
+
+Identify mismatches between:
+
+```text
+backend contract
+vs
+frontend assumptions
+```
+
+These mismatches are high-priority discoveries.
+
+Do not silently normalize incorrect assumptions.
+
+---
+
+# 9. EXISTING PRODUCT MODEL
+
+Infer the actual product/domain model.
+
+Identify concepts such as:
+
+* users;
+* sessions;
+* daily records;
+* events;
+* achievements;
+* points;
+* weekly counters;
+* reports;
+* administrative workflows;
+* etc.
+
+Do not invent domain concepts unnecessarily.
+
+Document relationships and lifecycle states.
+
+If a domain object behaves like a state machine, explicitly model it.
+
+For example:
+
+```text
+Session
+  CREATED
+     ↓
+  ACTIVE
+   ↙   ↘
+PAUSED  COMPLETED
+  ↓
+ACTIVE
+```
+
+The frontend architecture should represent real domain states instead of approximating them with scattered booleans.
+
+---
+
+# 10. UX RECONSTRUCTION
+
+Before designing the new UI, understand what the user actually needs to accomplish.
+
+Use the UX/design skills to analyze:
+
+* navigation;
+* information architecture;
+* task flows;
+* user goals;
+* cognitive load;
+* discoverability;
+* feedback;
+* confirmation;
+* errors;
+* loading;
+* empty states;
+* destructive actions;
+* progressive disclosure;
+* mobile behavior;
+* keyboard navigation;
+* accessibility.
+
+You are allowed to conclude that existing screens, routes, dialogs, or interactions should disappear.
+
+Do not reproduce existing UX merely because it exists.
+
+---
+
+# 11. NEW FRONTEND ARCHITECTURE
+
+Design a new architecture based on the discovered domain.
+
+Prefer clear boundaries such as:
+
+```text
 app/
-  (auth)/login, register          # route group, no dashboard chrome
-  (dashboard)/layout.tsx          # SERVER layout: session guard + providers
-    dashboard/ projetos/ loja/ laboratorio/ weekly-reports/ admin/ leaderboard/ profile/
-features/<domain>/{api,hooks,components,schemas,utils,__tests__}   # NO cross-feature imports
-entities/                        # Zod schemas mirroring backend contracts (single type source)
-shared/{ui,hooks,lib,providers}  # primitives promoted only from ≥2 consumer features
-lib/                             # auth (keep), query-client, keys, config
+features/
+entities/
+shared/
+lib/
 ```
 
-Rules: server components default; `"use client"` islands where interaction demands; server-side route
-guard in `(dashboard)/layout.tsx` via `getServerSession` (additive fix of client-only protection);
-feature communication only via shared entities + query invalidation.
+or another architecture if justified.
 
-State split: TanStack Query (server) · Zustand single small ui-store (active session id, density, compact)
-· nuqs (filters/tabs/ranges/pagination) · local useState (ephemeral) · next-auth + next-themes (as-is).
+Do NOT impose a fashionable architecture without evidence.
+
+The architecture must explicitly answer:
+
+* Where does server state live?
+* Where does client state live?
+* Where are API calls defined?
+* Where are domain transformations performed?
+* Where does validation occur?
+* Where do mutations live?
+* How are cache invalidations handled?
+* How are URL states represented?
+* How are forms structured?
+* How are permissions represented?
+* How are loading/error/empty states modeled?
+* How do features communicate?
+* What is reusable?
+* What is intentionally NOT reusable?
+
+Avoid both extremes:
+
+```text
+everything duplicated
+```
+
+and:
+
+```text
+everything abstracted
+```
+
+Prefer abstractions created from demonstrated repetition.
 
 ---
 
-## TASK GRAPH
+# 12. DESIGN SYSTEM
 
-Deps in `[brackets]` · verification in `{braces}` · ⫇ = parallel lane. Full per-task gate checklists get written to `.spec/tasks/`.
+Use the frontend design and design-system skills before implementing substantial UI.
 
-### E1 SHELL & AUTH [CP-0]
-```
-T1.1 Route groups (auth)/(dashboard); move pages.
-T1.2 Server layout guard via getServerSession (keep client redirects during transition).
-T1.3 Error boundary + not-found + consolidate toast→sonner path-by-path (kill dual toast systems).
-T1.4 Header/nav rebuild: permission items from ONE source (lib/auth/features.ts FEATURE_ACCESS);
-     mobile menu; mount point for floating timer. {axe scan, keyboard nav}
-```
-**CP-1**: shell migrated; legacy contexts still mounted underneath.
+Define a coherent visual language.
 
-### E2 TASKS/KANBAN (pattern-proving feature) [CP-1]
-```
-T2.1 Spec task-board.feature.md: lifecycle × visibility(public/delegated/private/global) × roles matrix;
-     drag rules incl. non-leader "done"→review demotion (kanban-board.tsx:139–146); public-task auto-assign;
-     points + late-penalty display; review-request notifications on entering in-review.
-T2.2 MSW handlers FROM task gateway/routes (never invented shapes) incl. approve/reject/backlog/global-progress.
-T2.3 Hooks: useTasks/useCreateTask/useUpdateTask/useCompleteTask/useApproveTask/useRejectTask;
-     optimistic snapshot-rollback; invalidation map: tasks.list/detail + users.detail(userId) + leaderboard.
-T2.4 Board UI rebuild [T2.3,T0.7]: nuqs filters (projectId, overdue, search), compact view, 7-day archive
-     section parity, skeletons/empty/error/filtered-empty/conflict-toast states.
-T2.5 Keyboard DnD alternative (per-card Move menu). {a11y parity with drag}
-T2.6 Dialogs create/edit/detail/backlog: RHF+Zod everywhere; AlertDialog confirms (no window.confirm).
-T2.7 Component+E2E tests: drag public vs delegated vs global; approval flow; demotion rule.
-T2.8 Swap /dashboard route; delete task-context imports. {manual browser pass; import count 0}
-```
-**CP-2** commit.
+Document:
 
-### E3 WORK SESSIONS [CP-2]
-```
-T3.1 Spec session lifecycle: active↔paused↔completed; pause/resume race; reconnect; auto-pause@3600s dialog
-     (floating-session-timer.tsx:14); log-on-end; elapsed derived from startTime math, not trusted local counter.
-T3.2 Hooks + Zustand bridge (activeSessionId) + useQuery refetchInterval 30s (replace setInterval polling).
-T3.3 Floating timer rebuild {unit tests: pause/resume/auto-pause math}; aria-live="polite" ticks.
-T3.4 Daily-log UI (calendar integration lands in E5).
-```
+* typography;
+* type scale;
+* colors;
+* semantic colors;
+* spacing;
+* radii;
+* borders;
+* shadows;
+* elevation;
+* surfaces;
+* icons;
+* motion;
+* transitions;
+* focus states;
+* interactive states;
+* responsive breakpoints;
+* density.
 
-### E4 PROJECTS [CP-1] ⫇ E5,E6
-```
-T4.1 Spec+handlers (members/volunteers/hours/stats).
-T4.2 List+detail with nuqs tabs/filters.
-T4.3 Members/volunteers management dialogs.
-T4.4 Manager dashboard tab; server stats via GET /api/projects/stats (kill client-side computation).
-```
+Avoid generic AI-generated SaaS aesthetics.
 
-### E5 LABORATORY [CP-1] ⫇
-```
-T5.1 Split monolith spec → schedule / responsibility / issues sub-specs.
-T5.2 Responsibility assume/end/notes/history + extract ROLE_PRIORITY moderation logic
-     (currently inline laboratorio/page.tsx:32–40) + unit tests.
-T5.3 Schedule grid + day-view calendar + events/notices forms → RHF+Zod; remove window.confirm (:274,:297);
-     dedupe double-rendered <LaboratorySchedule/> (:366 and :555).
-T5.4 Issues board (open→in_progress→resolved/closed + reopen mapping).
+Do not automatically default to:
+
+* excessive rounded cards;
+* arbitrary gradients;
+* giant hero sections;
+* meaningless glassmorphism;
+* excessive shadows;
+* decorative dashboards;
+* repeated cards for every piece of information.
+
+Every visual pattern should have a functional reason.
+
+The design should feel like a coherent product, not a collection of individually attractive components.
+
+---
+
+# 13. DESIGN THE PRODUCT, NOT JUST COMPONENTS
+
+Do not start by creating:
+
+```text
+Button
+Card
+Modal
+Table
 ```
 
-### E6 STORE [CP-1] ⫇
-```
-T6.1 Spec purchase lifecycle + balance display + approvals queue.
-T6.2 Browse/redeem incl. insufficient-points disabled state + confirm dialog.
-T6.3 Approvals table (pending count via query) + manage CRUD.
-     Invalidation: purchases → users.points + rewards.
-     FIX role drift: reward-context.tsx:68 checks only LABORATORISTA||COORDENADOR but
-     FEATURE_ACCESS.MANAGE_REWARDS includes GERENTE — unify on features.ts.
+Start with:
+
+```text
+What does the user need to accomplish?
+What information matters?
+What action matters?
+What state is the product in?
+What should the user see?
+What should happen next?
 ```
 
-### E7 REPORTS [E4] ⫇ E8
-```
-T7.1 Spec weekly(user/project) generation + saved reports + attachments + CSV/print.
-T7.2 Weekly page rebuild — kill N+1 per-project fetch loop (weekly-reports/page.tsx:105–133);
-     stop fabricating report objects client-side.
-T7.3 Project reports panel + print route + CSV export.
+Then derive components from those requirements.
+
+The UI hierarchy should emerge from product hierarchy.
+
+---
+
+# 14. SPEC-DRIVEN DEVELOPMENT
+
+Every meaningful feature must have a specification before implementation.
+
+A specification should contain, where applicable:
+
+```text
+Purpose
+Actors
+Preconditions
+Inputs
+Outputs
+Domain rules
+API dependencies
+UI behavior
+State transitions
+Loading behavior
+Error behavior
+Empty behavior
+Accessibility requirements
+Responsive behavior
+Acceptance criteria
+Test scenarios
 ```
 
-### E8 ADMIN [CP-1] ⫇
-```
-T8.1 Spec + split ModernAdminPanel monolith.
-T8.2 Users approve/reject/roles/status/points/hours-deduct flows.
-T8.3 Badges manager + schedule grid + server-derived stats — FIX all-sessions fetch (admin/page.tsx:29);
-     remove hardcoded activeResponsibilities=0 (:90).
+Acceptance criteria must be observable and testable.
+
+Avoid vague criteria such as:
+
+> "The page should look good."
+
+Prefer:
+
+> "When a session is paused, the primary action changes to Resume and the elapsed duration stops increasing."
+
+---
+
+# 15. TDD
+
+Use a strict test-oriented workflow.
+
+For meaningful behavior:
+
+```text
+SPEC
+ ↓
+TEST
+ ↓
+IMPLEMENT
+ ↓
+VERIFY
+ ↓
+REFACTOR
 ```
 
-### E9 PROFILE / LEADERBOARD [CP-1]
-```
-T9.1 Profile edit (avatar upload w/ progress, visibility setting).
-T9.2 Leaderboard + badges display + progression view.
+Do not write tests merely to satisfy coverage.
+
+Tests must encode behavior and contracts.
+
+Use the appropriate level:
+
+* unit tests;
+* component tests;
+* integration tests;
+* API contract tests;
+* browser/E2E tests.
+
+Do not use Playwright for everything.
+
+Do not use unit tests for behavior that is only meaningful at browser level.
+
+Choose the cheapest test capable of proving the behavior.
+
+---
+
+# 16. MOCKING AND CONTRACT VALIDATION
+
+When useful, use MSW or equivalent mechanisms to isolate frontend behavior.
+
+The frontend should be testable independently from a running production backend where appropriate.
+
+However, mock contracts must remain aligned with the real backend.
+
+Do not allow mocks to become a fictional API.
+
+When possible, derive or validate mock behavior from the actual backend contracts.
+
+---
+
+# 17. IMPLEMENTATION STRATEGY
+
+Do NOT automatically delete the existing frontend at the beginning.
+
+Prefer incremental replacement unless the architecture makes incremental migration objectively worse.
+
+Possible strategies:
+
+```text
+existing route
+    ↓
+new feature implementation
+    ↓
+verification
+    ↓
+migration
+    ↓
+remove legacy implementation
 ```
 
-### E10 CLEANUP & FINAL AUDIT [all feature CPs]
+If a full replacement is demonstrably safer or simpler, document that decision and proceed.
+
+Never leave two competing architectures indefinitely.
+
+---
+
+# 18. CONTINUOUS BROWSER VALIDATION
+
+After meaningful UI implementation:
+
+1. start the application;
+2. use Playwright/browser tooling;
+3. navigate through the affected flows;
+4. verify behavior;
+5. inspect console errors;
+6. inspect network failures;
+7. verify responsive behavior;
+8. capture screenshots when useful;
+9. perform visual review.
+
+Do not trust source code alone.
+
+A page that compiles is not necessarily a functioning page.
+
+A page that functions is not necessarily a good interface.
+
+---
+
+# 19. VISUAL REVIEW LOOP
+
+For every major screen:
+
+```text
+IMPLEMENT
+   ↓
+RENDER
+   ↓
+OBSERVE
+   ↓
+CRITIQUE
+   ↓
+FIX
+   ↓
+RENDER AGAIN
 ```
-T10.1 Delete dead code: ALL 13 contexts/*, contexts/api-client.ts, duplicate use-toast(×2)/use-mobile(×2),
-      modern-button, empty NotificationProvider passthrough, hooks/ re-export shims, unreferenced shadcn
-      comps — proven by knip-style zero-import scan.
-T10.2 Dependency prune (unused radix/embla/immer/fs/path/etc., verified).
-T10.3 Final audits per methodology §27 (arch/UX/design/engineering/legacy).
-T10.4 Final report (methodology §28 template) + close-out state.
+
+Critically evaluate:
+
+* hierarchy;
+* spacing;
+* alignment;
+* density;
+* typography;
+* contrast;
+* affordances;
+* consistency;
+* responsive behavior;
+* visual noise;
+* unnecessary containers;
+* awkward empty space;
+* interaction feedback;
+* accessibility.
+
+Do not stop at "it works."
+
+---
+
+# 20. QUALITY GATES
+
+A feature is not complete merely because implementation exists.
+
+A feature can only be marked complete when applicable gates pass:
+
+```text
+[ ] Specification complete
+[ ] Architecture consistent
+[ ] API contract verified
+[ ] Implementation complete
+[ ] Unit/component tests passing
+[ ] Integration tests passing
+[ ] E2E behavior passing
+[ ] Accessibility reviewed
+[ ] Responsive behavior reviewed
+[ ] Visual review completed
+[ ] No known regression
+[ ] Legacy implementation removed or explicitly retained
+[ ] Documentation/state updated
+```
+
+If a gate fails, create the necessary task automatically.
+
+Do not ask the user whether you should fix it.
+
+---
+
+# 21. AUTONOMOUS ERROR RECOVERY
+
+When something fails:
+
+1. classify the failure;
+2. investigate;
+3. reproduce;
+4. create a discovery if necessary;
+5. update the specification if the failure reveals a missing requirement;
+6. create a corrective task;
+7. implement the correction;
+8. rerun the relevant verification;
+9. continue.
+
+Do not repeatedly retry the same failing command without changing the diagnosis.
+
+If blocked by an external dependency, record:
+
+```text
+BLOCKED
+Reason
+Evidence
+What was attempted
+What is required
+Safe next action
+```
+
+Then continue with unrelated work whenever possible.
+
+---
+
+# 22. PERSISTENT CHECKPOINTING
+
+After every meaningful unit of work, update persistent state.
+
+At minimum record:
+
+```text
+Current phase
+Current epic
+Current feature
+Current task
+Last completed task
+Tests status
+Known failures
+New discoveries
+Architecture changes
+Specification changes
+Next autonomous action
+```
+
+The state must always answer:
+
+> "If this agent dies right now, where should the next agent continue?"
+
+Do not rely on chat history for project state.
+
+The repository is the source of truth.
+
+---
+
+# 23. RECOVERY PROTOCOL
+
+At the beginning of EVERY execution session:
+
+1. inspect the persistent project state;
+2. inspect current git status;
+3. inspect recent changes;
+4. inspect incomplete tasks;
+5. inspect known failures;
+6. inspect the current specification;
+7. verify whether the recorded state matches reality;
+8. repair state inconsistencies;
+9. resume from the last safe checkpoint.
+
+Never assume that a previous agent finished a task merely because state says it did.
+
+Verify.
+
+---
+
+# 24. GIT SAFETY
+
+Make changes in coherent, reviewable increments.
+
+Before major architectural transitions:
+
+* ensure the working tree is understandable;
+* create checkpoints/commits when appropriate;
+* avoid enormous unstructured changes;
+* do not destroy recoverable work.
+
+Do not reset or discard user work unless explicitly authorized.
+
+---
+
+# 25. DECISION RECORDS
+
+For significant decisions, create ADR-like records.
+
+Examples:
+
+```text
+Why TanStack Query?
+Why feature-based architecture?
+Why this state-management strategy?
+Why server/client boundary here?
+Why this design system?
+Why migration instead of rewrite?
+Why this component remains feature-specific?
+```
+
+Do not document trivial implementation details.
+
+Document decisions that future agents might otherwise reconsider incorrectly.
+
+---
+
+# 26. SCOPE CONTROL
+
+The objective is a complete frontend refactor, not infinite perfection.
+
+Distinguish:
+
+```text
+REQUIRED
+IMPORTANT
+NICE_TO_HAVE
+OUT_OF_SCOPE
+```
+
+Do not derail the migration because an unrelated improvement was discovered.
+
+Record unrelated opportunities in a backlog and continue.
+
+However, if a discovery directly affects the architecture being implemented, stop and update the relevant specification before continuing.
+
+---
+
+# 27. FINAL AUDIT
+
+Do not declare completion simply because all planned tasks are marked complete.
+
+Perform a final autonomous audit.
+
+Check:
+
+## Architecture
+
+* boundaries;
+* coupling;
+* duplication;
+* state management;
+* API layer;
+* feature organization.
+
+## UX
+
+* flows;
+* navigation;
+* states;
+* accessibility;
+* responsive behavior.
+
+## Design
+
+* consistency;
+* typography;
+* spacing;
+* visual hierarchy;
+* interaction states.
+
+## Engineering
+
+* tests;
+* type safety;
+* performance;
+* error handling;
+* loading;
+* caching;
+* API contracts.
+
+## Legacy
+
+Search for:
+
+* dead components;
+* obsolete hooks;
+* duplicated implementations;
+* unused dependencies;
+* old routes;
+* abandoned state management;
+* legacy styles;
+* compatibility hacks.
+
+Remove what is genuinely obsolete.
+
+---
+
+# 28. FINAL COMPLETION CRITERIA
+
+The project is complete only when:
+
+1. the new frontend architecture is documented;
+2. the backend/frontend contracts are documented;
+3. the major UX flows are specified;
+4. the design system is documented;
+5. the implemented architecture matches the specification;
+6. tests cover meaningful behavior;
+7. browser validation passes;
+8. accessibility has been reviewed;
+9. visual quality has been reviewed;
+10. legacy architecture has been removed or explicitly justified;
+11. no critical known failures remain;
+12. persistent project state accurately describes the completed system.
+
+At completion, produce a concise final report containing:
+
+```text
+Architecture
+Major Changes
+API Integration
+UX Changes
+Design System
+Testing
+Migration Status
+Removed Legacy
+Known Limitations
+Future Opportunities
 ```
 
 ---
 
-## CHECKPOINTS & PARALLELISM
+# 29. MOST IMPORTANT RULE
 
-- Checkpoint = `git commit` + update `.spec/state/current.md` + verify.sh green + manual browser pass on affected flows.
-- Sequence: CP-0 → CP-1 → E2 (CP-2) → E3 → then **E4 ∥ E5 ∥ E6** → then **E7 ∥ E8** (E9 anytime post-CP-1) → E10.
-- Specs (T\*.1) may be written ahead of their lane.
-- Hard rule (methodology §17): a feature swap task INCLUDES deleting that domain's legacy imports. Import-count-zero gates every CP.
+You are not merely an implementation engine.
 
----
+You are responsible for **maintaining the engineering process itself**.
 
-## VERIFICATION COMMANDS & QUALITY GATES
+You must continuously ask yourself:
 
-```bash
-npm run lint && npx tsc --noEmit && vitest run && targeted playwright specs
-```
+> Is the current specification still correct?
 
-- NEVER trust `next build` (eslint.ignoreDuringBuilds + typescript.ignoreBuildErrors are true).
-- Per-feature browser validation: dev server + Playwright flow navigation, console/network check,
-  screenshots light+dark × 320/768/1024/1440, axe-core scan, visual critique loop (methodology §18–19).
-- Quality gates = methodology §20 checklist verbatim, encoded per-task in `.spec/tasks/`.
-- MSW handlers derive from backend route/gateway source; contract test asserts handler responses against
-  `entities/` schemas so mocks cannot drift into fiction.
+> Did implementation reveal a missing requirement?
 
----
+> Did the architecture prove inadequate?
 
-## RISKS
+> Is this task too large and therefore under-specified?
 
-| # | Risk | Mitigation |
-|---|---|---|
-| R1 | `@hello-pangea/dnd` pinned "latest" — React 19 drift | Pin working version (T0.2); E2E drag tripwire |
-| R2 | Tailwind v4 port breaks visuals | Screenshot baseline BEFORE switch; family-by-family; adopt user's tokens |
-| R3 | legacy-peer-deps hides broken installs | One-by-one installs + `tsc --noEmit` after each |
-| R4 | Response-shape inconsistency (`{tasks}`/`{data}`/bare) breaks typed layer | T0.5 forbids silent unwrap; per-endpoint truth captured; MSW contract tests |
-| R5 | Dual permission maps diverge further | Contract test asserting FEATURE_ACCESS semantics ⊇ rbac.PERMISSIONS; known drift bugs fixed in T6.3 |
-| R6 | RSC + next-auth v4 + query hydration pitfalls | Start client-only queries; prefetch only where measured need |
-| R7 | Two architectures forever | Import-count-zero enforced at every CP |
-| R8 | Gamification neutralized migrations trap | NO prisma schema changes; out of scope (AGENTS.md warning) |
-| R9 | pt-BR copy regressions | Copy frozen in specs; assertions include key strings |
-| R10 | Scope creep (i18n, email notif, websockets, dark-mode-spec revival) | Backlog only |
+> Is this abstraction premature?
 
----
+> Is the UI solving the user's problem or merely rendering data?
 
-## OPEN QUESTIONS — DEFAULTS APPLY UNLESS OVERRIDDEN IN state/current.md
+> Is the current design coherent with the rest of the product?
 
-| Q | Default |
-|---|---|
-| Q1 Dashboard default scope | ALL visible tasks + prominent "assigned to me" filter (current behavior) |
-| Q2 Route slugs | Keep pt-BR (`/loja`, `/projetos`) — bookmark safety |
-| Q3 Mobile kanban | Horizontal scroll < lg (current); accordion = backlog |
-| Q4 Notifications cadence | refetchInterval 60s + refetchOnWindowFocus; no websockets this phase |
-| Q5 i18n beyond pt-BR | Out of scope |
+> What should the next autonomous engineering action be?
+
+If the answer requires modifying the plan, modify the plan.
+
+If it requires expanding the specification, expand the specification.
+
+If it requires creating new tasks, create them.
+
+If it requires revising architecture, revise architecture.
+
+Then continue working.
+
+**Do not wait for the human to tell you the next step.**
+
+The human defines the objective.
+
+You own the execution.
 
 ---
 
-## STATE SCHEMA (`.spec/state/current.md` — update EVERY checkpoint)
+# START
 
-```
-phase · epic/task in progress · last completed · tests status · known failures ·
-new discoveries · spec changes · next autonomous action · blocked[] {reason, evidence, attempted, required, safe-next}
-Sidecar files: completed.md (append-only) · discoveries.md · backlog.md · blocked.md
-```
+Begin now.
 
----
+Do NOT implement production features yet.
 
-## RECOVERY PROTOCOL (start of EVERY session)
+First perform the repository autopsy, establish persistent state, map the backend/frontend contracts, reconstruct the product/domain model, analyze the existing UX, and design the target frontend architecture.
 
-1. Inspect `.spec/state/current.md`.
-2. `git status --short`; inspect recent commits/diff.
-3. Inspect incomplete tasks + known failures + current spec.
-4. **Verify recorded state matches reality** — never assume a prior agent finished what state claims.
-5. Repair inconsistencies; record discovery if reality diverged.
-6. Resume from last safe checkpoint.
+Then produce the initial specification hierarchy and execution plan.
 
----
+Once the plan is sufficiently grounded, begin autonomous implementation.
 
-## COMPLETION CRITERIA (methodology §28)
+Continue until the migration is complete or you encounter a genuinely irreducible blocker requiring human product input.
 
-New architecture documented · contracts documented · major UX flows specified · design system documented ·
-implementation matches specs · meaningful tests green · browser validation passed · accessibility reviewed ·
-visual quality reviewed · legacy removed or ADR-justified · no critical failures · persistent state accurate.
-Final report sections: Architecture · Major Changes · API Integration · UX Changes · Design System ·
-Testing · Migration Status · Removed Legacy · Known Limitations · Future Opportunities.

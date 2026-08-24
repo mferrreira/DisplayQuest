@@ -76,4 +76,28 @@ Significant decisions recorded as ADRs in `.spec/decisions/`:
 - Next agent resumes from `.spec/state/current.md` without conversation history.
 
 ---
+
+## Amendments (v2 — approved 2026-08-24 via Master Execution Plan v2.0)
+
+The user approved Master Plan v2 (including these amendments) by instructing autonomous execution.
+
+**A1 · UI-state grid is a hard gate (extends §2/§7).**
+Every screen specification MUST define: loading / error / empty / filtered-empty / conflict-revert /
+unauthorized / permission-denied states. A feature without the full grid fails its gates.
+
+**A2 · Cross-feature access via public API only (refines §4).**
+Features never import each other's internals. Permitted channels: a feature's public `index.ts`
+exports (typically read hooks over shared query keys), `entities/` schemas, and query invalidation.
+Promote to `shared/` only at ≥2 consumer features.
+
+**A3 · Destructive-action rule (extends §6).**
+No `window.confirm`. All destructive/irreversible actions use AlertDialog with explicit consequence copy.
+
+**A4 · Standing user directives (operational law).**
+1. Execute directly on branch `dev`.
+2. Autonomous `git commit` at every checkpoint once verify.sh gates pass.
+3. Never push without explicit request; never touch user's uncommitted WIP without asking.
+4. No Prisma schema changes this phase (R8 gamification-migration trap).
+
+---
 *This constitution is binding. Amendments require explicit human approval and ADR.*

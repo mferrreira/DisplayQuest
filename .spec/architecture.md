@@ -1,5 +1,9 @@
 # DisplayQuest Frontend Architecture Audit
 
+> **STATUS:** as-is audit + target. Phases −1/0 complete; see EXECUTION-PLAN.md for live task graph.
+
+# DisplayQuest Frontend Architecture Audit
+
 ## Current Architecture (As-Is)
 
 ### Structure

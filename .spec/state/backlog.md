@@ -7,3 +7,5 @@
 - [ ] Legacy purchase rows in dev DB: id=1 "delivered", id=2 "processing" — propose UPDATE to "completed"/"cancelled" or DELETE; PENDING USER DECISION (do not touch data autonomously).
 - [ ] B-1 · Remove .eslintrc.json override when each of these is rebuilt: laboratorio/page.tsx (E5), loja/page.tsx + loja/gerenciar/page.tsx (E6), user-approval.tsx (E8), volunteer-actions.tsx (E8/E9). Violations: conditional hooks after early returns, unescaped quotes. Fix during rebuild, then delete the file entry from overrides.
 - [ ] B-2 · Visual baseline dir is gitignored (8.7MB). If CI visual regression is adopted later, move baselines to proper artifact storage; regenerate locally via scripts/capture-visual-baseline.mjs.
+- [ ] v2: adopt knip (or depcheck) at E10 for zero-import/unused-dep proof instead of grep heuristics — decide when E10 starts.
+- [ ] v2: `kanban_boards` prisma model has no visible frontend consumer — confirm unused during E2 spec, then note for backend (do NOT change schema this phase).

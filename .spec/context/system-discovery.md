@@ -1,3 +1,5 @@
+> **v2 STATUS (2026-08-24 evening):** Phase −1 + Phase 0 COMPLETE (CP-0 verified in-tree). This audit remains the as-is evidence base; target state governed by EXECUTION-PLAN.md. Anchors re-verified during v2 planning.
+
 # DisplayQuest System Discovery Snapshot
 
 **Captured**: 2026-08-24 · **Branch**: `dev` (dirty tree — user's dark-mode/token refactoring in flight, ~62 files)

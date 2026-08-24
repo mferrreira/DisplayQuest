@@ -53,3 +53,18 @@ after `git mv`, paths changed → scoped warnings stopped matching → same erro
 verify.sh. WHEN RESUMING E1: pop the stash, update override paths to
 `app/(dashboard)/dashboard/...` (or convert overrides to basename matching), then proceed with
 T1.1 verification. Structural work itself was sound (tsc clean after .next/types refresh).
+
+## D-10 · 2026-08-24 (v2 planning) · body font is Arial, contradicting design-system
+`app/globals.css` sets `body { font-family: Arial }`; design-system.md declares Inter + JetBrains Mono.
+Resolved by ADR-006: self-hosted @fontsource variable fonts in T1.6, landed BEFORE CP-1 baseline
+recapture so the new baseline carries final typography.
+
+## D-11 · 2026-08-24 (v2 planning) · vitest suite includes LIVE-DB round-trip test
+tests/integration/entities-roundtrip.test.ts hits Postgres. verify.sh therefore requires docker db up.
+Recovery step 0 = ensure docker-compose db healthy (R11). Do not "fix" by deleting the test — it is
+the contract guard that caught D-8.
+
+## D-12 · 2026-08-24 (v2 planning) · lib/api/project-members.ts sits outside endpoints/
+Foundation created `lib/api/endpoints/{tasks,projects,users,notifications,work-sessions}.ts` plus a
+stray `lib/api/project-members.ts`. Consolidate into endpoints/projects.ts during E4; no new code may
+import the stray file.
