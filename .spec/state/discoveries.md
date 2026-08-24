@@ -44,3 +44,12 @@ rejected (both refund paths handled) → completed; cancel → cancelled. produc
 drift bug, fix lands with E6. Dev DB contains legacy rows `delivered` (id 1) and `processing`
 (id 2) written by pre-module versions; entity schema intentionally REJECTS them (contract encoded
 in round-trip test). Data cleanup = user decision, backlog item added.
+
+## D-9 · 2026-08-24 · E1 WIP stashed; lint override paths break on file moves
+First T1.1 attempt (route groups (auth)/(dashboard) + server guard in (dashboard)/layout.tsx +
+DashboardChrome) was STASHED at user request: `git stash@{0}` ("E1 WIP: route groups + server
+guard"). Root cause of the loop: `.eslintrc.json` overrides scoped the 5 legacy files by OLD paths;
+after `git mv`, paths changed → scoped warnings stopped matching → same errors resurfaced in
+verify.sh. WHEN RESUMING E1: pop the stash, update override paths to
+`app/(dashboard)/dashboard/...` (or convert overrides to basename matching), then proceed with
+T1.1 verification. Structural work itself was sound (tsc clean after .next/types refresh).

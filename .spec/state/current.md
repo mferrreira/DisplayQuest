@@ -12,7 +12,7 @@
 - new discoveries: D-1…D-8 (discoveries.md)
 - spec changes: design-system.md re-baselined; product-model.md purchase lifecycle patched (D-8);
   api-contracts.md gained REAL WIRE SHAPES appendix
-- next autonomous action: E1/T1.1 — create (auth)/(dashboard) route groups, move pages; T1.2
+- next autonomous action: E1/T1.1 — RESUME FROM STASH (git stash pop; see D-9 for the lint-override path gotcha); then route groups + T1.2
   server layout guard via getServerSession (additive); write .spec/tasks/E1 gates first
 - blocked: []
 
