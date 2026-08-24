@@ -79,6 +79,7 @@ Routes live in `app/api/<domain>/route.ts`. Thin handlers: parse request, authen
 - `middleware.ts` only handles `/uploads/avatars/*` (sets WebP content-type + security headers). No auth middleware.
 - User status must be `"active"` to pass `requireActiveUser()` checks.
 - Output mode is `standalone` (for Docker). Images are `unoptimized`.
+- Gamification migrations `202602161822_add_gamification_core_schema` and `202602162235_add_gamification_chest_schema` were NEUTRALIZED into commented no-ops (2026-08-24): the gamification models were previously reverted from `prisma/schema.prisma` while the migrations remained, causing permanent drift -- every new `prisma migrate dev` proposed `DROP TABLE ... gamification_*`. Production DB never had those tables (migrations only recorded as applied in `_prisma_migrations`) and the gamification module only uses `users`/`history`. When gamification work resumes: re-add the models to schema.prisma and generate a fresh migration; do not resurrect the neutralized SQL.
 
 ## Verification checklist
 

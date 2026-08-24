@@ -1,8 +1,7 @@
 -- Additive-only migration (project reports + attachments).
 -- NOTE: auto-generated drops of legacy gamification_* tables were removed by hand.
--- Those tables are dead artifacts of reverted migrations (never present on production DB;
--- the gamification module only uses users/history). Hygiene cleanup deferred to a
--- dedicated maintenance task -- this migration must never destroy data.
+-- (The source gamification migrations themselves were later neutralized -- see
+-- 202602161822_add_gamification_core_schema.) This migration must never destroy data.
 -- CreateTable
 CREATE TABLE "project_reports" (
     "id" SERIAL NOT NULL,
