@@ -2,6 +2,17 @@
 
 **Updated**: 2026-08-24 · **Phase**: 0 COMPLETE (CP-0) · **Branch**: `dev`
 
+## Standing user directives (valid across sessions — set 2026-08-24)
+1. Execute directly on branch `dev` (no dedicated refactor branch).
+2. Autonomous `git commit` at every checkpoint once verify.sh gates pass (lint + tsc + vitest).
+3. Never push without explicit request. Never touch the user's uncommitted work without asking.
+4. User's own WIP found in the tree: ask before stashing/committing (first time, they committed
+   it themselves mid-session; second time, they asked for a stash — default to ASKING).
+
+## ENTRYPOINT FOR FRESH SESSIONS
+Read this file → run the Recovery Protocol (METHODOLOGY.md §23) → executable plan = `.spec/PLAN.md`
+→ process rules = `.spec/METHODOLOGY.md` → evidence base = `.spec/context/system-discovery.md`.
+
 ## Snapshot
 - phase: CP-0 reached — foundation green, Tailwind v4 port pixel-identical
 - epic/task in progress: none (between phases) → next: **E1 Shell & Auth** (T1.1 route groups)
