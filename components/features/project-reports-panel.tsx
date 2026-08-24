@@ -23,7 +23,13 @@ interface ProjectReportListItem {
   attachments: Array<{ id: number }>
 }
 
-export function ProjectReportsPanel({ projectId }: { projectId?: number }) {
+interface ProjectReportsPanelProps {
+  projectId?: number
+  /** Enables in-panel generation (project picker inside the dialog) when projectId is absent. */
+  projects?: Array<{ id: number; name: string }>
+}
+
+export function ProjectReportsPanel({ projectId, projects }: ProjectReportsPanelProps) {
   const { toast } = useToast()
   const [loading, setLoading] = useState(true)
   const [reports, setReports] = useState<ProjectReportListItem[]>([])
@@ -113,7 +119,7 @@ export function ProjectReportsPanel({ projectId }: { projectId?: number }) {
           </ul>
         )}
 
-        {!projectId && (
+        {!projectId && !projects && (
           <p className="text-xs text-muted-foreground">
             Dica: gere relatórios a partir do detalhe de um projeto específico.
           </p>
@@ -122,6 +128,7 @@ export function ProjectReportsPanel({ projectId }: { projectId?: number }) {
 
       <ProjectReportDialog
         projectId={projectId ?? 0}
+        projects={projects}
         open={createOpen}
         onOpenChange={setCreateOpen}
         onSaved={load}

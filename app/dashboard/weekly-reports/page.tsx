@@ -504,7 +504,7 @@ export default function WeeklyReportsPage() {
         </TabsContent>
 
         <TabsContent value="projetos" className="space-y-6">
-          <ProjectReportsPanel />
+          <ProjectReportsPanel projects={projects.map((project) => ({ id: project.id, name: project.name }))} />
         </TabsContent>
       </Tabs>
 
