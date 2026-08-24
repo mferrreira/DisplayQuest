@@ -36,3 +36,11 @@ client-layout pathname gating (DashboardProviders); weekly N+1 Promise.all loop 
 User committed their project-report picker work themselves as `d875233 feat: Temporal reports form added`
 while execution was starting. Tree clean afterwards. weekly-reports/page.tsx passes mapped `{id,name}`
 projects into ProjectReportsPanel — noted for E7 spec so we don't regress the picker.
+
+## D-8 · 2026-08-24 · Purchase status domain diverges from product-model; legacy rows in DB
+Round-trip test caught it live. Backend truth (store-service.gateway.ts): pending → approved |
+rejected (both refund paths handled) → completed; cancel → cancelled. product-model.md said
+"used" as terminal state — PATCHED. Frontend loja/page.tsx still renders "used" (:217) — latent
+drift bug, fix lands with E6. Dev DB contains legacy rows `delivered` (id 1) and `processing`
+(id 2) written by pre-module versions; entity schema intentionally REJECTS them (contract encoded
+in round-trip test). Data cleanup = user decision, backlog item added.

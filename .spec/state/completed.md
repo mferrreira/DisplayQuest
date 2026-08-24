@@ -7,3 +7,17 @@
 - Landed tokens adopted: design-system.md patched (table of light/dark HSL + v4 target form).
 - `prisma migrate status` up to date; no new migrations.
 - Exit gate: `npx tsc --noEmit` PASS. Lint impossible (D-4) — accepted as recorded failure, fix is first T0.2 item.
+
+## 2026-08-24 · Phase 0 · FOUNDATION ✅ (CP-0)
+- T0.2 deps one-by-one, tsc green after EACH (caught real peer-dep trap: @testing-library/dom).
+- T0.3 vitest4+jsdom+RTL16 / playwright / msw2 (node+browser) / verify.sh — smoke green.
+- T0.4 entities/ Zod mirroring schema.prisma; round-trip vs LIVE DB 9/9 → caught D-8 purchase
+  status drift; task wire shape corrected to assigneeIds (toJSON source).
+- T0.5 lib/api/client.ts (ApiError, z.output, no silent unwrap) + endpoints: tasks,
+  work-sessions({data} envelope), projects, users, notifications; REAL SHAPES appendix.
+- T0.6 queryKeys factory + QueryProvider (staleTime 5m, no 4xx retry) mounted in client-layout.
+- T0.7 Tailwind v4.3.3 port: @theme inline bridge over untouched HSL vars, @custom-variant dark,
+  tw-animate-css replaces tailwindcss-animate, tailwind.config.ts deleted, components.json updated.
+  Baseline v3 captured BEFORE switch (64 imgs = 8 routes × 320/768/1024/1440 × light/dark);
+  after-v4 compared: **64/64 at 0.000% pixel diff**. Chrome manual pass: dashboard renders, 0 console errors.
+- Lint debt: 5 legacy files scoped to warn (rules-of-hooks, unescaped entities) — backlog B-1.

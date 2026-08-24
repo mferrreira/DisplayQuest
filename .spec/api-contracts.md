@@ -488,3 +488,31 @@ export const listTasks = api.query({
   endpoint: "/api/tasks",
 });
 ```
+
+---
+
+## APPENDIX — REAL WIRE SHAPES (T0.5, verified from route source 2026-08-24)
+
+Supersedes the "Convention" block above wherever they disagree. These are the envelopes the
+typed layer (`lib/api/endpoints/*`) encodes in Zod.
+
+| Endpoint | Real success envelope | Source |
+|---|---|---|
+| GET /api/tasks | `{ tasks: Task[] }` — Task = toJSON() shape below | route.ts:45 |
+| GET /api/projects | `{ projects }` | route.ts:24 |
+| POST /api/projects | `{ project }` (201) | route.ts:69 |
+| GET/POST /api/users | `{ users }` / `{ user }` (201) | route.ts:16/:48 |
+| ALL /api/work-sessions* | `{ data }` wrapper (list AND single, incl. POST 201) | route.ts:46,:60,:89,:151,:157 |
+| GET /api/notifications | `{ success: true, notifications }` | route.ts:21 |
+| errors | `{ error: string }` (+ optional `details` on work-sessions) | various |
+
+### Task wire shape (`backend/models/Task.ts` toJSON :119–136)
+```
+{ id, title, description: string|null, status, priority,
+  assignedTo: number|null, assigneeIds: number[],        ← flat ids, NOT task_assignees rows
+  projectId: number|null, dueDate: string|null,          ← DB String column
+  points, completed: boolean, completedAt: string(ISO)|null,
+  taskVisibility, isGlobal }
+```
+### Dead calls CONFIRMED (D-3): `POST /api/badges/award`, `GET /api/users/search?q=` have NO route files.
+### Purchase status domain: pending/approved/rejected/completed/cancelled (D-8; legacy delivered/processing rejected by schema).

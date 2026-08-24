@@ -132,11 +132,16 @@ ACTIVE
 ### Purchase Lifecycle
 ```
 PENDING (user requests)
-  -> APPROVED (by COORDENADOR/GERENTE/LABORATORISTA) -> points deducted
+  -> APPROVED (by approvers) -> points deducted
   -> REJECTED -> points returned
 APPROVED
-  -> USED (when reward consumed)
+  -> COMPLETED (reward consumed)      ← backend store-service.gateway.ts completePurchase
+PENDING/APPROVED
+  -> CANCELLED (refund when applicable) ← cancelPurchase
 ```
+> **PATCHED 2026-08-24 (D-8):** the original "used" terminal state does not exist in the current
+> backend. Authoritative domain: `pending | approved | rejected | completed | cancelled`.
+> Legacy dev-DB rows with `delivered`/`processing` predate this module and are schema-rejected.
 
 ## Role Permission Matrix (from FEATURE_ACCESS)
 
