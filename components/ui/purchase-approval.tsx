@@ -97,7 +97,7 @@ export function PurchaseApproval({ purchases, onPurchaseUpdate }: PurchaseApprov
     return (
       <Card>
         <CardContent className="pt-6 text-center">
-          <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
+          <CheckCircle className="h-12 w-12 text-green-500 dark:text-success mx-auto mb-4" />
           <p className="text-muted-foreground">Nenhuma compra pendente para aprovação.</p>
         </CardContent>
       </Card>
@@ -146,7 +146,7 @@ export function PurchaseApproval({ purchases, onPurchaseUpdate }: PurchaseApprov
                   <TableCell className="font-medium">{purchase.rewardName}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
-                      <Trophy className="h-4 w-4 text-amber-500" />
+                      <Trophy className="h-4 w-4 text-amber-500 dark:text-amber-400" />
                       <span>{purchase.price}</span>
                     </div>
                   </TableCell>
@@ -168,7 +168,7 @@ export function PurchaseApproval({ purchases, onPurchaseUpdate }: PurchaseApprov
                         variant="outline"
                         size="sm"
                         onClick={() => handleApprove(purchase)}
-                        className="text-green-600 hover:text-green-700"
+                        className="text-green-600 hover:text-green-700 dark:text-success dark:hover:text-success/90"
                       >
                         <CheckCircle className="h-4 w-4 mr-1" />
                         Aprovar
@@ -177,7 +177,7 @@ export function PurchaseApproval({ purchases, onPurchaseUpdate }: PurchaseApprov
                         variant="outline"
                         size="sm"
                         onClick={() => handleDeny(purchase)}
-                        className="text-red-600 hover:text-red-700"
+                        className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
                       >
                         <XCircle className="h-4 w-4 mr-1" />
                         Negar
@@ -221,7 +221,7 @@ export function PurchaseApproval({ purchases, onPurchaseUpdate }: PurchaseApprov
                   <div className="flex justify-between">
                     <span className="text-sm text-muted-foreground">Pontos:</span>
                     <span className="font-medium flex items-center gap-1">
-                      <Trophy className="h-4 w-4 text-amber-500" />
+                      <Trophy className="h-4 w-4 text-amber-500 dark:text-amber-400" />
                       {selectedPurchase.price}
                     </span>
                   </div>
@@ -258,7 +258,7 @@ export function PurchaseApproval({ purchases, onPurchaseUpdate }: PurchaseApprov
                   variant="outline"
                   onClick={() => confirmAction("deny")}
                   disabled={isProcessing}
-                  className="text-red-600 hover:text-red-700"
+                  className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
                 >
                   {isProcessing ? (
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -270,7 +270,7 @@ export function PurchaseApproval({ purchases, onPurchaseUpdate }: PurchaseApprov
                 <Button
                   onClick={() => confirmAction("approve")}
                   disabled={isProcessing}
-                  className="bg-green-600 hover:bg-green-700"
+                  className="bg-green-600 hover:bg-green-700 dark:bg-success dark:text-success-foreground dark:hover:bg-success/90"
                 >
                   {isProcessing ? (
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />

@@ -21,6 +21,7 @@ import type {
   CreateUserScheduleCommand,
   DeleteLabEventCommand,
   DeleteLabNoticeCommand,
+  DeleteLaboratoryScheduleCommand,
   DeleteUserScheduleCommand,
   LabIssueQuery,
   ListResponsibilitiesQuery,
@@ -319,10 +320,16 @@ export class DefaultLabOperationsGateway implements LabOperationsGateway {
     return await this.laboratoryScheduleRepository.update(existing)
   }
 
-  async deleteLaboratorySchedule(scheduleId: number) {
-    const existing = await this.laboratoryScheduleRepository.findById(scheduleId)
+  async deleteLaboratorySchedule(command: DeleteLaboratoryScheduleCommand) {
+    const existing = await this.laboratoryScheduleRepository.findById(command.scheduleId)
     if (!existing) throw new Error("Horário do laboratório não encontrado")
-    await this.laboratoryScheduleRepository.delete(scheduleId)
+
+    const canManage = await this.canUserManageLaboratorySchedule(command.userId)
+    if (!canManage) {
+      throw new Error("Usuário não tem permissão para gerenciar horários do laboratório")
+    }
+
+    await this.laboratoryScheduleRepository.delete(command.scheduleId)
   }
 
   async listResponsibilities(query?: ListResponsibilitiesQuery) {
@@ -421,8 +428,7 @@ export class DefaultLabOperationsGateway implements LabOperationsGateway {
   }
 
   async createUserSchedule(command: CreateUserScheduleCommand) {
-    const canManageSchedules = hasPermission(command.actorRoles, "MANAGE_USERS")
-    if (!canManageSchedules && command.targetUserId !== command.actorUserId) {
+    if (!hasPermission(command.actorRoles, "MANAGE_USERS")) {
       throw new Error("Acesso negado")
     }
 
@@ -440,13 +446,12 @@ export class DefaultLabOperationsGateway implements LabOperationsGateway {
   }
 
   async updateUserSchedule(command: UpdateUserScheduleCommand) {
-    const existing = await this.userScheduleRepository.findById(command.scheduleId)
-    if (!existing) throw new Error("Horário não encontrado")
-
-    const canManageSchedules = hasPermission(command.actorRoles, "MANAGE_USERS")
-    if (!canManageSchedules && existing.userId !== command.actorUserId) {
+    if (!hasPermission(command.actorRoles, "MANAGE_USERS")) {
       throw new Error("Acesso negado")
     }
+
+    const existing = await this.userScheduleRepository.findById(command.scheduleId)
+    if (!existing) throw new Error("Horário não encontrado")
 
     if (command.startTime !== undefined || command.endTime !== undefined) {
       existing.startTime = command.startTime || existing.startTime
@@ -457,13 +462,12 @@ export class DefaultLabOperationsGateway implements LabOperationsGateway {
   }
 
   async deleteUserSchedule(command: DeleteUserScheduleCommand) {
-    const existing = await this.userScheduleRepository.findById(command.scheduleId)
-    if (!existing) throw new Error("Horário não encontrado")
-
-    const canManageSchedules = hasPermission(command.actorRoles, "MANAGE_USERS")
-    if (!canManageSchedules && existing.userId !== command.actorUserId) {
+    if (!hasPermission(command.actorRoles, "MANAGE_USERS")) {
       throw new Error("Acesso negado")
     }
+
+    const existing = await this.userScheduleRepository.findById(command.scheduleId)
+    if (!existing) throw new Error("Horário não encontrado")
 
     await this.userScheduleRepository.delete(command.scheduleId)
   }

@@ -78,21 +78,21 @@ export function UserSearch({ onUserSelect, placeholder = "Buscar usuários..." }
 
   const getRoleColor = (role: string) => {
     const colors: Record<string, string> = {
-      'COORDENADOR': 'bg-purple-100 text-purple-800',
-      'GERENTE': 'bg-blue-100 text-blue-800',
-      'LABORATORISTA': 'bg-green-100 text-green-800',
-      'PESQUISADOR': 'bg-orange-100 text-orange-800',
-      'GERENTE_PROJETO': 'bg-indigo-100 text-indigo-800',
-      'COLABORADOR': 'bg-gray-100 text-gray-800',
-      'VOLUNTARIO': 'bg-pink-100 text-pink-800',
+      'COORDENADOR': 'bg-purple-100 dark:bg-purple-500/15 text-purple-800 dark:text-purple-300',
+      'GERENTE': 'bg-blue-100 dark:bg-info/15 text-blue-800 dark:text-blue-300',
+      'LABORATORISTA': 'bg-green-100 dark:bg-success/15 text-green-800 dark:text-green-300',
+      'PESQUISADOR': 'bg-orange-100 text-orange-800 dark:bg-orange-500/15 dark:text-orange-300',
+      'GERENTE_PROJETO': 'bg-indigo-100 text-indigo-800 dark:bg-indigo-500/15 dark:text-indigo-300',
+      'COLABORADOR': 'bg-gray-100 dark:bg-muted/40 text-gray-800 dark:text-gray-200',
+      'VOLUNTARIO': 'bg-pink-100 text-pink-800 dark:bg-pink-500/15 dark:text-pink-300',
     }
-    return colors[role] || 'bg-gray-100 text-gray-800'
+    return colors[role] || 'bg-gray-100 dark:bg-muted/40 text-gray-800 dark:text-gray-200'
   }
 
   return (
     <div className="relative w-full max-w-md">
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-muted-foreground/70" />
         <Input
           type="text"
           placeholder={placeholder}
@@ -119,8 +119,8 @@ export function UserSearch({ onUserSelect, placeholder = "Buscar usuários..." }
             
             {isSearching ? (
               <div className="flex items-center justify-center py-4">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-                <span className="ml-2 text-sm text-gray-600">Buscando...</span>
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 dark:border-info"></div>
+                <span className="ml-2 text-sm text-gray-600 dark:text-muted-foreground">Buscando...</span>
               </div>
             ) : searchResults.length > 0 ? (
               <div className="space-y-1">
@@ -128,7 +128,7 @@ export function UserSearch({ onUserSelect, placeholder = "Buscar usuários..." }
                   <div
                     key={user.id}
                     onClick={() => handleUserSelect(user)}
-                    className="flex items-center space-x-3 p-2 rounded-md hover:bg-gray-50 cursor-pointer transition-colors"
+                    className="flex items-center space-x-3 p-2 rounded-md hover:bg-gray-50 dark:bg-muted/40 cursor-pointer transition-colors"
                   >
                     <div>
                     <Avatar className="h-8 w-8">
@@ -138,10 +138,10 @@ export function UserSearch({ onUserSelect, placeholder = "Buscar usuários..." }
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium text-gray-900 truncate">
+                      <div className="text-sm font-medium text-gray-900 dark:text-foreground truncate">
                         {user.name}
                       </div>
-                      <div className="text-xs text-gray-500 truncate">
+                      <div className="text-xs text-gray-500 dark:text-muted-foreground truncate">
                         {user.email}
                       </div>
                     </div>
@@ -172,7 +172,7 @@ export function UserSearch({ onUserSelect, placeholder = "Buscar usuários..." }
               </div>
 
             ) : (
-              <div className="text-center py-4 text-sm text-gray-500">
+              <div className="text-center py-4 text-sm text-gray-500 dark:text-muted-foreground">
                 Nenhum usuário encontrado
               </div>
             )}

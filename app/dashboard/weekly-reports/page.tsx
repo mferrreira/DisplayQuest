@@ -13,11 +13,13 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Calendar, FileText, Users, CalendarDays, Plus, Download } from "lucide-react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, AlertTriangle } from "lucide-react"
 import { useToast } from "@/contexts/use-toast"
 import type { WeeklyReport } from "@/contexts/types"
 import { WeeklyReportDetail, type ProjectWeeklyDetailReport } from "@/components/ui/weekly-report-detail"
+import { ProjectReportsPanel } from "@/components/features/project-reports-panel"
 
 export default function WeeklyReportsPage() {
   const { user } = useAuth()
@@ -271,6 +273,13 @@ export default function WeeklyReportsPage() {
         </div>
       </div>
 
+      <Tabs defaultValue="usuarios" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="usuarios">Usuários (semanal)</TabsTrigger>
+          <TabsTrigger value="projetos">Relatórios de Projeto</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="usuarios" className="space-y-6">
       {error && (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
@@ -386,7 +395,7 @@ export default function WeeklyReportsPage() {
       </Card>
 
       <div className="space-y-4">
-        <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">Relatórios por Projeto</h2>
+        <h2 className="text-2xl font-semibold text-gray-900 dark:text-foreground dark:text-white">Relatórios por Projeto</h2>
         {projectReports.length === 0 ? (
           <Card>
             <CardContent className="flex items-center justify-center h-24">
@@ -418,7 +427,7 @@ export default function WeeklyReportsPage() {
                     Sessões: <strong>{report.totalLogs || 0}</strong> | Contribuidores: <strong>{report.contributorCount || 0}</strong>
                   </p>
                   <div className="flex items-center justify-between mt-3">
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-gray-500 dark:text-muted-foreground">
                       {formatDate(report.createdAt)}
                     </span>
                     <Button
@@ -441,12 +450,12 @@ export default function WeeklyReportsPage() {
 
       {/* Reports List */}
       <div className="space-y-4">
-        <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">Relatórios Existentes</h2>
+        <h2 className="text-2xl font-semibold text-gray-900 dark:text-foreground dark:text-white">Relatórios Existentes</h2>
         
         {weeklyReports.length === 0 ? (
           <Card>
             <CardContent className="flex items-center justify-center h-32">
-              <div className="text-center text-gray-500">
+              <div className="text-center text-gray-500 dark:text-muted-foreground">
                 <FileText className="h-12 w-12 mx-auto mb-2 opacity-50" />
                 <p>Nenhum relatório semanal encontrado</p>
                 <p className="text-sm">Gere um relatório para começar</p>
@@ -474,11 +483,11 @@ export default function WeeklyReportsPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
+                  <p className="text-sm text-gray-600 dark:text-muted-foreground dark:text-gray-400 dark:text-muted-foreground/70 line-clamp-2">
                     {report.summary || "Nenhum resumo disponível"}
                   </p>
                   <div className="flex items-center justify-between mt-3">
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-gray-500 dark:text-muted-foreground">
                       {formatDate(report.createdAt)}
                     </span>
                     <Button variant="ghost" size="sm">
@@ -491,6 +500,13 @@ export default function WeeklyReportsPage() {
           </div>
         )}
       </div>
+
+        </TabsContent>
+
+        <TabsContent value="projetos" className="space-y-6">
+          <ProjectReportsPanel />
+        </TabsContent>
+      </Tabs>
 
       {/* WeeklyReportDetail Dialog */}
       {selectedReport && (

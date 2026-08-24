@@ -1,7 +1,15 @@
 import type {
+  CreateProjectReportCommand,
+  DeleteProjectReportCommand,
+  DeleteReportAttachmentCommand,
+  ListProjectReportsQuery,
   ProjectHoursHistoryQuery,
   ProjectHoursQuery,
   ProjectHoursResult,
+  ProjectReportAggregateResult,
+  ProjectReportReadModel,
+  RegisterReportAttachmentCommand,
+  UpdateProjectReportCommand,
   UpsertWeeklyReportCommand,
   UserProjectHoursQuery,
   WeeklyHoursHistoryItem,
@@ -11,6 +19,16 @@ import type {
 } from "@/backend/modules/reporting/application/contracts"
 
 export interface ReportingGateway {
+  createProjectReport(command: CreateProjectReportCommand): Promise<{ report: ProjectReportReadModel; created: boolean }>
+  updateProjectReport(command: UpdateProjectReportCommand): Promise<ProjectReportReadModel>
+  deleteProjectReport(command: DeleteProjectReportCommand): Promise<void>
+  getProjectReport(actorUserId: number, actorRoles: string[], reportId: number): Promise<ProjectReportReadModel | null>
+  listProjectReports(query: ListProjectReportsQuery): Promise<ProjectReportReadModel[]>
+  aggregateProjectReport(actorUserId: number, actorRoles: string[], reportId: number): Promise<ProjectReportAggregateResult>
+  registerReportAttachment(command: RegisterReportAttachmentCommand): Promise<ProjectReportReadModel>
+  deleteReportAttachment(command: DeleteReportAttachmentCommand): Promise<void>
+  sweepStaleReportUploads(maxAgeMs?: number): Promise<number>
+  // legacy surface below
   listWeeklyReports(query: WeeklyReportListQuery): Promise<WeeklyReportReadModel[]>
   getWeeklyReportById(id: number): Promise<WeeklyReportReadModel | null>
   upsertWeeklyReport(command: UpsertWeeklyReportCommand): Promise<WeeklyReportReadModel>

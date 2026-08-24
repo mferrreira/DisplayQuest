@@ -64,8 +64,8 @@ export function KanbanHeader({
       {showProjectSelector && (
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
-            <FolderOpen className="h-4 w-4 text-blue-600" />
-            <span className="text-sm font-medium text-gray-700">Projeto:</span>
+            <FolderOpen className="h-4 w-4 text-blue-600 dark:text-info" />
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300 dark:text-muted-foreground/50">Projeto:</span>
           </div>
           <Select
             value={selectedProjectId?.toString() || "all"}
@@ -99,7 +99,7 @@ export function KanbanHeader({
         <div className="flex items-center space-x-4">
           <h2 className="text-lg font-semibold">{title}</h2>
           {overdueCount > 0 && (
-            <div className="flex items-center text-orange-600">
+            <div className="flex items-center text-orange-600 dark:text-orange-400">
               <AlertTriangle className="h-4 w-4 mr-1" />
               <span className="text-sm hidden sm:inline">
                 {overdueCount} tarefa(s) atrasada(s)

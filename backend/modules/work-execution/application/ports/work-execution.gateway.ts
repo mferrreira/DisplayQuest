@@ -6,6 +6,8 @@ import type {
   CreateDailyLogFromSessionCommand,
   ListWorkSessionsQuery,
   ListDailyLogsQuery,
+  ListProjectLogsForLeaderCommand,
+  ProjectLogsForLeaderResult,
   DeleteWorkSessionCommand,
   UpdateWorkSessionCommand,
 } from "@/backend/modules/work-execution/application/contracts"
@@ -16,6 +18,7 @@ export interface WorkExecutionGateway {
   createDailyLogFromSession(command: CreateDailyLogFromSessionCommand): Promise<DailyLog>
   listWorkSessions(query: ListWorkSessionsQuery): Promise<WorkSession[]>
   listDailyLogs(query: ListDailyLogsQuery): Promise<DailyLog[]>
+  listProjectLogsForLeader(command: ListProjectLogsForLeaderCommand): Promise<ProjectLogsForLeaderResult>
   deleteWorkSession(command: DeleteWorkSessionCommand): Promise<void>
   updateWorkSession(command: UpdateWorkSessionCommand): Promise<WorkSession>
   getSessionById(sessionId: number): Promise<WorkSession | null>

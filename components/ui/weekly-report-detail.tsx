@@ -148,9 +148,9 @@ ${sessionsText}
 
   if (loading) {
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div className="bg-white dark:bg-gray-800 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto flex flex-col items-center justify-center">
-          <Loader2 className="h-12 w-12 animate-spin text-blue-600 mb-4" />
+      <div className="fixed inset-0 bg-black bg-opacity-50 /* dark-mode:ok (scrim) */ flex items-center justify-center p-4 z-50">
+        <div className="bg-white dark:bg-card rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto flex flex-col items-center justify-center">
+          <Loader2 className="h-12 w-12 animate-spin text-blue-600 dark:text-info mb-4" />
           <p className="text-lg text-gray-700 dark:text-gray-200">Carregando relatório...</p>
         </div>
       </div>
@@ -158,17 +158,17 @@ ${sessionsText}
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black bg-opacity-50 /* dark-mode:ok (scrim) */ flex items-center justify-center p-4 z-50">
+      <div className="bg-white dark:bg-card rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
-                <FileText className="h-6 w-6 text-blue-600" />
+              <div className="p-2 bg-blue-100 dark:bg-info/15 dark:bg-blue-900/20 rounded-lg">
+                <FileText className="h-6 w-6 text-blue-600 dark:text-info" />
               </div>
               <div>
                 <h3 className="text-xl font-semibold">Relatório Detalhado</h3>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-gray-500 dark:text-muted-foreground">
                   {isProjectReport
                     ? `Relatório semanal do projeto ${report.projectName}`
                     : `Relatório semanal de ${report.userName}`}
@@ -226,7 +226,7 @@ ${sessionsText}
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label className="text-sm font-medium text-gray-500">
+                    <Label className="text-sm font-medium text-gray-500 dark:text-muted-foreground">
                       {isProjectReport ? "Projeto" : "Usuário"}
                     </Label>
                     <p className="text-lg font-medium">
@@ -234,11 +234,11 @@ ${sessionsText}
                     </p>
                   </div>
                   <div>
-                    <Label className="text-sm font-medium text-gray-500">Período</Label>
+                    <Label className="text-sm font-medium text-gray-500 dark:text-muted-foreground">Período</Label>
                     <p className="text-lg font-medium">{getWeekRange(report.weekStart, report.weekEnd)}</p>
                   </div>
                   <div>
-                    <Label className="text-sm font-medium text-gray-500">
+                    <Label className="text-sm font-medium text-gray-500 dark:text-muted-foreground">
                       {isProjectReport ? "Total de Sessões" : "Total de Logs"}
                     </Label>
                     <div className="flex items-center gap-2">
@@ -247,7 +247,7 @@ ${sessionsText}
                     </div>
                   </div>
                   <div>
-                    <Label className="text-sm font-medium text-gray-500">Data de Criação</Label>
+                    <Label className="text-sm font-medium text-gray-500 dark:text-muted-foreground">Data de Criação</Label>
                     <p className="text-lg font-medium">{formatDate(report.createdAt)}</p>
                   </div>
                 </div>
@@ -255,11 +255,11 @@ ${sessionsText}
                 {isProjectReport && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                     <div>
-                      <Label className="text-sm font-medium text-gray-500">Horas Totais</Label>
+                      <Label className="text-sm font-medium text-gray-500 dark:text-muted-foreground">Horas Totais</Label>
                       <p className="text-lg font-medium">{report.totalHours.toFixed(1)}h</p>
                     </div>
                     <div>
-                      <Label className="text-sm font-medium text-gray-500">Contribuidores</Label>
+                      <Label className="text-sm font-medium text-gray-500 dark:text-muted-foreground">Contribuidores</Label>
                       <p className="text-lg font-medium">{report.contributorCount}</p>
                     </div>
                   </div>
@@ -267,8 +267,8 @@ ${sessionsText}
                 
                 {report.summary && (
                   <div className="mt-4">
-                    <Label className="text-sm font-medium text-gray-500">Resumo</Label>
-                    <p className="text-gray-700 dark:text-gray-300 mt-1">{report.summary}</p>
+                    <Label className="text-sm font-medium text-gray-500 dark:text-muted-foreground">Resumo</Label>
+                    <p className="text-gray-700 dark:text-gray-300 dark:text-gray-300 mt-1">{report.summary}</p>
                   </div>
                 )}
               </CardContent>
@@ -295,7 +295,7 @@ ${sessionsText}
                             <Badge variant="secondary">
                               {formatDate(log.date)}
                             </Badge>
-                            <span className="text-sm text-gray-500">
+                            <span className="text-sm text-gray-500 dark:text-muted-foreground">
                               {formatTime(log.date)}
                             </span>
                           </div>
@@ -306,13 +306,13 @@ ${sessionsText}
                           )}
                         </div>
                         {isProjectReport && log.userName && (
-                          <p className="text-sm text-gray-500 mb-1">Usuário: {log.userName}</p>
+                          <p className="text-sm text-gray-500 dark:text-muted-foreground mb-1">Usuário: {log.userName}</p>
                         )}
-                        <p className="text-gray-700 dark:text-gray-300">
+                        <p className="text-gray-700 dark:text-gray-300 dark:text-gray-300">
                           {log.note || "Sem descrição"}
                         </p>
                         {isProjectReport && (
-                          <div className="mt-2 flex flex-wrap gap-2 text-xs text-gray-500">
+                          <div className="mt-2 flex flex-wrap gap-2 text-xs text-gray-500 dark:text-muted-foreground">
                             {typeof log.durationSeconds === "number" && (
                               <span>Duração: {(log.durationSeconds / 3600).toFixed(2)}h</span>
                             )}
@@ -323,7 +323,7 @@ ${sessionsText}
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center py-8 text-gray-500">
+                  <div className="text-center py-8 text-gray-500 dark:text-muted-foreground">
                     <Calendar className="h-12 w-12 mx-auto mb-2 opacity-50" />
                     <p>Nenhum log encontrado para este período</p>
                   </div>

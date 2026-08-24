@@ -54,20 +54,20 @@ export function TimerCard({ onSessionEnd }: TimerCardProps) {
   }
 
   return (
-    <Card className="mb-4 border-blue-200 bg-blue-50">
+    <Card className="mb-4 border-blue-200 bg-blue-50 dark:border-info/25 dark:bg-info/10">
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <span className="flex items-center space-x-2">
-            <Clock className="h-5 w-5 text-blue-600" />
+            <Clock className="h-5 w-5 text-blue-600 dark:text-info" />
             <span>Timer de Atividade</span>
           </span>
-          {sessionStatus === "active" && <Badge className="bg-green-600">Ativa</Badge>}
+          {sessionStatus === "active" && <Badge className="bg-green-600 dark:bg-success">Ativa</Badge>}
           {sessionStatus === "paused" && <Badge variant="secondary">Pausada</Badge>}
           {sessionStatus === "idle" && <Badge variant="outline">Sem sessão</Badge>}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="text-3xl font-mono text-blue-900 font-bold">{formatTime(elapsedSeconds)}</div>
+        <div className="text-3xl font-mono text-blue-900 dark:text-info font-bold">{formatTime(elapsedSeconds)}</div>
 
         {currentSession && currentSession.userId === user?.id ? (
           <div className="space-y-2 text-sm text-muted-foreground">

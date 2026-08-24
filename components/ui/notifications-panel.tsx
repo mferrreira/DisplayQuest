@@ -41,38 +41,38 @@ export function NotificationsPanel({ className }: NotificationsPanelProps) {
   const getNotificationIcon = (type: string) => {
     switch (type) {
       case 'TASK_REVIEW_REQUEST':
-        return <AlertCircle className="h-4 w-4 text-yellow-500" />
+        return <AlertCircle className="h-4 w-4 text-yellow-500 dark:text-warning" />
       case 'TASK_APPROVED':
-        return <CheckCircle2 className="h-4 w-4 text-green-500" />
+        return <CheckCircle2 className="h-4 w-4 text-green-500 dark:text-success" />
       case 'TASK_REJECTED':
-        return <AlertCircle className="h-4 w-4 text-red-500" />
+        return <AlertCircle className="h-4 w-4 text-red-500 dark:text-red-400" />
       case 'TASK_ASSIGNED':
-        return <UserPlus className="h-4 w-4 text-blue-500" />
+        return <UserPlus className="h-4 w-4 text-blue-500 dark:text-info" />
       case 'PROJECT_INVITATION':
-        return <UserPlus className="h-4 w-4 text-purple-500" />
+        return <UserPlus className="h-4 w-4 text-purple-500 dark:text-purple-400" />
       case 'SYSTEM_ANNOUNCEMENT':
-        return <Megaphone className="h-4 w-4 text-orange-500" />
+        return <Megaphone className="h-4 w-4 text-orange-500 dark:text-orange-400" />
       default:
-        return <Bell className="h-4 w-4 text-gray-500" />
+        return <Bell className="h-4 w-4 text-gray-500 dark:text-muted-foreground" />
     }
   }
 
   const getNotificationColor = (type: string) => {
     switch (type) {
       case 'TASK_REVIEW_REQUEST':
-        return 'bg-yellow-50 border-yellow-200'
+        return 'bg-yellow-50 border-yellow-200 dark:bg-warning/10 dark:border-warning/25'
       case 'TASK_APPROVED':
-        return 'bg-green-50 border-green-200'
+        return 'bg-green-50 border-green-200 dark:bg-success/10 dark:border-success/25'
       case 'TASK_REJECTED':
-        return 'bg-red-50 border-red-200'
+        return 'bg-red-50 border-red-200 dark:bg-destructive/10 dark:border-destructive/25'
       case 'TASK_ASSIGNED':
-        return 'bg-blue-50 border-blue-200'
+        return 'bg-blue-50 border-blue-200 dark:bg-info/10 dark:border-info/25'
       case 'PROJECT_INVITATION':
-        return 'bg-purple-50 border-purple-200'
+        return 'bg-purple-50 border-purple-200 dark:bg-purple-500/10 dark:border-purple-500/25'
       case 'SYSTEM_ANNOUNCEMENT':
-        return 'bg-orange-50 border-orange-200'
+        return 'bg-orange-50 border-orange-200 dark:bg-orange-500/10 dark:border-orange-500/25'
       default:
-        return 'bg-gray-50 border-gray-200'
+        return 'bg-gray-50 border-gray-200 dark:bg-muted/40 dark:border-border'
     }
   }
 
@@ -133,15 +133,15 @@ export function NotificationsPanel({ className }: NotificationsPanelProps) {
             <ScrollArea className="h-96">
               {loading ? (
                 <div className="flex items-center justify-center p-4">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900"></div>
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 dark:border-muted-foreground"></div>
                 </div>
               ) : error ? (
-                <div className="flex items-center justify-center p-4 text-red-500">
+                <div className="flex items-center justify-center p-4 text-red-500 dark:text-red-400">
                   <AlertCircle className="h-4 w-4 mr-2" />
                   {error}
                 </div>
               ) : notifications.length === 0 ? (
-                <div className="flex items-center justify-center p-4 text-gray-500">
+                <div className="flex items-center justify-center p-4 text-gray-500 dark:text-muted-foreground">
                   <Bell className="h-8 w-8 mr-2" />
                   Nenhuma notificação
                 </div>
@@ -151,21 +151,21 @@ export function NotificationsPanel({ className }: NotificationsPanelProps) {
                   {unreadNotifications.map((notification) => (
                     <div
                       key={notification.id}
-                      className={`p-3 cursor-pointer hover:bg-gray-50 border-l-4 border-l-blue-500 ${getNotificationColor(notification.type)}`}
+                      className={`p-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-muted/40 border-l-4 border-l-blue-500 ${getNotificationColor(notification.type)}`}
                       onClick={() => handleNotificationClick(notification)}
                     >
                       <div className="flex items-start gap-3">
                         {getNotificationIcon(notification.type)}
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900">
+                          <p className="text-sm font-medium text-gray-900 dark:text-foreground">
                             {notification.title}
                           </p>
-                          <p className="text-sm text-gray-600 mt-1">
+                          <p className="text-sm text-gray-600 dark:text-muted-foreground mt-1">
                             {notification.message}
                           </p>
                           <div className="flex items-center gap-2 mt-2">
-                            <Clock className="h-3 w-3 text-gray-400" />
-                            <span className="text-xs text-gray-500">
+                            <Clock className="h-3 w-3 text-gray-400 dark:text-muted-foreground/70" />
+                            <span className="text-xs text-gray-500 dark:text-muted-foreground">
                               {formatDistanceToNow(new Date(notification.createdAt), { 
                                 addSuffix: true, 
                                 locale: ptBR 
@@ -197,21 +197,21 @@ export function NotificationsPanel({ className }: NotificationsPanelProps) {
                   {readNotifications.map((notification) => (
                     <div
                       key={notification.id}
-                      className={`p-3 cursor-pointer hover:bg-gray-50 opacity-75 ${getNotificationColor(notification.type)}`}
+                      className={`p-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-muted/40 opacity-75 ${getNotificationColor(notification.type)}`}
                       onClick={() => handleNotificationClick(notification)}
                     >
                       <div className="flex items-start gap-3">
                         {getNotificationIcon(notification.type)}
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-700">
+                          <p className="text-sm font-medium text-gray-700 dark:text-foreground/90">
                             {notification.title}
                           </p>
-                          <p className="text-sm text-gray-500 mt-1">
+                          <p className="text-sm text-gray-500 dark:text-muted-foreground mt-1">
                             {notification.message}
                           </p>
                           <div className="flex items-center gap-2 mt-2">
-                            <Check className="h-3 w-3 text-green-500" />
-                            <span className="text-xs text-gray-400">
+                            <Check className="h-3 w-3 text-green-500 dark:text-success" />
+                            <span className="text-xs text-gray-400 dark:text-muted-foreground/70">
                               Lida {formatDistanceToNow(new Date(notification.readAt!), { 
                                 addSuffix: true, 
                                 locale: ptBR 

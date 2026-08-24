@@ -184,9 +184,9 @@ export function IssueForm({ onSuccess, onCancel }: IssueFormProps) {
           )}
 
           {success && (
-            <Alert className="border-green-200 bg-green-50">
-              <CheckCircle className="h-4 w-4 text-green-600" />
-              <AlertDescription className="text-green-800">{success}</AlertDescription>
+            <Alert className="border-green-200 dark:border-success/25 bg-green-50 dark:bg-success/10">
+              <CheckCircle className="h-4 w-4 text-green-600 dark:text-success" />
+              <AlertDescription className="text-green-800 dark:text-green-300">{success}</AlertDescription>
             </Alert>
           )}
 

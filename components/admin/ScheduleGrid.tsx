@@ -16,32 +16,22 @@ import {
   Users
 } from "lucide-react"
 import { useToast } from "@/contexts/use-toast"
-
-const TIME_SLOTS = [
-  { start: "07:00", end: "09:00" },
-  { start: "09:00", end: "11:00" },
-  { start: "11:00", end: "13:00" },
-  { start: "13:00", end: "15:00" },
-  { start: "15:00", end: "17:00" },
-  { start: "17:00", end: "19:00" },
-  { start: "19:00", end: "21:00" },
-]
-
-const WEEK_DAYS = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta"]
+import { hasPermission } from "@/lib/auth/rbac"
+import { TIME_SLOTS, WEEK_DAYS, snapRange } from "@/lib/constants/schedule-grid"
 
 // Generate a subtle color for each user based on their id
 function getUserColor(userId: number) {
   const colors = [
-    "bg-blue-100 text-blue-900 border-blue-200",
-    "bg-green-100 text-green-900 border-green-200",
-    "bg-yellow-100 text-yellow-900 border-yellow-200",
-    "bg-purple-100 text-purple-900 border-purple-200",
-    "bg-pink-100 text-pink-900 border-pink-200",
-    "bg-cyan-100 text-cyan-900 border-cyan-200",
-    "bg-orange-100 text-orange-900 border-orange-200",
-    "bg-indigo-100 text-indigo-900 border-indigo-200",
-    "bg-teal-100 text-teal-900 border-teal-200",
-    "bg-rose-100 text-rose-900 border-rose-200",
+    "bg-blue-100 text-blue-900 border-blue-200 dark:bg-blue-50 dark:bg-info/100/15 dark:text-blue-300 dark:border-blue-500/30",
+    "bg-green-100 text-green-900 border-green-200 dark:bg-green-500/15 dark:text-green-300 dark:border-green-500/30",
+    "bg-yellow-100 text-yellow-900 border-yellow-200 dark:bg-yellow-500/15 dark:text-yellow-300 dark:border-yellow-500/30",
+    "bg-purple-100 text-purple-900 border-purple-200 dark:bg-purple-500/15 dark:text-purple-300 dark:border-purple-500/30",
+    "bg-pink-100 text-pink-900 border-pink-200 dark:bg-pink-500/15 dark:text-pink-300 dark:border-pink-500/30",
+    "bg-cyan-100 text-cyan-900 border-cyan-200 dark:bg-cyan-500/15 dark:text-cyan-300 dark:border-cyan-500/30",
+    "bg-orange-100 text-orange-900 border-orange-200 dark:bg-orange-500/15 dark:text-orange-300 dark:border-orange-500/30",
+    "bg-indigo-100 text-indigo-900 border-indigo-200 dark:bg-indigo-500/15 dark:text-indigo-300 dark:border-indigo-500/30",
+    "bg-teal-100 text-teal-900 border-teal-200 dark:bg-teal-500/15 dark:text-teal-300 dark:border-teal-500/30",
+    "bg-rose-100 text-rose-900 border-rose-200 dark:bg-rose-500/15 dark:text-rose-300 dark:border-rose-500/30",
   ]
   return colors[userId % colors.length]
 }
@@ -51,8 +41,6 @@ interface ScheduleGridProps {
   readOnly?: boolean
   currentUser?: { id: number; roles?: string[] }
 }
-
-const ADMIN_ROLES = ['COORDENADOR', 'GERENTE']
 
 export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleGridProps) {
   const { toast } = useToast()
@@ -72,17 +60,7 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
     setUserSchedule([])
   }, [selectedUserId])
 
-  const canManageAllSchedules = currentUser?.roles?.some(role => ADMIN_ROLES.includes(role)) || false
-  const canEditSelectedUser = !readOnly && (
-    canManageAllSchedules ||
-    (currentUser && selectedUserId === currentUser.id?.toString())
-  )
-
-  useEffect(() => {
-    if (!canManageAllSchedules && currentUser?.id) {
-      setSelectedUserId(currentUser.id.toString())
-    }
-  }, [canManageAllSchedules, currentUser])
+  const canManageAllSchedules = hasPermission(currentUser?.roles ?? [], "MANAGE_USERS")
 
   const fetchSchedules = async () => {
     setLoading(true)
@@ -103,10 +81,10 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
   }
 
   const handleDelete = async (scheduleId: number) => {
-    if (!canEditSelectedUser) {
+    if (!canManageAllSchedules) {
       toast({
         title: "Sem permissão",
-        description: "Você só pode remover seus próprios horários.",
+        description: "Apenas coordenadores e gerentes podem remover horários.",
         variant: "destructive"
       })
       return
@@ -137,7 +115,7 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
 
   const handleDayChange = (dayIdx: number, checked: boolean) => {
     if (checked) {
-      setUserSchedule(prev => [...prev, { dayOfWeek: dayIdx, startTime: "09:00", endTime: "10:00" }])
+      setUserSchedule(prev => [...prev, { dayOfWeek: dayIdx, startTime: "09:00", endTime: "09:30" }])
     } else {
       setUserSchedule(prev => prev.filter(s => s.dayOfWeek !== dayIdx))
     }
@@ -148,10 +126,10 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
   }
 
   const handleSave = async () => {
-    if (!canEditSelectedUser) {
+    if (!canManageAllSchedules) {
       toast({
         title: "Sem permissão",
-        description: "Você só pode editar seus próprios horários.",
+        description: "Apenas coordenadores e gerentes podem definir horários.",
         variant: "destructive"
       })
       return
@@ -181,8 +159,7 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
         const payload = {
           userId: parseInt(selectedUserId),
           dayOfWeek: s.dayOfWeek,
-          startTime: s.startTime,
-          endTime: s.endTime
+          ...snapRange({ startTime: s.startTime, endTime: s.endTime })
         }
         
         await fetch("/api/schedules", {
@@ -232,7 +209,7 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
           Grade Semanal de Horários
         </CardTitle>
         <CardDescription>
-          Visualize e gerencie os horários dos usuários no laboratório
+          Visualize os horários dos usuários no laboratório. Apenas coordenadores e gerentes podem definir horários.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -243,20 +220,10 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
               {schedules.length} horários cadastrados
             </span>
           </div>
-          {!readOnly && (
-            <Button 
-              onClick={() => {
-                if (!canEditSelectedUser) {
-                  toast({
-                    title: "Sem permissão",
-                    description: "Você só pode editar o seu próprio horário.",
-                    variant: "destructive"
-                  })
-                  return
-                }
-                setDialogOpen(true)
-              }} 
-              variant="outline" 
+          {!readOnly && canManageAllSchedules && (
+            <Button
+              onClick={() => setDialogOpen(true)}
+              variant="outline"
               size="sm"
               disabled={!currentUser}
             >
@@ -309,7 +276,6 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
                   <SelectContent>
                     {users
                       .filter(u => u.status === 'active')
-                      .filter(u => canManageAllSchedules || u.id === currentUser?.id)
                       .map((user) => (
                         <SelectItem key={user.id} value={user.id.toString()}>
                           {user.name} ({user.email})
@@ -342,6 +308,7 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
                             <div className="flex items-center gap-2">
                               <Input
                                 type="time"
+                                step={1800}
                                 value={userSchedule.find(s => s.dayOfWeek === idx)?.startTime ?? ""}
                                 onChange={e => handleTimeChange(idx, "startTime", e.target.value)}
                                 className="w-32"
@@ -349,6 +316,7 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
                               <span className="text-muted-foreground">até</span>
                               <Input
                                 type="time"
+                                step={1800}
                                 value={userSchedule.find(s => s.dayOfWeek === idx)?.endTime ?? ""}
                                 onChange={e => handleTimeChange(idx, "endTime", e.target.value)}
                                 className="w-32"
@@ -363,7 +331,7 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
               )}
 
               {selectedUser && (
-                <div className="p-3 bg-blue-50 rounded-lg">
+                <div className="p-3 bg-blue-50 dark:bg-info/10 rounded-lg">
                   <div className="text-sm">
                     <span className="font-medium">Horas semanais obrigatórias:</span> {requiredHours.toFixed(1)}h
                   </div>
@@ -372,7 +340,7 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
                   </div>
                   
                   {totalScheduledHours < requiredHours && (
-                    <div className="mt-2 flex items-center gap-2 text-yellow-800 text-sm">
+                    <div className="mt-2 flex items-center gap-2 text-yellow-800 dark:text-yellow-300 text-sm">
                       <AlertCircle className="h-4 w-4" />
                       <span>O total de horas agendadas está abaixo do mínimo semanal para este usuário.</span>
                     </div>
@@ -386,7 +354,7 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
                 </Button>
                 <Button 
                   onClick={handleSave} 
-                  disabled={!selectedUserId || userSchedule.length === 0 || saving || !canEditSelectedUser}
+                  disabled={!selectedUserId || userSchedule.length === 0 || saving}
                 >
                   {saving ? "Salvando..." : "Salvar"}
                 </Button>
@@ -407,9 +375,9 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
             <table className="min-w-full border text-xs">
               <thead>
                 <tr>
-                  <th className="px-3 py-2 border-b bg-blue-50 text-left font-medium">Horário</th>
+                  <th className="px-3 py-2 border-b bg-blue-50 dark:bg-info/10 text-left font-medium">Horário</th>
                   {WEEK_DAYS.map((day) => (
-                    <th key={day} className="px-3 py-2 border-b bg-blue-50 text-center font-medium">
+                    <th key={day} className="px-3 py-2 border-b bg-blue-50 dark:bg-info/10 text-center font-medium">
                       {day}
                     </th>
                   ))}
@@ -444,10 +412,10 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
                                     <span className="ml-1 text-[10px] text-muted-foreground whitespace-nowrap">
                                       ({s.startTime} - {s.endTime})
                                     </span>
-                                    {!readOnly && canEditSelectedUser && (
+                                    {!readOnly && canManageAllSchedules && (
                                       <button
                                         onClick={() => handleDelete(s.id)}
-                                        className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 transition-opacity"
+                                        className="opacity-0 group-hover:opacity-100 text-red-500 dark:text-red-400 hover:text-red-700 transition-opacity"
                                         title="Remover"
                                       >
                                         <Trash2 className="w-3 h-3" />

@@ -15,7 +15,7 @@ const STATUS_CONFIG = {
     icon: Clock,
     color: "bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900",
     borderColor: "border-gray-300 dark:border-gray-600",
-    headerColor: "bg-gradient-to-r from-gray-500 to-slate-600 text-white",
+    headerColor: "bg-gradient-to-r from-gray-500 to-slate-600 dark:from-gray-700 dark:to-slate-800 text-white", // dark-mode:ok (texto branco sobre header nos 2 temas)
     accentColor: "from-gray-400 to-slate-500"
   },
   "in-progress": {
@@ -23,7 +23,7 @@ const STATUS_CONFIG = {
     icon: Edit,
     color: "bg-gradient-to-br from-blue-50 to-cyan-100 dark:from-blue-900/30 dark:to-cyan-900/20",
     borderColor: "border-blue-300 dark:border-blue-600",
-    headerColor: "bg-gradient-to-r from-blue-500 to-cyan-600 text-white",
+    headerColor: "bg-gradient-to-r from-blue-500 to-cyan-600 dark:from-blue-800/70 dark:to-cyan-900/70 text-white", // dark-mode:ok
     accentColor: "from-blue-400 to-cyan-500"
   },
   "in-review": {
@@ -31,7 +31,7 @@ const STATUS_CONFIG = {
     icon: Eye,
     color: "bg-gradient-to-br from-purple-50 to-violet-100 dark:from-purple-900/30 dark:to-violet-900/20",
     borderColor: "border-purple-300 dark:border-purple-600",
-    headerColor: "bg-gradient-to-r from-purple-500 to-violet-600 text-white",
+    headerColor: "bg-gradient-to-r from-purple-500 to-violet-600 dark:from-purple-800/70 dark:to-violet-900/70 text-white", // dark-mode:ok
     accentColor: "from-purple-400 to-violet-500"
   },
   "adjust": {
@@ -39,7 +39,7 @@ const STATUS_CONFIG = {
     icon: AlertCircle,
     color: "bg-gradient-to-br from-orange-50 to-amber-100 dark:from-orange-900/30 dark:to-amber-900/20",
     borderColor: "border-orange-300 dark:border-orange-600",
-    headerColor: "bg-gradient-to-r from-orange-500 to-amber-600 text-white",
+    headerColor: "bg-gradient-to-r from-orange-500 to-amber-600 dark:from-orange-800/70 dark:to-amber-900/70 text-white", // dark-mode:ok
     accentColor: "from-orange-400 to-amber-500"
   },
   "done": {
@@ -47,7 +47,7 @@ const STATUS_CONFIG = {
     icon: CheckCircle,
     color: "bg-gradient-to-br from-green-50 to-emerald-100 dark:from-green-900/30 dark:to-emerald-900/20",
     borderColor: "border-green-300 dark:border-green-600",
-    headerColor: "bg-gradient-to-r from-green-500 to-emerald-600 text-white",
+    headerColor: "bg-gradient-to-r from-green-500 to-emerald-600 dark:from-green-800/70 dark:to-emerald-900/70 text-white", // dark-mode:ok
     accentColor: "from-green-400 to-emerald-500"
   }
 }
@@ -67,20 +67,25 @@ export function KanbanColumn({ status, tasks, onEdit, onClick, onAddTask, canAdd
   return (
     <Card className={`${config.color} ${config.borderColor} h-[min(78vh,860px)] min-h-[460px] shadow-lg hover:shadow-xl transition-all duration-300 group relative overflow-hidden flex flex-col`}>
       {/* Animated background effect */}
-      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-pulse pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 dark:via-white/5 to-transparent animate-pulse pointer-events-none" />
       
+      {/* dark-mode:ok (translúcidos sobre header colorido nos 2 temas) */}
       <CardHeader className={`${config.headerColor} sticky top-0 pb-3 relative z-20 border-b border-white/10 backdrop-blur supports-[backdrop-filter]:bg-black/10`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
+            {/* dark-mode:ok */}
             <div className="p-1.5 bg-white/20 rounded-lg">
               <Icon className="h-4 w-4" />
             </div>
+            {/* dark-mode:ok */}
             <CardTitle className="text-sm font-bold text-white">{config.title}</CardTitle>
+            {/* dark-mode:ok */}
             <Badge className={`text-xs font-bold bg-gradient-to-r ${config.accentColor} text-white border-white/20 shadow-lg`}>
               {tasks.length}
             </Badge>
           </div>
           {canAddTask && onAddTask && (
+            // dark-mode:ok (translúcido sobre header nos 2 temas)
             <Button
               variant="ghost"
               size="sm"

@@ -28,7 +28,7 @@ export function UserScheduleManager({ selectedUser, selectedUserSchedules, openE
               <h4 className="font-medium text-center text-sm">{day}</h4>
               <div className="space-y-1">
                 {daySchedules.map((schedule) => (
-                  <div key={schedule.id} className="p-2 bg-blue-50 dark:bg-blue-950/30 rounded text-xs relative group">
+                  <div key={schedule.id} className="p-2 bg-blue-50 dark:bg-info/10 dark:bg-blue-950/30 rounded text-xs relative group">
                     <div className="font-medium">{schedule.startTime} - {schedule.endTime}</div>
                     <div className="text-muted-foreground">
                       {((parseInt(schedule.endTime.split(":")[0]) * 60 + parseInt(schedule.endTime.split(":")[1])) - (parseInt(schedule.startTime.split(":")[0]) * 60 + parseInt(schedule.startTime.split(":")[1]))) / 60}h
@@ -38,7 +38,7 @@ export function UserScheduleManager({ selectedUser, selectedUserSchedules, openE
                         <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => openEditDialog(schedule)}>
                           <Edit className="h-3 w-3" />
                         </Button>
-                        <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-red-600 hover:text-red-700" onClick={() => handleDeleteSchedule(schedule.id)}>
+                        <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-red-600 dark:text-red-400 hover:text-red-700 dark:text-red-300" onClick={() => handleDeleteSchedule(schedule.id)}>
                           <Trash2 className="h-3 w-3" />
                         </Button>
                       </div>

@@ -140,7 +140,7 @@ export function DataTable<T extends { id?: number | string }>({
         <div className="flex flex-col sm:flex-row gap-2">
           {showSearch && (
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-muted-foreground/70" />
               <Input
                 placeholder={searchPlaceholder}
                 value={searchTerm}
@@ -237,7 +237,7 @@ export function DataTable<T extends { id?: number | string }>({
                           {onDelete && (
                             <DropdownMenuItem 
                               onClick={() => onDelete(item)}
-                              className="text-red-600"
+                              className="text-red-600 dark:text-red-400"
                             >
                               <Trash2 className="mr-2 h-4 w-4" />
                               Excluir
@@ -262,7 +262,7 @@ export function DataTable<T extends { id?: number | string }>({
 
       {/* Results Count */}
       {filteredAndSortedData.length > 0 && (
-        <div className="text-sm text-gray-500 text-center">
+        <div className="text-sm text-gray-500 dark:text-muted-foreground text-center">
           {filteredAndSortedData.length} de {data.length} registro(s)
         </div>
       )}

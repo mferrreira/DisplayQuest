@@ -42,6 +42,18 @@ export interface ListDailyLogsQuery {
   date?: string
 }
 
+export interface ListProjectLogsForLeaderCommand {
+  leaderId: number
+  projectId?: number
+  memberUserId?: number
+}
+
+export interface ProjectLogsForLeaderResult {
+  logs: DailyLog[]
+  sessions: WorkSession[]
+  ledProjectIds: number[]
+}
+
 export interface DeleteWorkSessionCommand {
   sessionId: number
   actorUserId: number

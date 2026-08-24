@@ -13,9 +13,9 @@ import type { Project } from "@/contexts/types"
 import { hasAccess } from "@/lib/utils/utils"
 
 const statusColors = {
-  active: "bg-green-100 text-green-800",
-  completed: "bg-blue-100 text-blue-800",
-  archived: "bg-gray-100 text-gray-800",
+  active: "bg-green-100 text-green-800 dark:bg-success/15 dark:text-green-300",
+  completed: "bg-blue-100 text-blue-800 dark:bg-info/15 dark:text-blue-300",
+  archived: "bg-gray-100 text-gray-800 dark:bg-muted/50 dark:text-gray-200",
 }
 
 const statusLabels = {
@@ -68,12 +68,12 @@ export function ProjectList({ onProjectSelect, projects: providedProjects }: Pro
         {[...Array(3)].map((_, i) => (
           <Card key={i} className="animate-pulse">
             <CardHeader>
-              <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-              <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+              <div className="h-4 bg-gray-200 dark:bg-muted/60 rounded w-3/4"></div>
+              <div className="h-3 bg-gray-200 dark:bg-muted/60 rounded w-1/2"></div>
             </CardHeader>
             <CardContent>
-              <div className="h-3 bg-gray-200 rounded w-full mb-2"></div>
-              <div className="h-3 bg-gray-200 rounded w-2/3"></div>
+              <div className="h-3 bg-gray-200 dark:bg-muted/60 rounded w-full mb-2"></div>
+              <div className="h-3 bg-gray-200 dark:bg-muted/60 rounded w-2/3"></div>
             </CardContent>
           </Card>
         ))}
@@ -180,7 +180,7 @@ export function ProjectList({ onProjectSelect, projects: providedProjects }: Pro
 
                 {project.links &&
                   <div>
-                    <hr className="border-t border-gray-300 m-4" />
+                    <hr className="border-t border-gray-300 dark:border-border m-4" />
                     <h3 className="mt-2 align-middle text-center m-2">Links</h3>
                     <div className="flex flex-row gap-4 m-4">
                       {project.links.filter(l => l?.url && l?.label).length > 0

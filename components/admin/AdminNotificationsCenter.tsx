@@ -199,8 +199,8 @@ export function AdminNotificationsCenter({ users }: AdminNotificationsCenterProp
               </div>
             )}
 
-            {error && <div className="text-sm text-red-600">{error}</div>}
-            {feedback && <div className="text-sm text-green-700">{feedback}</div>}
+            {error && <div className="text-sm text-red-600 dark:text-red-400">{error}</div>}
+            {feedback && <div className="text-sm text-green-700 dark:text-green-300">{feedback}</div>}
 
             <Button type="submit" disabled={submitting} className="w-full sm:w-auto">
               <Send className="mr-2 h-4 w-4" />

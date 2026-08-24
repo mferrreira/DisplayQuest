@@ -235,7 +235,7 @@ export function AdminHoursManagement({ users, projects, sessions }: AdminHoursMa
           <div className="flex flex-col lg:flex-row gap-4">
             <div className="flex-1">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-muted-foreground/70 h-4 w-4" />
                 <Input
                   placeholder="Buscar usuários..."
                   value={searchTerm}
@@ -301,7 +301,7 @@ export function AdminHoursManagement({ users, projects, sessions }: AdminHoursMa
                 <p className="text-sm font-medium text-muted-foreground">Total de Horas</p>
                 <p className="text-2xl font-bold">{formatHours(getTotalHours())}</p>
               </div>
-              <Clock className="h-8 w-8 text-blue-600" />
+              <Clock className="h-8 w-8 text-blue-600 dark:text-info" />
             </div>
           </CardContent>
         </Card>
@@ -313,7 +313,7 @@ export function AdminHoursManagement({ users, projects, sessions }: AdminHoursMa
                 <p className="text-sm font-medium text-muted-foreground">Total de Sessões</p>
                 <p className="text-2xl font-bold">{getTotalSessions()}</p>
               </div>
-              <BarChart3 className="h-8 w-8 text-green-600" />
+              <BarChart3 className="h-8 w-8 text-green-600 dark:text-success" />
             </div>
           </CardContent>
         </Card>
@@ -325,7 +325,7 @@ export function AdminHoursManagement({ users, projects, sessions }: AdminHoursMa
                 <p className="text-sm font-medium text-muted-foreground">Usuários Ativos</p>
                 <p className="text-2xl font-bold">{hoursReports.filter(r => r.totalHours > 0).length}</p>
               </div>
-              <Users className="h-8 w-8 text-purple-600" />
+              <Users className="h-8 w-8 text-purple-600 dark:text-purple-400" />
             </div>
           </CardContent>
         </Card>
@@ -337,7 +337,7 @@ export function AdminHoursManagement({ users, projects, sessions }: AdminHoursMa
                 <p className="text-sm font-medium text-muted-foreground">Média por Usuário</p>
                 <p className="text-2xl font-bold">{formatHours(getAverageHours())}</p>
               </div>
-              <TrendingUp className="h-8 w-8 text-orange-600" />
+              <TrendingUp className="h-8 w-8 text-orange-600 dark:text-orange-400" />
             </div>
           </CardContent>
         </Card>
@@ -357,7 +357,7 @@ export function AdminHoursManagement({ users, projects, sessions }: AdminHoursMa
         <CardContent>
           {loading ? (
             <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-info"></div>
             </div>
           ) : (
             <Table>
@@ -382,8 +382,8 @@ export function AdminHoursManagement({ users, projects, sessions }: AdminHoursMa
                     <TableRow key={report.userId}>
                       <TableCell>
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                            <span className="text-sm font-medium text-blue-600">
+                          <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-info/15 flex items-center justify-center">
+                            <span className="text-sm font-medium text-blue-600 dark:text-info">
                               {report.userName.split(' ').map((n: string) => n[0]).join('')}
                             </span>
                           </div>
@@ -399,7 +399,7 @@ export function AdminHoursManagement({ users, projects, sessions }: AdminHoursMa
                         <span className="font-medium">{formatHours(report.totalHours)}</span>
                       </TableCell>
                       <TableCell>
-                        <span className="font-medium text-green-600">
+                        <span className="font-medium text-green-600 dark:text-success">
                           {formatHours(report.currentWeekHours)}
                         </span>
                       </TableCell>
@@ -461,8 +461,8 @@ export function AdminHoursManagement({ users, projects, sessions }: AdminHoursMa
                 .map((report, index) => (
                   <div key={report.userId} className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-6 h-6 rounded-full bg-yellow-100 flex items-center justify-center">
-                        <span className="text-xs font-bold text-yellow-600">
+                      <div className="w-6 h-6 rounded-full bg-yellow-100 dark:bg-warning/15 flex items-center justify-center">
+                        <span className="text-xs font-bold text-yellow-600 dark:text-warning">
                           {index + 1}
                         </span>
                       </div>

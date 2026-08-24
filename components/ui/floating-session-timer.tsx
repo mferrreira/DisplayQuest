@@ -237,7 +237,7 @@ export function FloatingSessionTimer() {
                   value={startLocation}
                   onChange={(event) => setStartLocation(event.target.value)}
                 />
-                {startError && <p className="text-xs text-red-600">{startError}</p>}
+                {startError && <p className="text-xs text-red-600 dark:text-red-400">{startError}</p>}
                 <Button size="sm" onClick={handleStart} disabled={loading || startProjectId === "no-projects"}>
                   Iniciar sessão
                 </Button>

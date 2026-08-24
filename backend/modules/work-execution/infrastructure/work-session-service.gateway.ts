@@ -11,6 +11,8 @@ import type {
   CreateDailyLogFromSessionCommand,
   ListWorkSessionsQuery,
   ListDailyLogsQuery,
+  ListProjectLogsForLeaderCommand,
+  ProjectLogsForLeaderResult,
   DeleteWorkSessionCommand,
   UpdateWorkSessionCommand,
 } from "@/backend/modules/work-execution/application/contracts"
@@ -207,6 +209,67 @@ export class WorkSessionServiceGateway implements WorkExecutionGateway {
     }
 
     return await this.dailyLogRepository.findAll()
+  }
+
+  async listProjectLogsForLeader(command: ListProjectLogsForLeaderCommand) {
+    const ledProjects = await prisma.projects.findMany({
+      where: { leaderId: command.leaderId },
+      select: { id: true },
+    })
+    const ledProjectIds = ledProjects.map((p) => p.id)
+
+    if (ledProjectIds.length === 0) {
+      return { logs: [], sessions: [], ledProjectIds }
+    }
+
+    if (command.projectId !== undefined && !ledProjectIds.includes(command.projectId)) {
+      throw new Error("Acesso negado")
+    }
+
+    const scopedProjectIds = command.projectId !== undefined ? [command.projectId] : ledProjectIds
+    const logWhere = {
+      projectId: { in: scopedProjectIds },
+      ...(command.memberUserId !== undefined ? { userId: command.memberUserId } : {}),
+    }
+    const sessionWhere = {
+      projectId: { in: scopedProjectIds },
+      ...(command.memberUserId !== undefined ? { userId: command.memberUserId } : {}),
+    }
+
+    const [logData, sessionData] = await Promise.all([
+      prisma.daily_logs.findMany({
+        where: logWhere,
+        include: { user: true, project: true },
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.work_sessions.findMany({
+        where: sessionWhere,
+        orderBy: { startTime: "desc" },
+      }),
+    ])
+
+    await prisma.history.create({
+      data: {
+        entityType: "project_logs",
+        entityId: command.projectId ?? 0,
+        action: "read_by_project_leader",
+        performedBy: command.leaderId,
+        description: "Líder leu logs de projetos que lidera",
+        metadata: {
+          requestedProjectId: command.projectId ?? null,
+          memberUserId: command.memberUserId ?? null,
+          ledProjectIds,
+          logCount: logData.length,
+          sessionCount: sessionData.length,
+        },
+      },
+    })
+
+    return {
+      logs: logData.map((item) => DailyLog.fromPrisma(item)),
+      sessions: sessionData.map((item) => WorkSession.fromPrisma(item)),
+      ledProjectIds,
+    }
   }
 
   async deleteWorkSession(command: DeleteWorkSessionCommand) {

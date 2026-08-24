@@ -194,7 +194,7 @@ export function UserWeeklyHoursTable({ users, sessions }: UserWeeklyHoursTablePr
   };
 
   return (
-    <div className="bg-blue-50 rounded-lg p-4">
+    <div className="bg-blue-50 dark:bg-info/10 rounded-lg p-4">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold flex items-center gap-2">
           <Calendar className="h-5 w-5" />
@@ -217,7 +217,7 @@ export function UserWeeklyHoursTable({ users, sessions }: UserWeeklyHoursTablePr
               size="sm"
               onClick={goToCurrentWeek}
               disabled={loading || isCurrentWeek}
-              className={isCurrentWeek ? "bg-blue-100" : ""}
+              className={isCurrentWeek ? "bg-blue-100 dark:bg-info/15" : ""}
             >
               Hoje
             </Button>
@@ -260,7 +260,7 @@ export function UserWeeklyHoursTable({ users, sessions }: UserWeeklyHoursTablePr
             <TableRow>
               <TableCell colSpan={5} className="text-center py-8">
                 <div className="flex items-center justify-center gap-2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 dark:border-info"></div>
                   Carregando dados da semana...
                 </div>
               </TableCell>
@@ -270,20 +270,20 @@ export function UserWeeklyHoursTable({ users, sessions }: UserWeeklyHoursTablePr
               const horasTrabalhadas = getUserHours(u.id);
               const expected = u.weekHours || 0;
               const diff = expected - horasTrabalhadas;
-              let diffColor = "text-gray-700";
+              let diffColor = "text-gray-700 dark:text-gray-300";
               let diffText = '';
               
               if (expected === 0) {
                 diffText = "Sem meta definida";
-                diffColor = "text-gray-500";
+                diffColor = "text-gray-500 dark:text-muted-foreground";
               } else if (diff > 0) {
-                diffColor = "text-red-600 font-bold";
+                diffColor = "text-red-600 dark:text-red-400 font-bold";
                 diffText = `${diff.toFixed(1)}h restantes`;
               } else if (diff < 0) {
-                diffColor = "text-green-600 font-bold";
+                diffColor = "text-green-600 dark:text-success font-bold";
                 diffText = `+${Math.abs(diff).toFixed(1)}h extra`;
               } else {
-                diffColor = "text-blue-700 font-bold";
+                diffColor = "text-blue-700 dark:text-info font-bold";
                 diffText = `Meta atingida!`;
               }
               
@@ -291,10 +291,10 @@ export function UserWeeklyHoursTable({ users, sessions }: UserWeeklyHoursTablePr
                 <TableRow key={u.id}>
                   <TableCell>{u.name}</TableCell>
                   <TableCell>{u.email}</TableCell>
-                  <TableCell className="text-right font-bold text-blue-900">
+                  <TableCell className="text-right font-bold text-blue-900 dark:text-blue-300">
                     {horasTrabalhadas.toFixed(1)} h
                   </TableCell>
-                  <TableCell className="text-right text-blue-700">
+                  <TableCell className="text-right text-blue-700 dark:text-blue-300/90">
                     {expected.toFixed(1)} h
                   </TableCell>
                   <TableCell className={`text-right ${diffColor}`}>{diffText}</TableCell>

@@ -51,7 +51,7 @@ export default function AdminDashboardPage() {
         <main className="flex-1 container mx-auto p-4 md:p-6">
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-info mx-auto mb-4"></div>
               <p className="text-muted-foreground">Carregando painel administrativo...</p>
             </div>
           </div>

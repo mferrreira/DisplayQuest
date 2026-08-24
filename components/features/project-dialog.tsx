@@ -206,8 +206,8 @@ export function ProjectDialog({ open, onOpenChange, project = null }: ProjectDia
           </DialogHeader>
 
           {error && (
-            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
-              <p className="text-red-600 text-sm">{error}</p>
+            <div className="mt-4 p-3 bg-red-50 dark:bg-destructive/10 border border-red-200 dark:border-destructive/25 rounded-md">
+              <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
             </div>
           )}
 

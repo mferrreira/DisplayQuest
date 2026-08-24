@@ -51,15 +51,15 @@ export function UserProfileView({ user, onBack, canEdit = false, onEdit, project
 
   const getRoleColor = (role: string) => {
     const colors: Record<string, string> = {
-      'COORDENADOR': 'bg-purple-100 text-purple-800 border-purple-200',
-      'GERENTE': 'bg-blue-100 text-blue-800 border-blue-200',
-      'LABORATORISTA': 'bg-green-100 text-green-800 border-green-200',
-      'PESQUISADOR': 'bg-orange-100 text-orange-800 border-orange-200',
-      'GERENTE_PROJETO': 'bg-indigo-100 text-indigo-800 border-indigo-200',
-      'COLABORADOR': 'bg-gray-100 text-gray-800 border-gray-200',
-      'VOLUNTARIO': 'bg-pink-100 text-pink-800 border-pink-200',
+      'COORDENADOR': 'bg-purple-100 dark:bg-purple-500/15 text-purple-800 dark:text-purple-300 border-purple-200 dark:border-purple-500/25',
+      'GERENTE': 'bg-blue-100 dark:bg-info/15 text-blue-800 dark:text-blue-300 border-blue-200 dark:border-info/25',
+      'LABORATORISTA': 'bg-green-100 dark:bg-success/15 text-green-800 dark:text-green-300 border-green-200 dark:border-success/25',
+      'PESQUISADOR': 'bg-orange-100 text-orange-800 dark:bg-orange-500/15 dark:text-orange-300 border-orange-200',
+      'GERENTE_PROJETO': 'bg-indigo-100 text-indigo-800 dark:bg-indigo-500/15 dark:text-indigo-300 border-indigo-200',
+      'COLABORADOR': 'bg-gray-100 dark:bg-muted/40 text-gray-800 dark:text-gray-200 border-gray-200 dark:border-border',
+      'VOLUNTARIO': 'bg-pink-100 text-pink-800 dark:bg-pink-500/15 dark:text-pink-300 border-pink-200',
     }
-    return colors[role] || 'bg-gray-100 text-gray-800 border-gray-200'
+    return colors[role] || 'bg-gray-100 dark:bg-muted/40 text-gray-800 dark:text-gray-200 border-gray-200 dark:border-border'
   }
 
   return (
@@ -70,7 +70,7 @@ export function UserProfileView({ user, onBack, canEdit = false, onEdit, project
           <ArrowLeft className="h-4 w-4 mr-2" />
           Voltar
         </Button>
-        <h1 className="text-2xl font-bold text-gray-900">Perfil do Usuário</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-foreground">Perfil do Usuário</h1>
       </div>
 
       {/* Main Profile Card */}
@@ -85,12 +85,12 @@ export function UserProfileView({ user, onBack, canEdit = false, onEdit, project
                 </AvatarFallback>
               </Avatar>
               <div className="space-y-1">
-                <h2 className="text-2xl font-bold text-gray-900">{user.name}</h2>
-                <div className="flex items-center space-x-2 text-sm text-gray-600">
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-foreground">{user.name}</h2>
+                <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-muted-foreground">
                   <Mail className="h-4 w-4" />
                   <span>{user.email}</span>
                 </div>
-                <div className="flex items-center space-x-2 text-sm text-gray-600">
+                <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-muted-foreground">
                   <Calendar className="h-4 w-4" />
                   <span>Membro desde {safeFormatDistance(user.createdAt)}</span>
                 </div>
@@ -109,38 +109,38 @@ export function UserProfileView({ user, onBack, canEdit = false, onEdit, project
           {/* Bio */}
           {user.bio && (
             <div>
-              <h3 className="text-sm font-medium text-gray-900 mb-2">Sobre</h3>
-              <p className="text-gray-700 leading-relaxed">{user.bio}</p>
+              <h3 className="text-sm font-medium text-gray-900 dark:text-foreground mb-2">Sobre</h3>
+              <p className="text-gray-700 dark:text-gray-300 leading-relaxed">{user.bio}</p>
             </div>
           )}
 
           {/* Stats Grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center p-3 bg-blue-50 rounded-lg">
-              <Trophy className="h-6 w-6 text-blue-600 mx-auto mb-1" />
-              <div className="text-2xl font-bold text-blue-900">{user.points}</div>
-              <div className="text-xs text-blue-700">Pontos</div>
+            <div className="text-center p-3 bg-blue-50 dark:bg-info/10 rounded-lg">
+              <Trophy className="h-6 w-6 text-blue-600 dark:text-info mx-auto mb-1" />
+              <div className="text-2xl font-bold text-blue-900 dark:text-blue-300">{user.points}</div>
+              <div className="text-xs text-blue-700 dark:text-blue-300">Pontos</div>
             </div>
-            <div className="text-center p-3 bg-green-50 rounded-lg">
-              <Target className="h-6 w-6 text-green-600 mx-auto mb-1" />
-              <div className="text-2xl font-bold text-green-900">{user.completedTasks}</div>
-              <div className="text-xs text-green-700">Tarefas</div>
+            <div className="text-center p-3 bg-green-50 dark:bg-success/10 rounded-lg">
+              <Target className="h-6 w-6 text-green-600 dark:text-success mx-auto mb-1" />
+              <div className="text-2xl font-bold text-green-900 dark:text-green-300">{user.completedTasks}</div>
+              <div className="text-xs text-green-700 dark:text-green-300">Tarefas</div>
             </div>
-            <div className="text-center p-3 bg-orange-50 rounded-lg">
-              <Clock className="h-6 w-6 text-orange-600 mx-auto mb-1" />
-              <div className="text-2xl font-bold text-orange-900">{user.weekHours}</div>
-              <div className="text-xs text-orange-700">Horas/Sem</div>
+            <div className="text-center p-3 bg-orange-50 dark:bg-orange-500/10 rounded-lg">
+              <Clock className="h-6 w-6 text-orange-600 dark:text-orange-400 mx-auto mb-1" />
+              <div className="text-2xl font-bold text-orange-900 dark:text-orange-300">{user.weekHours}</div>
+              <div className="text-xs text-orange-700 dark:text-orange-300">Horas/Sem</div>
             </div>
-            <div className="text-center p-3 bg-purple-50 rounded-lg">
-              <UserIcon className="h-6 w-6 text-purple-600 mx-auto mb-1" />
-              <div className="text-2xl font-bold text-purple-900">{user.roles.length}</div>
-              <div className="text-xs text-purple-700">Funções</div>
+            <div className="text-center p-3 bg-purple-50 dark:bg-purple-500/10 rounded-lg">
+              <UserIcon className="h-6 w-6 text-purple-600 dark:text-purple-400 mx-auto mb-1" />
+              <div className="text-2xl font-bold text-purple-900 dark:text-purple-300">{user.roles.length}</div>
+              <div className="text-xs text-purple-700 dark:text-purple-300">Funções</div>
             </div>
           </div>
 
           {/* Roles */}
           <div>
-            <h3 className="text-sm font-medium text-gray-900 mb-3">Funções</h3>
+            <h3 className="text-sm font-medium text-gray-900 dark:text-foreground mb-3">Funções</h3>
             <div className="flex flex-wrap gap-2">
               {user.roles.map((role) => (
                 <Badge 
@@ -155,7 +155,7 @@ export function UserProfileView({ user, onBack, canEdit = false, onEdit, project
           </div>
 
           <div>
-            <h3 className="mb-3 text-sm font-medium text-gray-900">Projetos</h3>
+            <h3 className="mb-3 text-sm font-medium text-gray-900 dark:text-foreground">Projetos</h3>
             {projectNames.length > 0 ? (
               <div className="flex flex-wrap gap-2">
                 {projectNames.map((projectName) => (

@@ -31,10 +31,10 @@ interface DayViewCalendarProps {
 }
 
 const typeColor: Record<string, string> = {
-  log: "bg-blue-500",
-  responsibility: "bg-green-500",
-  laboratory: "bg-purple-500",
-  event: "bg-amber-500",
+  log: "bg-blue-500 dark:bg-blue-400",
+  responsibility: "bg-green-500 dark:bg-green-400",
+  laboratory: "bg-purple-500 dark:bg-purple-400",
+  event: "bg-amber-500 dark:bg-amber-400",
 };
 
 const DayViewCalendar: React.FC<DayViewCalendarProps> = ({

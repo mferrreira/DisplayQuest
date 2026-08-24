@@ -157,7 +157,7 @@ export function LaboratorySchedule() {
               <Loader2 className="h-6 w-6 animate-spin" />
             </div>
           ) : error ? (
-            <div className="text-center py-8 text-red-500">
+            <div className="text-center py-8 text-red-500 dark:text-red-400">
               {error}
             </div>
           ) : schedules.length === 0 ? (

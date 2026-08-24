@@ -77,15 +77,15 @@ export function UserBadges({ userId, showAll = false, limit = 6, className = "" 
   const getCategoryColor = (category: string) => {
     switch (category) {
       case 'achievement':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200'
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-warning/15 dark:text-yellow-300 dark:border-warning/25'
       case 'milestone':
-        return 'bg-blue-100 text-blue-800 border-blue-200'
+        return 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-info/15 dark:text-blue-300 dark:border-info/25'
       case 'special':
-        return 'bg-purple-100 text-purple-800 border-purple-200'
+        return 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-500/15 dark:text-purple-300 dark:border-purple-500/25'
       case 'social':
-        return 'bg-green-100 text-green-800 border-green-200'
+        return 'bg-green-100 text-green-800 border-green-200 dark:bg-success/15 dark:text-green-300 dark:border-success/25'
       default:
-        return 'bg-gray-100 text-gray-800 border-gray-200'
+        return 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-muted/50 dark:text-gray-200 dark:border-border'
     }
   }
 
@@ -146,7 +146,7 @@ export function UserBadges({ userId, showAll = false, limit = 6, className = "" 
     )
   }
 
-  const safeBadges = badges.filter((userBadge) => userBadge.badge)
+  const safeBadges = badges.filter((userBadge): userBadge is typeof userBadge & { badge: NonNullable<typeof userBadge.badge> } => Boolean(userBadge.badge))
 
   if (safeBadges.length === 0) {
     return (
@@ -255,15 +255,15 @@ export function UserBadgesCard({ userId, className = "" }: { userId: number; cla
   const getCategoryColor = (category: string) => {
     switch (category) {
       case 'achievement':
-        return 'bg-yellow-50 border-yellow-200 hover:bg-yellow-100'
+        return 'bg-yellow-50 border-yellow-200 dark:bg-warning/10 dark:border-warning/25 hover:bg-yellow-100'
       case 'milestone':
-        return 'bg-blue-50 border-blue-200 hover:bg-blue-100'
+        return 'bg-blue-50 border-blue-200 dark:bg-info/10 dark:border-info/25 hover:bg-blue-100'
       case 'special':
-        return 'bg-purple-50 border-purple-200 hover:bg-purple-100'
+        return 'bg-purple-50 border-purple-200 dark:bg-purple-500/10 dark:border-purple-500/25 hover:bg-purple-100'
       case 'social':
-        return 'bg-green-50 border-green-200 hover:bg-green-100'
+        return 'bg-green-50 border-green-200 dark:bg-success/10 dark:border-success/25 hover:bg-green-100'
       default:
-        return 'bg-gray-50 border-gray-200 hover:bg-gray-100'
+        return 'bg-gray-50 border-gray-200 dark:bg-muted/40 dark:border-border hover:bg-gray-100'
     }
   }
 
@@ -327,7 +327,7 @@ export function UserBadgesCard({ userId, className = "" }: { userId: number; cla
     )
   }
 
-  const safeBadges = badges.filter((userBadge) => userBadge.badge)
+  const safeBadges = badges.filter((userBadge): userBadge is typeof userBadge & { badge: NonNullable<typeof userBadge.badge> } => Boolean(userBadge.badge))
 
   if (safeBadges.length === 0) {
     return (

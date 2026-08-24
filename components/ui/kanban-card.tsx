@@ -95,36 +95,36 @@ export function KanbanCard({ task, onEdit, onClick, isOverdue, index }: Draggabl
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case "high":
-        return "bg-gradient-to-r from-red-500 to-pink-500 text-white border-red-400 shadow-lg shadow-red-500/25"
+        return "bg-gradient-to-r from-red-500 to-pink-500 text-white border-red-400 shadow-lg shadow-red-500/25 dark:from-red-500/20 dark:to-pink-500/20 dark:text-red-300 dark:border-red-500/40 dark:shadow-none"
       case "medium":
-        return "bg-gradient-to-r from-yellow-500 to-orange-500 text-white border-yellow-400 shadow-lg shadow-yellow-500/25"
+        return "bg-gradient-to-r from-yellow-500 to-orange-500 text-white border-yellow-400 shadow-lg shadow-yellow-500/25 dark:from-yellow-500/20 dark:to-orange-500/20 dark:text-yellow-300 dark:border-yellow-500/40 dark:shadow-none"
       case "low":
-        return "bg-gradient-to-r from-green-500 to-emerald-500 text-white border-green-400 shadow-lg shadow-green-500/25"
+        return "bg-gradient-to-r from-green-500 to-emerald-500 text-white border-green-400 shadow-lg shadow-green-500/25 dark:from-green-500/20 dark:to-emerald-500/20 dark:text-green-300 dark:border-green-500/40 dark:shadow-none"
       default:
-        return "bg-gradient-to-r from-gray-500 to-slate-500 text-white border-gray-400"
+        return "bg-gradient-to-r from-gray-500 to-slate-500 text-white border-gray-400 dark:from-slate-500/20 dark:to-gray-500/20 dark:text-gray-300 dark:border-gray-500/40"
     }
   }
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case "done":
-        return "bg-gradient-to-r from-emerald-500 to-green-500 text-white border-emerald-400 shadow-lg shadow-emerald-500/25"
+        return "bg-gradient-to-r from-emerald-500 to-green-500 text-white border-emerald-400 shadow-lg shadow-emerald-500/25 dark:from-emerald-500/20 dark:to-green-500/20 dark:text-emerald-300 dark:border-emerald-500/40 dark:shadow-none"
       case "in-progress":
-        return "bg-gradient-to-r from-blue-500 to-cyan-500 text-white border-blue-400 shadow-lg shadow-blue-500/25"
+        return "bg-gradient-to-r from-blue-500 to-cyan-500 text-white border-blue-400 shadow-lg shadow-blue-500/25 dark:from-blue-500/20 dark:to-cyan-500/20 dark:text-blue-300 dark:border-blue-500/40 dark:shadow-none"
       case "in-review":
-        return "bg-gradient-to-r from-purple-500 to-violet-500 text-white border-purple-400 shadow-lg shadow-purple-500/25"
+        return "bg-gradient-to-r from-purple-500 to-violet-500 text-white border-purple-400 shadow-lg shadow-purple-500/25 dark:from-purple-500/20 dark:to-violet-500/20 dark:text-purple-300 dark:border-purple-500/40 dark:shadow-none"
       case "adjust":
-        return "bg-gradient-to-r from-orange-500 to-amber-500 text-white border-orange-400 shadow-lg shadow-orange-500/25"
+        return "bg-gradient-to-r from-orange-500 to-amber-500 text-white border-orange-400 shadow-lg shadow-orange-500/25 dark:from-orange-500/20 dark:to-amber-500/20 dark:text-orange-300 dark:border-orange-500/40 dark:shadow-none"
       default:
-        return "bg-gradient-to-r from-slate-500 to-gray-500 text-white border-slate-400"
+        return "bg-gradient-to-r from-slate-500 to-gray-500 text-white border-slate-400 dark:from-slate-500/20 dark:to-gray-500/20 dark:text-slate-300 dark:border-slate-500/40"
     }
   }
 
   const getPointsStyle = () => {
     if (isHighPoints) {
-      return "bg-gradient-to-r from-yellow-400 to-amber-500 text-white border-yellow-300 shadow-lg shadow-yellow-500/25"
+      return "bg-gradient-to-r from-yellow-400 to-amber-500 text-white border-yellow-300 shadow-lg shadow-yellow-500/25 dark:from-yellow-500/20 dark:to-amber-500/20 dark:text-yellow-300 dark:border-yellow-500/40 dark:shadow-none"
     }
-    return "bg-gradient-to-r from-blue-500 to-indigo-500 text-white border-blue-400 shadow-lg shadow-blue-500/25"
+    return "bg-gradient-to-r from-blue-500 to-indigo-500 text-white border-blue-400 shadow-lg shadow-blue-500/25 dark:from-blue-500/20 dark:to-indigo-500/20 dark:text-blue-300 dark:border-blue-500/40 dark:shadow-none"
   }
 
   const formatDate = (dateString: string | null) => {
@@ -145,13 +145,13 @@ export function KanbanCard({ task, onEdit, onClick, isOverdue, index }: Draggabl
         const getCardStyle = () => {
           if (isPublicTask) {
             return `mb-3 cursor-grab transition-all duration-300 hover:shadow-2xl hover:scale-105 ${
-              isOverdue ? "border-red-400 bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/30 dark:to-red-800/20" : 
-              "border-amber-400 bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 dark:from-amber-900/30 dark:via-yellow-900/20 dark:to-orange-900/30"
+              isOverdue ? "border-red-400 bg-gradient-to-br from-red-50 to-red-100 dark:from-red-500/10 dark:to-red-500/5" : 
+              "border-amber-400 dark:border-amber-500/40 bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 dark:from-amber-400/10 dark:via-yellow-300/5 dark:to-orange-400/10"
             } ${snapshot.isDragging ? "shadow-2xl rotate-2" : ""} relative overflow-hidden`
           }
           
           return `mb-3 cursor-grab transition-all duration-200 hover:shadow-lg hover:scale-102 ${
-            isOverdue ? "border-red-300 bg-gradient-to-br from-red-50 to-red-100 dark:border-red-600 dark:from-red-900/20 dark:to-red-800/10" : 
+            isOverdue ? "border-red-300 bg-gradient-to-br from-red-50 to-red-100 dark:border-red-500/40 dark:from-red-500/10 dark:to-red-500/5" : 
             "border-gray-200 bg-gradient-to-br from-white to-gray-50 dark:border-gray-600 dark:from-gray-800 dark:to-gray-700"
           } ${snapshot.isDragging ? "shadow-xl" : ""}`
         }
@@ -175,19 +175,21 @@ export function KanbanCard({ task, onEdit, onClick, isOverdue, index }: Draggabl
               >
                 {/* Public Task Special Effects */}
                 {isPublicTask && (
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-yellow-200/20 to-transparent animate-pulse pointer-events-none" />
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-yellow-200/20 dark:via-yellow-500/10 to-transparent animate-pulse pointer-events-none" />
                 )}
                 
                 {/* Global Task Special Effects */}
                 {isGlobalTask && (
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-200/20 to-transparent animate-pulse pointer-events-none" />
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-200/20 dark:via-blue-500/10 to-transparent animate-pulse pointer-events-none" />
                 )}
                 
                 <CardContent className="p-4 relative">
                   {/* Public Task Crown */}
                   {isPublicTask && (
                     <div className="absolute -top-2 -right-2 z-10">
+                       {/* dark-mode:ok (dourado nos 2 temas) */}
                       <div className="bg-gradient-to-r from-yellow-400 to-amber-500 rounded-full p-1 shadow-lg">
+                        {/* dark-mode:ok (branco sobre dourado nos 2 temas) */}
                         <Crown className="h-4 w-4 text-white" />
                       </div>
                     </div>
@@ -231,7 +233,7 @@ export function KanbanCard({ task, onEdit, onClick, isOverdue, index }: Draggabl
 
                   {/* Progress Bar for Task Completion */}
                   <div className="mb-3">
-                    <div className="flex justify-between text-xs text-gray-500 mb-1">
+                    <div className="flex justify-between text-xs text-gray-500 dark:text-muted-foreground mb-1">
                       <span>Progresso</span>
                       <span>{task.status === "done" ? "100%" : 
                             task.status === "in-progress" ? "50%" : 
@@ -259,13 +261,13 @@ export function KanbanCard({ task, onEdit, onClick, isOverdue, index }: Draggabl
                        task.status === "adjust" ? "AJUSTES" : "A FAZER"}
                     </Badge>
                     {isPublicTask && (
-                      <Badge className="text-xs font-bold bg-gradient-to-r from-yellow-400 to-amber-500 text-white border-yellow-300 shadow-lg shadow-yellow-500/25 animate-pulse">
+                      <Badge className="text-xs font-bold bg-gradient-to-r from-yellow-400 to-amber-500 text-white border-yellow-300 shadow-lg shadow-yellow-500/25 animate-pulse dark:from-yellow-500/20 dark:to-amber-500/20 dark:text-yellow-300 dark:border-yellow-500/40 dark:shadow-none">
                         <Users className="mr-1 h-3 w-3" />
                         PÚBLICA
                       </Badge>
                     )}
                     {isGlobalTask && (
-                      <Badge className="text-xs font-bold bg-gradient-to-r from-blue-500 to-indigo-500 text-white border-blue-300 shadow-lg shadow-blue-500/25 animate-pulse">
+                      <Badge className="text-xs font-bold bg-gradient-to-r from-blue-500 to-indigo-500 text-white border-blue-300 shadow-lg shadow-blue-500/25 animate-pulse dark:from-blue-500/20 dark:to-indigo-500/20 dark:text-blue-300 dark:border-blue-500/40 dark:shadow-none">
                         <Zap className="mr-1 h-3 w-3" />
                         QUEST GLOBAL
                       </Badge>
@@ -296,7 +298,7 @@ export function KanbanCard({ task, onEdit, onClick, isOverdue, index }: Draggabl
                     <div className="flex gap-2 mt-3">
                       <Button
                         size="sm"
-                        className="flex-1 bg-green-500 hover:bg-green-600 text-white text-xs"
+                        className="flex-1 bg-green-500 hover:bg-green-600 text-white text-xs dark:bg-success dark:text-success-foreground dark:hover:bg-success/90"
                         onClick={(e) => {
                           e.stopPropagation()
                           handleApproveTask(task.id)
@@ -355,7 +357,7 @@ export function KanbanCard({ task, onEdit, onClick, isOverdue, index }: Draggabl
                   {/* Special Effects for High Priority Tasks */}
                   {isHighPriority && (
                     <div className="absolute top-2 left-2">
-                      <div className="bg-red-500 rounded-full w-2 h-2 animate-ping" />
+                      <div className="bg-red-500 rounded-full w-2 h-2 animate-ping" /> {/* dark-mode:ok */}
                     </div>
                   )}
                 </CardContent>

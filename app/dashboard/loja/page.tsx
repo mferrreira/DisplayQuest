@@ -204,7 +204,7 @@ export default function StorePage() {
         )
       case "approved":
         return (
-          <Badge variant="default" className="bg-green-500 flex items-center gap-1">
+          <Badge variant="default" className="bg-green-500 dark:bg-success flex items-center gap-1">
             <CheckCircle className="h-3 w-3" /> Aprovado
           </Badge>
         )

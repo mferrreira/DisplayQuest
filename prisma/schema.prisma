@@ -43,6 +43,7 @@ model users {
   weekly_reports       weekly_reports[]       @relation("UserWeeklyReports")
   work_sessions        work_sessions[]        @relation("UserWorkSessions")
   notifications        notifications[]        @relation("UserNotifications")
+  projectReports       project_reports[]      @relation("ProjectReportAuthor")
 }
 
 model projects {
@@ -60,6 +61,7 @@ model projects {
   leader      users?            @relation("UserProjectLeadership", fields: [leaderId], references: [id])
   tasks       tasks[]           @relation("ProjectTasks")
   work_sessions work_sessions[] @relation("WorkSessionProject")
+  project_reports project_reports[] @relation("ProjectReports")
 }
 
 model project_members {
@@ -182,6 +184,39 @@ model weekly_reports {
   summary   String?
   createdAt DateTime @default(now())
   user      users    @relation("UserWeeklyReports", fields: [userId], references: [id])
+}
+
+model project_reports {
+  id          Int      @id @default(autoincrement())
+  projectId   Int
+  authorId    Int
+  periodType  String
+  periodStart DateTime
+  periodEnd   DateTime
+  title       String?
+  content     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  project     projects @relation("ProjectReports", fields: [projectId], references: [id], onDelete: Cascade)
+  author      users    @relation("ProjectReportAuthor", fields: [authorId], references: [id])
+  attachments report_attachments[] @relation("ReportAttachments")
+
+  @@unique([projectId, periodType, periodStart, authorId])
+  @@index([projectId, periodType])
+}
+
+model report_attachments {
+  id         Int             @id @default(autoincrement())
+  reportId   Int
+  fileName   String
+  storedPath String
+  mimeType   String
+  sizeBytes  Int
+  uploadedBy Int
+  createdAt  DateTime        @default(now())
+  report     project_reports @relation("ReportAttachments", fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@index([reportId])
 }
 
 model user_schedules {

@@ -37,26 +37,26 @@ export function StatsCard({
   const getVariantStyles = () => {
     switch (variant) {
       case "success":
-        return "border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950"
+        return "border-green-200 bg-green-50 dark:border-success/25 dark:bg-success/10"
       case "warning":
-        return "border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-950"
+        return "border-yellow-200 bg-yellow-50 dark:border-warning/25 dark:bg-warning/10"
       case "danger":
-        return "border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950"
+        return "border-red-200 bg-red-50 dark:border-destructive/25 dark:bg-destructive/10"
       default:
-        return "border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950"
+        return "border-blue-200 bg-blue-50 dark:border-info/25 dark:bg-info/10"
     }
   }
 
   const getIconColor = () => {
     switch (variant) {
       case "success":
-        return "text-green-600 dark:text-green-400"
+        return "text-green-600 dark:text-success"
       case "warning":
-        return "text-yellow-600 dark:text-yellow-400"
+        return "text-yellow-600 dark:text-warning"
       case "danger":
         return "text-red-600 dark:text-red-400"
       default:
-        return "text-blue-600 dark:text-blue-400"
+        return "text-blue-600 dark:text-info"
     }
   }
 
@@ -77,9 +77,9 @@ export function StatsCard({
             <Badge 
               variant={trend.isPositive ? "default" : "secondary"}
               className={`text-xs ${
-                trend.isPositive 
-                  ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" 
-                  : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+                trend.isPositive
+                  ? "bg-green-100 text-green-800 dark:bg-success/15 dark:text-success"
+                  : "bg-red-100 text-red-800 dark:bg-destructive/15 dark:text-red-400"
               }`}
             >
               {trend.isPositive ? "+" : ""}{trend.value}%

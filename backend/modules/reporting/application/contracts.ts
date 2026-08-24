@@ -102,3 +102,108 @@ export interface WeeklyHoursHistoryItem {
     roles: string[]
   }
 }
+
+export type ProjectReportPeriodType = "weekly" | "biweekly" | "monthly" | "semiannual" | "annual"
+
+export interface CreateProjectReportCommand {
+  actorUserId: number
+  actorRoles: string[]
+  projectId: number
+  periodType: ProjectReportPeriodType
+  reference?: string
+  title?: string | null
+  content: string
+}
+
+export interface UpdateProjectReportCommand {
+  actorUserId: number
+  actorRoles: string[]
+  reportId: number
+  title?: string | null
+  content?: string
+}
+
+export interface DeleteProjectReportCommand {
+  actorUserId: number
+  actorRoles: string[]
+  reportId: number
+}
+
+export interface ListProjectReportsQuery {
+  actorUserId: number
+  actorRoles: string[]
+  projectId?: number
+  periodType?: ProjectReportPeriodType
+  from?: string
+  to?: string
+  authorId?: number
+}
+
+export interface RegisterReportAttachmentCommand {
+  actorUserId: number
+  actorRoles: string[]
+  reportId: number
+  fileName: string
+  storedPath: string
+  mimeType: string
+  sizeBytes: number
+}
+
+export interface DeleteReportAttachmentCommand {
+  actorUserId: number
+  actorRoles: string[]
+  attachmentId: number
+}
+
+export interface ProjectReportAttachmentDto {
+  id: number
+  fileName: string
+  storedPath: string
+  mimeType: string
+  sizeBytes: number
+  createdAt: string
+}
+
+export interface ProjectReportReadModel {
+  id: number
+  projectId: number
+  projectName: string
+  authorId: number
+  authorName: string
+  periodType: ProjectReportPeriodType
+  periodLabel: string
+  periodStart: string
+  periodEnd: string
+  title: string | null
+  content: string
+  createdAt: string
+  updatedAt: string
+  attachments: ProjectReportAttachmentDto[]
+}
+
+export interface ProjectReportAggregateResult {
+  report: ProjectReportReadModel
+  logs: Array<{
+    id: number
+    userId: number
+    userName: string | null
+    date: string
+    note: string | null
+    projectName: string | null
+  }>
+  sessions: Array<{
+    id: number
+    userId: number
+    userName: string
+    startTime: string
+    endTime: string | null
+    durationHours: number | null
+    activity: string | null
+    location: string | null
+  }>
+  totals: {
+    logCount: number
+    sessionCount: number
+    totalHours: number
+  }
+}

@@ -68,7 +68,7 @@ export function ProjectMembersManager({ projectId }: ProjectMembersManagerProps)
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {(error || membersError) && <div className="text-red-600 mb-2">{error || membersError}</div>}
+        {(error || membersError) && <div className="text-red-600 dark:text-red-400 mb-2">{error || membersError}</div>}
         <div className="mb-4">
           <div className="flex gap-2 items-end">
             <div className="flex-1">
@@ -120,7 +120,7 @@ export function ProjectMembersManager({ projectId }: ProjectMembersManagerProps)
                   disabled={loading}
                   title="Remover do projeto"
                 >
-                  <Trash2 className="h-4 w-4 text-red-600" />
+                  <Trash2 className="h-4 w-4 text-red-600 dark:text-red-400" />
                 </Button>
               </div>
             ))
