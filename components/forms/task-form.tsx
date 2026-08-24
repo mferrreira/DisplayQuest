@@ -84,7 +84,7 @@ function FormField({
         {...inputProps}
       />
       {error && (
-        <p className="text-xs text-red-600">{error}</p>
+        <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
       )}
     </div>
   )
@@ -111,7 +111,7 @@ function NumberField({
         value={value}
         onChange={onChange}
         disabled={disabled}
-        className={disabled ? "bg-gray-100 cursor-not-allowed" : ""}
+        className={disabled ? "bg-gray-100 dark:bg-muted/40 cursor-not-allowed" : ""}
       />
       {helperText && (
         <p className="text-xs text-gray-600 dark:text-gray-400">{helperText}</p>
@@ -138,7 +138,7 @@ function SelectField({ label, value, onValueChange, placeholder, options, error,
     <div className="grid gap-2">
       <Label>{label}</Label>
       <Select value={value} onValueChange={onValueChange} disabled={disabled}>
-        <SelectTrigger className={disabled ? "bg-gray-100 cursor-not-allowed" : ""}>
+        <SelectTrigger className={disabled ? "bg-gray-100 dark:bg-muted/40 cursor-not-allowed" : ""}>
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>
@@ -150,7 +150,7 @@ function SelectField({ label, value, onValueChange, placeholder, options, error,
         </SelectContent>
       </Select>
       {error && (
-        <p className="text-xs text-red-600">{error}</p>
+        <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
       )}
     </div>
   )
@@ -457,17 +457,17 @@ export function TaskForm({
             )}
           </div>
           {fieldErrors.assignedTo && (
-            <p className="text-xs text-red-600">{fieldErrors.assignedTo}</p>
+            <p className="text-xs text-red-600 dark:text-red-400">{fieldErrors.assignedTo}</p>
           )}
         </div>
       </div>
       {!formData.isGlobal && formData.taskVisibility === "public" && (
-        <p className="text-xs text-amber-700 bg-amber-50 p-2 rounded">
+        <p className="text-xs text-amber-700 bg-amber-50 dark:text-yellow-300 dark:bg-warning/10 p-2 rounded">
           ℹ️ Tasks gerais ficam visíveis para membros do projeto e podem ser assumidas ao serem movidas no quadro.
         </p>
       )}
       {formData.isGlobal && (
-        <p className="text-xs text-blue-600 bg-blue-50 p-2 rounded">
+        <p className="text-xs text-blue-600 bg-blue-50 dark:text-blue-300 dark:bg-info/10 p-2 rounded">
           ℹ️ Quest globais não precisam de projeto ou responsável específico - são visíveis para todos os usuários.
         </p>
       )}
@@ -495,7 +495,7 @@ export function TaskForm({
 
       {/* Quest Global Checkbox - Only show for managers/coordinators in creation mode */}
       {!task && currentUser && (currentUser.roles.includes('GERENTE') || currentUser.roles.includes('COORDENADOR')) && (
-        <div className="space-y-4 p-4 border rounded-lg bg-blue-50">
+        <div className="space-y-4 p-4 border rounded-lg bg-blue-50 dark:bg-info/10">
           <div className="flex items-center space-x-2">
             <input
               type="checkbox"
@@ -503,13 +503,13 @@ export function TaskForm({
               name="isGlobal"
               checked={formData.isGlobal || false}
               onChange={handleCheckboxChange}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-border rounded"
             />
-            <label htmlFor="isGlobal" className="text-sm font-medium text-blue-900">
+            <label htmlFor="isGlobal" className="text-sm font-medium text-blue-900 dark:text-blue-300">
               Quest Global
             </label>
           </div>
-          <p className="text-xs text-blue-700">
+          <p className="text-xs text-blue-700 dark:text-blue-300/90">
             Quest globais são visíveis para todos os usuários e não precisam de responsável específico.
           </p>
         </div>

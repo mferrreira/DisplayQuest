@@ -82,10 +82,10 @@ function ProfilePageContent() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-muted/40 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Carregando perfil...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-info mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-muted-foreground">Carregando perfil...</p>
         </div>
       </div>
     )
@@ -97,7 +97,7 @@ function ProfilePageContent() {
       .map((project) => project.name)
 
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50 dark:bg-muted/40">
         <div className="container mx-auto px-4 py-8">
           <UserProfileView
             user={viewingUser}
@@ -111,25 +111,25 @@ function ProfilePageContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-muted/40">
       
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
 
           <div className="mb-8">
-            <Card className={showProfileForm ? "border-blue-200 bg-blue-50/50" : ""}>
-              <CardHeader className={showProfileForm ? "bg-blue-50/30" : ""}>
+            <Card className={showProfileForm ? "border-blue-200 dark:border-info/25 bg-blue-50/50" : ""}>
+              <CardHeader className={showProfileForm ? "bg-blue-50/30 dark:bg-info/10" : ""}>
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center space-x-2">
                     <UserIcon className="h-5 w-5" />
                     <span>Meu Perfil</span>
-                    {showProfileForm && <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">Editando</span>}
+                    {showProfileForm && <span className="text-xs bg-blue-100 dark:bg-info/15 text-blue-800 dark:text-blue-300 px-2 py-1 rounded-full">Editando</span>}
                   </CardTitle>
                   <Button 
                     variant={showProfileForm ? "default" : "outline"} 
                     size="sm" 
                     onClick={() => setShowProfileForm(!showProfileForm)}
-                    className={showProfileForm ? "bg-blue-600 hover:bg-blue-700" : ""}
+                    className={showProfileForm ? "bg-blue-600 dark:bg-info hover:bg-blue-700" : ""}
                   >
                     {showProfileForm ? "Cancelar Edição" : "Editar Perfil"}
                   </Button>
@@ -151,11 +151,11 @@ function ProfilePageContent() {
                     <p className="text-muted-foreground">{user?.email}</p>
                     <div className="flex items-center gap-4 mt-2">
                       <div className="flex items-center gap-1">
-                        <Trophy className="h-4 w-4 text-yellow-600" />
+                        <Trophy className="h-4 w-4 text-yellow-600 dark:text-warning" />
                         <span className="text-sm font-medium">{user?.points} pontos</span>
                       </div>
                       <div className="flex items-center gap-1">
-                        <Target className="h-4 w-4 text-green-600" />
+                        <Target className="h-4 w-4 text-green-600 dark:text-success" />
                         <span className="text-sm font-medium">{user?.completedTasks} tarefas concluídas</span>
                       </div>
                     </div>
@@ -231,7 +231,7 @@ function ProfilePageContent() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="mb-4 rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+                  <div className="mb-4 rounded-md border border-blue-200 dark:border-info/25 bg-blue-50 dark:bg-info/10 p-3 text-sm text-blue-800 dark:text-blue-300">
                     Registros diários agora são gerados no encerramento da Work Session.
                   </div>
                   <DailyLogList
@@ -271,19 +271,19 @@ function ProfilePageContent() {
                       <CardContent className="space-y-4">
                         <div>
                           <Label className="text-sm font-medium">Nome</Label>
-                          <p className="text-sm text-gray-600">{user.name}</p>
+                          <p className="text-sm text-gray-600 dark:text-muted-foreground">{user.name}</p>
                         </div>
                         <div>
                           <Label className="text-sm font-medium">Email</Label>
-                          <p className="text-sm text-gray-600">{user.email}</p>
+                          <p className="text-sm text-gray-600 dark:text-muted-foreground">{user.email}</p>
                         </div>
                         <div>
                           <Label className="text-sm font-medium">Biografia</Label>
-                          <p className="text-sm text-gray-600">{user.bio || "Nenhuma biografia definida"}</p>
+                          <p className="text-sm text-gray-600 dark:text-muted-foreground">{user.bio || "Nenhuma biografia definida"}</p>
                         </div>
                         <div>
                           <Label className="text-sm font-medium">Visibilidade do Perfil</Label>
-                          <p className="text-sm text-gray-600">
+                          <p className="text-sm text-gray-600 dark:text-muted-foreground">
                             {user.profileVisibility === "public" && "Público"}
                             {user.profileVisibility === "members_only" && "Apenas Membros"}
                             {user.profileVisibility === "private" && "Privado"}
@@ -291,7 +291,7 @@ function ProfilePageContent() {
                         </div>
                         <div>
                           <Label className="text-sm font-medium">Horas Semanais</Label>
-                          <p className="text-sm text-gray-600">{user.weekHours} horas</p>
+                          <p className="text-sm text-gray-600 dark:text-muted-foreground">{user.weekHours} horas</p>
                         </div>
                       </CardContent>
                     </Card>
@@ -316,10 +316,10 @@ function ProfilePageContent() {
 
 function ProfilePageFallback() {
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+    <div className="min-h-screen bg-gray-50 dark:bg-muted/40 flex items-center justify-center">
       <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-        <p className="text-gray-600">Carregando perfil...</p>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-info mx-auto mb-4"></div>
+        <p className="text-gray-600 dark:text-muted-foreground">Carregando perfil...</p>
       </div>
     </div>
   )

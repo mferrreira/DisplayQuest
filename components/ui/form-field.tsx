@@ -56,14 +56,14 @@ export function FormField(props: FormFieldProps) {
             placeholder={props.placeholder}
             rows={props.rows || 3}
             disabled={props.disabled}
-            className={cn(error && "border-red-500", className)}
+            className={cn(error && "border-red-500 dark:border-red-400", className)}
           />
         )
 
       case "select":
         return (
           <Select value={props.value} onValueChange={props.onValueChange} disabled={props.disabled}>
-            <SelectTrigger className={cn(error && "border-red-500", className)}>
+            <SelectTrigger className={cn(error && "border-red-500 dark:border-red-400", className)}>
               <SelectValue placeholder={props.placeholder} />
             </SelectTrigger>
             <SelectContent>
@@ -86,7 +86,7 @@ export function FormField(props: FormFieldProps) {
             min={props.min}
             max={props.max}
             disabled={props.disabled}
-            className={cn(error && "border-red-500", className)}
+            className={cn(error && "border-red-500 dark:border-red-400", className)}
           />
         )
     }
@@ -96,7 +96,7 @@ export function FormField(props: FormFieldProps) {
     <div className="grid gap-2">
       <Label htmlFor={label.toLowerCase().replace(/\s+/g, '-')}>
         {label}
-        {required && <span className="text-red-500 ml-1">*</span>}
+        {required && <span className="text-red-500 dark:text-red-400 ml-1">*</span>}
       </Label>
       {renderField()}
       {error && (

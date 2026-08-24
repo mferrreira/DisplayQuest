@@ -683,11 +683,11 @@ export default function LabResponsibilityPage() {
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">Horário</label>
+                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300 dark:text-muted-foreground/50">Horário</label>
                 <Input type="time" value={eventDialogTime} onChange={e => setEventDialogTime(e.target.value)} className="w-32" />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">Descrição</label>
+                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300 dark:text-muted-foreground/50">Descrição</label>
                 <Textarea
                   value={eventDialogNote}
                   onChange={e => setEventDialogNote(e.target.value)}
@@ -713,7 +713,7 @@ export default function LabResponsibilityPage() {
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">Aviso</label>
+                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300 dark:text-muted-foreground/50">Aviso</label>
                 <Textarea
                   value={noticeDialogNote}
                   onChange={e => setNoticeDialogNote(e.target.value)}

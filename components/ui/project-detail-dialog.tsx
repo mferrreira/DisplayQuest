@@ -68,9 +68,9 @@ export function ProjectDetailDialog({
   const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0
 
   const statusColors = {
-    active: "bg-green-100 text-green-800",
-    completed: "bg-blue-100 text-blue-800",
-    archived: "bg-gray-100 text-gray-800",
+    active: "bg-green-100 text-green-800 dark:bg-success/15 dark:text-green-300",
+    completed: "bg-blue-100 text-blue-800 dark:bg-info/15 dark:text-blue-300",
+    archived: "bg-gray-100 text-gray-800 dark:bg-muted/50 dark:text-gray-200",
   }
 
   const statusLabels = {
@@ -80,11 +80,11 @@ export function ProjectDetailDialog({
   }
 
   const taskStatusColors = {
-    "to-do": "bg-yellow-100 text-yellow-800",
-    "in-progress": "bg-blue-100 text-blue-800",
-    "in-review": "bg-purple-100 text-purple-800",
-    "adjust": "bg-orange-100 text-orange-800",
-    "done": "bg-green-100 text-green-800",
+    "to-do": "bg-yellow-100 text-yellow-800 dark:bg-warning/15 dark:text-yellow-300",
+    "in-progress": "bg-blue-100 text-blue-800 dark:bg-info/15 dark:text-blue-300",
+    "in-review": "bg-purple-100 text-purple-800 dark:bg-purple-500/15 dark:text-purple-300",
+    "adjust": "bg-orange-100 text-orange-800 dark:bg-orange-500/15 dark:text-orange-300",
+    "done": "bg-green-100 text-green-800 dark:bg-success/15 dark:text-green-300",
   }
 
   const taskStatusLabels = {
@@ -193,30 +193,30 @@ export function ProjectDetailDialog({
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Concluídas</CardTitle>
-                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-success" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-green-600">{completedTasks}</div>
+                  <div className="text-2xl font-bold text-green-600 dark:text-success">{completedTasks}</div>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Em Progresso</CardTitle>
-                  <Clock className="h-4 w-4 text-blue-600" />
+                  <Clock className="h-4 w-4 text-blue-600 dark:text-info" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-blue-600">{inProgressTasks}</div>
+                  <div className="text-2xl font-bold text-blue-600 dark:text-info">{inProgressTasks}</div>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Pendentes</CardTitle>
-                  <AlertCircle className="h-4 w-4 text-yellow-600" />
+                  <AlertCircle className="h-4 w-4 text-yellow-600 dark:text-warning" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-yellow-600">{pendingTasks}</div>
+                  <div className="text-2xl font-bold text-yellow-600 dark:text-warning">{pendingTasks}</div>
                 </CardContent>
               </Card>
             </div>
@@ -285,7 +285,7 @@ export function ProjectDetailDialog({
                               {taskStatusLabels[task.status as keyof typeof taskStatusLabels]}
                             </Badge>
                             {task.taskVisibility === "public" && (
-                              <Badge className="bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700">
+                              <Badge className="bg-blue-100 text-blue-800 dark:bg-info/15 dark:text-blue-300 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700">
                                 Pública
                               </Badge>
                             )}

@@ -183,8 +183,8 @@ export function ProfilePictureUpload({ user, onUpdate, onError }: ProfilePicture
             </AvatarFallback>
           </Avatar>
           <div>
-            <h3 className="font-medium text-gray-900">{user.name}</h3>
-            <p className="text-sm text-gray-600">
+            <h3 className="font-medium text-gray-900 dark:text-foreground">{user.name}</h3>
+            <p className="text-sm text-gray-600 dark:text-muted-foreground">
               {user.avatar ? 'Foto de perfil ativa' : 'Nenhuma foto de perfil'}
             </p>
           </div>
@@ -202,7 +202,7 @@ export function ProfilePictureUpload({ user, onUpdate, onError }: ProfilePicture
               ref={fileInputRef}
               className="mt-1"
             />
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-gray-500 dark:text-muted-foreground mt-1">
               Formatos aceitos: JPG, PNG, GIF. Tamanho máximo: 5MB. 
               <br />
               As imagens serão convertidas para WebP e redimensionadas para 300x300px.
@@ -220,8 +220,8 @@ export function ProfilePictureUpload({ user, onUpdate, onError }: ProfilePicture
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <p className="text-sm font-medium text-gray-900">Pré-visualização</p>
-                  <p className="text-xs text-gray-600">Esta será sua nova foto de perfil</p>
+                  <p className="text-sm font-medium text-gray-900 dark:text-foreground">Pré-visualização</p>
+                  <p className="text-xs text-gray-600 dark:text-muted-foreground">Esta será sua nova foto de perfil</p>
                 </div>
               </div>
               
@@ -233,7 +233,7 @@ export function ProfilePictureUpload({ user, onUpdate, onError }: ProfilePicture
                 >
                   {uploading ? (
                     <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2 /* dark-mode:ok (sobre overlay escuro) */"></div>
                       Enviando...
                     </>
                   ) : (
@@ -270,7 +270,7 @@ export function ProfilePictureUpload({ user, onUpdate, onError }: ProfilePicture
             >
               {uploading ? (
                 <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-2"></div>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 dark:border-border mr-2"></div>
                   Removendo...
                 </>
               ) : (
@@ -292,9 +292,9 @@ export function ProfilePictureUpload({ user, onUpdate, onError }: ProfilePicture
         )}
 
         {success && (
-          <Alert className="border-green-200 bg-green-50">
-            <CheckCircle className="h-4 w-4 text-green-600" />
-            <AlertDescription className="text-green-800">{success}</AlertDescription>
+          <Alert className="border-green-200 dark:border-success/25 bg-green-50 dark:bg-success/10">
+            <CheckCircle className="h-4 w-4 text-green-600 dark:text-success" />
+            <AlertDescription className="text-green-800 dark:text-green-300">{success}</AlertDescription>
           </Alert>
         )}
       </CardContent>

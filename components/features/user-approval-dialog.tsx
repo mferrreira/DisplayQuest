@@ -198,7 +198,7 @@ export function UserApprovalDialog({ user, open, onOpenChange, onApproved }: Use
                     Solicitou acesso em {new Date(user.createdAt).toLocaleDateString('pt-BR')}
                   </p>
                 </div>
-                <Badge variant="outline" className="bg-yellow-100 text-yellow-800">
+                <Badge variant="outline" className="bg-yellow-100 dark:bg-warning/15 text-yellow-800 dark:text-yellow-300">
                   Pendente
                 </Badge>
               </div>
@@ -237,8 +237,8 @@ export function UserApprovalDialog({ user, open, onOpenChange, onApproved }: Use
                 ))}
               </div>
               {selectedRoles.length > 0 && (
-                <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                  <p className="text-sm font-medium text-blue-900 mb-2">Funções selecionadas:</p>
+                <div className="mt-4 p-3 bg-blue-50 dark:bg-info/10 rounded-lg">
+                  <p className="text-sm font-medium text-blue-900 dark:text-blue-300 mb-2">Funções selecionadas:</p>
                   <div className="flex flex-wrap gap-2">
                     {selectedRoles.map((role) => {
                       const roleInfo = availableRoles.find(r => r.value === role)
@@ -319,11 +319,11 @@ export function UserApprovalDialog({ user, open, onOpenChange, onApproved }: Use
           </Card>
 
           {/* Aviso de Confirmação */}
-          <div className="flex items-start gap-3 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
+          <div className="flex items-start gap-3 p-4 bg-yellow-50 dark:bg-warning/10 border border-yellow-200 dark:border-warning/25 rounded-lg">
+            <AlertTriangle className="h-5 w-5 text-yellow-600 dark:text-warning mt-0.5" />
             <div>
-              <p className="font-medium text-yellow-900">Confirmação necessária</p>
-              <p className="text-sm text-yellow-800">
+              <p className="font-medium text-yellow-900 dark:text-yellow-300">Confirmação necessária</p>
+              <p className="text-sm text-yellow-800 dark:text-yellow-300">
                 Após aprovar, o usuário receberá acesso ao sistema com as configurações definidas. 
                 Esta ação não pode ser desfeita facilmente.
               </p>

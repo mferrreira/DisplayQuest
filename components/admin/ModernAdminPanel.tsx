@@ -337,8 +337,8 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
                       return (
                         <div key={session.id} className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
-                              <span className="text-sm font-medium text-green-600">
+                            <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-success/15 flex items-center justify-center">
+                              <span className="text-sm font-medium text-green-600 dark:text-success">
                                 {user.name.split(' ').map((n: string) => n[0]).join('')}
                               </span>
                             </div>
@@ -350,7 +350,7 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
                             </div>
                           </div>
                           <div className="text-right">
-                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                            <Badge variant="outline" className="bg-green-50 dark:bg-success/10 text-green-700 dark:text-green-300 border-green-200 dark:border-success/25">
                               {user.roles?.[0] || 'Usuário'}
                             </Badge>
                             <p className="text-xs text-muted-foreground mt-1">
@@ -396,8 +396,8 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
                           <span>Progresso</span>
                           <span>75%</span>
                         </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div className="bg-blue-600 h-2 rounded-full" style={{ width: '75%' }}></div>
+                        <div className="w-full bg-gray-200 dark:bg-muted/60 rounded-full h-2">
+                          <div className="bg-blue-600 dark:bg-info h-2 rounded-full" style={{ width: '75%' }}></div>
                         </div>
                       </div>
                     </div>
@@ -443,7 +443,7 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
                   <div className="flex flex-col sm:flex-row gap-4">
                     <div className="flex-1">
                       <div className="relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-muted-foreground/70 h-4 w-4" />
                         <Input
                           placeholder="Buscar usuários..."
                           value={searchTerm}
@@ -510,8 +510,8 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
                       .map((user) => (
                         <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg">
                           <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                              <span className="text-sm font-medium text-blue-600">
+                            <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-info/15 flex items-center justify-center">
+                              <span className="text-sm font-medium text-blue-600 dark:text-info">
                                 {user.name.split(' ').map((n: string) => n[0]).join('')}
                               </span>
                             </div>
@@ -694,7 +694,7 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  className="text-green-700 border-green-300 hover:bg-green-50 gap-1"
+                                  className="text-green-700 dark:text-green-300 border-green-300 dark:border-success/40 hover:bg-green-50 dark:bg-success/10 gap-1"
                                   disabled={isLoading}
                                   onClick={async () => {
                                     if (inFlightTaskIds.current.has(task.id)) return
@@ -716,7 +716,7 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  className="text-red-700 border-red-300 hover:bg-red-50 gap-1"
+                                  className="text-red-700 dark:text-red-300 border-red-300 dark:border-destructive/40 hover:bg-red-50 dark:bg-destructive/10 gap-1"
                                   disabled={isLoading}
                                   onClick={async () => {
                                     if (inFlightTaskIds.current.has(task.id)) return
@@ -783,9 +783,9 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
                               {task.completedCount}/{task.audienceSize} concluíram
                             </Badge>
                           </div>
-                          <div className="w-full bg-gray-200 rounded-full h-1.5">
+                          <div className="w-full bg-gray-200 dark:bg-muted/60 rounded-full h-1.5">
                             <div
-                              className="bg-green-600 h-1.5 rounded-full"
+                              className="bg-green-600 dark:bg-success h-1.5 rounded-full"
                               style={{ width: `${Math.round(task.completionRate)}%` }}
                             />
                           </div>

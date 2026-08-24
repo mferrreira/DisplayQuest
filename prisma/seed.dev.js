@@ -81,7 +81,7 @@ function main() {
                         { key: 'GERENTE_PROJETO', email: 'gerente_projeto@lab.com', name: 'Gerente de Projeto', weekHours: 40 },
                         { key: 'COLABORADOR', email: 'colaborador@lab.com', name: 'Colaborador', weekHours: 20 },
                     ];
-                    return [4 /*yield*/, bcryptjs_1.default.hash('123', 10)];
+                    return [4 /*yield*/, bcryptjs_1.hash('123', 10)];
                 case 1:
                     password = _2.sent();
                     createdUsers = [];

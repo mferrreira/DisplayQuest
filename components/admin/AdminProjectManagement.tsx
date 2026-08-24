@@ -166,11 +166,11 @@ export function AdminProjectManagement({ projects, users, tasks, sessions, onPro
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active': return 'bg-green-100 text-green-800'
-      case 'completed': return 'bg-blue-100 text-blue-800'
-      case 'paused': return 'bg-yellow-100 text-yellow-800'
-      case 'cancelled': return 'bg-red-100 text-red-800'
-      default: return 'bg-gray-100 text-gray-800'
+      case 'active': return 'bg-green-100 dark:bg-success/15 text-green-800 dark:text-green-300'
+      case 'completed': return 'bg-blue-100 dark:bg-info/15 text-blue-800 dark:text-blue-300'
+      case 'paused': return 'bg-yellow-100 dark:bg-warning/15 text-yellow-800 dark:text-yellow-300'
+      case 'cancelled': return 'bg-red-100 dark:bg-destructive/15 text-red-800 dark:text-red-300'
+      default: return 'bg-gray-100 dark:bg-muted/40 text-gray-800 dark:text-gray-200'
     }
   }
 
@@ -215,7 +215,7 @@ export function AdminProjectManagement({ projects, users, tasks, sessions, onPro
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-muted-foreground/70 h-4 w-4" />
                 <Input
                   placeholder="Buscar projetos..."
                   value={searchTerm}

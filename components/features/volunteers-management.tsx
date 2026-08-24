@@ -179,11 +179,11 @@ export function VolunteersManagement() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'active':
-        return <Badge variant="default" className="bg-green-100 text-green-800">Ativo</Badge>
+        return <Badge variant="default" className="bg-green-100 dark:bg-success/15 text-green-800 dark:text-green-300">Ativo</Badge>
       case 'inactive':
         return <Badge variant="secondary">Inativo</Badge>
       case 'on_leave':
-        return <Badge variant="outline" className="border-yellow-200 text-yellow-800">Afastado</Badge>
+        return <Badge variant="outline" className="border-yellow-200 dark:border-warning/25 text-yellow-800 dark:text-yellow-300">Afastado</Badge>
       default:
         return <Badge variant="secondary">{status}</Badge>
     }
@@ -468,7 +468,7 @@ export function VolunteersManagement() {
                                 projectId={selectedProjectId}
                                 onHoursDeducted={() => loadProjectData(selectedProjectId)}
                               >
-                                <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
+                                <Button variant="outline" size="sm" className="text-red-600 dark:text-red-400 hover:text-red-700 dark:text-red-300">
                                   <Minus className="h-4 w-4" />
                                 </Button>
                               </DeductHoursDialog>

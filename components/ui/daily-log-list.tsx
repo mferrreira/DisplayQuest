@@ -46,8 +46,8 @@ export function DailyLogList({ logs, currentUser, onEdit, onDelete, isSubmitting
 
   if (logs.length === 0) {
     return (
-      <div className="text-center py-8 text-gray-500">
-        <Calendar className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+      <div className="text-center py-8 text-gray-500 dark:text-muted-foreground">
+        <Calendar className="h-12 w-12 mx-auto mb-4 text-gray-300 dark:text-muted-foreground/50" />
         <p>Nenhum registro encontrado.</p>
       </div>
     )
@@ -61,8 +61,8 @@ export function DailyLogList({ logs, currentUser, onEdit, onDelete, isSubmitting
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-2">
-                  <Calendar className="h-4 w-4 text-blue-500" />
-                  <span className="font-medium text-blue-900">
+                  <Calendar className="h-4 w-4 text-blue-500 dark:text-info" />
+                  <span className="font-medium text-blue-900 dark:text-blue-300">
                     {formatDate(log.createdAt || log.date)}
                   </span>
                   <Badge variant="outline" className="text-xs">
@@ -73,7 +73,7 @@ export function DailyLogList({ logs, currentUser, onEdit, onDelete, isSubmitting
                   )}
                 </div>
 
-                <div className="text-gray-700">
+                <div className="text-gray-700 dark:text-gray-300">
                   {log.note && log.note.length > 200 && !expandedLogs.has(log.id) ? (
                     <div>
                       <p className="whitespace-pre-line">
@@ -82,7 +82,7 @@ export function DailyLogList({ logs, currentUser, onEdit, onDelete, isSubmitting
                       <Button
                         variant="link"
                         size="sm"
-                        className="p-0 h-auto text-blue-600"
+                        className="p-0 h-auto text-blue-600 dark:text-info"
                         onClick={() => toggleExpanded(log.id)}
                       >
                         Ler mais
@@ -95,7 +95,7 @@ export function DailyLogList({ logs, currentUser, onEdit, onDelete, isSubmitting
                         <Button
                           variant="link"
                           size="sm"
-                          className="p-0 h-auto text-blue-600"
+                          className="p-0 h-auto text-blue-600 dark:text-info"
                           onClick={() => toggleExpanded(log.id)}
                         >
                           Ler menos
@@ -122,7 +122,7 @@ export function DailyLogList({ logs, currentUser, onEdit, onDelete, isSubmitting
                     size="sm"
                     onClick={() => onDelete(log.id)}
                     disabled={isSubmitting}
-                    className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                    className="h-8 w-8 p-0 text-red-600 dark:text-red-400 hover:text-red-700 dark:text-red-300"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>

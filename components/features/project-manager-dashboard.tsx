@@ -108,15 +108,15 @@ export function ProjectManagerDashboard({ projects, tasks, user }: ProjectManage
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-orange-500" />
+              <AlertCircle className="h-5 w-5 text-orange-500 dark:text-orange-400" />
               Alertas Importantes
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {overdueTasks > 0 && (
-              <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
+              <div className="flex items-center justify-between p-3 bg-orange-50 dark:bg-orange-500/10 rounded-lg">
                 <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-orange-500" />
+                  <Clock className="h-4 w-4 text-orange-500 dark:text-orange-400" />
                   <span className="text-sm font-medium">Tasks Atrasadas</span>
                 </div>
                 <Badge variant="destructive">{overdueTasks}</Badge>
@@ -124,9 +124,9 @@ export function ProjectManagerDashboard({ projects, tasks, user }: ProjectManage
             )}
             
             {inProgressTasks > 0 && (
-              <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+              <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-info/10 rounded-lg">
                 <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-blue-500" />
+                  <Clock className="h-4 w-4 text-blue-500 dark:text-info" />
                   <span className="text-sm font-medium">Em Andamento</span>
                 </div>
                 <Badge variant="secondary">{inProgressTasks}</Badge>
@@ -134,12 +134,12 @@ export function ProjectManagerDashboard({ projects, tasks, user }: ProjectManage
             )}
             
             {completedTasks > 0 && (
-              <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+              <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-success/10 rounded-lg">
                 <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  <CheckCircle2 className="h-4 w-4 text-green-500 dark:text-success" />
                   <span className="text-sm font-medium">Concluídas</span>
                 </div>
-                <Badge variant="default" className="bg-green-100 text-green-800">
+                <Badge variant="default" className="bg-green-100 text-green-800 dark:bg-success/15 dark:text-green-300">
                   {completedTasks}
                 </Badge>
               </div>
@@ -150,7 +150,7 @@ export function ProjectManagerDashboard({ projects, tasks, user }: ProjectManage
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-green-500" />
+              <TrendingUp className="h-5 w-5 text-green-500 dark:text-success" />
               Progresso Geral
             </CardTitle>
           </CardHeader>

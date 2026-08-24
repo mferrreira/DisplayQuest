@@ -104,7 +104,7 @@ export function TaskList({
         <div className="flex flex-col sm:flex-row gap-2">
           {showSearch && (
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-muted-foreground/70" />
               <Input
                 placeholder="Buscar tarefas..."
                 value={searchTerm}
@@ -192,14 +192,14 @@ export function TaskList({
           ))}
         </div>
       ) : (
-        <div className="text-center py-8 text-gray-500">
+        <div className="text-center py-8 text-gray-500 dark:text-muted-foreground">
           <p>{emptyMessage}</p>
         </div>
       )}
 
       {/* Results Count */}
       {filteredAndSortedTasks.length > 0 && (
-        <div className="text-sm text-gray-500 text-center">
+        <div className="text-sm text-gray-500 dark:text-muted-foreground text-center">
           {filteredAndSortedTasks.length} de {tasks.length} tarefa(s)
         </div>
       )}

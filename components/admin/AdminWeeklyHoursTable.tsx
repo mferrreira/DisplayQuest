@@ -9,7 +9,7 @@ interface AdminWeeklyHoursTableProps {
 }
 
 export const AdminWeeklyHoursTable: React.FC<AdminWeeklyHoursTableProps> = ({ users, sessions }) => (
-  <Card className="mb-6 border-blue-200 bg-blue-50">
+  <Card className="mb-6 border-blue-200 bg-blue-50 dark:border-info/25 dark:bg-info/10">
     <UserWeeklyHoursTable users={users} sessions={sessions} />
   </Card>
 ); 

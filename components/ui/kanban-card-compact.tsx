@@ -31,13 +31,13 @@ export function KanbanCardCompact({ task, onEdit, onClick, isOverdue, index }: D
   const getCardStyle = () => {
     if (isPublicTask) {
       return `mb-2 cursor-grab transition-all duration-300 hover:shadow-lg hover:scale-102 ${
-        isOverdue ? "border-red-400 bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/30 dark:to-red-800/20" : 
-        "border-amber-400 bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 dark:from-amber-900/30 dark:via-yellow-900/20 dark:to-orange-900/30"
+        isOverdue ? "border-red-400 bg-gradient-to-br from-red-50 to-red-100 dark:from-red-500/10 dark:to-red-500/5" : 
+        "border-amber-400 dark:border-amber-500/40 bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 dark:from-amber-400/10 dark:via-yellow-300/5 dark:to-orange-400/10"
       } relative overflow-hidden`
     }
     
     return `mb-2 cursor-grab transition-all duration-200 hover:shadow-md hover:scale-101 ${
-      isOverdue ? "border-red-300 bg-gradient-to-br from-red-50 to-red-100 dark:border-red-600 dark:from-red-900/20 dark:to-red-800/10" : 
+      isOverdue ? "border-red-300 bg-gradient-to-br from-red-50 to-red-100 dark:border-red-500/40 dark:from-red-500/10 dark:to-red-500/5" : 
       "border-gray-200 bg-gradient-to-br from-white to-gray-50 dark:border-gray-600 dark:from-gray-800 dark:to-gray-700"
     }`
   }
@@ -62,15 +62,16 @@ export function KanbanCardCompact({ task, onEdit, onClick, isOverdue, index }: D
           >
             {/* Public Task Special Effects */}
             {isPublicTask && (
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-yellow-200/10 to-transparent animate-pulse pointer-events-none" />
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-yellow-200/10 dark:via-yellow-500/10 to-transparent animate-pulse pointer-events-none" />
             )}
             
             <CardContent className="p-3 relative">
               {/* Public Task Crown */}
               {isPublicTask && (
                 <div className="absolute -top-1 -right-1 z-10">
+                   {/* dark-mode:ok (dourado nos 2 temas) */}
                   <div className="bg-gradient-to-r from-yellow-400 to-amber-500 rounded-full p-0.5 shadow-md">
-                    <Crown className="h-3 w-3 text-white" />
+                    <Crown className="h-3 w-3 text-white" /> {/* dark-mode:ok */}
                   </div>
                 </div>
               )}
@@ -104,14 +105,14 @@ export function KanbanCardCompact({ task, onEdit, onClick, isOverdue, index }: D
                   {/* Priority Indicator */}
                   {isHighPriority && (
                     <div className="flex-shrink-0">
-                      <div className="bg-red-500 rounded-full w-2 h-2 animate-pulse" />
+                      <div className="bg-red-500 rounded-full w-2 h-2 animate-pulse" /> {/* dark-mode:ok */}
                     </div>
                   )}
 
                   {/* Overdue Indicator */}
                   {isOverdue && (
                     <div className="flex-shrink-0">
-                      <AlertTriangle className="h-3 w-3 text-red-500" />
+                      <AlertTriangle className="h-3 w-3 text-red-500 dark:text-red-400" />
                     </div>
                   )}
                 </div>
@@ -119,7 +120,7 @@ export function KanbanCardCompact({ task, onEdit, onClick, isOverdue, index }: D
                 {/* Points Badge (if any) */}
                 {task.points > 0 && (
                   <div className="flex-shrink-0 ml-2">
-                    <span className="text-xs font-bold bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-2 py-0.5 rounded-full">
+                    <span className="text-xs font-bold bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-2 py-0.5 rounded-full dark:from-blue-500/20 dark:to-indigo-500/20 dark:text-blue-300">
                       {task.points}pts
                     </span>
                   </div>

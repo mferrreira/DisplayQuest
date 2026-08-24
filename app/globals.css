@@ -39,6 +39,12 @@ body {
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
     --radius: 0.75rem;
+    --success: 160 84% 30%;
+    --success-foreground: 0 0% 100%;
+    --warning: 32 92% 38%;
+    --warning-foreground: 0 0% 100%;
+    --info: 221 83% 45%;
+    --info-foreground: 0 0% 100%;
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
     --sidebar-primary: 240 5.9% 10%;
@@ -49,38 +55,49 @@ body {
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
   .dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 142.1 76.2% 36.3%;
-    --primary-foreground: 355.7 100% 97.3%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
+    /* Neutros com tint azul — escala de elevação (background < card < popover) */
+    --background: 222 15% 8%;
+    --foreground: 210 20% 93%;
+    --card: 222 13% 11%;
+    --card-foreground: 210 20% 93%;
+    --popover: 222 12% 14%;
+    --popover-foreground: 210 20% 93%;
+    /* Azul da família do light (light usa 221 83% 53%) */
+    --primary: 217 91% 50%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 220 10% 17%;
+    --secondary-foreground: 210 15% 90%;
+    --muted: 220 10% 17%;
+    --muted-foreground: 218 11% 65%;
+    --accent: 220 12% 19%;
+    --accent-foreground: 210 15% 92%;
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 142.1 76.2% 36.3%;
-    --chart-1: 142.1 76.2% 36.3%;
-    --chart-2: 217.2 91.2% 59.8%;
-    --chart-3: 47.9 95.8% 53.1%;
-    --chart-4: 262.1 83.3% 57.8%;
-    --chart-5: 0 84.2% 60.2%;
-    --sidebar-background: 240 10% 3.9%;
-    --sidebar-foreground: 0 0% 98%;
-    --sidebar-primary: 142.1 76.2% 36.3%;
-    --sidebar-primary-foreground: 355.7 100% 97.3%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 142.1 76.2% 36.3%;
+    --border: 220 10% 20%;
+    --input: 220 10% 20%;
+    --ring: 217 91% 60%;
+    /* Status */
+    --success: 158 64% 52%;
+    --success-foreground: 160 45% 8%;
+    --warning: 38 92% 56%;
+    --warning-foreground: 30 50% 10%;
+    --info: 213 94% 68%;
+    --info-foreground: 220 45% 9%;
+    /* Charts: hues do dark anterior, clareados p/ fundo escuro */
+    --chart-1: 217 91% 62%;
+    --chart-2: 160 70% 55%;
+    --chart-3: 45 96% 60%;
+    --chart-4: 262 83% 70%;
+    --chart-5: 0 84% 65%;
+    /* Sidebar acompanha a escala */
+    --sidebar-background: 222 15% 7%;
+    --sidebar-foreground: 210 20% 93%;
+    --sidebar-primary: 217 91% 50%;
+    --sidebar-primary-foreground: 210 40% 98%;
+    --sidebar-accent: 220 12% 19%;
+    --sidebar-accent-foreground: 210 15% 92%;
+    --sidebar-border: 220 10% 20%;
+    --sidebar-ring: 217 91% 60%;
   }
 }
 
@@ -97,80 +114,39 @@ body {
   .text-balance {
     text-wrap: balance;
   }
-  
-  /* Smooth transitions for theme changes */
-  * {
-    transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
-  }
-  
+
   /* Modern scrollbar */
   ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
   }
-  
+
   ::-webkit-scrollbar-track {
     background: hsl(var(--muted));
     border-radius: 4px;
   }
-  
+
   ::-webkit-scrollbar-thumb {
     background: hsl(var(--muted-foreground));
     border-radius: 4px;
   }
-  
+
   ::-webkit-scrollbar-thumb:hover {
     background: hsl(var(--foreground));
   }
-  
+
   /* Focus styles */
   .focus-ring {
     @apply focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background;
   }
-  
+
   /* Card hover effects */
   .card-hover {
     @apply transition-all duration-200 hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-white/5;
   }
-  
+
   /* Button hover effects */
   .btn-hover {
     @apply transition-all duration-200 hover:scale-105 active:scale-95;
-  }
-  
-  /* Dark mode specific improvements */
-  .dark {
-    /* Better text contrast */
-    --tw-text-opacity: 1;
-  }
-  
-  .dark * {
-    /* Ensure proper contrast in dark mode */
-    border-color: hsl(var(--border));
-  }
-  
-  /* Dark mode link improvements */
-  .dark a {
-    color: hsl(var(--primary));
-  }
-  
-  .dark a:hover {
-    color: hsl(var(--primary) / 0.8);
-  }
-  
-  /* Dark mode input improvements */
-  .dark input,
-  .dark textarea,
-  .dark select {
-    background-color: hsl(var(--input));
-    border-color: hsl(var(--border));
-    color: hsl(var(--foreground));
-  }
-  
-  .dark input:focus,
-  .dark textarea:focus,
-  .dark select:focus {
-    border-color: hsl(var(--ring));
-    box-shadow: 0 0 0 2px hsl(var(--ring) / 0.2);
   }
 }

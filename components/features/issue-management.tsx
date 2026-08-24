@@ -226,28 +226,28 @@ export function IssueManagement({ className }: IssueManagementProps) {
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center space-x-2">
-                  <AlertCircle className="h-4 w-4 text-red-500" />
+                  <AlertCircle className="h-4 w-4 text-red-500 dark:text-red-400" />
                   <span className="text-sm font-medium">Reclamações Abertas</span>
                 </div>
-                <p className="text-2xl font-bold text-red-600">{openIssues.length}</p>
+                <p className="text-2xl font-bold text-red-600 dark:text-red-400">{openIssues.length}</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center space-x-2">
-                  <User className="h-4 w-4 text-blue-500" />
+                  <User className="h-4 w-4 text-blue-500 dark:text-info" />
                   <span className="text-sm font-medium">Atribuídas a Mim</span>
                 </div>
-                <p className="text-2xl font-bold text-blue-600">{myAssignedIssues.length}</p>
+                <p className="text-2xl font-bold text-blue-600 dark:text-info">{myAssignedIssues.length}</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center space-x-2">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <CheckCircle className="h-4 w-4 text-green-500 dark:text-success" />
                   <span className="text-sm font-medium">Total</span>
                 </div>
-                <p className="text-2xl font-bold text-green-600">{issues.length}</p>
+                <p className="text-2xl font-bold text-green-600 dark:text-success">{issues.length}</p>
               </CardContent>
             </Card>
           </div>

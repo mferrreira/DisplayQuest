@@ -182,8 +182,8 @@ export function CreateUserDialog({ open, onOpenChange, onCreated }: CreateUserDi
                 ))}
               </div>
               {selectedRoles.length > 0 && (
-                <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                  <p className="text-sm font-medium text-blue-900 mb-2">Funções selecionadas:</p>
+                <div className="mt-4 p-3 bg-blue-50 dark:bg-info/10 rounded-lg">
+                  <p className="text-sm font-medium text-blue-900 dark:text-blue-300 mb-2">Funções selecionadas:</p>
                   <div className="flex flex-wrap gap-2">
                     {selectedRoles.map((role) => {
                       const roleInfo = availableRoles.find(r => r.value === role)

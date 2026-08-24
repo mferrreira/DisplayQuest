@@ -60,7 +60,7 @@ export function LabResponsibilityStatus() {
         {activeResponsibility ? (
           <div className="flex flex-col">
             <div className="flex items-center justify-between mb-3">
-              <Badge variant="default" className="bg-green-500">
+              <Badge variant="default" className="bg-green-500 dark:bg-success">
                 Laboratório em uso
               </Badge>
               <span className="text-sm text-muted-foreground">
