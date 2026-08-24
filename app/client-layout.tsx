@@ -8,6 +8,7 @@ import { WorkSessionsProvider } from "@/contexts/work-sessions-context"
 import { SessionProvider } from "next-auth/react"
 import { AppHeader } from "@/components/layout/app-header"
 import { FloatingSessionTimer } from "@/components/ui/floating-session-timer"
+import { QueryProvider } from "@/shared/providers/query-provider"
 import { usePathname } from "next/navigation"
 import type { Session } from "next-auth"
 
@@ -56,7 +57,9 @@ export default function ClientLayout({
   return (
     <SessionProvider session={session} refetchOnWindowFocus={false} refetchInterval={0}>
       <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
-        <LayoutContent>{children}</LayoutContent>
+        <QueryProvider>
+          <LayoutContent>{children}</LayoutContent>
+        </QueryProvider>
       </ThemeProvider>
     </SessionProvider>
   )
