@@ -27,8 +27,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { toast } from "@/components/ui/use-toast"
-import { ToastAction } from "@/components/ui/toast"
-import { Toaster } from "@/components/ui/toaster"
 import { PurchaseApproval } from "@/components/ui/purchase-approval"
 import type { Reward, Purchase } from "@/contexts/types"
 import { hasAccess } from "@/lib/utils/utils"
@@ -105,7 +103,7 @@ export default function StorePage() {
         toast({
           title: "Compra realizada com sucesso!",
           description: `Você adquiriu "${selectedReward.name}" por ${selectedReward.price} pontos.`,
-          action: <ToastAction altText="Ver minhas compras">Ver compras</ToastAction>,
+          action: "Ver compras",
         })
       } else {
         toast({
@@ -486,8 +484,6 @@ export default function StorePage() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-
-        <Toaster />
       </main>
     </div>
   )

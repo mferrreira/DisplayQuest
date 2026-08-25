@@ -4,10 +4,6 @@
 /* Class-based dark mode (was darkMode:["class"] in tailwind.config.ts) */
 @custom-variant dark (&:is(.dark *));
 
-body {
-  font-family: Arial, Helvetica, sans-serif;
-}
-
 @layer utilities {
   .text-balance {
     text-wrap: balance;
@@ -109,6 +105,10 @@ body {
  * Values are EXACTLY the user's landed tokens (ADR-005) — no palette changes.
  */
 @theme inline {
+  /* Fonts (ADR-006): Inter applied via next/font on <body>; mono exposed for timers/ids. */
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
+
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
   --color-card: hsl(var(--card));

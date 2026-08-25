@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { Inter } from "next/font/google"
+import { Inter, JetBrains_Mono } from "next/font/google"
 import "./globals.css"
 import ClientLayout from "./client-layout"
 import { initCronService } from "@/lib/services/init-cron"
@@ -11,7 +11,9 @@ if (typeof window === 'undefined') {
   initCronService()
 }
 
-const inter = Inter({ subsets: ["latin"] })
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
+// ADR-006: mono for timers/ids; consumed via `font-mono` utility (@theme bridge in globals.css).
+const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-jetbrains-mono" })
 
 export const metadata: Metadata = {
   title: "Sistema de Gerenciamento de Tarefas",
@@ -28,7 +30,7 @@ export default async function RootLayout({
 
   return (
     <html lang="pt-BR" suppressHydrationWarning>
-      <body className={inter.className}>
+      <body className={`${inter.variable} ${jetbrainsMono.variable} font-sans`}>
         <ClientLayout session={session}>{children}</ClientLayout>
       </body>
     </html>

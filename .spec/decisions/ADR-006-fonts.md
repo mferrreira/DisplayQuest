@@ -1,25 +1,23 @@
-# ADR-006 · Self-hosted variable fonts (Inter + JetBrains Mono) via @fontsource
+# ADR-006 · Fonts — CORRECTED during execution (T1.1 discovery)
 
-**Status**: Accepted · **Date**: 2026-08-24
+**Status**: Accepted (amended 2026-08-24, same day) · **Supersedes**: original @fontsource proposal
 
-## Context
-Discovery D-10: `app/globals.css` sets `body { font-family: Arial, Helvetica, sans-serif }` while
-`.spec/design-system.md` declares Inter (sans) and JetBrains Mono (timers/code/ids). The runtime font
-contradicts the documented design system, and mono has no runtime source at all despite timers/IDs
-being core UI (floating session timer, kanban ids).
+## Correction
+Original premise (D-10) said runtime font was Arial. Reading `app/layout.tsx` during T1.1 shows the
+root layout ALREADY applies `next/font/google` Inter to `<body className={inter.className}>`; the class
+selector beats globals.css' `body { font-family: Arial }` element rule. Runtime = build-time
+self-hosted Inter, and the CP-0 pixel-identical baseline was captured WITH it.
 
-Options: (a) keep system stack and amend the spec; (b) `next/font/google` (downloads at build);
-(c) self-hosted packages via @fontsource (bundled at install).
-
-## Decision
-Install `@fontsource-variable/inter` and a JetBrains Mono package, import in the root layout, and set
-`--font-sans` / `--font-mono` in `globals.css` `@theme`. NOT next/font/google: the production image is
-`output: standalone` and builds may run without network access; bundled fonts are offline-safe.
+## Decision (revised)
+1. KEEP `next/font/google` Inter as-is — switching sources would shift metrics against the visual
+   baseline for zero benefit.
+2. Add `JetBrains_Mono` via `next/font/google` in root layout; expose `--font-mono` token in
+   `@theme` for timers/ids (E3 consumes).
+3. Delete the dead `body { font-family: Arial }` rule from globals.css in the same commit
+   (zero visual risk — overridden declaration) so nobody is misled again.
+4. Offline-Docker concern resolved empirically: builds already download Google fonts successfully;
+   revisit ONLY if a build environment proves airgapped.
 
 ## Consequences
-- Small bundle increase (~100–300KB variable fonts, subsetted latin).
-- T1.6 lands this AFTER the CP-1 visual baseline capture? No — fonts change text metrics everywhere.
-  Landing order: T1.6 happens BEFORE baseline recapture at CP-1 so the new baseline includes the final
-  typography. Any screenshot diff at CP-1 must be explained by (a) route-group chrome changes or
-  (b) font swap — nothing else.
-- Future palette/typography tweaks happen as tokens-only commits.
+- T1.6 scope shrinks to: mono token + dead-rule removal (+ optional metadata generator cleanup).
+- Baseline continuity preserved through CP-1.

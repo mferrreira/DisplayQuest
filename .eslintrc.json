@@ -3,11 +3,11 @@
   "overrides": [
     {
       "files": [
-        "app/dashboard/laboratorio/page.tsx",
-        "app/dashboard/loja/gerenciar/page.tsx",
-        "app/dashboard/loja/page.tsx",
-        "components/features/user-approval.tsx",
-        "components/features/volunteer-actions.tsx"
+        "**/laboratorio/page.tsx",
+        "**/loja/gerenciar/page.tsx",
+        "**/loja/page.tsx",
+        "**/user-approval.tsx",
+        "**/volunteer-actions.tsx"
       ],
       "rules": {
         "react-hooks/rules-of-hooks": "warn",
