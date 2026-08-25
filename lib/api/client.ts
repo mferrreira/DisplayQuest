@@ -51,7 +51,11 @@ export async function apiFetch<S extends z.ZodTypeAny>({
 }: ApiRequest<S>): Promise<z.output<S>> {
   const isFormData = typeof FormData !== "undefined" && body instanceof FormData;
 
-  const response = await fetch(path, {
+  // Resolve against the document origin when one exists (browser/jsdom). Node's fetch cannot
+  // parse relative URLs, which broke MSW-backed component tests (E2/T2.7).
+  const origin =
+    typeof window !== "undefined" && window.location?.origin ? window.location.origin : "";
+  const response = await fetch(`${origin}${path}`, {
     method,
     signal,
     headers: isFormData || body === undefined ? undefined : { "Content-Type": "application/json" },

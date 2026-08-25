@@ -75,3 +75,11 @@
   header/detail-dialog); task-dialog+backlog-dialog retained (project-detail-dialog consumers → E4).
 - D-18 found+fixed (wire normalization); NuqsAdapter mounted (was missing — caught by new error.tsx).
 - Gates: tsc clean, vitest 29/29, shell e2e 5/5, visual review of new board (screenshot OK).
+
+## 2026-08-25 · E2/T2.7 (part) ✅
+- TaskBoard component tests (MSW-backed): column distribution + archive section, filtered-empty
+  round-trip, non-leader done-block rule through real menu UI (store assertion: no mutation).
+- INFRA FIX: tests/setup.ts now starts MSW node server (was never listening — component fetches
+  leaked to the docker container and 401'd); lib/api/client.ts resolves fetch against
+  window.location.origin (Node fetch cannot parse relative URLs).
+- vitest 32/32; shell e2e 5/5; tsc clean.
