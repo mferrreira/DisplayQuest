@@ -94,3 +94,8 @@ Lesson: T0.5's "capture real shape" must include METHOD, not just envelope.
 ## D-16 · 2026-08-25 (CP-1) · register page used window.alert for success
 Replaced with sonner toast during T1.5 (constitution A3). Legacy alert()/confirm() sweep
 continues per-domain (laboratorio :274/:297 in E5, task-dialog :83 in E2).
+
+## D-17 · 2026-08-25 (E2/T2.2) · entities/task priority enum missed 'urgent'
+backend/models/Task.ts TaskPriority = low|medium|high|urgent; entity enum had only low|medium|high.
+A single 'urgent' row would fail list parse (zod) and break the whole board. Fixed in entities;
+round-trip test had not caught it (no urgent rows in dev DB).

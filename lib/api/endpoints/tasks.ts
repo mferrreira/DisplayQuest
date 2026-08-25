@@ -12,15 +12,17 @@ const progressResponse = z.object({ progress: z.array(taskUserProgressSchema) })
 const deleteResponse = z.object({ success: z.boolean() });
 
 /** Client-side filter params (nuqs-backed in E2); the server filters by session actor. */
-export interface TaskFilters {
+/** Client-side filter params (nuqs-backed in E2); the server filters by session actor.
+ *  Intersects QueryParams so it flows straight into qs(). */
+export type TaskFilters = QueryParams & {
   projectId?: number;
   overdue?: boolean;
   search?: string;
-}
+};
 
 export const tasksApi = {
   /** GET /api/tasks — actor-scoped server-side; query params are convenience only. */
-  list(params: QueryParams = {}, signal?: AbortSignal): Promise<Task[]> {
+  list(params: TaskFilters = {}, signal?: AbortSignal): Promise<Task[]> {
     return apiFetch({
       path: `/api/tasks${qs(params)}`,
       schema: taskListResponse,

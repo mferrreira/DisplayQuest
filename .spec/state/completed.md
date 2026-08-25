@@ -50,3 +50,15 @@
 - Gates: verify.sh GREEN; shell.spec 5/5 (incl. axe login + axe dashboard-header); vitest 15/15.
 - baseline-e1 captured (64 imgs, :3001) — visual review: header/nav/points/dark/mobile OK.
   Legacy board observations → E2 (action row overflows 320px; saturated column headers; D-15 items).
+
+## 2026-08-25 · E2 foundation (T2.1–T2.3) ✅
+- T2.1 .spec/specs/task-board.feature.md — full spec: permission matrix (gateway line-cited),
+  lifecycle × visibility, per-user progress on public tasks, penalty mirror, drag rules,
+  state grid, D-15 a11y obligations as AC, responsive fixes (320px overflow), test scenarios.
+- T2.2 MSW task handlers from route source (list w/ projectId quirk, create/backlog, complete
+  status semantics :401, approve/reject in-review guard + FIX line, delete) + board fixture
+  factory (visibility×status×overdue×archive matrix) + in-memory store helpers.
+- T2.3 features/tasks: useTasks/useTaskMutations (snapshot rollback onMutate/onError,
+  invalidation: tasks.all+users.all+notifications.all), pure move-rules (resolveMove,
+  optimisticStatusFor, archive, overdue, penalty, backlog parser) + 14 unit tests.
+- D-17: entities priority enum missed 'urgent' (backend Task.ts declares it) — fixed.

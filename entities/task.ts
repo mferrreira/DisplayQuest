@@ -12,7 +12,12 @@ import { dateTimeString, nullableDateTimeString } from "./user";
 export const taskStatusSchema = z.enum(["to-do", "in-progress", "in-review", "adjust", "done"]);
 export type TaskStatus = z.infer<typeof taskStatusSchema>;
 
-export const taskPrioritySchema = z.enum(["low", "medium", "high"]);
+/**
+ * D-17: backend models/Task.ts declares 'low'|'medium'|'high'|'urgent' — the gateway does not
+ * narrow it, so 'urgent' can reach the wire. Omitting it here would fail zod parse for the
+ * ENTIRE list. UI renders URGENTE badge (kanban parity).
+ */
+export const taskPrioritySchema = z.enum(["low", "medium", "high", "urgent"]);
 export type TaskPriority = z.infer<typeof taskPrioritySchema>;
 
 export const taskVisibilitySchema = z.enum(["public", "delegated", "private"]);
