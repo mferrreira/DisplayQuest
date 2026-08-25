@@ -239,6 +239,7 @@ export function TaskBoard() {
                   status={column.id}
                   tasks={boardTasks.filter((task) => task.status === column.id)}
                   canAddTask={canCreateTasks}
+                  isCompact={compactaParam === "compacta"}
                   onAddTask={openCreate}
                   onEdit={openEdit}
                   onOpenDetail={openDetail}

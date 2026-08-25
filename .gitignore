@@ -153,3 +153,11 @@ tests/e2e/__screenshots__/
 # Playwright artifacts
 test-results/
 playwright-report/
+
+# Internal engineering files — methodology, specs, tests, design system docs
+# These are local-only development artifacts; never push to origin.
+.spec/
+tests/
+AGENTS.md
+scripts/capture-visual-baseline.mjs
+scripts/compare-visual-baseline.mjs

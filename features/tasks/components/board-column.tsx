@@ -29,12 +29,13 @@ export interface BoardColumnProps {
   status: TaskStatus
   tasks: Task[]
   canAddTask: boolean
+  isCompact?: boolean
   onAddTask: () => void
   onEdit: (task: Task) => void
   onOpenDetail: (task: Task) => void
 }
 
-export function BoardColumn({ status, tasks, canAddTask, onAddTask, onEdit, onOpenDetail }: BoardColumnProps) {
+export function BoardColumn({ status, tasks, canAddTask, isCompact, onAddTask, onEdit, onOpenDetail }: BoardColumnProps) {
   const style = COLUMN_STYLES[status]
   const title = COLUMN_TITLES[status]
 
@@ -88,6 +89,7 @@ export function BoardColumn({ status, tasks, canAddTask, onAddTask, onEdit, onOp
                     task.status !== "done" &&
                     new Date(task.dueDate as string).getTime() < Date.now()
                   }
+                  isCompact={isCompact}
                   onEdit={onEdit}
                   onOpenDetail={onOpenDetail}
                 />

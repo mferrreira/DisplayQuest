@@ -113,11 +113,12 @@ export interface TaskCardProps {
   task: Task
   index: number
   isOverdue: boolean
+  isCompact?: boolean
   onEdit: (task: Task) => void
   onOpenDetail: (task: Task) => void
 }
 
-export function TaskCard({ task, index, isOverdue, onEdit, onOpenDetail }: TaskCardProps) {
+export function TaskCard({ task, index, isOverdue, isCompact, onEdit, onOpenDetail }: TaskCardProps) {
   const { user } = useAuth()
   const { data: projects = [] } = useProjects()
   const { data: users = [] } = useUsers()
@@ -234,7 +235,7 @@ export function TaskCard({ task, index, isOverdue, onEdit, onOpenDetail }: TaskC
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-200/20 dark:via-blue-500/10 to-transparent animate-pulse pointer-events-none" />
               )}
 
-              <CardContent className="relative p-4">
+              <CardContent className={`relative ${isCompact ? "p-2 pl-5" : "p-4"}`}>
                 {/* DnD grip — the ONLY drag handle; separate from buttons (no nested-interactive) */}
                 <button
                   type="button"
@@ -245,7 +246,7 @@ export function TaskCard({ task, index, isOverdue, onEdit, onOpenDetail }: TaskC
                   <GripVertical className="h-4 w-4" aria-hidden="true" />
                 </button>
 
-                {isPublicTask && (
+                {isPublicTask && !isCompact && (
                   <div className="absolute -top-2 right-6 z-10">
                     <div className="rounded-full bg-gradient-to-r from-yellow-400 to-amber-500 p-1 shadow-lg">
                       <Crown className="h-4 w-4 text-white" aria-hidden="true" />
@@ -253,161 +254,205 @@ export function TaskCard({ task, index, isOverdue, onEdit, onOpenDetail }: TaskC
                   </div>
                 )}
 
-                <div className="mb-3 flex items-start justify-between gap-2 pl-4">
+                <div className={`flex items-center gap-2 ${isCompact ? "" : "mb-3 items-start justify-between gap-2 pl-4"}`}>
                   <button
                     type="button"
-                    className="flex-1 text-left"
+                    className={isCompact ? "flex-1 text-left" : "flex-1 text-left"}
                     onClick={() => onOpenDetail(task)}
                     aria-label={`Ver detalhes de ${task.title}`}
                   >
-                    <h3 className="line-clamp-2 flex-1 pr-1 text-sm font-bold text-gray-900 dark:text-gray-100">
+                    <h3 className={`${isCompact ? "line-clamp-1 text-xs font-semibold" : "line-clamp-2 text-sm font-bold"} flex-1 pr-1 text-gray-900 dark:text-gray-100`}>
                       {task.title}
-                      {isPublicTask && <span className="ml-1">⚡</span>}
-                      {isGlobalTask && <span className="ml-1">🌍</span>}
+                      {isPublicTask && !isCompact && <span className="ml-1">⚡</span>}
+                      {isGlobalTask && !isCompact && <span className="ml-1">🌍</span>}
                     </h3>
                   </button>
 
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 shrink-0 p-0"
-                        aria-label={`Ações para ${task.title}`}
-                      >
-                        <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                      <DropdownMenuLabel>Mover para</DropdownMenuLabel>
-                      {BOARD_COLUMNS.filter((c) => c.id !== task.status).map((column) => (
-                        <DropdownMenuItem key={column.id} onSelect={() => handleMove(column.id)}>
-                          <ArrowRight className="mr-2 h-4 w-4" aria-hidden="true" />
-                          {column.title}
-                        </DropdownMenuItem>
-                      ))}
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onSelect={() => onOpenDetail(task)}>
-                        <Eye className="mr-2 h-4 w-4" aria-hidden="true" />
-                        Ver detalhes
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onSelect={() => onEdit(task)}>
-                        <Pencil className="mr-2 h-4 w-4" aria-hidden="true" />
-                        Editar
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-
-                {task.description && (
-                  <p className="mb-3 line-clamp-2 text-xs text-gray-600 dark:text-gray-400">
-                    {task.description}
-                  </p>
-                )}
-
-                <div className="mb-3">
-                  <div className="mb-1 flex justify-between text-xs text-muted-foreground">
-                    <span>Progresso</span>
-                    <span>{STATUS_PROGRESS[task.status]}%</span>
-                  </div>
-                  <Progress
-                    value={STATUS_PROGRESS[task.status]}
-                    className="h-2"
-                    aria-label={`Progresso de ${task.title}: ${STATUS_PROGRESS[task.status]}%`}
-                  />
-                </div>
-
-                <div className="mb-3 flex flex-wrap gap-1">
-                  <Badge variant="outline" className={`text-xs font-bold ${priorityBadgeClass(task.priority)}`}>
-                    <Flag className="mr-1 h-3 w-3" aria-hidden="true" />
-                    {PRIORITY_LABEL[task.priority]}
-                  </Badge>
-                  <Badge variant="outline" className={`text-xs font-bold ${statusBadgeClass(task.status)}`}>
-                    {STATUS_LABEL[task.status]}
-                  </Badge>
-                  {isPublicTask && (
-                    <Badge className="animate-pulse bg-gradient-to-r from-yellow-400 to-amber-500 text-xs font-bold text-white dark:from-yellow-500/20 dark:to-amber-500/20 dark:text-yellow-300">
-                      <Users className="mr-1 h-3 w-3" aria-hidden="true" />
-                      PÚBLICA
-                    </Badge>
-                  )}
-                  {isGlobalTask && (
-                    <Badge className="animate-pulse bg-gradient-to-r from-blue-500 to-indigo-500 text-xs font-bold text-white dark:from-blue-500/20 dark:to-indigo-500/20 dark:text-blue-300">
-                      <Zap className="mr-1 h-3 w-3" aria-hidden="true" />
-                      QUEST GLOBAL
-                    </Badge>
-                  )}
-                  {task.points > 0 && (
-                    <Badge className="bg-gradient-to-r from-blue-500 to-indigo-500 text-xs font-bold text-white dark:from-blue-500/20 dark:to-indigo-500/20 dark:text-blue-300">
-                      {isHighPoints && <Star className="mr-1 h-3 w-3" aria-hidden="true" />}
-                      {task.points} pts
-                    </Badge>
-                  )}
-                </div>
-
-                {assigneeIds.length > 0 && (
-                  <div className="mb-3 rounded-md border border-slate-200/70 bg-white/60 px-2 py-1.5 dark:border-slate-700/70 dark:bg-slate-900/30">
-                    <div className="flex items-center gap-1 text-[11px] font-medium text-slate-600 dark:text-slate-300">
-                      <User className="h-3 w-3" aria-hidden="true" />
-                      <span>{assigneeIds.length > 1 ? "Delegados" : "Delegado"}</span>
+                  {isCompact ? (
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      {task.points > 0 && (
+                        <Badge className="bg-gradient-to-r from-blue-500 to-indigo-500 text-[10px] font-bold text-white dark:from-blue-500/20 dark:to-indigo-500/20 dark:text-blue-300">
+                          {task.points} pts
+                        </Badge>
+                      )}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-5 w-5 shrink-0 p-0 opacity-40 hover:opacity-100"
+                            aria-label={`Ações para ${task.title}`}
+                          >
+                            <MoreHorizontal className="h-3 w-3" aria-hidden="true" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                          <DropdownMenuLabel>Mover para</DropdownMenuLabel>
+                          {BOARD_COLUMNS.filter((c) => c.id !== task.status).map((column) => (
+                            <DropdownMenuItem key={column.id} onSelect={() => handleMove(column.id)}>
+                              <ArrowRight className="mr-2 h-4 w-4" aria-hidden="true" />
+                              {column.title}
+                            </DropdownMenuItem>
+                          ))}
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onSelect={() => onOpenDetail(task)}>
+                            <Eye className="mr-2 h-4 w-4" aria-hidden="true" />
+                            Ver detalhes
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onSelect={() => onEdit(task)}>
+                            <Pencil className="mr-2 h-4 w-4" aria-hidden="true" />
+                            Editar
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
-                    <p className="mt-1 line-clamp-2 text-xs text-slate-700 dark:text-slate-200">
-                      {assigneeIds
-                        .map((id) => users.find((u) => u.id === id)?.name ?? `Membro #${id}`)
-                        .slice(0, 3)
-                        .join(", ")}
-                    </p>
-                  </div>
-                )}
-
-                {projectName && (
-                  <p className="mb-2 text-[11px] text-muted-foreground">Projeto: {projectName}</p>
-                )}
-
-                {canApproveReject && (
-                  <div className="mt-3 flex gap-2">
-                    <Button
-                      size="sm"
-                      className="flex-1 bg-green-500 text-xs text-white hover:bg-green-600 dark:bg-success dark:text-success-foreground dark:hover:bg-success/90"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        void handleApprove()
-                      }}
-                    >
-                      <Check className="mr-1 h-3 w-3" aria-hidden="true" />
-                      Aprovar
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      className="flex-1 text-xs"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setRejectOpen(true)
-                      }}
-                    >
-                      <X className="mr-1 h-3 w-3" aria-hidden="true" />
-                      Rejeitar
-                    </Button>
-                  </div>
-                )}
-
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <div className="flex items-center space-x-2">
-                    {task.dueDate && (
-                      <span className="flex items-center">
-                        <Calendar className="mr-1 h-3 w-3" aria-hidden="true" />
-                        {new Date(task.dueDate).toLocaleDateString("pt-BR")}
-                      </span>
-                    )}
-                  </div>
-                  {isOverdue && (
-                    <span className="flex items-center font-bold text-destructive">
-                      <AlertTriangle className="mr-1 h-3 w-3" aria-hidden="true" />
-                      ATRASADA
-                    </span>
+                  ) : (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 shrink-0 p-0"
+                          aria-label={`Ações para ${task.title}`}
+                        >
+                          <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenuLabel>Mover para</DropdownMenuLabel>
+                        {BOARD_COLUMNS.filter((c) => c.id !== task.status).map((column) => (
+                          <DropdownMenuItem key={column.id} onSelect={() => handleMove(column.id)}>
+                            <ArrowRight className="mr-2 h-4 w-4" aria-hidden="true" />
+                            {column.title}
+                          </DropdownMenuItem>
+                        ))}
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onSelect={() => onOpenDetail(task)}>
+                          <Eye className="mr-2 h-4 w-4" aria-hidden="true" />
+                          Ver detalhes
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => onEdit(task)}>
+                          <Pencil className="mr-2 h-4 w-4" aria-hidden="true" />
+                          Editar
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   )}
                 </div>
+
+                {!isCompact && (
+                  <>
+                    {task.description && (
+                      <p className="mb-3 line-clamp-2 pl-4 text-xs text-gray-600 dark:text-gray-400">
+                        {task.description}
+                      </p>
+                    )}
+
+                    <div className="mb-3 pl-4">
+                      <div className="mb-1 flex justify-between text-xs text-muted-foreground">
+                        <span>Progresso</span>
+                        <span>{STATUS_PROGRESS[task.status]}%</span>
+                      </div>
+                      <Progress
+                        value={STATUS_PROGRESS[task.status]}
+                        className="h-2"
+                        aria-label={`Progresso de ${task.title}: ${STATUS_PROGRESS[task.status]}%`}
+                      />
+                    </div>
+
+                    <div className="mb-3 flex flex-wrap gap-1 pl-4">
+                      <Badge variant="outline" className={`text-xs font-bold ${priorityBadgeClass(task.priority)}`}>
+                        <Flag className="mr-1 h-3 w-3" aria-hidden="true" />
+                        {PRIORITY_LABEL[task.priority]}
+                      </Badge>
+                      <Badge variant="outline" className={`text-xs font-bold ${statusBadgeClass(task.status)}`}>
+                        {STATUS_LABEL[task.status]}
+                      </Badge>
+                      {isPublicTask && (
+                        <Badge className="animate-pulse bg-gradient-to-r from-yellow-400 to-amber-500 text-xs font-bold text-white dark:from-yellow-500/20 dark:to-amber-500/20 dark:text-yellow-300">
+                          <Users className="mr-1 h-3 w-3" aria-hidden="true" />
+                          PÚBLICA
+                        </Badge>
+                      )}
+                      {isGlobalTask && (
+                        <Badge className="animate-pulse bg-gradient-to-r from-blue-500 to-indigo-500 text-xs font-bold text-white dark:from-blue-500/20 dark:to-indigo-500/20 dark:text-blue-300">
+                          <Zap className="mr-1 h-3 w-3" aria-hidden="true" />
+                          QUEST GLOBAL
+                        </Badge>
+                      )}
+                      {task.points > 0 && (
+                        <Badge className="bg-gradient-to-r from-blue-500 to-indigo-500 text-xs font-bold text-white dark:from-blue-500/20 dark:to-indigo-500/20 dark:text-blue-300">
+                          {isHighPoints && <Star className="mr-1 h-3 w-3" aria-hidden="true" />}
+                          {task.points} pts
+                        </Badge>
+                      )}
+                    </div>
+
+                    {assigneeIds.length > 0 && (
+                      <div className="mb-3 ml-4 rounded-md border border-slate-200/70 bg-white/60 px-2 py-1.5 dark:border-slate-700/70 dark:bg-slate-900/30">
+                        <div className="flex items-center gap-1 text-[11px] font-medium text-slate-600 dark:text-slate-300">
+                          <User className="h-3 w-3" aria-hidden="true" />
+                          <span>{assigneeIds.length > 1 ? "Delegados" : "Delegado"}</span>
+                        </div>
+                        <p className="mt-1 line-clamp-2 text-xs text-slate-700 dark:text-slate-200">
+                          {assigneeIds
+                            .map((id) => users.find((u) => u.id === id)?.name ?? `Membro #${id}`)
+                            .slice(0, 3)
+                            .join(", ")}
+                        </p>
+                      </div>
+                    )}
+
+                    {projectName && (
+                      <p className="mb-2 ml-4 text-[11px] text-muted-foreground">Projeto: {projectName}</p>
+                    )}
+
+                    {canApproveReject && (
+                      <div className="mt-3 ml-4 flex gap-2">
+                        <Button
+                          size="sm"
+                          className="flex-1 bg-green-500 text-xs text-white hover:bg-green-600 dark:bg-success dark:text-success-foreground dark:hover:bg-success/90"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            void handleApprove()
+                          }}
+                        >
+                          <Check className="mr-1 h-3 w-3" aria-hidden="true" />
+                          Aprovar
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="flex-1 text-xs"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setRejectOpen(true)
+                          }}
+                        >
+                          <X className="mr-1 h-3 w-3" aria-hidden="true" />
+                          Rejeitar
+                        </Button>
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <div className="flex items-center space-x-2">
+                        {task.dueDate && (
+                          <span className="flex items-center">
+                            <Calendar className="mr-1 h-3 w-3" aria-hidden="true" />
+                            {new Date(task.dueDate).toLocaleDateString("pt-BR")}
+                          </span>
+                        )}
+                      </div>
+                      {isOverdue && (
+                        <span className="flex items-center font-bold text-destructive">
+                          <AlertTriangle className="mr-1 h-3 w-3" aria-hidden="true" />
+                          ATRASADA
+                        </span>
+                      )}
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
           </div>

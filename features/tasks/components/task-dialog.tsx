@@ -36,6 +36,7 @@ import { useProjects } from "@/features/projects"
 import { useUsers } from "@/features/users"
 import { useTaskMutations } from "../hooks/use-tasks"
 import type { Task } from "@/entities/task"
+import { listProjectMembers, type ProjectMember } from "@/lib/api/project-members"
 
 const taskFormSchema = z.object({
   title: z.string().min(1, "O título é obrigatório").max(200, "Máximo de 200 caracteres"),
@@ -111,11 +112,35 @@ export function TaskDialog({ open, onOpenChange, task, defaultProjectId }: TaskD
   const selectedProjectId = watch("projectId")
   const assigneeIds = watch("assigneeIds")
 
+  // When a project is selected, fetch its members as assignee candidates.
+  // Falls back to all users when no project is selected.
+  const [projectMembers, setProjectMembers] = useState<ProjectMember[]>([])
+  const [membersLoading, setMembersLoading] = useState(false)
+
+  useEffect(() => {
+    const pid = selectedProjectId ? Number(selectedProjectId) : null
+    if (!pid || !Number.isInteger(pid) || pid <= 0) {
+      setProjectMembers([])
+      return
+    }
+    let cancelled = false
+    setMembersLoading(true)
+    listProjectMembers(pid)
+      .then((members) => { if (!cancelled) setProjectMembers(members) })
+      .catch(() => { if (!cancelled) setProjectMembers([]) })
+      .finally(() => { if (!cancelled) setMembersLoading(false) })
+    return () => { cancelled = true }
+  }, [selectedProjectId])
+
   const memberOptions = useMemo(() => {
-    // Assignees come from the chosen project's membership context when possible; the users
-    // list is the fallback pool (E4 replaces this with the members endpoint).
+    if (projectMembers.length > 0) {
+      // Map project members to a shape compatible with the checkbox list.
+      // ProjectMember has userId + userName + userEmail; we need id + name.
+      return projectMembers.map((m) => ({ id: m.userId, name: m.userName ?? m.userEmail ?? `Membro #${m.userId}` }))
+    }
+    // No project selected or no members — show all users as fallback.
     return users
-  }, [users])
+  }, [projectMembers, users])
 
   const onSubmit = async (values: TaskFormValues) => {
     setServerError("")
