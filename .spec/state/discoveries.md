@@ -99,3 +99,12 @@ continues per-domain (laboratorio :274/:297 in E5, task-dialog :83 in E2).
 backend/models/Task.ts TaskPriority = low|medium|high|urgent; entity enum had only low|medium|high.
 A single 'urgent' row would fail list parse (zod) and break the whole board. Fixed in entities;
 round-trip test had not caught it (no urgent rows in dev DB).
+
+## D-18 · 2026-08-25 (E2/T2.4) · LIVE DB contains legacy task statuses outside the enum
+Rows 36–40: status in {completed, pending, in_progress} — written before the 5-value enum existed.
+Backend passes them through unvalidated (plain String column); legacy board silently DROPPED them
+(columns matched exact status); strict zod rejected the ENTIRE list (board error state).
+Resolution: entities/task.ts gains wireTaskStatus (explicit documented map + console.warn);
+endpoints parse with wireTaskSchema; taskSchema stays STRICT for contract tests. Cleanup UPDATE
+migration proposed in backlog — PENDING USER DECISION. Post-fix: board renders all 9 rows incl.
+the 5 previously-invisible ones. NOTE: initial post-swap e2e failures were THIS, not compile time.

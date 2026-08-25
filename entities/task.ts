@@ -70,3 +70,33 @@ export const taskSchema = z.object({
   isGlobal: z.boolean().default(false),
 });
 export type Task = z.infer<typeof taskSchema>;
+
+/**
+ * D-18 (2026-08-25): the live DB contains rows with LEGACY status values written before the
+ * current enum existed (verified: completed=1, pending=2, in_progress=2 on 2026-08-25).
+ * The backend passes them through unvalidated (tasks.status is a plain String column), so the
+ * wire can carry values outside taskStatusSchema. taskSchema stays STRICT (contract truth,
+ * round-trip tests); the WIRE layer uses this explicit, loud normalization map so the board
+ * keeps working while the cleanup migration is a pending user decision (state/backlog.md).
+ */
+const LEGACY_STATUS_MAP: Record<string, TaskStatus> = {
+  completed: "done",
+  pending: "to-do",
+  in_progress: "in-progress",
+};
+
+export const wireTaskStatus = z
+  .string()
+  .transform((value): TaskStatus => {
+    if ((taskStatusSchema.options as string[]).includes(value)) return value as TaskStatus;
+    const mapped = LEGACY_STATUS_MAP[value];
+    if (mapped) {
+      console.warn(`[entities/task] legacy status "${value}" → "${mapped}" (D-18)`);
+      return mapped;
+    }
+    console.warn(`[entities/task] unknown status "${value}" → "to-do" (D-18)`);
+    return "to-do";
+  });
+
+/** Wire-tolerant task schema used by API endpoints (strict taskSchema remains the contract). */
+export const wireTaskSchema = taskSchema.extend({ status: wireTaskStatus });

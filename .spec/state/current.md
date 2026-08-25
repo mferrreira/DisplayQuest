@@ -14,24 +14,20 @@ Read this file → run Recovery Protocol (`PLAN.md` §23) → executable plan = 
 Legacy fate table = `.spec/migrations/legacy-map.md`.
 
 ## Snapshot
-- phase: **CP-1 REACHED** (E1 Shell & Auth complete) → next: **E2 Tasks/Kanban**, starting T2.1
-  (write `.spec/specs/task-board.feature.md`; MUST encode D-15 a11y obligations 1–4)
-- epic/task in progress: none (between epics)
-- last completed: E1 — T1.1 route groups (eslint basename fix first), T1.2 server guard,
-  T1.3 error boundaries + sonner toast consolidation (17 invisible-toast call sites FIXED),
-  T1.4 nav single source + header refactor (no all-users fetch; session-derived points),
-  T1.4b features/notifications (typed endpoints fixed per D-14: PUT markAsRead contract),
-  T1.5 login/register RHF+Zod (register alert() → sonner), T1.6 fonts (ADR-006 revised:
-  Inter already via next/font; added JetBrains Mono token; dead Arial rule removed),
-  T1.7 rbac contract test
-- tests status: verify.sh GREEN; shell e2e 5/5 (server-guard, login round-trip, board render,
-  axe login, axe dashboard-shell); vitest 15/15 (10 + 5 rbac)
+- phase: **CP-2 (core) REACHED** — new TaskBoard live on /dashboard → next: **T2.7** component
+  tests (board states, dialog validation, move-menu parity via MSW) + E2E drag/approve flows,
+  then CP-2 final commit is already partially landed (see completed.md)
+- epic/task in progress: E2 remaining: T2.7 tests; then E3 Work Sessions (T3.1 spec first)
+- last completed: E2 core — spec, MSW handlers, hooks+move-rules (29 unit tests), board UI
+  swap, legacy kanban chain deleted, D-17 (urgent priority) + D-18 (legacy statuses) fixed
+- tests status: verify.sh GREEN; shell e2e 5/5; vitest 29/29 (incl. 14 move-rule tests)
 - known failures: none open
-- new discoveries: D-13 (NEXTAUTH_SECRET missing in dev .env — masked by port-shared cookies),
-  D-14 (notifications endpoint contract was WRONG in foundation: PATCH→PUT action:markAsRead),
-  D-15 (dashboard a11y inventory → E2 spec obligations)
+- new discoveries: D-13 (NEXTAUTH_SECRET), D-14 (notifications PUT contract), D-15 (a11y
+  inventory → E2 spec), D-16 (register alert), D-17 (urgent priority), D-18 (legacy statuses
+  in live DB — wire normalization landed; cleanup migration PENDING USER DECISION)
 - spec changes: ADR-006 revised; legacy-map updated (notification-context deleted; toast shim)
-- next autonomous action: E2/T2.1 — write task-board.feature.md spec, then T2.2 MSW handlers
+- next autonomous action: E2/T2.7 — component tests (MSW) for board states + dialog validation;
+  then E2E move/approve flows; then E3/T3.1 work-sessions spec
 - blocked: []
 
 ## Checkpoint log

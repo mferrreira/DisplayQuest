@@ -4,10 +4,10 @@
  */
 import { z } from "zod";
 import { apiFetch, qs, type QueryParams } from "@/lib/api/client";
-import { taskSchema, taskUserProgressSchema, type Task } from "@/entities/task";
+import { wireTaskSchema, taskUserProgressSchema, type Task } from "@/entities/task";
 
-const taskListResponse = z.object({ tasks: z.array(taskSchema) });
-const taskResponse = z.object({ task: taskSchema });
+const taskListResponse = z.object({ tasks: z.array(wireTaskSchema) });
+const taskResponse = z.object({ task: wireTaskSchema });
 const progressResponse = z.object({ progress: z.array(taskUserProgressSchema) });
 const deleteResponse = z.object({ success: z.boolean() });
 
@@ -43,7 +43,7 @@ export const tasksApi = {
       path: "/api/tasks",
       method: "POST",
       body: { tasks },
-      schema: z.object({ tasks: z.array(taskSchema), createdCount: z.number().int() }),
+      schema: z.object({ tasks: z.array(wireTaskSchema), createdCount: z.number().int() }),
     });
   },
 

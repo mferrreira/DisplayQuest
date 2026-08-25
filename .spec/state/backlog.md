@@ -9,3 +9,7 @@
 - [ ] B-2 · Visual baseline dir is gitignored (8.7MB). If CI visual regression is adopted later, move baselines to proper artifact storage; regenerate locally via scripts/capture-visual-baseline.mjs.
 - [ ] v2: adopt knip (or depcheck) at E10 for zero-import/unused-dep proof instead of grep heuristics — decide when E10 starts.
 - [ ] v2: `kanban_boards` prisma model has no visible frontend consumer — confirm unused during E2 spec, then note for backend (do NOT change schema this phase).
+- [ ] D-18 DATA CLEANUP — PENDING USER DECISION: live DB has 5 tasks with legacy statuses
+      (completed=1, pending=2, in_progress=2 — ids 36–40, written pre-enum). Frontend wire layer
+      normalizes explicitly (entities/task.ts wireTaskStatus) with console warnings. Propose UPDATE
+      migration to canonical values; do NOT touch data autonomously (same class as purchase rows).

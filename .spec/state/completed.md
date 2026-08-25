@@ -62,3 +62,16 @@
   invalidation: tasks.all+users.all+notifications.all), pure move-rules (resolveMove,
   optimisticStatusFor, archive, overdue, penalty, backlog parser) + 14 unit tests.
 - D-17: entities priority enum missed 'urgent' (backend Task.ts declares it) — fixed.
+
+## 2026-08-25 · CP-2 (core) · E2 TASKS/KANBAN — board swapped ✅
+- T2.4 NEW TaskBoard container (nuqs URL filters projeto/atrasadas/busca/visao, skeleton/error/
+  empty/filtered-empty states, archive section, DnD via resolveMove) + BoardColumn/BoardToolbar
+  (contrast fix D-15.3, 320px wrap fix) + TaskCard (grip handle = only DnD handle; ALL controls
+  labeled; progressbar aria; Move menu = T2.5 keyboard parity; reject prompt()→AlertDialog A3).
+- T2.6 TaskDialog (RHF+Zod, global-quest gating), TaskDetailDialog (FIX blocks, approve/reject/
+  delete w/ AlertDialog), BacklogDialog (parser-based, live count).
+- Seed hooks: features/projects (E4 seed), features/users (E8/E9 seed).
+- T2.8 SWAP: /dashboard renders TaskBoard; legacy kanban chain DELETED (board/column/card/compact/
+  header/detail-dialog); task-dialog+backlog-dialog retained (project-detail-dialog consumers → E4).
+- D-18 found+fixed (wire normalization); NuqsAdapter mounted (was missing — caught by new error.tsx).
+- Gates: tsc clean, vitest 29/29, shell e2e 5/5, visual review of new board (screenshot OK).
