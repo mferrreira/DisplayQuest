@@ -3,22 +3,11 @@
 import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import {
-  ChevronDown,
-  Clock,
-  FileText,
-  FolderKanban,
-  Home,
-  Shield,
-  ShoppingBag,
-  Trophy,
-  User,
-} from "lucide-react"
+import { ChevronDown, Trophy } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
-import { useUser } from "@/contexts/user-context"
 import { MobileMenu } from "@/components/layout/mobile-menu"
 import { ThemeToggle } from "@/components/layout/theme-toggle"
-import { ModernButton } from "@/components/ui/modern-button"
+import { Button } from "@/components/ui/button"
 import { NotificationsPanel } from "@/components/ui/notifications-panel"
 import {
   DropdownMenu,
@@ -29,18 +18,17 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { hasAccess } from "@/lib/utils/utils"
+import {
+  getNavigationGroups,
+  getPrimaryRoleLabel,
+  isNavItemActive,
+  type NavGroupDef,
+  type NavItemDef,
+} from "@/components/layout/nav-config"
 
-type NavItem = {
-  href: string
-  label: string
-  icon: typeof Home
-  visible: boolean
-  active: boolean
-}
+type NavItem = NavItemDef & { active: boolean }
 
-type NavGroup = {
-  label: string
+type NavGroup = Pick<NavGroupDef, "label"> & {
   items: NavItem[]
 }
 
@@ -52,7 +40,7 @@ type GroupedNavMenuProps = {
 }
 
 function GroupedNavMenu({ group, isOpen, onOpen, onClose }: GroupedNavMenuProps) {
-  const visibleItems = group.items.filter((item) => item.visible)
+  const visibleItems = group.items
   const isActive = visibleItems.some((item) => item.active)
 
   if (visibleItems.length === 0) {
@@ -118,87 +106,17 @@ function GroupedNavMenu({ group, isOpen, onOpen, onClose }: GroupedNavMenuProps)
 
 export function AppHeader() {
   const { user, logout } = useAuth()
-  const { users } = useUser()
   const pathname = usePathname()
   const [openGroup, setOpenGroup] = useState<string | null>(null)
   const userRoles = user?.roles ?? []
-  const currentUserData = user ? users.find((registeredUser) => registeredUser.id === user.id) : null
+  // Points come from the session (jwt callback enriches from DB) — no all-users fetch needed.
+  const points = user?.points ?? null
 
-  const projectGroup: NavGroup = {
-    label: "Projetos",
-    items: [
-      {
-        href: "/dashboard",
-        label: "Quadro de Tarefas",
-        icon: Home,
-        visible: true,
-        active: pathname === "/dashboard",
-      },
-      {
-        href: "/dashboard/projetos",
-        label: "Projetos",
-        icon: FolderKanban,
-        visible: hasAccess(userRoles, "VIEW_PROJECT_DASHBOARD"),
-        active: pathname.startsWith("/dashboard/projetos"),
-      },
-    ],
-  }
-
-  const labGroup: NavGroup = {
-    label: "Laboratorio",
-    items: [
-      {
-        href: "/dashboard/laboratorio",
-        label: "Laboratorio",
-        icon: Clock,
-        visible: true,
-        active: pathname.startsWith("/dashboard/laboratorio"),
-      },
-      {
-        href: "/dashboard/weekly-reports",
-        label: "Relatorios Semanais",
-        icon: FileText,
-        visible: hasAccess(userRoles, "DASHBOARD_WEEKLY_REPORTS"),
-        active: pathname.startsWith("/dashboard/weekly-reports"),
-      },
-      {
-        href: "/dashboard/admin",
-        label: "Painel Administrativo",
-        icon: Shield,
-        visible: hasAccess(userRoles, "DASHBOARD_ADMIN"),
-        active: pathname.startsWith("/dashboard/admin"),
-      },
-    ],
-  }
-
-  const personalGroup: NavGroup = {
-    label: "Pessoal",
-    items: [
-      {
-        href: "/dashboard/profile",
-        label: "Perfil",
-        icon: User,
-        visible: true,
-        active: pathname.startsWith("/dashboard/profile"),
-      },
-      {
-        href: "/dashboard/loja",
-        label: "Loja",
-        icon: ShoppingBag,
-        visible: true,
-        active: pathname.startsWith("/dashboard/loja"),
-      },
-      {
-        href: "/dashboard/leaderboard",
-        label: "Ranking",
-        icon: Trophy,
-        visible: true,
-        active: pathname.startsWith("/dashboard/leaderboard"),
-      },
-    ],
-  }
-
-  const navigationGroups = [projectGroup, labGroup, personalGroup]
+  // Single navigation source: components/layout/nav-config.ts
+  const navigationGroups = getNavigationGroups(userRoles).map((group) => ({
+    ...group,
+    items: group.items.map((item) => ({ ...item, active: isNavItemActive(item, pathname) })),
+  }))
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -225,11 +143,11 @@ export function AppHeader() {
 
         <div className="flex items-center justify-end gap-2">
           <div className="hidden items-center gap-2 md:flex">
-            {currentUserData ? (
+            {points !== null ? (
               <div className="flex items-center gap-2 rounded-full border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 px-3 py-1.5 dark:border-emerald-700 dark:from-emerald-900/20 dark:to-teal-900/20">
                 <Trophy className="h-4 w-4 text-amber-500 dark:text-emerald-400" />
                 <span className="bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-sm font-semibold text-transparent dark:from-emerald-400 dark:to-teal-400">
-                  {currentUserData.points}
+                  {points}
                 </span>
               </div>
             ) : null}
@@ -239,7 +157,7 @@ export function AppHeader() {
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <ModernButton variant="outline" size="sm" className="gap-2 rounded-full">
+                <Button variant="outline" size="sm" className="gap-2 rounded-full">
                   <Avatar className="h-6 w-6">
                     <AvatarImage src={user?.avatar || undefined} alt={user?.name || ""} />
                     <AvatarFallback className="text-xs">
@@ -254,27 +172,19 @@ export function AppHeader() {
                     </AvatarFallback>
                   </Avatar>
                   <span className="max-w-32 truncate">{user?.name}</span>
-                </ModernButton>
+                </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>
                   <div className="flex flex-col">
                     <span>{user?.name}</span>
                     <span className="text-xs text-muted-foreground">{user?.email}</span>
-                    <span className="mt-1 text-xs font-normal capitalize">
-                      {userRoles.includes("GERENTE_PROJETO")
-                        ? "Gerente de Projeto"
-                        : userRoles.includes("COORDENADOR")
-                          ? "Coordenador"
-                          : userRoles.includes("LABORATORISTA")
-                            ? "Laboratorista"
-                            : userRoles.includes("VOLUNTARIO")
-                              ? "Voluntario"
-                              : "Usuario"}
+                    <span className="mt-1 text-xs font-normal">
+                      {getPrimaryRoleLabel(userRoles)}
                     </span>
-                    {currentUserData ? (
+                    {points !== null ? (
                       <span className="mt-1 bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-xs font-medium text-transparent dark:from-emerald-400 dark:to-teal-400">
-                        {currentUserData.points} pontos
+                        {points} pontos
                       </span>
                     ) : null}
                   </div>

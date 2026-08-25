@@ -17,10 +17,10 @@ file dies at E10 cleanup if zero imports remain.
 | `contexts/work-sessions-context.tsx` ({data} unwrap defensive Array.isArray) | features/work-sessions | E3 |
 | `contexts/responsibility-context.tsx`, `laboratory-schedule-context.tsx`, `lab-events-context.tsx`, `lab-notices-context.tsx`, `issue-context.tsx` | features/laboratory | E5 |
 | `contexts/weekly-report-context.tsx` (client-fabricated report objects) | features/reports; server aggregation instead | E7 |
-| `contexts/notification-context.tsx` (EMPTY provider passthrough; hook raw fetch) | features/notifications (T1.4b) | E1 |
+| `contexts/notification-context.tsx` | ✅ DELETED at CP-1 — replaced by features/notifications (T1.4b) | E1 done |
 | `contexts/auth-context.tsx` (thin wrapper; EMPTY Provider :16–18) | useSession directly / shared auth helper | E1 |
 | `contexts/types.ts` (577 lines, drifts from Prisma) | Type imports repoint to entities/ domain-by-domain | E2–E9 |
-| `contexts/use-toast.ts` + `components/ui/use-toast.ts` (duplicate) | sonner only | E1 |
+| `contexts/use-toast.ts` + `components/ui/use-toast.ts` | ✅ CP-1: reimplemented as sonner-backed shim (single impl + re-export); radix toast.tsx/toaster.tsx DELETED; shim dies at E10 | E1 partial / E10 |
 | `contexts/use-mobile.tsx` + `components/ui/use-mobile.tsx` (duplicate) | shared/hooks/use-media-query | E10 |
 | `hooks/use-work-sessions.ts` (re-export shim), `use-daily-logs.ts`, `use-project-members.ts` | feature hooks replace; shims deleted with their domain | E3/E4/E5 |
 | `components/ui/modern-button.tsx` (duplicate of button) | delete | E10 |

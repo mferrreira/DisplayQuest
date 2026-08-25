@@ -74,7 +74,7 @@ export function KanbanHeader({
               onProjectChange?.(projectId)
             }}
           >
-            <SelectTrigger className="w-[250px]">
+            <SelectTrigger className="w-[250px]" aria-label="Filtrar tarefas por projeto">
               <SelectValue placeholder="Selecione um projeto" />
             </SelectTrigger>
             <SelectContent>

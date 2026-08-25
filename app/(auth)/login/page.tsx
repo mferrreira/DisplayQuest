@@ -1,39 +1,58 @@
 "use client"
 
-import { useState } from "react"
+/**
+ * Login (E1/T1.5) — RHF+Zod per constitution §2; inline field errors + aria wiring.
+ * Auth errors from the credentials provider surface in the alert above the form.
+ */
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { useState } from "react"
 import { signIn } from "next-auth/react"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { z } from "zod"
+import { AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { AlertCircle } from "lucide-react"
+
+const loginSchema = z.object({
+  email: z.string().min(1, "Informe o email").email("Email inválido"),
+  password: z.string().min(1, "Informe a senha"),
+})
+
+type LoginFormValues = z.infer<typeof loginSchema>
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [error, setError] = useState("")
+  const [authError, setAuthError] = useState("")
   const router = useRouter()
+  const {
+    register: registerField,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: "", password: "" },
+  })
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError("")
+  const onSubmit = async (values: LoginFormValues) => {
+    setAuthError("")
 
     try {
       const result = await signIn("credentials", {
         redirect: false,
-        email: email.toLowerCase(),
-        password,
+        email: values.email.toLowerCase(),
+        password: values.password,
       })
       if (result?.error) {
-        setError(result.error)
+        setAuthError(result.error)
       } else {
         router.push("/dashboard")
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Falha ao fazer login")
+      setAuthError(err instanceof Error ? err.message : "Falha ao fazer login")
     }
   }
 
@@ -45,36 +64,48 @@ export default function LoginPage() {
           <CardDescription>Digite suas credenciais para acessar sua conta</CardDescription>
         </CardHeader>
         <CardContent>
-          {error && (
-            <Alert variant="destructive" className="mb-4">
+          {authError && (
+            <Alert variant="destructive" className="mb-4" role="alert">
               <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
+              <AlertDescription>{authError}</AlertDescription>
             </Alert>
           )}
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
                 placeholder="nome@exemplo.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
+                autoComplete="email"
+                aria-invalid={Boolean(errors.email)}
+                aria-describedby={errors.email ? "email-error" : undefined}
+                {...registerField("email")}
               />
+              {errors.email ? (
+                <p id="email-error" className="text-sm text-destructive">
+                  {errors.email.message}
+                </p>
+              ) : null}
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Senha</Label>
               <Input
                 id="password"
                 type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
+                autoComplete="current-password"
+                aria-invalid={Boolean(errors.password)}
+                aria-describedby={errors.password ? "password-error" : undefined}
+                {...registerField("password")}
               />
+              {errors.password ? (
+                <p id="password-error" className="text-sm text-destructive">
+                  {errors.password.message}
+                </p>
+              ) : null}
             </div>
-            <Button type="submit" className="w-full">
-              Entrar
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? "Entrando..." : "Entrar"}
             </Button>
           </form>
         </CardContent>

@@ -68,3 +68,29 @@ the contract guard that caught D-8.
 Foundation created `lib/api/endpoints/{tasks,projects,users,notifications,work-sessions}.ts` plus a
 stray `lib/api/project-members.ts`. Consolidate into endpoints/projects.ts during E4; no new code may
 import the stray file.
+
+## D-15 · 2026-08-25 (E1/CP-1) · dashboard a11y inventory — obligations for E2 spec
+Axe scan of /dashboard (authenticated) found, all within LEGACY board markup that E2 rebuilds:
+1. [critical button-name] 11 icon-only action buttons on kanban cards (incl. dropdown triggers).
+2. [serious aria-progressbar-name] progressbars without accessible name (6 instances).
+3. [serious color-contrast] "N tarefa(s) atrasada(s)" banner text fails contrast.
+4. [serious nested-interactive] @hello-pangea/dnd draggable role=button contains buttons.
+CP-1 axe gate scoped to SHELL (header + login page). T2.1 (task-board.feature.md) MUST encode
+1–4 as acceptance criteria of the NEW board; T2.5 keyboard alternative must resolve 4 by design.
+
+## D-13 · 2026-08-25 (E1) · NEXTAUTH_SECRET missing from dev environment
+`.env` had ONLY DATABASE_URL. Dev-issued JWE cookies failed server-side verification
+(JWT_SESSION_ERROR → every API 401 "Não autorizado"). Was masked historically because browsers
+share cookies across ports on localhost and the docker prod build (:3000) HAS a secret.
+FIX: NEXTAUTH_SECRET + NEXTAUTH_URL=:3001 appended to .env (gitignored) + .env.example created.
+Any fresh clone MUST set these or login breaks.
+
+## D-14 · 2026-08-25 (E1/T1.4b) · foundation notifications endpoint had WRONG contract
+lib/api/endpoints/notifications.ts assumed PATCH {read:true}; the route only implements
+PUT {action:"markAsRead"} ([id]/route.ts:14, PATCH absent → 400). Also ?count=true →
+{success,count} and DELETE were undocumented. Endpoint file rewritten from route source.
+Lesson: T0.5's "capture real shape" must include METHOD, not just envelope.
+
+## D-16 · 2026-08-25 (CP-1) · register page used window.alert for success
+Replaced with sonner toast during T1.5 (constitution A3). Legacy alert()/confirm() sweep
+continues per-domain (laboratorio :274/:297 in E5, task-dialog :83 in E2).

@@ -3,47 +3,26 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import {
-  Clock,
-  FileText,
-  FolderKanban,
-  Home,
-  LogOut,
-  Menu,
-  Shield,
-  ShoppingBag,
-  Trophy,
-  User,
-} from "lucide-react"
+import { LogOut, Menu, Trophy } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
-import { useUser } from "@/contexts/user-context"
 import { ThemeToggle } from "@/components/layout/theme-toggle"
+import {
+  getNavigationGroups,
+  getPrimaryRoleLabel,
+  isNavItemActive,
+} from "@/components/layout/nav-config"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
-import { hasAccess } from "@/lib/utils/utils"
-
-type MobileNavItem = {
-  href: string
-  label: string
-  icon: typeof Home
-  visible: boolean
-  active: boolean
-}
-
-type MobileNavGroup = {
-  label: string
-  items: MobileNavItem[]
-}
 
 export function MobileMenu() {
   const { user, logout } = useAuth()
-  const { users } = useUser()
   const pathname = usePathname()
   const [isOpen, setIsOpen] = useState(false)
   const userRoles = user?.roles ?? []
-  const currentUserData = user ? users.find((registeredUser) => registeredUser.id === user.id) : null
+  // Points come from the session (jwt callback enriches from DB) — no all-users fetch needed.
+  const points = user?.points ?? null
 
   useEffect(() => {
     const handleRouteChange = () => setIsOpen(false)
@@ -56,79 +35,11 @@ export function MobileMenu() {
     setIsOpen(false)
   }
 
-  const navigationGroups: MobileNavGroup[] = [
-    {
-      label: "Projetos",
-      items: [
-        {
-          href: "/dashboard",
-          label: "Quadro de Tarefas",
-          icon: Home,
-          visible: true,
-          active: pathname === "/dashboard",
-        },
-        {
-          href: "/dashboard/projetos",
-          label: "Projetos",
-          icon: FolderKanban,
-          visible: hasAccess(userRoles, "VIEW_PROJECT_DASHBOARD"),
-          active: pathname.startsWith("/dashboard/projetos"),
-        },
-      ],
-    },
-    {
-      label: "Laboratorio",
-      items: [
-        {
-          href: "/dashboard/laboratorio",
-          label: "Laboratorio",
-          icon: Clock,
-          visible: true,
-          active: pathname.startsWith("/dashboard/laboratorio"),
-        },
-        {
-          href: "/dashboard/weekly-reports",
-          label: "Relatorios Semanais",
-          icon: FileText,
-          visible: hasAccess(userRoles, "DASHBOARD_WEEKLY_REPORTS"),
-          active: pathname.startsWith("/dashboard/weekly-reports"),
-        },
-        {
-          href: "/dashboard/admin",
-          label: "Painel Administrativo",
-          icon: Shield,
-          visible: hasAccess(userRoles, "DASHBOARD_ADMIN"),
-          active: pathname.startsWith("/dashboard/admin"),
-        },
-      ],
-    },
-    {
-      label: "Pessoal",
-      items: [
-        {
-          href: "/dashboard/profile",
-          label: "Perfil",
-          icon: User,
-          visible: true,
-          active: pathname.startsWith("/dashboard/profile"),
-        },
-        {
-          href: "/dashboard/loja",
-          label: "Loja",
-          icon: ShoppingBag,
-          visible: true,
-          active: pathname.startsWith("/dashboard/loja"),
-        },
-        {
-          href: "/dashboard/leaderboard",
-          label: "Ranking",
-          icon: Trophy,
-          visible: true,
-          active: pathname.startsWith("/dashboard/leaderboard"),
-        },
-      ],
-    },
-  ]
+  // Single navigation source: components/layout/nav-config.ts
+  const navigationGroups = getNavigationGroups(userRoles).map((group) => ({
+    ...group,
+    items: group.items.map((item) => ({ ...item, active: isNavItemActive(item, pathname) })),
+  }))
 
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
@@ -166,25 +77,17 @@ export function MobileMenu() {
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{user.name}</p>
                   <p className="truncate text-xs text-muted-foreground">{user.email}</p>
-                  <p className="text-xs text-muted-foreground capitalize">
-                    {userRoles.includes("GERENTE_PROJETO")
-                      ? "Gerente de Projeto"
-                      : userRoles.includes("COORDENADOR")
-                        ? "Coordenador"
-                        : userRoles.includes("LABORATORISTA")
-                          ? "Laboratorista"
-                          : userRoles.includes("VOLUNTARIO")
-                            ? "Voluntario"
-                            : "Usuario"}
+                  <p className="truncate text-xs text-muted-foreground capitalize">
+                    {getPrimaryRoleLabel(userRoles)}
                   </p>
                 </div>
               </div>
 
-              {currentUserData ? (
+              {points !== null ? (
                 <div className="flex items-center justify-center gap-2 rounded-xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 p-3 dark:border-emerald-700 dark:from-emerald-900/20 dark:to-teal-900/20">
                   <Trophy className="h-5 w-5 text-amber-500 dark:text-emerald-400" />
                   <span className="bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-lg font-semibold text-transparent dark:from-emerald-400 dark:to-teal-400">
-                    {currentUserData.points}
+                    {points}
                   </span>
                 </div>
               ) : null}

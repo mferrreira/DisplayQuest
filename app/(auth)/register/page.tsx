@@ -1,32 +1,54 @@
 "use client"
 
-import { useState } from "react"
+/**
+ * Register (E1/T1.5) — RHF+Zod per constitution §2; inline field errors + aria wiring.
+ * Success feedback uses the global sonner toaster (window.alert is banned — constitution A3).
+ */
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useAuth } from "@/contexts/auth-context"
+import { useState } from "react"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { z } from "zod"
+import { toast } from "sonner"
+import { AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { AlertCircle } from "lucide-react"
+import { useAuth } from "@/contexts/auth-context"
+
+const registerSchema = z.object({
+  name: z.string().min(2, "Informe seu nome completo"),
+  email: z.string().min(1, "Informe o email").email("Email inválido"),
+  password: z.string().min(6, "A senha deve ter pelo menos 6 caracteres"),
+})
+
+type RegisterFormValues = z.infer<typeof registerSchema>
 
 export default function RegisterPage() {
-  const [name, setName] = useState("")
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
   const [error, setError] = useState("")
   const { register } = useAuth()
   const router = useRouter()
+  const {
+    register: registerField,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<RegisterFormValues>({
+    resolver: zodResolver(registerSchema),
+    defaultValues: { name: "", email: "", password: "" },
+  })
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const onSubmit = async (values: RegisterFormValues) => {
     setError("")
 
     try {
-      await register(name, email, password)
-      // Show success message and redirect to login
-      alert("Conta criada com sucesso! Sua solicitação será analisada por um coordenador ou gerente. Você receberá um email quando sua conta for aprovada.")
+      await register(values.name, values.email, values.password)
+      toast.success("Conta criada com sucesso!", {
+        description:
+          "Sua solicitação será analisada por um coordenador ou gerente. Você receberá uma notificação quando sua conta for aprovada.",
+      })
       router.push("/login")
     } catch (err) {
       setError(err instanceof Error ? err.message : "Falha ao registrar")
@@ -42,28 +64,34 @@ export default function RegisterPage() {
           <Alert>
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              Após o registro, sua conta será analisada por um coordenador ou gerente. 
+              Após o registro, sua conta será analisada por um coordenador ou gerente.
               Você receberá uma notificação quando sua conta for aprovada e suas funções forem definidas.
             </AlertDescription>
           </Alert>
         </CardHeader>
         <CardContent>
           {error && (
-            <Alert variant="destructive" className="mb-4">
+            <Alert variant="destructive" className="mb-4" role="alert">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
             <div className="space-y-2">
               <Label htmlFor="name">Nome Completo</Label>
               <Input
                 id="name"
                 placeholder="João Silva"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
+                autoComplete="name"
+                aria-invalid={Boolean(errors.name)}
+                aria-describedby={errors.name ? "name-error" : undefined}
+                {...registerField("name")}
               />
+              {errors.name ? (
+                <p id="name-error" className="text-sm text-destructive">
+                  {errors.name.message}
+                </p>
+              ) : null}
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
@@ -71,23 +99,35 @@ export default function RegisterPage() {
                 id="email"
                 type="email"
                 placeholder="nome@exemplo.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
+                autoComplete="email"
+                aria-invalid={Boolean(errors.email)}
+                aria-describedby={errors.email ? "email-error" : undefined}
+                {...registerField("email")}
               />
+              {errors.email ? (
+                <p id="email-error" className="text-sm text-destructive">
+                  {errors.email.message}
+                </p>
+              ) : null}
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Senha</Label>
               <Input
                 id="password"
                 type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
+                autoComplete="new-password"
+                aria-invalid={Boolean(errors.password)}
+                aria-describedby={errors.password ? "password-error" : undefined}
+                {...registerField("password")}
               />
+              {errors.password ? (
+                <p id="password-error" className="text-sm text-destructive">
+                  {errors.password.message}
+                </p>
+              ) : null}
             </div>
-            <Button type="submit" className="w-full">
-              Criar conta
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? "Criando..." : "Criar conta"}
             </Button>
           </form>
         </CardContent>

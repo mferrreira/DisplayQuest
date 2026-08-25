@@ -33,3 +33,20 @@
 - migrations/legacy-map.md created — every legacy artifact mapped to fate + owning epic.
 - Discoveries appended: D-10 font gap, D-11 DB-dependent vitest, D-12 stray project-members endpoint.
 - Backlog extended (knip@E10, kanban_boards probe@E2).
+
+## 2026-08-25 · CP-1 · E1 SHELL & AUTH ✅
+- T1.1 basename eslint overrides BEFORE moves; route groups (auth)/(dashboard); URLs unchanged.
+- T1.2 server guard (dashboard)/layout.tsx — /dashboard 307s to /login unauthenticated (e2e-proven).
+- T1.3 error/global-error/not-found (pt-BR); use-toast → sonner shim; FIXED latent bug: radix
+  <Toaster/> was only mounted in loja so 17 call sites had invisible toasts; radix primitives deleted.
+- T1.4 nav single source (components/layout/nav-config.ts) consumed by header+mobile-menu; killed
+  2× all-users fetches (session-derived points); ModernButton→Button; proper pt-BR accents.
+- T1.4b features/notifications (query hooks, 60s poll, optimistic read/delete) rewired into
+  NotificationsPanel; legacy notification-context DELETED; endpoint contract corrected (D-14).
+- T1.5 login/register RHF+Zod (inline errors, aria-invalid/describedby, autoComplete); alert()→sonner.
+- T1.6 ADR-006 revised: Inter already via next/font (D-10 premise corrected); JetBrains Mono token
+  added (--font-mono); dead Arial rule removed.
+- T1.7 tests/unit/rbac-contract.test.ts (shared-map equality, GERENTE tripwire, helpers).
+- Gates: verify.sh GREEN; shell.spec 5/5 (incl. axe login + axe dashboard-header); vitest 15/15.
+- baseline-e1 captured (64 imgs, :3001) — visual review: header/nav/points/dark/mobile OK.
+  Legacy board observations → E2 (action row overflows 320px; saturated column headers; D-15 items).
