@@ -1,6 +1,6 @@
 # Current Migration State
 
-**Updated**: 2026-08-25 (early) · **Phase**: EXECUTION · **Branch**: `dev`
+**Updated**: 2026-08-25 (late) · **Phase**: EXECUTION · **Branch**: `dev`
 
 ## Standing user directives (valid across sessions)
 1. Execute directly on branch `dev` (no dedicated refactor branch).
@@ -14,21 +14,20 @@ Read this file → run Recovery Protocol (`PLAN.md` §23) → executable plan = 
 Legacy fate table = `.spec/migrations/legacy-map.md`.
 
 ## Snapshot
-- phase: **CP-2 (core) REACHED** — new TaskBoard live on /dashboard → next: **T2.7** component
-  tests (board states, dialog validation, move-menu parity via MSW) + E2E drag/approve flows,
-  then CP-2 final commit is already partially landed (see completed.md)
-- epic/task in progress: E2 remaining: T2.7 tests; then E3 Work Sessions (T3.1 spec first)
-- last completed: E2 core — spec, MSW handlers, hooks+move-rules (29 unit tests), board UI
-  swap, legacy kanban chain deleted, D-17 (urgent priority) + D-18 (legacy statuses) fixed
-- tests status: verify.sh GREEN; shell e2e 5/5; vitest 29/29 (incl. 14 move-rule tests)
-- known failures: none open
-- new discoveries: D-13 (NEXTAUTH_SECRET), D-14 (notifications PUT contract), D-15 (a11y
-  inventory → E2 spec), D-16 (register alert), D-17 (urgent priority), D-18 (legacy statuses
-  in live DB — wire normalization landed; cleanup migration PENDING USER DECISION)
+- phase: **E2 FULLY COMPLETE → next E3 (Work Sessions)** — TaskBoard live with E2E flows
+  and component tests. CP-2 is reached. E3 starts with T3.1 spec.
+- epic/task in progress: E3 Work Sessions — T3.1 spec (lifecycle, pause/resume race,
+  reconnect, auto-pause@3600s, log-on-end)
+- last completed: E2 closeout — T2.7 E2E (5 flows: columns, move, approve+points badge,
+  URL filter round-trip, keyboard move); bug fixes for live points refresh and status default
+- tests status: vitest 32/32, shell+task-board e2e 10/10; lint clean; tsc pre-existing
+  .next/types RouteContext mismatch (same on clean tree — Next.js 15 type-gen lag, not caused by changes)
+- known failures: pre-existing tsc .next/types error (ignore for now)
+- new discoveries: D-13..D-19 (D-19: backend single-create missing status default, frontend fixed)
 - spec changes: ADR-006 revised; legacy-map updated (notification-context deleted; toast shim)
-- next autonomous action: E2 closeout — browser E2E for move/approve flows (drag via Move menu
-  + leader approve → points), then E3/T3.1 work-sessions spec. NOTE: MSW now listens in ALL
-  vitest tests (setup.ts); component tests use NuqsTestingAdapter
+- next autonomous action: **T3.1** — write work-sessions spec in `.spec/specs/work-sessions.feature.md`
+  (per EXECUTION-PLAN.md: lifecycle active↔paused↔completed; pause/resume race;
+  reconnect; auto-pause@3600s dialog; log-on-end)
 - blocked: []
 
 ## Checkpoint log

@@ -83,3 +83,19 @@
   leaked to the docker container and 401'd); lib/api/client.ts resolves fetch against
   window.location.origin (Node fetch cannot parse relative URLs).
 - vitest 32/32; shell e2e 5/5; tsc clean.
+
+## 2026-08-25 · E2/T2.7 (E2E closeout) ✅
+- Created `tests/e2e/helpers.ts` — shared `login(page)` + `apiSession(request)` helpers.
+- Created `tests/e2e/task-board.spec.ts` — 5 serial E2E flow tests:
+  1. Board renders all five lifecycle columns.
+  2. Delegated task moved via Move menu lands in Em Revisão (server-truth verify).
+  3. Leader approves → card reaches Concluído → header points badge increments.
+  4. URL filter round-trip: busca drives filtered state, clear restores, deep link reproduces.
+  5. Keyboard-only Move menu to Ajustes, fixture cleanup, points restore.
+- Bug fix: `use-tasks.ts` now calls `session.update()` (next-auth `update()`) on complete/approve
+  onSettled → live points badge refresh. Authority: lib/auth/config.ts :92-115.
+- Bug fix: `task-dialog.tsx` now sends `status: "to-do"` on create (D-19: backend single-create
+  route lacks default status — Prisma arg validation fails without it; backlog branch has it).
+- DB residue: 0 fixture rows after all runs (afterAll safety net).
+- Gates: vitest 32/32, shell+task-board e2e 10/10. Lint clean. TSC pre-existing .next/types
+  RouteContext mismatch (same on clean tree — Next.js 15 params Promise<> type-gen lag).

@@ -123,6 +123,9 @@ export function TaskDialog({ open, onOpenChange, task, defaultProjectId }: TaskD
     const body: Record<string, unknown> = {
       title: parsed.title,
       description: parsed.description || null,
+      // legacy task-form parity (:199): single-create route does NOT default status
+      // (only the backlog array branch does) and Prisma requires it.
+      status: "to-do",
       points: parsed.points,
       priority: parsed.priority,
       taskVisibility: parsed.taskVisibility,

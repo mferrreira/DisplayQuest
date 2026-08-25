@@ -6,6 +6,7 @@
  * rollback (legacy parity kanban-board.tsx:210–217) via standardized onMutate/onError.
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useSession } from "next-auth/react"
 import { tasksApi } from "@/lib/api/endpoints/tasks"
 import { queryKeys } from "@/lib/query/keys"
 import type { TaskFilters } from "@/lib/api/endpoints/tasks"
@@ -59,6 +60,20 @@ function useRollback(): () => RollbackContext {
 
 export function useTaskMutations() {
   const makeRollback = useRollback()
+  // complete/approve change the ACTOR's points when they are the assignee. The header badge
+  // reads from the next-auth session (T1.4: no all-users fetch); its session callback re-reads
+  // points from the DB on every fetch (lib/auth/config.ts session callback), so refreshing the
+  // session after awarding mutations keeps the badge live without a page reload.
+  const { update: refreshSession } = useSession()
+  const refreshPoints = () => {
+    // optional call: test stubs may omit update(); failures are best-effort by design
+    const result = typeof refreshSession === "function" ? refreshSession() : undefined
+    if (result && typeof result.catch === "function") {
+      result.catch(() => {
+        /* unauthenticated/no-op contexts must not break the mutation */
+      })
+    }
+  }
 
   const updateStatus = useMutation({
     mutationFn: ({ id, status }: { id: number; status: Task["status"] }) =>
@@ -103,7 +118,10 @@ export function useTaskMutations() {
       return { ctx }
     },
     onError: (_err, _vars, context) => context?.ctx.rollback(),
-    onSettled: (_d, _e, _v, context) => context?.ctx.invalidate(),
+    onSettled: (_d, _e, _v, context) => {
+      context?.ctx.invalidate()
+      refreshPoints()
+    },
   })
 
   const create = useMutation({
@@ -124,7 +142,11 @@ export function useTaskMutations() {
 
   const approve = useMutation({
     mutationFn: (id: number) => tasksApi.approve(id),
-    onSettled: () => makeRollback().invalidate(),
+    onSettled: () => {
+      makeRollback().invalidate()
+      // delegated tasks award points to the assignee HERE (gateway :458–481)
+      refreshPoints()
+    },
   })
 
   const reject = useMutation({

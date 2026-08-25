@@ -108,3 +108,10 @@ Resolution: entities/task.ts gains wireTaskStatus (explicit documented map + con
 endpoints parse with wireTaskSchema; taskSchema stays STRICT for contract tests. Cleanup UPDATE
 migration proposed in backlog — PENDING USER DECISION. Post-fix: board renders all 9 rows incl.
 the 5 previously-invisible ones. NOTE: initial post-swap e2e failures were THIS, not compile time.
+
+## D-19 · 2026-08-25 (E2/E2E closeout) · backend single-create route missing status default
+POST `/api/tasks` (single create) does NOT default `status` when omitted — Prisma throws arg
+validation error (500). The backlog branch DOES default to "to-do" at :72. Frontend fix applied:
+`task-dialog.tsx` now sends `status: "to-do"` on create. Backend route should harden with an
+explicit default or validation to match the backlog branch behavior — backlog item for backend
+hardening phase.
