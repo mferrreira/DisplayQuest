@@ -26,8 +26,9 @@ Legacy fate table = `.spec/migrations/legacy-map.md`.
   inventory → E2 spec), D-16 (register alert), D-17 (urgent priority), D-18 (legacy statuses
   in live DB — wire normalization landed; cleanup migration PENDING USER DECISION)
 - spec changes: ADR-006 revised; legacy-map updated (notification-context deleted; toast shim)
-- next autonomous action: E2/T2.7 — component tests (MSW) for board states + dialog validation;
-  then E2E move/approve flows; then E3/T3.1 work-sessions spec
+- next autonomous action: E2 closeout — browser E2E for move/approve flows (drag via Move menu
+  + leader approve → points), then E3/T3.1 work-sessions spec. NOTE: MSW now listens in ALL
+  vitest tests (setup.ts); component tests use NuqsTestingAdapter
 - blocked: []
 
 ## Checkpoint log
