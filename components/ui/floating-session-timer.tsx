@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Clock, Pause, PlayCircle, StopCircle, ChevronDown } from "lucide-react"
 import { useProject } from "@/contexts/project-context"
 import { getMissedScheduledPause } from "@/lib/work-sessions/schedule"
+import { SessionAutoPauseCountdown } from "@/components/ui/session-auto-pause-countdown"
 
 function formatTime(seconds: number) {
   const h = Math.floor(seconds / 3600)
@@ -202,6 +203,11 @@ export function FloatingSessionTimer() {
             </div>
 
             <p className="font-mono text-2xl font-bold">{formatTime(seconds)}</p>
+
+            <SessionAutoPauseCountdown
+              sessionStatus={currentSession?.status ?? null}
+              startTime={currentSession?.startTime ?? null}
+            />
 
             {!currentSession && user && (
               <div className="space-y-2">
