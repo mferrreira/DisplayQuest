@@ -92,7 +92,7 @@ export function ProjectReportDialog({ projectId, projects, open, onOpenChange, o
 
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!saving) onOpenChange(next) }}>
-      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto sm:overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Gerar Relatório de Projeto</DialogTitle>
           <DialogDescription>

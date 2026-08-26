@@ -305,7 +305,7 @@ export function ProjectMembersManagement({ project, onUpdate }: ProjectMembersMa
                   Adicionar Membro
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-h-[90vh] overflow-y-auto">
+              <DialogContent className="max-h-[90vh] overflow-y-auto sm:overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Adicionar Membro ao Projeto</DialogTitle>
                   <DialogDescription>
@@ -519,7 +519,7 @@ export function ProjectMembersManagement({ project, onUpdate }: ProjectMembersMa
 
         {/* Dialog para remover membro */}
         <Dialog open={showRemoveDialog} onOpenChange={setShowRemoveDialog}>
-          <DialogContent className="max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-h-[90vh] overflow-y-auto sm:overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Remover Membro</DialogTitle>
               <DialogDescription>
@@ -540,7 +540,7 @@ export function ProjectMembersManagement({ project, onUpdate }: ProjectMembersMa
 
         {/* Dialog para adicionar horas */}
         <Dialog open={showHoursDialog} onOpenChange={setShowHoursDialog}>
-          <DialogContent className="max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-h-[90vh] overflow-y-auto sm:overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Adicionar Horas</DialogTitle>
               <DialogDescription>

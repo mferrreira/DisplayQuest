@@ -402,7 +402,7 @@ export function AdminProjectManagement({ projects, users, tasks, sessions, onPro
 
       {/* Dialog de detalhes do projeto */}
       <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto sm:overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{selectedProject?.name}</DialogTitle>
             <DialogDescription>
