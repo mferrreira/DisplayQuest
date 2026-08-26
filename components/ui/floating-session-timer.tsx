@@ -12,6 +12,7 @@ import { Clock, Pause, PlayCircle, StopCircle, ChevronDown } from "lucide-react"
 import { useProject } from "@/contexts/project-context"
 import { getMissedScheduledPause } from "@/lib/work-sessions/schedule"
 import { SessionAutoPauseCountdown } from "@/components/ui/session-auto-pause-countdown"
+import { SessionWelcomeBalloon } from "@/components/ui/session-welcome-balloon"
 
 function formatTime(seconds: number) {
   const h = Math.floor(seconds / 3600)
@@ -178,6 +179,11 @@ export function FloatingSessionTimer() {
           expanded ? "w-80 p-4" : "w-16 h-16 p-0"
         }`}
       >
+        <SessionWelcomeBalloon
+          isLoggedIn={Boolean(user)}
+          hasNoSession={!currentSession}
+          onStartSession={() => setExpanded(true)}
+        />
         {!expanded ? (
           <Button
             variant="ghost"
