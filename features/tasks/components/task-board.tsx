@@ -263,7 +263,7 @@ export function TaskBoard() {
       <ArchiveSection tasks={archivedTasks} projects={projects} />
 
       <TaskDialog open={dialogOpen} onOpenChange={setDialogOpen} task={editTask} />
-      <BacklogDialog open={backlogOpen} onOpenChange={setBacklogOpen} />
+      <BacklogDialog open={backlogOpen} onOpenChange={setBacklogOpen} defaultProjectId={projetoParam} />
       <TaskDetailDialog
         task={viewTask}
         open={detailOpen}

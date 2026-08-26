@@ -58,8 +58,21 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
   }, [])
 
   useEffect(() => {
-    setUserSchedule([])
-  }, [selectedUserId])
+    if (!selectedUserId) {
+      setUserSchedule([])
+      return
+    }
+    // Load existing schedules for this user so save doesn't wipe them out
+    const userId = parseInt(selectedUserId)
+    const existing = schedules
+      .filter((s) => s.userId === userId)
+      .map((s) => ({
+        dayOfWeek: s.dayOfWeek,
+        startTime: s.startTime,
+        endTime: s.endTime,
+      }))
+    setUserSchedule(existing)
+  }, [selectedUserId, schedules])
 
   const canManageAllSchedules = hasPermission(currentUser?.roles ?? [], "MANAGE_USERS")
 
@@ -81,7 +94,7 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
     }
   }
 
-  const handleDelete = async (scheduleId: number) => {
+  const handleDelete = async (scheduleId: number, label?: string) => {
     if (!canManageAllSchedules) {
       toast({
         title: "Sem permissão",
@@ -90,6 +103,7 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
       })
       return
     }
+    if (!window.confirm(`Remover este horário${label ? ` (${label})` : ""}?`)) return
     try {
       const response = await fetch(`/api/schedules/${scheduleId}`, {
         method: "DELETE",
@@ -446,7 +460,7 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
                                     </span>
                                     {!readOnly && canManageAllSchedules && (
                                       <button
-                                        onClick={() => handleDelete(s.id)}
+                                        onClick={() => handleDelete(s.id, `${user?.name || "Usuário"} ${s.startTime}-${s.endTime}`)}
                                         className="opacity-0 group-hover:opacity-100 text-red-500 dark:text-red-400 hover:text-red-700 transition-opacity"
                                         title="Remover"
                                       >

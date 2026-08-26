@@ -126,7 +126,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit }: TaskDetai
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg sm:overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="pr-6">{task.title}</DialogTitle>
             <DialogDescription>

@@ -269,7 +269,7 @@ export function VolunteersManagement() {
                   Gestão Completa
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+              <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto sm:overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Gestão Completa do Projeto</DialogTitle>
                   <DialogDescription>

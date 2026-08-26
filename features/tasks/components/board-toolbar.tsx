@@ -79,7 +79,7 @@ export function BoardToolbar({
             <>
               <Button variant="outline" size="sm" onClick={onCreateBacklog}>
                 <Upload className="mr-1 h-4 w-4" aria-hidden="true" />
-                Importar Backlog
+                Inserir backlog
               </Button>
               <Button size="sm" onClick={onCreateTask} disabled={isUpdating}>
                 <Plus className="mr-1 h-4 w-4" aria-hidden="true" />
