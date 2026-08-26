@@ -39,8 +39,8 @@ export const userSchema = z.object({
   password: z.string().nullable().optional(), // never sent by API responses that matter; defensive
   status: userStatusSchema,
   weekHours: z.number(),
-  createdAt: dateTimeString,
-  currentWeekHours: z.number(),
+  createdAt: dateTimeString.optional(), // not always sent by list endpoints
+  currentWeekHours: z.number().optional(), // not always sent by list endpoints
   roles: z.array(userRoleSchema),
   avatar: z.string().nullable().optional(),
   bio: z.string().nullable().optional(),
