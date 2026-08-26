@@ -10,6 +10,7 @@ export interface IUserScheduleRepository {
     findByUserId(userId: number): Promise<UserSchedule[]>;
     findByDayOfWeek(dayOfWeek: number): Promise<UserSchedule[]>;
     findActiveByUserId(userId: number): Promise<UserSchedule[]>;
+    replaceForUser(userId: number, slots: { dayOfWeek: number; startTime: string; endTime: string }[]): Promise<UserSchedule[]>;
 }
 
 export class UserScheduleRepository implements IUserScheduleRepository {
@@ -131,6 +132,22 @@ export class UserScheduleRepository implements IUserScheduleRepository {
         });
 
         return userSchedules.map(userSchedule => UserSchedule.fromPrisma(userSchedule));
+    }
+
+    async replaceForUser(userId: number, slots: { dayOfWeek: number; startTime: string; endTime: string }[]): Promise<UserSchedule[]> {
+        await prisma.$transaction([
+            prisma.user_schedules.deleteMany({ where: { userId } }),
+            prisma.user_schedules.createMany({
+                data: slots.map((slot) => ({
+                    userId,
+                    dayOfWeek: slot.dayOfWeek,
+                    startTime: slot.startTime,
+                    endTime: slot.endTime,
+                })),
+            }),
+        ]);
+
+        return this.findByUserId(userId);
     }
 
     private validateUserSchedule(userSchedule: UserSchedule): string[] {

@@ -1,9 +1,11 @@
 import * as cron from 'node-cron'
 import { prisma } from '@/lib/database/prisma'
 import { startOfWeek, endOfWeek, format } from 'date-fns'
+import { getBackendComposition } from '@/backend/composition/root'
 
-class CronService {
+export class CronService {
   private weeklyResetJob: cron.ScheduledTask | null = null
+  private scheduledPauseJobs: cron.ScheduledTask[] = []
   private isInitialized = false
 
   /**
@@ -21,7 +23,30 @@ class CronService {
       timezone: 'America/Sao_Paulo' // Fuso horário do Brasil
     })
 
+    // Pause automático das work sessions em horários fixos:
+    // 09:30 e 15:00 (minuto 30) / 12:00 e 17:00 (minuto 0)
+    this.scheduledPauseJobs = [
+      cron.schedule('30 9,15 * * *', async () => {
+        await this.executeScheduledPause()
+      }, { timezone: 'America/Sao_Paulo' }),
+      cron.schedule('0 12,17 * * *', async () => {
+        await this.executeScheduledPause()
+      }, { timezone: 'America/Sao_Paulo' }),
+    ]
+
     this.isInitialized = true
+  }
+
+  /**
+   * Pausa todas as sessões ativas que cruzaram um horário de pausa agendado.
+   */
+  async executeScheduledPause() {
+    try {
+      const { workExecution } = getBackendComposition()
+      await workExecution.listWorkSessions({ status: 'active' })
+    } catch (error) {
+      console.error('❌ Erro ao executar pause automático de sessões:', error)
+    }
   }
 
   /**
@@ -114,6 +139,10 @@ class CronService {
     if (this.weeklyResetJob) {
       this.weeklyResetJob.stop()
     }
+    for (const job of this.scheduledPauseJobs) {
+      job.stop()
+    }
+    this.scheduledPauseJobs = []
     this.isInitialized = false
   }
 

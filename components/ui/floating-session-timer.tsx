@@ -10,8 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Clock, Pause, PlayCircle, StopCircle, ChevronDown } from "lucide-react"
 import { useProject } from "@/contexts/project-context"
-
-const AUTO_PAUSE_AFTER_SECONDS = 60 * 60
+import { getMissedScheduledPause } from "@/lib/work-sessions/schedule"
+import { SessionAutoPauseCountdown } from "@/components/ui/session-auto-pause-countdown"
+import { SessionWelcomeBalloon } from "@/components/ui/session-welcome-balloon"
 
 function formatTime(seconds: number) {
   const h = Math.floor(seconds / 3600)
@@ -75,7 +76,9 @@ export function FloatingSessionTimer() {
 
   useEffect(() => {
     if (!currentSession?.id || currentSession.status !== "active" || !user?.id) return
-    if (seconds < AUTO_PAUSE_AFTER_SECONDS) return
+    // Scheduled auto-pause: fire once the session has crossed a scheduled
+    // pause time (09:30/12:00/15:00/17:00, America/Sao_Paulo).
+    if (!getMissedScheduledPause(currentSession.startTime, new Date())) return
     if (autoPausedSessionIdsRef.current.has(currentSession.id)) return
 
     autoPausedSessionIdsRef.current.add(currentSession.id)
@@ -176,6 +179,11 @@ export function FloatingSessionTimer() {
           expanded ? "w-80 p-4" : "w-16 h-16 p-0"
         }`}
       >
+        <SessionWelcomeBalloon
+          isLoggedIn={Boolean(user)}
+          hasNoSession={!currentSession}
+          onStartSession={() => setExpanded(true)}
+        />
         {!expanded ? (
           <Button
             variant="ghost"
@@ -201,6 +209,11 @@ export function FloatingSessionTimer() {
             </div>
 
             <p className="font-mono text-2xl font-bold">{formatTime(seconds)}</p>
+
+            <SessionAutoPauseCountdown
+              sessionStatus={currentSession?.status ?? null}
+              startTime={currentSession?.startTime ?? null}
+            />
 
             {!currentSession && user && (
               <div className="space-y-2">

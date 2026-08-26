@@ -5,6 +5,10 @@ import { WorkSession } from "@/backend/models/WorkSession"
 import { DailyLog } from "@/backend/models/DailyLog"
 import type { WorkExecutionGateway } from "@/backend/modules/work-execution/application/ports/work-execution.gateway"
 import { prisma } from "@/lib/database/prisma"
+import {
+  getMissedScheduledPause,
+  getNextScheduledPause,
+} from "@/lib/work-sessions/schedule"
 import type {
   StartWorkSessionCommand,
   CompleteWorkSessionCommand,
@@ -16,8 +20,6 @@ import type {
   DeleteWorkSessionCommand,
   UpdateWorkSessionCommand,
 } from "@/backend/modules/work-execution/application/contracts"
-
-const AUTO_PAUSE_AFTER_SECONDS = 60 * 60
 
 export class WorkSessionServiceGateway implements WorkExecutionGateway {
   constructor(
@@ -212,11 +214,24 @@ export class WorkSessionServiceGateway implements WorkExecutionGateway {
   }
 
   async listProjectLogsForLeader(command: ListProjectLogsForLeaderCommand) {
-    const ledProjects = await prisma.projects.findMany({
-      where: { leaderId: command.leaderId },
-      select: { id: true },
-    })
-    const ledProjectIds = ledProjects.map((p) => p.id)
+    // Leadership scope = projects formally led (leaderId) UNION projects where
+    // the actor holds the GERENTE_PROJETO membership role.
+    const [ledProjects, managedMemberships] = await Promise.all([
+      prisma.projects.findMany({
+        where: { leaderId: command.leaderId },
+        select: { id: true },
+      }),
+      prisma.project_members.findMany({
+        where: { userId: command.leaderId, roles: { has: "GERENTE_PROJETO" } },
+        select: { projectId: true },
+      }),
+    ])
+    const ledProjectIds = Array.from(
+      new Set([
+        ...ledProjects.map((p) => p.id),
+        ...managedMemberships.map((m) => m.projectId),
+      ]),
+    )
 
     if (ledProjectIds.length === 0) {
       return { logs: [], sessions: [], ledProjectIds }
@@ -450,19 +465,24 @@ export class WorkSessionServiceGateway implements WorkExecutionGateway {
   private async normalizeExpiredActiveSession(session: WorkSession) {
     if (!session.id || session.status !== "active") return session
 
-    const now = new Date()
-    const elapsedFromCurrentStart = Math.max(0, (now.getTime() - session.startTime.getTime()) / 1000)
-
-    if (elapsedFromCurrentStart < AUTO_PAUSE_AFTER_SECONDS) {
+    // Scheduled auto-pause: a session active across a scheduled pause time
+    // (09:30 / 12:00 / 15:00 / 17:00, America/Sao_Paulo) is paused at that
+    // instant, not at the moment of this (possibly lazy) normalization.
+    const missedPause = getMissedScheduledPause(session.startTime, new Date())
+    if (!missedPause) {
       return session
     }
 
+    const elapsedUntilPause = Math.max(
+      0,
+      (missedPause.getTime() - session.startTime.getTime()) / 1000,
+    )
     const accumulatedDuration = session.duration || 0
 
     return await this.workSessionRepository.update(session.id, {
       status: "paused",
-      endTime: now,
-      duration: accumulatedDuration + elapsedFromCurrentStart,
+      endTime: missedPause,
+      duration: accumulatedDuration + elapsedUntilPause,
     })
   }
 

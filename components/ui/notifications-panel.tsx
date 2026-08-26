@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
-import { useNotification } from "@/contexts/notification-context"
+import { useNotifications } from "@/features/notifications"
 import { 
   Bell, 
   Check, 
@@ -34,7 +34,7 @@ export function NotificationsPanel({ className }: NotificationsPanelProps) {
     markAsRead, 
     markAllAsRead, 
     deleteNotification 
-  } = useNotification()
+  } = useNotifications()
   
   const [isOpen, setIsOpen] = useState(false)
 
@@ -86,18 +86,23 @@ export function NotificationsPanel({ className }: NotificationsPanelProps) {
   const readNotifications = notifications.filter(n => n.read)
 
   return (
-    <div className={`relative ${className}`}>
+    <div className={`relative ${className ?? ""}`}>
       <Button
         variant="outline"
         size="sm"
         onClick={() => setIsOpen(!isOpen)}
         className="relative"
+        aria-label={
+          unreadCount > 0 ? `Notificações (${unreadCount} não lidas)` : "Notificações"
+        }
+        aria-expanded={isOpen}
       >
-        <Bell className="h-4 w-4" />
+        <Bell className="h-4 w-4" aria-hidden="true" />
         {unreadCount > 0 && (
-          <Badge 
-            variant="destructive" 
+          <Badge
+            variant="destructive"
             className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs"
+            aria-hidden="true"
           >
             {unreadCount}
           </Badge>

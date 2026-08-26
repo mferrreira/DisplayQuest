@@ -2,7 +2,9 @@
 
 // Função genérica para fazer requisições
 export async function fetchAPI<T>(url: string, options: RequestInit = {}): Promise<T> {
-  console.log(`🔍 API Call: ${options.method || 'GET'} ${url}`)
+  if (process.env.NODE_ENV !== "production") {
+    console.log(`🔍 API Call: ${options.method || 'GET'} ${url}`)
+  }
 
   const headers = new Headers(options.headers || {})
   const isFormDataBody = typeof FormData !== "undefined" && options.body instanceof FormData
@@ -45,7 +47,9 @@ export async function fetchAPI<T>(url: string, options: RequestInit = {}): Promi
     throw new Error((typeof data?.error === "string" && data.error) || "Ocorreu um erro na requisição")
   }
 
-  console.log(`✅ API Success: ${options.method || 'GET'} ${url}`)
+  if (process.env.NODE_ENV !== "production") {
+    console.log(`✅ API Success: ${options.method || 'GET'} ${url}`)
+  }
   return (data?.data || data || {}) as T
 }
 

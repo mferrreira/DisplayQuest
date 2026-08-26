@@ -22,13 +22,16 @@ const PERIOD_LABELS: Record<ReportPeriodType, string> = {
 
 interface ProjectReportDialogProps {
   projectId: number
+  /** When projectId is 0/absent, a selectable project list enables generation from a global page. */
+  projects?: Array<{ id: number; name: string }>
   open: boolean
   onOpenChange: (open: boolean) => void
   onSaved?: () => void
 }
 
-export function ProjectReportDialog({ projectId, open, onOpenChange, onSaved }: ProjectReportDialogProps) {
+export function ProjectReportDialog({ projectId, projects, open, onOpenChange, onSaved }: ProjectReportDialogProps) {
   const { toast } = useToast()
+  const [selectedProjectId, setSelectedProjectId] = useState<string>("")
   const [periodType, setPeriodType] = useState<ReportPeriodType>("biweekly")
   const [reference, setReference] = useState<string>("")
   const [title, setTitle] = useState("")
@@ -36,19 +39,27 @@ export function ProjectReportDialog({ projectId, open, onOpenChange, onSaved }: 
   const [files, setFiles] = useState<File[]>([])
   const [saving, setSaving] = useState(false)
 
+  const needsProjectPicker = !projectId && Array.isArray(projects) && projects.length > 0
+  const effectiveProjectId = projectId || Number(selectedProjectId) || 0
+
+  function reset() {
+    setSelectedProjectId("")
+    setTitle("")
+    setContent("")
+    setFiles([])
+  }
+
   const periodPreview = useMemo(() => {
     const refDate = reference ? new Date(`${reference}T12:00:00`) : new Date()
     if (Number.isNaN(refDate.getTime())) return ""
     return computePeriod(periodType, refDate).label
   }, [periodType, reference])
 
-  function reset() {
-    setTitle("")
-    setContent("")
-    setFiles([])
-  }
-
   async function handleSubmit() {
+    if (!effectiveProjectId) {
+      toast({ title: "Erro", description: "Selecione um projeto.", variant: "destructive" })
+      return
+    }
     if (!content.trim()) {
       toast({ title: "Erro", description: "Escreva o conteúdo do relatório.", variant: "destructive" })
       return
@@ -56,7 +67,7 @@ export function ProjectReportDialog({ projectId, open, onOpenChange, onSaved }: 
     setSaving(true)
     try {
       const form = new FormData()
-      form.set("projectId", String(projectId))
+      form.set("projectId", String(effectiveProjectId))
       form.set("periodType", periodType)
       form.set("content", content)
       if (title.trim()) form.set("title", title.trim())
@@ -90,6 +101,24 @@ export function ProjectReportDialog({ projectId, open, onOpenChange, onSaved }: 
         </DialogHeader>
 
         <div className="space-y-4">
+          {needsProjectPicker && (
+            <div className="space-y-2">
+              <Label>Projeto *</Label>
+              <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
+                <SelectTrigger>
+                  <SelectValue placeholder={projects!.length ? "Selecione um projeto" : "Nenhum projeto disponível"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {projects!.map((project) => (
+                    <SelectItem key={project.id} value={String(project.id)}>
+                      {project.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Periodicidade</Label>
@@ -154,7 +183,7 @@ export function ProjectReportDialog({ projectId, open, onOpenChange, onSaved }: 
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancelar</Button>
-          <Button onClick={handleSubmit} disabled={saving}>
+          <Button onClick={handleSubmit} disabled={saving || !effectiveProjectId}>
             {saving ? (<><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Enviando...</>) : "Enviar relatório"}
           </Button>
         </DialogFooter>

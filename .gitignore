@@ -1,9 +1,10 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-.spec/
 # Dependencies
 /node_modules
 /.pnp
 .pnp.js
+
+.opencode/
 
 # Testing
 /coverage
@@ -147,3 +148,18 @@ temp/
 .env.test.local
 .env.production.local
 AGENTS.md
+
+# Visual regression artifacts (regenerate via scripts/capture-visual-baseline.mjs)
+tests/e2e/__screenshots__/
+
+# Playwright artifacts
+test-results/
+playwright-report/
+
+# Internal engineering files — methodology, specs, tests, design system docs
+# These are local-only development artifacts; never push to origin.
+.spec/
+tests/
+AGENTS.md
+scripts/capture-visual-baseline.mjs
+scripts/compare-visual-baseline.mjs

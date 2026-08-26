@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useToast } from "@/contexts/use-toast"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { Calendar, Clock, Plus, Edit, Trash2, Loader2 } from "lucide-react"
 import type { LaboratoryScheduleFormData } from "@/contexts/types"
 
@@ -39,6 +40,7 @@ export function LaboratorySchedule() {
     notes: ""
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null)
 
   // Check if user can manage schedules
   const canManage =
@@ -108,8 +110,6 @@ export function LaboratorySchedule() {
   }
 
   const handleDelete = async (id: number) => {
-    if (!confirm("Tem certeza que deseja remover este horário?")) return
-
     try {
       await deleteSchedule(id)
       toast({
@@ -122,6 +122,8 @@ export function LaboratorySchedule() {
         description: "Erro ao remover horário",
         variant: "destructive",
       })
+    } finally {
+      setPendingDeleteId(null)
     }
   }
 
@@ -210,7 +212,7 @@ export function LaboratorySchedule() {
                           <Button
                             size="sm"
                             variant="destructive"
-                            onClick={() => handleDelete(schedule.id)}
+                            onClick={() => setPendingDeleteId(schedule.id)}
                           >
                             <Trash2 className="h-3 w-3" />
                           </Button>
@@ -296,6 +298,18 @@ export function LaboratorySchedule() {
           </DialogContent>
         </Dialog>
       ) : null}
+
+      <ConfirmDialog
+        open={pendingDeleteId !== null}
+        onOpenChange={(open) => !open && setPendingDeleteId(null)}
+        title="Remover horário"
+        description="Tem certeza que deseja remover este horário?"
+        confirmLabel="Remover"
+        destructive
+        onConfirm={async () => {
+          if (pendingDeleteId !== null) await handleDelete(pendingDeleteId)
+        }}
+      />
     </>
   )
 } 

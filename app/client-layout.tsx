@@ -6,8 +6,11 @@ import { ProjectProvider } from "@/contexts/project-context"
 import { TaskProvider } from "@/contexts/task-context"
 import { WorkSessionsProvider } from "@/contexts/work-sessions-context"
 import { SessionProvider } from "next-auth/react"
+import { NuqsAdapter } from "nuqs/adapters/next/app"
 import { AppHeader } from "@/components/layout/app-header"
 import { FloatingSessionTimer } from "@/components/ui/floating-session-timer"
+import { QueryProvider } from "@/shared/providers/query-provider"
+import { Toaster } from "@/components/ui/sonner"
 import { usePathname } from "next/navigation"
 import type { Session } from "next-auth"
 
@@ -56,7 +59,14 @@ export default function ClientLayout({
   return (
     <SessionProvider session={session} refetchOnWindowFocus={false} refetchInterval={0}>
       <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
-        <LayoutContent>{children}</LayoutContent>
+        {/* nuqs adapter required by useQueryState (E2 URL state) */}
+        <NuqsAdapter>
+          <QueryProvider>
+            {/* Global toast surface (E1/T1.3): sonner only. Legacy useToast() shim renders here. */}
+            <Toaster richColors closeButton position="bottom-right" />
+            <LayoutContent>{children}</LayoutContent>
+          </QueryProvider>
+        </NuqsAdapter>
       </ThemeProvider>
     </SessionProvider>
   )

@@ -23,7 +23,9 @@ import {
 import { formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { Issue } from "@/contexts/types"
+import { useToast } from "@/contexts/use-toast"
 import { hasAccess } from "@/lib/utils/access-control"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 
 interface IssueManagementProps {
   className?: string
@@ -49,6 +51,8 @@ export function IssueManagement({ className }: IssueManagementProps) {
   const [resolution, setResolution] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [priorityFilter, setPriorityFilter] = useState<string>("all")
+  const [pendingDeleteIssueId, setPendingDeleteIssueId] = useState<number | null>(null)
+  const { toast } = useToast()
 
   useEffect(() => {
     if (user) {
@@ -66,15 +70,17 @@ export function IssueManagement({ className }: IssueManagementProps) {
   const openIssues = getOpenIssues()
 
   const handleDeleteIssue = async (issueId: number) => {
-    //TODO: Validar se o usuário é coordenador ou gerente
     if (!user || !(user.roles.includes("COORDENADOR") || user.roles.includes("GERENTE"))) {
-      alert("Apenas coordenadores ou gerentes podem remover reclamações!");
-      return;
+      toast({
+        title: "Sem permissão",
+        description: "Apenas coordenadores ou gerentes podem remover reclamações!",
+        variant: "destructive",
+      })
+      return
     }
 
-    await deleteIssue(issueId);
-
-    return;
+    await deleteIssue(issueId)
+    setPendingDeleteIssueId(null)
   }
 
   const handleAssignToMe = async (issueId: number) => {
@@ -346,7 +352,7 @@ export function IssueManagement({ className }: IssueManagementProps) {
                         <Button
                           size="sm"
                           variant="destructive"
-                          onClick={() => handleDeleteIssue(issue.id)}
+                          onClick={() => setPendingDeleteIssueId(issue.id)}
                         >
                           Cancelar
                         </Button>
@@ -400,6 +406,18 @@ export function IssueManagement({ className }: IssueManagementProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={pendingDeleteIssueId !== null}
+        onOpenChange={(open) => !open && setPendingDeleteIssueId(null)}
+        title="Remover reclamação"
+        description="Tem certeza que deseja remover esta reclamação? Esta ação não pode ser desfeita."
+        confirmLabel="Remover"
+        destructive
+        onConfirm={async () => {
+          if (pendingDeleteIssueId !== null) await handleDeleteIssue(pendingDeleteIssueId)
+        }}
+      />
     </div>
   )
 }
