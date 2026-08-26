@@ -20,7 +20,6 @@ import { hasPermission } from "@/lib/auth/rbac"
 import { TIME_SLOTS, WEEK_DAYS, snapRange } from "@/lib/constants/schedule-grid"
 import { groupSchedulesByUser } from "@/lib/schedule-grid-view"
 
-// Generate a subtle color for each user based on their id
 function getUserColor(userId: number) {
   const colors = [
     "bg-blue-100 text-blue-900 border-blue-200 dark:bg-blue-50 dark:bg-info/100/15 dark:text-blue-300 dark:border-blue-500/30",
@@ -37,6 +36,20 @@ function getUserColor(userId: number) {
   return colors[userId % colors.length]
 }
 
+/** Unique block identifier: DB id for existing, temp string for new */
+interface ScheduleBlock {
+  key: string
+  dayOfWeek: number
+  startTime: string
+  endTime: string
+  dbId?: number
+}
+
+let _tempId = 0
+function tempKey(): string {
+  return `new-${++_tempId}-${Date.now()}`
+}
+
 interface ScheduleGridProps {
   users: any[]
   readOnly?: boolean
@@ -49,7 +62,7 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
   const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedUserId, setSelectedUserId] = useState("")
-  const [userSchedule, setUserSchedule] = useState<{ dayOfWeek: number, startTime: string, endTime: string }[]>([])
+  const [blocks, setBlocks] = useState<ScheduleBlock[]>([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
 
@@ -59,19 +72,23 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
 
   useEffect(() => {
     if (!selectedUserId) {
-      setUserSchedule([])
+      setBlocks([])
       return
     }
-    // Load existing schedules for this user so save doesn't wipe them out
+    // Load existing schedules as blocks with DB IDs
     const userId = parseInt(selectedUserId)
     const existing = schedules
       .filter((s) => s.userId === userId)
-      .map((s) => ({
+      .sort((a, b) => a.dayOfWeek - b.dayOfWeek || a.startTime.localeCompare(b.startTime))
+    setBlocks(
+      existing.map((s) => ({
+        key: `db-${s.id}`,
         dayOfWeek: s.dayOfWeek,
         startTime: s.startTime,
         endTime: s.endTime,
+        dbId: s.id,
       }))
-    setUserSchedule(existing)
+    )
   }, [selectedUserId, schedules])
 
   const canManageAllSchedules = hasPermission(currentUser?.roles ?? [], "MANAGE_USERS")
@@ -128,16 +145,21 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
     }
   }
 
-  const handleDayChange = (dayIdx: number, checked: boolean) => {
-    if (checked) {
-      setUserSchedule(prev => [...prev, { dayOfWeek: dayIdx, startTime: "09:00", endTime: "09:30" }])
-    } else {
-      setUserSchedule(prev => prev.filter(s => s.dayOfWeek !== dayIdx))
-    }
+  // --- Block-level operations (multi-block per day) ---
+
+  const addBlock = (dayIdx: number) => {
+    setBlocks(prev => [
+      ...prev,
+      { key: tempKey(), dayOfWeek: dayIdx, startTime: "09:00", endTime: "09:30" },
+    ])
   }
 
-  const handleTimeChange = (dayIdx: number, field: "startTime" | "endTime", value: string) => {
-    setUserSchedule(prev => prev.map(s => s.dayOfWeek === dayIdx ? { ...s, [field]: value } : s))
+  const removeBlock = (key: string) => {
+    setBlocks(prev => prev.filter((b) => b.key !== key))
+  }
+
+  const updateBlockTime = (key: string, field: "startTime" | "endTime", value: string) => {
+    setBlocks(prev => prev.map((b) => (b.key === key ? { ...b, [field]: value } : b)))
   }
 
   const handleSave = async () => {
@@ -169,9 +191,9 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userId: parseInt(selectedUserId),
-          slots: userSchedule.map((s) => ({
-            dayOfWeek: s.dayOfWeek,
-            ...snapRange({ startTime: s.startTime, endTime: s.endTime }),
+          slots: blocks.map((b) => ({
+            dayOfWeek: b.dayOfWeek,
+            ...snapRange({ startTime: b.startTime, endTime: b.endTime }),
           })),
         }),
       })
@@ -181,11 +203,10 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
         throw new Error(data?.error || "Erro ao salvar horários")
       }
 
-      // Refresh schedules
       await fetchSchedules()
       setDialogOpen(false)
       setSelectedUserId("")
-      setUserSchedule([])
+      setBlocks([])
       
       toast({
         title: "Sucesso",
@@ -206,14 +227,19 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
   const selectedUser = users.find(u => u.id === parseInt(selectedUserId))
   const visibleSlots = TIME_SLOTS
   const mobileGroups = groupSchedulesByUser(schedules, users)
-  const totalScheduledMinutes = userSchedule.reduce((sum, s) => {
-    const [sh, sm] = s.startTime.split(":").map(Number)
-    const [eh, em] = s.endTime.split(":").map(Number)
+  const totalScheduledMinutes = blocks.reduce((sum, b) => {
+    const [sh, sm] = b.startTime.split(":").map(Number)
+    const [eh, em] = b.endTime.split(":").map(Number)
     return sum + ((eh * 60 + em) - (sh * 60 + sm))
   }, 0)
   const totalScheduledHours = totalScheduledMinutes / 60
   const requiredHours = selectedUser?.weekHours || 0
   const activeUsers = users.filter((user) => user.status === "active")
+
+  // Group blocks by day for the dialog
+  const blocksByDay = WEEK_DAYS.map((_, idx) =>
+    blocks.filter((b) => b.dayOfWeek === idx)
+  )
 
   return (
     <Card>
@@ -268,11 +294,12 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
         {/* Dialog para definir horários */}
         {!readOnly && (
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl sm:overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Definir Horários do Usuário</DialogTitle>
               <DialogDescription>
-                Configure os dias e horários em que o usuário deve estar no laboratório
+                Configure os dias e horários em que o usuário deve estar no laboratório.
+                Cada dia pode ter múltiplos blocos (ex: 07:30–12:00 e 15:30–17:00).
               </DialogDescription>
             </DialogHeader>
             
@@ -305,37 +332,58 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
                   <div className="font-medium">Dias da Semana</div>
                   <div className="grid grid-cols-1 gap-3">
                     {WEEK_DAYS.map((day, idx) => {
-                      const checked = userSchedule.some(s => s.dayOfWeek === idx)
+                      const dayBlocks = blocksByDay[idx]
+                      const hasBlocks = dayBlocks.length > 0
                       return (
-                        <div key={day} className="flex items-center justify-between p-3 border rounded-lg">
-                          <div className="flex items-center gap-3">
-                            <input
-                              type="checkbox"
-                              checked={checked}
-                              onChange={e => handleDayChange(idx, e.target.checked)}
-                              className="w-4 h-4"
-                            />
+                        <div key={day} className="border rounded-lg p-3 space-y-2">
+                          <div className="flex items-center justify-between">
                             <span className="font-medium">{day}</span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 text-xs"
+                              onClick={() => addBlock(idx)}
+                            >
+                              <Plus className="mr-1 h-3 w-3" />
+                              Adicionar bloco
+                            </Button>
                           </div>
-                          
-                          {checked && (
-                            <div className="flex items-center gap-2">
-                              <Input
-                                type="time"
-                                step={1800}
-                                value={userSchedule.find(s => s.dayOfWeek === idx)?.startTime ?? ""}
-                                onChange={e => handleTimeChange(idx, "startTime", e.target.value)}
-                                className="w-32"
-                              />
-                              <span className="text-muted-foreground">até</span>
-                              <Input
-                                type="time"
-                                step={1800}
-                                value={userSchedule.find(s => s.dayOfWeek === idx)?.endTime ?? ""}
-                                onChange={e => handleTimeChange(idx, "endTime", e.target.value)}
-                                className="w-32"
-                              />
+
+                          {hasBlocks ? (
+                            <div className="space-y-2">
+                              {dayBlocks.map((block) => (
+                                <div key={block.key} className="flex items-center gap-2">
+                                  <Input
+                                    type="time"
+                                    step={1800}
+                                    value={block.startTime}
+                                    onChange={(e) => updateBlockTime(block.key, "startTime", e.target.value)}
+                                    className="w-32"
+                                    aria-label={`Início ${day}`}
+                                  />
+                                  <span className="text-muted-foreground">até</span>
+                                  <Input
+                                    type="time"
+                                    step={1800}
+                                    value={block.endTime}
+                                    onChange={(e) => updateBlockTime(block.key, "endTime", e.target.value)}
+                                    className="w-32"
+                                    aria-label={`Fim ${day}`}
+                                  />
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 shrink-0 text-destructive hover:text-destructive"
+                                    onClick={() => removeBlock(block.key)}
+                                    title="Remover este bloco"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              ))}
                             </div>
+                          ) : (
+                            <p className="text-xs text-muted-foreground">Nenhum horário</p>
                           )}
                         </div>
                       )
@@ -368,7 +416,7 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
                 </Button>
                 <Button 
                   onClick={handleSave} 
-                  disabled={!selectedUserId || userSchedule.length === 0 || saving}
+                  disabled={!selectedUserId || blocks.length === 0 || saving}
                 >
                   {saving ? "Salvando..." : "Salvar"}
                 </Button>
