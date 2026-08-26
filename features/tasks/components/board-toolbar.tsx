@@ -6,7 +6,7 @@
  *  - action row wraps at 320px (legacy overflow fix, CP-1 observation)
  *  - filters are nuqs-backed (URL is source of truth)
  */
-import { Filter, LayoutGrid, List, Plus, Rows3, TriangleAlert, Upload } from "lucide-react"
+import { Filter, LayoutGrid, List, Plus, Rows3, TriangleAlert, Upload, UserCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Select,
@@ -136,7 +136,17 @@ export function BoardToolbar({
           Somente atrasadas
         </Button>
 
-        {(filters.projectId || filters.overdue || filters.search) && (
+        <Button
+          variant={filters.mine ? "secondary" : "outline"}
+          size="sm"
+          onClick={() => onFiltersChange({ ...filters, mine: filters.mine ? undefined : true })}
+          aria-pressed={Boolean(filters.mine)}
+        >
+          <UserCheck className="mr-1 h-4 w-4" aria-hidden="true" />
+          Atribuídas a mim
+        </Button>
+
+        {(filters.projectId || filters.overdue || filters.search || filters.mine) && (
           <Button
             variant="ghost"
             size="sm"

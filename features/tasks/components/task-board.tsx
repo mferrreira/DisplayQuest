@@ -25,6 +25,7 @@ import {
   isTaskOverdue,
   BOARD_COLUMNS,
 } from "../index"
+import { isAssignedToUser } from "../utils/is-assigned-to-user"
 import type { Task } from "@/entities/task"
 import { BoardColumn } from "./board-column"
 import { BoardToolbar } from "./board-toolbar"
@@ -47,6 +48,10 @@ export function TaskBoard() {
     parseAsBoolean.withDefault(false),
   )
   const [buscaParam, setBuscaParam] = useQueryState("busca", parseAsString.withDefault(""))
+  const [minhasParam, setMinhasParam] = useQueryState(
+    "minhas",
+    parseAsBoolean.withDefault(false),
+  )
   const [compactaParam, setCompactaParam] = useQueryState(
     "visao",
     parseAsString.withDefault("normal"),
@@ -69,15 +74,18 @@ export function TaskBoard() {
     userRoles.includes(r),
   )
 
+  const sessionUserId = (session?.user as { id?: number } | undefined)?.id
+
   const filteredTasks = useMemo(() => {
     let list = tasks ?? []
+    if (minhasParam) list = list.filter((t) => isAssignedToUser(t, sessionUserId))
     if (atrasadasParam) list = list.filter((t) => isTaskOverdue(t))
     if (buscaParam) {
       const q = buscaParam.toLowerCase()
       list = list.filter((t) => t.title.toLowerCase().includes(q))
     }
     return list
-  }, [tasks, atrasadasParam, buscaParam])
+  }, [tasks, minhasParam, atrasadasParam, buscaParam, sessionUserId])
 
   const archivedTasks = useMemo(() => filteredTasks.filter((t) => isArchivedTask(t)), [filteredTasks])
   const boardTasks = useMemo(() => {
@@ -183,11 +191,13 @@ export function TaskBoard() {
           projectId: projetoParam ?? undefined,
           overdue: atrasadasParam || undefined,
           search: buscaParam || undefined,
+          mine: minhasParam || undefined,
         }}
         onFiltersChange={(next) => {
           void setProjetoParam(next.projectId ?? null)
           void setAtrasadasParam(Boolean(next.overdue))
           void setBuscaParam(next.search ?? "")
+          void setMinhasParam(Boolean(next.mine))
         }}
         overdueCount={overdueCount}
         canCreateTasks={canCreateTasks}

@@ -18,6 +18,8 @@ export type TaskFilters = QueryParams & {
   projectId?: number;
   overdue?: boolean;
   search?: string;
+  /** "Atribuídas a mim" — resolved CLIENT-side (server cannot filter for all roles). */
+  mine?: boolean;
 };
 
 export const tasksApi = {
