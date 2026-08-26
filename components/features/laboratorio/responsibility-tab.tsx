@@ -246,23 +246,17 @@ export function ResponsibilityTab() {
                 {notices.map((notice) => (
                   <div key={notice.id} className="rounded-xl border bg-card p-4">
                     <div className="flex items-start justify-between gap-3">
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline">
-                            {new Date(notice.createdAt).toLocaleDateString("pt-BR")}
-                          </Badge>
-                          <Badge variant="secondary">
+                        <div className="space-y-2">
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(notice.createdAt).toLocaleDateString("pt-BR")} às{" "}
                             {new Date(notice.createdAt).toLocaleTimeString("pt-BR", {
                               hour: "2-digit",
                               minute: "2-digit",
                             })}
-                          </Badge>
-                          {notice.userName ? (
-                            <span className="text-sm text-muted-foreground">{notice.userName}</span>
-                          ) : null}
+                            {notice.userName ? ` · ${notice.userName}` : ""}
+                          </p>
+                          <p className="text-sm leading-6">{notice.note}</p>
                         </div>
-                        <p className="text-sm leading-6">{notice.note}</p>
-                      </div>
                       {canManageTargetEvent(user, labUsers, notice.userId) ? (
                         <Button
                           variant="ghost"
