@@ -44,7 +44,9 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
     <DashboardProviders>
       <AppHeader />
       <FloatingSessionTimer />
-      {children}
+      {/* Reserve space for the fixed left-docked FloatingSessionTimer
+          (left 6em + 4em width = 10em) so it never covers page content. */}
+      <div className="pl-10 sm:pl-40">{children}</div>
     </DashboardProviders>
   )
 }
