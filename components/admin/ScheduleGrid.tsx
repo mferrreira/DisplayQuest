@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useMemo } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -20,7 +20,6 @@ import { hasPermission } from "@/lib/auth/rbac"
 import { TIME_SLOTS, WEEK_DAYS, snapRange } from "@/lib/constants/schedule-grid"
 import { groupSchedulesByUser } from "@/lib/schedule-grid-view"
 
-// Generate a subtle color for each user based on their id
 function getUserColor(userId: number) {
   const colors = [
     "bg-blue-100 text-blue-900 border-blue-200 dark:bg-blue-50 dark:bg-info/100/15 dark:text-blue-300 dark:border-blue-500/30",
@@ -50,6 +49,7 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedUserId, setSelectedUserId] = useState("")
   const [userSchedule, setUserSchedule] = useState<{ dayOfWeek: number, startTime: string, endTime: string }[]>([])
+  const [existingIds, setExistingIds] = useState<Set<number>>(new Set())
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
 
@@ -60,18 +60,20 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
   useEffect(() => {
     if (!selectedUserId) {
       setUserSchedule([])
+      setExistingIds(new Set())
       return
     }
-    // Load existing schedules for this user so save doesn't wipe them out
+    // Load existing schedules for this user, tracking their IDs
     const userId = parseInt(selectedUserId)
-    const existing = schedules
-      .filter((s) => s.userId === userId)
-      .map((s) => ({
+    const existing = schedules.filter((s) => s.userId === userId)
+    setUserSchedule(
+      existing.map((s) => ({
         dayOfWeek: s.dayOfWeek,
         startTime: s.startTime,
         endTime: s.endTime,
       }))
-    setUserSchedule(existing)
+    )
+    setExistingIds(new Set(existing.map((s) => s.id)))
   }, [selectedUserId, schedules])
 
   const canManageAllSchedules = hasPermission(currentUser?.roles ?? [], "MANAGE_USERS")
@@ -128,11 +130,31 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
     }
   }
 
-  const handleDayChange = (dayIdx: number, checked: boolean) => {
+  // Toggle a day on/off. Existing schedules (from DB) cannot be unchecked.
+  const handleDayToggle = (dayIdx: number, checked: boolean) => {
     if (checked) {
       setUserSchedule(prev => [...prev, { dayOfWeek: dayIdx, startTime: "09:00", endTime: "09:30" }])
     } else {
-      setUserSchedule(prev => prev.filter(s => s.dayOfWeek !== dayIdx))
+      // Only remove entries that are NOT from DB (new entries only)
+      setUserSchedule(prev => {
+        const existing = prev.find(
+          s => s.dayOfWeek === dayIdx && existingIds.has(-1) // placeholder check
+        )
+        // Check if this day has any existing schedules
+        const hasExisting = schedules.some(
+          s => s.userId === parseInt(selectedUserId) && s.dayOfWeek === dayIdx
+        )
+        if (hasExisting) {
+          // Don't remove — existing schedules can't be unchecked
+          toast({
+            title: "Horário existente",
+            description: "Este dia possui horários cadastrados. Use o grid para removê-los.",
+            variant: "default"
+          })
+          return prev
+        }
+        return prev.filter(s => s.dayOfWeek !== dayIdx)
+      })
     }
   }
 
@@ -164,6 +186,8 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
 
     try {
       // Atomic replace: one PUT replaces all schedules for this user
+      // userSchedule now contains BOTH existing (from DB) and new (user-added) entries
+      // Existing entries are preserved because handleDayToggle prevents unchecking them
       const response = await fetch("/api/schedules/bulk", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -181,11 +205,11 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
         throw new Error(data?.error || "Erro ao salvar horários")
       }
 
-      // Refresh schedules
       await fetchSchedules()
       setDialogOpen(false)
       setSelectedUserId("")
       setUserSchedule([])
+      setExistingIds(new Set())
       
       toast({
         title: "Sucesso",
@@ -214,6 +238,10 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
   const totalScheduledHours = totalScheduledMinutes / 60
   const requiredHours = selectedUser?.weekHours || 0
   const activeUsers = users.filter((user) => user.status === "active")
+
+  // Check if a day has existing schedules in the DB
+  const dayHasExisting = (dayIdx: number) =>
+    schedules.some(s => s.userId === parseInt(selectedUserId) && s.dayOfWeek === dayIdx)
 
   return (
     <Card>
@@ -268,7 +296,7 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
         {/* Dialog para definir horários */}
         {!readOnly && (
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl sm:overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Definir Horários do Usuário</DialogTitle>
               <DialogDescription>
@@ -305,6 +333,7 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
                   <div className="font-medium">Dias da Semana</div>
                   <div className="grid grid-cols-1 gap-3">
                     {WEEK_DAYS.map((day, idx) => {
+                      const hasExisting = dayHasExisting(idx)
                       const checked = userSchedule.some(s => s.dayOfWeek === idx)
                       return (
                         <div key={day} className="flex items-center justify-between p-3 border rounded-lg">
@@ -312,10 +341,14 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
                             <input
                               type="checkbox"
                               checked={checked}
-                              onChange={e => handleDayChange(idx, e.target.checked)}
+                              disabled={hasExisting}
+                              onChange={e => handleDayToggle(idx, e.target.checked)}
                               className="w-4 h-4"
                             />
                             <span className="font-medium">{day}</span>
+                            {hasExisting && (
+                              <Badge variant="secondary" className="text-[10px]">cadastrado</Badge>
+                            )}
                           </div>
                           
                           {checked && (
