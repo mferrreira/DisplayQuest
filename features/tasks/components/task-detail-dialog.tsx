@@ -31,6 +31,7 @@ import {
 import { Calendar, Check, Pencil, Trash2, X } from "lucide-react"
 import type { Task } from "@/entities/task"
 import { useProjects } from "@/features/projects"
+import { useUsers } from "@/features/users"
 import { useTaskMutations, projectedAward } from ".."
 
 export interface TaskDetailDialogProps {
@@ -55,6 +56,7 @@ function splitFixInstructions(description: string | null | undefined) {
 export function TaskDetailDialog({ task, open, onOpenChange, onEdit }: TaskDetailDialogProps) {
   const { data: session } = useSession()
   const { data: projects = [] } = useProjects()
+  const { data: users = [] } = useUsers()
   const { approve, reject, remove } = useTaskMutations()
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [rejectOpen, setRejectOpen] = useState(false)
@@ -188,7 +190,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit }: TaskDetai
               <div>
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">Responsáveis</p>
                 <p className="text-sm">
-                  {task.assigneeIds.map((id) => `Membro #${id}`).join(", ")}
+                  {task.assigneeIds.map((id) => users.find((u) => u.id === id)?.name ?? `Membro #${id}`).join(", ")}
                 </p>
               </div>
             )}
