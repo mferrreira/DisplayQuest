@@ -41,6 +41,7 @@ export class LabOperationsModule {
   readonly createUserSchedule: GatewayCall<LabOperationsGateway["createUserSchedule"]>
   readonly updateUserSchedule: GatewayCall<LabOperationsGateway["updateUserSchedule"]>
   readonly deleteUserSchedule: GatewayCall<LabOperationsGateway["deleteUserSchedule"]>
+  readonly replaceUserSchedules: GatewayCall<LabOperationsGateway["replaceUserSchedules"]>
 
   constructor(private readonly gateway: LabOperationsGateway) {
     this.listIssues = this.gateway.listIssues.bind(this.gateway)
@@ -75,6 +76,7 @@ export class LabOperationsModule {
     this.createUserSchedule = this.gateway.createUserSchedule.bind(this.gateway)
     this.updateUserSchedule = this.gateway.updateUserSchedule.bind(this.gateway)
     this.deleteUserSchedule = this.gateway.deleteUserSchedule.bind(this.gateway)
+    this.replaceUserSchedules = this.gateway.replaceUserSchedules.bind(this.gateway)
   }
 }
 

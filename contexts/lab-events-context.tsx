@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useRef, type ReactNode } from "react";
 import { LabEventsAPI } from "@/contexts/api-client";
 
 interface LabEvent {
@@ -25,10 +25,13 @@ export function LabEventsProvider({ children }: { children: ReactNode }) {
   const [events, setEvents] = useState<LabEvent[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Último dia buscado; mutações refazem o fetch desse dia
+  const lastDateRef = useRef<Date | null>(null);
 
   const fetchEvents = useCallback(async (date: Date) => {
     setLoading(true);
     setError(null);
+    lastDateRef.current = date;
     try {
       const day = date.getDate();
       const month = date.getMonth() + 1;
@@ -48,7 +51,10 @@ export function LabEventsProvider({ children }: { children: ReactNode }) {
     setError(null);
     try {
       const { event: newEvent } = await LabEventsAPI.createEvent(event);
-      setEvents((prev) => [...prev, newEvent]);
+      // Refetch do dia selecionado (fonte de verdade)
+      if (lastDateRef.current) {
+        await fetchEvents(lastDateRef.current);
+      }
       return newEvent;
     } catch (err) {
       setError("Erro ao criar evento do laboratório");
@@ -56,21 +62,24 @@ export function LabEventsProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [fetchEvents]);
 
   const deleteEvent = useCallback(async (eventId: number) => {
     setLoading(true);
     setError(null);
     try {
       await LabEventsAPI.deleteEvent(eventId);
-      setEvents((prev) => prev.filter((event) => event.id !== eventId));
+      // Refetch do dia selecionado (fonte de verdade)
+      if (lastDateRef.current) {
+        await fetchEvents(lastDateRef.current);
+      }
     } catch (err) {
       setError("Erro ao remover evento do laboratório");
       throw err;
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [fetchEvents]);
 
   return (
     <LabEventsContext.Provider value={{ events, loading, error, fetchEvents, createEvent, deleteEvent }}>

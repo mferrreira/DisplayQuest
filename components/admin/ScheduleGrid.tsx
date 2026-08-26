@@ -149,30 +149,25 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
     }
 
     try {
-      // TODO(step-6): replace delete-all-then-recreate with the atomic bulk PUT
-      // endpoint (/api/schedules/bulk).
-      // 1. Delete all existing schedules for this user
-      const userSchedules = schedules.filter(s => s.userId === parseInt(selectedUserId))
-      await Promise.all(userSchedules.map(async (s) => {
-        await fetch(`/api/schedules/${s.id}`, { method: "DELETE" })
-      }))
-
-      // 2. Create new schedules
-      for (const s of userSchedule) {
-        const payload = {
+      // Atomic replace: one PUT replaces all schedules for this user
+      const response = await fetch("/api/schedules/bulk", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
           userId: parseInt(selectedUserId),
-          dayOfWeek: s.dayOfWeek,
-          ...snapRange({ startTime: s.startTime, endTime: s.endTime })
-        }
-        
-        await fetch("/api/schedules", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        })
+          slots: userSchedule.map((s) => ({
+            dayOfWeek: s.dayOfWeek,
+            ...snapRange({ startTime: s.startTime, endTime: s.endTime }),
+          })),
+        }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => null)
+        throw new Error(data?.error || "Erro ao salvar horários")
       }
 
-      // 3. Refresh schedules
+      // Refresh schedules
       await fetchSchedules()
       setDialogOpen(false)
       setSelectedUserId("")

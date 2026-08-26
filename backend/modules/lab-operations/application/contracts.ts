@@ -94,3 +94,10 @@ export interface DeleteUserScheduleCommand {
   actorRoles: string[]
   scheduleId: number
 }
+
+export interface ReplaceUserSchedulesCommand {
+  actorUserId: number
+  actorRoles: string[]
+  targetUserId: number
+  slots: { dayOfWeek: number; startTime: string; endTime: string }[]
+}

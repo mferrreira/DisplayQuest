@@ -46,7 +46,8 @@ export function LabNoticesProvider({ children }: { children: ReactNode }) {
     setError(null)
     try {
       const { notice } = await LabNoticesAPI.create(payload)
-      setNotices((prev) => [notice, ...prev])
+      // Refetch dos avisos (fonte de verdade)
+      await fetchNotices()
       return notice
     } catch (err) {
       setError("Erro ao criar aviso do laboratório")
@@ -54,21 +55,22 @@ export function LabNoticesProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [fetchNotices])
 
   const deleteNotice = useCallback(async (noticeId: number) => {
     setLoading(true)
     setError(null)
     try {
       await LabNoticesAPI.delete(noticeId)
-      setNotices((prev) => prev.filter((notice) => notice.id !== noticeId))
+      // Refetch dos avisos (fonte de verdade)
+      await fetchNotices()
     } catch (err) {
       setError("Erro ao remover aviso do laboratório")
       throw err
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [fetchNotices])
 
   return (
     <LabNoticesContext.Provider value={{ notices, loading, error, fetchNotices, createNotice, deleteNotice }}>

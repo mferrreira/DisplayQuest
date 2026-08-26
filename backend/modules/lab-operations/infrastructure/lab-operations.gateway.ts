@@ -23,6 +23,7 @@ import type {
   DeleteLabNoticeCommand,
   DeleteLaboratoryScheduleCommand,
   DeleteUserScheduleCommand,
+  ReplaceUserSchedulesCommand,
   LabIssueQuery,
   ListResponsibilitiesQuery,
   ListUserSchedulesQuery,
@@ -470,6 +471,17 @@ export class DefaultLabOperationsGateway implements LabOperationsGateway {
     if (!existing) throw new Error("Horário não encontrado")
 
     await this.userScheduleRepository.delete(command.scheduleId)
+  }
+
+  async replaceUserSchedules(command: ReplaceUserSchedulesCommand) {
+    if (!hasPermission(command.actorRoles, "MANAGE_USERS")) {
+      throw new Error("Acesso negado")
+    }
+
+    const user = await this.userRepository.findById(command.targetUserId)
+    if (!user) throw new Error("Usuário não encontrado")
+
+    return await this.userScheduleRepository.replaceForUser(command.targetUserId, command.slots)
   }
 
   private async canUserManageLaboratorySchedule(userId?: number) {

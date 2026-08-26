@@ -16,6 +16,7 @@ import type {
   LabIssueQuery,
   ListUserSchedulesQuery,
   ListResponsibilitiesQuery,
+  ReplaceUserSchedulesCommand,
   StartResponsibilityCommand,
   UpdateUserScheduleCommand,
   UpdateLaboratoryScheduleCommand,
@@ -61,4 +62,5 @@ export interface LabOperationsGateway {
   createUserSchedule(command: CreateUserScheduleCommand): Promise<UserSchedule>
   updateUserSchedule(command: UpdateUserScheduleCommand): Promise<UserSchedule>
   deleteUserSchedule(command: DeleteUserScheduleCommand): Promise<void>
+  replaceUserSchedules(command: ReplaceUserSchedulesCommand): Promise<UserSchedule[]>
 }
