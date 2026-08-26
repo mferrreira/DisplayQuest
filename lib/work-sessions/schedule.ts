@@ -101,18 +101,29 @@ export function getMinutesUntilNextPause(now: Date): number {
  * should have been automatically paused. Returns null when no pause was
  * crossed (session may stay active).
  */
+export function toSafeDate(value: Date | string | number): Date {
+  return value instanceof Date ? value : new Date(value)
+}
+
+/**
+ * Earliest scheduled pause that occurred strictly after `startTime` and at or
+ * before `now`. This is the moment an active session started before a pause
+ * should have been automatically paused. Returns null when no pause was
+ * crossed (session may stay active).
+ */
 export function getMissedScheduledPause(
-  startTime: Date,
-  now: Date,
+  startTime: Date | string,
+  now: Date | string = new Date(),
 ): Date | null {
-  const startMs = startTime.getTime();
+  const startMs = toSafeDate(startTime).getTime()
+  const nowDate = toSafeDate(now)
   let missed: Date | null = null;
   // Check the day of startTime and the following day (sessions cannot span
   // more than that without having been normalized already).
   for (const dayOffset of [0, 1]) {
     const ref = new Date(startMs + dayOffset * 24 * 60 * MINUTE_MS);
     for (const p of pauseInstantsOfDay(ref)) {
-      if (p.getTime() > startMs && p.getTime() <= now.getTime()) {
+      if (p.getTime() > startMs && p.getTime() <= nowDate.getTime()) {
         if (!missed || p.getTime() < missed.getTime()) missed = p;
       }
     }

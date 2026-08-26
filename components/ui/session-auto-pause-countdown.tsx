@@ -8,7 +8,7 @@ import {
 
 interface SessionAutoPauseCountdownProps {
   sessionStatus: string | null
-  startTime: Date | null
+  startTime: Date | string | null
 }
 
 function formatCountdown(totalMinutes: number) {
