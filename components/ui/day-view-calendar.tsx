@@ -1,11 +1,40 @@
 import React, { useMemo } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const DEFAULT_SLOTS = ["07:30", "09:30", "13:30", "15:50", "17:30", "19:30"];
-function getVisibleSlots(events: { time: string }[], labSchedules?: { startTime: string; endTime: string }[]) {
-  const eventSlots = events.map(e => e.time);
-  const labSlots = labSchedules ? labSchedules.flatMap(s => [s.startTime, s.endTime]) : [];
-  return Array.from(new Set([...DEFAULT_SLOTS, ...eventSlots, ...labSlots])).sort();
+
+/**
+ * Janela visível de slots do dia. Com muitos horários cadastrados (limites de
+ * escalas distantes dos eventos), limita a janela ao intervalo entre o
+ * primeiro e o último evento/horário relevante (± 1 slot), para não renderizar
+ * uma tabela longa e vazia.
+ */
+export function getVisibleSlots(
+  events: { time: string }[],
+  labSchedules?: { startTime: string; endTime: string }[],
+): string[] {
+  const all = Array.from(
+    new Set([
+      ...DEFAULT_SLOTS,
+      ...events.map((e) => e.time),
+      ...(labSchedules ? labSchedules.flatMap((s) => [s.startTime, s.endTime]) : []),
+    ]),
+  ).sort();
+
+  if (all.length <= 14 || events.length === 0) return all;
+
+  const relevantTimes = [
+    ...events.map((e) => e.time),
+    ...(labSchedules ?? []).flatMap((s) => [s.startTime, s.endTime]),
+  ].sort();
+
+  const min = relevantTimes[0];
+  const max = relevantTimes[relevantTimes.length - 1];
+  const minIdx = Math.max(0, all.indexOf(min) - 1);
+  const maxIdx = Math.min(all.length - 1, all.lastIndexOf(max) + 1);
+
+  return all.slice(minIdx, maxIdx + 1);
 }
 
 export interface DayViewEvent {
@@ -62,37 +91,37 @@ const DayViewCalendar: React.FC<DayViewCalendarProps> = ({
   };
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md p-4 w-full max-w-md mx-auto border border-gray-200 dark:border-gray-700">
+    <div className="w-full rounded-lg border bg-card p-4">
       <div className="flex items-center justify-between mb-4">
-        <button onClick={handlePrevDay} className="text-blue-600 dark:text-blue-400 hover:underline px-2 py-1">◀</button>
-        <span className="font-semibold text-lg text-gray-900 dark:text-gray-100">{date.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "2-digit", year: "numeric" })}</span>
-        <button onClick={handleNextDay} className="text-blue-600 dark:text-blue-400 hover:underline px-2 py-1">▶</button>
+        <Button variant="ghost" size="icon" onClick={handlePrevDay} aria-label="Dia anterior">
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        <span className="font-semibold text-lg capitalize">
+          {date.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "2-digit", year: "numeric" })}
+        </span>
+        <Button variant="ghost" size="icon" onClick={handleNextDay} aria-label="Próximo dia">
+          <ChevronRight className="h-4 w-4" />
+        </Button>
       </div>
       {canAddEvent && onAddEventFromHeader ? (
         <div className="mb-4 flex justify-end">
-          <button
-            type="button"
-            onClick={onAddEventFromHeader}
-            className="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition hover:opacity-90"
-          >
-            <Plus className="h-4 w-4" />
+          <Button size="sm" onClick={onAddEventFromHeader}>
+            <Plus className="h-4 w-4 mr-2" />
             Adicionar evento
-          </button>
+          </Button>
         </div>
       ) : null}
-      <div className="divide-y divide-gray-200 dark:divide-gray-700">
+      <div className="divide-y divide-border">
         {visibleSlots.map((slot) => {
-          const event = events.find(e => e.time === slot);
+          const event = events.find((e) => e.time === slot);
           return (
-            <div key={slot} className="flex items-center py-3 group">
-              <div className="w-16 text-right pr-4 text-gray-800 dark:text-gray-300 font-mono">{slot}</div>
+            <div key={slot} className="flex items-center py-3">
+              <div className="w-16 text-right pr-4 text-muted-foreground font-mono">{slot}</div>
               {event ? (
-                <div className="flex-1 flex items-center gap-2">
-                  <span className={`inline-block w-2.5 h-2.5 rounded-full ${typeColor[event.type ?? "log"]}`} />
-                  <div className="flex-1">
-                    <span className="text-gray-900 dark:text-gray-100">
-                      {event.note}
-                    </span>
+                <div className="flex-1 flex items-center gap-2 min-w-0">
+                  <span className={`inline-block w-2.5 h-2.5 rounded-full shrink-0 ${typeColor[event.type ?? "log"]}`} />
+                  <div className="flex-1 min-w-0">
+                    <span>{event.note}</span>
                     {event.userName && event.type !== "laboratory" && (
                       <div className="text-xs text-muted-foreground">
                         {event.userName}
@@ -104,21 +133,25 @@ const DayViewCalendar: React.FC<DayViewCalendarProps> = ({
                     <button
                       type="button"
                       onClick={() => onDeleteEvent(event)}
-                      className="opacity-0 transition group-hover:opacity-100 text-muted-foreground hover:text-destructive"
+                      aria-label="Remover evento"
                       title="Remover evento"
+                      className="rounded p-1 text-muted-foreground opacity-60 transition hover:text-destructive hover:opacity-100 focus-visible:opacity-100 focus-visible:text-destructive focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
                   ) : null}
                 </div>
               ) : canAddEvent ? (
-                <button
-                  className="ml-2 text-sm text-blue-600 dark:text-blue-400 hover:underline opacity-0 group-hover:opacity-100 transition"
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-muted-foreground opacity-60 hover:opacity-100 focus-visible:opacity-100"
                   onClick={() => onAddEvent(slot)}
                   title="Adicionar evento neste horário"
                 >
-                  + Adicionar evento
-                </button>
+                  <Plus className="h-3.5 w-3.5 mr-1" />
+                  Adicionar evento
+                </Button>
               ) : (
                 <div className="flex-1" />
               )}

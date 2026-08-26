@@ -18,6 +18,7 @@ import {
 import { useToast } from "@/contexts/use-toast"
 import { hasPermission } from "@/lib/auth/rbac"
 import { TIME_SLOTS, WEEK_DAYS, snapRange } from "@/lib/constants/schedule-grid"
+import { getVisibleTimeSlots, groupSchedulesByUser } from "@/lib/schedule-grid-view"
 
 // Generate a subtle color for each user based on their id
 function getUserColor(userId: number) {
@@ -148,6 +149,8 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
     }
 
     try {
+      // TODO(step-6): replace delete-all-then-recreate with the atomic bulk PUT
+      // endpoint (/api/schedules/bulk).
       // 1. Delete all existing schedules for this user
       const userSchedules = schedules.filter(s => s.userId === parseInt(selectedUserId))
       await Promise.all(userSchedules.map(async (s) => {
@@ -192,6 +195,8 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
   }
 
   const selectedUser = users.find(u => u.id === parseInt(selectedUserId))
+  const visibleSlots = getVisibleTimeSlots(schedules)
+  const mobileGroups = groupSchedulesByUser(schedules, users)
   const totalScheduledMinutes = userSchedule.reduce((sum, s) => {
     const [sh, sm] = s.startTime.split(":").map(Number)
     const [eh, em] = s.endTime.split(":").map(Number)
@@ -365,14 +370,46 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
         )}
 
         {/* Grade de horários */}
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto max-w-full">
           {loading ? (
             <div className="text-center text-muted-foreground py-8">
               <Clock className="h-8 w-8 mx-auto mb-2 animate-spin" />
               Carregando horários...
             </div>
+          ) : schedules.length === 0 ? (
+            <div className="rounded-lg border border-dashed p-6 text-center text-muted-foreground">
+              Nenhum horário cadastrado.
+              {!readOnly && canManageAllSchedules && (
+                <div className="mt-3">
+                  <Button variant="outline" size="sm" onClick={() => setDialogOpen(true)} disabled={!currentUser}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Definir Horários
+                  </Button>
+                </div>
+              )}
+            </div>
           ) : (
-            <table className="min-w-full border text-xs">
+            <>
+              {/* Visão compacta mobile */}
+              <div className="md:hidden space-y-3">
+                {mobileGroups.map((group) => (
+                  <div key={group.userId} className="rounded-lg border p-3">
+                    <div className="flex items-center gap-2 font-medium">
+                      <span className={`inline-block h-2.5 w-2.5 rounded-full ${getUserColor(group.userId).split(" ")[0]}`} />
+                      {group.userName}
+                    </div>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {group.entries
+                        .map((entry) => `${WEEK_DAYS[entry.dayOfWeek] ?? "Dia"} ${entry.timeRange}`)
+                        .join(" · ")}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Tabela desktop */}
+              <div className="hidden md:block">
+            <table className="w-full min-w-[640px] border text-xs">
               <thead>
                 <tr>
                   <th className="px-3 py-2 border-b bg-blue-50 dark:bg-info/10 text-left font-medium">Horário</th>
@@ -384,7 +421,7 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
                 </tr>
               </thead>
               <tbody>
-                {TIME_SLOTS.map((slot) => (
+                {visibleSlots.map((slot) => (
                   <tr key={slot.start + slot.end}>
                     <td className="px-3 py-2 border-r text-right align-middle whitespace-nowrap border-b-2 font-medium">
                       {slot.start}<br />{slot.end}
@@ -433,6 +470,8 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
                 ))}
               </tbody>
             </table>
+              </div>
+            </>
           )}
         </div>
       </CardContent>
