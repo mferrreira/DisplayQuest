@@ -98,5 +98,21 @@ export const wireTaskStatus = z
     return "to-do";
   });
 
+/**
+ * Wire-tolerant priority transform: the DB column is a plain String and live rows contain empty
+ * strings ("") or legacy values that don't match taskPrioritySchema. Normalize to "medium"
+ * (the default) so the entire task list doesn't fail zod parse.
+ */
+export const wireTaskPriority = z
+  .string()
+  .transform((value): TaskPriority => {
+    if ((taskPrioritySchema.options as string[]).includes(value)) return value as TaskPriority;
+    console.warn(`[entities/task] invalid priority "${value}" → "medium"`);
+    return "medium";
+  });
+
 /** Wire-tolerant task schema used by API endpoints (strict taskSchema remains the contract). */
-export const wireTaskSchema = taskSchema.extend({ status: wireTaskStatus });
+export const wireTaskSchema = taskSchema.extend({
+  status: wireTaskStatus,
+  priority: wireTaskPriority,
+});
