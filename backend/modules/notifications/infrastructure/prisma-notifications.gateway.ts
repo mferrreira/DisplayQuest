@@ -48,7 +48,7 @@ export class PrismaNotificationsGateway implements NotificationsGateway {
       type: notification.type,
       title: notification.title,
       message: notification.message,
-      data: this.parseData(notification.data),
+      data: notification.data,
       read: notification.read,
       createdAt: notification.createdAt.toISOString(),
       readAt: notification.readAt ? notification.readAt.toISOString() : null,

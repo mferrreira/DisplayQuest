@@ -1,5 +1,3 @@
-import { projects } from '@prisma/client';
-
 export interface IProject {
     id?: number;
     name: string;
@@ -9,6 +7,14 @@ export interface IProject {
     leaderId?: number | null;
     status: ProjectStatus;
     links?: ProjectLink[] | null;
+    memberCount?: number;
+    members?: ProjectMemberSummary[];
+}
+
+export interface ProjectMemberSummary {
+    userId: number;
+    roles: string[];
+    user?: { id: number; name: string; email: string } | null;
 }
 
 export interface ProjectLink {
@@ -32,6 +38,8 @@ export class Project {
     public leaderId?: number | null;
     public status: ProjectStatus;
     public links?: ProjectLink[] | null;
+    public memberCount?: number;
+    public members?: ProjectMemberSummary[];
 
     constructor(data: IProject) {
         this.id = data.id;
@@ -42,6 +50,8 @@ export class Project {
         this.leaderId = data.leaderId;
         this.status = data.status;
         this.links = data.links;
+        this.memberCount = data.memberCount;
+        this.members = data.members;
     }
 
     toJSON(): any {
@@ -54,10 +64,12 @@ export class Project {
             leaderId: this.leaderId,
             status: this.status,
             links: this.links,
+            memberCount: this.memberCount,
+            members: this.members,
         };
     }
 
-    static fromPrisma(data: projects): Project {
+    static fromPrisma(data: any): Project {
         return new Project({
             id: data.id,
             name: data.name,
@@ -67,6 +79,14 @@ export class Project {
             leaderId: data.leaderId,
             status: data.status as ProjectStatus,
             links: data.links ? (data.links as unknown as ProjectLink[]) : null,
+            memberCount: data._count?.members ?? data.members?.length ?? undefined,
+            members: Array.isArray(data.members)
+                ? data.members.map((m: any) => ({
+                      userId: m.userId,
+                      roles: m.roles ?? [],
+                      user: m.user ?? null,
+                  }))
+                : undefined,
         });
     }
 
