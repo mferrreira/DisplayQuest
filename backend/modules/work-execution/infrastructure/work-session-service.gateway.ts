@@ -214,11 +214,24 @@ export class WorkSessionServiceGateway implements WorkExecutionGateway {
   }
 
   async listProjectLogsForLeader(command: ListProjectLogsForLeaderCommand) {
-    const ledProjects = await prisma.projects.findMany({
-      where: { leaderId: command.leaderId },
-      select: { id: true },
-    })
-    const ledProjectIds = ledProjects.map((p) => p.id)
+    // Leadership scope = projects formally led (leaderId) UNION projects where
+    // the actor holds the GERENTE_PROJETO membership role.
+    const [ledProjects, managedMemberships] = await Promise.all([
+      prisma.projects.findMany({
+        where: { leaderId: command.leaderId },
+        select: { id: true },
+      }),
+      prisma.project_members.findMany({
+        where: { userId: command.leaderId, roles: { has: "GERENTE_PROJETO" } },
+        select: { projectId: true },
+      }),
+    ])
+    const ledProjectIds = Array.from(
+      new Set([
+        ...ledProjects.map((p) => p.id),
+        ...managedMemberships.map((m) => m.projectId),
+      ]),
+    )
 
     if (ledProjectIds.length === 0) {
       return { logs: [], sessions: [], ledProjectIds }
