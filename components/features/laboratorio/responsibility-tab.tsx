@@ -12,10 +12,12 @@ import { useAuth } from "@/contexts/auth-context"
 import { useUser } from "@/contexts/user-context"
 import { useResponsibility } from "@/contexts/responsibility-context"
 import { useLabNotices } from "@/contexts/lab-notices-context"
+import { useToast } from "@/contexts/use-toast"
 import { hasAccess } from "@/lib/utils/utils"
 import { canManageTargetEvent } from "@/components/features/laboratorio/permissions"
 import { NoticeDialog } from "@/components/features/laboratorio/notice-dialog"
 import { NotesDialog } from "@/components/features/laboratorio/notes-dialog"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 
 export function ResponsibilityTab() {
   const { user } = useAuth()
@@ -36,6 +38,8 @@ export function ResponsibilityTab() {
   const [startNotes, setStartNotes] = useState("")
   const [selectedResponsibility, setSelectedResponsibility] = useState<{ id: number; notes?: string | null } | null>(null)
   const [showNoticeDialog, setShowNoticeDialog] = useState(false)
+  const [pendingDeleteNotice, setPendingDeleteNotice] = useState<{ id: number; userId: number; note: string } | null>(null)
+  const { toast } = useToast()
 
   // Memoize formatted active responsibility start time
   const formattedActiveStartTime = useMemo(
@@ -64,6 +68,11 @@ export function ResponsibilityTab() {
       setStartNotes("")
     } catch (err) {
       console.error("Erro ao iniciar responsabilidade:", err)
+      toast({
+        title: "Erro",
+        description: "Não foi possível iniciar a responsabilidade. Tente novamente.",
+        variant: "destructive",
+      })
     } finally {
       setIsStarting(false)
     }
@@ -75,6 +84,11 @@ export function ResponsibilityTab() {
       await endResponsibility()
     } catch (err) {
       console.error("Erro ao encerrar responsabilidade:", err)
+      toast({
+        title: "Erro",
+        description: "Não foi possível encerrar a responsabilidade. Tente novamente.",
+        variant: "destructive",
+      })
     } finally {
       setIsEnding(false)
     }
@@ -87,6 +101,11 @@ export function ResponsibilityTab() {
       setSelectedResponsibility(null)
     } catch (err) {
       console.error("Erro ao atualizar notas:", err)
+      toast({
+        title: "Erro",
+        description: "Não foi possível salvar as notas. Tente novamente.",
+        variant: "destructive",
+      })
     }
   }
 
@@ -95,9 +114,23 @@ export function ResponsibilityTab() {
     setShowNoticeDialog(false)
   }
 
-  const handleDeleteNotice = async (notice: { id: number; userId: number }) => {
-    if (!canManageTargetEvent(user, labUsers, notice.userId)) return
-    await deleteNotice(notice.id)
+  const handleDeleteNotice = async () => {
+    const notice = pendingDeleteNotice
+    if (!notice || !canManageTargetEvent(user, labUsers, notice.userId)) {
+      setPendingDeleteNotice(null)
+      return
+    }
+    try {
+      await deleteNotice(notice.id)
+    } catch (err) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível remover o aviso.",
+        variant: "destructive",
+      })
+    } finally {
+      setPendingDeleteNotice(null)
+    }
   }
 
   return (
@@ -234,7 +267,7 @@ export function ResponsibilityTab() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => void handleDeleteNotice(notice)}
+                          onClick={() => setPendingDeleteNotice(notice)}
                           aria-label={`Remover o aviso "${notice.note}"`}
                           className="text-muted-foreground hover:text-destructive"
                         >
@@ -317,6 +350,16 @@ export function ResponsibilityTab() {
       </div>
 
       <NoticeDialog open={showNoticeDialog} onOpenChange={setShowNoticeDialog} onSave={handleSaveNotice} />
+
+      <ConfirmDialog
+        open={Boolean(pendingDeleteNotice)}
+        onOpenChange={(open) => !open && setPendingDeleteNotice(null)}
+        title="Remover aviso"
+        description={`Remover o aviso "${pendingDeleteNotice?.note || ""}"?`}
+        confirmLabel="Remover"
+        destructive
+        onConfirm={handleDeleteNotice}
+      />
 
       <NotesDialog
         open={Boolean(selectedResponsibility)}
