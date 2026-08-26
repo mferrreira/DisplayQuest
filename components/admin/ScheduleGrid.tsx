@@ -18,7 +18,7 @@ import {
 import { useToast } from "@/contexts/use-toast"
 import { hasPermission } from "@/lib/auth/rbac"
 import { TIME_SLOTS, WEEK_DAYS, snapRange } from "@/lib/constants/schedule-grid"
-import { getVisibleTimeSlots, groupSchedulesByUser } from "@/lib/schedule-grid-view"
+import { groupSchedulesByUser } from "@/lib/schedule-grid-view"
 
 // Generate a subtle color for each user based on their id
 function getUserColor(userId: number) {
@@ -190,7 +190,7 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
   }
 
   const selectedUser = users.find(u => u.id === parseInt(selectedUserId))
-  const visibleSlots = getVisibleTimeSlots(schedules)
+  const visibleSlots = TIME_SLOTS
   const mobileGroups = groupSchedulesByUser(schedules, users)
   const totalScheduledMinutes = userSchedule.reduce((sum, s) => {
     const [sh, sm] = s.startTime.split(":").map(Number)

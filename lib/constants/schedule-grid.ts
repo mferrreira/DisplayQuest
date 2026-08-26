@@ -1,6 +1,6 @@
 export const SLOT_MINUTES = 30
-export const GRID_START = "07:00"
-export const GRID_END = "21:00"
+export const GRID_START = "07:30"
+export const GRID_END = "17:00"
 
 export const WEEK_DAYS = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta"]
 
