@@ -15,4 +15,4 @@ export {
   TASK_STATUSES,
   ARCHIVE_AFTER_DAYS,
 } from "./utils/move-rules"
-export type { MoveDecision } from "./utils/move-rules"
+export type { MoveDecision, ParsedBacklogLine } from "./utils/move-rules"

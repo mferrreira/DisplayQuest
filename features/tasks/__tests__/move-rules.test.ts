@@ -117,9 +117,41 @@ describe("parseBacklogLines", () => {
       "Comprar reagentes !alta @30\nEscrever relatório\n\n   \nTestar sensor !urgente @15",
     )
     expect(result).toEqual([
-      { title: "Comprar reagentes", priority: "high", points: 30 },
-      { title: "Escrever relatório", priority: "medium", points: 0 },
-      { title: "Testar sensor", priority: "urgent", points: 15 },
+      { title: "Comprar reagentes", priority: "high", points: 30, dueDate: null },
+      { title: "Escrever relatório", priority: "medium", points: 0, dueDate: null },
+      { title: "Testar sensor", priority: "urgent", points: 15, dueDate: null },
+    ])
+  })
+
+  it("parses #dd/mm dates (current year)", () => {
+    const year = new Date().getFullYear()
+    const result = parseBacklogLines("Comprar reagentes #25/12\nCalibrar #1/3")
+    expect(result).toEqual([
+      { title: "Comprar reagentes", priority: "medium", points: 0, dueDate: `${year}-12-25` },
+      { title: "Calibrar", priority: "medium", points: 0, dueDate: `${year}-03-01` },
+    ])
+  })
+
+  it("parses #dd/mm/yyyy dates with explicit year", () => {
+    const result = parseBacklogLines("Relatório #15/06/2027")
+    expect(result).toEqual([
+      { title: "Relatório", priority: "medium", points: 0, dueDate: "2027-06-15" },
+    ])
+  })
+
+  it("parses all tokens together", () => {
+    const year = new Date().getFullYear()
+    const result = parseBacklogLines("Comprar reagentes !alta @30 #25/12")
+    expect(result).toEqual([
+      { title: "Comprar reagentes", priority: "high", points: 30, dueDate: `${year}-12-25` },
+    ])
+  })
+
+  it("ignores invalid dates gracefully", () => {
+    const result = parseBacklogLines("Tarefa #32/13\nOutra #abc")
+    expect(result).toEqual([
+      { title: "Tarefa #32/13", priority: "medium", points: 0, dueDate: null },
+      { title: "Outra #abc", priority: "medium", points: 0, dueDate: null },
     ])
   })
 })

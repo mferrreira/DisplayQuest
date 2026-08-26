@@ -108,7 +108,30 @@ export function projectedAward(task: Pick<Task, "dueDate" | "points">, now: Date
  * One task per line. Optional prefixes: `!alta`/`!media`/`!baixa`/`!urgente` set priority,
  * `@pontos` (integer) sets points. Everything else is the title.
  */
-export function parseBacklogLines(raw: string): Array<{ title: string; priority: Task["priority"]; points: number }> {
+export interface ParsedBacklogLine {
+  title: string;
+  priority: Task["priority"];
+  points: number;
+  dueDate: string | null; // ISO date string (YYYY-MM-DD) or null
+}
+
+/** Parse #dd/mm or #dd/mm/yyyy into YYYY-MM-DD. Returns null on invalid. */
+function parseDateToken(token: string): string | null {
+  const m = token.match(/^#(\d{1,2})\/(\d{1,2})(?:\/(\d{4}))?$/);
+  if (!m) return null;
+  const day = Number(m[1]);
+  const month = Number(m[2]);
+  const year = m[3] ? Number(m[3]) : new Date().getFullYear();
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+  const date = new Date(year, month - 1, day);
+  if (date.getDate() !== day || date.getMonth() !== month - 1) return null; // overflow check
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+export function parseBacklogLines(raw: string): ParsedBacklogLine[] {
   return raw
     .split("\n")
     .map((line) => line.trim())
@@ -116,7 +139,17 @@ export function parseBacklogLines(raw: string): Array<{ title: string; priority:
     .map((line) => {
       let priority: Task["priority"] = "medium";
       let points = 0;
+      let dueDate: string | null = null;
       let title = line;
+
+      const dateMatch = title.match(/\s#(\d{1,2}\/\d{1,2}(?:\/\d{4})?)\b/);
+      if (dateMatch) {
+        const parsed = parseDateToken(`#${dateMatch[1]}`);
+        if (parsed) {
+          dueDate = parsed;
+          title = title.replace(dateMatch[0], "");
+        }
+      }
 
       const pointsMatch = title.match(/\s@(\d+)\b/);
       if (pointsMatch) {
@@ -129,7 +162,7 @@ export function parseBacklogLines(raw: string): Array<{ title: string; priority:
         priority = p === "alta" ? "high" : p === "baixa" ? "low" : p === "urgente" ? "urgent" : "medium";
         title = title.replace(priorityMatch[0], "");
       }
-      return { title: title.trim(), priority, points };
+      return { title: title.trim(), priority, points, dueDate };
     })
     .filter((t) => t.title.length > 0);
 }
