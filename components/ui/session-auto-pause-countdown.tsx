@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import {
   getMissedScheduledPause,
   getNextScheduledPause,
@@ -20,6 +20,11 @@ function formatCountdown(totalMinutes: number) {
 /**
  * Countdown to the next scheduled auto-pause (09:30/12:00/15:00/17:00 SP),
  * shown inside the expanded session clock while a session is active.
+ *
+ * The pause boundary is a fixed instant for the lifetime of the current
+ * (status, startTime) pair, so it is derived once via the schedule helpers
+ * and each 1s tick only does plain arithmetic against that instant — no
+ * timezone schedule math per tick.
  */
 export function SessionAutoPauseCountdown({
   sessionStatus,
@@ -33,9 +38,23 @@ export function SessionAutoPauseCountdown({
     return () => clearInterval(interval)
   }, [sessionStatus])
 
-  if (sessionStatus !== "active" || !startTime) return null
+  const boundary = useMemo(() => {
+    if (sessionStatus !== "active" || !startTime) return null
+    const at = new Date()
+    const missed = getMissedScheduledPause(startTime, at)
+    return {
+      missed,
+      next: missed ? null : getNextScheduledPause(at),
+    }
+  }, [sessionStatus, startTime])
 
-  if (getMissedScheduledPause(startTime, now)) {
+  if (sessionStatus !== "active" || !startTime || !boundary) return null
+
+  const boundaryPassed =
+    boundary.missed !== null ||
+    (boundary.next !== null && boundary.next.getTime() <= now.getTime())
+
+  if (boundaryPassed) {
     return (
       <p className="text-xs text-amber-600 dark:text-amber-400">
         Sessão será pausada automaticamente
@@ -43,10 +62,7 @@ export function SessionAutoPauseCountdown({
     )
   }
 
-  const minutes = Math.max(
-    0,
-    Math.ceil((getNextScheduledPause(now).getTime() - now.getTime()) / 60_000),
-  )
+  const minutes = Math.max(0, Math.ceil((boundary.next!.getTime() - now.getTime()) / 60_000))
 
   return (
     <p className="text-xs text-muted-foreground">

@@ -12,19 +12,30 @@ export const SCHEDULED_PAUSE_TIMES = ["09:30", "12:00", "15:00", "17:00"] as con
 
 const MINUTE_MS = 60_000;
 
+// DateTimeFormat instances are stateless and expensive to construct (10-50ms
+// on Firefox/SpiderMonkey with a timeZone). Build once and reuse: the timer
+// components call these helpers on every render tick.
+const TZ_FORMATTER = new Intl.DateTimeFormat("en-US", {
+  timeZone: SESSION_TIMEZONE,
+  hourCycle: "h23",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+});
+
+const DATE_PARTS_FORMATTER = new Intl.DateTimeFormat("en-CA", {
+  timeZone: SESSION_TIMEZONE,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
 /** Offset (ms) of SESSION_TIMEZONE at the given instant. Positive = west of UTC. */
 function tzOffsetMs(instant: Date): number {
-  const dtf = new Intl.DateTimeFormat("en-US", {
-    timeZone: SESSION_TIMEZONE,
-    hourCycle: "h23",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
-  const parts = dtf.formatToParts(instant);
+  const parts = TZ_FORMATTER.formatToParts(instant);
   const get = (type: string) =>
     Number(parts.find((p) => p.type === type)!.value);
   const asUtc = Date.UTC(
@@ -40,13 +51,7 @@ function tzOffsetMs(instant: Date): number {
 
 /** Y/M/D wall-clock date in SESSION_TIMEZONE at the given instant. */
 function spDateParts(instant: Date): { y: number; m: number; d: number } {
-  const dtf = new Intl.DateTimeFormat("en-CA", {
-    timeZone: SESSION_TIMEZONE,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
-  const [y, m, d] = dtf.format(instant).split("-").map(Number);
+  const [y, m, d] = DATE_PARTS_FORMATTER.format(instant).split("-").map(Number);
   return { y, m, d };
 }
 

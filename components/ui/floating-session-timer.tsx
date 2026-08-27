@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Clock, Pause, PlayCircle, StopCircle, ChevronDown } from "lucide-react"
 import { useProject } from "@/contexts/project-context"
-import { getMissedScheduledPause } from "@/lib/work-sessions/schedule"
+import { getNextScheduledPause, getMissedScheduledPause, toSafeDate } from "@/lib/work-sessions/schedule"
 import { SessionAutoPauseCountdown } from "@/components/ui/session-auto-pause-countdown"
 import { SessionWelcomeBalloon } from "@/components/ui/session-welcome-balloon"
 
@@ -74,25 +74,48 @@ export function FloatingSessionTimer() {
     return () => clearInterval(interval)
   }, [currentSession, user?.id, getElapsedSeconds])
 
+  // Scheduled auto-pause (client-side, in sync with the server cron): while a
+  // session is active, the next pause boundary (09:30/12:00/15:00/17:00,
+  // America/Sao_Paulo) is a fixed wall-clock instant, so wait for it with a
+  // single timeout instead of re-running timezone schedule math every second
+  // (that per-second Intl work saturated the main thread in Firefox). The
+  // effect re-runs only when the session identity/state changes (the 30s poll
+  // included) or the pause callback changes. Server-side normalization (cron
+  // + list/get endpoints) remains the authoritative safety net for idle tabs
+  // and other clients.
   useEffect(() => {
-    if (!currentSession?.id || currentSession.status !== "active" || !user?.id) return
-    // Scheduled auto-pause: fire once the session has crossed a scheduled
-    // pause time (09:30/12:00/15:00/17:00, America/Sao_Paulo).
-    if (!getMissedScheduledPause(currentSession.startTime, new Date())) return
-    if (autoPausedSessionIdsRef.current.has(currentSession.id)) return
+    if (!currentSession?.id || currentSession.status !== "active" || !currentSession.startTime || !user?.id) return
 
-    autoPausedSessionIdsRef.current.add(currentSession.id)
+    const sessionId = currentSession.id
+    const start = toSafeDate(currentSession.startTime)
+    const now = new Date()
 
-    void (async () => {
-      try {
-        await pauseSession(currentSession.id)
-        await fetchSessions(user.id)
-        setShowAutoPauseDialog(true)
-      } catch {
-        autoPausedSessionIdsRef.current.delete(currentSession.id)
-      }
-    })()
-  }, [currentSession, seconds, pauseSession, fetchSessions, user?.id])
+    const doAutoPause = () => {
+      if (autoPausedSessionIdsRef.current.has(sessionId)) return
+      autoPausedSessionIdsRef.current.add(sessionId)
+      void (async () => {
+        try {
+          await pauseSession(sessionId)
+          await fetchSessions(user.id)
+          setShowAutoPauseDialog(true)
+        } catch {
+          // Allow a later poll to retry if the pause request failed.
+          autoPausedSessionIdsRef.current.delete(sessionId)
+        }
+      })()
+    }
+
+    // A pause was crossed while the tab was asleep or backgrounded: pause now.
+    if (getMissedScheduledPause(start, now)) {
+      doAutoPause()
+      return
+    }
+
+    const nextPause = getNextScheduledPause(now)
+    const delay = Math.max(0, nextPause.getTime() - now.getTime())
+    const timeout = setTimeout(doAutoPause, delay)
+    return () => clearTimeout(timeout)
+  }, [currentSession?.id, currentSession?.status, currentSession?.startTime, user?.id, pauseSession, fetchSessions])
 
   useEffect(() => {
     if (!expanded) return
