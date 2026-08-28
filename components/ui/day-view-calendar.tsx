@@ -1,6 +1,8 @@
-import React, { useMemo } from "react";
-import { ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
+import React, { useMemo, useState } from "react";
+import { CalendarIcon, ChevronLeft, ChevronRight, Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 const DEFAULT_SLOTS = ["07:30", "09:30", "13:30", "15:50", "17:30", "19:30"];
 
@@ -53,6 +55,9 @@ interface DayViewCalendarProps {
   labSchedules?: { startTime: string; endTime: string }[];
   onAddEvent: (time: string) => void;
   onAddEventFromHeader?: () => void;
+  onViewEvent?: (event: DayViewEvent) => void;
+  onEditEvent?: (event: DayViewEvent) => void;
+  canEditEvent?: (event: DayViewEvent) => boolean;
   onDeleteEvent?: (event: DayViewEvent) => void;
   canAddEvent?: boolean;
   canDeleteEvent?: (event: DayViewEvent) => boolean;
@@ -72,12 +77,16 @@ const DayViewCalendar: React.FC<DayViewCalendarProps> = ({
   labSchedules,
   onAddEvent,
   onAddEventFromHeader,
+  onViewEvent,
+  onEditEvent,
+  canEditEvent,
   onDeleteEvent,
   canAddEvent = false,
   canDeleteEvent,
   onDateChange,
 }) => {
   const visibleSlots = useMemo(() => getVisibleSlots(events, labSchedules), [events, labSchedules]);
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
   const handlePrevDay = () => {
     const prev = new Date(date);
@@ -96,9 +105,27 @@ const DayViewCalendar: React.FC<DayViewCalendarProps> = ({
         <Button variant="ghost" size="icon" onClick={handlePrevDay} aria-label="Dia anterior">
           <ChevronLeft className="h-4 w-4" />
         </Button>
-        <span className="font-semibold text-lg capitalize">
-          {date.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "2-digit", year: "numeric" })}
-        </span>
+        <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+          <PopoverTrigger asChild>
+            <Button variant="ghost" className="font-semibold text-lg capitalize" title="Escolher dia">
+              <CalendarIcon className="h-4 w-4 mr-2 text-muted-foreground" />
+              {date.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "2-digit", year: "numeric" })}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="center">
+            <Calendar
+              mode="single"
+              selected={date}
+              onSelect={(selected) => {
+                if (selected) {
+                  onDateChange(selected);
+                  setCalendarOpen(false);
+                }
+              }}
+              autoFocus
+            />
+          </PopoverContent>
+        </Popover>
         <Button variant="ghost" size="icon" onClick={handleNextDay} aria-label="Próximo dia">
           <ChevronRight className="h-4 w-4" />
         </Button>
@@ -121,7 +148,20 @@ const DayViewCalendar: React.FC<DayViewCalendarProps> = ({
                 <div className="flex-1 flex items-center gap-2 min-w-0">
                   <span className={`inline-block w-2.5 h-2.5 rounded-full shrink-0 ${typeColor[event.type ?? "log"]}`} />
                   <div className="flex-1 min-w-0">
-                    <span>{event.note}</span>
+                    {onViewEvent ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-auto px-0 text-left font-normal text-foreground hover:bg-transparent hover:underline"
+                        onClick={() => onViewEvent(event)}
+                        title="Ver detalhes do evento"
+                      >
+                        Ver detalhes
+                      </Button>
+                    ) : (
+                      <span>{event.note}</span>
+                    )}
                     {event.userName && event.type !== "laboratory" && (
                       <div className="text-xs text-muted-foreground">
                         {event.userName}
@@ -129,17 +169,30 @@ const DayViewCalendar: React.FC<DayViewCalendarProps> = ({
                       </div>
                     )}
                   </div>
-                  {onDeleteEvent && canDeleteEvent?.(event) ? (
-                    <button
-                      type="button"
-                      onClick={() => onDeleteEvent(event)}
-                      aria-label="Remover evento"
-                      title="Remover evento"
-                      className="rounded p-1 text-muted-foreground opacity-60 transition hover:text-destructive hover:opacity-100 focus-visible:opacity-100 focus-visible:text-destructive focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  ) : null}
+                  <div className="flex items-center gap-1 shrink-0">
+                    {onEditEvent && canEditEvent?.(event) ? (
+                      <button
+                        type="button"
+                        onClick={() => onEditEvent(event)}
+                        aria-label="Editar evento"
+                        title="Editar evento"
+                        className="rounded p-1 text-muted-foreground opacity-60 transition hover:text-foreground hover:opacity-100 focus-visible:opacity-100 focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                    ) : null}
+                    {onDeleteEvent && canDeleteEvent?.(event) ? (
+                      <button
+                        type="button"
+                        onClick={() => onDeleteEvent(event)}
+                        aria-label="Remover evento"
+                        title="Remover evento"
+                        className="rounded p-1 text-muted-foreground opacity-60 transition hover:text-destructive hover:opacity-100 focus-visible:opacity-100 focus-visible:text-destructive focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    ) : null}
+                  </div>
                 </div>
               ) : canAddEvent ? (
                 <Button

@@ -27,9 +27,11 @@ import type {
   LabIssueQuery,
   ListResponsibilitiesQuery,
   ListUserSchedulesQuery,
+  ListLabEventsByRangeQuery,
   StartResponsibilityCommand,
   UpdateLaboratoryScheduleCommand,
   UpdateUserScheduleCommand,
+  UpdateLabEventCommand,
 } from "@/backend/modules/lab-operations/application/contracts"
 import type { LabOperationsGateway } from "@/backend/modules/lab-operations/application/ports/lab-operations.gateway"
 
@@ -217,30 +219,36 @@ export class DefaultLabOperationsGateway implements LabOperationsGateway {
     return await this.labEventRepository.create(event)
   }
 
+  async updateLabEvent(command: UpdateLabEventCommand) {
+    const event = await this.labEventRepository.findById(command.eventId)
+    if (!event) throw new Error("Evento não encontrado")
+
+    await this.assertCanManageLabEvent(command.actorUserId, event.userId, "editar")
+
+    if (command.date !== undefined) {
+      if (isNaN(command.date.getTime())) throw new Error("Data do evento inválida")
+      event.date = command.date
+    }
+    if (command.note !== undefined) {
+      const note = command.note.trim()
+      if (!note) throw new Error("Nota do evento é obrigatória")
+      event.note = note
+    }
+
+    return await this.labEventRepository.update(event)
+  }
+
   async deleteLabEvent(command: DeleteLabEventCommand) {
     const event = await this.labEventRepository.findById(command.eventId)
     if (!event) throw new Error("Evento não encontrado")
 
-    const actor = await this.userRepository.findById(command.actorUserId)
-    if (!actor) throw new Error("Usuário não encontrado")
-
-    if (!this.canManageLabEvent(actor.roles, command.actorUserId, event.userId)) {
-      throw new Error("Usuário não tem permissão para remover este evento")
-    }
-
-    if (event.userId !== command.actorUserId) {
-      const targetUser = await this.userRepository.findById(event.userId)
-      if (!targetUser) throw new Error("Usuário do evento não encontrado")
-
-      const actorPriority = this.getHighestRolePriority(actor.roles)
-      const targetPriority = this.getHighestRolePriority(targetUser.roles)
-
-      if (actorPriority <= targetPriority) {
-        throw new Error("Usuário não tem permissão para remover eventos deste perfil")
-      }
-    }
+    await this.assertCanManageLabEvent(command.actorUserId, event.userId, "remover")
 
     await this.labEventRepository.delete(command.eventId)
+  }
+
+  async listLabEventsByRange(query: ListLabEventsByRangeQuery) {
+    return await this.labEventRepository.findByDateRange(query.startDate, query.endDate)
   }
 
   async listLabNotices() {
@@ -496,6 +504,27 @@ export class DefaultLabOperationsGateway implements LabOperationsGateway {
   private canManageLabEvent(actorRoles: string[], actorUserId: number, targetUserId: number) {
     if (actorUserId === targetUserId) return true
     return this.identityAccess.hasAnyRole(actorRoles as any, ["COORDENADOR", "GERENTE", "LABORATORISTA"])
+  }
+
+  private async assertCanManageLabEvent(actorUserId: number, targetUserId: number, action: "editar" | "remover") {
+    const actor = await this.userRepository.findById(actorUserId)
+    if (!actor) throw new Error("Usuário não encontrado")
+
+    if (!this.canManageLabEvent(actor.roles, actorUserId, targetUserId)) {
+      throw new Error(`Usuário não tem permissão para ${action} este evento`)
+    }
+
+    if (targetUserId !== actorUserId) {
+      const targetUser = await this.userRepository.findById(targetUserId)
+      if (!targetUser) throw new Error("Usuário do evento não encontrado")
+
+      const actorPriority = this.getHighestRolePriority(actor.roles)
+      const targetPriority = this.getHighestRolePriority(targetUser.roles)
+
+      if (actorPriority <= targetPriority) {
+        throw new Error(`Usuário não tem permissão para ${action} eventos deste perfil`)
+      }
+    }
   }
 
   private getHighestRolePriority(roles: string[]) {

@@ -50,7 +50,9 @@ export function WorkSessionsProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       const message = err instanceof Error ? err.message : "Erro ao carregar sessões"
       setError(message)
-      setSessions([])
+      // Keep the last good sessions: a transient failure must not wipe the
+      // list, which would reset the floating timer to 00:00:00 while the
+      // session is still live. The next successful refresh restores the data.
     } finally {
       setLoading(false)
     }

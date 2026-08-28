@@ -55,6 +55,8 @@ export function ProjectDetailDialog({
   const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false)
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
   const [isBacklogDialogOpen, setIsBacklogDialogOpen] = useState(false)
+  const [linkName, setLinkName] = useState("")
+  const [linkUrl, setLinkUrl] = useState("")
 
   if (!project) return null
 
@@ -112,7 +114,13 @@ export function ProjectDetailDialog({
 
   const handleAddLink = (e: any) => {
     e.preventDefault()
-    console.log("Adicionou os link")
+    const label = linkName.trim()
+    const url = linkUrl.trim()
+    if (!label || !url) return
+
+    project.links = [...(project.links || []), { label, url }]
+    setLinkName("")
+    setLinkUrl("")
   }
 
   const getUserNameById = (userId?: number | null) => {
@@ -382,11 +390,15 @@ export function ProjectDetailDialog({
                       <div className="flex-1">
                         <Input 
                         placeholder="Nome (ex: Figma, GitHub)"
+                        value={linkName}
+                        onChange={(e) => setLinkName(e.target.value)}
                         />
                       </div>
                       <div className="flex-1">
                         <Input
                         placeholder="Link"
+                        value={linkUrl}
+                        onChange={(e) => setLinkUrl(e.target.value)}
                         />
                       </div>
                       <Button type="button" variant="outline" onClick={handleAddLink}>
@@ -405,11 +417,11 @@ export function ProjectDetailDialog({
                     {project?.links?.map((link, i) => (
 
                       <div key={i} className="flex gap-2 mb-2">
-                        <div className="flex-1 flex p-2 border rounded">
+                        <div className="w-1/4 min-w-[6rem] flex p-2 border rounded text-sm font-medium">
                           {link.label}
                         </div>
                           <a href={link.url} target="_blank">
-                        <div className="flex-3 flex p-2 border rounded">
+                        <div className="w-3/4 flex p-2 border rounded text-sm text-muted-foreground truncate">
                           {link.url}
                         </div>
                           </a>

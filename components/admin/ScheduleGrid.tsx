@@ -6,19 +6,22 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
-import { Badge } from "@/components/ui/badge"
+import { badgeVariants } from "@/components/ui/badge"
+import { cn } from "@/lib/utils/utils"
 import { 
+  Check,
   Clock, 
   Plus, 
   Trash2, 
   AlertCircle,
   Calendar,
-  Users
+  Users,
+  X
 } from "lucide-react"
 import { useToast } from "@/contexts/use-toast"
 import { hasPermission } from "@/lib/auth/rbac"
 import { TIME_SLOTS, WEEK_DAYS, snapRange } from "@/lib/constants/schedule-grid"
-import { groupSchedulesByUser } from "@/lib/schedule-grid-view"
+import { groupSchedulesByUser, filterSchedulesByMemberIds } from "@/lib/schedule-grid-view"
 
 function getUserColor(userId: number) {
   const colors = [
@@ -65,6 +68,7 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
   const [blocks, setBlocks] = useState<ScheduleBlock[]>([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
+  const [selectedUserIds, setSelectedUserIds] = useState<Set<number>>(new Set())
 
   useEffect(() => {
     fetchSchedules()
@@ -224,9 +228,24 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
     }
   }
 
+  const toggleUser = (userId: number) => {
+    setSelectedUserIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(userId)) {
+        next.delete(userId)
+      } else {
+        next.add(userId)
+      }
+      return next
+    })
+  }
+
+  const clearSelection = () => setSelectedUserIds(new Set())
+
   const selectedUser = users.find(u => u.id === parseInt(selectedUserId))
   const visibleSlots = TIME_SLOTS
-  const mobileGroups = groupSchedulesByUser(schedules, users)
+  const visibleSchedules: any[] = filterSchedulesByMemberIds(schedules, selectedUserIds)
+  const mobileGroups = groupSchedulesByUser(visibleSchedules, users)
   const totalScheduledMinutes = blocks.reduce((sum, b) => {
     const [sh, sm] = b.startTime.split(":").map(Number)
     const [eh, em] = b.endTime.split(":").map(Number)
@@ -274,18 +293,45 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
         </div>
 
         <div className="mb-4 rounded-lg border bg-muted/20 p-3">
-          <div className="mb-2 flex items-center gap-2 text-sm font-medium">
-            <Users className="h-4 w-4" />
-            Membros visiveis na grade
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <Users className="h-4 w-4" />
+              Membros visiveis na grade
+            </div>
+            {selectedUserIds.size > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 px-2 text-xs"
+                onClick={clearSelection}
+                title="Voltar a mostrar todos os horários"
+              >
+                <X className="mr-1 h-3 w-3" />
+                Limpar seleção
+              </Button>
+            )}
           </div>
           <div className="flex flex-wrap gap-2">
             {activeUsers.map((user) => {
               const hasAnySchedule = schedules.some((schedule) => schedule.userId === user.id)
+              const isSelected = selectedUserIds.has(user.id)
               return (
-                <Badge key={user.id} variant={hasAnySchedule ? "secondary" : "outline"} className="gap-1">
+                <button
+                  key={user.id}
+                  type="button"
+                  onClick={() => toggleUser(user.id)}
+                  aria-pressed={isSelected}
+                  className={cn(
+                    badgeVariants({ variant: isSelected ? "success" : "outline" }),
+                    "cursor-pointer gap-1 transition-colors",
+                    !isSelected && "hover:bg-accent hover:text-accent-foreground",
+                  )}
+                  title={isSelected ? `Ocultar ${user.name}` : `Mostrar apenas ${user.name}`}
+                >
+                  {isSelected && <Check className="h-3 w-3" />}
                   <span>{user.name}</span>
                   {!hasAnySchedule ? <span className="text-[10px]">(sem horario)</span> : null}
-                </Badge>
+                </button>
               )
             })}
           </div>
@@ -445,6 +491,10 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
                 </div>
               )}
             </div>
+          ) : visibleSchedules.length === 0 ? (
+            <div className="rounded-lg border border-dashed p-6 text-center text-muted-foreground">
+              Nenhum horário para os membros selecionados.
+            </div>
           ) : (
             <>
               {/* Visão compacta mobile */}
@@ -484,7 +534,7 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
                       {slot.start}<br />{slot.end}
                     </td>
                     {WEEK_DAYS.map((_, dayIdx) => {
-                      const slotSchedules = schedules.filter((s) => {
+                      const slotSchedules = visibleSchedules.filter((s) => {
                         if (s.dayOfWeek !== dayIdx) return false
                         return s.startTime < slot.end && s.endTime > slot.start
                       })

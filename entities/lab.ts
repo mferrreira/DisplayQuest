@@ -39,6 +39,7 @@ export const labEventSchema = z.object({
   userName: z.string(),
   date: z.string(), // DateTime column, JSON-transported — parse defensively
   note: z.string(),
+  createdAt: z.string().optional(), // "Criado em" on detail dialog; missing on legacy rows
 });
 export type LabEvent = z.infer<typeof labEventSchema>;
 

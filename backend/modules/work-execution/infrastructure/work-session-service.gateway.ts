@@ -37,7 +37,7 @@ export class WorkSessionServiceGateway implements WorkExecutionGateway {
     const activeSession = await this.workSessionRepository.findActiveByUserId(command.userId)
     if (activeSession?.id) {
       const endTime = new Date()
-      const duration = (endTime.getTime() - activeSession.startTime.getTime()) / 1000
+      const duration = this.closedSessionDuration(activeSession, endTime)
 
       await this.workSessionRepository.update(activeSession.id, {
         endTime,
@@ -99,24 +99,27 @@ export class WorkSessionServiceGateway implements WorkExecutionGateway {
       await this.validateCompletedTasksForSession(command.actorUserId, targetProjectId, taskIdsToAttach)
     }
 
-    if (command.endTime !== undefined) {
-      const endTime = new Date(command.endTime)
-      if (Number.isNaN(endTime.getTime())) {
-        throw new Error("endTime inválido")
-      }
-      existingSession.endTime = endTime
-      existingSession.status = "completed"
-      const accumulatedDuration = existingSession.duration || 0
-      const elapsedFromCurrentStart = Math.max(0, (endTime.getTime() - existingSession.startTime.getTime()) / 1000)
-      existingSession.duration = accumulatedDuration + elapsedFromCurrentStart
-    } else if (existingSession.status === "active") {
-      const endTime = new Date()
-      existingSession.endTime = endTime
-      existingSession.status = "completed"
-      const accumulatedDuration = existingSession.duration || 0
-      const elapsedFromCurrentStart = Math.max(0, (endTime.getTime() - existingSession.startTime.getTime()) / 1000)
-      existingSession.duration = accumulatedDuration + elapsedFromCurrentStart
+    const endTime = command.endTime !== undefined
+      ? (() => {
+          const parsed = new Date(command.endTime)
+          if (Number.isNaN(parsed.getTime())) {
+            throw new Error("endTime inválido")
+          }
+          return parsed
+        })()
+      : new Date()
+
+    // A completed session is idempotent: the duration is already final. A
+    // paused session already froze its last stretch into duration at pause
+    // time. Only an active session still has a stretch that must be counted,
+    // and that stretch ends at a missed scheduled pause (the session should
+    // have been auto-paused there) if one falls before the end time.
+    if (existingSession.status === "active") {
+      existingSession.duration = this.closedSessionDuration(existingSession, endTime)
     }
+
+    existingSession.endTime = endTime
+    existingSession.status = "completed"
 
     if (command.activity !== undefined) {
       existingSession.activity = command.activity
@@ -347,11 +350,22 @@ export class WorkSessionServiceGateway implements WorkExecutionGateway {
       session.duration = accumulatedDuration + elapsedFromCurrentStart
     } else if (command.status === "completed" && session.status === "active") {
       const endTime = new Date()
+      session.duration = this.closedSessionDuration(session, endTime)
       session.endTime = endTime
       session.status = "completed"
-      const accumulatedDuration = session.duration || 0
-      const elapsedFromCurrentStart = Math.max(0, (endTime.getTime() - session.startTime.getTime()) / 1000)
-      session.duration = accumulatedDuration + elapsedFromCurrentStart
+    } else if (command.status === "paused" && session.status === "active") {
+      // Server-authoritative pause: the stretch ends at a missed scheduled
+      // pause (auto-pause) or now. The client-provided duration is ignored so
+      // the recorded time is exact regardless of when the client clicked.
+      const pausedAt = this.pauseInstantFor(session)
+      session.duration = (session.duration || 0)
+        + Math.max(0, (pausedAt.getTime() - session.startTime.getTime()) / 1000)
+      session.endTime = pausedAt
+      session.status = "paused"
+    } else if (command.status === "active" && session.status === "paused") {
+      // Resume: a fresh active stretch starts now; drop the pause endTime.
+      session.status = "active"
+      session.endTime = null
     } else if (command.status !== undefined) {
       session.status = command.status
     }
@@ -364,7 +378,9 @@ export class WorkSessionServiceGateway implements WorkExecutionGateway {
       session.startTime = startTime
     }
 
-    if (command.duration !== undefined) {
+    // Duration is server-computed on pause (see above); a plain status switch
+    // such as resuming must never be overwritten by a stale client value.
+    if (command.duration !== undefined && command.status !== "paused") {
       session.duration = Number(command.duration)
     }
 
@@ -458,6 +474,28 @@ export class WorkSessionServiceGateway implements WorkExecutionGateway {
       .join("\n")
   }
 
+  /**
+   * Final duration of an active session closed at `closedAt`: the accumulated
+   * duration plus the current stretch, which ends at `closedAt` or earlier at
+   * the first scheduled pause crossed since `startTime` (the session should
+   * have been auto-paused there).
+   */
+  private closedSessionDuration(session: WorkSession, closedAt: Date): number {
+    const missedPause = getMissedScheduledPause(session.startTime, closedAt)
+    const activeUntil =
+      missedPause && missedPause.getTime() <= closedAt.getTime() ? missedPause : closedAt
+    const elapsed = Math.max(0, (activeUntil.getTime() - session.startTime.getTime()) / 1000)
+    return (session.duration || 0) + elapsed
+  }
+
+  /** The instant an active session must be paused at: the first scheduled
+   * pause crossed since its start, or now when none was crossed. */
+  private pauseInstantFor(session: WorkSession): Date {
+    const now = new Date()
+    const missedPause = getMissedScheduledPause(session.startTime, now)
+    return missedPause && missedPause.getTime() <= now.getTime() ? missedPause : now
+  }
+
   private async normalizeExpiredActiveSessions(sessions: WorkSession[]) {
     return await Promise.all(sessions.map((session) => this.normalizeExpiredActiveSession(session)))
   }
@@ -473,10 +511,7 @@ export class WorkSessionServiceGateway implements WorkExecutionGateway {
       return session
     }
 
-    const elapsedUntilPause = Math.max(
-      0,
-      (missedPause.getTime() - session.startTime.getTime()) / 1000,
-    )
+    const elapsedUntilPause = Math.max(0, (missedPause.getTime() - session.startTime.getTime()) / 1000)
     const accumulatedDuration = session.duration || 0
 
     return await this.workSessionRepository.update(session.id, {

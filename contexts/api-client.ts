@@ -479,21 +479,6 @@ export const WorkSessionsAPI = {
   },
 }
 
-// API de Eventos do Laboratório
-export const LabEventsAPI = {
-  getEventsByDate: (day: number, month: number, year: number) =>
-    fetchAPI<{ events: any[] }>(`/api/lab-events?day=${day}&month=${month}&year=${year}`),
-  createEvent: (event: { date: string; note: string }) =>
-    fetchAPI<{ event: any }>(`/api/lab-events`, {
-      method: "POST",
-      body: JSON.stringify(event),
-    }),
-  deleteEvent: (id: number) =>
-    fetchAPI<{ success: boolean }>(`/api/lab-events/${id}`, {
-      method: "DELETE",
-    }),
-}
-
 export const LabNoticesAPI = {
   getAll: () => fetchAPI<{ notices: any[] }>(`/api/lab-notices`),
   create: (notice: { note: string }) =>

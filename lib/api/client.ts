@@ -57,6 +57,7 @@ export async function apiFetch<S extends z.ZodTypeAny>({
     typeof window !== "undefined" && window.location?.origin ? window.location.origin : "";
   const response = await fetch(`${origin}${path}`, {
     method,
+    credentials: "include",
     signal,
     headers: isFormData || body === undefined ? undefined : { "Content-Type": "application/json" },
     body: body === undefined ? undefined : isFormData ? (body as FormData) : JSON.stringify(body),
