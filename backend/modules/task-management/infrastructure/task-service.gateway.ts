@@ -188,6 +188,23 @@ export class TaskServiceGateway implements TaskManagementGateway {
       }, actorProgressUserId)
     }
 
+    // D-41 (2026-08-28): quem puxa task SEM dono para "Em andamento" torna-se o dono
+    // (delegado). Só ocorre se a task não possuir dono e o payload não definir dono explícito.
+    if (
+      data.status === "in-progress"
+      && data.assignedTo === undefined
+      && (data.assigneeIds === undefined || (Array.isArray(data.assigneeIds) && data.assigneeIds.length === 0))
+    ) {
+      if (existingTask.projectId && !canManageTasks && !canManageUsers) {
+        const memberships = await this.userRepository.getUserProjectMemberships(command.actorId)
+        const isMember = memberships.some((membership) => membership.projectId === existingTask.projectId)
+        if (!isMember) {
+          throw new Error("Usuário não pertence ao projeto desta tarefa")
+        }
+      }
+      await this.claimTaskIfUnclaimed(existingTask, command.actorId)
+    }
+
     if (!canManageTasks && !canManageUsers && isStatusOnlyUpdate(data)) {
       const canManipulate =
         existingTask.taskVisibility !== "public"
@@ -384,6 +401,21 @@ export class TaskServiceGateway implements TaskManagementGateway {
       const leaderIsAssigned = await this.isActorAssignedToTask(task, command.userId)
       if (project && project.leaderId === command.userId && leaderIsAssigned) {
         throw new Error("Líderes de projeto não podem concluir suas próprias tasks. Delegue para outro membro da equipe.")
+      }
+    }
+
+    // D-41 (2026-08-28): concluir diretamente uma task sem dono atribui o concluinte como dono.
+    // O gate de permissão acima já garantiu autoridade OU atribuição prévia, e o claim só ocorre
+    // quando a task NÃO possui dono — nunca reatribui. Se houver dono apenas em task_assignees
+    // (estado sujo: assignedTo null), materializa o dono real para o fluxo prosseguir.
+    if (task.taskVisibility !== "public" && !task.isGlobal && task.assignedTo == null) {
+      const claimed = await this.claimTaskIfUnclaimed(task, command.userId)
+      if (!claimed && task.id != null && this.taskAssigneeRepository.isAvailable()) {
+        const assignedUserIds = await this.taskAssigneeRepository.listUserIdsByTaskId(task.id)
+        if (assignedUserIds.length > 0) {
+          task.assignedTo = assignedUserIds[0]
+          task.assigneeIds = assignedUserIds
+        }
       }
     }
 
@@ -715,6 +747,28 @@ export class TaskServiceGateway implements TaskManagementGateway {
       return true
     }
     return await this.isActorAssignedToTask(task, actorId)
+  }
+
+  /**
+   * D-41 (2026-08-28): atribui o ator como dono da task quando ela NÃO possui dono.
+   * "Possuir dono" = campo assignedTo preenchido OU qualquer linha em task_assignees.
+   * NUNCA reatribui: se já houver dono (ou for pública/global), retorna false sem alterar nada.
+   */
+  private async claimTaskIfUnclaimed(task: Task, actorId: number): Promise<boolean> {
+    if (task.taskVisibility === "public") return false
+    if (task.isGlobal) return false
+    if (task.assignedTo != null) return false
+    if (task.id != null && this.taskAssigneeRepository.isAvailable()) {
+      const assignedUserIds = await this.taskAssigneeRepository.listUserIdsByTaskId(task.id)
+      if (assignedUserIds.length > 0) return false
+    }
+
+    task.assignedTo = actorId
+    task.assigneeIds = [actorId]
+    if (task.id != null) {
+      await this.syncTaskAssignees(task.id, [actorId], actorId)
+    }
+    return true
   }
 }
 
