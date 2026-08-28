@@ -31,6 +31,8 @@ services:
       - NEXTAUTH_URL=http://localhost:3000
       - NEXTAUTH_SECRET=your-secret-key-here
       - NODE_ENV=production
+    volumes:
+      - uploads_data:/app/public/uploads
     depends_on:
       postgres:
         condition: service_healthy
@@ -49,6 +51,7 @@ services:
 
 volumes:
   postgres_data:
+  uploads_data:
 
 networks:
   display-quest-network:

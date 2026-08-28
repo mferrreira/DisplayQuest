@@ -58,7 +58,10 @@ export class ImageProcessor {
 
       await writeFile(filePath, processedBuffer);
 
-      return `/uploads/avatars/${userId}/${filename}`;
+      // URL servida pela rota app/api/uploads/avatars/[...]/route.ts, que lê do
+      // disco a cada request. O serving estático de public/ não enxerga arquivos
+      // criados em runtime sem restart (cache de boot do standalone).
+      return `/api/uploads/avatars/${userId}/${filename}`;
     } catch (error) {
       console.error('Error processing image:', error);
       throw new Error('Erro ao processar imagem');
@@ -67,7 +70,15 @@ export class ImageProcessor {
 
   static async deleteImage(imagePath: string): Promise<void> {
     try {
-      const fullPath = join(process.cwd(), 'public', imagePath);
+      // Aceita as duas formas de URL gravadas no banco: /uploads/avatars/...
+      // (legado) e /api/uploads/avatars/... (nova). Extrai o caminho relativo
+      // a public/ a partir do marcador /uploads/.
+      const marker = '/uploads/';
+      const markerIndex = imagePath.indexOf(marker);
+      if (markerIndex === -1) return;
+
+      const relative = imagePath.slice(markerIndex + 1);
+      const fullPath = join(process.cwd(), 'public', relative);
       if (existsSync(fullPath)) {
         const { unlink } = await import('fs/promises');
         await unlink(fullPath);
