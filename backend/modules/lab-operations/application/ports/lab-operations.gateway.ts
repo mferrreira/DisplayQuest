@@ -16,10 +16,12 @@ import type {
   LabIssueQuery,
   ListUserSchedulesQuery,
   ListResponsibilitiesQuery,
+  ListLabEventsByRangeQuery,
   ReplaceUserSchedulesCommand,
   StartResponsibilityCommand,
   UpdateUserScheduleCommand,
   UpdateLaboratoryScheduleCommand,
+  UpdateLabEventCommand,
 } from "@/backend/modules/lab-operations/application/contracts"
 
 export interface LabOperationsGateway {
@@ -37,7 +39,9 @@ export interface LabOperationsGateway {
 
   listLabEventsByDate(date: Date): Promise<LabEvent[]>
   createLabEvent(command: CreateLabEventCommand): Promise<LabEvent>
+  updateLabEvent(command: UpdateLabEventCommand): Promise<LabEvent>
   deleteLabEvent(command: DeleteLabEventCommand): Promise<void>
+  listLabEventsByRange(query: ListLabEventsByRangeQuery): Promise<LabEvent[]>
   listLabNotices(): Promise<LabNotice[]>
   createLabNotice(command: CreateLabNoticeCommand): Promise<LabNotice>
   deleteLabNotice(command: DeleteLabNoticeCommand): Promise<void>

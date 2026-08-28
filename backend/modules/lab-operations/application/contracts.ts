@@ -20,6 +20,19 @@ export interface DeleteLabEventCommand {
   actorRoles: string[]
 }
 
+export interface UpdateLabEventCommand {
+  eventId: number
+  actorUserId: number
+  actorRoles: string[]
+  date?: Date
+  note?: string
+}
+
+export interface ListLabEventsByRangeQuery {
+  startDate: Date
+  endDate: Date
+}
+
 export interface CreateLabNoticeCommand {
   userId: number
   userName: string

@@ -98,6 +98,7 @@ export const queryKeys = {
     events: {
       all: ["lab", "events"] as const,
       list: (date?: string) => [...queryKeys.lab.events.all, "list", date ?? "all"] as const,
+      upcoming: (days: number) => [...queryKeys.lab.events.all, "upcoming", days] as const,
     },
     notices: {
       all: ["lab", "notices"] as const,

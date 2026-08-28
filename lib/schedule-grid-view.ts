@@ -35,6 +35,18 @@ export function getVisibleTimeSlots(
 }
 
 /**
+ * Filtra horários pelos membros selecionados na grade. Com a seleção vazia,
+ * retorna todos os horários (comportamento padrão).
+ */
+export function filterSchedulesByMemberIds(
+  schedules: GridSchedule[],
+  selectedIds: Set<number>,
+): GridSchedule[] {
+  if (selectedIds.size === 0) return schedules
+  return schedules.filter((s) => selectedIds.has(s.userId))
+}
+
+/**
  * Agrupa horários por usuário para a visão compacta mobile:
  * [{ user, days: [{ label, range }] }]
  */
