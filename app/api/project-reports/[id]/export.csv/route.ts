@@ -1,13 +1,8 @@
 import { requireApiActor } from "@/lib/auth/api-guard"
 import { getBackendComposition } from "@/backend/composition/root"
+import { csvCell } from "@/lib/reports/csv-utils"
 
 const { reporting: reportingModule } = getBackendComposition()
-
-function csvCell(value: unknown): string {
-  const text = value == null ? "" : String(value)
-  // aspas para conter ; e quebras de linha; dobra aspas internas
-  return `"${text.replace(/"/g, '""')}"`
-}
 
 export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
   try {

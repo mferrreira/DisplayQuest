@@ -104,7 +104,7 @@ export function ProjectReportDetailDialog({
                 <ul className="space-y-1">
                   {data.report.attachments.map((attachment) => (
                     <li key={attachment.id} className="flex items-center justify-between gap-2 border rounded px-2 py-1 text-sm">
-                      <a href={`/${attachment.storedPath}`} target="_blank" rel="noreferrer" className="truncate underline-offset-2 hover:underline">
+                      <a href={`/api/report-files/${attachment.storedPath}`} target="_blank" rel="noreferrer" className="truncate underline-offset-2 hover:underline">
                         {attachment.fileName}
                       </a>
                       <span className="text-xs text-muted-foreground">{(attachment.sizeBytes / (1024 * 1024)).toFixed(2)} MB</span>

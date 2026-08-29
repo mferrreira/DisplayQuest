@@ -1,14 +1,12 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:15.3-bullseye
 
     container_name: display-quest-db
     environment:
-      POSTGRES_DB: display-quest
-      POSTGRES_USER: display-quest
-      POSTGRES_PASSWORD: display-quest123
+      POSTGRES_DB: ${POSTGRES_DB:-display-quest}
+      POSTGRES_USER: ${POSTGRES_USER:-display-quest}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD no ambiente/.env}
     ports:
       - "5432:5432"
     volumes:
@@ -27,12 +25,13 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - DATABASE_URL=postgresql://display-quest:display-quest123@postgres:5432/display-quest
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-display-quest}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-display-quest}
       - NEXTAUTH_URL=http://localhost:3000
-      - NEXTAUTH_SECRET=your-secret-key-here
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:?Defina NEXTAUTH_SECRET no ambiente/.env}
       - NODE_ENV=production
     volumes:
       - uploads_data:/app/public/uploads
+      - report_files_data:/app/data/uploads
     depends_on:
       postgres:
         condition: service_healthy
@@ -52,6 +51,7 @@ services:
 volumes:
   postgres_data:
   uploads_data:
+  report_files_data:
 
 networks:
   display-quest-network:

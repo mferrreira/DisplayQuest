@@ -8,16 +8,17 @@
     "start": "next start",
     "lint": "next lint",
     "test": "vitest run",
-    "db:seed": "tsx prisma/seed.ts",
+    "db:seed": "NODE_ENV=${NODE_ENV:-development} tsx prisma/seed.ts",
     "db:generate": "prisma generate",
     "db:migrate:dev": "prisma migrate dev",
     "db:migrate:deploy": "prisma migrate deploy",
     "db:migrate:status": "prisma migrate status",
     "db:reset:local": "prisma migrate reset --force",
-    "db:safe-deploy": "bash scripts/db-safe-deploy.sh"
+    "db:safe-deploy": "bash scripts/db-safe-deploy.sh",
+    "check:env": "node scripts/check-env-secrets.js"
   },
   "prisma": {
-    "seed": "tsx prisma/seed.ts"
+    "seed": "NODE_ENV=${NODE_ENV:-development} tsx prisma/seed.ts"
   },
   "dependencies": {
     "@hello-pangea/dnd": "^18.0.1",

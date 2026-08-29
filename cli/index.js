@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 const { PrismaClient } = require('@prisma/client');
+const { assertCliAllowed } = require('./guard');
 const bcrypt = require('bcryptjs');
 const readline = require('readline');
 
@@ -236,13 +237,26 @@ async function showMenu() {
 // Execução principal
 async function main() {
     try {
+        // A10: CLI administrativo é guardado por ambiente — aborta ANTES de
+        // conectar/prompt fora de desenvolvimento (ou sem --allow-prod explícito).
+        const args = process.argv.slice(2);
+        const nodeEnv = process.env.NODE_ENV || "development";
+        const allowProd = args.includes("--allow-prod");
+
+        if (!assertCliAllowed({ nodeEnv, allowProd })) {
+            log(
+                'red',
+                '🌐 CLI administrativo bloqueado fora de desenvolvimento (NODE_ENV não é "development").' +
+                    ' Se você tem certeza do que está fazendo em produção, rode com --allow-prod.'
+            );
+            process.exit(1);
+        }
+
         // Testar conexão com banco
         await prisma.$connect();
         log('green', '✅ Conectado ao banco de dados');
 
         // Verificar se é execução direta ou com argumentos
-        const args = process.argv.slice(2);
-        
         if (args.length > 0) {
             // Modo comando direto
             switch (args[0]) {

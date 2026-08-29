@@ -1,3 +1,9 @@
+import { assertSeedAllowed } from "./guard"
+
+// A6 (2026-08-29): seed de desenvolvimento SÓ roda com NODE_ENV=development.
+// Mantida como primeira instrução: aborta antes do PrismaClient e do resetDatabase.
+assertSeedAllowed()
+
 import { Prisma, PrismaClient, type UserRole } from "@prisma/client"
 import * as bcrypt from "bcryptjs"
 

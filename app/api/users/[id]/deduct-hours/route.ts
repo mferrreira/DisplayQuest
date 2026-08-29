@@ -35,7 +35,11 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     })
 
     return NextResponse.json(result, { status: 200 })
-  } catch (error) {
+  } catch (error: any) {
+    const message = typeof error?.message === "string" ? error.message : ""
+    if (message.includes("Acesso negado") || message.includes("não pertence")) {
+      return NextResponse.json({ error: message }, { status: 403 })
+    }
     console.error("Erro ao retirar horas:", error)
     return NextResponse.json({ error: "Erro ao retirar horas" }, { status: 500 })
   }

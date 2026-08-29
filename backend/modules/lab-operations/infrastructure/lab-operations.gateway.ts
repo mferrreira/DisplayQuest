@@ -429,6 +429,12 @@ export class DefaultLabOperationsGateway implements LabOperationsGateway {
       return await this.userScheduleRepository.findByUserId(query.targetUserId)
     }
 
+    // A7: sem targetUserId, usuário comum enxerga apenas as próprias agendas
+    // (antes: qualquer autenticado listava TODAS as agendas do laboratório).
+    if (!canManageSchedules) {
+      return await this.userScheduleRepository.findByUserId(query.actorUserId)
+    }
+
     return await this.userScheduleRepository.findAll()
   }
 

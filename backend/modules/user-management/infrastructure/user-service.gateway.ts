@@ -114,7 +114,7 @@ export class UserServiceGateway implements UserManagementGateway {
     }
 
     if (data.bio !== undefined) currentUser.bio = data.bio ? String(data.bio) : null
-    if (data.avatar !== undefined) currentUser.avatar = data.avatar ? String(data.avatar) : null
+    if (data.avatar !== undefined) currentUser.avatar = this.normalizeAvatar(data.avatar)
     if (data.profileVisibility !== undefined) currentUser.profileVisibility = data.profileVisibility as any
     if (data.weekHours !== undefined) currentUser.weekHours = Number(data.weekHours)
     if (data.status !== undefined) currentUser.status = String(data.status)
@@ -150,6 +150,22 @@ export class UserServiceGateway implements UserManagementGateway {
     return await this.deleteUser(userId)
   }
 
+  // A11: avatar aceita só null/"" ou URL interna sob /uploads/avatars/ (legado)
+  // ou /api/uploads/avatars/ (runtime). URL externa, protocolo-relativa, caminho
+  // fora do prefixo ou traversal → erro. Testado em tests/unit/user-management/
+  // update-user-profile.test.ts.
+  private normalizeAvatar(raw: unknown): string | null {
+    const value = raw ? String(raw) : ""
+    const trimmed = value.trim()
+    if (!trimmed) return null
+    if (trimmed.includes("..") || !trimmed.startsWith("/")) {
+      throw new Error("Imagem de perfil inválida")
+    }
+    if (trimmed.startsWith("/uploads/avatars/")) return trimmed
+    if (trimmed.startsWith("/api/uploads/avatars/")) return trimmed
+    throw new Error("Imagem de perfil inválida")
+  }
+
   async updateUserProfile(userId: number, data: Record<string, unknown>) {
     const user = await this.userRepository.findById(userId)
     if (!user) {
@@ -162,7 +178,7 @@ export class UserServiceGateway implements UserManagementGateway {
       user.name = name
     }
     if (data.bio !== undefined) user.bio = data.bio ? String(data.bio) : null
-    if (data.avatar !== undefined) user.avatar = data.avatar ? String(data.avatar) : null
+    if (data.avatar !== undefined) user.avatar = this.normalizeAvatar(data.avatar)
     if (data.profileVisibility !== undefined) user.profileVisibility = data.profileVisibility as any
     if (data.weekHours !== undefined) user.weekHours = Number(data.weekHours)
 
@@ -218,6 +234,28 @@ export class UserServiceGateway implements UserManagementGateway {
 
       if (!membership) {
         throw new Error("Usuário não pertence ao projeto")
+      }
+    }
+
+    if (this.identityAccess.hasAnyRole(command.deductedByRoles, ["GERENTE_PROJETO"])) {
+      // A4: GERENTE_PROJETO só deduz de projetos aos quais pertence OU lidera.
+      // (antes: qualquer GERENTE_PROJETO deduzia de qualquer projeto — checava
+      // apenas a relação da vítima, nunca a do ator).
+      const actorMembership = await prisma.project_members.findFirst({
+        where: {
+          userId: command.deductedBy,
+          projectId: command.projectId!,
+        },
+        select: { id: true },
+      })
+      const leadsProject = actorMembership
+        ? true
+        : await prisma.projects.findFirst({
+            where: { id: command.projectId!, leaderId: command.deductedBy },
+            select: { id: true },
+          })
+      if (!actorMembership && !leadsProject) {
+        throw new Error("Acesso negado")
       }
     }
 
