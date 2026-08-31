@@ -42,10 +42,11 @@ COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
 
 # Garante que o usuário nextjs (uid 1001) consiga gravar em /app/public/uploads
-# em runtime (avatares e relatórios fazem upload pro disco). A permissão é
-# herdada pelo volume nomeado `uploads_data` do docker-compose, que persiste
-# entre rebuilds (mesmo padrão do postgres_data).
-RUN mkdir -p /app/public/uploads && chown -R nextjs:nogroup /app/public/uploads
+# em runtime (avatares) e em /app/data/uploads (relatórios). A permissão é
+# herdada pelos volumes nomeados `uploads_data` e `report_files_data` do
+# docker-compose, que persistem entre rebuilds (mesmo padrão do postgres_data).
+RUN mkdir -p /app/public/uploads && chown -R nextjs:nogroup /app/public/uploads \
+  && mkdir -p /app/data/uploads && chown -R nextjs:nogroup /app/data/uploads
 
 # Copia CLI
 COPY cli ./cli/

@@ -5,11 +5,12 @@ import { hasPermission } from "@/lib/auth/rbac"
 
 const { taskManagement: taskManagementModule } = getBackendComposition()
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const auth = await requireApiActor()
     if (auth.error) return auth.error
 
+    const params = await context.params
     const id = parseInt(params.id)
     const task = await taskManagementModule.getTaskById(id)
     if (!task) {
@@ -84,6 +85,10 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
   } catch (error: any) {
     if (error.message?.includes('not found')) {
       return NextResponse.json({ error: "Tarefa não encontrada" }, { status: 404 })
+    }
+    const message = typeof error?.message === "string" ? error.message : ""
+    if (message.includes("não pertence") || message.includes("não pode") || message.includes("Acesso negado")) {
+      return NextResponse.json({ error: message }, { status: 403 })
     }
     console.error("Erro ao atualizar tarefa:", error)
     return NextResponse.json({ error: error.message || "Erro ao atualizar tarefa" }, { status: 500 })

@@ -28,6 +28,15 @@ export async function requireAuth(): Promise<{ user: any; error?: Response }> {
     return { user: null, error: createApiError("Não autorizado", 401) }
   }
 
+  const sessionUser = session.user as any
+
+  // A3: contas suspensas/rejeitadas/pendentes não mantêm acesso via sessão existente.
+  // O session callback (lib/auth/config.ts) já refresca `status` do banco a cada request,
+  // então esta checagem reflete o estado atual — não apenas o do login.
+  if (sessionUser.status && sessionUser.status !== "active") {
+    return { user: null, error: createApiError("Usuário não está ativo", 403) }
+  }
+
   return { user: session.user }
 }
 
@@ -54,14 +63,8 @@ export async function requirePermission(permission: Permission): Promise<{ user:
 }
 
 export async function requireActiveUser(): Promise<{ user: any; error?: Response }> {
-  const authResult = await requireAuth()
-  if (authResult.error) return authResult
-
-  if (authResult.user.status !== "active") {
-    return { user: null, error: createApiError("Usuário não está ativo", 403) }
-  }
-
-  return { user: authResult.user }
+  // requireAuth já valida status ("active") — mantido como alias para não quebrar usos existentes.
+  return requireAuth()
 }
 
 export const ROLES = {

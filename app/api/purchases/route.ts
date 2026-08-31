@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { requireApiActor } from "@/lib/auth/api-guard";
 import { hasPermission } from "@/lib/auth/rbac";
 import { getBackendComposition } from "@/backend/composition/root"
+import { resolvePurchaseQueryScope } from "@/backend/modules/store/application/purchase-query-scope"
 
 const { store: storeModule } = getBackendComposition()
 // GET: Obter todas as compras
@@ -11,35 +12,23 @@ export async function GET(request: Request) {
     if (auth.error) return auth.error;
 
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get("userId");
-    const rewardId = searchParams.get("rewardId");
-    const status = searchParams.get("status");
-    const startDate = searchParams.get("startDate");
-    const endDate = searchParams.get("endDate");
-
     const actor = auth.actor;
     const canManagePurchases = hasPermission(actor.roles, "MANAGE_PURCHASES");
-    let purchases;
-    
-    if (userId) {
-      if (!canManagePurchases && Number(userId) !== actor.id) {
-        return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
-      }
-      purchases = await storeModule.listPurchases({ userId: Number(userId) });
-    } else if (rewardId) {
-      purchases = await storeModule.listPurchases({ rewardId: Number(rewardId) });
-    } else if (status) {
-      purchases = await storeModule.listPurchases({ status });
-    } else if (startDate && endDate) {
-      purchases = await storeModule.listPurchases({
-        startDate: new Date(startDate),
-        endDate: new Date(endDate)
-      });
-    } else if (canManagePurchases) {
-      purchases = await storeModule.listPurchases({});
-    } else {
-      purchases = await storeModule.listPurchases({ userId: actor.id });
+
+    const scope = resolvePurchaseQueryScope({
+      actorId: actor.id,
+      canManagePurchases,
+      userId: searchParams.get("userId"),
+      rewardId: searchParams.get("rewardId"),
+      status: searchParams.get("status"),
+      startDate: searchParams.get("startDate"),
+      endDate: searchParams.get("endDate"),
+    });
+    if (scope.deny) {
+      return NextResponse.json({ error: scope.message }, { status: 403 });
     }
+
+    const purchases = await storeModule.listPurchases(scope.query);
 
     return NextResponse.json({ purchases });
   } catch (error: any) {

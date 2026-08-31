@@ -3,6 +3,9 @@ set -euo pipefail
 
 echo "==> Prisma safe deploy"
 
+echo "==> Validação de secrets (A5): npm run check:env"
+npm run check:env
+
 if [[ "${BACKUP_BEFORE_MIGRATE:-0}" == "1" ]]; then
   if command -v pg_dump >/dev/null 2>&1; then
     timestamp="$(date +%Y%m%d_%H%M%S)"

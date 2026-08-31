@@ -239,6 +239,19 @@ export class TaskServiceGateway implements TaskManagementGateway {
       return await this.attachAssigneeIds(updatedTask)
     }
 
+    // A1: sem gestão de tarefas/usuários, o fall-through (qualquer body que combine
+    // status+assignedTo, prioridade, datas etc.) exige membresia no projeto da
+    // tarefa. Antes: qualquer autenticado editava tarefa de QUALQUER projeto.
+    if (!canManageTasks && !canManageUsers) {
+      if (!existingTask.projectId) {
+        throw new Error("Usuário não pode modificar esta tarefa")
+      }
+      const memberships = await this.userRepository.getUserProjectMemberships(command.actorId)
+      if (!memberships.some((membership) => membership.projectId === existingTask.projectId)) {
+        throw new Error("Usuário não pertence ao projeto desta tarefa")
+      }
+    }
+
     let canModifyCompleted = this.identityAccess.hasAnyRole(userRoles, [
       "COORDENADOR",
       "LABORATORISTA",

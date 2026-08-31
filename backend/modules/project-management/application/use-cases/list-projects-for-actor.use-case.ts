@@ -6,6 +6,10 @@ export class ListProjectsForActorUseCase {
   constructor(private readonly gateway: ProjectManagementGateway) {}
 
   async execute(query: ListProjectsForActorQuery) {
+    // POLÍTICA: "laboratório aberto". Quem tem MANAGE_TASKS (COORDENADOR, GERENTE,
+    // GERENTE_PROJETO, COLABORADOR, PESQUISADOR) precisa criar/editar tarefas de
+    // qualquer projeto, então enxerga TODOS os projetos. NÃO MUDAR sem revisão —
+    // comportamento travado por teste de contrato (A9, spec .spec/tasks.md Tarefa 3).
     if (hasPermission(query.actorRoles, "MANAGE_TASKS")) {
       return await this.gateway.listAllProjects()
     }

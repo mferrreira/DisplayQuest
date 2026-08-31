@@ -3,7 +3,9 @@ import fs from "fs"
 import path from "path"
 
 export const MAX_REPORT_FILE_BYTES = 20 * 1024 * 1024 // 20 MB (D5)
-export const REPORT_UPLOADS_ROOT = path.join(process.cwd(), "public", "uploads", "reports")
+// A11: raiz privada — fora de public/. Relatórios só são servidos pela rota
+// autenticada app/api/report-files/[...path]/route.ts (nunca estáticos).
+export const REPORT_UPLOADS_ROOT = path.join(process.cwd(), "data", "uploads", "reports")
 export const SWEEP_MAX_AGE_MS = 48 * 60 * 60 * 1000 // D6: lazy sweep on read
 
 const ALLOWED_MIME = new Set([
@@ -128,10 +130,16 @@ export async function storeReportFile(reportId: number, file: File): Promise<Sto
 }
 
 export function absolutePathOf(storedPath: string): string | null {
-  const normalized = storedPath.replace(/\\/g, "/").replace(/^\/+/, "")
-  if (!normalized.startsWith("uploads/reports/") || normalized.includes("..")) return null
-  const abs = path.join(process.cwd(), "public", normalized)
-  if (!abs.startsWith(REPORT_UPLOADS_ROOT)) return null
+  if (!storedPath) return null
+  const withSlashes = storedPath.replace(/\\/g, "/")
+  if (withSlashes !== storedPath) return null // barra invertida: rejeita, sem normalizar
+  if (/^[a-z][a-z0-9+.-]*:/i.test(withSlashes)) return null // esquema (http://, data:, c:)
+  if (withSlashes.startsWith("/")) return null // caminho absoluto / leading slash
+  if (!withSlashes.startsWith("uploads/reports/")) return null // prefixo público esperado
+  if (withSlashes.includes("..")) return null // traversal
+  const relative = withSlashes.slice("uploads/reports/".length)
+  const abs = path.join(REPORT_UPLOADS_ROOT, relative)
+  if (!abs.startsWith(REPORT_UPLOADS_ROOT + path.sep)) return null
   return abs
 }
 
@@ -139,6 +147,21 @@ export async function removeStoredReportFile(storedPath: string): Promise<void> 
   const abs = absolutePathOf(storedPath)
   if (!abs) return
   await fs.promises.rm(abs, { force: true })
+}
+
+/**
+ * A11: lê bytes de um arquivo de relatório já validado por absolutePathOf.
+ * null para template/traversal OU arquivo ausente — a rota autenticada
+ * app/api/report-files/[...path]/route.ts usa este seam (nunca lê fs direto).
+ */
+export async function readReportFileBytes(storedPath: string): Promise<Buffer | null> {
+  const abs = absolutePathOf(storedPath)
+  if (!abs) return null
+  try {
+    return await fs.promises.readFile(abs)
+  } catch {
+    return null
+  }
 }
 
 /** D6: removes stored files older than maxAge that are not referenced by any DB row. */
