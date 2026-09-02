@@ -38,8 +38,6 @@ export function TaskBoard() {
   const { data: session } = useSession()
   const { user } = useAuth()
   const { data: projects = [] } = useProjects()
-  const { data: tasks, isPending, error, refetch } = useTasks({})
-  const { updateStatus, complete } = useTaskMutations()
 
   // URL state (nuqs) — shareable/back-forward safe (spec AC 8)
   const [projetoParam, setProjetoParam] = useQueryState("projeto", parseAsInteger)
@@ -56,6 +54,11 @@ export function TaskBoard() {
     "visao",
     parseAsString.withDefault("normal"),
   )
+
+  const { data: tasks, isPending, error, refetch } = useTasks(
+    projetoParam ? { projectId: projetoParam } : {},
+  )
+  const { updateStatus, complete } = useTaskMutations()
 
   const [editTask, setEditTask] = useState<Task | null>(null)
   const [viewTask, setViewTask] = useState<Task | null>(null)
@@ -78,6 +81,7 @@ export function TaskBoard() {
 
   const filteredTasks = useMemo(() => {
     let list = tasks ?? []
+    if (projetoParam) list = list.filter((t) => t.projectId === projetoParam)
     if (minhasParam) list = list.filter((t) => isAssignedToUser(t, sessionUserId))
     if (atrasadasParam) list = list.filter((t) => isTaskOverdue(t))
     if (buscaParam) {
@@ -85,7 +89,7 @@ export function TaskBoard() {
       list = list.filter((t) => t.title.toLowerCase().includes(q))
     }
     return list
-  }, [tasks, minhasParam, atrasadasParam, buscaParam, sessionUserId])
+  }, [tasks, projetoParam, minhasParam, atrasadasParam, buscaParam, sessionUserId])
 
   const archivedTasks = useMemo(() => filteredTasks.filter((t) => isArchivedTask(t)), [filteredTasks])
   const boardTasks = useMemo(() => {
