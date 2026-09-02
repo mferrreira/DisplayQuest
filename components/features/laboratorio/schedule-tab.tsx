@@ -104,13 +104,14 @@ export function ScheduleTab({ labUsersLoading }: ScheduleTabProps) {
     setEditEvent(event)
   }
 
-  const editInitialValues: LabEventDialogValues | undefined = editEvent
-    ? {
-        date: format(new Date(editEvent.date), "yyyy-MM-dd"),
-        time: new Date(editEvent.date).toTimeString().slice(0, 5),
-        note: editEvent.note,
-      }
-    : undefined
+  const editInitialValues: LabEventDialogValues | undefined = useMemo(() => {
+    if (!editEvent) return undefined
+    return {
+      date: format(new Date(editEvent.date), "yyyy-MM-dd"),
+      time: new Date(editEvent.date).toTimeString().slice(0, 5),
+      note: editEvent.note,
+    }
+  }, [editEvent])
 
   const handleUpdateEvent = async ({ date: day, time, note }: LabEventDialogValues) => {
     if (!user || !editEvent) return

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { format } from "date-fns"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
@@ -47,14 +47,26 @@ export function EventDialog({
   const [time, setTime] = useState("08:00")
   const [note, setNote] = useState("")
 
+  // Capture the initial values at the moment the dialog opens so that the
+  // fields are NOT reset again on subsequent parent re-renders (which can
+  // happen every second due to the active responsibility timer).
+  const initialValuesRef = useRef(initialValues)
+
   useEffect(() => {
     if (open) {
-      setDate(initialValues?.date ?? format(new Date(), "yyyy-MM-dd"))
-      setTime(initialValues?.time ?? "08:00")
-      setNote(initialValues?.note ?? "")
+      initialValuesRef.current = initialValues
+    }
+  }, [open, initialValues])
+
+  useEffect(() => {
+    if (open) {
+      const vals = initialValuesRef.current
+      setDate(vals?.date ?? format(new Date(), "yyyy-MM-dd"))
+      setTime(vals?.time ?? "08:00")
+      setNote(vals?.note ?? "")
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reset only when (re)opened
-  }, [open, initialValues])
+  }, [open])
 
   const handleSave = async () => {
     // saving state is controlled by the parent (mutation isPending)
