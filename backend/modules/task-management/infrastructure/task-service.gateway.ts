@@ -81,6 +81,7 @@ export class TaskServiceGateway implements TaskManagementGateway {
     }
 
     const data = { ...command }
+    data.createdBy = actorId
     const normalizedAssigneeIds = this.normalizeAssigneeIds(data)
 
     const creationMode = data.creationMode ?? "individual"

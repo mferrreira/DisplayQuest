@@ -69,6 +69,7 @@ export const taskSchema = z.object({
   taskVisibility: taskVisibilitySchema.default("delegated"),
   isGlobal: z.boolean().default(false),
   groupTaskId: z.number().int().nullable().optional(),
+  createdBy: z.number().int().nullable().optional(),
 });
 export type Task = z.infer<typeof taskSchema>;
 

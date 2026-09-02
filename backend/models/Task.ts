@@ -18,6 +18,7 @@ export interface ITask {
   taskVisibility: TaskVisibility;
   isGlobal?: boolean;
   groupTaskId?: number | null;
+  createdBy?: number | null;
 }
 
 export class Task {
@@ -36,6 +37,7 @@ export class Task {
   public taskVisibility: TaskVisibility;
   public isGlobal: boolean;
   public groupTaskId: number | null;
+  public createdBy: number | null;
 
   constructor(data: ITask) {
     this.id = data.id;
@@ -53,6 +55,7 @@ export class Task {
     this.taskVisibility = data.taskVisibility;
     this.isGlobal = data.isGlobal || false;
     this.groupTaskId = data.groupTaskId ?? null;
+    this.createdBy = data.createdBy ?? null;
   }
 
   static create(data: Omit<ITask, 'id'>): Task {
@@ -79,6 +82,7 @@ export class Task {
       taskVisibility: data.taskVisibility || 'delegated',
       isGlobal: data.isGlobal || false,
       groupTaskId: data.groupTaskId ?? null,
+      createdBy: data.createdBy ?? null,
     });
   }
 
@@ -101,6 +105,7 @@ export class Task {
       taskVisibility: data.taskVisibility,
       isGlobal: data.isGlobal || false,
       groupTaskId: data.groupTaskId ?? null,
+      createdBy: data.createdBy ?? null,
     });
   }
 
@@ -119,6 +124,7 @@ export class Task {
       taskVisibility: this.taskVisibility,
       isGlobal: this.isGlobal,
       groupTaskId: this.groupTaskId ?? null,
+      createdBy: this.createdBy,
     };
   }
 
@@ -139,6 +145,7 @@ export class Task {
       taskVisibility: this.taskVisibility,
       isGlobal: this.isGlobal,
       groupTaskId: this.groupTaskId ?? null,
+      createdBy: this.createdBy,
     };
   }
 }

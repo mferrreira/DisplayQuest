@@ -160,6 +160,14 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit }: TaskDetai
 
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Criado por</p>
+                <p className="font-semibold">
+                  {task.createdBy
+                    ? (users.find((u) => u.id === task.createdBy)?.name ?? `Usuário #${task.createdBy}`)
+                    : "—"}
+                </p>
+              </div>
+              <div>
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">Pontos</p>
                 <p className="font-semibold">
                   {task.points} pts
