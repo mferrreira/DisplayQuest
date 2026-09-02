@@ -519,7 +519,7 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
             <table className="w-full border text-xs" style={{ tableLayout: "fixed" }}>
               <thead>
                 <tr>
-                  <th className="w-[80px] px-2 py-1.5 border-b bg-blue-50 dark:bg-info/10 text-left font-medium text-[11px]">Horário</th>
+                  <th className="w-[44px] px-1 py-1.5 border-b bg-blue-50 dark:bg-info/10 text-left font-medium text-[11px]">Horário</th>
                   {WEEK_DAYS.map((day) => (
                     <th key={day} className="px-2 py-1.5 border-b bg-blue-50 dark:bg-info/10 text-center font-medium text-[11px]">
                       {day}
@@ -530,7 +530,7 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
               <tbody>
                 {visibleSlots.map((slot) => (
                   <tr key={slot.start + slot.end}>
-                    <td className="w-[80px] px-1.5 py-1.5 border-r text-right align-middle whitespace-nowrap border-b-2 font-medium text-[11px]">
+                    <td className="w-[44px] px-1 py-1.5 border-r text-right align-middle whitespace-nowrap border-b-2 font-medium text-[11px]">
                       {slot.start}<br />{slot.end}
                     </td>
                     {WEEK_DAYS.map((_, dayIdx) => {
