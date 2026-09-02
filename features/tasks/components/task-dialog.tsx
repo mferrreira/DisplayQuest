@@ -106,7 +106,11 @@ export function TaskDialog({ open, onOpenChange, task, defaultProjectId }: TaskD
         priority: task?.priority ?? "medium",
         taskVisibility: task?.taskVisibility ?? "delegated",
         isGlobal: task?.isGlobal ?? false,
-        creationMode: task?.assignedTo != null && !!task?.groupTaskId ? "individual" : "shared",
+        creationMode: task
+          ? task.assignedTo != null && !!task.groupTaskId
+            ? "individual"
+            : "shared"
+          : "individual",
       })
     }
   }, [open, task, defaultProjectId, reset])
