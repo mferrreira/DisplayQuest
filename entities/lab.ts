@@ -11,6 +11,8 @@ export const labResponsibilitySchema = z.object({
   userName: z.string(),
   startTime: z.string(), // DB String — parse defensively
   endTime: z.string().nullable().optional(), // null while active
+  pausedAt: z.string().nullable().optional(), // ISO; null = running
+  totalPausedMs: z.number().int().default(0),
   notes: z.string().nullable().optional(),
 });
 export type LabResponsibility = z.infer<typeof labResponsibilitySchema>;

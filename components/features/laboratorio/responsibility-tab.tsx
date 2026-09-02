@@ -161,6 +161,11 @@ export function ResponsibilityTab() {
                 <div className="flex items-center justify-center">
                   <Clock className="h-5 w-5 mr-2 text-primary" />
                   <span className="text-2xl font-mono">{formatDuration(activeResponsibility.duration)}</span>
+                  {activeResponsibility.isPaused && (
+                    <Badge variant="secondary" className="ml-2 bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300">
+                      PAUSADA
+                    </Badge>
+                  )}
                 </div>
 
                 {canManageLab && (

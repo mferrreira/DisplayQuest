@@ -153,13 +153,15 @@ model purchases {
 }
 
 model lab_responsibilities {
-  id        Int     @id @default(autoincrement())
-  userId    Int
-  userName  String
-  startTime String
-  endTime   String?
-  notes     String?
-  user      users   @relation("UserLabResponsibilities", fields: [userId], references: [id])
+  id            Int     @id @default(autoincrement())
+  userId        Int
+  userName      String
+  startTime     String
+  endTime       String?
+  pausedAt      String? // ISO quando pausada; null enquanto em execução
+  totalPausedMs Int     @default(0)
+  notes         String?
+  user          users   @relation("UserLabResponsibilities", fields: [userId], references: [id])
 }
 
 model daily_logs {

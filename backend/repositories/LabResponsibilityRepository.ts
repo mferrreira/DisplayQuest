@@ -10,6 +10,9 @@ export interface ILabResponsibilityRepository {
     findByUserId(userId: number): Promise<LabResponsibility[]>;
     findActiveResponsibility(): Promise<LabResponsibility | null>;
     findByDateRange(startDate: Date, endDate: Date): Promise<LabResponsibility[]>;
+    findActiveResponsibilityForUser(userId: number): Promise<LabResponsibility | null>;
+    pauseActiveForUser(userId: number): Promise<LabResponsibility | null>;
+    resumeForUser(userId: number): Promise<LabResponsibility | null>;
 }
 
 export class LabResponsibilityRepository implements ILabResponsibilityRepository {
@@ -50,6 +53,8 @@ export class LabResponsibilityRepository implements ILabResponsibilityRepository
                 userName: data.userName,
                 startTime: data.startTime,
                 endTime: data.endTime,
+                pausedAt: data.pausedAt,
+                totalPausedMs: data.totalPausedMs,
                 notes: data.notes
             },
             include: this.getIncludeOptions()
@@ -76,6 +81,8 @@ export class LabResponsibilityRepository implements ILabResponsibilityRepository
                 userName: data.userName,
                 startTime: data.startTime,
                 endTime: data.endTime,
+                pausedAt: data.pausedAt,
+                totalPausedMs: data.totalPausedMs,
                 notes: data.notes
             },
             include: this.getIncludeOptions()
@@ -108,6 +115,34 @@ export class LabResponsibilityRepository implements ILabResponsibilityRepository
         });
 
         return labResponsibility ? LabResponsibility.fromPrisma(labResponsibility) : null;
+    }
+
+    async findActiveResponsibilityForUser(userId: number): Promise<LabResponsibility | null> {
+        const resp = await prisma.lab_responsibilities.findFirst({
+            where: { userId, endTime: null },
+            include: this.getIncludeOptions(),
+            orderBy: { startTime: 'desc' },
+        });
+        return resp ? LabResponsibility.fromPrisma(resp) : null;
+    }
+
+    async pauseActiveForUser(userId: number): Promise<LabResponsibility | null> {
+        const active = await this.findActiveResponsibilityForUser(userId);
+        if (!active || active.isPaused) return active ? active : null; // nothing to do if already paused or none
+        active.pause();
+        return await this.update(active);
+    }
+
+    async resumeForUser(userId: number): Promise<LabResponsibility | null> {
+        const resp = await prisma.lab_responsibilities.findFirst({
+            where: { userId, endTime: null, pausedAt: { not: null } },
+            include: this.getIncludeOptions(),
+            orderBy: { startTime: 'desc' },
+        });
+        if (!resp) return null;
+        const model = LabResponsibility.fromPrisma(resp);
+        model.resume();
+        return await this.update(model);
     }
 
     async findByDateRange(startDate: Date, endDate: Date): Promise<LabResponsibility[]> {

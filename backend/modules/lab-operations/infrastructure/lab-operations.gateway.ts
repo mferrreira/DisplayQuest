@@ -401,6 +401,14 @@ export class DefaultLabOperationsGateway implements LabOperationsGateway {
     return await this.labResponsibilityRepository.update(existing)
   }
 
+  async pauseResponsibilityForUser(userId: number) {
+    return await this.labResponsibilityRepository.pauseActiveForUser(userId);
+  }
+
+  async resumeResponsibilityForUser(userId: number) {
+    return await this.labResponsibilityRepository.resumeForUser(userId);
+  }
+
   async updateResponsibilityNotes(responsibilityId: number, actorUserId: number, notes: string) {
     const existing = await this.labResponsibilityRepository.findById(responsibilityId)
     if (!existing) throw new Error("Responsabilidade não encontrada")

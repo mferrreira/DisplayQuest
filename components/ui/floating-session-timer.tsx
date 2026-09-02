@@ -13,6 +13,7 @@ import { useProject } from "@/contexts/project-context"
 import { getNextScheduledPause, getMissedScheduledPause, toSafeDate } from "@/lib/work-sessions/schedule"
 import { SessionAutoPauseCountdown } from "@/components/ui/session-auto-pause-countdown"
 import { SessionWelcomeBalloon } from "@/components/ui/session-welcome-balloon"
+import { ResponsibilitiesAPI } from "@/contexts/api-client"
 
 function formatTime(seconds: number) {
   const h = Math.floor(seconds / 3600)
@@ -97,6 +98,11 @@ export function FloatingSessionTimer() {
         try {
           await pauseSession(sessionId)
           await fetchSessions(user.id)
+          try {
+            await ResponsibilitiesAPI.pause()
+          } catch {
+            // Responsibility pause is secondary; session pause succeeded.
+          }
           setShowAutoPauseDialog(true)
         } catch {
           // Allow a later poll to retry if the pause request failed.
@@ -149,6 +155,11 @@ export function FloatingSessionTimer() {
     if (!currentSession || currentSession.status !== "paused" || !user?.id) return
     await resumeSession(currentSession.id)
     await fetchSessions(user.id)
+    try {
+      await ResponsibilitiesAPI.resume()
+    } catch {
+      // session resume is authoritative
+    }
     setShowAutoPauseDialog(false)
   }
 

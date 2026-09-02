@@ -10,6 +10,9 @@ interface ActiveResponsibility {
   userName: string
   startTime: string
   duration: number
+  isPaused: boolean
+  pausedAt?: string | null
+  totalPausedMs?: number
   userRole?: string
 }
 import { ResponsibilitiesAPI } from "@/contexts/api-client"
@@ -43,18 +46,17 @@ export function ResponsibilityProvider({ children }: { children: ReactNode }) {
   const toActiveResponsibility = useCallback((responsibility: any): ActiveResponsibility | null => {
     if (!responsibility) return null
 
-    const startTimeMs = new Date(responsibility.startTime).getTime()
-    const nowMs = Date.now()
-    const durationSeconds = Number.isFinite(startTimeMs)
-      ? Math.max(0, Math.floor((nowMs - startTimeMs) / 1000))
-      : 0
-
+    const serverDuration = typeof responsibility.duration === "number" ? responsibility.duration * 60 : 0 // minutes -> seconds
+    const isPaused = Boolean(responsibility.pausedAt)
     return {
       id: responsibility.id,
       userId: responsibility.userId,
       userName: responsibility.userName,
       startTime: responsibility.startTime,
-      duration: durationSeconds,
+      duration: Math.max(0, Math.floor(serverDuration)),
+      isPaused,
+      pausedAt: responsibility.pausedAt ?? null,
+      totalPausedMs: responsibility.totalPausedMs ?? 0,
       userRole: responsibility.userRole,
     }
   }, [])
@@ -65,7 +67,7 @@ export function ResponsibilityProvider({ children }: { children: ReactNode }) {
 
     const interval = setInterval(() => {
       setActiveResponsibility((prev) => {
-        if (!prev) return null
+        if (!prev || prev.isPaused) return prev
         return {
           ...prev,
           duration: prev.duration + 1,
