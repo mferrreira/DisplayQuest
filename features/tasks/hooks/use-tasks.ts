@@ -23,13 +23,15 @@ export function useTasks(filters: TaskFilters = {}) {
 /** Cross-cutting invalidation for ANY task mutation (spec §5.3). */
 export function useInvalidateTaskGraph() {
   const queryClient = useQueryClient()
-  return (scope?: "tasks" | "full") => {
+  return (scope?: "tasks" | "notifications" | "full") => {
     void queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all })
+    // server publishes TASK_* notifications on in-review transitions and reject
+    if (scope === "notifications" || scope === "full") {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all })
+    }
     if (scope === "full") {
       // points/completedTasks change on completion+approval; leaderboard reads users
       void queryClient.invalidateQueries({ queryKey: queryKeys.users.all })
-      // server publishes TASK_* notifications on review/approve/reject
-      void queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all })
     }
   }
 }
@@ -37,7 +39,7 @@ export function useInvalidateTaskGraph() {
 interface RollbackContext {
   applyOptimistic: (updater: (prev: Task[]) => Task[]) => void
   rollback: () => void
-  invalidate: (scope?: "tasks" | "full") => void
+  invalidate: (scope?: "tasks" | "notifications" | "full") => void
 }
 
 function useRollback(): () => RollbackContext {
@@ -97,7 +99,8 @@ export function useTaskMutations() {
       return { ctx }
     },
     onError: (_err, _vars, context) => context?.ctx.rollback(),
-    onSettled: (_d, _e, _v, context) => context?.ctx.invalidate(),
+    // moving to in-review publishes TASK_REVIEW_REQUEST → refresh notifications
+    onSettled: (_d, _e, _v, context) => context?.ctx.invalidate("notifications"),
   })
 
   const complete = useMutation({
@@ -139,7 +142,8 @@ export function useTaskMutations() {
   const update = useMutation({
     mutationFn: ({ id, data }: { id: number; data: Record<string, unknown> }) =>
       tasksApi.update(id, data),
-    onSettled: () => makeRollback().invalidate(),
+    // generic update can move a task to in-review → TASK_REVIEW_REQUEST published
+    onSettled: () => makeRollback().invalidate("notifications"),
   })
 
   const approve = useMutation({
@@ -153,7 +157,8 @@ export function useTaskMutations() {
 
   const reject = useMutation({
     mutationFn: ({ id, reason }: { id: number; reason?: string }) => tasksApi.reject(id, reason),
-    onSettled: () => makeRollback().invalidate(),
+    // reject publishes TASK_REJECTED → refresh notifications
+    onSettled: () => makeRollback().invalidate("notifications"),
   })
 
   const remove = useMutation({
