@@ -90,6 +90,7 @@ model tasks {
   completedAt    DateTime?
   taskVisibility String    @default("delegated")
   isGlobal       Boolean   @default(false)
+  groupTaskId    Int?                    // Vincula cópias individuais criadas a partir do mesmo template
   assignee       users?    @relation("UserTasks", fields: [assignedTo], references: [id])
   projectObj     projects? @relation("ProjectTasks", fields: [projectId], references: [id])
   assignees      task_assignees[] @relation("TaskAssignees")

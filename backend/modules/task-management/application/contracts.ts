@@ -6,7 +6,9 @@ export interface ListTasksForActorQuery {
   projectId?: number
 }
 
-export type CreateTaskCommand = Omit<ITask, "id">
+export type CreateTaskCommand = Omit<ITask, "id"> & {
+  creationMode?: "individual" | "shared"
+}
 
 export interface CreateTaskBacklogCommand {
   tasks: CreateTaskCommand[]

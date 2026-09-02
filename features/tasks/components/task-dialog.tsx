@@ -48,6 +48,7 @@ const taskFormSchema = z.object({
   priority: z.enum(["low", "medium", "high", "urgent"]),
   taskVisibility: z.enum(["public", "delegated", "private"]),
   isGlobal: z.boolean(),
+  creationMode: z.enum(["individual", "shared"]),
 })
 
 type TaskFormValues = z.input<typeof taskFormSchema>
@@ -88,6 +89,7 @@ export function TaskDialog({ open, onOpenChange, task, defaultProjectId }: TaskD
       priority: "medium",
       taskVisibility: "delegated",
       isGlobal: false,
+      creationMode: "individual",
     },
   })
 
@@ -104,6 +106,7 @@ export function TaskDialog({ open, onOpenChange, task, defaultProjectId }: TaskD
         priority: task?.priority ?? "medium",
         taskVisibility: task?.taskVisibility ?? "delegated",
         isGlobal: task?.isGlobal ?? false,
+        creationMode: task?.assignedTo != null && !!task?.groupTaskId ? "individual" : "shared",
       })
     }
   }, [open, task, defaultProjectId, reset])
@@ -164,6 +167,9 @@ export function TaskDialog({ open, onOpenChange, task, defaultProjectId }: TaskD
       body.projectId = parsed.projectId ? Number(parsed.projectId) : null
       body.assigneeIds = parsed.assigneeIds
       if (parsed.dueDate) body.dueDate = parsed.dueDate
+      if (!parsed.isGlobal && (parsed.assigneeIds?.length ?? 0) > 1) {
+        body.creationMode = parsed.creationMode
+      }
     }
 
     try {
@@ -320,6 +326,28 @@ export function TaskDialog({ open, onOpenChange, task, defaultProjectId }: TaskD
                   </SelectContent>
                 </Select>
               </div>
+
+              {!isGlobal && (assigneeIds?.length ?? 0) > 1 && (
+                <div className="flex items-center justify-between rounded-md border p-3">
+                  <div className="space-y-0.5">
+                    <Label>Modo de atribuição</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Individual: cada responsável recebe uma tarefa independente.
+                      Compartilhado: todos compartilham o mesmo estado.
+                    </p>
+                  </div>
+                  <Select
+                    value={watch("creationMode")}
+                    onValueChange={(v) => setValue("creationMode", v as "individual" | "shared")}
+                  >
+                    <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="individual">Individual</SelectItem>
+                      <SelectItem value="shared">Compartilhado</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </>
           )}
 

@@ -83,6 +83,11 @@ export class TaskServiceGateway implements TaskManagementGateway {
     const data = { ...command }
     const normalizedAssigneeIds = this.normalizeAssigneeIds(data)
 
+    const creationMode = data.creationMode ?? "individual"
+    if (creationMode === "individual" && !data.isGlobal && normalizedAssigneeIds.length > 1) {
+      return this.createIndividualTasks(data, normalizedAssigneeIds, actorId)
+    }
+
     if (data.isGlobal) {
       if (!this.identityAccess.hasPermission(creator.roles, "MANAGE_USERS")) {
         throw new Error("Usuário não tem permissão para criar quests globais")
@@ -122,6 +127,38 @@ export class TaskServiceGateway implements TaskManagementGateway {
     }
 
     return createdTask
+  }
+
+  private async createIndividualTasks(
+    data: CreateTaskCommand,
+    assigneeIds: number[],
+    actorId: number,
+  ): Promise<Task> {
+    const createdTasks: Task[] = []
+    let groupTaskId: number | null = data.groupTaskId ?? null
+
+    for (const assigneeId of assigneeIds) {
+      const taskData: CreateTaskCommand = {
+        ...data,
+        assigneeIds: [assigneeId],
+        assignedTo: assigneeId,
+      }
+
+      const task = Task.create(taskData)
+      const created = await this.taskRepository.create(task)
+
+      if (!groupTaskId) groupTaskId = created.id!
+      created.groupTaskId = groupTaskId
+      // IMPORTANT: repository.update(id, task) calls task.toPrisma() and needs a full Task.
+      await this.taskRepository.update(created.id!, created)
+
+      await this.syncTaskAssignees(created.id!, [assigneeId], actorId)
+      created.assigneeIds = [assigneeId]
+      created.assignedTo = assigneeId
+      createdTasks.push(created)
+    }
+
+    return createdTasks[0]
   }
 
   async createTaskBacklog(tasks: CreateTaskCommand[], actorId: number) {
