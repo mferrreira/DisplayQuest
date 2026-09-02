@@ -12,13 +12,13 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { Calendar, FileText, Users, CalendarDays, Plus, Download } from "lucide-react"
+import { Calendar, FileText, CalendarDays, Plus, Download } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, AlertTriangle } from "lucide-react"
 import { useToast } from "@/contexts/use-toast"
 import type { WeeklyReport } from "@/contexts/types"
-import { WeeklyReportDetail, type ProjectWeeklyDetailReport } from "@/components/ui/weekly-report-detail"
+import { WeeklyReportDetail } from "@/components/ui/weekly-report-detail"
 import { ProjectReportsPanel } from "@/components/features/project-reports-panel"
 
 export default function WeeklyReportsPage() {
@@ -29,108 +29,11 @@ export default function WeeklyReportsPage() {
   const { toast } = useToast()
   
   const [selectedUser, setSelectedUser] = useState<string>("")
-  const [selectedProject, setSelectedProject] = useState<string>("")
   const [weekStart, setWeekStart] = useState<string>("")
   const [weekEnd, setWeekEnd] = useState<string>("")
   const [isGenerating, setIsGenerating] = useState(false)
-  const [isGeneratingProjectReport, setIsGeneratingProjectReport] = useState(false)
-  const [projectReports, setProjectReports] = useState<ProjectWeeklyDetailReport[]>([])
   const [selectedReport, setSelectedReport] = useState<WeeklyReport | null>(null)
-  const [selectedProjectReport, setSelectedProjectReport] = useState<ProjectWeeklyDetailReport | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
-
-  const buildProjectDetailReport = (
-    projectId: number,
-    weekStartValue: string,
-    weekEndValue: string,
-    hours: any,
-  ): ProjectWeeklyDetailReport => {
-    const projectInfo = projects.find((project) => project.id === projectId)
-    const sessions = Array.isArray(hours?.sessions) ? hours.sessions : []
-    const contributors = Array.isArray(hours?.hoursByUser) ? hours.hoursByUser.length : 0
-    const totalHours = Number(hours?.totalHours || 0)
-    const totalLogs = Number(hours?.sessionCount || sessions.length || 0)
-
-    return {
-      reportType: "project",
-      id: `${projectId}-${weekStartValue}-${weekEndValue}`,
-      projectId,
-      projectName: projectInfo?.name || `Projeto ${projectId}`,
-      weekStart: weekStartValue,
-      weekEnd: weekEndValue,
-      totalLogs,
-      totalHours,
-      contributorCount: contributors,
-      createdAt: new Date().toISOString(),
-      summary: [
-        `Projeto com ${totalHours.toFixed(1)}h registradas no período.`,
-        `${totalLogs} sessão(ões) concluída(s).`,
-        `${contributors} colaborador(es) com registro no projeto.`,
-      ].join(" "),
-      logs: sessions.map((session: any) => ({
-        id: session.id,
-        date: session.endTime || session.startTime,
-        note: session.activity || "Sessão finalizada sem observações",
-        project: {
-          id: projectId,
-          name: projectInfo?.name || `Projeto ${projectId}`,
-        },
-        userName: session.userName || "Usuário",
-        location: session.location || null,
-        durationSeconds: typeof session.duration === "number" ? session.duration : null,
-      })),
-    }
-  }
-
-  const upsertProjectReport = (reportDetail: ProjectWeeklyDetailReport) => {
-    setProjectReports((prev) => {
-      const reportId = `${reportDetail.projectId}-${reportDetail.weekStart}-${reportDetail.weekEnd}`
-      const nextReport = { ...reportDetail, id: reportId }
-      const existingIndex = prev.findIndex((report) => report.id === reportId)
-
-      if (existingIndex === -1) {
-        return [nextReport, ...prev]
-      }
-
-      return prev.map((report, index) => (index === existingIndex ? nextReport : report))
-    })
-  }
-
-  const loadProjectReports = async (weekStartValue: string, weekEndValue: string) => {
-    if (!weekStartValue || !weekEndValue || projects.length === 0) {
-      setProjectReports([])
-      return
-    }
-
-    const results = await Promise.all(
-      projects.map(async (project) => {
-        try {
-          const response = await fetch(
-            `/api/projects/${project.id}/hours?weekStart=${encodeURIComponent(weekStartValue)}&weekEnd=${encodeURIComponent(weekEndValue)}`,
-          )
-          const payload = await response.json()
-
-          if (!response.ok) {
-            return null
-          }
-
-          const hours = payload?.hours || null
-          const totalLogs = Number(hours?.sessionCount || 0)
-          const totalHours = Number(hours?.totalHours || 0)
-          if (totalLogs <= 0 && totalHours <= 0) {
-            return null
-          }
-
-          return buildProjectDetailReport(project.id, weekStartValue, weekEndValue, hours)
-        } catch (error) {
-          console.error(`Erro ao carregar relatório do projeto ${project.id}:`, error)
-          return null
-        }
-      }),
-    )
-
-    setProjectReports(results.filter((report): report is ProjectWeeklyDetailReport => report !== null))
-  }
 
   // Set default week (current week)
   useEffect(() => {
@@ -146,15 +49,6 @@ export default function WeeklyReportsPage() {
     setWeekStart(startOfWeek.toISOString().split('T')[0])
     setWeekEnd(endOfWeek.toISOString().split('T')[0])
   }, [])
-
-  useEffect(() => {
-    if (!user || !hasAccess(user.roles || [], 'VIEW_WEEKLY_REPORTS')) {
-      setProjectReports([])
-      return
-    }
-
-    void loadProjectReports(weekStart, weekEnd)
-  }, [projects, user, weekStart, weekEnd])
 
   const handleGenerateReport = async () => {
     if (!selectedUser || !weekStart || !weekEnd) {
@@ -192,48 +86,6 @@ export default function WeeklyReportsPage() {
       setSelectedReport(fullReport || report)
     } finally {
       setDetailLoading(false)
-    }
-  }
-
-  const handleGenerateProjectReport = async () => {
-    if (!selectedProject || !weekStart || !weekEnd) {
-      toast({
-        title: "Erro",
-        description: "Selecione um projeto e defina o período da semana.",
-        variant: "destructive",
-      })
-      return
-    }
-
-    try {
-      setIsGeneratingProjectReport(true)
-      const response = await fetch(`/api/projects/${selectedProject}/hours?weekStart=${encodeURIComponent(weekStart)}&weekEnd=${encodeURIComponent(weekEnd)}`)
-      const payload = await response.json()
-
-      if (!response.ok) {
-        throw new Error(payload?.error || "Erro ao gerar relatório por projeto")
-      }
-
-      const reportDetail = buildProjectDetailReport(
-        Number(selectedProject),
-        weekStart,
-        weekEnd,
-        payload?.hours || null,
-      )
-      upsertProjectReport(reportDetail)
-      setSelectedProjectReport(reportDetail)
-      toast({
-        title: "Sucesso",
-        description: "Relatório por projeto gerado com sucesso!",
-      })
-    } catch (error) {
-      toast({
-        title: "Erro",
-        description: error instanceof Error ? error.message : "Erro ao gerar relatório por projeto.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsGeneratingProjectReport(false)
     }
   }
 
@@ -295,11 +147,11 @@ export default function WeeklyReportsPage() {
             Gerar Novo Relatório
           </CardTitle>
           <CardDescription>
-            Gere relatório por usuário ou por projeto no período informado
+            Gere relatório por usuário no período informado
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label htmlFor="user">Usuário</Label>
               <Select value={selectedUser} onValueChange={setSelectedUser}>
@@ -310,22 +162,6 @@ export default function WeeklyReportsPage() {
                   {users.map((user) => (
                     <SelectItem key={user.id} value={user.id.toString()}>
                       {user.name} ({user.roles.join(', ')})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="project">Projeto</Label>
-              <Select value={selectedProject} onValueChange={setSelectedProject}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione um projeto" />
-                </SelectTrigger>
-                <SelectContent>
-                  {projects.map((project) => (
-                    <SelectItem key={project.id} value={project.id.toString()}>
-                      {project.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -371,82 +207,9 @@ export default function WeeklyReportsPage() {
                 </>
               )}
             </Button>
-
-            <Button
-              variant="outline"
-              onClick={handleGenerateProjectReport}
-              disabled={isGeneratingProjectReport || !selectedProject || !weekStart || !weekEnd}
-              className="w-full md:w-auto"
-            >
-              {isGeneratingProjectReport ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Gerando...
-                </>
-              ) : (
-                <>
-                  <Users className="mr-2 h-4 w-4" />
-                  Gerar Relatório por Projeto
-                </>
-              )}
-            </Button>
           </div>
         </CardContent>
       </Card>
-
-      <div className="space-y-4">
-        <h2 className="text-2xl font-semibold text-gray-900 dark:text-foreground dark:text-white">Relatórios por Projeto</h2>
-        {projectReports.length === 0 ? (
-          <Card>
-            <CardContent className="flex items-center justify-center h-24">
-              <p className="text-sm text-muted-foreground">Nenhum relatório por projeto gerado ainda.</p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {projectReports.map((report) => (
-              <Card
-                key={report.id}
-                className="cursor-pointer hover:shadow-md transition-shadow"
-                onClick={() => setSelectedProjectReport(report)}
-              >
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg">{report.projectName}</CardTitle>
-                    <Badge variant="outline">
-                      {Number(report.totalHours || 0).toFixed(1)}h
-                    </Badge>
-                  </div>
-                  <CardDescription className="flex items-center gap-1">
-                    <CalendarDays className="h-4 w-4" />
-                    {getWeekRange(report.weekStart, report.weekEnd)}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">
-                    Sessões: <strong>{report.totalLogs || 0}</strong> | Contribuidores: <strong>{report.contributorCount || 0}</strong>
-                  </p>
-                  <div className="flex items-center justify-between mt-3">
-                    <span className="text-xs text-gray-500 dark:text-muted-foreground">
-                      {formatDate(report.createdAt)}
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setSelectedProjectReport(report)
-                      }}
-                    >
-                      <FileText className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-      </div>
 
       {/* Reports List */}
       <div className="space-y-4">
@@ -518,13 +281,6 @@ export default function WeeklyReportsPage() {
             await fetchWeeklyReports()
             setSelectedReport(null)
           }}
-        />
-      )}
-
-      {selectedProjectReport && (
-        <WeeklyReportDetail
-          report={selectedProjectReport}
-          onClose={() => setSelectedProjectReport(null)}
         />
       )}
     </div>
