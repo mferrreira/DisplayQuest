@@ -338,17 +338,10 @@ export class WorkSessionServiceGateway implements WorkExecutionGateway {
       await this.validateCompletedTasksForSession(command.actorUserId, targetProjectId, taskIdsToAttach)
     }
 
-    if (command.endTime !== undefined) {
-      const endTime = new Date(command.endTime)
-      if (Number.isNaN(endTime.getTime())) {
-        throw new Error("endTime inválido")
-      }
-      session.endTime = endTime
-      session.status = "completed"
-      const accumulatedDuration = session.duration || 0
-      const elapsedFromCurrentStart = Math.max(0, (endTime.getTime() - session.startTime.getTime()) / 1000)
-      session.duration = accumulatedDuration + elapsedFromCurrentStart
-    } else if (command.status === "completed" && session.status === "active") {
+    if (command.endTime !== undefined || (command.status === "completed" && session.status === "active")) {
+      // Completion is server-authoritative: the client endTime is only used as
+      // a trigger that the operation is a completion; its VALUE is ignored so
+      // the record reflects the server clock (clock-skew / manipulation safe).
       const endTime = new Date()
       session.duration = this.closedSessionDuration(session, endTime)
       session.endTime = endTime
@@ -363,19 +356,13 @@ export class WorkSessionServiceGateway implements WorkExecutionGateway {
       session.endTime = pausedAt
       session.status = "paused"
     } else if (command.status === "active" && session.status === "paused") {
-      // Resume: a fresh active stretch starts now; drop the pause endTime.
+      // Resume: a fresh active stretch starts NOW (server-authoritative); the
+      // client must not dictate the resume instant (clock-skew safe).
       session.status = "active"
       session.endTime = null
+      session.startTime = new Date()
     } else if (command.status !== undefined) {
       session.status = command.status
-    }
-
-    if (command.startTime !== undefined) {
-      const startTime = new Date(command.startTime)
-      if (Number.isNaN(startTime.getTime())) {
-        throw new Error("startTime inválido")
-      }
-      session.startTime = startTime
     }
 
     // Duration is server-computed on pause (see above); a plain status switch
