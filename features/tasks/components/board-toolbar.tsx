@@ -6,7 +6,7 @@
  *  - action row wraps at 320px (legacy overflow fix, CP-1 observation)
  *  - filters are nuqs-backed (URL is source of truth)
  */
-import { Filter, LayoutGrid, List, Plus, Rows3, TriangleAlert, Upload, UserCheck } from "lucide-react"
+import { Filter, LayoutGrid, List, Plus, Rows3, TriangleAlert, Upload, UserCheck, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Select,
@@ -25,6 +25,7 @@ export interface BoardToolbarProps {
   canCreateTasks: boolean
   canSeeProjectSelector: boolean
   projects: Array<{ id: number; name: string }>
+  users: Array<{ id: number; name: string }>
   isCompact: boolean
   onToggleCompact: () => void
   onCreateTask: () => void
@@ -39,6 +40,7 @@ export function BoardToolbar({
   canCreateTasks,
   canSeeProjectSelector,
   projects,
+  users,
   isCompact,
   onToggleCompact,
   onCreateTask,
@@ -126,6 +128,26 @@ export function BoardToolbar({
           />
         </div>
 
+        <Select
+          value={filters.assigneeId?.toString() ?? "all"}
+          onValueChange={(value) =>
+            onFiltersChange({ ...filters, assigneeId: value === "all" ? undefined : Number(value) })
+          }
+        >
+          <SelectTrigger className="w-[200px]" aria-label="Filtrar tarefas por pessoa">
+            <Users className="mr-1 h-4 w-4 text-muted-foreground" aria-hidden="true" />
+            <SelectValue placeholder="Todas as pessoas" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas as pessoas</SelectItem>
+            {users.map((u) => (
+              <SelectItem key={u.id} value={u.id.toString()}>
+                {u.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
         <Button
           variant={filters.overdue ? "secondary" : "outline"}
           size="sm"
@@ -146,7 +168,7 @@ export function BoardToolbar({
           Atribuídas a mim
         </Button>
 
-        {(filters.projectId || filters.overdue || filters.search || filters.mine) && (
+        {(filters.projectId || filters.overdue || filters.search || filters.mine || filters.assigneeId) && (
           <Button
             variant="ghost"
             size="sm"

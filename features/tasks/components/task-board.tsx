@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useAuth } from "@/contexts/auth-context"
 import { useProjects } from "@/features/projects"
+import { useUsers } from "@/features/users"
 import {
   useTasks,
   useTaskMutations,
@@ -38,6 +39,7 @@ export function TaskBoard() {
   const { data: session } = useSession()
   const { user } = useAuth()
   const { data: projects = [] } = useProjects()
+  const { data: users = [] } = useUsers()
 
   // URL state (nuqs) — shareable/back-forward safe (spec AC 8)
   const [projetoParam, setProjetoParam] = useQueryState("projeto", parseAsInteger)
@@ -54,6 +56,7 @@ export function TaskBoard() {
     "visao",
     parseAsString.withDefault("normal"),
   )
+  const [pessoaParam, setPessoaParam] = useQueryState("pessoa", parseAsInteger)
 
   const { data: tasks, isPending, error, refetch } = useTasks(
     projetoParam ? { projectId: projetoParam } : {},
@@ -83,13 +86,14 @@ export function TaskBoard() {
     let list = tasks ?? []
     if (projetoParam) list = list.filter((t) => t.projectId === projetoParam)
     if (minhasParam) list = list.filter((t) => isAssignedToUser(t, sessionUserId))
+    if (pessoaParam) list = list.filter((t) => isAssignedToUser(t, pessoaParam))
     if (atrasadasParam) list = list.filter((t) => isTaskOverdue(t))
     if (buscaParam) {
       const q = buscaParam.toLowerCase()
       list = list.filter((t) => t.title.toLowerCase().includes(q))
     }
     return list
-  }, [tasks, projetoParam, minhasParam, atrasadasParam, buscaParam, sessionUserId])
+  }, [tasks, projetoParam, minhasParam, pessoaParam, atrasadasParam, buscaParam, sessionUserId])
 
   const archivedTasks = useMemo(() => filteredTasks.filter((t) => isArchivedTask(t)), [filteredTasks])
   const boardTasks = useMemo(() => {
@@ -196,17 +200,20 @@ export function TaskBoard() {
           overdue: atrasadasParam || undefined,
           search: buscaParam || undefined,
           mine: minhasParam || undefined,
+          assigneeId: pessoaParam ?? undefined,
         }}
         onFiltersChange={(next) => {
           void setProjetoParam(next.projectId ?? null)
           void setAtrasadasParam(Boolean(next.overdue))
           void setBuscaParam(next.search ?? "")
           void setMinhasParam(Boolean(next.mine))
+          void setPessoaParam(next.assigneeId ?? null)
         }}
         overdueCount={overdueCount}
         canCreateTasks={canCreateTasks}
         canSeeProjectSelector={canSeeProjectSelector}
         projects={projects}
+        users={users}
         isCompact={compactaParam === "compacta"}
         onToggleCompact={() => void setCompactaParam(compactaParam === "compacta" ? "normal" : "compacta")}
         onCreateTask={openCreate}
@@ -234,6 +241,7 @@ export function TaskBoard() {
               void setProjetoParam(null)
               void setAtrasadasParam(false)
               void setBuscaParam("")
+              void setPessoaParam(null)
             }}
           >
             Limpar filtros

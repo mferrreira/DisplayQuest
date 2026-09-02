@@ -20,6 +20,8 @@ export type TaskFilters = QueryParams & {
   search?: string;
   /** "Atribuídas a mim" — resolved CLIENT-side (server cannot filter for all roles). */
   mine?: boolean;
+  /** Filtro por pessoa — resolved CLIENT-side (tasks scoped server-side by actor). */
+  assigneeId?: number;
 };
 
 export const tasksApi = {
