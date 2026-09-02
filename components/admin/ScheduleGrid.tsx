@@ -516,12 +516,12 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
 
               {/* Tabela desktop */}
               <div className="hidden md:block">
-            <table className="w-full min-w-[640px] border text-xs">
+            <table className="w-full border text-xs" style={{ tableLayout: "fixed" }}>
               <thead>
                 <tr>
-                  <th className="px-3 py-2 border-b bg-blue-50 dark:bg-info/10 text-left font-medium">Horário</th>
+                  <th className="px-2 py-1.5 border-b bg-blue-50 dark:bg-info/10 text-left font-medium text-[11px]">Horário</th>
                   {WEEK_DAYS.map((day) => (
-                    <th key={day} className="px-3 py-2 border-b bg-blue-50 dark:bg-info/10 text-center font-medium">
+                    <th key={day} className="px-2 py-1.5 border-b bg-blue-50 dark:bg-info/10 text-center font-medium text-[11px]">
                       {day}
                     </th>
                   ))}
@@ -530,7 +530,7 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
               <tbody>
                 {visibleSlots.map((slot) => (
                   <tr key={slot.start + slot.end}>
-                    <td className="px-3 py-2 border-r text-right align-middle whitespace-nowrap border-b-2 font-medium">
+                    <td className="px-1.5 py-1.5 border-r text-right align-middle whitespace-nowrap border-b-2 font-medium text-[11px]">
                       {slot.start}<br />{slot.end}
                     </td>
                     {WEEK_DAYS.map((_, dayIdx) => {
@@ -540,7 +540,7 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
                       })
                       
                       return (
-                        <td key={dayIdx} className="px-2 py-2 border align-top min-w-[120px]">
+                        <td key={dayIdx} className="px-1.5 py-1.5 border align-top">
                           {slotSchedules.length === 0 ? (
                             <span className="text-muted-foreground text-center block">-</span>
                           ) : (
@@ -553,7 +553,7 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
                                     className={`group rounded border px-2 py-1 text-xs font-medium ${getUserColor(s.userId)} flex items-center justify-between gap-1`}
                                   >
                                     <span className="truncate">{user?.name || "Usuário"}</span>
-                                    <span className="ml-1 text-[10px] text-muted-foreground whitespace-nowrap">
+                                    <span className="ml-1 text-[10px] text-muted-foreground">
                                       ({s.startTime} - {s.endTime})
                                     </span>
                                     {!readOnly && canManageAllSchedules && (
