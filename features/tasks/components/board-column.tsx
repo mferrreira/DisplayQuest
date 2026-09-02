@@ -7,6 +7,7 @@ import { Droppable } from "@hello-pangea/dnd"
 import { PenLine, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import type { Task, TaskStatus } from "@/entities/task"
+import { isTaskOverdue, isTaskDueToday } from "../utils/move-rules"
 import { TaskCard } from "./task-card"
 
 const COLUMN_STYLES: Record<TaskStatus, { header: string; icon: string }> = {
@@ -84,24 +85,8 @@ export function BoardColumn({ status, tasks, canAddTask, isCompact, onAddTask, o
                   key={task.id}
                   task={task}
                   index={index}
-                  isOverdue={
-                    Boolean(task.dueDate) &&
-                    task.status !== "done" &&
-                    new Date(task.dueDate as string).getTime() < Date.now()
-                  }
-                  isDueToday={
-                    Boolean(task.dueDate) &&
-                    task.status !== "done" &&
-                    (() => {
-                      const d = new Date(task.dueDate as string)
-                      const n = new Date()
-                      return (
-                        d.getFullYear() === n.getFullYear() &&
-                        d.getMonth() === n.getMonth() &&
-                        d.getDate() === n.getDate()
-                      )
-                    })()
-                  }
+                  isOverdue={isTaskOverdue(task)}
+                  isDueToday={isTaskDueToday(task)}
                   isCompact={isCompact}
                   onEdit={onEdit}
                   onOpenDetail={onOpenDetail}

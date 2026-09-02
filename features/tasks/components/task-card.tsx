@@ -216,7 +216,9 @@ export function TaskCard({ task, index, isOverdue, isDueToday, isCompact, onEdit
   const cardTone = isPublicTask
     ? isOverdue
       ? "border-red-400 bg-gradient-to-br from-red-50 to-red-100 dark:from-red-500/10 dark:to-red-500/5"
-      : "border-amber-400 dark:border-amber-500/40 bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 dark:from-amber-400/10 dark:via-yellow-300/5 dark:to-orange-400/10"
+      : isDueToday
+        ? "border-sky-300 bg-gradient-to-br from-sky-50 to-sky-100 dark:border-sky-500/40 dark:from-sky-500/10 dark:to-sky-500/5"
+        : "border-amber-400 dark:border-amber-500/40 bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 dark:from-amber-400/10 dark:via-yellow-300/5 dark:to-orange-400/10"
     : isOverdue
       ? "border-red-300 bg-gradient-to-br from-red-50 to-red-100 dark:border-red-500/40 dark:from-red-500/10 dark:to-red-500/5"
       : isDueToday

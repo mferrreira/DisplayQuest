@@ -100,6 +100,12 @@ describe("overdue + penalty (gateway :593–607 mirror)", () => {
     expect(isTaskOverdue(doneOverdue)).toBe(false)
   })
 
+  it("isTaskOverdue is false for a task due today (date-only comparison)", () => {
+    const today = new Date()
+    const dueToday = makeTask({ dueDate: today.toISOString(), status: "to-do" })
+    expect(isTaskOverdue(dueToday)).toBe(false)
+  })
+
   it("isTaskDueToday flags non-done tasks due today and nothing else", () => {
     const today = new Date()
     const dueToday = makeTask({ dueDate: today.toISOString(), status: "to-do" })

@@ -85,7 +85,8 @@ export function isTaskOverdue(task: Task, now: Date = new Date()): boolean {
   if (!task.dueDate || task.status === "done") return false;
   const due = new Date(task.dueDate);
   if (Number.isNaN(due.getTime())) return false;
-  return due.getTime() < now.getTime();
+  const dayOf = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  return dayOf(due) < dayOf(now);
 }
 
 /**

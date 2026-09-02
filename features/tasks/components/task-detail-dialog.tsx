@@ -33,6 +33,7 @@ import type { Task } from "@/entities/task"
 import { useProjects } from "@/features/projects"
 import { useUsers } from "@/features/users"
 import { useTaskMutations, projectedAward } from ".."
+import { isTaskOverdue, isTaskDueToday } from "../utils/move-rules"
 
 export interface TaskDetailDialogProps {
   task: Task | null
@@ -82,9 +83,8 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit }: TaskDetai
   const isAssignee = Boolean(userId && (task.assignedTo === userId || task.assigneeIds?.includes(userId)))
   const projectName = task.projectId ? projects.find((p) => p.id === task.projectId)?.name : null
   const { main, fixes } = splitFixInstructions(task.description)
-  const isOverdue = Boolean(task.dueDate) && task.status !== "done" && new Date(task.dueDate as string).getTime() < Date.now()
-  const isDueToday = Boolean(task.dueDate) && task.status !== "done" &&
-    (() => { const d = new Date(task.dueDate as string); const n = new Date(); return d.getFullYear()===n.getFullYear() && d.getMonth()===n.getMonth() && d.getDate()===n.getDate() })()
+  const isOverdue = isTaskOverdue(task)
+  const isDueToday = isTaskDueToday(task)
 
   const handleApprove = async () => {
     try {
