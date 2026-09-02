@@ -35,17 +35,20 @@ export default function WeeklyReportsPage() {
   const [selectedReport, setSelectedReport] = useState<WeeklyReport | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
 
-  // Set default week (current week)
+  // Set default week (Monday-Sunday, matching backend weekStartsOn: 1)
   useEffect(() => {
     const now = new Date()
+    const dayOfWeek = now.getDay() // 0=Sun, 1=Mon, ..., 6=Sat
+    const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
+
     const startOfWeek = new Date(now)
-    startOfWeek.setDate(now.getDate() - now.getDay()) // Sunday
+    startOfWeek.setDate(now.getDate() + mondayOffset)
     startOfWeek.setHours(0, 0, 0, 0)
-    
-    const endOfWeek = new Date(now)
-    endOfWeek.setDate(now.getDate() + (6 - now.getDay())) // Saturday
+
+    const endOfWeek = new Date(startOfWeek)
+    endOfWeek.setDate(startOfWeek.getDate() + 6)
     endOfWeek.setHours(23, 59, 59, 999)
-    
+
     setWeekStart(startOfWeek.toISOString().split('T')[0])
     setWeekEnd(endOfWeek.toISOString().split('T')[0])
   }, [])
