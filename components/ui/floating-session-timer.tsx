@@ -149,6 +149,11 @@ export function FloatingSessionTimer() {
     if (!activeSession || !user?.id) return
     await pauseSession(activeSession.id)
     await fetchSessions(user.id)
+    try {
+      await ResponsibilitiesAPI.pause()
+    } catch {
+      // Responsibility pause is secondary; session pause succeeded.
+    }
   }
 
   const handleResume = async () => {

@@ -137,28 +137,42 @@ export class TaskServiceGateway implements TaskManagementGateway {
     const createdTasks: Task[] = []
     let groupTaskId: number | null = data.groupTaskId ?? null
 
-    for (const assigneeId of assigneeIds) {
-      const taskData: CreateTaskCommand = {
-        ...data,
-        assigneeIds: [assigneeId],
-        assignedTo: assigneeId,
+    // No transaction is available on the repository, so on a mid-loop failure we
+    // delete the tasks already created to avoid leaving an orphaned/incomplete group.
+    try {
+      for (const assigneeId of assigneeIds) {
+        const taskData: CreateTaskCommand = {
+          ...data,
+          assigneeIds: [assigneeId],
+          assignedTo: assigneeId,
+        }
+
+        const task = Task.create(taskData)
+        const created = await this.taskRepository.create(task)
+
+        if (!groupTaskId) groupTaskId = created.id!
+        created.groupTaskId = groupTaskId
+        // IMPORTANT: repository.update(id, task) calls task.toPrisma() and needs a full Task.
+        await this.taskRepository.update(created.id!, created)
+
+        await this.syncTaskAssignees(created.id!, [assigneeId], actorId)
+        created.assigneeIds = [assigneeId]
+        created.assignedTo = assigneeId
+        createdTasks.push(created)
       }
 
-      const task = Task.create(taskData)
-      const created = await this.taskRepository.create(task)
-
-      if (!groupTaskId) groupTaskId = created.id!
-      created.groupTaskId = groupTaskId
-      // IMPORTANT: repository.update(id, task) calls task.toPrisma() and needs a full Task.
-      await this.taskRepository.update(created.id!, created)
-
-      await this.syncTaskAssignees(created.id!, [assigneeId], actorId)
-      created.assigneeIds = [assigneeId]
-      created.assignedTo = assigneeId
-      createdTasks.push(created)
+      return createdTasks[0]
+    } catch (error) {
+      // Best-effort cleanup so a partial failure does not leave orphaned tasks.
+      for (const created of createdTasks) {
+        try {
+          await this.taskRepository.delete(created.id!)
+        } catch {
+          // Ignore per-task cleanup errors; the original error is what surfaces.
+        }
+      }
+      throw error
     }
-
-    return createdTasks[0]
   }
 
   async createTaskBacklog(tasks: CreateTaskCommand[], actorId: number) {
