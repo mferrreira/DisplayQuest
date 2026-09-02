@@ -26,6 +26,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Textarea } from "@/components/ui/textarea"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -408,31 +409,43 @@ export function TaskCard({ task, index, isOverdue, isCompact, onEdit, onOpenDeta
                     )}
 
                     {canApproveReject && (
-                      <div className="mt-3 ml-4 flex gap-2">
-                        <Button
-                          size="sm"
-                          className="flex-1 bg-green-500 text-xs text-white hover:bg-green-600 dark:bg-success dark:text-success-foreground dark:hover:bg-success/90"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            void handleApprove()
-                          }}
-                        >
-                          <Check className="mr-1 h-3 w-3" aria-hidden="true" />
-                          Aprovar
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          className="flex-1 text-xs"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setRejectOpen(true)
-                          }}
-                        >
-                          <X className="mr-1 h-3 w-3" aria-hidden="true" />
-                          Rejeitar
-                        </Button>
-                      </div>
+                      <TooltipProvider delayDuration={150}>
+                        <div className="mt-3 ml-4 flex items-center gap-1.5">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="icon"
+                                className="h-7 w-7 bg-green-500 text-white hover:bg-green-600 dark:bg-success dark:text-success-foreground dark:hover:bg-success/90"
+                                aria-label="Aprovar tarefa"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  void handleApprove()
+                                }}
+                              >
+                                <Check className="h-3.5 w-3.5" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Aprovar</TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="icon"
+                                variant="destructive"
+                                className="h-7 w-7"
+                                aria-label="Rejeitar tarefa"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setRejectOpen(true)
+                                }}
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Rejeitar</TooltipContent>
+                          </Tooltip>
+                        </div>
+                      </TooltipProvider>
                     )}
 
                     <div className="flex items-center justify-between text-xs text-muted-foreground">
