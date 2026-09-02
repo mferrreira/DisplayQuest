@@ -83,6 +83,8 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit }: TaskDetai
   const projectName = task.projectId ? projects.find((p) => p.id === task.projectId)?.name : null
   const { main, fixes } = splitFixInstructions(task.description)
   const isOverdue = Boolean(task.dueDate) && task.status !== "done" && new Date(task.dueDate as string).getTime() < Date.now()
+  const isDueToday = Boolean(task.dueDate) && task.status !== "done" &&
+    (() => { const d = new Date(task.dueDate as string); const n = new Date(); return d.getFullYear()===n.getFullYear() && d.getMonth()===n.getMonth() && d.getDate()===n.getDate() })()
 
   const handleApprove = async () => {
     try {
@@ -178,6 +180,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit }: TaskDetai
                   <Calendar className="h-3.5 w-3.5" aria-hidden="true" />
                   {task.dueDate ? new Date(task.dueDate).toLocaleDateString("pt-BR") : "—"}
                   {isOverdue && <Badge variant="destructive" className="ml-1">ATRASADA</Badge>}
+                  {isDueToday && !isOverdue && <Badge variant="secondary" className="ml-1 bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-300">Para hoje</Badge>}
                 </p>
               </div>
               <div>

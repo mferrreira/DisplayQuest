@@ -8,6 +8,7 @@ export {
   optimisticStatusFor,
   isArchivedTask,
   isTaskOverdue,
+  isTaskDueToday,
   latePenalty,
   projectedAward,
   parseBacklogLines,

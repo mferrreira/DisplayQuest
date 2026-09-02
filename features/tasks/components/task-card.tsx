@@ -51,6 +51,7 @@ import {
   ArrowRight,
   Eye,
   AlertTriangle,
+  CalendarClock,
 } from "lucide-react"
 import type { Task, TaskStatus } from "@/entities/task"
 import { useAuth } from "@/contexts/auth-context"
@@ -114,12 +115,13 @@ export interface TaskCardProps {
   task: Task
   index: number
   isOverdue: boolean
+  isDueToday?: boolean
   isCompact?: boolean
   onEdit: (task: Task) => void
   onOpenDetail: (task: Task) => void
 }
 
-export function TaskCard({ task, index, isOverdue, isCompact, onEdit, onOpenDetail }: TaskCardProps) {
+export function TaskCard({ task, index, isOverdue, isDueToday, isCompact, onEdit, onOpenDetail }: TaskCardProps) {
   const { user } = useAuth()
   const { data: projects = [] } = useProjects()
   const { data: users = [] } = useUsers()
@@ -217,7 +219,9 @@ export function TaskCard({ task, index, isOverdue, isCompact, onEdit, onOpenDeta
       : "border-amber-400 dark:border-amber-500/40 bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 dark:from-amber-400/10 dark:via-yellow-300/5 dark:to-orange-400/10"
     : isOverdue
       ? "border-red-300 bg-gradient-to-br from-red-50 to-red-100 dark:border-red-500/40 dark:from-red-500/10 dark:to-red-500/5"
-      : "border-gray-200 bg-gradient-to-br from-white to-gray-50 dark:border-gray-600 dark:from-gray-800 dark:to-gray-700"
+      : isDueToday
+        ? "border-sky-300 bg-gradient-to-br from-sky-50 to-sky-100 dark:border-sky-500/40 dark:from-sky-500/10 dark:to-sky-500/5"
+        : "border-gray-200 bg-gradient-to-br from-white to-gray-50 dark:border-gray-600 dark:from-gray-800 dark:to-gray-700"
 
   return (
     <>
@@ -461,6 +465,12 @@ export function TaskCard({ task, index, isOverdue, isCompact, onEdit, onOpenDeta
                         <span className="flex items-center font-bold text-destructive">
                           <AlertTriangle className="mr-1 h-3 w-3" aria-hidden="true" />
                           ATRASADA
+                        </span>
+                      )}
+                      {isDueToday && !isOverdue && (
+                        <span className="flex items-center font-semibold text-sky-600 dark:text-sky-400">
+                          <CalendarClock className="mr-1 h-3 w-3" aria-hidden="true" />
+                          Para hoje
                         </span>
                       )}
                     </div>

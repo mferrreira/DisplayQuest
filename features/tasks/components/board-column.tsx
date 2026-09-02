@@ -89,6 +89,19 @@ export function BoardColumn({ status, tasks, canAddTask, isCompact, onAddTask, o
                     task.status !== "done" &&
                     new Date(task.dueDate as string).getTime() < Date.now()
                   }
+                  isDueToday={
+                    Boolean(task.dueDate) &&
+                    task.status !== "done" &&
+                    (() => {
+                      const d = new Date(task.dueDate as string)
+                      const n = new Date()
+                      return (
+                        d.getFullYear() === n.getFullYear() &&
+                        d.getMonth() === n.getMonth() &&
+                        d.getDate() === n.getDate()
+                      )
+                    })()
+                  }
                   isCompact={isCompact}
                   onEdit={onEdit}
                   onOpenDetail={onOpenDetail}

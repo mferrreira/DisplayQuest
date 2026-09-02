@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 import {
   isArchivedTask,
   isTaskOverdue,
+  isTaskDueToday,
   latePenalty,
   optimisticStatusFor,
   parseBacklogLines,
@@ -97,6 +98,20 @@ describe("overdue + penalty (gateway :593–607 mirror)", () => {
     expect(isTaskOverdue(overdue)).toBe(true)
     expect(isTaskOverdue(future)).toBe(false)
     expect(isTaskOverdue(doneOverdue)).toBe(false)
+  })
+
+  it("isTaskDueToday flags non-done tasks due today and nothing else", () => {
+    const today = new Date()
+    const dueToday = makeTask({ dueDate: today.toISOString(), status: "to-do" })
+    const tomorrow = new Date()
+    tomorrow.setDate(today.getDate() + 1)
+    const dueTomorrow = makeTask({ dueDate: tomorrow.toISOString(), status: "to-do" })
+    const doneToday = makeTask({ dueDate: today.toISOString(), status: "done", completed: true })
+    const noDue = makeTask({ dueDate: null, status: "to-do" })
+    expect(isTaskDueToday(dueToday)).toBe(true)
+    expect(isTaskDueToday(dueTomorrow)).toBe(false)
+    expect(isTaskDueToday(doneToday)).toBe(false)
+    expect(isTaskDueToday(noDue)).toBe(false)
   })
 
   it("penalty = daysLate × points (ceil)", () => {

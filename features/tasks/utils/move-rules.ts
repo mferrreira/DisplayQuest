@@ -88,6 +88,17 @@ export function isTaskOverdue(task: Task, now: Date = new Date()): boolean {
   return due.getTime() < now.getTime();
 }
 
+/**
+ * True when a non-done task has a dueDate on the current calendar day (local time).
+ */
+export function isTaskDueToday(task: Task, now: Date = new Date()): boolean {
+  if (!task.dueDate || task.status === "done") return false;
+  const due = new Date(task.dueDate);
+  if (Number.isNaN(due.getTime())) return false;
+  const d = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  return d(due) === d(now);
+}
+
 /** Gateway :593–607 — display-side mirror of the server's penalty math. */
 export function latePenalty(task: Pick<Task, "dueDate" | "points">, completion: Date = new Date()): number {
   if (!task.dueDate) return 0;
