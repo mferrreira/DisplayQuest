@@ -50,6 +50,25 @@ export class TaskAssigneeRepository {
     return rows.map((row: any) => Number(row.taskId)).filter((id: number) => !Number.isNaN(id))
   }
 
+  async listUserIdsByTaskIds(taskIds: number[]): Promise<Map<number, number[]>> {
+    if (!this.table || taskIds.length === 0) return new Map()
+    const rows = await this.table.findMany({
+      where: { taskId: { in: taskIds } },
+      select: { taskId: true, userId: true },
+      orderBy: { assignedAt: "asc" },
+    })
+    const map = new Map<number, number[]>()
+    for (const row of rows) {
+      const tid = Number(row.taskId)
+      const uid = Number(row.userId)
+      if (Number.isNaN(tid) || Number.isNaN(uid)) continue
+      const arr = map.get(tid)
+      if (arr) arr.push(uid)
+      else map.set(tid, [uid])
+    }
+    return map
+  }
+
   async isUserAssigned(taskId: number, userId: number): Promise<boolean> {
     if (!this.table) return false
     const row = await this.table.findUnique({

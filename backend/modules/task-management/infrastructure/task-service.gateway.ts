@@ -713,12 +713,12 @@ export class TaskServiceGateway implements TaskManagementGateway {
 
   async applyActorProgress(tasks: Task[], actorId: number) {
     if (!this.taskUserProgressRepository.isAvailable()) {
-    return await Promise.all(tasks.map((task) => this.attachAssigneeIds(task)))
+      return await this.batchAttachAssigneeIds(tasks)
     }
 
     const publicTasks = tasks.filter((task) => task.id && task.taskVisibility === "public")
     if (publicTasks.length === 0) {
-      return await Promise.all(tasks.map((task) => this.attachAssigneeIds(task)))
+      return await this.batchAttachAssigneeIds(tasks)
     }
 
     const progressRows = await this.taskUserProgressRepository.findByTaskIdsAndUser(
@@ -744,7 +744,7 @@ export class TaskServiceGateway implements TaskManagementGateway {
         completedAt: progress.completedAt,
       }, progress.userId)
     })
-    return await Promise.all(withProgress.map((task) => this.attachAssigneeIds(task)))
+    return await this.batchAttachAssigneeIds(withProgress)
   }
 
   private withActorProgress(
@@ -799,6 +799,26 @@ export class TaskServiceGateway implements TaskManagementGateway {
     task.assigneeIds = assigneeIds
     task.assignedTo = assigneeIds[0] ?? task.assignedTo ?? null
     return task
+  }
+
+  private async batchAttachAssigneeIds(tasks: Task[]): Promise<Task[]> {
+    if (!this.taskAssigneeRepository.isAvailable()) {
+      for (const task of tasks) {
+        task.assigneeIds = task.assignedTo ? [task.assignedTo] : []
+      }
+      return tasks
+    }
+    const taskIds = tasks.filter((t) => t.id).map((t) => t.id!)
+    if (taskIds.length === 0) return tasks
+
+    const assigneeMap = await this.taskAssigneeRepository.listUserIdsByTaskIds(taskIds)
+    for (const task of tasks) {
+      if (!task.id) continue
+      const ids = assigneeMap.get(task.id) ?? []
+      task.assigneeIds = ids
+      task.assignedTo = ids[0] ?? task.assignedTo ?? null
+    }
+    return tasks
   }
 
   private async isActorAssignedToTask(task: Task, actorId: number) {
