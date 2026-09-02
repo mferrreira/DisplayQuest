@@ -42,8 +42,19 @@ export class CronService {
    */
   async executeScheduledPause() {
     try {
-      const { workExecution } = getBackendComposition()
-      await workExecution.listWorkSessions({ status: 'active' })
+      const { workExecution, labOperations } = getBackendComposition()
+      const sessions = await workExecution.listWorkSessions({ status: 'active' })
+      const affectedUserIds = [
+        ...new Set((sessions ?? []).map((s: any) => s.userId as number).filter((uid: number) => Number.isInteger(uid) && uid > 0)),
+      ]
+      for (const userId of affectedUserIds) {
+        try {
+          await labOperations.pauseResponsibilityForUser(userId)
+        } catch (err) {
+          // Continuing is more important than a single failed responsibility pause.
+          console.error(`⚠️ Não foi possível pausar responsabilidade do usuário ${userId}:`, err)
+        }
+      }
     } catch (error) {
       console.error('❌ Erro ao executar pause automático de sessões:', error)
     }
