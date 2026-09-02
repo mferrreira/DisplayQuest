@@ -81,11 +81,16 @@ export function isArchivedTask(
 }
 
 // ---- overdue + penalty display ----
+
+/** Milliseconds since epoch for the start of the local calendar day of `x`. */
+function dayOf(x: Date): number {
+  return new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+}
+
 export function isTaskOverdue(task: Task, now: Date = new Date()): boolean {
   if (!task.dueDate || task.status === "done") return false;
   const due = new Date(task.dueDate);
   if (Number.isNaN(due.getTime())) return false;
-  const dayOf = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
   return dayOf(due) < dayOf(now);
 }
 
@@ -96,8 +101,7 @@ export function isTaskDueToday(task: Task, now: Date = new Date()): boolean {
   if (!task.dueDate || task.status === "done") return false;
   const due = new Date(task.dueDate);
   if (Number.isNaN(due.getTime())) return false;
-  const d = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
-  return d(due) === d(now);
+  return dayOf(due) === dayOf(now);
 }
 
 /** Gateway :593–607 — display-side mirror of the server's penalty math. */
