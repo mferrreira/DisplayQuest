@@ -33,7 +33,6 @@ import { BoardToolbar } from "./board-toolbar"
 import { ArchiveSection } from "./archive-section"
 import { TaskDialog } from "./task-dialog"
 import { TaskDetailDialog } from "./task-detail-dialog"
-import { BacklogDialog } from "./backlog-dialog"
 
 export function TaskBoard() {
   const { data: session } = useSession()
@@ -48,10 +47,6 @@ export function TaskBoard() {
     parseAsBoolean.withDefault(false),
   )
   const [buscaParam, setBuscaParam] = useQueryState("busca", parseAsString.withDefault(""))
-  const [minhasParam, setMinhasParam] = useQueryState(
-    "minhas",
-    parseAsBoolean.withDefault(false),
-  )
   const [compactaParam, setCompactaParam] = useQueryState(
     "visao",
     parseAsString.withDefault("normal"),
@@ -66,7 +61,6 @@ export function TaskBoard() {
   const [editTask, setEditTask] = useState<Task | null>(null)
   const [viewTask, setViewTask] = useState<Task | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [backlogOpen, setBacklogOpen] = useState(false)
   const [detailOpen, setDetailOpen] = useState(false)
 
   const userRoles: string[] = user?.roles ?? []
@@ -85,7 +79,6 @@ export function TaskBoard() {
   const filteredTasks = useMemo(() => {
     let list = tasks ?? []
     if (projetoParam) list = list.filter((t) => t.projectId === projetoParam)
-    if (minhasParam) list = list.filter((t) => isAssignedToUser(t, sessionUserId))
     if (pessoaParam) list = list.filter((t) => isAssignedToUser(t, pessoaParam))
     if (atrasadasParam) list = list.filter((t) => isTaskOverdue(t))
     if (buscaParam) {
@@ -93,7 +86,7 @@ export function TaskBoard() {
       list = list.filter((t) => t.title.toLowerCase().includes(q))
     }
     return list
-  }, [tasks, projetoParam, minhasParam, pessoaParam, atrasadasParam, buscaParam, sessionUserId])
+  }, [tasks, projetoParam, pessoaParam, atrasadasParam, buscaParam])
 
   const archivedTasks = useMemo(() => filteredTasks.filter((t) => isArchivedTask(t)), [filteredTasks])
   const boardTasks = useMemo(() => {
@@ -199,14 +192,12 @@ export function TaskBoard() {
           projectId: projetoParam ?? undefined,
           overdue: atrasadasParam || undefined,
           search: buscaParam || undefined,
-          mine: minhasParam || undefined,
           assigneeId: pessoaParam ?? undefined,
         }}
         onFiltersChange={(next) => {
           void setProjetoParam(next.projectId ?? null)
           void setAtrasadasParam(Boolean(next.overdue))
           void setBuscaParam(next.search ?? "")
-          void setMinhasParam(Boolean(next.mine))
           void setPessoaParam(next.assigneeId ?? null)
         }}
         overdueCount={overdueCount}
@@ -214,10 +205,10 @@ export function TaskBoard() {
         canSeeProjectSelector={canSeeProjectSelector}
         projects={projects}
         users={users}
+        currentUserId={sessionUserId ?? null}
         isCompact={compactaParam === "compacta"}
         onToggleCompact={() => void setCompactaParam(compactaParam === "compacta" ? "normal" : "compacta")}
         onCreateTask={openCreate}
-        onCreateBacklog={() => setBacklogOpen(true)}
         isUpdating={updateStatus.isPending || complete.isPending}
       />
 
@@ -274,8 +265,12 @@ export function TaskBoard() {
 
       <ArchiveSection tasks={archivedTasks} projects={projects} />
 
-      <TaskDialog open={dialogOpen} onOpenChange={setDialogOpen} task={editTask} />
-      <BacklogDialog open={backlogOpen} onOpenChange={setBacklogOpen} defaultProjectId={projetoParam} />
+      <TaskDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        task={editTask}
+        defaultProjectId={projetoParam ?? undefined}
+      />
       <TaskDetailDialog
         task={viewTask}
         open={detailOpen}

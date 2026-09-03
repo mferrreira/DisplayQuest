@@ -18,9 +18,8 @@ export type TaskFilters = QueryParams & {
   projectId?: number;
   overdue?: boolean;
   search?: string;
-  /** "Atribuídas a mim" — resolved CLIENT-side (server cannot filter for all roles). */
-  mine?: boolean;
-  /** Filtro por pessoa — resolved CLIENT-side (tasks scoped server-side by actor). */
+  /** Filtro por pessoa — resolved CLIENT-side (tasks scoped server-side by actor).
+   *  Subsumes the old `mine` toggle: selecting the current user's id = "minhas tarefas". */
   assigneeId?: number;
 };
 

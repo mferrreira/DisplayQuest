@@ -11,6 +11,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { useSession } from "next-auth/react"
 import { toast } from "sonner"
+import { HelpCircle, Info, Upload } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -32,11 +33,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { useProjects } from "@/features/projects"
 import { useUsers } from "@/features/users"
 import { useTaskMutations } from "../hooks/use-tasks"
+import { parseBacklogLines } from "../utils/move-rules"
 import type { Task } from "@/entities/task"
 import { listProjectMembers, type ProjectMember } from "@/lib/api/project-members"
+
+type TaskDialogTab = "task" | "backlog"
+
+const BACKLOG_TEMPLATE = [
+  "Comprar reagentes !alta @30 #25/12",
+  "Calibrar equipamento @10 #15/03/2026",
+  "Testar sensor !urgente",
+  "Analisar dados !baixa @5 #01/01",
+  "Escrever relatório !media @20",
+].join("\n")
 
 const taskFormSchema = z.object({
   title: z.string().min(1, "O título é obrigatório").max(200, "Máximo de 200 caracteres"),
@@ -64,11 +78,20 @@ export function TaskDialog({ open, onOpenChange, task, defaultProjectId }: TaskD
   const { data: session } = useSession()
   const { data: projects = [] } = useProjects()
   const { data: users = [] } = useUsers()
-  const { create, update } = useTaskMutations()
+  const { create, update, createBacklog } = useTaskMutations()
   const [serverError, setServerError] = useState("")
+
+  // ---- create-mode tabs ("Nova tarefa" / "Inserir backlog") + backlog state ----
+  const [activeTab, setActiveTab] = useState<TaskDialogTab>("task")
+  const [backlogRaw, setBacklogRaw] = useState("")
+  const [backlogHelpOpen, setBacklogHelpOpen] = useState(false)
+  const [backlogProjectId, setBacklogProjectId] = useState<string>("none")
 
   const userRoles = (session?.user as { roles?: string[] } | undefined)?.roles ?? []
   const canManageUsers = userRoles.includes("COORDENADOR") || userRoles.includes("GERENTE")
+  const canSelectProject = ["COORDENADOR", "GERENTE", "GERENTE_PROJETO"].some((r) =>
+    userRoles.includes(r),
+  )
 
   const {
     register,
@@ -96,6 +119,10 @@ export function TaskDialog({ open, onOpenChange, task, defaultProjectId }: TaskD
   useEffect(() => {
     if (open) {
       setServerError("")
+      setActiveTab("task")
+      setBacklogRaw("")
+      setBacklogHelpOpen(false)
+      setBacklogProjectId(defaultProjectId ? String(defaultProjectId) : "none")
       reset({
         title: task?.title ?? "",
         description: task?.description ?? "",
@@ -192,17 +219,36 @@ export function TaskDialog({ open, onOpenChange, task, defaultProjectId }: TaskD
     }
   }
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg sm:overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{task ? "Editar Tarefa" : "Nova Tarefa"}</DialogTitle>
-          <DialogDescription>
-            {task ? "Atualize os dados da tarefa." : "Crie uma nova tarefa para o quadro."}
-          </DialogDescription>
-        </DialogHeader>
+  // ---- backlog tab (content migrated from the former BacklogDialog) ----
+  const backlogParsed = useMemo(() => parseBacklogLines(backlogRaw), [backlogRaw])
+  const backlogDatesDetected = backlogParsed.filter((t) => t.dueDate).length
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+  const handleBacklogImport = async () => {
+    if (backlogParsed.length === 0) return
+    const projectId = backlogProjectId !== "none" ? Number(backlogProjectId) : null
+    try {
+      const result = await createBacklog.mutateAsync(
+        backlogParsed.map((t) => ({
+          title: t.title,
+          priority: t.priority,
+          points: t.points,
+          dueDate: t.dueDate,
+          projectId,
+        })),
+      )
+      toast.success("Backlog importado", {
+        description: `${result.createdCount} tarefa(s) criada(s).`,
+      })
+      onOpenChange(false)
+    } catch (error) {
+      toast.error("Erro ao importar backlog", {
+        description: error instanceof Error ? error.message : undefined,
+      })
+    }
+  }
+
+  const taskForm = (
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
           {serverError && (
             <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive" role="alert">
               {serverError}
@@ -395,15 +441,144 @@ export function TaskDialog({ open, onOpenChange, task, defaultProjectId }: TaskD
             </div>
           </div>
 
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Salvando..." : task ? "Salvar" : "Criar Tarefa"}
-            </Button>
-          </DialogFooter>
-        </form>
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          Cancelar
+        </Button>
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? "Salvando..." : task ? "Salvar" : "Criar Tarefa"}
+        </Button>
+      </DialogFooter>
+    </form>
+  )
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg sm:overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{task ? "Editar Tarefa" : "Nova Tarefa"}</DialogTitle>
+          <DialogDescription>
+            {task
+              ? "Atualize os dados da tarefa."
+              : activeTab === "backlog"
+                ? "Importe várias tarefas de uma vez (uma por linha)."
+                : "Crie uma nova tarefa para o quadro."}
+          </DialogDescription>
+        </DialogHeader>
+
+        {task ? (
+          taskForm
+        ) : (
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TaskDialogTab)}>
+            <TabsList className="w-full">
+              <TabsTrigger value="task" className="flex-1">
+                Nova tarefa
+              </TabsTrigger>
+              <TabsTrigger value="backlog" className="flex-1">
+                Inserir backlog
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="task" className="mt-4">
+              {taskForm}
+            </TabsContent>
+
+            <TabsContent value="backlog" className="mt-4 space-y-4">
+              <Collapsible open={backlogHelpOpen} onOpenChange={setBacklogHelpOpen}>
+                <CollapsibleTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <HelpCircle className="mr-1 h-4 w-4" aria-hidden="true" />
+                    Ajuda de sintaxe
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-3 rounded-lg border bg-muted/30 p-3 text-sm">
+                  <div className="flex items-center gap-1.5 font-medium text-muted-foreground">
+                    <Info className="h-3.5 w-3.5" aria-hidden="true" />
+                    Sintaxe — um item por linha
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                    <span>
+                      <code className="font-mono">!alta</code>{" "}
+                      <code className="font-mono">!baixa</code>{" "}
+                      <code className="font-mono">!urgente</code>
+                    </span>
+                    <span className="text-muted-foreground">prioridade (opcional)</span>
+                    <span>
+                      <code className="font-mono">@30</code>
+                    </span>
+                    <span className="text-muted-foreground">pontos (opcional)</span>
+                    <span>
+                      <code className="font-mono">#25/12</code>{" "}
+                      <code className="font-mono">#25/12/2026</code>
+                    </span>
+                    <span className="text-muted-foreground">vencimento (opcional)</span>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full text-xs"
+                    onClick={() => setBacklogRaw(BACKLOG_TEMPLATE)}
+                  >
+                    Usar modelo
+                  </Button>
+                </CollapsibleContent>
+              </Collapsible>
+
+              {canSelectProject && (
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium" htmlFor="backlog-project">
+                    Projeto
+                  </label>
+                  <Select value={backlogProjectId} onValueChange={setBacklogProjectId}>
+                    <SelectTrigger id="backlog-project" aria-label="Selecionar projeto">
+                      <SelectValue placeholder="Nenhum projeto" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nenhum projeto</SelectItem>
+                      {projects.map((project) => (
+                        <SelectItem key={project.id} value={project.id.toString()}>
+                          {project.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              <Textarea
+                rows={8}
+                value={backlogRaw}
+                onChange={(e) => setBacklogRaw(e.target.value)}
+                placeholder="Comprar reagentes !alta @30 #25/12
+Calibrar equipamento @10
+Testar sensor !urgente
+Analisar dados !baixa @5
+Escrever relatório !media @20"
+                aria-label="Lista de tarefas para importação"
+                className="font-mono text-sm"
+              />
+
+              <p className="text-xs text-muted-foreground" aria-live="polite">
+                {backlogParsed.length} tarefa(s) detectada(s)
+                {backlogDatesDetected > 0 && ` · ${backlogDatesDetected} com vencimento`}
+              </p>
+
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                  Cancelar
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => void handleBacklogImport()}
+                  disabled={backlogParsed.length === 0 || createBacklog.isPending}
+                >
+                  <Upload className="mr-1 h-4 w-4" aria-hidden="true" />
+                  {createBacklog.isPending ? "Inserindo..." : `Inserir ${backlogParsed.length}`}
+                </Button>
+              </DialogFooter>
+            </TabsContent>
+          </Tabs>
+        )}
       </DialogContent>
     </Dialog>
   )
