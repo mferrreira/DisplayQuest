@@ -15,6 +15,7 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import type { Task } from "@/contexts/types"
 import { useUser } from "@/contexts/user-context"
+import { formatDateOnly } from "@/lib/date-only"
 
 interface TaskCardProps {
   task: Task
@@ -77,7 +78,7 @@ export function TaskCard({
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return null
-    return new Date(dateString).toLocaleDateString("pt-BR")
+    return formatDateOnly(dateString)
   }
 
   const getProgressValue = () => {

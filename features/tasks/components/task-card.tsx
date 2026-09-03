@@ -59,6 +59,7 @@ import { useProjects } from "@/features/projects"
 import { useUsers } from "@/features/users"
 import { useTaskMutations, resolveMove, projectedAward, BOARD_COLUMNS } from ".."
 import { toast } from "sonner"
+import { formatDateOnly } from "@/lib/date-only"
 
 const STATUS_PROGRESS: Record<Task["status"], number> = {
   "to-do": 0,
@@ -459,7 +460,7 @@ export function TaskCard({ task, index, isOverdue, isDueToday, isCompact, onEdit
                         {task.dueDate && (
                           <span className="flex items-center">
                             <Calendar className="mr-1 h-3 w-3" aria-hidden="true" />
-                            {new Date(task.dueDate).toLocaleDateString("pt-BR")}
+                            {formatDateOnly(task.dueDate)}
                           </span>
                         )}
                       </div>

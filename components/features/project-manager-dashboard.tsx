@@ -16,6 +16,7 @@ import {
   BarChart3
 } from "lucide-react"
 import type { Project, Task } from "@/contexts/types"
+import { isOverdueDateOnly } from "@/lib/date-only"
 
 interface ProjectManagerDashboardProps {
   projects: Project[]
@@ -34,8 +35,8 @@ export function ProjectManagerDashboard({ projects, tasks, user }: ProjectManage
   const completedTasks = managerTasks.filter(task => task.status === "done").length
   const inProgressTasks = managerTasks.filter(task => task.status === "in-progress").length
   const overdueTasks = managerTasks.filter(task => {
-    if (!task.dueDate) return false
-    return new Date(task.dueDate) < new Date() && task.status !== "done"
+    if (!task.dueDate || task.status === "done") return false
+    return isOverdueDateOnly(task.dueDate)
   }).length
   
   const totalPoints = managerTasks.reduce((sum, task) => sum + (task.points || 0), 0)
