@@ -118,49 +118,6 @@ export function BoardToolbar({
           </Select>
         )}
 
-        {/* Buscador expansível — ícone de lupa que expande em input (animação de largura). */}
-        <div
-          className={cn(
-            "flex items-center overflow-hidden rounded-md border bg-background px-1.5 transition-[width] duration-300 ease-in-out",
-            searchOpen ? "w-[200px]" : "w-9",
-          )}
-        >
-          <button
-            type="button"
-            aria-label="Buscar tarefas"
-            className="shrink-0 rounded p-1 text-muted-foreground transition-colors hover:text-foreground"
-            onClick={() => {
-              setSearchOpen(true)
-              requestAnimationFrame(() => searchRef.current?.focus())
-            }}
-          >
-            <Search className="h-4 w-4" aria-hidden="true" />
-          </button>
-          <input
-            ref={searchRef}
-            className="w-full min-w-0 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-            placeholder="Buscar tarefas..."
-            aria-label="Buscar tarefas por título"
-            tabIndex={searchOpen ? 0 : -1}
-            value={filters.search ?? ""}
-            onChange={(e) => onFiltersChange({ ...filters, search: e.target.value || undefined })}
-            onBlur={() => {
-              if (!(filters.search ?? "")) setSearchOpen(false)
-            }}
-          />
-          <button
-            type="button"
-            aria-label="Limpar busca"
-            className="shrink-0 rounded p-0.5 text-muted-foreground transition-colors hover:text-foreground"
-            onClick={() => {
-              onFiltersChange({ ...filters, search: undefined })
-              searchRef.current?.focus()
-            }}
-          >
-            <X className="h-3.5 w-3.5" aria-hidden="true" />
-          </button>
-        </div>
-
         <Select
           value={filters.assigneeId?.toString() ?? "all"}
           onValueChange={(value) =>
@@ -205,6 +162,49 @@ export function BoardToolbar({
             Limpar filtros
           </Button>
         )}
+
+        {/* Buscador expansível — no canto direito (ml-auto), não entre os selects. */}
+        <div
+          className={cn(
+            "ml-auto flex items-center overflow-hidden rounded-md border bg-background px-1.5 transition-[width] duration-300 ease-in-out",
+            searchOpen ? "w-[200px]" : "w-9",
+          )}
+        >
+          <button
+            type="button"
+            aria-label="Buscar tarefas"
+            className="shrink-0 rounded p-1 text-muted-foreground transition-colors hover:text-foreground"
+            onClick={() => {
+              setSearchOpen(true)
+              requestAnimationFrame(() => searchRef.current?.focus())
+            }}
+          >
+            <Search className="h-4 w-4" aria-hidden="true" />
+          </button>
+          <input
+            ref={searchRef}
+            className="w-full min-w-0 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+            placeholder="Buscar tarefas..."
+            aria-label="Buscar tarefas por título"
+            tabIndex={searchOpen ? 0 : -1}
+            value={filters.search ?? ""}
+            onChange={(e) => onFiltersChange({ ...filters, search: e.target.value || undefined })}
+            onBlur={() => {
+              if (!(filters.search ?? "")) setSearchOpen(false)
+            }}
+          />
+          <button
+            type="button"
+            aria-label="Limpar busca"
+            className="shrink-0 rounded p-0.5 text-muted-foreground transition-colors hover:text-foreground"
+            onClick={() => {
+              onFiltersChange({ ...filters, search: undefined })
+              searchRef.current?.focus()
+            }}
+          >
+            <X className="h-3.5 w-3.5" aria-hidden="true" />
+          </button>
+        </div>
       </div>
     </div>
   )
