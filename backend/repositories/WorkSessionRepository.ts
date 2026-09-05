@@ -111,21 +111,26 @@ export class WorkSessionRepository implements IWorkSessionRepository {
     }
 
     async endAllActiveSessions(): Promise<void> {
+        const { getMissedScheduledPause, MAX_STRETCH_SEC } = await import("@/lib/work-sessions/schedule");
         const endTime = new Date();
-        
-        // Find all active sessions and calculate their durations
+
         const activeSessions = await prisma.work_sessions.findMany({
             where: { status: 'active' }
         });
 
         for (const session of activeSessions) {
-            const diffMs = endTime.getTime() - session.startTime.getTime();
-            const duration = diffMs / 1000;
+            const missedPause = getMissedScheduledPause(session.startTime, endTime);
+            const activeUntil = missedPause && missedPause.getTime() <= endTime.getTime() ? missedPause : endTime;
+            const elapsed = Math.min(
+                MAX_STRETCH_SEC,
+                Math.max(0, (activeUntil.getTime() - session.startTime.getTime()) / 1000),
+            );
+            const duration = (session.duration ?? 0) + elapsed;
 
             await prisma.work_sessions.update({
                 where: { id: session.id },
                 data: {
-                    endTime,
+                    endTime: activeUntil,
                     duration,
                     status: 'completed'
                 }

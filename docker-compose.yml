@@ -7,14 +7,14 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-display-quest}
       POSTGRES_USER: ${POSTGRES_USER:-display-quest}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD no ambiente/.env}
-    ports:
-      - "5432:5432"
+    expose:
+      - "5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - display-quest-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U display-quest -d display-quest"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-display-quest} -d $${POSTGRES_DB:-display-quest}"]
       interval: 10s
       timeout: 5s
       retries: 5

@@ -40,7 +40,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     const session = isCompletionIntent
       ? await workExecutionModule.completeWorkSession({
           sessionId: id,
-          actorUserId: existingSession.userId,
+          actorUserId: actor.id,
           actorRoles: actor.roles,
           activity: data.activity,
           location: data.location,
@@ -52,7 +52,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
         })
       : await workExecutionModule.updateWorkSession({
           sessionId: id,
-          actorUserId: existingSession.userId,
+          actorUserId: actor.id,
           actorRoles: actor.roles,
           activity: data.activity,
           location: data.location,
@@ -100,7 +100,8 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
     
     await workExecutionModule.deleteWorkSession({
       sessionId: id,
-      actorUserId: existingSession.userId,
+      actorUserId: actor.id,
+      actorRoles: actor.roles,
     });
     
     return new Response(JSON.stringify({ success: true }), {

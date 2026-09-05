@@ -428,19 +428,10 @@ export class DefaultLabOperationsGateway implements LabOperationsGateway {
   }
 
   async listUserSchedules(query: ListUserSchedulesQuery) {
-    const canManageSchedules = hasPermission(query.actorRoles, "MANAGE_USERS")
-
+    // Leitura aberta: todo autenticado vê todas as grades (requisito grade horários).
+    // Escrita continua exigindo MANAGE_USERS (create/update/delete/replace).
     if (query.targetUserId) {
-      if (!canManageSchedules && query.targetUserId !== query.actorUserId) {
-        throw new Error("Acesso negado")
-      }
       return await this.userScheduleRepository.findByUserId(query.targetUserId)
-    }
-
-    // A7: sem targetUserId, usuário comum enxerga apenas as próprias agendas
-    // (antes: qualquer autenticado listava TODAS as agendas do laboratório).
-    if (!canManageSchedules) {
-      return await this.userScheduleRepository.findByUserId(query.actorUserId)
     }
 
     return await this.userScheduleRepository.findAll()

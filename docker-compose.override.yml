@@ -1,0 +1,7 @@
+# Dev only — bind postgres to loopback for local `localhost:5432` (tests, psql).
+# Em prod, suba com `docker compose up` SEM este override (base não expõe porta).
+# Debug remoto: `ssh -L 5432:localhost:5432 <host>` em vez de 0.0.0.0.
+services:
+  postgres:
+    ports:
+      - "127.0.0.1:5432:5432"

@@ -90,11 +90,12 @@ export function WorkSessionsProvider({ children }: { children: ReactNode }) {
   const getElapsedSeconds = useCallback((session?: WorkSession | null) => {
     if (!session) return 0
 
+    const MAX_STRETCH_SEC = 9 * 3600
     const accumulated = typeof session.duration === "number" ? session.duration : 0
     if (session.status === "active" && session.startTime) {
       const start = new Date(session.startTime).getTime()
       const now = Date.now()
-      const running = Math.max(0, (now - start) / 1000)
+      const running = Math.min(MAX_STRETCH_SEC, Math.max(0, (now - start) / 1000))
       return Math.floor(accumulated + running)
     }
 

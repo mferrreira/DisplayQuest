@@ -34,15 +34,25 @@ export class CronService {
       }, { timezone: 'America/Sao_Paulo' }),
     ]
 
+    this.nightlySweepJob = cron.schedule('59 23 * * *', async () => {
+      await this.executeNightlySweep()
+    }, { timezone: 'America/Sao_Paulo' })
+
     this.isInitialized = true
   }
 
+  private nightlySweepJob: cron.ScheduledTask | null = null
+
   /**
    * Pausa todas as sessões ativas que cruzaram um horário de pausa agendado.
+   * Também persiste o auto-pause em work_sessions via normalização (lazy
+   * persist: listar já grava paused no DB, cobrindo farm overnight/weekend).
    */
   async executeScheduledPause() {
     try {
       const { workExecution, labOperations } = getBackendComposition()
+      // Persist work_sessions auto-pause (list normalizes active→paused)
+      await workExecution.listWorkSessions({ status: 'active' })
       const sessions = await workExecution.listWorkSessions({ status: 'active' })
       const affectedUserIds = [
         ...new Set((sessions ?? []).map((s: any) => s.userId as number).filter((uid: number) => Number.isInteger(uid) && uid > 0)),
@@ -51,12 +61,21 @@ export class CronService {
         try {
           await labOperations.pauseResponsibilityForUser(userId)
         } catch (err) {
-          // Continuing is more important than a single failed responsibility pause.
           console.error(`⚠️ Não foi possível pausar responsabilidade do usuário ${userId}:`, err)
         }
       }
     } catch (error) {
       console.error('❌ Erro ao executar pause automático de sessões:', error)
+    }
+  }
+
+  /** Sweep 23:59 America/Sao_Paulo — qualquer ativa restante vira pausada (anti-farm). */
+  async executeNightlySweep() {
+    try {
+      const { workExecution } = getBackendComposition()
+      await workExecution.listWorkSessions({ status: 'active' })
+    } catch (error) {
+      console.error('❌ Erro no sweep noturno de sessões:', error)
     }
   }
 
@@ -152,6 +171,10 @@ export class CronService {
     }
     for (const job of this.scheduledPauseJobs) {
       job.stop()
+    }
+    if (this.nightlySweepJob) {
+      this.nightlySweepJob.stop()
+      this.nightlySweepJob = null
     }
     this.scheduledPauseJobs = []
     this.isInitialized = false

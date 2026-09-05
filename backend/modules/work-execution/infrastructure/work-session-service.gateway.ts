@@ -8,6 +8,7 @@ import { prisma } from "@/lib/database/prisma"
 import {
   getMissedScheduledPause,
   getNextScheduledPause,
+  MAX_STRETCH_SEC,
 } from "@/lib/work-sessions/schedule"
 import type {
   StartWorkSessionCommand,
@@ -71,7 +72,7 @@ export class WorkSessionServiceGateway implements WorkExecutionGateway {
       throw new Error("Sessão não encontrada")
     }
 
-    if (existingSession.userId !== command.actorUserId) {
+    if (existingSession.userId !== command.actorUserId && !hasPermission(command.actorRoles ?? [], "MANAGE_WORK_SESSIONS")) {
       throw new Error("Não autorizado a atualizar esta sessão")
     }
 
@@ -296,7 +297,7 @@ export class WorkSessionServiceGateway implements WorkExecutionGateway {
       throw new Error("Sessão não encontrada")
     }
 
-    if (session.userId !== command.actorUserId) {
+    if (session.userId !== command.actorUserId && !hasPermission(command.actorRoles ?? [], "MANAGE_WORK_SESSIONS")) {
       throw new Error("Não autorizado a excluir esta sessão")
     }
 
@@ -309,7 +310,7 @@ export class WorkSessionServiceGateway implements WorkExecutionGateway {
       throw new Error("Sessão não encontrada")
     }
 
-    if (session.userId !== command.actorUserId) {
+    if (session.userId !== command.actorUserId && !hasPermission(command.actorRoles ?? [], "MANAGE_WORK_SESSIONS")) {
       throw new Error("Não autorizado a atualizar esta sessão")
     }
 
@@ -348,11 +349,10 @@ export class WorkSessionServiceGateway implements WorkExecutionGateway {
       session.status = "completed"
     } else if (command.status === "paused" && session.status === "active") {
       // Server-authoritative pause: the stretch ends at a missed scheduled
-      // pause (auto-pause) or now. The client-provided duration is ignored so
-      // the recorded time is exact regardless of when the client clicked.
+      // pause (auto-pause) or now. Capped by MAX_STRETCH_SEC (anti-farm).
       const pausedAt = this.pauseInstantFor(session)
       session.duration = (session.duration || 0)
-        + Math.max(0, (pausedAt.getTime() - session.startTime.getTime()) / 1000)
+        + Math.min(MAX_STRETCH_SEC, Math.max(0, (pausedAt.getTime() - session.startTime.getTime()) / 1000))
       session.endTime = pausedAt
       session.status = "paused"
     } else if (command.status === "active" && session.status === "paused") {
@@ -471,7 +471,10 @@ export class WorkSessionServiceGateway implements WorkExecutionGateway {
     const missedPause = getMissedScheduledPause(session.startTime, closedAt)
     const activeUntil =
       missedPause && missedPause.getTime() <= closedAt.getTime() ? missedPause : closedAt
-    const elapsed = Math.max(0, (activeUntil.getTime() - session.startTime.getTime()) / 1000)
+    const elapsed = Math.min(
+      MAX_STRETCH_SEC,
+      Math.max(0, (activeUntil.getTime() - session.startTime.getTime()) / 1000),
+    )
     return (session.duration || 0) + elapsed
   }
 
@@ -498,7 +501,10 @@ export class WorkSessionServiceGateway implements WorkExecutionGateway {
       return session
     }
 
-    const elapsedUntilPause = Math.max(0, (missedPause.getTime() - session.startTime.getTime()) / 1000)
+    const elapsedUntilPause = Math.min(
+      MAX_STRETCH_SEC,
+      Math.max(0, (missedPause.getTime() - session.startTime.getTime()) / 1000),
+    )
     const accumulatedDuration = session.duration || 0
 
     return await this.workSessionRepository.update(session.id, {
