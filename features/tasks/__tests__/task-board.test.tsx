@@ -115,7 +115,8 @@ describe("TaskBoard", () => {
     expect(screen.queryByText("Tarefa futura")).not.toBeInTheDocument();
   });
 
-  it("move menu blocks non-leader from moving a done task (legacy rule parity)", async () => {    // make the current user a plain researcher (non-leader)
+  it("move menu blocks non-leader from moving a done task (legacy rule parity)", async () => {
+    // make the current user a plain researcher (non-leader)
     mockUser.roles = ["PESQUISADOR"];
     resetTaskStore();
     renderBoard();
