@@ -10,7 +10,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SessionProvider } from "next-auth/react";
 import { NuqsTestingAdapter } from "nuqs/adapters/testing";
 import { TaskBoard } from "../components/task-board";
-import { resetTaskStore, getTaskStore } from "@/tests/mocks/handlers";
+import { resetTaskStore, getTaskStore, seedTasks } from "@/tests/mocks/handlers";
 import { server } from "@/tests/mocks/server";
 
 // next-auth/react useSession is mocked (SessionProvider alone would need a real session flow)
@@ -24,19 +24,24 @@ vi.mock("next-auth/react", async (importOriginal) => {
   };
 });
 
-function renderBoard() {
+function renderBoard(initialSearchParams?: string) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   return render(
     <SessionProvider session={null}>
       <QueryClientProvider client={queryClient}>
-        <NuqsTestingAdapter>
+        <NuqsTestingAdapter searchParams={initialSearchParams}>
           <TaskBoard />
         </NuqsTestingAdapter>
       </QueryClientProvider>
     </SessionProvider>,
   );
+}
+
+function todayIso(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 }
 
 describe("TaskBoard", () => {
@@ -75,8 +80,42 @@ describe("TaskBoard", () => {
     expect(screen.getByText("Checklist do laboratório")).toBeVisible();
   });
 
-  it("move menu blocks non-leader from moving a done task (legacy rule parity)", async () => {
-    // make the current user a plain researcher (non-leader)
+  it("due-today filter shows only today's tasks, OR-combines with overdue, and ?hoje=true preselects it", async () => {
+    seedTasks([
+      { id: 101, title: "Tarefa vencida ontem", status: "to-do", dueDate: "2020-01-01" },
+      { id: 102, title: "Tarefa vence hoje", status: "to-do", dueDate: todayIso() },
+      { id: 103, title: "Tarefa futura", status: "to-do", dueDate: "2099-12-31" },
+    ]);
+    renderBoard();
+    const user = userEvent.setup();
+    await waitFor(() => expect(screen.getByText("Tarefa vence hoje")).toBeVisible());
+
+    // Only "Para hoje": yesterday's + future hidden
+    await user.click(screen.getByRole("button", { name: /vencimento/i }));
+    await user.click(screen.getByRole("menuitemcheckbox", { name: "Para hoje" }));
+    await waitFor(() => expect(screen.queryByText("Tarefa vencida ontem")).not.toBeInTheDocument());
+    expect(screen.queryByText("Tarefa futura")).not.toBeInTheDocument();
+    expect(screen.getByText("Tarefa vence hoje")).toBeVisible();
+
+    // OR: enabling "Somente atrasadas" too shows yesterday's as well, still not future
+    await user.click(screen.getByRole("button", { name: /vencimento/i }));
+    await user.click(screen.getByRole("menuitemcheckbox", { name: /somente atrasadas/i }));
+    await waitFor(() => expect(screen.getByText("Tarefa vencida ontem")).toBeVisible());
+    expect(screen.getByText("Tarefa vence hoje")).toBeVisible();
+    expect(screen.queryByText("Tarefa futura")).not.toBeInTheDocument();
+  });
+
+  it("preselects Para hoje from ?hoje=true URL", async () => {
+    seedTasks([
+      { id: 201, title: "Tarefa vence hoje", status: "to-do", dueDate: todayIso() },
+      { id: 202, title: "Tarefa futura", status: "to-do", dueDate: "2099-12-31" },
+    ]);
+    renderBoard("?hoje=true");
+    await waitFor(() => expect(screen.getByText("Tarefa vence hoje")).toBeVisible());
+    expect(screen.queryByText("Tarefa futura")).not.toBeInTheDocument();
+  });
+
+  it("move menu blocks non-leader from moving a done task (legacy rule parity)", async () => {    // make the current user a plain researcher (non-leader)
     mockUser.roles = ["PESQUISADOR"];
     resetTaskStore();
     renderBoard();
