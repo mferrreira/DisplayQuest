@@ -69,7 +69,7 @@ export function ManageWorkSessionsDialog({ open, onOpenChange, users, sessions, 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-5xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Gerenciar sessões (ativas e pausadas)</DialogTitle>
           <DialogDescription>
@@ -89,7 +89,7 @@ export function ManageWorkSessionsDialog({ open, onOpenChange, users, sessions, 
           </Button>
         </div>
 
-        <div className="rounded-md border">
+        <div className="rounded-md border overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -122,7 +122,7 @@ export function ManageWorkSessionsDialog({ open, onOpenChange, users, sessions, 
                       <TableCell className="font-mono text-sm">{elapsedLabel(s, getElapsedSeconds)}</TableCell>
                       <TableCell className="text-sm truncate max-w-[160px]">{s.activity ?? "—"}</TableCell>
                       <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
+                        <div className="flex justify-end gap-1 flex-wrap">
                           {s.status === "active" && (
                             <Button size="sm" variant="outline" disabled={busyId === s.id} onClick={() => act(s, "pause")}>
                               <Pause className="h-3 w-3 mr-1" /> Pausar
