@@ -148,9 +148,9 @@ describe("TaskBoard — filtro por pessoa (select de pessoas)", () => {
     renderBoard();
     await waitFor(() => expect(screen.getByText("Minha tarefa delegada")).toBeVisible());
     await selectPerson("Coordenador (você)");
-    await userEvent
-      .setup()
-      .click(screen.getByRole("button", { name: "Somente atrasadas" }));
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: /vencimento/i }));
+    await user.click(screen.getByRole("menuitemcheckbox", { name: "Somente atrasadas" }));
     expect(screen.queryByText("Minha tarefa delegada")).not.toBeInTheDocument();
     expect(screen.getByText("Minha tarefa atrasada")).toBeVisible();
   });

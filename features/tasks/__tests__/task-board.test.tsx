@@ -66,7 +66,8 @@ describe("TaskBoard", () => {
     renderBoard();
     const user = userEvent.setup();
     await waitFor(() => expect(screen.getByText("Checklist do laboratório")).toBeVisible());
-    await user.click(screen.getByRole("button", { name: /somente atrasadas/i }));
+    await user.click(screen.getByRole("button", { name: /vencimento/i }));
+    await user.click(screen.getByRole("menuitemcheckbox", { name: /somente atrasadas/i }));
     expect(await screen.findByText("Nenhuma tarefa corresponde aos filtros")).toBeVisible();
     // two "Limpar filtros" exist (toolbar + empty state); use the empty-state one
     const emptyState = screen.getByText("Nenhuma tarefa corresponde aos filtros").parentElement!;

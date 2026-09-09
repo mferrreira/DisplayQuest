@@ -24,6 +24,7 @@ import {
   resolveMove,
   isArchivedTask,
   isTaskOverdue,
+  isTaskDueToday,
   BOARD_COLUMNS,
 } from "../index"
 import { isAssignedToUser } from "../utils/is-assigned-to-user"
@@ -46,6 +47,7 @@ export function TaskBoard() {
     "atrasadas",
     parseAsBoolean.withDefault(false),
   )
+  const [hojeParam, setHojeParam] = useQueryState("hoje", parseAsBoolean.withDefault(false))
   const [buscaParam, setBuscaParam] = useQueryState("busca", parseAsString.withDefault(""))
   const [compactaParam, setCompactaParam] = useQueryState(
     "visao",
@@ -80,13 +82,16 @@ export function TaskBoard() {
     let list = tasks ?? []
     if (projetoParam) list = list.filter((t) => t.projectId === projetoParam)
     if (pessoaParam) list = list.filter((t) => isAssignedToUser(t, pessoaParam))
-    if (atrasadasParam) list = list.filter((t) => isTaskOverdue(t))
+    if (atrasadasParam || hojeParam)
+      list = list.filter(
+        (t) => (atrasadasParam && isTaskOverdue(t)) || (hojeParam && isTaskDueToday(t)),
+      )
     if (buscaParam) {
       const q = buscaParam.toLowerCase()
       list = list.filter((t) => t.title.toLowerCase().includes(q))
     }
     return list
-  }, [tasks, projetoParam, pessoaParam, atrasadasParam, buscaParam])
+  }, [tasks, projetoParam, pessoaParam, atrasadasParam, hojeParam, buscaParam])
 
   const archivedTasks = useMemo(() => filteredTasks.filter((t) => isArchivedTask(t)), [filteredTasks])
   const boardTasks = useMemo(() => {
@@ -191,12 +196,14 @@ export function TaskBoard() {
         filters={{
           projectId: projetoParam ?? undefined,
           overdue: atrasadasParam || undefined,
+          dueToday: hojeParam || undefined,
           search: buscaParam || undefined,
           assigneeId: pessoaParam ?? undefined,
         }}
         onFiltersChange={(next) => {
           void setProjetoParam(next.projectId ?? null)
           void setAtrasadasParam(Boolean(next.overdue))
+          void setHojeParam(Boolean(next.dueToday))
           void setBuscaParam(next.search ?? "")
           void setPessoaParam(next.assigneeId ?? null)
         }}
@@ -231,6 +238,7 @@ export function TaskBoard() {
             onClick={() => {
               void setProjetoParam(null)
               void setAtrasadasParam(false)
+              void setHojeParam(false)
               void setBuscaParam("")
               void setPessoaParam(null)
             }}
