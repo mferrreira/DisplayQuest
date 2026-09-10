@@ -9,8 +9,14 @@
  *  - "Atribuídas a mim" subsumed by the people select (current user = "(você)")
  */
 import { useRef, useState } from "react"
-import { LayoutGrid, List, Plus, Rows3, Search, TriangleAlert, Users, X } from "lucide-react"
+import { CalendarClock, LayoutGrid, Plus, Rows3, Search, TriangleAlert, Users, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import {
   Select,
   SelectContent,
@@ -143,17 +149,44 @@ export function BoardToolbar({
           </SelectContent>
         </Select>
 
-        <Button
-          variant={filters.overdue ? "secondary" : "outline"}
-          size="sm"
-          onClick={() => onFiltersChange({ ...filters, overdue: filters.overdue ? undefined : true })}
-          aria-pressed={Boolean(filters.overdue)}
-        >
-          <List className="mr-1 h-4 w-4" aria-hidden="true" />
-          Somente atrasadas
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant={filters.overdue || filters.dueToday ? "secondary" : "outline"}
+              size="sm"
+              aria-pressed={Boolean(filters.overdue || filters.dueToday)}
+            >
+              <CalendarClock className="mr-1 h-4 w-4" aria-hidden="true" />
+              Vencimento
+              {(filters.overdue || filters.dueToday) && (
+                <span aria-hidden="true">
+                  {" "}
+                  • {[filters.overdue, filters.dueToday].filter(Boolean).length}
+                </span>
+              )}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuCheckboxItem
+              checked={Boolean(filters.overdue)}
+              onCheckedChange={(checked) =>
+                onFiltersChange({ ...filters, overdue: checked ? true : undefined })
+              }
+            >
+              Somente atrasadas
+            </DropdownMenuCheckboxItem>
+            <DropdownMenuCheckboxItem
+              checked={Boolean(filters.dueToday)}
+              onCheckedChange={(checked) =>
+                onFiltersChange({ ...filters, dueToday: checked ? true : undefined })
+              }
+            >
+              Para hoje
+            </DropdownMenuCheckboxItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
-        {(filters.projectId || filters.overdue || filters.search || filters.assigneeId) && (
+        {(filters.projectId || filters.overdue || filters.dueToday || filters.search || filters.assigneeId) && (
           <Button
             variant="ghost"
             size="sm"

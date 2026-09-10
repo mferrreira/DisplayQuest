@@ -17,6 +17,8 @@ const deleteResponse = z.object({ success: z.boolean() });
 export type TaskFilters = QueryParams & {
   projectId?: number;
   overdue?: boolean;
+  /** Vence hoje — combina com `overdue` em OR (qualquer um ativo filtra). */
+  dueToday?: boolean;
   search?: string;
   /** Filtro por pessoa — resolved CLIENT-side (tasks scoped server-side by actor).
    *  Subsumes the old `mine` toggle: selecting the current user's id = "minhas tarefas". */
