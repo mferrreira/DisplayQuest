@@ -5,6 +5,7 @@ import { UserProvider } from "@/contexts/user-context"
 import { ProjectProvider } from "@/contexts/project-context"
 import { TaskProvider } from "@/contexts/task-context"
 import { WorkSessionsProvider } from "@/contexts/work-sessions-context"
+import { ResponsibilityProvider } from "@/contexts/responsibility-context"
 import { SessionProvider } from "next-auth/react"
 import { NuqsAdapter } from "nuqs/adapters/next/app"
 import { AppHeader } from "@/components/layout/app-header"
@@ -25,7 +26,9 @@ function DashboardProviders({ children }: { children: React.ReactNode }) {
     <UserProvider>
       <ProjectProvider>
         <WorkSessionsProvider>
-          {shouldProvideTasks ? <TaskProvider>{children}</TaskProvider> : children}
+          <ResponsibilityProvider>
+            {shouldProvideTasks ? <TaskProvider>{children}</TaskProvider> : children}
+          </ResponsibilityProvider>
         </WorkSessionsProvider>
       </ProjectProvider>
     </UserProvider>

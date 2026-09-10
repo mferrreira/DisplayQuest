@@ -42,6 +42,10 @@ export function ResponsibilityProvider({ children }: { children: ReactNode }) {
   const userId = user?.id
   // Último intervalo de mês buscado; mutações refazem o fetch desse período
   const lastRangeRef = useRef<{ start?: string; end?: string }>({})
+  // History is lazy: only fetched via explicit fetchResponsibilities() calls
+  // (the laboratorio page opts in on mount). Mutations must not pull the
+  // full list into pages that only care about the active responsibility.
+  const historyLoadedRef = useRef(false)
 
   const toActiveResponsibility = useCallback((responsibility: any): ActiveResponsibility | null => {
     if (!responsibility) return null
@@ -85,6 +89,7 @@ export function ResponsibilityProvider({ children }: { children: ReactNode }) {
 
       const { responsibilities } = await ResponsibilitiesAPI.getAll(startDate, endDate)
       lastRangeRef.current = { start: startDate, end: endDate }
+      historyLoadedRef.current = true
       setResponsibilities(responsibilities)
     } catch (err) {
       setError("Erro ao carregar responsabilidades")
@@ -109,16 +114,18 @@ export function ResponsibilityProvider({ children }: { children: ReactNode }) {
     }
   }, [toActiveResponsibility])
 
-  // Carregar dados quando o componente montar ou o usuário mudar
+  // Carregar dados quando o componente montar ou o usuário mudar.
+  // A responsabilidade ativa é global (o timer flutuante usa). O histórico é
+  // preguiçoso: só carrega via chamada explícita (laboratorio) ou já carregado.
   useEffect(() => {
     if (userId) {
-      fetchResponsibilities()
-      fetchActiveResponsibility()
+      void fetchActiveResponsibility()
     } else {
       setResponsibilities([])
       setActiveResponsibility(null)
+      historyLoadedRef.current = false
     }
-  }, [userId, fetchResponsibilities, fetchActiveResponsibility])
+  }, [userId, fetchActiveResponsibility])
 
   const startResponsibility = async (notes?: string) => {
     try {
@@ -133,11 +140,13 @@ export function ResponsibilityProvider({ children }: { children: ReactNode }) {
         notes,
       })
 
-      // Refetch do período atual + responsabilidade ativa (fonte de verdade)
-      await Promise.all([
-        fetchResponsibilities(lastRangeRef.current.start, lastRangeRef.current.end),
-        fetchActiveResponsibility(),
-      ])
+      // Refetch do período atual + responsabilidade ativa (fonte de verdade).
+      // Fora do laboratorio o histórico é preguiçoso: não puxar a lista cheia.
+      const refresh: Promise<unknown>[] = [fetchActiveResponsibility()]
+      if (historyLoadedRef.current) {
+        refresh.push(fetchResponsibilities(lastRangeRef.current.start, lastRangeRef.current.end))
+      }
+      await Promise.all(refresh)
     } catch (err) {
       setError("Erro ao iniciar responsabilidade")
       console.error(err)
@@ -157,11 +166,13 @@ export function ResponsibilityProvider({ children }: { children: ReactNode }) {
 
       await ResponsibilitiesAPI.end(activeResponsibility.id, user.id)
 
-      // Refetch do período atual + responsabilidade ativa (fonte de verdade)
-      await Promise.all([
-        fetchResponsibilities(lastRangeRef.current.start, lastRangeRef.current.end),
-        fetchActiveResponsibility(),
-      ])
+      // Refetch do período atual + responsabilidade ativa (fonte de verdade).
+      // Fora do laboratorio o histórico é preguiçoso: não puxar a lista cheia.
+      const refreshEnd: Promise<unknown>[] = [fetchActiveResponsibility()]
+      if (historyLoadedRef.current) {
+        refreshEnd.push(fetchResponsibilities(lastRangeRef.current.start, lastRangeRef.current.end))
+      }
+      await Promise.all(refreshEnd)
     } catch (err) {
       setError("Erro ao encerrar responsabilidade")
       console.error(err)

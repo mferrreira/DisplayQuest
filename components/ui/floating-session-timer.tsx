@@ -8,11 +8,13 @@ import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Clock, Pause, PlayCircle, StopCircle, ChevronDown } from "lucide-react"
 import { useProject } from "@/contexts/project-context"
 import { getNextScheduledPause, getMissedScheduledPause, toSafeDate } from "@/lib/work-sessions/schedule"
 import { SessionAutoPauseCountdown } from "@/components/ui/session-auto-pause-countdown"
 import { SessionWelcomeBalloon } from "@/components/ui/session-welcome-balloon"
+import { ResponsibilityMiniPanel } from "@/components/ui/responsibility-mini-panel"
 import { ResponsibilitiesAPI } from "@/contexts/api-client"
 
 function formatTime(seconds: number) {
@@ -233,7 +235,13 @@ export function FloatingSessionTimer() {
             <Clock className="h-5 w-5" />
           </Button>
         ) : (
-          <div className="space-y-3">
+          <Tabs defaultValue="sessao" className="space-y-3">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="sessao">Sessão</TabsTrigger>
+              <TabsTrigger value="responsabilidade">Responsabilidade</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="sessao" className="space-y-3 mt-0">
             <div className="flex items-center justify-between">
               <p className="text-sm font-medium">Sessão de Trabalho</p>
               <span className="text-xs text-muted-foreground">
@@ -320,7 +328,17 @@ export function FloatingSessionTimer() {
                 <ChevronDown className="h-4 w-4" />
               </Button>
             </div>
-          </div>
+            </TabsContent>
+
+            <TabsContent value="responsabilidade" className="mt-0">
+              <ResponsibilityMiniPanel />
+              <div className="mt-2 flex justify-end">
+                <Button size="sm" variant="ghost" onClick={() => setExpanded(false)}>
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </div>
+            </TabsContent>
+          </Tabs>
         )}
       </div>
 
