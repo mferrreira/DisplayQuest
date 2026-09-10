@@ -15,6 +15,8 @@ const { responsibilityMock, authMock } = vi.hoisted(() => {
     error: null,
     fetchActiveResponsibility: vi.fn(),
     startResponsibility: vi.fn(),
+    pauseResponsibility: vi.fn(),
+    resumeResponsibility: vi.fn(),
     endResponsibility: vi.fn(),
     fetchResponsibilities: vi.fn(),
     responsibilities: [],
@@ -43,6 +45,8 @@ beforeEach(() => {
   responsibilityMock.loading = false;
   responsibilityMock.error = null;
   responsibilityMock.startResponsibility.mockResolvedValue(undefined);
+  responsibilityMock.pauseResponsibility.mockResolvedValue(undefined);
+  responsibilityMock.resumeResponsibility.mockResolvedValue(undefined);
   responsibilityMock.endResponsibility.mockResolvedValue(undefined);
   responsibilityMock.fetchActiveResponsibility.mockResolvedValue(undefined);
   authMock.user = { id: 1, name: "Lia", roles: ["LABORATORISTA"] };
@@ -96,6 +100,31 @@ describe("ResponsibilityMiniPanel", () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: /não sou mais responsável/i }));
     await waitFor(() => expect(responsibilityMock.endResponsibility).toHaveBeenCalledTimes(1));
+  });
+
+  it("pauses and resumes the responsibility independently via owner controls", async () => {
+    responsibilityMock.activeResponsibility = {
+      id: 11,
+      userId: 1,
+      userName: "Lia",
+      startTime: new Date().toISOString(),
+      duration: 120,
+      isPaused: false,
+    };
+    const user = userEvent.setup();
+    const { rerender } = render(<ResponsibilityMiniPanel />);
+    expect(await screen.findByText("00:02:00")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: /^pausar$/i }));
+    await waitFor(() => expect(responsibilityMock.pauseResponsibility).toHaveBeenCalledTimes(1));
+
+    responsibilityMock.activeResponsibility = {
+      ...responsibilityMock.activeResponsibility,
+      isPaused: true,
+    };
+    rerender(<ResponsibilityMiniPanel />);
+    expect(await screen.findByText("PAUSADA")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: /continuar/i }));
+    await waitFor(() => expect(responsibilityMock.resumeResponsibility).toHaveBeenCalledTimes(1));
   });
 
   it("is read-only for roles that cannot assume responsibility", async () => {

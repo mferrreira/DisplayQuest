@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { Loader2, Play, Square } from "lucide-react"
+import { Loader2, Pause, Play, Square } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Textarea } from "@/components/ui/textarea"
@@ -31,6 +31,8 @@ export function ResponsibilityMiniPanel() {
     error,
     fetchActiveResponsibility,
     startResponsibility,
+    pauseResponsibility,
+    resumeResponsibility,
     endResponsibility,
   } = useResponsibility()
   const canAssume = hasAccess(user?.roles || [], "VIEW_ALL_DATA")
@@ -59,6 +61,30 @@ export function ResponsibilityMiniPanel() {
     } catch (err) {
       setActionError(err instanceof Error ? err.message : "Não foi possível iniciar a responsabilidade. Tente novamente.")
       await fetchActiveResponsibility()
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handlePause = async () => {
+    setActionError(null)
+    setBusy(true)
+    try {
+      await pauseResponsibility()
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Não foi possível pausar a responsabilidade. Tente novamente.")
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleResume = async () => {
+    setActionError(null)
+    setBusy(true)
+    try {
+      await resumeResponsibility()
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Não foi possível retomar a responsabilidade. Tente novamente.")
     } finally {
       setBusy(false)
     }
@@ -127,10 +153,23 @@ export function ResponsibilityMiniPanel() {
           </p>
           <p className="font-mono text-2xl font-bold">{formatDuration(activeResponsibility.duration)}</p>
           {isOwner ? (
-            <Button size="sm" variant="destructive" className="w-full" onClick={handleEnd} disabled={busy}>
-              {busy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Square className="h-4 w-4 mr-2" />}
-              Não sou mais responsável
-            </Button>
+            <>
+              {activeResponsibility.isPaused ? (
+                <Button size="sm" variant="outline" className="w-full" onClick={handleResume} disabled={busy}>
+                  {busy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Play className="h-4 w-4 mr-2" />}
+                  Continuar
+                </Button>
+              ) : (
+                <Button size="sm" variant="outline" className="w-full" onClick={handlePause} disabled={busy}>
+                  {busy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Pause className="h-4 w-4 mr-2" />}
+                  Pausar
+                </Button>
+              )}
+              <Button size="sm" variant="destructive" className="w-full" onClick={handleEnd} disabled={busy}>
+                {busy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Square className="h-4 w-4 mr-2" />}
+                Não sou mais responsável
+              </Button>
+            </>
           ) : (
             <Button size="sm" className="w-full" disabled title="Outro usuário já é o responsável">
               Estar responsável

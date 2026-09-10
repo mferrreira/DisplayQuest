@@ -26,6 +26,8 @@ interface ResponsibilityContextType {
   fetchResponsibilities: (startDate?: string, endDate?: string) => Promise<void>
   fetchActiveResponsibility: () => Promise<void>
   startResponsibility: (notes?: string) => Promise<void>
+  pauseResponsibility: () => Promise<void>
+  resumeResponsibility: () => Promise<void>
   endResponsibility: () => Promise<void>
   updateNotes: (id: number, notes: string) => Promise<void>
   deleteResponsibility: (id: number) => Promise<void>
@@ -50,7 +52,10 @@ export function ResponsibilityProvider({ children }: { children: ReactNode }) {
   const toActiveResponsibility = useCallback((responsibility: any): ActiveResponsibility | null => {
     if (!responsibility) return null
 
-    const serverDuration = typeof responsibility.duration === "number" ? responsibility.duration * 60 : 0 // minutes -> seconds
+    // Backend-owned time: duration already arrives in seconds, computed
+    // server-side from startTime/pausedAt/totalPausedMs (full precision, no
+    // minute flooring). Use it directly so refresh/poll restores the timer.
+    const serverDuration = typeof responsibility.duration === "number" ? responsibility.duration : 0 // seconds
     const isPaused = Boolean(responsibility.pausedAt)
     return {
       id: responsibility.id,
@@ -65,7 +70,10 @@ export function ResponsibilityProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  // Atualizar o tempo de duração da responsabilidade ativa a cada segundo
+  // Display tick: advance the backend-anchored duration once per second.
+  // Deps are the responsibility identity/pause flag (not the whole object):
+  // the callback uses a functional update, so the interval must NOT be torn
+  // down and recreated on every tick.
   useEffect(() => {
     if (!activeResponsibility) return
 
@@ -80,7 +88,7 @@ export function ResponsibilityProvider({ children }: { children: ReactNode }) {
     }, 1000)
 
     return () => clearInterval(interval)
-  }, [activeResponsibility])
+  }, [activeResponsibility?.id, activeResponsibility?.isPaused])
 
   const fetchResponsibilities = useCallback(async (startDate?: string, endDate?: string) => {
     try {
@@ -149,6 +157,44 @@ export function ResponsibilityProvider({ children }: { children: ReactNode }) {
       await Promise.all(refresh)
     } catch (err) {
       setError("Erro ao iniciar responsabilidade")
+      console.error(err)
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const pauseResponsibility = async () => {
+    try {
+      if (!activeResponsibility) throw new Error("Não há responsabilidade ativa")
+
+      setLoading(true)
+      setError(null)
+
+      // Independent from the work session: pauses only the responsibility.
+      // Reuses the existing backend pause (timestamps stay server-owned).
+      await ResponsibilitiesAPI.pause()
+      await fetchActiveResponsibility()
+    } catch (err) {
+      setError("Erro ao pausar responsabilidade")
+      console.error(err)
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const resumeResponsibility = async () => {
+    try {
+      if (!activeResponsibility) throw new Error("Não há responsabilidade ativa")
+
+      setLoading(true)
+      setError(null)
+
+      await ResponsibilitiesAPI.resume()
+      await fetchActiveResponsibility()
+    } catch (err) {
+      setError("Erro ao retomar responsabilidade")
       console.error(err)
       throw err
     } finally {
@@ -233,6 +279,8 @@ export function ResponsibilityProvider({ children }: { children: ReactNode }) {
         fetchResponsibilities,
         fetchActiveResponsibility,
         startResponsibility,
+        pauseResponsibility,
+        resumeResponsibility,
         endResponsibility,
         updateNotes,
         deleteResponsibility,

@@ -94,7 +94,11 @@ export class LabResponsibility {
 
     toJSON(): any {
         const activeMs = this.effectiveDurationMs;
-        const durationInMinutes = Math.floor(activeMs / (1000 * 60));
+        // Seconds with full precision, computed backend-side from
+        // startTime/pausedAt/totalPausedMs. The frontend must use this value
+        // directly (no unit conversion): flooring to minutes here used to make
+        // every refresh/poll snap the timer back to the minute boundary.
+        const durationInSeconds = Math.max(0, Math.floor(activeMs / 1000));
 
         return {
             id: this.id,
@@ -107,7 +111,7 @@ export class LabResponsibility {
             totalPausedMs: this.totalPausedMs,
             createdAt: this.createdAt?.toISOString(),
             updatedAt: this.updatedAt?.toISOString(),
-            duration: durationInMinutes,
+            duration: durationInSeconds,
             isActive: !this.endTime,
             isPaused: this.isPaused,
         };

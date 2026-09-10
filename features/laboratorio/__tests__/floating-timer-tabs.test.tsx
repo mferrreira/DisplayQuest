@@ -4,9 +4,10 @@
  * tab sharing the same global responsibility state.
  */
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { FloatingSessionTimer } from "@/components/ui/floating-session-timer";
+import { ResponsibilitiesAPI } from "@/contexts/api-client";
 
 const { workSessionsMock, authMock, projectMock, responsibilityMock } = vi.hoisted(() => {
   const workSessionsMock: any = {
@@ -28,6 +29,8 @@ const { workSessionsMock, authMock, projectMock, responsibilityMock } = vi.hoist
     error: null,
     fetchActiveResponsibility: vi.fn(),
     startResponsibility: vi.fn(),
+    pauseResponsibility: vi.fn(),
+    resumeResponsibility: vi.fn(),
     endResponsibility: vi.fn(),
   };
   return { workSessionsMock, authMock, projectMock, responsibilityMock };
@@ -75,6 +78,38 @@ describe("FloatingSessionTimer tabgroup", () => {
     await user.click(screen.getByRole("tab", { name: /responsabilidade/i }));
     expect(await screen.findByText("Laboratório disponível")).toBeVisible();
     expect(screen.getByRole("button", { name: /estar responsável/i })).toBeVisible();
+  });
+
+  it("does not pause the responsibility when the session is paused manually", async () => {
+    const user = userEvent.setup();
+    const session = {
+      id: 7,
+      userId: 1,
+      status: "active",
+      startTime: new Date().toISOString(),
+    };
+    workSessionsMock.currentSession = session;
+    workSessionsMock.activeSession = session;
+    render(<FloatingSessionTimer />);
+    await user.click(screen.getByLabelText("Abrir timer de sessão"));
+    await user.click(screen.getByRole("button", { name: /pausar/i }));
+    await waitFor(() => expect(workSessionsMock.pauseSession).toHaveBeenCalledWith(7));
+    expect(ResponsibilitiesAPI.pause).not.toHaveBeenCalled();
+  });
+
+  it("does not resume the responsibility when the session is resumed manually", async () => {
+    const user = userEvent.setup();
+    workSessionsMock.currentSession = {
+      id: 7,
+      userId: 1,
+      status: "paused",
+      startTime: new Date().toISOString(),
+    };
+    render(<FloatingSessionTimer />);
+    await user.click(screen.getByLabelText("Abrir timer de sessão"));
+    await user.click(screen.getByRole("button", { name: /continuar/i }));
+    await waitFor(() => expect(workSessionsMock.resumeSession).toHaveBeenCalledWith(7));
+    expect(ResponsibilitiesAPI.resume).not.toHaveBeenCalled();
   });
 
   it("disables assume in the tab when someone else owns the responsibility", async () => {

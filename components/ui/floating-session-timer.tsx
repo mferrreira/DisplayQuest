@@ -101,6 +101,9 @@ export function FloatingSessionTimer() {
           await pauseSession(sessionId)
           await fetchSessions(user.id)
           try {
+            // Intentional coupling (business rule): at the key pause hours
+            // (09:30/12:00/15:00/17:00) BOTH the session and the lab
+            // responsibility pause. Manual session controls must NOT do this.
             await ResponsibilitiesAPI.pause()
           } catch {
             // Responsibility pause is secondary; session pause succeeded.
@@ -147,26 +150,21 @@ export function FloatingSessionTimer() {
     return () => window.removeEventListener("floating-session-timer:open", openHandler as EventListener)
   }, [])
 
+  // Manual session controls act on the session ONLY. The lab responsibility
+  // is an independent counter with its own state (see ResponsibilityMiniPanel
+  // Pausar/Continuar): pausing/resuming here must not touch it. The only
+  // session→responsibility coupling is the scheduled key-hour auto-pause
+  // (doAutoPause above), which pauses both by business rule.
   const handlePause = async () => {
     if (!activeSession || !user?.id) return
     await pauseSession(activeSession.id)
     await fetchSessions(user.id)
-    try {
-      await ResponsibilitiesAPI.pause()
-    } catch {
-      // Responsibility pause is secondary; session pause succeeded.
-    }
   }
 
   const handleResume = async () => {
     if (!currentSession || currentSession.status !== "paused" || !user?.id) return
     await resumeSession(currentSession.id)
     await fetchSessions(user.id)
-    try {
-      await ResponsibilitiesAPI.resume()
-    } catch {
-      // session resume is authoritative
-    }
     setShowAutoPauseDialog(false)
   }
 
