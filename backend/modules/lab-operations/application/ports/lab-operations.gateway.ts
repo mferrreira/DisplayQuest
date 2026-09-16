@@ -60,6 +60,8 @@ export interface LabOperationsGateway {
   endResponsibility(responsibilityId: number, notes?: string): Promise<LabResponsibility>
   updateResponsibilityNotes(responsibilityId: number, actorUserId: number, notes: string): Promise<LabResponsibility>
   deleteResponsibility(responsibilityId: number): Promise<void>
+  pauseResponsibilityForUser(userId: number): Promise<LabResponsibility | null>
+  resumeResponsibilityForUser(userId: number): Promise<LabResponsibility | null>
 
   listUserSchedules(query: ListUserSchedulesQuery): Promise<UserSchedule[]>
   getUserSchedule(scheduleId: number): Promise<UserSchedule | null>

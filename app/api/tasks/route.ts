@@ -78,6 +78,7 @@ export async function POST(request: Request) {
           completed: task.completed ?? false,
           taskVisibility: task.taskVisibility ?? "delegated",
           isGlobal: task.isGlobal ?? false,
+          creationMode: task.creationMode ?? "individual",
         })),
         auth.actor.id,
       )
@@ -100,7 +101,8 @@ export async function POST(request: Request) {
       points,
       completed,
       taskVisibility,
-      isGlobal
+      isGlobal,
+      creationMode
     } = body
 
     const task = await taskManagementModule.createTask({
@@ -116,6 +118,7 @@ export async function POST(request: Request) {
       completed,
       taskVisibility,
       isGlobal,
+      creationMode,
     }, auth.actor.id);
 
     return NextResponse.json({ task: task.toJSON() }, { status: 201 })

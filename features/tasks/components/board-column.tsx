@@ -7,14 +7,16 @@ import { Droppable } from "@hello-pangea/dnd"
 import { PenLine, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import type { Task, TaskStatus } from "@/entities/task"
+import { isTaskOverdue, isTaskDueToday } from "../utils/move-rules"
 import { TaskCard } from "./task-card"
 
 const COLUMN_STYLES: Record<TaskStatus, { header: string; icon: string }> = {
-  "to-do": { header: "bg-gradient-to-r from-slate-700 to-gray-600", icon: "🕐" },
-  "in-progress": { header: "bg-gradient-to-r from-blue-600 to-cyan-500", icon: "✏️" },
-  "in-review": { header: "bg-gradient-to-r from-purple-600 to-violet-500", icon: "👁️" },
-  adjust: { header: "bg-gradient-to-r from-orange-600 to-amber-500", icon: "⚠️" },
-  done: { header: "bg-gradient-to-r from-emerald-600 to-green-500", icon: "✅" },
+  // Modo claro: gradientes vibrantes (histórico); modo escuro: cores sólidas (sem degradê).
+  "to-do": { header: "bg-gradient-to-r from-slate-700 to-gray-600 dark:bg-none dark:bg-slate-800", icon: "🕐" },
+  "in-progress": { header: "bg-gradient-to-r from-blue-600 to-cyan-500 dark:bg-none dark:bg-blue-800", icon: "✏️" },
+  "in-review": { header: "bg-gradient-to-r from-purple-600 to-violet-500 dark:bg-none dark:bg-purple-800", icon: "👁️" },
+  adjust: { header: "bg-gradient-to-r from-orange-600 to-amber-500 dark:bg-none dark:bg-orange-700", icon: "⚠️" },
+  done: { header: "bg-gradient-to-r from-emerald-600 to-green-500 dark:bg-none dark:bg-emerald-700", icon: "✅" },
 }
 
 const COLUMN_TITLES: Record<TaskStatus, string> = {
@@ -84,11 +86,8 @@ export function BoardColumn({ status, tasks, canAddTask, isCompact, onAddTask, o
                   key={task.id}
                   task={task}
                   index={index}
-                  isOverdue={
-                    Boolean(task.dueDate) &&
-                    task.status !== "done" &&
-                    new Date(task.dueDate as string).getTime() < Date.now()
-                  }
+                  isOverdue={isTaskOverdue(task)}
+                  isDueToday={isTaskDueToday(task)}
                   isCompact={isCompact}
                   onEdit={onEdit}
                   onOpenDetail={onOpenDetail}

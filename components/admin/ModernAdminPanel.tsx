@@ -50,6 +50,7 @@ import { AdminNotificationsCenter } from "@/components/admin/AdminNotificationsC
 import { ScheduleGrid } from "@/components/admin/ScheduleGrid"
 import { NotificationsPanel } from "@/components/ui/notifications-panel"
 import { CreateUserDialog } from "@/components/admin/create-user-dialog"
+import { ManageWorkSessionsDialog } from "@/components/admin/manage-work-sessions-dialog"
 import { hasAccess } from "@/lib/utils/access-control"
 
 interface ModernAdminPanelProps {
@@ -87,6 +88,7 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
   const [globalTasksProgress, setGlobalTasksProgress] = useState<any[]>([])
   const [loadingGlobalTasks, setLoadingGlobalTasks] = useState(false)
   const [createUserOpen, setCreateUserOpen] = useState(false)
+  const [manageSessionsOpen, setManageSessionsOpen] = useState(false)
 
   // Verificar permissões do usuário
   const canManageUsers = hasAccess(user?.roles || [], 'MANAGE_USERS')
@@ -307,22 +309,29 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
         {/* Tab Visão Geral */}
         <TabsContent value="overview" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Usuários com sessões ativas */}
+            {/* Usuários com sessões ativas/pausadas + gerenciar */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5" />
-                  Sessões Ativas
-                </CardTitle>
-                <CardDescription>
-                  Usuários trabalhando no momento
-                </CardDescription>
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Users className="h-5 w-5" />
+                      Sessões Ativas e Pausadas
+                    </CardTitle>
+                    <CardDescription>
+                      Usuários com sessão ativa ou pausada — gerencie via diálogo
+                    </CardDescription>
+                  </div>
+                  <Button size="sm" variant="outline" onClick={() => setManageSessionsOpen(true)}>
+                    Gerenciar sessões
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
                   {sessions
-                    .filter(session => session.status === 'active')
-                    .slice(0, 5)
+                    .filter(session => session.status === 'active' || session.status === 'paused')
+                    .slice(0, 8)
                     .map((session) => {
                       const user = users.find(u => u.id === session.userId)
                       if (!user) return null
@@ -349,22 +358,22 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
                               </p>
                             </div>
                           </div>
-                          <div className="text-right">
-                            <Badge variant="outline" className="bg-green-50 dark:bg-success/10 text-green-700 dark:text-green-300 border-green-200 dark:border-success/25">
-                              {user.roles?.[0] || 'Usuário'}
-                            </Badge>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Trabalhando
-                            </p>
-                          </div>
+                            <div className="text-right">
+                             <Badge variant="outline" className={session.status === 'paused' ? 'bg-amber-50 dark:bg-warning/10 text-amber-700 dark:text-warning border-amber-200 dark:border-warning/25' : 'bg-green-50 dark:bg-success/10 text-green-700 dark:text-green-300 border-green-200 dark:border-success/25'}>
+                               {session.status === 'paused' ? 'Pausada' : (user.roles?.[0] || 'Usuário')}
+                             </Badge>
+                             <p className="text-xs text-muted-foreground mt-1">
+                               {session.status === 'paused' ? 'Pausada' : 'Trabalhando'}
+                             </p>
+                           </div>
                         </div>
                       )
                     })}
-                  {sessions.filter(session => session.status === 'active').length === 0 && (
+                  {(sessions.filter(session => session.status === 'active' || session.status === 'paused').length === 0) && (
                     <div className="text-center py-4">
                       <Users className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
                       <p className="text-sm text-muted-foreground">
-                        Nenhuma sessão ativa no momento
+                        Nenhuma sessão ativa ou pausada no momento
                       </p>
                     </div>
                   )}
@@ -1035,6 +1044,13 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
         open={createUserOpen}
         onOpenChange={setCreateUserOpen}
         onCreated={handleRefresh}
+      />
+      <ManageWorkSessionsDialog
+        open={manageSessionsOpen}
+        onOpenChange={setManageSessionsOpen}
+        users={users}
+        sessions={sessions}
+        onRefresh={handleRefresh}
       />
     </div>
   )

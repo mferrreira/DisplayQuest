@@ -17,12 +17,14 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useAuth } from "@/contexts/auth-context"
 import { useProjects } from "@/features/projects"
+import { useUsers } from "@/features/users"
 import {
   useTasks,
   useTaskMutations,
   resolveMove,
   isArchivedTask,
   isTaskOverdue,
+  isTaskDueToday,
   BOARD_COLUMNS,
 } from "../index"
 import { isAssignedToUser } from "../utils/is-assigned-to-user"
@@ -32,14 +34,12 @@ import { BoardToolbar } from "./board-toolbar"
 import { ArchiveSection } from "./archive-section"
 import { TaskDialog } from "./task-dialog"
 import { TaskDetailDialog } from "./task-detail-dialog"
-import { BacklogDialog } from "./backlog-dialog"
 
 export function TaskBoard() {
   const { data: session } = useSession()
   const { user } = useAuth()
   const { data: projects = [] } = useProjects()
-  const { data: tasks, isPending, error, refetch } = useTasks({})
-  const { updateStatus, complete } = useTaskMutations()
+  const { data: users = [] } = useUsers()
 
   // URL state (nuqs) — shareable/back-forward safe (spec AC 8)
   const [projetoParam, setProjetoParam] = useQueryState("projeto", parseAsInteger)
@@ -47,20 +47,22 @@ export function TaskBoard() {
     "atrasadas",
     parseAsBoolean.withDefault(false),
   )
+  const [hojeParam, setHojeParam] = useQueryState("hoje", parseAsBoolean.withDefault(false))
   const [buscaParam, setBuscaParam] = useQueryState("busca", parseAsString.withDefault(""))
-  const [minhasParam, setMinhasParam] = useQueryState(
-    "minhas",
-    parseAsBoolean.withDefault(false),
-  )
   const [compactaParam, setCompactaParam] = useQueryState(
     "visao",
     parseAsString.withDefault("normal"),
   )
+  const [pessoaParam, setPessoaParam] = useQueryState("pessoa", parseAsInteger)
+
+  const { data: tasks, isPending, error, refetch } = useTasks(
+    projetoParam ? { projectId: projetoParam } : {},
+  )
+  const { updateStatus, complete } = useTaskMutations()
 
   const [editTask, setEditTask] = useState<Task | null>(null)
   const [viewTask, setViewTask] = useState<Task | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [backlogOpen, setBacklogOpen] = useState(false)
   const [detailOpen, setDetailOpen] = useState(false)
 
   const userRoles: string[] = user?.roles ?? []
@@ -78,14 +80,18 @@ export function TaskBoard() {
 
   const filteredTasks = useMemo(() => {
     let list = tasks ?? []
-    if (minhasParam) list = list.filter((t) => isAssignedToUser(t, sessionUserId))
-    if (atrasadasParam) list = list.filter((t) => isTaskOverdue(t))
+    if (projetoParam) list = list.filter((t) => t.projectId === projetoParam)
+    if (pessoaParam) list = list.filter((t) => isAssignedToUser(t, pessoaParam))
+    if (atrasadasParam || hojeParam)
+      list = list.filter(
+        (t) => (atrasadasParam && isTaskOverdue(t)) || (hojeParam && isTaskDueToday(t)),
+      )
     if (buscaParam) {
       const q = buscaParam.toLowerCase()
       list = list.filter((t) => t.title.toLowerCase().includes(q))
     }
     return list
-  }, [tasks, minhasParam, atrasadasParam, buscaParam, sessionUserId])
+  }, [tasks, projetoParam, pessoaParam, atrasadasParam, hojeParam, buscaParam])
 
   const archivedTasks = useMemo(() => filteredTasks.filter((t) => isArchivedTask(t)), [filteredTasks])
   const boardTasks = useMemo(() => {
@@ -190,23 +196,26 @@ export function TaskBoard() {
         filters={{
           projectId: projetoParam ?? undefined,
           overdue: atrasadasParam || undefined,
+          dueToday: hojeParam || undefined,
           search: buscaParam || undefined,
-          mine: minhasParam || undefined,
+          assigneeId: pessoaParam ?? undefined,
         }}
         onFiltersChange={(next) => {
           void setProjetoParam(next.projectId ?? null)
           void setAtrasadasParam(Boolean(next.overdue))
+          void setHojeParam(Boolean(next.dueToday))
           void setBuscaParam(next.search ?? "")
-          void setMinhasParam(Boolean(next.mine))
+          void setPessoaParam(next.assigneeId ?? null)
         }}
         overdueCount={overdueCount}
         canCreateTasks={canCreateTasks}
         canSeeProjectSelector={canSeeProjectSelector}
         projects={projects}
+        users={users}
+        currentUserId={sessionUserId ?? null}
         isCompact={compactaParam === "compacta"}
         onToggleCompact={() => void setCompactaParam(compactaParam === "compacta" ? "normal" : "compacta")}
         onCreateTask={openCreate}
-        onCreateBacklog={() => setBacklogOpen(true)}
         isUpdating={updateStatus.isPending || complete.isPending}
       />
 
@@ -229,7 +238,9 @@ export function TaskBoard() {
             onClick={() => {
               void setProjetoParam(null)
               void setAtrasadasParam(false)
+              void setHojeParam(false)
               void setBuscaParam("")
+              void setPessoaParam(null)
             }}
           >
             Limpar filtros
@@ -262,8 +273,12 @@ export function TaskBoard() {
 
       <ArchiveSection tasks={archivedTasks} projects={projects} />
 
-      <TaskDialog open={dialogOpen} onOpenChange={setDialogOpen} task={editTask} />
-      <BacklogDialog open={backlogOpen} onOpenChange={setBacklogOpen} defaultProjectId={projetoParam} />
+      <TaskDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        task={editTask}
+        defaultProjectId={projetoParam ?? undefined}
+      />
       <TaskDetailDialog
         task={viewTask}
         open={detailOpen}

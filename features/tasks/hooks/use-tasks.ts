@@ -23,19 +23,23 @@ export function useTasks(filters: TaskFilters = {}) {
 /** Cross-cutting invalidation for ANY task mutation (spec §5.3). */
 export function useInvalidateTaskGraph() {
   const queryClient = useQueryClient()
-  return () => {
+  return (scope?: "tasks" | "notifications" | "full") => {
     void queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all })
-    // points/completedTasks change on completion+approval; leaderboard reads users
-    void queryClient.invalidateQueries({ queryKey: queryKeys.users.all })
-    // server publishes TASK_* notifications on review/approve/reject
-    void queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all })
+    // server publishes TASK_* notifications on in-review transitions and reject
+    if (scope === "notifications" || scope === "full") {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all })
+    }
+    if (scope === "full") {
+      // points/completedTasks change on completion+approval; leaderboard reads users
+      void queryClient.invalidateQueries({ queryKey: queryKeys.users.all })
+    }
   }
 }
 
 interface RollbackContext {
   applyOptimistic: (updater: (prev: Task[]) => Task[]) => void
   rollback: () => void
-  invalidate: () => void
+  invalidate: (scope?: "tasks" | "notifications" | "full") => void
 }
 
 function useRollback(): () => RollbackContext {
@@ -95,7 +99,8 @@ export function useTaskMutations() {
       return { ctx }
     },
     onError: (_err, _vars, context) => context?.ctx.rollback(),
-    onSettled: (_d, _e, _v, context) => context?.ctx.invalidate(),
+    // moving to in-review publishes TASK_REVIEW_REQUEST → refresh notifications
+    onSettled: (_d, _e, _v, context) => context?.ctx.invalidate("notifications"),
   })
 
   const complete = useMutation({
@@ -119,7 +124,7 @@ export function useTaskMutations() {
     },
     onError: (_err, _vars, context) => context?.ctx.rollback(),
     onSettled: (_d, _e, _v, context) => {
-      context?.ctx.invalidate()
+      context?.ctx.invalidate("full")
       refreshPoints()
     },
   })
@@ -137,13 +142,14 @@ export function useTaskMutations() {
   const update = useMutation({
     mutationFn: ({ id, data }: { id: number; data: Record<string, unknown> }) =>
       tasksApi.update(id, data),
-    onSettled: () => makeRollback().invalidate(),
+    // generic update can move a task to in-review → TASK_REVIEW_REQUEST published
+    onSettled: () => makeRollback().invalidate("notifications"),
   })
 
   const approve = useMutation({
     mutationFn: (id: number) => tasksApi.approve(id),
     onSettled: () => {
-      makeRollback().invalidate()
+      makeRollback().invalidate("full")
       // delegated tasks award points to the assignee HERE (gateway :458–481)
       refreshPoints()
     },
@@ -151,7 +157,8 @@ export function useTaskMutations() {
 
   const reject = useMutation({
     mutationFn: ({ id, reason }: { id: number; reason?: string }) => tasksApi.reject(id, reason),
-    onSettled: () => makeRollback().invalidate(),
+    // reject publishes TASK_REJECTED → refresh notifications
+    onSettled: () => makeRollback().invalidate("notifications"),
   })
 
   const remove = useMutation({

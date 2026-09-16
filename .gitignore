@@ -147,7 +147,6 @@ temp/
 .env.development.local
 .env.test.local
 .env.production.local
-AGENTS.md
 
 # Visual regression artifacts (regenerate via scripts/capture-visual-baseline.mjs)
 tests/e2e/__screenshots__/
@@ -159,7 +158,9 @@ playwright-report/
 # Internal engineering files — methodology, specs, tests, design system docs
 # These are local-only development artifacts; never push to origin.
 .spec/
+.future/
+future/
 tests/
-AGENTS.md
+.worktrees/
 scripts/capture-visual-baseline.mjs
 scripts/compare-visual-baseline.mjs

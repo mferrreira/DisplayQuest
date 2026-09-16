@@ -81,7 +81,13 @@ export class TaskServiceGateway implements TaskManagementGateway {
     }
 
     const data = { ...command }
+    data.createdBy = actorId
     const normalizedAssigneeIds = this.normalizeAssigneeIds(data)
+
+    const creationMode = data.creationMode ?? "individual"
+    if (creationMode === "individual" && !data.isGlobal && normalizedAssigneeIds.length > 1) {
+      return this.createIndividualTasks(data, normalizedAssigneeIds, actorId)
+    }
 
     if (data.isGlobal) {
       if (!this.identityAccess.hasPermission(creator.roles, "MANAGE_USERS")) {
@@ -122,6 +128,52 @@ export class TaskServiceGateway implements TaskManagementGateway {
     }
 
     return createdTask
+  }
+
+  private async createIndividualTasks(
+    data: CreateTaskCommand,
+    assigneeIds: number[],
+    actorId: number,
+  ): Promise<Task> {
+    const createdTasks: Task[] = []
+    let groupTaskId: number | null = data.groupTaskId ?? null
+
+    // No transaction is available on the repository, so on a mid-loop failure we
+    // delete the tasks already created to avoid leaving an orphaned/incomplete group.
+    try {
+      for (const assigneeId of assigneeIds) {
+        const taskData: CreateTaskCommand = {
+          ...data,
+          assigneeIds: [assigneeId],
+          assignedTo: assigneeId,
+        }
+
+        const task = Task.create(taskData)
+        const created = await this.taskRepository.create(task)
+
+        if (!groupTaskId) groupTaskId = created.id!
+        created.groupTaskId = groupTaskId
+        // IMPORTANT: repository.update(id, task) calls task.toPrisma() and needs a full Task.
+        await this.taskRepository.update(created.id!, created)
+
+        await this.syncTaskAssignees(created.id!, [assigneeId], actorId)
+        created.assigneeIds = [assigneeId]
+        created.assignedTo = assigneeId
+        createdTasks.push(created)
+      }
+
+      return createdTasks[0]
+    } catch (error) {
+      // Best-effort cleanup so a partial failure does not leave orphaned tasks.
+      for (const created of createdTasks) {
+        try {
+          await this.taskRepository.delete(created.id!)
+        } catch {
+          // Ignore per-task cleanup errors; the original error is what surfaces.
+        }
+      }
+      throw error
+    }
   }
 
   async createTaskBacklog(tasks: CreateTaskCommand[], actorId: number) {
@@ -397,10 +449,10 @@ export class TaskServiceGateway implements TaskManagementGateway {
         awardedPoints: pointsToAward,
       })
 
-      if (pointsToAward !== 0) {
-        user.completedTasks += 1
-        await this.userRepository.update(user)
-      }
+      // completedTasks counts the individual completion itself, not the points:
+      // a 0-point completion still counts.
+      user.completedTasks += 1
+      await this.userRepository.update(user)
 
       await this.publishTaskCompletionAward(command.userId, command.taskId, pointsToAward)
       return this.withActorProgress(task, {
@@ -451,16 +503,15 @@ export class TaskServiceGateway implements TaskManagementGateway {
     const updatedTask = await this.taskRepository.update(command.taskId, task)
     const updatedTaskWithAssignees = await this.attachAssigneeIds(updatedTask)
 
-    // Only award points when task is actually "done" (public/global tasks).
-    // Delegated/project tasks go to "in-review" and get points on approval.
+    // completedTasks counts reaching "done" itself, even with 0 points.
+    // Delegated/project tasks never land here (they go to "in-review"); their
+    // counter increment lives in approveTask.
     if (task.status === "done") {
+      user.completedTasks += 1
+      await this.userRepository.update(user)
+
       const latePenalty = this.calculateLatePenalty(task, new Date())
       const pointsToAward = task.points - latePenalty
-
-      if (pointsToAward !== 0) {
-        user.completedTasks += 1
-        await this.userRepository.update(user)
-      }
 
       await this.publishTaskCompletionAward(command.userId, command.taskId, pointsToAward)
     }
@@ -508,18 +559,21 @@ export class TaskServiceGateway implements TaskManagementGateway {
 
     if (task.assignedTo) {
       const user = await this.userRepository.findById(task.assignedTo)
-      if (user && task.points > 0) {
-        const latePenalty = this.calculateLatePenalty(task, new Date())
-        const pointsToAward = task.points - latePenalty
-
+      if (user) {
         // For delegated tasks, completeTask did not award points (status was "in-review").
-        // Award them now on approval. completedTasks is incremented for delegated tasks
-        // only here; for public/global tasks it was already incremented in completeTask.
+        // completedTasks counts the completion itself, so it is incremented on approval
+        // even when the task carries no points; for public/global tasks it was already
+        // counted in completeTask.
         if (task.taskVisibility !== "public" && !task.isGlobal) {
           user.completedTasks += 1
           await this.userRepository.update(user)
         }
-        await this.publishTaskCompletionAward(task.assignedTo, command.taskId, pointsToAward)
+        if (task.points > 0) {
+          const latePenalty = this.calculateLatePenalty(task, new Date())
+          const pointsToAward = task.points - latePenalty
+
+          await this.publishTaskCompletionAward(task.assignedTo, command.taskId, pointsToAward)
+        }
       }
 
       await this.publishTaskApproved(command.taskId, task.title, task.assignedTo)
@@ -661,12 +715,12 @@ export class TaskServiceGateway implements TaskManagementGateway {
 
   async applyActorProgress(tasks: Task[], actorId: number) {
     if (!this.taskUserProgressRepository.isAvailable()) {
-    return await Promise.all(tasks.map((task) => this.attachAssigneeIds(task)))
+      return await this.batchAttachAssigneeIds(tasks)
     }
 
     const publicTasks = tasks.filter((task) => task.id && task.taskVisibility === "public")
     if (publicTasks.length === 0) {
-      return await Promise.all(tasks.map((task) => this.attachAssigneeIds(task)))
+      return await this.batchAttachAssigneeIds(tasks)
     }
 
     const progressRows = await this.taskUserProgressRepository.findByTaskIdsAndUser(
@@ -692,7 +746,7 @@ export class TaskServiceGateway implements TaskManagementGateway {
         completedAt: progress.completedAt,
       }, progress.userId)
     })
-    return await Promise.all(withProgress.map((task) => this.attachAssigneeIds(task)))
+    return await this.batchAttachAssigneeIds(withProgress)
   }
 
   private withActorProgress(
@@ -747,6 +801,26 @@ export class TaskServiceGateway implements TaskManagementGateway {
     task.assigneeIds = assigneeIds
     task.assignedTo = assigneeIds[0] ?? task.assignedTo ?? null
     return task
+  }
+
+  private async batchAttachAssigneeIds(tasks: Task[]): Promise<Task[]> {
+    if (!this.taskAssigneeRepository.isAvailable()) {
+      for (const task of tasks) {
+        task.assigneeIds = task.assignedTo ? [task.assignedTo] : []
+      }
+      return tasks
+    }
+    const taskIds = tasks.filter((t) => t.id).map((t) => t.id!)
+    if (taskIds.length === 0) return tasks
+
+    const assigneeMap = await this.taskAssigneeRepository.listUserIdsByTaskIds(taskIds)
+    for (const task of tasks) {
+      if (!task.id) continue
+      const ids = assigneeMap.get(task.id) ?? []
+      task.assigneeIds = ids
+      task.assignedTo = ids[0] ?? task.assignedTo ?? null
+    }
+    return tasks
   }
 
   private async isActorAssignedToTask(task: Task, actorId: number) {

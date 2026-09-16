@@ -35,6 +35,12 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       }
       const responsibility = await labOperationsModule.updateResponsibilityNotes(id, auth.actor.id, body.notes);
       return NextResponse.json({ responsibility: responsibility.toJSON() }, { status: 200 });
+    } else if (body.action === "pause") {
+      const paused = await labOperationsModule.pauseResponsibilityForUser(auth.actor.id);
+      return NextResponse.json({ responsibility: paused?.toJSON() ?? null }, { status: 200 });
+    } else if (body.action === "resume") {
+      const resumed = await labOperationsModule.resumeResponsibilityForUser(auth.actor.id);
+      return NextResponse.json({ responsibility: resumed?.toJSON() ?? null }, { status: 200 });
     }
 
     return NextResponse.json({ error: "Ação não suportada" }, { status: 400 })

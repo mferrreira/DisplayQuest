@@ -8,6 +8,7 @@ import { prisma } from "@/lib/database/prisma"
 import {
   getMissedScheduledPause,
   getNextScheduledPause,
+  MAX_STRETCH_SEC,
 } from "@/lib/work-sessions/schedule"
 import type {
   StartWorkSessionCommand,
@@ -71,7 +72,7 @@ export class WorkSessionServiceGateway implements WorkExecutionGateway {
       throw new Error("Sessão não encontrada")
     }
 
-    if (existingSession.userId !== command.actorUserId) {
+    if (existingSession.userId !== command.actorUserId && !hasPermission(command.actorRoles ?? [], "MANAGE_WORK_SESSIONS")) {
       throw new Error("Não autorizado a atualizar esta sessão")
     }
 
@@ -296,7 +297,7 @@ export class WorkSessionServiceGateway implements WorkExecutionGateway {
       throw new Error("Sessão não encontrada")
     }
 
-    if (session.userId !== command.actorUserId) {
+    if (session.userId !== command.actorUserId && !hasPermission(command.actorRoles ?? [], "MANAGE_WORK_SESSIONS")) {
       throw new Error("Não autorizado a excluir esta sessão")
     }
 
@@ -309,7 +310,7 @@ export class WorkSessionServiceGateway implements WorkExecutionGateway {
       throw new Error("Sessão não encontrada")
     }
 
-    if (session.userId !== command.actorUserId) {
+    if (session.userId !== command.actorUserId && !hasPermission(command.actorRoles ?? [], "MANAGE_WORK_SESSIONS")) {
       throw new Error("Não autorizado a atualizar esta sessão")
     }
 
@@ -338,44 +339,30 @@ export class WorkSessionServiceGateway implements WorkExecutionGateway {
       await this.validateCompletedTasksForSession(command.actorUserId, targetProjectId, taskIdsToAttach)
     }
 
-    if (command.endTime !== undefined) {
-      const endTime = new Date(command.endTime)
-      if (Number.isNaN(endTime.getTime())) {
-        throw new Error("endTime inválido")
-      }
-      session.endTime = endTime
-      session.status = "completed"
-      const accumulatedDuration = session.duration || 0
-      const elapsedFromCurrentStart = Math.max(0, (endTime.getTime() - session.startTime.getTime()) / 1000)
-      session.duration = accumulatedDuration + elapsedFromCurrentStart
-    } else if (command.status === "completed" && session.status === "active") {
+    if (command.endTime !== undefined || (command.status === "completed" && session.status === "active")) {
+      // Completion is server-authoritative: the client endTime is only used as
+      // a trigger that the operation is a completion; its VALUE is ignored so
+      // the record reflects the server clock (clock-skew / manipulation safe).
       const endTime = new Date()
       session.duration = this.closedSessionDuration(session, endTime)
       session.endTime = endTime
       session.status = "completed"
     } else if (command.status === "paused" && session.status === "active") {
       // Server-authoritative pause: the stretch ends at a missed scheduled
-      // pause (auto-pause) or now. The client-provided duration is ignored so
-      // the recorded time is exact regardless of when the client clicked.
+      // pause (auto-pause) or now. Capped by MAX_STRETCH_SEC (anti-farm).
       const pausedAt = this.pauseInstantFor(session)
       session.duration = (session.duration || 0)
-        + Math.max(0, (pausedAt.getTime() - session.startTime.getTime()) / 1000)
+        + Math.min(MAX_STRETCH_SEC, Math.max(0, (pausedAt.getTime() - session.startTime.getTime()) / 1000))
       session.endTime = pausedAt
       session.status = "paused"
     } else if (command.status === "active" && session.status === "paused") {
-      // Resume: a fresh active stretch starts now; drop the pause endTime.
+      // Resume: a fresh active stretch starts NOW (server-authoritative); the
+      // client must not dictate the resume instant (clock-skew safe).
       session.status = "active"
       session.endTime = null
+      session.startTime = new Date()
     } else if (command.status !== undefined) {
       session.status = command.status
-    }
-
-    if (command.startTime !== undefined) {
-      const startTime = new Date(command.startTime)
-      if (Number.isNaN(startTime.getTime())) {
-        throw new Error("startTime inválido")
-      }
-      session.startTime = startTime
     }
 
     // Duration is server-computed on pause (see above); a plain status switch
@@ -484,7 +471,10 @@ export class WorkSessionServiceGateway implements WorkExecutionGateway {
     const missedPause = getMissedScheduledPause(session.startTime, closedAt)
     const activeUntil =
       missedPause && missedPause.getTime() <= closedAt.getTime() ? missedPause : closedAt
-    const elapsed = Math.max(0, (activeUntil.getTime() - session.startTime.getTime()) / 1000)
+    const elapsed = Math.min(
+      MAX_STRETCH_SEC,
+      Math.max(0, (activeUntil.getTime() - session.startTime.getTime()) / 1000),
+    )
     return (session.duration || 0) + elapsed
   }
 
@@ -511,7 +501,10 @@ export class WorkSessionServiceGateway implements WorkExecutionGateway {
       return session
     }
 
-    const elapsedUntilPause = Math.max(0, (missedPause.getTime() - session.startTime.getTime()) / 1000)
+    const elapsedUntilPause = Math.min(
+      MAX_STRETCH_SEC,
+      Math.max(0, (missedPause.getTime() - session.startTime.getTime()) / 1000),
+    )
     const accumulatedDuration = session.duration || 0
 
     return await this.workSessionRepository.update(session.id, {

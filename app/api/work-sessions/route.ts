@@ -139,7 +139,8 @@ export async function POST(request: Request) {
     if (shouldCompleteOnCreate && session?.id) {
       const completedSession = await workExecutionModule.completeWorkSession({
         sessionId: session.id,
-        actorUserId: targetUserId,
+        actorUserId: actor.id,
+        actorRoles: actor.roles,
         activity: data.activity,
         location: data.location,
         endTime,

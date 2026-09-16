@@ -401,6 +401,14 @@ export class DefaultLabOperationsGateway implements LabOperationsGateway {
     return await this.labResponsibilityRepository.update(existing)
   }
 
+  async pauseResponsibilityForUser(userId: number) {
+    return await this.labResponsibilityRepository.pauseActiveForUser(userId);
+  }
+
+  async resumeResponsibilityForUser(userId: number) {
+    return await this.labResponsibilityRepository.resumeForUser(userId);
+  }
+
   async updateResponsibilityNotes(responsibilityId: number, actorUserId: number, notes: string) {
     const existing = await this.labResponsibilityRepository.findById(responsibilityId)
     if (!existing) throw new Error("Responsabilidade não encontrada")
@@ -420,19 +428,10 @@ export class DefaultLabOperationsGateway implements LabOperationsGateway {
   }
 
   async listUserSchedules(query: ListUserSchedulesQuery) {
-    const canManageSchedules = hasPermission(query.actorRoles, "MANAGE_USERS")
-
+    // Leitura aberta: todo autenticado vê todas as grades (requisito grade horários).
+    // Escrita continua exigindo MANAGE_USERS (create/update/delete/replace).
     if (query.targetUserId) {
-      if (!canManageSchedules && query.targetUserId !== query.actorUserId) {
-        throw new Error("Acesso negado")
-      }
       return await this.userScheduleRepository.findByUserId(query.targetUserId)
-    }
-
-    // A7: sem targetUserId, usuário comum enxerga apenas as próprias agendas
-    // (antes: qualquer autenticado listava TODAS as agendas do laboratório).
-    if (!canManageSchedules) {
-      return await this.userScheduleRepository.findByUserId(query.actorUserId)
     }
 
     return await this.userScheduleRepository.findAll()

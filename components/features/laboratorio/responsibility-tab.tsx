@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Textarea } from "@/components/ui/textarea"
-import { Loader2, Clock, Play, Square, FileText, Plus, Megaphone, Trash2 } from "lucide-react"
+import { Loader2, Clock, Pause, Play, Square, FileText, Plus, Megaphone, Trash2 } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { useUser } from "@/contexts/user-context"
 import { useResponsibility } from "@/contexts/responsibility-context"
@@ -27,13 +27,17 @@ export function ResponsibilityTab() {
     activeResponsibility,
     loading,
     startResponsibility,
+    pauseResponsibility,
+    resumeResponsibility,
     endResponsibility,
     updateNotes,
   } = useResponsibility()
+  const isOwner = Boolean(activeResponsibility && user && activeResponsibility.userId === user.id)
   const { notices, createNotice, deleteNotice } = useLabNotices()
   const canManageLab = hasAccess(user?.roles || [], "VIEW_ALL_DATA")
 
   const [isStarting, setIsStarting] = useState(false)
+  const [isPausing, setIsPausing] = useState(false)
   const [isEnding, setIsEnding] = useState(false)
   const [startNotes, setStartNotes] = useState("")
   const [selectedResponsibility, setSelectedResponsibility] = useState<{ id: number; notes?: string | null } | null>(null)
@@ -75,6 +79,38 @@ export function ResponsibilityTab() {
       })
     } finally {
       setIsStarting(false)
+    }
+  }
+
+  const handlePauseResponsibility = async () => {
+    try {
+      setIsPausing(true)
+      await pauseResponsibility()
+    } catch (err) {
+      console.error("Erro ao pausar responsabilidade:", err)
+      toast({
+        title: "Erro",
+        description: "Não foi possível pausar a responsabilidade. Tente novamente.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsPausing(false)
+    }
+  }
+
+  const handleResumeResponsibility = async () => {
+    try {
+      setIsPausing(true)
+      await resumeResponsibility()
+    } catch (err) {
+      console.error("Erro ao retomar responsabilidade:", err)
+      toast({
+        title: "Erro",
+        description: "Não foi possível retomar a responsabilidade. Tente novamente.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsPausing(false)
     }
   }
 
@@ -161,7 +197,44 @@ export function ResponsibilityTab() {
                 <div className="flex items-center justify-center">
                   <Clock className="h-5 w-5 mr-2 text-primary" />
                   <span className="text-2xl font-mono">{formatDuration(activeResponsibility.duration)}</span>
+                  {activeResponsibility.isPaused && (
+                    <Badge variant="secondary" className="ml-2 bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300">
+                      PAUSADA
+                    </Badge>
+                  )}
                 </div>
+
+                {isOwner && (
+                  activeResponsibility.isPaused ? (
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={handleResumeResponsibility}
+                      disabled={isPausing}
+                    >
+                      {isPausing ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Play className="h-4 w-4 mr-2" />
+                      )}
+                      Continuar
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={handlePauseResponsibility}
+                      disabled={isPausing}
+                    >
+                      {isPausing ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Pause className="h-4 w-4 mr-2" />
+                      )}
+                      Pausar
+                    </Button>
+                  )
+                )}
 
                 {canManageLab && (
                   <Button

@@ -57,6 +57,7 @@ export interface ProjectLogsForLeaderResult {
 export interface DeleteWorkSessionCommand {
   sessionId: number
   actorUserId: number
+  actorRoles?: string[]
 }
 
 export interface UpdateWorkSessionCommand {

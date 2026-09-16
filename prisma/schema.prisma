@@ -34,6 +34,7 @@ model users {
   ledProjects          projects[]             @relation("UserProjectLeadership")
   purchases            purchases[]            @relation("UserPurchases")
   tasks                tasks[]                @relation("UserTasks")
+  createdTasks         tasks[]                @relation("UserCreatedTasks")
   taskAssignments      task_assignees[]       @relation("UserTaskAssignments")
   taskProgress         task_user_progress[]   @relation("UserTaskProgress")
   awardedBadges        user_badges[]          @relation("UserAwardedBadges")
@@ -90,6 +91,9 @@ model tasks {
   completedAt    DateTime?
   taskVisibility String    @default("delegated")
   isGlobal       Boolean   @default(false)
+  groupTaskId    Int?                    // Vincula cópias individuais criadas a partir do mesmo template
+  createdBy      Int?
+  creator        users?    @relation("UserCreatedTasks", fields: [createdBy], references: [id])
   assignee       users?    @relation("UserTasks", fields: [assignedTo], references: [id])
   projectObj     projects? @relation("ProjectTasks", fields: [projectId], references: [id])
   assignees      task_assignees[] @relation("TaskAssignees")
@@ -152,13 +156,15 @@ model purchases {
 }
 
 model lab_responsibilities {
-  id        Int     @id @default(autoincrement())
-  userId    Int
-  userName  String
-  startTime String
-  endTime   String?
-  notes     String?
-  user      users   @relation("UserLabResponsibilities", fields: [userId], references: [id])
+  id            Int     @id @default(autoincrement())
+  userId        Int
+  userName      String
+  startTime     String
+  endTime       String?
+  pausedAt      String? // ISO quando pausada; null enquanto em execução
+  totalPausedMs Int     @default(0)
+  notes         String?
+  user          users   @relation("UserLabResponsibilities", fields: [userId], references: [id])
 }
 
 model daily_logs {

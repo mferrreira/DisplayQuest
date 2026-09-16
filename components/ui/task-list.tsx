@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Search, Filter, SortAsc, SortDesc } from "lucide-react"
 import type { Task } from "@/contexts/types"
+import { isOverdueDateOnly } from "@/lib/date-only"
 
 interface TaskListProps {
   tasks: Task[]
@@ -39,11 +40,8 @@ export function TaskList({
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc")
 
   const isTaskOverdue = (task: Task): boolean => {
-    if (!task.dueDate) return false
-    const dueDate = new Date(task.dueDate)
-    const today = new Date()
-    today.setHours(23, 59, 59, 999)
-    return dueDate < today && task.status !== "done"
+    if (!task.dueDate || task.status === "done") return false
+    return isOverdueDateOnly(task.dueDate)
   }
 
   const filteredAndSortedTasks = tasks
@@ -75,8 +73,9 @@ export function TaskList({
           bValue = statusOrder[b.status] || 0
           break
         case "dueDate":
-          aValue = a.dueDate ? new Date(a.dueDate).getTime() : 0
-          bValue = b.dueDate ? new Date(b.dueDate).getTime() : 0
+          // Use lexicographic comparison for date-only strings
+          aValue = a.dueDate || ""
+          bValue = b.dueDate || ""
           break
         case "points":
           aValue = a.points || 0

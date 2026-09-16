@@ -309,6 +309,20 @@ export const ResponsibilitiesAPI = {
       body: JSON.stringify({ action: "updateNotes", notes }),
     }),
 
+  // Pausar a responsabilidade ativa
+  pause: () =>
+    fetchAPI<{ responsibility: any | null }>("/api/responsibilities/0", {
+      method: "PATCH",
+      body: JSON.stringify({ action: "pause" }),
+    }),
+
+  // Retomar a responsabilidade pausada
+  resume: () =>
+    fetchAPI<{ responsibility: any | null }>("/api/responsibilities/0", {
+      method: "PATCH",
+      body: JSON.stringify({ action: "resume" }),
+    }),
+
   // Excluir uma responsabilidade
   delete: (id: number) =>
     fetchAPI<{ success: boolean }>(`/api/responsibilities/${id}`, {

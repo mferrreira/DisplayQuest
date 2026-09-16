@@ -33,7 +33,7 @@ export const userStatusSchema = z.enum(["pending", "active", "rejected", "suspen
 export const userSchema = z.object({
   id: z.number().int(),
   name: z.string(),
-  email: z.string(),
+  email: z.string().optional(), // omitted by listUsersForActor for roles without full view
   points: z.number().int(),
   completedTasks: z.number().int(),
   password: z.string().nullable().optional(), // never sent by API responses that matter; defensive

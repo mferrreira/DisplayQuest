@@ -81,19 +81,33 @@ export function isArchivedTask(
 }
 
 // ---- overdue + penalty display ----
-export function isTaskOverdue(task: Task, now: Date = new Date()): boolean {
+
+import { isOverdueDateOnly, isDueTodayDateOnly } from "@/lib/date-only"
+
+export function isTaskOverdue(task: Task, _now?: Date): boolean {
   if (!task.dueDate || task.status === "done") return false;
-  const due = new Date(task.dueDate);
-  if (Number.isNaN(due.getTime())) return false;
-  return due.getTime() < now.getTime();
+  return isOverdueDateOnly(task.dueDate);
+}
+
+/**
+ * True when a non-done task has a dueDate on the current calendar day (local time).
+ */
+export function isTaskDueToday(task: Task, _now?: Date): boolean {
+  if (!task.dueDate || task.status === "done") return false;
+  return isDueTodayDateOnly(task.dueDate);
 }
 
 /** Gateway :593–607 — display-side mirror of the server's penalty math. */
 export function latePenalty(task: Pick<Task, "dueDate" | "points">, completion: Date = new Date()): number {
   if (!task.dueDate) return 0;
-  const due = new Date(task.dueDate);
+  // For penalty calculation, we need time precision (hours matter)
+  // If date-only string, parse as noon to avoid timezone shift
+  const due = task.dueDate.includes("T") 
+    ? new Date(task.dueDate) 
+    : new Date(`${task.dueDate}T12:00:00`);
   if (Number.isNaN(due.getTime())) return 0;
-  const daysLate = Math.ceil((completion.getTime() - due.getTime()) / (24 * 60 * 60 * 1000));
+  const timeDiff = completion.getTime() - due.getTime();
+  const daysLate = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
   if (daysLate <= 0) return 0;
   return daysLate * task.points;
 }

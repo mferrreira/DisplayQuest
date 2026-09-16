@@ -3,7 +3,6 @@
 const { PrismaClient } = require('@prisma/client');
 const { assertCliAllowed } = require('./guard');
 const bcrypt = require('bcryptjs');
-const readline = require('readline');
 
 const prisma = new PrismaClient();
 
@@ -22,35 +21,46 @@ function log(color, message) {
     console.log(`${colors[color]}${message}${colors.reset}`);
 }
 
-// Interface para input
-function askQuestion(question) {
-    const rl = readline.createInterface({
-        input: process.stdin,
-        output: process.stdout
-    });
-
-    return new Promise((resolve) => {
-        rl.question(question, (answer) => {
-            rl.close();
-            resolve(answer.trim());
-        });
-    });
+// Parser simples de argumentos no estilo --chave valor.
+// Uso: node cli/index.js create-admin --name "X" --email y@z --password p --role COORDENADOR
+function parseArgs(argv) {
+    const opts = {};
+    for (let i = 0; i < argv.length; i++) {
+        const a = argv[i];
+        if (a.startsWith('--')) {
+            const key = a.slice(2);
+            const val = argv[i + 1];
+            if (!val || val.startsWith('--')) {
+                throw new Error(`Argumento --${key} precisa de um valor (ex.: --${key} valor)`);
+            }
+            opts[key] = val;
+            i++;
+        }
+    }
+    return opts;
 }
 
-// Função para criar usuário administrador
-async function createAdmin() {
+// Função para criar usuário administrador (não-interativa: dados via --chave valor)
+async function createAdmin(opts) {
     log('cyan', '\n🔐 Criando usuário administrador...\n');
 
     try {
-        const name = await askQuestion('Nome completo: ');
-        const email = await askQuestion('Email: ');
-        const password = await askQuestion('Senha: ');
-        const role = await askQuestion('Role (COORDENADOR/GERENTE/LABORATORISTA): ');
+        const name = opts.name;
+        const email = opts.email;
+        const password = opts.password;
+        const role = opts.role;
+
+        if (!name || !email || !password || !role) {
+            log('red', '❌ Uso: node cli/index.js create-admin --name "Nome" --email email@ex.com --password senha --role ROLE');
+            log('cyan', '   ROLE deve ser um de: COORDENADOR, GERENTE, LABORATORISTA');
+            log('cyan', '   Ex.: node cli/index.js create-admin --name "Admin" --email admin@admin.com --password 123 --role COORDENADOR');
+            return;
+        }
 
         // Validar role
         const validRoles = ['COORDENADOR', 'GERENTE', 'LABORATORISTA'];
         if (!validRoles.includes(role.toUpperCase())) {
-            log('red', '❌ Role inválido. Use: COORDENADOR, GERENTE ou LABORATORISTA');
+            log('red', `❌ Role inválido: ${role}. Use: COORDENADOR, GERENTE ou LABORATORISTA`);
             return;
         }
 
@@ -133,12 +143,18 @@ async function listUsers() {
 }
 
 // Função para aprovar usuário
-async function approveUser() {
+// Função para aprovar usuário (não-interativa: --email)
+async function approveUser(opts) {
     log('cyan', '\n✅ Aprovando usuário...\n');
 
     try {
-        const email = await askQuestion('Email do usuário para aprovar: ');
-        
+        const email = opts.email;
+
+        if (!email) {
+            log('red', '❌ Uso: node cli/index.js approve-user --email email@ex.com');
+            return;
+        }
+
         const user = await prisma.users.findUnique({
             where: { email: email.toLowerCase() }
         });
@@ -166,13 +182,19 @@ async function approveUser() {
 }
 
 // Função para resetar senha
-async function resetPassword() {
+// Função para resetar senha (não-interativa: --email e --password)
+async function resetPassword(opts) {
     log('cyan', '\n🔑 Resetando senha...\n');
 
     try {
-        const email = await askQuestion('Email do usuário: ');
-        const newPassword = await askQuestion('Nova senha: ');
-        
+        const email = opts.email;
+        const newPassword = opts.password;
+
+        if (!email || !newPassword) {
+            log('red', '❌ Uso: node cli/index.js reset-password --email email@ex.com --password novasenha');
+            return;
+        }
+
         const user = await prisma.users.findUnique({
             where: { email: email.toLowerCase() }
         });
@@ -196,42 +218,23 @@ async function resetPassword() {
     }
 }
 
-// Menu principal
-async function showMenu() {
-    while (true) {
-        log('magenta', '\n🚀 CLI de Gerenciamento - DisplayQuest');
-        log('magenta', '=====================================\n');
-        
-        log('cyan', '1. 👤 Criar usuário administrador');
-        log('cyan', '2. 📋 Listar usuários');
-        log('cyan', '3. ✅ Aprovar usuário');
-        log('cyan', '4. 🔑 Resetar senha');
-        log('cyan', '5. 🚪 Sair\n');
-
-        const choice = await askQuestion('Escolha uma opção (1-5): ');
-
-        switch (choice) {
-            case '1':
-                await createAdmin();
-                break;
-            case '2':
-                await listUsers();
-                break;
-            case '3':
-                await approveUser();
-                break;
-            case '4':
-                await resetPassword();
-                break;
-            case '5':
-                log('green', '\n👋 Até logo!');
-                process.exit(0);
-            default:
-                log('red', '❌ Opção inválida');
-        }
-
-        await askQuestion('\nPressione Enter para continuar...');
-    }
+// Uso/help do CLI
+function usage() {
+    log('cyan', 'Uso: node cli/index.js <comando> [--opcoes] [--allow-prod]');
+    log('cyan', '');
+    log('cyan', 'Comandos:');
+    log('cyan', '  create-admin    Criar usuário administrador');
+    log('cyan', '    node cli/index.js create-admin --name "<Nome>" --email <email> --password <senha> --role <ROLE>');
+    log('cyan', '    ROLE: COORDENADOR | GERENTE | LABORATORISTA');
+    log('cyan', '  list-users      Listar usuários');
+    log('cyan', '    node cli/index.js list-users');
+    log('cyan', '  approve-user    Aprovar usuário pendente');
+    log('cyan', '    node cli/index.js approve-user --email <email>');
+    log('cyan', '  reset-password  Resetar a senha de um usuário');
+    log('cyan', '    node cli/index.js reset-password --email <email> --password <novaSenha>');
+    log('cyan', '');
+    log('cyan', 'Em produção (NODE_ENV != development), acrescente --allow-prod:');
+    log('cyan', '  node cli/index.js create-admin --name "Admin" --email a@b.c --password x --role COORDENADOR --allow-prod');
 }
 
 // Execução principal
@@ -256,31 +259,43 @@ async function main() {
         await prisma.$connect();
         log('green', '✅ Conectado ao banco de dados');
 
-        // Verificar se é execução direta ou com argumentos
-        if (args.length > 0) {
-            // Modo comando direto
-            switch (args[0]) {
+        if (args.length === 0) {
+            usage();
+            return;
+        }
+
+        // --allow-prod é uma flag de ambiente, não vira opção de comando
+        const cmdArgs = args.filter(a => a !== '--allow-prod');
+        const command = cmdArgs[0];
+
+        if (!command) {
+            usage();
+            return;
+        }
+
+        try {
+            const opts = parseArgs(cmdArgs.slice(1));
+            switch (command) {
                 case 'create-admin':
-                    await createAdmin();
+                    await createAdmin(opts);
                     break;
                 case 'list-users':
                     await listUsers();
                     break;
                 case 'approve-user':
-                    await approveUser();
+                    await approveUser(opts);
                     break;
                 case 'reset-password':
-                    await resetPassword();
+                    await resetPassword(opts);
                     break;
                 default:
-                    log('red', '❌ Comando inválido');
-                    log('cyan', 'Comandos disponíveis: create-admin, list-users, approve-user, reset-password');
+                    log('red', `❌ Comando inválido: ${command}`);
+                    usage();
             }
-        } else {
-            // Modo interativo
-            await showMenu();
+        } catch (parseError) {
+            log('red', `❌ ${parseError.message}`);
+            usage();
         }
-
     } catch (error) {
         log('red', `❌ Erro de conexão: ${error.message}`);
         process.exit(1);

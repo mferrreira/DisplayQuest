@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { useNotifications } from "@/features/notifications"
 import { 
   Bell, 
@@ -86,31 +87,32 @@ export function NotificationsPanel({ className }: NotificationsPanelProps) {
   const readNotifications = notifications.filter(n => n.read)
 
   return (
-    <div className={`relative ${className ?? ""}`}>
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => setIsOpen(!isOpen)}
-        className="relative"
-        aria-label={
-          unreadCount > 0 ? `Notificações (${unreadCount} não lidas)` : "Notificações"
-        }
-        aria-expanded={isOpen}
-      >
-        <Bell className="h-4 w-4" aria-hidden="true" />
-        {unreadCount > 0 && (
-          <Badge
-            variant="destructive"
-            className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs"
-            aria-hidden="true"
-          >
-            {unreadCount}
-          </Badge>
-        )}
-      </Button>
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          size="sm"
+          className={`relative ${className ?? ""}`}
+          aria-label={
+            unreadCount > 0 ? `Notificações (${unreadCount} não lidas)` : "Notificações"
+          }
+          aria-expanded={isOpen}
+        >
+          <Bell className="h-4 w-4" aria-hidden="true" />
+          {unreadCount > 0 && (
+            <Badge
+              variant="destructive"
+              className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs"
+              aria-hidden="true"
+            >
+              {unreadCount}
+            </Badge>
+          )}
+        </Button>
+      </PopoverTrigger>
 
-      {isOpen && (
-        <Card className="absolute right-0 top-12 w-80 z-50 shadow-lg">
+      <PopoverContent align="end" className="w-80 p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
+        <Card className="border-0 shadow-none">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg">Notificações</CardTitle>
@@ -243,8 +245,8 @@ export function NotificationsPanel({ className }: NotificationsPanelProps) {
             </ScrollArea>
           </CardContent>
         </Card>
-      )}
-    </div>
+      </PopoverContent>
+    </Popover>
   )
 }
 

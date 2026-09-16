@@ -10,6 +10,8 @@ export const SESSION_TIMEZONE = "America/Sao_Paulo";
 
 export const SCHEDULED_PAUSE_TIMES = ["09:30", "12:00", "15:00", "17:00"] as const;
 
+export const MAX_STRETCH_SEC = 9 * 3600;
+
 const MINUTE_MS = 60_000;
 
 // DateTimeFormat instances are stateless and expensive to construct (10-50ms
@@ -121,17 +123,22 @@ export function getMissedScheduledPause(
   now: Date | string = new Date(),
 ): Date | null {
   const startMs = toSafeDate(startTime).getTime()
-  const nowDate = toSafeDate(now)
-  let missed: Date | null = null;
-  // Check the day of startTime and the following day (sessions cannot span
-  // more than that without having been normalized already).
-  for (const dayOffset of [0, 1]) {
-    const ref = new Date(startMs + dayOffset * 24 * 60 * MINUTE_MS);
-    for (const p of pauseInstantsOfDay(ref)) {
-      if (p.getTime() > startMs && p.getTime() <= nowDate.getTime()) {
-        if (!missed || p.getTime() < missed.getTime()) missed = p;
+  const nowMs = toSafeDate(now).getTime()
+  let missed: Date | null = null
+  // Scan SP calendar days from start through now (handles multi-day/weekend).
+  let cursor = new Date(startMs)
+  const maxDays = 60
+  for (let i = 0; i < maxDays; i++) {
+    for (const p of pauseInstantsOfDay(cursor)) {
+      if (p.getTime() > startMs && p.getTime() <= nowMs) {
+        if (!missed || p.getTime() < missed.getTime()) missed = p
       }
     }
+    const { y: cy, m: cm, d: cd } = spDateParts(cursor)
+    const { y: ny, m: nm, d: nd } = spDateParts(toSafeDate(now))
+    if (cy === ny && cm === nm && cd === nd) break
+    cursor = new Date(cursor.getTime() + 24 * 60 * MINUTE_MS)
+    if (cursor.getTime() > nowMs + 24 * 60 * MINUTE_MS) break
   }
-  return missed;
+  return missed
 }

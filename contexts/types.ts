@@ -214,6 +214,8 @@ export interface LabResponsibility {
   userName: string
   startTime: string
   endTime?: string | null
+  pausedAt?: string | null
+  totalPausedMs?: number
   notes?: string | null
 }
 

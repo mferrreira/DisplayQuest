@@ -56,6 +56,7 @@ export default function LabResponsibilityPage() {
   const router = useRouter()
   const {
     error,
+    fetchResponsibilities,
   } = useResponsibility()
 
   const { error: issuesError } = useIssues()
@@ -65,6 +66,13 @@ export default function LabResponsibilityPage() {
       router.push("/login")
     }
   }, [user, authLoading, router])
+
+  // History is lazy globally; the laboratorio page opts in on mount.
+  useEffect(() => {
+    if (user) {
+      void fetchResponsibilities()
+    }
+  }, [user, fetchResponsibilities])
 
   if (authLoading) {
     return (

@@ -8,11 +8,14 @@ import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Clock, Pause, PlayCircle, StopCircle, ChevronDown } from "lucide-react"
 import { useProject } from "@/contexts/project-context"
 import { getNextScheduledPause, getMissedScheduledPause, toSafeDate } from "@/lib/work-sessions/schedule"
 import { SessionAutoPauseCountdown } from "@/components/ui/session-auto-pause-countdown"
 import { SessionWelcomeBalloon } from "@/components/ui/session-welcome-balloon"
+import { ResponsibilityMiniPanel } from "@/components/ui/responsibility-mini-panel"
+import { ResponsibilitiesAPI } from "@/contexts/api-client"
 
 function formatTime(seconds: number) {
   const h = Math.floor(seconds / 3600)
@@ -97,6 +100,14 @@ export function FloatingSessionTimer() {
         try {
           await pauseSession(sessionId)
           await fetchSessions(user.id)
+          try {
+            // Intentional coupling (business rule): at the key pause hours
+            // (09:30/12:00/15:00/17:00) BOTH the session and the lab
+            // responsibility pause. Manual session controls must NOT do this.
+            await ResponsibilitiesAPI.pause()
+          } catch {
+            // Responsibility pause is secondary; session pause succeeded.
+          }
           setShowAutoPauseDialog(true)
         } catch {
           // Allow a later poll to retry if the pause request failed.
@@ -139,6 +150,11 @@ export function FloatingSessionTimer() {
     return () => window.removeEventListener("floating-session-timer:open", openHandler as EventListener)
   }, [])
 
+  // Manual session controls act on the session ONLY. The lab responsibility
+  // is an independent counter with its own state (see ResponsibilityMiniPanel
+  // Pausar/Continuar): pausing/resuming here must not touch it. The only
+  // session→responsibility coupling is the scheduled key-hour auto-pause
+  // (doAutoPause above), which pauses both by business rule.
   const handlePause = async () => {
     if (!activeSession || !user?.id) return
     await pauseSession(activeSession.id)
@@ -217,7 +233,13 @@ export function FloatingSessionTimer() {
             <Clock className="h-5 w-5" />
           </Button>
         ) : (
-          <div className="space-y-3">
+          <Tabs defaultValue="sessao" className="space-y-3">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="sessao">Sessão</TabsTrigger>
+              <TabsTrigger value="responsabilidade">Responsabilidade</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="sessao" className="space-y-3 mt-0">
             <div className="flex items-center justify-between">
               <p className="text-sm font-medium">Sessão de Trabalho</p>
               <span className="text-xs text-muted-foreground">
@@ -304,7 +326,17 @@ export function FloatingSessionTimer() {
                 <ChevronDown className="h-4 w-4" />
               </Button>
             </div>
-          </div>
+            </TabsContent>
+
+            <TabsContent value="responsabilidade" className="mt-0">
+              <ResponsibilityMiniPanel />
+              <div className="mt-2 flex justify-end">
+                <Button size="sm" variant="ghost" onClick={() => setExpanded(false)}>
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </div>
+            </TabsContent>
+          </Tabs>
         )}
       </div>
 

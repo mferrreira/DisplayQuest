@@ -38,6 +38,8 @@ export class LabOperationsModule {
   readonly endResponsibility: GatewayCall<LabOperationsGateway["endResponsibility"]>
   readonly updateResponsibilityNotes: GatewayCall<LabOperationsGateway["updateResponsibilityNotes"]>
   readonly deleteResponsibility: GatewayCall<LabOperationsGateway["deleteResponsibility"]>
+  readonly pauseResponsibilityForUser: GatewayCall<LabOperationsGateway["pauseResponsibilityForUser"]>
+  readonly resumeResponsibilityForUser: GatewayCall<LabOperationsGateway["resumeResponsibilityForUser"]>
   readonly listUserSchedules: GatewayCall<LabOperationsGateway["listUserSchedules"]>
   readonly getUserSchedule: GatewayCall<LabOperationsGateway["getUserSchedule"]>
   readonly createUserSchedule: GatewayCall<LabOperationsGateway["createUserSchedule"]>
@@ -75,6 +77,8 @@ export class LabOperationsModule {
     this.endResponsibility = this.gateway.endResponsibility.bind(this.gateway)
     this.updateResponsibilityNotes = this.gateway.updateResponsibilityNotes.bind(this.gateway)
     this.deleteResponsibility = this.gateway.deleteResponsibility.bind(this.gateway)
+    this.pauseResponsibilityForUser = this.gateway.pauseResponsibilityForUser.bind(this.gateway)
+    this.resumeResponsibilityForUser = this.gateway.resumeResponsibilityForUser.bind(this.gateway)
     this.listUserSchedules = this.gateway.listUserSchedules.bind(this.gateway)
     this.getUserSchedule = this.gateway.getUserSchedule.bind(this.gateway)
     this.createUserSchedule = this.gateway.createUserSchedule.bind(this.gateway)

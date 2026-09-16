@@ -10,6 +10,9 @@ interface ActiveResponsibility {
   userName: string
   startTime: string
   duration: number
+  isPaused: boolean
+  pausedAt?: string | null
+  totalPausedMs?: number
   userRole?: string
 }
 import { ResponsibilitiesAPI } from "@/contexts/api-client"
@@ -23,6 +26,8 @@ interface ResponsibilityContextType {
   fetchResponsibilities: (startDate?: string, endDate?: string) => Promise<void>
   fetchActiveResponsibility: () => Promise<void>
   startResponsibility: (notes?: string) => Promise<void>
+  pauseResponsibility: () => Promise<void>
+  resumeResponsibility: () => Promise<void>
   endResponsibility: () => Promise<void>
   updateNotes: (id: number, notes: string) => Promise<void>
   deleteResponsibility: (id: number) => Promise<void>
@@ -39,33 +44,42 @@ export function ResponsibilityProvider({ children }: { children: ReactNode }) {
   const userId = user?.id
   // Último intervalo de mês buscado; mutações refazem o fetch desse período
   const lastRangeRef = useRef<{ start?: string; end?: string }>({})
+  // History is lazy: only fetched via explicit fetchResponsibilities() calls
+  // (the laboratorio page opts in on mount). Mutations must not pull the
+  // full list into pages that only care about the active responsibility.
+  const historyLoadedRef = useRef(false)
 
   const toActiveResponsibility = useCallback((responsibility: any): ActiveResponsibility | null => {
     if (!responsibility) return null
 
-    const startTimeMs = new Date(responsibility.startTime).getTime()
-    const nowMs = Date.now()
-    const durationSeconds = Number.isFinite(startTimeMs)
-      ? Math.max(0, Math.floor((nowMs - startTimeMs) / 1000))
-      : 0
-
+    // Backend-owned time: duration already arrives in seconds, computed
+    // server-side from startTime/pausedAt/totalPausedMs (full precision, no
+    // minute flooring). Use it directly so refresh/poll restores the timer.
+    const serverDuration = typeof responsibility.duration === "number" ? responsibility.duration : 0 // seconds
+    const isPaused = Boolean(responsibility.pausedAt)
     return {
       id: responsibility.id,
       userId: responsibility.userId,
       userName: responsibility.userName,
       startTime: responsibility.startTime,
-      duration: durationSeconds,
+      duration: Math.max(0, Math.floor(serverDuration)),
+      isPaused,
+      pausedAt: responsibility.pausedAt ?? null,
+      totalPausedMs: responsibility.totalPausedMs ?? 0,
       userRole: responsibility.userRole,
     }
   }, [])
 
-  // Atualizar o tempo de duração da responsabilidade ativa a cada segundo
+  // Display tick: advance the backend-anchored duration once per second.
+  // Deps are the responsibility identity/pause flag (not the whole object):
+  // the callback uses a functional update, so the interval must NOT be torn
+  // down and recreated on every tick.
   useEffect(() => {
     if (!activeResponsibility) return
 
     const interval = setInterval(() => {
       setActiveResponsibility((prev) => {
-        if (!prev) return null
+        if (!prev || prev.isPaused) return prev
         return {
           ...prev,
           duration: prev.duration + 1,
@@ -74,7 +88,7 @@ export function ResponsibilityProvider({ children }: { children: ReactNode }) {
     }, 1000)
 
     return () => clearInterval(interval)
-  }, [activeResponsibility])
+  }, [activeResponsibility?.id, activeResponsibility?.isPaused])
 
   const fetchResponsibilities = useCallback(async (startDate?: string, endDate?: string) => {
     try {
@@ -83,6 +97,7 @@ export function ResponsibilityProvider({ children }: { children: ReactNode }) {
 
       const { responsibilities } = await ResponsibilitiesAPI.getAll(startDate, endDate)
       lastRangeRef.current = { start: startDate, end: endDate }
+      historyLoadedRef.current = true
       setResponsibilities(responsibilities)
     } catch (err) {
       setError("Erro ao carregar responsabilidades")
@@ -107,16 +122,18 @@ export function ResponsibilityProvider({ children }: { children: ReactNode }) {
     }
   }, [toActiveResponsibility])
 
-  // Carregar dados quando o componente montar ou o usuário mudar
+  // Carregar dados quando o componente montar ou o usuário mudar.
+  // A responsabilidade ativa é global (o timer flutuante usa). O histórico é
+  // preguiçoso: só carrega via chamada explícita (laboratorio) ou já carregado.
   useEffect(() => {
     if (userId) {
-      fetchResponsibilities()
-      fetchActiveResponsibility()
+      void fetchActiveResponsibility()
     } else {
       setResponsibilities([])
       setActiveResponsibility(null)
+      historyLoadedRef.current = false
     }
-  }, [userId, fetchResponsibilities, fetchActiveResponsibility])
+  }, [userId, fetchActiveResponsibility])
 
   const startResponsibility = async (notes?: string) => {
     try {
@@ -131,13 +148,53 @@ export function ResponsibilityProvider({ children }: { children: ReactNode }) {
         notes,
       })
 
-      // Refetch do período atual + responsabilidade ativa (fonte de verdade)
-      await Promise.all([
-        fetchResponsibilities(lastRangeRef.current.start, lastRangeRef.current.end),
-        fetchActiveResponsibility(),
-      ])
+      // Refetch do período atual + responsabilidade ativa (fonte de verdade).
+      // Fora do laboratorio o histórico é preguiçoso: não puxar a lista cheia.
+      const refresh: Promise<unknown>[] = [fetchActiveResponsibility()]
+      if (historyLoadedRef.current) {
+        refresh.push(fetchResponsibilities(lastRangeRef.current.start, lastRangeRef.current.end))
+      }
+      await Promise.all(refresh)
     } catch (err) {
       setError("Erro ao iniciar responsabilidade")
+      console.error(err)
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const pauseResponsibility = async () => {
+    try {
+      if (!activeResponsibility) throw new Error("Não há responsabilidade ativa")
+
+      setLoading(true)
+      setError(null)
+
+      // Independent from the work session: pauses only the responsibility.
+      // Reuses the existing backend pause (timestamps stay server-owned).
+      await ResponsibilitiesAPI.pause()
+      await fetchActiveResponsibility()
+    } catch (err) {
+      setError("Erro ao pausar responsabilidade")
+      console.error(err)
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const resumeResponsibility = async () => {
+    try {
+      if (!activeResponsibility) throw new Error("Não há responsabilidade ativa")
+
+      setLoading(true)
+      setError(null)
+
+      await ResponsibilitiesAPI.resume()
+      await fetchActiveResponsibility()
+    } catch (err) {
+      setError("Erro ao retomar responsabilidade")
       console.error(err)
       throw err
     } finally {
@@ -155,11 +212,13 @@ export function ResponsibilityProvider({ children }: { children: ReactNode }) {
 
       await ResponsibilitiesAPI.end(activeResponsibility.id, user.id)
 
-      // Refetch do período atual + responsabilidade ativa (fonte de verdade)
-      await Promise.all([
-        fetchResponsibilities(lastRangeRef.current.start, lastRangeRef.current.end),
-        fetchActiveResponsibility(),
-      ])
+      // Refetch do período atual + responsabilidade ativa (fonte de verdade).
+      // Fora do laboratorio o histórico é preguiçoso: não puxar a lista cheia.
+      const refreshEnd: Promise<unknown>[] = [fetchActiveResponsibility()]
+      if (historyLoadedRef.current) {
+        refreshEnd.push(fetchResponsibilities(lastRangeRef.current.start, lastRangeRef.current.end))
+      }
+      await Promise.all(refreshEnd)
     } catch (err) {
       setError("Erro ao encerrar responsabilidade")
       console.error(err)
@@ -220,6 +279,8 @@ export function ResponsibilityProvider({ children }: { children: ReactNode }) {
         fetchResponsibilities,
         fetchActiveResponsibility,
         startResponsibility,
+        pauseResponsibility,
+        resumeResponsibility,
         endResponsibility,
         updateNotes,
         deleteResponsibility,

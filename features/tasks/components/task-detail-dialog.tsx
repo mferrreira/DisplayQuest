@@ -33,6 +33,8 @@ import type { Task } from "@/entities/task"
 import { useProjects } from "@/features/projects"
 import { useUsers } from "@/features/users"
 import { useTaskMutations, projectedAward } from ".."
+import { isTaskOverdue, isTaskDueToday } from "../utils/move-rules"
+import { formatDateOnly } from "@/lib/date-only"
 
 export interface TaskDetailDialogProps {
   task: Task | null
@@ -82,7 +84,8 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit }: TaskDetai
   const isAssignee = Boolean(userId && (task.assignedTo === userId || task.assigneeIds?.includes(userId)))
   const projectName = task.projectId ? projects.find((p) => p.id === task.projectId)?.name : null
   const { main, fixes } = splitFixInstructions(task.description)
-  const isOverdue = Boolean(task.dueDate) && task.status !== "done" && new Date(task.dueDate as string).getTime() < Date.now()
+  const isOverdue = isTaskOverdue(task)
+  const isDueToday = isTaskDueToday(task)
 
   const handleApprove = async () => {
     try {
@@ -158,6 +161,14 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit }: TaskDetai
 
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Criado por</p>
+                <p className="font-semibold">
+                  {task.createdBy
+                    ? (users.find((u) => u.id === task.createdBy)?.name ?? `Usuário #${task.createdBy}`)
+                    : "—"}
+                </p>
+              </div>
+              <div>
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">Pontos</p>
                 <p className="font-semibold">
                   {task.points} pts
@@ -176,8 +187,9 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit }: TaskDetai
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">Prazo</p>
                 <p className="flex items-center gap-1 font-semibold">
                   <Calendar className="h-3.5 w-3.5" aria-hidden="true" />
-                  {task.dueDate ? new Date(task.dueDate).toLocaleDateString("pt-BR") : "—"}
+                  {formatDateOnly(task.dueDate) || "—"}
                   {isOverdue && <Badge variant="destructive" className="ml-1">ATRASADA</Badge>}
+                  {isDueToday && !isOverdue && <Badge variant="secondary" className="ml-1 bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-300">Para hoje</Badge>}
                 </p>
               </div>
               <div>

@@ -90,11 +90,12 @@ export function WorkSessionsProvider({ children }: { children: ReactNode }) {
   const getElapsedSeconds = useCallback((session?: WorkSession | null) => {
     if (!session) return 0
 
+    const MAX_STRETCH_SEC = 9 * 3600
     const accumulated = typeof session.duration === "number" ? session.duration : 0
     if (session.status === "active" && session.startTime) {
       const start = new Date(session.startTime).getTime()
       const now = Date.now()
-      const running = Math.max(0, (now - start) / 1000)
+      const running = Math.min(MAX_STRETCH_SEC, Math.max(0, (now - start) / 1000))
       return Math.floor(accumulated + running)
     }
 
@@ -135,7 +136,6 @@ export function WorkSessionsProvider({ children }: { children: ReactNode }) {
     try {
       const response = await WorkSessionsAPI.update(id, {
         status: "completed",
-        endTime: new Date().toISOString(),
         activity,
         dailyLogNote: options?.dailyLogNote,
         dailyLogDate: options?.dailyLogDate,
@@ -155,16 +155,12 @@ export function WorkSessionsProvider({ children }: { children: ReactNode }) {
 
   const pauseSession = useCallback(async (id: number): Promise<WorkSession> => {
     if (!user) throw new Error("Usuário não autenticado")
-    const session = sessions.find((candidate) => candidate.id === id)
-    if (!session) throw new Error("Sessão não encontrada")
 
     setLoading(true)
     setError(null)
     try {
-      const elapsed = getElapsedSeconds(session)
       const response = await WorkSessionsAPI.update(id, {
         status: "paused",
-        duration: elapsed,
       })
       const updatedSession = response?.data || response
       await fetchSessions(user.id)
@@ -176,7 +172,7 @@ export function WorkSessionsProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false)
     }
-  }, [user, sessions, getElapsedSeconds, fetchSessions])
+  }, [user, fetchSessions])
 
   const resumeSession = useCallback(async (id: number): Promise<WorkSession> => {
     if (!user) throw new Error("Usuário não autenticado")
@@ -186,7 +182,6 @@ export function WorkSessionsProvider({ children }: { children: ReactNode }) {
     try {
       const response = await WorkSessionsAPI.update(id, {
         status: "active",
-        startTime: new Date().toISOString(),
       })
       const updatedSession = response?.data || response
       await fetchSessions(user.id)

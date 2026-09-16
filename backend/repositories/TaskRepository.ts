@@ -41,6 +41,9 @@ export class TaskRepository implements ITaskRepository {
           description: true,
           status: true
         }
+      },
+      creator: {
+        select: { id: true, name: true, email: true }
       }
     };
   }

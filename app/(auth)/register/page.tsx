@@ -11,7 +11,7 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { toast } from "sonner"
-import { AlertCircle } from "lucide-react"
+import { AlertCircle, Eye, EyeOff } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -29,6 +29,7 @@ type RegisterFormValues = z.infer<typeof registerSchema>
 
 export default function RegisterPage() {
   const [error, setError] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
   const { register } = useAuth()
   const router = useRouter()
   const {
@@ -112,14 +113,30 @@ export default function RegisterPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Senha</Label>
-              <Input
-                id="password"
-                type="password"
-                autoComplete="new-password"
-                aria-invalid={Boolean(errors.password)}
-                aria-describedby={errors.password ? "password-error" : undefined}
-                {...registerField("password")}
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="new-password"
+                  className="pr-10"
+                  aria-invalid={Boolean(errors.password)}
+                  aria-describedby={errors.password ? "password-error" : undefined}
+                  {...registerField("password")}
+                />
+                <button
+                  type="button"
+                  aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                  aria-pressed={showPassword}
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" aria-hidden="true" />
+                  ) : (
+                    <Eye className="h-4 w-4" aria-hidden="true" />
+                  )}
+                </button>
+              </div>
               {errors.password ? (
                 <p id="password-error" className="text-sm text-destructive">
                   {errors.password.message}
