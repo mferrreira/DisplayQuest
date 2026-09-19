@@ -1,0 +1,60 @@
+{
+  "plan": "plan-v2",
+  "version": "0.1.0",
+  "updatedAt": "2026-09-19T23:00:00-03:00",
+  "activeFeature": null,
+  "latestCommittedGate": null,
+
+  "features": [
+    {
+      "id": "01",
+      "name": "roles-permissions",
+      "status": "draft",
+      "dependencies": []
+    },
+    {
+      "id": "02",
+      "name": "logging-audit",
+      "status": "draft",
+      "dependencies": []
+    },
+    {
+      "id": "03",
+      "name": "project-lifecycle-reports",
+      "status": "draft",
+      "dependencies": ["01", "02"]
+    },
+    {
+      "id": "04",
+      "name": "deep-gamification",
+      "status": "draft",
+      "dependencies": ["01", "02", "03"]
+    },
+    {
+      "id": "05",
+      "name": "multi-lab-saas",
+      "status": "draft",
+      "dependencies": ["01", "02", "03", "04"]
+    },
+    {
+      "id": "06",
+      "name": "auth-sso-ldap",
+      "status": "draft",
+      "dependencies": ["05"]
+    }
+  ],
+
+  "gates": {
+    "lint": "npx eslint --no-eslintrc --config .eslintrc.json <arquivos>",
+    "types": "npx tsc --noEmit",
+    "unit": "set -a; source .env; set +a; npx vitest run",
+    "integration": "docker compose up -d postgres && npx vitest run",
+    "migration": "npx prisma migrate dev|deploy"
+  },
+
+  "notes": [
+    "256/257 esperado no unit (único fail conhecido: floating-session-timer)",
+    "Nunca commitar NEXTAUTH_SECRET real",
+    "PDF template externo pendente: 03 SPEC keep PDF ACs blocked até template chegar"
+  ]
+}

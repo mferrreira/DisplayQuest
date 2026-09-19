@@ -1,0 +1,187 @@
+{
+  "featureId": "05",
+  "name": "multi-lab-saas",
+  "status": "draft",
+  "version": "0.1.0",
+
+  "dependencies": {
+    "list": ["01", "02", "03", "04"],
+    "allDone": false
+  },
+
+  "artifacts": {
+    "PLAN": "PLAN.md",
+    "SPEC": "SPEC.md",
+    "AGENT": "AGENT.md",
+    "STATE": "STATE.json"
+  },
+
+  "currentMilestone": null,
+  "currentBatch": null,
+
+  "acceptanceCriteria": [
+    {
+      "id": "AC-05-01",
+      "summary": "Provisioning: slug valido -> subdomain, fragmento/env/volume, secrets mintados, record PROVISIONED e token emitido; use case puro sem I/O de disco",
+      "testRef": "tests/unit/modules/provisioning/provisioning.use-case.test.ts; tests/unit/modules/provisioning/compose-overrides.generator.test.ts",
+      "status": "pending"
+    },
+    {
+      "id": "AC-05-02",
+      "summary": "Token single-use: claim 1a vez 200 com consumedAt e handover full 1x; 2a vez 409 sem dados; expirado 410",
+      "testRef": "tests/unit/modules/provisioning/mint-onboarding-token.test.ts; tests/integration/provisioning-registry-roundtrip.test.ts",
+      "status": "pending"
+    },
+    {
+      "id": "AC-05-03",
+      "summary": "Validacao de subdominio: invalidos (charset/reservados/curto/longo/hifen) -> InvalidSubdomainError; validos -> slug.displayquest.ifnmg.edu.br deterministico",
+      "testRef": "tests/unit/modules/provisioning/subdomain.test.ts",
+      "status": "pending"
+    },
+    {
+      "id": "AC-05-04",
+      "summary": "Branding INSTANCE_*: env injetado -> lab name na UI/notificacao; sem env -> defaults identicos ao comportamento atual (zero regressao); testavel SEM router",
+      "testRef": "tests/unit/lib/config/instance.test.ts",
+      "status": "pending"
+    },
+    {
+      "id": "AC-05-05",
+      "summary": "Registry + auditoria: GET /api/provisioning/instances listavel (mascarado) e eventos INSTANCE/PROVISIONED e INSTANCE/TOKEN_CONSUMED via AuditLogWriter",
+      "testRef": "tests/unit/modules/provisioning/provisioning.api.test.ts; tests/integration/provisioning-registry-roundtrip.test.ts",
+      "status": "pending"
+    },
+    {
+      "id": "AC-05-06",
+      "summary": "Handover/runbook: onboarding ponta a ponta reproduzivel (CLI + claim) gera subdominio, env, fragmento compose, volume e snippet Caddy; secreto mascaado/1x",
+      "testRef": "evidencia de docs/05-operacao-deploy.md e docs/06-guia-de-manutencao-handover.md + cli/provision-instance.js (temp dir)",
+      "status": "pending"
+    },
+    {
+      "id": "AC-05-07",
+      "summary": "Idempotencia: retry POST instances com mesmo X-Idempotency-Key devolve mesmo record; mint para subdominio ja PROVISIONED -> 409",
+      "testRef": "tests/unit/modules/provisioning/provisioning.api.test.ts; tests/integration/provisioning-registry-roundtrip.test.ts",
+      "status": "pending"
+    },
+    {
+      "id": "AC-05-08",
+      "summary": "Secreto: NEXTAUTH_SECRET nunca em full fora do payload unico da claim; mascarado no mint/list; nada em logs",
+      "testRef": "tests/unit/modules/provisioning/secrets.test.ts; tests/unit/modules/provisioning/provisioning.api.test.ts",
+      "status": "pending"
+    },
+    {
+      "id": "AC-05-09",
+      "summary": "Lab-agnostic: grep INSTANCE_ fora de lib/config/instance.ts = 0; nenhum model Lab/labId novo em tabela de dominio",
+      "testRef": "grep anti-scatter (AGENT.md secao 4) + G2/G3",
+      "status": "pending"
+    },
+    {
+      "id": "AC-05-10",
+      "summary": "Nao-regressao: features 01-04 sem regressao; baseline unit = 256/257 + novos verdes; G5 sem drift",
+      "testRef": "suites existentes + gates G1-G5 (AGENT.md secao 4)",
+      "status": "pending"
+    },
+    {
+      "id": "AC-05-11",
+      "summary": "Env-gate: instancia member (INSTANCE_ROLE != coordinator) recebe 403 em endpoints de provisioning; sem sessao 401",
+      "testRef": "tests/unit/modules/provisioning/provisioning.api.test.ts",
+      "status": "pending"
+    }
+  ],
+
+  "gates": {
+    "lint": "pending",
+    "types": "pending",
+    "unit": "pending",
+    "integration": "pending",
+    "migration": "pending"
+  },
+
+  "evidence": [],
+
+  "rollbacks": [],
+  "blockers": [
+    {
+      "id": "BLK-05-01",
+      "subject": "Wildcard DNS *.displayquest.ifnmg.edu.br + reverse proxy de producao",
+      "blocker": false,
+      "detail": "O roteamento por subdominio vive na infra (D-05-04). O codigo, o contrato de provisioning e o runbook nao dependem do DNS existir; porem o AC-05-06 (onboarding ponta a ponta reproduzivel) e o playbook de producao exigem o wildcard apontando para o reverse proxy. Sem DNS, so o runbook fica sem validacao real em producao.",
+      "ownerAction": "Registrar o wildcard *.displayquest.ifnmg.edu.br -> reverse proxy e anexar o exemplo Caddy do docs/ops/caddy-routing.example.",
+      "unblocksWhen": "Wildcard DNS ativo; roteamento Caddy/nginx aplicado em producao."
+    }
+  ],
+
+  "checks": [
+    {
+      "id": "CHK-05-01",
+      "subject": "Path de materializacao dos artefatos no endpoint",
+      "detail": "Decisao D-05-03/06: o endpoint NUNCA grava em path novo do container (gotcha Dockerfile EACCES). Materializacao default via CLI no host (.deploy/labs/<slug>/); excecao opcional: /app/data/uploads/.deploy/<slug>/ (volume ja writable report_files_data). Confirmar com o dono se o endpoint pode materializar em /app/data/uploads/.deploy/ nesta versao ou se fica 100% CLI.",
+      "status": "proposed"
+    },
+    {
+      "id": "CHK-05-02",
+      "subject": "Extensao do catalogo de auditoria da feature 02",
+      "detail": "INSTANCE/PROVISIONED, INSTANCE/TOKEN_ISSUED, INSTANCE/TOKEN_CONSUMED sao aditivos ao action-catalog.ts da feature 02. Confirmar que a feature 02 sera 'done' antes da Etapa 4 (dependencia real), senao manter o port AuditLogWriter plugavel e emitir apenas quando disponivel.",
+      "status": "proposed"
+    }
+  ],
+
+  "decisions": [
+    {
+      "id": "D-05-01",
+      "subject": "Tenancy = per-instance agora, federacao depois",
+      "decision": "Multi-lab v2 e INSTANCE-PER-LAB: cada lab roda o proprio deploy (subdominio privado no padrao *.displayquest.ifnmg.edu.br), proprio DB, proprio docker compose + volume de Postgres proprio, NEXTAUTH_SECRET proprio, env propio. NAO e row-level multi-tenant em DB/schema unico e NAO existira model Lab naive. SSO/LDAP federado (feature 06) vem depois e reusa o contrato de identidade. O codigo do app permanece lab-agnostic: nenhum model Lab, nenhum labId em laboratory_schedules/lab_events (schema.prisma:238/306 permanecem), nenhuma deteccao hardcoded de instancia em logica de dominio; o app le apenas INSTANCE_* via lib/config/instance.ts para branding/reporte.",
+      "rationale": "Mantem o schema compartilhado manufacturing-free (sem migracoes de re-arrendar tabelas), isolamento total de dados/seguranca por lab, e evita o esforco de uma reescrita multi-tenant que nada agrega agora; a federacao (06) exige o contrato de identidade que esta feature define como seam.",
+      "owner": "projeto",
+      "status": "accepted"
+    },
+    {
+      "id": "D-05-02",
+      "subject": "Onboarding single-use: endpoint de provisioning burn-after-first-call",
+      "decision": "Um endpoint de uso unico (POST /api/provisioning/instances) permite ao coordenador de um lab novo mintar/provisionar UMA nova instancia: subdominio novo, fragmento de compose override, env com chaves mintadas, volume de DB proprio, e um onboarding token (single-use, expiry) entregue ao coordenador. O provisioning e registrado (tabelas provisioning_records/provisioning_tokens + idempotencia de storage por X-Idempotency-Key e constraints unique) para o mesmo lab nao duplicar provisionamento.",
+      "rationale": "Self-serve seguro: o burn atomico (consumedAt na mesma transacao) impede replay; a idempotencia em banco sobrevive a retries de rede sem duplicar instancias.",
+      "owner": "projeto",
+      "status": "accepted"
+    },
+    {
+      "id": "D-05-03",
+      "subject": "Provisioning runner = infra script/CLI + endpoint wrapper; dominio puro",
+      "decision": "A rotina real de provisioning e deterministica: gerar fragmento de compose override + .env keys + secret minting. Implementada como modulo de dominio PURO backend/modules/provisioning/ (application: subdomain.ts, secrets.ts, compose-overrides.generator.ts, use-cases) com ports InstanceProvisioner/ProvisioningRepository; o endpoint e um thin adapter e o runner de infra e a CLI cli/provision-instance.js (host). O use case nao faz I/O de disco; materializacao em disco so via CLI no host (.deploy/labs/<slug>/) ou path ja writable (/app/data/uploads/.deploy/). Subdominio deriva de slug de forma deterministica (sem sufixo aleatorio); colisoes resolvidas por constraint unique.",
+      "rationale": "Testabilidade (dominio puro), repetibilidade (deterministico) e o gotcha real do container (USER nextjs, EACCES fora de /app/public/uploads e /app/data/uploads) exigem que o endpoint nao escreva em paths novos.",
+      "owner": "projeto",
+      "status": "accepted"
+    },
+    {
+      "id": "D-05-04",
+      "subject": "Roteamento por subdominio e infra, nao codigo do app",
+      "decision": "O roteamento *.displayquest.ifnmg.edu.br -> container da instancia vive no reverse proxy (Caddy/nginx) + runbook (docs/05-operacao-deploy.md / docs/06-guia-de-manutencao-handover.md + docs/ops/caddy-routing.example). O codigo do app apenas LE INSTANCE_* (lib/config/instance.ts) para branding/reporte e usa INSTANCE_ROLE para expor (ou nao) o endpoint de provisioning. Verificavel por teste de branding com env injetado, sem a presenca do router.",
+      "rationale": "Separa preocupacoes: infra muda sem release do app; o app continua deployavel como single-instance sem o router.",
+      "owner": "projeto",
+      "status": "accepted"
+    },
+    {
+      "id": "D-05-05",
+      "subject": "Secrets lifecycle: NEXTAUTH_SECRET por instancia, mintado, never full depois do mint",
+      "decision": "NEXTAUTH_SECRET (e POSTGRES_PASSWORD) sao mintados no provisioning (>= 32 chars, sem placeholder, denylist do scripts/check-env-secrets.js), nunca logados/commitados/retornados em full apos o mint (GET/list so mascarados, maskSecret 1o/ultimo char); full unica exibicao no payload da claim (handover). Storage via mecanismo de secret do env do container; compose mantem ${VAR:?} (docker-compose.yml:9,30).",
+      "rationale": "So quem conclui o onboarding ve a chave completa; o resto do ciclo, masking-only. Compose guard ja e o padrao da casa.",
+      "owner": "projeto",
+      "status": "accepted"
+    },
+    {
+      "id": "D-05-06",
+      "subject": "Registry de instancias: banco da instancia coordenadora (nao filesystem)",
+      "decision": "O registry (provisioning_records + provisioning_tokens) vive no BANCO da instancia coordenadora/primaria, como tabelas aditivas no schema compartilhado (a mesma migracao add_provisioning_registry roda em qualquer instancia, mas so a coordinator usa). Nao ha registry em filesystem/out-of-band.",
+      "rationale": "O burn single-use exige transacao atomica (token + record juntos); banco oferece atomicidade, constraints unique (subdomain/slug/instanceId/tokenHash/idempotencyKeyHash) e a trilha de auditoria (feature 02) no mesmo lugar. Filesystem nao da atomicidade de consumo nem audit confiavel.",
+      "owner": "projeto",
+      "status": "accepted"
+    }
+  ],
+
+  "timeline": [
+    {
+      "at": "2026-09-19T23:50:00-03:00",
+      "event": "created",
+      "from": null,
+      "to": "draft"
+    }
+  ]
+}

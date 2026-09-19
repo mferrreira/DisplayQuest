@@ -1,0 +1,233 @@
+{
+  "featureId": "04",
+  "name": "deep-gamification",
+  "status": "draft",
+  "version": "0.1.0",
+
+  "dependencies": {
+    "list": ["01", "02", "03"],
+    "allDone": false
+  },
+
+  "artifacts": {
+    "PLAN": "PLAN.md",
+    "SPEC": "SPEC.md",
+    "AGENT": "AGENT.md",
+    "STATE": "STATE.json"
+  },
+
+  "currentMilestone": null,
+  "currentBatch": null,
+
+  "acceptanceCriteria": [
+    {
+      "id": "AC-04-01",
+      "summary": "XP separado da moeda: xp so sobe (nunca debitado por loja), points continua a unica moeda resgatavel",
+      "testRef": "tests/unit/modules/gamification/prisma-gamification.award-xp.test.ts; suites de purchases (nao-regressao)",
+      "status": "pending"
+    },
+    {
+      "id": "AC-04-02",
+      "summary": "Migracao add_users_xp_level: users ganham xp=0/level=0/freeLootboxKeys=0 com saldos de points intactos",
+      "testRef": "npx prisma migrate status + tests/integration/gamification-xp-roundtrip.test.ts",
+      "status": "pending"
+    },
+    {
+      "id": "AC-04-03",
+      "summary": "Award de task/work session persiste xp, level cache e tier recalculado na mesma transacao; replay nao realoca",
+      "testRef": "tests/unit/modules/gamification/prisma-gamification.award-xp.test.ts; tests/integration/gamification-xp-roundtrip.test.ts",
+      "status": "pending"
+    },
+    {
+      "id": "AC-04-04",
+      "summary": "Nivel por limiar puro LEVEL_XP_STEP=100 (xp=0->0, 99->0, 100->1) em funcao sem I/O",
+      "testRef": "tests/unit/modules/gamification/level-engine.test.ts",
+      "status": "pending"
+    },
+    {
+      "id": "AC-04-05",
+      "summary": "Tier por faixa fixa (NOVICE..LEGENDARY) com nextTier/nextTierMinXp, sem estado persistido de tier",
+      "testRef": "tests/unit/modules/gamification/tier-engine.test.ts",
+      "status": "pending"
+    },
+    {
+      "id": "AC-04-06",
+      "summary": "Badge conquistado por regra concede +50 xp uma unica vez (dedup @@unique userId+badgeId); sem backfill",
+      "testRef": "tests/unit/modules/gamification/badge-xp.test.ts",
+      "status": "pending"
+    },
+    {
+      "id": "AC-04-07",
+      "summary": "GET /api/users/[id]/gamification devolve progression integrada (xp/level/tier/badges/points) para self ou MANAGE_USERS; demais 403",
+      "testRef": "tests/unit/modules/gamification/progression-contract.test.ts",
+      "status": "pending"
+    },
+    {
+      "id": "AC-04-08",
+      "summary": "Ranking por xp desc (limit 1..100) com nivel/tier e points secundario; 400 em limit invalido (RF-08)",
+      "testRef": "tests/unit/modules/gamification/leaderboard-route.test.ts",
+      "status": "pending"
+    },
+    {
+      "id": "AC-04-09",
+      "summary": "Leitura do leaderboard liberada a qualquer autenticado; rotas thin adapters sem regra de negocio",
+      "testRef": "tests/unit/modules/gamification/leaderboard-route.test.ts",
+      "status": "pending"
+    },
+    {
+      "id": "AC-04-10",
+      "summary": "POST /api/gamification/lootbox/config valida probabilidades (0..1, soma<=1) e referenceId por dropType; substitui tabela ativa; 403 sem MANAGE_REWARDS",
+      "testRef": "tests/unit/modules/gamification/lootbox-drop-config.test.ts",
+      "status": "pending"
+    },
+    {
+      "id": "AC-04-11",
+      "summary": "Roll ponderado com BADGE duplicado rerolla ate 3x e cai em consolacao de store points (nunca xp)",
+      "testRef": "tests/unit/modules/gamification/lootbox.engine.test.ts",
+      "status": "pending"
+    },
+    {
+      "id": "AC-04-12",
+      "summary": "Abertura por STORE_POINTS debita custo (nunca negativo) e por XP_MILESTONE consome 1 key; resultado gravado; xp inalterado",
+      "testRef": "tests/unit/modules/gamification/open-lootbox.test.ts",
+      "status": "pending"
+    },
+    {
+      "id": "AC-04-13",
+      "summary": "Nenhum drop altera users.xp nem cria/edita rewards/purchases (invarriante REWARD_DRAFT e voucher)", 
+      "testRef": "tests/unit/modules/gamification/lootbox-invariants.test.ts",
+      "status": "pending"
+    },
+    {
+      "id": "AC-04-14",
+      "summary": "Loja/rewards/purchases e badges sem regressao (RF-56/57/58/RF-55); unit = 256/257 + novos verdes",
+      "testRef": "gates G1-G3 (AGENT.md seccao 4) + suites existentes",
+      "status": "pending"
+    },
+    {
+      "id": "AC-04-15",
+      "summary": "Mirrors VIEW_PROGRESSION (todos) e MANAGE_LOOTBOX (=MANAGE_REWARDS) em features.ts; UI renderiza progressao/progress bar so com o mirror",
+      "testRef": "tests/unit/lib/auth/gamification-features-parity.test.ts; tests/unit/components/gamification/progression-card.test.tsx",
+      "status": "pending"
+    },
+    {
+      "id": "AC-04-16",
+      "summary": "G1-G5 verdes, migracoes versionadas sem db push, STATE.json com evidencias de todas as ACs",
+      "testRef": "checklist PLAN seccao 6 + STATE.evidence",
+      "status": "pending"
+    }
+  ],
+
+  "gates": {
+    "lint": "pending",
+    "types": "pending",
+    "unit": "pending",
+    "integration": "pending",
+    "migration": "pending"
+  },
+
+  "evidence": [],
+
+  "rollbacks": [],
+  "blockers": [
+    {
+      "id": "B1",
+      "subject": "Coluna users.freeLootboxKeys como contador de chaves por level-up",
+      "detail": "D-04-03 define abertura 'por XP-clearing de marcos'. Sem um contador persistente nao ha como evitar reuso da mesma chave. O PLAN/SPEC adotam users.freeLootboxKeys (Int default 0, +1 a cada level-up detectado na re-avaliacao rolling).",
+      "unblock": "Confirmar a coluna no schema (Etapa 2) ou definir alternativa derivada (ex.: contar openings XP_MILESTONE vs level atual) antes de implementar a Etapa 5.",
+      "owner": "dono"
+    },
+    {
+      "id": "B2",
+      "subject": "Leaderboard passa a ordenar por XP (RF-08)",
+      "detail": "O ranking hoje ordena por users.points (app/(dashboard)/dashboard/leaderboard/page.tsx:27-30). D-04-01 separa XP de moeda; ranking por XP e coerente, mas e uma mudanca de comportamento observavel do dashboard.",
+      "unblock": "Confirmar que o ranking passa a ordenar por xp desc (points apenas exibido). Se negado, especificar outra metrica.",
+      "owner": "dono"
+    },
+    {
+      "id": "B3",
+      "subject": "Resgate de voucher REWARD_DRAFT adiado",
+      "detail": "REWARD_DRAFT grava voucher em lootbox_openings.drops sem tocar a loja (D-04-04). Converter o voucher em compra via RF-57 e fluxo futuro.",
+      "unblock": "Confirmar que o voucher sem resgate serve nesta versao (registro + exibicao na progressao).",
+      "owner": "dono"
+    }
+  ],
+
+  "checks": [],
+
+  "decisions": [
+    {
+      "id": "D-04-01",
+      "subject": "XP separado de Store Points",
+      "decision": "users.points continua moeda de loja (spendable, como hoje: purchases/rewards). Novo conceito XP (progression) e separado e nao-gastavel: nunca e trocado ou resgatado. XP persiste em nova coluna users.xp (Int default 0) com users.level (cache) opcional; awards de task completion, work session e badges passam a persistir XP via os use-cases existentes do modulo gamification.",
+      "rationale": "Gastar pontos hoje derruba o nivel computado em prisma-gamification.gateway.ts:135 (xp = max(0, points)). Separar destaca a loja e a progression, objetivando RF-53/54 sem corromper RF-57.",
+      "owner": "projeto",
+      "status": "accepted"
+    },
+    {
+      "id": "D-04-02",
+      "subject": "Tiers/ELO por thresholds + re-avaliacao continua (rolling)",
+      "decision": "Nivel = funcao de limiar sobre XP acumulado (LEVEL_XP_STEP=100 mantido). Tiers com nomes e thresholds fixos substituem ELO_THRESHOLDS (DIAMANTE/OURO/PRATA/BRONZE): NOVICE(0)/APPRENTICE(100)/ADEPT(300)/EXPERT(600)/MASTER(1000)/LEGENDARY(1500). Reavaliacao a cada award (rolling, em transacao), sem batch semanal e sem 'reset de ELO' competitivo fechado. Tier nunca persistido em coluna propria; e derivado sempre do xp.",
+      "rationale": "O ELO atual era derivado do points e sem mecanismo de reset; faixas fixas sao deterministicas, testaveis e compatíveis com um laboratorio (sem torneio fechado).",
+      "owner": "projeto",
+      "status": "accepted"
+    },
+    {
+      "id": "D-04-03",
+      "subject": "Lootboxes como RF novo (gap)",
+      "decision": "Novo RF 'caixa misteriosa' (RF-04-EXT-01..03) abre por store points (custo default 100) OU por XP-clearing de marcos (consome users.freeLootboxKeys, +1 por level-up). Drops: BADGE (via engine com dedup/reroll), REWARD_DRAFT (voucher gravado, resgate fora de v1), TIER_BOOST (cosmetico 7 dias). Tabela de probabilidades configuravel (lootbox_drop_configs, soma <= 1, resto = SEM_REWARD).",
+      "rationale": "Preenche o gap detectado pelo dono; reutiliza badge engine e store points sem nova moeda.",
+      "owner": "projeto",
+      "status": "accepted"
+    },
+    {
+      "id": "D-04-04",
+      "subject": "Nada quebra loja/rewards existentes",
+      "decision": "rewards, purchases, badges e aprovacao de compras continuam como hoje (RF-56/57/58, RF-55). Gamificacao apenas adiciona XP/padroes e CONSUME a loja (abrir lootbox debita users.points). Nenhuma mudanca de schema/rota/use-case em store/rewards/purchases. Aplicacao de BADGE drop registrada em history (GAMIFICATION_AWARD) como hoje; abertura registrada em lootbox_openings (sem tocar audit_logs nesta versao).",
+      "rationale": "Escopo defensivo: a loja e base de RF-56..58 e ja e operacao corrente; garantir zero regressao.",
+      "owner": "projeto",
+      "status": "accepted"
+    },
+    {
+      "id": "D-04-05",
+      "subject": "Modelagem de drops e schema da gamificacao",
+      "decision": "adiciona users.xp (Int default 0), users.level (Int default 0, cache), users.freeLootboxKeys (Int default 0). Novas tabelas lootbox_drop_configs (name, dropType LootboxDropType, referenceId Int?, probability Float 0..1, isActive, createdBy, createdAt) e lootbox_openings (userId, openSource LootboxOpenSource, costPoints, drops Json, tierBoostExpiresAt DateTime?, openedAt) com @@index([userId, openedAt]). Contrato UserProgression ganha tier/tierLabel/tierColor/nextTier/nextTierLabel/nextTierMinXp e REMOVE a key elo. Migracoes versionadas add_users_xp_level e add_lootbox_drop_configs_and_openings (sem db push).",
+      "rationale": "Duas migracoes seguem os lotes atômicos do PLAN; defaults nao tocam saldos; elo era derivado e nao precisa de coluna.",
+      "owner": "projeto",
+      "status": "accepted"
+    },
+    {
+      "id": "D-04-06",
+      "subject": "Permissoes e mirrors de feature flag",
+      "decision": "Backend reutiliza MANAGE_REWARDS (=[COORDENADOR, GERENTE, LABORATORISTA], lib/auth/rbac.ts:18) para config de lootbox; abertura e self; leitura de progressao e self ou MANAGE_USERS (inalterado); leaderboard leitura autenticada. lib/auth/features.ts ADICIONA VIEW_PROGRESSION (todos os Role[]) e MANAGE_LOOTBOX (= MANAGE_REWARDS) — enforcement 100% backend, UI espelha.",
+      "rationale": "Mesma diretriz da feature 01 (espelhar flags sem alterar matrizes existentes); evita nova PERMISSIONS p/ lootbox.",
+      "owner": "projeto",
+      "status": "accepted"
+    },
+    {
+      "id": "D-04-07",
+      "subject": "XP de badge unico (BADGE_XP = 50) e consolacao de lootbox",
+      "decision": "Badge conquistado por regras OU concedido manualmente concede BADGE_XP=50 uma unica vez (dedup por @@unique([userId, badgeId])). Sem backfill para badges pre-migracao. No lootbox, BADGE duplicado rerolla ate 3x sobre a pool restante; fallback = consolacao em store points (nunca xp).",
+      "rationale": "Dedup via unique constraint existente (prisma/schema.prisma:352) evita estado paralelo; consolacao preserva a invarriante de D-04-08.",
+      "owner": "projeto",
+      "status": "accepted"
+    },
+    {
+      "id": "D-04-08",
+      "subject": "XP nunca vira loot",
+      "decision": "Nenhum drop de lootbox altera users.xp; xp e excluido do espaco de premios da caixa misteriosa. Invarriante coberta por suite dedicada (lootbox-invariants.test.ts).",
+      "rationale": "D-04-01 define XP como nao-gastavel; transformar XP em premio de loot violaria a separacao moeda/progression e criaria circulo de gasto.",
+      "owner": "projeto",
+      "status": "accepted"
+    }
+  ],
+
+  "timeline": [
+    {
+      "at": "2026-09-19T12:00:00-03:00",
+      "event": "created",
+      "from": null,
+      "to": "draft"
+    }
+  ]
+}

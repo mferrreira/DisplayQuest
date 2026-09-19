@@ -1,0 +1,224 @@
+{
+  "featureId": "06",
+  "name": "auth-sso-ldap",
+  "status": "draft",
+  "version": "0.1.0",
+
+  "dependencies": {
+    "list": ["05"],
+    "allDone": false,
+    "transitive": ["01", "02", "03", "04"]
+  },
+
+  "artifacts": {
+    "PLAN": "PLAN.md",
+    "SPEC": "SPEC.md",
+    "AGENT": "AGENT.md",
+    "STATE": "STATE.json"
+  },
+
+  "currentMilestone": null,
+  "currentBatch": null,
+
+  "acceptanceCriteria": [
+    {
+      "id": "AC-06-01",
+      "summary": "Assertion valida de DisplayLab resolve identidade por externalId e estabelece sessao next-auth JWT com users.id",
+      "testRef": "tests/unit/modules/identity-federation/federation-login.test.ts; tests/unit/modules/identity-federation/federation-callback.route.test.ts",
+      "status": "pending"
+    },
+    {
+      "id": "AC-06-02",
+      "summary": "Assertion invalida/expirada/nao-assinada rejeitada com FederationAssertionError 401, nada provisionado",
+      "testRef": "tests/unit/modules/identity-federation/federation-login.test.ts",
+      "status": "pending"
+    },
+    {
+      "id": "AC-06-03",
+      "summary": "externalId inexistente: provisao cria users com externalId X, name/email das claims, roles coarse->fine, status active",
+      "testRef": "tests/unit/modules/identity-federation/external-id-upsert.test.ts; tests/integration/identity-federation-external-id-roundtrip.test.ts",
+      "status": "pending"
+    },
+    {
+      "id": "AC-06-04",
+      "summary": "externalId existente: upsert atualiza o mesmo registro (name/email/roles) sem duplicar; campos locais (points/badges/weekHours) intocados",
+      "testRef": "tests/unit/modules/identity-federation/external-id-upsert.test.ts; tests/integration/identity-federation-external-id-roundtrip.test.ts",
+      "status": "pending"
+    },
+    {
+      "id": "AC-06-05",
+      "summary": "Invariante 1 usuario por external id: externalId unico; formato duplicado cai no update, nunca cria segunda linha",
+      "testRef": "tests/integration/identity-federation-external-id-roundtrip.test.ts",
+      "status": "pending"
+    },
+    {
+      "id": "AC-06-06",
+      "summary": "Fallback=1: usuario local com password loga (RF-03); usuario com externalId set nunca loga por credencial",
+      "testRef": "tests/unit/modules/identity-federation/fallback-gate.test.ts",
+      "status": "pending"
+    },
+    {
+      "id": "AC-06-07",
+      "summary": "Fallback=0: provider de credencial ausente, login recusado com mensagem estavel; env invalido -> check:env falha",
+      "testRef": "tests/unit/modules/identity-federation/fallback-gate.test.ts; npm run check:env",
+      "status": "pending"
+    },
+    {
+      "id": "AC-06-08",
+      "summary": "Mapeamento coarse->fine exato para toda a tabela LF_*; grupo desconhecido/ausente ignorado (roles=[], USUARIO)",
+      "testRef": "tests/unit/modules/identity-federation/rbac-mapping.test.ts",
+      "status": "pending"
+    },
+    {
+      "id": "AC-06-09",
+      "summary": "RBAC do app autoritativo e intocado: PERMISSIONS/FEATURE_ACCESS sem mudanca, sem admin novo, decisao via identity-access",
+      "testRef": "tests/unit/modules/identity-federation/rbac-mapping.test.ts + diff em rbac.ts/features.ts",
+      "status": "pending"
+    },
+    {
+      "id": "AC-06-10",
+      "summary": "Logout local sempre executa; propagacao federada melhor esforco; tenure da sessao = min(assertion.exp, 48h+sliding)",
+      "testRef": "tests/unit/modules/identity-federation/federation-logout.test.ts",
+      "status": "pending"
+    },
+    {
+      "id": "AC-06-11",
+      "summary": "Migracao add_users_external_id_unique versionada (G5, sem db push); backfill nenhum (externalId null = fallback)",
+      "testRef": "npx prisma migrate dev; prisma/schema.prisma model users",
+      "status": "pending"
+    },
+    {
+      "id": "AC-06-12",
+      "summary": "Nenhum segredo (DisplayLab client secret, LDAP bind password, NEXTAUTH_SECRET) impresso/committado; check:env valida novos vars + denylist",
+      "testRef": "npm run check:env; grep de segredos no git/hist",
+      "status": "pending"
+    },
+    {
+      "id": "AC-06-13",
+      "summary": "Nao-regressao: RF-01/02/03/04/05/06/07 e RF-28 intactos; RBAC manual segue autoritativo; unit = 256/257 + novos verdes",
+      "testRef": "G1-G3 (AGENT.md seccao 6) + suites existentes",
+      "status": "pending"
+    },
+    {
+      "id": "AC-06-14",
+      "summary": "Runbook docs/09-sso-ldap-runbook.md entrega contrato DisplayLab, integracao LDAP, ciclo de vida de secrets e plano de rollout/rollback do fallback",
+      "testRef": "docs/09-sso-ldap-runbook.md (arquivo) + checklist check:env",
+      "status": "pending"
+    }
+  ],
+
+  "gates": {
+    "lint": "pending",
+    "types": "pending",
+    "unit": "pending",
+    "integration": "pending",
+    "migration": "pending"
+  },
+
+  "evidence": [],
+
+  "rollbacks": [],
+  "blockers": [],
+
+  "checks": [],
+
+  "decisions": [
+    {
+      "id": "D-06-01",
+      "subject": "Mecanismo: federacao de identidade, nao patch no CredentialsProvider",
+      "decision": "SSO/LDAP e identidade federada. Autenticacao (verificacao de credencial de login) sai para camada de federacao: app -> DisplayLab/LDAP emite JWT/sessao/serialized identity; o app consome, valida (JWKS/discovery ou bind LDAP) e sincroniza/upserts users por externalId; sessao next-auth JWT carrega o users.id interno. users.password vira opcional/legado. CredentialsProvider nao e alterado para fazer federacao.",
+      "rationale": "Compartilhar credencial contra a propria tabela users nao e LDAP. Manter o app dono do perfil/badges/gamificacao; mover so a prova de quem e o usuario.",
+      "owner": "owner",
+      "status": "accepted"
+    },
+    {
+      "id": "D-06-02",
+      "subject": "Desacoplar auth do dominio do usuario: ports/contratos de identidade",
+      "decision": "Fronteira limpa: modulo de identidade com ports. lib/auth/* e backend/modules/identity-access permanecem como camada RBAC/permissao (WHO pode WHAT); a verificacao de QUEM e o usuario (authentication) vem da federacao via seams (contracts/ports). RBAC intacto. CredentialsProvider permanece como provider legacy/fallback somente, gated por AUTH_FALLBACK_CREDENTIALS=0|1 enquanto usuarios migram.",
+      "rationale": "Separacao modular auth x RBAC garante que a federacao entre e saia sem tocar a autorizacao; fallback env-gated da migracao sem downtime.",
+      "owner": "owner",
+      "status": "accepted"
+    },
+    {
+      "id": "D-06-03",
+      "subject": "RBAC coarse da federacao distinto do RBAC fine do app",
+      "decision": "A federacao (DisplayLab ou LDAP groups) define roles coarse (ex.: isCoordinator / LF_*), que o app mapeia nos seus roles UserRole. Mapa default: LF_COORDENADOR->COORDENADOR, LF_GERENTE->GERENTE, etc. (tabela completa no SPEC /RF-SSO-04 e no runbook). O RBAC do app permanece autoritativo para permissoes finas (PERMISSIONS inalterado).",
+      "rationale": "Coarse vem de fora, fine decide aqui; mal mapeamento nunca concede alem da matriz.",
+      "owner": "owner",
+      "status": "accepted"
+    },
+    {
+      "id": "D-06-04",
+      "subject": "Migracao runtime (nao schema/data) para usuarios existentes",
+      "decision": "Caminho de migracao runtime: usuarios existentes seguem funcionando (fallback), novos/sessoes SSO provisionam o registro users chaveado por external id. Invariante de merge/upsert: um usuario por external id; users.externalId unico. Backfill de dados: nenhum; externalId null = conta local fallback.",
+      "rationale": "Migracao por uso evita downtime e reescrita de dados; a constraint unique garante a invariante mesmo em corrida.",
+      "owner": "owner",
+      "status": "accepted"
+    },
+    {
+      "id": "D-06-05",
+      "subject": "Nenhum credencial/segredo armazenado, impresso ou commitado",
+      "decision": "Nada de DisplayLab client secret, LDAP bind password ou NEXTAUTH_SECRET em logs, payloads de rota ou git. Secrets vivem em env ${VAR:?} no compose; forbidden list documentada no runbook e validada por npm run check:env (denylist).",
+      "rationale": "Exposicao de segredo de federacao compromete todo o parque de identidade; gate automatizado evita drift.",
+      "owner": "owner",
+      "status": "accepted"
+    },
+    {
+      "id": "D-06-06",
+      "subject": "Ultima feature: depende de todas, em especial do contrato de identidade de 05",
+      "decision": "06 e a ultima feature da cadeia plan-v2. Depende de todas (01-05), com o contrato de identidade/onboarding de 05 como dependencia direta. O drafting deste plano referencia o contrato de 05 a definir; nao desenha como se 05 ja estivesse codificado. 05 ainda nao possui SPEC/PLAN (pasta vazia).",
+      "rationale": "A identidade federada reforcada no DisplayQuest so faz sentido sobre o modelo de identidade que 05 define.",
+      "owner": "owner",
+      "status": "accepted"
+    },
+    {
+      "id": "D-06-07",
+      "subject": "Localizacao dos seams de identidade: novo modulo identity-federation",
+      "decision": "Novo modulo backend/modules/identity-federation/ (contracts + ports + infra), seguindo o padrao de identity-access. backend/modules/identity-access/ continua sendo RBAC-decision apenas; nao recebe ports de autenticacao.",
+      "rationale": "identity-access ja existente e puro RBAC; misturar autenticacao ali violaria D-06-02.",
+      "owner": "projeto",
+      "status": "proposed"
+    },
+    {
+      "id": "D-06-08",
+      "subject": "Nome dos ports da camada de identidade",
+      "decision": "authenticate-with-federation (valida assertion/bind -> FederationClaims), resolve-actor-identity (claims -> ResolvedIdentity, inclui map coarse->fine), provision-user-from-external (upsert por externalId -> users). Implementacoes: DisplayLab gateway e LDAP gateway por tras do mesmo port.",
+      "rationale": "Alinhado com o contrato pedido pelo dono e com o padrao application/ports de identity-access.",
+      "owner": "projeto",
+      "status": "proposed"
+    },
+    {
+      "id": "D-06-09",
+      "subject": "Status default da conta federada provisionada",
+      "decision": "Usuarios provisionados por federacao nascem com status=active (a federacao autenticou = aprovou a identidade). Cadastro local permanece pending + RF-05. Se o letramento da organizacao pedir re-aprovacao manual, revisar.", 
+      "rationale": "Reduz atrito do SSO (sem fila de aprovacao para identidade ja validada fora); RF-05 continua governando contas locais.",
+      "owner": "projeto",
+      "status": "proposed"
+    },
+    {
+      "id": "D-06-10",
+      "subject": "Single-session e tenure",
+      "decision": "Sessao local JWT tem taxa atual (48h + sliding), encurtada para min(assertion.exp, 48h) quando federada. Logout local sempre executa; propagacao do logout federado e melhor esforco quando o contrato DisplayLab expor endpoint. Single-session concorrente e autoridade da federacao (DisplayLab revoga); o app nao cria session-store proprio.",
+      "rationale": "JWT stateless evita store; monopolizar single-session no app duplicaria a autoridade da federacao.",
+      "owner": "projeto",
+      "status": "proposed"
+    },
+    {
+      "id": "D-06-11",
+      "subject": "Tabela coarse->fine (fonte unica)",
+      "decision": "Mapeamento coarse->fine: LF_COORDENADOR->COORDENADOR, LF_GERENTE->GERENTE, LF_LABORATORISTA->LABORATORISTA, LF_PESQUISADOR->PESQUISADOR, LF_GRUPO_PROJETO->GERENTE_PROJETO, LF_COLABORADOR->COLABORADOR, LF_VOLUNTARIO->VOLUNTARIO; ausente/desconhecido -> nenhum role (USUARIO). Mapeamento roda na provisao (grava users.roles), nunca por request.",
+      "rationale": "Coarse->fine no provisionamento mantem RBAC estavel e otimizado; RBAC de request continua via PERMISSIONS.",
+      "owner": "projeto",
+      "status": "proposed"
+    }
+  ],
+
+  "timeline": [
+    {
+      "at": "2026-09-19T24:00:00-03:00",
+      "event": "created",
+      "from": null,
+      "to": "draft"
+    }
+  ]
+}

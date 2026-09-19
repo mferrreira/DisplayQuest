@@ -1,0 +1,165 @@
+{
+  "featureId": "01",
+  "name": "roles-permissions",
+  "status": "draft",
+  "version": "0.1.0",
+
+  "dependencies": {
+    "list": [],
+    "allDone": false
+  },
+
+  "artifacts": {
+    "PLAN": "PLAN.md",
+    "SPEC": "SPEC.md",
+    "AGENT": "AGENT.md",
+    "STATE": "STATE.json"
+  },
+
+  "currentMilestone": null,
+  "currentBatch": null,
+
+  "acceptanceCriteria": [
+    {
+      "id": "AC-01",
+      "summary": "Lider aprova staff task do proprio projeto: 200, done, award de pontos",
+      "testRef": "tests/unit/modules/task-management/approval-policy.test.ts; tests/unit/modules/task-management/task-approval-rbac.gateway.test.ts",
+      "status": "pending"
+    },
+    {
+      "id": "AC-02",
+      "summary": "Lider NAO aprova nem rejeita a propria task: 403, task inalterada, sem award",
+      "testRef": "tests/unit/modules/task-management/task-approval-rbac.gateway.test.ts",
+      "status": "pending"
+    },
+    {
+      "id": "AC-03",
+      "summary": "Gestor amplo (MANAGE_USERS) aprova task do lider: 200, done, lider recebe pontos",
+      "testRef": "tests/unit/modules/task-management/task-approval-rbac.gateway.test.ts",
+      "status": "pending"
+    },
+    {
+      "id": "AC-04",
+      "summary": "Ator com MANAGE_TASKS diferente do lider aprova task do lider: 200",
+      "testRef": "tests/unit/modules/task-management/approval-policy.test.ts",
+      "status": "pending"
+    },
+    {
+      "id": "AC-05",
+      "summary": "Nao-aprovador (sem MANAGE_USERS/MANAGE_TASKS e nao-lider) recebe 403 em approve e reject",
+      "testRef": "tests/unit/modules/task-management/approval-policy.test.ts; tests/unit/modules/task-management/approve-reject.routes.test.ts",
+      "status": "pending"
+    },
+    {
+      "id": "AC-06",
+      "summary": "Reject espelha approve: lider rejeita staff task (200, adjust, FIX line) e nao rejeita a propria (403)",
+      "testRef": "tests/unit/modules/task-management/task-approval-rbac.gateway.test.ts",
+      "status": "pending"
+    },
+    {
+      "id": "AC-07",
+      "summary": "Task global so aprova via MANAGE_USERS: GERENTE_PROJETO sem ela recebe 403, COORDENADOR recebe 200",
+      "testRef": "tests/unit/modules/task-management/approval-policy.test.ts",
+      "status": "pending"
+    },
+    {
+      "id": "AC-08",
+      "summary": "Negacao de autorizacao retorna HTTP 403 com body.error estavel e igual nos dois verbos (nao 500)",
+      "testRef": "tests/unit/modules/task-management/approve-reject.routes.test.ts",
+      "status": "pending"
+    },
+    {
+      "id": "AC-09",
+      "summary": "Paridade de feature flags: FEATURE_ACCESS.MANAGE_TASKS == PERMISSIONS.MANAGE_TASKS e APPROVE_TASKS presente com set = MANAGE_TASKS",
+      "testRef": "tests/unit/lib/auth/features-parity.test.ts",
+      "status": "pending"
+    },
+    {
+      "id": "AC-10",
+      "summary": "Mirror UI (lib/utils/task-approval-ui.ts) responde igual a isTaskApprover para a matriz de casos",
+      "testRef": "tests/unit/lib/utils/task-approval-ui.test.ts",
+      "status": "pending"
+    },
+    {
+      "id": "AC-11",
+      "summary": "Baseline RF-05/07/16/17 sem regressao: mesmas permissoes, sem schema change, unit = 256/257 + novos verdes",
+      "testRef": "gates G1-G3 (AGENT.md seccao 4) + suites existentes",
+      "status": "pending"
+    }
+  ],
+
+  "gates": {
+    "lint": "pending",
+    "types": "pending",
+    "unit": "pending",
+    "integration": "pending",
+    "migration": "pending"
+  },
+
+  "evidence": [],
+
+  "rollbacks": [],
+  "blockers": [],
+
+  "checks": [],
+
+  "decisions": [
+    {
+      "id": "D1",
+      "subject": "Pool de gestores para aprovar a task do proprio lider (ramo A3)",
+      "decision": "A task cujo tasks.assignedTo == projects.leaderId so pode ser aprovada/rejeitada por detentores de MANAGE_TASKS alem do lider (actorId != taskOwnerId) ou MANAGE_USERS. O pool A3 e GLOBAL (nao exige membership no projeto), consistente com MANAGE_TASKS ser permissao global em lib/auth/rbac.ts:23; inclui GERENTE_PROJETO de outros projetos, COLABORADOR e PESQUISADOR por decisao explicita do dono ('holders of MANAGE_TASKS beyond leader').",
+      "rationale": "MANAGE_USERS (COORDENADOR/GERENTE) ja aprovava qualquer task; A3 estende a divisao sem criar papel novo nem mudar matriz. `actorId != taskOwnerId` remove o proprio lider mesmo quando ele detem MANAGE_TASKS (auto-aprovacao proibida).",
+      "owner": "projeto",
+      "status": "accepted"
+    },
+    {
+      "id": "D2",
+      "subject": "project_members.roles nao decide aprovador nesta versao",
+      "decision": "Autorizacao de aprovacao usa apenas papeis globais (users.roles) + projects.leaderId + tasks.assignedTo/tasks.projectId. project_members.roles (RF-16) permanece como dado de atribuicao e nao entra na policy.",
+      "rationale": "Nenhuma regra existente usa project-scoped roles para decisao de autorizacao de task; introduzir isso estenderia o escopo para alem da divisao staff x lider. Tightening futuro possivel.",
+      "owner": "projeto",
+      "status": "accepted"
+    },
+    {
+      "id": "D3",
+      "subject": "Definicao de 'task do lider'",
+      "decision": "'Task do lider' = tasks.assignedTo === projects.leaderId (campo unico de dono). Tasks multiatribuidas onde o lider aparece apenas em task_assignees adicionais NAO contam como 'task do lider'.",
+      "rationale": "assignedTo e o campo canonico de dono (RF-22); o precedente de restricao do lider em completeTask (task-service.gateway.ts:464-470) tambem usa a atribuicao de dono. Evita ambiguidade em group tasks.",
+      "owner": "projeto",
+      "status": "accepted"
+    },
+    {
+      "id": "D4",
+      "subject": "HTTP 403 em negacao de aprovacao",
+      "decision": "O gateway lanca erro tipado TaskAuthorizationError (status 403); as rotas app/api/tasks/[id]/approve e reject traduzem para NextResponse 403 com body.error estavel. Nao usa mapeamento por substring de mensagem (contraste com toHttpStatus).",
+      "rationale": "Precedente do repo mapeia por substring (members route), mas erro tipado e mais estavel e testavel; rotas seguem 'thin adapters' sem regra de negocio.",
+      "owner": "projeto",
+      "status": "accepted"
+    },
+    {
+      "id": "D5",
+      "subject": "Feature flag APPROVE_TASKS na UI",
+      "decision": "features.ts ganha APPROVE_TASKS com set = MANAGE_TASKS (em ingles). O painel (components/admin/ModernAdminPanel.tsx) usa o mirror puro canActorApproveTaskUI (lib/utils/task-approval-ui.ts) para exibir/ocultar botoes Aprovar/Rejeitar. Enforcement permanece 100% backend.",
+      "rationale": "Manter flags existentes (decisao do dono) e apenas adicionar a key de espelho; nenhuma matriz existente muda; regression zero nas flags atuais.",
+      "owner": "projeto",
+      "status": "accepted"
+    },
+    {
+      "id": "D6",
+      "subject": "Nenhuma mudanca de schema",
+      "decision": "Zero alteracoes em prisma/schema.prisma; G4/G5 marcados n/a. Sem prisma db push; sem migracao.",
+      "rationale": "projects.leaderId, tasks.assignedTo, tasks.projectId, users.roles e project_members.roles ja modelam tudo que a policy precisa.",
+      "owner": "projeto",
+      "status": "accepted"
+    }
+  ],
+
+  "timeline": [
+    {
+      "at": "2026-09-19T23:30:00-03:00",
+      "event": "created",
+      "from": null,
+      "to": "draft"
+    }
+  ]
+}
