@@ -1,0 +1,88 @@
+{
+  "plan": "clean-arch",
+  "version": "0.1.0",
+  "updatedAt": "2026-09-19T18:10:00-03:00",
+  "status": "draft",
+  "activeWave": null,
+  "activeBatch": null,
+  "target": {
+    "repo": "DisplayQuest",
+    "branch": "dev",
+    "prev": "spec-v2 (pre-requisito para plan-v2/01..06)",
+    "acceptedDecisions": [
+      "DEC-01: allow-list do dep-cruiser com referencia de tarefa, removida na Onda 9 (zero violacao final)",
+      "DEC-02: versionar testes de arquitetura via excecao gitignore (!tests/unit/modules/**) — decisao do dono pendente de confirmacao",
+      "DEC-03: lib/work-sessions/schedule.ts movido para backend/domain/work com re-export via barrel (nao quebrar imports atuais)",
+      "DEC-04: ports permanecem em application/ports/ (fronteira app/domain), conforme padrao atual",
+      "DEC-05: convencao de nome: <modulo>.gateway.ts = adapter fino; repositories/ = mapping Prisma; events/ = publicadores in-process",
+      "DEC-06: destino final de backend/models (re-export do domain vs eliminacao) decidido apos Onda 6"
+    ]
+  },
+
+  "waves": [
+    { "id": "0", "name": "fundacoes", "status": "pending", "batches": ["0.1", "0.2", "0.3", "0.4", "0.5"], "dependencies": [] },
+    { "id": "1", "name": "piloto-notifications", "status": "pending", "batches": ["1.1", "1.2", "1.3", "1.4"], "dependencies": ["0"] },
+    { "id": "2", "name": "identidade-usuarios", "status": "pending", "batches": ["2.1", "2.2", "2.3", "2.4"], "dependencies": ["0"] },
+    { "id": "3", "name": "work-execution", "status": "pending", "batches": ["3.1", "3.2", "3.3", "3.4"], "dependencies": ["2"] },
+    { "id": "4", "name": "task-management", "status": "pending", "batches": ["4.1", "4.2", "4.3", "4.4"], "dependencies": ["2", "3"] },
+    { "id": "5", "name": "projetos", "status": "pending", "batches": ["5.1", "5.2", "5.3", "5.4"], "dependencies": ["2", "4"] },
+    { "id": "6", "name": "gamificacao", "status": "pending", "batches": ["6.1", "6.2", "6.3", "6.4"], "dependencies": ["2", "3", "4"] },
+    { "id": "7", "name": "relatorios", "status": "pending", "batches": ["7.1", "7.2", "7.3", "7.4"], "dependencies": ["3", "5"] },
+    { "id": "8", "name": "loja-laboratorio", "status": "pending", "batches": ["8.1", "8.2", "8.3", "8.4"], "dependencies": ["2"] },
+    { "id": "9", "name": "cleanup-docs-fechamento", "status": "pending", "batches": ["9.1", "9.2", "9.3"], "dependencies": ["1", "2", "3", "4", "5", "6", "7", "8"] }
+  ],
+
+  "gates": {
+    "arch": "npm run arch:check",
+    "lint": "npx eslint --no-eslintrc --config .eslintrc.json <arquivos>",
+    "types": "npx tsc --noEmit",
+    "unit": "set -a; source .env; set +a; npx vitest run",
+    "integration": "docker compose up -d postgres && set -a; source .env; set +a; npx vitest run",
+    "migration": "npx prisma migrate dev|deploy"
+  },
+
+  "baseline": {
+    "unitCaptured": false,
+    "unitCount": null,
+    "unitListPath": null,
+    "archViolations": "registrar saida do depcruise na onda 0 (allow-list com referencias)",
+    "modelPrismaImports": ["Badge", "DailyLog", "ProjectMembership", "Purchase", "Reward", "WorkSession", "user/User"]
+  },
+
+  "acceptanceCriteria": [
+    { "id": "AC-00-01", "summary": "domain/application sem @prisma/client", "status": "pending" },
+    { "id": "AC-00-02", "summary": "backend/models sem @prisma/client (Onda 9)", "status": "pending" },
+    { "id": "AC-00-03", "summary": "create*Module so em index.ts e composition/root", "status": "pending" },
+    { "id": "AC-00-04", "summary": "sem new *Repository em application/domain", "status": "pending" },
+    { "id": "AC-00-05", "summary": "dep-cruiser exit 0 (zero violacao final)", "status": "pending" },
+    { "id": "AC-00-06", "summary": "app/api sem prisma e sem create*Module", "status": "pending" },
+    { "id": "AC-00-07", "summary": "status HTTP estaveis para erros tipados nas rotas", "status": "pending" },
+    { "id": "AC-00-08", "summary": "por modulo: golden + contract + use-case tests verdes", "status": "pending" },
+    { "id": "AC-00-09", "summary": "enums puros em backend/domain; rbac sem @prisma/client", "status": "pending" },
+    { "id": "AC-00-10", "summary": "backend/domain sem imports de infra/db/auth/api/app/next", "status": "pending" },
+    { "id": "AC-00-11", "summary": "nenhum infrastructure importa outro modulo", "status": "pending" },
+    { "id": "AC-00-12", "summary": "schedule.ts via backend/domain/work com exports preservados", "status": "pending" },
+    { "id": "AC-00-13", "summary": "baseline unit registrado; zero regressao a cada onda", "status": "pending" },
+    { "id": "AC-00-14", "summary": "frontend intocado salvo correcao minima documentada", "status": "pending" },
+    { "id": "AC-00-15", "summary": "docs/04 e backend/README atualizados na Onda 9", "status": "pending" }
+  ],
+
+  "evidence": [],
+
+  "rollbacks": [],
+
+  "blockers": [],
+
+  "checks": [],
+
+  "notes": [
+    "Checkout atual: testimonial unit = testes/unit/entities/wire-task-schema.test.ts; tests/setup.ts ausente (necessario reconstruir na onda 0, batch 0.5)",
+    "Baseline vitest '256/257' do AGENTS.md refere-se a suite local das mitigacoes (gitignored) — NAO codificar numeros magicos; capturar baseline real na onda 0",
+    "Nunca commitar NEXTAUTH_SECRET real",
+    "Frontend: fases 0-9 nao tocam UI; correcao minima apenas se compilacao/comportamento quebrar (AC-00-14)"
+  ],
+
+  "timeline": [
+    { "at": "2026-09-19T18:10:00-03:00", "event": "created", "from": null, "to": "draft" }
+  ]
+}
