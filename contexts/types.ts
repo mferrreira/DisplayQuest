@@ -505,6 +505,25 @@ export interface LaboratoryScheduleContextType {
 }
 
 // Weekly Report types
+/**
+ * Log do relatório semanal (1 por sessão concluída na janela). `startTime`/`endTime`
+ * refletem a sessão de trabalho; `date` é a data de referência (fim da sessão, se houver).
+ */
+export interface WeeklyReportLog {
+  id: number
+  userId: number
+  projectId: number | null
+  startTime?: string | null
+  endTime?: string | null
+  date: string
+  note: string | null
+  createdAt?: string
+  project?: {
+    id: number
+    name: string
+  } | null
+}
+
 export interface WeeklyReport {
   id: number
   userId: number
@@ -512,7 +531,7 @@ export interface WeeklyReport {
   weekStart: Date
   weekEnd: Date
   totalLogs: number
-  logs: DailyLog[]
+  logs: WeeklyReportLog[]
   summary: string
   createdAt: Date
 }

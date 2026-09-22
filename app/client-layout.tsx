@@ -38,6 +38,9 @@ function DashboardProviders({ children }: { children: React.ReactNode }) {
 function LayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const isDashboardRoute = pathname.startsWith("/dashboard")
+  // Print/PDF route: hide the floating session timer so its fixed button
+  // doesn't render mid-content in the exported PDF (scoped to this route only).
+  const isPrintRoute = /^\/dashboard\/.*\/print$/.test(pathname)
 
   if (!isDashboardRoute) {
     return <>{children}</>
@@ -46,7 +49,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
   return (
     <DashboardProviders>
       <AppHeader />
-      <FloatingSessionTimer />
+      {!isPrintRoute && <FloatingSessionTimer />}
       {children}
     </DashboardProviders>
   )

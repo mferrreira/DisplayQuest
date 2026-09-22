@@ -534,11 +534,19 @@ export class TaskServiceGateway implements TaskManagementGateway {
       throw new Error("Usuário aprovador não encontrado")
     }
 
+    await this.attachAssigneeIds(task)
+    const isSelf =
+      task.assignedTo === command.approverId || task.assigneeIds?.includes(command.approverId)
+
     const canApproveAnyTask = this.identityAccess.hasPermission(approver.roles, "MANAGE_USERS")
     const canApproveProjectTask =
       this.identityAccess.hasAnyRole(approver.roles, ["GERENTE_PROJETO"])
       && task.projectId !== null
       && task.projectId !== undefined
+
+    if (isSelf && !canApproveAnyTask) {
+      throw new Error("Líder não pode aprovar a própria tarefa. Solicite um gerente ou coordenador.")
+    }
 
     if (!canApproveAnyTask) {
       if (canApproveProjectTask) {
@@ -597,11 +605,19 @@ export class TaskServiceGateway implements TaskManagementGateway {
       throw new Error("Usuário aprovador não encontrado")
     }
 
+    await this.attachAssigneeIds(task)
+    const isSelf =
+      task.assignedTo === command.approverId || task.assigneeIds?.includes(command.approverId)
+
     const canRejectAnyTask = this.identityAccess.hasPermission(approver.roles, "MANAGE_USERS")
     const canRejectProjectTask =
       this.identityAccess.hasAnyRole(approver.roles, ["GERENTE_PROJETO"])
       && task.projectId !== null
       && task.projectId !== undefined
+
+    if (isSelf && !canRejectAnyTask) {
+      throw new Error("Líder não pode rejeitar a própria tarefa. Solicite um gerente ou coordenador.")
+    }
 
     if (!canRejectAnyTask) {
       if (canRejectProjectTask) {

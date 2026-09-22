@@ -84,6 +84,35 @@ export function isArchivedTask(
 
 import { isOverdueDateOnly, isDueTodayDateOnly } from "@/lib/date-only"
 
+/** Urgency rank — `urgent` first, `low` last. Used by sortTasksByUrgencyAndDueDate. */
+export const PRIORITY_RANK: Record<Task["priority"], number> = {
+  urgent: 0,
+  high: 1,
+  medium: 2,
+  low: 3,
+};
+
+/**
+ * Sort board tasks by urgency (priority) then by due date (earliest first).
+ * Tasks without a dueDate sink to the bottom of their urgency group;
+ * ties fall back to newest-first (repository `orderBy id desc` parity).
+ */
+export function sortTasksByUrgencyAndDueDate<T extends Pick<Task, "priority" | "dueDate" | "id">>(tasks: T[]): T[] {
+  return [...tasks].sort((a, b) => {
+    const byUrgency = PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority];
+    if (byUrgency !== 0) return byUrgency;
+    const aDue = a.dueDate;
+    const bDue = b.dueDate;
+    if (aDue != null && bDue != null) {
+      if (aDue !== bDue) return aDue < bDue ? -1 : 1;
+      return b.id - a.id; // same date — newest first
+    }
+    if (aDue != null) return -1;
+    if (bDue != null) return 1;
+    return b.id - a.id; // no due dates — newest first
+  });
+}
+
 export function isTaskOverdue(task: Task, _now?: Date): boolean {
   if (!task.dueDate || task.status === "done") return false;
   return isOverdueDateOnly(task.dueDate);

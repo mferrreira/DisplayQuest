@@ -284,7 +284,7 @@ export function ProjectDetailDialog({
                     {projectTasks.map((task) => (
                       <div
                         key={task.id}
-                        className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors"
+                        className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors dark:hover:bg-gray-800/60"
                       >
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">

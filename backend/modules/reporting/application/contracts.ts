@@ -37,6 +37,8 @@ export interface WeeklyReportSessionLog {
   id: number
   userId: number
   projectId: number | null
+  startTime: string
+  endTime: string | null
   date: string
   note: string | null
   createdAt: string
@@ -188,6 +190,8 @@ export interface ProjectReportAggregateResult {
     userId: number
     userName: string | null
     date: string
+    startTime: string | null
+    endTime: string | null
     note: string | null
     projectName: string | null
   }>

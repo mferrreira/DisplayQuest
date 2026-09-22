@@ -8,8 +8,10 @@ import {
   parseBacklogLines,
   projectedAward,
   resolveMove,
+  sortTasksByUrgencyAndDueDate,
 } from "../utils/move-rules"
 import { makeTask } from "@/tests/mocks/fixtures/tasks"
+import type { Task } from "@/entities/task"
 
 describe("resolveMove (legacy kanban-board.tsx:137–164 parity)", () => {
   const delegated = makeTask({ taskVisibility: "delegated" })
@@ -129,6 +131,54 @@ describe("overdue + penalty (gateway :593–607 mirror)", () => {
 
   it("no dueDate → no penalty", () => {
     expect(latePenalty({ dueDate: null, points: 20 })).toBe(0)
+  })
+})
+
+describe("sortTasksByUrgencyAndDueDate", () => {
+  const task = (id: number, priority: Task["priority"], dueDate: string | null = null) => ({ id, title: `t${id}`, status: "to-do" as const, priority, dueDate })
+
+  it("orders by urgency first (urgent > high > medium > low)", () => {
+    const list = [
+      task(1, "low"),
+      task(2, "urgent"),
+      task(3, "high"),
+      task(4, "medium"),
+    ]
+    expect(sortTasksByUrgencyAndDueDate(list).map((t) => t.id)).toEqual([2, 3, 4, 1])
+  })
+
+  it("within the same urgency, sorts by due date ascending (same-date ties newest-first)", () => {
+    const list = [
+      task(1, "high", "2026-12-20"),
+      task(2, "high", "2026-11-01"),
+      task(3, "high", "2026-11-01"),
+    ]
+    expect(sortTasksByUrgencyAndDueDate(list).map((t) => t.id)).toEqual([3, 2, 1])
+  })
+
+  it("puts tasks without dueDate at the bottom of their urgency group", () => {
+    const list = [
+      task(1, "medium", null),
+      task(2, "medium", "2026-11-05"),
+      task(3, "medium", "2026-10-01"),
+    ]
+    expect(sortTasksByUrgencyAndDueDate(list).map((t) => t.id)).toEqual([3, 2, 1])
+  })
+
+  it("breaks due-date ties newest-first (id desc parity)", () => {
+    const list = [
+      task(5, "urgent", "2026-11-01"),
+      task(8, "urgent", "2026-11-01"),
+      task(2, "urgent", "2026-11-01"),
+    ]
+    expect(sortTasksByUrgencyAndDueDate(list).map((t) => t.id)).toEqual([8, 5, 2])
+  })
+
+  it("does not mutate the input array", () => {
+    const list = [task(1, "low"), task(2, "urgent")]
+    const snapshot = [...list]
+    sortTasksByUrgencyAndDueDate(list)
+    expect(list).toEqual(snapshot)
   })
 })
 

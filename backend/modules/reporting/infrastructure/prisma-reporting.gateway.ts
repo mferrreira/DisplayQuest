@@ -552,6 +552,13 @@ export class PrismaReportingGateway implements ReportingGateway {
             name: true,
           },
         },
+        dailyLog: {
+          select: {
+            id: true,
+            note: true,
+            date: true,
+          },
+        },
         tasks: {
           include: {
             task: {
@@ -615,12 +622,16 @@ export class PrismaReportingGateway implements ReportingGateway {
   }
 
   private mapSessionToWeeklyLog(session: SessionWithRelations): WeeklyReportSessionLog {
+    const startTime = (session.startTime instanceof Date ? session.startTime : new Date(session.startTime))
+    const endTime = session.endTime ? (session.endTime instanceof Date ? session.endTime : new Date(session.endTime)) : null
     return {
       id: session.id,
       userId: session.userId,
       projectId: session.projectId,
-      date: (session.endTime || session.startTime).toISOString(),
-      note: session.activity || "Sessão finalizada sem observações",
+      startTime: startTime.toISOString(),
+      endTime: endTime ? endTime.toISOString() : null,
+      date: (endTime || startTime).toISOString(),
+      note: session.dailyLog?.note || session.activity || "Sessão finalizada sem observações",
       createdAt: session.createdAt.toISOString(),
       project: session.project
         ? {
@@ -913,7 +924,11 @@ export class PrismaReportingGateway implements ReportingGateway {
     const [logRows, sessionRows] = await Promise.all([
       prisma.daily_logs.findMany({
         where: { projectId: report.projectId, date: { gte: windowStart, lte: windowEnd } },
-        include: { user: { select: { name: true } }, project: { select: { name: true } } },
+        include: {
+          user: { select: { name: true } },
+          project: { select: { name: true } },
+          workSession: { select: { startTime: true, endTime: true } },
+        },
         orderBy: { date: "desc" },
       }),
       prisma.work_sessions.findMany({
@@ -932,6 +947,8 @@ export class PrismaReportingGateway implements ReportingGateway {
         userId: log.userId,
         userName: log.user?.name ?? null,
         date: log.date.toISOString(),
+        startTime: log.workSession?.startTime ? log.workSession.startTime.toISOString() : null,
+        endTime: log.workSession?.endTime ? log.workSession.endTime.toISOString() : null,
         note: log.note,
         projectName: log.project?.name ?? null,
       })),

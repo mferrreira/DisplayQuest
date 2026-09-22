@@ -47,9 +47,19 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     }
     lines.push("")
     lines.push(`Logs diarios (${totals.logCount})`)
-    lines.push(["Usuario", "Data", "Nota"].map(csvCell).join(";"))
+    lines.push(["Usuario", "Data", "Inicio", "Fim", "Nota"].map(csvCell).join(";"))
     for (const log of logs) {
-      lines.push([log.userName ?? "-", new Date(log.date).toLocaleDateString("pt-BR"), log.note ?? "-"].map(csvCell).join(";"))
+      lines.push(
+        [
+          log.userName ?? "-",
+          new Date(log.date).toLocaleDateString("pt-BR"),
+          log.startTime ? new Date(log.startTime).toLocaleString("pt-BR") : "-",
+          log.endTime ? new Date(log.endTime).toLocaleString("pt-BR") : "-",
+          log.note ?? "-",
+        ]
+          .map(csvCell)
+          .join(";"),
+      )
     }
 
     const csv = "\uFEFF" + lines.join("\n")

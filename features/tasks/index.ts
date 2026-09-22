@@ -9,6 +9,8 @@ export {
   isArchivedTask,
   isTaskOverdue,
   isTaskDueToday,
+  sortTasksByUrgencyAndDueDate,
+  PRIORITY_RANK,
   latePenalty,
   projectedAward,
   parseBacklogLines,

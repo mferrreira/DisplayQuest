@@ -74,14 +74,15 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit }: TaskDetai
     userRoles.includes("GERENTE_PROJETO") ||
     userRoles.includes("COLABORADOR") ||
     userRoles.includes("PESQUISADOR")
+  const isAssignee = Boolean(userId && (task.assignedTo === userId || task.assigneeIds?.includes(userId)))
   const canApprove =
     task.status === "in-review" &&
     (userRoles.includes("COORDENADOR") ||
       userRoles.includes("GERENTE") ||
       (userRoles.includes("GERENTE_PROJETO") &&
         task.projectId != null &&
-        projects.find((p) => p.id === task.projectId)?.leaderId === userId))
-  const isAssignee = Boolean(userId && (task.assignedTo === userId || task.assigneeIds?.includes(userId)))
+        projects.find((p) => p.id === task.projectId)?.leaderId === userId &&
+        !isAssignee))
   const projectName = task.projectId ? projects.find((p) => p.id === task.projectId)?.name : null
   const { main, fixes } = splitFixInstructions(task.description)
   const isOverdue = isTaskOverdue(task)

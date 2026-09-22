@@ -1,15 +1,21 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
-import { Calendar, FileText, User, CalendarDays, X, Download, Clock, Loader2 } from "lucide-react"
-import type { WeeklyReport, DailyLog } from "@/contexts/types"
+import { Calendar, FileText, User, CalendarDays, X, Download, Clock, Loader2, ListFilter, ChevronDown } from "lucide-react"
+import type { WeeklyReport } from "@/contexts/types"
 import { Label } from "@/components/ui/label"
 import { useAuth } from "@/contexts/auth-context"
 import { useWeeklyReports } from "@/contexts/weekly-report-context"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { groupLogsByProject, type ReportDisplayMode } from "@/lib/reports/grouping"
 
 interface ProjectReportLog {
   id: number
@@ -22,6 +28,8 @@ interface ProjectReportLog {
   userName?: string | null
   location?: string | null
   durationSeconds?: number | null
+  startTime?: string | Date | null
+  endTime?: string | Date | null
 }
 
 export interface ProjectWeeklyDetailReport {
@@ -54,27 +62,44 @@ export function WeeklyReportDetail({ report, onClose, loading, onDelete }: Weekl
   const { deleteWeeklyReport } = useWeeklyReports()
   const [isExporting, setIsExporting] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [displayMode, setDisplayMode] = useState<ReportDisplayMode>("grouped")
   const isProjectReport = report.reportType === "project"
+
+  const logs: ProjectReportLog[] = Array.isArray(report.logs) ? report.logs : []
+  const displaySections = useMemo(() => {
+    const list: ProjectReportLog[] = Array.isArray(report.logs) ? report.logs : []
+    return groupLogsByProject(list, displayMode)
+  }, [report.logs, displayMode])
 
   const formatDate = (date: Date | string) => {
     return new Date(date).toLocaleDateString('pt-BR')
   }
 
   const formatTime = (date: Date | string) => {
-    return new Date(date).toLocaleTimeString('pt-BR', { 
-      hour: '2-digit', 
-      minute: '2-digit' 
+    return new Date(date).toLocaleTimeString('pt-BR', {
+      hour: '2-digit',
+      minute: '2-digit'
     })
+  }
+
+  const formatTimeRange = (log: ProjectReportLog) => {
+    const start = log.startTime ?? log.date
+    if (!start) return formatTime(log.date)
+    const range = formatTime(start)
+    return log.endTime ? `${range} – ${formatTime(log.endTime)}` : range
   }
 
   const getWeekRange = (start: Date | string, end: Date | string) => {
     return `${formatDate(start)} - ${formatDate(end)}`
   }
 
+  const displayModeLabel = displayMode === "grouped"
+    ? (isProjectReport ? "Agrupado por pessoa" : "Agrupado por projeto")
+    : displayMode === "chronological" ? "Cronológico" : "Ordem original"
+
   const handleExport = async () => {
     setIsExporting(true)
     try {
-      const logs = Array.isArray(report.logs) ? report.logs : []
       const header = isProjectReport
         ? `RELATÓRIO SEMANAL DO PROJETO - ${report.projectName}`
         : `RELATÓRIO SEMANAL - ${report.userName}`
@@ -83,20 +108,29 @@ export function WeeklyReportDetail({ report, onClose, loading, onDelete }: Weekl
         : `Total de Logs: ${report.totalLogs}`
 
       const sessionsText = logs.length > 0
-        ? `SESSÕES CONSOLIDADAS:\n${logs.map((log: any, index: number) => {
-            const lines = [
-              `${index + 1}. ${formatDate(log.date)} - ${formatTime(log.date)}`,
-              isProjectReport && log.userName ? `   Usuário: ${log.userName}` : "",
-              `   ${log.note || "Sem descrição"}`,
-              log.project ? `   Projeto: ${log.project.name}` : "",
-              isProjectReport && typeof log.durationSeconds === "number"
-                ? `   Duração: ${(log.durationSeconds / 3600).toFixed(2)}h`
-                : "",
-              isProjectReport && log.location ? `   Local: ${log.location}` : "",
-            ].filter(Boolean)
+        ? `SESSÕES CONSOLIDADAS (${displayModeLabel}):\n${displaySections
+            .map((section) => {
+              const body = section.items
+                .map((log: any, index: number) => {
+                  const lines = [
+                    `${index + 1}. ${formatDate(log.date)} - ${formatTimeRange(log)}`,
+                    isProjectReport && log.userName ? `   Usuário: ${log.userName}` : "",
+                    `   ${log.note || "Sem descrição"}`,
+                    log.project ? `   Projeto: ${log.project.name}` : "",
+                    isProjectReport && typeof log.durationSeconds === "number"
+                      ? `   Duração: ${(log.durationSeconds / 3600).toFixed(2)}h`
+                      : "",
+                    isProjectReport && log.location ? `   Local: ${log.location}` : "",
+                  ].filter(Boolean)
 
-            return lines.join("\n")
-          }).join("\n\n")}`
+                  return lines.join("\n")
+                })
+                .join("\n\n")
+
+              return section.label ? `◆ ${section.label}:\n${body}` : body
+            })
+            .filter(Boolean)
+            .join("\n\n")}`
         : "Nenhum log encontrado para este período."
 
       const reportText = `
@@ -281,44 +315,75 @@ ${sessionsText}
                   <CalendarDays className="h-5 w-5" />
                   Sessões Consolidadas ({report.totalLogs})
                 </CardTitle>
-                <CardDescription>
-                  Registros derivados das sessões concluídas no período
+                <CardDescription className="flex flex-wrap items-center justify-between gap-2">
+                  <span>Registros derivados das sessões concluídas no período</span>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm">
+                        <ListFilter className="mr-2 h-4 w-4" />
+                        {displayModeLabel}
+                        <ChevronDown className="ml-2 h-4 w-4 text-muted-foreground" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => setDisplayMode("grouped")}>
+                        {isProjectReport ? "Agrupar por pessoa" : "Agrupar por projeto"}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setDisplayMode("chronological")}>
+                        Cronológico
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setDisplayMode("original")}>
+                        Ordem original
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {report.logs && report.logs.length > 0 ? (
+                {logs.length > 0 ? (
                   <div className="space-y-4">
-                    {report.logs.map((log: any, index) => (
-                      <div key={`${log.id}-${index}`} className="border rounded-lg p-4">
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            <Badge variant="secondary">
-                              {formatDate(log.date)}
-                            </Badge>
-                            <span className="text-sm text-gray-500 dark:text-muted-foreground">
-                              {formatTime(log.date)}
-                            </span>
-                          </div>
-                          {log.project && (
-                            <Badge variant="outline">
-                              {log.project.name}
-                            </Badge>
-                          )}
+                    {displaySections.map((section) => (
+                      <div key={section.key} className="space-y-3">
+                        {section.label && (
+                          <h4 className="text-sm font-semibold text-muted-foreground">
+                            {section.label}
+                          </h4>
+                        )}
+                        <div className="space-y-3">
+                          {section.items.map((log: any, index) => (
+                            <div key={`${log.id}-${index}`} className="border rounded-lg p-4">
+                              <div className="flex items-start justify-between mb-2">
+                                <div className="flex items-center gap-2">
+                                  <Badge variant="secondary">
+                                    {formatDate(log.date)}
+                                  </Badge>
+                                  <span className="text-sm text-gray-500 dark:text-muted-foreground">
+                                    {formatTimeRange(log)}
+                                  </span>
+                                </div>
+                                {log.project && (
+                                  <Badge variant="outline">
+                                    {log.project.name}
+                                  </Badge>
+                                )}
+                              </div>
+                              {isProjectReport && log.userName && (
+                                <p className="text-sm text-gray-500 dark:text-muted-foreground mb-1">Usuário: {log.userName}</p>
+                              )}
+                              <p className="text-gray-700 dark:text-gray-300 dark:text-gray-300">
+                                {log.note || "Sem descrição"}
+                              </p>
+                              {isProjectReport && (
+                                <div className="mt-2 flex flex-wrap gap-2 text-xs text-gray-500 dark:text-muted-foreground">
+                                  {typeof log.durationSeconds === "number" && (
+                                    <span>Duração: {(log.durationSeconds / 3600).toFixed(2)}h</span>
+                                  )}
+                                  {log.location && <span>Local: {log.location}</span>}
+                                </div>
+                              )}
+                            </div>
+                          ))}
                         </div>
-                        {isProjectReport && log.userName && (
-                          <p className="text-sm text-gray-500 dark:text-muted-foreground mb-1">Usuário: {log.userName}</p>
-                        )}
-                        <p className="text-gray-700 dark:text-gray-300 dark:text-gray-300">
-                          {log.note || "Sem descrição"}
-                        </p>
-                        {isProjectReport && (
-                          <div className="mt-2 flex flex-wrap gap-2 text-xs text-gray-500 dark:text-muted-foreground">
-                            {typeof log.durationSeconds === "number" && (
-                              <span>Duração: {(log.durationSeconds / 3600).toFixed(2)}h</span>
-                            )}
-                            {log.location && <span>Local: {log.location}</span>}
-                          </div>
-                        )}
                       </div>
                     ))}
                   </div>

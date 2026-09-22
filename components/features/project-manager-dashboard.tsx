@@ -13,7 +13,8 @@ import {
   Target,
   Calendar,
   AlertCircle,
-  BarChart3
+  BarChart3,
+  Eye
 } from "lucide-react"
 import type { Project, Task } from "@/contexts/types"
 import { isOverdueDateOnly } from "@/lib/date-only"
@@ -22,9 +23,10 @@ interface ProjectManagerDashboardProps {
   projects: Project[]
   tasks: Task[]
   user: any
+  onProjectSelect?: (project: Project) => void
 }
 
-export function ProjectManagerDashboard({ projects, tasks, user }: ProjectManagerDashboardProps) {
+export function ProjectManagerDashboard({ projects, tasks, user, onProjectSelect }: ProjectManagerDashboardProps) {
   // Calcular estatísticas específicas do gerente
   const managerProjects = projects.filter(project => project.leaderId === user?.id)
   const managerTasks = tasks.filter(task => 
@@ -205,9 +207,21 @@ export function ProjectManagerDashboard({ projects, tasks, user }: ProjectManage
                     <div key={project.id} className="border rounded-lg p-4 space-y-3">
                       <div className="flex items-center justify-between">
                         <h4 className="font-semibold">{project.name}</h4>
-                        <Badge variant={project.status === 'active' ? 'default' : 'secondary'}>
-                          {project.status === 'active' ? 'Ativo' : 'Concluído'}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          {onProjectSelect && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => onProjectSelect(project)}
+                              aria-label={`Ver detalhes de ${project.name}`}
+                            >
+                              <Eye className="h-3 w-3" />
+                            </Button>
+                          )}
+                          <Badge variant={project.status === 'active' ? 'default' : 'secondary'}>
+                            {project.status === 'active' ? 'Ativo' : 'Concluído'}
+                          </Badge>
+                        </div>
                       </div>
                       
                       {project.description && (

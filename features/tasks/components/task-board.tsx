@@ -25,6 +25,7 @@ import {
   isArchivedTask,
   isTaskOverdue,
   isTaskDueToday,
+  sortTasksByUrgencyAndDueDate,
   BOARD_COLUMNS,
 } from "../index"
 import { isAssignedToUser } from "../utils/is-assigned-to-user"
@@ -96,7 +97,8 @@ export function TaskBoard() {
   const archivedTasks = useMemo(() => filteredTasks.filter((t) => isArchivedTask(t)), [filteredTasks])
   const boardTasks = useMemo(() => {
     const archivedIds = new Set(archivedTasks.map((t) => t.id))
-    return filteredTasks.filter((t) => !archivedIds.has(t.id))
+    const visible = filteredTasks.filter((t) => !archivedIds.has(t.id))
+    return sortTasksByUrgencyAndDueDate(visible)
   }, [filteredTasks, archivedTasks])
 
   const overdueCount = useMemo(() => (tasks ?? []).filter((t) => isTaskOverdue(t)).length, [tasks])

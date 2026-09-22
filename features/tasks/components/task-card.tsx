@@ -140,17 +140,18 @@ export function TaskCard({ task, index, isOverdue, isDueToday, isCompact, onEdit
     userRoles.includes("GERENTE") ||
     userRoles.includes("GERENTE_PROJETO") ||
     userRoles.includes("LABORATORISTA")
+  const assigneeIds = (task.assigneeIds?.length ? task.assigneeIds : task.assignedTo ? [task.assignedTo] : []).filter(
+    (id): id is number => typeof id === "number",
+  )
+  const isSelfAssignee = Boolean(user?.id && (task.assignedTo === user.id || assigneeIds.includes(user.id)))
   const canApproveReject =
     task.status === "in-review" &&
     (userRoles.includes("COORDENADOR") ||
       userRoles.includes("GERENTE") ||
       (userRoles.includes("GERENTE_PROJETO") &&
         task.projectId != null &&
-        projects.find((p) => p.id === task.projectId)?.leaderId === user?.id))
-
-  const assigneeIds = (task.assigneeIds?.length ? task.assigneeIds : task.assignedTo ? [task.assignedTo] : []).filter(
-    (id): id is number => typeof id === "number",
-  )
+        projects.find((p) => p.id === task.projectId)?.leaderId === user?.id &&
+        !isSelfAssignee))
 
   const projectName = task.projectId ? projects.find((p) => p.id === task.projectId)?.name : undefined
 

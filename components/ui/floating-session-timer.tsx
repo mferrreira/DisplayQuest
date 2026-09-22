@@ -168,12 +168,14 @@ export function FloatingSessionTimer() {
     setShowAutoPauseDialog(false)
   }
 
-  const handleStop = async (withLog: boolean) => {
+  const handleStop = async () => {
     if (!currentSession || !user?.id) return
+    const note = logNote.trim()
+    if (!note) return
     setSubmitting(true)
     try {
       await endSession(currentSession.id, currentSession.activity || undefined, {
-        dailyLogNote: withLog && logNote.trim() ? logNote.trim() : undefined,
+        dailyLogNote: note,
       })
       setShowStopDialog(false)
       setShowAutoPauseDialog(false)
@@ -345,7 +347,7 @@ export function FloatingSessionTimer() {
           <DialogHeader>
             <DialogTitle>Finalizar Work Session</DialogTitle>
             <DialogDescription>
-              Adicione um log da sessão (opcional) antes de encerrar.
+              Escreva um log da sessão antes de encerrar — ele é obrigatório.
             </DialogDescription>
           </DialogHeader>
 
@@ -355,13 +357,15 @@ export function FloatingSessionTimer() {
             onChange={(event) => setLogNote(event.target.value)}
             rows={5}
           />
+          {!logNote.trim() && (
+            <p className="text-xs text-muted-foreground">
+              O log é obrigatório para encerrar a sessão.
+            </p>
+          )}
 
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => handleStop(false)} disabled={submitting}>
-              Encerrar sem log
-            </Button>
-            <Button onClick={() => handleStop(true)} disabled={submitting}>
-              Encerrar com log
+            <Button onClick={() => handleStop()} disabled={submitting || !logNote.trim()}>
+              Encerrar sessão
             </Button>
           </DialogFooter>
         </DialogContent>
