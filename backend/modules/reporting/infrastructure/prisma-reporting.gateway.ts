@@ -176,6 +176,14 @@ export class PrismaReportingGateway implements ReportingGateway {
     await prisma.weekly_reports.delete({ where: { id } })
   }
 
+  async findActiveUsers(): Promise<Array<{ id: number; name: string }>> {
+    return await prisma.users.findMany({
+      where: { status: "active" },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    })
+  }
+
   async getProjectHours(query: ProjectHoursQuery): Promise<ProjectHoursResult> {
     const sessions = await this.findCompletedSessions({
       projectId: query.projectId,

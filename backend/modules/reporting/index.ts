@@ -1,4 +1,5 @@
 import type {
+  BulkGenerateWeeklyReportsCommand,
   CreateProjectReportCommand,
   DeleteProjectReportCommand,
   DeleteReportAttachmentCommand,
@@ -12,6 +13,7 @@ import type {
   WeeklyHoursHistoryQuery,
   WeeklyReportListQuery,
 } from "@/backend/modules/reporting/application/contracts"
+import { BulkGenerateWeeklyReportsUseCase } from "@/backend/modules/reporting/application/use-cases/bulk-generate-weekly-reports.use-case"
 import { DeleteWeeklyReportUseCase } from "@/backend/modules/reporting/application/use-cases/delete-weekly-report.use-case"
 import { GetWeeklyReportByIdUseCase } from "@/backend/modules/reporting/application/use-cases/get-weekly-report-by-id.use-case"
 import { ListWeeklyReportsUseCase } from "@/backend/modules/reporting/application/use-cases/list-weekly-reports.use-case"
@@ -28,6 +30,7 @@ export class ReportingModule {
     private readonly getWeeklyReportByIdUseCase: GetWeeklyReportByIdUseCase,
     private readonly upsertWeeklyReportUseCase: UpsertWeeklyReportUseCase,
     private readonly deleteWeeklyReportUseCase: DeleteWeeklyReportUseCase,
+    private readonly bulkGenerateWeeklyReportsUseCase: BulkGenerateWeeklyReportsUseCase,
     private readonly _gateway: PrismaReportingGateway,
   ) {}
 
@@ -70,6 +73,10 @@ export class ReportingModule {
 
   async upsertWeeklyReport(command: UpsertWeeklyReportCommand) {
     return await this.upsertWeeklyReportUseCase.execute(command)
+  }
+
+  async bulkGenerateWeeklyReports(command: BulkGenerateWeeklyReportsCommand) {
+    return await this.bulkGenerateWeeklyReportsUseCase.execute(command)
   }
 
   async deleteWeeklyReport(id: number) {
@@ -130,6 +137,7 @@ export function createReportingModule(options: ReportingModuleFactoryOptions = {
     new GetWeeklyReportByIdUseCase(gateway),
     new UpsertWeeklyReportUseCase(gateway),
     new DeleteWeeklyReportUseCase(gateway),
+    new BulkGenerateWeeklyReportsUseCase(gateway),
     gateway,
   )
 }

@@ -4,7 +4,7 @@
  * e original (ordem como veio da API). Funções puras, unitáveis (padrão lib/reports/csv-utils).
  */
 
-export type ReportDisplayMode = "grouped" | "chronological" | "original"
+export type ReportDisplayMode = "grouped" | "chronological" | "original" | "byDate"
 
 export interface ReportGroupSection<T> {
   key: string
@@ -119,6 +119,57 @@ export function groupByPerson<T extends PersonGroupable>(
 
   if (unassigned.length > 0) {
     sections.push({ key: "person:unassigned", label: "Sem responsável", items: sortByTimeAsc(unassigned) })
+  }
+  return sections
+}
+
+const dateLabelFmt = new Intl.DateTimeFormat("pt-BR", {
+  weekday: "long",
+  day: "2-digit",
+  month: "long",
+  year: "numeric",
+})
+
+function dateKey(value: IsoOrDate): string | null {
+  if (!value) return null
+  const t = new Date(value).getTime()
+  if (Number.isNaN(t)) return null
+  return new Date(t).toISOString().slice(0, 10)
+}
+
+function noonUtc(key: string): number {
+  return new Date(`${key}T12:00:00.000Z`).getTime()
+}
+
+/** Agrupa logs/sessões pelo dia em que ocorreram (crescente; sem data no fim). */
+export function groupLogsByDate<T extends TimeOrderable>(items: T[]): ReportGroupSection<T>[] {
+  const map = new Map<string, { label: string; items: T[] }>()
+  const order: string[] = []
+  const unassigned: T[] = []
+
+  for (const item of items) {
+    const key = dateKey(item.date ?? item.startTime)
+    if (key) {
+      if (map.has(key)) map.get(key)!.items.push(item)
+      else {
+        map.set(key, { label: dateLabelFmt.format(new Date(`${key}T12:00:00.000Z`)), items: [item] })
+        order.push(key)
+      }
+    } else {
+      unassigned.push(item)
+    }
+  }
+
+  const sections = [...order]
+    .sort((a, b) => noonUtc(a) - noonUtc(b))
+    .map((key) => ({
+      key: `date:${key}`,
+      label: map.get(key)!.label,
+      items: sortByTimeAsc(map.get(key)!.items),
+    }))
+
+  if (unassigned.length > 0) {
+    sections.push({ key: "date:unassigned", label: "Sem data", items: sortByTimeAsc(unassigned) })
   }
   return sections
 }

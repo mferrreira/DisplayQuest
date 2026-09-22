@@ -15,7 +15,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { groupLogsByProject, type ReportDisplayMode } from "@/lib/reports/grouping"
+import { groupLogsByDate, groupLogsByProject, type ReportDisplayMode } from "@/lib/reports/grouping"
 
 interface ProjectReportLog {
   id: number
@@ -68,6 +68,7 @@ export function WeeklyReportDetail({ report, onClose, loading, onDelete }: Weekl
   const logs: ProjectReportLog[] = Array.isArray(report.logs) ? report.logs : []
   const displaySections = useMemo(() => {
     const list: ProjectReportLog[] = Array.isArray(report.logs) ? report.logs : []
+    if (displayMode === "byDate") return groupLogsByDate(list)
     return groupLogsByProject(list, displayMode)
   }, [report.logs, displayMode])
 
@@ -95,7 +96,9 @@ export function WeeklyReportDetail({ report, onClose, loading, onDelete }: Weekl
 
   const displayModeLabel = displayMode === "grouped"
     ? (isProjectReport ? "Agrupado por pessoa" : "Agrupado por projeto")
-    : displayMode === "chronological" ? "Cronológico" : "Ordem original"
+    : displayMode === "chronological" ? "Cronológico"
+    : displayMode === "byDate" ? "Agrupado por data"
+    : "Ordem original"
 
   const handleExport = async () => {
     setIsExporting(true)
@@ -328,6 +331,9 @@ ${sessionsText}
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={() => setDisplayMode("grouped")}>
                         {isProjectReport ? "Agrupar por pessoa" : "Agrupar por projeto"}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setDisplayMode("byDate")}>
+                        Agrupar por data
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => setDisplayMode("chronological")}>
                         Cronológico
