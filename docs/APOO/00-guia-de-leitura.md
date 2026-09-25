@@ -54,7 +54,3 @@ Ela prioriza:
 - `prisma/schema.prisma`
 - modulos em `backend/modules/*`
 - rotas em `app/api/*`
-
-## Observacao importante
-
-Algumas informacoes organizacionais ainda nao estao explicitas no repositorio, como o nome formal da instituicao, o nome oficial do laboratorio e eventuais restricoes normativas locais. Quando necessario, estas lacunas sao marcadas como pendencias de validacao, sem inventar contexto externo.
