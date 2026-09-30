@@ -33,6 +33,7 @@ export interface ReportingGateway {
   getWeeklyReportById(id: number): Promise<WeeklyReportReadModel | null>
   upsertWeeklyReport(command: UpsertWeeklyReportCommand): Promise<WeeklyReportReadModel>
   deleteWeeklyReport(id: number): Promise<void>
+  findActiveUsers(): Promise<Array<{ id: number; name: string }>>
   getProjectHours(query: ProjectHoursQuery): Promise<ProjectHoursResult>
   getProjectWeeklyHours(projectId: number, weekStart: string): Promise<ProjectHoursResult>
   getProjectHoursHistory(query: ProjectHoursHistoryQuery): Promise<{

@@ -390,4 +390,40 @@ describe("G4 roundtrip — reporting (isolated test DB)", () => {
 
     await expect(reporting.deleteWeeklyReport(weeklyReportId)).rejects.toThrow();
   });
+
+  it("bulkGenerateWeeklyReports (merge 64a6095): gera por usuario ativo; reexecucao nao duplica", async () => {
+    const command = { periodType: "weekly" as const, from: WEEK_START.toISOString(), to: WEEK_END.toISOString() };
+
+    const first = await reporting.bulkGenerateWeeklyReports(command);
+    expect(first.periodCount).toBeGreaterThanOrEqual(1);
+    expect(first.reportCount).toBe(first.periods.reduce((sum, p) => sum + p.reports, 0));
+    // author/manager/outsider sao ativos no DB de teste -> cada periodo cobre ao menos os 3
+    expect(first.periods.every((p) => p.reports >= 3)).toBe(true);
+
+    const rowsAfterFirst = await prisma.weekly_reports.count({
+      where: { userId: { in: [authorId, managerId, outsiderId] } },
+    });
+    expect(rowsAfterFirst).toBeGreaterThanOrEqual(3);
+
+    // Idempotencia (upsert pelo MESMO window): contagem de linhas dos NOSSOS usuarios nao muda.
+    // reportCount total NAO e comparado entre execucoes — arquivos de roundtrip paralelos podem
+    // semear/remover outros usuarios ativos do DB compartilhado durante a corrida.
+    const second = await reporting.bulkGenerateWeeklyReports(command);
+    expect(second.periodCount).toBe(first.periodCount);
+    expect(second.periods.every((p) => p.reports >= 3)).toBe(true);
+    const rowsAfterSecond = await prisma.weekly_reports.count({
+      where: { userId: { in: [authorId, managerId, outsiderId] } },
+    });
+    expect(rowsAfterSecond).toBe(rowsAfterFirst);
+  });
+
+  it("bulkGenerateWeeklyReports validacao: periodicidade invalida -> mensagem legada (ValidationError)", async () => {
+    await expect(
+      reporting.bulkGenerateWeeklyReports({
+        periodType: "quinzenal" as never,
+        from: WEEK_START.toISOString(),
+        to: WEEK_END.toISOString(),
+      }),
+    ).rejects.toThrow("Periodicidade inválida");
+  });
 });

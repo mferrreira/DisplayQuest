@@ -1,3 +1,5 @@
+import type { ReportPeriod } from "@/backend/domain/reporting"
+
 export interface WeeklyReportListQuery {
   userId?: number
   weekStart?: string
@@ -31,6 +33,25 @@ export interface UpsertWeeklyReportCommand {
   weekStart: string
   weekEnd: string
   summary?: string | null
+}
+
+export interface BulkGenerateWeeklyReportsCommand {
+  periodType: ReportPeriod
+  from: string
+  to: string
+}
+
+export interface BulkWeeklyReportPeriodResult {
+  label: string
+  start: string
+  end: string
+  reports: number
+}
+
+export interface BulkGenerateWeeklyReportsResult {
+  periodCount: number
+  reportCount: number
+  periods: BulkWeeklyReportPeriodResult[]
 }
 
 export interface WeeklyReportSessionLog {

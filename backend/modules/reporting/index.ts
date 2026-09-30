@@ -1,4 +1,5 @@
 import type {
+  BulkGenerateWeeklyReportsCommand,
   CreateProjectReportCommand,
   DeleteProjectReportCommand,
   DeleteReportAttachmentCommand,
@@ -13,6 +14,7 @@ import type {
   WeeklyReportListQuery,
 } from "@/backend/modules/reporting/application/contracts"
 import { AggregateProjectReportUseCase } from "@/backend/modules/reporting/application/use-cases/aggregate-project-report.use-case"
+import { BulkGenerateWeeklyReportsUseCase } from "@/backend/modules/reporting/application/use-cases/bulk-generate-weekly-reports.use-case"
 import { CreateProjectReportUseCase } from "@/backend/modules/reporting/application/use-cases/create-project-report.use-case"
 import { CreateWeeklyHoursHistoryUseCase } from "@/backend/modules/reporting/application/use-cases/create-weekly-hours-history.use-case"
 import { DeleteProjectReportUseCase } from "@/backend/modules/reporting/application/use-cases/delete-project-report.use-case"
@@ -63,6 +65,7 @@ export class ReportingModule {
     private readonly getWeeklyReportByIdUseCase: GetWeeklyReportByIdUseCase,
     private readonly upsertWeeklyReportUseCase: UpsertWeeklyReportUseCase,
     private readonly deleteWeeklyReportUseCase: DeleteWeeklyReportUseCase,
+    private readonly bulkGenerateWeeklyReportsUseCase: BulkGenerateWeeklyReportsUseCase,
     private readonly getProjectHoursUseCase: GetProjectHoursUseCase,
     private readonly getProjectWeeklyHoursUseCase: GetProjectWeeklyHoursUseCase,
     private readonly getProjectHoursHistoryUseCase: GetProjectHoursHistoryUseCase,
@@ -93,6 +96,10 @@ export class ReportingModule {
 
   async upsertWeeklyReport(command: UpsertWeeklyReportCommand) {
     return await this.upsertWeeklyReportUseCase.execute(command)
+  }
+
+  async bulkGenerateWeeklyReports(command: BulkGenerateWeeklyReportsCommand) {
+    return await this.bulkGenerateWeeklyReportsUseCase.execute(command)
   }
 
   async deleteWeeklyReport(id: number) {
@@ -207,12 +214,16 @@ export function createReportingModule(options: ReportingModuleFactoryOptions = {
   const publisher = options.ports?.publisher ?? new UnwiredReportSubmittedPublisher()
 
   const getProjectReport = new GetProjectReportUseCase(projectReports, directory)
+  const upsertWeeklyReport = new UpsertWeeklyReportUseCase(weeklyReports, hoursRead, directory)
 
   return new ReportingModule(
     new ListWeeklyReportsUseCase(weeklyReports, hoursRead),
     new GetWeeklyReportByIdUseCase(weeklyReports, hoursRead),
-    new UpsertWeeklyReportUseCase(weeklyReports, hoursRead, directory),
+    upsertWeeklyReport,
     new DeleteWeeklyReportUseCase(weeklyReports),
+    // Bulk (feature 64a6095) portado para a wiring nova: compoe o MESMO UpsertWeeklyReportUseCase
+    // (paridade do upsert ja pinada no contract suite) + directory.findActiveUsers.
+    new BulkGenerateWeeklyReportsUseCase(upsertWeeklyReport, directory),
     new GetProjectHoursUseCase(hoursRead),
     new GetProjectWeeklyHoursUseCase(hoursRead),
     new GetProjectHoursHistoryUseCase(hoursRead),
