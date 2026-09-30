@@ -3,6 +3,10 @@ import { createApiError, createApiResponse } from "@/lib/utils/utils"
 import { requireApiActor } from "@/lib/auth/api-guard"
 import { hasPermission, hasRole } from "@/lib/auth/rbac"
 import { getBackendComposition } from "@/backend/composition/root"
+import { domainErrorResponse } from "@/lib/api/domain-error-response"
+// OND7-B4 (R4): DomainErrors mapeados por domainErrorResponse. EVOLUTION: erros de
+// upsertWeeklyReport ("Usuário não encontrado") antes caíam no 500 com error.message;
+// agora NotFoundError -> 404 {error,code,details} (mensagens pinadas pelo contract OND7-B3).
 const { reporting: reportingModule } = getBackendComposition()
 export async function GET(request: Request) {
   try {
@@ -41,6 +45,8 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ weeklyReports })
   } catch (error) {
+    const mapped = domainErrorResponse(error)
+    if (mapped) return mapped
     console.error("Erro ao buscar relatórios semanais:", error)
     return createApiError("Erro ao buscar relatórios semanais")
   }
@@ -79,6 +85,8 @@ export async function POST(request: Request) {
 
     return createApiResponse({ weeklyReport }, 201)
   } catch (error: unknown) {
+    const mapped = domainErrorResponse(error)
+    if (mapped) return mapped
     console.error("Erro ao criar relatório semanal:", error)
     const message = error instanceof Error ? error.message : "Erro ao criar relatório semanal"
     return createApiError(message, 500)

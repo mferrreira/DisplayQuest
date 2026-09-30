@@ -3,6 +3,7 @@ import path from "path"
 import { requireApiActor } from "@/lib/auth/api-guard"
 import { getBackendComposition } from "@/backend/composition/root"
 import { absolutePathOf, readReportFileBytes } from "@/lib/storage/report-uploads"
+import { domainErrorResponse } from "@/lib/api/domain-error-response"
 
 const { reporting: reportingModule } = getBackendComposition()
 
@@ -72,13 +73,10 @@ export async function GET(
       },
     })
   } catch (error: unknown) {
+    const mapped = domainErrorResponse(error)
+    if (mapped) return mapped
     console.error("Erro ao servir arquivo de relatório:", error)
     const message = error instanceof Error ? error.message : "Erro ao servir arquivo"
-    const status = message.includes("Acesso negado")
-      ? 403
-      : message.includes("não encontrado")
-        ? 404
-        : 500
-    return NextResponse.json({ error: message }, { status })
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }

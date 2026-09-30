@@ -1,7 +1,6 @@
 import { endOfWeek, format, startOfWeek, subWeeks } from "date-fns"
 import { prisma } from "@/lib/database/prisma"
 import { hasPermission } from "@/lib/auth/rbac"
-import type { NotificationsModule } from "@/backend/modules/notifications"
 import {
   computePeriod,
   isReportPeriodType,
@@ -31,10 +30,19 @@ import type {
 } from "@/backend/modules/reporting/application/contracts"
 import type { ReportingGateway } from "@/backend/modules/reporting/application/ports/reporting.gateway"
 
+/**
+ * OND9-B1 (RG-04): seam estrutural LOCAL (DEC-15/19/21) — o gateway LEGADO (seam do golden
+ * 7.1/contract 7.3) so precisa de publishEvent; o import (type-only) da factory de outro
+ * modulo sai. O modulo real de notifications continua estruturalmente atribivel.
+ */
+interface NotificationsModuleLike {
+  publishEvent(event: any): Promise<unknown>
+}
+
 type SessionWithRelations = any
 
 export class PrismaReportingGateway implements ReportingGateway {
-  constructor(private readonly notificationsModule?: NotificationsModule) {}
+  constructor(private readonly notificationsModule?: NotificationsModuleLike) {}
 
   async listWeeklyReports(query: WeeklyReportListQuery): Promise<WeeklyReportReadModel[]> {
     const reports = await prisma.weekly_reports.findMany({
@@ -1011,6 +1019,6 @@ export class PrismaReportingGateway implements ReportingGateway {
   }
 }
 
-export function createReportingGateway(deps: { notificationsModule?: NotificationsModule } = {}) {
+export function createReportingGateway(deps: { notificationsModule?: NotificationsModuleLike } = {}) {
   return new PrismaReportingGateway(deps.notificationsModule)
 }

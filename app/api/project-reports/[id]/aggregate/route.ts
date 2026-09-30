@@ -1,15 +1,11 @@
 import { NextResponse } from "next/server"
 import { requireApiActor } from "@/lib/auth/api-guard"
 import { getBackendComposition } from "@/backend/composition/root"
+import { domainErrorResponse } from "@/lib/api/domain-error-response"
 
+// OND7-B4 (R4): DomainErrors mapeados por domainErrorResponse — mesmos status do
+// toHttpStatus por mensagem anterior (403/404), agora tipados (contract OND7-B3).
 const { reporting: reportingModule } = getBackendComposition()
-
-function toHttpStatus(error: unknown) {
-  const message = error instanceof Error ? error.message : "Erro interno do servidor"
-  if (message.includes("Acesso negado")) return 403
-  if (message.includes("não encontrado")) return 404
-  return 500
-}
 
 export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
@@ -25,8 +21,10 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     const aggregate = await reportingModule.aggregateProjectReport(auth.actor.id, auth.actor.roles, reportId)
     return NextResponse.json(aggregate)
   } catch (error: unknown) {
+    const mapped = domainErrorResponse(error)
+    if (mapped) return mapped
     console.error("Erro ao agregar relatório de projeto:", error)
     const message = error instanceof Error ? error.message : "Erro ao agregar relatório de projeto"
-    return NextResponse.json({ error: message }, { status: toHttpStatus(error) })
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }

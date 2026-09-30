@@ -1,6 +1,9 @@
 import { createApiError, createApiResponse } from "@/lib/utils/utils"
 import { ensureSelfOrPermission, requireApiActor } from "@/lib/auth/api-guard"
 import { getBackendComposition } from "@/backend/composition/root"
+import { domainErrorResponse } from "@/lib/api/domain-error-response"
+// OND7-B4 (R4): DomainErrors mapeados por domainErrorResponse. EVOLUTION: "Usuário não
+// encontrado" antes caía no 500 com error.message; agora NotFoundError -> 404.
 const { reporting: reportingModule } = getBackendComposition()
 export async function POST(request: Request) {
   try {
@@ -27,6 +30,8 @@ export async function POST(request: Request) {
 
     return createApiResponse({ weeklyReport })
   } catch (error: unknown) {
+    const mapped = domainErrorResponse(error)
+    if (mapped) return mapped
     console.error("Erro ao gerar relatório semanal:", error)
     const message = error instanceof Error ? error.message : "Erro ao gerar relatório semanal"
     return createApiError(message, 500)

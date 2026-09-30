@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server"
 import { ensurePermission, requireApiActor } from "@/lib/auth/api-guard"
 import { getBackendComposition } from "@/backend/composition/root"
+import { domainErrorResponse } from "@/lib/api/domain-error-response"
+// OND7-B4 (R4): DomainErrors mapeados por domainErrorResponse (400/404); não-DomainError
+// mantém o 500 com error.message como antes.
 const { reporting: reportingModule } = getBackendComposition()
 export async function GET(request: Request) {
   try {
@@ -36,6 +39,8 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ history })
   } catch (error: unknown) {
+    const mapped = domainErrorResponse(error)
+    if (mapped) return mapped
     console.error("Erro na API de histórico de horas semanais:", error)
     const message = error instanceof Error ? error.message : "Erro interno do servidor"
     return NextResponse.json({ error: message }, { status: 500 })
@@ -80,6 +85,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ error: "Ação não reconhecida" }, { status: 400 })
   } catch (error: unknown) {
+    const mapped = domainErrorResponse(error)
+    if (mapped) return mapped
     console.error("Erro na API de histórico de horas semanais:", error)
     const message = error instanceof Error ? error.message : "Erro interno do servidor"
     return NextResponse.json({ error: message }, { status: 500 })

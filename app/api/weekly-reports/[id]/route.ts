@@ -3,6 +3,8 @@ import { createApiError, createApiResponse } from "@/lib/utils/utils"
 import { requireApiActor } from "@/lib/auth/api-guard"
 import { hasPermission, hasRole } from "@/lib/auth/rbac"
 import { getBackendComposition } from "@/backend/composition/root"
+import { domainErrorResponse } from "@/lib/api/domain-error-response"
+// OND7-B4 (R4): DomainErrors (ex.: P2025 do delete) mapeados por domainErrorResponse.
 const { reporting: reportingModule } = getBackendComposition()
 export async function GET(
   _request: NextRequest,
@@ -34,6 +36,8 @@ export async function GET(
 
     return createApiResponse({ weeklyReport: report })
   } catch (error) {
+    const mapped = domainErrorResponse(error)
+    if (mapped) return mapped
     console.error("Erro ao buscar relatório semanal:", error)
     return createApiError("Erro interno do servidor", 500)
   }
@@ -70,6 +74,8 @@ export async function DELETE(
     await reportingModule.deleteWeeklyReport(id)
     return createApiResponse({ success: true })
   } catch (error) {
+    const mapped = domainErrorResponse(error)
+    if (mapped) return mapped
     console.error("Erro ao deletar relatório semanal:", error)
     return createApiError("Erro ao deletar relatório semanal", 500)
   }
