@@ -10,7 +10,8 @@ export interface AwardFromWorkSessionCommand {
 export interface AwardFromTaskCompletionCommand {
   userId: number
   taskId: number
-  taskPoints?: number
+  /** GAP-04 (fecha em OND6-B2): null era aceito em runtime (default 10) sem estar no tipo. */
+  taskPoints?: number | null
 }
 
 export interface UserProgression {

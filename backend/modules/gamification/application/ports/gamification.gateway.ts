@@ -7,7 +7,7 @@ import type {
   CreateBadgeCommand,
   UpdateBadgeCommand,
 } from "@/backend/modules/gamification/application/contracts"
-import type { Badge, UserBadge } from "@/backend/models/Badge"
+import type { Badge, UserBadge } from "@/backend/domain"
 
 export interface GamificationGateway {
   awardFromWorkSession(command: AwardFromWorkSessionCommand): Promise<GamificationAwardResult>

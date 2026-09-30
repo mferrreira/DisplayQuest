@@ -1,7 +1,7 @@
 import { Prisma } from "@prisma/client"
 import { prisma } from "@/lib/database/prisma"
-import { BadgeRulesEngine } from "@/backend/modules/gamification/domain/engines/badge-rules.engine"
-import { BadgeEngine } from "@/backend/modules/gamification/domain/engines/badge.engine"
+import { BadgeRulesEngine } from "@/backend/modules/gamification/infrastructure/legacy-engines/badge-rules.engine"
+import { BadgeEngine } from "@/backend/modules/gamification/infrastructure/legacy-engines/badge.engine"
 import { BadgeRepository, UserBadgeRepository } from "@/backend/repositories/BadgeRepository"
 import { UserRepository } from "@/backend/repositories/UserRepository"
 import type {

@@ -2,6 +2,12 @@ import { NextResponse } from "next/server"
 import { requireApiActor } from "@/lib/auth/api-guard"
 import { hasPermission } from "@/lib/auth/rbac"
 import { getBackendComposition } from "@/backend/composition/root"
+import { domainErrorResponse } from "@/lib/api/domain-error-response"
+
+// OND6-B4 (R4): DomainErrors mapeados por domainErrorResponse. EVOLUTION: no POST,
+// "Badge não encontrado" antes caía no 500 com error.message -> agora 404; "Usuário já
+// possui este badge" -> 409 ConflictError (mensagens pinadas pelo contract OND6-B3).
+
 const { gamification: gamificationModule } = getBackendComposition()
 export async function GET(request: Request) {
   try {
@@ -33,7 +39,9 @@ export async function GET(request: Request) {
       recentBadges,
       count: badges.length,
     })
-  } catch (error) {
+  } catch (error: unknown) {
+    const mapped = domainErrorResponse(error)
+    if (mapped) return mapped
     console.error("Erro ao buscar badges do usuário:", error)
     return NextResponse.json({ error: "Erro ao buscar badges do usuário" }, { status: 500 })
   }
@@ -64,8 +72,11 @@ export async function POST(request: Request) {
     })
 
     return NextResponse.json({ userBadge }, { status: 201 })
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const mapped = domainErrorResponse(error)
+    if (mapped) return mapped
     console.error("Erro ao conceder badge:", error)
-    return NextResponse.json({ error: error.message || "Erro ao conceder badge" }, { status: 500 })
+    const message = error instanceof Error ? error.message : undefined
+    return NextResponse.json({ error: message || "Erro ao conceder badge" }, { status: 500 })
   }
 }

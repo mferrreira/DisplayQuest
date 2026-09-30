@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server"
 import { ensurePermission, requireApiActor } from "@/lib/auth/api-guard"
 import { getBackendComposition } from "@/backend/composition/root"
+import { domainErrorResponse } from "@/lib/api/domain-error-response"
+
+// OND6-B4 (R4): DomainErrors mapeados por domainErrorResponse. EVOLUTION: "Badge não
+// encontrado" no PUT/DELETE antes caía no 500 com error.message; agora NotFoundError ->
+// 404 (mensagem pinada pelo contract OND6-B3). O GET mantém o 404 manual (getBadgeById
+// devolve null, nao lanca).
 
 const { gamification: gamificationModule } = getBackendComposition()
 export async function GET(_request: Request, context: { params: Promise<{ id: string }> }) {
@@ -17,7 +23,9 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
     }
 
     return NextResponse.json({ badge })
-  } catch (error) {
+  } catch (error: unknown) {
+    const mapped = domainErrorResponse(error)
+    if (mapped) return mapped
     console.error("Erro ao buscar badge:", error)
     return NextResponse.json({ error: "Erro ao buscar badge" }, { status: 500 })
   }
@@ -40,9 +48,12 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
     const body = await request.json()
     const badge = await gamificationModule.updateBadge({ id, data: body })
     return NextResponse.json({ badge })
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const mapped = domainErrorResponse(error)
+    if (mapped) return mapped
     console.error("Erro ao atualizar badge:", error)
-    return NextResponse.json({ error: error.message || "Erro ao atualizar badge" }, { status: 500 })
+    const message = error instanceof Error ? error.message : undefined
+    return NextResponse.json({ error: message || "Erro ao atualizar badge" }, { status: 500 })
   }
 }
 
@@ -62,8 +73,11 @@ export async function DELETE(_request: Request, context: { params: Promise<{ id:
 
     await gamificationModule.deleteBadge(id)
     return NextResponse.json({ success: true })
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const mapped = domainErrorResponse(error)
+    if (mapped) return mapped
     console.error("Erro ao excluir badge:", error)
-    return NextResponse.json({ error: error.message || "Erro ao excluir badge" }, { status: 500 })
+    const message = error instanceof Error ? error.message : undefined
+    return NextResponse.json({ error: message || "Erro ao excluir badge" }, { status: 500 })
   }
 }
