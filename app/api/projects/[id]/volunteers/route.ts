@@ -1,15 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireApiActor } from "@/lib/auth/api-guard"
 import { getBackendComposition } from "@/backend/composition/root"
+import { domainErrorResponse } from "@/lib/api/domain-error-response"
 
 const { projectManagement: projectManagementModule } = getBackendComposition()
-function toHttpStatus(error: unknown) {
-  const message = error instanceof Error ? error.message : "Erro interno do servidor"
-  if (message.includes("não encontrado")) return 404
-  if (message.includes("Acesso negado") || message.includes("permissão")) return 403
-  if (message.includes("inválido")) return 400
-  return 500
-}
 
 export async function GET(_request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
@@ -30,8 +24,9 @@ export async function GET(_request: NextRequest, context: { params: Promise<{ id
 
     return NextResponse.json(result, { status: 200 })
   } catch (error: unknown) {
+    const mapped = domainErrorResponse(error)
+    if (mapped) return mapped
     console.error("Erro ao buscar estatísticas dos voluntários:", error)
-    const message = error instanceof Error ? error.message : "Erro ao buscar estatísticas dos voluntários"
-    return NextResponse.json({ error: message }, { status: toHttpStatus(error) })
+    return NextResponse.json({ error: "Erro ao buscar estatísticas dos voluntários" }, { status: 500 })
   }
 }

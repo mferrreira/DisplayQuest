@@ -3,7 +3,6 @@ import { prisma } from "@/lib/database/prisma"
 import { hasPermission } from "@/lib/auth/rbac"
 import { Project } from "@/backend/models/Project"
 import { ProjectMembership } from "@/backend/models/ProjectMembership"
-import type { IdentityAccessModule } from "@/backend/modules/identity-access"
 import { ProjectRepository } from "@/backend/repositories/ProjectRepository"
 import { ProjectMembershipRepository } from "@/backend/repositories/ProjectMembershipRepository"
 import { UserRepository } from "@/backend/repositories/UserRepository"
@@ -14,12 +13,20 @@ import type {
 } from "@/backend/modules/project-management/application/contracts"
 import type { ProjectManagementGateway, ProjectRecord } from "@/backend/modules/project-management/application/ports/project-management.gateway"
 
+/**
+ * OND9-B1 (RG-04): seam estrutural LOCAL (DEC-15/19) — o gateway LEGADO (seam do contract
+ * 5.3) so precisa de hasPermission; o import (type-only) da factory de outro modulo sai.
+ */
+interface IdentityAccessModuleLike {
+  hasPermission(roles: unknown, permission: string): boolean
+}
+
 export class ProjectServiceGateway implements ProjectManagementGateway {
   constructor(
     private readonly projectRepository: ProjectRepository,
     private readonly membershipRepository: ProjectMembershipRepository,
     private readonly userRepository: UserRepository,
-    private readonly identityAccess: IdentityAccessModule,
+    private readonly identityAccess: IdentityAccessModuleLike,
   ) {}
 
   async listAllProjects(): Promise<ProjectRecord[]> {
@@ -269,7 +276,7 @@ export interface ProjectManagementGatewayDependencies {
   projectRepository: ProjectRepository
   membershipRepository: ProjectMembershipRepository
   userRepository: UserRepository
-  identityAccess: IdentityAccessModule
+  identityAccess: IdentityAccessModuleLike
 }
 
 export function createProjectManagementGateway(

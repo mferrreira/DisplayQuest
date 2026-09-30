@@ -1,15 +1,13 @@
 import { NextResponse } from "next/server"
 import { ensurePermission, requireApiActor } from "@/lib/auth/api-guard"
 import { getBackendComposition } from "@/backend/composition/root"
+import { domainErrorResponse } from "@/lib/api/domain-error-response"
 
 const { projectManagement: projectManagementModule } = getBackendComposition()
-function toHttpStatus(error: unknown) {
-  const message = error instanceof Error ? error.message : "Erro interno do servidor"
-  if (message.includes("não encontrado")) return 404
-  if (message.includes("Acesso negado") || message.includes("permissão")) return 403
-  if (message.includes("Dados inválidos") || message.includes("obrigatório")) return 400
-  return 500
-}
+
+// OND5-B3 (R4): business errors are typed DomainErrors thrown by the use cases and mapped
+// by domainErrorResponse (status + code + details). The old message-heuristic toHttpStatus
+// is gone; unknown errors keep the generic 500.
 
 export async function GET() {
   try {
@@ -23,9 +21,10 @@ export async function GET() {
 
     return NextResponse.json({ projects }, { status: 200 })
   } catch (error: unknown) {
+    const mapped = domainErrorResponse(error)
+    if (mapped) return mapped
     console.error("Erro ao buscar projetos:", error)
-    const message = error instanceof Error ? error.message : "Erro ao buscar projetos"
-    return NextResponse.json({ error: message }, { status: toHttpStatus(error) })
+    return NextResponse.json({ error: "Erro ao buscar projetos" }, { status: 500 })
   }
 }
 
@@ -68,8 +67,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ project }, { status: 201 })
   } catch (error: unknown) {
+    const mapped = domainErrorResponse(error)
+    if (mapped) return mapped
     console.error("Erro ao criar projeto:", error)
-    const message = error instanceof Error ? error.message : "Erro ao criar projeto"
-    return NextResponse.json({ error: message }, { status: toHttpStatus(error) })
+    return NextResponse.json({ error: "Erro ao criar projeto" }, { status: 500 })
   }
 }

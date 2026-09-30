@@ -1,5 +1,4 @@
-import type { IProject } from "@/backend/models/Project"
-import type { Role } from "@/lib/auth/rbac"
+import type { IProject, Role } from "@/backend/domain"
 
 export interface ListProjectsForActorQuery {
   actorId: number

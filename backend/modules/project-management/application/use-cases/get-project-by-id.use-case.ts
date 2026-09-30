@@ -1,9 +1,14 @@
-import type { ProjectManagementGateway } from "@/backend/modules/project-management/application/ports/project-management.gateway"
+import type { ProjectRepositoryPort } from "@/backend/modules/project-management/application/ports/project.repository"
+
+/** GetProjectByIdUseCase — OND5-B2 (R2). Raw read; access control lives in GetProjectForActor. */
+export interface GetProjectByIdDependencies {
+  projects: ProjectRepositoryPort
+}
 
 export class GetProjectByIdUseCase {
-  constructor(private readonly gateway: ProjectManagementGateway) {}
+  constructor(private readonly dependencies: GetProjectByIdDependencies) {}
 
   async execute(projectId: number) {
-    return await this.gateway.getProjectById(projectId)
+    return await this.dependencies.projects.findById(projectId)
   }
 }
