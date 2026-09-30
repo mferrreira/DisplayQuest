@@ -1,5 +1,24 @@
-import { users, UserRole, ProfileVisibility } from '@prisma/client';
+// OND9-B1 (DEC-06): model PURO — UserRole/ProfileVisibility vem do CORE (backend/domain
+// espelha os enums do schema); a forma da linha `users` e declarada localmente.
+import type { ProfileVisibility, UserRole } from "@/backend/domain";
 import * as bcrypt from 'bcryptjs';
+
+interface UserRow {
+    id: number;
+    name: string;
+    email: string;
+    points: number;
+    completedTasks: number;
+    password: string | null;
+    status: string;
+    weekHours: number;
+    createdAt: Date;
+    currentWeekHours: number;
+    roles: UserRole[];
+    avatar: string | null;
+    bio: string | null;
+    profileVisibility: ProfileVisibility;
+}
 
 export interface IUser {
     id?: number;
@@ -65,7 +84,7 @@ export class User {
         });
     }
 
-    static fromPrisma(data: users): User {
+    static fromPrisma(data: UserRow): User {
         return new User({
             id: data.id,
             name: data.name,
@@ -84,7 +103,7 @@ export class User {
         });
     }
 
-    toPrisma(): Omit<users, 'id' | 'createdAt'> {
+    toPrisma(): Omit<UserRow, 'id' | 'createdAt'> {
         return {
             name: this.name,
             email: this.email,

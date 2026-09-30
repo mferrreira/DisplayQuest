@@ -1,4 +1,6 @@
-import { UserRole } from '@prisma/client';
+// OND9-B1 (DEC-06): model PURO — UserRole vem do CORE (backend/domain espelha o enum do
+// schema), nao mais de @prisma/client.
+import type { UserRole } from "@/backend/domain";
 
 export interface IProjectMembership {
     id?: number;

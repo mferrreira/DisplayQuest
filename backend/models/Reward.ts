@@ -1,4 +1,12 @@
-import { rewards } from '@prisma/client';
+// OND9-B1 (DEC-06): o model e PURO — a forma da linha `rewards` do schema e declarada
+// localmente (nenhum import de @prisma/client em backend/models).
+interface RewardRow {
+    id: number;
+    name: string;
+    description: string | null;
+    price: number;
+    available: boolean;
+}
 
 export interface IReward {
     id?: number;
@@ -41,7 +49,7 @@ export class Reward {
         this.imageUrl = imageUrl;
     }
 
-    static fromPrisma(data: rewards): Reward {
+    static fromPrisma(data: RewardRow): Reward {
         return new Reward(
             data.name,
             data.price,

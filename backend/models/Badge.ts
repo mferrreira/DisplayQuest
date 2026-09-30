@@ -1,4 +1,26 @@
-import { badges, user_badges } from '@prisma/client';
+// OND9-B1 (DEC-06): models PUROS — formas das linhas `badges`/`user_badges` declaradas
+// localmente (BadgeCategory local ja espelha o enum do schema, entao a atribuicao ao
+// Prisma nas repositorios permanece tipada).
+interface BadgeRow {
+    id: number;
+    name: string;
+    description: string;
+    icon: string | null;
+    color: string | null;
+    category: BadgeCategory;
+    criteria: unknown;
+    isActive: boolean;
+    createdAt: Date;
+    createdBy: number;
+}
+
+interface UserBadgeRow {
+    id: number;
+    userId: number;
+    badgeId: number;
+    earnedAt: Date;
+    earnedBy: number | null;
+}
 
 export interface IBadge {
     id?: number;
@@ -66,7 +88,7 @@ export class Badge {
         });
     }
 
-    static fromPrisma(data: badges): Badge {
+    static fromPrisma(data: BadgeRow): Badge {
         return new Badge({
             id: data.id,
             name: data.name,
@@ -81,7 +103,7 @@ export class Badge {
         });
     }
 
-    toPrisma(): Omit<badges, 'id' | 'createdAt'> {
+    toPrisma(): Omit<BadgeRow, 'id' | 'createdAt'> {
         return {
             name: this.name,
             description: this.description,
@@ -139,7 +161,7 @@ export class UserBadge {
         });
     }
 
-    static fromPrisma(data: user_badges): UserBadge {
+    static fromPrisma(data: UserBadgeRow): UserBadge {
         return new UserBadge({
             id: data.id,
             userId: data.userId,
@@ -149,7 +171,7 @@ export class UserBadge {
         });
     }
 
-    toPrisma(): Omit<user_badges, 'id'> {
+    toPrisma(): Omit<UserBadgeRow, 'id'> {
         return {
             userId: this.userId,
             badgeId: this.badgeId,

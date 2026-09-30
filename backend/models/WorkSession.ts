@@ -1,4 +1,19 @@
-import { work_sessions } from '@prisma/client';
+// OND9-B1 (DEC-06): model PURO — forma da linha `work_sessions` (so colunas escalares,
+// como o tipo base do Prisma) declarada localmente.
+interface WorkSessionRow {
+    id: number;
+    userId: number;
+    userName: string;
+    startTime: Date;
+    endTime: Date | null;
+    duration: number | null;
+    activity: string | null;
+    location: string | null;
+    projectId: number | null;
+    status: string;
+    createdAt: Date;
+    updatedAt: Date;
+}
 
 export class WorkSession {
     public id?: number;
@@ -66,7 +81,7 @@ export class WorkSession {
         );
     }
 
-    static fromPrisma(data: work_sessions): WorkSession {
+    static fromPrisma(data: WorkSessionRow): WorkSession {
         return new WorkSession(
             data.userId,
             data.userName,
@@ -83,7 +98,7 @@ export class WorkSession {
         );
     }
 
-    toPrisma(): Omit<work_sessions, 'id' | 'createdAt' | 'updatedAt'> {
+    toPrisma(): Omit<WorkSessionRow, 'id' | 'createdAt' | 'updatedAt'> {
         return {
             userId: this.userId,
             userName: this.userName,

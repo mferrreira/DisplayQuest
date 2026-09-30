@@ -1,4 +1,13 @@
-import { purchases } from '@prisma/client';
+// OND9-B1 (DEC-06): model PURO — forma da linha `purchases` declarada localmente.
+interface PurchaseRow {
+    id: number;
+    userId: number;
+    rewardId: number;
+    rewardName: string;
+    price: number;
+    purchaseDate: string;
+    status: string;
+}
 
 export interface IPurchase {
     id?: number;
@@ -39,7 +48,7 @@ export class Purchase {
         this.status = status;
     }
 
-    static fromPrisma(data: purchases): Purchase {
+    static fromPrisma(data: PurchaseRow): Purchase {
         return new Purchase(
             data.userId,
             data.rewardId,

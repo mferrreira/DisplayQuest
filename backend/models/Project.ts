@@ -1,3 +1,9 @@
+import { ProjectStatus } from "@/backend/domain";
+import type { ProjectLink, ProjectMemberSummary } from "@/backend/domain";
+
+export { ProjectStatus };
+export type { ProjectLink, ProjectMemberSummary };
+
 export interface IProject {
     id?: number;
     name: string;
@@ -9,24 +15,6 @@ export interface IProject {
     links?: ProjectLink[] | null;
     memberCount?: number;
     members?: ProjectMemberSummary[];
-}
-
-export interface ProjectMemberSummary {
-    userId: number;
-    roles: string[];
-    user?: { id: number; name: string; email: string } | null;
-}
-
-export interface ProjectLink {
-    label: string;
-    url: string;
-}
-
-export enum ProjectStatus {
-    ACTIVE = 'active',
-    COMPLETED = 'completed',
-    ARCHIVED = 'archived',
-    ON_HOLD = 'on_hold'
 }
 
 export class Project {
