@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server"
 import { ensureAnyRole, requireApiActor } from "@/lib/auth/api-guard";
 import { getBackendComposition } from "@/backend/composition/root"
-
+import { domainErrorResponse } from "@/lib/api/domain-error-response"
+// OND8-B4 (R4): DomainErrors mapeados. EVOLUTION (documentada): startResponsibility
+// ("Ja existe uma responsabilidade ativa..." -> ConflictError 409; "Usuario nao
+// encontrado" -> 404) antes caia no 500 com error.message. Gate de papel da rota
+// (ensureAnyRole) preservado com corpo legado.
 const { labOperations: labOperationsModule } = getBackendComposition();
 
 export async function GET(request: Request) {
@@ -38,6 +42,8 @@ export async function GET(request: Request) {
       }, { status: 200 })
     }
   } catch (error: any) {
+    const mapped = domainErrorResponse(error);
+    if (mapped) return mapped;
     console.error("Erro ao buscar responsabilidades:", error)
     return NextResponse.json({ 
       error: error.message || "Erro ao buscar responsabilidades" 
@@ -69,6 +75,8 @@ export async function POST(request: Request) {
       responsibility: responsibility.toJSON() 
     }, { status: 201 })
   } catch (error: any) {
+    const mapped = domainErrorResponse(error);
+    if (mapped) return mapped;
     console.error("Erro ao iniciar responsabilidade:", error)
     return NextResponse.json({ 
       error: error.message || "Erro ao iniciar responsabilidade" 

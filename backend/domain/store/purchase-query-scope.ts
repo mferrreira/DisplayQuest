@@ -1,4 +1,25 @@
-import type { ListPurchasesQuery } from "@/backend/modules/store/application/contracts"
+/**
+ * OND8-B2 — escopo de listagem de compras (movido VERBATIM de
+ * `backend/modules/store/application/purchase-query-scope.ts` para o domínio puro).
+ *
+ * A2: define o escopo de listagem de compras.
+ * - Filtros globais (rewardId/status/datas) enumeram compras de TODOS os usuários →
+ *   exigem MANAGE_PURCHASES (era a falha: qualquer autenticado listava tudo).
+ * - userId explícito: somente o próprio usuário, ou manager para qualquer um.
+ * - Sem filtros: manager lista tudo; usuário comum lista apenas as próprias.
+ * Precedência original das branches é preservada para casos permitidos.
+ *
+ * O tipo do query é declarado localmente (RG-01: o core não importa contratos de módulo);
+ * é estruturalmente idêntico a `ListPurchasesQuery` do módulo.
+ */
+
+export interface PurchaseQueryScope {
+  userId?: number
+  rewardId?: number
+  status?: string
+  startDate?: Date
+  endDate?: Date
+}
 
 export interface PurchaseScopeInput {
   actorId: number
@@ -12,14 +33,8 @@ export interface PurchaseScopeInput {
 
 export type PurchaseScopeResult =
   | { deny: true; message: string }
-  | { deny: false; query: ListPurchasesQuery }
+  | { deny: false; query: PurchaseQueryScope }
 
-// A2: define o escopo de listagem de compras.
-// - Filtros globais (rewardId/status/datas) enumeram compras de TODOS os usuários →
-//   exigem MANAGE_PURCHASES (era a falha: qualquer autenticado listava tudo).
-// - userId explícito: somente o próprio usuário, ou manager para qualquer um.
-// - Sem filtros: manager lista tudo; usuário comum lista apenas as próprias.
-// Precedência original das branches é preservada para casos permitidos.
 export function resolvePurchaseQueryScope(input: PurchaseScopeInput): PurchaseScopeResult {
   if (input.userId) {
     const targetId = Number(input.userId)
@@ -51,7 +66,8 @@ export function resolvePurchaseQueryScope(input: PurchaseScopeInput): PurchaseSc
     }
   }
 
-  return input.canManagePurchases
-    ? { deny: false, query: {} }
-    : { deny: false, query: { userId: input.actorId } }
+  if (input.canManagePurchases) {
+    return { deny: false, query: {} }
+  }
+  return { deny: false, query: { userId: input.actorId } }
 }

@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server"
 import { getBackendComposition } from "@/backend/composition/root"
 import { requireApiActor } from "@/lib/auth/api-guard"
-
+import { domainErrorResponse } from "@/lib/api/domain-error-response"
+// OND8-B4 (R4): DomainErrors mapeados por domainErrorResponse (leitura — sem erros de
+// regra esperados; fallback legado preservado).
 const { labOperations: labOperationsModule } = getBackendComposition()
 
 export async function GET(request: Request) {
@@ -24,6 +26,8 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ events: events.map((event) => event.toJSON()) })
   } catch (error: any) {
+    const mapped = domainErrorResponse(error)
+    if (mapped) return mapped
     console.error("Erro ao buscar próximos eventos:", error)
     return NextResponse.json({ error: error.message || "Erro ao buscar próximos eventos" }, { status: 500 })
   }

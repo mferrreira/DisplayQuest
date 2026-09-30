@@ -1,9 +1,11 @@
-import type { Issue } from "@/backend/models/Issue"
-import type { LabEvent } from "@/backend/models/LabEvent"
-import type { LabNotice } from "@/backend/models/LabNotice"
-import type { LaboratorySchedule } from "@/backend/models/LaboratorySchedule"
-import type { LabResponsibility } from "@/backend/models/LabResponsibility"
-import type { UserSchedule } from "@/backend/models/UserSchedule"
+import type {
+  Issue,
+  LabEvent,
+  LabNotice,
+  LabResponsibility,
+  LaboratorySchedule,
+  UserSchedule,
+} from "@/backend/domain"
 import type {
   CreateLabEventCommand,
   CreateLabNoticeCommand,

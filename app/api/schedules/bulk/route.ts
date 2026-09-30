@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server"
 import { requireApiActor, ensurePermission } from "@/lib/auth/api-guard"
 import { getBackendComposition } from "@/backend/composition/root"
-
+import { domainErrorResponse } from "@/lib/api/domain-error-response"
+// OND8-B4 (R4): DomainErrors mapeados; heuristic legado (toHttpStatus) como fallback.
 const { labOperations: labOperationsModule } = getBackendComposition()
 
 interface BulkSlot {
@@ -75,6 +76,8 @@ export async function PUT(request: Request) {
       schedules: schedules.map((schedule: any) => schedule.toJSON()),
     })
   } catch (error: unknown) {
+    const mapped = domainErrorResponse(error)
+    if (mapped) return mapped
     console.error("Erro ao salvar horários em lote:", error)
     const message = error instanceof Error ? error.message : "Erro ao salvar horários"
     return NextResponse.json({ error: message }, { status: toHttpStatus(error) })

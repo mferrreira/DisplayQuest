@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
-import { createLabOperationsModule } from '@/backend/modules/lab-operations';
 import { requireApiActor } from '@/lib/auth/api-guard';
 import { getBackendComposition } from "@/backend/composition/root"
-
+import { domainErrorResponse } from "@/lib/api/domain-error-response"
+// OND8-B4 (R4): DomainErrors mapeados. EVOLUTION (documentada): createLabEvent com
+// validacao ("Dados invalidos: ...") ou usuario inativo/inexistente antes caia no 500 com
+// error.message; agora ValidationError -> 400, NotFoundError -> 404, ForbiddenError -> 403.
 const { labOperations: labOperationsModule } = getBackendComposition();
 
 export async function GET(request: Request) {
@@ -24,6 +26,8 @@ export async function GET(request: Request) {
     
     return NextResponse.json({ events: events.map(event => event.toJSON()) });
   } catch (error: any) {
+    const mapped = domainErrorResponse(error);
+    if (mapped) return mapped;
     console.error("Erro ao buscar eventos:", error);
     return NextResponse.json({ error: error.message || "Erro ao buscar eventos" }, { status: 500 });
   }
@@ -50,6 +54,8 @@ export async function POST(request: Request) {
     
     return NextResponse.json({ event: event.toJSON() }, { status: 201 });
   } catch (error: any) {
+    const mapped = domainErrorResponse(error);
+    if (mapped) return mapped;
     console.error("Erro ao criar evento:", error);
     return NextResponse.json({ error: error.message || "Erro ao criar evento" }, { status: 500 });
   }

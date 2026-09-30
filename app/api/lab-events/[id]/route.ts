@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server"
 import { getBackendComposition } from "@/backend/composition/root"
 import { requireApiActor } from "@/lib/auth/api-guard"
-
+import { domainErrorResponse } from "@/lib/api/domain-error-response"
+// OND8-B4 (R4): DomainErrors mapeados. EVOLUTION (documentada): "Evento nao encontrado"
+// antes caia no 500 (PATCH mapeava apenas 'permissao' -> 403); agora NotFoundError -> 404,
+// ForbiddenError -> 403, ValidationError -> 400. O heuristic legado 'permissao'->403 segue
+// como fallback para erros nao-tipados.
 const { labOperations: labOperationsModule } = getBackendComposition()
 
 export async function PATCH(
@@ -45,6 +49,8 @@ export async function PATCH(
 
     return NextResponse.json({ event: event.toJSON() })
   } catch (error: any) {
+    const mapped = domainErrorResponse(error)
+    if (mapped) return mapped
     console.error("Erro ao atualizar evento:", error)
     const status = String(error?.message || "").includes("permissão") ? 403 : 500
     return NextResponse.json({ error: error.message || "Erro ao atualizar evento" }, { status })
@@ -74,6 +80,8 @@ export async function DELETE(
 
     return NextResponse.json({ success: true })
   } catch (error: any) {
+    const mapped = domainErrorResponse(error)
+    if (mapped) return mapped
     console.error("Erro ao remover evento:", error)
     return NextResponse.json({ error: error.message || "Erro ao remover evento" }, { status: 500 })
   }

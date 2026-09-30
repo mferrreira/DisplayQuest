@@ -1,5 +1,3 @@
-import type { NotificationsModule } from "@/backend/modules/notifications"
-import type { IdentityAccessModule } from "@/backend/modules/identity-access"
 import { Issue } from "@/backend/models/Issue"
 import { LabEvent } from "@/backend/models/LabEvent"
 import { LabNotice } from "@/backend/models/LabNotice"
@@ -35,11 +33,25 @@ import type {
 } from "@/backend/modules/lab-operations/application/contracts"
 import type { LabOperationsGateway } from "@/backend/modules/lab-operations/application/ports/lab-operations.gateway"
 
+/**
+ * OND9-B1 (RG-04): seam estrutural LOCAL. Este gateway LEGADO (seam do golden 8.1/contract
+ * 8.3, DEC-15/19) so precisa destes metodos dos modulos notifications/identity-access;
+ * declara-los localmente remove o import (mesmo type-only) da factory de outro modulo.
+ * Os modulos reais continuam estruturalmente atributiveis (bivariancia de metodo).
+ */
+interface NotificationsModuleLike {
+  publishEvent(event: any): Promise<unknown>
+}
+interface IdentityAccessModuleLike {
+  hasAnyRole(roles: unknown, requiredRoles: string[]): boolean
+  hasPermission(roles: unknown, permission: string): boolean
+}
+
 export class DefaultLabOperationsGateway implements LabOperationsGateway {
   constructor(
     private readonly issueRepository: IssueRepository,
-    private readonly notificationsModule: NotificationsModule,
-    private readonly identityAccess: IdentityAccessModule,
+    private readonly notificationsModule: NotificationsModuleLike,
+    private readonly identityAccess: IdentityAccessModuleLike,
     private readonly userRepository: UserRepository,
     private readonly labEventRepository: LabEventRepository,
     private readonly labNoticeRepository: LabNoticeRepository,
@@ -594,8 +606,8 @@ export class DefaultLabOperationsGateway implements LabOperationsGateway {
 
 export interface LabOperationsGatewayDependencies {
   issueRepository: IssueRepository
-  notificationsModule: NotificationsModule
-  identityAccess: IdentityAccessModule
+  notificationsModule: NotificationsModuleLike
+  identityAccess: IdentityAccessModuleLike
   userRepository: UserRepository
   labEventRepository: LabEventRepository
   labNoticeRepository: LabNoticeRepository
