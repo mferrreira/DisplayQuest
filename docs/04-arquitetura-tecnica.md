@@ -77,9 +77,27 @@ Rotas principais do dashboard:
 
 ## 3. Arquitetura do backend
 
+> Atualizado em 2026-10 apos a refatoracao clean-arch (`displayquest-v2/clean-arch`):
+> core puro em `backend/domain/`, use cases em todos os modulos, adapters Prisma finos
+> e arquitetura vigia pelo gate G0 (`npm run arch:check`, allow-list vazia).
+
 ### 3.1 Organizacao modular
 
-O backend foi organizado em modulos por dominio dentro de `backend/modules/*`.
+O backend e organizado em camadas + modulos por dominio:
+
+- `backend/domain/` — **core puro**: erros tipados (`ValidationError`, `NotFoundError`,
+  `ConflictError`, `ForbiddenError`) e regras de dominio como funcoes puras por
+  dominio (`identity/`, `work/`, `task/`, `project/`, `gamification/`, `store/`,
+  `lab/`, `reporting/`); sem Prisma, sem framework e sem relogio global (`now`
+  sempre parametro)
+- `backend/models/` — record builders **puros** (`fromPrisma`/`toPrisma`/`toJSON`);
+  nenhum arquivo importa `@prisma/client` (formas de linha como interfaces locais,
+  enums vindos do core)
+- `backend/repositories/` — repositorios Prisma legados, consumidos apenas pelos
+  gateways legados (seams de teste)
+- `backend/composition/root.ts` — composition root (+ `checkDatabaseHealth`, o probe
+  que a rota `/api/health` consome)
+- `backend/modules/*` — modulos por dominio
 
 Modulos atuais:
 
@@ -97,20 +115,25 @@ Modulos atuais:
 
 ### 3.2 Estrutura interna dos modulos
 
-O projeto segue uma organizacao modular inspirada em Clean Architecture, mas aplicada de forma incremental.
+Todos os modulos seguem a mesma organizacao (refatoracao concluida nas ondas 0-9):
 
-Elementos presentes conforme o modulo:
+- `application/contracts.ts` — contratos de entrada/saida
+- `application/ports/*` — interfaces locais (repositorios finos, directory, publishers)
+- `application/use-cases/*` — orquestram regras puras do core + ports
+- `infrastructure/repositories/*` — adapters Prisma finos (implementam os ports;
+  escrevem apenas colunas reais do schema)
+- `infrastructure/adapters/*` — directory/publisher e afins
+- `infrastructure/*.gateway.ts` — gateways **legados** mantidos como seam indexavel
+  das suites golden/contract (DEC-15/19); a wiring de producao nao os usa
+- `index.ts` — factory do modulo (aceita `repository?`/`ports?` como seam primaria)
 
-- `application/contracts.ts`
-- `application/ports/*`
-- `application/use-cases/*` quando o dominio ja foi extraido nesse nivel
-- `infrastructure/*` para gateways, publishers e adaptadores
-- `index.ts` como factory do modulo
+Observacoes:
 
-Observacao importante:
-
-- nem todos os modulos possuem o mesmo grau de detalhamento interno
-- em varios casos, o gateway da infraestrutura ainda concentra parte importante da orquestracao do dominio
+- os quirks de comportamento legado sao pinados por **golden tests** e provados
+  equivalentes por **contract tests** antigo-vs-novo (fake Prisma deterministico);
+  divergencias so existem com aprovacao registrada (ex.: DEC-23)
+- as regras de dependencia RG-01..RG-06 sao vigidas pelo dependency-cruiser
+  (`.dependency-cruiser.js`); a allow-list esta **vazia** desde a OND9-B1
 
 ### 3.3 Composition root
 
@@ -121,15 +144,20 @@ Arquivo central:
 Responsabilidades:
 
 - instanciar todos os modulos
-- resolver dependencias cruzadas
-- montar publishers e integracoes auxiliares
+- resolver dependencias cruzadas (unica camada autorizada a importar factories de
+  modulos — RG-05)
+- montar publishers e integracoes auxiliares: eventos entre modulos saem por
+  **porta local** do modulo consumidor e o adaptador e injetado aqui (ex.:
+  `NotificationsLabPublisher`, `NotificationsReportPublisher`, publisher de eventos
+  de task/work ligado a gamification)
 - expor o singleton via `getBackendComposition()`
+- expor `checkDatabaseHealth()` (probe de saude consumido por `/api/health`)
 
-Dependencias cruzadas atuais incluem, por exemplo:
+Dependencias cruzadas atuais:
 
-- `task-management` usando `identityAccess`, `notifications` e eventos de progresso ligados a `gamification`
-- `lab-operations` usando `identityAccess` e `notifications`
-- `work-execution` usando publisher de eventos conectado a `gamification`
+- `task-management` recebe `notifications` e eventos de progresso ligados a `gamification`
+- `lab-operations` e `reporting` recebem publishers de notificacao via porta local
+- `work-execution` recebe publisher de eventos conectado a `gamification`
 
 ### 3.4 Papel das rotas HTTP
 
@@ -141,11 +169,15 @@ Responsabilidades esperadas:
 - interpretar parametros e payload
 - aplicar validacoes HTTP imediatas
 - chamar o modulo adequado via `getBackendComposition()`
+- mapear erros de dominio para HTTP com o mapper compartilhado
+  `lib/api/domain-error-response.ts` (`domainErrorResponse`: 400/404/409/403 por tipo
+  de erro); erros nao-DomainError (ex.: enum do Prisma, FK) seguem no tratamento legado
 - converter o resultado em resposta JSON
 
 Regra arquitetural:
 
-- rotas nao devem instanciar `createXModule()` diretamente
+- rotas nao devem instanciar `createXModule()` nem Prisma/repositorios diretamente
+  (RG-06; vigido por gate)
 - regra de negocio relevante nao deve ficar espalhada nos route handlers
 
 ## 4. Fluxo de requisicao
@@ -156,9 +188,11 @@ Fluxo tipico:
 2. a rota em `app/api/*` recebe a requisicao
 3. a rota autentica o usuario e valida o contexto da chamada
 4. a rota resolve o modulo pelo composition root
-5. o modulo delega para gateway, contrato ou use case correspondente
-6. a infraestrutura conversa com repositorios, Prisma e dependencias auxiliares
-7. o resultado retorna para a rota e depois para a UI
+5. o modulo delega para o use case correspondente
+6. o use case compoe regras puras (`backend/domain`) + ports
+7. os adapters finos da infraestrutura conversam com Prisma
+8. erros de dominio (tipados) sao mapeados por `domainErrorResponse`
+9. o resultado retorna para a rota e depois para a UI
 
 ## 5. Persistencia e modelo de dados
 
@@ -202,15 +236,27 @@ Arquivos centrais:
 ## 7. Decisoes arquiteturais relevantes
 
 - monolito web com separacao logica clara entre interface, HTTP e dominio
-- composition root central para evitar dependencia cruzada escondida
-- modularizacao incremental, sem exigir que todos os dominios tenham a mesma maturidade interna
+- **core puro** (`backend/domain`): regras como funcoes puras, erros tipados, sem ORM/
+  framework/relogio (`now` sempre parametro); date-fns aceito como lib de funcoes puras
+- composition root central para evitar dependencia cruzada escondida; eventos entre
+  modulos via porta local do consumidor, injetada na composicao
+- modularizacao uniforme (todos os modulos com contracts/ports/use-cases/adapters finos)
+- comportamento legado pinado por golden tests + contract tests antigo-vs-novo; quirks
+  sao contrato ate decisao registrada de conserto (ex.: DEC-23 no update de rewards)
+- gate G0 (`npm run arch:check`, dependency-cruiser RG-01..RG-06) com allow-list **vazia**
+  desde a OND9-B1 — violacao nova quebra o build
 - preservacao de compatibilidade em trechos legados, especialmente no dominio de tarefas
-- uso de providers por area no frontend para evitar espalhar IO por componentes visuais
 
 ## 8. Pontos de atencao para manutencao
 
-- novas rotas devem passar pelo composition root
+- novas rotas devem passar pelo composition root e mapear erros com `domainErrorResponse`
 - mudancas entre dominios precisam ser refletidas em `backend/composition/root.ts`
+- nenhum import novo entre camadas sem antes rodar `npm run arch:check` (a allow-list
+  esta vazia; nao re-adicionar entradas sem decisao registrada)
+- testes de integracao (G4) rodam SO contra o banco de teste isolado
+  (`dq-dev-test-db`, `127.0.0.1:5433`) — nunca contra o `display-quest-db` (5432)
 - evolucoes no frontend devem priorizar reutilizacao de providers e hooks existentes
-- alteracoes no schema precisam atualizar a documentacao e ser avaliadas no impacto dos gateways e contexts
-- no dominio de tarefas, a convivencia entre `assignedTo`, `task_assignees`, `taskVisibility` e `task_user_progress` exige cuidado para evitar regressao funcional
+- alteracoes no schema precisam atualizar a documentacao e ser avaliadas no impacto dos
+  adapters e contexts
+- no dominio de tarefas, a convivencia entre `assignedTo`, `task_assignees`,
+  `taskVisibility` e `task_user_progress` exige cuidado para evitar regressao funcional

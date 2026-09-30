@@ -5,9 +5,30 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
 
 ## Verificação
 
-- **Gate de entrega:** `npm run lint` (nada de erro) && `npx tsc --noEmit` (0) && `npx vitest run` (esperado **256/257** — o único failure é o conhecido `floating-session-timer`, ver gotcha abaixo).
+- **Gate de entrega:** `npm run arch:check` (exit 0, allow-list **vazia**) && `npm run lint` (nada de erro) && `npx tsc --noEmit` (0) && `npx vitest run` (baseline atual: **67 arquivos / 1245 testes, zero failure** — a contagem só cresce; ver seção clean-arch).
+- **G4/integração:** roundtrips Prisma real rodam **só** contra o banco de teste isolado `dq-dev-test-db` em `127.0.0.1:5433` (`$env:DATABASE_URL="postgresql://dq_dev:dq_dev_local_only@127.0.0.1:5433/dq_dev_test"; npx vitest run`) — nunca contra o `display-quest-db` (5432, produção local).
 - **Secrets:** `npm run check:env` valida `NEXTAUTH_SECRET` (≥32, sem placeholder) e
   senha do banco (denylist). O runner lê `process.env`, não `.env` — exporte as variáveis.
+
+## Arquitetura clean-arch (refatoração 2026-09/10, ondas 0–9)
+
+- **Árvore:** `backend/domain/` (core puro: erros tipados + regras como funções puras,
+  `now` sempre parâmetro), `backend/models/` (record builders puros, **zero**
+  `@prisma/client`), `backend/modules/<m>/{application/{contracts,ports,use-cases},infrastructure/{repositories,adapters}}`, `backend/composition/root.ts` (único ponto de wiring cruzado; expõe `checkDatabaseHealth`). Ver `backend/README.md`.
+- **Gate G0:** `npm run arch:check` (dependency-cruiser, RG-01..RG-06) com **allow-list
+  vazia** desde OND9-B1 — import proibido novo quebra o gate. Não re-adicionar entradas
+  sem decisão registrada em `displayquest-v2/clean-arch/STATE.json`.
+- **Rotas:** finas, via `getBackendComposition()`; erros de domínio mapeados por
+  `lib/api/domain-error-response.ts` (`domainErrorResponse`: Validation→400, NotFound→404,
+  Conflict→409, Forbidden→403); não-DomainError (enum Prisma, FK P2003) segue no 500 legado.
+- **Quirks são contrato:** comportamento legado é pinado por golden tests e provado por
+  contract tests antigo-vs-novo (fakes Prisma determinísticos em `tests/unit/modules/*`).
+  Gateways legados em `infrastructure/*.gateway.ts` sobrevivem como seam desses testes
+  (DEC-15/19); a wiring de produção não os usa.
+- **Composição:** factories aceitam `repository?`/`ports?` (seam primário); publishers
+  entre módulos entram por porta local injetada no composition root (DEC-21).
+- **Estado/decisões:** `displayquest-v2/clean-arch/{PLAN.md,STATE.json}` (ondas 0–9
+  concluídas em 2026-09-30: 41 batches, AC-00-01..15 met, DEC-01..DEC-25).
 
 ## Perfil do sistema (2026-09-05)
 
@@ -33,14 +54,15 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
   de forma confiável (a rota ainda via o `readFile` real). Padrão da casa: rotas leem via
   um seam em `lib/` (ex.: `readReportFileBytes` em `lib/storage/report-uploads.ts`) e o
    teste mocka a lib, não o builtin.
-- **`floating-session-timer` falha de propósito (256/257):** `tests/unit/components/floating-session-timer.test.tsx`
-  (local, gitignored) asserciona o dialog "Sessão pausada automaticamente", mas o path de auto-pause do
-  componente passou a chamar `ResponsibilitiesAPI.pause()` (endpoint real `PATCH /api/responsibilities/0`)
-  sem que o teste mockasse `@/contexts/api-client` — sob `vi.useFakeTimers()` o fetch real nunca settle,
-  o dialog nunca abre e a asserção falha. As asserções do agendamento (o importante) passam.
-  Defeito de teste, não de produção. Decisão do dono (2026-09-03): **deixar falhando**, tratar 256/257
-  como verde. Fix eventual: `vi.mock("@/contexts/api-client")` com `ResponsibilitiesAPI.pause`/`resume`
-  resolvidos.
+- **`floating-session-timer` (256/257) não se aplica a esta base:** o arquivo
+  `tests/unit/components/floating-session-timer.test.tsx` citado pelo gotcha antigo
+  **não existe nesta máquina/base** — o teste do timer aqui é
+  `features/laboratorio/__tests__/floating-timer-tabs.test.tsx` (5 testes, na baseline).
+  A suite desta base fecha sem failures (baseline atual 67 arquivos / 1245 testes;
+  registrado no STATE.json do clean-arch). O gotcha original (auto-pause chamando
+  `ResponsibilitiesAPI.pause()` sem mock de `@/contexts/api-client`) pertence a outra
+  máquina; se o arquivo reaparecer, o fix sugerido continua sendo
+  `vi.mock("@/contexts/api-client")` com `pause`/`resume` resolvidos.
 - **LSP engana:** `Cannot find module` para `.js`/libs recém-criadas é falso-positivo do
   LSP; `tsc --noEmit` e `vitest` passam (`allowJs: true`, `moduleResolution: bundler`).
 - **Uploads (A11):** relatórios em `data/uploads/reports` (privado, servido só por
@@ -59,10 +81,14 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
   `aria-expanded` fica `false`) e o teste só falha ao buscar os `role="option"`. Shims vivem em
   `tests/setup.ts` (guardados por `typeof Element !== "undefined"` — as suítes com
   `// @vitest-environment node` pulam). Não remover (2026-09-03).
-- **Roundtrip de integração precisa de banco no ar:** `tests/integration/entities-roundtrip.test.ts`
-  (environment `node`) roda Prisma real contra `localhost:5432`. Com o container parado, a suíte
-  falha com "Can't reach database server". Sobe com `docker compose up -d postgres` (nome do
-  serviço = `postgres`, container = `display-quest-db`) — `db` **não** é o nome do serviço.
+- **Roundtrip de integração precisa de banco no ar:** os roundtrips G4 do clean-arch
+  (`tests/integration/*-roundtrip.test.ts`, environment `node`) rodam Prisma real contra
+  o banco de teste **isolado** `dq-dev-test-db` em `127.0.0.1:5433` (exportar
+  `DATABASE_URL` apontando para a 5433). Com o container parado, a suíte falha com
+  "Can't reach database server"; re-arme com `docker start dq-dev-test-db` (NUNCA tocar
+  no `display-quest-db`/`display-quest`). O roundtrip antigo `tests/integration/entities-roundtrip.test.ts`
+  usa `localhost:5432` via `docker compose up -d postgres` (nome do serviço = `postgres`,
+  container = `display-quest-db`) — `db` **não** é o nome do serviço.
 - **Nunca imprimir/commitar o valor real do `NEXTAUTH_SECRET`** do `.env` local.
 - `tests/` está em `.gitignore` (linha 163) — os testes de mitigação ficam fora do commit
   a menos que se adicione `!tests/unit`.

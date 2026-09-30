@@ -26,6 +26,16 @@ O que plan-v2 **não** é:
 - Não é para ser commitado além do branch `dev` (a ramo de desenvolvimento). Multi-lab
   (item 05) e SSO/LDAP (item 06) são projetos de infra em separado, fora deste repo.
 
+**Pré-requisito (registrado 2026-10):** toda funcionalidade plan-v2 (01–06) assume a
+refatoração **`displayquest-v2/clean-arch`** como base concluída: a árvore nova
+(`backend/domain` core puro, `backend/models` sem Prisma, modulos com
+contracts/ports/use-cases e adapters Prisma finos, composition root unico para wiring
+cruzado) e os gates **G0–G5** da Seção 5 (incluindo G0 `npm run arch:check` com
+allow-list vazia). Implementações plan-v2 devem seguir as convencoes do clean-arch
+(erros tipados + `domainErrorResponse` nas rotas, publishers via porta local injetada
+na composicao, quirks pinados por golden/contract). Estado da refatoracao:
+`displayquest-v2/clean-arch/STATE.json` (ondas 0–9).
+
 ## 2. Estrutura de pastas de plan-v2
 
 ```
@@ -102,13 +112,14 @@ Antes de marcar `verifying → done`, rodar (na ordem):
 
 | # | Gate | Comando | Critério |
 |---|---|---|---|
+| G0 | Arquitetura | `npm run arch:check` | exit 0 (allow-list vazia; import proibido novo falha o gate) |
 | G1 | Lint | `npx eslint --no-eslintrc --config .eslintrc.json <arquivos>` | exit 0 |
 | G2 | Typecheck | `npx tsc --noEmit` | 0 errors |
-| G3 | Unit | `npx vitest run` (com env: `set -a; sset;a`) | 256/257 (único fail conhecido) + novos testes verdes |
-| G4 | Integração | `docker compose up -d postgres && npx vitest run` (com env) | n/a quando não tocar DB |
+| G3 | Unit | `npx vitest run` (com env exportado) | suite completa verde (baseline pós-clean-arch: 67 arquivos / 1245 testes; a contagem só cresce) |
+| G4 | Integração | `DATABASE_URL=...@127.0.0.1:5433/dq_dev_test npx vitest run` (roundtrips) | só contra o banco de teste isolado (`dq-dev-test-db`, 5433) — nunca a 5432; n/a quando não tocar DB |
 | G5 | Migração | `npx prisma migrate dev` (local) / `deploy` (prod) | sem `db push` |
 
-Regra: **G1–G3 sempre; G4–G5 quando a etapa tocar schema/DB/infra**.
+Regra: **G0–G3 sempre; G4–G5 quando a etapa tocar schema/DB/infra**.
 "Todos os gates verdes da etapa" é pré-condição para `verifying → done`. Sem isso,
 o rollback é disparado.
 
