@@ -1,3 +1,12 @@
+/**
+ * LEGACY reference implementation (OND1-B2).
+ *
+ * As of batch 1.2 the composition root no longer wires this class: the module runs on
+ * `NotificationsGatewayAdapter` + `PrismaNotificationRepository`, with the business rules in
+ * the use cases. The class is kept UNTOUCHED as the "implementacao antiga indexada no seam"
+ * required by PLAN §3 R3 — `notifications.contract.test.ts` runs the shared port matrix
+ * against it and against the new adapter. Removal task: OND9-B1.
+ */
 import { prisma } from "@/lib/database/prisma"
 import type {
   NotificationItem,

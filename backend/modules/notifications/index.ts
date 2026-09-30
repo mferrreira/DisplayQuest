@@ -1,14 +1,14 @@
 import type { PublishNotificationEventCommand } from "@/backend/modules/notifications/application/contracts"
+import type { NotificationsGateway } from "@/backend/modules/notifications/application/ports/notifications.gateway"
+import type { NotificationRepository } from "@/backend/modules/notifications/application/ports/notification.repository"
 import { DeleteUserNotificationUseCase } from "@/backend/modules/notifications/application/use-cases/delete-user-notification.use-case"
 import { GetUnreadCountUseCase } from "@/backend/modules/notifications/application/use-cases/get-unread-count.use-case"
 import { ListUserNotificationsUseCase } from "@/backend/modules/notifications/application/use-cases/list-user-notifications.use-case"
 import { MarkAllNotificationsAsReadUseCase } from "@/backend/modules/notifications/application/use-cases/mark-all-notifications-as-read.use-case"
 import { MarkNotificationAsReadUseCase } from "@/backend/modules/notifications/application/use-cases/mark-notification-as-read.use-case"
 import { PublishNotificationEventUseCase } from "@/backend/modules/notifications/application/use-cases/publish-notification-event.use-case"
-import {
-  createNotificationsGateway,
-  PrismaNotificationsGateway,
-} from "@/backend/modules/notifications/infrastructure/prisma-notifications.gateway"
+import { createNotificationsGatewayAdapter } from "@/backend/modules/notifications/infrastructure/notifications.gateway"
+import { createPrismaNotificationRepository } from "@/backend/modules/notifications/infrastructure/repositories/prisma-notification.repository"
 
 export class NotificationsModule {
   constructor(
@@ -18,7 +18,6 @@ export class NotificationsModule {
     private readonly markNotificationAsReadUseCase: MarkNotificationAsReadUseCase,
     private readonly markAllNotificationsAsReadUseCase: MarkAllNotificationsAsReadUseCase,
     private readonly deleteUserNotificationUseCase: DeleteUserNotificationUseCase,
-    private readonly _gateway: PrismaNotificationsGateway,
   ) {}
 
   async publishEvent(command: PublishNotificationEventCommand) {
@@ -47,18 +46,25 @@ export class NotificationsModule {
 }
 
 export interface NotificationsModuleFactoryOptions {
-  gateway?: PrismaNotificationsGateway
+  /** New primary seam (OND1-B2): inject a fake `NotificationRepository` in tests. */
+  repository?: NotificationRepository
+  /**
+   * Legacy seam kept working for the golden/contract suites (they index the old gateway
+   * against the mocked prisma seam). New code should inject `repository`. OND9-B1 removes it.
+   */
+  gateway?: NotificationsGateway
 }
 
 export function createNotificationsModule(options: NotificationsModuleFactoryOptions = {}) {
-  const gateway = options.gateway ?? createNotificationsGateway()
+  const repository = options.repository ?? createPrismaNotificationRepository()
+  const gateway = options.gateway ?? createNotificationsGatewayAdapter({ repository })
+
   return new NotificationsModule(
-    new PublishNotificationEventUseCase(gateway),
+    new PublishNotificationEventUseCase(gateway, repository),
     new ListUserNotificationsUseCase(gateway),
     new GetUnreadCountUseCase(gateway),
     new MarkNotificationAsReadUseCase(gateway),
     new MarkAllNotificationsAsReadUseCase(gateway),
     new DeleteUserNotificationUseCase(gateway),
-    gateway,
   )
 }
