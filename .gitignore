@@ -160,7 +160,22 @@ playwright-report/
 .spec/
 .future/
 future/
-tests/
+# tests/: excecao registrada (2026-09-30, decisao do agente com dono OK) — a malha de
+# regressao do clean-arch (golden/contract/roundtrip, 1245 testes) passa a ser versionada.
+# Somente os conteudos de teste; screenshots de e2e continuam ignorados.
+tests/*
+!tests/e2e
+!tests/e2e/**
+!tests/fixtures
+!tests/fixtures/**
+!tests/integration
+!tests/integration/**
+!tests/mocks
+!tests/mocks/**
+!tests/unit
+!tests/unit/**
+!tests/setup.ts
+tests/e2e/__screenshots__/
 .worktrees/
 scripts/capture-visual-baseline.mjs
 scripts/compare-visual-baseline.mjs
