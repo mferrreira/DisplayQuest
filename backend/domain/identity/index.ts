@@ -1,0 +1,29 @@
+export { UserRole, USER_ROLES, isUserRole } from "./UserRole";
+export {
+  ProfileVisibility,
+  PROFILE_VISIBILITIES,
+  isProfileVisibility,
+  type IUser,
+  type User,
+} from "./User";
+export {
+  ROLE_VALUES,
+  hasAllRoles,
+  hasAnyRole,
+  hasRole,
+  isRole,
+  normalizeRoles,
+  type Role,
+} from "./roles";
+export {
+  FEATURE_ACCESS,
+  FEATURE_KEYS,
+  PERMISSIONS,
+  PERMISSION_KEYS,
+  type FeatureAccess,
+  type Permission,
+} from "./permissions";
+export { hasFeatureAccess, hasPermission, rolesFor, rolesForFeature } from "./has-permission";
+export { normalizeAvatar } from "./avatar";
+export { resolveUserListVisibility, type UserListVisibility } from "./user-visibility";
+export { toPublicUser, type PublicUser } from "./public-user";

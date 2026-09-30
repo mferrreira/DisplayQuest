@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { requireApiActor } from "@/lib/auth/api-guard"
 import { hasPermission } from "@/lib/auth/rbac"
+import { domainErrorResponse } from "@/lib/api/domain-error-response"
 import { getBackendComposition } from "@/backend/composition/root"
 const { userManagement: userManagementModule } = getBackendComposition()
 export async function GET(_request: Request, context: { params: Promise<{ id: string }> }) {
@@ -26,6 +27,8 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
 
     return NextResponse.json({ user })
   } catch (error) {
+    const mapped = domainErrorResponse(error)
+    if (mapped) return mapped
     console.error("Erro ao buscar usuário:", error)
     return NextResponse.json({ error: "Erro ao buscar usuário" }, { status: 500 })
   }
@@ -56,6 +59,8 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
     const user = await userManagementModule.updateUser(id, filteredBody)
     return NextResponse.json({ user })
   } catch (error: any) {
+    const mapped = domainErrorResponse(error)
+    if (mapped) return mapped
     console.error("Erro ao atualizar usuário:", error)
     return NextResponse.json({ error: error.message || "Erro ao atualizar usuário" }, { status: 500 })
   }
@@ -80,6 +85,8 @@ export async function DELETE(_request: Request, context: { params: Promise<{ id:
     await userManagementModule.deleteUser(id)
     return NextResponse.json({ success: true })
   } catch (error: any) {
+    const mapped = domainErrorResponse(error)
+    if (mapped) return mapped
     console.error("Erro ao excluir usuário:", error)
     return NextResponse.json({ error: error.message || "Erro ao excluir usuário" }, { status: 500 })
   }

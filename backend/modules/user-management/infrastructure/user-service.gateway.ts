@@ -1,8 +1,17 @@
+/**
+ * LEGACY reference implementation (OND2-B2).
+ *
+ * As of batch 2.2 the composition root no longer wires this class: the module runs on the
+ * use cases over `UserRepositoryPort`/`PasswordHasher`, with the pure domain policies
+ * (avatar, visibility, RBAC) replacing the IdentityAccessModule dependency. The class is
+ * kept UNTOUCHED as the "implementacao antiga indexada no seam" for
+ * tests/unit/modules/user-management/user-management.contract.test.ts (PLAN §3 R3).
+ * Removal task: OND9-B1 (with its allow-list entry).
+ */
 import type { UserRole } from "@prisma/client"
 import { prisma } from "@/lib/database/prisma"
 import { hasRole } from "@/lib/auth/rbac"
 import bcrypt from "bcryptjs"
-import type { IdentityAccessModule } from "@/backend/modules/identity-access"
 import { UserRepository } from "@/backend/repositories/UserRepository"
 import { User } from "@/backend/models/user/User"
 import type {
@@ -17,10 +26,19 @@ import type {
 } from "@/backend/modules/user-management/application/contracts"
 import type { UserManagementGateway } from "@/backend/modules/user-management/application/ports/user-management.gateway"
 
+/**
+ * OND9-B1 (RG-04): seam estrutural LOCAL (DEC-15/19) — o gateway LEGADO (seam do contract
+ * 2.2) so precisa destes metodos; o import (type-only) da factory de outro modulo sai.
+ */
+interface IdentityAccessModuleLike {
+  hasAnyRole(roles: unknown, requiredRoles: string[]): boolean
+  hasPermission(roles: unknown, permission: string): boolean
+}
+
 export class UserServiceGateway implements UserManagementGateway {
   constructor(
     private readonly userRepository: UserRepository,
-    private readonly identityAccess: IdentityAccessModule,
+    private readonly identityAccess: IdentityAccessModuleLike,
   ) {}
 
   async createUser(command: CreateUserCommand) {
@@ -353,7 +371,7 @@ export class UserServiceGateway implements UserManagementGateway {
 
 export interface UserManagementGatewayDependencies {
   userRepository: UserRepository
-  identityAccess: IdentityAccessModule
+  identityAccess: IdentityAccessModuleLike
 }
 
 export function createUserManagementGateway(

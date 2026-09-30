@@ -1,4 +1,4 @@
-import type { UserRole } from "@prisma/client"
+import type { UserRole } from "@/backend/domain"
 
 export interface ListUsersForActorQuery {
   actorRoles: string[]
@@ -46,4 +46,11 @@ export interface CreateUserCommand {
   password: string
   roles: string[]
   weekHours: number
+}
+
+/** Public self-registration (OND2-B3): no roles/weekHours — the approval flow sets them. */
+export interface RegisterUserCommand {
+  name: string
+  email: string
+  password: string
 }

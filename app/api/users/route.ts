@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { requireApiActor, ensurePermission } from '@/lib/auth/api-guard'
-import { createUserManagementModule } from '@/backend/modules/user-management'
+import { domainErrorResponse } from '@/lib/api/domain-error-response'
 import { getBackendComposition } from "@/backend/composition/root"
 
 const { userManagement: userManagementModule } = getBackendComposition()
@@ -15,6 +15,8 @@ export async function GET() {
 
     return NextResponse.json({ users }, { status: 200 })
   } catch (error: any) {
+    const mapped = domainErrorResponse(error)
+    if (mapped) return mapped
     console.error('Erro na API de usuários:', error)
     if (error?.message?.includes('não tem permissão')) {
       return NextResponse.json({ error: error.message }, { status: 403 })
@@ -47,6 +49,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ user }, { status: 201 })
   } catch (error: any) {
+    const mapped = domainErrorResponse(error)
+    if (mapped) return mapped
     console.error('Erro ao criar usuário:', error)
     return NextResponse.json(
       { error: error.message || 'Erro ao criar usuário' },

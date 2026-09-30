@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { ImageProcessor } from "@/lib/utils/image-processor"
 import { requireApiActor } from "@/lib/auth/api-guard"
+import { domainErrorResponse } from "@/lib/api/domain-error-response"
 import { getBackendComposition } from "@/backend/composition/root"
 const { userManagement: userManagementModule } = getBackendComposition()
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
@@ -30,6 +31,8 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       message: "Avatar removido com sucesso",
     })
   } catch (error) {
+    const mapped = domainErrorResponse(error)
+    if (mapped) return mapped
     console.error("Erro ao remover avatar:", error)
     return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 })
   }

@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server"
-import type { UserRole } from "@prisma/client"
 import { ensurePermission, requireApiActor } from "@/lib/auth/api-guard"
 import { normalizeRoles } from "@/lib/auth/rbac"
+import { domainErrorResponse } from "@/lib/api/domain-error-response"
+import { type UserRole } from "@/backend/domain"
 import { getBackendComposition } from "@/backend/composition/root"
 const { userManagement: userManagementModule } = getBackendComposition()
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
@@ -45,6 +46,8 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 
     return NextResponse.json({ user })
   } catch (error: unknown) {
+    const mapped = domainErrorResponse(error)
+    if (mapped) return mapped
     console.error("Erro ao atualizar roles do usuário:", error)
     const message = error instanceof Error ? error.message : "Erro ao atualizar roles do usuário"
     return NextResponse.json({ error: message }, { status: 500 })

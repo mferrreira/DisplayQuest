@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { ensurePermission, requireApiActor } from "@/lib/auth/api-guard"
+import { domainErrorResponse } from "@/lib/api/domain-error-response"
 import { getBackendComposition } from "@/backend/composition/root"
 const { userManagement: userManagementModule } = getBackendComposition()
 export async function GET() {
@@ -45,6 +46,8 @@ export async function POST(request: Request) {
       { status: 200 },
     )
   } catch (error: any) {
+    const mapped = domainErrorResponse(error)
+    if (mapped) return mapped
     if (error.code === "P2025") {
       return NextResponse.json({ error: "Usuário não encontrado" }, { status: 404 })
     }

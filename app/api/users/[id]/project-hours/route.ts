@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server"
 import { ensureSelfOrPermission, requireApiActor } from "@/lib/auth/api-guard"
 import { getBackendComposition } from "@/backend/composition/root"
+import { domainErrorResponse } from "@/lib/api/domain-error-response"
+// OND7-B4 (R4): DomainErrors mapeados por domainErrorResponse (404/400); 500 preservado p/ desconhecidos.
 const { reporting: reportingModule } = getBackendComposition()
 export async function GET(
   request: Request,
@@ -31,6 +33,8 @@ export async function GET(
 
     return NextResponse.json({ hours }, { status: 200 })
   } catch (error: unknown) {
+    const mapped = domainErrorResponse(error)
+    if (mapped) return mapped
     console.error("Erro na API de horas dos projetos do usuário:", error)
     const message = error instanceof Error ? error.message : "Erro interno do servidor"
     return NextResponse.json({ error: message }, { status: 500 })
