@@ -1,81 +1,116 @@
-import { StartWorkSessionUseCase } from "@/backend/modules/work-execution/application/use-cases/start-work-session.use-case"
+import type { WorkExecutionGateway } from "@/backend/modules/work-execution/application/ports/work-execution.gateway"
+import type { WorkExecutionEvents } from "@/backend/modules/work-execution/application/ports/work-execution.events"
+import type { DailyLogRepositoryPort } from "@/backend/modules/work-execution/application/ports/daily-log.repository"
+import type { ProjectAccessPort } from "@/backend/modules/work-execution/application/ports/project-access.port"
+import type { TaskVerificationPort } from "@/backend/modules/work-execution/application/ports/task-verification.port"
+import type { WorkSessionRepositoryPort } from "@/backend/modules/work-execution/application/ports/work-session.repository"
 import { CompleteWorkSessionUseCase } from "@/backend/modules/work-execution/application/use-cases/complete-work-session.use-case"
 import { CreateDailyLogFromSessionUseCase } from "@/backend/modules/work-execution/application/use-cases/create-daily-log-from-session.use-case"
-import { ListWorkSessionsUseCase } from "@/backend/modules/work-execution/application/use-cases/list-work-sessions.use-case"
+import { DeleteWorkSessionUseCase } from "@/backend/modules/work-execution/application/use-cases/delete-work-session.use-case"
+import { GetDailyLogByIdUseCase } from "@/backend/modules/work-execution/application/use-cases/get-daily-log-by-id.use-case"
+import { GetWorkSessionByIdUseCase } from "@/backend/modules/work-execution/application/use-cases/get-work-session-by-id.use-case"
 import { ListDailyLogsUseCase } from "@/backend/modules/work-execution/application/use-cases/list-daily-logs.use-case"
 import { ListProjectLogsForLeaderUseCase } from "@/backend/modules/work-execution/application/use-cases/list-project-logs-for-leader.use-case"
-import { DeleteWorkSessionUseCase } from "@/backend/modules/work-execution/application/use-cases/delete-work-session.use-case"
+import { ListWorkSessionsUseCase } from "@/backend/modules/work-execution/application/use-cases/list-work-sessions.use-case"
+import { StartWorkSessionUseCase } from "@/backend/modules/work-execution/application/use-cases/start-work-session.use-case"
 import { UpdateWorkSessionUseCase } from "@/backend/modules/work-execution/application/use-cases/update-work-session.use-case"
-import { GetWorkSessionByIdUseCase } from "@/backend/modules/work-execution/application/use-cases/get-work-session-by-id.use-case"
-import { GetDailyLogByIdUseCase } from "@/backend/modules/work-execution/application/use-cases/get-daily-log-by-id.use-case"
-import { createWorkExecutionEventsPublisher } from "@/backend/modules/work-execution/infrastructure/work-execution-events.publisher"
-import type { WorkExecutionEvents } from "@/backend/modules/work-execution/application/ports/work-execution.events"
-import type { WorkExecutionGateway } from "@/backend/modules/work-execution/application/ports/work-execution.gateway"
-import {
-  createWorkExecutionGateway,
-} from "@/backend/modules/work-execution/infrastructure/work-session-service.gateway"
-import { createGamificationModule } from "@/backend/modules/gamification"
+import { createPrismaDailyLogRepository } from "@/backend/modules/work-execution/infrastructure/repositories/prisma-daily-log.repository"
+import { createPrismaProjectAccess } from "@/backend/modules/work-execution/infrastructure/repositories/prisma-project-access"
+import { createPrismaTaskVerification } from "@/backend/modules/work-execution/infrastructure/repositories/prisma-task-verification"
+import { createPrismaWorkSessionRepository } from "@/backend/modules/work-execution/infrastructure/repositories/prisma-work-session.repository"
 
-type UseCaseExecute<T> = T extends { execute: (...args: infer A) => infer R } ? (...args: A) => R : never
+type GatewayCall<T> = T extends (...args: infer A) => infer R ? (...args: A) => R : never
 
+/**
+ * WorkExecutionModule — public surface: the same 10 methods the routes consume today
+ * (WorkExecutionGateway). OND3-B2: the rules moved from the fat gateway into the use cases;
+ * the module is now composed from repository ports (DEC-15/17).
+ */
 export class WorkExecutionModule {
-  readonly startWorkSession: UseCaseExecute<StartWorkSessionUseCase>
-  readonly completeWorkSession: UseCaseExecute<CompleteWorkSessionUseCase>
-  readonly createDailyLogFromSession: UseCaseExecute<CreateDailyLogFromSessionUseCase>
-  readonly listWorkSessions: UseCaseExecute<ListWorkSessionsUseCase>
-  readonly listDailyLogs: UseCaseExecute<ListDailyLogsUseCase>
-  readonly listProjectLogsForLeader: UseCaseExecute<ListProjectLogsForLeaderUseCase>
-  readonly deleteWorkSession: UseCaseExecute<DeleteWorkSessionUseCase>
-  readonly updateWorkSession: UseCaseExecute<UpdateWorkSessionUseCase>
-  readonly getSessionById: UseCaseExecute<GetWorkSessionByIdUseCase>
-  readonly getDailyLogById: UseCaseExecute<GetDailyLogByIdUseCase>
+  readonly startWorkSession: GatewayCall<WorkExecutionGateway["startWorkSession"]>
+  readonly completeWorkSession: GatewayCall<WorkExecutionGateway["completeWorkSession"]>
+  readonly createDailyLogFromSession: GatewayCall<WorkExecutionGateway["createDailyLogFromSession"]>
+  readonly listWorkSessions: GatewayCall<WorkExecutionGateway["listWorkSessions"]>
+  readonly listDailyLogs: GatewayCall<WorkExecutionGateway["listDailyLogs"]>
+  readonly listProjectLogsForLeader: GatewayCall<WorkExecutionGateway["listProjectLogsForLeader"]>
+  readonly deleteWorkSession: GatewayCall<WorkExecutionGateway["deleteWorkSession"]>
+  readonly updateWorkSession: GatewayCall<WorkExecutionGateway["updateWorkSession"]>
+  readonly getSessionById: GatewayCall<WorkExecutionGateway["getSessionById"]>
+  readonly getDailyLogById: GatewayCall<WorkExecutionGateway["getDailyLogById"]>
 
-  constructor(
-    private readonly startWorkSessionUseCase: StartWorkSessionUseCase,
-    private readonly completeWorkSessionUseCase: CompleteWorkSessionUseCase,
-    private readonly createDailyLogFromSessionUseCase: CreateDailyLogFromSessionUseCase,
-    private readonly listWorkSessionsUseCase: ListWorkSessionsUseCase,
-    private readonly listDailyLogsUseCase: ListDailyLogsUseCase,
-    private readonly listProjectLogsForLeaderUseCase: ListProjectLogsForLeaderUseCase,
-    private readonly deleteWorkSessionUseCase: DeleteWorkSessionUseCase,
-    private readonly updateWorkSessionUseCase: UpdateWorkSessionUseCase,
-    private readonly getWorkSessionByIdUseCase: GetWorkSessionByIdUseCase,
-    private readonly getDailyLogByIdUseCase: GetDailyLogByIdUseCase,
-  ) {
-    this.startWorkSession = this.startWorkSessionUseCase.execute.bind(this.startWorkSessionUseCase)
-    this.completeWorkSession = this.completeWorkSessionUseCase.execute.bind(this.completeWorkSessionUseCase)
-    this.createDailyLogFromSession = this.createDailyLogFromSessionUseCase.execute.bind(this.createDailyLogFromSessionUseCase)
-    this.listWorkSessions = this.listWorkSessionsUseCase.execute.bind(this.listWorkSessionsUseCase)
-    this.listDailyLogs = this.listDailyLogsUseCase.execute.bind(this.listDailyLogsUseCase)
-    this.listProjectLogsForLeader = this.listProjectLogsForLeaderUseCase.execute.bind(this.listProjectLogsForLeaderUseCase)
-    this.deleteWorkSession = this.deleteWorkSessionUseCase.execute.bind(this.deleteWorkSessionUseCase)
-    this.updateWorkSession = this.updateWorkSessionUseCase.execute.bind(this.updateWorkSessionUseCase)
-    this.getSessionById = this.getWorkSessionByIdUseCase.execute.bind(this.getWorkSessionByIdUseCase)
-    this.getDailyLogById = this.getDailyLogByIdUseCase.execute.bind(this.getDailyLogByIdUseCase)
+  constructor(private readonly service: WorkExecutionGateway) {
+    this.startWorkSession = this.service.startWorkSession.bind(this.service)
+    this.completeWorkSession = this.service.completeWorkSession.bind(this.service)
+    this.createDailyLogFromSession = this.service.createDailyLogFromSession.bind(this.service)
+    this.listWorkSessions = this.service.listWorkSessions.bind(this.service)
+    this.listDailyLogs = this.service.listDailyLogs.bind(this.service)
+    this.listProjectLogsForLeader = this.service.listProjectLogsForLeader.bind(this.service)
+    this.deleteWorkSession = this.service.deleteWorkSession.bind(this.service)
+    this.updateWorkSession = this.service.updateWorkSession.bind(this.service)
+    this.getSessionById = this.service.getSessionById.bind(this.service)
+    this.getDailyLogById = this.service.getDailyLogById.bind(this.service)
   }
 }
 
 export interface WorkExecutionModuleFactoryOptions {
+  /** Primary seam (OND3-B2, DEC-17): inject fake ports in tests. */
+  ports?: {
+    workSessions?: WorkSessionRepositoryPort
+    dailyLogs?: DailyLogRepositoryPort
+    projectAccess?: ProjectAccessPort
+    taskVerification?: TaskVerificationPort
+  }
+  /** Events port; the composition root wires the gamification awards into the publisher. */
+  events?: WorkExecutionEvents
+  /** Legacy seam (DEC-15/17) — only the golden/contract suites index it. OND9-B1 removes it. */
   gateway?: WorkExecutionGateway
-  eventsPublisher?: WorkExecutionEvents
 }
 
 export function createWorkExecutionModule(options: WorkExecutionModuleFactoryOptions = {}) {
-  const gateway = options.gateway ?? createWorkExecutionGateway()
-  const eventsPublisher = options.eventsPublisher ?? createWorkExecutionEventsPublisher({
-    gamificationModule: createGamificationModule(),
-  })
+  if (options.gateway) {
+    // Legacy seam: the 10 gateway methods forwarded with explicit `this`.
+    const gateway = options.gateway
+    const legacyService: WorkExecutionGateway = {
+      startWorkSession: (command) => gateway.startWorkSession(command),
+      completeWorkSession: (command) => gateway.completeWorkSession(command),
+      createDailyLogFromSession: (command) => gateway.createDailyLogFromSession(command),
+      listWorkSessions: (query) => gateway.listWorkSessions(query),
+      listDailyLogs: (query) => gateway.listDailyLogs(query),
+      listProjectLogsForLeader: (command) => gateway.listProjectLogsForLeader(command),
+      deleteWorkSession: (command) => gateway.deleteWorkSession(command),
+      updateWorkSession: (command) => gateway.updateWorkSession(command),
+      getSessionById: (sessionId) => gateway.getSessionById(sessionId),
+      getDailyLogById: (logId) => gateway.getDailyLogById(logId),
+    }
+    return new WorkExecutionModule(legacyService)
+  }
 
-  return new WorkExecutionModule(
-    new StartWorkSessionUseCase(gateway),
-    new CompleteWorkSessionUseCase(gateway, eventsPublisher),
-    new CreateDailyLogFromSessionUseCase(gateway),
-    new ListWorkSessionsUseCase(gateway),
-    new ListDailyLogsUseCase(gateway),
-    new ListProjectLogsForLeaderUseCase(gateway),
-    new DeleteWorkSessionUseCase(gateway),
-    new UpdateWorkSessionUseCase(gateway),
-    new GetWorkSessionByIdUseCase(gateway),
-    new GetDailyLogByIdUseCase(gateway),
+  const workSessions = options.ports?.workSessions ?? createPrismaWorkSessionRepository()
+  const dailyLogs = options.ports?.dailyLogs ?? createPrismaDailyLogRepository()
+  const projectAccess = options.ports?.projectAccess ?? createPrismaProjectAccess()
+  const taskVerification = options.ports?.taskVerification ?? createPrismaTaskVerification()
+
+  const completeWorkSessionUseCase = new CompleteWorkSessionUseCase(
+    { workSessions, dailyLogs, projectAccess, taskVerification },
+    options.events,
   )
+
+  const service: WorkExecutionGateway = {
+    startWorkSession: (command) =>
+      new StartWorkSessionUseCase({ workSessions, projectAccess }).execute(command),
+    completeWorkSession: (command) => completeWorkSessionUseCase.execute(command),
+    createDailyLogFromSession: (command) =>
+      new CreateDailyLogFromSessionUseCase({ workSessions, dailyLogs }).execute(command),
+    listWorkSessions: (query) => new ListWorkSessionsUseCase({ workSessions }).execute(query),
+    listDailyLogs: (query) => new ListDailyLogsUseCase({ dailyLogs }).execute(query),
+    listProjectLogsForLeader: (command) =>
+      new ListProjectLogsForLeaderUseCase({ projectAccess }).execute(command),
+    deleteWorkSession: (command) => new DeleteWorkSessionUseCase({ workSessions }).execute(command),
+    updateWorkSession: (command) =>
+      new UpdateWorkSessionUseCase({ workSessions, projectAccess, taskVerification }).execute(command),
+    getSessionById: (sessionId) => new GetWorkSessionByIdUseCase({ workSessions }).execute(sessionId),
+    getDailyLogById: (logId) => new GetDailyLogByIdUseCase({ dailyLogs }).execute(logId),
+  }
+
+  return new WorkExecutionModule(service)
 }

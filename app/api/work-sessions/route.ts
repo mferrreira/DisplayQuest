@@ -1,5 +1,6 @@
 import { ensureSelfOrPermission, requireApiActor } from "@/lib/auth/api-guard";
 import { hasPermission } from "@/lib/auth/rbac"
+import { domainErrorResponse } from "@/lib/api/domain-error-response"
 import { getBackendComposition } from "@/backend/composition/root"
 
 const { workExecution: workExecutionModule } = getBackendComposition();
@@ -48,9 +49,10 @@ export async function GET(request: Request) {
             headers: { "Content-Type": "application/json" }
           });
         } catch (error: any) {
-          const message = error?.message || "";
-          return new Response(JSON.stringify({ error: message.includes('Acesso negado') ? 'Acesso negado' : 'Erro ao buscar sessões de trabalho' }), {
-            status: message.includes('Acesso negado') ? 403 : 500,
+          const mapped = domainErrorResponse(error);
+          if (mapped) return mapped;
+          return new Response(JSON.stringify({ error: 'Erro ao buscar sessões de trabalho' }), {
+            status: 500,
             headers: { "Content-Type": "application/json" }
           });
         }
@@ -92,6 +94,8 @@ export async function GET(request: Request) {
     });
 
   } catch (error: any) {
+    const mapped = domainErrorResponse(error);
+    if (mapped) return mapped;
     console.error('Erro ao buscar sessões de trabalho:', error);
     return new Response(JSON.stringify({ error: 'Erro ao buscar sessões de trabalho', details: error?.message }), {
       status: 500,
@@ -161,6 +165,8 @@ export async function POST(request: Request) {
     });
 
   } catch (error: any) {
+    const mapped = domainErrorResponse(error);
+    if (mapped) return mapped;
     console.error('Erro ao criar sessão de trabalho:', error);
     return new Response(JSON.stringify({ error: 'Erro ao criar sessão de trabalho', details: error?.message }), {
       status: 500,

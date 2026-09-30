@@ -1,4 +1,5 @@
 import { ensureSelfOrPermission, requireApiActor } from "@/lib/auth/api-guard";
+import { domainErrorResponse } from "@/lib/api/domain-error-response"
 import { getBackendComposition } from "@/backend/composition/root"
 
 const { workExecution: workExecutionModule } = getBackendComposition();
@@ -29,15 +30,13 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       : undefined;
     const dailyLogNote = typeof data.dailyLogNote === "string" ? data.dailyLogNote : undefined
     const dailyLogDate = typeof data.dailyLogDate === "string" ? data.dailyLogDate : undefined
-    const isCompletionIntent =
-      data.status === "completed" ||
-      data.endTime !== undefined ||
-      data.projectId !== undefined ||
-      completedTaskIds !== undefined ||
-      dailyLogNote !== undefined ||
-      dailyLogDate !== undefined;
-
-    const session = isCompletionIntent
+    // OND3-B3: the "completion intent" heuristic (endTime/projectId/completedTaskIds/
+    // dailyLogNote/dailyLogDate presence triggering completion) is GONE — the route dispatches
+    // on the explicit status. Completion (with daily-log upsert + gamification events) is
+    // status === "completed"; everything else is updateWorkSession, whose completion branch is
+    // server-authoritative (an endTime in the payload still closes the session at the server
+    // clock, frozen by the golden matrix).
+    const session = data.status === "completed"
       ? await workExecutionModule.completeWorkSession({
           sessionId: id,
           actorUserId: actor.id,
@@ -69,6 +68,8 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       headers: { "Content-Type": "application/json" }
     });
   } catch (error: any) {
+    const mapped = domainErrorResponse(error);
+    if (mapped) return mapped;
     console.error('Erro ao atualizar sessão de trabalho:', error);
     return new Response(JSON.stringify({ error: 'Erro ao atualizar sessão de trabalho', details: error?.message }), {
       status: 500,
@@ -109,6 +110,8 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
       headers: { "Content-Type": "application/json" }
     });
   } catch (error: any) {
+    const mapped = domainErrorResponse(error);
+    if (mapped) return mapped;
     console.error('Erro ao excluir sessão de trabalho:', error);
     return new Response(JSON.stringify({ error: 'Erro ao excluir sessão de trabalho', details: error?.message }), {
       status: 500,

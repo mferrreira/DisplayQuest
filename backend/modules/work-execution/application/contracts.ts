@@ -1,5 +1,4 @@
-import type { WorkSession } from "@/backend/models/WorkSession"
-import type { DailyLog } from "@/backend/models/DailyLog"
+import type { DailyLog, WorkSession } from "@/backend/domain"
 
 export interface StartWorkSessionCommand {
   userId: number

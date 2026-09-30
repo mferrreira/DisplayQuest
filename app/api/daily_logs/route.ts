@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { hasPermission, hasRole } from "@/lib/auth/rbac"
 import { requireApiActor } from "@/lib/auth/api-guard"
+import { domainErrorResponse } from "@/lib/api/domain-error-response"
 import { getBackendComposition } from "@/backend/composition/root"
 
 const { workExecution: workExecutionModule } = getBackendComposition()
@@ -59,10 +60,8 @@ export async function GET(request: Request) {
           }
           return NextResponse.json({ logs: result.logs })
         } catch (error) {
-          const message = error instanceof Error ? error.message : ""
-          if (message.includes("Acesso negado")) {
-            return NextResponse.json({ error: "Acesso negado." }, { status: 403 })
-          }
+          const mapped = domainErrorResponse(error)
+          if (mapped) return mapped
           return NextResponse.json({ error: "Erro ao buscar logs diários" }, { status: 500 })
         }
       }
