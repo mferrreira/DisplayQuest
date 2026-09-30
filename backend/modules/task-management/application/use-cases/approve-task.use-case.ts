@@ -1,10 +1,128 @@
-import type { ApproveTaskCommand } from "@/backend/modules/task-management/application/contracts"
-import type { TaskManagementGateway } from "@/backend/modules/task-management/application/ports/task-management.gateway"
+import {
+  approvalDecision,
+  awardPointsForCompletion,
+  ConflictError,
+  ForbiddenError,
+  hasAnyRole,
+  hasPermission,
+  NotFoundError,
+  type Task,
+} from "@/backend/domain";
+import type { ApproveTaskCommand } from "@/backend/modules/task-management/application/contracts";
+import type { TaskAssigneesPort } from "@/backend/modules/task-management/application/ports/task-assignees.repository";
+import type { TaskActorsPort } from "@/backend/modules/task-management/application/ports/task-actors.port";
+import type { TaskNotificationsPort } from "@/backend/modules/task-management/application/ports/task-notifications.port";
+import type { TaskProgressEvents } from "@/backend/modules/task-management/application/ports/task-progress.events";
+import type { TaskProjectsPort } from "@/backend/modules/task-management/application/ports/task-projects.port";
+import type { TaskRepositoryPort } from "@/backend/modules/task-management/application/ports/task.repository";
+import {
+  attachAssignees,
+  publishTaskCompletionAward,
+} from "@/backend/modules/task-management/application/use-cases/internal/task-view";
+
+/**
+ * ApproveTaskUseCase — OND4-B3 (R2): rules frozen by OND4-B1:
+ *   - only "in-review" tasks; approver must exist;
+ *   - isSelf is evaluated AFTER attachAssignees rewrites assignedTo to assignees[0];
+ *   - authority: MANAGE_USERS, or GERENTE_PROJETO who leads the task's project;
+ *   - self-approval is forbidden without MANAGE_USERS (even for the project leader);
+ *   - the update persists the ATTACHED view (assignedTo may become assignees[0]);
+ *   - non-public/non-global approval increments the assignee's completedTasks (even at 0
+ *     points); the award fires only when points > 0; TASK_APPROVED notification.
+ */
+export interface ApproveTaskDependencies {
+  tasks: TaskRepositoryPort
+  assignees: TaskAssigneesPort
+  actors: TaskActorsPort
+  projects: TaskProjectsPort
+  notifications: TaskNotificationsPort
+}
 
 export class ApproveTaskUseCase {
-  constructor(private readonly gateway: TaskManagementGateway) {}
+  constructor(
+    private readonly dependencies: ApproveTaskDependencies,
+    private readonly events?: TaskProgressEvents,
+  ) {}
 
-  async execute(command: ApproveTaskCommand) {
-    return await this.gateway.approveTask(command)
+  async execute(command: ApproveTaskCommand): Promise<Task> {
+    const task = await this.dependencies.tasks.findById(command.taskId)
+    if (!task) {
+      throw new NotFoundError("Tarefa não encontrada")
+    }
+
+    if (task.status !== "in-review") {
+      throw new ConflictError("Tarefa não está em revisão")
+    }
+
+    const approver = await this.dependencies.actors.findById(command.approverId)
+    if (!approver) {
+      throw new NotFoundError("Usuário aprovador não encontrado")
+    }
+
+    const taskWithAssignees = await attachAssignees(task, this.dependencies.assignees)
+    const isSelf =
+      taskWithAssignees.assignedTo === command.approverId
+      || Boolean(taskWithAssignees.assigneeIds?.includes(command.approverId))
+
+    const decision = approvalDecision({
+      canApproveAny: hasPermission(approver.roles, "MANAGE_USERS"),
+      isSelf,
+      canApproveProjectTask:
+        hasAnyRole(approver.roles, ["GERENTE_PROJETO"]) && task.projectId !== null && task.projectId !== undefined,
+    })
+
+    if (decision.allowed === false) {
+      if (decision.reason === "self") {
+        throw new ForbiddenError("Líder não pode aprovar a própria tarefa. Solicite um gerente ou coordenador.")
+      }
+      throw new ForbiddenError("Usuário não tem permissão para aprovar esta tarefa")
+    }
+
+    if (decision.allowed === "needs-leader-check") {
+      const project = await this.dependencies.projects.findById(task.projectId!)
+      if (!project || project.leaderId !== command.approverId) {
+        throw new ForbiddenError("Usuário não é líder do projeto")
+      }
+    }
+
+    const updatedTask = await this.dependencies.tasks.update(command.taskId, {
+      ...taskWithAssignees,
+      status: "done",
+      completed: true,
+      completedAt: new Date(),
+    })
+
+    if (taskWithAssignees.assignedTo) {
+      const assignedUser = await this.dependencies.actors.findById(taskWithAssignees.assignedTo)
+      if (assignedUser) {
+        // For delegated tasks completeTask did not award (status was "in-review"); the
+        // counter increments here, even when the task carries no points.
+        if (task.taskVisibility !== "public" && !task.isGlobal) {
+          await this.dependencies.actors.incrementCompletedTasks(taskWithAssignees.assignedTo)
+        }
+        if (task.points > 0) {
+          const pointsToAward = awardPointsForCompletion(task, new Date())
+          await publishTaskCompletionAward(this.events, taskWithAssignees.assignedTo, command.taskId, pointsToAward)
+        }
+      }
+
+      await this.publishTaskApproved(command.taskId, task.title, taskWithAssignees.assignedTo)
+    }
+
+    return updatedTask
+  }
+
+  private async publishTaskApproved(taskId: number, taskTitle: string, userId: number) {
+    try {
+      await this.dependencies.notifications.publishEvent({
+        eventType: "TASK_APPROVED",
+        title: "Tarefa Aprovada",
+        message: `Sua tarefa "${taskTitle}" foi aprovada! Você recebeu os pontos.`,
+        data: { taskId, taskTitle },
+        audience: { mode: "USER_IDS", userIds: [userId] },
+      })
+    } catch (error) {
+      console.error("Erro ao publicar notificação TASK_APPROVED:", error)
+    }
   }
 }

@@ -1,4 +1,4 @@
-import type { ITask } from "@/backend/models/Task"
+import type { ITask } from "@/backend/domain"
 
 export interface ListTasksForActorQuery {
   actorId: number

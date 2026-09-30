@@ -1,4 +1,4 @@
-import type { Task } from "@/backend/models/Task"
+import type { Task } from "@/backend/domain"
 import type {
   ApproveTaskCommand,
   CompleteTaskCommand,

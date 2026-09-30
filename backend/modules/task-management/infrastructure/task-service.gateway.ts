@@ -4,8 +4,6 @@ import { TaskAssigneeRepository } from "@/backend/repositories/TaskAssigneeRepos
 import { TaskUserProgressRepository } from "@/backend/repositories/TaskUserProgressRepository"
 import { UserRepository } from "@/backend/repositories/UserRepository"
 import { ProjectRepository } from "@/backend/repositories/ProjectRepository"
-import type { NotificationsModule } from "@/backend/modules/notifications"
-import type { IdentityAccessModule } from "@/backend/modules/identity-access"
 import type { TaskProgressEvents } from "@/backend/modules/task-management/application/ports/task-progress.events"
 import type {
   ApproveTaskCommand,
@@ -17,6 +15,19 @@ import type {
 } from "@/backend/modules/task-management/application/contracts"
 import type { TaskManagementGateway } from "@/backend/modules/task-management/application/ports/task-management.gateway"
 
+/**
+ * OND9-B1 (RG-04): seam estrutural LOCAL (DEC-15/19). O gateway LEGADO (seam do golden
+ * 4.1/contract 4.3) so precisa destes metodos; o import (type-only) da factory de outro
+ * modulo sai. Os modulos reais continuam estruturalmente atributiveis.
+ */
+interface NotificationsModuleLike {
+  publishEvent(event: any): Promise<unknown>
+}
+interface IdentityAccessModuleLike {
+  hasAnyRole(roles: unknown, requiredRoles: string[]): boolean
+  hasPermission(roles: unknown, permission: string): boolean
+}
+
 export class TaskServiceGateway implements TaskManagementGateway {
   constructor(
     private readonly taskRepository: TaskRepository,
@@ -24,8 +35,8 @@ export class TaskServiceGateway implements TaskManagementGateway {
     private readonly taskUserProgressRepository: TaskUserProgressRepository,
     private readonly userRepository: UserRepository,
     private readonly projectRepository: ProjectRepository,
-    private readonly notificationsModule: NotificationsModule,
-    private readonly identityAccess: IdentityAccessModule,
+    private readonly notificationsModule: NotificationsModuleLike,
+    private readonly identityAccess: IdentityAccessModuleLike,
     private readonly taskProgressEvents: TaskProgressEvents,
   ) {}
 
@@ -881,8 +892,8 @@ export interface TaskManagementGatewayDependencies {
   taskUserProgressRepository: TaskUserProgressRepository
   userRepository: UserRepository
   projectRepository: ProjectRepository
-  notificationsModule: NotificationsModule
-  identityAccess: IdentityAccessModule
+  notificationsModule: NotificationsModuleLike
+  identityAccess: IdentityAccessModuleLike
   taskProgressEvents: TaskProgressEvents
 }
 

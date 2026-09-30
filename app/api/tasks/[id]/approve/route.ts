@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getBackendComposition } from "@/backend/composition/root"
 import { requireApiActor } from "@/lib/auth/api-guard"
+import { domainErrorResponse } from "@/lib/api/domain-error-response"
 
 const { taskManagement: taskManagementModule } = getBackendComposition()
 
@@ -26,6 +27,8 @@ export async function POST(_request: NextRequest, context: { params: Promise<{ i
       task: task.toJSON()
     }, { status: 200 })
   } catch (error) {
+    const mapped = domainErrorResponse(error)
+    if (mapped) return mapped
     console.error("Erro ao aprovar tarefa:", error)
     return NextResponse.json({ 
       error: error instanceof Error ? error.message : "Erro ao aprovar tarefa" 

@@ -7,76 +7,144 @@ import { DeleteTaskUseCase } from "@/backend/modules/task-management/application
 import { CompleteTaskUseCase } from "@/backend/modules/task-management/application/use-cases/complete-task.use-case"
 import { ApproveTaskUseCase } from "@/backend/modules/task-management/application/use-cases/approve-task.use-case"
 import { RejectTaskUseCase } from "@/backend/modules/task-management/application/use-cases/reject-task.use-case"
-import type { TaskManagementGateway } from "@/backend/modules/task-management/application/ports/task-management.gateway"
-import {
-  createTaskManagementGateway,
-  type TaskManagementGatewayDependencies,
-} from "@/backend/modules/task-management/infrastructure/task-service.gateway"
+import { ListGlobalProgressUseCase, type GlobalProgressEntry } from "@/backend/modules/task-management/application/use-cases/list-global-progress.use-case"
+import type { CreateTaskCommand } from "@/backend/modules/task-management/application/contracts"
+import type { TaskAssigneesPort } from "@/backend/modules/task-management/application/ports/task-assignees.repository"
+import type { TaskActorsPort } from "@/backend/modules/task-management/application/ports/task-actors.port"
+import type { TaskNotificationsPort } from "@/backend/modules/task-management/application/ports/task-notifications.port"
+import type { TaskProgressEvents } from "@/backend/modules/task-management/application/ports/task-progress.events"
+import type { TaskProgressPort } from "@/backend/modules/task-management/application/ports/task-progress.repository"
+import type { TaskProjectsPort } from "@/backend/modules/task-management/application/ports/task-projects.port"
+import type { TaskRepositoryPort } from "@/backend/modules/task-management/application/ports/task.repository"
 import { createNotificationsModule } from "@/backend/modules/notifications"
-import { createIdentityAccessModule } from "@/backend/modules/identity-access"
-import { createTaskProgressEvents } from "@/backend/modules/task-management/infrastructure/gamification-task-progress.events"
+import { createPrismaTaskRepository } from "@/backend/modules/task-management/infrastructure/repositories/prisma-task.repository"
+import { createPrismaTaskAssigneesRepository } from "@/backend/modules/task-management/infrastructure/repositories/prisma-task-assignees.repository"
+import { createPrismaTaskProgressRepository } from "@/backend/modules/task-management/infrastructure/repositories/prisma-task-progress.repository"
+import { createPrismaTaskActorsRepository } from "@/backend/modules/task-management/infrastructure/repositories/prisma-task-actors.repository"
+import { createPrismaTaskProjectsRepository } from "@/backend/modules/task-management/infrastructure/repositories/prisma-task-projects.repository"
 
-type UseCaseExecute<T> = T extends { execute: (...args: infer A) => infer R } ? (...args: A) => R : never
-
+/**
+ * TaskManagementModule — public surface unchanged for the routes (OND4-B3). The rules now
+ * live in the use cases over repository ports (DEC-15/17); the legacy TaskServiceGateway
+ * stays alive untouched as the "old implementation indexed at the seam" for the contract
+ * suite — OND9-B1 removes it.
+ */
 export class TaskManagementModule {
-  readonly getTaskById: UseCaseExecute<GetTaskByIdUseCase>
-  readonly listTasksForActor: UseCaseExecute<ListTasksForActorUseCase>
-  readonly listActorProjectIds: UseCaseExecute<ListActorProjectIdsUseCase>
-  readonly createTask: UseCaseExecute<CreateTaskUseCase>
-  readonly createTaskBacklog: (tasks: Parameters<UseCaseExecute<CreateTaskUseCase>>[0][], actorId: number) => Promise<any[]>
-  readonly updateTask: UseCaseExecute<UpdateTaskUseCase>
-  readonly deleteTask: UseCaseExecute<DeleteTaskUseCase>
-  readonly completeTask: UseCaseExecute<CompleteTaskUseCase>
-  readonly approveTask: UseCaseExecute<ApproveTaskUseCase>
-  readonly rejectTask: UseCaseExecute<RejectTaskUseCase>
+  readonly getTaskById: (taskId: number) => Promise<any>
+  readonly listTasksForActor: (query: { actorId: number; actorRoles: string[]; projectId?: number }) => Promise<any[]>
+  readonly listActorProjectIds: (actorId: number) => Promise<number[]>
+  readonly createTask: (command: CreateTaskCommand, actorId: number) => Promise<any>
+  readonly createTaskBacklog: (tasks: CreateTaskCommand[], actorId: number) => Promise<any[]>
+  readonly updateTask: (command: { taskId: number; actorId: number; data: Record<string, unknown> }) => Promise<any>
+  readonly deleteTask: (command: { taskId: number; actorId: number }) => Promise<void>
+  readonly completeTask: (command: { taskId: number; userId: number }) => Promise<any>
+  readonly approveTask: (command: { taskId: number; approverId: number }) => Promise<any>
+  readonly rejectTask: (command: { taskId: number; approverId: number; reason?: string }) => Promise<any>
+  readonly globalProgress: () => Promise<GlobalProgressEntry[]>
 
-  constructor(
-    private readonly getTaskByIdUseCase: GetTaskByIdUseCase,
-    private readonly listTasksForActorUseCase: ListTasksForActorUseCase,
-    private readonly listActorProjectIdsUseCase: ListActorProjectIdsUseCase,
-    private readonly createTaskUseCase: CreateTaskUseCase,
-    private readonly updateTaskUseCase: UpdateTaskUseCase,
-    private readonly deleteTaskUseCase: DeleteTaskUseCase,
-    private readonly completeTaskUseCase: CompleteTaskUseCase,
-    private readonly approveTaskUseCase: ApproveTaskUseCase,
-    private readonly rejectTaskUseCase: RejectTaskUseCase,
-  ) {
-    this.getTaskById = this.getTaskByIdUseCase.execute.bind(this.getTaskByIdUseCase)
-    this.listTasksForActor = this.listTasksForActorUseCase.execute.bind(this.listTasksForActorUseCase)
-    this.listActorProjectIds = this.listActorProjectIdsUseCase.execute.bind(this.listActorProjectIdsUseCase)
-    this.createTask = this.createTaskUseCase.execute.bind(this.createTaskUseCase)
-    this.createTaskBacklog = async (tasks, actorId) => {
-      return await Promise.all(tasks.map((task) => this.createTaskUseCase.execute(task as any, actorId)))
-    }
-    this.updateTask = this.updateTaskUseCase.execute.bind(this.updateTaskUseCase)
-    this.deleteTask = this.deleteTaskUseCase.execute.bind(this.deleteTaskUseCase)
-    this.completeTask = this.completeTaskUseCase.execute.bind(this.completeTaskUseCase)
-    this.approveTask = this.approveTaskUseCase.execute.bind(this.approveTaskUseCase)
-    this.rejectTask = this.rejectTaskUseCase.execute.bind(this.rejectTaskUseCase)
+  constructor(ports: {
+    tasks: TaskRepositoryPort
+    assignees: TaskAssigneesPort
+    progress: TaskProgressPort
+    actors: TaskActorsPort
+    projects: TaskProjectsPort
+    notifications: TaskNotificationsPort
+    events?: TaskProgressEvents
+  }) {
+    const getTaskByIdUseCase = new GetTaskByIdUseCase({
+      tasks: ports.tasks,
+      assignees: ports.assignees,
+    })
+    const listTasksForActorUseCase = new ListTasksForActorUseCase({
+      tasks: ports.tasks,
+      assignees: ports.assignees,
+      progress: ports.progress,
+      actors: ports.actors,
+    })
+    const listActorProjectIdsUseCase = new ListActorProjectIdsUseCase(ports.actors)
+    const createTaskUseCase = new CreateTaskUseCase({
+      tasks: ports.tasks,
+      assignees: ports.assignees,
+      actors: ports.actors,
+      projects: ports.projects,
+    })
+    const updateTaskUseCase = new UpdateTaskUseCase({
+      tasks: ports.tasks,
+      assignees: ports.assignees,
+      progress: ports.progress,
+      actors: ports.actors,
+      projects: ports.projects,
+      notifications: ports.notifications,
+    })
+    const deleteTaskUseCase = new DeleteTaskUseCase(ports.tasks)
+    const completeTaskUseCase = new CompleteTaskUseCase(
+      {
+        tasks: ports.tasks,
+        assignees: ports.assignees,
+        progress: ports.progress,
+        actors: ports.actors,
+        projects: ports.projects,
+      },
+      ports.events,
+    )
+    const approveTaskUseCase = new ApproveTaskUseCase(
+      {
+        tasks: ports.tasks,
+        assignees: ports.assignees,
+        actors: ports.actors,
+        projects: ports.projects,
+        notifications: ports.notifications,
+      },
+      ports.events,
+    )
+    const rejectTaskUseCase = new RejectTaskUseCase({
+      tasks: ports.tasks,
+      assignees: ports.assignees,
+      actors: ports.actors,
+      projects: ports.projects,
+      notifications: ports.notifications,
+    })
+    const listGlobalProgressUseCase = new ListGlobalProgressUseCase({
+      tasks: ports.tasks,
+      actors: ports.actors,
+      progress: ports.progress,
+    })
+
+    this.getTaskById = (taskId) => getTaskByIdUseCase.execute(taskId)
+    this.listTasksForActor = (query) => listTasksForActorUseCase.execute(query)
+    this.listActorProjectIds = (actorId) => listActorProjectIdsUseCase.execute(actorId)
+    this.createTask = (command, actorId) => createTaskUseCase.execute(command, actorId)
+    // Same Promise.all semantics the module has today (frozen for the routes).
+    this.createTaskBacklog = (tasks, actorId) => Promise.all(tasks.map((task) => createTaskUseCase.execute(task, actorId)))
+    this.updateTask = (command) => updateTaskUseCase.execute(command)
+    this.deleteTask = (command) => deleteTaskUseCase.execute(command)
+    this.completeTask = (command) => completeTaskUseCase.execute(command)
+    this.approveTask = (command) => approveTaskUseCase.execute(command)
+    this.rejectTask = (command) => rejectTaskUseCase.execute(command)
+    this.globalProgress = () => listGlobalProgressUseCase.execute()
   }
 }
 
-export interface TaskManagementModuleFactoryOptions {
-  gateway?: TaskManagementGateway
-  gatewayDependencies?: Partial<TaskManagementGatewayDependencies>
+export interface TaskManagementModulePorts {
+  /** Primary seam (OND4-B3, DEC-17): inject fake ports in tests. */
+  tasks?: TaskRepositoryPort
+  assignees?: TaskAssigneesPort
+  progress?: TaskProgressPort
+  actors?: TaskActorsPort
+  projects?: TaskProjectsPort
+  notifications?: TaskNotificationsPort
+  /** Awards port; the composition root wires the gamification module into the publisher. */
+  events?: TaskProgressEvents
 }
 
-export function createTaskManagementModule(options: TaskManagementModuleFactoryOptions = {}) {
-  const gateway = options.gateway ?? createTaskManagementGateway({
-    notificationsModule: createNotificationsModule(),
-    identityAccess: createIdentityAccessModule(),
-    taskProgressEvents: createTaskProgressEvents(),
-    ...options.gatewayDependencies,
+export function createTaskManagementModule(options: TaskManagementModulePorts = {}) {
+  return new TaskManagementModule({
+    tasks: options.tasks ?? createPrismaTaskRepository(),
+    assignees: options.assignees ?? createPrismaTaskAssigneesRepository(),
+    progress: options.progress ?? createPrismaTaskProgressRepository(),
+    actors: options.actors ?? createPrismaTaskActorsRepository(),
+    projects: options.projects ?? createPrismaTaskProjectsRepository(),
+    notifications: options.notifications ?? createNotificationsModule(),
+    events: options.events,
   })
-  return new TaskManagementModule(
-    new GetTaskByIdUseCase(gateway),
-    new ListTasksForActorUseCase(gateway),
-    new ListActorProjectIdsUseCase(gateway),
-    new CreateTaskUseCase(gateway),
-    new UpdateTaskUseCase(gateway),
-    new DeleteTaskUseCase(gateway),
-    new CompleteTaskUseCase(gateway),
-    new ApproveTaskUseCase(gateway),
-    new RejectTaskUseCase(gateway),
-  )
 }

@@ -1,9 +1,11 @@
-import type { TaskManagementGateway } from "@/backend/modules/task-management/application/ports/task-management.gateway"
+import type { TaskActorsPort } from "@/backend/modules/task-management/application/ports/task-actors.port";
 
+/** ListActorProjectIdsUseCase — OND4-B3 (R1): thin read through the actors port. */
 export class ListActorProjectIdsUseCase {
-  constructor(private readonly gateway: TaskManagementGateway) {}
+  constructor(private readonly actors: TaskActorsPort) {}
 
   async execute(actorId: number) {
-    return await this.gateway.listActorProjectIds(actorId)
+    const memberships = await this.actors.getUserProjectMemberships(actorId)
+    return memberships.map((membership) => membership.projectId)
   }
 }
