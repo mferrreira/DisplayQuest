@@ -25,6 +25,7 @@ import {
   type ReportingFakeWorld,
 } from "./reporting-fake-prisma"
 import { ValidationError } from "@/backend/domain"
+import type { ReportPeriod } from "@/backend/domain/reporting"
 import { createReportingModule } from "@/backend/modules/reporting"
 import { PrismaHoursReadRepository } from "@/backend/modules/reporting/infrastructure/repositories/prisma-hours-read.repository"
 import { PrismaReportingDirectory } from "@/backend/modules/reporting/infrastructure/repositories/prisma-reporting-directory"
@@ -126,13 +127,13 @@ describe("BulkGenerateWeeklyReportsUseCase (wiring nova, merge 64a6095)", () => 
       seedUser(world, { id: 1 })
       seedUser(world, { id: 2 })
 
-      const module = newModule()
-      const first = await module.bulkGenerateWeeklyReports({
+      const reportingModule = newModule()
+      const first = await reportingModule.bulkGenerateWeeklyReports({
         periodType: "weekly",
         from: "2026-09-07",
         to: "2026-09-20",
       })
-      const second = await module.bulkGenerateWeeklyReports({
+      const second = await reportingModule.bulkGenerateWeeklyReports({
         periodType: "weekly",
         from: "2026-09-07",
         to: "2026-09-20",
@@ -169,19 +170,19 @@ describe("BulkGenerateWeeklyReportsUseCase (wiring nova, merge 64a6095)", () => 
 
     it("mantem as mensagens legadas verbatim", async () => {
       seedUser(world, { id: 1 })
-      const module = newModule()
+      const reportingModule = newModule()
 
       expect(
-        (await captureError(() => module.bulkGenerateWeeklyReports({ periodType: "x", from: "2026-09-07", to: "2026-09-20" })) as Error).message,
+        (await captureError(() => reportingModule.bulkGenerateWeeklyReports({ periodType: "x" as unknown as ReportPeriod, from: "2026-09-07", to: "2026-09-20" })) as Error).message,
       ).toBe("Periodicidade inválida")
       expect(
-        (await captureError(() => module.bulkGenerateWeeklyReports({ periodType: "weekly", from: "banana", to: "2026-09-20" })) as Error).message,
+        (await captureError(() => reportingModule.bulkGenerateWeeklyReports({ periodType: "weekly", from: "banana", to: "2026-09-20" })) as Error).message,
       ).toBe("Intervalo de datas inválido")
       expect(
-        (await captureError(() => module.bulkGenerateWeeklyReports({ periodType: "weekly", from: "2026-09-20", to: "2026-09-07" })) as Error).message,
+        (await captureError(() => reportingModule.bulkGenerateWeeklyReports({ periodType: "weekly", from: "2026-09-20", to: "2026-09-07" })) as Error).message,
       ).toBe("A data final não pode ser anterior à data inicial")
       expect(
-        (await captureError(() => module.bulkGenerateWeeklyReports({ periodType: "weekly", from: "2025-01-06", to: "2026-09-20" })) as Error).message,
+        (await captureError(() => reportingModule.bulkGenerateWeeklyReports({ periodType: "weekly", from: "2025-01-06", to: "2026-09-20" })) as Error).message,
       ).toBe("Limite de 52 períodos por geração em lote excedido")
     })
 
