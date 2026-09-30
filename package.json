@@ -15,6 +15,8 @@
     "db:migrate:status": "prisma migrate status",
     "db:reset:local": "prisma migrate reset --force",
     "db:safe-deploy": "bash scripts/db-safe-deploy.sh",
+    "arch:check": "npx depcruise --config .dependency-cruiser.js --ts-config tsconfig.json --ts-pre-compilation-deps --output-type err .",
+    "arch:check:sh": "bash scripts/arch-check.sh",
     "check:env": "node scripts/check-env-secrets.js"
   },
   "prisma": {
@@ -101,6 +103,7 @@
     "@types/react": "19",
     "@types/react-dom": "19",
     "@vitejs/plugin-react": "^6.1.0",
+    "dependency-cruiser": "^18.4.0",
     "eslint": "^8.57.1",
     "eslint-config-next": "^15.2.4",
     "jsdom": "^30.0.1",

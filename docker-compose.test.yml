@@ -1,0 +1,48 @@
+# docker-compose.test.yml — harness isolado dos gates G4/G5 (clean-arch + plan-v2).
+#
+# POR QUE ESTE ARQUIVO EXISTE (medido em 2026-09-23, STATE.json BLOCKER-02 / DEC-10):
+#   o `docker-compose.yml` desta pasta define `container_name: display-quest-db`, e em varios
+#   hostos esse container JA esta no ar como deploy e ja publica 127.0.0.1:5432 via
+#   docker-compose.override.yml. Os testes de integracao do repo (Prisma real) esperam
+#   exatamente `localhost:5432`. Rodar G4/G5 contra essa porta escreve no banco de producao.
+#
+#   Entao G4/G5 nunca usam o compose base nem o override. Este arquivo e o caminho do gate.
+#   `docker compose down`, `rm` e `up` SEM -f continuam sendo operacao de deploy, e nao sao
+#   comando de gate.
+#
+# O que este arquivo garante:
+#   • nome de container proprio (dq-dev-test-db)  -> nenhuma colisao com display-quest-db
+#   • porta propria (127.0.0.1:5433)              -> nenhuma colisao com 5432
+#   • volume proprio (postgres_test_data)         -> nenhum dado de production em risco
+#   • POSTGRES_HOST_AUTH_METHOD=trust, SÓ em loopback -> nenhum segredo em arquivo versionado
+#     (nada aqui esconde uma senha; a superficie de acesso e 127.0.0.1)
+#
+# DATABASE_URL do gate:
+#   postgresql://dq_dev@127.0.0.1:5433/dq_dev_test
+#
+# Subir:  npm run db:test:up
+# Verificar: npm run db:test:guard
+
+name: dq-dev-test
+
+services:
+  postgres-test:
+    image: postgres:15.3-bullseye
+    container_name: dq-dev-test-db
+    ports:
+      - "127.0.0.1:5433:5432"
+    environment:
+      POSTGRES_DB: dq_dev_test
+      POSTGRES_USER: dq_dev
+      POSTGRES_HOST_AUTH_METHOD: trust
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dq_dev -d dq_dev_test"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: "no"
+
+volumes:
+  postgres_test_data:
