@@ -3,9 +3,9 @@
   "version": "2.0.0",
   "updatedAt": "2026-10-01T00:00:00-03:00",
   "status": "in_progress",
-  "activeWave": "B1",
-  "activeBatch": "B1",
-  "awaitingInstruction": false,
+  "activeWave": "B3",
+  "activeBatch": "B3",
+  "awaitingInstruction": true,
   "target": "Eliminar dívidas de fluxo legado e código morto do repositorio, com gates por lote e rollback por revert. Ver PLAN.md (lotes B0..B11).",
   "lineage": {
     "previousPlan": "clean-arch (ondas 0-9, 41 batches, AC-00-01..15, DEC-01..25, status done em 2026-09-30)",
@@ -26,7 +26,7 @@
   "waves": [
     { "id": "B0", "title": "Setup: branch, tag pre-cleanup, reset da pasta clean-arch (PLAN novo + STATE zerado)", "status": "done" },
     { "id": "B1", "title": "Tier A: 24 componentes frontend orfaos + lib/api/endpoints/work-sessions.ts", "status": "done" },
-    { "id": "B2", "title": "Tier B: dependencias npm mortas (apos verificacao CSS/config)", "status": "pending" },
+    { "id": "B2", "title": "Tier B: dependencias npm mortas (apos verificacao CSS/config)", "status": "done" },
     { "id": "B3", "title": "D1+D2: cron weekly reset via ResetWeeklyHoursHistoryUseCase + horarios cron derivados do dominio (golden antes)", "status": "pending" },
     { "id": "B4", "title": "D3: api-guard via getBackendComposition().identityAccess", "status": "pending" },
     { "id": "B5", "title": "D5: domainErrorResponse nas 9 rotas fora do mapper (urgente purchases/[id]) + rota-tests", "status": "pending" },
@@ -63,6 +63,18 @@
       ],
       "gates": "G0 arch:check 0 (756 modules, -33) | G1 lint 0 | G2 tsc 0 | G3+G4 vitest 68 arquivos/1255 testes verdes",
       "incidente": "primeira corrida G4 falhou com PrismaClientInitializationError: dq-dev-test-db estava Exited (255) desde reboot da maquina; re-armado com docker start (nenhum comando de parar/remover/criar); segunda corrida verde",
+      "result": "green"
+    },
+    {
+      "id": "B2",
+      "at": "2026-10-01",
+      "title": "Tier B: remocao de 26 dependencias npm mortas",
+      "actions": [
+        "npm uninstall: zustand, immer, pg, @types/pg, better-sqlite3, input-otp, embla-carousel-react, react-resizable-panels, @radix-ui/react-{aspect-ratio,menubar,navigation-menu,slider,toast,toggle-group,accordion,context-menu,hover-card,radio-group,toggle}, recharts, cmdk, vaul, @tanstack/react-table, autoprefixer, pixelmatch, pngjs",
+        "armadilhas evitadas por verificacao antes do corte: tw-animate-css MANTIDO (app/globals.css:2 @import); @tailwindcss/postcss MANTIDO (postcss.config.mjs); @tanstack/react-query MANTIDO (9 usos vivos — nao confundir com react-table); @types/node-cron MANTIDO (node-cron nao traz tipos proprios)",
+        "evidencia: grep de cada pacote em app/components/features/contexts/lib/tests/backend = 0 importadores (react-table e pixelmatch/pngjs zerados apos B1)"
+      ],
+      "gates": "G0 arch:check 0 (756 modules) | G1 lint 0 | G2 tsc 0 | G3+G4 vitest 68/1255 verdes | npm run build exit 0",
       "result": "green"
     }
   ],
