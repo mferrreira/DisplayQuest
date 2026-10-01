@@ -79,7 +79,13 @@ export type Task = z.infer<typeof taskSchema>;
  * The backend passes them through unvalidated (tasks.status is a plain String column), so the
  * wire can carry values outside taskStatusSchema. taskSchema stays STRICT (contract truth,
  * round-trip tests); the WIRE layer uses this explicit, loud normalization map so the board
- * keeps working while the cleanup migration is a pending user decision (state/backlog.md).
+ * keeps working while the cleanup migration is a pending user decision.
+ *
+ * DEVIDA RASTREADA: GAP-05 em displayquest-v2/clean-arch/STATE.json (gapRegistry).
+ * Medido em 2026-10-01 no 5432: 14 de 18 tasks com status legado. A tolerância aqui é
+ * a ÚNICA coisa segurando isso — qualquer leitura nova de tasks.status que não passe por
+ * wireTaskSchema vaza os valores crus. A correção é a migration de cleanup (D-18), não
+ * mais código de tolerância.
  */
 const LEGACY_STATUS_MAP: Record<string, TaskStatus> = {
   completed: "done",

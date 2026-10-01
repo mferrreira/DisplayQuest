@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
-import { readFile } from "fs/promises"
-import { join } from "path"
+import { readFile } from "node:fs/promises"
+import { join } from "node:path"
 
 // Avatares são gravados em public/uploads/avatars/{userId}/ em runtime.
 // O Next standalone só serve de public/ o que existia no boot do servidor

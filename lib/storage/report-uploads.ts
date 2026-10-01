@@ -1,6 +1,6 @@
 import { randomUUID } from "crypto"
-import fs from "fs"
-import path from "path"
+import fs from "node:fs"
+import path from "node:path"
 
 export const MAX_REPORT_FILE_BYTES = 20 * 1024 * 1024 // 20 MB (D5)
 // A11: raiz privada — fora de public/. Relatórios só são servidos pela rota

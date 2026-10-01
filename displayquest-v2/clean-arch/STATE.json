@@ -204,7 +204,8 @@
     { "id": "GAP-01", "status": "carried", "summary": "store gateway port tipado por backend/models/{Purchase,Reward} (toPrisma em rota). Verificar em B8." },
     { "id": "GAP-02", "status": "open", "summary": "WorkSession.status e User.status como string, nao WorkSessionStatus/UserStatus. Atendido em B10 (D9)." },
     { "id": "GAP-03", "status": "closed", "summary": "toJSON(): any nos contracts — fechado (0 ocorrencias medidas em contracts.ts)." },
-    { "id": "GAP-04", "status": "carried", "summary": "AwardFromTaskCompletionCommand.taskPoints number? vs runtime que aceita null (default 10). Verificar em B8." }
+    { "id": "GAP-04", "status": "carried", "summary": "AwardFromTaskCompletionCommand.taskPoints number? vs runtime que aceita null (default 10). Verificar em B8." },
+    { "id": "GAP-05", "status": "open", "summary": "D-18: 14 de 18 tasks no 5432 carregam status pre-contrato (pending/in_progress/completed). tasks.status e TEXT sem constraint e NAO existe migration de dados. Absorvido em tempo de leitura por entities/task.ts wireTaskSchema (client-side, com console.warn). Medido 2026-10-01: em /api/tasks as tasks taskVisibility=public tem status sobrescrito pelo progresso por ator (task-view.ts:104-111) e as delegated vazam o valor cru. Risco: qualquer leitura nova de tasks.status que nao passe por wireTaskSchema expoe os valores crus. Resolucao e a migration de cleanup (decisao do dono) — nao mais codigo de tolerancia." }
   ],
   "debtRegistry": [
     { "id": "D1", "batch": "B3", "summary": "cron weekly reset com Prisma cru (cron-service.ts:89-156), zero testes, exposto via POST /api/cron/status" },

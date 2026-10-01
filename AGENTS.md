@@ -5,8 +5,20 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
 
 ## Verificação
 
-- **Gate de entrega:** `npm run arch:check` (exit 0, allow-list **vazia**) && `npm run lint` (nada de erro) && `npx tsc --noEmit` (0) && `npx vitest run` (baseline atual: **50 arquivos / 619 testes, zero failure** — a contagem só cresce desde o B8, que removeu os 651 testes de paridade; ver seção clean-arch).
+- **Gate de entrega:** `npm run arch:check` (exit 0, allow-list **vazia**) && `npm run lint` (nada de erro) && `npx tsc --noEmit` (0) && `npx vitest run` (baseline atual: **64 arquivos / 721 testes, zero failure** — a contagem só cresce desde o B8, que removeu os 651 testes de paridade; ver seção clean-arch).
 - **G4/integração:** roundtrips Prisma real rodam **só** contra o banco de teste isolado `dq-dev-test-db` em `127.0.0.1:5433` (`$env:DATABASE_URL="postgresql://dq_dev:dq_dev_local_only@127.0.0.1:5433/dq_dev_test"; npx vitest run`) — nunca contra o `display-quest-db` (5432, produção local).
+- **Setup do G4 (medido 2026-10-01):** o `docker-compose.test.yml` cita `npm run db:test:up` e
+  `db:test:guard` que **não existem** no `package.json`. A sequência que funciona é:
+  1. `docker compose -f docker-compose.test.yml up -d`
+  2. `DATABASE_URL=...5433 npx prisma migrate deploy`
+  3. `DATABASE_URL=...5433 npm run db:seed`
+  4. `docker exec -i dq-dev-test-db psql -U dq_dev -d dq_dev_test -f - < tests/fixtures/g4-normalize.sql`
+
+  Sem o passo 4, `entities-roundtrip` falha: o seed escreve status pré-contrato e o schema
+  estrito os rejeita por design (D-18). O passo 4 é o que torna o banco testável.
+- **Node local ≠ Node de deploy:** a imagem é `node:20-alpine`; o `engines` não é declarado e
+  não há `.nvmrc`. Gate verde local não implica gate verde no deploy quando o Node difere —
+  foi assim que o shim `path` (removido) quebrava em Node 22+ e passaria em Node 20.
 - **Secrets:** `npm run check:env` valida `NEXTAUTH_SECRET` (≥32, sem placeholder) e
   senha do banco (denylist). O runner lê `process.env`, não `.env` — exporte as variáveis.
 
@@ -59,15 +71,15 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
   de forma confiável (a rota ainda via o `readFile` real). Padrão da casa: rotas leem via
   um seam em `lib/` (ex.: `readReportFileBytes` em `lib/storage/report-uploads.ts`) e o
    teste mocka a lib, não o builtin.
-- **`floating-session-timer` (256/257) não se aplica a esta base:** o arquivo
-  `tests/unit/components/floating-session-timer.test.tsx` citado pelo gotcha antigo
-  **não existe nesta máquina/base** — o teste do timer aqui é
-  `features/laboratorio/__tests__/floating-timer-tabs.test.tsx` (5 testes, na baseline).
-  A suite desta base fecha sem failures (baseline atual 50 arquivos / 619 testes;
-  registrado no STATE.json do clean-arch). O gotcha original (auto-pause chamando
-  `ResponsibilitiesAPI.pause()` sem mock de `@/contexts/api-client`) pertence a outra
-  máquina; se o arquivo reaparecer, o fix sugerido continua sendo
-  `vi.mock("@/contexts/api-client")` com `pause`/`resume` resolvidos.
+- **`floating-session-timer` — gotcha CONFIRMADO nesta base (2026-10-01):** o arquivo
+  `tests/unit/components/floating-session-timer.test.tsx` existe e está na baseline (5 testes,
+  verdes). O auto-pause chama `ResponsibilitiesAPI.pause()` **depois** de `pauseSession()`;
+  sem mock, essa chamada vai pro MSW, fica **pendente**, e a linha seguinte
+  (`setShowAutoPauseDialog(true)`) nunca executa dentro do `act()` — o sintoma é `pauseSession`
+  tendo sido chamado corretamente e mesmo assim o dialog "Sessão pausada automaticamente"
+  ausente. Fix (validado): `vi.mock("@/contexts/api-client")` expondo `ResponsibilitiesAPI`
+  com `pause`/`resume`/`getActive` resolvidos. Uma versão anterior deste arquivo afirmava que
+  o teste "não existe nesta base" — está errado, não siga.
 - **LSP engana:** `Cannot find module` para `.js`/libs recém-criadas é falso-positivo do
   LSP; `tsc --noEmit` e `vitest` passam (`allowJs: true`, `moduleResolution: bundler`).
 - **Uploads (A11):** relatórios em `data/uploads/reports` (privado, servido só por
