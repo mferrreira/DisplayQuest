@@ -16,11 +16,11 @@
     "branch": "cleanup/repo-sweep",
     "baseCommit": "12d9d6c",
     "rollbackTag": "pre-cleanup",
-    "testFiles": 71,
-    "tests": 1270,
+    "testFiles": 50,
+    "tests": 619,
     "failures": 0,
-    "archModules": 759,
-    "archDependencies": 2987,
+    "archModules": 701,
+    "archDependencies": 2692,
     "allowListEntries": 0
   },
   "waves": [
@@ -32,7 +32,7 @@
     { "id": "B5", "title": "D5: domainErrorResponse nas 9 rotas fora do mapper (urgente purchases/[id]) + rota-tests", "status": "done" },
     { "id": "B6", "title": "D4: autorizacao rota->use case em 16 rotas, modulo a modulo", "status": "deferred", "reason": "DEC-29: re-sequenciado para depois do B8 (gates de rota sao o unico enforcement; dominio permissivo congelado por contract parity)" },
     { "id": "B7", "title": "D7: remover imports cruzados de fallback (task-management/index.ts, lab-operations/index.ts)", "status": "done" },
-    { "id": "B8", "title": "OND9-B1: remocao de gateways legados + legacy-engines + backend/repositories + golden/contract", "status": "ready", "reason": "DEC-26 adiou ate B3-B7 verdes — precondicao atingida (B3,B4,B5,B7 verdes). DEC-29 re-sequencia: B8 ANTES de B6, e B6 passa a ser o lote que migra os gates rota->use case sem colisao de paridade." },
+    { "id": "B8", "title": "OND9-B1: remocao de gateways legados + legacy-engines + backend/repositories + golden/contract", "status": "done", "reason": "DEC-26 + DEC-29; executado 2026-10-01 (commit ebf6798)" },
     { "id": "B9", "title": "Docs: corrigir APOO/12 4.1, docs/06, docs/03, AGENTS.md; verify.sh + arch:check; plugar assert-test-db.js; doc de feature", "status": "pending" },
     { "id": "B10", "title": "Opcionais: D8 portas finas notifications, D9 GAP-02, D10 withRouteHandler, D11 constante do cliente", "status": "optional" },
     { "id": "B11", "title": "Tabela kanban_boards", "status": "excluded", "reason": "DEC-27 (dono 2026-10-01): tabela mantida" }
@@ -142,6 +142,23 @@
       ],
       "gates": "nenhum codigo alterado (lote de analise)",
       "result": "decision"
+    },
+    {
+      "id": "B8",
+      "at": "2026-10-01",
+      "title": "OND9-B1 executado (DEC-26 + DEC-29): remocao do legado pre-clean-arch",
+      "actions": [
+        "removidos 10 gateways legacy de infrastructure (prisma-gamification, lab-operations, prisma-notifications, project-management, prisma-project-membership, prisma-reporting, store-service, task-service, user-service, work-session-service)",
+        "removidos 2 legacy-engines (gamification badge.engine + badge-rules.engine) e 17 backend/repositories",
+        "removidos 6 ports gordos legados (gamification, project-management, project-membership, reporting, store, task-management — importados so por legado/testes); MANTIDOS os ports consumidos pela wiring nova: identity-access, notifications (D8), lab-operations, user-management, work-execution",
+        "removidos 21 arquivos golden/contract de paridade (651 testes) + 2 harness orfaos (lab-fake-prisma, store-fake-prisma); MANTIDOS reporting-fake-prisma (usa bulk + cron golden), golden.identity-access, golden.work-execution-events.publisher e todos os use-cases/rules tests",
+        "removidos os seam branches mortos dos factories (lab-operations gateway/gatewayDependencies, user-management gateway, work-execution gateway, notifications gateway) + imports orfaos",
+        "verificacao antes de cada remocao: mapa completo de importadores (app/backend/components/contexts/features/lib/tests) — legado entrava so por golden/contract; apos remocao de testes, vitest verde SEM o legado (619/619) provando isolamento",
+        "comentarios de cabecalho atualizados nos 9 index.ts (legado 'stay alive' -> 'removed in OND9-B1; historico no git via tag pre-cleanup')"
+      ],
+      "gates": "G0 arch:check 0 (701 modules, 2692 deps — -58 modulos) | G1 eslint 0 | G2 tsc 0 | G3+G4 vitest 50 arquivos/619 testes verdes | npm run build 0",
+      "baseline-delta": "testes 1270->619 (651 testes de paridade removidos — unica excecao registrada a regra 'contagem so cresce', autorizada via DEC-26/DEC-29)",
+      "result": "green"
     }
   ],
   "gates": {

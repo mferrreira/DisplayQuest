@@ -46,7 +46,7 @@ Não é: remoção do legado golden/contract (ADIADA — DEC-26), drop de tabela
 | B5 | D5: mapper nas 9 rotas sem `domainErrorResponse` (urgente: `purchases/[id]` 500→404/409) + rota-tests | ✅ concluído (6 rotas migradas; auth/health/avatars ficam fora por natureza de infra; 11 rota-tests) |
 | B6 | D4: autorização rota→use case, módulo a módulo (16 rotas), rota-test antes de cada migração | ⏸️ RE-SEQUENCIADO (DEC-29) — executar **depois do B8**; hoje os gates são o único enforcement e o domínio é permissivo congelado |
 | B7 | D7: remover fallbacks cruzados dos 2 `index.ts` (harnesses injetam explicitamente) | ✅ concluído (task-management: default virou no-op Unwired; lab-operations: gateway legado já exige as dependências) |
-| B8 | OND9-B1: remover gateways legados + legacy-engines + `backend/repositories` + golden/contract (~9.000 linhas + 667 testes) | ▶️ PRONTO (DEC-26: pré-condição B3–B7 verdes atingida; DEC-29: B8 antes de B6) |
+| B8 | OND9-B1: remover gateways legados + legacy-engines + `backend/repositories` + golden/contract (~9.000 linhas + 667 testes) | ✅ concluído 2026-10-01 (`ebf6798`): removidos 10 gateways + 2 engines + 17 repositories + 6 ports legados + 21 arquivos golden/contract (651 testes) + seams mortos; wiring nova é a única casa |
 | B9 | Docs: corrigir `docs/APOO/12` §4.1 ("regra no gateway" → use case/domain), `docs/06` (fonte de persistência), `docs/03` (anti-farm), `AGENTS.md`; `verify.sh` + `arch:check`; plugar `scripts/assert-test-db.js` nos gates; doc "como adicionar funcionalidade" | aprovado, aguardando |
 | B10 | Opcionais: D8 portas finas notifications, D9 GAP-02, D10 `withRouteHandler`, D11 constante do cliente | backlog opcional |
 | B11 | Tabela `kanban_boards` | ❌ FORA (DEC-27 — tabela mantida) |

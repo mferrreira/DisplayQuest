@@ -5,7 +5,7 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
 
 ## Verificação
 
-- **Gate de entrega:** `npm run arch:check` (exit 0, allow-list **vazia**) && `npm run lint` (nada de erro) && `npx tsc --noEmit` (0) && `npx vitest run` (baseline atual: **70 arquivos / 1259 testes, zero failure** — a contagem só cresce; ver seção clean-arch).
+- **Gate de entrega:** `npm run arch:check` (exit 0, allow-list **vazia**) && `npm run lint` (nada de erro) && `npx tsc --noEmit` (0) && `npx vitest run` (baseline atual: **50 arquivos / 619 testes, zero failure** — a contagem só cresce desde o B8, que removeu os 651 testes de paridade; ver seção clean-arch).
 - **G4/integração:** roundtrips Prisma real rodam **só** contra o banco de teste isolado `dq-dev-test-db` em `127.0.0.1:5433` (`$env:DATABASE_URL="postgresql://dq_dev:dq_dev_local_only@127.0.0.1:5433/dq_dev_test"; npx vitest run`) — nunca contra o `display-quest-db` (5432, produção local).
 - **Secrets:** `npm run check:env` valida `NEXTAUTH_SECRET` (≥32, sem placeholder) e
   senha do banco (denylist). O runner lê `process.env`, não `.env` — exporte as variáveis.
@@ -21,10 +21,11 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
 - **Rotas:** finas, via `getBackendComposition()`; erros de domínio mapeados por
   `lib/api/domain-error-response.ts` (`domainErrorResponse`: Validation→400, NotFound→404,
   Conflict→409, Forbidden→403); não-DomainError (enum Prisma, FK P2003) segue no 500 legado.
-- **Quirks são contrato:** comportamento legado é pinado por golden tests e provado por
-  contract tests antigo-vs-novo (fakes Prisma determinísticos em `tests/unit/modules/*`).
-  Gateways legados em `infrastructure/*.gateway.ts` sobrevivem como seam desses testes
-  (DEC-15/19); a wiring de produção não os usa.
+- **Quirks são contrato:** os quirks congelados seguem pinados pelos testes da wiring nova
+  (roundtrips G4, `use-cases.*`, `*-rules`, goldens novos). A suíte de paridade
+  antigo-vs-novo e os gateways legados em `infrastructure/*.gateway.ts` foram **removidos
+  no OND9-B1 (repo-cleanup B8, 2026-10-01, DEC-26/DEC-29)** — o comportamento antigo está
+  preservado no git (tag `pre-cleanup` = `12d9d6c`).
 - **Composição:** factories aceitam `repository?`/`ports?` (seam primário); publishers
   entre módulos entram por porta local injetada no composition root (DEC-21).
 - **Estado/decisões:** `displayquest-v2/clean-arch/{PLAN.md,STATE.json}` — STATE.json v2.0.0
@@ -62,7 +63,7 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
   `tests/unit/components/floating-session-timer.test.tsx` citado pelo gotcha antigo
   **não existe nesta máquina/base** — o teste do timer aqui é
   `features/laboratorio/__tests__/floating-timer-tabs.test.tsx` (5 testes, na baseline).
-  A suite desta base fecha sem failures (baseline atual 70 arquivos / 1259 testes;
+  A suite desta base fecha sem failures (baseline atual 50 arquivos / 619 testes;
   registrado no STATE.json do clean-arch). O gotcha original (auto-pause chamando
   `ResponsibilitiesAPI.pause()` sem mock de `@/contexts/api-client`) pertence a outra
   máquina; se o arquivo reaparecer, o fix sugerido continua sendo
