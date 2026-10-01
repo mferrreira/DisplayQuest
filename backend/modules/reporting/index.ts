@@ -56,8 +56,9 @@ import { ReportUploadsStorage } from "@/backend/modules/reporting/infrastructure
  * OND7-B3 — the reporting facade. THE PUBLIC SURFACE IS UNCHANGED (22 methods, same names
  * and shapes — routes keep compiling until OND7-B4 migrates them to domainErrorResponse).
  * What changed: every method now runs through a USE CASE holding the rules (R1) over thin
- * table-level ports; the fat `PrismaReportingGateway` is no longer wired (it survives
- * untouched as the golden/contract seam — DEC-15, removal task OND9-B1).
+ * table-level ports; the fat `PrismaReportingGateway` was removed in OND9-B1 (repo-cleanup
+ * B8, 2026-10-01) together with the golden/contract seam — old behavior preserved in git
+ * (tag `pre-cleanup`).
  */
 export class ReportingModule {
   constructor(

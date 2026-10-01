@@ -48,16 +48,11 @@ export class NotificationsModule {
 export interface NotificationsModuleFactoryOptions {
   /** New primary seam (OND1-B2): inject a fake `NotificationRepository` in tests. */
   repository?: NotificationRepository
-  /**
-   * Legacy seam kept working for the golden/contract suites (they index the old gateway
-   * against the mocked prisma seam). New code should inject `repository`. OND9-B1 removes it.
-   */
-  gateway?: NotificationsGateway
 }
 
 export function createNotificationsModule(options: NotificationsModuleFactoryOptions = {}) {
   const repository = options.repository ?? createPrismaNotificationRepository()
-  const gateway = options.gateway ?? createNotificationsGatewayAdapter({ repository })
+  const gateway = createNotificationsGatewayAdapter({ repository })
 
   return new NotificationsModule(
     new PublishNotificationEventUseCase(gateway, repository),

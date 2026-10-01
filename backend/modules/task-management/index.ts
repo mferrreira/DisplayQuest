@@ -25,8 +25,8 @@ import { createPrismaTaskProjectsRepository } from "@/backend/modules/task-manag
 /**
  * TaskManagementModule — public surface unchanged for the routes (OND4-B3). The rules now
  * live in the use cases over repository ports (DEC-15/17); the legacy TaskServiceGateway
- * stays alive untouched as the "old implementation indexed at the seam" for the contract
- * suite — OND9-B1 removes it.
+ * was removed in OND9-B1 (repo-cleanup B8, 2026-10-01) together with the golden/contract
+ * seam — old behavior preserved in git (tag `pre-cleanup`).
  */
 export class TaskManagementModule {
   readonly getTaskById: (taskId: number) => Promise<any>

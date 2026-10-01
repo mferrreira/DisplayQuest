@@ -30,9 +30,9 @@ import { createPrismaUserStatsPort } from "@/backend/modules/gamification/infras
  * INALTERADA (mesodos nomes e assinaturas — GamificationAwardsPort/TaskAwardPort dos
  * publishers continuam casando estruturalmente, DEC-21).
  *
- * O `PrismaGamificationGateway` legado (284 linhas) e os engines antigos permanecem
- * VIVOS E INTOCADOS como "implementacao antiga indexada no seam" para o contract suite
- * (OND6-B3, DEC-15); a remocao deles e task OND9-B1.
+ * O `PrismaGamificationGateway` legado e os engines antigos FORAM REMOVIDOS em OND9-B1
+ * (repo-cleanup B8, 2026-10-01) junto com o contract suite — o comportamento antigo fica
+ * preservado no git (tag `pre-cleanup`).
  */
 
 type UseCaseExecute<T> = T extends { execute: (...args: infer A) => infer R } ? (...args: A) => R : never

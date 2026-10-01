@@ -26,7 +26,7 @@ type GatewayCall<T> = T extends (...args: infer A) => infer R ? (...args: A) => 
 /**
  * The public self-registration capability (OND2-B3). NOT part of `UserManagementGateway`:
  * the legacy gateway never had it (register lived in the route). The module exposes it on
- * the new wiring; the legacy seam gets an explicit stub.
+ * the new wiring (the legacy gateway/seam was removed in OND9-B1, repo-cleanup B8).
  */
 export interface RegisterUserCapability {
   registerUser(command: RegisterUserCommand): Promise<unknown>
@@ -78,39 +78,9 @@ export interface UserManagementModuleFactoryOptions {
   repository?: UserRepositoryPort
   /** Secondary seam: fake hasher (tests avoid real bcrypt). */
   passwordHasher?: PasswordHasher
-  /** Legacy seam — only the golden/contract suites index it. OND9-B1 removes it. */
-  gateway?: UserManagementGateway
 }
 
 export function createUserManagementModule(options: UserManagementModuleFactoryOptions = {}) {
-  if (options.gateway) {
-    // Legacy seam (DEC-15/17): the 15 gateway methods forwarded with explicit `this`;
-    // registerUser never existed in the legacy impl — calling it through the seam is a
-    // harness error, not a business path, so it fails loudly.
-    const gateway = options.gateway
-    const legacyService: UserManagementService = {
-      createUser: (command) => gateway.createUser(command),
-      listUsersForActor: (query) => gateway.listUsersForActor(query),
-      findUserById: (userId) => gateway.findUserById(userId),
-      updateUser: (userId, data) => gateway.updateUser(userId, data),
-      deleteUser: (userId) => gateway.deleteUser(userId),
-      listPendingUsers: () => gateway.listPendingUsers(),
-      moderatePendingUser: (userId, action) => gateway.moderatePendingUser(userId, action),
-      updateUserProfile: (userId, data) => gateway.updateUserProfile(userId, data),
-      updateUserPoints: (command) => gateway.updateUserPoints(command),
-      deductUserHours: (command) => gateway.deductUserHours(command),
-      updateUserRoles: (command) => gateway.updateUserRoles(command),
-      updateUserStatus: (command) => gateway.updateUserStatus(command),
-      listUserStatistics: (type) => gateway.listUserStatistics(type),
-      listLeaderboard: (query) => gateway.listLeaderboard(query),
-      listProfiles: (query) => gateway.listProfiles(query),
-      registerUser: async () => {
-        throw new Error("registerUser nao existe na implementacao legacy (seam apenas para golden/contract tests)")
-      },
-    }
-    return new UserManagementModule(legacyService)
-  }
-
   const repository = options.repository ?? createPrismaUserRepository()
   const passwordHasher = options.passwordHasher ?? createBcryptPasswordHasher()
 
