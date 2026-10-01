@@ -237,7 +237,9 @@
     "knip (dupla checagem de orfaos) opcional — nao executado; a varredura de importadores foi feita por grep direto (@/ e relativo) em app/components/contexts/features/lib/tests"
   ],
   "timeline": [
-    { "at": "2026-09-30", "event": "auditoria de 4 dimensões (subagents) + fix do bulk 12d9d6c" },
-    { "at": "2026-10-01", "event": "varredura de dividas e orfaos; decisoes do dono DEC-26/27/28; inicio do repo-cleanup" }
+    { "at": "2026-09-30", "event": "auditoria de 4 dimensoes (subagents) + fix do bulk 12d9d6c" },
+    { "at": "2026-10-01", "event": "varredura de dividas e orfaos; decisoes do dono DEC-26/27/28; inicio do repo-cleanup" },
+    { "at": "2026-10-01", "event": "B0-B5,B7 verdes; DEC-29 (B6 depois do B8); B8 executado (-31k linhas, baseline 50/619)" },
+    { "at": "2026-10-01", "event": "checkpoint do dono: branch cleanup/repo-sweep + tag pre-cleanup pushadas para origin; B6/B9 aguardando rebuild+smoke-test no PC do dono" }
   ]
 }
