@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { requireApiActor } from "@/lib/auth/api-guard";
 import { hasPermission } from "@/lib/auth/rbac";
+import { domainErrorResponse } from "@/lib/api/domain-error-response"
 import { getBackendComposition } from "@/backend/composition/root"
 
 const { store: storeModule } = getBackendComposition()
@@ -22,8 +23,10 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     }
     return NextResponse.json({ purchase });
   } catch (error: any) {
+    const mapped = domainErrorResponse(error)
+    if (mapped) return mapped
     console.error('Erro ao buscar compra:', error);
-    return NextResponse.json({ error: 'Erro ao buscar compra', details: error?.message }, { status: 500 });
+    return NextResponse.json({ error: 'Erro ao buscar compra' }, { status: 500 });
   }
 }
 
@@ -44,8 +47,10 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
     const purchase = await storeModule.updatePurchase(Number(params.id), data);
     return NextResponse.json({ purchase });
   } catch (error: any) {
+    const mapped = domainErrorResponse(error)
+    if (mapped) return mapped
     console.error('Erro ao atualizar compra:', error);
-    return NextResponse.json({ error: 'Erro ao atualizar compra', details: error?.message }, { status: 500 });
+    return NextResponse.json({ error: 'Erro ao atualizar compra' }, { status: 500 });
   }
 }
 
@@ -84,8 +89,10 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 
     return NextResponse.json({ purchase });
   } catch (error: any) {
+    const mapped = domainErrorResponse(error)
+    if (mapped) return mapped
     console.error('Erro ao atualizar compra:', error);
-    return NextResponse.json({ error: 'Erro ao atualizar compra', details: error?.message }, { status: 500 });
+    return NextResponse.json({ error: 'Erro ao atualizar compra' }, { status: 500 });
   }
 }
 
@@ -105,7 +112,9 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
     await storeModule.deletePurchase(Number(params.id));
     return NextResponse.json({ success: true });
   } catch (error: any) {
+    const mapped = domainErrorResponse(error)
+    if (mapped) return mapped
     console.error('Erro ao excluir compra:', error);
-    return NextResponse.json({ error: 'Erro ao excluir compra', details: error?.message }, { status: 500 });
+    return NextResponse.json({ error: 'Erro ao excluir compra' }, { status: 500 });
   }
 }
