@@ -3,8 +3,8 @@
   "version": "2.0.0",
   "updatedAt": "2026-10-01T00:00:00-03:00",
   "status": "in_progress",
-  "activeWave": "B6",
-  "activeBatch": "B6",
+  "activeWave": "B8",
+  "activeBatch": "B8",
   "awaitingInstruction": true,
   "target": "Eliminar dívidas de fluxo legado e código morto do repositorio, com gates por lote e rollback por revert. Ver PLAN.md (lotes B0..B11).",
   "lineage": {
@@ -30,9 +30,9 @@
     { "id": "B3", "title": "D1+D2: cron weekly reset via ResetWeeklyHoursHistoryUseCase + horarios cron derivados do dominio (golden antes)", "status": "done" },
     { "id": "B4", "title": "D3: api-guard via getBackendComposition().identityAccess", "status": "done" },
     { "id": "B5", "title": "D5: domainErrorResponse nas 9 rotas fora do mapper (urgente purchases/[id]) + rota-tests", "status": "done" },
-    { "id": "B6", "title": "D4: autorizacao rota->use case em 16 rotas, modulo a modulo", "status": "pending" },
+    { "id": "B6", "title": "D4: autorizacao rota->use case em 16 rotas, modulo a modulo", "status": "deferred", "reason": "DEC-29: re-sequenciado para depois do B8 (gates de rota sao o unico enforcement; dominio permissivo congelado por contract parity)" },
     { "id": "B7", "title": "D7: remover imports cruzados de fallback (task-management/index.ts, lab-operations/index.ts)", "status": "done" },
-    { "id": "B8", "title": "OND9-B1: remocao de gateways legados + legacy-engines + backend/repositories + golden/contract", "status": "deferred", "reason": "DEC-26 (dono 2026-10-01): so apos B3-B7 verdes e quirks re-pinnados" },
+    { "id": "B8", "title": "OND9-B1: remocao de gateways legados + legacy-engines + backend/repositories + golden/contract", "status": "ready", "reason": "DEC-26 adiou ate B3-B7 verdes — precondicao atingida (B3,B4,B5,B7 verdes). DEC-29 re-sequencia: B8 ANTES de B6, e B6 passa a ser o lote que migra os gates rota->use case sem colisao de paridade." },
     { "id": "B9", "title": "Docs: corrigir APOO/12 4.1, docs/06, docs/03, AGENTS.md; verify.sh + arch:check; plugar assert-test-db.js; doc de feature", "status": "pending" },
     { "id": "B10", "title": "Opcionais: D8 portas finas notifications, D9 GAP-02, D10 withRouteHandler, D11 constante do cliente", "status": "optional" },
     { "id": "B11", "title": "Tabela kanban_boards", "status": "excluded", "reason": "DEC-27 (dono 2026-10-01): tabela mantida" }
@@ -129,6 +129,19 @@
       ],
       "gates": "G0 arch:check 0 (759 modules, 2987 deps, -2 deps cruzadas) | G1 eslint 0 | G2 tsc 0 | G3+G4 vitest 71/1270 verdes (inclui golden/contract lab e tasks-roundtrip G4)",
       "result": "green"
+    },
+    {
+      "id": "B6-analysis",
+      "at": "2026-10-01",
+      "title": "Varredura D4 completa (16 rotas x enforcement do dominio) -> decisao DEC-29",
+      "actions": [
+        "mapeados todos os gates das 16 rotas (hasPermission/hasRole/ensure*) e o enforcement correspondente nos use cases novos e nos gateways legados",
+        "achado central: NENHUM dos 16 gates e redundante — os use cases novos portam o legado permissivo (gateways legacy sem check; delete-task com quirk congelado documentado); tasks PUT rota e MAIS ESTRITA que o dominio (dominio deixa membro de projeto editar)",
+        "conclusao tecnica: B6 antes do B8 exigiria declarar divergencia old-vs-new em ~7 modulos (667 testes de contract) + ripple de assinatura; depois do B8 vira refactor limpo",
+        "DEC-29 registrada pelo dono: re-sequenciar B8 antes de B6; gates de rota permanecem enforcement de fronteira ate la (sem regressao)"
+      ],
+      "gates": "nenhum codigo alterado (lote de analise)",
+      "result": "decision"
     }
   ],
   "gates": {
@@ -167,7 +180,8 @@
     "DEC-25: seams legados de RG-04 resolvidos com INTERFACES ESTRUTURAIS LOCAIS nos gateways legados (classes intocadas).",
     "DEC-26 (dono 2026-10-01): OND9-B1 (remocao de gateways/repositories legados + golden/contract, ~9.000 linhas + 667 testes) ADIADA — executar apenas apos B3-B7 verdes e quirks criticos re-pinnados nos testes da wiring nova.",
     "DEC-27 (dono 2026-10-01): tabela kanban_boards MANTIDA (zero uso de delegate no codigo, mas possivel feature futura de kanban).",
-    "DEC-28 (dono 2026-10-01): docs/APOO MANTIDO e CORRIGIDO (nao arquivar nem deletar); contradicoes resolvidas no lote B9."
+    "DEC-28 (dono 2026-10-01): docs/APOO MANTIDO e CORRIGIDO (nao arquivar nem deletar); contradicoes resolvidas no lote B9.",
+    "DEC-29 (dono 2026-10-01): B6 (autorizacao rota->use case, D4) RE-SEQUENCIADO para depois do B8. Evidencia da varredura: os gates das 16 rotas sao o UNICO enforcement do sistema — os use cases novos portam fielmente o legado PERMISSIVO (gateways legacy sem check algum; delete-task tem quirk congelado documentado 'any authenticated actor deletes any task'). Remover o gate agora = regressao de seguranca; adicionar enforcement no use case novo = divergencia old-vs-new nos 667 testes de contract + ripple de assinatura em 7 facades, e endureceria o B8. Apos o B8 (legado+contract removidos), a migração dos gates vira refactor limpo pinado por golden + rota-tests. Ate la, os gates de rota permanecem como enforcement de fronteira (sem regressao)."
   ],
   "gapRegistry": [
     { "id": "GAP-01", "status": "carried", "summary": "store gateway port tipado por backend/models/{Purchase,Reward} (toPrisma em rota). Verificar em B8." },
@@ -179,7 +193,7 @@
     { "id": "D1", "batch": "B3", "summary": "cron weekly reset com Prisma cru (cron-service.ts:89-156), zero testes, exposto via POST /api/cron/status" },
     { "id": "D2", "batch": "B3", "summary": "expressoes cron '30 9,15'/'0 12,17' duplicam SCHEDULED_PAUSE_TIMES do dominio" },
     { "id": "D3", "batch": "B4", "summary": "api-guard.ts:15 instancia createIdentityAccessModule() fora do composition root (2 instancias RBAC em prod)" },
-    { "id": "D4", "batch": "B6", "summary": "16 rotas com hasPermission/hasRole de lib/auth/rbac na rota (daily_logs x2, issues x4, purchases x2, tasks x2, user-badges x2, users/[id], weekly-reports x2, work-sessions)" },
+    { "id": "D4", "batch": "B6 (apos B8 — DEC-29)", "summary": "16 rotas com hasPermission/hasRole de lib/auth/rbac na rota — HOJE o unico enforcement do sistema (dominio permissivo congelado por contract parity); migra rota->use case depois da remocao do legado" },
     { "id": "D5", "batch": "B5", "summary": "9 rotas sem domainErrorResponse: users/statistics, users/leaderboard, users/profiles, purchases/[id], daily_logs/[id], cron/status, health, auth/[...nextauth], uploads/avatars/...; purchases/[id] vaza NotFoundError tipado como 500" },
     { "id": "D6", "batch": "B3", "summary": "4 rotas sem composition root (auth, cron/status, health, avatars); so cron/status migra" },
     { "id": "D7", "batch": "B7", "summary": "imports cruzados de fallback: task-management/index.ts:19, lab-operations/index.ts:69-72,195" },
