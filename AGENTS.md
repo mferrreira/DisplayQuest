@@ -5,7 +5,7 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
 
 ## Verificação
 
-- **Gate de entrega:** `npm run arch:check` (exit 0, allow-list **vazia**) && `npm run lint` (nada de erro) && `npx tsc --noEmit` (0) && `npx vitest run` (baseline atual: **67 arquivos / 1245 testes, zero failure** — a contagem só cresce; ver seção clean-arch).
+- **Gate de entrega:** `npm run arch:check` (exit 0, allow-list **vazia**) && `npm run lint` (nada de erro) && `npx tsc --noEmit` (0) && `npx vitest run` (baseline atual: **68 arquivos / 1255 testes, zero failure** — a contagem só cresce; ver seção clean-arch).
 - **G4/integração:** roundtrips Prisma real rodam **só** contra o banco de teste isolado `dq-dev-test-db` em `127.0.0.1:5433` (`$env:DATABASE_URL="postgresql://dq_dev:dq_dev_local_only@127.0.0.1:5433/dq_dev_test"; npx vitest run`) — nunca contra o `display-quest-db` (5432, produção local).
 - **Secrets:** `npm run check:env` valida `NEXTAUTH_SECRET` (≥32, sem placeholder) e
   senha do banco (denylist). O runner lê `process.env`, não `.env` — exporte as variáveis.
@@ -27,8 +27,12 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
   (DEC-15/19); a wiring de produção não os usa.
 - **Composição:** factories aceitam `repository?`/`ports?` (seam primário); publishers
   entre módulos entram por porta local injetada no composition root (DEC-21).
-- **Estado/decisões:** `displayquest-v2/clean-arch/{PLAN.md,STATE.json}` (ondas 0–9
-  concluídas em 2026-09-30: 41 batches, AC-00-01..15 met, DEC-01..DEC-25).
+- **Estado/decisões:** `displayquest-v2/clean-arch/{PLAN.md,STATE.json}` — STATE.json v2.0.0
+  agora monitora o **repo-cleanup** (lotes B0–B11, iniciado 2026-10-01). O histórico da
+  refatoração clean-arch (ondas 0–9, 41 batches, AC-00-01..15, DEC-01..DEC-25) está no git
+  (tag `pre-cleanup` = `12d9d6c`); o registro DEC-01..28 e os GAPs foram carregados no
+  STATE.json v2 (`decisionRegistry`/`gapRegistry`) — comentários de código que citam
+  `DEC-NN` continuam resolvíveis.
 
 ## Perfil do sistema (2026-09-05)
 
@@ -58,7 +62,7 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
   `tests/unit/components/floating-session-timer.test.tsx` citado pelo gotcha antigo
   **não existe nesta máquina/base** — o teste do timer aqui é
   `features/laboratorio/__tests__/floating-timer-tabs.test.tsx` (5 testes, na baseline).
-  A suite desta base fecha sem failures (baseline atual 67 arquivos / 1245 testes;
+  A suite desta base fecha sem failures (baseline atual 68 arquivos / 1255 testes;
   registrado no STATE.json do clean-arch). O gotcha original (auto-pause chamando
   `ResponsibilitiesAPI.pause()` sem mock de `@/contexts/api-client`) pertence a outra
   máquina; se o arquivo reaparecer, o fix sugerido continua sendo
@@ -90,8 +94,9 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
   usa `localhost:5432` via `docker compose up -d postgres` (nome do serviço = `postgres`,
   container = `display-quest-db`) — `db` **não** é o nome do serviço.
 - **Nunca imprimir/commitar o valor real do `NEXTAUTH_SECRET`** do `.env` local.
-- `tests/` está em `.gitignore` (linha 163) — os testes de mitigação ficam fora do commit
-  a menos que se adicione `!tests/unit`.
+- `tests/` é versionado por negações no `.gitignore` (`tests/*` + `!tests/unit`,
+  `!tests/integration/**` etc.; screenshots de e2e continuam ignorados) — os testes
+  fazem parte do commit desde `7155b92`.
 - **Lint em git worktree falha (config-cascade):** o app é desenvolvido em worktrees em
   `.worktrees/`. Como worktree é dir aninhado, o ESLint conflita config-cascade
   (`.eslintrc.json` local vs `../../.eslintrc.json` do repo pai, exit ≠ 0 só em worktree).
