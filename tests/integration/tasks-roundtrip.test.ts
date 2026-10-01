@@ -18,8 +18,12 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { prisma } from "@/lib/database/prisma";
 import { createTaskManagementModule } from "@/backend/modules/task-management";
+import { createNotificationsModule } from "@/backend/modules/notifications";
 
-const taskModule = createTaskManagementModule();
+// B7 (D7): o fallback cruzado da factory virou no-op; o roundtrip ASSERTA notificacoes
+// reais no banco, entao injeta o modulo de notifications explicitamente (a composition
+// root faz o mesmo).
+const taskModule = createTaskManagementModule({ notifications: createNotificationsModule() });
 const stamp = Date.now();
 let anaId = 0;
 let leaderId = 0;

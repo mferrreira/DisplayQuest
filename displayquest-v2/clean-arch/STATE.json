@@ -3,8 +3,8 @@
   "version": "2.0.0",
   "updatedAt": "2026-10-01T00:00:00-03:00",
   "status": "in_progress",
-  "activeWave": "B4",
-  "activeBatch": "B4",
+  "activeWave": "B6",
+  "activeBatch": "B6",
   "awaitingInstruction": true,
   "target": "Eliminar dívidas de fluxo legado e código morto do repositorio, com gates por lote e rollback por revert. Ver PLAN.md (lotes B0..B11).",
   "lineage": {
@@ -16,11 +16,11 @@
     "branch": "cleanup/repo-sweep",
     "baseCommit": "12d9d6c",
     "rollbackTag": "pre-cleanup",
-    "testFiles": 70,
-    "tests": 1259,
+    "testFiles": 71,
+    "tests": 1270,
     "failures": 0,
-    "archModules": 758,
-    "archDependencies": 2975,
+    "archModules": 759,
+    "archDependencies": 2987,
     "allowListEntries": 0
   },
   "waves": [
@@ -29,9 +29,9 @@
     { "id": "B2", "title": "Tier B: dependencias npm mortas (apos verificacao CSS/config)", "status": "done" },
     { "id": "B3", "title": "D1+D2: cron weekly reset via ResetWeeklyHoursHistoryUseCase + horarios cron derivados do dominio (golden antes)", "status": "done" },
     { "id": "B4", "title": "D3: api-guard via getBackendComposition().identityAccess", "status": "done" },
-    { "id": "B5", "title": "D5: domainErrorResponse nas 9 rotas fora do mapper (urgente purchases/[id]) + rota-tests", "status": "pending" },
+    { "id": "B5", "title": "D5: domainErrorResponse nas 9 rotas fora do mapper (urgente purchases/[id]) + rota-tests", "status": "done" },
     { "id": "B6", "title": "D4: autorizacao rota->use case em 16 rotas, modulo a modulo", "status": "pending" },
-    { "id": "B7", "title": "D7: remover imports cruzados de fallback (task-management/index.ts, lab-operations/index.ts)", "status": "pending" },
+    { "id": "B7", "title": "D7: remover imports cruzados de fallback (task-management/index.ts, lab-operations/index.ts)", "status": "done" },
     { "id": "B8", "title": "OND9-B1: remocao de gateways legados + legacy-engines + backend/repositories + golden/contract", "status": "deferred", "reason": "DEC-26 (dono 2026-10-01): so apos B3-B7 verdes e quirks re-pinnados" },
     { "id": "B9", "title": "Docs: corrigir APOO/12 4.1, docs/06, docs/03, AGENTS.md; verify.sh + arch:check; plugar assert-test-db.js; doc de feature", "status": "pending" },
     { "id": "B10", "title": "Opcionais: D8 portas finas notifications, D9 GAP-02, D10 withRouteHandler, D11 constante do cliente", "status": "optional" },
@@ -103,6 +103,31 @@
         "seguranca medida antes: os 5 rota-tests que exercitam rotas que usam api-guard ja mockam @/lib/auth/api-guard inteiro (api-guard nem carrega neles); nenhum outro teste importa api-guard direto"
       ],
       "gates": "G0 arch:check 0 (758 modules) | G1 eslint 0 | G2 tsc 0 | G3+G4 vitest 70/1259 verdes",
+      "result": "green"
+    },
+    {
+      "id": "B5",
+      "at": "2026-10-01",
+      "title": "D5: domainErrorResponse em 6 rotas fora do mapper + 11 rota-tests",
+      "actions": [
+        "mapper + catch wired em: purchases/[id] (4 handlers), daily_logs/[id], users/statistics, users/leaderboard, users/profiles, cron/status (auth/[...nextauth], health e uploads seguem fora do mapper por natureza de infra)",
+        "vazamentos de 500 removidos: purchases/[id] nao devolve mais details=error.message; users/statistics e cron/status nao devolvem mais error.message no corpo",
+        "tests/unit/api/mapped-routes.test.ts (11 testes): NotFound->404, Conflict->409, Validation->400, Forbidden->403, nao-Domain->500 generico SEM vazamento (assert JSON nao contem a mensagem interna), 404 legado de purchase null preservado"
+      ],
+      "gates": "G0 arch:check 0 (759 modules) | G1 eslint 0 | G2 tsc 0 | G3+G4 vitest 71 arquivos/1270 testes verdes",
+      "result": "green"
+    },
+    {
+      "id": "B7",
+      "at": "2026-10-01",
+      "title": "D7: removidos imports cruzados de fallback (task-management e lab-operations index.ts)",
+      "actions": [
+        "task-management/index.ts: fallback 'notifications ?? createNotificationsModule()' virou no-op UnwiredTaskNotifications (padrao da casa, console.warn); import do modulo notifications removido",
+        "lab-operations/index.ts: ramo de seam legado nao constroi mais createNotificationsModule()/createIdentityAccessModule(); o proprio gateway legado ja lanca erro se faltarem (lab-operations.gateway.ts:620-623) e golden/contract ja os injetam explicitamente — fallback era codigo morto",
+        "tasks-roundtrip.test.ts: unico consumidor do fallback (asserta notificacoes reais no banco) passou a injetar createNotificationsModule() explicitamente, como a composition root faz",
+        "medido antes: 3 call sites de createTaskManagementModule (composition injeta, contract injeta, roundtrip); 2 call sites de createLabOperationsModule (golden e contract injetam gatewayDependencies completas)"
+      ],
+      "gates": "G0 arch:check 0 (759 modules, 2987 deps, -2 deps cruzadas) | G1 eslint 0 | G2 tsc 0 | G3+G4 vitest 71/1270 verdes (inclui golden/contract lab e tasks-roundtrip G4)",
       "result": "green"
     }
   ],

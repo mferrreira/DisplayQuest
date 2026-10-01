@@ -68,8 +68,6 @@ import {
   createLabOperationsGateway,
   type LabOperationsGatewayDependencies,
 } from "@/backend/modules/lab-operations/infrastructure/lab-operations.gateway"
-import { createNotificationsModule } from "@/backend/modules/notifications"
-import { createIdentityAccessModule } from "@/backend/modules/identity-access"
 
 type GatewayCall<T> = T extends (...args: infer A) => infer R ? (...args: A) => R : never
 
@@ -189,13 +187,12 @@ class UnwiredLabPublisher implements LabIssuePublisherPort {
 
 export function createLabOperationsModule(options: LabOperationsModuleFactoryOptions = {}) {
   if (options.gateway || options.gatewayDependencies) {
+    // repo-cleanup B7 (D7): a factory nao constroi dependencias cruzadas
+    // (createNotificationsModule/createIdentityAccessModule removidos daqui). O gateway
+    // legado exige notificationsModule + identityAccess e lanca erro proprio se faltarem
+    // (lab-operations.gateway.ts:620-623); golden/contract os injetam explicitamente.
     return new LabOperationsModule(
-      options.gateway ??
-        createLabOperationsGateway({
-          notificationsModule: createNotificationsModule(),
-          identityAccess: createIdentityAccessModule(),
-          ...options.gatewayDependencies,
-        }),
+      options.gateway ?? createLabOperationsGateway({ ...options.gatewayDependencies }),
     )
   }
 

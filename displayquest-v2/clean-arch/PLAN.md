@@ -43,9 +43,9 @@ Não é: remoção do legado golden/contract (ADIADA — DEC-26), drop de tabela
 | B2 | Dependências npm mortas (Tier B, após verificação CSS/config) | ✅ concluído |
 | B3 | D1+D2: cron weekly reset → `ResetWeeklyHoursHistoryUseCase`; horários cron derivados do domínio. Golden ANTES de mexer; unit + roundtrip depois | ✅ concluído (achados: gatilho legado disparava 15:30 vs domínio 15:00; 4 rotas `[id]` com assinatura Next-14 corrigidas — 2 quebradas em runtime) |
 | B4 | D3: api-guard → `getBackendComposition().identityAccess` | aprovado, aguardando |
-| B5 | D5: mapper nas 9 rotas sem `domainErrorResponse` (urgente: `purchases/[id]` 500→404/409) + rota-tests | aprovado, aguardando |
+| B5 | D5: mapper nas 9 rotas sem `domainErrorResponse` (urgente: `purchases/[id]` 500→404/409) + rota-tests | ✅ concluído (6 rotas migradas; auth/health/avatars ficam fora por natureza de infra; 11 rota-tests) |
 | B6 | D4: autorização rota→use case, módulo a módulo (16 rotas), rota-test antes de cada migração | aprovado, aguardando |
-| B7 | D7: remover fallbacks cruzados dos 2 `index.ts` (harnesses injetam explicitamente) | aprovado, aguardando |
+| B7 | D7: remover fallbacks cruzados dos 2 `index.ts` (harnesses injetam explicitamente) | ✅ concluído (task-management: default virou no-op Unwired; lab-operations: gateway legado já exige as dependências) |
 | B8 | OND9-B1: remover gateways legados + legacy-engines + `backend/repositories` + golden/contract (~9.000 linhas + 667 testes) | ⏸️ ADIADO (DEC-26) — só após B3-B7 verdes e quirks re-pinnados |
 | B9 | Docs: corrigir `docs/APOO/12` §4.1 ("regra no gateway" → use case/domain), `docs/06` (fonte de persistência), `docs/03` (anti-farm), `AGENTS.md`; `verify.sh` + `arch:check`; plugar `scripts/assert-test-db.js` nos gates; doc "como adicionar funcionalidade" | aprovado, aguardando |
 | B10 | Opcionais: D8 portas finas notifications, D9 GAP-02, D10 `withRouteHandler`, D11 constante do cliente | backlog opcional |
