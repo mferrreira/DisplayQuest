@@ -39,7 +39,7 @@ Não é: remoção do legado golden/contract (ADIADA — DEC-26), drop de tabela
 | Lote | Escopo | Status |
 |------|--------|--------|
 | B0 | Setup: branch `cleanup/repo-sweep`, tag `pre-cleanup`, reset da pasta clean-arch (este plano + STATE v2.0.0 zerado) | ✅ concluído |
-| B1 | Código morto Tier A: 24 componentes frontend órfãos + `lib/api/endpoints/work-sessions.ts` | agendado |
+| B1 | Código morto Tier A: 24 componentes frontend órfãos + `lib/api/endpoints/work-sessions.ts` | ✅ concluído |
 | B2 | Dependências npm mortas (Tier B, após verificação CSS/config) | agendado |
 | B3 | D1+D2: cron weekly reset → `ResetWeeklyHoursHistoryUseCase`; horários cron derivados do domínio. Golden ANTES de mexer; unit + roundtrip depois | aprovado, aguardando execução |
 | B4 | D3: api-guard → `getBackendComposition().identityAccess` | aprovado, aguardando |

@@ -25,7 +25,7 @@
   },
   "waves": [
     { "id": "B0", "title": "Setup: branch, tag pre-cleanup, reset da pasta clean-arch (PLAN novo + STATE zerado)", "status": "done" },
-    { "id": "B1", "title": "Tier A: 24 componentes frontend orfaos + lib/api/endpoints/work-sessions.ts", "status": "pending" },
+    { "id": "B1", "title": "Tier A: 24 componentes frontend orfaos + lib/api/endpoints/work-sessions.ts", "status": "done" },
     { "id": "B2", "title": "Tier B: dependencias npm mortas (apos verificacao CSS/config)", "status": "pending" },
     { "id": "B3", "title": "D1+D2: cron weekly reset via ResetWeeklyHoursHistoryUseCase + horarios cron derivados do dominio (golden antes)", "status": "pending" },
     { "id": "B4", "title": "D3: api-guard via getBackendComposition().identityAccess", "status": "pending" },
@@ -50,6 +50,19 @@
         "playwright --list: 10 testes em 2 specs, nenhum referencia componentes do Tier A"
       ],
       "gates": "G2/G3/G4 inalterados (nenhum codigo de producao tocado); STATE.json validado por parse JSON",
+      "result": "green"
+    },
+    {
+      "id": "B1",
+      "at": "2026-10-01",
+      "title": "Tier A: remocao de 25 arquivos orfaos (24 componentes frontend + lib/api/endpoints/work-sessions.ts)",
+      "actions": [
+        "git rm: components/ui/{accordion,activity-logs-tab,admin-stats-card,breadcrumb,chart,command,context-menu,dashboard-stats,data-table,drawer,form,form-field,hover-card,pagination,radio-group,task-list,toggle,use-mobile,user-approval-section,work-sessions-tab}.tsx",
+        "git rm: components/features/lab-responsibility-status.tsx, components/forms/{daily-log-form,user-schedule-manager}.tsx, contexts/use-mobile.tsx, lib/api/endpoints/work-sessions.ts",
+        "evidencia de nao-uso: varredura de importadores @/ e relativos (duas passadas) + dynamic imports = 0; playwright --list nao referencia nenhum"
+      ],
+      "gates": "G0 arch:check 0 (756 modules, -33) | G1 lint 0 | G2 tsc 0 | G3+G4 vitest 68 arquivos/1255 testes verdes",
+      "incidente": "primeira corrida G4 falhou com PrismaClientInitializationError: dq-dev-test-db estava Exited (255) desde reboot da maquina; re-armado com docker start (nenhum comando de parar/remover/criar); segunda corrida verde",
       "result": "green"
     }
   ],
