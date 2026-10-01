@@ -5,7 +5,7 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
 
 ## Verificação
 
-- **Gate de entrega:** `npm run arch:check` (exit 0, allow-list **vazia**) && `npm run lint` (nada de erro) && `npx tsc --noEmit` (0) && `npx vitest run` (baseline atual: **68 arquivos / 1255 testes, zero failure** — a contagem só cresce; ver seção clean-arch).
+- **Gate de entrega:** `npm run arch:check` (exit 0, allow-list **vazia**) && `npm run lint` (nada de erro) && `npx tsc --noEmit` (0) && `npx vitest run` (baseline atual: **70 arquivos / 1259 testes, zero failure** — a contagem só cresce; ver seção clean-arch).
 - **G4/integração:** roundtrips Prisma real rodam **só** contra o banco de teste isolado `dq-dev-test-db` em `127.0.0.1:5433` (`$env:DATABASE_URL="postgresql://dq_dev:dq_dev_local_only@127.0.0.1:5433/dq_dev_test"; npx vitest run`) — nunca contra o `display-quest-db` (5432, produção local).
 - **Secrets:** `npm run check:env` valida `NEXTAUTH_SECRET` (≥32, sem placeholder) e
   senha do banco (denylist). O runner lê `process.env`, não `.env` — exporte as variáveis.
@@ -62,7 +62,7 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
   `tests/unit/components/floating-session-timer.test.tsx` citado pelo gotcha antigo
   **não existe nesta máquina/base** — o teste do timer aqui é
   `features/laboratorio/__tests__/floating-timer-tabs.test.tsx` (5 testes, na baseline).
-  A suite desta base fecha sem failures (baseline atual 68 arquivos / 1255 testes;
+  A suite desta base fecha sem failures (baseline atual 70 arquivos / 1259 testes;
   registrado no STATE.json do clean-arch). O gotcha original (auto-pause chamando
   `ResponsibilitiesAPI.pause()` sem mock de `@/contexts/api-client`) pertence a outra
   máquina; se o arquivo reaparecer, o fix sugerido continua sendo

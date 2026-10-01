@@ -3,8 +3,8 @@
   "version": "2.0.0",
   "updatedAt": "2026-10-01T00:00:00-03:00",
   "status": "in_progress",
-  "activeWave": "B3",
-  "activeBatch": "B3",
+  "activeWave": "B4",
+  "activeBatch": "B4",
   "awaitingInstruction": true,
   "target": "Eliminar dívidas de fluxo legado e código morto do repositorio, com gates por lote e rollback por revert. Ver PLAN.md (lotes B0..B11).",
   "lineage": {
@@ -16,18 +16,18 @@
     "branch": "cleanup/repo-sweep",
     "baseCommit": "12d9d6c",
     "rollbackTag": "pre-cleanup",
-    "testFiles": 68,
-    "tests": 1255,
+    "testFiles": 70,
+    "tests": 1259,
     "failures": 0,
-    "archModules": 789,
-    "archDependencies": 3064,
+    "archModules": 758,
+    "archDependencies": 2975,
     "allowListEntries": 0
   },
   "waves": [
     { "id": "B0", "title": "Setup: branch, tag pre-cleanup, reset da pasta clean-arch (PLAN novo + STATE zerado)", "status": "done" },
     { "id": "B1", "title": "Tier A: 24 componentes frontend orfaos + lib/api/endpoints/work-sessions.ts", "status": "done" },
     { "id": "B2", "title": "Tier B: dependencias npm mortas (apos verificacao CSS/config)", "status": "done" },
-    { "id": "B3", "title": "D1+D2: cron weekly reset via ResetWeeklyHoursHistoryUseCase + horarios cron derivados do dominio (golden antes)", "status": "pending" },
+    { "id": "B3", "title": "D1+D2: cron weekly reset via ResetWeeklyHoursHistoryUseCase + horarios cron derivados do dominio (golden antes)", "status": "done" },
     { "id": "B4", "title": "D3: api-guard via getBackendComposition().identityAccess", "status": "pending" },
     { "id": "B5", "title": "D5: domainErrorResponse nas 9 rotas fora do mapper (urgente purchases/[id]) + rota-tests", "status": "pending" },
     { "id": "B6", "title": "D4: autorizacao rota->use case em 16 rotas, modulo a modulo", "status": "pending" },
@@ -75,6 +75,23 @@
         "evidencia: grep de cada pacote em app/components/features/contexts/lib/tests/backend = 0 importadores (react-table e pixelmatch/pngjs zerados apos B1)"
       ],
       "gates": "G0 arch:check 0 (756 modules) | G1 lint 0 | G2 tsc 0 | G3+G4 vitest 68/1255 verdes | npm run build exit 0",
+      "result": "green"
+    },
+    {
+      "id": "B3",
+      "at": "2026-10-01",
+      "title": "D1+D2: cron weekly reset via use case + agenda cron derivada do dominio",
+      "actions": [
+        "GOLDEN ANTES: tests/unit/services/cron-weekly-reset.golden.test.ts pinou a semantica do Prisma cru no STORE (history so com totalHours>0, currentWeekHours zerado para todo ativo mesmo 0h, inativo intocado, sem dedup QUIRK-7C, window startOfWeek/endOfWeek) — verde no codigo antigo e VERDE APOS a migração (prova de equivalencia)",
+        "cron-service.executeWeeklyReset: ~70 linhas de Prisma cru removidas; delega a getBackendComposition().reporting.resetWeeklyHoursHistory() (use case ja coberto por contract + roundtrip G4)",
+        "pauseCronExpressions derivadas de SCHEDULED_PAUSE_TIMES; imports de prisma e date-fns removidos do cron-service",
+        "tests/unit/services/cron-schedule.test.ts: mock de node-cron pinando a agenda completa ['0 0 * * 1','30 9 * * *','0 12,15,17 * * *','59 23 * * *'] + identidade com o dominio"
+      ],
+      "achados": [
+        "BUG D2 real medido: as expressoes legadas '30 9,15' disparavam pausa em 15:30, horario que NAO esta em SCHEDULED_PAUSE_TIMES (15:00). Evolucao documentada: gatilho passa a bater 15:00; nenhum estado muda (normalizacao lazy ja cobria leituras), so o momento da gravacao",
+        "tsc exposto pelo build do B2: 4 rotas [id] com assinatura Next-14 (purchases/[id], rewards/[id] GET sem request; users/[id]/avatar e deduct-hours com params sync). avatar e deduct-hours estavam QUEBRADOS em runtime (params.id em Promise -> NaN -> sempre 400). Corrigido no commit 37b98ed com ajuste dos rota-tests"
+      ],
+      "gates": "G0 arch:check 0 (758 modules) | G1 eslint 0 nos arquivos tocados | G2 tsc 0 | G3+G4 vitest 70 arquivos/1259 testes verdes (baseline +2 arquivos/+4 testes)",
       "result": "green"
     }
   ],
