@@ -303,7 +303,7 @@ describe("/api/users/[id]/deduct-hours POST", () => {
   it("200 {message,user}", async () => {
     const response = await deductHours(
       makeRequest("/api/users/1/deduct-hours", { method: "POST", body: { hours: 5, reason: "ausência" } }) as never,
-      { params: { id: "1" } },
+      idContext("1"),
     );
     expect(response.status).toBe(200);
     expect((await response.json()).message).toBe("5 horas retiradas com sucesso");
@@ -315,7 +315,7 @@ describe("/api/users/[id]/deduct-hours POST", () => {
     };
     const response = await deductHours(
       makeRequest("/api/users/1/deduct-hours", { method: "POST", body: { hours: 1, reason: "r", projectId: 7 } }) as never,
-      { params: { id: "1" } },
+      idContext("1"),
     );
     expect(response.status).toBe(403);
     expect((await response.json()).error).toBe("Acesso negado");
@@ -327,7 +327,7 @@ describe("/api/users/[id]/deduct-hours POST", () => {
     };
     const response = await deductHours(
       makeRequest("/api/users/1/deduct-hours", { method: "POST", body: { hours: 99, reason: "r" } }) as never,
-      { params: { id: "1" } },
+      idContext("1"),
     );
     expect(response.status).toBe(400);
     expect((await response.json()).error).toBe("Usuário não possui horas suficientes");
@@ -339,13 +339,13 @@ describe("/api/users/[id]/deduct-hours POST", () => {
     };
     const missing = await deductHours(
       makeRequest("/api/users/99/deduct-hours", { method: "POST", body: { hours: 1, reason: "r" } }) as never,
-      { params: { id: "99" } },
+      idContext("99"),
     );
     expect(missing.status).toBe(404);
 
     const invalid = await deductHours(
       makeRequest("/api/users/1/deduct-hours", { method: "POST", body: { hours: 0, reason: "r" } }) as never,
-      { params: { id: "1" } },
+      idContext("1"),
     );
     expect(invalid.status).toBe(400);
   });

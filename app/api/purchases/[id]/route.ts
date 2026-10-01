@@ -5,7 +5,7 @@ import { getBackendComposition } from "@/backend/composition/root"
 
 const { store: storeModule } = getBackendComposition()
 // GET: Obter uma compra específica
-export async function GET(context: { params: Promise<{ id: string }> }) {
+export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const auth = await requireApiActor();
     if (auth.error) return auth.error;
