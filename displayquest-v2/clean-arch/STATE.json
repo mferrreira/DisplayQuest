@@ -1,11 +1,46 @@
 {
   "plan": "clean-arch",
   "version": "1.0.0",
-  "updatedAt": "2026-09-30T15:40:00-03:00",
+  "updatedAt": "2026-09-30T21:10:00-03:00",
   "status": "done",
   "activeWave": "9",
   "activeBatch": "none (refatoracao concluida: ondas 0-9 done, 41 batches, AC-00-01..15 todas met, gates finais verdes com allow-list vazia)",
   "awaitingInstruction": "DONO: aprovacao dos COMMITS das ondas 0-9 (AGENT.md §7 — todo o trabalho esta UNCOMMITTED na branch dev). Refatoracao clean-arch concluida em 2026-09-30 (ONDA 9 aprovada e fechada: 9.1 allow-list zerada, 9.2 docs, 9.3 gates finais + ACs). Proposta pendente desde a ONDA 8: commit split por onda (10 commits) como historico.",
+  "postMergeReview": {
+    "at": "2026-09-30T21:10:00-03:00",
+    "author": "sessao de revisao independente (pos-ff para 625bd57)",
+    "doc": "displayquest-v2/clean-arch/PENDENCIAS-FINAIS.md",
+    "mergeJaEstavaNaOrigin": "SIM — origin/dev = 625bd57 (= origin/refactor/clean-arch). O dev local (64a6095) era ancestral direto: o pull e ff puro, sem conflito. A refatoracao NAO esta no main.",
+    "summary": "Gates re-executados localmente apos o merge. G0 arch:check VERDE (787 modulos/3061 deps, zero violacoes, allow-list vazia). G1 lint VERDE (exit 0, so warnings React). next build VERDE (exit 0, 49/49 paginas, 0 erro/0 warning). G2 tsc e G3 vitest VERMELHOS por 1 defeito real de codigo (P0) mais erros de arquivos orfaos NAO commitados.",
+    "gatesReverified": {
+      "G0": "VERDE — arch:check exit 0, 787 modules, 3061 dependencies, allow-list vazia",
+      "G1": "VERDE — next lint exit 0, apenas warnings pre-existentes de React",
+      "G2": "VERMELHO por P0; apos correcao, ZERO erros em codigo commitado. Residuo: 4 erros em .next/types (artefato de build stale) + 4 em testes ORFAOS nao commitados (tests/unit/project-management/, tests/unit/store/purchase-query-scope.test.ts).",
+      "G3": "VERMELHO por P0 (bulk 5/8 failed por ReferenceError); apos correcao bulk 8/8 passed. Suite completa ainda tem falhas de fixture/ambiente — ver P5.",
+      "G4": "NAO RE-EXECUTADO — exige o banco isolado dq-dev-test-db em 127.0.0.1:5433 (DEC-10). Ver P5.",
+      "G5": "N/A — prisma/schema.prisma INALTERADO, zero migrations novas (git diff --stat prisma/ vazio).",
+      "BUILD": "VERDE — next build exit 0, compilado em 7.0s, 49/49 static pages, 0 erro / 0 warning"
+    },
+    "findings": [
+      { "id": "P0", "severity": "alta", "status": "CORRIGIDO", "area": "codigo", "file": "backend/modules/reporting/application/use-cases/bulk-generate-weekly-reports.use-case.ts:40", "summary": "ReferenceError: listPeriods is not defined — TODA chamada a bulkGenerateWeeklyReports quebrava.", "cause": "A linha 40 chamava listPeriods, mas o unico simbolo importado do dominio (linha 2) e listReportPeriods. listPeriods so existe no wrapper legado lib/constants/report-periods (que delega para o dominio) — nao esta no escopo do use-case.", "fix": "Rename de 1 linha: listPeriods( -> listReportPeriods(. No teste, o caso periodType 'x' foi tipado como `as any` explicito (padrao ja usado no mesmo arquivo) para o tsc nao mascarar o guard isReportPeriod.", "verification": "tests/unit/modules/reporting/bulk-weekly-reports.use-cases.test.ts -> 8/8 passed (era 5/8 failed com ReferenceError).", "impacto": "CONTRADIZ a evidencia herdada de 'vitest 68 arquivos / 1255 testes verdes' do commit 625bd57 — o numero nao se reproduz. O bug era invisivel ao tsc isolado e so aparecia na execucao real do use-case (exatamente o valor do contract test).", "bloqueiaDeploy": true },
+      { "id": "P1", "severity": "media", "status": "aberto (opcional)", "area": "arquitetura", "summary": "~130 KB de gateways legados + 5 ports orfas ainda wired APENAS nos golden/contract (DEC-15/19/25 prometeram remocao na OND9-B1 que nao ocorreu).", "medicao": "Analise de alcancabilidade a partir de app/ + composition root: 35 arquivos / 258 KB em backend/ inalcancaveis da producao (10 gateways legados, 11 backend/repositories/*, 9 backend/models/*, 5 ports orfas).", "risco": "Drift silencioso: a golden so exercita a implementacao VELHA, entao divergencia entre nova e velha nao e detectada por ela.", "acao": "Onda 10: deletar o legado e reancorar os goldens na wiring nova. NAO bloqueia deploy, NAO e risco de runtime.", "decisaoDoDono": "pendente" },
+      { "id": "P2", "severity": "media", "status": "aberto", "area": "processo", "summary": "DEC-11 NAO aplicada: no-restricted-imports continua em 'warn' para application/** e app/api/** (DEC-11 declara 'error').", "medicao": ".eslintrc.json real: backend/domain=error (OK), backend/modules/*/application=warn, app/api=warn.", "acao": "Promover a 'error' (2 linhas). SEGURO hoje porque o G0 esta com allow-list VAZIA.", "bloqueiaDeploy": false },
+      { "id": "P3", "severity": "baixa", "status": "aberto", "area": "documental", "summary": "GAP-02 e GAP-03 seguem ABERTOS apesar de status='done' e activeBatch='refatoracao concluida'.", "detalhe": "GAP-02: WorkSession.status continua 'string' (o enum WorkSessionStatus existe e e exportado, mas nao e usado no campo; so os testes o consomem). GAP-03: toJSON() ainda presente nos contracts de dominio Task/Project/Issue/LabEvent.", "acao": "Fechar as duas ou ajustar status/activeBatch para nao afirmar 'concluida' com gaps abertos.", "bloqueiaDeploy": false },
+      { "id": "P4", "severity": "media", "status": "aberto", "area": "fluxo-de-commit", "summary": ".gitignore passa a versionar tests/unit/** (DEC-02), re-expondo 25 arquivos de teste ORFAOS da mitigacao A1-A11 — incluindo tests/unit/components/floating-session-timer.test.tsx, que falha DE PROPOSITO por decisao do dono.", "medicao": "git check-ignore -> .gitignore:176 (!tests/unit/**) casa com o arquivo; 25 arquivos orfaos aparecem como ?? no git status apos o ff.", "risco": "Um `git add tests/` commitaria o teste que falha de proposito e quebraria o CI.", "acao": "Cuidado no commit (nao usar `git add -A`/`git add tests/`) ou regra de exclusao especifica para os orfaos.", "bloqueiaDeploy": false },
+      { "id": "P5", "severity": "baixa", "status": "aberto", "area": "ambiente", "summary": "A suite completa tem falhas de fixture/ambiente, NAO de codigo refatorado.", "detalhe": "Os roundtrips G4 apontam para 127.0.0.1:5432 (display-quest-db) em vez do banco isolado dq-dev-test-db:5433 (DEC-10/AGENTS.md); alguns testes orfaos da mitigacao falham por seam local. A afirmacao '1255 verdes' so e reproduzivel no recorte commitado + 5433.", "acao": "Rodar G4 exportando DATABASE_URL para 5433 e restringindo a suite commitada (tests/unit/modules/** + tests/integration/*-roundtrip).", "bloqueiaDeploy": false }
+    ],
+    "deployVerdict": {
+      "schemaChanged": false,
+      "newMigrations": 0,
+      "infraChanged": false,
+      "dockerfileChanged": false,
+      "composeChanged": false,
+      "newEnvVars": 0,
+      "newWritePaths": 0,
+      "productionBuild": "exit 0 (7.0s, 49/49 static pages, 0 erro / 0 warning)",
+      "conclusion": "git pull + docker compose up -d --build sobe SEM derrubar/alterar o banco e sem erro. Nao usar down -v (volumes postgres_data/uploads/reports persistem). Ressalva: o build foi validado localmente; G4 de integracao precisa do banco isolado 5433."
+    }
+  },
   "target": {
     "repo": "DisplayQuest",
     "branch": "dev",
@@ -995,7 +1030,9 @@
     { "at": "2026-09-30T14:10:00-03:00", "batch": "9.1", "kind": "G0-allow-list-zero", "command": "npm run arch:check (ALLOW_LIST com todas as chaves = [])", "output": "✔ no dependency violations found (786 modules, 3041 dependencies cruised); exit 0 — allow-list 9 -> 0 (health via composition root; 5 gateways com interfaces estruturais locais DEC-25; engines movidos para infrastructure/legacy-engines)" },
     { "at": "2026-09-30T14:10:00-03:00", "batch": "9.1", "kind": "AC-00-02-grep", "command": "grep '@prisma/client' backend/models", "output": "2 hits, AMBOS comentarios de documentacao (Reward.ts:2, ProjectMembership.ts:2); zero imports reais — baseline.modelPrismaImports = []" },
     { "at": "2026-09-30T15:35:00-03:00", "batch": "9.3", "kind": "G1-G4-final", "command": "npm run lint; npm run arch:check; npx tsc --noEmit; npx vitest run (DATABASE_URL 127.0.0.1:5433); docker ps", "output": "lint exit 0 (so warnings pre-existentes); ✔ no dependency violations (786 modules, 3041 dependencies) allow-list VAZIA; tsc exit 0; vitest: Test Files 67 passed (67), Tests 1245 passed (1245) — zero failure, incluindo os 9 roundtrips de modulo na 5433; docker ps: dq-dev-test-db Up, display-quest Up, display-quest-db Up (healthy) — nada tocado" },
-    { "at": "2026-09-30T15:36:00-03:00", "batch": "9.3", "kind": "AC-grep-final", "command": "grep 'new *Repository(|create*Module(' em backend/modules/*/application e */domain; grep '@prisma/client|backend/repositories|create*Module(' em app/api", "output": "application/domain: zero hits reais (so comentarios); new *Repository( apenas em infrastructure/ (factories permitidas); app/api: 1 hit, comentario em projects/[id]/members — zero imports reais" }
+    { "at": "2026-09-30T15:36:00-03:00", "batch": "9.3", "kind": "AC-grep-final", "command": "grep 'new *Repository(|create*Module(' em backend/modules/*/application e */domain; grep '@prisma/client|backend/repositories|create*Module(' em app/api", "output": "application/domain: zero hits reais (so comentarios); new *Repository( apenas em infrastructure/ (factories permitidas); app/api: 1 hit, comentario em projects/[id]/members — zero imports reais" },
+    { "at": "2026-09-30T21:10:00-03:00", "batch": "pos-merge-review", "kind": "G0-G1-BUILD-reverificado", "command": "npm run arch:check; npm run lint; npx next build", "output": "G0 exit 0 (787 modules, 3061 dependencies, allow-list VAZIA); G1 exit 0 (warnings React pre-existentes, nenhum erro); BUILD exit 0 (7.0s, 49/49 static pages, 0 erro / 0 warning)" },
+    { "at": "2026-09-30T21:10:00-03:00", "batch": "P0", "kind": "G2-G3-defeito-corrigido", "command": "npx tsc --noEmit; npx vitest run tests/unit/modules/reporting/bulk-weekly-reports.use-cases.test.ts", "output": "ANTES: tsc TS2304 'Cannot find name listPeriods' em bulk-generate-weekly-reports.use-case.ts:40 + bulk 5/8 FAILED (ReferenceError: listPeriods is not defined). CORRECAO: rename de 1 linha para listReportPeriods + `as any` explicito no caso periodType 'x' do teste. DEPOIS: bulk 8/8 passed; tsc com ZERO erros em codigo commitado (residuo apenas em .next/types stale e em testes orfaos nao commitados)." }
   ],
 
   "rollbacks": [
@@ -1085,7 +1122,8 @@
     { "at": "2026-09-29T09:54:00-03:00", "command": "docker ps", "observation": "fim do batch 3.2: display-quest Up, display-quest-db Up (healthy, 127.0.0.1:5432), dq-dev-test-db Up (127.0.0.1:5433). Nenhum container do deploy tocado; nenhum comando docker de exclusao/parada executado." },
     { "at": "2026-09-29T10:23:00-03:00", "command": "docker ps", "observation": "fecho da ONDA 3 (batch 3.4): display-quest Up (0.0.0.0:3000), display-quest-db Up (healthy, 127.0.0.1:5432), dq-dev-test-db Up (127.0.0.1:5433). Deploy intacto; G4 rodou SO contra 5433; nenhum comando docker de exclusao/parada executado em toda a onda 3." },
     { "at": "2026-09-29T15:30:00-03:00", "command": "docker ps", "observation": "batch 6.1 (inicio da ONDA 6): display-quest Up (0.0.0.0:3000), display-quest-db Up (healthy, 127.0.0.1:5432), dq-dev-test-db Up (127.0.0.1:5433). Deploy intacto; nenhum comando docker de exclusao/parada/recreate executado." },
-    { "at": "2026-09-29T16:05:00-03:00", "command": "docker ps", "observation": "fecho da ONDA 6 (batch 6.4): display-quest Up (0.0.0.0:3000), display-quest-db Up (healthy, 127.0.0.1:5432), dq-dev-test-db Up (127.0.0.1:5433). Deploy intacto; G4 rodou SO contra 5433; nenhum comando docker de exclusao/parada/recreate executado em toda a onda 6." }
+    { "at": "2026-09-29T16:05:00-03:00", "command": "docker ps", "observation": "fecho da ONDA 6 (batch 6.4): display-quest Up (0.0.0.0:3000), display-quest-db Up (healthy, 127.0.0.1:5432), dq-dev-test-db Up (127.0.0.1:5433). Deploy intacto; G4 rodou SO contra 5433; nenhum comando docker de exclusao/parada/recreate executado em toda a onda 6." },
+    { "at": "2026-09-30T21:10:00-03:00", "command": "git diff --stat 64a6095 625bd57 -- prisma/ Dockerfile docker-compose.yml docker-compose.override.yml; analise de alcancabilidade a partir de app/ + composition root", "observation": "Diff de prisma/ e de Dockerfile/compose INTOCOS (vazio) -> o deploy NAO toca schema, NAO cria migration, NAO muda a infra. Alcancabilidade: 35 arquivos / 258 KB em backend/ sao inalcancaveis da producao (gateways legados + backend/repositories + models so alcancaveis via legado + ports orfas) — medido para P1." }
   ],
 
   "notes": [
@@ -1145,6 +1183,7 @@
     { "at": "2026-09-30T13:10:00-03:00", "event": "ONDA-9-approved (dono: 'Aprovar so a ONDA 9' — cleanup/docs/fechamento aprovados; commits das ondas 0-8 CONTINUAM pendentes de aprovacao)" },
     { "at": "2026-09-30T14:20:00-03:00", "event": "batch-9.1-done (OND9-B1: ALLOW_LIST esvaziada — health via composition root, 5 gateways legados com interfaces estruturais locais, engines movidos para infrastructure/legacy-engines, 7 models purificados; arch exit 0 COM allow-list VAZIA; 1245 testes verdes; DEC-24 registra a decisao DEC-06)", "from": "pending", "to": "done" },
     { "at": "2026-09-30T15:10:00-03:00", "event": "batch-9.2-done (docs: backend/README.md reescrito para a arvore/gates do clean-arch; docs/04-arquitetura-tecnica.md secoes 3-4 e 7-8 atualizadas; AGENTS.md com nova secao clean-arch + gotchas floating-session e roundtrip corrigidos para esta base; plan-v2/ARCHITECTURE.md registra o pre-requisito clean-arch e a tabela G0-G5)", "from": "pending", "to": "done" },
-    { "at": "2026-09-30T15:40:00-03:00", "event": "batch-9.3-done e REFACTORACAO-CONCLUIDA (gates finais: arch exit 0 COM allow-list VAZIA, lint 0, tsc 0, vitest 67/1245 zero failure na 5433, containers intactos; AC-00-01..15 todas met; STATE status=done v1.0.0; 40 batches, zero rollback). Pendencia unica: aprovacao dos commits das ondas 0-9 pelo dono (AGENT.md §7).", "from": "pending", "to": "done" }
+    { "at": "2026-09-30T15:40:00-03:00", "event": "batch-9.3-done e REFACTORACAO-CONCLUIDA (gates finais: arch exit 0 COM allow-list VAZIA, lint 0, tsc 0, vitest 67/1245 zero failure na 5433, containers intactos; AC-00-01..15 todas met; STATE status=done v1.0.0; 40 batches, zero rollback). Pendencia unica: aprovacao dos commits das ondas 0-9 pelo dono (AGENT.md §7).", "from": "pending", "to": "done" },
+    { "at": "2026-09-30T21:10:00-03:00", "event": "pos-merge-review (ff dev->625bd57; o merge JA estava na origin como origin/dev). Revisao independente: P0 (ReferenceError: listPeriods is not defined em bulk-generate-weekly-reports.use-case.ts:40, quebrava TODA geracao em lote de relatorios) CORRIGIDO com rename de 1 linha e validado (bulk 5/8 -> 8/8). G0/G1/BUILD verdes; deploy sem risco de banco (schema/migrations/Dockerfile/compose intocados). P1-P5 registrados. Ver PENDENCIAS-FINAIS.md.", "from": "done", "to": "done" }
   ]
 }
