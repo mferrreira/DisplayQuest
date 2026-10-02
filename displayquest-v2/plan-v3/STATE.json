@@ -5,7 +5,7 @@
   "updatedAt": "2026-10-02",
   "status": "in_progress",
   "activeWave": "1",
-  "activeBatch": "1.C",
+  "activeBatch": "2.A",
   "awaitingInstruction": [],
   "target": "corrigir a economia de pontos, acabar com o silêncio das pausas automáticas e tornar o quadro utilizável quando enche",
   "lineage": {
@@ -23,7 +23,17 @@
     "failures": 0,
     "archModules": 731,
     "archDependencies": 2748,
-    "allowListEntries": 0
+    "allowListEntries": 0,
+    "afterOnda1": {
+      "at": "2026-10-02",
+      "commit": "9fc6987",
+      "testFilesUnitAndFeatures": 58,
+      "testsUnitAndFeatures": 681,
+      "integrationFiles": 10,
+      "integrationTests": 83,
+      "archModules": 732,
+      "archDependencies": 2762
+    }
   },
   "gates": {
     "G0": "npm run arch:check (exit 0, allow-list vazia)",
@@ -41,7 +51,7 @@
       "batches": [
         "S0.1"
       ],
-      "status": "planned",
+      "status": "done",
       "dependsOn": []
     },
     {
@@ -53,7 +63,7 @@
         "1.C",
         "1.D"
       ],
-      "status": "planned",
+      "status": "done",
       "dependsOn": [
         "0"
       ]
@@ -66,7 +76,7 @@
         "2.B",
         "2.C"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "dependsOn": [
         "0"
       ]
@@ -148,8 +158,9 @@
       "id": "1.D",
       "wave": "1",
       "title": "10 pontos fixos na superfície: remove campo dos 2 formulários, @pontos do backlog aceito e ignorado (DEC-41), rota grava 10, tasks.points histórico intocado (DEC-40)",
-      "status": "planned",
-      "gates": "G0 G1 G2 G3 G4 G5 G6"
+      "status": "done",
+      "gates": "G0 G1 G2 G3 G4 G5 G6",
+      "evidence": "commit 9fc6987. Campo de pontos fora do TaskDialog (grade 3->2 colunas), do TaskForm legado (PRIORITY_POINTS 25/50/100/150 e NumberField mortos) e do BacklogDialog legado ('Pontos por task'); `points` saiu de TaskFormData e de ParsedBacklogLine. Rotas: POST /api/tasks (simples e bulk), PUT /api/tasks/[id] (points saiu de allowedFields) e o log do PATCH complete param de imprimir numero que a rota nao conhece. createTaskRecord aplica POINTS_PER_TASK (CreateTaskCommand.points ficou opcional). Telas: detalhe mostra base 10 + projecao (se concluir agora), selo do cartao mostra a base (morreu isHighPoints), archive e detalhe de projeto pararam de exibir o historico. AC-P3-03 coberto por tests/unit/api/tasks-approve-route.test.ts (6 testes com as rotas reais). G0 732 modulos/2762 deps sem violacao e allow-list vazia; G1 limpo; G2 0 erros; G3 58 arquivos/681 testes; G4 10 arquivos/83 testes contra dq-dev-test-db:5433; G5 docs:build + docs:check (guia, FAQ, loja e RB-18 + RB-66..RB-70 corrigidos); G6 recaptura de quadro-tarefas, quadro-tarefas-participante, dialogo-nova-tarefa, dialogo-detalhe-tarefa e dialogo-detalhe-projeto contra a instancia recem-rebuildada — o extrato do DOM confirma 'Pontos' fora dos fieldLabels do diálogo de nova tarefa."
     },
     {
       "id": "2.A",
@@ -331,6 +342,14 @@
     {
       "at": "2026-10-02",
       "event": "1.C: a aritmetica de atraso passou a existir em um lugar so. Import features -> backend/domain aceito pelo gate sem alterar a allow-list."
+    },
+    {
+      "at": "2026-10-02",
+      "event": "1.D: nenhuma tela aceita mais pontuação do cliente. O campo saiu dos tres formularios, @pontos do backlog virou token ignorado, as tres bordas HTTP (criar simples, criar em lote, editar) pararam de ler `points` e a aprovacao nunca le o corpo. Medido: o extrato do DOM da tela Nova Tarefa recapturada nao tem mais 'Pontos' entre os rotulos. Onda 1 fechada (G0-G6 verdes no commit 9fc6987)."
+    },
+    {
+      "at": "2026-10-02",
+      "event": "Medido para a Onda 2, antes de planejar o batch: o log da sessao e obrigatorio — sem texto, o botão 'Encerrar sessão' fica desabilitado e nao ha como encerrar. A nota da sessao (2.B) precisa tratar isso alem de salvar rascunho."
     }
   ]
 }

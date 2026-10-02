@@ -94,5 +94,5 @@ A barra de filtros e as colunas são as mesmas; o que muda é o conjunto de tare
 ```
 
 ::: nota titulo="Importar backlog"
-Quem cria tarefas também encontra **Inserir backlog** no diálogo de nova tarefa, para trazer um conjunto de tarefas de uma vez. O sistema confirma com *"Backlog importado"* ou denuncia o motivo da recusa.
+Quem cria tarefas também encontra **Inserir backlog** no diálogo de nova tarefa, para trazer um conjunto de tarefas de uma vez. Cada linha vira uma tarefa; os prefixes **!alta**, **!baixa**, **!urgente** e **#25/12** definem prioridade e vencimento. O prefixo antigo **@30** continua aceito, mas é ignorado: toda tarefa vale 10 pontos. O sistema confirma com *"Backlog importado"* ou denuncia o motivo da recusa.
 :::
