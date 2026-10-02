@@ -138,9 +138,14 @@ Scripts relevantes hoje:
 
 Observacao importante:
 
-- `scripts/docker-setup.sh` existe no repositorio, mas o texto dele esta desatualizado em relacao ao comportamento atual do projeto
-- esse script menciona seed automatica e credenciais padrao que nao refletem o fluxo real atual
-- se for mantido, ele deve ser revisado antes de ser tratado como referencia operacional
+- `scripts/docker-setup.sh` foi REMOVIDO em 2026-10-02. Ele era o orphans mais perigoso
+  do repo: rodava `docker-compose down` (v1) antes de subir, o que derrubava o stack de
+  producao local, e prometia seed automatica + credenciais padrao que nunca existiram.
+  Por convencao do projeto, NUNCA rodar `docker compose down` — o `up -d` ja e
+  idempotente e os volumes (`postgres_data`, `uploads_data`, `report_files_data`)
+  persistem entre `--build` / `--force-recreate`.
+- fluxo de setup/subida oficial: `docker compose up --build -d` e, se o banco estiver
+  vazio, `npm run db:seed` explicitamente. Nao ha seed automatico.
 
 ## 10. Troubleshooting
 

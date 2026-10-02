@@ -169,19 +169,39 @@ npm run dev
 - `npm run build`
 - `npm run start`
 - `npm run lint`
+- `npm run arch:check` (dependency-cruiser, regras RG-01..RG-06)
 - `npm run db:generate`
 - `npm run db:migrate:dev`
 - `npm run db:migrate:deploy`
 - `npm run db:migrate:status`
 - `npm run db:reset:local`
 - `npm run db:safe-deploy`
+- `npm run check:env` (valida `NEXTAUTH_SECRET` e senha do banco)
 
 ## Docker
 
+Use o **plugin v2** (`docker compose`, com espaco). O `docker-compose` v1 (com hifen) esta
+obsoleto e nao e mais suportado pelo Docker.
+
 ```bash
-docker-compose up -d
-docker-compose ps
-docker-compose logs -f
+docker compose up --build -d   # build + sobe app e postgres
+docker compose ps
+docker compose logs -f
+```
+
+Nunca rode `docker compose down`: os volumes `postgres_data`, `uploads_data` e
+`report_files_data` sao eliminados junto, e junto vai o banco. O `up -d` ja e idempotente.
+
+O `docker-compose.override.yml` entra **implicitamente** (por convencao de nome do Compose) e
+publica o Postgres apenas no loopback `127.0.0.1:5432`, para `psql` local e para
+`tests/integration/entities-roundtrip.test.ts`. A base usa so `expose`, que nao publica porta
+no host. Isso vale tambem em producao, e e seguro porque nunca amarra em `0.0.0.0`.
+
+Banco de teste isolado (nunca toca no banco de producao local):
+
+```bash
+npm run db:test:up       # sobe dq-dev-test-db em 127.0.0.1:5433
+npm run db:test:setup    # migrate deploy + db:seed + tests/fixtures/g4-normalize.sql
 ```
 
 ## Documentacao
