@@ -117,6 +117,7 @@ quem responde pelo sistema.
 | A camada de registros de entidade é adotada por um único módulo | Adaptadores de persistência do laboratório | A forma de construir registros não é uniforme entre módulos | Assumido; adotá-la nos demais módulos é alteração mecânica |
 | O processo grava em dois diretórios | Contêiner da aplicação | Caminho de escrita novo falha sem alteração da construção da imagem | Documentado e verificado |
 | A versão de execução da aplicação está fixada | Imagem de execução e versão declarada | Verificação local só vale se a versão local coincidir com a da imagem | Alinhado; divergir de novo reintroduz o risco |
+| Uma peça de interface grava no armazenamento do navegador sem a costura de estado do cliente | Aviso de sessão iniciada, no cronômetro | Uma chave fora do namespace `dq:`, sem leitura tolerante a conteúdo corrompido | Divergência única e consciente: trocar de `sessionStorage` para o armazenamento persistente mudaria a semântica do aviso |
 
 A divergência entre a autorização avaliada na rota e a matriz do domínio merece uma observação
 de método. A matriz do domínio descreve o que o sistema permite; a verificação na rota decide o

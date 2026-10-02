@@ -31,6 +31,7 @@ Toda recusa do sistema tem um motivo, e o motivo está na mensagem. Esta lista r
 | O sistema diz | Por quê | O que fazer |
 | --- | --- | --- |
 | **O log é obrigatório para encerrar a sessão.** | o diálogo **Finalizar Work Session** não aceita log vazio | escreva o que foi feito; o botão libera em seguida |
+| **Não foi possível encerrar a sessão. Sua anotação foi mantida — tente de novo.** | a gravação da sessão não chegou ao fim | o texto continua no lugar: clique em **Encerrar sessão** outra vez |
 | **Sessão pausada automaticamente** | a sessão cruzou 09:30, 12:00, 15:00 ou 17:00 | **Continuar sessão** para retomar, **Encerrar sessão** para fechar |
 | **Sem sessão** | não há sessão aberta | use **Iniciar sessão** para registrar tempo |
 | **Pausa automática em …** | contagem regressiva para a próxima pausa programada | pause antes, se for sair |

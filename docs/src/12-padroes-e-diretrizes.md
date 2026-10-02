@@ -44,6 +44,18 @@ adaptador nem modelo persistente. A violação é detectada automaticamente.
 comportamento correto seria fixado. Um comportamento preservado sem teste é um
 comportamento que se perderá na próxima alteração.
 
+**O estado guardado no navegador passa por um ponto único.** Rascunho, preferência e
+ordenação persistida no navegador são lidos e gravados pela costura de estado do cliente,
+que dá namespace às chaves, tolera conteúdo corrompido e devolve o valor padrão quando não
+há `window` — servidor, área privativa ou navegador com armazenamento bloqueado. Nenhuma
+peça de interface toca o armazenamento do navegador diretamente.
+
+::: nota titulo="Por que o valor padrão importa"
+Uma chave corrompida — de outra versão da aplicação, ou editada à mão no depurador — não
+pode derrubar a tela. A costura devolve o padrão e o produto segue funcionando, apenas sem
+lembrar o que foi escolhido.
+:::
+
 ## Diretrizes de interface
 
 A interface segue um vocabulário visual consistente, e as decisões abaixo são parte do

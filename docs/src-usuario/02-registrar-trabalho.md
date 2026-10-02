@@ -10,7 +10,7 @@ O controle de sessão fica fixo no canto da tela, em todas as telas internas. Fe
 O estado aparece escrito ao lado de "Sessão de Trabalho": **Sem sessão**, **Pausada** ou **Ativa**.
 ```
 
-Na aba **Sessão** o painel mostra o tempo decorrido e, quando há sessão aberta, o aviso da próxima pausa automática. A aba **Responsabilidade** é o plantão do laboratório, tratado no capítulo 6.
+Na aba **Sessão** o painel mostra o tempo decorrido e, quando há sessão aberta, o aviso da próxima pausa automática e a caixa **Anotações da sessão** (descrita abaixo). A aba **Responsabilidade** é o plantão do laboratório, tratado no capítulo 6.
 
 ## Iniciar uma sessão
 
@@ -30,10 +30,24 @@ Uma pessoa só tem uma sessão de trabalho aberta por vez. Se já existe uma ati
 
 O tempo de uma sessão pausada não é contado enquanto ela está pausada. Pausar é o procedimento correto para almoço, reunião ou saída do laboratório.
 
+## Anotações da sessão
+
+Com a sessão aberta, o painel mostra a caixa **Anotações da sessão**, abaixo do relógio. É para escrever ali o que você está fazendo, em blocos, ao longo do dia: ajuste de protocolo, leitura de resultados, discussão de caso.
+
+- Cada sessão tem a sua anotação. Começar outra sessão não traz o texto da anterior, e a anotação da sessão anterior continua guardada.
+- O texto fica gravado **neste navegador** enquanto a sessão estiver aberta. Recarregar a página, fechar o painel ou navegar não perde o que já foi escrito.
+- Ao clicar em **Parar** — ou em **Encerrar sessão** no aviso de pausa automática — o texto vem para a caixa de log do diálogo, onde você ainda pode ajustar antes de confirmar.
+
+O rascunho **só é apagado quando o encerramento dá certo**. Se a gravação falhar, o diálogo avisa *"Não foi possível encerrar a sessão. Sua anotação foi mantida — tente de novo."* e o texto continua onde estava.
+
+::: nota titulo="Anotação não é o log"
+A anotação é rascunho local: só existe neste navegador e some quando a sessão é encerrada com sucesso. O que fica registrado no sistema é o **log diário** que você confirmar no diálogo (capítulo 8).
+:::
+
 ## Encerrar uma sessão
 
 1. Abra o cronômetro e clique em **Parar**.
-2. O sistema abre o diálogo **Finalizar Work Session**. Escreva o log na caixa "Descreva o que foi feito nesta sessão...".
+2. O sistema abre o diálogo **Finalizar Work Session**. A caixa "Descreva o que foi feito nesta sessão..." já vem com as anotações da sessão, e continua editável.
 3. Clique em **Encerrar sessão**.
 
 O log é obrigatório: enquanto a caixa estiver vazia o diálogo avisa *"O log é obrigatório para encerrar a sessão."* e o botão fica desabilitado.

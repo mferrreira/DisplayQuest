@@ -3102,7 +3102,15 @@ adaptador nem modelo persistente. A violação é detectada automaticamente.</p>
 — e o capítulo 7 lista vários —, ele é fixado por teste com o mesmo cuidado com que um
 comportamento correto seria fixado. Um comportamento preservado sem teste é um
 comportamento que se perderá na próxima alteração.</p>
-<h2 id="diretrizes-de-interface">Diretrizes de interface</h2>
+<p><strong>O estado guardado no navegador passa por um ponto único.</strong> Rascunho, preferência e
+ordenação persistida no navegador são lidos e gravados pela costura de estado do cliente,
+que dá namespace às chaves, tolera conteúdo corrompido e devolve o valor padrão quando não
+há <code>window</code> — servidor, área privativa ou navegador com armazenamento bloqueado. Nenhuma
+peça de interface toca o armazenamento do navegador diretamente.</p>
+<aside class="dq-callout dq-callout--nota"><p class="dq-callout__label">Por que o valor padrão importa</p><div class="dq-callout__body"><p>Uma chave corrompida — de outra versão da aplicação, ou editada à mão no depurador — não
+pode derrubar a tela. A costura devolve o padrão e o produto segue funcionando, apenas sem
+lembrar o que foi escolhido.</p>
+</div></aside><h2 id="diretrizes-de-interface">Diretrizes de interface</h2>
 <p>A interface segue um vocabulário visual consistente, e as decisões abaixo são parte do
 contrato de apresentação.</p>
 <table>
@@ -4211,6 +4219,12 @@ quem responde pelo sistema.</p>
 <td>Verificação local só vale se a versão local coincidir com a da imagem</td>
 <td>Alinhado; divergir de novo reintroduz o risco</td>
 </tr>
+<tr>
+<td>Uma peça de interface grava no armazenamento do navegador sem a costura de estado do cliente</td>
+<td>Aviso de sessão iniciada, no cronômetro</td>
+<td>Uma chave fora do namespace <code>dq:</code>, sem leitura tolerante a conteúdo corrompido</td>
+<td>Divergência única e consciente: trocar de <code>sessionStorage</code> para o armazenamento persistente mudaria a semântica do aviso</td>
+</tr>
 </tbody>
 </table>
 <p>A divergência entre a autorização avaliada na rota e a matriz do domínio merece uma observação
@@ -4282,7 +4296,7 @@ expressa como migração versionada não pertence a este sistema.</p>
 <footer class="dq-footer">
   <p>
     Conteúdo gerado a partir de <code>docs/src/</code> e <code>docs/diagrams/</code>. Diagramas em notação UML (PlantUML). O conteúdo reflete o estado do
-    código no commit <code>9fc6987 (2026-10-02)</code>.
+    código no commit <code>28392d6 (2026-10-02)</code>.
   </p>
 </footer>
 

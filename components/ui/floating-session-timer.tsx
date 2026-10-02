@@ -14,6 +14,7 @@ import { useProject } from "@/contexts/project-context"
 import { getNextScheduledPause, getMissedScheduledPause, toSafeDate } from "@/lib/work-sessions/schedule"
 import { SessionAutoPauseCountdown } from "@/components/ui/session-auto-pause-countdown"
 import { SessionWelcomeBalloon } from "@/components/ui/session-welcome-balloon"
+import { SessionNotesDraft, useSessionNotes } from "@/components/ui/session-notes-draft"
 import { ResponsibilityMiniPanel } from "@/components/ui/responsibility-mini-panel"
 import { ResponsibilitiesAPI } from "@/contexts/api-client"
 
@@ -46,11 +47,20 @@ export function FloatingSessionTimer() {
   const [showAutoPauseDialog, setShowAutoPauseDialog] = useState(false)
   const [logNote, setLogNote] = useState("")
   const [submitting, setSubmitting] = useState(false)
+  const [stopError, setStopError] = useState<string | null>(null)
   const [startProjectId, setStartProjectId] = useState("")
   const [startActivity, setStartActivity] = useState("")
   const [startLocation, setStartLocation] = useState("")
   const [startError, setStartError] = useState<string | null>(null)
   const autoPausedSessionIdsRef = useRef<Set<number>>(new Set())
+
+  // OND2-B: rascunho de anotações preso a ESTA sessão (chave inclui o id). Vive aqui porque
+  // quem precisa do texto no momento de encerrar é o próprio cronômetro — o despejo no log.
+  const {
+    note: sessionNote,
+    setNote: setSessionNote,
+    clearNote: clearSessionNote,
+  } = useSessionNotes(currentSession?.id ?? null)
 
   useEffect(() => {
     if (!user?.id) return
@@ -168,19 +178,39 @@ export function FloatingSessionTimer() {
     setShowAutoPauseDialog(false)
   }
 
+  /**
+   * OND2-B: abrir "Finalizar Work Session" despeja o rascunho na caixa de log, que segue
+   * editável — o rascunho evita redigitar, não decide o texto final. Os dois caminhos de
+   * entrada (botão Parar e o "Encerrar sessão" da pausa automática) passam por aqui.
+   */
+  const openStopDialog = () => {
+    setLogNote(sessionNote)
+    setStopError(null)
+    setShowStopDialog(true)
+  }
+
   const handleStop = async () => {
     if (!currentSession || !user?.id) return
     const note = logNote.trim()
     if (!note) return
     setSubmitting(true)
+    setStopError(null)
     try {
       await endSession(currentSession.id, currentSession.activity || undefined, {
         dailyLogNote: note,
       })
+      // Só agora o rascunho sai: encerrar com sucesso é o que libera a chave da sessão.
+      clearSessionNote()
       setShowStopDialog(false)
       setShowAutoPauseDialog(false)
       setLogNote("")
       await fetchSessions(user.id)
+    } catch {
+      // Falhou: a sessão continua aberta, então nada pode ser descartado. O texto editado
+      // no diálogo volta para o rascunho (é ele o que sobrevive a recarga) e o erro fica
+      // visível — antes disso a falha era um rejection silencioso no console.
+      setSessionNote(note)
+      setStopError("Não foi possível encerrar a sessão. Sua anotação foi mantida — tente de novo.")
     } finally {
       setSubmitting(false)
     }
@@ -262,6 +292,14 @@ export function FloatingSessionTimer() {
               startTime={currentSession?.startTime ?? null}
             />
 
+            {currentSession && (
+              <SessionNotesDraft
+                sessionId={currentSession.id}
+                note={sessionNote}
+                onNoteChange={setSessionNote}
+              />
+            )}
+
             {!currentSession && user && (
               <div className="space-y-2">
                 <Select value={startProjectId} onValueChange={setStartProjectId}>
@@ -318,7 +356,7 @@ export function FloatingSessionTimer() {
               ) : null}
 
               {currentSession && (
-                <Button size="sm" variant="destructive" onClick={() => setShowStopDialog(true)} disabled={loading}>
+                <Button size="sm" variant="destructive" onClick={openStopDialog} disabled={loading}>
                   <StopCircle className="h-4 w-4 mr-1" />
                   Parar
                 </Button>
@@ -362,6 +400,11 @@ export function FloatingSessionTimer() {
               O log é obrigatório para encerrar a sessão.
             </p>
           )}
+          {stopError && (
+            <p role="alert" className="text-xs text-destructive">
+              {stopError}
+            </p>
+          )}
 
           <DialogFooter className="gap-2">
             <Button onClick={() => handleStop()} disabled={submitting || !logNote.trim()}>
@@ -385,7 +428,7 @@ export function FloatingSessionTimer() {
               variant="outline"
               onClick={() => {
                 setShowAutoPauseDialog(false)
-                setShowStopDialog(true)
+                openStopDialog()
               }}
             >
               Encerrar sessão
