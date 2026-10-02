@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { cronService } from "@/lib/services/cron-service";
 import { ensureAnyRole, requireApiActor } from "@/lib/auth/api-guard";
+import { domainErrorResponse } from "@/lib/api/domain-error-response"
 
 export async function GET() {
   try {
@@ -12,11 +13,10 @@ export async function GET() {
     const status = cronService.getStatus();
     return NextResponse.json({ status });
   } catch (error: any) {
+    const mapped = domainErrorResponse(error)
+    if (mapped) return mapped
     console.error("Erro ao buscar status do cron:", error);
-    return NextResponse.json(
-      { error: error.message || "Erro interno do servidor" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 });
   }
 }
 
@@ -39,10 +39,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ error: "Ação não reconhecida" }, { status: 400 });
   } catch (error: any) {
+    const mapped = domainErrorResponse(error)
+    if (mapped) return mapped
     console.error("Erro ao executar ação do cron:", error);
-    return NextResponse.json(
-      { error: error.message || "Erro interno do servidor" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 });
   }
 }

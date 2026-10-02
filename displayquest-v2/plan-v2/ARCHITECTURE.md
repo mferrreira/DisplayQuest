@@ -41,6 +41,7 @@ na composicao, quirks pinados por golden/contract). Estado da refatoracao:
 ```
 plan-v2/
 ├── ARCHITECTURE.md       <- este arquivo (o meta-plano)
+├── UI-UX.md              <- contrato transversal de interface (vinculante p/ 01..06)
 ├── state.json            <- rastreamento global do plan-v2 (o trello do processo)
 ├── templates/            <- modelos canônicos dos 4 artefatos
 │   ├── PLAN.template.md
@@ -153,6 +154,7 @@ Sequência canônica do gate: `01 → 02 → 03 → 04 → 05 → 06`.
 | PLAN | Ordem de execução com done criteria (PLAN.md) |
 | AGENT | Regras e contexto para o agente executor (AGENT.md) |
 | STATE | Rastreamento de progresso com evidências (STATE.json) |
+| UI-UX | Contrato transversal de interface (`UI-UX.md`), vinculante para 01..06 |
 | AC | Acceptance Criterion (critério de aceitação na SPEC) |
 | RF0n | Requisito Funcional n do documento de visão |
 | done | Estado terminal de uma funcionalidade (todas ACs verdes + gates) |

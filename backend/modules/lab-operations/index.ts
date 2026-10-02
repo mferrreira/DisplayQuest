@@ -64,12 +64,6 @@ import { PrismaLabNoticeRepository } from "@/backend/modules/lab-operations/infr
 import { PrismaLaboratoryScheduleRepository } from "@/backend/modules/lab-operations/infrastructure/repositories/prisma-laboratory-schedule.repository"
 import { PrismaResponsibilityRepository } from "@/backend/modules/lab-operations/infrastructure/repositories/prisma-responsibility.repository"
 import { PrismaUserScheduleRepository } from "@/backend/modules/lab-operations/infrastructure/repositories/prisma-user-schedule.repository"
-import {
-  createLabOperationsGateway,
-  type LabOperationsGatewayDependencies,
-} from "@/backend/modules/lab-operations/infrastructure/lab-operations.gateway"
-import { createNotificationsModule } from "@/backend/modules/notifications"
-import { createIdentityAccessModule } from "@/backend/modules/identity-access"
 
 type GatewayCall<T> = T extends (...args: infer A) => infer R ? (...args: A) => R : never
 
@@ -167,13 +161,6 @@ export interface LabOperationsModulePorts {
 
 export interface LabOperationsModuleFactoryOptions {
   ports?: LabOperationsModulePorts
-  /**
-   * SEAM LEGADO (DEC-15): gateway explicito OU gatewayDependencies continuam montando o
-   * DefaultLabOperationsGateway intacto — eixo do golden 8.1/contract 8.3. Sai da casa em
-   * OND9-B1; o caminho padrao (sem estas opcoes) ja e a wiring nova de use cases.
-   */
-  gateway?: LabOperationsGateway
-  gatewayDependencies?: Partial<LabOperationsGatewayDependencies>
 }
 
 /** Publisher default quando a composition root nao cabula: no-op com trace alto (padrao reporting/DEC-21). */
@@ -188,17 +175,6 @@ class UnwiredLabPublisher implements LabIssuePublisherPort {
 }
 
 export function createLabOperationsModule(options: LabOperationsModuleFactoryOptions = {}) {
-  if (options.gateway || options.gatewayDependencies) {
-    return new LabOperationsModule(
-      options.gateway ??
-        createLabOperationsGateway({
-          notificationsModule: createNotificationsModule(),
-          identityAccess: createIdentityAccessModule(),
-          ...options.gatewayDependencies,
-        }),
-    )
-  }
-
   const issues = options.ports?.issues ?? new PrismaIssueRepository()
   const labEvents = options.ports?.labEvents ?? new PrismaLabEventRepository()
   const labNotices = options.ports?.labNotices ?? new PrismaLabNoticeRepository()

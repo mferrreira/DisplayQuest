@@ -19,9 +19,9 @@ import { createPrismaProjectRepository } from "@/backend/modules/project-managem
 /**
  * ProjectManagementModule — OND5-B2 (R1/R2). The use cases now HOLD the rules (frozen by
  * the golden matrix OND5-B1) over thin ports; the module surface for the routes is
- * UNCHANGED. The legacy `ProjectServiceGateway` stays alive untouched as the "old
- * implementation indexed at the seam" for the contract suite (DEC-15); its removal is task
- * OND9-B1.
+ * UNCHANGED. The legacy `ProjectServiceGateway` was removed in OND9-B1 (repo-cleanup B8,
+ * 2026-10-01) together with the contract suite — old behavior preserved in git (tag
+ * `pre-cleanup`).
  */
 
 type UseCaseExecute<T> = T extends { execute: (...args: infer A) => infer R } ? (...args: A) => R : never

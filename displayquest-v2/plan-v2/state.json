@@ -45,15 +45,19 @@
   ],
 
   "gates": {
+    "architecture": "npm run arch:check",
     "lint": "npx eslint --no-eslintrc --config .eslintrc.json <arquivos>",
     "types": "npx tsc --noEmit",
     "unit": "set -a; source .env; set +a; npx vitest run",
-    "integration": "docker compose up -d postgres && npx vitest run",
+    "integration": "DATABASE_URL=postgresql://dq_dev:dq_dev_local_only@127.0.0.1:5433/dq_dev_test npx vitest run tests/integration",
     "migration": "npx prisma migrate dev|deploy"
   },
 
+  "uiUxContract": null,
+
   "notes": [
-    "256/257 esperado no unit (único fail conhecido: floating-session-timer)",
+    "Baseline do unit (MEDIDA em 2026-10-01, pos-clean-arch + repo-cleanup): 64 arquivos / 721 testes, zero failure. As cifras '67 arquivos / 1245 testes' e a nota antiga '256/257, unico fail floating-session-timer' estao ambas ERRADAS — 1245 era a baseline de antes do B8, que removeu os 651 testes de paridade. O arquivo tests/unit/components/floating-session-timer.test.tsx EXISTE e hoje e verde (gotcha correto em AGENTS.md).",
+    "G4 (integration) roda SO no banco de teste isolado dq-dev-test-db em 127.0.0.1:5433. NUNCA contra display-quest-db (5432), que e o banco de producao local.",
     "Nunca commitar NEXTAUTH_SECRET real",
     "PDF template externo pendente: 03 SPEC keep PDF ACs blocked até template chegar"
   ]

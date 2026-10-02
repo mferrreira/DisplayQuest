@@ -20,8 +20,15 @@
 # DATABASE_URL do gate:
 #   postgresql://dq_dev@127.0.0.1:5433/dq_dev_test
 #
-# Subir:  npm run db:test:up
-# Verificar: npm run db:test:guard
+# Subir:   npm run db:test:up
+# Preparar: npm run db:test:setup    (prisma migrate deploy + db:seed + tests/fixtures/g4-normalize.sql)
+# Rodar:    DATABASE_URL=postgresql://dq_dev:dq_dev_local_only@127.0.0.1:5433/dq_dev_test npx vitest run
+#
+# NOTA 2026-10-01: este arquivo citava `npm run db:test:up` e `npm run db:test:guard`,
+# que nunca existiram no package.json — o caminho do gate nao era executavel como
+# documentado. db:test:up e db:test:setup agora existem e foram validados do zero.
+# `db:test:guard` NAO foi criado: nao havia especificacao para ele, e nao se inventa
+# sem decisao. (Por convencao do repo, NUNCA rodar `docker compose down`.)
 
 name: dq-dev-test
 

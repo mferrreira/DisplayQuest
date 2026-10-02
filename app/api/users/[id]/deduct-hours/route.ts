@@ -3,11 +3,12 @@ import { requireApiActor } from "@/lib/auth/api-guard"
 import { domainErrorResponse } from "@/lib/api/domain-error-response"
 import { getBackendComposition } from "@/backend/composition/root"
 const { userManagement: userManagementModule } = getBackendComposition()
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     const auth = await requireApiActor()
     if (auth.error) return auth.error
 
+    const params = await context.params
     const userId = Number(params.id)
     if (!Number.isInteger(userId) || userId <= 0) {
       return NextResponse.json({ error: "ID do usuário inválido" }, { status: 400 })

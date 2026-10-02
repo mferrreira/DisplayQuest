@@ -62,29 +62,9 @@ export interface WorkExecutionModuleFactoryOptions {
   }
   /** Events port; the composition root wires the gamification awards into the publisher. */
   events?: WorkExecutionEvents
-  /** Legacy seam (DEC-15/17) — only the golden/contract suites index it. OND9-B1 removes it. */
-  gateway?: WorkExecutionGateway
 }
 
 export function createWorkExecutionModule(options: WorkExecutionModuleFactoryOptions = {}) {
-  if (options.gateway) {
-    // Legacy seam: the 10 gateway methods forwarded with explicit `this`.
-    const gateway = options.gateway
-    const legacyService: WorkExecutionGateway = {
-      startWorkSession: (command) => gateway.startWorkSession(command),
-      completeWorkSession: (command) => gateway.completeWorkSession(command),
-      createDailyLogFromSession: (command) => gateway.createDailyLogFromSession(command),
-      listWorkSessions: (query) => gateway.listWorkSessions(query),
-      listDailyLogs: (query) => gateway.listDailyLogs(query),
-      listProjectLogsForLeader: (command) => gateway.listProjectLogsForLeader(command),
-      deleteWorkSession: (command) => gateway.deleteWorkSession(command),
-      updateWorkSession: (command) => gateway.updateWorkSession(command),
-      getSessionById: (sessionId) => gateway.getSessionById(sessionId),
-      getDailyLogById: (logId) => gateway.getDailyLogById(logId),
-    }
-    return new WorkExecutionModule(legacyService)
-  }
-
   const workSessions = options.ports?.workSessions ?? createPrismaWorkSessionRepository()
   const dailyLogs = options.ports?.dailyLogs ?? createPrismaDailyLogRepository()
   const projectAccess = options.ports?.projectAccess ?? createPrismaProjectAccess()

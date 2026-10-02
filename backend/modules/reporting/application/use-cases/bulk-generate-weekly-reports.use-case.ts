@@ -37,7 +37,7 @@ export class BulkGenerateWeeklyReportsUseCase {
       throw new ValidationError("A data final não pode ser anterior à data inicial")
     }
 
-    const periods = listPeriods(command.periodType, from, to)
+    const periods = listReportPeriods(command.periodType, from, to)
     if (periods.length === 0) {
       throw new ValidationError("Nenhum período encontrado no intervalo informado")
     }

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import path from "path"
+import path from "node:path"
 import { requireApiActor } from "@/lib/auth/api-guard"
 import { getBackendComposition } from "@/backend/composition/root"
 import { absolutePathOf, readReportFileBytes } from "@/lib/storage/report-uploads"

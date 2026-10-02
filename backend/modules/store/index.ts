@@ -23,10 +23,11 @@ import { PrismaRewardRepository } from "@/backend/modules/store/infrastructure/r
 /**
  * OND8-B3 — the store facade. THE PUBLIC SURFACE IS UNCHANGED (12 methods, same names and
  * shapes — routes keep compiling). What changed: every method now runs through a USE CASE
- * holding the rules (R1) over thin table-level ports; the fat `StoreServiceGateway` is no
- * longer wired (it survives untouched as the golden/contract seam — DEC-15, removal task
- * OND9-B1). DEC-23 (owner-approved): the new wiring FIXES QUIRK-8S1 — reward writes only
- * real schema columns, so PUT/PATCH /api/rewards/[id] works again.
+ * holding the rules (R1) over thin table-level ports; the fat `StoreServiceGateway` was
+ * removed in OND9-B1 (repo-cleanup B8, 2026-10-01) together with the golden/contract seam
+ * — old behavior preserved in git (tag `pre-cleanup`). DEC-23 (owner-approved): the new
+ * wiring FIXES QUIRK-8S1 — reward writes only real schema columns, so PUT/PATCH
+ * /api/rewards/[id] works again.
  */
 export class StoreModule {
   constructor(

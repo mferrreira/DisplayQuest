@@ -11,12 +11,11 @@ import { ListGlobalProgressUseCase, type GlobalProgressEntry } from "@/backend/m
 import type { CreateTaskCommand } from "@/backend/modules/task-management/application/contracts"
 import type { TaskAssigneesPort } from "@/backend/modules/task-management/application/ports/task-assignees.repository"
 import type { TaskActorsPort } from "@/backend/modules/task-management/application/ports/task-actors.port"
-import type { TaskNotificationsPort } from "@/backend/modules/task-management/application/ports/task-notifications.port"
+import type { TaskNotificationEvent, TaskNotificationsPort } from "@/backend/modules/task-management/application/ports/task-notifications.port"
 import type { TaskProgressEvents } from "@/backend/modules/task-management/application/ports/task-progress.events"
 import type { TaskProgressPort } from "@/backend/modules/task-management/application/ports/task-progress.repository"
 import type { TaskProjectsPort } from "@/backend/modules/task-management/application/ports/task-projects.port"
 import type { TaskRepositoryPort } from "@/backend/modules/task-management/application/ports/task.repository"
-import { createNotificationsModule } from "@/backend/modules/notifications"
 import { createPrismaTaskRepository } from "@/backend/modules/task-management/infrastructure/repositories/prisma-task.repository"
 import { createPrismaTaskAssigneesRepository } from "@/backend/modules/task-management/infrastructure/repositories/prisma-task-assignees.repository"
 import { createPrismaTaskProgressRepository } from "@/backend/modules/task-management/infrastructure/repositories/prisma-task-progress.repository"
@@ -26,8 +25,8 @@ import { createPrismaTaskProjectsRepository } from "@/backend/modules/task-manag
 /**
  * TaskManagementModule — public surface unchanged for the routes (OND4-B3). The rules now
  * live in the use cases over repository ports (DEC-15/17); the legacy TaskServiceGateway
- * stays alive untouched as the "old implementation indexed at the seam" for the contract
- * suite — OND9-B1 removes it.
+ * was removed in OND9-B1 (repo-cleanup B8, 2026-10-01) together with the golden/contract
+ * seam — old behavior preserved in git (tag `pre-cleanup`).
  */
 export class TaskManagementModule {
   readonly getTaskById: (taskId: number) => Promise<any>
@@ -137,6 +136,22 @@ export interface TaskManagementModulePorts {
   events?: TaskProgressEvents
 }
 
+/**
+ * repo-cleanup B7 (D7): o default de notifications deixou de ser o factory cruzado
+ * createNotificationsModule() (import proibido pela RG-03 — módulo chamando módulo fora
+ * do composition root). Sem porta injetada, o default é o no-op da casa (padrão
+ * Unwired, ver lab-operations): eventos logados e descartados. A composition root
+ * sempre injeta a porta real; testes que exercitam publicação injetam explicitamente
+ * (tasks-roundtrip injeta createNotificationsModule()).
+ */
+class UnwiredTaskNotifications implements TaskNotificationsPort {
+  async publishEvent(event: TaskNotificationEvent): Promise<void> {
+    console.warn(
+      `[task-management] notifications nao conectado — evento ${event.eventType} descartado.`,
+    )
+  }
+}
+
 export function createTaskManagementModule(options: TaskManagementModulePorts = {}) {
   return new TaskManagementModule({
     tasks: options.tasks ?? createPrismaTaskRepository(),
@@ -144,7 +159,7 @@ export function createTaskManagementModule(options: TaskManagementModulePorts = 
     progress: options.progress ?? createPrismaTaskProgressRepository(),
     actors: options.actors ?? createPrismaTaskActorsRepository(),
     projects: options.projects ?? createPrismaTaskProjectsRepository(),
-    notifications: options.notifications ?? createNotificationsModule(),
+    notifications: options.notifications ?? new UnwiredTaskNotifications(),
     events: options.events,
   })
 }

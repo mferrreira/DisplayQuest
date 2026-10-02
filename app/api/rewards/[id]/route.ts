@@ -7,7 +7,7 @@ import { domainErrorResponse } from "@/lib/api/domain-error-response"
 //    agora FUNCIONAM (adapter escreve so colunas reais) e validacao -> 400 ValidationError.
 //  - DELETE inexistente: antes 500 com details 'Recompensa nao encontrada'; agora 404.
 const { store: storeModule } = getBackendComposition()
-export async function GET(context: { params: Promise<{ id: string }> }) {
+export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const auth = await requireApiActor();
     if (auth.error) return auth.error;
