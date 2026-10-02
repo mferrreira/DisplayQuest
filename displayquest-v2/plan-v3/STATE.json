@@ -3,15 +3,10 @@
   "title": "qualidade operacional: sessões, quadro e pontos",
   "version": "3.0.0",
   "updatedAt": "2026-10-02",
-  "status": "planned",
+  "status": "ready",
   "activeWave": null,
   "activeBatch": null,
-  "awaitingInstruction": [
-    "GAP-P3-01: a premiação pode ficar negativa? (recomendação: piso em zero) — trava 1.B",
-    "GAP-P3-02: HTTPS na instância do laboratório — trava a Onda 5 inteira",
-    "GAP-P3-03: tarefas existentes com pontos arbitrários: reescrever ou deixar como histórico? (recomendação: deixar)",
-    "GAP-P3-04: token @pontos do backlog: ignorar valor mantendo a sintaxe? (recomendação: sim)"
-  ],
+  "awaitingInstruction": [],
   "target": "corrigir a economia de pontos, acabar com o silêncio das pausas automáticas e tornar o quadro utilizável quando enche",
   "lineage": {
     "predecessor": "clean-arch (repo-cleanup, ondas 0-9 + lotes B0-B11)",
@@ -50,9 +45,9 @@
   "batches": [
     { "id": "S0.1", "wave": "0", "title": "branch plan/v3-operacional, tag pre-plan-v3, STATE v3.0.0, ponteiros em README/AGENTS", "status": "planned", "gates": "nenhum (nada de código muda)" },
     { "id": "1.A", "wave": "1", "title": "golden de caracterização do comportamento atual de pontos (inclui o caso do dia do prazo -> 0)", "status": "planned", "gates": "G0 G1 G2 G3" },
-    { "id": "1.B", "wave": "1", "title": "backend/domain/task/points-rules.ts: dias de calendário SP, POINTS_PER_TASK=10, 1.5x adiantada; task-rules re-exporta", "status": "planned", "gates": "G0 G1 G2 G3 G4", "blockedBy": ["GAP-P3-01"] },
+    { "id": "1.B", "wave": "1", "title": "backend/domain/task/points-rules.ts: dias de calendário SP, POINTS_PER_TASK=10, 1.5x adiantada, premiação pode ficar negativa (DEC-39); task-rules re-exporta", "status": "planned", "gates": "G0 G1 G2 G3 G4" },
     { "id": "1.C", "wave": "1", "title": "move-rules.ts deixa de duplicar a penalidade e consulta o domínio (elimina a divergência)", "status": "planned", "gates": "G0 G1 G2 G3" },
-    { "id": "1.D", "wave": "1", "title": "10 pontos fixos na superfície: remove campo dos 2 formulários, @pontos do backlog ignorado, rota grava 10", "status": "planned", "gates": "G0 G1 G2 G3 G4 G5 G6" },
+    { "id": "1.D", "wave": "1", "title": "10 pontos fixos na superfície: remove campo dos 2 formulários, @pontos do backlog aceito e ignorado (DEC-41), rota grava 10, tasks.points histórico intocado (DEC-40)", "status": "planned", "gates": "G0 G1 G2 G3 G4 G5 G6" },
     { "id": "2.A", "wave": "2", "title": "lib/client-storage.ts: seam único de estado client-side (namespace, JSON tolerante, SSR-safe)", "status": "planned", "gates": "G0 G1 G2 G3" },
     { "id": "2.B", "wave": "2", "title": "caixa de notas da sessão: salva por sessão, despeja no log, limpa só em sucesso", "status": "planned", "gates": "G0 G1 G2 G3 G5" },
     { "id": "2.C", "wave": "2", "title": "alerta de pausa: visual sempre + som WebAudio opcional; sem window.alert", "status": "planned", "gates": "G0 G1 G2 G3" },
@@ -71,17 +66,21 @@
     "DEC-34: mover para fora de Concluído mantém a regra de permissão atual; a UI deixa de oferecer destino bloqueado. Arrastar done continua desabilitado para todos.",
     "DEC-35: notificação dividida em F1a (alerta in-app + som, funciona em HTTP hoje) e F1b (nativa, exige HTTPS). Nenhuma onda depende de F1b.",
     "DEC-36: som via WebAudio, sem asset binário no repositório.",
-    "DEC-37: quirk 'penalidade pode exceder os pontos' descongelado deliberadamente; comportamento anterior preservado como teste de caracterização em 1.A.",
-    "DEC-38: subtasks fora do escopo de plan-v3."
+    "DEC-37: quirk 'penalidade pode exceder os pontos' MANTIDO; o que muda é a contagem de dias (calendário, não fração de 24h). Comportamento anterior caracterizado em teste na Onda 1.A porque a aritmética de dias muda.",
+    "DEC-38: subtasks fora do escopo de plan-v3.",
+    "DEC-39: premiação PODE ficar negativa — a penalidade por dia de atraso não tem piso. Consequência aceita pelo dono: tarefa muito atrasada produz valor grande negativo e o total de pontos da pessoa pode cair; a UI precisa exibir isso sem disfarce.",
+    "DEC-40: nenhum UPDATE no tasks.points existente. O cálculo passa a usar a constante de 10 pontos e o valor gravado deixa de importar; o histórico do que foi creditado continua em task_user_progress.awardedPoints.",
+    "DEC-41: o token @pontos do importador de backlog continua aceito e é ignorado — não quebra backlog que as pessoas já têm escrito.",
+    "DEC-42: Onda 5 (notificação nativa) adiada. Ondas 1-4 executam sem TLS. A Onda 2 entrega alerta in-app + som, que funciona em HTTP."
   ],
   "gapRegistry": [
-    { "id": "GAP-P3-01", "open": true, "summary": "premiação pode ficar negativa? recomendação: piso em zero", "blocks": ["1.B"] },
-    { "id": "GAP-P3-02", "open": true, "summary": "HTTPS na instância do laboratório", "blocks": ["5.A"] },
-    { "id": "GAP-P3-03", "open": true, "summary": "tarefas existentes com pontos arbitrários: reescrever ou manter? recomendação: manter", "blocks": ["1.D"] },
-    { "id": "GAP-P3-04", "open": true, "summary": "token @pontos do backlog: recomendação manter a sintaxe e ignorar o valor", "blocks": ["1.D"] }
+    { "id": "GAP-P3-01", "open": false, "resolved": "2026-10-02", "resolution": "PREMIAO PODE FICAR NEGATIVA (DEC-39). Consequencia aceita: tarefa muito atrasada produz valor grande negativo e o total da pessoa pode cair.", "blocks": ["1.B"] },
+    { "id": "GAP-P3-02", "open": false, "resolved": "2026-10-02", "resolution": "ADIADO (DEC-42): ondas 1-4 executam sem TLS; Onda 5 permanece bloqueada por BLK-01 ate a infra existir.", "blocks": ["5.A"] },
+    { "id": "GAP-P3-03", "open": false, "resolved": "2026-10-02", "resolution": "MANTER COMO ESTA (DEC-40): nenhum UPDATE em tasks.points; o calculo passa a usar a constante e o valor gravado deixa de importar.", "blocks": ["1.D"] },
+    { "id": "GAP-P3-04", "open": false, "resolved": "2026-10-02", "resolution": "ACEITAR E IGNORAR O VALOR (DEC-41): sintaxe @N continua aceita para nao quebrar backlog existente; o numero nao define ponto." , "blocks": ["1.D"] }
   ],
   "blockers": [
-    { "id": "BLK-01", "summary": "instância servida em HTTP num IP de rede: Chrome e Firefox recusam pedido de permissão de notificação fora de secure context", "blocks": ["5.A"], "owner": "dono/infra" }
+    { "id": "BLK-01", "summary": "instância servida em HTTP num IP de rede: Chrome e Firefox recusam pedido de permissão de notificação fora de secure context", "blocks": ["5.A"], "owner": "dono/infra", "disposition": "Onda 5 adiada pelo dono em 2026-10-02 (DEC-42). Onda 2 entrega o alerta in-app + som, que funciona em HTTP e não depende deste bloqueio." }
   ],
   "acceptanceCriteria": [
     "AC-P3-01: tarefa com prazo hoje, aprovada hoje, credita 10 pontos (não zero).",
@@ -106,6 +105,7 @@
     "Nenhuma onda toca display-quest-db :5432. Capturas de tela sim: docs/.capture.env aponta para a instância real."
   ],
   "timeline": [
-    { "at": "2026-10-02", "event": "plano escrito a partir da lista do dono; restrições R1-R14 medidas no código; DEC-30..38 registradas; 4 gaps abertos" }
+    { "at": "2026-10-02", "event": "plano escrito a partir da lista do dono; restrições R1-R14 medidas no código; DEC-30..38 registradas; 4 gaps abertos" },
+    { "at": "2026-10-02", "event": "dono respondeu os 4 gaps: DEC-39 (premiação pode ficar negativa), DEC-40 (histórico de pontos intocado), DEC-41 (@pontos aceito e ignorado), DEC-42 (Onda 5 adiada). Gaps fechados, status ready, nenhum batch travado exceto 5.A por BLK-01." }
   ]
 }

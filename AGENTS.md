@@ -45,16 +45,18 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
   `DEC-NN` continuam resolvíveis.
 - **Estado/decisões (plan-v3):** `displayquest-v2/plan-v3/{PLAN.md,STATE.json}` — STATE.json
   v3.0.0 monitora o plano operacional **plan-v3** (ondas 0–5, 14 batches, AC-P3-01..10,
-  DEC-30..DEC-38, GAP-P3-01..04, BLK-01). A numeração de decisões **continua** a do
+  DEC-30..DEC-42, GAP-P3-01..04 fechados, BLK-01). A numeração de decisões **continua** a do
   clean-arch: DEC-01..29 são do clean-arch, DEC-30 em diante são do plan-v3. Não reinicie a
   numeração em outro plano.
 
 ## plan-v3 — qualidade operacional (sessões, quadro, pontos)
 
-- **Estado atual:** `planned` — nada executado. 4 lacunas abertas travam batches específicos
-  (`awaitingInstruction` no STATE.json): piso da premiação (GAP-P3-01), HTTPS na instância
-  (GAP-P3-02 → trava a Onda 5 inteira), destino dos pontos históricos (GAP-P3-03) e token
-  `@pontos` do backlog (GAP-P3-04).
+- **Estado atual:** `ready` — plano aprovado, **nada executado ainda**. As 4 lacunas foram
+  respondidas pelo dono em 2026-10-02 (DEC-39..42) e `awaitingInstruction` está vazio. Único
+  batch travado: **5.A**, por BLK-01 (HTTPS) — onda **adiada** por decisão, sem travar as outras.
+- **Decisões que mudam o desenho:** premiação **pode ficar negativa** (DEC-39, sem piso — o
+  `-37140 pts` medido numa captura é a regra funcionando, não bug isolado); nenhum `UPDATE` em
+  `tasks.points` histórico (DEC-40); `@pontos` do backlog aceito e ignorado (DEC-41).
 - **Restrições duras medidas** (detalhe em `PLAN.md` §2): a instância é **HTTP em IP de rede**,
   e Chrome/Firefox **recusam pedido de permissão de notificação fora de secure context** —
   notificação nativa não é possível lá hoje. A aritmética de atraso existe em dois lugares com

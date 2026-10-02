@@ -131,16 +131,20 @@ plano o descongela deliberadamente — isso precisa estar registrado, não embut
   - dias contados por **calendário em `America/Sao_Paulo`**, reaproveitando `lib/date-only.ts`
     (`isOverdueDateOnly`, `isDueTodayDateOnly`) — prazo de hoje entregue hoje **não é atraso**;
   - premiação: adiantada `10 × 1.5 = 15`, no dia `10`, sem prazo `10`, atrasada `10 − diasAtrasados × 10`;
-  - piso da premiação: **pendente** (GAP-P3-01) — ver §7.
-  - `task-rules.ts` passa a re-exportar, para não tocar importadores (precedente:
-    `backend/domain/work/schedule.ts`, movido em OND0-B5).
+  - **sem piso**: a premiação pode ficar negativa (DEC-39). Consequência aceita pelo dono e
+    que a UI precisa exibir sem disfarce — ver §7.
+  - `task-rules.ts` passa a re-exportar `points-rules.ts`, para não tocar importadores
+    (precedente exato: OND0-B5 / DEC-03 — as regras saíram de `lib/work-sessions/schedule.ts`
+    para `backend/domain/work/schedule.ts` e o caminho antigo re-exporta até hoje).
 - **1.C — mata a duplicação.** `features/tasks/utils/move-rules.ts` deixa de ter `latePenalty`
   e `projectedAward` próprios e passa a chamar o domínio (permitido por R14). Elimina a
   divergência R5 por construção, não por revisão.
 - **1.D — 10 pontos fixos na superfície.** Remove o campo de pontos dos dois formulários
-  (R8) e o default por prioridade; `parseBacklogLines` para de definir valor pelo `@N`
-  (mantém o parsing para não quebrar backlogs existentes, ignora o valor — GAP-P3-04);
-  rotas de criação ignoram `points` vindo do cliente e gravam 10.
+  (R8) e o default por prioridade; `parseBacklogLines` continua aceitando `@N` e **ignora o
+  valor** (DEC-41 — não quebra backlog que as pessoas já têm escrito); as rotas de criação
+  ignoram `points` vindo do cliente e gravam 10 (`app/api/tasks/route.ts:104,120`).
+  **Nenhum `UPDATE` em `tasks.points` existente** (DEC-40): o valor gravado deixa de importar,
+  e o que foi creditado continua registrado em `task_user_progress.awardedPoints`.
 
 **Testes da onda**
 
@@ -244,7 +248,8 @@ Dois batches.
 
 ### Onda 5 — notificação nativa (F1b) — bloqueada
 
-Um batch, **dependente de infra**, não de código.
+Um batch, **dependente de infra**, não de código. **Adiado por decisão do dono (DEC-42)**: as
+ondas 1–4 executam sem TLS, e a Onda 2 já entrega o alerta que funciona em HTTP.
 
 - **5.A** liga o seam `lib/notifications/browser-notifications.ts` (criado na Onda 2) ao fluxo
   de pausa: botão explícito "ativar avisos" (gesto, por R2), pedido de permissão uma vez,
@@ -294,23 +299,35 @@ Baseline atual, para comparação em cada batch: **64 arquivos / 721 testes**, 7
 - **DEC-35** — notificação split em **F1a** (alerta in-app + som, funciona em HTTP hoje) e
   **F1b** (nativa, exige HTTPS). Nenhuma onda depende de F1b para entregar valor.
 - **DEC-36** — som gerado por WebAudio, sem asset binário no repositório.
-- **DEC-37** — quirk "penalidade pode exceder os pontos" é **descongelado deliberadamente**,
-  com o teste antigo preservado como caracterização na Onda 1.A.
+- **DEC-37** — o quirk "penalidade pode exceder os pontos" é **mantido**: o que muda é a
+  contagem de dias (calendário, não fração de 24h), não a permissão de ficar negativo. O teste
+  que o congela é preservado e o comportamento anterior é caracterizado na Onda 1.A, porque a
+  aritmética de dias **muda** e o batch precisa ser auditável.
 - **DEC-38** — subtasks **fora** deste plano.
+- **DEC-39** — a premiação **pode ficar negativa**: sem piso na penalidade. Consequência
+  aceita explicitamente pelo dono — tarefa muito atrasada produz valor grande negativo, o
+  total de pontos da pessoa pode cair e o ranking pode exibir saldo negativo. A UI mostra isso
+  sem disfarce (a animação da Onda 4 usa `−X` vermelho exatamente para esse caso).
+- **DEC-40** — nenhum `UPDATE` em `tasks.points` existente.
+- **DEC-41** — o token `@pontos` do backlog continua aceito e é ignorado.
+- **DEC-42** — Onda 5 adiada; as ondas 1–4 executam sem TLS.
 
-### Lacunas abertas (precisam de resposta antes do batch indicado)
+### Lacunas: todas fechadas em 2026-10-02
 
-- **GAP-P3-01** — *a premiação pode ficar negativa?* Com 10 fixos e penalidade linear, uma
-  tarefa atrasada 2 dias rende −10. Recomendação: **piso em zero** — atraso nunca produz
-  saldo negativo; o custo do atraso é deixar de ganhar, não perder. Afeta 1.B.
-- **GAP-P3-02** — *HTTPS na instância do laboratório.* Sem isso, F1b não executa. Dono decide
-  entre domínio com certificado, autoassinado com confiança instalada, ou proxy reverso TLS.
-- **GAP-P3-03** — *tarefas existentes com pontos arbitrários* (25/50/100/150/0). Se a premiação
-  passa a usar a constante, o valor armazenado deixa de importar — o que é consistente, mas
-  deixa a coluna `points` no banco como dado morto. Recomendação: **não reescrever** o
-  histórico; reescrever alteraria retroativamente o que as pessoas já ganharam.
-- **GAP-P3-04** — *o token `@pontos` do backlog.* Recomendação: continuar aceitando a sintaxe
-  e ignorar o valor, para não quebrar backlogs que as pessoas já têm escritos.
+| Gap | Pergunta | Resolução |
+|---|---|---|
+| GAP-P3-01 | a premiação pode ficar negativa? | **Sim** (DEC-39). Recomendação da casa (piso em zero) foi recusada conscientemente. |
+| GAP-P3-02 | HTTPS na instância do laboratório | **Adiado** (DEC-42). Onda 5 fica bloqueada por BLK-01 até a infra existir; a Onda 2 entrega alerta + som em HTTP. |
+| GAP-P3-03 | pontos já gravados nas tarefas existentes | **Mantidos** (DEC-40). Nenhum rewrite retroativo. |
+| GAP-P3-04 | token `@pontos` do importador de backlog | **Aceito e ignorado** (DEC-41). |
+
+::: limite
+Consequência registrada de DEC-39, para não aparecer como surpresa depois: com penalidade
+linear sem piso, uma tarefa vencida há 620 dias rende `10 − 6200 = −6190`. O número absurdo
+visto na captura do guia **não é um bug isolado** — é esta regra funcionando. O que a Onda 1
+conserta é a contagem de dias (entregar no prazo deixa de contar como atraso); o valor grande
+negativo em tarefa antiga continua possível, por decisão.
+:::
 
 ## 8. Fora deste plano, mas na fila
 
@@ -344,7 +361,7 @@ de uso, inverte-se sem quebrar nada. O único encadeamento duro é **1 → 4**.
 
 - `waves[]` / `batches[]` com `status` (`planned` → `in_progress` → `done`), `gates`, `evidence`;
 - `baseline` medido no S0.1 e atualizado a cada batch concluído;
-- `decisionRegistry` (DEC-30..38) e `gapRegistry` (GAP-P3-01..04);
+- `decisionRegistry` (DEC-30..42) e `gapRegistry` (GAP-P3-01..04, todos fechados);
 - `blockers` — BLK-01 (HTTPS) trava a Onda 5;
 - `rollbacks` — tag `pre-plan-v3` mais um commit por batch;
 - `awaitingInstruction` — o que está parado esperando resposta do dono.
