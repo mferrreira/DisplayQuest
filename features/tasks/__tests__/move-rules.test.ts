@@ -10,6 +10,8 @@ import {
   resolveMove,
   sortTasksByUrgencyAndDueDate,
 } from "../utils/move-rules"
+import { POINTS_PER_TASK } from "../"
+import { awardPointsForCompletion, calculateLatePenalty } from "@/backend/domain"
 import { makeTask } from "@/tests/mocks/fixtures/tasks"
 import type { Task } from "@/entities/task"
 
@@ -122,15 +124,20 @@ describe("overdue + penalty (gateway :593–607 mirror)", () => {
     expect(isTaskDueToday(noDue)).toBe(false)
   })
 
-  it("penalty = daysLate × points (ceil)", () => {
-    const task = { dueDate: new Date(Date.now() - 30 * 3600e3).toISOString(), points: 20 }
-    // 30h late → ceil(1.25) = 2 days → 40
-    expect(latePenalty(task)).toBe(40)
-    expect(projectedAward(task)).toBe(-20)
+  it("plan-v3 OND1-C: penalidade e premiação vêm da regra do domínio, não de uma cópia local (AC-P3-02)", () => {
+    const completion = new Date("2026-06-17T12:00:00.000Z")
+    const task = { dueDate: "2026-06-15", points: 20 }
+    // 2 dias civis de atraso × POINTS_PER_TASK — e 10 fixos na premiação, não os 20 gravados.
+    expect(latePenalty(task, completion)).toBe(20)
+    expect(projectedAward(task, completion)).toBe(-10)
+    // Os dois números são as mesmas funções que o backend usa para creditar.
+    expect(latePenalty(task, completion)).toBe(calculateLatePenalty(task, completion))
+    expect(projectedAward(task, completion)).toBe(awardPointsForCompletion(task, completion))
   })
 
-  it("no dueDate → no penalty", () => {
-    expect(latePenalty({ dueDate: null, points: 20 })).toBe(0)
+  it("no dueDate → no penalty, e vale POINTS_PER_TASK", () => {
+    expect(latePenalty({ dueDate: null })).toBe(0)
+    expect(projectedAward({ dueDate: null })).toBe(POINTS_PER_TASK)
   })
 })
 

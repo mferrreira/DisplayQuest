@@ -57,7 +57,7 @@ import type { Task, TaskStatus } from "@/entities/task"
 import { useAuth } from "@/contexts/auth-context"
 import { useProjects } from "@/features/projects"
 import { useUsers } from "@/features/users"
-import { useTaskMutations, resolveMove, projectedAward, BOARD_COLUMNS } from ".."
+import { useTaskMutations, resolveMove, projectedAward, POINTS_PER_TASK, BOARD_COLUMNS } from ".."
 import { toast } from "sonner"
 import { formatDateOnly } from "@/lib/date-only"
 
@@ -173,13 +173,20 @@ export function TaskCard({ task, index, isOverdue, isDueToday, isCompact, onEdit
     }
     if (decision.kind === "complete") {
       const isDirectDone = task.isGlobal || task.taskVisibility === "public"
+      // plan-v3 OND1-C: o número exibido é o mesmo que o servidor credita, porque agora existe
+      // uma aritmética só (points-rules). Antes o toast prometia `task.points`.
+      const award = projectedAward(task)
+      const awardDescription =
+        award > POINTS_PER_TASK
+          ? `${award} pts (bônus por entrega adiantada).`
+          : award < POINTS_PER_TASK
+            ? `${award} pts (penalidade por atraso aplicada).`
+            : `${POINTS_PER_TASK} pontos foram adicionados ao perfil do responsável.`
       toast[isDirectDone ? "success" : "info"](
         isDirectDone ? "🎉 Tarefa Concluída!" : "📋 Tarefa Enviada para Revisão",
         {
           description: isDirectDone
-            ? projectedAward(task) !== task.points
-              ? `${projectedAward(task)} pts (penalidade por atraso aplicada).`
-              : `${task.points} pontos foram adicionados ao perfil do responsável.`
+            ? awardDescription
             : "A tarefa foi enviada para revisão. Os pontos serão adicionados após aprovação.",
         },
       )

@@ -5,7 +5,7 @@
   "updatedAt": "2026-10-02",
   "status": "in_progress",
   "activeWave": "1",
-  "activeBatch": "1.B",
+  "activeBatch": "1.C",
   "awaitingInstruction": [],
   "target": "corrigir a economia de pontos, acabar com o silêncio das pausas automáticas e tornar o quadro utilizável quando enche",
   "lineage": {
@@ -19,7 +19,7 @@
     "baseCommit": "db6df77",
     "branch": "plan/v3-operacional",
     "testFiles": 67,
-    "tests": 759,
+    "tests": 675,
     "failures": 0,
     "archModules": 731,
     "archDependencies": 2748,
@@ -140,8 +140,9 @@
       "id": "1.C",
       "wave": "1",
       "title": "move-rules.ts deixa de duplicar a penalidade e consulta o domínio (elimina a divergência)",
-      "status": "planned",
-      "gates": "G0 G1 G2 G3"
+      "status": "done",
+      "gates": "G0 G1 G2 G3",
+      "evidence": "move-rules.ts delega a points-rules (latePenalty/projectedAward sem matematica propria). task-card passou a comparar com POINTS_PER_TASK e distingue bonus/penalidade. Caracterizacao atualizada: os 4 instantes que divergiam em 1.B agora coincidem nos dois lados (AC-P3-02). G0 731/2753 sem violacao e sem entrada nova na allow-list."
     },
     {
       "id": "1.D",
@@ -326,6 +327,10 @@
     {
       "at": "2026-10-02",
       "event": "1.A e 1.B executados. A regra de atraso passou a dia civil America/Sao_Paulo (UTC-3 fixo) via backend/domain/time/civil-day.ts; premiação 10 / 15 adiantada / 10 no dia / 10−dias×10 atrasada, sem piso. Entregar no dia do prazo deixou de render zero."
+    },
+    {
+      "at": "2026-10-02",
+      "event": "1.C: a aritmetica de atraso passou a existir em um lugar so. Import features -> backend/domain aceito pelo gate sem alterar a allow-list."
     }
   ]
 }

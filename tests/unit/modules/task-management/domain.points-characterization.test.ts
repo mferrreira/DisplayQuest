@@ -131,33 +131,33 @@ describe("plan-v3 1.B · legado × v3 — o que foi preservado", () => {
   });
 });
 
-describe("plan-v3 1.B · o espelho do frontend AINDA é o cálculo antigo (1.C resolve)", () => {
+describe("plan-v3 1.C · o espelho do frontend convergeu com o backend (R5 encerrada)", () => {
   /**
-   * `latePenalty` / `projectedAward` (features/tasks/utils/move-rules.ts:130-147) parseiam
-   * data-only como meio-dia local. O backend já conta em dia civil. Enquanto o batch 1.C não
-   * executar, o quadro mostra um número e o servidor credita outro — a divergência R5 medida.
+   * `latePenalty` / `projectedAward` (features/tasks/utils/move-rules.ts) deixaram de ter
+   * matemática própria e delegam a `points-rules`. Os mesmos instantes em que a divergência foi
+   * medida em 1.B agora produzem o mesmo número nos dois lados — é a prova de AC-P3-02.
    */
-  it("no dia do prazo de manhã, o cartão mostra 10 e o servidor credita 10 — mas por contas diferentes", () => {
-    const task = { points: 10, dueDate: DUE_TODAY };
+  const cases: Array<{ nome: string; iso: string; esperado: number }> = [
+    { nome: "08h de Brasília do dia do prazo", iso: "2026-06-15T11:00:00.000Z", esperado: 10 },
+    { nome: "23h de Brasília do dia do prazo", iso: "2026-06-16T02:00:00.000Z", esperado: 10 },
+    { nome: "um dia antes do prazo", iso: "2026-06-14T12:00:00.000Z", esperado: 15 },
+    { nome: "dois dias depois do prazo", iso: "2026-06-17T12:00:00.000Z", esperado: -10 },
+  ];
+
+  it("cartão e servidor produzem o mesmo número em cada caso que divergia", () => {
+    for (const c of cases) {
+      const completion = new Date(c.iso);
+      const task = { points: 10, dueDate: DUE_TODAY };
+      expect(projectedAward(task, completion)).toBe(c.esperado);
+      expect(awardPointsForCompletion(task, completion)).toBe(c.esperado);
+      expect(latePenalty(task, completion)).toBe(calculateLatePenalty(task, completion));
+    }
+  });
+
+  it("e o número exibido não depende mais do fuso da máquina (a âncora é o domínio)", () => {
     const completion = new Date("2026-06-15T11:00:00.000Z");
+    const task = { points: 10, dueDate: DUE_TODAY };
     expect(projectedAward(task, completion)).toBe(10);
-    expect(awardPointsForCompletion(task, completion)).toBe(10);
-    // A concordância aqui é coincidência: o espelho ainda acha que não houve atraso nenhum
-    // porque ancorou o prazo no meio-dia local.
     expect(latePenalty(task, completion)).toBe(0);
-  });
-
-  it("23h de Brasília do dia do prazo: cartão diz 0, servidor credita 10", () => {
-    const task = { points: 10, dueDate: DUE_TODAY };
-    const completion = new Date("2026-06-16T02:00:00.000Z");
-    expect(projectedAward(task, completion)).toBe(0);
-    expect(awardPointsForCompletion(task, completion)).toBe(10);
-  });
-
-  it("adiantamento: cartão diz 10, servidor credita 15", () => {
-    const task = { points: 10, dueDate: DUE_TODAY };
-    const completion = new Date("2026-06-14T12:00:00.000Z");
-    expect(projectedAward(task, completion)).toBe(10);
-    expect(awardPointsForCompletion(task, completion)).toBe(15);
   });
 });

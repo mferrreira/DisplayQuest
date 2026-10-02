@@ -4,6 +4,7 @@
  * the server remains the enforcer; these functions decide optimistic UI + which call to fire.
  */
 import type { Task, TaskStatus } from "@/entities/task";
+import { awardPointsForCompletion, calculateLatePenalty } from "@/backend/domain";
 
 export const TASK_STATUSES: TaskStatus[] = ["to-do", "in-progress", "in-review", "adjust", "done"];
 
@@ -126,24 +127,26 @@ export function isTaskDueToday(task: Task, _now?: Date): boolean {
   return isDueTodayDateOnly(task.dueDate);
 }
 
-/** Gateway :593–607 — display-side mirror of the server's penalty math. */
-export function latePenalty(task: Pick<Task, "dueDate" | "points">, completion: Date = new Date()): number {
-  if (!task.dueDate) return 0;
-  // For penalty calculation, we need time precision (hours matter)
-  // If date-only string, parse as noon to avoid timezone shift
-  const due = task.dueDate.includes("T") 
-    ? new Date(task.dueDate) 
-    : new Date(`${task.dueDate}T12:00:00`);
-  if (Number.isNaN(due.getTime())) return 0;
-  const timeDiff = completion.getTime() - due.getTime();
-  const daysLate = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
-  if (daysLate <= 0) return 0;
-  return daysLate * task.points;
+/**
+ * plan-v3 OND1-C — o espelho de exibição **deixou de ter matemática própria**.
+ *
+ * Antes, esta função replicava a penalidade do servidor ancorando `dueDate` date-only no
+ * **meio-dia local**, enquanto o backend ancorava na meia-noite UTC. As duas contas davam
+ * números diferentes para a mesma tarefa e o mesmo instante: no dia do prazo, às 02h e 08h de
+ * Brasília o cartão mostrava 10 pontos e o servidor creditava 0 (divergência R5, pinada em
+ * `tests/unit/modules/task-management/domain.points-characterization.test.ts`).
+ *
+ * Agora há uma aritmética só: `backend/domain/task/points-rules.ts`. Importar o domínio puro
+ * daqui é permitido pelo gate (RG-05 só veda Prisma e `lib/database/prisma`) e já é padrão da
+ * casa (`lib/api/domain-error-response.ts`, `lib/auth/features.ts`).
+ */
+export function latePenalty(task: Pick<Task, "dueDate">, completion: Date = new Date()): number {
+  return calculateLatePenalty(task, completion);
 }
 
-/** Points the actor would receive if completed now (can be ≤ 0). */
-export function projectedAward(task: Pick<Task, "dueDate" | "points">, now: Date = new Date()): number {
-  return task.points - latePenalty(task, now);
+/** Pontos que a pessoa receberia se concluí agora (pode ser ≤ 0 — DEC-39). */
+export function projectedAward(task: Pick<Task, "dueDate">, now: Date = new Date()): number {
+  return awardPointsForCompletion(task, now);
 }
 
 // ---- backlog parser (legacy backlog-dialog parity) ----
