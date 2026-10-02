@@ -4,8 +4,8 @@
   "version": "3.0.0",
   "updatedAt": "2026-10-02",
   "status": "in_progress",
-  "activeWave": "0",
-  "activeBatch": "S0.1",
+  "activeWave": "1",
+  "activeBatch": "1.B",
   "awaitingInstruction": [],
   "target": "corrigir a economia de pontos, acabar com o silêncio das pausas automáticas e tornar o quadro utilizável quando enche",
   "lineage": {
@@ -18,11 +18,11 @@
     "measuredAt": "2026-10-02",
     "baseCommit": "db6df77",
     "branch": "plan/v3-operacional",
-    "testFiles": 64,
-    "tests": 721,
+    "testFiles": 67,
+    "tests": 759,
     "failures": 0,
-    "archModules": 725,
-    "archDependencies": 2737,
+    "archModules": 731,
+    "archDependencies": 2748,
     "allowListEntries": 0
   },
   "gates": {
@@ -124,15 +124,17 @@
       "id": "1.A",
       "wave": "1",
       "title": "golden de caracterização do comportamento atual de pontos (inclui o caso do dia do prazo -> 0)",
-      "status": "in_progress",
-      "gates": "G0 G1 G2 G3"
+      "status": "done",
+      "gates": "G0 G1 G2 G3",
+      "evidence": "tests/unit/modules/task-management/domain.points-characterization.test.ts (9 testes). Reproduz o -37140 medido na interface e pinou a divergencia backend x frontend (10 no cartao vs 0 no servidor as 02h/08h de Brasilia)."
     },
     {
       "id": "1.B",
       "wave": "1",
       "title": "backend/domain/task/points-rules.ts: dias de calendário SP, POINTS_PER_TASK=10, 1.5x adiantada, premiação pode ficar negativa (DEC-39); task-rules re-exporta",
-      "status": "planned",
-      "gates": "G0 G1 G2 G3 G4"
+      "status": "done",
+      "gates": "G0 G1 G2 G3 G4",
+      "evidence": "backend/domain/time/civil-day.ts + backend/domain/task/points-rules.ts; task-rules re-exporta. 139 testes nos 10 arquivos de task-management/_foundations; integration 10/83 verdes contra dq-dev-test-db:5433, incluido o caso novo AC-P3-01 (prazo hoje -> awardedPoints 10 no Prisma real). G0 731 modulos/2748 deps sem violacao."
     },
     {
       "id": "1.C",
@@ -229,7 +231,8 @@
     "DEC-40: nenhum UPDATE no tasks.points existente. O cálculo passa a usar a constante de 10 pontos e o valor gravado deixa de importar; o histórico do que foi creditado continua em task_user_progress.awardedPoints.",
     "DEC-41: o token @pontos do importador de backlog continua aceito e é ignorado — não quebra backlog que as pessoas já têm escrito.",
     "DEC-42: Onda 5 (notificação nativa) adiada. Ondas 1-4 executam sem TLS. A Onda 2 entrega alerta in-app + som, que funciona em HTTP.",
-    "DEC-43: restrição R15 — RG-01 proibe backend/domain/ de importar lib/ (LAYER.lib em FORBIDDEN_FOR_CORE). A regra de pontos usa data civil propria do dominio (padrao spParts/SP_OFFSET_MS de ReportPeriod.ts), nao lib/date-only.ts. O plano original estava errado e foi corrigido antes de executar 1.B."
+    "DEC-43: restrição R15 — RG-01 proibe backend/domain/ de importar lib/ (LAYER.lib em FORBIDDEN_FOR_CORE). A regra de pontos usa data civil propria do dominio (padrao spParts/SP_OFFSET_MS de ReportPeriod.ts), nao lib/date-only.ts. O plano original estava errado e foi corrigido antes de executar 1.B.",
+    "DEC-44: o gate `task.points > 0` em approve-task foi removido. Com POINTS_PER_TASK fixo e DEC-40 (historico intocado), tarefas legadas gravadas com 0 pontos nunca receberiam nada — o gate contradizia a decisao. complete-task ja creditava sem gate."
   ],
   "gapRegistry": [
     {
@@ -319,6 +322,10 @@
     {
       "at": "2026-10-02",
       "event": "S0.1: branch plan/v3-operacional + tag pre-plan-v3 em db6df77. Dono escolheu executar neste checkout e comecar pela Onda 1. Antes de 1.B, mediu-se R15 (RG-01 veda domain->lib) e o plano foi corrigido (DEC-43)."
+    },
+    {
+      "at": "2026-10-02",
+      "event": "1.A e 1.B executados. A regra de atraso passou a dia civil America/Sao_Paulo (UTC-3 fixo) via backend/domain/time/civil-day.ts; premiação 10 / 15 adiantada / 10 no dia / 10−dias×10 atrasada, sem piso. Entregar no dia do prazo deixou de render zero."
     }
   ]
 }

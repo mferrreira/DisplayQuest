@@ -11,6 +11,9 @@ export {
   isReviewRequestTransition,
   calculateLatePenalty,
   awardPointsForCompletion,
+  daysLateForTask,
+  POINTS_PER_TASK,
+  EARLY_DELIVERY_MULTIPLIER,
   canBeCompleted,
   isClaimable,
   progressPatchForStatus,
@@ -35,4 +38,5 @@ export {
   type StatusPatch,
   type ProgressPatch,
   type ApprovalDecision,
+  type AwardableTask,
 } from "./task-rules";

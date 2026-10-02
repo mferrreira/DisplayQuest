@@ -104,32 +104,20 @@ export function isReviewRequestTransition(oldStatus: TaskStatus, nextStatus: Tas
 }
 
 // ---------------------------------------------------------------------------
-// Completion / award arithmetic (frozen: penalty CAN exceed points)
+// Completion / award arithmetic — MOVED to ./points-rules in plan-v3 OND1-B1 (DEC-30..32).
+// Re-exported here so no importer changes: same pattern as lib/work-sessions/schedule.ts (OND0-B5).
+// The pre-v3 behaviour is characterised in
+// tests/unit/modules/task-management/domain.points-characterization.test.ts.
 // ---------------------------------------------------------------------------
 
-/**
- * daysLate = ceil((completion - dueDate) / 24h); <= 0 -> 0; penalty = daysLate * points.
- * No timezone normalization: raw Date arithmetic, exactly as the legacy gateway.
- */
-export function calculateLatePenalty(
-  task: { points: number; dueDate?: string | null },
-  completionDate: Date,
-): number {
-  if (!task.dueDate) return 0;
-  const dueDate = new Date(task.dueDate);
-  const timeDiff = completionDate.getTime() - dueDate.getTime();
-  const daysLate = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
-  if (daysLate <= 0) return 0;
-  return daysLate * task.points;
-}
-
-/** Awarded points = points - latePenalty (frozen quirk: may go NEGATIVE). */
-export function awardPointsForCompletion(
-  task: { points: number; dueDate?: string | null },
-  completionDate: Date,
-): number {
-  return task.points - calculateLatePenalty(task, completionDate);
-}
+export {
+  POINTS_PER_TASK,
+  EARLY_DELIVERY_MULTIPLIER,
+  awardPointsForCompletion,
+  calculateLatePenalty,
+  daysLateForTask,
+  type AwardableTask,
+} from "./points-rules";
 
 /** `status !== "done" && (public || assignedTo !== null)` (gateway :487-489). */
 export function canBeCompleted(task: Pick<Task, "status" | "taskVisibility" | "assignedTo">): boolean {

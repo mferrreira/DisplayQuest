@@ -28,6 +28,7 @@ import {
   isReviewRequestTransition,
   isStatusOnlyUpdate,
   normalizeAssigneeIds,
+  POINTS_PER_TASK,
   progressPatchForCompletion,
   progressPatchForStatus,
   serializeTask,
@@ -116,17 +117,25 @@ describe("status transitions", () => {
   });
 });
 
-describe("completion / award arithmetic", () => {
-  it("calculateLatePenalty: ceil(days) * points; on-time/undated -> 0", () => {
-    expect(calculateLatePenalty({ points: 10, dueDate: null }, NOW)).toBe(0);
-    expect(calculateLatePenalty({ points: 10, dueDate: "2026-06-15T12:00:00.000Z" }, NOW)).toBe(0);
-    expect(calculateLatePenalty({ points: 10, dueDate: "2026-06-13T12:00:00.000Z" }, NOW)).toBe(20);
-    expect(calculateLatePenalty({ points: 10, dueDate: "2026-06-14T13:00:00.000Z" }, NOW)).toBe(10); // 23h -> ceil 1
+describe("completion / award arithmetic (plan-v3 OND1-B1: calendar days, POINTS_PER_TASK)", () => {
+  it("calculateLatePenalty: dias inteiros de calendário × POINTS_PER_TASK; on-time/undated -> 0", () => {
+    expect(calculateLatePenalty({ dueDate: null }, NOW)).toBe(0);
+    expect(calculateLatePenalty({ dueDate: "2026-06-15T12:00:00.000Z" }, NOW)).toBe(0);
+    expect(calculateLatePenalty({ dueDate: "2026-06-13T12:00:00.000Z" }, NOW)).toBe(20);
+    expect(calculateLatePenalty({ dueDate: "2026-06-14T13:00:00.000Z" }, NOW)).toBe(10); // 1 dia civil
   });
 
-  it("awardPointsForCompletion CAN go negative (frozen quirk)", () => {
-    expect(awardPointsForCompletion({ points: 10, dueDate: "2026-06-13T12:00:00.000Z" }, NOW)).toBe(-10);
-    expect(awardPointsForCompletion({ points: 4, dueDate: null }, NOW)).toBe(4);
+  it("o bug que originou o plano: prazo HOJE (date-only), entregue HOJE -> 10, não 0", () => {
+    expect(calculateLatePenalty({ dueDate: "2026-06-15" }, NOW)).toBe(0);
+    expect(awardPointsForCompletion({ dueDate: "2026-06-15" }, NOW)).toBe(10);
+  });
+
+  it("awardPointsForCompletion CAN go negative (preservado por decisão — DEC-39)", () => {
+    expect(awardPointsForCompletion({ dueDate: "2026-06-13T12:00:00.000Z" }, NOW)).toBe(-10);
+  });
+
+  it("award não lê task.points: sem prazo vale POINTS_PER_TASK (DEC-30, DEC-40)", () => {
+    expect(awardPointsForCompletion({ dueDate: null }, NOW)).toBe(POINTS_PER_TASK);
   });
 
   it("canBeCompleted: not done AND (public OR has owner)", () => {

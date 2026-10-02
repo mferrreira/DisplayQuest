@@ -27,8 +27,10 @@ import {
  *   - authority: MANAGE_USERS, or GERENTE_PROJETO who leads the task's project;
  *   - self-approval is forbidden without MANAGE_USERS (even for the project leader);
  *   - the update persists the ATTACHED view (assignedTo may become assignees[0]);
- *   - non-public/non-global approval increments the assignee's completedTasks (even at 0
- *     points); the award fires only when points > 0; TASK_APPROVED notification.
+ *   - non-public/non-global approval increments the assignee's completedTasks; the award fires
+ *     unconditionally (plan-v3 DEC-30: every task is worth POINTS_PER_TASK, so the old
+ *     `points > 0` gate would silently keep legacy 0-point tasks worth nothing);
+ *     TASK_APPROVED notification.
  */
 export interface ApproveTaskDependencies {
   tasks: TaskRepositoryPort
@@ -100,10 +102,8 @@ export class ApproveTaskUseCase {
         if (task.taskVisibility !== "public" && !task.isGlobal) {
           await this.dependencies.actors.incrementCompletedTasks(taskWithAssignees.assignedTo)
         }
-        if (task.points > 0) {
-          const pointsToAward = awardPointsForCompletion(task, new Date())
-          await publishTaskCompletionAward(this.events, taskWithAssignees.assignedTo, command.taskId, pointsToAward)
-        }
+        const pointsToAward = awardPointsForCompletion(task, new Date())
+        await publishTaskCompletionAward(this.events, taskWithAssignees.assignedTo, command.taskId, pointsToAward)
       }
 
       await this.publishTaskApproved(command.taskId, task.title, taskWithAssignees.assignedTo)

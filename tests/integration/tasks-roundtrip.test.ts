@@ -19,6 +19,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { prisma } from "@/lib/database/prisma";
 import { createTaskManagementModule } from "@/backend/modules/task-management";
 import { createNotificationsModule } from "@/backend/modules/notifications";
+import { civilDayOfInstant } from "@/backend/domain";
 
 // B7 (D7): o fallback cruzado da factory virou no-op; o roundtrip ASSERTA notificacoes
 // reais no banco, entao injeta o modulo de notifications explicitamente (a composition
@@ -228,7 +229,7 @@ describe("G4 roundtrip — task-management (isolated test DB)", () => {
     const progress = await prisma.task_user_progress.findFirst({ where: { taskId: task.id!, userId: anaId } });
     expect(progress?.status).toBe("done");
     expect(progress?.completedAt).not.toBeNull();
-    expect(progress?.awardedPoints).toBe(8);
+    expect(progress?.awardedPoints).toBe(10); // plan-v3 DEC-30: POINTS_PER_TASK, não o `points: 8` gravado
 
     const ana = await prisma.users.findUnique({ where: { id: anaId } });
     expect(ana?.completedTasks).toBe(2);
@@ -237,6 +238,33 @@ describe("G4 roundtrip — task-management (isolated test DB)", () => {
     await expect(taskModule.completeTask({ taskId: task.id!, userId: anaId })).rejects.toThrow(
       "Tarefa pública já concluída por este usuário",
     );
+  });
+
+  it("AC-P3-01 (plan-v3): prazo HOJE, concluída HOJE -> credita 10 no banco, não 0", async () => {
+    // Pré-v3 este caso creditava 0: dueDate date-only virava meia-noite UTC e qualquer hora
+    // do dia contava como 1 dia de atraso. Aqui é Prisma real, pela wiring nova.
+    const today = civilDayOfInstant(new Date());
+    const task = await taskModule.createTask(
+      {
+        title: `G4 due today ${stamp}`,
+        completed: false,
+        status: "to-do",
+        priority: "medium",
+        points: 0, // DEC-40: o valor gravado deixou de importar
+        taskVisibility: "public",
+        dueDate: today,
+      },
+      leaderId,
+    );
+    createdTaskIds.push(task.id!);
+
+    await taskModule.completeTask({ taskId: task.id!, userId: coordinatorId });
+
+    const progress = await prisma.task_user_progress.findFirst({
+      where: { taskId: task.id!, userId: coordinatorId },
+    });
+    expect(progress?.status).toBe("done");
+    expect(progress?.awardedPoints).toBe(10);
   });
 
   it("global quest (MANAGE_USERS creator) + globalProgress roster aggregation", async () => {
