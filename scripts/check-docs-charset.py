@@ -20,11 +20,23 @@ ALLOWED_RANGES = (
     (0x25A0, 0x25FF),   # formas geométricas
     (0x2713, 0x2718),   # marcações
     (0x00B7, 0x00B7),   # middle dot
+    # Emojis: aparecem apenas ao transcrever literalmente uma mensagem da
+    # interface (ex.: "📋 Tarefa Enviada para Revisão"). CJK (U+4E00–U+9FFF),
+    # que é o que este gate procura, continua fora de qualquer faixa.
+    (0x1F000, 0x1FAFF),  # emojis
 )
+
+# Caracteres individuais liberados por descreverem um símbolo que a própria
+# interface usa, e não por serem prosa.
+ALLOWED_CHARS = {
+    "\u26a1",  # ⚡ marcador de tarefa pública no cartão
+}
 
 
 def suspect(ch: str) -> bool:
     if ord(ch) < 128:
+        return False
+    if ch in ALLOWED_CHARS:
         return False
     return not any(lo <= ord(ch) <= hi for lo, hi in ALLOWED_RANGES)
 
@@ -32,8 +44,9 @@ def suspect(ch: str) -> bool:
 def main() -> int:
     targets = sorted(
         glob.glob("docs/src/*.md")
+        + glob.glob("docs/src-usuario/*.md")
         + glob.glob("docs/diagrams/*.puml")
-        + ["docs/theme/document.css", "scripts/build-docs.mjs"]
+        + ["docs/theme/document.css", "scripts/build-docs.mjs", "scripts/capture-user-guide.mjs"]
     )
     findings = 0
     for path in targets:

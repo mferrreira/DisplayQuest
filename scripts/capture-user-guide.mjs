@@ -14,7 +14,8 @@
  * Credenciais: docs/.capture.env (gitignored). Nada é impresso.
  */
 
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -22,7 +23,10 @@ import { chromium } from "@playwright/test";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const ENV_FILE = join(ROOT, "docs", ".capture.env");
-const OUT_DIR = join(ROOT, "docs", ".build", "screens");
+// As capturas são fonte do guia: vão para docs/screens/, que é versionado.
+const OUT_DIR = join(ROOT, "docs", "screens");
+// O extrato do DOM é subproduto da captura, não integra o guia.
+const MANIFEST_FILE = join(ROOT, "docs", ".build", "screens", "manifest.json");
 
 const log = (...a) => console.log("[captura]", ...a);
 const die = (msg) => {
@@ -105,11 +109,15 @@ const INTERACTIONS = [
   { id: "loja-solicitacoes", role: "coord", route: "/dashboard/loja/gerenciar", aba: "Solicitações Pendentes" },
   { id: "admin-usuarios", role: "coord", route: "/dashboard/admin", aba: "Usuários" },
   { id: "admin-horas", role: "coord", route: "/dashboard/admin", aba: "Horas" },
-  { id: "perfil-edicao", role: "part", route: "/dashboard/profile", abre: "Editar Perfil" },
+  { id: "perfil-edicao", role: "part", route: "/dashboard/profile", abre: "Editar Perfil", verifica: "Cancelar Edição" },
   { id: "perfil-configuracoes", role: "part", route: "/dashboard/profile", aba: "Configurações" },
   { id: "loja-minhas-compras", role: "part", route: "/dashboard/loja", aba: "Minhas Compras" },
   { id: "controle-de-sessao", role: "part", route: "/dashboard/profile", abre: "Abrir controle de sessao" },
   { id: "relatorios-gerar-lote", role: "coord", route: "/dashboard/weekly-reports", abre: "Gerar em Lote" },
+  // alvo: controle sem rótulo legível, localizado pela estrutura da tela
+  { id: "dialogo-detalhe-tarefa", role: "coord", route: "/dashboard", alvo: "button.flex-1.text-left", dialogo: "PONTOS" },
+  { id: "dialogo-detalhe-projeto", role: "coord", route: "/dashboard/projetos", alvo: "button:has(svg.lucide-eye)", dialogo: "Progresso Geral" },
+  { id: "painel-notificacoes", role: "coord", route: "/dashboard", abre: "Notificações", dialogo: "Notifica" },
 ];
 
 /** A navegação é um acordeão: os destinos só aparecem quando o grupo é aberto. */
@@ -146,9 +154,10 @@ const wanted = only ? new Set(only.split(",")) : null;
 const screens = SCREENS.filter((s) => !wanted || wanted.has(s.id));
 const interactions = INTERACTIONS.filter((s) => !wanted || wanted.has(s.id));
 
-if (!screens.length) die("nenhuma tela selecionada (--only)");
+if (!screens.length && !interactions.length) die("nenhuma tela selecionada (--only)");
 
 mkdirSync(OUT_DIR, { recursive: true });
+mkdirSync(dirname(MANIFEST_FILE), { recursive: true });
 
 const browser = await chromium.launch();
 const manifest = [];
@@ -236,8 +245,9 @@ for (const it of interactions) {
       record.aba = it.aba;
     }
 
-    if (it.abre) {
-      await page.getByRole("button", { name: it.abre, exact: true }).first().click();
+    if (it.abre || it.alvo) {
+      if (it.abre) await page.getByRole("button", { name: it.abre, exact: true }).first().click();
+      else await page.locator(it.alvo).first().click();
       await page.waitForTimeout(900);
 
       if (it.dialogo) {
@@ -249,7 +259,11 @@ for (const it of interactions) {
         }
         record.dialog = dialogText.slice(0, 400);
       } else {
-        record.after = (await page.locator("body").innerText()).replace(/\s+/g, " ").slice(0, 300);
+        const bodyText = (await page.locator("body").innerText()).replace(/\s+/g, " ");
+        if (it.verifica && !bodyText.includes(it.verifica)) {
+          throw new Error(`após o clique a tela não contém "${it.verifica}": "${bodyText.slice(0, 140)}"`);
+        }
+        record.after = bodyText.slice(0, 300);
       }
     }
 
@@ -266,7 +280,7 @@ for (const it of interactions) {
 }
 
 /* --- navegação: um registro por grupo, com o grupo aberto --- */
-{
+if (!wanted) {
   const { page } = sessions.get(NAVIGATION.role) ?? (await openSession(NAVIGATION.role));
   for (const grupo of NAVIGATION.grupos) {
     const id = `navegacao-${grupo.toLowerCase().replace(/[^a-z]/g, "")}`;
@@ -290,8 +304,38 @@ for (const it of interactions) {
 
 await browser.close();
 
-writeFileSync(join(OUT_DIR, "manifest.json"), JSON.stringify(manifest, null, 2));
-log(`${manifest.length} tela(s) capturada(s) → ${OUT_DIR}`);
+/* ------------------------------------------------------------------ */
+/* normalização                                                        */
+/* ------------------------------------------------------------------ */
+
+/**
+ * As capturas saem supersampled (2x = 2880px). O documento exibe a tela em
+ * ~800px, então 1440 de largura já é o dobro do necessário — e corta o peso
+ * do HTML embutido a menos da metade. `sips` existe no macOS; onde não existe,
+ * as capturas ficam em 2x e o documento sai maior (nada quebra).
+ */
+function normalizeScreens(ids) {
+  try {
+    execFileSync("sips", ["--version"], { stdio: "ignore" });
+  } catch {
+    log("AVISO: sips indisponível — capturas mantidas em 2880px");
+    return;
+  }
+  for (const id of ids) {
+    execFileSync("sips", ["-Z", "1440", join(OUT_DIR, `${id}.png`)], { stdio: "ignore" });
+  }
+  log(`${ids.length} captura(s) normalizada(s) para 1440px de largura`);
+}
+
+normalizeScreens(manifest.map((r) => r.id));
+
+// Uma execução parcial (--only) atualiza o que foi capturado e preserva o resto.
+const previous = existsSync(MANIFEST_FILE) ? JSON.parse(readFileSync(MANIFEST_FILE, "utf8")) : [];
+const byId = new Map(previous.map((r) => [r.id, r]));
+for (const r of manifest) byId.set(r.id, r);
+const merged = [...byId.values()];
+writeFileSync(MANIFEST_FILE, JSON.stringify(merged, null, 2));
+log(`${manifest.length} tela(s) nesta execução, ${merged.length} no extrato → ${OUT_DIR}`);
 
 if (failures.length) {
   console.error(`\n[captura] ${failures.length} tela(s) falharam:\n  ${failures.join("\n  ")}\n`);

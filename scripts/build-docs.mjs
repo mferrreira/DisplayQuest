@@ -266,9 +266,10 @@ md.renderer.rules.foto = (tokens, idx) => {
   const caption = titulo || id;
   const legend = md.render(t.content).trim();
   figures.push({ id, caption });
+  const img = `<img class="dq-photo" src="data:image/png;base64,${photoDataUri(id)}" alt="${escapeAttr(stripTags(md.renderInline(caption)))}">`;
   return (
     `<figure class="dq-figure dq-figure--photo" id="fig-${id}">` +
-    `<div class="dq-figure__plot">${loadPhoto(id)}</div>` +
+    `<div class="dq-figure__plot">${img}</div>` +
     `<figcaption><span class="dq-figure__num">Figura ${figures.length}</span>` +
     `<span class="dq-figure__cap">${md.renderInline(caption)}</span></figcaption>` +
     (legend ? `<div class="dq-figure__legend">${legend}</div>` : "") +
@@ -310,7 +311,7 @@ const slugify = (s) =>
 /* 5 · montagem                                                        */
 /* ================================================================== */
 
-const SCREEN_DIR = join(DOCS, ".build", "screens");
+const SCREEN_DIR = join(DOCS, "screens");
 
 const figures = [];
 const seenFigureIds = new Set();
@@ -328,15 +329,15 @@ function resetDocumentState() {
  */
 const photoCache = new Map();
 
-function loadPhoto(id) {
+function photoDataUri(id) {
   if (photoCache.has(id)) return photoCache.get(id);
   const path = join(SCREEN_DIR, `${id}.png`);
   if (!existsSync(path)) {
-    die(`captura "${id}" sem PNG em docs/.build/screens — rode primeiro a captura de telas`);
+    die(`captura "${id}" sem PNG em docs/screens — rode primeiro a captura de telas`);
   }
-  const tag = `<img class="dq-photo" src="data:image/png;base64,${readFileSync(path).toString("base64")}" alt="${escapeAttr(id)}">`;
-  photoCache.set(id, tag);
-  return tag;
+  const b64 = readFileSync(path).toString("base64");
+  photoCache.set(id, b64);
+  return b64;
 }
 
 function parseSources(def) {
@@ -351,7 +352,7 @@ function parseSources(def) {
     const raw = readFileSync(join(def.src, f), "utf8");
     checkFences(f, raw);
     for (const m of raw.matchAll(/^```figure\s+(\S+)/gm)) loadSvg(m[1]);
-    for (const m of raw.matchAll(/^```foto\s+(\S+)/gm)) loadPhoto(m[1]);
+    for (const m of raw.matchAll(/^```foto\s+(\S+)/gm)) photoDataUri(m[1]);
   }
 
   const body = files
@@ -452,12 +453,12 @@ const DOCUMENTS = [
       "Como fazer cada coisa no DisplayQuest, tela por tela. Cada procedimento parte do que aparece na interface e termina no resultado que o sistema produz. O que o sistema é por dentro está descrito no documento técnico.",
     facts: [
       ["Para quem", "Participantes, laboratoristas e coordenadores"],
-      ["Telas", "As dez telas, com as variações por papel"],
+      ["Telas", "As onze telas, com as variações por papel"],
       ["Formato", "Procedimentos, referência de telas e mensagens"],
       ["Capturas", "Obtidas na instância em execução"],
     ],
     diagrams: false,
-    sources: "<code>docs/src-usuario/</code> e as capturas de tela de <code>docs/.build/screens/</code>",
+    sources: "<code>docs/src-usuario/</code> e as capturas de tela de <code>docs/screens/</code>",
     listTitle: "Lista de telas",
   },
 ];

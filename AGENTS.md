@@ -7,15 +7,12 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
 
 - **Gate de entrega:** `npm run arch:check` (exit 0, allow-list **vazia**) && `npm run lint` (nada de erro) && `npx tsc --noEmit` (0) && `npx vitest run` (baseline atual: **64 arquivos / 721 testes, zero failure** — a contagem só cresce desde o B8, que removeu os 651 testes de paridade; ver seção clean-arch).
 - **G4/integração:** roundtrips Prisma real rodam **só** contra o banco de teste isolado `dq-dev-test-db` em `127.0.0.1:5433` (`$env:DATABASE_URL="postgresql://dq_dev:dq_dev_local_only@127.0.0.1:5433/dq_dev_test"; npx vitest run`) — nunca contra o `display-quest-db` (5432, produção local).
-- **Setup do G4 (medido 2026-10-01):** o `docker-compose.test.yml` cita `npm run db:test:up` e
-  `db:test:guard` que **não existem** no `package.json`. A sequência que funciona é:
-  1. `docker compose -f docker-compose.test.yml up -d`
-  2. `DATABASE_URL=...5433 npx prisma migrate deploy`
-  3. `DATABASE_URL=...5433 npm run db:seed`
-  4. `docker exec -i dq-dev-test-db psql -U dq_dev -d dq_dev_test -f - < tests/fixtures/g4-normalize.sql`
-
-  Sem o passo 4, `entities-roundtrip` falha: o seed escreve status pré-contrato e o schema
-  estrito os rejeita por design (D-18). O passo 4 é o que torna o banco testável.
+- **Setup do G4 (corrigido 2026-10-02):** `npm run db:test:up` e `npm run db:test:setup` **existem**
+  no `package.json` e fazem a sequência completa (`docker compose -f docker-compose.test.yml up -d`,
+  `prisma migrate deploy` na 5433, `db:seed` e `tests/fixtures/g4-normalize.sql`). Uma nota anterior
+  aqui afirmava que não existiam — está superada. O passo do `g4-normalize.sql` continua
+  indispensável: sem ele, `entities-roundtrip` falha porque o seed escreve status pré-contrato e o
+  schema estrito os rejeita por design (D-18). `db:test:guard` **não** existe e não foi inventado.
 - **Node local ≠ Node de deploy:** a imagem é `node:20-alpine`; o `engines` não é declarado e
   não há `.nvmrc`. Gate verde local não implica gate verde no deploy quando o Node difere —
   foi assim que o shim `path` (removido) quebrava em Node 22+ e passaria em Node 20.
@@ -121,19 +118,33 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
 
 ## Documentação (docs/)
 
-- **Fonte única:** `docs/displayquest.html` é **gerado**, não editado à mão. Fontes em
-  `docs/src/*.md` (texto, um arquivo por capítulo, ordem alfabética) e `docs/diagrams/*.puml`
-  (33 diagramas UML) + `docs/theme/document.css`. `npm run docs:build` renderiza os SVGs
-  (PlantUML em Docker — requer Docker no ar) e monta o HTML único; `npm run docs:check` valida
-  os caracteres das fontes. Saída atual: 15 capítulos, 33 figuras, ~1 MB autocontido (abra por
-  `file://`, sem servidor).
+- **Dois documentos, ambos gerados** (nenhum editado à mão): `docs/displayquest.html` (técnico:
+  `docs/src/*.md` + `docs/diagrams/*.puml`, 15 capítulos / 33 figuras UML, ~1 MB) e
+  `docs/guia-do-usuario.html` (guia de uso: `docs/src-usuario/*.md` + `docs/screens/*.png`,
+  12 capítulos / 34 capturas, ~8 MB). Compartilham `docs/theme/document.css`. `npm run docs:build`
+  renderiza os SVGs (PlantUML em Docker — requer Docker no ar) e monta os dois; `--only=tecnico`
+  ou `--only=usuario` monta um só; `--no-render` reaproveita os SVGs. `npm run docs:check` valida
+  os caracteres das fontes (agora também `docs/src-usuario`). Abra por `file://`, sem servidor.
+- **O guia é o modo "como fazer":** cada seção parte de um objetivo e nomeia controles pelo rótulo
+  que a interface mostra. Arquitetura, modelo de dados, derivação de regra e API ficam no documento
+  técnico — não duplique no guia.
+- **Capturas:** `node scripts/capture-user-guide.mjs` percorre a instância em execução, verifica que
+  a tela certa foi alcançada (URL + textos esperados) e extrai do DOM títulos/botões/abas/colunas/
+  links em `docs/.build/screens/manifest.json`. **Esse extrato é a fonte do texto do guia** — o guia
+  descreve a interface medida, não o código lido. PNGs vão para `docs/screens/` (**versionado**);
+  credenciais em `docs/.capture.env` (gitignored). **Algumas capturas gravam de verdade** (ex.:
+  *Gerar em Lote* criou 9 relatórios semanais na instância real): confira a lista `INTERACTIONS`
+  antes de rodar contra dados reais.
+- **Bloco de captura:** ```foto <id> titulo="…"``` embute `docs/screens/<id>.png` como data URI.
+  Uma captura referenciada duas vezes derruba o build, igual ao `figure`.
 - **O build é um gate duro:** falha se um `.puml` não renderizar, se um bloco cercado ficar sem
   fechamento (bug real já ocorrido: sem o ``` final, o capítulo inteiro era absorvido como
   legenda da figura e nada denunciava), se um diagrama for referenciado duas vezes, ou se dois
   capítulos tiverem o mesmo título. Depois de mexer em `docs/src` ou `docs/diagrams`, rode o
   build — e confira se nenhum aviso `AVISO:` apareceu.
-- **Não versionar intermediários:** `docs/.build/` (SVGs re-renderizados) está no `.gitignore`.
-  `docs/displayquest.html` **é** versionado.
+- **O que é versionado:** `docs/displayquest.html`, `docs/guia-do-usuario.html` e `docs/screens/`
+  (as capturas são fonte do guia). `docs/.build/` (SVGs re-renderizados e o extrato do DOM) está no
+  `.gitignore`, junto de `docs/.capture.env`.
 - **Diagramas: uma referência por arquivo.** `docs/diagrams/<id>.puml` é consumido por um único
   bloco ```figure <id> titulo="…"```; referenciar duas vezes derruba o build. Para citar uma
   figura já usada, escreva no texto ("a figura da implantação, no capítulo 10") — não repita o
@@ -149,3 +160,28 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
   aresta vinda de `class` — use `class … <<casoDeUso>>` no diagrama de requisitos;
   (b) linha começando `|palavra|` (activity bar) dentro de `if` aninhado quebra o parser;
   (c) o token `Next` no início/fim de rótulo de activity quebra o parser.
+
+## Defeitos de interface medidos na instância (2026-10-02)
+
+Coletados pelo extrato do DOM da captura do guia (`docs/.build/screens/manifest.json`) e por
+leitura do texto visível. São observações medidas na instância real, **não** diagnosticados:
+
+- **`<title>` genérico em todas as telas:** "Sistema de Gerenciamento de Tarefas" (medido nas 11
+  rotas, inclusive `/login`). A aba do navegador nunca diz DisplayQuest.
+- **Strings sem acento, entregues assim na interface:** "Quadro de Lideranca", "Classificacao
+  completa", colunas "Posicao" / "Usuario" / "Tarefas concluidas" (ranking); "Abrir controle de
+  sessao" (perfil); "Meus Premios" (menu do cabeçalho); "admin (sem horario)" e afins (grade do
+  laboratório).
+- **Vazamento de enum no detalhe da tarefa:** o diálogo mostra "PRIORIDADE High" e "STATUS to-do"
+  em vez de "Alta" e "A Fazer".
+- **Prazo renderizado quebrado no detalhe da tarefa:** "PRAZO 21T12:00:00.000Z/01/2025".
+- **Penalidade de atraso explode o valor:** "PONTOS 60 pts(agora: -37140 pts com penalidade)" numa
+  tarefa vencida de 2025. O cálculo de `calculateLatePenalty` não tem piso.
+- **`/login` e `/register` não têm nenhum heading** (0 `h1`/`h2`/`h3` no DOM): o título é
+  `CardTitle`, que renderiza `div`. Sem ponto de ancoragem para leitor de tela.
+- **Navegação do cabeçalho é inconsistente entre papéis:** grupo com vários destinos visíveis vira
+  acordeão fechado (o coordenador vê só os rótulos, nenhum destino); grupo com um único destino
+  visível é achatado em link direto (o pesquisador vê "Laboratório" como link). O mesmo cabeçalho
+  se apresenta de duas formas.
+- **Dados de lixo na instância real:** tarefas "rewqr" e "asfsa", projeto "asdfasdf" — aparecem no
+  quadro e nas capturas.

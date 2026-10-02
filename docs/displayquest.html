@@ -299,6 +299,13 @@ hr {
 }
 .dq-diagram { display: block; width: 100%; height: auto; max-width: 100%; }
 
+/* Capturas de tela: a imagem é a interface real, então aparece sem moldura
+   decorativa e ocupa a largura da coluna. */
+.dq-figure--photo { padding: 0.7rem; background: var(--paper); }
+.dq-figure--photo .dq-figure__plot { background: var(--paper-raised); border: 1px solid var(--rule); border-radius: 3px; }
+.dq-photo { display: block; width: 100%; height: auto; max-width: 100%; }
+.dq-figure--photo figcaption { margin-top: 0.7rem; }
+
 .dq-figure figcaption {
   font-family: var(--font-ui);
   font-size: 0.82rem;
@@ -4249,7 +4256,7 @@ expressa como migração versionada não pertence a este sistema.</p>
 <footer class="dq-footer">
   <p>
     Conteúdo gerado a partir de <code>docs/src/</code> e <code>docs/diagrams/</code>. Diagramas em notação UML (PlantUML). O conteúdo reflete o estado do
-    código no commit <code>81d2859 (2026-10-02)</code>.
+    código no commit <code>d2e5c12 (2026-10-02)</code>.
   </p>
 </footer>
 
