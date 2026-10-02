@@ -1,0 +1,111 @@
+{
+  "plan": "plan-v3",
+  "title": "qualidade operacional: sessões, quadro e pontos",
+  "version": "3.0.0",
+  "updatedAt": "2026-10-02",
+  "status": "planned",
+  "activeWave": null,
+  "activeBatch": null,
+  "awaitingInstruction": [
+    "GAP-P3-01: a premiação pode ficar negativa? (recomendação: piso em zero) — trava 1.B",
+    "GAP-P3-02: HTTPS na instância do laboratório — trava a Onda 5 inteira",
+    "GAP-P3-03: tarefas existentes com pontos arbitrários: reescrever ou deixar como histórico? (recomendação: deixar)",
+    "GAP-P3-04: token @pontos do backlog: ignorar valor mantendo a sintaxe? (recomendação: sim)"
+  ],
+  "target": "corrigir a economia de pontos, acabar com o silêncio das pausas automáticas e tornar o quadro utilizável quando enche",
+  "lineage": {
+    "predecessor": "clean-arch (repo-cleanup, ondas 0-9 + lotes B0-B11)",
+    "convention": "mesma do clean-arch: PLAN.md + STATE.json, 1 batch = 1 commit revertível",
+    "rollbackTag": "pre-plan-v3",
+    "branch": "plan/v3-operacional"
+  },
+  "baseline": {
+    "measuredAt": "2026-10-02",
+    "baseCommit": "8d78812",
+    "branch": "dev",
+    "testFiles": 64,
+    "tests": 721,
+    "failures": 0,
+    "archModules": 725,
+    "archDependencies": 2737,
+    "allowListEntries": 0
+  },
+  "gates": {
+    "G0": "npm run arch:check (exit 0, allow-list vazia)",
+    "G1": "npx eslint --no-eslintrc --config .eslintrc.json <arquivos> (exit 0)",
+    "G2": "npx tsc --noEmit (0 erros)",
+    "G3": "npx vitest run tests/unit features (sem banco)",
+    "G4": "npx vitest run completo contra dq-dev-test-db :5433 (nunca :5432)",
+    "G5": "npm run docs:build + npm run docs:check (batches que mudam comportamento visível)",
+    "G6": "recaptura --only=<telas> + rebuild, quando a captura do guia deixa de representar a tela"
+  },
+  "waves": [
+    { "id": "0", "name": "setup", "batches": ["S0.1"], "status": "planned", "dependsOn": [] },
+    { "id": "1", "name": "economia de pontos (X1)", "batches": ["1.A", "1.B", "1.C", "1.D"], "status": "planned", "dependsOn": ["0"] },
+    { "id": "2", "name": "sessão: nota e alerta (F2, F1a)", "batches": ["2.A", "2.B", "2.C"], "status": "planned", "dependsOn": ["0"] },
+    { "id": "3", "name": "quadro: altura, mover, ordenação (X2, X3, F3)", "batches": ["3.A", "3.B", "3.C"], "status": "planned", "dependsOn": ["0"] },
+    { "id": "4", "name": "animação de pontos (F4)", "batches": ["4.A", "4.B"], "status": "planned", "dependsOn": ["1"] },
+    { "id": "5", "name": "notificação nativa (F1b)", "batches": ["5.A"], "status": "blocked", "dependsOn": ["2"], "blockedBy": ["BLK-01"] }
+  ],
+  "batches": [
+    { "id": "S0.1", "wave": "0", "title": "branch plan/v3-operacional, tag pre-plan-v3, STATE v3.0.0, ponteiros em README/AGENTS", "status": "planned", "gates": "nenhum (nada de código muda)" },
+    { "id": "1.A", "wave": "1", "title": "golden de caracterização do comportamento atual de pontos (inclui o caso do dia do prazo -> 0)", "status": "planned", "gates": "G0 G1 G2 G3" },
+    { "id": "1.B", "wave": "1", "title": "backend/domain/task/points-rules.ts: dias de calendário SP, POINTS_PER_TASK=10, 1.5x adiantada; task-rules re-exporta", "status": "planned", "gates": "G0 G1 G2 G3 G4", "blockedBy": ["GAP-P3-01"] },
+    { "id": "1.C", "wave": "1", "title": "move-rules.ts deixa de duplicar a penalidade e consulta o domínio (elimina a divergência)", "status": "planned", "gates": "G0 G1 G2 G3" },
+    { "id": "1.D", "wave": "1", "title": "10 pontos fixos na superfície: remove campo dos 2 formulários, @pontos do backlog ignorado, rota grava 10", "status": "planned", "gates": "G0 G1 G2 G3 G4 G5 G6" },
+    { "id": "2.A", "wave": "2", "title": "lib/client-storage.ts: seam único de estado client-side (namespace, JSON tolerante, SSR-safe)", "status": "planned", "gates": "G0 G1 G2 G3" },
+    { "id": "2.B", "wave": "2", "title": "caixa de notas da sessão: salva por sessão, despeja no log, limpa só em sucesso", "status": "planned", "gates": "G0 G1 G2 G3 G5" },
+    { "id": "2.C", "wave": "2", "title": "alerta de pausa: visual sempre + som WebAudio opcional; sem window.alert", "status": "planned", "gates": "G0 G1 G2 G3" },
+    { "id": "3.A", "wave": "3", "title": "board-column.tsx: altura máxima + overflow-y por coluna, cabeçalho fixo", "status": "planned", "gates": "G0 G1 G2 G3 G6" },
+    { "id": "3.B", "wave": "3", "title": "allowedTargets(task, isLeader): menu deixa de oferecer destino que o servidor recusaria; regra de permissão inalterada", "status": "planned", "gates": "G0 G1 G2 G3" },
+    { "id": "3.C", "wave": "3", "title": "column-order.ts: ordenação por coluna, customizável, persistida em localStorage", "status": "planned", "gates": "G0 G1 G2 G3 G6" },
+    { "id": "4.A", "wave": "4", "title": "contrato: aprovação devolve awardedPoints autoritativo (withActorProgress + schema de resposta)", "status": "planned", "gates": "G0 G1 G2 G3 G4" },
+    { "id": "4.B", "wave": "4", "title": "points-delta.tsx: +X verde / -X vermelho incrementando em 1s; respeita prefers-reduced-motion", "status": "planned", "gates": "G0 G1 G2 G3 G5 G6" },
+    { "id": "5.A", "wave": "5", "title": "liga browser-notifications.ts ao fluxo de pausa: botão de ativação por gesto, dedupe por tag, degradação para o alerta da onda 2", "status": "blocked", "gates": "G0 G1 G2 G3", "blockedBy": ["BLK-01"] }
+  ],
+  "decisionRegistry": [
+    "DEC-30: 10 pontos fixos por tarefa; campo removido dos formulários; coluna tasks.points mantida como histórico, valor ignorado no cálculo.",
+    "DEC-31: atraso em dias de calendário (America/Sao_Paulo), não fração de 24h; entregar no dia do prazo não é atraso.",
+    "DEC-32: entrega adiantada = 1,5x (15 pontos); sem prazo = 10.",
+    "DEC-33: ordenação por coluna persistida em localStorage, por pessoa e navegador (não em banco, não em URL).",
+    "DEC-34: mover para fora de Concluído mantém a regra de permissão atual; a UI deixa de oferecer destino bloqueado. Arrastar done continua desabilitado para todos.",
+    "DEC-35: notificação dividida em F1a (alerta in-app + som, funciona em HTTP hoje) e F1b (nativa, exige HTTPS). Nenhuma onda depende de F1b.",
+    "DEC-36: som via WebAudio, sem asset binário no repositório.",
+    "DEC-37: quirk 'penalidade pode exceder os pontos' descongelado deliberadamente; comportamento anterior preservado como teste de caracterização em 1.A.",
+    "DEC-38: subtasks fora do escopo de plan-v3."
+  ],
+  "gapRegistry": [
+    { "id": "GAP-P3-01", "open": true, "summary": "premiação pode ficar negativa? recomendação: piso em zero", "blocks": ["1.B"] },
+    { "id": "GAP-P3-02", "open": true, "summary": "HTTPS na instância do laboratório", "blocks": ["5.A"] },
+    { "id": "GAP-P3-03", "open": true, "summary": "tarefas existentes com pontos arbitrários: reescrever ou manter? recomendação: manter", "blocks": ["1.D"] },
+    { "id": "GAP-P3-04", "open": true, "summary": "token @pontos do backlog: recomendação manter a sintaxe e ignorar o valor", "blocks": ["1.D"] }
+  ],
+  "blockers": [
+    { "id": "BLK-01", "summary": "instância servida em HTTP num IP de rede: Chrome e Firefox recusam pedido de permissão de notificação fora de secure context", "blocks": ["5.A"], "owner": "dono/infra" }
+  ],
+  "acceptanceCriteria": [
+    "AC-P3-01: tarefa com prazo hoje, aprovada hoje, credita 10 pontos (não zero).",
+    "AC-P3-02: backend e frontend produzem o mesmo número de pontos para a mesma tarefa e instante.",
+    "AC-P3-03: nenhuma tela de criação de tarefa aceita pontos vindos do cliente.",
+    "AC-P3-04: pausa automática produz alerta visível sem depender de permissão de navegador, e som opcional.",
+    "AC-P3-05: a nota escrita durante a sessão sobrevive a recarregar a página e só é descartada quando o encerramento tem sucesso.",
+    "AC-P3-06: cada coluna do quadro tem altura limitada e scroll próprio; a página não cresce infinitamente.",
+    "AC-P3-07: o menu do cartão não oferece destino que o servidor recusaria.",
+    "AC-P3-08: ordenação de coluna escolhida persiste por pessoa e navegador e o padrão atual é preservado.",
+    "AC-P3-09: o delta de pontos exibido vem da resposta do servidor, não de recálculo no cliente.",
+    "AC-P3-10: com prefers-reduced-motion, o valor final aparece sem animação."
+  ],
+  "evidence": {},
+  "rollbacks": [
+    { "tag": "pre-plan-v3", "commit": "8d78812", "scope": "todo plan-v3" }
+  ],
+  "notes": [
+    "Onda 2 e Onda 3 são independentes da Onda 1 e entre si; podem ser invertidas por urgência de uso.",
+    "Único encadeamento duro: 1 -> 4 (a animação depende do delta autoritativo).",
+    "Altura/scroll de coluna não tem teste unitário honesto em jsdom: a prova é o spec Playwright.",
+    "Nenhuma onda toca display-quest-db :5432. Capturas de tela sim: docs/.capture.env aponta para a instância real."
+  ],
+  "timeline": [
+    { "at": "2026-10-02", "event": "plano escrito a partir da lista do dono; restrições R1-R14 medidas no código; DEC-30..38 registradas; 4 gaps abertos" }
+  ]
+}
