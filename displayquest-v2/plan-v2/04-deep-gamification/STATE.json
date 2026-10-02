@@ -115,6 +115,60 @@
       "summary": "G1-G5 verdes, migracoes versionadas sem db push, STATE.json com evidencias de todas as ACs",
       "testRef": "checklist PLAN seccao 6 + STATE.evidence",
       "status": "pending"
+    },
+    {
+      "id": "AC-04-17",
+      "summary": "Motor de badge automatico roda no mesmo request do award: user_badges + BADGE_XP no mesmo request; falha na avaliacao nunca reverte o award",
+      "testRef": "tests/unit/modules/gamification/badge-engine-wiring.test.ts; tests/integration/badge-engine-roundtrip.test.ts",
+      "status": "pending"
+    },
+    {
+      "id": "AC-04-18",
+      "summary": "Pacote referenciado: install mantem badges.count identico (zero clones), packId preenchido e 1 linha em badge_pack_installs",
+      "testRef": "tests/integration/badge-packs-roundtrip.test.ts; tests/unit/modules/gamification/badge-packs.use-cases.test.ts",
+      "status": "pending"
+    },
+    {
+      "id": "AC-04-19",
+      "summary": "install/uninstall idempotente; desinstalar nao apaga badges nem user_badges; badge avulso 400; sem MANAGE_BADGE_PACKS 403",
+      "testRef": "tests/unit/modules/gamification/badge-packs.route.test.ts; tests/unit/modules/gamification/badge-packs.use-cases.test.ts",
+      "status": "pending"
+    },
+    {
+      "id": "AC-04-20",
+      "summary": "Criterios v2: arvore all/any/not avalia corretamente; eixo/comparador desconhecido = 400 na autoria (nunca false silencioso); specialCondition por igualdade sobre enum",
+      "testRef": "tests/unit/modules/gamification/badge-criteria-v2.test.ts",
+      "status": "pending"
+    },
+    {
+      "id": "AC-04-21",
+      "summary": "Badges preexistentes (criteriaVersion 1/ausente) seguem no motor v1 intocado, inclusive o quirk de threshold 0; goldens de gamification continuam verdes sem edicao",
+      "testRef": "tests/unit/modules/gamification/badge-criteria-v1-compat.test.ts; npx vitest run tests/unit/modules/gamification",
+      "status": "pending"
+    },
+    {
+      "id": "AC-04-22",
+      "summary": "Modificador de pacote aplica multiplicador de XP por faixa (noturno 1.5x) e NUNCA altera users.points; fora de 0.5..2.0 ou 3+ modificadores e rejeitado",
+      "testRef": "tests/unit/modules/gamification/pack-modifiers.test.ts",
+      "status": "pending"
+    },
+    {
+      "id": "AC-04-23",
+      "summary": "Desinstalar/reinstalar nao reverte nem duplica xp, nao apaga user_badges e nao re-concede badges; zero XP retroativo",
+      "testRef": "tests/unit/modules/gamification/pack-invariants.test.ts",
+      "status": "pending"
+    },
+    {
+      "id": "AC-04-24",
+      "summary": "UI de pacote e arvore de criterios so renderizam sob o mirror, usando os tokens e o grid do plan-v2/UI-UX.md; nenhum token de cor novo",
+      "testRef": "tests/unit/components/gamification/badge-pack-card.test.tsx; tests/unit/components/gamification/criteria-tree-editor.test.tsx",
+      "status": "pending"
+    },
+    {
+      "id": "AC-04-25",
+      "summary": "G0-G5 verdes (G0 com allow-list vazia), 3 migracoes versionadas sem db push, STATE.json com decisions D-04-09..13 e evidencia de todas as ACs",
+      "testRef": "checklist PLAN etapa 11 + STATE.evidence",
+      "status": "pending"
     }
   ],
 
@@ -149,6 +203,27 @@
       "subject": "Resgate de voucher REWARD_DRAFT adiado",
       "detail": "REWARD_DRAFT grava voucher em lootbox_openings.drops sem tocar a loja (D-04-04). Converter o voucher em compra via RF-57 e fluxo futuro.",
       "unblock": "Confirmar que o voucher sem resgate serve nesta versao (registro + exibicao na progressao).",
+      "owner": "dono"
+    },
+    {
+      "id": "B4",
+      "subject": "Custo da re-avaliacao rolling de badges por award",
+      "detail": "RF-04.09 amarra evaluateUserBadges a todo award de task/work session. A avaliacao agrega stats do usuario (UserStatsPort) e varre o catalogo ativo por award. Com o alvo de 4 pacotes x 20 badges (~80 badges ativos apos install), o custo por evento precisa ser medido no volume real antes de fechar o AC-04-17.",
+      "unblock": "Medir o custo com o catalogo real; se incomodar, adotar o filtro por eixo dependente (indice criterio->gatilho: award de task so re-avalia criterios de tasks/projects) em vez da varredura completa. Decisao do dono entre 'rolling completo' e 'rolling otimizado'.",
+      "owner": "dono"
+    },
+    {
+      "id": "B5",
+      "subject": "Instalacao de pacote e global nesta versao (sem escopo por laboratorio)",
+      "detail": "Nao existe tabela `laboratories`; o unico `labId` do schema esta em kanban_boards:301 e nao e usado por nenhum codigo. 05-multi-lab-saas (que depende do 04) e quem cria a tenancy. Enquanto isso, badge_pack_installs tem @@unique([packId]) — toggle global.",
+      "unblock": "Confirmar que o toggle global basta para a primeira versao, e que o escopo por lab entra no 05 como coluna nova em badge_pack_installs (o unique vira [laboratoryId, packId]) sem mudar a semantica do toggle.",
+      "owner": "dono"
+    },
+    {
+      "id": "B6",
+      "subject": "Estrategia de wiring do motor de badge (Etapa 0)",
+      "detail": "Duas opcoes foram analisadas: (A) intra-modulo — os use-cases de award chamam evaluateUserBadges internamente, tornando a garantia 'award => avalia badge' estrutural; (B) via porta GamificationAwardsPort nos publishers de work-execution/task-management, deixa a orquestracao no event layer mas torna a garantia nao-estrutural (cada publisher pode esquecer a chamada — exatamente a falha que a Etapa 0 remove). O PLAN documenta as duas com a matriz de trade-off e recomenda A.",
+      "unblock": "Confirmar a opcao A (recomendada). Se B for escolhida, registrar a decisao e o DC0.3 passa a exigir teste por publisher, mantendo o custo de manutencao de 2 modulos.",
       "owner": "dono"
     }
   ],
@@ -219,6 +294,46 @@
       "rationale": "D-04-01 define XP como nao-gastavel; transformar XP em premio de loot violaria a separacao moeda/progression e criaria circulo de gasto.",
       "owner": "projeto",
       "status": "accepted"
+    },
+    {
+      "id": "D-04-09",
+      "subject": "Pacote de badges = conjunto REFERENCIADO, com toggle de instalacao",
+      "decision": "Pacotes sao entidades de primeira classe (badge_packs: key, nome, descricao, icone, tema, version, modifiers, isPublished). badges ganha packId NULLABLE — badge avulso continua valido. 'Instalar' e um toggle em badge_pack_installs (@@unique([packId])), NAO uma copia: badges nunca e clonada, badgeId permanece estavel e user_badges nunca fica orfa.",
+      "rationale": "Clonar produz badges duplicados e, ao desinstalar, user_badges apontando para linhas que somem. Referenciar torna a desinstalacao reversivel, permite atualizar o pacote preservando historico e deixa o badge_id como identidade estavel. packId nullable preserva o catalogo atual sem migrar dado.",
+      "owner": "projeto",
+      "status": "accepted"
+    },
+    {
+      "id": "D-04-10",
+      "subject": "Criterios em duas versoes; v1 congelado, v2 como arvore de condicoes",
+      "decision": "badges ganha criteriaVersion Int @default(1). O formato v1 (7 campos numericos flat + specialCondition por substring em portugues, badge-rules.ts:145-191) PERMANECE e continua avaliado pelo motor atual, coberto pelos goldens. O formato v2 e uma arvore all/any/not sobre um vocabulario FECHADO de eixos e operadores, com specialCondition por IGUALDADE sobre enum (elimina o includes() fragil e a dependencia de portugues). Sem hibrido e sem fallback silencioso entre versoes. Profundidade maxima 3 niveis.",
+      "rationale": "O vocabulario atual e um mini-DSL em linguagem natural: nao da para expressar uma condicao nova sem alterar codigo, e nao distingue escopo (projeto/periodo/papel) nem composicao (AND/OR). Isso e o gargalo real da criacao de badges e o que impede 'particularidades' por pacote. Manter v1 intocado preserva os goldens e nao exige backfill.",
+      "owner": "projeto",
+      "status": "accepted"
+    },
+    {
+      "id": "D-04-11",
+      "subject": "Motor de badge automatico ligado em rolling intra-modulo (RF-04.09)",
+      "decision": "evaluateUserBadges passa a rodar rolling no mesmo request do award: os use-cases award-from-work-session e award-from-task-completion chamam a avaliacao internamente depois de applyAward (wire intra-modulo, sem porta nova e sem import cruzado). Falha de avaliacao e engolida com log e NUNCA reverte o award. Sem cron e sem batch semanal — coerente com D-04-02. O escopo avaliado e o catalogo ativo: badges isActive de pacotes instalados ou avulsos (packId null).",
+      "rationale": "evaluateUserBadges era instanciado (index.ts:73,108) e nunca invocado: o badge por regra nao existia em producao, e o QUIRK-6A ('a correcao da Onda 6 faz a concessao funcionar') so se manifestava contra fakes — confianca falsa. O wiring intra-modulo torna a garantia 'award => avalia badge' estrutural, eliminando a propria classe de bug que a etapa corrige; a alternativa via porta em 2 modulos seria nao-estrutural (cada publisher poderia esquecer).",
+      "owner": "projeto",
+      "status": "accepted"
+    },
+    {
+      "id": "D-04-12",
+      "subject": "Instalacao global nesta versao; escopo por lab no 05",
+      "decision": "badge_pack_installs tem @@unique([packId]) — toggle global. Nao ha coluna de laboratorio porque `laboratories` nao existe (unico labId do schema esta em kanban_boards:301, sem uso em codigo). 05-multi-lab-saas, que depende do 04, adiciona a coluna de escopo e o unique passa a [laboratoryId, packId] sem mudar a semantica do toggle.",
+      "rationale": "plan-v2 ordena multi-lab DEPOIS da gamificacao (04 -> 05). Inventar um eixo de laboratorio no 04 seria duplicar o modelo de tenancy antes de ele existir, e refazer a migration depois. 'Publicar' (isPublished) e 'instalar' sao eixos independentes.",
+      "owner": "projeto",
+      "status": "accepted"
+    },
+    {
+      "id": "D-04-13",
+      "subject": "Particularidades do pacote = modificadores de XP, enum fechado",
+      "decision": "badge_packs.modifiers (Json) carrega as particularidades do pacote, resolvidos por funcao pura em backend/domain/gamification/pack-modifiers.ts a partir de um ENUM FECHADO (SESSION_XP_MULTIPLIER_NIGHT, TASK_XP_BONUS_ROLE, BADGE_XP_OVERRIDE). Modificador afeta SOMENTE XP, nunca users.points; vale so para awards posteriores a instalacao (sem recalculo retroativo); multiplicador limitado a 0.5..2.0, no maximo 2 modificadores empilham por multiplicacao, resultado truncado e nunca negativo. Modificador desconhecido nao quebra o award (falha engolida, padrao da casa).",
+      "rationale": "'Cada pacote com suas particularidades' nao tem onde morar no modelo atual. Restringir a enum fechado eFaixa impede que 'particularidade' vire mais uma substring em portugues — o mesmo problema que D-04-10 resolve no lado dos criterios. Manter XP-only preserva a separacao D-04-01.",
+      "owner": "projeto",
+      "status": "accepted"
     }
   ],
 
@@ -228,6 +343,18 @@
       "event": "created",
       "from": null,
       "to": "draft"
+    },
+    {
+      "at": "2026-10-01T00:00:00-03:00",
+      "event": "revised: motor de badge automatico ligado (RF-04.09, D-04-11) + pacotes de badges instalaveis (RF-04-EXT-04..08, D-04-09/10/12/13); Etapa 0 inserida como pre-requisito e Etapas 8-11 acrescentadas; AC-04-17..25 e B4..B6 novos",
+      "from": "draft",
+      "to": "draft"
     }
+  ],
+  "notes": [
+    "Baseline do G3 corrigida em 2026-10-01: 67 arquivos / 1245 testes, zero failure (displayquest-v2/clean-arch/STATE.json). As versoes anteriores desta SPEC/PLAN citavam '256/257 com unico fail floating-session-timer' — numero herdado de outra base; o arquivo tests/unit/components/floating-session-timer.test.tsx nao existe neste repo (gotcha registrado em AGENTS.md).",
+    "Caminhos de 'Fronteira' corrigidos: as regras puras vivem em backend/domain/gamification/ (nao em backend/modules/gamification/domain/engines/, caminho removido pelo clean-arch). Ver SPEC 2.1.",
+    "Contrato visual transversal: plan-v2/UI-UX.md (binding das features 01..06, incluindo a Etapa 10 desta feature).",
+    "G0 exige o devDependency dependency-cruiser ^18.4.0. Em 2026-10-01 ele NAO estava instalado no node_modules do repo principal (npm install falhava por rede: ETIMEDOUT/ECONNRESET), entao `npm run arch:check` nao roda aqui sem reinstalar. O gate ja foi verificado exit 0 / allow-list vazia em worktree isolado durante a revisao pos-merge; a revisao desta documentacao **nao adiciona nenhuma aresta de dependencia** (o wiring da Etapa 0 e intra-modulo), portanto o resultado do G0 permanece valido. Detalhe em displayquest-v2/clean-arch/PENDENCIAS-FINAIS.md."
   ]
 }
