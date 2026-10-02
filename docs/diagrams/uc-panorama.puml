@@ -1,0 +1,120 @@
+@startuml
+!include _base.puml
+
+title Diagrama de casos de uso — panorama
+
+left to right direction
+
+actor Visitante
+actor Voluntário
+actor Colaborador
+actor Laboratorista
+actor "Gerente\nde Projeto" as GP
+actor Coordenador
+actor Gerente
+
+rectangle "DisplayQuest" <<fronteira>> {
+
+  package "Conta e acesso" {
+    usecase "Criar conta" as UC_CRIAR
+    usecase "Autenticar-se" as UC_LOGIN
+    usecase "Aprovar ou\nrecusar conta" as UC_APROVAR
+    usecase "Gerenciar\nusuários" as UC_GUSU
+    usecase "Editar perfil\ne carregar avatar" as UC_PERFIL
+  }
+
+  package "Projetos" {
+    usecase "Consultar projetos" as UC_CPROJ
+    usecase "Criar e editar\nprojeto" as UC_EPROJ
+    usecase "Gerenciar membros" as UC_MEMB
+    usecase "Definir líder" as UC_LIDER
+  }
+
+  package "Tarefas" {
+    usecase "Movimentar tarefa\nno quadro" as UC_MOV
+    usecase "Atribuir tarefa" as UC_ATR
+    usecase "Concluir tarefa" as UC_CONC
+    usecase "Submeter para\nrevisão" as UC_REV
+    usecase "Aprovar ou\nrejeitar entrega" as UC_APREV
+  }
+
+  package "Trabalho e horas" {
+    usecase "Registrar sessão" as UC_SESS
+    usecase "Pausar e retomar\nsessão" as UC_PAUS
+    usecase "Finalizar sessão" as UC_FIM
+    usecase "Anotar log diário" as UC_LOG
+    usecase "Emitir relatório\nsemanal" as UC_RSEM
+    usecase "Emitir relatório\nde projeto" as UC_RPROJ
+  }
+
+  package "Laboratório" {
+    usecase "Assumir\nresponsabilidade" as UC_RESP
+    usecase "Pausar e encerrar\nresponsabilidade" as UC_RESPX
+    usecase "Registrar evento" as UC_EVT
+    usecase "Publicar aviso" as UC_AVISO
+    usecase "Abrir e tratar\nissue" as UC_ISS
+    usecase "Consultar e editar\nhorários" as UC_HOR
+  }
+
+  package "Engajamento" {
+    usecase "Consultar pontos,\nbadges e ranking" as UC_ENG
+    usecase "Resgatar recompensa" as UC_LOJA
+    usecase "Avaliar e conceder\nbadges" as UC_BADGE
+    usecase "Consultar e ler\nnotificações" as UC_NOTIF
+    usecase "Transmitir\ncomunicado" as UC_COM
+  }
+}
+
+Visitante     --> UC_CRIAR
+Visitante     --> UC_LOGIN
+Coordenador   --> UC_APROVAR
+Coordenador   --> UC_GUSU
+Coordenador   --> UC_AVISO
+Coordenador   --> UC_COM
+Gerente       --> UC_GUSU
+Gerente       --> UC_COM
+Coordenador   --> UC_HOR
+Laboratorista --> UC_RESP
+Coordenador   --> UC_RESP
+Laboratorista --> UC_RESPX
+Coordenador   --> UC_ISS
+GP            --> UC_ISS
+Voluntario    --> UC_MOV
+Colaborador   --> UC_MOV
+GP            --> UC_MOV
+Voluntario    --> UC_ENG
+Colaborador   --> UC_ENG
+Laboratorista --> UC_ENG
+Voluntario    --> UC_LOJA
+Colaborador   --> UC_LOJA
+GP            --> UC_CPROJ
+Voluntario    --> UC_CPROJ
+GP            --> UC_EPROJ
+GP            --> UC_MEMB
+GP            --> UC_LIDER
+Voluntario    --> UC_SESS
+Colaborador   --> UC_SESS
+Laboratorista --> UC_SESS
+GP            --> UC_SESS
+Voluntario    --> UC_LOG
+GP            --> UC_RSEM
+GP            --> UC_RPROJ
+GP            --> UC_REV
+GP            --> UC_APREV
+Coordenador   --> UC_APREV
+GP            --> UC_EPROJ
+
+UC_LOG   ..> UC_SESS  : <<inclui>>
+UC_MOV   ..> UC_CONC  : <<inclui>>
+UC_CONC  ..> UC_REV   : <<extensão>>
+UC_RPROJ ..> UC_EVT   : <<inclui>>
+
+note right of UC_MOV
+  A movimentação no quadro é a
+  operação mais frequente do sistema.
+  Quem não tem permissão apenas
+  altera o próprio progresso em
+  tarefas públicas.
+end note
+
+@enduml

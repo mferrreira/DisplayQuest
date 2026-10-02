@@ -22,7 +22,9 @@
     "db:test:setup": "DATABASE_URL=postgresql://dq_dev:dq_dev_local_only@127.0.0.1:5433/dq_dev_test prisma migrate deploy && DATABASE_URL=postgresql://dq_dev:dq_dev_local_only@127.0.0.1:5433/dq_dev_test npm run db:seed && docker exec -i dq-dev-test-db psql -U dq_dev -d dq_dev_test -f - < tests/fixtures/g4-normalize.sql",
     "arch:check": "npx depcruise --config .dependency-cruiser.js --ts-config tsconfig.json --ts-pre-compilation-deps --output-type err .",
     "arch:check:sh": "bash scripts/arch-check.sh",
-    "check:env": "node scripts/check-env-secrets.js"
+    "check:env": "node scripts/check-env-secrets.js",
+    "docs:build": "node scripts/build-docs.mjs",
+    "docs:check": "python3 scripts/check-docs-charset.py"
   },
   "prisma": {
     "seed": "NODE_ENV=${NODE_ENV:-development} tsx prisma/seed.ts"
@@ -87,6 +89,7 @@
     "eslint": "^8.57.1",
     "eslint-config-next": "^15.2.4",
     "jsdom": "^30.0.1",
+    "markdown-it": "^15.0.2",
     "msw": "^2.15.0",
     "postcss": "8",
     "tailwindcss": "^4.3.3",

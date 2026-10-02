@@ -1,0 +1,84 @@
+@startuml
+!include _base.puml
+
+title Casos de uso — tarefas e fluxo de revisão
+
+left to right direction
+
+actor Voluntário
+actor Colaborador
+actor Pesquisador
+actor Laboratorista
+actor "Gerente de Projeto" as GP
+actor Coordenador
+
+rectangle "DisplayQuest" <<fronteira>> {
+  usecase "Abrir quadro\nde tarefas" as UC_QUADRO
+  usecase "Criar tarefa" as UC_CRIAR
+  usecase "Editar tarefa" as UC_EDIT
+  usecase "Excluir tarefa" as UC_EXCL
+  usecase "Mover no quadro" as UC_MOV
+  usecase "Assumir tarefa\nsem responsável" as UC_ASSUM
+  usecase "Atribuir ou\nremover responsável" as UC_ATR
+  usecase "Concluir tarefa" as UC_CONC
+  usecase "Submeter para revisão" as UC_REV
+  usecase "Aprovar entrega" as UC_APROVAR
+  usecase "Rejeitar entrega" as UC_REJEITAR
+  usecase "Consultar progresso\nglobal" as UC_PROG
+}
+
+Voluntário --> UC_QUADRO
+Voluntário --> UC_MOV
+Voluntário --> UC_ASSUM
+Voluntário --> UC_CONC
+Colaborador --> UC_QUADRO
+Colaborador --> UC_CRIAR
+Colaborador --> UC_EDIT
+Colaborador --> UC_MOV
+Colaborador --> UC_ASSUM
+Colaborador --> UC_CONC
+Colaborador --> UC_REV
+Pesquisador --> UC_QUADRO
+Pesquisador --> UC_CRIAR
+Pesquisador --> UC_MOV
+Pesquisador --> UC_CONC
+GP --> UC_QUADRO
+GP --> UC_CRIAR
+GP --> UC_EDIT
+GP --> UC_EXCL
+GP --> UC_MOV
+GP --> UC_ATR
+GP --> UC_REV
+GP --> UC_APROVAR
+GP --> UC_REJEITAR
+GP --> UC_PROG
+Coordenador --> UC_CRIAR
+Coordenador --> UC_EXCL
+Coordenador --> UC_ATR
+Coordenador --> UC_APROVAR
+Coordenador --> UC_PROG
+
+UC_MOV ..> UC_ASSUM : <<extensão>>
+UC_CONC ..> UC_REV : <<extensão>>
+UC_APROVAR ..> UC_MOV : <<inclui>>
+UC_REJEITAR ..> UC_MOV : <<inclui>>
+UC_CRIAR ..> UC_ATR  : <<extensão>>
+
+note right of UC_MOV
+  Arrastar um cartão é a operação
+  mais usada da interface. Em
+  tarefas públicas o usuário só
+  mexe no próprio progresso; em
+  tarefas delegadas, só quem está
+  atribuído ou quem administra
+  o projeto.
+end note
+
+note bottom of UC_APROVAR
+  Aprovação é sempre de outra
+  pessoa: o solicitante não
+  aprova a própria entrega, a
+  não ser Coord. ou Gerente.
+end note
+
+@enduml

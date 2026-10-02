@@ -1,0 +1,53 @@
+@startuml
+!include _base.puml
+
+title Máquina de estados — compra na loja
+
+hide empty description
+scale 1.1
+
+[*] --> Pendente : resgatar
+
+state Pendente
+state Aprovada
+state Rejeitada
+state "Concluída" as Concluida <<final>>
+state Cancelada <<final>>
+
+Pendente    --> Aprovada   : aprovar
+Pendente    --> Rejeitada  : recusar (devolve pontos)
+Pendente    --> Cancelada  : cancelar (devolve pontos)
+Aprovada    --> Concluida  : entregar
+Aprovada    --> Cancelada  : cancelar (devolve pontos)
+Rejeitada   --> [*]        : (terminal)
+Cancelada   --> [*]        : (terminal)
+Concluida   --> [*]        : (terminal)
+
+Pendente : <<verificação na criação>>
+Pendente : usuário existe
+Pendente : recompensa existe
+Pendente : recompensa disponível
+Pendente : pontos suficientes
+Pendente : preço e nome congelados
+
+note right of Pendente
+  Todo resgate nasce Pendente e
+  carrega uma cópia do nome e do
+  preço da recompensa no momento
+  da compra: mudar o catálogo
+  depois não reescreve o passado.
+
+  Aprovação e recusa só partem
+  de Pendente; a entrega só
+  parte de Aprovada; Concluída
+  não cancela.
+end note
+
+note bottom of Pendente
+  O débito de pontos e a gravação
+  da compra ocorrem na mesma
+  transação — ou os dois acontecem,
+  ou nenhum.
+end note
+
+@enduml

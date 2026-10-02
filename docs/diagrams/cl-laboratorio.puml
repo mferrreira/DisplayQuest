@@ -1,0 +1,112 @@
+@startuml
+!include _base.puml
+
+title Modelo de domínio — operação do laboratório
+
+skinparam classAttributeIconSize 0
+left to right direction
+
+class "<<entidade>>\nResponsabilidade" as Resp {
+  - id : Int
+  - usuarioId : Int
+  - inicio : String "ISO-8601"
+  - fim : String? "ISO-8601"
+  - pausadaEm : String? "ISO-8601"
+  - pausadaMs : Int = 0
+  - observacoes : String?
+  + pausar(agora) : void
+  + retomar(agora) : void
+  + encerrar(agora) : void
+  + duracaoEfetivaMs(agora) : number
+  + ehPlantao() : Boolean
+}
+
+class "<<entidade>>\nIssue" as Issue {
+  - id : Int
+  - titulo : String
+  - descricao : String
+  - situacao : SituacaoIssue
+  - prioridade : PrioridadeIssue
+  - categoria : String?
+  - relatadaPor : Int
+  - atribuidaA : Int?
+  - resolvidaEm : DateTime?
+  + atribuir(usuario) : void
+  + resolver(agora) : void
+  + fechar() : void
+  + reabrir() : void
+}
+
+enum "SituaçãoIssue" as SituacaoIssue {
+  aberta
+  em_andamento
+  resolvida
+  fechada
+}
+
+enum "PrioridadeIssue" as PrioridadeIssue {
+  baixa
+  media
+  alta
+  urgente
+}
+
+class "<<entidade>>\nEvento do laboratório" as Evento {
+  - id : Int
+  - usuarioId : Int
+  - data : DateTime
+  - nota : String
+}
+
+class "Aviso" as Aviso {
+  - id : Int
+  - usuarioId : Int
+  - usuarioNome : String
+  - nota : String
+  - criadoEm : DateTime
+}
+
+class "Grade do\nlaboratório" as GradeLab {
+  - id : Int
+  - diaDaSemana : Int 0..6
+  - inicio : String "HH:MM"
+  - fim : String "HH:MM"
+  - observacoes : String?
+}
+
+class "Grade pessoal" as GradeUser {
+  - id : Int
+  - usuarioId : Int
+  - diaDaSemana : Int 0..6
+  - inicio : String "HH:MM"
+  - fim : String "HH:MM"
+}
+
+class "Usuário" as Usuario
+
+Usuario "1" *-- "0..*" Resp : assume
+Usuario "1" *-- "0..*" Evento : registra
+Usuario "1" *-- "0..*" GradeUser : declara
+Usuario "1" *-- "0..*" Aviso : publica
+Usuario "1" --> "0..*" Issue : relata
+Usuario "0..1" <-- "0..*" Issue : resolve
+
+note right of Resp
+  A situação não existe como
+  coluna: é derivada de início,
+  fim e pausa. Uma única
+  responsabilidade pode estar
+  ativa no laboratório, o que
+  torna o plantão único e
+  inequívoco.
+end note
+
+note bottom of Aviso
+  Avisos e trilha de auditoria
+  ocupam a mesma tabela. O aviso
+  é um recorte daquela linha
+  com ação de criação e metadado
+  de usuário.
+end note
+
+@enduml

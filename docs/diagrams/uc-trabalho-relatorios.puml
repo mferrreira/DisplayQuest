@@ -1,0 +1,86 @@
+@startuml
+!include _base.puml
+
+title Casos de uso — trabalho, horas e relatórios
+
+left to right direction
+
+actor Usuário
+actor Coordenador
+actor Gerente
+actor Laboratorista
+actor "Gerente de Projeto" as GP
+
+rectangle "DisplayQuest" <<fronteira>> {
+  usecase "Iniciar sessão\nde trabalho" as UC_INI
+  usecase "Pausar sessão" as UC_PAUS
+  usecase "Retomar sessão" as UC_RET
+  usecase "Finalizar sessão" as UC_FIM
+  usecase "Excluir sessão" as UC_EXC
+  usecase "Vincular tarefas\nconcluídas" as UC_VINC
+  usecase "Consultar sessões" as UC_LIS
+  usecase "Editar log diário" as UC_LOG
+  usecase "Gerar relatório\nsemanal" as UC_GER
+  usecase "Emitir relatório\nsemanal em lote" as UC_LOTE
+  usecase "Consultar histórico\nde horas" as UC_HIST
+  usecase "Criar relatório\nde projeto" as UC_RPCRIAR
+  usecase "Editar relatório\nde projeto" as UC_RPEDIT
+  usecase "Excluir relatório\nde projeto" as UC_RPEXC
+  usecase "Anexar arquivos" as UC_ANEXO
+  usecase "Remover anexo" as UC_REMANEXO
+  usecase "Exportar relatório\nem CSV" as UC_CSV
+  usecase "Imprimir relatório" as UC_IMP
+  usecase "Baixar anexo" as UC_BAIXAR
+  usecase "Descontar horas\nmanuais" as UC_DESC
+}
+
+Usuário    --> UC_INI
+Usuário    --> UC_PAUS
+Usuário    --> UC_RET
+Usuário    --> UC_FIM
+Usuário    --> UC_LIS
+Usuário    --> UC_LOG
+Usuário    --> UC_GER
+Usuário    --> UC_RPCRIAR
+Usuário    --> UC_ANEXO
+Usuário    --> UC_BAIXAR
+GP         --> UC_VINC
+GP         --> UC_RPEDIT
+GP         --> UC_RPEXC
+GP         --> UC_REMANEXO
+GP         --> UC_CSV
+GP         --> UC_IMP
+GP         --> UC_DESC
+Coordenador --> UC_EXC
+Coordenador --> UC_HIST
+Coordenador --> UC_LOTE
+Coordenador --> UC_DESC
+Gerente     --> UC_EXC
+Gerente     --> UC_HIST
+Gerente     --> UC_LOTE
+Laboratorista --> UC_LIS
+
+UC_VINC  ..> UC_FIM    : <<inclui>>
+UC_CSV   ..> UC_RPEDIT : <<inclui>>
+UC_IMP   ..> UC_RPCRIAR : <<inclui>>
+UC_GER   ..> UC_LIS    : <<extensão>>
+
+note right of UC_FIM
+  A finalização é autorizada
+  pelo servidor: o horário e a
+  duração são calculados no
+  back, ignorando o relógio do
+  cliente. A sessão pode carregar
+  tarefas concluídas na mesma
+  chamada, e aí os pontos são
+  creditados na sequência.
+end note
+
+note bottom of UC_BAIXAR
+  Anexos de relatório ficam fora
+  da pasta pública e só são
+  servidos a quem pode ver o
+  relatório a que pertencem.
+end note
+
+@enduml

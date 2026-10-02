@@ -1,0 +1,256 @@
+@startuml
+!include _base.puml
+
+title Modelo de dados — operação do laboratório e engajamento
+
+hide empty description
+hide circle
+
+entity "users" as U {
+  * id : Int <<PK>>
+}
+
+entity "projects" as P {
+  * id : Int <<PK>>
+}
+
+entity "work_sessions" as WS {
+  * id : Int <<PK>>
+  --
+  userId : Int <<FK>>
+  userName : String
+  startTime : DateTime
+  endTime : DateTime?
+  duration : Float?
+  activity : String?
+  location : String?
+  projectId : Int? <<FK>>
+  status : String <<"active">>
+}
+
+entity "work_session_tasks" as WST {
+  * id : Int <<PK>>
+  --
+  workSessionId : Int <<FK>>
+  taskId : Int <<FK>>
+}
+
+entity "tasks" as T {
+  * id : Int <<PK>>
+  --
+  title : String
+  points : Int
+}
+
+entity "daily_logs" as DL {
+  * id : Int <<PK>>
+  --
+  userId : Int <<FK>>
+  projectId : Int? <<FK>>
+  date : DateTime
+  note : String?
+  workSessionId : Int? <<FK, único>>
+}
+
+entity "weekly_reports" as WR {
+  * id : Int <<PK>>
+  --
+  userId : Int <<FK>>
+  userName : String
+  weekStart : DateTime
+  weekEnd : DateTime
+  totalLogs : Int
+  summary : String?
+}
+
+entity "weekly_hours_history" as WHH {
+  * id : Int <<PK>>
+  --
+  userId : Int <<FK>>
+  userName : String
+  weekStart : DateTime
+  weekEnd : DateTime
+  totalHours : Float
+}
+
+entity "project_reports" as PR {
+  * id : Int <<PK>>
+  --
+  projectId : Int <<FK>>
+  authorId : Int <<FK>>
+  periodType : String
+  periodStart : DateTime
+  periodEnd : DateTime
+  title : String?
+  content : String
+}
+
+entity "report_attachments" as RA {
+  * id : Int <<PK>>
+  --
+  reportId : Int <<FK>>
+  fileName : String
+  storedPath : String
+  mimeType : String
+  sizeBytes : Int
+  uploadedBy : Int
+}
+
+entity "lab_responsibilities" as LR {
+  * id : Int <<PK>>
+  --
+  userId : Int <<FK>>
+  userName : String
+  startTime : String
+  endTime : String?
+  pausedAt : String?
+  totalPausedMs : Int
+  notes : String?
+}
+
+entity "laboratory_schedules" as LS {
+  * id : Int <<PK>>
+  --
+  dayOfWeek : Int
+  startTime : String
+  endTime : String
+  notes : String?
+}
+
+entity "user_schedules" as US {
+  * id : Int <<PK>>
+  --
+  userId : Int <<FK>>
+  dayOfWeek : Int
+  startTime : String
+  endTime : String
+}
+
+entity "lab_events" as LE {
+  * id : Int <<PK>>
+  --
+  userId : Int <<FK>>
+  userName : String
+  date : DateTime
+  note : String
+}
+
+entity "issues" as ISS {
+  * id : Int <<PK>>
+  --
+  title : String
+  description : String
+  status : IssueStatus <<"open">>
+  priority : IssuePriority <<"medium">>
+  category : String?
+  reporterId : Int <<FK>>
+  assigneeId : Int? <<FK>>
+  resolvedAt : DateTime?
+}
+
+entity "notifications" as N {
+  * id : Int <<PK>>
+  --
+  userId : Int <<FK>>
+  type : String
+  title : String
+  message : String
+  data : String?
+  read : Boolean
+  readAt : DateTime?
+  createdAt : DateTime
+}
+
+entity "rewards" as RW {
+  * id : Int <<PK>>
+  --
+  name : String
+  price : Int
+  available : Boolean
+}
+
+entity "purchases" as PU {
+  * id : Int <<PK>>
+  --
+  userId : Int <<FK>>
+  rewardId : Int <<FK>>
+  rewardName : String <<congelado>>
+  price : Int <<congelado>>
+  purchaseDate : String
+  status : String
+}
+
+entity "kanban_boards" as KB {
+  * id : Int <<PK>>
+  --
+  name : String
+  labId : Int
+}
+
+U ||--o{ WS : registra
+P |o--o{ WS : agrega
+WS ||--o{ WST : referencia
+T ||--o{ WST : aparece
+WS ||--o| DL : origina
+U ||--o{ DL : escreve
+P |o--o{ DL : contextualiza
+U ||--o{ WR : consolida
+U ||--o{ WHH : fecha semana
+P ||--o{ PR : recebe
+U ||--o{ PR : redige
+PR ||--o{ RA : anexa
+U ||--o{ LR : escala
+U ||--o{ US : declara horário
+LS ||--o{ US : orienta
+U ||--o{ LE : registra evento
+U ||--o{ ISS : relata
+U |o--o{ ISS : recebe
+U ||--o{ N : recebe
+U ||--o{ PU : compra
+RW ||--o{ PU : origina
+
+note top of WS
+  A sessão é o coração do registro de
+  trabalho. Duração e horário final são
+  calculados pelo servidor; o valor
+  enviado pelo cliente serve apenas
+  como gatilho.
+end note
+
+note bottom of PU
+  Nome e preço são copiados no momento
+  da compra. Alterar o catálogo depois
+  não reescreve o histórico do que foi
+  pago.
+end note
+
+note bottom of LR
+  Graduação de tempo em milissegundos
+  acumulados e um carimbo de pausa:
+  a mesma disciplina antifraude da
+  sessão de trabalho, aplicada à
+  escala do laboratório.
+end note
+
+note bottom of LS
+  A grade do laboratório é uma tabela
+  única, sem dono. A grade individual
+  é lida por qualquer autenticado e
+  escrita apenas por quem administra
+  usuários.
+end note
+
+note bottom of ISS
+  A única entidade do esquema com
+  status e prioridade tipados por
+  enum; as demais máquinas de estado
+  vivem em colunas de texto.
+end note
+
+note bottom of N
+  Notificações são internas ao painel:
+  o sistema não envia correio
+  eletrônico.
+end note
+
+@enduml

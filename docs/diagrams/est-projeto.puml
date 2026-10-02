@@ -1,0 +1,52 @@
+@startuml
+!include _base.puml
+
+title Máquina de estados — projeto
+
+hide empty description
+scale 1.05
+
+[*] --> Ativo : criar
+
+state Ativo
+state "Em espera" as Espera
+state "Concluído" as Concluido <<final>>
+state Arquivado
+
+Ativo    --> Espera    : colocar em espera
+Ativo    --> Concluido : concluir
+Ativo    --> Arquivado : arquivar
+Espera   --> Ativo     : retomar
+Arquivado --> Ativo    : reativar
+Concluido --> [*]      : (terminal — não pode ser excluído)
+Arquivado --> [*]      : pode ser excluído
+Espera    --> [*]      : pode ser excluído
+
+Ativo : <<projeto em andamento>>
+Ativo : recebe tarefas e sessões
+Concluido : <<projeto encerrado>>
+Concluido : sem novas tarefas
+Arquivado : <<projeto encerrado>>
+Arquivado : preservado para consulta
+
+note right of Concluido
+  Concluir é definitivo: o
+  projeto sai da lista de trabalho
+  e passa a recusar a exclusão.
+  Para encerrar sem travar o
+  registro, use Arquivado — que
+  permite exclusão posterior.
+end note
+
+note bottom of Ativo
+  Não há grafo de transições
+  validado: o campo de situação é
+  gravado como veio na requisição.
+  O que existe é uma lista de
+  valores aceitos na entrada
+  (Ativo, Concluído, Arquivado,
+  Em espera) e uma restrição de
+  exclusão por situação.
+end note
+
+@enduml

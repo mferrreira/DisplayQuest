@@ -1,0 +1,73 @@
+@startuml
+!include _base.puml
+
+title Arquitetura — o caminho de uma requisição de escrita
+
+hide empty description
+
+start
+:Cliente envia JSON à rota;
+
+if (é uma requisição de avatar?) then (sim)
+  :O middleware aplica nosniff e\nnegação de enquadramento;\nO WebP recebe cache imutável;
+  stop
+endif
+
+:requireApiActor();
+:aguardar a sessão autenticada;
+
+if (sessão válida e usuário inteiro?) then (não)
+  #FFB4A8:Resposta 401 · Não autorizado;
+  stop
+endif
+
+:ensurePermission(), ensureAnyRole()\nou ensureSelfOrPermission();
+note right
+  A decisão de autorização é uma
+  pergunta feita ao módulo
+  identidade-e-acesso, obtida do
+  singleton de composição.
+end note
+
+if (permissão satisfeita?) then (não)
+  #FFB4A8:Resposta 403 · Acesso negado;
+  stop
+endif
+
+:Caso de uso executa;
+:As regras puras do domínio\nvalidam e calculam;
+note right
+  O instante atual entra como
+  parâmetro: o núcleo não lê o
+  relógio e por isso é testável
+  sem infraestrutura.
+end note
+
+:A persistência acontece pelas portas,\npor meio dos adaptadores Prisma;
+
+if (o caso de uso prevê efeito colateral?) then (sim)
+  :Publicação por porta local:\nnotificação ou award;
+  note right
+    A falha na publicação é registrada
+    e absorvida — a transação de
+    negócio já foi confirmada e não
+    é desfeita.
+  end note
+else (não)
+endif
+
+if (houve DomainError?) then (sim)
+  #FFF0C2:domainErrorResponse():\n400 · 403 · 404 · 409;
+  stop
+else (não)
+  if (houve erro não mapeado?) then (sim)
+    #FFB4A8:Resposta 500 pelo caminho\nlegado de tratamento;
+    stop
+  else (não)
+    :Resposta 200 com o registro;
+  endif
+endif
+
+stop
+
+@enduml

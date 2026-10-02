@@ -1,0 +1,73 @@
+@startuml
+!include _base.puml
+
+title Arquitetura — camadas e a regra de dependência
+
+left to right direction
+hide empty description
+
+package "Apresentação" <<fronteira>> {
+  component "Páginas\n(App Router)" as UI
+  component "Componentes\ne contextos" as COMP
+  note bottom of COMP
+    Duas camadas de acesso a dados
+    coexistem: contextos legados e
+    consultas tipadas com
+    validação de esquema.
+  end note
+}
+
+package "Aplicação" <<fronteira>> {
+  component "Rotas HTTP\n(app/api)" as ROTAS
+  component "Guardas\nde acesso" as GUARDA
+  component "Casos de uso" as UC
+}
+
+package "Domínio" <<fronteira>> {
+  component "Regras puras\ne erros tipados" as DOM
+}
+
+package "Infraestrutura" <<fronteira>> {
+  component "Portas" as PORTA
+  component "Adaptadores\nde persistência" as ADAPT
+  component "Composição\n(root)" as COMP_ROOT
+}
+
+package "Externo" <<fronteira>> {
+  database "PostgreSQL" as DB
+  folder "Armazenamento\nde arquivos" as FS
+}
+
+UI --> COMP
+COMP --> ROTAS : HTTP
+ROTAS --> GUARDA
+ROTAS --> UC
+GUARDA --> UC
+UC --> DOM
+UC --> PORTA : interfaces
+ADAPT ..> PORTA : implementa
+COMP_ROOT ..> ADAPT : injeta
+COMP_ROOT ..> UC : constrói
+ADAPT --> DB
+ADAPT --> FS
+
+DOM ..> DB : proibido
+UC ..> DB : proibido
+ROTAS ..> DB : proibido
+
+note right of DOM
+  O núcleo de domínio não
+  conhece ORM, banco, framework
+  nem relógio: o instante atual
+  entra sempre como parâmetro,
+  o que torna as regras
+  verificáveis por teste unitário
+  sem qualquer infraestrutura.
+end note
+
+note bottom of DOM
+  A regra é verificada automaticamente por análise de dependências: qualquer
+  importação do núcleo em direção a uma camada externa derruba a verificação.
+end note
+
+@enduml

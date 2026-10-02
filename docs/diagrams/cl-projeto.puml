@@ -1,0 +1,107 @@
+@startuml
+!include _base.puml
+
+title Modelo de domínio — projetos
+
+skinparam classAttributeIconSize 0
+left to right direction
+
+class "<<entidade>>\nProjeto" as Projeto {
+  - id : Int
+  - nome : String "≤ 100"
+  - descricao : String? "≤ 500"
+  - situacao : SituacaoProjeto
+  - criadoEm : String
+  - criadoPor : Int
+  - liderId : Int?
+  - links : Json?
+  + validarEntrada() : void
+  + ehExcluivel() : Boolean
+  + aplicarAtualizacao(dados) : Projeto
+}
+
+enum "SituacaoProjeto" as SituacaoProjeto {
+  ativo
+  concluido
+  arquivado
+  em_espera
+}
+
+class "Participação" as Membro {
+  - projetoId : Int
+  - usuarioId : Int
+  - papeis : Papel[]
+  - entrouEm : DateTime
+  + podeVerMembros(ator) : Boolean
+  + podeGerenciarMembros(ator) : Boolean
+}
+
+class "Relatório\nde projeto" as Relatorio {
+  - id : Int
+  - projetoId : Int
+  - autorId : Int
+  - periodo : Periodo
+  - inicio : DateTime
+  - fim : DateTime
+  - titulo : String?
+  - conteudo : String
+  - nomeOriginal : String
+  - caminho : String
+  - mime : String
+  - tamanho : Int
+  + podeVer(ator) : Boolean
+  + podeEditar(ator) : Boolean
+  + podeExcluir(ator) : Boolean
+}
+
+class "Anexo" as Anexo {
+  - nomeOriginal : String
+  - caminhoArmazenado : String
+  - tipoMime : String
+  - bytes : Int
+  - enviadoPor : Int
+}
+
+enum "Período" as Periodo {
+  semanal
+  quinzenal
+  mensal
+  semestral
+  anual
+}
+
+class "Usuário" as Usuario
+class "Tarefa" as Tarefa
+class "Sessão" as Sessao
+
+Usuario "1" --> "0..*" Projeto : cria
+Usuario "0..1" --> "0..*" Projeto : lidera
+Projeto "1" *-- "1..*" Membro : agrega
+Usuario "1" *-- "0..*" Membro : participa
+
+Projeto "1" *-- "0..*" Tarefa : agrega
+Projeto "1" o-- "0..*" Sessao : recebe
+Projeto "1" *-- "0..*" Relatorio : documenta
+Relatorio "1" *-- "0..*" Anexo : reúne
+
+Membro ..> Papel : classifica
+
+note right of Projeto
+  Um usuário pode liderar no
+  máximo um projeto: a regra é
+  verificada no ato da indicação,
+  não por restrição do banco.
+
+  Projetos concluídos recusam
+  exclusão; arquivados e em
+  espera aceitam.
+end note
+
+note bottom of Relatorio
+  A janela do relatório é
+  derivada do período em horário
+  de São Paulo, não em UTC:
+  a semana começa na segunda.
+end note
+
+@enduml

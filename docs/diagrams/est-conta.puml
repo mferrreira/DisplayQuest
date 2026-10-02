@@ -1,0 +1,40 @@
+@startuml
+!include _base.puml
+
+title Máquina de estados — situação da conta de usuário
+
+hide empty description
+
+[*] --> Pendente : cadastro
+
+state Pendente
+state Ativa
+state Recusada
+state Suspensa
+
+Pendente   --> Ativa    : aprovar · moderar
+Pendente   --> Recusada : recusar
+Ativa      --> Suspensa : suspender
+Suspensa   --> Ativa    : reativar
+Ativa      --> Ativa    : alterar papéis · perfil
+Suspensa   --> Suspensa : manter
+Recusada   --> [*]      : (conta não é removida;\n  histórico preservado)
+
+Ativa     : <<estado ativo>>
+Ativa     : login permitido
+Suspensa  : <<estado bloqueado>>
+Suspensa  : login recusado (403)
+Pendente  : <<estado intermediário>>
+Pendente  : existe, mas não autentica
+Recusada  : <<estado terminal>>
+
+note right of Ativa
+  Só contas ativas autenticam e
+  Only Active Users alcança
+  o sistema.
+  Toda transição para Ativa é
+  cadastro com status
+  predefinido como pending.
+end note
+
+@enduml

@@ -1,0 +1,89 @@
+' ---------------------------------------------------------------------------
+' Estilo comum a todos os diagramas do documento DisplayQuest.
+' Incluído com !include _base.puml — não é renderizado isoladamente.
+' ---------------------------------------------------------------------------
+
+skinparam defaultFontName      sans-serif
+skinparam defaultFontSize      13
+skinparam shadowing            false
+skinparam packageStyle         rectangle
+skinparam classAttributeIconSize 0
+skinparam dpi                  130
+skinparam roundcorner          3
+skinparam ArrowFontSize        12
+skinparam NoteFontSize         12
+skinparam state {
+  BackgroundColor   #FCFCFD
+  BorderColor       #374151
+  FontColor         #111827
+  ArrowColor        #4B5563
+  ArrowFontColor    #374151
+  BackgroundColor<<initial>>  #E5E7EB
+  BackgroundColor<<final>>    #E5E7EB
+  BackgroundColor<<erro>>     #FBE9E7
+  BorderColor<<erro>>         #B3541E
+}
+skinparam usecase {
+  BackgroundColor   #FCFCFD
+  BorderColor       #374151
+  FontColor         #111827
+  ArrowColor        #4B5563
+}
+skinparam actor {
+  BorderColor       #374151
+  FontColor         #111827
+  BackgroundColor   #FCFCFD
+}
+skinparam class {
+  BackgroundColor   #FCFCFD
+  BorderColor       #4B5568
+  FontColor         #111827
+  ArrowColor        #4B5563
+  BorderColor<<entidade>>   #1F4E79
+  BackgroundColor<<entidade>> #EDF3F9
+  BackgroundColor<<porta>>   #F3F0F7
+  BorderColor<<porta>>       #6B5B7A
+  BackgroundColor<<servico>> #EFF6F1
+  BorderColor<<servico>>     #3F6B52
+}
+skinparam component {
+  BackgroundColor   #FCFCFD
+  BorderColor       #374151
+  FontColor         #111827
+  ArrowColor        #4B5563
+}
+skinparam interface {
+  BackgroundColor   #F7FAFC
+  BorderColor       #4A5568
+  FontColor         #111827
+}
+skinparam database {
+  BackgroundColor   #FCFCFD
+  BorderColor       #374151
+  FontColor         #111827
+}
+skinparam node {
+  BackgroundColor   #FCFCFD
+  BorderColor       #374151
+  FontColor         #111827
+}
+skinparam folder {
+  BackgroundColor   #F4F6F9
+  BorderColor       #9AA3AF
+  FontColor         #111827
+}
+skinparam componentStyle       rectangle
+skinparam rectangle {
+  BorderColor       #6B7280
+  FontColor         #111827
+  BackgroundColor   #FCFCFD
+}
+skinparam rectangle<<fronteira>> {
+  BorderColor       #1F4E79
+  BackgroundColor   #F7FAFD
+  FontColor         #1F4E79
+}
+
+hide circle
+hide empty fields
+hide empty methods

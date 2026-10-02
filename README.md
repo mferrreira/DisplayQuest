@@ -206,46 +206,45 @@ npm run db:test:setup    # migrate deploy + db:seed + tests/fixtures/g4-normaliz
 
 ## Documentacao
 
-O repositorio hoje esta documentado em tres camadas:
+### Documento principal
 
-### 1. Guias rapidos de manutencao
+**`docs/displayquest.html`** — documento único e autocontido (abra direto no navegador, sem
+servidor). Cobre visao geral e escopo, atores e permissoes, requisitos, catalogo e expansao de
+casos de uso, regras de negocio, maquinas de estado, modelo conceitual, arquitetura, modelo de
+dados, padroes, rastreabilidade, operacao e manutencao. Os 33 diagramas UML (casos de uso,
+maquinas de estado, classes, arquitetura, sequencia, entidade-relacionamento e rastreabilidade de
+requisitos) estao embutidos no proprio arquivo.
+
+O documento e **gerado**, nao editado a mao:
+
+```bash
+npm run docs:build    # renderiza os diagramas e monta docs/displayquest.html (requer Docker)
+npm run docs:check    # integridade de caracteres das fontes
+```
+
+Fontes:
+
+- `docs/src/*.md` — o texto, um arquivo por capitulo, em ordem alfabetica
+- `docs/diagrams/*.puml` — os diagramas, em notacao UML
+- `docs/theme/document.css` — a folha de estilo do documento
+
+Para mudar o documento, edite as fontes e rode `npm run docs:build`. O build falha se um
+diagrama nao renderizar, se um bloco ficar sem fechamento, se um diagrama for referenciado duas
+vezes ou se um titulo de capitulo se repetir. O resultado fica em `docs/displayquest.html` e
+pode ser aberto por `file://`.
+
+### Guias de manutencao por camada
 
 - `README.md`: visao geral do projeto, setup local e mapa do repositorio
 - `app/README.md`: estrutura da interface, contextos, telas e manutencao do frontend
 - `backend/README.md`: arquitetura backend, composition root, modulos e diretrizes de extensao
-
-### 2. Documentacao tecnica e funcional base
-
-- `docs/01-visao-geral-sistema.md`: panorama geral do sistema
-- `docs/02-manual-do-usuario.md`: uso das funcionalidades principais
-- `docs/03-regras-de-negocio.md`: regras operacionais centrais
-- `docs/04-arquitetura-tecnica.md`: visao arquitetural e organizacao tecnica
-- `docs/05-operacao-deploy.md`: orientacoes de operacao e deploy
-- `docs/06-guia-de-manutencao-handover.md`: continuidade e manutencao do projeto
-- `docs/07-modelo-de-dados.md`: entidades e relacoes principais
-
-### 3. Documentacao APOO
-
-O pacote em `docs/APOO/` organiza a documentacao formal no formato de Analise e Projeto Orientado a Objetos, incluindo:
-
-- sumario executivo
-- visao geral e escopo
-- atores e glossario
-- requisitos funcionais e nao funcionais
-- catalogo e expansao de casos de uso
-- regras de negocio
-- maquinas de estado
-- modelo conceitual
-- projeto arquitetural
-- padroes de projeto e rastreabilidade
-
-Arquivo de apoio do processo de escrita:
-
-- `docs/08-plano-acao-para-documentacao.md`
 
 ## Notas de Manutencao
 
 - rotas em `app/api/*` nao devem instanciar `createXModule()` diretamente
 - use `getBackendComposition()` para resolver dependencias do backend
 - dependencias entre dominios devem ser centralizadas no composition root
-- alteracoes estruturais relevantes devem refletir na documentacao em `docs/`
+- alteracoes de comportamento devem vir com o teste da regra correspondente
+- alteracoes estruturais devem passar por `npm run arch:check`
+- alteracoes de comportamento ou de estrutura devem refletir em `docs/src` e `docs/diagrams`,
+  seguidas de `npm run docs:build`

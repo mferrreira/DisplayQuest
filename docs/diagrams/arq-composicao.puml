@@ -1,0 +1,87 @@
+@startuml
+!include _base.puml
+
+title Arquitetura — o ponto de composição e o grafo de montagem
+
+hide empty description
+top to bottom direction
+
+actor "Rota HTTP\n(app/api)" as ROTA
+component "getBackendComposition()" as GET <<singleton>>
+
+component "createBackendComposition()" as CREATE
+
+package "módulos sem dependência cruzada" {
+  component "identity-access" as IDENT
+  component "notifications" as NOTIF
+  component "gamification" as GAME
+  component "user-management" as USER
+  component "project-management" as PROJ
+  component "project-membership" as MEMB
+  component "store" as STORE
+}
+
+package "módulos publicadores" {
+  component "task-management" as TASK
+  component "lab-operations" as LAB
+  component "reporting" as REP
+  component "work-execution" as WORK
+}
+
+component "PrismaClient\n(compartilhado)" as PRISMA <<externo>>
+component "checkDatabaseHealth()" as HEALTH
+
+GET --> CREATE : 1ª chamada\n(constrói)
+GET --> IDENT : reutiliza o singleton
+GET --> HEALTH : /api/health
+
+CREATE --> IDENT
+CREATE --> NOTIF
+CREATE --> GAME
+CREATE --> USER
+CREATE --> PROJ
+CREATE --> MEMB
+CREATE --> STORE
+
+CREATE --> TASK  : notifications +\nevents: createTaskProgressEvents\n{ awards: gamification }
+CREATE --> LAB   : ports.publisher =\nnew NotificationsLabPublisher(notifications)
+CREATE --> REP   : ports.publisher =\nnew NotificationsReportPublisher(notifications)
+CREATE --> WORK  : events:\ncreateWorkExecutionEventsPublisher\n{ awards: gamification }
+
+TASK ..> NOTIF : publica
+TASK ..> GAME : publica
+LAB  ..> NOTIF : publica
+REP  ..> NOTIF : publica
+WORK ..> GAME : publica
+
+CREATE --> PRISMA
+HEALTH --> PRISMA : SELECT 1
+
+note right of GET
+  O singleton é preguiçoso: só
+  a primeira chamada constrói
+  os onze módulos, e todas as
+  requisições seguintes
+  reutilizam a mesma instância.
+end note
+
+note bottom of CREATE
+  Esta função é o único lugar do
+  código onde dois módulos de
+  domínio se conhecem. Todo
+  acoplamento entre módulos entra
+  por injeção de porta declarada
+  no módulo consumidor e satisfeita
+  aqui — nenhum `import` cruzado
+  atravessa `backend/modules/`.
+end note
+
+note bottom of HEALTH
+  O sonda de saúde do banco deixou
+  de instanciar um cliente próprio
+  e passou a usar o cliente
+  compartilhado, exported pelo
+  próprio ponto de composição.
+end note
+
+@enduml

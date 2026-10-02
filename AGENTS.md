@@ -118,3 +118,34 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
 - **Enviar env para vitest em worktree:** o runner lê `process.env`, não `.env`, e o `.env`
   tem aspas nos valores. Exportar com `set -a; source .env; set +a; npx vitest run` (o
   `grep/cut` sem aspas também funciona).
+
+## Documentação (docs/)
+
+- **Fonte única:** `docs/displayquest.html` é **gerado**, não editado à mão. Fontes em
+  `docs/src/*.md` (texto, um arquivo por capítulo, ordem alfabética) e `docs/diagrams/*.puml`
+  (33 diagramas UML) + `docs/theme/document.css`. `npm run docs:build` renderiza os SVGs
+  (PlantUML em Docker — requer Docker no ar) e monta o HTML único; `npm run docs:check` valida
+  os caracteres das fontes. Saída atual: 15 capítulos, 33 figuras, ~1 MB autocontido (abra por
+  `file://`, sem servidor).
+- **O build é um gate duro:** falha se um `.puml` não renderizar, se um bloco cercado ficar sem
+  fechamento (bug real já ocorrido: sem o ``` final, o capítulo inteiro era absorvido como
+  legenda da figura e nada denunciava), se um diagrama for referenciado duas vezes, ou se dois
+  capítulos tiverem o mesmo título. Depois de mexer em `docs/src` ou `docs/diagrams`, rode o
+  build — e confira se nenhum aviso `AVISO:` apareceu.
+- **Não versionar intermediários:** `docs/.build/` (SVGs re-renderizados) está no `.gitignore`.
+  `docs/displayquest.html` **é** versionado.
+- **Diagramas: uma referência por arquivo.** `docs/diagrams/<id>.puml` é consumido por um único
+  bloco ```figure <id> titulo="…"```; referenciar duas vezes derruba o build. Para citar uma
+  figura já usada, escreva no texto ("a figura da implantação, no capítulo 10") — não repita o
+  bloco. O bloco aceita um corpo markdown livre, que sai como legenda abaixo da figura.
+- **Callouts:** `::: nota|atencao|limite|legado titulo="…"` … `:::` (fechamento obrigatório).
+- **Os `.md` antigos (`docs/01..08`, `docs/APOO/`) foram removidos** em 2026-10-02, arquivados
+  pelo git; o conteúdo foi reescrito em `docs/src`. Não os recrie.
+- **Ruído de caracteres:** o gerador de texto às vezes insere caracteres não latinos
+  ("树叶", "拒绝了", "分明") na prosa. `npm run docs:check` pega os não latinos; os puramente
+  ASCII (ex.: "Family", "Consulting", "efeitocolateral", "etimau") só aparecem na releitura —
+  sempre releia o que escreveu.
+- **Quirks do PlantUML desta versão:** (a) `usecase` dentro de `package`/`rectangle` não aceita
+  aresta vinda de `class` — use `class … <<casoDeUso>>` no diagrama de requisitos;
+  (b) linha começando `|palavra|` (activity bar) dentro de `if` aninhado quebra o parser;
+  (c) o token `Next` no início/fim de rótulo de activity quebra o parser.

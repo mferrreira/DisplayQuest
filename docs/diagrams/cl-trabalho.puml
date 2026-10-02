@@ -1,0 +1,100 @@
+@startuml
+!include _base.puml
+
+title Modelo de domínio — trabalho, horas e produtividade
+
+skinparam classAttributeIconSize 0
+left to right direction
+
+class "<<entidade>>\nSessão de trabalho" as Sessao {
+  - id : Int
+  - usuarioId : Int
+  - inicio : DateTime
+  - fim : DateTime?
+  - duracaoSegundos : Float?
+  - situacao : SituacaoSessao
+  - atividade : String?
+  - local : String?
+  - projetoId : Int?
+  - usuarioNome : String
+  + ehAtiva() : Boolean
+  + ehPausada() : Boolean
+  + normalizarExpiracao(agora) : boolean
+}
+
+enum "SituaçãoSessão" as SituacaoSessao {
+  ativa
+  pausada
+  concluida
+}
+
+class "Vínculo\nsessão–tarefa" as Vinculo {
+  - sessaoId : Int
+  - tarefaId : Int
+}
+
+class "<<entidade>>\nLog diário" as Log {
+  - id : Int
+  - usuarioId : Int
+  - projetoId : Int?
+  - data : DateTime
+  - nota : String?
+  - sessaoId : Int? <<único>>
+}
+
+class "Relatório\nsemanal" as Semanal {
+  - id : Int
+  - usuarioId : Int
+  - inicioSemana : DateTime
+  - fimSemana : DateTime
+  - totalRegistros : Int = 0
+  - resumo : String?
+}
+
+class "Histórico\nde horas" as Historico {
+  - id : Int
+  - usuarioId : Int
+  - inicioSemana : DateTime
+  - fimSemana : DateTime
+  - totalHoras : Float
+}
+
+class "Usuário" as Usuario
+class "Projeto" as Projeto
+class "Tarefa" as Tarefa
+
+Usuario "1" *-- "0..*" Sessao : registra
+Usuario "1" *-- "0..*" Log : escreve
+Usuario "1" *-- "0..*" Semanal : consolida
+Usuario "1" *-- "0..*" Historico : acumula
+Projeto "0..1" o-- "0..*" Sessao : agrega
+Projeto "0..1" o-- "0..*" Log : agrega
+
+Sessao "1" *-- "0..*" Vinculo : referencia
+Tarefa "1" o-- "0..*" Vinculo : referencia
+Sessao "0..1" --o "0..1" Log : origina
+
+note right of Sessao
+  Situação, instante final e
+  duração são decididos no
+  servidor. O valor de fim
+  enviado pelo cliente serve
+  apenas de gatilho: o carimbo
+  gravado é sempre o relógio
+  do servidor.
+
+  Duração é acumulada em
+  segundos ao longo dos trechos.
+end note
+
+note bottom of Historico
+  O histórico guarda uma linha
+  por semana e é reescrito na
+  virada (domingo à meia-noite,
+  horário de São Paulo). É ele
+  que alimenta os critérios de
+  badge e as médias de
+  produtividade.
+end note
+
+@enduml

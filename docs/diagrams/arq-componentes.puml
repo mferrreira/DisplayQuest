@@ -1,0 +1,97 @@
+@startuml
+!include _base.puml
+
+title Arquitetura — componentes do sistema implantado
+
+left to right direction
+hide empty description
+
+package "fora do servidor" <<fronteira>> {
+  actor "Navegador" as NAV
+}
+
+package "servidor de aplicação · processo único Node" <<fronteira>> {
+  component "Páginas do App Router" as PAG
+  component "Componentes\ne contextos de cliente" as COMP
+
+  component "Rotas HTTP\n(app/api, 77 handlers)" as API
+  component "Guardas\n(api-guard, features)" as GUARD
+  component "Serviço de cron\n(node-cron, em processo)" as CRON
+
+  component "Composição\n(backend/composition)" as COMP_ROOT
+  component "Casos de uso\n(11 módulos)" as UC
+  component "Domínio\n(regras puras)" as DOM
+  component "Portas e adaptadores" as INFRA
+
+  component "PrismaClient" as PRISMA
+}
+
+package "persistência e arquivos" <<fronteira>> {
+  database "PostgreSQL 15\n25 tabelas" as PG
+  folder "Anexos de relatório\n(/app/data/uploads)" as ARQ
+  folder "Avatares\n(/app/public/uploads)" as AVATAR
+}
+
+package "serviços externos" <<fronteira>> {
+  component "Autenticação\n(credencial na sessão)" as AUTH
+}
+
+NAV --> PAG : HTTPS
+PAG --> COMP
+COMP --> API : fetch / JSON
+CRON --> UC : dispara casos de uso
+API --> GUARD
+API --> COMP_ROOT : obtém o singleton
+GUARD --> AUTH : valida a sessão
+GUARD --> COMP_ROOT : identidade-e-acesso
+COMP_ROOT --> UC : constrói
+API --> UC : executa
+UC --> DOM : consulta
+UC --> INFRA : portas
+INFRA --> PRISMA
+PRISMA --> PG
+INFRA --> ARQ
+INFRA --> AVATAR
+
+note top of CRON
+  Agenda America/Sao_Paulo:
+  `0 0 * * 1` (reinício semanal),
+  `30 9 * * *` e `0 12,15,17 * * *`
+  (pausa programada), `59 23 * * *`
+  (varredura noturna).
+end note
+
+note bottom of CRON
+  O agendador vive dentro do
+  processo do servidor e é registrado
+  uma única vez, por processo.
+  Em uma implantação com mais de
+  uma réplica, cada réplica
+  executaria a agenda — é a
+  razão pela qual a implantação
+  recomendada é de réplica única.
+end note
+
+note left of ARQ
+  Raiz privada: anexos nunca são
+  servidos como arquivo estático.
+  Passam por uma rota autenticada
+  que consulta a permissão de
+  leitura do relatório.
+end note
+
+note left of AVATAR
+  Único volume com servição
+  estática. O middleware aplica
+  `nosniff` e `DENY` de
+  enquadramento, e marca o
+  WebP como imutável por um ano.
+end note
+
+note bottom of PG
+  O banco não é alcançável a partir
+  da rede: o serviço o declara com
+  `expose`, sem publicação de porta.
+end note
+
+@enduml

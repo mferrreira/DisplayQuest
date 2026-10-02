@@ -1,0 +1,98 @@
+@startuml
+!include _base.puml
+
+title Modelo de domínio — tarefas
+
+skinparam classAttributeIconSize 0
+left to right direction
+
+class "<<entidade>>\nTarefa" as Tarefa {
+  - id : Int
+  - titulo : String "≤ 200"
+  - descricao : String? "≤ 1000"
+  - situacao : SituacaoTarefa
+  - prioridade : Prioridade
+  - visibilidade : VisibilidadeTarefa
+  - pontos : Int ≥ 0
+  - concluida : Boolean = false
+  - concluidaEm : DateTime?
+  - prazo : String?
+  - global : Boolean = false
+  - projetoId : Int?
+  - criadoPor : Int?
+  + ehConcluivel() : Boolean
+  + ehReivindicavel() : Boolean
+  + calcularMulta(conclusao) : Int
+  + calcularPremio(conclusao) : Int
+  + decisaoAprovacao(ator) : Decisao
+}
+
+enum "SituaçãoTarefa" as SituacaoTarefa {
+  a_fazer
+  em_andamento
+  em_revisao
+  em_ajuste
+  concluida
+}
+
+enum "Prioridade" as Prioridade {
+  baixa
+  media
+  alta
+  urgente
+}
+
+enum "VisibilidadeTarefa" as VisibilidadeTarefa {
+  publica
+  delegada
+  privada
+}
+
+class "Responsável" as Resp {
+  - tarefaId : Int
+  - usuarioId : Int
+  - atribuidoPor : Int?
+  - atribuidoEm : DateTime
+}
+
+class "Progresso\nindividual" as Progresso {
+  - tarefaId : Int
+  - usuarioId : Int
+  - situacao : SituacaoTarefa = a_fazer
+  - assumidoEm : DateTime?
+  - concluidoEm : DateTime?
+  - pontosConcedidos : Int = 0
+  + jaConcluido() : Boolean
+}
+
+class "Usuário" as Usuario
+class "Projeto" as Projeto
+
+Tarefa "1" *-- "0..*" Resp : atribui
+Tarefa "1" *-- "0..*" Progresso : registra
+Usuario "1" *-- "0..*" Resp : recebe
+Usuario "1" *-- "0..*" Progresso : acumula
+Projeto "0..1" o-- "0..*" Tarefa : contém
+
+Resp ..> Progresso : par único
+
+note right of Tarefa
+  Tarefa pública e tarefa
+  delegada seguem caminhos
+  distintos de escrita: na
+  pública cada usuário tem
+  progresso próprio e mexer em
+  nome de outro exige
+  administração; na delegada só
+  o atribuído ou o gestor mexe.
+end note
+
+note bottom of Progresso
+  O progresso individual é o que
+  sustenta a semântica pública:
+  concluir a tarefa é concluir
+  a sua parte, e é isso que gera
+  os pontos de quem entregou.
+end note
+
+@enduml

@@ -1,0 +1,71 @@
+@startuml
+!include _base.puml
+
+title Sequência — aprovação de um cadastro pendente
+
+hide empty description
+autonumber
+
+actor "Gestor" as G
+participant "Rota\n/api/users/approve" as R
+participant "requireApiActor" as A
+participant "identidade-e-acesso" as IDENT
+participant "user-management" as UM
+participant "DeleteUserUseCase" as DEL
+database "users" as DB
+
+G -> R : POST { userId, action }
+R -> A : exige ator autenticado
+A -> IDENT : hasPermission(roles, MANAGE_USERS)
+IDENT --> A : permitido?
+A --> R : ator { id, roles }
+
+alt falta de permissão
+  R --> G : 403 Acesso negado
+else permissão concedida
+  R -> R : valida userId inteiro\ne action em {approve, reject}
+  R -> UM : moderatePendingUser(userId, action)
+
+  alt action = approve
+    UM -> DB : findById(userId)
+    DB --> UM : cadastro pendente
+    UM -> UM : status ← "active"
+    UM -> DB : update
+    DB --> UM : registro
+    UM --> R : projeção pública do usuário
+  else action = reject
+    R -> DEL : nada — a decisão\njá vai como exclusão
+    UM -> DEL : deleteUser(userId)
+    DEL -> DB : remove o cadastro
+    alt cadastro inexistente
+      DB --> DEL : —
+      DEL --> R : NotFoundError
+      R --> G : 404
+    else cadastro removido
+      DEL --> R : conclude
+    end
+  end
+  R --> G : 200 { user, message }
+end
+
+note over A, IDENT
+  O ator é derivado da sessão, nunca do
+  corpo da requisição: o cliente não
+  declara o próprio papel.
+end note
+
+note over UM, DEL
+  A rejeição não é um estado — é uma
+  exclusão. A conta pendente é apagada
+  e precisa ser recriada do zero caso
+  a pessoa volte a se cadastrar.
+end note
+
+note over R
+  A enumeração `P2025` do Prisma é
+  tratada à mão pela rota, porque não é
+  um erro de domínio e por isso não
+  passa pelo mapeador comum.
+end note
+
+@enduml

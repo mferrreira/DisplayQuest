@@ -1,0 +1,112 @@
+@startuml
+!include _base.puml
+
+title Arquitetura — módulos de domínio do back-end
+
+hide empty description
+skinparam packageStyle rectangle
+top to bottom direction
+
+' --- módulos sem dependência de outros módulos -----------------------------
+package "identidade-e-acesso" {
+  class "<<porta>>\nConsulta de\nautorização" as P_IDENT
+}
+
+package "gestão-de-usuários" {
+  class "Casos de uso" as UC_USU
+  class "<<porta>>\nRepositório\nde usuários" as P_USU
+}
+
+package "gestão-de-projetos" {
+  class "Casos de uso" as UC_PROJ
+  class "<<porta>>\nProjeto e\nmembros" as P_PROJ
+}
+
+package "participação-em-projetos" {
+  class "Casos de uso" as UC_MEMB
+  class "<<porta>>\nParticipação\n(vinclui 1 líder)" as P_MEMB
+}
+
+package "loja" {
+  class "Casos de uso" as UC_STORE
+  class "<<porta>>\nCompras e\nrecompensas" as P_STORE
+}
+
+' --- módulos publicadores ---------------------------------------------------
+package "operação-do-laboratório" {
+  class "Casos de uso" as UC_LAB
+  class "<<porta>>\nPublicação\nde issue" as P_LABPUB
+}
+
+package "relatórios" {
+  class "Casos de uso" as UC_REP
+  class "<<porta>>\nPublicação\nde relatório" as P_REPPUB
+}
+
+package "gestão-de-tarefas" {
+  class "Casos de uso" as UC_TASK
+  class "<<porta>>\nNotificação\nde tarefa" as P_TASKNOT
+  class "<<porta>>\nPremiação\nde tarefa" as P_TASKAWARD
+}
+
+package "execução-de-trabalho" {
+  class "Casos de uso" as UC_WORK
+  class "<<porta>>\nPremiação\nde sessão" as P_WORKAWARD
+}
+
+' --- sumidouros ------------------------------------------------------------
+package "notificações" {
+  class "Casos de uso" as UC_NOT
+  class "<<porta>>\nRepositório\nde notificações" as P_NOT
+}
+
+package "gamificação" {
+  class "Casos de uso" as UC_GAME
+  class "<<porta>>\nConcessão e\nprogressão" as P_GAME
+}
+
+' --- dependências ----------------------------------------------------------
+UC_LAB   ..> P_LABPUB   : publica
+UC_REP   ..> P_REPPUB   : publica
+UC_TASK  ..> P_TASKNOT  : publica
+UC_TASK  ..> P_TASKAWARD : publica
+UC_WORK  ..> P_WORKAWARD : publica
+
+P_LABPUB   <..  UC_NOT : atende
+P_REPPUB   <..  UC_NOT : atende
+P_TASKNOT  <..  UC_NOT : atende
+P_WORKAWARD <.. UC_GAME : atende
+P_TASKAWARD <.. UC_GAME : atende
+
+UC_USU ..> P_USU
+UC_PROJ ..> P_PROJ
+UC_MEMB ..> P_MEMB
+UC_STORE ..> P_STORE
+UC_TASK ..> UC_NOT  : <<agrega>>
+UC_WORK ..> UC_GAME : <<agrega>>
+UC_NOT ..> P_NOT
+UC_GAME ..> P_GAME
+
+UC_PROJ <.. P_IDENT : usa
+UC_MEMB <.. P_IDENT : usa
+UC_TASK <.. P_IDENT : usa
+UC_WORK <.. P_IDENT : usa
+UC_LAB  <.. P_IDENT : usa
+
+note right of UC_NOT
+  Notificações e gamificação são
+  sumidouros: nenhum outro módulo
+  os importa. Todo acoplamento
+  entre módulos acontece no
+  ponto de composição, por
+  injeção de porta.
+end note
+
+note bottom of P_IDENT
+  Único módulo sem casos de uso:
+  expõe diretamente uma pergunta
+  sobre permissão, papel e
+  acesso a si próprio.
+end note
+
+@enduml

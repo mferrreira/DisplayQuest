@@ -1,0 +1,75 @@
+@startuml
+!include _base.puml
+
+title Casos de uso — engajamento e comunicação
+
+left to right direction
+
+actor Usuário
+actor Laboratorista
+actor Coordenador
+
+rectangle "DisplayQuest" <<fronteira>> {
+  usecase "Consultar pontos\ne progresso" as UC_PROG
+  usecase "Consultar badges" as UC_BADGES
+  usecase "Consultar ranking" as UC_RANK
+  usecase "Ver catálogo\nde recompensas" as UC_CAT
+  usecase "Resgatar\nrecompensa" as UC_RESG
+  usecase "Consultar minhas\ncompras" as UC_COMPRAS
+  usecase "Criar, editar e\nexcluir recompensa" as UC_REGCAT
+  usecase "Avaliar critérios\nde badge" as UC_EVAL
+  usecase "Criar, editar e\nexcluir badge" as UC_REGBADGE
+  usecase "Conceder badge" as UC_CONCEDER
+  usecase "Retirar badge" as UC_RETIRAR
+  usecase "Aprovar compra" as UC_APCOMPRA
+  usecase "Rejeitar compra" as UC_REJC
+  usecase "Concluir entrega" as UC_ENTREG
+  usecase "Cancelar compra" as UC_CANC
+  usecase "Ler notificação" as UC_LER
+  usecase "Marcar tudo\ncomo lido" as UC_TUDO
+  usecase "Excluir notificação" as UC_EXCN
+  usecase "Transmitir comunicado" as UC_COMUNICAR
+}
+
+Usuário      --> UC_PROG
+Usuário      --> UC_BADGES
+Usuário      --> UC_RANK
+Usuário      --> UC_CAT
+Usuário      --> UC_RESG
+Usuário      --> UC_COMPRAS
+Usuário      --> UC_LER
+Usuário      --> UC_TUDO
+Usuário      --> UC_EXCN
+Laboratorista --> UC_ENTREG
+Coordenador  --> UC_REGCAT
+Coordenador  --> UC_REGBADGE
+Coordenador  --> UC_CONCEDER
+Coordenador  --> UC_RETIRAR
+Coordenador  --> UC_APCOMPRA
+Coordenador  --> UC_REJC
+Coordenador  --> UC_COMUNICAR
+Coordenador  --> UC_EVAL
+
+UC_RESG  ..> UC_COMPRAS : <<inclui>>
+UC_CONCEDER ..> UC_EVAL : <<extensão>>
+UC_ENTREG  ..> UC_COMPRAS : <<inclui>>
+
+note right of UC_RESG
+  O resgate debita pontos na
+  mesma transação que grava a
+  compra, e congela o nome e o
+  preço da recompensa para que
+  uma alteração futura no catálogo
+  não mude o histórico do resgate.
+end note
+
+note bottom of UC_COMUNICAR
+  Comunicados são entregues no
+  painel interno para todos os
+  usuários ativos. O sistema não
+  dispara e-mail: a notificação
+  existe apenas dentro da
+  aplicação.
+end note
+
+@enduml

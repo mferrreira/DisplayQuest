@@ -183,5 +183,13 @@ scripts/compare-visual-baseline.mjs
 # Documentacao local nao versionada (decisao do dono 2026-10-01): declarada aqui em vez
 # de ficar como untracked solto, para nao reaparecer como surpresa nem se perder num clean.
 docs/Projeto/
+
+# Intermediarios da geracao do documento (docs/displayquest.html): os SVGs sao
+# re-renderizados pelo build a partir de docs/diagrams, nao versionados.
+docs/.build/
+
+# Credenciais usadas pelo script de captura de telas do guia do usuario.
+# Nunca commitar: contem senha de uma conta real da instancia de operacao.
+docs/.capture.env
 displayquest-v2/clean-arch/PENDENCIAS-FINAIS.md
 displayquest-v2/plan-v2/UI-UX.md

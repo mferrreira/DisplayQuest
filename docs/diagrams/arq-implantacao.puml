@@ -1,0 +1,94 @@
+@startuml
+!include _base.puml
+
+title Arquitetura — implantação
+
+left to right direction
+hide empty description
+
+node "máquina hospedeira" as HOST <<node>> {
+
+  node "rede do Compose\n(display-quest-network)" as NET <<node>> {
+
+    node "contêiner display-quest" as APP <<node>> {
+      component "Next.js · node:20-alpine\nUSER nextjs (uid 1001)" as NEXT
+      component "migrations Prisma\nexecutadas no start" as MIG
+      component "agenda de cron\n(agendada no start)" as CRON
+    }
+
+    node "contêiner display-quest-db" as DBC <<node>> {
+      database "PostgreSQL 15.3\nPOSTGRES_DB / USER / PASSWORD" as PG
+    }
+  }
+
+  folder "volume postgres_data" as V1
+  folder "volume uploads_data\n→ /app/public/uploads" as V2
+  folder "volume report_files_data\n→ /app/data/uploads" as V3
+
+  interface "127.0.0.1:3000" as P3000 <<interface>>
+  interface "127.0.0.1:5432\n(override, só loopback)" as P5432 <<interface>>
+  interface "127.0.0.1:5433\n(banco de teste, isolado)" as P5433 <<interface>>
+}
+
+actor "Navegador\ndo operador" as NAV
+database "dq-dev-test-db\n(fora do Compose, opcional)" as TESTDB
+
+NAV --> P3000
+P3000 --> NEXT
+NEXT --> MIG
+NEXT --> CRON
+NEXT --> PG : 5432 intra-rede
+DBC --> PG
+
+V1 --> PG
+V2 --> NEXT : avatares
+V3 --> NEXT : anexos
+
+P5432 --> PG
+P5433 --> TESTDB
+
+note right of NEXT
+  Construtor em duas etapas; a
+  imagem final copia a saída
+  `standalone` do Next e inicia
+  `node server.js` sem gerenciador
+  de processos.
+end note
+
+note right of V2
+  Somente `/app/public/uploads` e
+  `/app/data/uploads` são graváveis
+  pelo usuário da aplicação: o
+  Dockerfile cria os dois diretórios
+  e lhes atribui a propriedade.
+  Qualquer novo caminho de escrita
+  precisa do mesmo tratamento, ou a
+  gravação falha com EACCES.
+end note
+
+note bottom of P5432
+  A publicação em loopback vem de um
+  arquivo de sobreposição versionado,
+  que o Compose carrega por convenção
+  de nome e portanto também entra em
+  produção. É seguro: amarra apenas
+  em 127.0.0.1, nunca em 0.0.0.0.
+end note
+
+note left of P3000
+  O Compose sobe a aplicação com
+  dependência Condition: service_healthy
+  sobre o banco; o comando de start
+  ainda aguarda, executa as migrations
+  versionadas e só então inicia o
+  servidor.
+end note
+
+note bottom of TESTDB
+  A suíte de integração de banco real
+  roda contra um contêiner separado,
+  em outra porta, e nunca contra a
+  instância de produção.
+end note
+
+@enduml
