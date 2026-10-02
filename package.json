@@ -2,6 +2,9 @@
   "name": "my-v0-project",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "20.x"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -15,6 +18,8 @@
     "db:migrate:status": "prisma migrate status",
     "db:reset:local": "prisma migrate reset --force",
     "db:safe-deploy": "bash scripts/db-safe-deploy.sh",
+    "db:test:up": "docker compose -f docker-compose.test.yml up -d",
+    "db:test:setup": "DATABASE_URL=postgresql://dq_dev:dq_dev_local_only@127.0.0.1:5433/dq_dev_test prisma migrate deploy && DATABASE_URL=postgresql://dq_dev:dq_dev_local_only@127.0.0.1:5433/dq_dev_test npm run db:seed && docker exec -i dq-dev-test-db psql -U dq_dev -d dq_dev_test -f - < tests/fixtures/g4-normalize.sql",
     "arch:check": "npx depcruise --config .dependency-cruiser.js --ts-config tsconfig.json --ts-pre-compilation-deps --output-type err .",
     "arch:check:sh": "bash scripts/arch-check.sh",
     "check:env": "node scripts/check-env-secrets.js"
