@@ -69,7 +69,7 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
       "assigneeIds",
       "projectId", 
       "dueDate", 
-      "points", 
+      // plan-v3 OND1-D (AC-P3-03): "points" saiu da lista — editar tarefa não redefine valor.
       "completed", 
       "taskVisibility", 
       "isGlobal"
@@ -146,7 +146,9 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       userId: userToAward,
     })
     
-    console.log(`✅ Task ${id} completed by user ${userToAward}. Awarded ${task.points} points.`)
+    // O valor creditado é decidido pelo domínio (points-rules) e publicado pelo publisher de
+    // gamificação; a rota não sabe o número — logar `task.points` mentia (plan-v3 OND1-D).
+    console.log(`✅ Task ${id} completed by user ${userToAward}.`)
     
     return NextResponse.json({ task: task.toJSON() })
   } catch (error: any) {

@@ -152,12 +152,14 @@ export function projectedAward(task: Pick<Task, "dueDate">, now: Date = new Date
 // ---- backlog parser (legacy backlog-dialog parity) ----
 /**
  * One task per line. Optional prefixes: `!alta`/`!media`/`!baixa`/`!urgente` set priority,
- * `@pontos` (integer) sets points. Everything else is the title.
+ * `#dd/mm` sets the due date. Everything else is the title.
+ *
+ * plan-v3 DEC-41: `@pontos` é aceito e ignorado (o número define menos valor que antes — toda
+ * tarefa vale `POINTS_PER_TASK`), então ele não aparece mais no tipo de saída.
  */
 export interface ParsedBacklogLine {
   title: string;
   priority: Task["priority"];
-  points: number;
   dueDate: string | null; // ISO date string (YYYY-MM-DD) or null
 }
 
@@ -184,7 +186,6 @@ export function parseBacklogLines(raw: string): ParsedBacklogLine[] {
     .filter(Boolean)
     .map((line) => {
       let priority: Task["priority"] = "medium";
-      let points = 0;
       let dueDate: string | null = null;
       let title = line;
 
@@ -199,7 +200,9 @@ export function parseBacklogLines(raw: string): ParsedBacklogLine[] {
 
       const pointsMatch = title.match(/\s@(\d+)\b/);
       if (pointsMatch) {
-        points = Number(pointsMatch[1]);
+        // plan-v3 DEC-41: a sintaxe `@N` continua aceita — backlog que as pessoas já têm
+        // escrito não quebra — mas o número não define ponto nenhum: toda tarefa vale
+        // POINTS_PER_TASK. O token é removido do título como antes.
         title = title.replace(pointsMatch[0], "");
       }
       const priorityMatch = title.match(/\s!(alta|media|média|baixa|urgente)\b/i);
@@ -208,7 +211,7 @@ export function parseBacklogLines(raw: string): ParsedBacklogLine[] {
         priority = p === "alta" ? "high" : p === "baixa" ? "low" : p === "urgente" ? "urgent" : "medium";
         title = title.replace(priorityMatch[0], "");
       }
-      return { title: title.trim(), priority, points, dueDate };
+      return { title: title.trim(), priority, dueDate };
     })
     .filter((t) => t.title.length > 0);
 }

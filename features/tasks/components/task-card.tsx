@@ -42,7 +42,6 @@ import {
   User,
   Flag,
   Users,
-  Star,
   Crown,
   Zap,
   Check,
@@ -132,7 +131,10 @@ export function TaskCard({ task, index, isOverdue, isDueToday, isCompact, onEdit
 
   const isPublicTask = task.taskVisibility === "public"
   const isGlobalTask = task.isGlobal
-  const isHighPoints = task.points >= 50
+  // plan-v3 OND1-D (DEC-30): o selo mostra a base fixa da regla, nunca `task.points` — a
+  // coluna virou histórico (DEC-40) e o valor creditado depende do prazo (ver task-card.tsx
+  // toast e task-detail-dialog.tsx). O antigo `isHighPoints` (>= 50) morreu aqui.
+  const pointsBadgeTitle = `Tarefa vale ${POINTS_PER_TASK} pontos — bônus de 50% se entregue adiantada, penalidade de ${POINTS_PER_TASK} por dia de atraso`
 
   const userRoles = user?.roles ?? []
   const isLeader =
@@ -286,11 +288,12 @@ export function TaskCard({ task, index, isOverdue, isDueToday, isCompact, onEdit
 
                   {isCompact ? (
                     <div className="flex shrink-0 items-center gap-1.5">
-                      {task.points > 0 && (
-                        <Badge className="bg-gradient-to-r from-blue-500 to-indigo-500 text-[10px] font-bold text-white dark:from-blue-500/20 dark:to-indigo-500/20 dark:text-blue-300">
-                          {task.points} pts
-                        </Badge>
-                      )}
+                      <Badge
+                        className="bg-gradient-to-r from-blue-500 to-indigo-500 text-[10px] font-bold text-white dark:from-blue-500/20 dark:to-indigo-500/20 dark:text-blue-300"
+                        title={pointsBadgeTitle}
+                      >
+                        {POINTS_PER_TASK} pts
+                      </Badge>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button
@@ -396,12 +399,12 @@ export function TaskCard({ task, index, isOverdue, isDueToday, isCompact, onEdit
                           QUEST GLOBAL
                         </Badge>
                       )}
-                      {task.points > 0 && (
-                        <Badge className="bg-gradient-to-r from-blue-500 to-indigo-500 text-xs font-bold text-white dark:from-blue-500/20 dark:to-indigo-500/20 dark:text-blue-300">
-                          {isHighPoints && <Star className="mr-1 h-3 w-3" aria-hidden="true" />}
-                          {task.points} pts
-                        </Badge>
-                      )}
+                      <Badge
+                        className="bg-gradient-to-r from-blue-500 to-indigo-500 text-xs font-bold text-white dark:from-blue-500/20 dark:to-indigo-500/20 dark:text-blue-300"
+                        title={pointsBadgeTitle}
+                      >
+                        {POINTS_PER_TASK} pts
+                      </Badge>
                     </div>
 
                     {assigneeIds.length > 0 && (

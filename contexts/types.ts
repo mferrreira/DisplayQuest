@@ -161,7 +161,7 @@ export interface TaskFormData {
   assigneeIds: string[]
   project: string
   dueDate: string
-  points: number
+  // plan-v3 DEC-30: `points` saiu do formulário — a premiação é fixa e decidedora no domínio.
   completed: boolean
   taskVisibility?: "public" | "delegated" | "private"
   isGlobal?: boolean

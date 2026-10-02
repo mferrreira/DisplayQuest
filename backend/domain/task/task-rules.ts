@@ -11,6 +11,7 @@
  */
 import { hasAnyRole, hasPermission } from "../identity";
 import { ValidationError } from "../errors";
+import { POINTS_PER_TASK } from "./points-rules";
 import type { ITask, Task } from "./Task";
 import type { TaskStatus } from "./TaskStatus";
 import type { TaskVisibility } from "./TaskVisibility";
@@ -393,7 +394,8 @@ export function createTaskRecord(data: NewTaskInput, now: Date): ITask {
   if (data.description && data.description.length > 1000) {
     throw new ValidationError("Descrição da tarefa não pode ter mais de 1000 caracteres");
   }
-  if ((data.points || 0) < 0) throw new ValidationError("Pontos da tarefa não podem ser negativos");
+  const points = data.points ?? POINTS_PER_TASK; // plan-v3 DEC-30: sem entrada do cliente, toda tarefa vale 10
+  if (points < 0) throw new ValidationError("Pontos da tarefa não podem ser negativos");
 
   return {
     title,
@@ -404,7 +406,7 @@ export function createTaskRecord(data: NewTaskInput, now: Date): ITask {
     assigneeIds: data.assigneeIds || (data.assignedTo ? [data.assignedTo] : []),
     projectId: data.projectId || null,
     dueDate: data.dueDate || null,
-    points: data.points || 0,
+    points,
     completed: data.completed || false,
     completedAt: data.completed || data.status === "done" ? now : null,
     taskVisibility: data.taskVisibility || "delegated",

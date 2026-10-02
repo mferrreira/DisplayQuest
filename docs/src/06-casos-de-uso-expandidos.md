@@ -89,8 +89,8 @@ identificador resultam em perda definitiva.
 6. O sistema persiste a tarefa com a situação concluída, a marca de conclusão e o
    instante, junto com o conjunto de responsáveis já resolvido.
 7. Se a tarefa não for pública nem global, o contador de tarefas concluídas do responsável
-   é incrementado — inclusive quando a tarefa não concede pontos.
-8. Se a tarefa conceder pontos, o award correspondente é disparado.
+   é incrementado.
+8. O award correspondente é disparado, com o valor calculado no domínio a partir do prazo.
 9. O responsável recebe a notificação de aprovação.
 10. O aprovador recebe a confirmação.
 
@@ -121,7 +121,7 @@ aplica àquela tarefa específica.
 | Efeito | Condição |
 | --- | --- |
 | Incremento do contador de tarefas concluídas | Tarefa não pública e não global, com responsável resolvido |
-| Award de pontos | Tarefa com pontuação maior que zero |
+| Award de pontos | Aprovação de qualquer tarefa elegível; o valor é calculado no domínio (10 por padrão, 15 quando antecipada, 10 menos 10 por dia de atraso) |
 | Notificação ao responsável | Tarefa com responsável resolvido |
 
 Os três efeitos ocorrem fora da transação que persiste a aprovação e são absorvidos em

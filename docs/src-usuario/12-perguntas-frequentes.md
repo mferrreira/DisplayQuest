@@ -26,7 +26,7 @@ Os botões **Aprovar** e **Rejeitar** só aparecem na coluna **Em Revisão**, e 
 
 ## Por que a tarefa aparece com pontos negativos?
 
-Porque foi aprovada depois do prazo. A penalidade é aplicada sobre os pontos originais e o detalhe da tarefa mostra o valor resultante. Para evitar, entregue antes do vencimento ou ajuste o prazo antes da aprovação.
+Porque foi aprovada depois do prazo. Toda tarefa vale 10 pontos e a penalidade é de 10 pontos por dia de atraso, contados em dias de calendário — sem limite inferior, então o valor pode ficar negativo. Para evitar, aprove antes do vencimento ou ajuste o prazo antes da aprovação.
 
 ## Dá para transferir horas ou pontos entre pessoas?
 

@@ -2,7 +2,7 @@
 
 /**
  * TaskDialog (E2/T2.6) — create/edit, RHF+Zod (spec §5.2).
- * Mirrors gateway constraints: title 1–200, description ≤1000, points ≥0,
+ * Mirrors gateway constraints: title 1–200, description ≤1000,
  * isGlobal requires MANAGE_USERS and disables project/assignees/visibility (gateway :86–93).
  */
 import { useEffect, useMemo, useState } from "react"
@@ -39,17 +39,18 @@ import { useProjects } from "@/features/projects"
 import { useUsers } from "@/features/users"
 import { useTaskMutations } from "../hooks/use-tasks"
 import { parseBacklogLines } from "../utils/move-rules"
+import { POINTS_PER_TASK } from ".."
 import type { Task } from "@/entities/task"
 import { listProjectMembers, type ProjectMember } from "@/lib/api/project-members"
 
 type TaskDialogTab = "task" | "backlog"
 
 const BACKLOG_TEMPLATE = [
-  "Comprar reagentes !alta @30 #25/12",
-  "Calibrar equipamento @10 #15/03/2026",
+  "Comprar reagentes !alta #25/12",
+  "Calibrar equipamento #15/03/2026",
   "Testar sensor !urgente",
-  "Analisar dados !baixa @5 #01/01",
-  "Escrever relatório !media @20",
+  "Analisar dados !baixa #01/01",
+  "Escrever relatório !media",
 ].join("\n")
 
 const taskFormSchema = z.object({
@@ -58,7 +59,7 @@ const taskFormSchema = z.object({
   projectId: z.string().optional(),
   assigneeIds: z.array(z.number().int()),
   dueDate: z.string().optional(),
-  points: z.coerce.number().int("Pontos devem ser um número inteiro").min(0, "Pontos não podem ser negativos"),
+  // plan-v3 OND1-D (AC-P3-03): sem campo de pontos — o servidor aplica POINTS_PER_TASK.
   priority: z.enum(["low", "medium", "high", "urgent"]),
   taskVisibility: z.enum(["public", "delegated", "private"]),
   isGlobal: z.boolean(),
@@ -108,7 +109,6 @@ export function TaskDialog({ open, onOpenChange, task, defaultProjectId }: TaskD
       projectId: undefined,
       assigneeIds: [],
       dueDate: "",
-      points: 10,
       priority: "medium",
       taskVisibility: "delegated",
       isGlobal: false,
@@ -129,7 +129,6 @@ export function TaskDialog({ open, onOpenChange, task, defaultProjectId }: TaskD
         projectId: task?.projectId?.toString() ?? defaultProjectId?.toString(),
         assigneeIds: task?.assigneeIds ?? [],
         dueDate: task?.dueDate ? task.dueDate.slice(0, 10) : "",
-        points: task?.points ?? 10,
         priority: task?.priority ?? "medium",
         taskVisibility: task?.taskVisibility ?? "delegated",
         isGlobal: task?.isGlobal ?? false,
@@ -185,7 +184,6 @@ export function TaskDialog({ open, onOpenChange, task, defaultProjectId }: TaskD
       // legacy task-form parity (:199): single-create route does NOT default status
       // (only the backlog array branch does) and Prisma requires it.
       status: "to-do",
-      points: parsed.points,
       priority: parsed.priority,
       taskVisibility: parsed.taskVisibility,
       isGlobal: parsed.isGlobal,
@@ -231,7 +229,6 @@ export function TaskDialog({ open, onOpenChange, task, defaultProjectId }: TaskD
         backlogParsed.map((t) => ({
           title: t.title,
           priority: t.priority,
-          points: t.points,
           dueDate: t.dueDate,
           projectId,
         })),
@@ -401,26 +398,12 @@ export function TaskDialog({ open, onOpenChange, task, defaultProjectId }: TaskD
             </>
           )}
 
-          <div className="grid grid-cols-3 gap-3">
+          {/* plan-v3 OND1-D (DEC-30): o campo de pontos saiu do formulário — toda tarefa vale
+              POINTS_PER_TASK e quem cria não define valor. */}
+          <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label htmlFor="task-due">Prazo</Label>
               <Input id="task-due" type="date" {...register("dueDate")} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="task-points">Pontos</Label>
-              <Input
-                id="task-points"
-                type="number"
-                min={0}
-                aria-invalid={Boolean(errors.points)}
-                aria-describedby={errors.points ? "task-points-error" : undefined}
-                {...register("points")}
-              />
-              {errors.points && (
-                <p id="task-points-error" className="text-sm text-destructive">
-                  {errors.points.message}
-                </p>
-              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="task-priority">Prioridade</Label>
@@ -504,14 +487,16 @@ export function TaskDialog({ open, onOpenChange, task, defaultProjectId }: TaskD
                     </span>
                     <span className="text-muted-foreground">prioridade (opcional)</span>
                     <span>
-                      <code className="font-mono">@30</code>
-                    </span>
-                    <span className="text-muted-foreground">pontos (opcional)</span>
-                    <span>
                       <code className="font-mono">#25/12</code>{" "}
                       <code className="font-mono">#25/12/2026</code>
                     </span>
                     <span className="text-muted-foreground">vencimento (opcional)</span>
+                    <span>
+                      <code className="font-mono">@30</code>
+                    </span>
+                    <span className="text-muted-foreground">
+                      aceito e ignorado — toda tarefa vale {POINTS_PER_TASK} pontos
+                    </span>
                   </div>
                   <Button
                     variant="outline"
@@ -549,11 +534,11 @@ export function TaskDialog({ open, onOpenChange, task, defaultProjectId }: TaskD
                 rows={8}
                 value={backlogRaw}
                 onChange={(e) => setBacklogRaw(e.target.value)}
-                placeholder="Comprar reagentes !alta @30 #25/12
-Calibrar equipamento @10
+                placeholder="Comprar reagentes !alta #25/12
+Calibrar equipamento #15/03/2026
 Testar sensor !urgente
-Analisar dados !baixa @5
-Escrever relatório !media @20"
+Analisar dados !baixa #01/01
+Escrever relatório !media"
                 aria-label="Lista de tarefas para importação"
                 className="font-mono text-sm"
               />

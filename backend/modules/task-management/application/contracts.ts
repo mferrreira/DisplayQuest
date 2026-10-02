@@ -6,7 +6,10 @@ export interface ListTasksForActorQuery {
   projectId?: number
 }
 
-export type CreateTaskCommand = Omit<ITask, "id"> & {
+export type CreateTaskCommand = Omit<ITask, "id" | "points"> & {
+  // plan-v3 DEC-30: caller no longer defines the award. Kept only for internal/backlog callers
+  // that still carry the historical value; when absent, createTaskRecord applies POINTS_PER_TASK.
+  points?: number
   creationMode?: "individual" | "shared"
 }
 

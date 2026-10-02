@@ -77,7 +77,8 @@ export async function POST(request: Request) {
           assigneeIds: Array.isArray(task.assigneeIds) ? task.assigneeIds : undefined,
           projectId: task.projectId ?? null,
           dueDate: task.dueDate ?? null,
-          points: task.points ?? 0,
+          // plan-v3 OND1-D (DEC-30): o importador de backlog não define pontuação. A coluna
+          // `points` continua existindo no schema como histórico e recebe POINTS_PER_TASK.
           completed: task.completed ?? false,
           taskVisibility: task.taskVisibility ?? "delegated",
           isGlobal: task.isGlobal ?? false,
@@ -101,13 +102,14 @@ export async function POST(request: Request) {
       assigneeIds,
       projectId,
       dueDate,
-      points,
       completed,
       taskVisibility,
       isGlobal,
       creationMode
     } = body
 
+    // plan-v3 OND1-D (AC-P3-03): `points` não é lido do corpo. createTaskRecord aplica
+    // POINTS_PER_TASK quando o caller não informa — a superfície deixou de definir valor.
     const task = await taskManagementModule.createTask({
       title,
       description,
@@ -117,7 +119,6 @@ export async function POST(request: Request) {
       assigneeIds,
       projectId,
       dueDate,
-      points,
       completed,
       taskVisibility,
       isGlobal,

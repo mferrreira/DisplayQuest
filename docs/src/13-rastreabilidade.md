@@ -12,12 +12,12 @@ responder, a partir de qualquer um dos níveis, onde o comportamento é decidido
 | RF-01 · Conta sob aprovação | Criar conta, Aprovar conta, Recusar conta, Suspender conta | RB-01, RB-02, RB-03 | Usuário, SituaçãoConta | `user-management`, `identity-access` |
 | RF-02 · Papéis e permissões | Gerenciar usuários, Atribuir papéis, Definir papéis no projeto | RB-04, RB-05, RB-06 | Papel, Participação | `identity-access`, `user-management`, `project-membership` |
 | RF-03 · Projeto com líder único | Criar projeto, Editar projeto, Definir líder, Gerenciar membros | RB-07 a RB-11 | Projeto, Participação | `project-management`, `project-membership` |
-| RF-04 · Tarefa revisada por terceiro | Mover no quadro, Concluir, Submeter, Aprovar, Rejeitar | RB-12 a RB-19 | Tarefa, Responsável, Progresso individual | `task-management` |
+| RF-04 · Tarefa revisada por terceiro | Mover no quadro, Concluir, Submeter, Aprovar, Rejeitar | RB-12 a RB-19, RB-66 | Tarefa, Responsável, Progresso individual | `task-management` |
 | RF-05 · Sessão regida pelo servidor | Iniciar, Pausar, Retomar, Finalizar, Excluir, Vincular tarefas | RB-20 a RB-31 | Sessão de trabalho, Vínculo, Log diário | `work-execution` |
 | RF-06 · Relatório com anexo | Criar, Editar, Excluir relatório, Anexar, Baixar | RB-32 a RB-38 | Relatório de projeto, Anexo | `reporting` |
 | RF-07 · Plantão único e visível | Assumir, Pausar, Retomar, Encerrar responsabilidade, Abrir e tratar issue | RB-39 a RB-41, RB-44 a RB-50 | Responsabilidade, Issue | `lab-operations` |
 | RF-08 · Grade com escrita restrita | Consultar grade, Editar a própria grade, Editar grade de terceiros | RB-42, RB-43 | Grade do laboratório, Grade pessoal | `lab-operations` |
-| RF-09 · Pontos, distintivos e recompensa | Consultar progresso, Resgatar, Aprovar compra, Conceder badge | RB-51 a RB-57 | Recompensa, Compra, Distintivo, Premiação | `store`, `gamification` |
+| RF-09 · Pontos, distintivos e recompensa | Consultar progresso, Resgatar, Aprovar compra, Conceder badge | RB-51 a RB-57, RB-67 a RB-70 | Recompensa, Compra, Distintivo, Premiação | `store`, `gamification` |
 | RF-10 · Comunicado interno | Transmitir comunicado, Ler notificação, Marcar tudo como lido | RB-58 a RB-61 | Notificação, Público | `notifications` |
 
 ## Critérios de aceitação por requisito
@@ -30,7 +30,7 @@ enunciados na forma de condição observável.
 | RF-01 | Uma conta recém-criada não autentica; após aprovação, autentica. Uma conta recusada não pode ser consultada nem reativada. |
 | RF-02 | Um ator sem a permissão requerida recebe 403 em rota protegida, mesmo que a requisição seja bem formada. |
 | RF-03 | Atribuir a liderança a alguém que já lidera outro projeto produz 409. Excluir um projeto concluído é recusado. |
-| RF-04 | Aprovar uma tarefa que não está em revisão produz 409. Um gerente de projeto não aprova a própria entrega. Uma tarefa concluída registra instante de conclusão. |
+| RF-04 | Aprovar uma tarefa que não está em revisão produz 409. Um gerente de projeto não aprova a própria entrega. Uma tarefa concluída registra instante de conclusão. Aprovar no dia do prazo credita 10 pontos; aprovar depois desconta 10 por dia de atraso. |
 | RF-05 | A duração de uma sessão não muda quando o cliente envia um valor diferente do computado. Uma sessão que atravessa 09:30 é pausada nesse instante. Um trecho ativo não excede nove horas. |
 | RF-06 | Anexo de relatório não é acessível por endereço direto sem sessão autorizada. Um arquivo com extensão permitida e conteúdo divergente é recusado. |
 | RF-07 | Assumir plantão com outro já ativo é recusado. O plantão pausado acumula tempo e o encerrado deixa de aparecer como ativo. |

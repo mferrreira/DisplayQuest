@@ -32,7 +32,7 @@ import { Calendar, Check, Pencil, Trash2, X } from "lucide-react"
 import type { Task } from "@/entities/task"
 import { useProjects } from "@/features/projects"
 import { useUsers } from "@/features/users"
-import { useTaskMutations, projectedAward } from ".."
+import { useTaskMutations, projectedAward, POINTS_PER_TASK } from ".."
 import { isTaskOverdue, isTaskDueToday } from "../utils/move-rules"
 import { formatDateOnly } from "@/lib/date-only"
 
@@ -87,6 +87,10 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit }: TaskDetai
   const { main, fixes } = splitFixInstructions(task.description)
   const isOverdue = isTaskOverdue(task)
   const isDueToday = isTaskDueToday(task)
+  // plan-v3 OND1-D (DEC-30/DEC-40): o número exibido é o que o domínio calcula agora — o
+  // `task.points` gravado é histórico e mente (aвариado o caso medido de "-37140 pts com
+  // 60 pts de base"). O que foi de fato creditado em tarefa concluída chega na Onda 4.
+  const projected = projectedAward(task)
 
   const handleApprove = async () => {
     try {
@@ -170,12 +174,17 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit }: TaskDetai
                 </p>
               </div>
               <div>
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">Pontos</p>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  {task.completed ? "Pontos (base)" : "Pontos"}
+                </p>
                 <p className="font-semibold">
-                  {task.points} pts
-                  {isOverdue && (
-                    <span className="ml-2 text-xs font-normal text-destructive">
-                      (agora: {projectedAward(task)} pts com penalidade)
+                  {POINTS_PER_TASK} pts
+                  {!task.completed && projected !== POINTS_PER_TASK && (
+                    <span
+                      className={`ml-2 text-xs font-normal ${projected < POINTS_PER_TASK ? "text-destructive" : "text-emerald-600 dark:text-emerald-400"}`}
+                    >
+                      (se concluir agora: {projected} pts
+                      {projected < POINTS_PER_TASK ? " com penalidade" : " de bônus"})
                     </span>
                   )}
                 </p>

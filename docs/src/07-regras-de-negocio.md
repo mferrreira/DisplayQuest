@@ -42,8 +42,13 @@ a realiza.
 | RB-15 | Ninguém aprova a própria entrega, exceto quem administra usuários | RF-04 |
 | RB-16 | Tarefas concluídas exigem que a entrega esteja em revisão | RF-04 |
 | RB-17 | O contador de tarefas concluídas sobe em aprovação que não seja pública nem global, mesmo sem pontos | RF-04 |
-| RB-18 | O award de pontos ocorre apenas quando a tarefa tem pontuação maior que zero | RF-04, RF-09 |
+| RB-18 | O award de pontos é creditado na aprovação de toda tarefa, e a pontuação vale 10 por padrão | RF-04, RF-09 |
 | RB-19 | O responsável principal é reescrito pelo primeiro elemento da lista de responsáveis, e é esse valor que é persistido | RF-04 |
+| RB-66 | A pontuação de uma tarefa é fixa em 10 e não é informada pelo cliente na criação nem na edição | RF-04 |
+| RB-67 | A entrega antes do prazo multiplica a pontuação por 1,5, resultando em 15 pontos | RF-09 |
+| RB-68 | A entrega sem prazo, ou no próprio dia do prazo, rende a pontuação cheia | RF-09 |
+| RB-69 | O atraso é contado em dias de calendário no fuso do laboratório, e cada dia desconta a pontuação da tarefa | RF-09 |
+| RB-70 | O award resultante não tem piso: tarefa vencida rende valor negativo, que reduz o saldo | RF-09 |
 
 ## RB · Tempo e sessões
 

@@ -61,8 +61,9 @@ A separação resolve um problema real: várias pessoas podem trabalhar na mesma
 cada uma tem o próprio avanço. Sem o progresso individual, o quadro não conseguiria
 representar duas pessoas na mesma tarefa sem que uma sobrescrevesse o estado da outra.
 
-A pontuação é um inteiro não negativo na tarefa, mas o cálculo de pontos devidos admite
-resultado negativo, porque a multa por atraso é proporcional aos dias de atraso. A
+A pontuação é um inteiro fixo na tarefa (10) e não é editável: a criação e a edição não a
+recebem do cliente, e o que a tarefa rende é calculado no momento da aprovação. Esse cálculo
+admite resultado negativo, porque a multa por atraso é proporcional aos dias de atraso. A
 consequência está registrada como limite no capítulo 7.
 ```
 

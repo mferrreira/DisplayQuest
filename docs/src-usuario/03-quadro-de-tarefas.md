@@ -32,11 +32,12 @@ Na barra acima do quadro:
 
 ## O que o cartão mostra
 
-Título, projeto, pessoas responsáveis, pontos, prazo e prioridade. Além disso:
+Título, projeto, pessoas responsáveis, prazo e prioridade. Além disso:
 
 - **⚡** marca tarefa **pública**: qualquer pessoa pode pegá-la. A mesma marca aparece como coroa no canto do cartão.
 - **🌍** marca **Quest Global**: tarefa do laboratório inteiro, sem projeto. Só Coordenador e Gerente criam uma.
 - **ATRASADA** aparece em vermelho quando o prazo já passou.
+- O selo **10 pts** é o valor base da tarefa, o mesmo para todas.
 
 ## Criar uma tarefa
 
@@ -45,21 +46,21 @@ Título, projeto, pessoas responsáveis, pontos, prazo e prioridade. Além disso
 3. Escolha o destino: **Quest Global** (sem projeto, visível para todo o laboratório) ou **Projeto**.
 4. Em **Responsáveis**, defina quem executa. Com mais de uma pessoa escolhida aparece **Modo de atribuição**: **Individual** (cada responsável recebe uma tarefa independente) ou **Compartilhado** (todos compartilham o mesmo estado).
 5. Em **Visibilidade**, escolha **Delegada (responsáveis específicos)**, **Pública (qualquer um pode pegar)** ou **Privada (restrita aos responsáveis)**.
-6. Ajuste **Prazo**, **Pontos** e **Prioridade** (**Baixa**, **Média**, **Alta**).
+6. Ajuste **Prazo** e **Prioridade** (**Baixa**, **Média**, **Alta**).
 7. Salve.
 
 ```foto dialogo-nova-tarefa titulo="O diálogo Nova Tarefa"
 A opção Quest Global aparece apenas para quem tem permissão de gerenciar contas.
 ```
 
-Limites que o sistema aplica: título com até 200 caracteres, descrição com até 1000, pontos não negativos.
+Limites que o sistema aplica: título com até 200 caracteres e descrição com até 1000. A pontuação não é preenchida: toda tarefa vale 10 pontos, e quem cria não escolhe o valor.
 
 ## Ver, editar e excluir
 
 Clique no título do cartão para abrir o detalhe da tarefa, que traz projeto, visibilidade, descrição, criador, pontos, prioridade, prazo, status e os botões **Editar** e **Excluir**.
 
 ```foto dialogo-detalhe-tarefa titulo="O detalhe de uma tarefa"
-O detalhe mostra também a penalidade aplicada ao prazo vencido, quando existe.
+O detalhe mostra o valor que a tarefa rende se for concluída agora, com o bônus ou a penalidade do prazo.
 ```
 
 ## Enviar para revisão e aprovar
@@ -74,7 +75,7 @@ A aprovação aparece na própria coluna **Em Revisão**, como dois botões no c
 Aprovar move a tarefa para **Concluído** e credita os pontos. Rejeitar devolve para **Ajustes**, com a mensagem *"Retornou para ajustes."*.
 
 ::: limite titulo="Pontos e atraso"
-Pontos são creditados na aprovação, não na entrega. Uma tarefa aprovada depois do prazo sofre penalidade, e o detalhe da tarefa mostra o valor resultante. Uma tarefa concluída não volta para revisão por botão: é preciso editá-la.
+Pontos são creditados na aprovação, não na entrega. Toda tarefa vale 10 pontos, com três desfechos: 15 quando é aprovada **antes** do prazo, 10 quando é aprovada **no dia** do prazo ou quando não tem prazo, e 10 menos 10 por dia de atraso quando é aprovada depois. A contagem é por dia de calendário: aprovar no dia do vencimento não gera atraso. O valor resultante pode ser negativo — tarefa muito atrasada reduz o saldo — e o detalhe da tarefa mostra o número sem disfarce. Uma tarefa concluída não volta para revisão por botão: é preciso editá-la.
 :::
 
 ## Quem pode o quê no quadro
