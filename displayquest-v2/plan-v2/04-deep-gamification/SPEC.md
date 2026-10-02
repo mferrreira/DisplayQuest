@@ -18,6 +18,20 @@ com re-avaliacao rolling** (a cada award, nunca em batch semanal), integra progr
 e adiciona **lootboxes como RF novo** (RF-04-EXT-01..03) — sem quebrar a loja existente
 (RF-56..58).
 
+Esta revisao (2026-10-01) adiciona tres blocos:
+
+1. **RF-04.09 — motor de badge automatico ligado.** A correcao QUIRK-6A (o badge por regra
+   passou a ser concedido de fato) **esta inerte**: `evaluateUserBadges` e instanciado em
+   `backend/modules/gamification/index.ts:73,108` mas **nao e invocado** por rota, evento
+   nem cron. RF-04.05 (badge que da XP) e RF-04-EXT-02 (drop `BADGE`) dependem de um motor
+   que nunca roda; este RF amarra a avaliacao ao award (rolling).
+2. **RF-04-EXT-04..08 — pacotes de badges instalaveis.** O gargalo real de criacao de
+   badges hoje e o vocabulario de criterios: 7 campos numericos fixos + `specialCondition`
+   avaliado por **substring em portugues**. Pacotes (RF-04-EXT-04) exigem criterios ricos
+   (RF-04-EXT-06) e particularidades por pacote (RF-04-EXT-07).
+3. **Contrato visual** transversal em `plan-v2/UI-UX.md`, binding desta e das demais
+   features (01..06).
+
 ## 2. Contexto atual (linha de base)
 
 Fatos verificados no codigo (linha de base da feature):
@@ -38,10 +52,18 @@ Fatos verificados no codigo (linha de base da feature):
   incrementa **so `points`** (`:200-243`) e grava `history` `action="GAMIFICATION_AWARD"`
   com dedup por `description "GAMIFICATION:<SRC>:<ID>"` (`:245-257`). Usos publicados
   por eventos (`backend/composition/root.ts:43` e `:67`).
-- **Badges** (`garagem de regras` `backend/modules/gamification/domain/engines/
-  badge-rules.engine.ts`): criterios usam `points`/`completedTasks`/stats; concedem
-  `user_badges` (unique `@@unique([userId, badgeId])`, `prisma/schema.prisma:352`) sem
-  XP associado. Tabelas `badges` (`:327-340`) e `user_badges` (`:342-353`).
+- **Badges** — a linha de base desta feature foi reescrita pelo clean-arch; os caminhos
+  citados abaixo sao os **atuais** (ver §2.1). Regras puras em
+  `backend/domain/gamification/badge-rules.ts` (`badgeCriteriaMet`, `selectBadgesToAward`,
+  `maxConsecutiveDaysFrom`, `averageWeeklyHoursFrom`) e
+  `backend/domain/gamification/Progression.ts` (`computeUserProgression`, `levelForXp`,
+  `eloForXp`, `LEVEL_XP_STEP`, `ELO_THRESHOLDS`). Contratos puros em
+  `backend/domain/gamification/Badge.ts` (`BadgeCriteria`, `BadgeCategory`).
+  O engine legado sobrevive **apenas como seam de golden/contract test** em
+  `backend/modules/gamification/infrastructure/legacy-engines/badge-rules.engine.ts`
+  (DEC-15/DEC-19; nao e usado pela wiring de producao).
+  Tabelas `badges` (`prisma/schema.prisma:327-340`) e `user_badges` (`:342-353`,
+  `@@unique([userId, badgeId])` em `:352`), sem XP associado.
 - **Progressao consultavel** (`app/api/users/[id]/gamification/route.ts:17`):
   `ensureSelfOrPermission(auth.actor, userId, "MANAGE_USERS")`; retorna `{ progression }`.
 - **RBAC/features** (`lib/auth/rbac.ts:18-19`: `MANAGE_REWARDS` e `MANAGE_PURCHASES` =
@@ -55,7 +77,63 @@ Fatos verificados no codigo (linha de base da feature):
 Lacunas identificadas: (1) XP e moeda sao a mesma coluna; (2) tiers tipo ELO com reset
 competitivo sem respaldo (D-04-02 os substitui por faixas fixas); (3) badges sem XP;
 (4) sem ranking dedicado por progressao (o leaderboard raks por `points`,
-`app/(dashboard)/dashboard/leaderboard/page.tsx:27-30`); (5) sem lootbox (D-04-03).
+`app/(dashboard)/dashboard/leaderboard/page.tsx:27-30`); (5) sem lootbox (D-04-03);
+(6) **motor de badge automatico inerte** (ver §2.2); (7) **vocabulario de criterio
+impede pacotes** (ver §2.3).
+
+### 2.1 Correcao de caminhos desta SPEC (clean-arch)
+
+Os "Fronteira" de RF-04.03/04/05 e as Etapas 2/3 do PLAN citavam
+`backend/modules/gamification/domain/engines/{level,tier,badge-rules}.engine.ts`, caminho
+que **nao existe** desde o clean-arch. Regras puras vao para `backend/domain/**` (core sem
+I/O, RG-01); use-cases em `backend/modules/<m>/application/use-cases/`; adapters Prisma em
+`backend/modules/<m>/infrastructure/`. `level.engine.ts`/`tier.engine.ts` **nao existem
+ainda** — sao artefatos a criar, e devem nascer em `backend/domain/gamification/`
+(`progression-level.ts`, `progression-tier.ts`), nao em `modules/*/domain/`.
+
+### 2.2 Motor de badge automatico inerte (lacuna 6)
+
+`EvaluateUserBadgesUseCase` existe, esta coberto por teste (contract + roundtrip) e
+**nao tem chamador de producao**:
+
+```
+backend/modules/gamification/index.ts:73,108,119,124,127   <- so instanciacao/exposicao
+backend/modules/gamification/application/use-cases/evaluate-user-badges.use-case.ts
+```
+
+Nao ha rota, evento, cron ou publisher que o invoque (unico `app/api/cron/*` e
+`app/api/cron/status/route.ts`, que nao toca gamificacao). Logo:
+
+- o badge por regra **nunca e concedido em producao**;
+- o documentado QUIRK-6A ("a correcao da Onda 6 faz a concessao FUNCIONAR") so se
+  manifesta contra fakes de teste;
+- RF-04.05 (`BADGE_XP`) e o drop `BADGE` de RF-04-EXT-02 **nao tem produtor**;
+- o endpoint de progressao **nao tem consumidor**: nao existe `getGamification` em
+  `contexts/api-client.ts` nem chamada a `/api/users/[id]/gamification` em
+  `app/(dashboard)`, `components/` ou `features/` — level/elo sao calculados e nunca
+  exibidos.
+
+### 2.3 Vocabulario de criterio limita a criacao de badges (lacuna 7)
+
+`BadgeCriteria` (`backend/domain/gamification/Badge.ts:11-19`) e um objeto **flat** com 7
+campos numericos opcionais (`points`, `tasks`, `projects`, `workSessions`, `weeklyHours`,
+`consecutiveDays`) mais `specialCondition: string`. Limites observados:
+
+1. **Sem composicao** — nao existe AND/OR/NOT entre criterios; tudo e E logico.
+2. **`specialCondition` e substring em portugues** —
+   `badge-rules.ts:164-189` faz `conditionLower.includes("primeiro") &&
+   includes("100")`, `includes("semana perfeita")`, `includes("sequência") &&
+   includes("dias")`, `includes("coordenador")`. E um mini-DSL em linguagem natural, sem
+   enum: nao ha como inventar uma condicao nova sem **alterar codigo**, e um pacote
+   autorado em ingles nunca casa.
+3. **Sem eixo de escopo** — nada distingue "20 tasks *neste projeto*", "sessao no periodo
+   noturno", "badge para quem eh VOLUNTARIO".
+4. **Sem entidade de pacote** — `badges` nao tem `packId`; nao existe `badge_packs`. O
+   catalogo e gerido **badge a badge** pelo form de `components/admin/badge-manager.tsx`
+   (474 linhas), que expoe exatamente os 7 campos numericos + 1 input de texto livre
+   (`updateCriteria(...)`, linhas 283-345).
+5. **Sem modificadores** — nao ha nocao de "particularidade" herdada do pacote (ex.: um
+   pacote que multiplica XP de sessao noturna).
 
 ## 3. Atores e papeis
 
@@ -64,7 +142,8 @@ competitivo sem respaldo (D-04-02 os substitui por faixas fixas); (3) badges sem
 | `VOLUNTARIO`, `COLABORADOR`, `PESQUISADOR`, `GERENTE_PROJETO`, `LABORATORISTA`, `GERENTE`, `COORDENADOR` | Qualquer autenticado | Consome/progressa (awards automáticos), consulta a propria progressao (RF-53), ve ranking por XP (RF-08), abre lootbox propria |
 | `COORDENADOR`, `GERENTE` | Gestores (MANAGE_USERS) | Consultam progressao de qualquer usuario |
 | `COORDENADOR`, `GERENTE`, `LABORATORISTA` | Detentores de `MANAGE_REWARDS` | Configuram a tabela de drops de lootbox (RF-04-EXT-01); continuam aprovando compras (RF-58, inalterado) |
-| Sistema / engines | Ator tecnico | Award automático em task completion, work session e conquista de badge; re-avaliacao rolling de nivel/tier |
+| `COORDENADOR`, `GERENTE` | Curadores de `MANAGE_BADGE_PACKS` | Publicam/despublicam pacotes, instalam/desinstalam pacotes no catalogo e autoram badges avulsos fora de pacote (RF-04-EXT-04/05) |
+| Sistema / engines | Ator tecnico | Award automatico em task completion, work session e conquista de badge; **re-avaliacao rolling de nivel/tier e avaliacao de badges automaticos no mesmo request do award** (RF-04.09); badges e criterios vem do catalogo instalado (RF-04-EXT-06) |
 
 ## 4. Requisitos funcionais
 
@@ -188,6 +267,40 @@ competitivo sem respaldo (D-04-02 os substitui por faixas fixas); (3) badges sem
   Then  comportamento, permissoes e schema permanecem inalterados (nao-regressao)
   ```
 
+### RF-04.09 — Motor de badge automatico ligado (rolling no award)
+
+- **Descricao:** a avaliacao de badges por regra passa a **rodar**. Hoje
+  `evaluateUserBadges` e instanciado e nunca invocado (§2.2); este RF define **quando** a
+  avaliacao roda: **rolling, no mesmo request do award**, junto da re-avaliacao de
+  nivel/tier ja exigida por D-04-02. Nao ha batch semanal nem cron de badges.
+- **Fronteira:** `backend/composition/root.ts` (wiring), modulo `gamification`
+  (`evaluate-user-badges.use-case.ts`, `application/ports/gamification-awards.port.ts` do
+  `work-execution` e do `task-management`). Sem import cruzado: o disparo entra pela
+  **porta local** injetada no composition root (DEC-21), nao por import de modulo.
+- **Entradas/Saidas:** sem comando novo. `awardFromTaskCompletion` /
+  `awardFromWorkSession` passam a emitir, apos `applyAward`, uma avaliacao de badges para o
+  mesmo `userId`.
+- **Cenario principal (Gherkin):**
+  ```
+  Given U nao tem o badge B e B tem criteria { tasks: 1 }, B esta ativo e B pertence a um
+        pacote instalado (ou e avulso)
+  When  U conclude uma task (award de task aplicado)
+  Then  U recebe B em user_badges e +BADGE_XP, no mesmo request
+  ```
+- **Regras de negocio:**
+  1. **Falha nao derruba o award** — o award ja foi aplicado; um erro na avaliacao de
+     badge e engolido com `console.error` (padrao da casa, ver
+     `evaluate-user-badges.use-case.ts`) e loga em `history`; **nunca** reverte o XP/points.
+  2. **Idempotente** — reavaliar sem mudanca de stat nao concede nada novo (dedup por
+     `@@unique([userId, badgeId])`).
+  3. **Escopo do catalogo** — so sao avaliados badges `isActive` **de pacotes instalados**
+     ou **avulsos** (`packId IS NULL`); badge de pacote nao instalado nunca e concedido.
+  4. **Um award dispara uma avaliacao** — nao uma por criterio; a avaliacao e o filtro
+     completo do catalogo ativo.
+  5. **Nao e reentrada** — `awardBadge` (concessao manual) e `evaluateUserBadges` nao se
+     chamam mutuamente; o `+BADGE_XP` do RF-04.05 acontece no unico caminho de concessao,
+     para nao duplicar XP.
+
 ### RF-04-EXT-01 — Configurar tabela de drops de lootbox
 
 - **Descricao:** novo RF (D-04-03): tabela configuravel de drops com `dropType`
@@ -238,6 +351,143 @@ competitivo sem respaldo (D-04-02 os substitui por faixas fixas); (3) badges sem
   Then  xp permanece 500 e nenhuma linha de rewards/purchases e alterada
   ```
 - **Regras de negocio:** invariante testada por suite dedicada.
+
+### RF-04-EXT-04 — Catalogo de pacotes de badges
+
+- **Descricao:** badges passam a se organizar em **pacotes** (RF novo, D-04-09): um
+  conjunto curado de badges com identidade propria (nome, slug, descricao, icone, tema,
+  versao). Alvo de referencia: **4 pacotes de 20 badges**, cada um com seus icones, criterios
+  e particularidades. `badges.packId` nullable: badge **avulso** (sem pacote) continua
+  valendo — o catalogo atual nao quebra.
+- **Fronteira:** `prisma/schema.prisma` (`badge_packs`, `badges.packId`),
+  `backend/modules/gamification` (use-cases de listar/publicar), rotas
+  `app/api/gamification/badge-packs`.
+- **Cenario principal (Gherkin):**
+  ```
+  Given um curador publica o pacote P ("Primeiros Passos", v1, 20 badges, isPublished=true)
+  Then  P aparece no catalogo de pacotes; cada badge de P tem packId=P e continua isActive
+        conforme autorado; o badge avulso legado (packId=null) segue no catalogo
+  ```
+- **Regras de negocio:** (1) `badge_packs.key` e unico e **estavel** (identidade em
+  `history`/badges ja concedidos nunca aponta para outro pacote); (2) `version` e inteiro
+  **declarado pelo autor** e incrementa a cada publicacao — nao e derivado; (3)
+  `isPublished=false` esconde o pacote do catalogo **sem** apagar badges nem concessoes;
+  (4) despublicar **nao** desinstala (sao eixos independentes — ver RF-04-EXT-05);
+  (5) badges de um pacote despublicado **nao concedem novos awards** automaticos, mas os
+  ja concedidos permanecem.
+
+### RF-04-EXT-05 — Instalar/desinstalar pacote (referenciado, sem clonar)
+
+- **Descricao:** "instalar" um pacote e **um toggle de referencia**, **nao uma copia**:
+  as linhas de `badges` continuam apontando para `badge_packs` e nao sao duplicadas. Desinstalar
+  e reversivel e **nao apaga historico**: badges ja conquistados (`user_badges`) sobrevivem.
+- **Fronteira:** `badge_pack_installs` (schema), use-cases
+  `install-badge-pack`/`uninstall-badge-pack`, rotas `app/api/gamification/badge-packs/[key]/install`.
+- **Cenario principal (Gherkin):**
+  ```
+  Given P publicado e ainda nao instalado
+  When  um curador instala P
+  Then  existe 1 registro em badge_pack_installs; badges.count e IDENTICO ao de antes
+        (nenhuma badge clonada); badges de P passam a ser elegiveis a award automatico
+  When  o mesmo curador desinstala P
+  Then  o registro e removido; P deixa de conceder novos badges; as user_badges ja
+        concedidas de P permanecem e seguem exibidas
+  ```
+- **Regras de negocio:** (1) `badgeId` e o identidade mantido — clonar produziria badges
+  órfãos e `user_badges` apontando para linhas que somem na desinstalacao; (2) desinstalar
+  **nao revoga** badges ja conquistados nem o `+BADGE_XP` dado (XP e monotonico,
+  D-04-01); (3) desinstalar **nao apaga** o pacote nem seus badges (somente sai do catalogo
+  ativo); (4) reinstalar e **idempotente** (2o install sem efeito, sem registro duplicado);
+  (5) **badge avulso nao e instalavel** — nao pertence a pacote; (6) no escopo desta versao
+  a instalacao e **global** (ver RF-04-EXT-05 regra 7 e §10): nao ha escopo por laboratorio
+  porque nao existe `laboratories` — o eixo por lab entra em `05-multi-lab-saas`, que
+  adiciona a coluna de escopo sem mudar a semantica do toggle.
+
+### RF-04-EXT-06 — Criterios ricos e compostos (arvore de condicoes)
+
+- **Descricao:** `badges.criteria` ganha um **formato v2** de arvore de condicoes, com
+  `badges.criteriaVersion` separando os formatos. O v1 (7 campos flat + `specialCondition`
+  por substring em portugues) **permanece valido e e avaliado pelo motor atual**, congelado
+  por goldens. O v2 e um **vocabulario fechado** de eixos e operadores, com composicao
+  `all`/`any`/`not`.
+- **Fronteira:** `backend/domain/gamification/badge-criteria.ts` (**NOVO**, funcoes puras,
+  RG-01), avaliador v2 em `backend/domain/gamification/badge-rules.ts`; coluna
+  `badges.criteriaVersion`.
+- **Eixos fechados do v2** (eixo `: comparador`):
+  - acumulado: `xp`, `points`, `completedTasks`, `projectsCount`, `workSessionsCount`,
+    `averageWeeklyHours`, `maxConsecutiveDays`, `level`, `tierRank`
+  - escopo: `projectId`, `taskId`, `dailyLogId` `: in | eq`
+  - tempo: `occurredAt` `: withinDays | inRange | weekday`
+  - papel: `roles` `: includes`
+  - condicao nomeada: `specialCondition` `: is` — **igualdade sobre um enum**
+    (`WORKED_NIGHT_SHIFT`, `MENTOR_APPROVED`, `FIRST_100_TASKS`, `PERFECT_WEEK`,
+    `SEVEN_DAY_STREAK`, `IS_COORDINATOR`), **nunca substring**
+- **Cenario principal (Gherkin):**
+  ```
+  Given badge B com criteriaVersion=2 e criteria
+        { "version": 2, "all": [ {"axis":"tasks","op":">=","value":10},
+                                {"axis":"consecutiveDays","op":">=","value":5},
+                                {"any": [ {"axis":"specialCondition","op":"is","value":"WORKED_NIGHT_SHIFT"},
+                                          {"axis":"specialCondition","op":"is","value":"MENTOR_APPROVED"} ] } ] }
+  Then  B e concedido quando TODOS os termos `all` e pelo menos UM dos termos `any` sao
+        satisfeitos; eixo/comparador desconhecido => validacao 400 na autoria, nunca match
+        silencioso
+  ```
+- **Regras de negocio:** (1) `criteriaVersion` ausente/`1` = **formato v1** (motor atual,
+  intocado — inclusive o quirk de threshold falsy `0` ser ignorado, que segue valendo);
+  (2) `criteriaVersion=2` ativa **apenas** o v2; nao ha hibrido nem fallback silencioso de
+  v2 para v1; (3) comparadores sao **fechados**: qualquer par `eixo: comparador`
+  desconhecido e erro de validacao na autoria do badge, nunca `false` silencioso;
+  (4) `specialCondition` com `op: is` faz **igualdade** sobre o enum — elimina o
+  `includes()` frágil e a dependencia de portugues; (5) a arvore e pura: `now` entra por
+  parametro, sem I/O; (6) profundidade maxima e `any`/`not` aninhados (limite de 3 niveis,
+  validado na autoria) para custo previsivel na re-avaliacao rolling.
+
+### RF-04-EXT-07 — Particularidades do pacote (modificadores)
+
+- **Descricao:** cada pacote pode declarar **modificadores proprios** — as "particularidades"
+  que um pacote de badges carrega e que valem para os awards de todo o pacote. Ex.:
+  `SESSION_XP_MULTIPLIER` por faixa horaria (noturno), `TASK_XP_BONUS` para um papel,
+  `BADGE_XP_OVERRIDE`. Sem isto, "cada pacote com suas particularidades" nao tem onde morar.
+- **Fronteira:** `badge_packs.modifiers Json?`, `backend/domain/gamification/pack-modifiers.ts`
+  (**NOVO**, funcao pura), `badge_catalog.port.ts` (leitura), `applyAward`.
+- **Cenario principal (Gherkin):**
+  ```
+  Given pacote P instalado com modifiers { "SESSION_XP_MULTIPLIER_NIGHT": 1.5 } e
+      sessionsafe noturna (22:00-06:00, America/Sao_Paulo)
+  When  U fecha uma sessao de trabalho noturna que rende 20 xp
+  Then  U recebe 30 xp (20 x 1.5, truncado) e a sessao diurna com os mesmos 20 xp recebe 20
+  ```
+- **Regras de negocio:** (1) modificador e **multiplicador/adicao de XP**, nunca de
+  `users.points` — moeda de loja nao e afetada por pacote (D-04-01); (2) modificador so se
+  aplica a awards **originados depois** da instalacao (sem recalculo retroativo); (3) os
+  modificadores nomeados sao um **enum fechado** (tabela em `pack-modifiers.ts`); um
+  modificador desconhecido nao e aplicado e nao quebra o award (falha engolida, padrao da
+  casa); (4) multiplicadores sao limitado a faixa `0.5 .. 2.0` e empilham por multiplicacao
+  (teto de 2 modificadores simultaneos); (5) o resultado e **truncado para inteiro** e
+  nunca fica negativo.
+
+### RF-04-EXT-08 — Invariantes de pacote
+
+- **Descricao:** as garantias que make "instalar/desinstalar" seguro quando ha historico e
+  badges ja conquistados por usuarios reais.
+- **Fronteira:** `backend/modules/gamification` + `prisma/schema.prisma`.
+- **Cenario principal (Gherkin):**
+  ```
+  Given U conquistou 3 badges do pacote P e o XP correspondente
+  When  P e desinstalado e depois reinstalado
+  Then  users.xp permanece (nao reverteu, nao duplicou), as 3 user_badges permanecem,
+        e a proxima avaliacao nao volta a conceder os mesmos badges
+  Given o pacote P removido do catalogo com badges concedidos
+  Then  nenhuma cascade apaga user_badges (relacao onDelete: Cascade so vale se a badge
+        sumir, e remocao de pacote nao remove badges — ver RF-04-EXT-04 regra 3)
+  ```
+- **Regras de negocio:** (1) `xp` e **monotonico**: desinstalar/reescalar pacote nao
+  decrementa XP (D-04-01); (2) **nao ha backfill** — badges ja conquistados antes de uma
+  mudanca de pacote nao dao XP retroativo (mesma politica de D-04-07); (3) `user_badges`
+  nunca e apagada por operacao de pacote; (4) `@@unique([userId, badgeId])` continua sendo
+  a **unica** fonte de dedup — nenhum estado paralelo de "ja evaluatei"; (5) invariante
+  testada por suite dedicada.
 
 ## 5. Requisitos nao funcionais
 
@@ -310,6 +560,59 @@ model lootbox_openings {
 - A tabela `history` (usada pelo gateway para dedup de award) permanece; o `audit_logs`
   da feature 02 nao recebe esses eventos nesta versao (D-04-04 registrado no STATE).
 
+### 6.1 Schema dos pacotes de badges (RF-04-EXT-04..08)
+
+Names snake_case, padrao do repo. Sobrepoe `badges` (`:327-340`); **nao** cria coluna nova
+em `users`.
+
+```prisma
+model badge_packs {
+  id          Int      @id @default(autoincrement())
+  key         String   @unique          // identidade estavel (nunca reciclada)
+  name        String
+  description String
+  icon        String?
+  color       String?
+  theme       String?                    // tag livre de tema (ex.: "noturno", "social")
+  version     Int      @default(1)       // declarado pelo autor, incrementa por publicacao
+  modifiers   Json?                      // particularidades do pacote (RF-04-EXT-07)
+  isPublished Boolean @default(false)
+  createdBy   Int
+  createdAt   DateTime @default(now())
+  badges      badges[] @relation("BadgePackBadges")
+
+  @@index([isPublished])
+}
+
+model badge_pack_installs {
+  id          Int      @id @default(autoincrement())
+  packId      Int
+  installedBy Int
+  installedAt DateTime @default(now())
+  pack        badge_packs @relation(fields: [packId], references: [id], onDelete: Cascade)
+
+  @@unique([packId])                     // toggle global; vira [laboratoryId, packId] no 05
+  @@index([packId])
+}
+
+// Alteracoes em `badges` (modelo existente, :327-340):
+// + packId        Int?    @relation("BadgePackBadges")
+// + criteriaVersion Int   @default(1)   // 1 = formato flat atual (intocado); 2 = arvore
+```
+
+- `badges.packId` e **nullable** e a relacao e **optional**: badge avulso legado
+  (`packId = null`) permanece valido e continua aparecendo no catalogo.
+- **`badges` nao e clonada** em install/uninstall (RF-04-EXT-05 regra 1) — e por isso
+  `user_badges.badgeId` continua apontando para uma linha estavel.
+- `badge_pack_installs` sem coluna de laboratorio **nesta versao**: `laboratories` nao
+  existe (unico `labId` do schema esta em `kanban_boards:301` e nao e usado por nenhum
+  codigo). O `05-multi-lab-saas` adiciona a coluna de escopo e o unique passa a ser
+  `[laboratoryId, packId]` — sem mudar a semantica do toggle.
+- Migracao versionada: `add_badge_packs_and_criteria_v2` (Etapa 8 do PLAN). **Sem
+  `db push`** (gotcha do repo).
+- `criteriaVersion` default `1` garante que **todo** badge existente continua no motor v1
+  congelado por golden, sem backfill.
+
 ## 7. Contratos de API e eventos
 
 ### 7.1 Endpoints novos/alterados
@@ -321,6 +624,13 @@ model lootbox_openings {
 | GET | `/api/gamification/lootbox/config` | **Novo**: listar tabela ativa de drops | `MANAGE_REWARDS` |
 | POST | `/api/gamification/lootbox/config` | **Novo**: substituir (upsert) tabela ativa de drops | `MANAGE_REWARDS` |
 | POST/PATCH | `/api/rewards`, `/api/purchases` (+`[id]`) | Inalterados (baseline RF-56/57/58; nao-regressao) | regras atuais (`MANAGE_REWARDS`/`MANAGE_PURCHASES`) |
+| GET | `/api/gamification/badge-packs` | **Novo**: catalogo de pacotes (`published`/`installed` por padrao; `?all=1` exige permissao) | leitura autenticada |
+| GET | `/api/gamification/badge-packs/[key]` | **Novo**: detalhe do pacote + seus badges | leitura autenticada |
+| POST | `/api/gamification/badge-packs` | **Novo**: criar/publicar pacote (key, nome, icone, tema, `modifiers`, `isPublished`) | `MANAGE_BADGE_PACKS` |
+| PATCH | `/api/gamification/badge-packs/[key]` | **Novo**: editar metadados/`version`/`modifiers`/`isPublished` | `MANAGE_BADGE_PACKS` |
+| POST | `/api/gamification/badge-packs/[key]/install` | **Novo**: instalar (toggle idempotente) | `MANAGE_BADGE_PACKS` |
+| DELETE | `/api/gamification/badge-packs/[key]/install` | **Novo**: desinstalar (toggle; nao apaga badges nem `user_badges`) | `MANAGE_BADGE_PACKS` |
+| PATCH | `/api/badges/[id]` | **Alterado**: aceita `criteriaVersion: 2` + arvore de condicoes; `version: 1` rejeita formato v2 (400) | `MANAGE_BADGE_PACKS` |
 
 ### 7.2 Eventos de dominio publicados/consumidos
 | Evento | Publisher | Consumidor | Estado |
@@ -329,9 +639,15 @@ model lootbox_openings {
 | `WORK_SESSION_COMPLETED` (award sessao) | work-execution (`work-execution-events.publisher`, composition root:67) | gamification (`awardFromWorkSession`) | Existente; passa a persistir xp |
 | `GAMIFICATION_AWARD` (`history`) | gamification gateway | storage interno (dedup) | Existente; mantido |
 | Abertura de lootbox | gamification (use-case) | `lootbox_openings` | Novo — sem fila, sync |
+| Avaliacao de badges automaticos | gamification (interno, pos-`applyAward`) | `user_badges` + `users.xp` | Novo — **rolling no mesmo request** do award, sem fila e sem cron (RF-04.09) |
 
 Nenhum evento novo cruza modulo; abertura de lootbox e registro local (sem publicacao
 externa). Auditoria funcional desta feature **nao** usa `audit_logs` nesta versao.
+
+O disparo da avaliacao de badges **nao** cruza modulo: `work-execution` e `task-management`
+ja injetam a **porta local** `GamificationAwardsPort` no composition root (DEC-21) — o
+`+ evaluateBadges` entra como metodo **opcional** dessa mesma porta, sem novo import
+cruzado e sem nova aresta em `dependency-cruiser` (G0 segue com allow-list vazia).
 
 ## 8. Casos de teste / evidencia esperada
 
@@ -353,16 +669,38 @@ Novos testes (unit sob `tests/unit/**`, integration sob `tests/integration/**`):
 - tests/unit/components/gamification/progression-card.test.tsx           (AC-04-15)
 ```
 
+Testes novos desta revisao (RF-04.09 + pacotes):
+
+```
+- tests/unit/modules/gamification/badge-engine-wiring.test.ts    (AC-04-17)  <- motor ligado
+- tests/unit/modules/gamification/badge-criteria-v2.test.ts      (AC-04-20)  <- arvore pura
+- tests/unit/modules/gamification/badge-criteria-v1-compat.test.ts (AC-04-21) <- v1 intocado
+- tests/unit/modules/gamification/pack-modifiers.test.ts         (AC-04-22)  <- modificadores puros
+- tests/unit/modules/gamification/badge-packs.use-cases.test.ts  (AC-04-18/19) <- catalogo+install
+- tests/unit/modules/gamification/badge-packs.route.test.ts       (AC-04-19)  <- thin adapters
+- tests/unit/modules/gamification/pack-invariants.test.ts         (AC-04-23)  <- xp monotonico/historico
+- tests/integration/badge-packs-roundtrip.test.ts                 (AC-04-18)  <- DB real, sem clone
+- tests/unit/components/gamification/badge-pack-card.test.tsx     (AC-04-24)  <- UI do pacote
+- tests/unit/components/gamification/criteria-tree-editor.test.tsx (AC-04-24) <- UI de criterios
+```
+
+> **Baseline do G3 (corrigido 2026-10-01).** As versoes anteriores desta SPEC citavam
+> "256/257 com unico fail conhecido `floating-session-timer`". Esse numero vem de outra
+> base: o arquivo `tests/unit/components/floating-session-timer.test.tsx` **nao existe**
+> neste repo, e o gotcha correspondente esta em `AGENTS.md`. A baseline **verificada** aqui
+> (pos-clean-arch, registrada em `displayquest-v2/clean-arch/STATE.json`) e
+> **67 arquivos / 1245 testes, zero failure**. Use a do `ARCHITECTURE.md` §5 (G3).
+
 Comandos (ordem dos gates do ARCHITECTURE), com `set -a; source .env; set +a`:
 
 - G1 `npx eslint --no-eslintrc --config .eslintrc.json <arquivos alterados>` — exit 0
 - G2 `npx tsc --noEmit` — 0 errors
-- G3 `npx vitest run` — **256/257 de base** (unico fail conhecido `floating-session-timer`)
-  + todos os novos verdes
-- G4 `docker compose up -d postgres && npx vitest run` — green (schema/DB tocados)
+- G3 `npx vitest run` — **67 arquivos / 1245 testes, zero failure** (baseline verificada;
+  a contagem so cresce) + todos os novos verdes
+- G4 `DATABASE_URL=postgresql://dq_dev:dq_dev_local_only@127.0.0.1:5433/dq_dev_test npx vitest run` — roundtrips no banco de teste **isolado** (nunca a 5432, que e o `display-quest-db` de producao local)
 - G5 `npx prisma migrate dev` (local) — sem `db push`
 
-Contagem esperada ao final: baseline 256/257 + ~13 novos testes unit + 1 integration.
+Contagem esperada ao final: baseline 67/1245 + ~11 arquivos de teste novos.
 
 ## 9. Acceptance criteria (definitivos e rastreaveis)
 
@@ -384,6 +722,15 @@ Contagem esperada ao final: baseline 256/257 + ~13 novos testes unit + 1 integra
 | AC-04-14 | Given fluxos de loja existentes (RF-56/57/58) e badges (RF-55); When a feature entra; Then comportamento/permissoes/schema de rewards+purchases inalterados, unit = 256/257 + novos verdes | Gates G1–G3 + suites existentes | RF-04.08 / D-04-04 |
 | AC-04-15 | Given FEATURE_ACCESS; Then VIEW_PROGRESSION (todos) e MANAGE_LOOTBOX (=MANAGE_REWARDS) presentes e espelhando RBAC; UI renderiza progressao/progress bar so com o mirror | `gamification-features-parity.test.ts` + `progression-card.test.tsx` | RF-04.06 / RF-08 |
 | AC-04-16 | Given todas as etapas verdes; Then G1–G5 verdes, migracoes versionadas sem db push, STATE.json com evidencias | checklist do PLAN §6 | processo geral |
+| AC-04-17 | Given badge ativo com criterio satisfeito e nenhum award anterior; When um award de task ou work session e aplicado; Then `user_badges` recebe a badge e o `+BADGE_XP` **no mesmo request**; When a avaliacao de badges lanca erro; Then o award permanece aplicado (xp/points nao revertidos) e o erro fica registrado | `badge-engine-wiring.test.ts` (+ roundtrip) | RF-04.09 / §2.2 |
+| AC-04-18 | Given pacote P publicado; When um curador instala P; Then `badges.count` e **identico** antes e depois (zero badges clonadas), `packId` preenchido em todas as badges de P, e `badge_pack_installs` tem exatamente 1 linha para P | `badge-packs-roundtrip.test.ts` + `badge-packs.use-cases.test.ts` | RF-04-EXT-04/05 |
+| AC-04-19 | Given P instalado; When `POST .../install` repetido; Then idempotente (sem linha duplicada); When `DELETE .../install`; Then toggle desliga e **nao apaga** badges nem `user_badges`; Given badge avulso (`packId=null`); When install; Then 400 (nao e instalavel); When ator sem `MANAGE_BADGE_PACKS`; Then 403 | `badge-packs.route.test.ts` + `badge-packs.use-cases.test.ts` | RF-04-EXT-05 |
+| AC-04-20 | Given criteria v2 com `all`/`any`/`not`; When avaliado; Then combina corretamente; When eixo ou comparador desconhecido; Then 400 na autoria e **nunca** `false` silencioso; When `specialCondition` com `op: is`; Then **igualdade** sobre enum (sem substring) | `badge-criteria-v2.test.ts` | RF-04-EXT-06 |
+| AC-04-21 | Given badges preexistentes (todas com `criteriaVersion` ausente/`1`); When a feature entra; Then sao avaliadas pelo **motor v1 atual**, incluindo o quirk de threshold `0` ignorado — suites golden/gamification existentes seguem verdes sem edicao | `badge-criteria-v1-compat.test.ts` + `npx vitest run tests/unit/modules/gamification` | RF-04-EXT-06 / D-04-10 |
+| AC-04-22 | Given pacote instalado com `SESSION_XP_MULTIPLIER_NIGHT: 1.5`; When uma sessao noturna rende 20 xp; Then concede 30; When a mesma sessao de dia; Then concede 20; Given multiplicador fora de `0.5..2.0` ou 3+ modificadores; Then rejeitado na autoria; Then **nunca** altera `users.points` | `pack-modifiers.test.ts` | RF-04-EXT-07 / D-04-01 |
+| AC-04-23 | Given U com 3 badges de P e o XP correspondente; When P e desinstalado e reinstallado; Then `users.xp` nao reverte nem duplica, as 3 `user_badges` permanecem, e a reavaliacao nao volta a conceder; Given badges ja conquistados antes de uma mudanca de pacote; Then zero XP retroativo | `pack-invariants.test.ts` | RF-04-EXT-08 / D-04-07 |
+| AC-04-24 | Given o mirror de permissao; Then o card de pacote e a arvore de criterios so renderizam com `MANAGE_BADGE_PACKS` (e a vitrine publica sem mirror), usando tokens/padrao de grid do `plan-v2/UI-UX.md`; nenhuma badge de pacote desinstalado aparece na vitrine | `badge-pack-card.test.tsx` + `criteria-tree-editor.test.tsx` | RF-04-EXT-04/06 / UI-UX §4 |
+| AC-04-25 | Given todas as etapas (0..11) verdes; Then **G0**–G5 verdes com allow-list vazia, 3 migracoes versionadas sem `db push`, e `STATE.json` com `decisions[]` D-04-09..13 e evidencia de todas as ACs | checklist do PLAN §7 + `STATE.evidence` | processo geral |
 
 ## 10. Fora de escopo (desta versao)
 
@@ -399,6 +746,22 @@ Contagem esperada ao final: baseline 256/257 + ~13 novos testes unit + 1 integra
 - 05-multi-lab e 06-auth/sso (plan-v2).
 - Alterar `PERMISSIONS`/`FEATURE_ACCESS` existentes (apenas ADICIONA
   `VIEW_PROGRESSION`/`MANAGE_LOOTBOX`).
+- **Escopo por laboratorio dos pacotes** — `laboratories` nao existe; a instalacao e
+  **global** nesta versao (RF-04-EXT-05 regra 6). O eixo por lab entra em
+  `05-multi-lab-saas` como coluna de escopo em `badge_pack_installs`, sem mudar a
+  semantica do toggle.
+- **Avaliacao de badge por periodo** (semanal/mensal/"todo dia") — o motor e **rolling no
+  award** (RF-04.09); criterios temporais (`withinDays`, `weekday`) sao avaliados no
+  contexto do award, nao por agendamento.
+- **Marketplace/curadoria externa de pacotes** — os pacotes sao autoria interna
+  (`MANAGE_BADGE_PACKS`); import/export de lote via JSON e semente de deploy, nao upload
+  por terceiro.
+- **Modificador fora do enum fechado** e **empilhamento com regra aditiva livre** — apenas
+  os nomeados em `pack-modifiers.ts`, limitado a 2 simultaneos.
+- **Badge avulso obrigatorio dentro de pacote** — `packId` nullable por compatibilidade;
+  exigir pacote para todo badge novo e regra de autoria da UI, nao de schema.
+- **Arvore de criterios com profundidade arbitraria** — limite de 3 niveis (RF-04-EXT-06
+  regra 6).
 
 ## 11. Dependencias e bloqueadores
 
@@ -411,4 +774,7 @@ Contagem esperada ao final: baseline 256/257 + ~13 novos testes unit + 1 integra
 | Decisao do dono: `users.freeLootboxKeys` como contador de chaves por level-up | decisao de negocio | Confirmar (ver STATE `blockers[]`) |
 | Decisao do dono: leaderboard ordenado por xp (points deixa de ordenar) | decisao de negocio | Confirmar sob RF-08 (ver STATE `blockers[]`) |
 | Decisao do dono: resgate de REWARD_DRAFT adiado | decisao de negocio | Confirmar (ver STATE `blockers[]`) |
-| `floating-session-timer` (fail conhecido) | teste legado | Nao bloqueador (baseline 256/257) |
+| `floating-session-timer` (fail conhecido) | teste legado | Nao bloqueador — ver nota de baseline no §8 |
+| **Escopo por lab da instalacao de pacote** | decisao de negocio | Confirmar que o toggle **global** basta nesta versao e que o eixo por lab fica para o `05` (ver STATE `blockers[]`) |
+| **Custo da re-avaliacao rolling** | decisao de projeto | Confirmar `evaluateUserBadges` em **todo** award (agrega stats por evento) vs. otimizar por eixo dependente (ver STATE `blockers[]`) |
+| **Volume real do catalogo de badges** | dado de producao | 4 pacotes x 20 badges = 80 badges no catalogo ativo apos install; confirmar se a re-avaliacao completa (sem filtro por eixo) se sustenta no volume real |
