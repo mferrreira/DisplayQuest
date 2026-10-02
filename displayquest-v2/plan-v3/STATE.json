@@ -4,9 +4,22 @@
   "version": "3.0.0",
   "updatedAt": "2026-10-02",
   "status": "in_progress",
-  "activeWave": "1",
-  "activeBatch": "2.A",
-  "awaitingInstruction": [],
+  "activeWave": "2",
+  "activeBatch": "2.C",
+  "awaitingInstruction": [
+    {
+      "id": "ASK-P3-02",
+      "askedAt": "2026-10-02",
+      "question": "O log da sessão deve continuar obrigatório para encerrar?",
+      "measured": "A obrigatoriedade e so da interface: o dialogo desabilita 'Encerrar sessão' com a caixa vazia. O backend aceita log vazio — create-daily-log-from-session usa `note: command.note || null` e ainda formata 'Sessao de trabalho finalizada - N minutos' quando nao ha texto. O guia (cap. 2 e cap. 11) descreve a regra como se fosse do sistema.",
+      "options": [
+        "manter obrigatorio (nada muda; o 2.B so evita redigitar)",
+        "tornar opcional na interface: botao sempre habilitado e o backend grava o log automatico — exige atualizar guia, mensagens e o texto do dialogo",
+        "manter obrigatorio, mas aceitar o rascunho como log valido (ja e o que o 2.B faz)"
+      ],
+      "blocks": []
+    }
+  ],
   "target": "corrigir a economia de pontos, acabar com o silêncio das pausas automáticas e tornar o quadro utilizável quando enche",
   "lineage": {
     "predecessor": "clean-arch (repo-cleanup, ondas 0-9 + lotes B0-B11)",
@@ -33,6 +46,16 @@
       "integrationTests": 83,
       "archModules": 732,
       "archDependencies": 2762
+    },
+    "after2B": {
+      "at": "2026-10-02",
+      "commit": "ce57be1",
+      "testFilesUnitAndFeatures": 60,
+      "testsUnitAndFeatures": 712,
+      "testFilesAll": 70,
+      "testsAll": 795,
+      "archModules": 736,
+      "archDependencies": 2772
     }
   },
   "gates": {
@@ -166,15 +189,17 @@
       "id": "2.A",
       "wave": "2",
       "title": "lib/client-storage.ts: seam único de estado client-side (namespace, JSON tolerante, SSR-safe)",
-      "status": "planned",
-      "gates": "G0 G1 G2 G3"
+      "status": "done",
+      "gates": "G0 G1 G2 G3",
+      "evidence": "commit 28392d6. Medido antes de escrever: zero uso de localStorage na base e um uso de sessionStorage (session-welcome-balloon.tsx), que ficou de fora de proposito — trocar por local mudaria a semantica do aviso. lib/client-storage.ts: namespace dq:, clientStorageKey (ignora parte vazia), readJson/writeJson com fallback explicito, leitura e escrita que nunca lancam (cota estourada, aba anonima, storage bloqueado), kind local|session, e nenhum acesso a window no import. tests/unit/lib/client-storage.test.ts (16 testes, environment node = SSR de verdade). G0 734 modulos/2764 deps sem violacao e allow-list vazia; G1 limpo; G2 0 erros; G3 59 arquivos/697 testes."
     },
     {
       "id": "2.B",
       "wave": "2",
       "title": "caixa de notas da sessão: salva por sessão, despeja no log, limpa só em sucesso",
-      "status": "planned",
-      "gates": "G0 G1 G2 G3 G5"
+      "status": "done",
+      "gates": "G0 G1 G2 G3 G5",
+      "evidence": "commit ce57be1. components/ui/session-notes-draft.tsx (rascunho dq:session-notes:<id>, debounce 400 ms, gravacao do que ficou pendente no unmount, texto vazio remove a chave, clearNote pelo ultimo id visto). No cronometro: openStopDialog unico para 'Parar' e para o 'Encerrar sessao' da pausa automatica (despeja o rascunho na caixa de log, que segue editavel); handleStop so limpa depois de endSession resolver, e na falha devolve o texto ao rascunho e mostra 'Não foi possível encerrar a sessão...' (antes: sem try/catch, rejection silenciosa). Medido no mesmo levantamento: o backend NAO exige log (`note: command.note || null`) — a obrigatoriedade e so da interface (ver awaitingInstruction/2). AC-P3-05 coberto: tests/unit/components/session-notes-draft.test.tsx (11) + 4 casos novos em floating-session-timer.test.tsx (despejo, falha mantem, sucesso limpa, pausa automatica). Gotcha novo medido: no jsdom do Vitest desta base window === globalThis e window.localStorage e undefined (o populateGlobal nao copia a Web Storage do jsdom) — os testes instalam um storage em memoria. G5: guia (secao 'Anotacoes da sessao', passo de encerramento, tabela de telas, mensagens), diretriz da costura de estado em 12-padroes-e-diretrizes e divida conhecida em 15. G6 avaliado e nao exigido: a captura controle-de-sessao foi feita com 'Sem sessao', entao a caixa nova nao aparece nela. G0 736/2772 sem violacao; G1 limpo; G2 0 erros; G3 60 arquivos/712 testes; G4 suite completa 70 arquivos/795 testes contra dq-dev-test-db:5433."
     },
     {
       "id": "2.C",
@@ -350,6 +375,14 @@
     {
       "at": "2026-10-02",
       "event": "Medido para a Onda 2, antes de planejar o batch: o log da sessao e obrigatorio — sem texto, o botão 'Encerrar sessão' fica desabilitado e nao ha como encerrar. A nota da sessao (2.B) precisa tratar isso alem de salvar rascunho."
+    },
+    {
+      "at": "2026-10-02",
+      "event": "2.A: criado lib/client-storage.ts. Medido antes: zero localStorage na base e um sessionStorage (o aviso de sessao iniciada, que fica de fora de proposito). Namespace dq:, leitura que nunca lanca, devolve padrao sem window. 16 testes em environment node."
+    },
+    {
+      "at": "2026-10-02",
+      "event": "2.B: a anotacao da sessao passa a existir enquanto ela acontece. Rascunho por sessao com debounce, despejado na caixa de log ao abrir 'Finalizar Work Session' (que continua editavel), apagado so depois de endSession resolver; na falha o texto volta ao rascunho e o erro aparece na tela (antes era rejection silenciosa). Medido de paso: o backend aceita log vazio (`note || null`), logo a obrigatoriedade do log e regra so da interface — pergunta em aberto para o dono."
     }
   ]
 }

@@ -51,9 +51,12 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
 
 ## plan-v3 — qualidade operacional (sessões, quadro, pontos)
 
-- **Estado atual:** `ready` — plano aprovado, **nada executado ainda**. As 4 lacunas foram
-  respondidas pelo dono em 2026-10-02 (DEC-39..42) e `awaitingInstruction` está vazio. Único
-  batch travado: **5.A**, por BLK-01 (HTTPS) — onda **adiada** por decisão, sem travar as outras.
+- **Estado atual:** `in_progress` — **Onda 1 fechada** (1.A–1.D, G6 no commit `85a6bb4`) e
+  **Onda 2 em andamento** (2.A e 2.B prontos; `activeBatch` = 2.C). As 4 lacunas foram
+  respondidas pelo dono em 2026-10-02 (DEC-39..42). Único batch travado: **5.A**, por BLK-01
+  (HTTPS) — onda **adiada** por decisão, sem travar as outras. Há **1 pergunta aberta** ao dono
+  no `awaitingInstruction`: `ASK-P3-02` — o log da sessão é obrigatório **só na interface**
+  (o backend aceita vazio, `note || null`); mudar isso é decisão de produto.
 - **Decisões que mudam o desenho:** premiação **pode ficar negativa** (DEC-39, sem piso — o
   `-37140 pts` medido numa captura é a regra funcionando, não bug isolado); nenhum `UPDATE` em
   `tasks.points` histórico (DEC-40); `@pontos` do backlog aceito e ignorado (DEC-41).
@@ -118,6 +121,16 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
   `aria-expanded` fica `false`) e o teste só falha ao buscar os `role="option"`. Shims vivem em
   `tests/setup.ts` (guardados por `typeof Element !== "undefined"` — as suítes com
   `// @vitest-environment node` pulam). Não remover (2026-09-03).
+- **jsdom desta base não tem `window.localStorage` (medido 2026-10-02):** no ambiente jsdom do
+  Vitest, `window === globalThis` e `typeof window.localStorage === "undefined"` — o
+  `populateGlobal` **não** copia a Web Storage do jsdom (que existe e funciona em
+  `globalThis.jsdom.window.localStorage`). Teste de componente que dependa de `localStorage`
+  precisa instalar o seu: `Object.defineProperty(window, "localStorage", { configurable: true,
+  value: <Map em memória> })` no `beforeEach` e `delete window.localStorage` no `afterEach`
+  (o `delete` é o que devolve o ambiente ao estado medido). Referência:
+  `tests/unit/components/session-notes-draft.test.tsx` e `floating-session-timer.test.tsx`.
+  Consequência boa: o seam `lib/client-storage.ts` cai no caminho "sem storage" durante o teste,
+  que é exatamente o comportamento de SSR.
 - **Roundtrip de integração precisa de banco no ar:** os roundtrips G4 do clean-arch
   (`tests/integration/*-roundtrip.test.ts`, environment `node`) rodam Prisma real contra
   o banco de teste **isolado** `dq-dev-test-db` em `127.0.0.1:5433` (exportar
