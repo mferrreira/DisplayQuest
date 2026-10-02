@@ -3,9 +3,9 @@
   "title": "qualidade operacional: sessões, quadro e pontos",
   "version": "3.0.0",
   "updatedAt": "2026-10-02",
-  "status": "ready",
-  "activeWave": null,
-  "activeBatch": null,
+  "status": "in_progress",
+  "activeWave": "0",
+  "activeBatch": "S0.1",
   "awaitingInstruction": [],
   "target": "corrigir a economia de pontos, acabar com o silêncio das pausas automáticas e tornar o quadro utilizável quando enche",
   "lineage": {
@@ -16,8 +16,8 @@
   },
   "baseline": {
     "measuredAt": "2026-10-02",
-    "baseCommit": "8d78812",
-    "branch": "dev",
+    "baseCommit": "db6df77",
+    "branch": "plan/v3-operacional",
     "testFiles": 64,
     "tests": 721,
     "failures": 0,
@@ -35,28 +35,185 @@
     "G6": "recaptura --only=<telas> + rebuild, quando a captura do guia deixa de representar a tela"
   },
   "waves": [
-    { "id": "0", "name": "setup", "batches": ["S0.1"], "status": "planned", "dependsOn": [] },
-    { "id": "1", "name": "economia de pontos (X1)", "batches": ["1.A", "1.B", "1.C", "1.D"], "status": "planned", "dependsOn": ["0"] },
-    { "id": "2", "name": "sessão: nota e alerta (F2, F1a)", "batches": ["2.A", "2.B", "2.C"], "status": "planned", "dependsOn": ["0"] },
-    { "id": "3", "name": "quadro: altura, mover, ordenação (X2, X3, F3)", "batches": ["3.A", "3.B", "3.C"], "status": "planned", "dependsOn": ["0"] },
-    { "id": "4", "name": "animação de pontos (F4)", "batches": ["4.A", "4.B"], "status": "planned", "dependsOn": ["1"] },
-    { "id": "5", "name": "notificação nativa (F1b)", "batches": ["5.A"], "status": "blocked", "dependsOn": ["2"], "blockedBy": ["BLK-01"] }
+    {
+      "id": "0",
+      "name": "setup",
+      "batches": [
+        "S0.1"
+      ],
+      "status": "planned",
+      "dependsOn": []
+    },
+    {
+      "id": "1",
+      "name": "economia de pontos (X1)",
+      "batches": [
+        "1.A",
+        "1.B",
+        "1.C",
+        "1.D"
+      ],
+      "status": "planned",
+      "dependsOn": [
+        "0"
+      ]
+    },
+    {
+      "id": "2",
+      "name": "sessão: nota e alerta (F2, F1a)",
+      "batches": [
+        "2.A",
+        "2.B",
+        "2.C"
+      ],
+      "status": "planned",
+      "dependsOn": [
+        "0"
+      ]
+    },
+    {
+      "id": "3",
+      "name": "quadro: altura, mover, ordenação (X2, X3, F3)",
+      "batches": [
+        "3.A",
+        "3.B",
+        "3.C"
+      ],
+      "status": "planned",
+      "dependsOn": [
+        "0"
+      ]
+    },
+    {
+      "id": "4",
+      "name": "animação de pontos (F4)",
+      "batches": [
+        "4.A",
+        "4.B"
+      ],
+      "status": "planned",
+      "dependsOn": [
+        "1"
+      ]
+    },
+    {
+      "id": "5",
+      "name": "notificação nativa (F1b)",
+      "batches": [
+        "5.A"
+      ],
+      "status": "blocked",
+      "dependsOn": [
+        "2"
+      ],
+      "blockedBy": [
+        "BLK-01"
+      ]
+    }
   ],
   "batches": [
-    { "id": "S0.1", "wave": "0", "title": "branch plan/v3-operacional, tag pre-plan-v3, STATE v3.0.0, ponteiros em README/AGENTS", "status": "planned", "gates": "nenhum (nada de código muda)" },
-    { "id": "1.A", "wave": "1", "title": "golden de caracterização do comportamento atual de pontos (inclui o caso do dia do prazo -> 0)", "status": "planned", "gates": "G0 G1 G2 G3" },
-    { "id": "1.B", "wave": "1", "title": "backend/domain/task/points-rules.ts: dias de calendário SP, POINTS_PER_TASK=10, 1.5x adiantada, premiação pode ficar negativa (DEC-39); task-rules re-exporta", "status": "planned", "gates": "G0 G1 G2 G3 G4" },
-    { "id": "1.C", "wave": "1", "title": "move-rules.ts deixa de duplicar a penalidade e consulta o domínio (elimina a divergência)", "status": "planned", "gates": "G0 G1 G2 G3" },
-    { "id": "1.D", "wave": "1", "title": "10 pontos fixos na superfície: remove campo dos 2 formulários, @pontos do backlog aceito e ignorado (DEC-41), rota grava 10, tasks.points histórico intocado (DEC-40)", "status": "planned", "gates": "G0 G1 G2 G3 G4 G5 G6" },
-    { "id": "2.A", "wave": "2", "title": "lib/client-storage.ts: seam único de estado client-side (namespace, JSON tolerante, SSR-safe)", "status": "planned", "gates": "G0 G1 G2 G3" },
-    { "id": "2.B", "wave": "2", "title": "caixa de notas da sessão: salva por sessão, despeja no log, limpa só em sucesso", "status": "planned", "gates": "G0 G1 G2 G3 G5" },
-    { "id": "2.C", "wave": "2", "title": "alerta de pausa: visual sempre + som WebAudio opcional; sem window.alert", "status": "planned", "gates": "G0 G1 G2 G3" },
-    { "id": "3.A", "wave": "3", "title": "board-column.tsx: altura máxima + overflow-y por coluna, cabeçalho fixo", "status": "planned", "gates": "G0 G1 G2 G3 G6" },
-    { "id": "3.B", "wave": "3", "title": "allowedTargets(task, isLeader): menu deixa de oferecer destino que o servidor recusaria; regra de permissão inalterada", "status": "planned", "gates": "G0 G1 G2 G3" },
-    { "id": "3.C", "wave": "3", "title": "column-order.ts: ordenação por coluna, customizável, persistida em localStorage", "status": "planned", "gates": "G0 G1 G2 G3 G6" },
-    { "id": "4.A", "wave": "4", "title": "contrato: aprovação devolve awardedPoints autoritativo (withActorProgress + schema de resposta)", "status": "planned", "gates": "G0 G1 G2 G3 G4" },
-    { "id": "4.B", "wave": "4", "title": "points-delta.tsx: +X verde / -X vermelho incrementando em 1s; respeita prefers-reduced-motion", "status": "planned", "gates": "G0 G1 G2 G3 G5 G6" },
-    { "id": "5.A", "wave": "5", "title": "liga browser-notifications.ts ao fluxo de pausa: botão de ativação por gesto, dedupe por tag, degradação para o alerta da onda 2", "status": "blocked", "gates": "G0 G1 G2 G3", "blockedBy": ["BLK-01"] }
+    {
+      "id": "S0.1",
+      "wave": "0",
+      "title": "branch plan/v3-operacional, tag pre-plan-v3, STATE v3.0.0, ponteiros em README/AGENTS",
+      "status": "done",
+      "gates": "nenhum (nada de código muda)",
+      "evidence": "branch plan/v3-operacional criada em db6df77; tag pre-plan-v3 apontando para o mesmo commit; worktree principal (sem worktree nova, por decisao do dono)"
+    },
+    {
+      "id": "1.A",
+      "wave": "1",
+      "title": "golden de caracterização do comportamento atual de pontos (inclui o caso do dia do prazo -> 0)",
+      "status": "in_progress",
+      "gates": "G0 G1 G2 G3"
+    },
+    {
+      "id": "1.B",
+      "wave": "1",
+      "title": "backend/domain/task/points-rules.ts: dias de calendário SP, POINTS_PER_TASK=10, 1.5x adiantada, premiação pode ficar negativa (DEC-39); task-rules re-exporta",
+      "status": "planned",
+      "gates": "G0 G1 G2 G3 G4"
+    },
+    {
+      "id": "1.C",
+      "wave": "1",
+      "title": "move-rules.ts deixa de duplicar a penalidade e consulta o domínio (elimina a divergência)",
+      "status": "planned",
+      "gates": "G0 G1 G2 G3"
+    },
+    {
+      "id": "1.D",
+      "wave": "1",
+      "title": "10 pontos fixos na superfície: remove campo dos 2 formulários, @pontos do backlog aceito e ignorado (DEC-41), rota grava 10, tasks.points histórico intocado (DEC-40)",
+      "status": "planned",
+      "gates": "G0 G1 G2 G3 G4 G5 G6"
+    },
+    {
+      "id": "2.A",
+      "wave": "2",
+      "title": "lib/client-storage.ts: seam único de estado client-side (namespace, JSON tolerante, SSR-safe)",
+      "status": "planned",
+      "gates": "G0 G1 G2 G3"
+    },
+    {
+      "id": "2.B",
+      "wave": "2",
+      "title": "caixa de notas da sessão: salva por sessão, despeja no log, limpa só em sucesso",
+      "status": "planned",
+      "gates": "G0 G1 G2 G3 G5"
+    },
+    {
+      "id": "2.C",
+      "wave": "2",
+      "title": "alerta de pausa: visual sempre + som WebAudio opcional; sem window.alert",
+      "status": "planned",
+      "gates": "G0 G1 G2 G3"
+    },
+    {
+      "id": "3.A",
+      "wave": "3",
+      "title": "board-column.tsx: altura máxima + overflow-y por coluna, cabeçalho fixo",
+      "status": "planned",
+      "gates": "G0 G1 G2 G3 G6"
+    },
+    {
+      "id": "3.B",
+      "wave": "3",
+      "title": "allowedTargets(task, isLeader): menu deixa de oferecer destino que o servidor recusaria; regra de permissão inalterada",
+      "status": "planned",
+      "gates": "G0 G1 G2 G3"
+    },
+    {
+      "id": "3.C",
+      "wave": "3",
+      "title": "column-order.ts: ordenação por coluna, customizável, persistida em localStorage",
+      "status": "planned",
+      "gates": "G0 G1 G2 G3 G6"
+    },
+    {
+      "id": "4.A",
+      "wave": "4",
+      "title": "contrato: aprovação devolve awardedPoints autoritativo (withActorProgress + schema de resposta)",
+      "status": "planned",
+      "gates": "G0 G1 G2 G3 G4"
+    },
+    {
+      "id": "4.B",
+      "wave": "4",
+      "title": "points-delta.tsx: +X verde / -X vermelho incrementando em 1s; respeita prefers-reduced-motion",
+      "status": "planned",
+      "gates": "G0 G1 G2 G3 G5 G6"
+    },
+    {
+      "id": "5.A",
+      "wave": "5",
+      "title": "liga browser-notifications.ts ao fluxo de pausa: botão de ativação por gesto, dedupe por tag, degradação para o alerta da onda 2",
+      "status": "blocked",
+      "gates": "G0 G1 G2 G3",
+      "blockedBy": [
+        "BLK-01"
+      ]
+    }
   ],
   "decisionRegistry": [
     "DEC-30: 10 pontos fixos por tarefa; campo removido dos formulários; coluna tasks.points mantida como histórico, valor ignorado no cálculo.",
@@ -71,16 +228,57 @@
     "DEC-39: premiação PODE ficar negativa — a penalidade por dia de atraso não tem piso. Consequência aceita pelo dono: tarefa muito atrasada produz valor grande negativo e o total de pontos da pessoa pode cair; a UI precisa exibir isso sem disfarce.",
     "DEC-40: nenhum UPDATE no tasks.points existente. O cálculo passa a usar a constante de 10 pontos e o valor gravado deixa de importar; o histórico do que foi creditado continua em task_user_progress.awardedPoints.",
     "DEC-41: o token @pontos do importador de backlog continua aceito e é ignorado — não quebra backlog que as pessoas já têm escrito.",
-    "DEC-42: Onda 5 (notificação nativa) adiada. Ondas 1-4 executam sem TLS. A Onda 2 entrega alerta in-app + som, que funciona em HTTP."
+    "DEC-42: Onda 5 (notificação nativa) adiada. Ondas 1-4 executam sem TLS. A Onda 2 entrega alerta in-app + som, que funciona em HTTP.",
+    "DEC-43: restrição R15 — RG-01 proibe backend/domain/ de importar lib/ (LAYER.lib em FORBIDDEN_FOR_CORE). A regra de pontos usa data civil propria do dominio (padrao spParts/SP_OFFSET_MS de ReportPeriod.ts), nao lib/date-only.ts. O plano original estava errado e foi corrigido antes de executar 1.B."
   ],
   "gapRegistry": [
-    { "id": "GAP-P3-01", "open": false, "resolved": "2026-10-02", "resolution": "PREMIAO PODE FICAR NEGATIVA (DEC-39). Consequencia aceita: tarefa muito atrasada produz valor grande negativo e o total da pessoa pode cair.", "blocks": ["1.B"] },
-    { "id": "GAP-P3-02", "open": false, "resolved": "2026-10-02", "resolution": "ADIADO (DEC-42): ondas 1-4 executam sem TLS; Onda 5 permanece bloqueada por BLK-01 ate a infra existir.", "blocks": ["5.A"] },
-    { "id": "GAP-P3-03", "open": false, "resolved": "2026-10-02", "resolution": "MANTER COMO ESTA (DEC-40): nenhum UPDATE em tasks.points; o calculo passa a usar a constante e o valor gravado deixa de importar.", "blocks": ["1.D"] },
-    { "id": "GAP-P3-04", "open": false, "resolved": "2026-10-02", "resolution": "ACEITAR E IGNORAR O VALOR (DEC-41): sintaxe @N continua aceita para nao quebrar backlog existente; o numero nao define ponto." , "blocks": ["1.D"] }
+    {
+      "id": "GAP-P3-01",
+      "open": false,
+      "resolved": "2026-10-02",
+      "resolution": "PREMIAO PODE FICAR NEGATIVA (DEC-39). Consequencia aceita: tarefa muito atrasada produz valor grande negativo e o total da pessoa pode cair.",
+      "blocks": [
+        "1.B"
+      ]
+    },
+    {
+      "id": "GAP-P3-02",
+      "open": false,
+      "resolved": "2026-10-02",
+      "resolution": "ADIADO (DEC-42): ondas 1-4 executam sem TLS; Onda 5 permanece bloqueada por BLK-01 ate a infra existir. Onda 5 adiada, BLK-01 permanece aberto.",
+      "blocks": [
+        "5.A"
+      ]
+    },
+    {
+      "id": "GAP-P3-03",
+      "open": false,
+      "resolved": "2026-10-02",
+      "resolution": "MANTER COMO ESTA (DEC-40): nenhum UPDATE em tasks.points; o calculo passa a usar a constante e o valor gravado deixa de importar.",
+      "blocks": [
+        "1.D"
+      ]
+    },
+    {
+      "id": "GAP-P3-04",
+      "open": false,
+      "resolved": "2026-10-02",
+      "resolution": "ACEITAR E IGNORAR O VALOR (DEC-41): sintaxe @N continua aceita para nao quebrar backlog existente; o numero nao define ponto.",
+      "blocks": [
+        "1.D"
+      ]
+    }
   ],
   "blockers": [
-    { "id": "BLK-01", "summary": "instância servida em HTTP num IP de rede: Chrome e Firefox recusam pedido de permissão de notificação fora de secure context", "blocks": ["5.A"], "owner": "dono/infra", "disposition": "Onda 5 adiada pelo dono em 2026-10-02 (DEC-42). Onda 2 entrega o alerta in-app + som, que funciona em HTTP e não depende deste bloqueio." }
+    {
+      "id": "BLK-01",
+      "summary": "instância servida em HTTP num IP de rede: Chrome e Firefox recusam pedido de permissão de notificação fora de secure context",
+      "blocks": [
+        "5.A"
+      ],
+      "owner": "dono/infra",
+      "disposition": "Onda 5 adiada pelo dono em 2026-10-02 (DEC-42). Onda 2 entrega o alerta in-app + som, que funciona em HTTP e não depende deste bloqueio."
+    }
   ],
   "acceptanceCriteria": [
     "AC-P3-01: tarefa com prazo hoje, aprovada hoje, credita 10 pontos (não zero).",
@@ -96,16 +294,31 @@
   ],
   "evidence": {},
   "rollbacks": [
-    { "tag": "pre-plan-v3", "commit": "8d78812", "scope": "todo plan-v3" }
+    {
+      "tag": "pre-plan-v3",
+      "commit": "8d78812",
+      "scope": "todo plan-v3"
+    }
   ],
   "notes": [
     "Onda 2 e Onda 3 são independentes da Onda 1 e entre si; podem ser invertidas por urgência de uso.",
     "Único encadeamento duro: 1 -> 4 (a animação depende do delta autoritativo).",
     "Altura/scroll de coluna não tem teste unitário honesto em jsdom: a prova é o spec Playwright.",
-    "Nenhuma onda toca display-quest-db :5432. Capturas de tela sim: docs/.capture.env aponta para a instância real."
+    "Nenhuma onda toca display-quest-db :5432. Capturas de tela sim: docs/.capture.env aponta para a instância real.",
+    "Correcao de plano: 1.B nao pode usar lib/date-only.ts (RG-01). Novo backend/domain/time/civil-day.ts, puro e sem import, compartilhado por backend e frontend — fonte unica que elimina a divergencia R5."
   ],
   "timeline": [
-    { "at": "2026-10-02", "event": "plano escrito a partir da lista do dono; restrições R1-R14 medidas no código; DEC-30..38 registradas; 4 gaps abertos" },
-    { "at": "2026-10-02", "event": "dono respondeu os 4 gaps: DEC-39 (premiação pode ficar negativa), DEC-40 (histórico de pontos intocado), DEC-41 (@pontos aceito e ignorado), DEC-42 (Onda 5 adiada). Gaps fechados, status ready, nenhum batch travado exceto 5.A por BLK-01." }
+    {
+      "at": "2026-10-02",
+      "event": "plano escrito a partir da lista do dono; restrições R1-R14 medidas no código; DEC-30..38 registradas; 4 gaps abertos"
+    },
+    {
+      "at": "2026-10-02",
+      "event": "dono respondeu os 4 gaps: DEC-39 (premiação pode ficar negativa), DEC-40 (histórico de pontos intocado), DEC-41 (@pontos aceito e ignorado), DEC-42 (Onda 5 adiada). Gaps fechados, status ready, nenhum batch travado exceto 5.A por BLK-01."
+    },
+    {
+      "at": "2026-10-02",
+      "event": "S0.1: branch plan/v3-operacional + tag pre-plan-v3 em db6df77. Dono escolheu executar neste checkout e comecar pela Onda 1. Antes de 1.B, mediu-se R15 (RG-01 veda domain->lib) e o plano foi corrigido (DEC-43)."
+    }
   ]
 }

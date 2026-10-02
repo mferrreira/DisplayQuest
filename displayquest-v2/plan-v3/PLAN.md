@@ -36,6 +36,7 @@ Estas restrições definem o que é possível e em que ordem. Todas verificadas 
 | R12 | A coluna do quadro não tem altura máxima: `min-h-[400px] … overflow-hidden`. O crescimento é vertical e infinito. | `features/tasks/components/board-column.tsx:45` |
 | R13 | Cartão concluído não é arrastável para **ninguém**, mas a regra de negócio já permite reverter para líderes — e o menu "Mover para" oferece destinos que o servidor recusaria. | `features/tasks/components/task-card.tsx:232` (`isDragDisabled={task.status === "done"}`) vs `features/tasks/utils/move-rules.ts:39-41` |
 | R14 | Frontend importar `backend/domain` **não é proibido** pelo gate (RG-05 só veda Prisma/`lib/database/prisma`), e já é padrão da casa (`lib/auth/features.ts` re-exporta o domínio; `components/layout/nav-config.ts` consome). | `.dependency-cruiser.js:197-198` |
+| R15 | **O domínio não pode importar `lib/`.** RG-01 lista `LAYER.lib` entre os proibidos para `backend/domain/` — e hoje zero arquivo do domínio importa `lib/`. Reaproveitar `lib/date-only.ts` na regra de pontos **quebraria o gate G0**. O domínio já tem o precedente próprio de data civil: `spParts`/`SP_OFFSET_MS` em `ReportPeriod.ts` (UTC-3 fixo, sem DST desde 2019). | `.dependency-cruiser.js:57-69`, `grep "from \"@/lib/" backend/domain/` → zero |
 
 ### O bug de pontos, resolvido antes de planejar
 
@@ -70,9 +71,11 @@ displayquest-v2/plan-v3/
 ├── PLAN.md                    este plano
 └── STATE.json                 máquina de estados v3.0.0 (ondas, batches, gates, decisões, gaps)
 
-backend/domain/task/
-├── points-rules.ts            NOVO: dias de calendário, premiação, multiplicador, piso
-└── task-rules.ts              re-exporta points-rules (mesmo padrão de lib/work-sessions/schedule.ts)
+backend/domain/
+├── time/civil-day.ts          NOVO: dia civil America/Sao_Paulo (UTC-3 fixo), puro, zero import
+└── task/
+    ├── points-rules.ts        NOVO: dias de calendário, premiação, multiplicador
+    └── task-rules.ts          re-exporta points-rules (mesmo padrão de lib/work-sessions/schedule.ts)
 
 lib/
 └── client-storage.ts          NOVO: seam único de estado client-side (SSR-safe, namespace, JSON)
@@ -126,10 +129,14 @@ plano o descongela deliberadamente — isso precisa estar registrado, não embut
   num teste explícito de "estado anterior" (`domain.points-rules.test.ts`, bloco
   `comportamento pré-v3`), incluindo o caso do dia do prazo → 0. Isso torna o batch revertível
   e a mudança auditável.
-- **1.B — regra nova no domínio.** `backend/domain/task/points-rules.ts`:
+- **1.B — regra nova no domínio.** `backend/domain/task/points-rules.ts` +
+  `backend/domain/time/civil-day.ts` (novo, puro, zero import):
   - `POINTS_PER_TASK = 10`;
-  - dias contados por **calendário em `America/Sao_Paulo`**, reaproveitando `lib/date-only.ts`
-    (`isOverdueDateOnly`, `isDueTodayDateOnly`) — prazo de hoje entregue hoje **não é atraso**;
+  - dias contados por **calendário em `America/Sao_Paulo`** (UTC-3 fixo, sem DST desde 2019),
+    no padrão já existente do domínio (`spParts`/`SP_OFFSET_MS` de `ReportPeriod.ts`) — **não**
+    via `lib/date-only.ts`, que RG-01 proíbe (R15). Prazo de hoje entregue hoje **não é atraso**;
+  - `civilDay(instant): "YYYY-MM-DD"` aceita também data-only cru, porque `tasks.dueDate` é
+    `String?` e o formulário do quadro envia `YYYY-MM-DD` (`task-dialog.tsx:200`, `<Input type="date">`);
   - premiação: adiantada `10 × 1.5 = 15`, no dia `10`, sem prazo `10`, atrasada `10 − diasAtrasados × 10`;
   - **sem piso**: a premiação pode ficar negativa (DEC-39). Consequência aceita pelo dono e
     que a UI precisa exibir sem disfarce — ver §7.
