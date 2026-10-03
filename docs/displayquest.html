@@ -3141,6 +3141,14 @@ contrato de apresentação.</p>
 <td>Autoria explícita</td>
 <td>A interface distingue o dado que a pessoa edita do dado que ela apenas consulta</td>
 </tr>
+<tr>
+<td>Estado visível sem depender da atenção</td>
+<td>O botão do cronômetro, mesmo fechado, diz se há sessão ativa ou pausada e marca a pausa automática com um ponto pulsante</td>
+</tr>
+<tr>
+<td>Sinal sonoro opcional</td>
+<td>O aviso de pausa é sintetizado na hora, sem arquivo de áudio, e só toca se a pessoa ligar o interruptor; o sinal visual nunca depende do som</td>
+</tr>
 </tbody>
 </table>
 <h2 id="diretrizes-de-verificacao">Diretrizes de verificação</h2>
@@ -4225,6 +4233,12 @@ quem responde pelo sistema.</p>
 <td>Uma chave fora do namespace <code>dq:</code>, sem leitura tolerante a conteúdo corrompido</td>
 <td>Divergência única e consciente: trocar de <code>sessionStorage</code> para o armazenamento persistente mudaria a semântica do aviso</td>
 </tr>
+<tr>
+<td>A costura de notificação do navegador existe e não está ligada a nenhum ponto</td>
+<td>Notificação do navegador, na biblioteca compartilhada</td>
+<td>A pausa automática avisa só quem está olhando a tela: o sinal visual do cronômetro e, se ligado, o som</td>
+<td>Adiado por decisão: a instância é servida em HTTP num endereço de rede, e os navegadores recusam pedido de permissão fora de contexto seguro; com HTTPS, a ligação é uma chamada no cronômetro</td>
+</tr>
 </tbody>
 </table>
 <p>A divergência entre a autorização avaliada na rota e a matriz do domínio merece uma observação
@@ -4296,7 +4310,7 @@ expressa como migração versionada não pertence a este sistema.</p>
 <footer class="dq-footer">
   <p>
     Conteúdo gerado a partir de <code>docs/src/</code> e <code>docs/diagrams/</code>. Diagramas em notação UML (PlantUML). O conteúdo reflete o estado do
-    código no commit <code>28392d6 (2026-10-02)</code>.
+    código no commit <code>b1eb1fe (2026-10-02)</code>.
   </p>
 </footer>
 

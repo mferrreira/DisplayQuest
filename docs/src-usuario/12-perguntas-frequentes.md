@@ -16,6 +16,10 @@ Não. Uma pessoa tem uma sessão por vez. Enquanto existir uma ativa ou pausada,
 
 Porque cruzou um dos horários programados — 09:30, 12:00, 15:00 ou 17:00, no fuso de São Paulo — ou porque a varredura das 23:59 fechou o que tinha sobrado aberto. A pausa é registrada no horário do corte, não no momento em que você viu o aviso.
 
+## Não vi o aviso de pausa automática. A sessão parou mesmo assim?
+
+Parou. O aviso é um lembrete, não a garantia: a pausa é registrada pelo sistema no horário do corte, mesmo que a janela esteja fechada ou em outra aba. Para saber por fora do diálogo, olhe o botão do cronômetro — fechado, ele mostra um ponto pulsante depois de uma pausa automática. Se quiser um sinal sonoro, ligue **Som ao pausar** na aba **Sessão** do cronômetro; o som é opcional e começa desligado.
+
 ## Não vejo Relatórios Semanais nem Painel Administrativo. É bug?
 
 Não é bug, é função. Relatórios Semanais é de Coordenador, Gerente e Laboratorista. Painel Administrativo é de Coordenador e Gerente. As demais funções não encontram o destino no menu.

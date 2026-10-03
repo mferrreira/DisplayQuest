@@ -68,6 +68,8 @@ contrato de apresentação.
 | Fechamento por clique externo | O popover de notificações fecha ao clicar fora, como espera um painel auxiliar |
 | Imagem de perfil quadrada | Recorte e conversão para WebP antes da gravação |
 | Autoria explícita | A interface distingue o dado que a pessoa edita do dado que ela apenas consulta |
+| Estado visível sem depender da atenção | O botão do cronômetro, mesmo fechado, diz se há sessão ativa ou pausada e marca a pausa automática com um ponto pulsante |
+| Sinal sonoro opcional | O aviso de pausa é sintetizado na hora, sem arquivo de áudio, e só toca se a pessoa ligar o interruptor; o sinal visual nunca depende do som |
 
 ## Diretrizes de verificação
 

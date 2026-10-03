@@ -20,7 +20,7 @@ Esta é a lista completa das telas do sistema, com o endereço de cada uma e que
 
 | Controle | Onde está | O que faz |
 | --- | --- | --- |
-| Cronômetro de sessão | canto da tela, em todas as telas internas | iniciar, pausar, continuar e encerrar a sessão de trabalho; anotar o que está sendo feito |
+| Cronômetro de sessão | canto da tela, em todas as telas internas | iniciar, pausar, continuar e encerrar a sessão de trabalho; anotar o que está sendo feito; ligar o som de pausa |
 | Painel de notificações | sino no cabeçalho | avisos não lidos; fecha com clique fora ou **Escape** |
 | Menu da pessoa | botão com as iniciais no cabeçalho | **Meu Perfil**, **Meus Premios**, **Sair** |
 | **Abrir menu** | cabeçalho em janela estreita | os mesmos grupos de navegação |

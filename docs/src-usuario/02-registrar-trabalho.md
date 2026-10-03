@@ -4,17 +4,17 @@ A sessão de trabalho é o registro do tempo que você passou no laboratório. �
 
 ## O cronômetro
 
-O controle de sessão fica fixo no canto da tela, em todas as telas internas. Fechado, ele é apenas um botão com o ícone de relógio (**Abrir timer de sessão**). Aberto, ele mostra duas abas: **Sessão** e **Responsabilidade**.
+O controle de sessão fica fixo no canto da tela, em todas as telas internas. Fechado, ele é um botão que muda conforme o estado: relógio com **Sessão de trabalho ativa**, ícone de pausa em âmbar com **Sessão de trabalho pausada**, e um ponto pulsante quando a pausa foi automática. Aberto, ele mostra duas abas: **Sessão** e **Responsabilidade**.
 
 ```foto controle-de-sessao titulo="O controle de sessão aberto, com as abas Sessão e Responsabilidade"
 O estado aparece escrito ao lado de "Sessão de Trabalho": **Sem sessão**, **Pausada** ou **Ativa**.
 ```
 
-Na aba **Sessão** o painel mostra o tempo decorrido e, quando há sessão aberta, o aviso da próxima pausa automática e a caixa **Anotações da sessão** (descrita abaixo). A aba **Responsabilidade** é o plantão do laboratório, tratado no capítulo 6.
+Na aba **Sessão** o painel mostra o tempo decorrido e, quando há sessão aberta, o aviso da próxima pausa automática, o interruptor **Som ao pausar** e a caixa **Anotações da sessão** (descrita abaixo). A aba **Responsabilidade** é o plantão do laboratório, tratado no capítulo 6.
 
 ## Iniciar uma sessão
 
-1. Abra o cronômetro. Se ele estiver fechado, clique no ícone de relógio.
+1. Abra o cronômetro. Se ele estiver fechado, clique no botão no canto da tela — ele mostra o estado da sessão, se houver uma aberta.
 2. Em **Projeto**, escolha o projeto em que você vai trabalhar. Coordenadores e gerentes encontram também a opção **Sem projeto específico**, para trabalho que não pertence a nenhum projeto.
 3. Opcionalmente preencha **Atividade (opcional)** e **Local (opcional)**. Eles entram no log que a sessão gera ao ser encerrada.
 4. Clique em **Iniciar sessão**.
@@ -73,6 +73,18 @@ Quando a pausa automática acontece, o sistema abre o diálogo **Sessão pausada
 Escolha **Continuar sessão** para retomar o trabalho, ou **Encerrar sessão** para fechar a sessão e escrever o log.
 
 A sessão é pausada **no horário da pausa**, não no momento em que você viu o aviso. Uma sessão iniciada às 11:00 e deixada ativa até as 14:00 é registrada como pausada às 12:00: as duas horas seguintes não contam.
+
+## Como você fica sabendo da pausa
+
+O diálogo **Sessão pausada automaticamente** aparece na tela — mas só se você estiver olhando para ela. Quem deixa a sessão correndo em outra aba precisa de um sinal fora do diálogo, e é isso que o cronômetro passa a dar:
+
+- **Fechado, o botão mostra o estado**: relógio com a sessão ativa, ícone de pausa em âmbar com a sessão pausada.
+- **Depois de uma pausa automática**, o botão ganha um ponto pulsante. Ele some quando você abre o painel, retoma a sessão ou a encerra — ou seja, quando o aviso foi visto ou resolvido.
+- **Com o som ligado**, a pausa também toca dois bipes curtos. O som é **desligado por padrão** e vive no interruptor **Som ao pausar**, dentro da aba **Sessão** do cronômetro.
+
+::: nota titulo="O som depende do navegador"
+O navegador só libera áudio depois de um clique seu. Por isso o interruptor toca uma prévia ao ser ligado: se você não ouviu nada, o navegador está bloqueando áudio nesta página — nesse caso, deixe desligado e use o sinal visual. A preferência fica guardada **neste navegador**.
+:::
 
 ::: limite titulo="Teto de 9 horas"
 Um trecho contínuo de sessão ativa conta no máximo 9 horas. Passou disso, o excedente não é somado. O teto existe para impedir que sessão deixada aberta indefinidamente vire hora registrada.

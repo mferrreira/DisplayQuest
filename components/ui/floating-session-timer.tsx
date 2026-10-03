@@ -9,12 +9,19 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Clock, Pause, PlayCircle, StopCircle, ChevronDown } from "lucide-react"
+import { Pause, PlayCircle, StopCircle, ChevronDown } from "lucide-react"
 import { useProject } from "@/contexts/project-context"
 import { getNextScheduledPause, getMissedScheduledPause, toSafeDate } from "@/lib/work-sessions/schedule"
 import { SessionAutoPauseCountdown } from "@/components/ui/session-auto-pause-countdown"
 import { SessionWelcomeBalloon } from "@/components/ui/session-welcome-balloon"
 import { SessionNotesDraft, useSessionNotes } from "@/components/ui/session-notes-draft"
+import {
+  SessionAlertSoundToggle,
+  SessionTimerIndicator,
+  sessionTimerButtonLabel,
+  useSessionAlertSound,
+  type SessionTimerVisualState,
+} from "@/components/ui/session-alert"
 import { ResponsibilityMiniPanel } from "@/components/ui/responsibility-mini-panel"
 import { ResponsibilitiesAPI } from "@/contexts/api-client"
 
@@ -53,6 +60,17 @@ export function FloatingSessionTimer() {
   const [startLocation, setStartLocation] = useState("")
   const [startError, setStartError] = useState<string | null>(null)
   const autoPausedSessionIdsRef = useRef<Set<number>>(new Set())
+  // OND2-C: o pulso do botão fechado vive enquanto ninguém retomou nem encerrou. Some
+  // sozinho ao abrir o painel (`expanded`), porque aí a pessoa já viu o aviso.
+  const [autoPausedNotice, setAutoPausedNotice] = useState(false)
+
+  const {
+    enabled: soundEnabled,
+    setEnabled: setSoundEnabled,
+    playPauseSound,
+    supported: soundSupported,
+    loaded: soundLoaded,
+  } = useSessionAlertSound()
 
   // OND2-B: rascunho de anotações preso a ESTA sessão (chave inclui o id). Vive aqui porque
   // quem precisa do texto no momento de encerrar é o próprio cronômetro — o despejo no log.
@@ -119,6 +137,11 @@ export function FloatingSessionTimer() {
             // Responsibility pause is secondary; session pause succeeded.
           }
           setShowAutoPauseDialog(true)
+          // OND2-C: o alerta é disparado aqui, e não quando a pessoa abre o painel — o
+          // diálogo modal não é visto com a aba em segundo plano, que é o caso comum de
+          // quem deixa a sessão correndo.
+          setAutoPausedNotice(true)
+          playPauseSound()
         } catch {
           // Allow a later poll to retry if the pause request failed.
           autoPausedSessionIdsRef.current.delete(sessionId)
@@ -136,7 +159,18 @@ export function FloatingSessionTimer() {
     const delay = Math.max(0, nextPause.getTime() - now.getTime())
     const timeout = setTimeout(doAutoPause, delay)
     return () => clearTimeout(timeout)
-  }, [currentSession?.id, currentSession?.status, currentSession?.startTime, user?.id, pauseSession, fetchSessions])
+    // `playPauseSound` entra na lista porque a preferência do som é lida dentro de
+    // `doAutoPause`: sem isto, o closure seria o da montagem, com o som ainda desligado.
+    // O efeito só rearma o timer com o próximo horário — o que o toggle não muda.
+  }, [
+    currentSession?.id,
+    currentSession?.status,
+    currentSession?.startTime,
+    user?.id,
+    pauseSession,
+    fetchSessions,
+    playPauseSound,
+  ])
 
   useEffect(() => {
     if (!expanded) return
@@ -169,6 +203,9 @@ export function FloatingSessionTimer() {
     if (!activeSession || !user?.id) return
     await pauseSession(activeSession.id)
     await fetchSessions(user.id)
+    // OND2-C: pausa manual também avisa. Quem parou por decisão própria já está olhando a
+    // tela, mas quem parou e depois foi para outra aba não está.
+    playPauseSound()
   }
 
   const handleResume = async () => {
@@ -176,6 +213,7 @@ export function FloatingSessionTimer() {
     await resumeSession(currentSession.id)
     await fetchSessions(user.id)
     setShowAutoPauseDialog(false)
+    setAutoPausedNotice(false)
   }
 
   /**
@@ -203,6 +241,7 @@ export function FloatingSessionTimer() {
       clearSessionNote()
       setShowStopDialog(false)
       setShowAutoPauseDialog(false)
+      setAutoPausedNotice(false)
       setLogNote("")
       await fetchSessions(user.id)
     } catch {
@@ -242,6 +281,17 @@ export function FloatingSessionTimer() {
     }
   }
 
+  // OND2-C: o que o botão fechado mostra. "auto-paused" (pulso) vale enquanto ninguém
+  // retomou, encerrou ou abriu o painel — abrir o painel já é ter visto o aviso.
+  const collapsedState: SessionTimerVisualState =
+    !currentSession
+      ? "none"
+      : currentSession.status === "paused"
+        ? autoPausedNotice && !expanded
+          ? "auto-paused"
+          : "paused"
+        : "active"
+
   return (
     <>
       <div
@@ -260,9 +310,10 @@ export function FloatingSessionTimer() {
             variant="ghost"
             className="w-full h-full rounded-lg flex items-center justify-center"
             onClick={() => setExpanded(true)}
-            aria-label="Abrir timer de sessão"
+            aria-label={sessionTimerButtonLabel(collapsedState)}
+            data-testid="floating-session-timer-collapsed"
           >
-            <Clock className="h-5 w-5" />
+            <SessionTimerIndicator state={collapsedState} />
           </Button>
         ) : (
           <Tabs defaultValue="sessao" className="space-y-3">
@@ -297,6 +348,17 @@ export function FloatingSessionTimer() {
                 sessionId={currentSession.id}
                 note={sessionNote}
                 onNoteChange={setSessionNote}
+              />
+            )}
+
+            {/* OND2-C: o aviso sonoro é por sessão aberta — sem sessão não há pausa para
+                avisar, e o interruptor ficaria num painel que não faz sentido. */}
+            {currentSession && (
+              <SessionAlertSoundToggle
+                enabled={soundEnabled}
+                onChange={setSoundEnabled}
+                supported={soundSupported}
+                loaded={soundLoaded}
               />
             )}
 

@@ -2,8 +2,9 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, act, fireEvent } from "@testing-library/react";
 import { FloatingSessionTimer } from "@/components/ui/floating-session-timer";
 import { SESSION_NOTES_DEBOUNCE_MS, sessionNotesKey } from "@/components/ui/session-notes-draft";
+import { PAUSE_SOUND_KEY } from "@/components/ui/session-alert";
 
-const { workSessionsMock, authMock, projectMock } = vi.hoisted(() => {
+const { workSessionsMock, authMock, projectMock, alertSoundMock } = vi.hoisted(() => {
   const workSessionsMock: any = {
     currentSession: null,
     activeSession: null,
@@ -26,7 +27,8 @@ const { workSessionsMock, authMock, projectMock } = vi.hoisted(() => {
   };
   const authMock = { user: { id: 1, roles: [] } as any, loading: false };
   const projectMock = { projects: [] as any[] };
-  return { workSessionsMock, authMock, projectMock };
+  const alertSoundMock = { playAlertSound: vi.fn(), isAlertSoundSupported: vi.fn() };
+  return { workSessionsMock, authMock, projectMock, alertSoundMock };
 });
 
 vi.mock("@/hooks/use-work-sessions", () => ({
@@ -37,6 +39,12 @@ vi.mock("@/contexts/auth-context", () => ({
 }));
 vi.mock("@/contexts/project-context", () => ({
   useProject: () => projectMock,
+}));
+// OND2-C: o som é uma costura em lib/ (padrão da casa — o teste dublê a lib, não o
+// builtin). O contexto WebAudio não existe em jsdom de todo modo.
+vi.mock("@/lib/notifications/alert-sound", () => ({
+  playAlertSound: alertSoundMock.playAlertSound,
+  isAlertSoundSupported: alertSoundMock.isAlertSoundSupported,
 }));
 // Gotcha AGENTS.md: o auto-pause chama ResponsibilitiesAPI.pause() depois de
 // pauseSession(). Sem este mock a chamada vai pro MSW, fica pendente, e a linha
@@ -102,7 +110,15 @@ beforeEach(() => {
   workSessionsMock.activeSession = null;
   workSessionsMock.pauseSession.mockResolvedValue(undefined);
   workSessionsMock.fetchSessions.mockResolvedValue(undefined);
+  // Padrão do produto: som desligado. Os testes que quiserem som ligam por preferência.
+  alertSoundMock.playAlertSound.mockReturnValue(true);
+  alertSoundMock.isAlertSoundSupported.mockReturnValue(true);
 });
+
+/** Liga a preferência do som **antes** da montagem, que é quando ela é lida. */
+function preferSoundOn() {
+  storageData.set(PAUSE_SOUND_KEY, JSON.stringify(true));
+}
 
 afterEach(() => {
   delete (window as unknown as Record<string, unknown>).localStorage;
@@ -189,7 +205,7 @@ describe("FloatingSessionTimer scheduled auto-pause", () => {
 
     // Expand the collapsed panel so the elapsed clock is visible.
     await act(async () => {
-      screen.getByLabelText("Abrir timer de sessão").click();
+      screen.getByLabelText(/abrir timer de sessão/i).click();
     });
 
     await act(async () => {
@@ -212,7 +228,7 @@ describe("FloatingSessionTimer anotações da sessão (OND2-B)", () => {
       render(<FloatingSessionTimer />);
     });
     await act(async () => {
-      screen.getByLabelText("Abrir timer de sessão").click();
+      screen.getByLabelText(/abrir timer de sessão/i).click();
     });
     return session;
   }
@@ -284,7 +300,7 @@ describe("FloatingSessionTimer anotações da sessão (OND2-B)", () => {
       render(<FloatingSessionTimer />);
     });
     await act(async () => {
-      screen.getByLabelText("Abrir timer de sessão").click();
+      screen.getByLabelText(/abrir timer de sessão/i).click();
     });
     await typeDraft("chegou ao limite das 12h");
 
@@ -299,5 +315,196 @@ describe("FloatingSessionTimer anotações da sessão (OND2-B)", () => {
     });
 
     expect(screen.getByPlaceholderText(LOG_PLACEHOLDER)).toHaveValue("chegou ao limite das 12h");
+  });
+});
+
+describe("FloatingSessionTimer alerta de pausa (OND2-C)", () => {
+  /** 10:45 SP com sessão ativa: cruzar 75 min dispara a pausa programada das 12:00. */
+  async function renderBeforeAutoPause(id: number) {
+    vi.setSystemTime(new Date("2026-08-25T13:45:00Z"));
+    const session = makeSession({ id, status: "active", startTime: new Date("2026-08-25T13:40:00Z") });
+    workSessionsMock.currentSession = session;
+    workSessionsMock.activeSession = session;
+    let utils!: ReturnType<typeof render>;
+    await act(async () => {
+      utils = render(<FloatingSessionTimer />);
+    });
+    return { session, ...utils };
+  }
+
+  /** Cruza a pausa programada e reflete o estado pausado que o servidor devolveria. */
+  async function crossAutoPause(id: number, utils: { rerender: (ui: React.ReactElement) => void }) {
+    await act(async () => {
+      vi.advanceTimersByTime(75 * 60_000);
+    });
+    workSessionsMock.currentSession = makeSession({
+      id,
+      status: "paused",
+      startTime: new Date("2026-08-25T13:40:00Z"),
+    });
+    workSessionsMock.activeSession = null;
+    await act(async () => {
+      utils.rerender(<FloatingSessionTimer />);
+    });
+  }
+
+  it("pausa automática toca o som quando a preferência está ligada", async () => {
+    preferSoundOn();
+    const { session, rerender } = await renderBeforeAutoPause(31);
+
+    await crossAutoPause(31, { rerender });
+
+    expect(workSessionsMock.pauseSession).toHaveBeenCalledWith(session.id);
+    expect(alertSoundMock.playAlertSound).toHaveBeenCalledWith("pause");
+  });
+
+  it("com o som desligado (padrão), a pausa automática é só visual", async () => {
+    const { rerender } = await renderBeforeAutoPause(32);
+
+    await crossAutoPause(32, { rerender });
+
+    expect(screen.getByText("Sessão pausada automaticamente")).toBeInTheDocument();
+    expect(alertSoundMock.playAlertSound).not.toHaveBeenCalled();
+  });
+
+  it("pausa manual também toca o som", async () => {
+    preferSoundOn();
+    vi.setSystemTime(new Date("2026-08-25T13:10:00Z"));
+    const session = makeSession({ id: 33, status: "active", startTime: new Date("2026-08-25T13:00:00Z") });
+    workSessionsMock.currentSession = session;
+    workSessionsMock.activeSession = session;
+
+    await act(async () => {
+      render(<FloatingSessionTimer />);
+    });
+    await act(async () => {
+      screen.getByLabelText(/abrir timer de sessão/i).click();
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /Pausar/ }));
+    });
+
+    expect(workSessionsMock.pauseSession).toHaveBeenCalledWith(33);
+    expect(alertSoundMock.playAlertSound).toHaveBeenCalledWith("pause");
+  });
+
+  it("o cronômetro fechado diz que a sessão está pausada (antes não dizia nada)", async () => {
+    workSessionsMock.currentSession = makeSession({
+      id: 34,
+      status: "paused",
+      startTime: new Date("2026-08-25T13:00:00Z"),
+    });
+
+    await act(async () => {
+      render(<FloatingSessionTimer />);
+    });
+
+    expect(screen.getByLabelText(/sessão de trabalho pausada/i)).toBeInTheDocument();
+    expect(screen.getByTestId("session-timer-icon-paused")).toBeInTheDocument();
+    expect(screen.queryByTestId("session-timer-auto-pause-dot")).not.toBeInTheDocument();
+  });
+
+  it("sessão ativa é rotulada como ativa; sem sessão, o rótulo segue o de sempre", async () => {
+    workSessionsMock.currentSession = makeSession({
+      id: 35,
+      status: "active",
+      startTime: new Date("2026-08-25T13:00:00Z"),
+    });
+
+    const { unmount } = render(<FloatingSessionTimer />);
+    expect(screen.getByLabelText(/sessão de trabalho ativa/i)).toBeInTheDocument();
+    unmount();
+
+    workSessionsMock.currentSession = null;
+    render(<FloatingSessionTimer />);
+    expect(screen.getByLabelText(/^abrir timer de sessão$/i)).toBeInTheDocument();
+    expect(screen.getByTestId("session-timer-icon-clock")).toBeInTheDocument();
+  });
+
+  it("depois da pausa automática o botão pulsa até alguém retomar", async () => {
+    const { rerender } = await renderBeforeAutoPause(36);
+    expect(screen.queryByTestId("session-timer-auto-pause-dot")).not.toBeInTheDocument();
+
+    await crossAutoPause(36, { rerender });
+
+    // O sinal fica mesmo com o diálogo aberto em cima: é para quem está em outra aba.
+    // (O diálogo modal marca o resto da página como aria-hidden, então a prova é o
+    // atributo do botão, não uma consulta por papel acessível.)
+    expect(screen.getByTestId("floating-session-timer-collapsed")).toHaveAttribute(
+      "aria-label",
+      expect.stringContaining("pausada automaticamente"),
+    );
+    expect(screen.getByTestId("session-timer-auto-pause-dot")).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Continuar sessão" }));
+    });
+    workSessionsMock.currentSession = makeSession({
+      id: 36,
+      status: "active",
+      startTime: new Date("2026-08-25T13:40:00Z"),
+    });
+    await act(async () => {
+      rerender(<FloatingSessionTimer />);
+    });
+
+    expect(screen.getByLabelText(/sessão de trabalho ativa/i)).toBeInTheDocument();
+    expect(screen.queryByTestId("session-timer-auto-pause-dot")).not.toBeInTheDocument();
+  });
+
+  it("o interruptor liga o som, guarda a preferência e toca a prévia", async () => {
+    vi.setSystemTime(new Date("2026-08-25T13:00:00Z"));
+    const session = makeSession({ id: 37, status: "active", startTime: new Date("2026-08-25T13:00:00Z") });
+    workSessionsMock.currentSession = session;
+    workSessionsMock.activeSession = session;
+
+    await act(async () => {
+      render(<FloatingSessionTimer />);
+    });
+    await act(async () => {
+      screen.getByLabelText(/abrir timer de sessão/i).click();
+    });
+
+    const toggle = screen.getByTestId("session-alert-sound");
+    expect(toggle).toHaveAttribute("data-state", "unchecked");
+
+    await act(async () => {
+      fireEvent.click(toggle);
+    });
+
+    expect(toggle).toHaveAttribute("data-state", "checked");
+    expect(storageData.get(PAUSE_SOUND_KEY)).toBe("true");
+    // A prévia é o que destrava o áudio pela política de autoplay: sem ela, "ligado" seria
+    // uma promessa que o navegador pode não cumprir.
+    expect(alertSoundMock.playAlertSound).toHaveBeenCalledWith("pause");
+  });
+
+  it("sem suporte a WebAudio o interruptor fica desabilitado e explica", async () => {
+    alertSoundMock.isAlertSoundSupported.mockReturnValue(false);
+    vi.setSystemTime(new Date("2026-08-25T13:00:00Z"));
+    const session = makeSession({ id: 38, status: "active", startTime: new Date("2026-08-25T13:00:00Z") });
+    workSessionsMock.currentSession = session;
+    workSessionsMock.activeSession = session;
+
+    await act(async () => {
+      render(<FloatingSessionTimer />);
+    });
+    await act(async () => {
+      screen.getByLabelText(/abrir timer de sessão/i).click();
+    });
+
+    expect(screen.getByTestId("session-alert-sound")).toBeDisabled();
+    expect(screen.getByText(/não permite tocar som/i)).toBeInTheDocument();
+  });
+
+  it("sem sessão aberta não há interruptor: não há pausa para avisar", async () => {
+    await act(async () => {
+      render(<FloatingSessionTimer />);
+    });
+    await act(async () => {
+      screen.getByLabelText(/^abrir timer de sessão$/i).click();
+    });
+
+    expect(screen.queryByTestId("session-alert-sound")).not.toBeInTheDocument();
   });
 });
