@@ -3173,6 +3173,14 @@ contrato de apresentação.</p>
 <td>Rótulo acessível não contém o de outro</td>
 <td>O rótulo de um controle não pode conter o rótulo do elemento que ele governa, porque toda busca por rótulo que case por substring passa a achar dois elementos — foi o que aconteceu com &quot;Ordenar coluna A Fazer&quot; contra &quot;Coluna A Fazer&quot;, e só o navegador pegou</td>
 </tr>
+<tr>
+<td>Variação mostrada vem do servidor</td>
+<td>Quando uma ação muda um total, a variação exibida é a que o servidor creditou — no caso dos pontos, o par <code>awardedPoints</code> com <code>awardedTo</code> que a conclusão e a aprovação devolvem — e nunca um recálculo do cliente: pedir e receber divergem por regras que existem e são intencionais (prêmio já registrado credita zero, o arredondamento da tarefa não tem piso e um crédito que falha vira &quot;ninguém creditado&quot; em vez de zero). <code>null</code> e <code>0</code> são casos distintos e a interface os trata assim</td>
+</tr>
+<tr>
+<td>Sinal que explica o número fica no número</td>
+<td>A variação que acabou de acontecer é exibida junto do contador que ela explica, e só quando o crédito é da pessoa logada: o prêmio da aprovação vai para o responsável pela tarefa, quase nunca para quem aprovou, e mostrar o prêmio de outra pessoa no contador de quem aprovou seria uma mentira</td>
+</tr>
 </tbody>
 </table>
 <h2 id="diretrizes-de-verificacao">Diretrizes de verificação</h2>
@@ -4343,7 +4351,7 @@ expressa como migração versionada não pertence a este sistema.</p>
 <footer class="dq-footer">
   <p>
     Conteúdo gerado a partir de <code>docs/src/</code> e <code>docs/diagrams/</code>. Diagramas em notação UML (PlantUML). O conteúdo reflete o estado do
-    código no commit <code>e6830e3 (2026-10-03)</code>.
+    código no commit <code>8901bc9 (2026-10-03)</code>.
   </p>
 </footer>
 

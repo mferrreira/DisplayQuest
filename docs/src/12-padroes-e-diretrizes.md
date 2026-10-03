@@ -76,6 +76,8 @@ contrato de apresentação.
 | Preferência é da pessoa, não do quadro | Uma escolha de quem está olhando — a ordem dos cartões de uma coluna — é guardada no navegador com chave por pessoa, e lida depois da montagem para o servidor e o cliente desenharem a mesma tela; estado que precisa ser compartilhado por link continua na URL |
 | O navegador é entrada não confiável | O que volta do `localStorage` é texto que outra versão do app pode ter escrito: só o que passa na guarda vira estado, e o que não passa vira o padrão |
 | Rótulo acessível não contém o de outro | O rótulo de um controle não pode conter o rótulo do elemento que ele governa, porque toda busca por rótulo que case por substring passa a achar dois elementos — foi o que aconteceu com "Ordenar coluna A Fazer" contra "Coluna A Fazer", e só o navegador pegou |
+| Variação mostrada vem do servidor | Quando uma ação muda um total, a variação exibida é a que o servidor creditou — no caso dos pontos, o par `awardedPoints` com `awardedTo` que a conclusão e a aprovação devolvem — e nunca um recálculo do cliente: pedir e receber divergem por regras que existem e são intencionais (prêmio já registrado credita zero, o arredondamento da tarefa não tem piso e um crédito que falha vira "ninguém creditado" em vez de zero). `null` e `0` são casos distintos e a interface os trata assim |
+| Sinal que explica o número fica no número | A variação que acabou de acontecer é exibida junto do contador que ela explica, e só quando o crédito é da pessoa logada: o prêmio da aprovação vai para o responsável pela tarefa, quase nunca para quem aprovou, e mostrar o prêmio de outra pessoa no contador de quem aprovou seria uma mentira |
 
 ## Diretrizes de verificação
 

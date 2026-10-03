@@ -35,12 +35,29 @@ export function seedTasks(overrides: Partial<Task>[]) {
 // ---- wire schemas (mirror route responses) ----
 const taskListResponse = z.object({ tasks: z.array(taskSchema) });
 const taskResponse = z.object({ task: taskSchema });
+// plan-v3 OND4-A: concluir/aprovar devolvem o prêmio creditado (route.ts de [id] e [id]/approve).
+// O shape segue a rota real — `awardedTo` é o responsável pela tarefa, quase nunca quem
+// aprovou, e `null` nos dois significa "ninguém creditado agora" (tarefa em revisão, ou o
+// caminho sem award). Um mock que devolvesse só `{ task }` quebraria o schema do cliente.
+const awardedTaskResponse = z.object({
+  task: taskSchema,
+  awardedTo: z.number().int().nullable(),
+  awardedPoints: z.number().int().nullable(),
+});
 const backlogResponse = z.object({ tasks: z.array(taskSchema), createdCount: z.number().int() });
 const deleteResponse = z.object({ success: z.boolean() });
 const progressResponse = z.object({ progress: z.array(taskUserProgressSchema) });
 
 const jsonError = (message: string, status: number) =>
   HttpResponse.json({ error: message }, { status });
+
+/**
+ * A pessoa logada no mock. Os handlers não leem sessão, mas o servidor real credita **o ator**
+ * da requisição (`requireApiActor` → `userToAward`), então o mock precisa de um id para o
+ * `awardedTo` da conclusão (OND4-A). É o mesmo id da pessoa do fixture (`boardUsersFixture`,
+ * o coordenador 2) e é o que a suíte do quadro afirma em `mockUser`.
+ */
+const MOCK_ACTOR_ID = 2;
 
 const delay = (ms = 120) => new Promise((r) => setTimeout(r, ms));
 
@@ -125,7 +142,18 @@ export const taskHandlers = [
       completedAt: new Date().toISOString(),
     };
     tasks[idx] = updated;
-    return HttpResponse.json(taskResponse.parse({ task: updated }));
+    // O caminho `done` credita QUEM CONCLUIU — o ator da requisição, não o responsável: é o que
+    // o caso de uso faz (`userToAward = userId`), e é o que o roundtrip G4 fixa em
+    // `awardedTo === anaId`. O caminho `in-review` não credita ninguém: o prêmio fica para a
+    // aprovação, e aí é `null`, não 0 (OND4-A / DEC-48).
+    const closesTask = updated.status === "done";
+    return HttpResponse.json(
+      awardedTaskResponse.parse({
+        task: updated,
+        awardedTo: closesTask ? MOCK_ACTOR_ID : null,
+        awardedPoints: closesTask ? 10 : null,
+      }),
+    );
   }),
 
   // POST /api/tasks/[id]/approve — [id]/approve/route.ts (must be in-review)
@@ -142,7 +170,15 @@ export const taskHandlers = [
       completedAt: new Date().toISOString(),
     };
     tasks[idx] = updated;
-    return HttpResponse.json(taskResponse.parse({ task: updated }));
+    // A aprovação credita o RESPONSÁVEL pela tarefa (OND4-A: `awardPointsForCompletion` com
+    // `task.assignedTo`), não quem aprovou — e sem responsável, ninguém é creditado.
+    return HttpResponse.json(
+      awardedTaskResponse.parse({
+        task: updated,
+        awardedTo: updated.assignedTo ?? null,
+        awardedPoints: updated.assignedTo ? 10 : null,
+      }),
+    );
   }),
 
   // POST /api/tasks/[id]/reject — [id]/reject/route.ts (must be in-review; appends FIX line)

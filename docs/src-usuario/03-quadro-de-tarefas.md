@@ -104,6 +104,12 @@ A aprovação aparece na própria coluna **Em Revisão**, como dois botões no c
 
 Aprovar move a tarefa para **Concluído** e credita os pontos. Rejeitar devolve para **Ajustes**, com a mensagem *"Retornou para ajustes."*.
 
+Quando o crédito é seu, o contador de pontos do cabeçalho mostra o que mudou: uma etiqueta com o valor — **+10** em verde, **−10** em vermelho — que conta o número por cerca de um segundo e some. O selo do total, ao lado, é o número novo. Quem pede menos movimento ao sistema vê o valor final de uma vez, sem a contagem.
+
+::: limite titulo="O selo aparece só quando o crédito é seu"
+A aprovação credita **o responsável pela tarefa**, que quase nunca é quem aprovou. Aprovar a tarefa de outra pessoa move o contador **dela**, e o seu fica quieto — o selo não aparece. O mesmo vale para quem não ganhou nada naquela entrega: tarefa já pontuada antes não gera selo.
+:::
+
 ::: limite titulo="Pontos e atraso"
 Pontos são creditados na aprovação, não na entrega. Toda tarefa vale 10 pontos, com três desfechos: 15 quando é aprovada **antes** do prazo, 10 quando é aprovada **no dia** do prazo ou quando não tem prazo, e 10 menos 10 por dia de atraso quando é aprovada depois. A contagem é por dia de calendário: aprovar no dia do vencimento não gera atraso. O valor resultante pode ser negativo — tarefa muito atrasada reduz o saldo — e o detalhe da tarefa mostra o número sem disfarce. Uma tarefa concluída não volta para revisão por botão: é preciso editá-la.
 :::

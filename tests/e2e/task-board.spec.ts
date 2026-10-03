@@ -181,6 +181,21 @@ test.describe("task board flows", () => {
     // session refresh (use-tasks.ts refreshPoints) keeps the badge live without reload
     await expect(badge).toHaveText(String(pointsBefore! + TASK_POINTS), { timeout: 10_000 });
 
+    // plan-v3 OND4-B: o chip do prêmio creditado aparece no contador, conta até o valor do
+    // servidor e some sozinho. Só aparece aqui porque o fixture entrega a tarefa ao PRÓPRIO
+    // aprovador (`assignedTo: COORDENADOR_ID`): a aprovação credita o responsável, e sem essa
+    // coincidência o chip — e o próprio badge — não mexeriam (ver DEC-48).
+    const delta = page.getByTestId("points-delta");
+    await expect(delta).toBeVisible({ timeout: 10_000 });
+    await expect(delta).toHaveText(/\+10/, { timeout: 10_000 });
+    // Geometria é do navegador, não do jsdom: o chip precisa ficar dentro da janela. A versão
+    // primeira era `-top-5` e o topo da pílula fica a ~15px do topo da página — o chip saía pela
+    // borda. `boundingBox` é o que pega isso.
+    const chipBox = await delta.boundingBox();
+    expect(chipBox, "chip sem caixa no navegador").not.toBeNull();
+    expect(chipBox!.y, "chip cortado pelo topo da janela").toBeGreaterThan(0);
+    await expect(delta).toBeHidden({ timeout: 10_000 });
+
     // server truth: done + completed (poll past optimistic window)
     await expect
       .poll(async () => {

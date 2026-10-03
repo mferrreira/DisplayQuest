@@ -18,6 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { PointsDelta } from "@/components/ui/points-delta"
 import {
   getNavigationGroups,
   getPrimaryRoleLabel,
@@ -144,11 +145,13 @@ export function AppHeader() {
         <div className="flex items-center justify-end gap-2">
           <div className="hidden items-center gap-2 md:flex">
             {points !== null ? (
-              <div className="flex items-center gap-2 rounded-full border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 px-3 py-1.5 dark:border-emerald-700 dark:from-emerald-900/20 dark:to-teal-900/20">
+              <div className="relative flex items-center gap-2 rounded-full border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 px-3 py-1.5 dark:border-emerald-700 dark:from-emerald-900/20 dark:to-teal-900/20">
                 <Trophy className="h-4 w-4 text-amber-500 dark:text-emerald-400" />
                 <span className="bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-sm font-semibold text-transparent dark:from-emerald-400 dark:to-teal-400">
                   {points}
                 </span>
+                {/* plan-v3 OND4-B: o prêmio desta entrega, ancorado no contador que ele explica. */}
+                <PointsDelta />
               </div>
             ) : null}
 

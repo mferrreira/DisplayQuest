@@ -27,6 +27,7 @@ Esta é a lista completa das telas do sistema, com o endereço de cada uma e que
 | **Alternar tema** | cabeçalho | claro e escuro, guardado no navegador |
 | Menu do cartão de tarefa | três pontos no cartão | **Mover para** (só os destinos permitidos), **Ver detalhes**, **Editar** |
 | Menu de ordenação da coluna | duas setas no cabeçalho da coluna | **Ordenar por** — Urgência, Prazo, Mais recentes, Pontos, Alfabética; vale só para aquela coluna e fica guardado no navegador |
+| Selo do prêmio | em cima do contador de pontos, no cabeçalho | o quanto entrou ou saiu da sua pontuação (**+10** verde, **−10** vermelho), contando o número por cerca de um segundo; aparece só quando o crédito é seu |
 
 ## Estados possíveis
 

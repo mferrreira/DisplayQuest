@@ -740,7 +740,9 @@ hr {
 <li><strong>Gerente de Projeto</strong> do projeto da tarefa — e nunca para aprovar a própria tarefa.</li>
 </ul>
 <p>Aprovar move a tarefa para <strong>Concluído</strong> e credita os pontos. Rejeitar devolve para <strong>Ajustes</strong>, com a mensagem <em>&quot;Retornou para ajustes.&quot;</em>.</p>
-<aside class="dq-callout dq-callout--limite"><p class="dq-callout__label">Pontos e atraso</p><div class="dq-callout__body"><p>Pontos são creditados na aprovação, não na entrega. Toda tarefa vale 10 pontos, com três desfechos: 15 quando é aprovada <strong>antes</strong> do prazo, 10 quando é aprovada <strong>no dia</strong> do prazo ou quando não tem prazo, e 10 menos 10 por dia de atraso quando é aprovada depois. A contagem é por dia de calendário: aprovar no dia do vencimento não gera atraso. O valor resultante pode ser negativo — tarefa muito atrasada reduz o saldo — e o detalhe da tarefa mostra o número sem disfarce. Uma tarefa concluída não volta para revisão por botão: é preciso editá-la.</p>
+<p>Quando o crédito é seu, o contador de pontos do cabeçalho mostra o que mudou: uma etiqueta com o valor — <strong>+10</strong> em verde, <strong>−10</strong> em vermelho — que conta o número por cerca de um segundo e some. O selo do total, ao lado, é o número novo. Quem pede menos movimento ao sistema vê o valor final de uma vez, sem a contagem.</p>
+<aside class="dq-callout dq-callout--limite"><p class="dq-callout__label">O selo aparece só quando o crédito é seu</p><div class="dq-callout__body"><p>A aprovação credita <strong>o responsável pela tarefa</strong>, que quase nunca é quem aprovou. Aprovar a tarefa de outra pessoa move o contador <strong>dela</strong>, e o seu fica quieto — o selo não aparece. O mesmo vale para quem não ganhou nada naquela entrega: tarefa já pontuada antes não gera selo.</p>
+</div></aside><aside class="dq-callout dq-callout--limite"><p class="dq-callout__label">Pontos e atraso</p><div class="dq-callout__body"><p>Pontos são creditados na aprovação, não na entrega. Toda tarefa vale 10 pontos, com três desfechos: 15 quando é aprovada <strong>antes</strong> do prazo, 10 quando é aprovada <strong>no dia</strong> do prazo ou quando não tem prazo, e 10 menos 10 por dia de atraso quando é aprovada depois. A contagem é por dia de calendário: aprovar no dia do vencimento não gera atraso. O valor resultante pode ser negativo — tarefa muito atrasada reduz o saldo — e o detalhe da tarefa mostra o número sem disfarce. Uma tarefa concluída não volta para revisão por botão: é preciso editá-la.</p>
 </div></aside><h2 id="quem-pode-o-que-no-quadro">Quem pode o quê no quadro</h2>
 <table>
 <thead>
@@ -1257,6 +1259,11 @@ hr {
 <td>duas setas no cabeçalho da coluna</td>
 <td><strong>Ordenar por</strong> — Urgência, Prazo, Mais recentes, Pontos, Alfabética; vale só para aquela coluna e fica guardado no navegador</td>
 </tr>
+<tr>
+<td>Selo do prêmio</td>
+<td>em cima do contador de pontos, no cabeçalho</td>
+<td>o quanto entrou ou saiu da sua pontuação (<strong>+10</strong> verde, <strong>−10</strong> vermelho), contando o número por cerca de um segundo; aparece só quando o crédito é seu</td>
+</tr>
 </tbody>
 </table>
 <h2 id="estados-possiveis">Estados possíveis</h2>
@@ -1693,7 +1700,7 @@ hr {
 <footer class="dq-footer">
   <p>
     Conteúdo gerado a partir de <code>docs/src-usuario/</code> e as capturas de tela de <code>docs/screens/</code>. O conteúdo reflete o estado do
-    código no commit <code>e6830e3 (2026-10-03)</code>.
+    código no commit <code>8901bc9 (2026-10-03)</code>.
   </p>
 </footer>
 

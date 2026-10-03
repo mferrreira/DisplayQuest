@@ -6,12 +6,14 @@
 import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { http, HttpResponse } from "msw";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SessionProvider } from "next-auth/react";
 import { NuqsTestingAdapter } from "nuqs/adapters/testing";
 import { TaskBoard } from "../components/task-board";
 import { resetTaskStore, getTaskStore, seedTasks } from "@/tests/mocks/handlers";
 import { server } from "@/tests/mocks/server";
+import { currentPointsDelta, resetPointsDeltaStore } from "@/lib/points-delta";
 
 // next-auth/react useSession is mocked (SessionProvider alone would need a real session flow)
 const mockUser = { id: 2, name: "Coordenador", email: "coordenador@lab.com", roles: ["COORDENADOR"] };
@@ -279,5 +281,106 @@ describe("TaskBoard", () => {
     for (const option of ["Prazo", "Mais recentes", "Pontos", "Alfabética"]) {
       expect(screen.getByRole("menuitemradio", { name: option })).toHaveAttribute("aria-checked", "false");
     }
+  });
+
+  // ---------------------------------------------------------------------------------------
+  // plan-v3 OND4-B — o prêmio creditado (OND4-A) vira sinal do contador
+  //
+  // A regra que estes casos provam é a da Onda 4: a aprovação credita o RESPONSÁVEL pela
+  // tarefa, quase nunca quem aprovou. Sem a comparação `awardedTo === pessoa logada`, o chip
+  // mostraria no contador de quem aprovou o prêmio de outra pessoa. O chip em si é testado em
+  // `tests/unit/components/points-delta.test.tsx`; aqui o que se prova é quem anuncia.
+  // ---------------------------------------------------------------------------------------
+  describe("OND4-B: quem ganhou o prêmio", () => {
+    beforeEach(() => resetPointsDeltaStore());
+    afterEach(() => resetPointsDeltaStore());
+
+    async function approveTheOnlyCard() {
+      const user = userEvent.setup();
+      await waitFor(() => expect(screen.getByRole("button", { name: "Aprovar tarefa" })).toBeEnabled());
+      await user.click(screen.getByRole("button", { name: "Aprovar tarefa" }));
+    }
+
+    it("aprovar uma tarefa que é minha anuncia o valor creditado, uma vez só", async () => {
+      seedTasks([
+        { id: 301, title: "Revisada comigo", status: "in-review", assignedTo: 2, taskVisibility: "delegated" },
+      ]);
+      renderBoard();
+      await waitFor(() => expect(screen.getByText("Revisada comigo")).toBeVisible());
+
+      await approveTheOnlyCard();
+
+      await waitFor(() => expect(currentPointsDelta()?.value).toBe(10));
+      expect(currentPointsDelta()?.id).toBe(1);
+    });
+
+    it("aprovar tarefa de outra pessoa NÃO move o meu contador", async () => {
+      // O caso comum da aprovação: o prêmio vai para o responsável (id 7), que não é quem aprovou.
+      seedTasks([
+        { id: 302, title: "Revisada de outra pessoa", status: "in-review", assignedTo: 7, taskVisibility: "delegated" },
+      ]);
+      renderBoard();
+      await waitFor(() => expect(screen.getByText("Revisada de outra pessoa")).toBeVisible());
+
+      await approveTheOnlyCard();
+
+      await waitFor(() => expect(getTaskStore()[0].status).toBe("done"));
+      expect(currentPointsDelta()).toBeNull();
+    });
+
+    it("prêmio 0 (o award já existia) não vira chip +0", async () => {
+      server.use(
+        http.post("*/api/tasks/:id/approve", async ({ params }) => {
+          // O override continua mexendo no store como a rota real: o que muda aqui é só o
+          // prêmio (0 = o award já existia, DEC-48), não o comportamento da chamada.
+          const store = getTaskStore();
+          const idx = store.findIndex((t) => t.id === Number(params.id));
+          const updated = { ...store[idx], status: "done" as const, completed: true };
+          store[idx] = updated;
+          return HttpResponse.json({ task: updated, awardedTo: 2, awardedPoints: 0 });
+        }),
+      );
+      seedTasks([
+        { id: 303, title: "Revisada sem prêmio novo", status: "in-review", assignedTo: 2, taskVisibility: "delegated" },
+      ]);
+      renderBoard();
+      await waitFor(() => expect(screen.getByText("Revisada sem prêmio novo")).toBeVisible());
+
+      await approveTheOnlyCard();
+
+      await waitFor(() => expect(getTaskStore()[0].status).toBe("done"));
+      expect(currentPointsDelta()).toBeNull();
+    });
+
+    it("concluir uma tarefa pública credita quem concluiu e anuncia uma vez só", async () => {
+      seedTasks([
+        { id: 304, title: "Quest pública do laboratório", status: "to-do", taskVisibility: "public" },
+      ]);
+      renderBoard();
+      const user = userEvent.setup();
+      await waitFor(() => expect(screen.getByText("Quest pública do laboratório")).toBeVisible());
+
+      await user.click(screen.getByRole("button", { name: "Ações para Quest pública do laboratório" }));
+      await user.click(screen.getByRole("menuitem", { name: "Concluído" }));
+
+      await waitFor(() => expect(currentPointsDelta()?.value).toBe(10));
+      expect(currentPointsDelta()?.id).toBe(1);
+    });
+
+    it("tarefa delegada vai para revisão sem creditar ninguém: nada é anunciado", async () => {
+      // O caminho `in-review` da conclusão: o prêmio fica para a aprovação (OND4-A, `null`).
+      seedTasks([
+        { id: 305, title: "Delegada que vai para revisão", status: "to-do", assignedTo: 2 },
+      ]);
+      renderBoard();
+      const user = userEvent.setup();
+      await waitFor(() => expect(screen.getByText("Delegada que vai para revisão")).toBeVisible());
+
+      await user.click(screen.getByRole("button", { name: "Ações para Delegada que vai para revisão" }));
+      await user.click(screen.getByRole("menuitem", { name: "Concluído" }));
+
+      await waitFor(() => expect(getTaskStore()[0].status).toBe("in-review"));
+      expect(currentPointsDelta()).toBeNull();
+    });
   });
 });

@@ -7,7 +7,8 @@
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useSession } from "next-auth/react"
-import { tasksApi } from "@/lib/api/endpoints/tasks"
+import { tasksApi, type AwardedTaskResponse } from "@/lib/api/endpoints/tasks"
+import { announcePointsDelta } from "@/lib/points-delta"
 import { queryKeys } from "@/lib/query/keys"
 import type { TaskFilters } from "@/lib/api/endpoints/tasks"
 import type { Task } from "@/entities/task"
@@ -68,7 +69,7 @@ export function useTaskMutations() {
   // reads from the next-auth session (T1.4: no all-users fetch); its session callback re-reads
   // points from the DB on every fetch (lib/auth/config.ts session callback), so refreshing the
   // session after awarding mutations keeps the badge live without a page reload.
-  const { update: refreshSession } = useSession()
+  const { update: refreshSession, data: session } = useSession()
   const refreshPoints = () => {
     // optional call: test stubs may omit update(); failures are best-effort by design
     const result = typeof refreshSession === "function" ? refreshSession() : undefined
@@ -77,6 +78,18 @@ export function useTaskMutations() {
         /* unauthenticated/no-op contexts must not break the mutation */
       })
     }
+  }
+
+  // plan-v3 OND4-B: o contador do cabeçalho já recebia o total novo, mas pulava do antigo para o
+  // novo sem dizer quanto nem para que lado. O sinal do chip (OND4-A, DEC-48) é do servidor.
+  // Só o prêmio da PRÓPRIA pessoa move o contador dela: a aprovação credita o responsável pela
+  // tarefa, quase nunca quem aprovou, e sem esta comparação o chip mostraria o prêmio de outra
+  // pessoa. `null` (ninguém creditado) e `0` (o award já existia) não são delta.
+  const sessionUserId = (session?.user as { id?: number } | undefined)?.id
+  const announceMyAward = (result: AwardedTaskResponse) => {
+    if (sessionUserId == null) return
+    if (result.awardedTo !== sessionUserId) return
+    announcePointsDelta(result.awardedPoints)
   }
 
   const updateStatus = useMutation({
@@ -123,6 +136,7 @@ export function useTaskMutations() {
       return { ctx }
     },
     onError: (_err, _vars, context) => context?.ctx.rollback(),
+    onSuccess: (result) => announceMyAward(result),
     onSettled: (_d, _e, _v, context) => {
       context?.ctx.invalidate("full")
       refreshPoints()
@@ -148,6 +162,7 @@ export function useTaskMutations() {
 
   const approve = useMutation({
     mutationFn: (id: number) => tasksApi.approve(id),
+    onSuccess: (result) => announceMyAward(result),
     onSettled: () => {
       makeRollback().invalidate("full")
       // delegated tasks award points to the assignee HERE (gateway :458–481)
