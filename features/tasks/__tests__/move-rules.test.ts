@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import {
+  allowedTargets,
   isArchivedTask,
   isTaskOverdue,
   isTaskDueToday,
@@ -9,6 +10,7 @@ import {
   projectedAward,
   resolveMove,
   sortTasksByUrgencyAndDueDate,
+  TASK_STATUSES,
 } from "../utils/move-rules"
 import { POINTS_PER_TASK } from "../"
 import { awardPointsForCompletion, calculateLatePenalty } from "@/backend/domain"
@@ -59,6 +61,66 @@ describe("resolveMove (legacy kanban-board.tsx:137–164 parity)", () => {
       kind: "status-update",
       status: "in-progress",
     })
+  })
+})
+
+describe("allowedTargets (plan-v3 OND3-B)", () => {
+  const delegated = makeTask({ taskVisibility: "delegated" })
+  const publicTask = makeTask({ taskVisibility: "public" })
+  const doneTask = makeTask({ status: "done", completed: true })
+
+  it("non-leader has NO destination for a done task (the menu offers nothing)", () => {
+    // arrasto de `done` é desabilitado para todo mundo; o menu era o único caminho e
+    // devolvia "Ação não permitida" nas quatro opções.
+    expect(allowedTargets(doneTask, false)).toEqual([])
+  })
+
+  it("leader keeps every other column as a destination for a done task", () => {
+    expect(allowedTargets(doneTask, true)).toEqual(["to-do", "in-progress", "in-review", "adjust"])
+  })
+
+  it("never offers the column the task is already in", () => {
+    for (const status of TASK_STATUSES) {
+      for (const isLeader of [true, false]) {
+        const targets = allowedTargets({ ...delegated, status }, isLeader)
+        expect(targets).not.toContain(status)
+      }
+    }
+  })
+
+  it("never offers a destination the rule blocks (matrix, não amostragem)", () => {
+    // A propriedade que o menu depende: offered ⊆ what resolveMove does not block.
+    const shapes = [
+      { taskVisibility: "delegated" as const, isGlobal: false },
+      { taskVisibility: "delegated" as const, isGlobal: true },
+      { taskVisibility: "public" as const, isGlobal: false },
+      { taskVisibility: "public" as const, isGlobal: true },
+    ]
+    for (const shape of shapes) {
+      for (const status of TASK_STATUSES) {
+        for (const isLeader of [true, false]) {
+          const task = { ...shape, status }
+          const blocked = TASK_STATUSES.filter(
+            (t) => resolveMove({ task, target: t, isLeader }).kind === "blocked",
+          )
+          const offered = allowedTargets(task, isLeader)
+          for (const t of blocked) expect(offered).not.toContain(t)
+          // a coluna atual não é destino de ninguém; o resto se reparte entre menu e bloqueio
+          expect(offered.length + blocked.length).toBe(TASK_STATUSES.length - 1)
+        }
+      }
+    }
+  })
+
+  it("keeps offering Concluído a non-leader on a delegated task: the server accepts and routes to review", () => {
+    // complete-task.use-case.ts:148 — concluir tarefa delegada devolve `in-review`, então
+    // retirar a opção aqui esconderia o caminho de "entregar para aprovação".
+    expect(allowedTargets(delegated, false)).toContain("done")
+    expect(allowedTargets(publicTask, false)).toContain("done")
+  })
+
+  it("non-leader on a non-done task can reach every other column", () => {
+    expect(allowedTargets(delegated, false)).toEqual(["in-progress", "in-review", "adjust", "done"])
   })
 })
 

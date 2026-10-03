@@ -71,6 +71,8 @@ contrato de apresentação.
 | Estado visível sem depender da atenção | O botão do cronômetro, mesmo fechado, diz se há sessão ativa ou pausada e marca a pausa automática com um ponto pulsante |
 | Sinal sonoro opcional | O aviso de pausa é sintetizado na hora, sem arquivo de áudio, e só toca se a pessoa ligar o interruptor; o sinal visual nunca depende do som |
 | Altura limitada por coluna | Cada coluna do quadro tem altura máxima derivada da janela e rolagem própria; o cabeçalho da coluna fica fora da área de rolagem e a página não cresce com a quantidade de cartões |
+| Menu só oferece o que a regra permite | A lista de destinos de um menu é derivada da mesma função que decide o movimento, e nunca é escrita à mão ao lado dela: oferecer um destino que a regra barra é oferecer uma operação que volta com erro |
+| Uma tela por comportamento | A mesma peça de interface não é duplicada por aparência; quando duas telas precisam do mesmo comportamento, ele mora em um componente só |
 
 ## Diretrizes de verificação
 

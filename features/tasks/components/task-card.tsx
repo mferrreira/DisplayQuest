@@ -49,6 +49,7 @@ import {
   GripVertical,
   ArrowRight,
   Eye,
+  Lock,
   AlertTriangle,
   CalendarClock,
 } from "lucide-react"
@@ -56,7 +57,7 @@ import type { Task, TaskStatus } from "@/entities/task"
 import { useAuth } from "@/contexts/auth-context"
 import { useProjects } from "@/features/projects"
 import { useUsers } from "@/features/users"
-import { useTaskMutations, resolveMove, projectedAward, POINTS_PER_TASK, BOARD_COLUMNS } from ".."
+import { useTaskMutations, resolveMove, allowedTargets, projectedAward, POINTS_PER_TASK, BOARD_COLUMNS } from ".."
 import { toast } from "sonner"
 import { formatDateOnly } from "@/lib/date-only"
 
@@ -121,6 +122,81 @@ export interface TaskCardProps {
   onOpenDetail: (task: Task) => void
 }
 
+/**
+ * Menu de ações do cartão — **um só**, para as duas aparências (normal e compacta).
+ *
+ * Antes havia duas cópias byte a byte desse menu dentro do cartão, uma por aparência, e
+ * só uma delas recebia mudança: foi assim que a lista de destinos do 3.B entrou pela metade
+ * (a compacta continuava oferecendo o que a regra bloqueia, sem nenhum teste para avisar).
+ * Extrair deixa a decisão em um lugar só; o que continua variando entre as aparências é o
+ * tamanho do gatilho.
+ */
+function TaskCardMenu({
+  task,
+  isLeader,
+  isCompact = false,
+  onMove,
+  onOpenDetail,
+  onEdit,
+}: {
+  task: Task
+  isLeader: boolean
+  isCompact?: boolean
+  onMove: (target: TaskStatus) => void
+  onOpenDetail: (task: Task) => void
+  onEdit: (task: Task) => void
+}) {
+  /**
+   * plan-v3 OND3-B: o menu lista o que a regra permite (`allowedTargets`, derivado de
+   * `resolveMove`), e não "as colunas menos a atual". Sem destinos — tarefa Concluído vista
+   * por quem não é líder — a opção some e fica um item desabilitado dizendo por quê, em vez
+   * de quatro destinos que voltariam com o mesmo toast de "Ação não permitida".
+   */
+  const moveTargets = allowedTargets(task, isLeader)
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          className={
+            isCompact ? "h-5 w-5 shrink-0 p-0 opacity-40 hover:opacity-100" : "h-6 w-6 shrink-0 p-0"
+          }
+          aria-label={`Ações para ${task.title}`}
+        >
+          <MoreHorizontal className={isCompact ? "h-3 w-3" : "h-4 w-4"} aria-hidden="true" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+        <DropdownMenuLabel>Mover para</DropdownMenuLabel>
+        {moveTargets.length === 0 ? (
+          <DropdownMenuItem disabled>
+            <Lock className="mr-2 h-4 w-4" aria-hidden="true" />
+            Tarefa concluída só volta de coluna para líderes de projeto
+          </DropdownMenuItem>
+        ) : (
+          BOARD_COLUMNS.filter((c) => moveTargets.includes(c.id)).map((column) => (
+            <DropdownMenuItem key={column.id} onSelect={() => onMove(column.id)}>
+              <ArrowRight className="mr-2 h-4 w-4" aria-hidden="true" />
+              {column.title}
+            </DropdownMenuItem>
+          ))
+        )}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={() => onOpenDetail(task)}>
+          <Eye className="mr-2 h-4 w-4" aria-hidden="true" />
+          Ver detalhes
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => onEdit(task)}>
+          <Pencil className="mr-2 h-4 w-4" aria-hidden="true" />
+          Editar
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
 export function TaskCard({ task, index, isOverdue, isDueToday, isCompact, onEdit, onOpenDetail }: TaskCardProps) {
   const { user } = useAuth()
   const { data: projects = [] } = useProjects()
@@ -157,7 +233,7 @@ export function TaskCard({ task, index, isOverdue, isDueToday, isCompact, onEdit
 
   const projectName = task.projectId ? projects.find((p) => p.id === task.projectId)?.name : undefined
 
-  /** T2.5 keyboard alternative: menu lists allowed targets, same rules as drag. */
+  /** T2.5 keyboard alternative: menu lists allowed targets, same rules as drag (OND3-B). */
   const handleMove = (target: TaskStatus) => {
     const decision = resolveMove({ task, target, isLeader })
     if (decision.kind === "blocked") {
@@ -294,68 +370,23 @@ export function TaskCard({ task, index, isOverdue, isDueToday, isCompact, onEdit
                       >
                         {POINTS_PER_TASK} pts
                       </Badge>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-5 w-5 shrink-0 p-0 opacity-40 hover:opacity-100"
-                            aria-label={`Ações para ${task.title}`}
-                          >
-                            <MoreHorizontal className="h-3 w-3" aria-hidden="true" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                          <DropdownMenuLabel>Mover para</DropdownMenuLabel>
-                          {BOARD_COLUMNS.filter((c) => c.id !== task.status).map((column) => (
-                            <DropdownMenuItem key={column.id} onSelect={() => handleMove(column.id)}>
-                              <ArrowRight className="mr-2 h-4 w-4" aria-hidden="true" />
-                              {column.title}
-                            </DropdownMenuItem>
-                          ))}
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onSelect={() => onOpenDetail(task)}>
-                            <Eye className="mr-2 h-4 w-4" aria-hidden="true" />
-                            Ver detalhes
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onSelect={() => onEdit(task)}>
-                            <Pencil className="mr-2 h-4 w-4" aria-hidden="true" />
-                            Editar
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <TaskCardMenu
+                        task={task}
+                        isLeader={isLeader}
+                        isCompact
+                        onMove={handleMove}
+                        onOpenDetail={onOpenDetail}
+                        onEdit={onEdit}
+                      />
                     </div>
                   ) : (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 w-6 shrink-0 p-0"
-                          aria-label={`Ações para ${task.title}`}
-                        >
-                          <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                        <DropdownMenuLabel>Mover para</DropdownMenuLabel>
-                        {BOARD_COLUMNS.filter((c) => c.id !== task.status).map((column) => (
-                          <DropdownMenuItem key={column.id} onSelect={() => handleMove(column.id)}>
-                            <ArrowRight className="mr-2 h-4 w-4" aria-hidden="true" />
-                            {column.title}
-                          </DropdownMenuItem>
-                        ))}
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onSelect={() => onOpenDetail(task)}>
-                          <Eye className="mr-2 h-4 w-4" aria-hidden="true" />
-                          Ver detalhes
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => onEdit(task)}>
-                          <Pencil className="mr-2 h-4 w-4" aria-hidden="true" />
-                          Editar
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <TaskCardMenu
+                      task={task}
+                      isLeader={isLeader}
+                      onMove={handleMove}
+                      onOpenDetail={onOpenDetail}
+                      onEdit={onEdit}
+                    />
                   )}
                 </div>
 

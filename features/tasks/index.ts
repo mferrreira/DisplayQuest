@@ -5,6 +5,7 @@
 export { useTasks, useTaskMutations, useInvalidateTaskGraph } from "./hooks/use-tasks"
 export {
   resolveMove,
+  allowedTargets,
   optimisticStatusFor,
   isArchivedTask,
   isTaskOverdue,

@@ -115,18 +115,50 @@ describe("TaskBoard", () => {
     expect(screen.queryByText("Tarefa futura")).not.toBeInTheDocument();
   });
 
-  it("move menu blocks non-leader from moving a done task (legacy rule parity)", async () => {
-    // make the current user a plain researcher (non-leader)
+  it("plan-v3 OND3-B: o menu de tarefa concluída não oferece destino a não-líder", async () => {
+    // Antes: as quatro colunas apareciam e todas voltavam com "Ação não permitida" — o
+    // arrasto de `done` é desabilitado, então o menu era o único caminho possível.
     mockUser.roles = ["PESQUISADOR"];
     resetTaskStore();
     renderBoard();
     await waitFor(() => expect(screen.getByText("Tarefa concluída recente")).toBeVisible());
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "Ações para Tarefa concluída recente" }));
-    await user.click(screen.getByRole("menuitem", { name: /Em Andamento/i }));
-    // blocked: task stays in Concluído column, no API call changes it
-    expect(await screen.findByText("Tarefa concluída recente")).toBeVisible();
-    expect(getTaskStore().find((t) => t.title === "Tarefa concluída recente")?.status).toBe("done");
+
+    for (const column of ["A Fazer", "Em Andamento", "Em Revisão", "Ajustes"]) {
+      expect(screen.queryByRole("menuitem", { name: column })).not.toBeInTheDocument();
+    }
+    const aviso = screen.getByRole("menuitem", { name: /só volta de coluna para líderes/i });
+    expect(aviso).toHaveAttribute("data-disabled");
+    // o resto do menu continua: ver detalhes e editar não dependem de coluna
+    expect(screen.getByRole("menuitem", { name: /ver detalhes/i })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: /editar/i })).toBeInTheDocument();
     mockUser.roles = ["COORDENADOR"];
+  });
+
+  it("plan-v3 OND3-B: o menu compacto tem a mesma regra (a duplicação do menu já custou uma regra pela metade)", async () => {
+    mockUser.roles = ["PESQUISADOR"];
+    resetTaskStore();
+    renderBoard("?visao=compacta");
+    await waitFor(() => expect(screen.getByText("Tarefa concluída recente")).toBeVisible());
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Ações para Tarefa concluída recente" }));
+
+    expect(screen.getByRole("menuitem", { name: /só volta de coluna para líderes/i })).toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: "Ajustes" })).not.toBeInTheDocument();
+    mockUser.roles = ["COORDENADOR"];
+  });
+
+  it("plan-v3 OND3-B: o líder continua vendo todos os destinos da tarefa concluída", async () => {
+    resetTaskStore();
+    renderBoard();
+    await waitFor(() => expect(screen.getByText("Tarefa concluída recente")).toBeVisible());
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Ações para Tarefa concluída recente" }));
+
+    for (const column of ["A Fazer", "Em Andamento", "Em Revisão", "Ajustes"]) {
+      expect(await screen.findByRole("menuitem", { name: column })).toBeEnabled();
+    }
+    expect(screen.queryByRole("menuitem", { name: /só volta de coluna/i })).not.toBeInTheDocument();
   });
 });

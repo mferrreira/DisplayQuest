@@ -25,7 +25,7 @@ Esta é a lista completa das telas do sistema, com o endereço de cada uma e que
 | Menu da pessoa | botão com as iniciais no cabeçalho | **Meu Perfil**, **Meus Premios**, **Sair** |
 | **Abrir menu** | cabeçalho em janela estreita | os mesmos grupos de navegação |
 | **Alternar tema** | cabeçalho | claro e escuro, guardado no navegador |
-| Menu do cartão de tarefa | três pontos no cartão | **Mover para**, **Ver detalhes**, **Editar** |
+| Menu do cartão de tarefa | três pontos no cartão | **Mover para** (só os destinos permitidos), **Ver detalhes**, **Editar** |
 
 ## Estados possíveis
 

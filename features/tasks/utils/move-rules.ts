@@ -51,6 +51,32 @@ export function resolveMove(params: {
   return { kind: "status-update", status: target };
 }
 
+/**
+ * plan-v3 OND3-B — destinos que o menu pode oferecer a esta pessoa, para esta tarefa.
+ *
+ * **Derivado de `resolveMove`, não escrito à mão.** Um destino só entra na lista se a regra
+ * não o bloqueia, então o menu não tem como divergir da decisão que o clique tomaria: não
+ * existe "quase a mesma lista" mantida em dois lugares. `resolveMove` segue sendo quem
+ * decide; aqui só se filtra o que ela reprova.
+ *
+ * Medido antes de escrever: o menu listava `BOARD_COLUMNS` menos a coluna atual, sem
+ * consultar a regra — para quem não é líder, as quatro destinos de uma tarefa **Concluído**
+ * apareciam e todos voltavam com o mesmo toast de "Ação não permitida" (o caminho de arrastar
+ * está desabilitado para `done` desde sempre, ou seja, o menu era o único caminho possível).
+ *
+ * "Concluído" continua sendo oferecido a não-líder em tarefa delegada: o servidor **aceita** e
+ * devolve a tarefa para revisão (`complete-task.use-case.ts:148` — `in-review` para
+ * delegada, `done` para pública/global). O que o menu esconde é o destino que seria barrado.
+ */
+export function allowedTargets(
+  task: Pick<Task, "taskVisibility" | "isGlobal" | "status">,
+  isLeader: boolean,
+): TaskStatus[] {
+  return TASK_STATUSES.filter(
+    (target) => target !== task.status && resolveMove({ task, target, isLeader }).kind !== "blocked",
+  );
+}
+
 /** Optimistic status the board should show for a move (before/without server confirm). */
 export function optimisticStatusFor(decision: MoveDecision, task: Pick<Task, "taskVisibility" | "isGlobal">): TaskStatus {
   switch (decision.kind) {

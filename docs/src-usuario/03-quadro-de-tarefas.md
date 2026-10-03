@@ -19,7 +19,9 @@ Vista de coordenador: o quadro mostra todas as tarefas visíveis, de todos os pr
 Mover um cartão de uma coluna para outra muda o estado da tarefa. Há dois caminhos:
 
 - arrastar o cartão pelo punho à esquerda dele e soltá-lo na coluna de destino;
-- abrir o menu do cartão (os três pontos) e escolher o destino em **Mover para**. A lista mostra apenas as colunas que a sua função pode alcançar.
+- abrir o menu do cartão (os três pontos) e escolher o destino em **Mover para**. A lista mostra apenas as colunas que a sua função pode alcançar: em um cartão **Concluído**, quem não é líder de projeto não tem nenhum destino — o menu mostra, em vez das colunas, o aviso *"Tarefa concluída só volta de coluna para líderes de projeto"*, e arrastar também não funciona. Para desfazer uma conclusão, é preciso ser líder de projeto (ou o criador/líder do projeto da tarefa).
+
+Uma tarefa **Concluído** em projeto delegado segue outro caminho: escolher **Concluído** entrega o trabalho para aprovação, e o cartão aparece em **Em Revisão**. Os pontos só entram depois da aprovação.
 
 Cada coluna tem altura própria e rola por dentro. Quando uma coluna tem mais cartões do que cabem na tela, a rolagem acontece **dentro dela** — o nome da coluna e a contagem de cartões continuam visíveis no alto. A página inteira não cresce com a quantidade de tarefas; para ver mais cartões de uma vez, use **Compacto** na barra acima do quadro.
 
