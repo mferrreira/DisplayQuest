@@ -215,8 +215,9 @@ Três batches, na ordem — os três tocam os mesmos arquivos.
 - **3.C — ordenação por coluna.** `features/tasks/utils/column-order.ts` (puro): opções
   `urgência`, `prazo`, `mais recentes`, `pontos`, `alfabética`; padrão atual preservado
   (urgência + prazo). Persistência em `localStorage` via `lib/client-storage.ts`, chave por
-  coluna, por pessoa e navegador (DEC-34). O estado de filtro que já é URL (`nuqs`) **não**
-  muda: ordenação é preferência, não link compartilhável.
+  coluna, por pessoa e navegador (DEC-33 — o texto citava DEC-34, que é a decisão do movimento
+  para fora de Concluído; corrigido ao executar, em 2026-10-03). O estado de filtro que já é URL
+  (`nuqs`) **não** muda: ordenação é preferência, não link compartilhável.
 
 **Testes da onda**
 

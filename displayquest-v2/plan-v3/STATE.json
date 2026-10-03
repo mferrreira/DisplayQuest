@@ -4,8 +4,8 @@
   "version": "3.0.0",
   "updatedAt": "2026-10-03",
   "status": "in_progress",
-  "activeWave": "3",
-  "activeBatch": "3.A",
+  "activeWave": "4",
+  "activeBatch": "4.A",
   "awaitingInstruction": [],
   "target": "corrigir a economia de pontos, acabar com o silêncio das pausas automáticas e tornar o quadro utilizável quando enche",
   "lineage": {
@@ -53,6 +53,17 @@
       "testsAll": 827,
       "archModules": 741,
       "archDependencies": 2784
+    },
+    "after3C": {
+      "at": "2026-10-03",
+      "commit": "bef0acf",
+      "testFilesUnitAndFeatures": 63,
+      "testsUnitAndFeatures": 766,
+      "testFilesAll": 73,
+      "testsAll": 849,
+      "archModules": 744,
+      "archDependencies": 2802,
+      "e2eBoardSpec": "7/7 contra a :3001"
     }
   },
   "gates": {
@@ -109,7 +120,7 @@
         "3.B",
         "3.C"
       ],
-      "status": "planned",
+      "status": "done",
       "dependsOn": [
         "0"
       ]
@@ -210,22 +221,25 @@
       "id": "3.A",
       "wave": "3",
       "title": "board-column.tsx: altura máxima + overflow-y por coluna, cabeçalho fixo",
-      "status": "planned",
-      "gates": "G0 G1 G2 G3 G6"
+      "status": "done",
+      "gates": "G0 G1 G2 G3 G4 G5 G6",
+      "evidence": "commit fbbde99. Medido antes de escrever, na instancia e no dev: a coluna mais cheia media 5.586 px de scrollHeight numa janela de 900 px e o documento 5.949 px (628 px de largura por coluna) — seis telas de rolagem para ver o quadro, e as colunas vazias esticavam até a altura da mais cheia. Altura máxima derivada da janela: max-h-[calc(100dvh-17rem)], com a reserva de 17rem MEDIDA (cabeçalho 65 + padding do main 24 + h1 32 + margem do h1 24 + barra do quadro 84 + respiro 24 = 257 px a 1440 px); dvh e não vh, pela barra de endereço do telefone. Scroll por coluna (overflow-y-auto overscroll-contain) e cabeçalho fixo por construção: irmão do Droppable, shrink-0, com min-h-0 no flexbox para poder encolher abaixo do conteúdo. Medido depois: coluna com 578 px de clientHeight contra 5.586 de scrollHeight, documento 965 px, scrollTop 5008 com o cabeçalho parado e window.scrollY === 0. Defeitos pré-existentes corrigidos no caminho: tests/e2e/helpers.ts usava getByLabel('Senha') sem exact e o botão 'Mostrar senha' impedia a suíte e2e de entrar; e o teste de busca não abria a lupa antes de preencher. Prova: tests/e2e/task-board.spec.ts com fixture próprio de 8 tarefas (o único lugar honesto para geometria — jsdom não calcula layout). G0 741 módulos/2784 deps sem violação e allow-list vazia; G1 limpo; G2 0 erros; G3 62 arquivos/744 testes; G4 72 arquivos/827 testes; G5 guia (cap. 3 e a seção de altura) + 12-padroes-e-diretrizes (diretriz de altura por coluna e o novo nível de verificação 'Navegador'); e2e 6/6; G6 recaptura de quadro-tarefas e quadro-tarefas-participante contra a instância reconstruída."
     },
     {
       "id": "3.B",
       "wave": "3",
       "title": "allowedTargets(task, isLeader): menu deixa de oferecer destino que o servidor recusaria; regra de permissão inalterada",
-      "status": "planned",
-      "gates": "G0 G1 G2 G3"
+      "status": "done",
+      "gates": "G0 G1 G2 G3 G4 G5",
+      "evidence": "commit e6830e3. Medido antes: o menu do cartão listava BOARD_COLUMNS menos a coluna atual sem consultar a regra — para quem não é líder, as quatro colunas de um cartão Concluído apareciam e todas voltavam com o mesmo toast de 'Ação não permitida'. Arrastar done está desabilitado para todo mundo (isDragDisabled), então o menu era o único caminho possível: os quatro destinos eram promessa que o servidor não cumpria. Solução: allowedTargets(task, isLeader) DERIVADO de resolveMove (não escrito à mão ao lado dele) e, sem destinos, o menu mostra um item desabilitado dizendo o porquê. Medido também que a conta do servidor é outra: MANAGE_TASKS inclui COLABORADOR e PESQUISADOR (que não são 'líder' na interface), LABORATORISTA não tem MANAGE_TASKS e passa pelo ramo de status-only, que nem olha completed; e concluir tarefa DELEGADA não é recusado — cai em in-review (complete-task.use-case.ts:148). Por isso 'Concluído' continua sendo oferecido a não-líder em tarefa delegada: retirar ali esconderia o caminho de entregar para aprovação. Achado que valia mais que a mudança: o cartão tinha DUAS cópias byte a byte do menu (aparência normal e compacta); a primeira recebeu a regra e a segunda não, e nenhum teste percebia. As duas foram extraídas para TaskCardMenu, com o que varia entre elas reduzido ao tamanho do gatilho. Testes: move-rules.test.ts +6 casos por propriedade (matriz de 4 formas de tarefa x 5 status x 2 papéis, com offered + blocked = total - 1); em task-board.test.tsx o teste antigo de paridade foi REESCRITO — provava o toast de bloqueio, que é exatamente o comportamento que este batch remove — e no lugar ficaram três casos (não-líder normal e compacto, líder com os quatro destinos). Nota honesta: o caso não-líder foi provado em jsdom, não no navegador, porque na base o participante não vê cartão Concluído nenhum (0 medido). G0 741/2784; G1 limpo; G2 0 erros; G3 62 arquivos/752 testes; G4 72 arquivos/835 testes; G5 guia (cap. 3 e a tabela de telas) + 12-padroes (duas diretrizes: menu derivado da regra e uma tela por comportamento); e2e do quadro 6/6, que cobre o caminho do líder pelo menu. G6 não exigido: o menu é um balão transitório, não há captura dele no guia e as duas telas do quadro não mudam."
     },
     {
       "id": "3.C",
       "wave": "3",
       "title": "column-order.ts: ordenação por coluna, customizável, persistida em localStorage",
-      "status": "planned",
-      "gates": "G0 G1 G2 G3 G6"
+      "status": "done",
+      "gates": "G0 G1 G2 G3 G4 G5 G6",
+      "evidence": "commit bef0acf. Medido antes de escolher as opções (GET /api/tasks como coordenador, 27 tarefas): a tarefa volta com 17 campos e NENHUM createdAt — não existe 'criado em' para ordenar, então 'Mais recentes' ordena por id decrescente, que é o orderBy id desc do repositório e o desempate que o quadro já usava; e points é heterogêneo na mesma lista (10, 15, 20, 25, 40, 60), resto de antes das 10 pts fixas, com DEC-40 congelando a coluna como histórico — então 'Pontos' ordena pelo valor GRAVADO e não pela premiação atual (10 + bônus/penalidade de prazo), que muda todo dia e não é o número que o rótulo nomeia (DEC-47). O guia diz isso numa caixa 'limite', em vez de deixar 'Pontos' parecer que promete prêmio. features/tasks/utils/column-order.ts é puro (sem React, sem window): as cinco opções e a chave; 'urgência' DELEGA a sortTasksByUrgencyAndDueDate para o padrão não poder divergir por acidente de uma cópia, e o primeiro caso de teste compara os dois comparadores. Toda ordenação desempata no id decrescente — sem isso dois cartões iguais trocam de lugar entre renders. features/tasks/hooks/use-column-orders.ts guarda a ordem das cinco colunas lendo o navegador DEPOIS da montagem (como o interruptor de som do 2.C) para servidor e cliente desenharem a mesma tela, com o id vindo do useSession. Chave dq:column-order:<pessoa>:<coluna> — por pessoa e por coluna (DEC-33), o navegador entrando por conta do localStorage. Correção de plano: o texto do 3.C citava DEC-34, que é a decisão do movimento para fora de Concluído; a da ordenação é a DEC-33. Storage tratado como entrada não confiável: JSON quebrado E JSON válido que não é ordem (uma string com espaço no fim, escrita por outra versão) voltam ao padrão, com caso de teste para os dois. Defeito achado no navegador, que o jsdom não veria: o rótulo acessível do botão era 'Ordenar coluna A Fazer', que CONTÉM o rótulo da coluna ('Coluna A Fazer'); toda busca por rótulo que case por substring — getByLabel é assim por padrão — achava dois elementos e a suíte e2e do quadro parou no primeiro teste. Rótulo corrigido para 'Ordenar tarefas de A Fazer' e três diretrizes novas no cap. 12 saíram dai. Testes: 11 casos do módulo puro (o de urgência contra o comparador antigo, um por ordenação, e 'toda ordenação é total e estável' sobre as cinco); 3 casos no quadro (a ordem muda SÓ na coluna escolhida, a preferência sobrevive ao remontar com a chave gravada conferida, storage de outra versão não derruba nada); e um caso e2e que é o único lugar honesto para a parte que importa — recarregar a página e ver a ordem voltar, conferindo a chave dq:column-order:2:to-do com o valor prazo no navegador. G0 744 módulos/2802 deps sem violação e allow-list vazia; G1 limpo; G2 0 erros; G3 63 arquivos/766 testes; G4 73 arquivos/849 testes; G5 guia (cap. 3 com a nova seção 'A ordem dos cartões', cap. 10 na tabela de controles) + 12-padroes (três diretrizes) + nova captura quadro-ordenar-coluna no script; e2e do quadro 7/7; G6 três telas recapturadas contra a instância reconstruída (duas pelo botão novo no cabeçalho, uma nova para o menu aberto, que até agora o guia descrevia sem foto)."
     },
     {
       "id": "4.A",
@@ -268,7 +282,8 @@
     "DEC-42: Onda 5 (notificação nativa) adiada. Ondas 1-4 executam sem TLS. A Onda 2 entrega alerta in-app + som, que funciona em HTTP.",
     "DEC-43: restrição R15 — RG-01 proibe backend/domain/ de importar lib/ (LAYER.lib em FORBIDDEN_FOR_CORE). A regra de pontos usa data civil propria do dominio (padrao spParts/SP_OFFSET_MS de ReportPeriod.ts), nao lib/date-only.ts. O plano original estava errado e foi corrigido antes de executar 1.B.",
     "DEC-44: o gate `task.points > 0` em approve-task foi removido. Com POINTS_PER_TASK fixo e DEC-40 (historico intocado), tarefas legadas gravadas com 0 pontos nunca receberiam nada — o gate contradizia a decisao. complete-task ja creditava sem gate.",
-    "DEC-46: o log da sessao CONTINUA obrigatorio — a pergunta ASK-P3-02 foi respondida pelo dono em 2026-10-02 e a regra nao muda. O 2.B apenas evita redigitar o texto. O guia continua descrevendo a obrigatoriedade sem atribui-la ao backend (que aceita `note || null`)."
+    "DEC-46: o log da sessao CONTINUA obrigatorio — a pergunta ASK-P3-02 foi respondida pelo dono em 2026-10-02 e a regra nao muda. O 2.B apenas evita redigitar o texto. O guia continua descrevendo a obrigatoriedade sem atribui-la ao backend (que aceita `note || null`).",
+    "DEC-47: 'Mais recentes' ordena por id decrescente (a tarefa não volta com createdAt, medido no GET /api/tasks) e 'Pontos' ordena pelo valor GRAVADO em tasks.points, não pela premiação atual. Motivo: a coluna é histórico (DEC-40) e é heterogênea na base (10 a 60 medidos), enquanto a premiação depende do prazo e muda todo dia."
   ],
   "gapRegistry": [
     {
@@ -344,7 +359,9 @@
     "Único encadeamento duro: 1 -> 4 (a animação depende do delta autoritativo).",
     "Altura/scroll de coluna não tem teste unitário honesto em jsdom: a prova é o spec Playwright.",
     "Nenhuma onda toca display-quest-db :5432. Capturas de tela sim: docs/.capture.env aponta para a instância real.",
-    "Correcao de plano: 1.B nao pode usar lib/date-only.ts (RG-01). Novo backend/domain/time/civil-day.ts, puro e sem import, compartilhado por backend e frontend — fonte unica que elimina a divergencia R5."
+    "Correcao de plano: 1.B nao pode usar lib/date-only.ts (RG-01). Novo backend/domain/time/civil-day.ts, puro e sem import, compartilhado por backend e frontend — fonte unica que elimina a divergencia R5.",
+    "Correcao de plano (3.C): o texto do batch citava DEC-34 para a persistencia da ordenacao; DEC-34 e a decisao do movimento para fora de Concluido. A da ordenacao e a DEC-33.",
+    "Rotulo acessivel nao deve conter o rotulo do elemento que ele governa: 'Ordenar coluna A Fazer' continha 'Coluna A Fazer' e o getByLabel do Playwright (que casa por substring) achava dois elementos. Virou diretriz no cap. 12 e o rotulo do botao passou a ser 'Ordenar tarefas de A Fazer'."
   ],
   "timeline": [
     {
@@ -390,6 +407,18 @@
     {
       "at": "2026-10-03",
       "event": "2.C: a pausa automatica passou a ter sinal fora do dialogo. O botao collapsed do cronometro diz o estado da sessao no icone, na cor e no nome acessivel, e pulsa depois da pausa automatica enquanto ninguem retomou, encerrou ou abriu o painel; o som (WebAudio, sem asset) e opcional, desligado por padrao e destravado pelo proprio interruptor. A costura de notificacao nativa ficou criada e testada, mas sem quem a invoque — fora de contexto seguro o navegador recusa a permissao. Onda 2 fechada; G0-G5 verdes no commit 624c543."
+    },
+    {
+      "at": "2026-10-03",
+      "event": "3.A: a coluna parou de ser a pagina. Medido antes: uma coluna com 17 cartoes media 5.586 px numa janela de 900 px, e o documento 5.949 px. Altura maxima derivada da janela com a reserva de 17rem medida (257 px de cromo a 1440 px), scroll por coluna e cabecalho fora da area de rolagem por construcao. No caminho, dois defeitos pre-existentes da suite e2e (o login nao achava o campo Senha por causa do botao Mostrar senha, e o teste de busca nao abria a lupa). G0-G6 verdes no commit fbbde99."
+    },
+    {
+      "at": "2026-10-03",
+      "event": "3.B: o menu do cartao parou de oferecer destino que o servidor recusa. allowedTargets e derivado de resolveMove; sem destino, o item desabilitado diz o porque. Arrastar Concluido continua desabilitado, entao o menu e o caminho. Achado: o cartao tinha duas copias do menu e a regra tinha entrado so numa delas — extraidas para TaskCardMenu. G0-G5 verdes no commit e6830e3."
+    },
+    {
+      "at": "2026-10-03",
+      "event": "3.C: cada coluna escolhe a propria ordem (urgencia, prazo, mais recentes, pontos, alfabetica), guardada por pessoa e por navegador em dq:column-order:<pessoa>:<coluna>. Medido antes: a tarefa nao volta com createdAt e points e heterogeneo na base — as duas opcoes foram desenhadas a partir disso (DEC-47), e o padrao 'urgencia' delega ao comparador antigo em vez de copia-lo. O navegador pegou um defeito que o jsdom nao veria: o rotulo do botao continha o rotulo da coluna e o getByLabel achava os dois. Onda 3 fechada; G0-G6 verdes no commit bef0acf."
     }
   ]
 }

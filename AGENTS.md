@@ -45,21 +45,24 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
   `DEC-NN` continuam resolvíveis.
 - **Estado/decisões (plan-v3):** `displayquest-v2/plan-v3/{PLAN.md,STATE.json}` — STATE.json
   v3.0.0 monitora o plano operacional **plan-v3** (ondas 0–5, 14 batches, AC-P3-01..10,
-  DEC-30..DEC-42, GAP-P3-01..04 fechados, BLK-01). A numeração de decisões **continua** a do
+  DEC-30..DEC-47, GAP-P3-01..04 fechados, BLK-01). A numeração de decisões **continua** a do
   clean-arch: DEC-01..29 são do clean-arch, DEC-30 em diante são do plan-v3. Não reinicie a
   numeração em outro plano.
 
 ## plan-v3 — qualidade operacional (sessões, quadro, pontos)
 
-- **Estado atual:** `in_progress` — **Ondas 1 e 2 fechadas** (1.A–1.D, G6 no commit `85a6bb4`;
-  2.A–2.C, último `624c543`) e **Onda 3 em andamento** (`activeBatch` = 3.A, altura/scroll por
-  coluna). As 4 lacunas foram respondidas pelo dono em 2026-10-02 (DEC-39..42). Único batch
-  travado: **5.A**, por BLK-01 (HTTPS) — onda **adiada** por decisão, sem travar as outras.
+- **Estado atual:** `in_progress` — **Ondas 1, 2 e 3 fechadas** (1.A–1.D, G6 no commit `85a6bb4`;
+  2.A–2.C, último `624c543`; 3.A–3.C, último `bef0acf`) e **Onda 4 em andamento**
+  (`activeBatch` = 4.A, contrato `awardedPoints` → animação `+X/−X`). As 4 lacunas foram
+  respondidas pelo dono em 2026-10-02 (DEC-39..42). Único batch travado: **5.A**, por BLK-01
+  (HTTPS) — onda **adiada** por decisão, sem travar as outras.
   `awaitingInstruction` está vazio: `ASK-P3-02` foi respondida em 2026-10-02 — o log da sessão
   **continua obrigatório** (DEC-46), a regra não muda e o 2.B só evita redigitar.
 - **Decisões que mudam o desenho:** premiação **pode ficar negativa** (DEC-39, sem piso — o
   `-37140 pts` medido numa captura é a regra funcionando, não bug isolado); nenhum `UPDATE` em
-  `tasks.points` histórico (DEC-40); `@pontos` do backlog aceito e ignorado (DEC-41).
+  `tasks.points` histórico (DEC-40); `@pontos` do backlog aceito e ignorado (DEC-41); a ordenação
+  por coluna ordena por `id` e pelo valor **gravado** em `points`, porque a tarefa não volta com
+  `createdAt` e a coluna é histórica (DEC-47).
 - **Restrições duras medidas** (detalhe em `PLAN.md` §2): a instância é **HTTP em IP de rede**,
   e Chrome/Firefox **recusam pedido de permissão de notificação fora de secure context** —
   notificação nativa não é possível lá hoje. A aritmética de atraso existe em dois lugares com
@@ -139,6 +142,24 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
 - **`Dialog` modal esconde o resto da página (medido 2026-10-03):** com o diálogo de pausa
   automática aberto, o botão collapsed cai em `aria-hidden` e `getByRole`/`getByLabelText` não o
   encontram. Nesse estado use `getByTestId("floating-session-timer-collapsed")` e `toHaveAttribute`.
+- **`getByLabel` casa por substring (medido 2026-10-03, 3.C):** um `aria-label` de controle não
+  pode **conter** o `aria-label` do elemento que ele governa. O botão de ordenação da coluna foi
+  escrito como `Ordenar coluna A Fazer` e passou a casar com o `aria-label="Coluna A Fazer"` da
+  própria coluna: `page.getByLabel("Coluna A Fazer")` do Playwright devolvia dois elementos e a
+  suíte e2e do quadro parou no primeiro teste (`getByLabelText` do Testing Library segue o mesmo
+  caminho por padrão). O rótulo virou `Ordenar tarefas de A Fazer`. Quando um controle novo
+  governa um elemento que já tem rótulo, **confira que os dois textos não se sobrepõem** — ou
+  passe `{ exact: true }`.
+- **A suíte e2e estava quebrada antes do 3.A (medido 2026-10-03, corrigido no mesmo batch):** duas
+  coisas faziam `tests/e2e/task-board.spec.ts` nem entrar no quadro — `tests/e2e/helpers.ts`
+  usava `getByLabel("Senha")` e o botão "Mostrar senha" também é um `label` acessível desse texto
+  (agora `getByLabel("Senha", { exact: true })`), e o teste de busca preenchia o input sem abrir a
+  lupa (`?busca=` só existe depois de clicar em "Buscar tarefas"). Se a suíte e2e falhar no
+  primeiro teste com *strict mode violation*, sospeite de rótulo duplicado antes de olhar o DOM.
+- **Rodar um spec e2e exige o dev server no ar:** `playwright.config.ts` fixa
+  `baseURL: http://localhost:3001` (o compose do repo serve em 3000, e a suíte de integração
+  precisa do banco). O spec do quadro cria e apaga as próprias tarefas — depois de rodar, confira
+  `select count(*) from tasks where title like 'E2E%'` na base (tem que dar 0).
 - **WebAudio em jsdom = degradar em silêncio:** o jsdom não implementa `AudioContext`, então o seam
   `lib/notifications/alert-sound.ts` cai no caminho "sem suporte" (interruptor desabilitado, som
   inaudível). Para provar a parte cliente ele é testado em `// @vitest-environment node` com
