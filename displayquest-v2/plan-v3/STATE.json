@@ -5,7 +5,7 @@
   "updatedAt": "2026-10-03",
   "status": "in_progress",
   "activeWave": "4",
-  "activeBatch": "4.A",
+  "activeBatch": "4.B",
   "awaitingInstruction": [],
   "target": "corrigir a economia de pontos, acabar com o silêncio das pausas automáticas e tornar o quadro utilizável quando enche",
   "lineage": {
@@ -64,6 +64,16 @@
       "archModules": 744,
       "archDependencies": 2802,
       "e2eBoardSpec": "7/7 contra a :3001"
+    },
+    "after4A": {
+      "at": "2026-10-03",
+      "commit": "2c98b1d",
+      "testFilesUnitAndFeatures": 64,
+      "testsUnitAndFeatures": 779,
+      "testFilesAll": 74,
+      "testsAll": 862,
+      "archModules": 745,
+      "archDependencies": 2805
     }
   },
   "gates": {
@@ -132,7 +142,7 @@
         "4.A",
         "4.B"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "dependsOn": [
         "1"
       ]
@@ -245,8 +255,9 @@
       "id": "4.A",
       "wave": "4",
       "title": "contrato: aprovação devolve awardedPoints autoritativo (withActorProgress + schema de resposta)",
-      "status": "planned",
-      "gates": "G0 G1 G2 G3 G4"
+      "status": "done",
+      "gates": "G0 G1 G2 G3 G4",
+      "evidence": "commit 2c98b1d. Medido antes de desenhar (2026-10-03): o premio autoritativo EXISTIA e era jogado fora. `awardFromTaskCompletion` (gamification) devolve `GamificationAwardResult { pointsAwarded, alreadyAwarded, newProgression }`, e o adaptador de task-management descartava — a porta `TaskProgressEvents.onTaskCompleted` era `Promise<void>`. Os dois casos de uso devolviam so a `Task` e as rotas respondiam `{ task }`; a rota de conclusao tinha um comentario registrando isso como limitacao aceita ('a rota nao sabe o numero'). Correcao do plano: o 4.A previa `withActorProgress` carregando `awardedPoints`; medido, esse read model e congelado, e o overlay de progresso por pessoa da LISTA — o valor que ele carregaria seria o PEDIDO, nao o creditado, que difere de verdade por tres peculiaridades (award ja registrado credita 0 em vez de 10; `taskAwardPoints` faz Math.floor sem clamp; award que estoura e engolido, porque falha de award nunca quebra a conclusao). A costura certa era o retorno do award, nao o read model. Segunda medicao que mudou o desenho: a aprovacao credita `task.assignedTo`, o responsavel pela tarefa — nunca quem aprovou, salvo quem tem MANAGE_USERS (autoaprovacao e proibida sem isso). O e2e do quadro entrega a tarefa ao proprio aprovador exatamente por isso: e a unica forma de o contador DELE mudar e o teste enxergar. Sem `awardedTo` no contrato, a animacao da 4.B mostraria no contador de quem aprovou o premio de outra pessoa. O que mudou: `onTaskCompleted` devolve `Promise<number | null>` (o efetivo; null = ninguem creditado — sem publisher, ou o award falhou); `publishTaskCompletionAward` repassa o numero; os dois casos de uso devolvem `TaskCompletionResult { task, awardedTo, awardedPoints }`; as duas rotas e o schema do cliente (`awardedTaskResponse`) repassam o par; e o modulo troca `Promise<any>` pelo contrato real nas duas assinaturas, o que impede a proxima rota de voltar a ler `task.points` e mentir (era exatamente o que a rota de conclusao fazia). Tres casos que a 4.B distingue e que um `|| 0` apagaria: `0` com `awardedTo` = o award ja existia e nada mudou; `null` nos dois = ninguem creditado (delegada foi para revisao, ou o creditador nao rodou); negativo = penalidade de atraso sem piso (DEC-39). Testes: 7 casos novos em tests/unit/modules/task-management/task-completion-award.test.ts provando que o CREDITADO atravessa a porta (pedido 15, creditado 0), que negativo passa intacto, que userId/taskId zerados nao chamam o award, e que award que estoura vira null com o erro registrado; 6 casos no arquivo de rota da OND1-D (os 3 da aprovacao mais `PATCH complete`, que e o caminho que a 4.B vai usar); e o roundtrip G4 passa a ler `.task` e a fixar `awardedPoints: null` — ele monta o modulo sem publisher de proposito, e isso virou contrato. G0 745 modulos/2805 deps sem violacao e allow-list vazia; G1 limpo; G2 0 erros; G3 64 arquivos/779 testes; G4 74 arquivos/862 testes. Fora de escopo medido e anotado: a premiacao por sessao de trabalho (work-execution-events.publisher.ts:35) tambem mexe no contador do cabecalho e nao tem resposta HTTP para viajar — ela aparece quando o jogador ve o total novo, sem sinal. Nao entra na 4.B (que e da tarefa), e fica registrada para quando alguem mexer no gamification."
     },
     {
       "id": "4.B",
@@ -283,7 +294,8 @@
     "DEC-43: restrição R15 — RG-01 proibe backend/domain/ de importar lib/ (LAYER.lib em FORBIDDEN_FOR_CORE). A regra de pontos usa data civil propria do dominio (padrao spParts/SP_OFFSET_MS de ReportPeriod.ts), nao lib/date-only.ts. O plano original estava errado e foi corrigido antes de executar 1.B.",
     "DEC-44: o gate `task.points > 0` em approve-task foi removido. Com POINTS_PER_TASK fixo e DEC-40 (historico intocado), tarefas legadas gravadas com 0 pontos nunca receberiam nada — o gate contradizia a decisao. complete-task ja creditava sem gate.",
     "DEC-46: o log da sessao CONTINUA obrigatorio — a pergunta ASK-P3-02 foi respondida pelo dono em 2026-10-02 e a regra nao muda. O 2.B apenas evita redigitar o texto. O guia continua descrevendo a obrigatoriedade sem atribui-la ao backend (que aceita `note || null`).",
-    "DEC-47: 'Mais recentes' ordena por id decrescente (a tarefa não volta com createdAt, medido no GET /api/tasks) e 'Pontos' ordena pelo valor GRAVADO em tasks.points, não pela premiação atual. Motivo: a coluna é histórico (DEC-40) e é heterogênea na base (10 a 60 medidos), enquanto a premiação depende do prazo e muda todo dia."
+    "DEC-47: 'Mais recentes' ordena por id decrescente (a tarefa não volta com createdAt, medido no GET /api/tasks) e 'Pontos' ordena pelo valor GRAVADO em tasks.points, não pela premiação atual. Motivo: a coluna é histórico (DEC-40) e é heterogênea na base (10 a 60 medidos), enquanto a premiação depende do prazo e muda todo dia.",
+    "DEC-48: `awardedPoints` na resposta de concluir/aprovar e o valor EFETIVAMENTE creditado (0 quando o award ja existia, negativo quando a penalidade de atraso vence os 10 pontos — sem piso, DEC-39), e `awardedTo` diz para quem. `null` nos dois significa 'ninguem creditado agora' e e distinto de 0. Motivo: o numero que a animacao da Onda 4.B mostra tem que ser o do servidor — recalcular no cliente reabriria a segunda aritmetica (R7) e erraria justamente nos casos que importam, porque o pedido e o creditado divergem por tres peculiaridades congeladas (idempotencia do award, Math.floor sem clamp, e award falho que nao pode quebrar a conclusao). E `awardedTo` porque a aprovacao credita o responsavel pela tarefa, nao quem aprovou: sem isso o contador de quem aprovou animaria com o premio de outra pessoa. Correcao do plano junto: o 4.A previa carregar `awardedPoints` no read model da tarefa (`withActorProgress`), que e congelado e carregaria o pedido."
   ],
   "gapRegistry": [
     {
@@ -361,7 +373,8 @@
     "Nenhuma onda toca display-quest-db :5432. Capturas de tela sim: docs/.capture.env aponta para a instância real.",
     "Correcao de plano: 1.B nao pode usar lib/date-only.ts (RG-01). Novo backend/domain/time/civil-day.ts, puro e sem import, compartilhado por backend e frontend — fonte unica que elimina a divergencia R5.",
     "Correcao de plano (3.C): o texto do batch citava DEC-34 para a persistencia da ordenacao; DEC-34 e a decisao do movimento para fora de Concluido. A da ordenacao e a DEC-33.",
-    "Rotulo acessivel nao deve conter o rotulo do elemento que ele governa: 'Ordenar coluna A Fazer' continha 'Coluna A Fazer' e o getByLabel do Playwright (que casa por substring) achava dois elementos. Virou diretriz no cap. 12 e o rotulo do botao passou a ser 'Ordenar tarefas de A Fazer'."
+    "Rotulo acessivel nao deve conter o rotulo do elemento que ele governa: 'Ordenar coluna A Fazer' continha 'Coluna A Fazer' e o getByLabel do Playwright (que casa por substring) achava dois elementos. Virou diretriz no cap. 12 e o rotulo do botao passou a ser 'Ordenar tarefas de A Fazer'.",
+    "Correcao de plano (4.A): o texto previa `withActorProgress` carregando `awardedPoints`; medido, esse read model e congelado e o valor que ele carregaria seria o pedido, nao o creditado. A costura e o retorno do award (porta `onTaskCompleted`), e o contrato ganhou tambem `awardedTo` porque a aprovacao credita o responsavel pela tarefa, nao quem aprovou. Ver DEC-48."
   ],
   "timeline": [
     {
@@ -419,6 +432,10 @@
     {
       "at": "2026-10-03",
       "event": "3.C: cada coluna escolhe a propria ordem (urgencia, prazo, mais recentes, pontos, alfabetica), guardada por pessoa e por navegador em dq:column-order:<pessoa>:<coluna>. Medido antes: a tarefa nao volta com createdAt e points e heterogeneo na base — as duas opcoes foram desenhadas a partir disso (DEC-47), e o padrao 'urgencia' delega ao comparador antigo em vez de copia-lo. O navegador pegou um defeito que o jsdom nao veria: o rotulo do botao continha o rotulo da coluna e o getByLabel achava os dois. Onda 3 fechada; G0-G6 verdes no commit bef0acf."
+    },
+    {
+      "at": "2026-10-03",
+      "event": "4.A: conclusao e aprovacao devolvem o premio creditado (awardedTo + awardedPoints). Medido antes: o numero existia e era descartado na fronteira — a porta do award era Promise<void>. O plano apontava o read model da tarefa; o medido mostrou que ali so entraria o valor pedido, e que a aprovacao credita o responsavel, nao quem aprovou. G0-G4 verdes no commit 2c98b1d (DEC-48)."
     }
   ]
 }

@@ -238,21 +238,31 @@ na coluna e `clientHeight` limitado. Teste unitário aqui seria teatro.
 
 Dois batches.
 
-- **4.A — contrato primeiro.** A aprovação passa a devolver o delta autoritativo:
-  `withActorProgress` carrega `awardedPoints`, o schema de resposta em
-  `lib/api/endpoints/tasks.ts` expõe o campo. Sem isso, o cliente recalcula e diverge (R7).
+- **4.A — contrato primeiro.** Conclusão e aprovação passam a devolver o prêmio **creditado**:
+  `TaskProgressEvents.onTaskCompleted` deixa de devolver `void` e repassa o valor que o award
+  creditou (DEC-48), os casos de uso devolvem `TaskCompletionResult { task, awardedTo,
+  awardedPoints }`, e o schema de resposta em `lib/api/endpoints/tasks.ts` expõe o par. Sem
+  isso, o cliente recalcula e diverge (R7).
+  **Correção registrada:** o texto original previa `withActorProgress` carregando `awardedPoints`
+  — medido, esse read model é congelado e é o overlay de progresso da *lista*; o valor que ele
+  carregaria seria o **pedido**, não o creditado (award já registrado credita 0, `Math.floor`
+  sem clamp, award falho é engolido). E `awardedTo` é necessário porque a aprovação credita o
+  **responsável** pela tarefa, quase nunca quem aprovou.
 - **4.B — animação.** `components/ui/points-delta.tsx`: chip `+15` verde / `−10` vermelho
   ancorado no contador de pontos do cabeçalho (`app-header.tsx:146-150`), com o número
   **incrementando ao longo de 1s** e o contador do cabeçalho acompanhando o valor novo.
-  Respeita `prefers-reduced-motion` (mostra o valor final sem animar).
+  Só anima quando `awardedTo` é a pessoa logada — no resto dos casos o chip não aparece, porque
+  o prêmio foi para outra pessoa. Respeita `prefers-reduced-motion` (mostra o valor final sem
+  animar).
 
 **Testes da onda**
 
 | Teste | O que prova |
 |---|---|
-| `tests/unit/api/tasks-approve-route.test.ts` | resposta traz `awardedPoints` correto |
+| `tests/unit/api/tasks-approve-route.test.ts` | resposta traz `awardedPoints`/`awardedTo` como o caso de uso devolveu, com `0` ≠ `null` |
+| `tests/unit/modules/task-management/task-completion-award.test.ts` | o **creditado** atravessa a porta (não o pedido) e falha de award vira `null` |
 | `tests/unit/components/points-delta.test.tsx` | sinal, cor e valor final; com `prefers-reduced-motion`, sem animação |
-| `features/tasks/__tests__/task-board.test.tsx` | aprovar dispara o delta uma única vez (a invalidação de `queryKeys.users.all` já existe em `use-tasks.ts:34`) |
+| `features/tasks/__tests__/task-board.test.tsx` | concluir/aprovar dispara o delta uma única vez, e só quando quem ganhou foi a pessoa logada |
 
 ### Onda 5 — notificação nativa (F1b) — bloqueada
 
