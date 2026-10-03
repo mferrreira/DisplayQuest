@@ -4278,7 +4278,7 @@ quem responde pelo sistema.</p>
 <td>A costura de notificação do navegador existe e não está ligada a nenhum ponto</td>
 <td>Notificação do navegador, na biblioteca compartilhada</td>
 <td>A pausa automática avisa só quem está olhando a tela: o sinal visual do cronômetro e, se ligado, o som</td>
-<td>Adiado por decisão: a instância é servida em HTTP num endereço de rede, e os navegadores recusam pedido de permissão fora de contexto seguro; com HTTPS, a ligação é uma chamada no cronômetro</td>
+<td>Fora do escopo por decisão (DEC-49, 2026-10-03): a instância é servida em HTTP num endereço de rede e os navegadores recusam pedido de permissão fora de contexto seguro. A costura ficou na árvore sem chamador; se a notificação nativa voltar, precisa de HTTPS e a ligação é uma chamada no cronômetro</td>
 </tr>
 </tbody>
 </table>
@@ -4351,7 +4351,7 @@ expressa como migração versionada não pertence a este sistema.</p>
 <footer class="dq-footer">
   <p>
     Conteúdo gerado a partir de <code>docs/src/</code> e <code>docs/diagrams/</code>. Diagramas em notação UML (PlantUML). O conteúdo reflete o estado do
-    código no commit <code>8901bc9 (2026-10-03)</code>.
+    código no commit <code>72e6529 (2026-10-03)</code>.
   </p>
 </footer>
 

@@ -1,10 +1,12 @@
 /**
- * plan-v3 — costura de **notificação nativa** do navegador (F1b, onda 5).
+ * plan-v3 — costura de **notificação nativa** do navegador (F1b, Onda 5).
  *
- * Este arquivo é criado na Onda 2 (2.C) e **ligado** na Onda 5 (5.A), que hoje está
- * bloqueada por BLK-01: a instância do laboratório é HTTP num IP de rede, e Chrome e
- * Firefox recusam o pedido de permissão fora de contexto seguro. Criar a costura agora, com
- * teste, é o que faz a onda 5 virar um commit de ligação em vez de um redesenho.
+ * Este arquivo é criado na Onda 2 (2.C) e **fica sem chamador**: a Onda 5 (5.A), que era
+ * quem o ligaria, saiu do plano em 2026-10-03 (DEC-49). Ela dependia de HTTPS e não de
+ * código — a instância do laboratório é HTTP num IP de rede, e Chrome e Firefox recusam o
+ * pedido de permissão fora de contexto seguro. Quem decidir que a notificação nativa vale a
+ * pena precisa primeiro colocar HTTPS no ar; a ligação, depois, é uma chamada no fluxo de
+ * pausa, e as regras que o ponto de ligação precisa são as listadas abaixo.
  *
  * Ele fica separado de `alert-sound.ts` porque os dois canais falham de maneiras
  * distintas: o som depende de WebAudio e da política de autoplay; a notificação nativa

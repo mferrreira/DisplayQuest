@@ -3,13 +3,15 @@
   "title": "qualidade operacional: sessões, quadro e pontos",
   "version": "3.0.0",
   "updatedAt": "2026-10-03",
-  "status": "blocked",
-  "activeWave": 5,
-  "activeBatch": "5.A",
-  "awaitingInstruction": [
+  "status": "done",
+  "activeWave": null,
+  "activeBatch": null,
+  "awaitingInstruction": [],
+  "answeredInstructions": [
     {
       "id": "ASK-P3-03",
       "askedAt": "2026-10-03",
+      "answeredAt": "2026-10-03",
       "question": "O plan-v3 nao tem mais batch executavel: ondas 0-4 fechadas, 5.A bloqueado por BLK-01. Como fechar?",
       "measured": "5.A continua pendente de HTTPS (BLK-01): em `http://<ip>:3000` o Chrome e o Firefox recusam o pedido de permissao de notificacao. Onda 2 ja entrega o aviso que funciona em HTTP (sinal visual sempre visivel + som opcional, ligado por gesto), que foi o motivo de DEC-42 ter adiado a Onda 5. O que a Onda 5 acrescenta e so a notificacao de sistema quando a aba esta em segundo plano.",
       "options": [
@@ -17,6 +19,8 @@
         "fechar o plan-v3 como esta: 5.A continua adiado por decisao, e o plano so reabre se o dono quiser a notificacao de sistema",
         "remover o 5.A do plano (e o BLK-01 junto), registrando que o alerta da Onda 2 e o sinal aceito para HTTP"
       ],
+      "answer": "terceira opcao: remover o 5.A do plano (e o BLK-01 junto), registrando que o alerta da Onda 2 e o sinal aceito para HTTP",
+      "decision": "DEC-49",
       "blocks": []
     }
   ],
@@ -170,20 +174,6 @@
       "dependsOn": [
         "1"
       ]
-    },
-    {
-      "id": "5",
-      "name": "notificação nativa (F1b)",
-      "batches": [
-        "5.A"
-      ],
-      "status": "blocked",
-      "dependsOn": [
-        "2"
-      ],
-      "blockedBy": [
-        "BLK-01"
-      ]
     }
   ],
   "batches": [
@@ -290,15 +280,37 @@
       "status": "done",
       "gates": "G0 G1 G2 G3 G5 e2e",
       "evidence": "commit dbd067e. Medido antes de desenhar: o contador do cabecalho JA recebia o total novo (refresh da sessao em use-tasks.ts, e a callback de sessao relê users.points do banco) e o que faltava era o sinal. Desenho: `lib/points-delta.ts` novo, sem import nenhum, com o sinal `{id, value, at}` e a aritmetica pura da contagem (estado de modulo, nao contexto, porque quem anuncia e a mutacao do quadro e quem consome e o cabecalho: dois galhos da arvore sem ancestral comum hoje, e o cabecalho tambem vive em telas que nao montam o quadro); `components/ui/points-delta.tsx` com o chip `+15` verde / `−20` vermelho ancorado na pilula de pontos, `role=status` para leitor de tela, 20 passos de 50 ms (1 s) e sumico depois de 0,9 s; e a regra de quem ganhou na mutacao (`awardedTo === pessoa logada`), porque a aprovacao credita o responsavel e quase nunca quem aprovou. `null` e `0` tambem nao anunciam (DEC-48): um chip `+0` mentiria sobre uma entrega que nao rendeu nada. Tres medicoes que mudaram o desenho: (1) `requestAnimationFrame` nao e comandado pelos timers falsos do teste e nao dispara em aba de segundo plano, onde o chip ficaria preso no meio da contagem — `setInterval` em passos e verificavel sem relogio e completa mesmo em aba oculta; (2) geometria e do navegador, nao do jsdom: a primeira versao era `-top-5` e o topo da pilula fica a ~15px do topo da pagina (`h-16`), entao o chip saia pela borda — medido no e2e (chip y=54..74, badge y=22..42) e virou `top-full`, com assercao de geometria no spec para nao voltar; e `zoom-in-95` saiu porque as variantes com transform sobrescrevem o `-translate-x-1/2` e desalinhariam o chip durante a animacao; (3) um caso que so apareceu ao escrever: o chip desmonta junto com o cabecalho (logout) e o `setTimeout` que limparia o sinal e cancelado junto, entao o premio de uma sessao reapareceria para quem logasse depois — limpar no `cleanup` foi descartado porque o modo estrito do React monta, desmonta e remonta todo efeito, e em desenvolvimento o chip nunca apareceria; o sinal passou a carregar `at` e um sinal passado do prazo nao desenha. Testes: 14 casos em `tests/unit/components/points-delta.test.tsx` (a contagem e contavel sem esperar um segundo: passo 10 de 15 e `+8`; o `-0` do `Math.round(-0.5)` nunca aparece na contagem negativa; o sinal repete por id e envelhece por tempo; `prefers-reduced-motion` entrega o valor final sem um tick) e 5 casos no quadro provando a regra de quem ganhou (aprovar tarefa de outra pessoa nao mexe no meu contador; premio 0 nao vira `+0`; concluir publica credita quem concluiu; a delegada vai para revisao e nao credita ninguem; e o sinal e por id, entao dois premios iguais sao dois sinais). Os handlers MSW estavam desatualizados pelo 4.A — devolviam so `{ task }` e ja quebrariam o schema do cliente; corrigidos, e com o caminho `done` creditando o ATOR e nao o responsavel, como o caso de uso faz. G0 748 modulos/2816 deps sem violacao e allow-list vazia; G1 limpo (1 warning pre-existente do `<img>`); G2 0; G3 65 arquivos/798 testes; G4 75 arquivos/881 testes; e2e 7/7 na :3001 sem residuo E2E no banco; G5 build dos dois documentos e `docs:check` limpos. G6 NAO se aplica, e por uma razao concreta: o chip dura 1,9 s e nenhuma captura estatica o mostraria; a prova de que ele aparece e o e2e, que e onde o evento acontece. AC-P3-09 e AC-P3-10 atendidos pelo chip — com a ressalva registrada em GAP-P3-05: o toast da conclusao direta ainda mostra o numero projetado antes de o servidor responder."
-    },
+    }
+  ],
+  "removedItems": [
     {
       "id": "5.A",
+      "kind": "batch",
       "wave": "5",
-      "title": "liga browser-notifications.ts ao fluxo de pausa: botão de ativação por gesto, dedupe por tag, degradação para o alerta da onda 2",
-      "status": "blocked",
-      "gates": "G0 G1 G2 G3",
-      "blockedBy": [
-        "BLK-01"
+      "plannedAt": "2026-10-02",
+      "plannedAs": "liga browser-notifications.ts ao fluxo de pausa: botão de ativação por gesto, dedupe por tag, degradação para o alerta da onda 2",
+      "removedAt": "2026-10-03",
+      "byDecision": "DEC-49",
+      "askedIn": "ASK-P3-03",
+      "reason": "Dependia de HTTPS e nao de codigo (BLK-01): em `http://<ip>:3000` o navegador recusa o pedido de permissao. O dono optou por tirar o batch do plano em vez de esperar a infra, aceitando o alerta da Onda 2 (F1a) como sinal de pausa.",
+      "acceptanceCriteriaLost": "nenhum — AC-P3-01..10 nao mencionam notificacao nativa (AC-P3-04 e o alerta in-app, que a Onda 2 entregou)",
+      "traceKeptIn": [
+        "PLAN.md §3 (F1a/F1b em DEC-35), §5 (tombstone da Onda 5), §7 (DEC-49)",
+        "STATE.json decisionRegistry (DEC-35, DEC-42, DEC-49)",
+        "docs/src/15-manutencao-e-continuidade.md (divergencia consciente da costura nao ligada)"
+      ],
+      "consequence": "lib/notifications/browser-notifications.ts (134 linhas) e tests/unit/lib/browser-notifications.test.ts (231 linhas) ficam sem chamador: medido em 2026-10-03, `grep -rn browser-notifications` acha so o proprio teste. Decisao sobre esse codigo orfao registrada em notes e em PLAN.md §8."
+    },
+    {
+      "id": "BLK-01",
+      "kind": "blocker",
+      "openedAt": "2026-10-02",
+      "removedAt": "2026-10-03",
+      "byDecision": "DEC-49",
+      "reason": "O bloqueio existia para travar a Onda 5. Sem Onda 5, nao ha o que bloquear: `blockers` fica vazio. A restricao R1 continua valendo como medida de ambiente (a instancia e HTTP em IP de rede) e segue registrada em PLAN.md §2.",
+      "traceKeptIn": [
+        "PLAN.md §2 (R1)",
+        "STATE.json gapRegistry GAP-P3-02"
       ]
     }
   ],
@@ -320,7 +332,8 @@
     "DEC-44: o gate `task.points > 0` em approve-task foi removido. Com POINTS_PER_TASK fixo e DEC-40 (historico intocado), tarefas legadas gravadas com 0 pontos nunca receberiam nada — o gate contradizia a decisao. complete-task ja creditava sem gate.",
     "DEC-46: o log da sessao CONTINUA obrigatorio — a pergunta ASK-P3-02 foi respondida pelo dono em 2026-10-02 e a regra nao muda. O 2.B apenas evita redigitar o texto. O guia continua descrevendo a obrigatoriedade sem atribui-la ao backend (que aceita `note || null`).",
     "DEC-47: 'Mais recentes' ordena por id decrescente (a tarefa não volta com createdAt, medido no GET /api/tasks) e 'Pontos' ordena pelo valor GRAVADO em tasks.points, não pela premiação atual. Motivo: a coluna é histórico (DEC-40) e é heterogênea na base (10 a 60 medidos), enquanto a premiação depende do prazo e muda todo dia.",
-    "DEC-48: `awardedPoints` na resposta de concluir/aprovar e o valor EFETIVAMENTE creditado (0 quando o award ja existia, negativo quando a penalidade de atraso vence os 10 pontos — sem piso, DEC-39), e `awardedTo` diz para quem. `null` nos dois significa 'ninguem creditado agora' e e distinto de 0. Motivo: o numero que a animacao da Onda 4.B mostra tem que ser o do servidor — recalcular no cliente reabriria a segunda aritmetica (R7) e erraria justamente nos casos que importam, porque o pedido e o creditado divergem por tres peculiaridades congeladas (idempotencia do award, Math.floor sem clamp, e award falho que nao pode quebrar a conclusao). E `awardedTo` porque a aprovacao credita o responsavel pela tarefa, nao quem aprovou: sem isso o contador de quem aprovou animaria com o premio de outra pessoa. Correcao do plano junto: o 4.A previa carregar `awardedPoints` no read model da tarefa (`withActorProgress`), que e congelado e carregaria o pedido."
+    "DEC-48: `awardedPoints` na resposta de concluir/aprovar e o valor EFETIVAMENTE creditado (0 quando o award ja existia, negativo quando a penalidade de atraso vence os 10 pontos — sem piso, DEC-39), e `awardedTo` diz para quem. `null` nos dois significa 'ninguem creditado agora' e e distinto de 0. Motivo: o numero que a animacao da Onda 4.B mostra tem que ser o do servidor — recalcular no cliente reabriria a segunda aritmetica (R7) e erraria justamente nos casos que importam, porque o pedido e o creditado divergem por tres peculiaridades congeladas (idempotencia do award, Math.floor sem clamp, e award falho que nao pode quebrar a conclusao). E `awardedTo` porque a aprovacao credita o responsavel pela tarefa, nao quem aprovou: sem isso o contador de quem aprovou animaria com o premio de outra pessoa. Correcao do plano junto: o 4.A previa carregar `awardedPoints` no read model da tarefa (`withActorProgress`), que e congelado e carregaria o pedido.",
+    "DEC-49: a Onda 5 (5.A, notificacao nativa) foi REMOVIDA do plano, junto com o BLK-01. Decisao do dono em 2026-10-03, respondendo ASK-P3-03. O sinal de pausa aceito em HTTP e o da Onda 2 (F1a): sempre visivel no cronômetro e, opcional, som ligado por gesto. A notificacao de sistema sai do escopo e volta só se o dono a pedir com HTTPS no ar — nada no plano dependia dela, porque nenhum criterio de aceite (AC-P3-01..10) era nativo. Consequências registradas: `waves` e `batches` nao tem mais a Onda 5, `blockers` fica vazio, e o que saiu foi registrado também em `removedItems`, com o rastro (apagar o historico nao e reverter). E o seam `lib/notifications/browser-notifications.ts` (134 linhas, 15 testes) fica ORFAO: zero chamadores em código de aplicação, medido por grep. Manter ou apagar esse código órfão é decisão do dono, registrada em `notes` e em `PLAN.md` §8."
   ],
   "gapRegistry": [
     {
@@ -336,10 +349,8 @@
       "id": "GAP-P3-02",
       "open": false,
       "resolved": "2026-10-02",
-      "resolution": "ADIADO (DEC-42): ondas 1-4 executam sem TLS; Onda 5 permanece bloqueada por BLK-01 ate a infra existir. Onda 5 adiada, BLK-01 permanece aberto.",
-      "blocks": [
-        "5.A"
-      ]
+      "resolution": "ADIADO (DEC-42) e depois REMOVIDO DO PLANO (DEC-49). As ondas 1-4 executaram sem TLS; em 2026-10-03 o dono optou por tirar a Onda 5 do plano em vez de esperar a infra. O sinal de pausa aceito em HTTP e o da Onda 2 (visual sempre + som opcional). Nenhum criterio de aceite dependia de F1b.",
+      "blocks": []
     },
     {
       "id": "GAP-P3-03",
@@ -368,17 +379,7 @@
       "blocks": []
     }
   ],
-  "blockers": [
-    {
-      "id": "BLK-01",
-      "summary": "instância servida em HTTP num IP de rede: Chrome e Firefox recusam pedido de permissão de notificação fora de secure context",
-      "blocks": [
-        "5.A"
-      ],
-      "owner": "dono/infra",
-      "disposition": "Onda 5 adiada pelo dono em 2026-10-02 (DEC-42). Onda 2 entrega o alerta in-app + som, que funciona em HTTP e não depende deste bloqueio."
-    }
-  ],
+  "blockers": [],
   "acceptanceCriteria": [
     "AC-P3-01: tarefa com prazo hoje, aprovada hoje, credita 10 pontos (não zero).",
     "AC-P3-02: backend e frontend produzem o mesmo número de pontos para a mesma tarefa e instante.",
@@ -410,7 +411,12 @@
     "Correcao de plano (4.A): o texto previa `withActorProgress` carregando `awardedPoints`; medido, esse read model e congelado e o valor que ele carregaria seria o pedido, nao o creditado. A costura e o retorno do award (porta `onTaskCompleted`), e o contrato ganhou tambem `awardedTo` porque a aprovacao credita o responsavel pela tarefa, nao quem aprovou. Ver DEC-48.",
     "Medido no 4.B: o chip `+0` nao pode existir. `announcePointsDelta` ignora `null` e `0`, e a contagem nunca passa por zero (passo minimo visivel de 1 na direcao do delta) — um chip que pisca zero mente sobre um premio que existe.",
     "Medido no 4.B: geometria de interface se prova no navegador, nao no jsdom. A primeira versao do chip (`-top-5`) saia pela borda do cabecalho e so o `boundingBox()` do e2e pegou.",
-    "Medido no 4.B: o timeout que limpa um sinal nao sobrevive ao desmontar do componente que o montou. Por isso o sinal carrega `at` e um sinal velho simplesmente nao desenha — limpar no `cleanup` quebraria o chip em desenvolvimento, porque o modo estrito do React remonta todo efeito."
+    "Medido no 4.B: o timeout que limpa um sinal nao sobrevive ao desmontar do componente que o montou. Por isso o sinal carrega `at` e um sinal velho simplesmente nao desenha — limpar no `cleanup` quebraria o chip em desenvolvimento, porque o modo estrito do React remonta todo efeito.",
+    "Encerramento (2026-10-03, DEC-49): o plan-v3 fecha com 13 batches executados — S0.1, 1.A-1.D, 2.A-2.C, 3.A-3.C, 4.A-4.B — e a Onda 5 removida. Os 10 criterios de aceite (AC-P3-01..10) continuam cobertos pelos batches entregues: nenhum deles era sobre notificacao nativa. `status: done`, `activeWave`/`activeBatch` nulos, `awaitingInstruction` vazia, `blockers` vazio.",
+    "Medido no encerramento: GAP-P3-05 (o toast da conclusao direta ainda anuncia o numero projetado) continua ABERTO e nao bloqueia nenhum criterio de aceite — AC-P3-09 e sobre o delta exibido no contador, que vem da resposta do servidor (chip da 4.B). Corrigi-lo move o aviso para depois da mutacao e mexe em OND1-C; fica como item aberto, nao como pendencia do plano.",
+    "Medido no encerramento: lib/notifications/browser-notifications.ts (134 linhas) e tests/unit/lib/browser-notifications.test.ts (231 linhas) estao ORFAOS — `grep -rn browser-notifications` devolve so o proprio teste, nenhum chamador em codigo de aplicacao. Existiram para a F1b, que saiu do plano (DEC-49). Duas saidas honestas: manter (costura pronta, registrada como divergencia consciente em docs/src/15) ou apagar seam e teste juntos (batch pequeno, so codigo). Decisao do dono, pendente — enquanto nao vier, fica como esta.",
+    "Correcao de plano (§6 do PLAN.md): a linha de baseline dizia '64 arquivos / 721 testes, 725 modulos / 2737 dependencias' — numeros vindos da baseline do clean-arch (a que ainda estava no AGENTS.md). A baseline do plan-v3, medida no S0.1 e registrada em `baseline`, e 67 arquivos / 675 testes e 731 modulos / 2748 dependencias. A linha foi corrigida para a do plan-v3 e as duas medidas ficam registradas, para ninguem comparar apples com oranges.",
+    "Medido no encerramento: DEC-45 nao existe no registro (grep em todo o repo e em todo o historico: zero ocorrencias). A numeracao nao foi reaproveitada — DEC-46 (ASK-P3-02), DEC-47, DEC-48 e DEC-49 seguem em ordem. A lacuna e impolida; nao renumerar nada para fechar o buraco, porque o registro e o que sustenta a rastreabilidade."
   ],
   "timeline": [
     {
@@ -476,6 +482,10 @@
     {
       "at": "2026-10-03",
       "event": "4.B: chip do premio creditado no contador do cabecalho (contagem de 1 s, respeita prefers-reduced-motion, so quando o credito e da propria pessoa). Tres medicoes mudaram o desenho: rAF nao serve (teste nem aba oculta), a geometria acima da pilula saia da tela, e o sinal sobrevive ao logout sem `at`. G0-G5 verdes + e2e 7/7 (commit dbd067e). Onda 4 fechada; GAP-P3-05 aberto (o toast da conclusao direta ainda recalcula o numero no cliente) e 5.A continua bloqueada por BLK-01, agora como unico item restante do plano."
+    },
+    {
+      "at": "2026-10-03",
+      "event": "Dono respondeu ASK-P3-03 na terceira opcao: tirar da Onda 5 o batch de notificacao nativa em vez de esperar HTTPS, junto com o BLK-01 (DEC-49). O sinal de pausa aceito em HTTP e o da Onda 2 (visual sempre visivel + som opcional). Medido antes de fechar: nenhum dos 10 criterios de aceite era sobre notificacao nativa (AC-P3-04 e o alerta in-app da Onda 2), entao a remocao nao abre nenhuma lacuna de entrega; e o grep mostrou que `lib/notifications/browser-notifications.ts` (134 linhas) e o teste (231) ficaram ORFAOS, sem nenhum chamador em codigo de aplicacao. Os cabecalos de comentario dos dois arquivos diziam 'ligado na 5.A, hoje bloqueada por BLK-01' e foram corrigidos — comentario que aponta para batch inexistente e documento mentiroso. Correcao de plano junto: a linha de baseline do §6 trazia numeros da baseline do clean-arch (64 arquivos/721 testes, 725 modulos/2737 deps) e foi trocada pela do plan-v3 (67/675 e 731/2748 no S0.1; 75/881 e 748/2816 no encerramento). Estado final: status done, activeWave/activeBatch nulos, 13 batches todos done, waves 0-4 done, blockers vazio, GAP-P3-05 segue aberto sem bloquear AC, seam orfao em aberto. Gates: G0 748 modulos/2816 deps sem violacao e allow-list vazia; G1 limpo nos dois arquivos tocados; G2 0 erros; G3 65 arquivos/798 testes; G4 75 arquivos/881 testes contra dq-dev-test-db:5433; G5 docs:check limpo e docs:build do documento tecnico (15 secoes, 33 figuras, 1014 KB)."
     }
   ]
 }

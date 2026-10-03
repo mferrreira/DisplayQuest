@@ -5,7 +5,7 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
 
 ## Verificação
 
-- **Gate de entrega:** `npm run arch:check` (exit 0, allow-list **vazia**) && `npm run lint` (nada de erro) && `npx tsc --noEmit` (0) && `npx vitest run` (baseline atual: **64 arquivos / 721 testes, zero failure** — a contagem só cresce desde o B8, que removeu os 651 testes de paridade; ver seção clean-arch).
+- **Gate de entrega:** `npm run arch:check` (exit 0, allow-list **vazia**) && `npm run lint` (nada de erro) && `npx tsc --noEmit` (0) && `npx vitest run` (zero failure). A contagem é **por branch**: no `dev` o baseline era **64 arquivos / 721 testes** quando o B8 removeu os 651 testes de paridade; no `plan/v3-operacional`, medido no encerramento do plan-v3 (2026-10-03), são **65 arquivos / 798 testes** em `tests/unit` + `features` e **75 / 881** na suíte completa. Compare sempre com o `STATE.json` do plano em que você está.
 - **G4/integração:** roundtrips Prisma real rodam **só** contra o banco de teste isolado `dq-dev-test-db` em `127.0.0.1:5433` (`$env:DATABASE_URL="postgresql://dq_dev:dq_dev_local_only@127.0.0.1:5433/dq_dev_test"; npx vitest run`) — nunca contra o `display-quest-db` (5432, produção local).
 - **Setup do G4 (corrigido 2026-10-02):** `npm run db:test:up` e `npm run db:test:setup` **existem**
   no `package.json` e fazem a sequência completa (`docker compose -f docker-compose.test.yml up -d`,
@@ -44,20 +44,25 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
   STATE.json v2 (`decisionRegistry`/`gapRegistry`) — comentários de código que citam
   `DEC-NN` continuam resolvíveis.
 - **Estado/decisões (plan-v3):** `displayquest-v2/plan-v3/{PLAN.md,STATE.json}` — STATE.json
-  v3.0.0 monitora o plano operacional **plan-v3** (ondas 0–5, 14 batches, AC-P3-01..10,
-  DEC-30..DEC-47, GAP-P3-01..04 fechados, BLK-01). A numeração de decisões **continua** a do
-  clean-arch: DEC-01..29 são do clean-arch, DEC-30 em diante são do plan-v3. Não reinicie a
-  numeração em outro plano.
+  v3.0.0 monitora o plano operacional **plan-v3** (ondas 0–4, 13 batches, AC-P3-01..10,
+  DEC-30..DEC-49, GAP-P3-01..04 fechados, GAP-P3-05 aberto, `blockers` vazio). A numeração de
+  decisões **continua** a do clean-arch: DEC-01..29 são do clean-arch, DEC-30 em diante são do
+  plan-v3. Não reinicie a numeração em outro plano.
 
 ## plan-v3 — qualidade operacional (sessões, quadro, pontos)
 
-- **Estado atual:** `in_progress` — **Ondas 1, 2 e 3 fechadas** (1.A–1.D, G6 no commit `85a6bb4`;
-  2.A–2.C, último `624c543`; 3.A–3.C, último `bef0acf`) e **Onda 4 em andamento**
-  (`activeBatch` = 4.A, contrato `awardedPoints` → animação `+X/−X`). As 4 lacunas foram
-  respondidas pelo dono em 2026-10-02 (DEC-39..42). Único batch travado: **5.A**, por BLK-01
-  (HTTPS) — onda **adiada** por decisão, sem travar as outras.
-  `awaitingInstruction` está vazio: `ASK-P3-02` foi respondida em 2026-10-02 — o log da sessão
-  **continua obrigatório** (DEC-46), a regra não muda e o 2.B só evita redigitar.
+- **Estado atual:** `done` — **encerrado em 2026-10-03**. Ondas 0–4 fechadas (S0.1, 1.A–1.D,
+  2.A–2.C, 3.A–3.C, 4.A–4.B; último commit de código `dbd067e`), G0–G4 verdes e e2e do quadro
+  7/7. A **Onda 5 foi removida do plano** (DEC-49, respondendo `ASK-P3-03`): o sinal de pausa
+  aceito em HTTP é o da Onda 2 (visual sempre visível + som opcional). `awaitingInstruction`
+  está vazia; as perguntas respondidas ficam em `answeredInstructions` e o que saiu do plano em
+  `removedItems`.
+- **Duas coisas seguem abertas de propósito:** `GAP-P3-05` — o toast da conclusão direta ainda
+  anuncia o número *projetado* (`features/tasks/components/task-card.tsx:256`) em vez do
+  creditado pela resposta; corrigir move o aviso para depois da mutação. E o seam
+  `lib/notifications/browser-notifications.ts` (134 linhas + teste), que ficou **órfão** com a
+  F1b fora do escopo: `grep` mostra zero chamadores. Manter ou apagar é decisão do dono
+  (registrada em `PLAN.md` §8).
 - **Decisões que mudam o desenho:** premiação **pode ficar negativa** (DEC-39, sem piso — o
   `-37140 pts` medido numa captura é a regra funcionando, não bug isolado); nenhum `UPDATE` em
   `tasks.points` histórico (DEC-40); `@pontos` do backlog aceito e ignorado (DEC-41); a ordenação

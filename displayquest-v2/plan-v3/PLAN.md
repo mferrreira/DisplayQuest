@@ -61,7 +61,7 @@ existir antes de o delta ser correto e vir do servidor.
 | X3 | Mover tarefa concluída: retirar a opção onde não é permitido, ou barrar no backend | **3** | UI/regra |
 | F3 | Ordenação própria e customizável por coluna, salva por sessão | **3** | client + seam |
 | F4 | Animação `+X` verde / `−X` vermelho incrementando ao longo de 1s | **4** | client + contrato |
-| F1b | Notificação nativa do navegador | **5** | client, **bloqueado por infra** |
+| F1b | Notificação nativa do navegador | — | **FORA** (DEC-49) |
 | — | Subtasks | — | **FORA** (DEC-38) |
 
 ## 4. Estrutura de arquivos
@@ -95,7 +95,7 @@ components/
 └── ui/session-notes-draft.tsx NOVO: caixa de notas persistida
 
 lib/notifications/
-└── browser-notifications.ts   NOVO: detecção de suporte, pedido por gesto, dedupe por tag
+└── browser-notifications.ts   NOVO na Onda 2; sem chamador depois de DEC-49 (ver §5)
 
 tests/
 ├── unit/modules/task-management/domain.points-rules.test.ts   NOVO
@@ -264,25 +264,28 @@ Dois batches.
 | `tests/unit/components/points-delta.test.tsx` | sinal, cor e valor final; com `prefers-reduced-motion`, sem animação |
 | `features/tasks/__tests__/task-board.test.tsx` | concluir/aprovar dispara o delta uma única vez, e só quando quem ganhou foi a pessoa logada |
 
-### Onda 5 — notificação nativa (F1b) — bloqueada
+### Onda 5 — notificação nativa (F1b) — removida do plano (DEC-49)
 
-Um batch, **dependente de infra**, não de código. **Adiado por decisão do dono (DEC-42)**: as
-ondas 1–4 executam sem TLS, e a Onda 2 já entrega o alerta que funciona em HTTP.
+**Não faz mais parte do plano.** O registro fica aqui porque apagar a onda do documento sem
+rastro pareceria que ela nunca existiu. Existiu como Onda 5, planejada em 2026-10-02, adiada por
+DEC-42 (dependia de TLS, não de código) e **removida em 2026-10-03** por DEC-49, quando o dono
+optou por tirar o batch em vez de esperar a infra. Ela saiu de `waves`, de `batches` e de
+`blockers` no `STATE.json`, e o que era dela está em `removedItems` com o motivo.
 
-- **5.A** liga o seam `lib/notifications/browser-notifications.ts` (criado na Onda 2) ao fluxo
-  de pausa: botão explícito "ativar avisos" (gesto, por R2), pedido de permissão uma vez,
-  dedupe por `tag` para não empilhar, e degradação silenciosa para o alerta da Onda 2 quando o
-  contexto não é seguro.
-
-**Bloqueio:** R1. Em `http://<ip>:3000` o Chrome e o Firefox **recusam o pedido de permissão**.
-A onda só executa quando a instância tiver HTTPS. Caminhos possíveis, a escolher pelo dono:
-certificado válido num domínio, certificado autoassinado com confiança instalada nas máquinas
-do laboratório, ou proxy reverso com TLS na frente da aplicação. O que **não** resolve:
-`http://localhost` só vale para quem acessa a própria máquina.
-
-**Estado em 2026-10-03:** é o único batch do plano que continua aberto — as ondas 0 a 4 estão
-fechadas. A decisão de como fechar (fornecer HTTPS, manter adiado ou remover do plano) está
-registrada como `ASK-P3-03` no `STATE.json`.
+- **O que seria o 5.A:** ligar o seam `lib/notifications/browser-notifications.ts` (criado na
+  Onda 2) ao fluxo de pausa — botão explícito "ativar avisos" (gesto, por R2), pedido de
+  permissão uma vez, dedupe por `tag` para não empilhar, e degradação silenciosa para o alerta
+  da Onda 2 quando o contexto não é seguro.
+- **Por que não executava:** R1. Em `http://<ip>:3000` o Chrome e o Firefox **recusam o pedido
+  de permissão**. O que resolveria, se um dia a notificação nativa voltar: HTTPS por certificado
+  válido num domínio, autoassinado com confiança instalada nas máquinas, ou proxy reverso com
+  TLS. O que **não** resolve: `http://localhost`, que só vale para quem acessa a própria máquina.
+- **O que fica no lugar do sinal:** o alerta da Onda 2 (F1a) — sempre visível no cronômetro e,
+  opcional, som ligado por gesto. **Nenhum critério de aceite dependia de F1b** (AC-P3-04 é o
+  alerta in-app), então remover a onda não abre nenhuma lacuna de entrega.
+- **O que sobra na árvore:** o seam `lib/notifications/browser-notifications.ts` e o seu teste,
+  **sem nenhum chamador** (medido em 2026-10-03: zero referências fora do próprio teste). A
+  decisão sobre esse código órfão está em §8.
 
 ## 6. Gates por batch
 
@@ -302,8 +305,10 @@ Idênticos aos do `clean-arch`, com dois acréscimos porque este plano toca inte
   --only=<telas>` e rebuild. Vale para Onda 1 (formulário sem campo de pontos), Onda 3
   (quadro com scroll) e Onda 4 (chip de pontos).
 
-Baseline atual, para comparação em cada batch: **64 arquivos / 721 testes**, 725 módulos /
-2737 dependências, allow-list 0.
+Baseline medido no S0.1 (registrado em `STATE.json` → `baseline`): **67 arquivos / 675 testes**,
+731 módulos / 2748 dependências, allow-list 0. No encerramento do plano: **75 arquivos / 881
+testes**, 748 módulos / 2816 dependências no commit `dbd067e`, com G0–G4 e o e2e do quadro
+verdes (7/7).
 
 ## 7. Decisões e lacunas
 
@@ -334,12 +339,25 @@ Baseline atual, para comparação em cada batch: **64 arquivos / 721 testes**, 7
 - **DEC-41** — o token `@pontos` do backlog continua aceito e é ignorado.
 - **DEC-42** — Onda 5 adiada; as ondas 1–4 executam sem TLS.
 
-### Lacunas: todas fechadas em 2026-10-02
+### Registradas na execução (mediu-se e corrigiu-se; ver `STATE.json` → `decisionRegistry`)
+
+DEC-43 a DEC-48 nasceram de medir antes de executar: a restrição R15 do gate G0 (DEC-43), a
+remoção do gate `points > 0` na aprovação (DEC-44), o log da sessão continuando obrigatório
+(DEC-46), o que "Mais recentes" e "Pontos" ordenam de fato (DEC-47) e `awardedPoints` como valor
+**creditado**, pareado com `awardedTo` (DEC-48).
+
+- **DEC-49** — **a Onda 5 é removida do plano, junto com o BLK-01.** Decisão do dono em
+  2026-10-03, respondendo `ASK-P3-03`: o sinal de pausa aceito em HTTP é o da Onda 2 (F1a),
+  sempre visível no cronômetro e, opcional, com som ligado por gesto. A notificação de sistema
+  sai do escopo e volta **só** se o dono a pedir com HTTPS no ar. Nenhum critério de aceite
+  dependia dela. Consequência registrada: o seam `browser-notifications.ts` fica órfão (§8).
+
+### Lacunas: fechadas (2026-10-02; GAP-P3-02 revisada em 2026-10-03 por DEC-49)
 
 | Gap | Pergunta | Resolução |
 |---|---|---|
 | GAP-P3-01 | a premiação pode ficar negativa? | **Sim** (DEC-39). Recomendação da casa (piso em zero) foi recusada conscientemente. |
-| GAP-P3-02 | HTTPS na instância do laboratório | **Adiado** (DEC-42). Onda 5 fica bloqueada por BLK-01 até a infra existir; a Onda 2 entrega alerta + som em HTTP. |
+| GAP-P3-02 | HTTPS na instância do laboratório | **Adiado** (DEC-42) e depois **removido do plano** (DEC-49): a notificação nativa saiu do escopo; o alerta da Onda 2 é o sinal aceito em HTTP. |
 | GAP-P3-03 | pontos já gravados nas tarefas existentes | **Mantidos** (DEC-40). Nenhum rewrite retroativo. |
 | GAP-P3-04 | token `@pontos` do importador de backlog | **Aceito e ignorado** (DEC-41). |
 
@@ -366,6 +384,16 @@ medidos*) que não pertencem a estas ondas por tocarem outra camada:
 - **Onda 7 candidata — dados de lixo na instância real:** tarefas `rewqr` e `asfsa`, projeto
   `asdfasdf`.
 
+### Fica na árvore sem destino — decisão do dono (medido em 2026-10-03)
+
+`lib/notifications/browser-notifications.ts` (134 linhas) e o seu teste (231 linhas) existem
+porque a Onda 2 os criou como costura para a F1b, e a F1b saiu do plano (DEC-49). **`grep -rn
+browser-notifications` devolve só o próprio teste: zero chamadores em código de aplicação.**
+As duas saídas honestas são **manter** (costura pronta e testada, sem quem a invoque — o que o
+cap. 15 de `docs/` já registra como divergência consciente) ou **apagar o seam e o teste
+juntos** (batch pequeno, só código, sem infra, com G0–G3). Enquanto o dono não escolher, fica
+como está.
+
 ## 9. Ordem e por quê
 
 ```
@@ -374,11 +402,12 @@ medidos*) que não pertencem a estas ondas por tocarem outra camada:
 2 sessão        (a reclamação mais alta; independente do resto)
 3 quadro        (três itens nos mesmos arquivos, numa ordem que evita conflito)
 4 animação      (depende do contrato da onda 1)
-5 nativa        (bloqueada por infra — pode ficar aguardando sem travar as outras)
 ```
 
 Onda 2 e Onda 3 são independentes entre si e da Onda 1: se for preciso inverter por urgência
-de uso, inverte-se sem quebrar nada. O único encadeamento duro é **1 → 4**.
+de uso, inverte-se sem quebrar nada. O único encadeamento duro é **1 → 4**. Havia uma quinta
+onda (notificação nativa), que dependia de HTTPS e saiu do plano por DEC-49 — a ordem acima é a
+que foi executada, do começo ao fim.
 
 ## 10. Como o estado é monitorado
 
@@ -386,10 +415,33 @@ de uso, inverte-se sem quebrar nada. O único encadeamento duro é **1 → 4**.
 
 - `waves[]` / `batches[]` com `status` (`planned` → `in_progress` → `done`), `gates`, `evidence`;
 - `baseline` medido no S0.1 e atualizado a cada batch concluído;
-- `decisionRegistry` (DEC-30..42) e `gapRegistry` (GAP-P3-01..04, todos fechados);
-- `blockers` — BLK-01 (HTTPS) trava a Onda 5;
+- `decisionRegistry` (DEC-30..49) e `gapRegistry` (GAP-P3-01..05; GAP-P3-05 segue **aberto** e
+  não bloqueia nenhum critério de aceite — ver §11);
+- `blockers` — vazio desde DEC-49;
+- `removedItems` — o que saiu do plano, com a decisão que tirou, o motivo e o que ficou na árvore;
+- `answeredInstructions` — perguntas já respondidas pelo dono; a que estiver pendente fica em
+  `awaitingInstruction` (hoje: nenhuma);
 - `rollbacks` — tag `pre-plan-v3` mais um commit por batch;
 - `awaitingInstruction` — o que está parado esperando resposta do dono.
 
 Regra de fechamento: **batch não entra em `done` com gate vermelho ou lacuna aberta que ele
 mesmo depende.**
+
+## 11. Encerramento
+
+O plan-v3 foi encerrado em **2026-10-03** (`STATE.json` → `status: done`, `activeWave` e
+`activeBatch` nulos): **13 batches** executados — S0.1, 1.A–1.D, 2.A–2.C, 3.A–3.C, 4.A–4.B —
+com G0–G4 verdes e e2e do quadro 7/7, e a Onda 5 removida por DEC-49. Os **10 critérios de
+aceite continuam cobertos**: nenhum deles era sobre notificação nativa.
+
+Duas coisas seguem **abertas de propósito**, e nenhuma delas é pendência do plano:
+
+- **GAP-P3-05** — o toast da conclusão direta ainda anuncia o número *projetado*
+  (`features/tasks/components/task-card.tsx:256`) em vez do creditado pela resposta. Não abre
+  nenhum AC (AC-P3-09 é sobre o delta exibido no contador, que vem da resposta, via o chip da
+  4.B) e corrigi-lo move o aviso para depois da mutação, mexendo em OND1-C.
+- **Seam órfão da F1b** — `lib/notifications/browser-notifications.ts` sem chamador (§8), à
+  espera de o dono dizer se fica ou se sai.
+
+Rollback de cada batch: um commit por batch na branch `plan/v3-operacional`, mais a tag
+`pre-plan-v3` (`8d78812`) marcando o ponto anterior ao plano inteiro.

@@ -1,13 +1,14 @@
 // @vitest-environment node
 /**
- * plan-v3 — costura de notificação nativa (F1b). Criada no 2.C, ligada na 5.A (hoje
- * bloqueada por BLK-01: a instância é HTTP num IP de rede e o navegador recusa o pedido de
- * permissão fora de contexto seguro).
+ * plan-v3 — costura de notificação nativa (F1b). Criada no 2.C e **sem chamador** desde
+ * 2026-10-03: a Onda 5 (5.A), que era quem a ligaria, saiu do plano (DEC-49), porque
+ * dependia de HTTPS e a instância é HTTP num IP de rede — lá o navegador recusa o pedido de
+ * permissão fora de contexto seguro.
  *
- * O que este arquivo fixa é a **degradação**: o ponto de ligação da onda 5 vai chamar
- * `showBrowserNotification` em três situações ruins — navegador sem API, permissão negada,
- * contexto inseguro — e nenhuma delas pode virar exceção num evento de pausa. Também fixa
- * o dedupe por `tag`, que é o que impede a pilha de notificações de pausa.
+ * O que este arquivo fixa é a **degradação**: o dia que houver HTTPS e um ponto de ligação,
+ * ele vai chamar `showBrowserNotification` em três situações ruins — navegador sem API,
+ * permissão negada, contexto inseguro — e nenhuma delas pode virar exceção num evento de
+ * pausa. Também fixa o dedupe por `tag`, que é o que impede a pilha de notificações de pausa.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
