@@ -21,6 +21,8 @@ Mover um cartão de uma coluna para outra muda o estado da tarefa. Há dois cami
 - arrastar o cartão pelo punho à esquerda dele e soltá-lo na coluna de destino;
 - abrir o menu do cartão (os três pontos) e escolher o destino em **Mover para**. A lista mostra apenas as colunas que a sua função pode alcançar.
 
+Cada coluna tem altura própria e rola por dentro. Quando uma coluna tem mais cartões do que cabem na tela, a rolagem acontece **dentro dela** — o nome da coluna e a contagem de cartões continuam visíveis no alto. A página inteira não cresce com a quantidade de tarefas; para ver mais cartões de uma vez, use **Compacto** na barra acima do quadro.
+
 ## Os filtros
 
 Na barra acima do quadro:

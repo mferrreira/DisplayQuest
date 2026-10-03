@@ -9,7 +9,9 @@ export const CREDENTIALS = { email: "coordenador@lab.com", password: "123" };
 export async function login(page: Page) {
   await page.goto("/login");
   await page.getByLabel("Email").fill(CREDENTIALS.email);
-  await page.getByLabel("Senha").fill(CREDENTIALS.password);
+  // `exact`: o formulário tem um botão "Mostrar senha", e getByLabel sem exact faz
+  // correspondência por fragmento — os dois elementos casavam e a suíte não entrava.
+  await page.getByLabel("Senha", { exact: true }).fill(CREDENTIALS.password);
   await page.getByRole("button", { name: /entrar/i }).click();
   await expect(page).toHaveURL(/\/dashboard/, { timeout: 15_000 });
 }

@@ -70,10 +70,11 @@ contrato de apresentação.
 | Autoria explícita | A interface distingue o dado que a pessoa edita do dado que ela apenas consulta |
 | Estado visível sem depender da atenção | O botão do cronômetro, mesmo fechado, diz se há sessão ativa ou pausada e marca a pausa automática com um ponto pulsante |
 | Sinal sonoro opcional | O aviso de pausa é sintetizado na hora, sem arquivo de áudio, e só toca se a pessoa ligar o interruptor; o sinal visual nunca depende do som |
+| Altura limitada por coluna | Cada coluna do quadro tem altura máxima derivada da janela e rolagem própria; o cabeçalho da coluna fica fora da área de rolagem e a página não cresce com a quantidade de cartões |
 
 ## Diretrizes de verificação
 
-A verificação do sistema está organizada em quatro níveis, do mais barato ao mais custoso.
+A verificação do sistema está organizada em cinco níveis, do mais barato ao mais custoso.
 
 | Nível | Objeto | Requer banco |
 | --- | --- | --- |
@@ -81,11 +82,17 @@ A verificação do sistema está organizada em quatro níveis, do mais barato ao
 | Caso de uso | Orquestração, com portas substituídas por dublês | Não |
 | Contrato | Forma e comportamento expostos por uma porta ou fábrica | Não |
 | Integração | Idas e voltas reais contra um banco isolado | Sim, em banco de teste separado |
+| Navegador | Layout e interação real: altura, rolagem, foco, arrasto | Sim, na base de desenvolvimento |
 
 O nível de integração roda exclusivamente contra um banco de teste isolado, em porta
 distinta da instância de operação. Essa separação é uma regra de higiene, não uma
 preferência: um teste de integração que apontasse para a base de operação destruiria dados
 reais.
+
+O nível de navegador existe porque o ambiente de teste de componentes **não calcula layout**:
+ele não mede altura, não rola e não arrasta. Um teste que lesse nomes de classe para
+"provar" a altura de uma coluna estaria conferindo a própria asserção. Onde a afirmação é
+sobre geometria, a prova é no navegador, contra um servidor de verdade.
 
 ## Diretrizes de modelagem de persistência
 

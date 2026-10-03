@@ -344,7 +344,10 @@ medidos*) que não pertencem a estas ondas por tocarem outra camada:
 - **Onda 6 candidata — legibilidade e consistência de interface:** `<title>` genérico em todas
   as telas; strings sem acento; enum vazado no detalhe da tarefa (`High`, `to-do`); prazo
   renderizado quebrado; `/login` e `/register` sem heading; cabeçalho que se apresenta de duas
-  formas conforme o papel.
+  formas conforme o papel. **Densidade do cartão**, medido no 3.A: em visão normal o cartão
+  mede 271–360 px de altura, então a coluna limitada (628 px numa janela de 900 px) mostra
+  cerca de dois cartões por vez; a visão **Compacto** existe, mas é preciso medir se ela
+  devolve densidade suficiente antes de tratar isso como defeito.
 - **Onda 7 candidata — dados de lixo na instância real:** tarefas `rewqr` e `asfsa`, projeto
   `asdfasdf`.
 

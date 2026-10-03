@@ -3149,10 +3149,14 @@ contrato de apresentação.</p>
 <td>Sinal sonoro opcional</td>
 <td>O aviso de pausa é sintetizado na hora, sem arquivo de áudio, e só toca se a pessoa ligar o interruptor; o sinal visual nunca depende do som</td>
 </tr>
+<tr>
+<td>Altura limitada por coluna</td>
+<td>Cada coluna do quadro tem altura máxima derivada da janela e rolagem própria; o cabeçalho da coluna fica fora da área de rolagem e a página não cresce com a quantidade de cartões</td>
+</tr>
 </tbody>
 </table>
 <h2 id="diretrizes-de-verificacao">Diretrizes de verificação</h2>
-<p>A verificação do sistema está organizada em quatro níveis, do mais barato ao mais custoso.</p>
+<p>A verificação do sistema está organizada em cinco níveis, do mais barato ao mais custoso.</p>
 <table>
 <thead>
 <tr>
@@ -3182,12 +3186,21 @@ contrato de apresentação.</p>
 <td>Idas e voltas reais contra um banco isolado</td>
 <td>Sim, em banco de teste separado</td>
 </tr>
+<tr>
+<td>Navegador</td>
+<td>Layout e interação real: altura, rolagem, foco, arrasto</td>
+<td>Sim, na base de desenvolvimento</td>
+</tr>
 </tbody>
 </table>
 <p>O nível de integração roda exclusivamente contra um banco de teste isolado, em porta
 distinta da instância de operação. Essa separação é uma regra de higiene, não uma
 preferência: um teste de integração que apontasse para a base de operação destruiria dados
 reais.</p>
+<p>O nível de navegador existe porque o ambiente de teste de componentes <strong>não calcula layout</strong>:
+ele não mede altura, não rola e não arrasta. Um teste que lesse nomes de classe para
+&quot;provar&quot; a altura de uma coluna estaria conferindo a própria asserção. Onde a afirmação é
+sobre geometria, a prova é no navegador, contra um servidor de verdade.</p>
 <h2 id="diretrizes-de-modelagem-de-persistencia">Diretrizes de modelagem de persistência</h2>
 <p><strong>A restrição que o banco pode garantir pertence ao banco.</strong> Unicidade e integridade
 referencial são declaradas no esquema, e não apenas verificadas em código.</p>
@@ -4310,7 +4323,7 @@ expressa como migração versionada não pertence a este sistema.</p>
 <footer class="dq-footer">
   <p>
     Conteúdo gerado a partir de <code>docs/src/</code> e <code>docs/diagrams/</code>. Diagramas em notação UML (PlantUML). O conteúdo reflete o estado do
-    código no commit <code>b1eb1fe (2026-10-02)</code>.
+    código no commit <code>c58bbe7 (2026-10-03)</code>.
   </p>
 </footer>
 

@@ -13,11 +13,46 @@ import { login, apiSession } from "./helpers";
  * Scenarios per .spec/specs/task-board.feature.md §10:
  *   board renders · delegated→review via Move menu · leader approve→done→points badge updates
  *   URL filter round-trip · keyboard-only move.
+ *
+ * plan-v3 OND3-A (AC-P3-06) acrescenta o cenário de altura de coluna. É o ÚNICO lugar onde
+ * altura limitada e scroll por coluna são verificáveis: jsdom não calcula layout, e um teste
+ * unitário que só lesse className seria teatro.
  */
 
 const TASK_TITLE = "E2E fluxo delegada";
 const COORDENADOR_ID = 2;
 const TASK_POINTS = 10;
+
+/* --- OND3-A: fixtures de estouro de coluna (a altura limitada é o que se prova) --- */
+
+const OVERFLOW_TITLE = "E2E coluna com scroll";
+/** 8 cartões de ~280 px medidos = ~2.240 px de conteúdo contra ~580 px visíveis. */
+const OVERFLOW_TASKS = 8;
+let overflowTaskIds: number[] = [];
+
+async function createOverflowTasks(page: Page) {
+  for (let i = 1; i <= OVERFLOW_TASKS; i++) {
+    const res = await page.request.post("/api/tasks", {
+      data: {
+        title: `${OVERFLOW_TITLE} ${i}`,
+        description: "Tarefa criada pelo teste de altura de coluna — deletada ao final.",
+        status: "to-do",
+        taskVisibility: "delegated",
+        priority: "medium",
+        isGlobal: false,
+      },
+    });
+    expect(res.status()).toBe(201);
+    overflowTaskIds.push((await res.json()).task.id as number);
+  }
+}
+
+async function deleteOverflowTasks(page: Page) {
+  for (const id of overflowTaskIds) {
+    await page.request.delete(`/api/tasks/${id}`).catch(() => {});
+  }
+  overflowTaskIds = [];
+}
 
 let createdTaskId: number | null = null;
 let pointsBefore: number | null = null;
@@ -51,6 +86,13 @@ test.describe("task board flows", () => {
 
   test.afterAll(async ({ request }) => {
     // safety net when a mid-flow test failed: clean fixture + restore points
+    if (overflowTaskIds.length > 0) {
+      await apiSession(request);
+      for (const id of overflowTaskIds) {
+        await request.delete(`/api/tasks/${id}`).catch(() => {});
+      }
+      overflowTaskIds = [];
+    }
     if (createdTaskId == null && pointsBefore == null) return;
     await apiSession(request);
     if (createdTaskId != null) {
@@ -142,6 +184,8 @@ test.describe("task board flows", () => {
     await login(page);
     await expect(page.getByLabel("Coluna A Fazer")).toBeVisible({ timeout: 15_000 });
 
+    // O buscador é expansível (ícone de lupa): sem abrir, o input existe mas fica oculto.
+    await page.getByRole("button", { name: "Buscar tarefas" }).click();
     const busca = page.getByLabel("Buscar tarefas por título");
     await busca.fill("xyzzy-nenhuma-correspondencia");
     await expect(page).toHaveURL(/busca=xyzzy/);
@@ -204,5 +248,70 @@ test.describe("task board flows", () => {
     expect(del.ok()).toBeTruthy();
     createdTaskId = null;
     pointsBefore = null;
+  });
+
+  /**
+   * plan-v3 OND3-A / AC-P3-06 — a coluna tem altura limitada, rola por conta própria e mantém o
+   * cabeçalho no lugar; a página não cresce com o conteúdo.
+   *
+   * O fixture é criado pelo próprio teste (8 tarefas em A Fazer) para que a prova não dependa
+   * do que existe na base: com conteúdo abaixo, `scrollHeight > clientHeight` tem de valer.
+   */
+  test("coluna limitada em altura, com scroll próprio e cabeçalho fixo", async ({ page }) => {
+    await login(page);
+    await createOverflowTasks(page);
+    try {
+      await page.reload();
+      const column = page.getByLabel("Coluna A Fazer");
+      await expect(column.getByText(`${OVERFLOW_TITLE} 1`)).toBeVisible({ timeout: 15_000 });
+
+      const geometry = await column.evaluate((el) => ({
+        clientHeight: el.clientHeight,
+        scrollHeight: el.scrollHeight,
+        overflowY: getComputedStyle(el).overflowY,
+        overscrollY: getComputedStyle(el).overscrollBehaviorY,
+        viewportHeight: window.innerHeight,
+        docHeight: document.documentElement.scrollHeight,
+      }));
+
+      // 1. a coluna não é a página inteira: altura abaixo da janela…
+      expect(geometry.clientHeight).toBeLessThan(geometry.viewportHeight);
+      // 2. …e o conteúdo é maior que ela, então o scroll é da coluna (overflow-y: auto)
+      expect(geometry.scrollHeight).toBeGreaterThan(geometry.clientHeight);
+      expect(geometry.overflowY).toBe("auto");
+      // 3. a página não cresce com o número de cartões: uma tela e meia cobrem o quadro
+      expect(geometry.docHeight).toBeLessThan(geometry.viewportHeight * 1.5);
+
+      // 4. rolar a coluna não arrasta a página (overscroll-contain) e o cabeçalho fica
+      const header = page.getByRole("heading", { name: "A Fazer", exact: true });
+      /** Mesma leitura antes e depois — comparar tipos diferentes seria medir outra coisa. */
+      const snapshot = () =>
+        page.evaluate(() => {
+          const column = document.querySelector('[aria-label="Coluna A Fazer"]')!;
+          const headerEl = column.parentElement!.firstElementChild as HTMLElement;
+          return {
+            pageY: Math.round(window.scrollY),
+            headerTop: Math.round(headerEl.getBoundingClientRect().top),
+            titleTop: Math.round(headerEl.querySelector("h2")!.getBoundingClientRect().top),
+          };
+        });
+
+      const before = await snapshot();
+      await column.evaluate((el) => {
+        el.scrollTop = el.scrollHeight;
+      });
+      await expect
+        .poll(async () => column.evaluate((el) => el.scrollTop))
+        .toBeGreaterThan(0);
+      const after = await snapshot();
+
+      expect(after.pageY).toBe(0); // o scroll da coluna não encadeia para a página
+      expect(after.headerTop).toBe(before.headerTop);
+      expect(after.titleTop).toBe(before.titleTop);
+      await expect(header).toBeVisible();
+      expect(geometry.overscrollY).toContain("contain");
+    } finally {
+      await deleteOverflowTasks(page);
+    }
   });
 });
