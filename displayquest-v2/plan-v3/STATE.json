@@ -2,24 +2,11 @@
   "plan": "plan-v3",
   "title": "qualidade operacional: sessões, quadro e pontos",
   "version": "3.0.0",
-  "updatedAt": "2026-10-02",
+  "updatedAt": "2026-10-03",
   "status": "in_progress",
-  "activeWave": "2",
-  "activeBatch": "2.C",
-  "awaitingInstruction": [
-    {
-      "id": "ASK-P3-02",
-      "askedAt": "2026-10-02",
-      "question": "O log da sessão deve continuar obrigatório para encerrar?",
-      "measured": "A obrigatoriedade e so da interface: o dialogo desabilita 'Encerrar sessão' com a caixa vazia. O backend aceita log vazio — create-daily-log-from-session usa `note: command.note || null` e ainda formata 'Sessao de trabalho finalizada - N minutos' quando nao ha texto. O guia (cap. 2 e cap. 11) descreve a regra como se fosse do sistema.",
-      "options": [
-        "manter obrigatorio (nada muda; o 2.B so evita redigitar)",
-        "tornar opcional na interface: botao sempre habilitado e o backend grava o log automatico — exige atualizar guia, mensagens e o texto do dialogo",
-        "manter obrigatorio, mas aceitar o rascunho como log valido (ja e o que o 2.B faz)"
-      ],
-      "blocks": []
-    }
-  ],
+  "activeWave": "3",
+  "activeBatch": "3.A",
+  "awaitingInstruction": [],
   "target": "corrigir a economia de pontos, acabar com o silêncio das pausas automáticas e tornar o quadro utilizável quando enche",
   "lineage": {
     "predecessor": "clean-arch (repo-cleanup, ondas 0-9 + lotes B0-B11)",
@@ -56,6 +43,16 @@
       "testsAll": 795,
       "archModules": 736,
       "archDependencies": 2772
+    },
+    "after2C": {
+      "at": "2026-10-03",
+      "commit": "624c543",
+      "testFilesUnitAndFeatures": 62,
+      "testsUnitAndFeatures": 744,
+      "testFilesAll": 72,
+      "testsAll": 827,
+      "archModules": 741,
+      "archDependencies": 2784
     }
   },
   "gates": {
@@ -99,7 +96,7 @@
         "2.B",
         "2.C"
       ],
-      "status": "in_progress",
+      "status": "done",
       "dependsOn": [
         "0"
       ]
@@ -205,8 +202,9 @@
       "id": "2.C",
       "wave": "2",
       "title": "alerta de pausa: visual sempre + som WebAudio opcional; sem window.alert",
-      "status": "planned",
-      "gates": "G0 G1 G2 G3"
+      "status": "done",
+      "gates": "G0 G1 G2 G3 G4 G5",
+      "evidence": "commit 624c543. Medido antes de escrever: o botao collapsed era o mesmo icone de relogio em qualquer estado (sessao pausada as 12:00 parecia sessao ativa as 11:00) e o aviso de pausa automatica vivia dentro de um Dialog modal, invisivel com a aba em segundo plano; e a instancia e HTTP num IP de rede, logo notificacao nativa e impossivel (DEC-42) e o sinal tinha de ser visual + opcional. Sinal visual sempre ligado (F1a de DEC-35): SessionTimerVisualState none|active|paused|auto-paused, icone e cor por estado no botao collapsed, ponto pulsante depois da pausa automatica enquanto ninguem retomou/encerrou/abriu o painel, e `sessionTimerButtonLabel` — o nome acessivel passou a dizer o estado (o que tambem tira a falta de ponto de ancoragem para leitor de tela). Som opcional e desligado por padrao (DEC-36): lib/notifications/alert-sound.ts com duas senoides e envelope, contexto em cache, contexto suspenso retomado (autoplay) e nunca lancando; preferencia `dq:som-pausa` pelo seam do 2.A, lida depois da montagem; o interruptor toca a previa ao ser ligado (o clique e o gesto que a politica de autoplay exige). Desvios do plano: arquivo a mais (alert-sound.ts — o plano so previa browser-notifications.ts) e som tambem na pausa manual (o plano so citava a automatica). lib/notifications/browser-notifications.ts (costura F1b) criada e testada mas NAO ligada — sem secure context o navegador recusa (5.A/BLK-01). AC-P3-04 coberto: tests/unit/lib/alert-sound.test.ts (8) + browser-notifications.test.ts (15, ambos environment node com window duble) + 9 casos novos em floating-session-timer.test.tsx (18 no arquivo). Efeito colateral medido: features/laboratorio/__tests__/floating-timer-tabs.test.tsx buscava o botao pelo rotulo exato, que deixou de valer com 4 rotulos — passou a buscar por fragmento. G5: guia (secao 'Como voce fica sabendo da pausa', passo 1 de 'Iniciar uma sessao', painel, tabela de telas, FAQ), 12-padroes-e-diretrizes (2 linhas de diretriz) e 15 (divida da costura F1b nao ligada). G6 avaliado e nao exigido: a captura controle-de-sessao foi feita com 'Sem sessao' e o interruptor so existe com sessao aberta. G0 741 modulos/2784 deps sem violacao e allow-list vazia; G1 limpo; G2 0 erros; G3 62 arquivos/744 testes; G4 suite completa 72 arquivos/827 testes contra dq-dev-test-db:5433."
     },
     {
       "id": "3.A",
@@ -269,7 +267,8 @@
     "DEC-41: o token @pontos do importador de backlog continua aceito e é ignorado — não quebra backlog que as pessoas já têm escrito.",
     "DEC-42: Onda 5 (notificação nativa) adiada. Ondas 1-4 executam sem TLS. A Onda 2 entrega alerta in-app + som, que funciona em HTTP.",
     "DEC-43: restrição R15 — RG-01 proibe backend/domain/ de importar lib/ (LAYER.lib em FORBIDDEN_FOR_CORE). A regra de pontos usa data civil propria do dominio (padrao spParts/SP_OFFSET_MS de ReportPeriod.ts), nao lib/date-only.ts. O plano original estava errado e foi corrigido antes de executar 1.B.",
-    "DEC-44: o gate `task.points > 0` em approve-task foi removido. Com POINTS_PER_TASK fixo e DEC-40 (historico intocado), tarefas legadas gravadas com 0 pontos nunca receberiam nada — o gate contradizia a decisao. complete-task ja creditava sem gate."
+    "DEC-44: o gate `task.points > 0` em approve-task foi removido. Com POINTS_PER_TASK fixo e DEC-40 (historico intocado), tarefas legadas gravadas com 0 pontos nunca receberiam nada — o gate contradizia a decisao. complete-task ja creditava sem gate.",
+    "DEC-46: o log da sessao CONTINUA obrigatorio — a pergunta ASK-P3-02 foi respondida pelo dono em 2026-10-02 e a regra nao muda. O 2.B apenas evita redigitar o texto. O guia continua descrevendo a obrigatoriedade sem atribui-la ao backend (que aceita `note || null`)."
   ],
   "gapRegistry": [
     {
@@ -383,6 +382,14 @@
     {
       "at": "2026-10-02",
       "event": "2.B: a anotacao da sessao passa a existir enquanto ela acontece. Rascunho por sessao com debounce, despejado na caixa de log ao abrir 'Finalizar Work Session' (que continua editavel), apagado so depois de endSession resolver; na falha o texto volta ao rascunho e o erro aparece na tela (antes era rejection silenciosa). Medido de paso: o backend aceita log vazio (`note || null`), logo a obrigatoriedade do log e regra so da interface — pergunta em aberto para o dono."
+    },
+    {
+      "at": "2026-10-02",
+      "event": "Dono respondeu ASK-P3-02: o log da sessao continua obrigatorio (DEC-46), a regra nao muda, e mandou executar o 2.C. Nenhum batch travado alem de 5.A (BLK-01)."
+    },
+    {
+      "at": "2026-10-03",
+      "event": "2.C: a pausa automatica passou a ter sinal fora do dialogo. O botao collapsed do cronometro diz o estado da sessao no icone, na cor e no nome acessivel, e pulsa depois da pausa automatica enquanto ninguem retomou, encerrou ou abriu o painel; o som (WebAudio, sem asset) e opcional, desligado por padrao e destravado pelo proprio interruptor. A costura de notificacao nativa ficou criada e testada, mas sem quem a invoque — fora de contexto seguro o navegador recusa a permissao. Onda 2 fechada; G0-G5 verdes no commit 624c543."
     }
   ]
 }

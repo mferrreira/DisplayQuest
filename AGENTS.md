@@ -51,12 +51,12 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
 
 ## plan-v3 — qualidade operacional (sessões, quadro, pontos)
 
-- **Estado atual:** `in_progress` — **Onda 1 fechada** (1.A–1.D, G6 no commit `85a6bb4`) e
-  **Onda 2 em andamento** (2.A e 2.B prontos; `activeBatch` = 2.C). As 4 lacunas foram
-  respondidas pelo dono em 2026-10-02 (DEC-39..42). Único batch travado: **5.A**, por BLK-01
-  (HTTPS) — onda **adiada** por decisão, sem travar as outras. Há **1 pergunta aberta** ao dono
-  no `awaitingInstruction`: `ASK-P3-02` — o log da sessão é obrigatório **só na interface**
-  (o backend aceita vazio, `note || null`); mudar isso é decisão de produto.
+- **Estado atual:** `in_progress` — **Ondas 1 e 2 fechadas** (1.A–1.D, G6 no commit `85a6bb4`;
+  2.A–2.C, último `624c543`) e **Onda 3 em andamento** (`activeBatch` = 3.A, altura/scroll por
+  coluna). As 4 lacunas foram respondidas pelo dono em 2026-10-02 (DEC-39..42). Único batch
+  travado: **5.A**, por BLK-01 (HTTPS) — onda **adiada** por decisão, sem travar as outras.
+  `awaitingInstruction` está vazio: `ASK-P3-02` foi respondida em 2026-10-02 — o log da sessão
+  **continua obrigatório** (DEC-46), a regra não muda e o 2.B só evita redigitar.
 - **Decisões que mudam o desenho:** premiação **pode ficar negativa** (DEC-39, sem piso — o
   `-37140 pts` medido numa captura é a regra funcionando, não bug isolado); nenhum `UPDATE` em
   `tasks.points` histórico (DEC-40); `@pontos` do backlog aceito e ignorado (DEC-41).
@@ -131,6 +131,19 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
   `tests/unit/components/session-notes-draft.test.tsx` e `floating-session-timer.test.tsx`.
   Consequência boa: o seam `lib/client-storage.ts` cai no caminho "sem storage" durante o teste,
   que é exatamente o comportamento de SSR.
+- **O botão collapsed do cronômetro tem 4 rótulos (medido 2026-10-03, 2.C):** o `aria-label` passou
+  a anunciar o estado (`sessionTimerButtonLabel` em `components/ui/session-alert.tsx`), então
+  `getByLabelText("Abrir timer de sessão")` só acha o caso "sem sessão". Foi o que quebrou
+  `features/laboratorio/__tests__/floating-timer-tabs.test.tsx` (2 dos 5 casos abrem o painel
+  com sessão aberta) — ele agora busca por fragmento `/abrir timer de sessão/i`.
+- **`Dialog` modal esconde o resto da página (medido 2026-10-03):** com o diálogo de pausa
+  automática aberto, o botão collapsed cai em `aria-hidden` e `getByRole`/`getByLabelText` não o
+  encontram. Nesse estado use `getByTestId("floating-session-timer-collapsed")` e `toHaveAttribute`.
+- **WebAudio em jsdom = degradar em silêncio:** o jsdom não implementa `AudioContext`, então o seam
+  `lib/notifications/alert-sound.ts` cai no caminho "sem suporte" (interruptor desabilitado, som
+  inaudível). Para provar a parte cliente ele é testado em `// @vitest-environment node` com
+  `vi.stubGlobal("window", { AudioContext: FakeAudioContext })` + `vi.resetModules()` por caso —
+  o mesmo truque do `alert-sound` guardando o contexto em cache.
 - **Roundtrip de integração precisa de banco no ar:** os roundtrips G4 do clean-arch
   (`tests/integration/*-roundtrip.test.ts`, environment `node`) rodam Prisma real contra
   o banco de teste **isolado** `dq-dev-test-db` em `127.0.0.1:5433` (exportar
