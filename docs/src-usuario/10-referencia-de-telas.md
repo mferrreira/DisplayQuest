@@ -26,6 +26,7 @@ Esta é a lista completa das telas do sistema, com o endereço de cada uma e que
 | **Abrir menu** | cabeçalho em janela estreita | os mesmos grupos de navegação |
 | **Alternar tema** | cabeçalho | claro e escuro, guardado no navegador |
 | Menu do cartão de tarefa | três pontos no cartão | **Mover para** (só os destinos permitidos), **Ver detalhes**, **Editar** |
+| Menu de ordenação da coluna | duas setas no cabeçalho da coluna | **Ordenar por** — Urgência, Prazo, Mais recentes, Pontos, Alfabética; vale só para aquela coluna e fica guardado no navegador |
 
 ## Estados possíveis
 

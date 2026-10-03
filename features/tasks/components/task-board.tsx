@@ -25,11 +25,12 @@ import {
   isArchivedTask,
   isTaskOverdue,
   isTaskDueToday,
-  sortTasksByUrgencyAndDueDate,
   BOARD_COLUMNS,
 } from "../index"
+import { useColumnOrders } from "../hooks/use-column-orders"
+import { sortTasksByColumnOrder, type ColumnOrder } from "../utils/column-order"
 import { isAssignedToUser } from "../utils/is-assigned-to-user"
-import type { Task } from "@/entities/task"
+import type { Task, TaskStatus } from "@/entities/task"
 import { BoardColumn } from "./board-column"
 import { BoardToolbar } from "./board-toolbar"
 import { ArchiveSection } from "./archive-section"
@@ -79,6 +80,11 @@ export function TaskBoard() {
 
   const sessionUserId = (session?.user as { id?: number } | undefined)?.id
 
+  // plan-v3 OND3-C: a ordem escolhida é guardada por pessoa e por navegador (DEC-33). O id vem
+  // do `useSession`, que resolve depois do primeiro render — até lá a preferência é o padrão e a
+  // leitura acontece (ver `useColumnOrders`).
+  const { orders: columnOrders, setOrder: setColumnOrder } = useColumnOrders(sessionUserId)
+
   const filteredTasks = useMemo(() => {
     let list = tasks ?? []
     if (projetoParam) list = list.filter((t) => t.projectId === projetoParam)
@@ -95,10 +101,12 @@ export function TaskBoard() {
   }, [tasks, projetoParam, pessoaParam, atrasadasParam, hojeParam, buscaParam])
 
   const archivedTasks = useMemo(() => filteredTasks.filter((t) => isArchivedTask(t)), [filteredTasks])
+  // plan-v3 OND3-C: cada coluna tem a sua ordenação, então a lista NÃO é ordenada aqui — o
+  // quadro inteiro não tem uma ordem só. O que sobra é a lista visível, repartida por status
+  // abaixo e ordenada dentro de cada coluna.
   const boardTasks = useMemo(() => {
     const archivedIds = new Set(archivedTasks.map((t) => t.id))
-    const visible = filteredTasks.filter((t) => !archivedIds.has(t.id))
-    return sortTasksByUrgencyAndDueDate(visible)
+    return filteredTasks.filter((t) => !archivedIds.has(t.id))
   }, [filteredTasks, archivedTasks])
 
   const overdueCount = useMemo(() => (tasks ?? []).filter((t) => isTaskOverdue(t)).length, [tasks])
@@ -156,6 +164,11 @@ export function TaskBoard() {
     setViewTask(task)
     setDetailOpen(true)
   }, [])
+
+  const handleColumnOrderChange = useCallback(
+    (status: TaskStatus, order: ColumnOrder) => setColumnOrder(status, order),
+    [setColumnOrder],
+  )
 
   if (isPending) {
     return (
@@ -260,9 +273,14 @@ export function TaskBoard() {
                 <BoardColumn
                   key={column.id}
                   status={column.id}
-                  tasks={boardTasks.filter((task) => task.status === column.id)}
+                  tasks={sortTasksByColumnOrder(
+                    boardTasks.filter((task) => task.status === column.id),
+                    columnOrders[column.id],
+                  )}
                   canAddTask={canCreateTasks}
                   isCompact={compactaParam === "compacta"}
+                  order={columnOrders[column.id]}
+                  onOrderChange={(order) => handleColumnOrderChange(column.id, order)}
                   onAddTask={openCreate}
                   onEdit={openEdit}
                   onOpenDetail={openDetail}

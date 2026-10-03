@@ -3161,6 +3161,18 @@ contrato de apresentação.</p>
 <td>Uma tela por comportamento</td>
 <td>A mesma peça de interface não é duplicada por aparência; quando duas telas precisam do mesmo comportamento, ele mora em um componente só</td>
 </tr>
+<tr>
+<td>Preferência é da pessoa, não do quadro</td>
+<td>Uma escolha de quem está olhando — a ordem dos cartões de uma coluna — é guardada no navegador com chave por pessoa, e lida depois da montagem para o servidor e o cliente desenharem a mesma tela; estado que precisa ser compartilhado por link continua na URL</td>
+</tr>
+<tr>
+<td>O navegador é entrada não confiável</td>
+<td>O que volta do <code>localStorage</code> é texto que outra versão do app pode ter escrito: só o que passa na guarda vira estado, e o que não passa vira o padrão</td>
+</tr>
+<tr>
+<td>Rótulo acessível não contém o de outro</td>
+<td>O rótulo de um controle não pode conter o rótulo do elemento que ele governa, porque toda busca por rótulo que case por substring passa a achar dois elementos — foi o que aconteceu com &quot;Ordenar coluna A Fazer&quot; contra &quot;Coluna A Fazer&quot;, e só o navegador pegou</td>
+</tr>
 </tbody>
 </table>
 <h2 id="diretrizes-de-verificacao">Diretrizes de verificação</h2>
@@ -4331,7 +4343,7 @@ expressa como migração versionada não pertence a este sistema.</p>
 <footer class="dq-footer">
   <p>
     Conteúdo gerado a partir de <code>docs/src/</code> e <code>docs/diagrams/</code>. Diagramas em notação UML (PlantUML). O conteúdo reflete o estado do
-    código no commit <code>fbbde99 (2026-10-03)</code>.
+    código no commit <code>e6830e3 (2026-10-03)</code>.
   </p>
 </footer>
 

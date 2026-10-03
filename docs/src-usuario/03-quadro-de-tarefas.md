@@ -25,6 +25,32 @@ Uma tarefa **Concluído** em projeto delegado segue outro caminho: escolher **Co
 
 Cada coluna tem altura própria e rola por dentro. Quando uma coluna tem mais cartões do que cabem na tela, a rolagem acontece **dentro dela** — o nome da coluna e a contagem de cartões continuam visíveis no alto. A página inteira não cresce com a quantidade de tarefas; para ver mais cartões de uma vez, use **Compacto** na barra acima do quadro.
 
+## A ordem dos cartões
+
+Cada coluna tem o seu botão de ordenação: o ícone de duas setas, ao lado da contagem de cartões. Ele abre um menu **Ordenar por** com cinco opções:
+
+| Opção | O que faz |
+| --- | --- |
+| **Urgência** (padrão) | pela prioridade — Urgente, Alta, Média, Baixa — e, dentro de cada prioridade, pelo prazo mais próximo primeiro |
+| **Prazo** | pelo vencimento mais próximo primeiro, seja qual for a prioridade |
+| **Mais recentes** | as tarefas mais novas primeiro |
+| **Pontos** | do maior valor gravado para o menor |
+| **Alfabética** | pelo título, de A a Z |
+
+```foto quadro-ordenar-coluna titulo="O menu de ordenação de uma coluna"
+A marca fica na opção que está valendo. A escolha vale para uma coluna por vez.
+```
+
+Três coisas que valem saber:
+
+- a escolha vale **só para a coluna** em que foi feita — dá para deixar **A Fazer** por prazo e **Concluído** por alfabética;
+- a escolha fica **guardada para você, neste navegador**. Quem usa outro navegador começa em **Urgência**;
+- tarefa **sem prazo** vai para o fim da coluna em **Urgência** e em **Prazo**, e o empate de duas tarefas é resolvido com a mais recente primeiro — a lista não se embaralha sozinha quando os dados chegam.
+
+::: limite titulo="O que a opção Pontos ordena"
+Toda tarefa nova vale 10 pontos, então **Pontos** só distingue tarefa de valor antigo: o número que está gravado nela, que pode ser 15, 20, 25, 40 ou 60. Não é o quanto a tarefa rende hoje — esse valor depende do prazo e aparece no detalhe da tarefa.
+:::
+
 ## Os filtros
 
 Na barra acima do quadro:

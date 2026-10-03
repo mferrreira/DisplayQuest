@@ -3,7 +3,7 @@
  * Proves board behavior beyond pure functions: column distribution, state grid, move-menu rules.
  * Auth is stubbed at the next-auth boundary (session = coordenador: leader, sees all tasks).
  */
-import { describe, expect, it, beforeEach, vi } from "vitest";
+import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -44,9 +44,46 @@ function todayIso(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 }
 
+/**
+ * Medido nesta base (2026-10-02): no jsdom do Vitest, `window === globalThis` e
+ * **`window.localStorage` é `undefined`** — o `populateGlobal` não copia a Web Storage do jsdom.
+ * A ordenação da coluna é guardada em `localStorage`, então o teste instala um em memória: sem
+ * ele, os casos de preferência estariam medindo só o caminho de SSR (sem storage), que é o
+ * mesmo do servidor.
+ */
+let storageData: Map<string, string>;
+
+function installMemoryStorage() {
+  storageData = new Map<string, string>();
+  const storage = {
+    getItem: (key: string) => (storageData.has(key) ? (storageData.get(key) as string) : null),
+    setItem: (key: string, value: string) => storageData.set(key, value),
+    removeItem: (key: string) => storageData.delete(key),
+    clear: () => storageData.clear(),
+    key: () => null,
+    get length() {
+      return storageData.size;
+    },
+  };
+  Object.defineProperty(window, "localStorage", { configurable: true, value: storage });
+}
+
+/** Ordem dos cartões de uma coluna, lida pelo rótulo do botão de ações de cada cartão. */
+function titlesInColumn(columnTitle: string): string[] {
+  return within(screen.getByLabelText(`Coluna ${columnTitle}`))
+    .getAllByRole("button", { name: /^Ações para / })
+    .map((button) => (button.getAttribute("aria-label") as string).replace(/^Ações para /, ""));
+}
+
 describe("TaskBoard", () => {
   beforeEach(() => {
     resetTaskStore();
+    installMemoryStorage();
+  });
+
+  afterEach(() => {
+    // `delete` devolve o ambiente ao estado medido (sem localStorage).
+    delete (window as unknown as Record<string, unknown>).localStorage;
   });
 
   it("renders fixture tasks distributed across columns", async () => {
@@ -160,5 +197,87 @@ describe("TaskBoard", () => {
       expect(await screen.findByRole("menuitem", { name: column })).toBeEnabled();
     }
     expect(screen.queryByRole("menuitem", { name: /só volta de coluna/i })).not.toBeInTheDocument();
+  });
+
+  // ---------------------------------------------------------------------------------------
+  // plan-v3 OND3-C — ordenação por coluna
+  //
+  // As duas colunas do fixture são montadas para que **urgência** e **prazo** discordem nas duas:
+  // em "A Fazer" o urgente vence a data, em "Em Andamento" a data vence a urgência. Assim o caso
+  // distingue trocar a ordem de trocar a lista inteira.
+  // ---------------------------------------------------------------------------------------
+  function seedOrderFixture() {
+    seedTasks([
+      { id: 11, title: "A Fazer sem prazo", status: "to-do", dueDate: null, priority: "low" },
+      { id: 12, title: "A Fazer urgente", status: "to-do", dueDate: "2026-12-31", priority: "urgent" },
+      { id: 13, title: "A Fazer vencendo", status: "to-do", dueDate: "2026-10-05", priority: "low" },
+      { id: 14, title: "Andamento urgente", status: "in-progress", dueDate: "2026-12-01", priority: "urgent" },
+      { id: 15, title: "Andamento cedo", status: "in-progress", dueDate: "2026-10-01", priority: "low" },
+    ]);
+  }
+
+  it("plan-v3 OND3-C: escolher a ordem reordena só a coluna escolhida", async () => {
+    seedOrderFixture();
+    renderBoard();
+    const user = userEvent.setup();
+    await waitFor(() => expect(screen.getByText("A Fazer vencendo")).toBeVisible());
+
+    // o padrão é urgência: o urgente vem antes, mesmo vencendo em dezembro
+    expect(titlesInColumn("A Fazer")).toEqual(["A Fazer urgente", "A Fazer vencendo", "A Fazer sem prazo"]);
+
+    await user.click(screen.getByRole("button", { name: "Ordenar tarefas de A Fazer" }));
+    // o menu diz o que está valendo — não é um controle cego
+    expect(screen.getByRole("menuitemradio", { name: "Urgência" })).toHaveAttribute("aria-checked", "true");
+    await user.click(screen.getByRole("menuitemradio", { name: "Prazo" }));
+
+    expect(titlesInColumn("A Fazer")).toEqual(["A Fazer vencendo", "A Fazer urgente", "A Fazer sem prazo"]);
+    // a outra coluna continua em urgência: a preferência é por coluna
+    expect(titlesInColumn("Em Andamento")).toEqual(["Andamento urgente", "Andamento cedo"]);
+  });
+
+  it("plan-v3 OND3-C: a ordem escolhida sobrevive ao recarregar, guardada por pessoa", async () => {
+    seedOrderFixture();
+    const user = userEvent.setup();
+    const first = renderBoard();
+    await waitFor(() => expect(screen.getByText("A Fazer vencendo")).toBeVisible());
+    await user.click(screen.getByRole("button", { name: "Ordenar tarefas de A Fazer" }));
+    await user.click(screen.getByRole("menuitemradio", { name: "Alfabética" }));
+    expect(titlesInColumn("A Fazer")).toEqual([
+      "A Fazer sem prazo",
+      "A Fazer urgente",
+      "A Fazer vencendo",
+    ]);
+    first.unmount();
+
+    // `mockUser.id` é 2: a preferência é da pessoa, não do navegador inteiro
+    expect(storageData.get("dq:column-order:2:to-do")).toBe('"alfabetica"');
+
+    renderBoard();
+    await waitFor(() => expect(screen.getByText("A Fazer vencendo")).toBeVisible());
+    expect(titlesInColumn("A Fazer")).toEqual([
+      "A Fazer sem prazo",
+      "A Fazer urgente",
+      "A Fazer vencendo",
+    ]);
+    // e o menu reabre marcando o que foi guardado
+    await user.click(screen.getByRole("button", { name: "Ordenar tarefas de A Fazer" }));
+    expect(screen.getByRole("menuitemradio", { name: "Alfabética" })).toHaveAttribute("aria-checked", "true");
+  });
+
+  it("plan-v3 OND3-C: storage de outra versão não derruba o quadro — volta ao padrão", async () => {
+    // JSON válido que não é ordem ("prazo " com espaço) e JSON quebrado: os dois caem no padrão
+    storageData.set("dq:column-order:2:to-do", '"prazo "');
+    storageData.set("dq:column-order:2:in-progress", "{isto nao e json");
+    seedOrderFixture();
+    renderBoard();
+    const user = userEvent.setup();
+    await waitFor(() => expect(screen.getByText("A Fazer vencendo")).toBeVisible());
+
+    expect(titlesInColumn("A Fazer")).toEqual(["A Fazer urgente", "A Fazer vencendo", "A Fazer sem prazo"]);
+    await user.click(screen.getByRole("button", { name: "Ordenar tarefas de A Fazer" }));
+    expect(screen.getByRole("menuitemradio", { name: "Urgência" })).toHaveAttribute("aria-checked", "true");
+    for (const option of ["Prazo", "Mais recentes", "Pontos", "Alfabética"]) {
+      expect(screen.getByRole("menuitemradio", { name: option })).toHaveAttribute("aria-checked", "false");
+    }
   });
 });

@@ -57,6 +57,19 @@ async function deleteOverflowTasks(page: Page) {
 let createdTaskId: number | null = null;
 let pointsBefore: number | null = null;
 
+/* --- OND3-C: fixtures de ordenação (3 tarefas com prazo e prioridade discordantes) --- */
+
+const ORDER_TITLE = "E2E ordem";
+
+/** Ordem dos cartões de uma coluna, lida pelo rótulo de "Ver detalhes" de cada cartão. */
+async function cardOrder(page: Page, column: string): Promise<string[]> {
+  const rotulos = await page
+    .getByLabel(`Coluna ${column}`)
+    .getByRole("button", { name: /^Ver detalhes de / })
+    .evaluateAll((els) => els.map((el) => el.getAttribute("aria-label") ?? ""));
+  return rotulos.map((rotulo) => rotulo.replace(/^Ver detalhes de /, ""));
+}
+
 async function createFixtureTask(page: Page) {
   const res = await page.request.post("/api/tasks", {
     data: {
@@ -312,6 +325,97 @@ test.describe("task board flows", () => {
       expect(geometry.overscrollY).toContain("contain");
     } finally {
       await deleteOverflowTasks(page);
+    }
+  });
+
+  /**
+   * plan-v3 OND3-C / AC-P3-07 — a coluna ordena pela ordem escolhida e a escolha fica guardada
+   * por pessoa (DEC-33).
+   *
+   * jsdom não recarrega a página, então **não** prova a parte que importa aqui: que a preferência
+   * sobrevive a um `reload`. Este teste cria 3 tarefas com prazo e prioridade discordantes (para
+   * que "Urgência" e "Prazo" discordem), filtra o quadro pelo título delas para comparar a ordem
+   * exata, troca a ordem, recarrega e confere que a ordem voltou — e que o menu reabre marcando
+   * o que está valendo.
+   */
+  test("ordem da coluna escolhida sobrevive ao recarregar (guardada por pessoa)", async ({ page }) => {
+    await login(page);
+    const criadas: Array<{ title: string; dueDate: string; priority: string }> = [
+      { title: `${ORDER_TITLE} 1`, dueDate: "2026-12-31", priority: "low" },
+      { title: `${ORDER_TITLE} 2`, dueDate: "2026-11-10", priority: "urgent" },
+      { title: `${ORDER_TITLE} 3`, dueDate: "2026-10-05", priority: "medium" },
+    ];
+    const criadasIds: number[] = [];
+    try {
+      for (const tarefa of criadas) {
+        const res = await page.request.post("/api/tasks", {
+          data: {
+            title: tarefa.title,
+            description: "Tarefa criada pelo teste de ordenação — deletada ao final.",
+            status: "to-do",
+            taskVisibility: "delegated",
+            priority: tarefa.priority,
+            dueDate: tarefa.dueDate,
+            isGlobal: false,
+          },
+        });
+        expect(res.status()).toBe(201);
+        criadasIds.push(((await res.json()) as { task: { id: number } }).task.id);
+      }
+
+      // o filtro de busca (URL) é o que permite comparar a ordem exata: sem ele, a coluna tem as
+      // tarefas que já estavam na base
+      await page.goto(`/dashboard?busca=${encodeURIComponent(ORDER_TITLE)}`);
+      await expect(page.getByLabel("Coluna A Fazer").getByText(`${ORDER_TITLE} 1`)).toBeVisible({
+        timeout: 15_000,
+      });
+
+      // urgência: a urgente primeiro, depois a média, depois a baixa
+      expect(await cardOrder(page, "A Fazer")).toEqual([
+        `${ORDER_TITLE} 2`,
+        `${ORDER_TITLE} 3`,
+        `${ORDER_TITLE} 1`,
+      ]);
+
+      await page.getByRole("button", { name: "Ordenar tarefas de A Fazer" }).click();
+      await expect(page.getByRole("menuitemradio", { name: "Urgência" })).toHaveAttribute(
+        "aria-checked",
+        "true",
+      );
+      await page.getByRole("menuitemradio", { name: "Prazo" }).click();
+      await expect.poll(async () => cardOrder(page, "A Fazer")).toEqual([
+        `${ORDER_TITLE} 3`,
+        `${ORDER_TITLE} 2`,
+        `${ORDER_TITLE} 1`,
+      ]);
+
+      // a preferência está no navegador da pessoa, na chave que o storage deriva
+      const guardada = await page.evaluate(() =>
+        Object.keys(window.localStorage)
+          .filter((key) => key.includes("column-order"))
+          .map((key) => `${key}=${window.localStorage.getItem(key)}`),
+      );
+      expect(guardada).toContain(`dq:column-order:${COORDENADOR_ID}:to-do="prazo"`);
+
+      // e a prova que o jsdom não dá: depois de recarregar, a ordem é a mesma
+      await page.reload();
+      await expect(page.getByLabel("Coluna A Fazer").getByText(`${ORDER_TITLE} 1`)).toBeVisible({
+        timeout: 15_000,
+      });
+      expect(await cardOrder(page, "A Fazer")).toEqual([
+        `${ORDER_TITLE} 3`,
+        `${ORDER_TITLE} 2`,
+        `${ORDER_TITLE} 1`,
+      ]);
+      await page.getByRole("button", { name: "Ordenar tarefas de A Fazer" }).click();
+      await expect(page.getByRole("menuitemradio", { name: "Prazo" })).toHaveAttribute(
+        "aria-checked",
+        "true",
+      );
+    } finally {
+      for (const id of criadasIds) {
+        await page.request.delete(`/api/tasks/${id}`).catch(() => {});
+      }
     }
   });
 });

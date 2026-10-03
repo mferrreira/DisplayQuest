@@ -73,6 +73,9 @@ contrato de apresentação.
 | Altura limitada por coluna | Cada coluna do quadro tem altura máxima derivada da janela e rolagem própria; o cabeçalho da coluna fica fora da área de rolagem e a página não cresce com a quantidade de cartões |
 | Menu só oferece o que a regra permite | A lista de destinos de um menu é derivada da mesma função que decide o movimento, e nunca é escrita à mão ao lado dela: oferecer um destino que a regra barra é oferecer uma operação que volta com erro |
 | Uma tela por comportamento | A mesma peça de interface não é duplicada por aparência; quando duas telas precisam do mesmo comportamento, ele mora em um componente só |
+| Preferência é da pessoa, não do quadro | Uma escolha de quem está olhando — a ordem dos cartões de uma coluna — é guardada no navegador com chave por pessoa, e lida depois da montagem para o servidor e o cliente desenharem a mesma tela; estado que precisa ser compartilhado por link continua na URL |
+| O navegador é entrada não confiável | O que volta do `localStorage` é texto que outra versão do app pode ter escrito: só o que passa na guarda vira estado, e o que não passa vira o padrão |
+| Rótulo acessível não contém o de outro | O rótulo de um controle não pode conter o rótulo do elemento que ele governa, porque toda busca por rótulo que case por substring passa a achar dois elementos — foi o que aconteceu com "Ordenar coluna A Fazer" contra "Coluna A Fazer", e só o navegador pegou |
 
 ## Diretrizes de verificação
 
