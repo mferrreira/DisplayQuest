@@ -3,10 +3,23 @@
   "title": "qualidade operacional: sessões, quadro e pontos",
   "version": "3.0.0",
   "updatedAt": "2026-10-03",
-  "status": "in_progress",
-  "activeWave": "4",
-  "activeBatch": "4.B",
-  "awaitingInstruction": [],
+  "status": "blocked",
+  "activeWave": 5,
+  "activeBatch": "5.A",
+  "awaitingInstruction": [
+    {
+      "id": "ASK-P3-03",
+      "askedAt": "2026-10-03",
+      "question": "O plan-v3 nao tem mais batch executavel: ondas 0-4 fechadas, 5.A bloqueado por BLK-01. Como fechar?",
+      "measured": "5.A continua pendente de HTTPS (BLK-01): em `http://<ip>:3000` o Chrome e o Firefox recusam o pedido de permissao de notificacao. Onda 2 ja entrega o aviso que funciona em HTTP (sinal visual sempre visivel + som opcional, ligado por gesto), que foi o motivo de DEC-42 ter adiado a Onda 5. O que a Onda 5 acrescenta e so a notificacao de sistema quando a aba esta em segundo plano.",
+      "options": [
+        "fornecer HTTPS (certificado num dominio, autoassinado com confianca nas maquinas, ou proxy reverso com TLS) e executar o 5.A — e o unico caminho que entrega F1b",
+        "fechar o plan-v3 como esta: 5.A continua adiado por decisao, e o plano so reabre se o dono quiser a notificacao de sistema",
+        "remover o 5.A do plano (e o BLK-01 junto), registrando que o alerta da Onda 2 e o sinal aceito para HTTP"
+      ],
+      "blocks": []
+    }
+  ],
   "target": "corrigir a economia de pontos, acabar com o silêncio das pausas automáticas e tornar o quadro utilizável quando enche",
   "lineage": {
     "predecessor": "clean-arch (repo-cleanup, ondas 0-9 + lotes B0-B11)",
@@ -74,6 +87,17 @@
       "testsAll": 862,
       "archModules": 745,
       "archDependencies": 2805
+    },
+    "after4B": {
+      "at": "2026-10-03",
+      "commit": "dbd067e",
+      "testFilesUnitAndFeatures": 65,
+      "testsUnitAndFeatures": 798,
+      "testFilesAll": 75,
+      "testsAll": 881,
+      "archModules": 748,
+      "archDependencies": 2816,
+      "e2eBoardSpec": "7/7 contra a :3001, com o chip e a geometria dele medidos"
     }
   },
   "gates": {
@@ -142,7 +166,7 @@
         "4.A",
         "4.B"
       ],
-      "status": "in_progress",
+      "status": "done",
       "dependsOn": [
         "1"
       ]
@@ -263,8 +287,9 @@
       "id": "4.B",
       "wave": "4",
       "title": "points-delta.tsx: +X verde / -X vermelho incrementando em 1s; respeita prefers-reduced-motion",
-      "status": "planned",
-      "gates": "G0 G1 G2 G3 G5 G6"
+      "status": "done",
+      "gates": "G0 G1 G2 G3 G5 e2e",
+      "evidence": "commit dbd067e. Medido antes de desenhar: o contador do cabecalho JA recebia o total novo (refresh da sessao em use-tasks.ts, e a callback de sessao relê users.points do banco) e o que faltava era o sinal. Desenho: `lib/points-delta.ts` novo, sem import nenhum, com o sinal `{id, value, at}` e a aritmetica pura da contagem (estado de modulo, nao contexto, porque quem anuncia e a mutacao do quadro e quem consome e o cabecalho: dois galhos da arvore sem ancestral comum hoje, e o cabecalho tambem vive em telas que nao montam o quadro); `components/ui/points-delta.tsx` com o chip `+15` verde / `−20` vermelho ancorado na pilula de pontos, `role=status` para leitor de tela, 20 passos de 50 ms (1 s) e sumico depois de 0,9 s; e a regra de quem ganhou na mutacao (`awardedTo === pessoa logada`), porque a aprovacao credita o responsavel e quase nunca quem aprovou. `null` e `0` tambem nao anunciam (DEC-48): um chip `+0` mentiria sobre uma entrega que nao rendeu nada. Tres medicoes que mudaram o desenho: (1) `requestAnimationFrame` nao e comandado pelos timers falsos do teste e nao dispara em aba de segundo plano, onde o chip ficaria preso no meio da contagem — `setInterval` em passos e verificavel sem relogio e completa mesmo em aba oculta; (2) geometria e do navegador, nao do jsdom: a primeira versao era `-top-5` e o topo da pilula fica a ~15px do topo da pagina (`h-16`), entao o chip saia pela borda — medido no e2e (chip y=54..74, badge y=22..42) e virou `top-full`, com assercao de geometria no spec para nao voltar; e `zoom-in-95` saiu porque as variantes com transform sobrescrevem o `-translate-x-1/2` e desalinhariam o chip durante a animacao; (3) um caso que so apareceu ao escrever: o chip desmonta junto com o cabecalho (logout) e o `setTimeout` que limparia o sinal e cancelado junto, entao o premio de uma sessao reapareceria para quem logasse depois — limpar no `cleanup` foi descartado porque o modo estrito do React monta, desmonta e remonta todo efeito, e em desenvolvimento o chip nunca apareceria; o sinal passou a carregar `at` e um sinal passado do prazo nao desenha. Testes: 14 casos em `tests/unit/components/points-delta.test.tsx` (a contagem e contavel sem esperar um segundo: passo 10 de 15 e `+8`; o `-0` do `Math.round(-0.5)` nunca aparece na contagem negativa; o sinal repete por id e envelhece por tempo; `prefers-reduced-motion` entrega o valor final sem um tick) e 5 casos no quadro provando a regra de quem ganhou (aprovar tarefa de outra pessoa nao mexe no meu contador; premio 0 nao vira `+0`; concluir publica credita quem concluiu; a delegada vai para revisao e nao credita ninguem; e o sinal e por id, entao dois premios iguais sao dois sinais). Os handlers MSW estavam desatualizados pelo 4.A — devolviam so `{ task }` e ja quebrariam o schema do cliente; corrigidos, e com o caminho `done` creditando o ATOR e nao o responsavel, como o caso de uso faz. G0 748 modulos/2816 deps sem violacao e allow-list vazia; G1 limpo (1 warning pre-existente do `<img>`); G2 0; G3 65 arquivos/798 testes; G4 75 arquivos/881 testes; e2e 7/7 na :3001 sem residuo E2E no banco; G5 build dos dois documentos e `docs:check` limpos. G6 NAO se aplica, e por uma razao concreta: o chip dura 1,9 s e nenhuma captura estatica o mostraria; a prova de que ele aparece e o e2e, que e onde o evento acontece. AC-P3-09 e AC-P3-10 atendidos pelo chip — com a ressalva registrada em GAP-P3-05: o toast da conclusao direta ainda mostra o numero projetado antes de o servidor responder."
     },
     {
       "id": "5.A",
@@ -333,6 +358,14 @@
       "blocks": [
         "1.D"
       ]
+    },
+    {
+      "id": "GAP-P3-05",
+      "open": true,
+      "summary": "O toast da conclusao direta ainda anuncia o numero de pontos PROJECTADO (client-side), antes de o servidor responder — features/tasks/components/task-card.tsx:256 (`projectedAward(task)`).",
+      "measured": "Medido em 2026-10-03: o toast sai no clique, no caminho `decision.kind === 'complete'` com `isDirectDone` (tarefa publica ou global), e o numero vem de `projectedAward(task)`, do `features/tasks/utils/move-rules.ts`. A aritmetica e a mesma do servidor por construcao e a paridade esta fixada por teste (features/tasks/__tests__/move-rules.test.ts:196-197, AC-P3-02), entao os dois numeros concordam com os mesmos dados; a divergencia real exigiria a fronteira do dia civil entre a pintura do cartao e o clique. Dois casos que o servidor trata e o toast nao: `awardedPoints: 0` (o award ja existia, DEC-48) e `null` (o credito falhou) chegariam como `+10` no toast. O caminho da aprovacao NAO tem o problema: o toast de la ('Tarefa aprovada com sucesso') nao traz numero.",
+      "whyNotFixedHere": "Fora do escopo do 4.B, que e o chip. Corrigir exige mover o toast de dentro do handler de clique para depois da resposta da mutacao (o numero so existe depois dela) — muda o instante do aviso, que hoje e imediato por desenho, e mexe em OND1-C.",
+      "blocks": []
     }
   ],
   "blockers": [
@@ -374,7 +407,10 @@
     "Correcao de plano: 1.B nao pode usar lib/date-only.ts (RG-01). Novo backend/domain/time/civil-day.ts, puro e sem import, compartilhado por backend e frontend — fonte unica que elimina a divergencia R5.",
     "Correcao de plano (3.C): o texto do batch citava DEC-34 para a persistencia da ordenacao; DEC-34 e a decisao do movimento para fora de Concluido. A da ordenacao e a DEC-33.",
     "Rotulo acessivel nao deve conter o rotulo do elemento que ele governa: 'Ordenar coluna A Fazer' continha 'Coluna A Fazer' e o getByLabel do Playwright (que casa por substring) achava dois elementos. Virou diretriz no cap. 12 e o rotulo do botao passou a ser 'Ordenar tarefas de A Fazer'.",
-    "Correcao de plano (4.A): o texto previa `withActorProgress` carregando `awardedPoints`; medido, esse read model e congelado e o valor que ele carregaria seria o pedido, nao o creditado. A costura e o retorno do award (porta `onTaskCompleted`), e o contrato ganhou tambem `awardedTo` porque a aprovacao credita o responsavel pela tarefa, nao quem aprovou. Ver DEC-48."
+    "Correcao de plano (4.A): o texto previa `withActorProgress` carregando `awardedPoints`; medido, esse read model e congelado e o valor que ele carregaria seria o pedido, nao o creditado. A costura e o retorno do award (porta `onTaskCompleted`), e o contrato ganhou tambem `awardedTo` porque a aprovacao credita o responsavel pela tarefa, nao quem aprovou. Ver DEC-48.",
+    "Medido no 4.B: o chip `+0` nao pode existir. `announcePointsDelta` ignora `null` e `0`, e a contagem nunca passa por zero (passo minimo visivel de 1 na direcao do delta) — um chip que pisca zero mente sobre um premio que existe.",
+    "Medido no 4.B: geometria de interface se prova no navegador, nao no jsdom. A primeira versao do chip (`-top-5`) saia pela borda do cabecalho e so o `boundingBox()` do e2e pegou.",
+    "Medido no 4.B: o timeout que limpa um sinal nao sobrevive ao desmontar do componente que o montou. Por isso o sinal carrega `at` e um sinal velho simplesmente nao desenha — limpar no `cleanup` quebraria o chip em desenvolvimento, porque o modo estrito do React remonta todo efeito."
   ],
   "timeline": [
     {
@@ -436,6 +472,10 @@
     {
       "at": "2026-10-03",
       "event": "4.A: conclusao e aprovacao devolvem o premio creditado (awardedTo + awardedPoints). Medido antes: o numero existia e era descartado na fronteira — a porta do award era Promise<void>. O plano apontava o read model da tarefa; o medido mostrou que ali so entraria o valor pedido, e que a aprovacao credita o responsavel, nao quem aprovou. G0-G4 verdes no commit 2c98b1d (DEC-48)."
+    },
+    {
+      "at": "2026-10-03",
+      "event": "4.B: chip do premio creditado no contador do cabecalho (contagem de 1 s, respeita prefers-reduced-motion, so quando o credito e da propria pessoa). Tres medicoes mudaram o desenho: rAF nao serve (teste nem aba oculta), a geometria acima da pilula saia da tela, e o sinal sobrevive ao logout sem `at`. G0-G5 verdes + e2e 7/7 (commit dbd067e). Onda 4 fechada; GAP-P3-05 aberto (o toast da conclusao direta ainda recalcula o numero no cliente) e 5.A continua bloqueada por BLK-01, agora como unico item restante do plano."
     }
   ]
 }

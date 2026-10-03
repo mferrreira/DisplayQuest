@@ -280,6 +280,10 @@ certificado válido num domínio, certificado autoassinado com confiança instal
 do laboratório, ou proxy reverso com TLS na frente da aplicação. O que **não** resolve:
 `http://localhost` só vale para quem acessa a própria máquina.
 
+**Estado em 2026-10-03:** é o único batch do plano que continua aberto — as ondas 0 a 4 estão
+fechadas. A decisão de como fechar (fornecer HTTPS, manter adiado ou remover do plano) está
+registrada como `ASK-P3-03` no `STATE.json`.
+
 ## 6. Gates por batch
 
 Idênticos aos do `clean-arch`, com dois acréscimos porque este plano toca interface e documento.
