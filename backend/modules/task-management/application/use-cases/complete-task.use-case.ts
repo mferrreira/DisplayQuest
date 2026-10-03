@@ -13,7 +13,7 @@ import {
   withActorProgress,
   type Task,
 } from "@/backend/domain";
-import type { CompleteTaskCommand } from "@/backend/modules/task-management/application/contracts";
+import type { CompleteTaskCommand, TaskCompletionResult } from "@/backend/modules/task-management/application/contracts";
 import type { TaskAssigneesPort } from "@/backend/modules/task-management/application/ports/task-assignees.repository";
 import type { TaskActorsPort } from "@/backend/modules/task-management/application/ports/task-actors.port";
 import type { TaskProgressEvents } from "@/backend/modules/task-management/application/ports/task-progress.events";
@@ -37,6 +37,11 @@ import {
  *   - GERENTE_PROJETO who leads the project AND is assigned cannot self-complete;
  *   - D-41: completing an unclaimed task claims it; a dirty row (assignees exist but
  *     assignedTo null) is materialized to assignees[0].
+ *
+ * plan-v3 OND4-A: devolve `TaskCompletionResult` — a tarefa e o prêmio creditado. Só os dois
+ * caminhos que publicam award trazem `awardedTo`/`awardedPoints`; a tarefa delegada que vai
+ * para "in-review" não credita ninguém agora (o prêmio fica com a aprovação), e devolve `null`
+ * nos dois campos em vez de um 0 que pareceria "valeu zero pontos".
  */
 export interface CompleteTaskDependencies {
   tasks: TaskRepositoryPort
@@ -52,7 +57,7 @@ export class CompleteTaskUseCase {
     private readonly events?: TaskProgressEvents,
   ) {}
 
-  async execute(command: CompleteTaskCommand): Promise<Task> {
+  async execute(command: CompleteTaskCommand): Promise<TaskCompletionResult> {
     const task = await this.dependencies.tasks.findById(command.taskId)
     if (!task) {
       throw new NotFoundError("Tarefa não encontrada")
@@ -97,9 +102,18 @@ export class CompleteTaskUseCase {
       // completion still counts.
       await this.dependencies.actors.incrementCompletedTasks(command.userId)
 
-      await publishTaskCompletionAward(this.events, command.userId, command.taskId, pointsToAward)
+      const creditedPoints = await publishTaskCompletionAward(
+        this.events,
+        command.userId,
+        command.taskId,
+        pointsToAward,
+      )
 
-      return withActorProgress(task, { status: "done", completedAt: now }, command.userId)
+      return {
+        task: withActorProgress(task, { status: "done", completedAt: now }, command.userId),
+        awardedTo: command.userId,
+        awardedPoints: creditedPoints,
+      }
     }
 
     if (task.projectId && hasAnyRole(user.roles, ["GERENTE_PROJETO"])) {
@@ -156,12 +170,24 @@ export class CompleteTaskUseCase {
 
     // completedTasks counts reaching "done" itself, even with 0 points. Delegated/project
     // tasks never land here (they go to "in-review"); their counter lives in approveTask.
+    let awardedPoints: number | null = null
     if (finalStatus === "done") {
       await this.dependencies.actors.incrementCompletedTasks(command.userId)
       const pointsToAward = awardPointsForCompletion(workingTask, new Date())
-      await publishTaskCompletionAward(this.events, command.userId, command.taskId, pointsToAward)
+      awardedPoints = await publishTaskCompletionAward(
+        this.events,
+        command.userId,
+        command.taskId,
+        pointsToAward,
+      )
     }
 
-    return updatedTaskWithAssignees
+    return {
+      task: updatedTaskWithAssignees,
+      // delegated lands "in-review" without awarding (approveTask credits): null, not 0 —
+      // "ninguém creditado agora" e "valeu zero pontos" são coisas diferentes na interface.
+      awardedTo: finalStatus === "done" ? command.userId : null,
+      awardedPoints,
+    }
   }
 }

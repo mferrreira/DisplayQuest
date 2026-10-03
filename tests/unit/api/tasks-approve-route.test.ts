@@ -14,8 +14,10 @@
  *  - `POST /api/tasks`         ignora `points` do corpo → createTaskRecord aplica 10;
  *  - `POST /api/tasks` (bulk)  ignora `points` do corpo;
  *  - `PUT /api/tasks/[id]`     `points` saiu de `allowedFields` → editar não redefine valor;
- *  - `POST /api/tasks/[id]/approve` nunca lê o corpo: o prêmio é decidido no domínio.
- *    (A Onda 4.1 estende este arquivo com o `awardedPoints` na resposta.)
+ *  - `POST /api/tasks/[id]/approve` nunca lê o corpo: o prêmio é decidido no domínio;
+ *  - OND4-A: aprovação e conclusão **repassam** `awardedTo`/`awardedPoints` do caso de uso,
+ *    sem recalcular, sem piso e sem trocar `null` por 0 — é o número do servidor que a
+ *    animação da Onda 4.B mostra, e por isso ele não pode ser reescrito na borda.
  *
  * Sem isto, um `points` aceito na borda voltaria a ser a segunda aritmética do sistema (R5).
  */
@@ -29,6 +31,7 @@ const mocks = vi.hoisted(() => {
     createTaskBacklog: [] as any[],
     updateTask: [] as any[],
     approveTask: [] as any[],
+    completeTask: [] as any[],
   };
   // `vi.hoisted` roda antes dos imports: o literal 10 é conferido contra a constante do
   // domínio no describe abaixo (`expect(POINTS_PER_TASK).toBe(10)`).
@@ -37,7 +40,11 @@ const mocks = vi.hoisted(() => {
     points: 10,
     toJSON: () => ({ id: 7, title: "tarefa", points: 10 }),
   };
-  return { calls, fakeTask };
+  // plan-v3 OND4-A: os casos de uso devolvem `{ task, awardedTo, awardedPoints }`. O par é
+  // mutável porque o que interessa aqui é a borda: a rota repassa o número do servidor sem
+  // recalcular, sem piso e sem trocar `null` por 0.
+  const award = { awardedTo: 7 as number | null, awardedPoints: 15 as number | null };
+  return { calls, fakeTask, award };
 });
 
 vi.mock("@/backend/composition/root", () => ({
@@ -57,7 +64,11 @@ vi.mock("@/backend/composition/root", () => ({
       },
       approveTask: async (command: any) => {
         mocks.calls.approveTask.push(command);
-        return mocks.fakeTask;
+        return { task: mocks.fakeTask, ...mocks.award };
+      },
+      completeTask: async (command: any) => {
+        mocks.calls.completeTask.push(command);
+        return { task: mocks.fakeTask, ...mocks.award };
       },
     },
   }),
@@ -75,12 +86,19 @@ vi.mock("@/lib/auth/rbac", () => ({
 }));
 
 import { POST as tasksPost } from "@/app/api/tasks/route";
-import { PUT as taskPut } from "@/app/api/tasks/[id]/route";
+import { PUT as taskPut, PATCH as taskPatch } from "@/app/api/tasks/[id]/route";
 import { POST as taskApprove } from "@/app/api/tasks/[id]/approve/route";
 
 function post(path: string, body: unknown) {
   return new NextRequest(new URL(path, "http://localhost:3000"), {
     method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+function patch(path: string, body: unknown) {
+  return new NextRequest(new URL(path, "http://localhost:3000"), {
+    method: "PATCH",
     body: JSON.stringify(body),
   });
 }
@@ -94,6 +112,10 @@ beforeEach(() => {
   mocks.calls.createTaskBacklog.length = 0;
   mocks.calls.updateTask.length = 0;
   mocks.calls.approveTask.length = 0;
+  mocks.calls.completeTask.length = 0;
+  // Padrão do describe novo: aprovação creditou 15 pontos ao responsável 7.
+  mocks.award.awardedTo = 7;
+  mocks.award.awardedPoints = 15;
 });
 
 describe("POST /api/tasks — criação não aceita points do cliente (DEC-30)", () => {
@@ -164,5 +186,79 @@ describe("POST /api/tasks/[id]/approve — o prêmio é do domínio", () => {
 
     expect(res.status).toBe(400);
     expect(mocks.calls.approveTask).toHaveLength(0);
+  });
+});
+
+/**
+ * plan-v3 OND4-A (AC-P3-08) — a borda devolve o prêmio **creditado**, e devolve como veio.
+ *
+ * Três casos que a interface da Onda 4.B distingue, e que um `|| 0` ou um clamp apagaria:
+ *   - `awardedPoints: 15` com `awardedTo: 7` — creditou outra pessoa (é o caso comum: a
+ *     aprovação credita o responsável, quase nunca quem aprovou);
+ *   - `awardedPoints: 0` com `awardedTo` preenchido — o award já existia: houve tentativa, e
+ *     nada mudou. Não é `null`;
+ *   - `null` nos dois — ninguém foi creditado (tarefa sem responsável, ou o caminho sem award).
+ */
+describe("POST /api/tasks/[id]/approve — a resposta carrega o prêmio creditado (OND4-A)", () => {
+  it("repassa awardedPoints e awardedTo como o caso de uso devolveu", async () => {
+    const res = await taskApprove(post("/api/tasks/7/approve", {}), idContext("7"));
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.awardedPoints).toBe(15);
+    expect(body.awardedTo).toBe(7);
+    expect(body.task).toEqual({ id: 7, title: "tarefa", points: 10 });
+  });
+
+  it("0 com awardedTo preenchido continua 0 — 'já constava' não vira null", async () => {
+    mocks.award.awardedPoints = 0;
+
+    const body = await (await taskApprove(post("/api/tasks/7/approve", {}), idContext("7"))).json();
+
+    expect(body.awardedTo).toBe(7);
+    expect(body.awardedPoints).toBe(0);
+  });
+
+  it("null nos dois quando ninguém foi creditado", async () => {
+    mocks.award.awardedTo = null;
+    mocks.award.awardedPoints = null;
+
+    const body = await (await taskApprove(post("/api/tasks/7/approve", {}), idContext("7"))).json();
+
+    expect(body.awardedTo).toBeNull();
+    expect(body.awardedPoints).toBeNull();
+  });
+
+  it("prêmio negativo chega negativo: penalidade de atraso não tem piso (DEC-39)", async () => {
+    mocks.award.awardedPoints = -20;
+
+    const body = await (await taskApprove(post("/api/tasks/7/approve", {}), idContext("7"))).json();
+
+    expect(body.awardedPoints).toBe(-20);
+  });
+});
+
+describe("PATCH /api/tasks/[id] (complete) — a conclusão também devolve o prêmio creditado", () => {
+  it("credita quem concluiu (o ator, id 42) e devolve o valor do servidor", async () => {
+    mocks.award.awardedTo = 42;
+    mocks.award.awardedPoints = 10;
+
+    const res = await taskPatch(patch("/api/tasks/7", { action: "complete" }), idContext("7"));
+
+    expect(res.status).toBe(200);
+    expect(mocks.calls.completeTask).toEqual([{ taskId: 7, userId: 42 }]);
+    const body = await res.json();
+    expect(body.awardedTo).toBe(42);
+    expect(body.awardedPoints).toBe(10);
+  });
+
+  it("tarefa delegada vai para revisão sem creditar ninguém: null, não 0", async () => {
+    mocks.award.awardedTo = null;
+    mocks.award.awardedPoints = null;
+
+    const body = await (await taskPatch(patch("/api/tasks/7", { action: "complete" }), idContext("7"))).json();
+
+    expect(body.awardedTo).toBeNull();
+    expect(body.awardedPoints).toBeNull();
   });
 });

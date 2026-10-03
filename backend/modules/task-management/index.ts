@@ -13,6 +13,7 @@ import type { TaskAssigneesPort } from "@/backend/modules/task-management/applic
 import type { TaskActorsPort } from "@/backend/modules/task-management/application/ports/task-actors.port"
 import type { TaskNotificationEvent, TaskNotificationsPort } from "@/backend/modules/task-management/application/ports/task-notifications.port"
 import type { TaskProgressEvents } from "@/backend/modules/task-management/application/ports/task-progress.events"
+import type { TaskCompletionResult } from "@/backend/modules/task-management/application/contracts"
 import type { TaskProgressPort } from "@/backend/modules/task-management/application/ports/task-progress.repository"
 import type { TaskProjectsPort } from "@/backend/modules/task-management/application/ports/task-projects.port"
 import type { TaskRepositoryPort } from "@/backend/modules/task-management/application/ports/task.repository"
@@ -36,8 +37,11 @@ export class TaskManagementModule {
   readonly createTaskBacklog: (tasks: CreateTaskCommand[], actorId: number) => Promise<any[]>
   readonly updateTask: (command: { taskId: number; actorId: number; data: Record<string, unknown> }) => Promise<any>
   readonly deleteTask: (command: { taskId: number; actorId: number }) => Promise<void>
-  readonly completeTask: (command: { taskId: number; userId: number }) => Promise<any>
-  readonly approveTask: (command: { taskId: number; approverId: number }) => Promise<any>
+  // plan-v3 OND4-A: `Promise<any>` → o contrato real. A rota consome `result.task.toJSON()` e
+  // repassa `awardedTo`/`awardedPoints`; tipar aqui é o que impede a próxima rota de voltar a
+  // ler `task.points` e mentir sobre o prêmio (foi o que a rota de conclusão registrava).
+  readonly completeTask: (command: { taskId: number; userId: number }) => Promise<TaskCompletionResult>
+  readonly approveTask: (command: { taskId: number; approverId: number }) => Promise<TaskCompletionResult>
   readonly rejectTask: (command: { taskId: number; approverId: number; reason?: string }) => Promise<any>
   readonly globalProgress: () => Promise<GlobalProgressEntry[]>
 

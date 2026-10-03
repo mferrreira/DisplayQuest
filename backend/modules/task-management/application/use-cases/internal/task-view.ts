@@ -113,17 +113,24 @@ export async function applyActorProgressToTasks(
   return await batchAttachAssignees(withProgress, deps.assignees);
 }
 
-/** publishTaskCompletionAward: award failures never break the completion (frozen). */
+/**
+ * publishTaskCompletionAward: award failures never break the completion (frozen).
+ *
+ * plan-v3 OND4-A: devolve os pontos **efetivamente creditados** (ou `null`), para o caso de uso
+ * levar o número até a resposta HTTP. Antes devolvia nada e a rota não tinha como saber o que
+ * foi creditado — o comentário da rota de conclusão registrava isso como limitação aceita.
+ */
 export async function publishTaskCompletionAward(
   events: TaskProgressEvents | undefined,
   userId: number,
   taskId: number,
   taskPoints: number,
-): Promise<void> {
-  if (!events) return;
+): Promise<number | null> {
+  if (!events) return null;
   try {
-    await events.onTaskCompleted({ userId, taskId, taskPoints });
+    return await events.onTaskCompleted({ userId, taskId, taskPoints });
   } catch (error) {
     console.error("Erro ao publicar progressão de gamificação para conclusão de task:", error);
+    return null;
   }
 }

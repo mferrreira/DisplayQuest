@@ -141,16 +141,18 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       return NextResponse.json({ error: "Sem permissão para concluir tarefa para outro usuário" }, { status: 403 })
     }
     
-    const task = await taskManagementModule.completeTask({
+    const { task, awardedTo, awardedPoints } = await taskManagementModule.completeTask({
       taskId: id,
       userId: userToAward,
     })
-    
-    // O valor creditado é decidido pelo domínio (points-rules) e publicado pelo publisher de
-    // gamificação; a rota não sabe o número — logar `task.points` mentia (plan-v3 OND1-D).
+
+    // O valor creditado é decidido pelo domínio (points-rules) e confirmado pelo publisher de
+    // gamificação, que devolve o **efetivo** (OND4-A) — inclusive 0 quando o award já existia.
+    // Antes desta Onda a rota não sabia o número, e o próprio código registrava isso como
+    // limitação aceita; logar `task.points` mentia e continua mentindo (plan-v3 OND1-D).
     console.log(`✅ Task ${id} completed by user ${userToAward}.`)
-    
-    return NextResponse.json({ task: task.toJSON() })
+
+    return NextResponse.json({ task: task.toJSON(), awardedTo, awardedPoints })
   } catch (error: any) {
     const mapped = domainErrorResponse(error)
     if (mapped) return mapped

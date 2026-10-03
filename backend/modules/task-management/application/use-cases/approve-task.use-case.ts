@@ -8,7 +8,7 @@ import {
   NotFoundError,
   type Task,
 } from "@/backend/domain";
-import type { ApproveTaskCommand } from "@/backend/modules/task-management/application/contracts";
+import type { ApproveTaskCommand, TaskCompletionResult } from "@/backend/modules/task-management/application/contracts";
 import type { TaskAssigneesPort } from "@/backend/modules/task-management/application/ports/task-assignees.repository";
 import type { TaskActorsPort } from "@/backend/modules/task-management/application/ports/task-actors.port";
 import type { TaskNotificationsPort } from "@/backend/modules/task-management/application/ports/task-notifications.port";
@@ -31,6 +31,12 @@ import {
  *     unconditionally (plan-v3 DEC-30: every task is worth POINTS_PER_TASK, so the old
  *     `points > 0` gate would silently keep legacy 0-point tasks worth nothing);
  *     TASK_APPROVED notification.
+ *
+ * plan-v3 OND4-A: devolve `TaskCompletionResult`. `awardedTo` é o **responsável** da tarefa,
+ * nunca o aprovador — autoaprovação é proibida sem MANAGE_USERS. Por isso o contrato carrega
+ * quem foi creditado: sem ele, o cliente animaria o contador de quem aprovou com o prêmio de
+ * outra pessoa (medido no e2e: o fixture entrega ao próprio aprovador justamente porque
+ * `MANAGE_USERS` abre essa porta, e é por isso que o teste enxerga o contador mudar).
  */
 export interface ApproveTaskDependencies {
   tasks: TaskRepositoryPort
@@ -46,7 +52,7 @@ export class ApproveTaskUseCase {
     private readonly events?: TaskProgressEvents,
   ) {}
 
-  async execute(command: ApproveTaskCommand): Promise<Task> {
+  async execute(command: ApproveTaskCommand): Promise<TaskCompletionResult> {
     const task = await this.dependencies.tasks.findById(command.taskId)
     if (!task) {
       throw new NotFoundError("Tarefa não encontrada")
@@ -94,6 +100,9 @@ export class ApproveTaskUseCase {
       completedAt: new Date(),
     })
 
+    let awardedTo: number | null = null
+    let awardedPoints: number | null = null
+
     if (taskWithAssignees.assignedTo) {
       const assignedUser = await this.dependencies.actors.findById(taskWithAssignees.assignedTo)
       if (assignedUser) {
@@ -103,13 +112,20 @@ export class ApproveTaskUseCase {
           await this.dependencies.actors.incrementCompletedTasks(taskWithAssignees.assignedTo)
         }
         const pointsToAward = awardPointsForCompletion(task, new Date())
-        await publishTaskCompletionAward(this.events, taskWithAssignees.assignedTo, command.taskId, pointsToAward)
+        // plan-v3 OND4-A: o creditado, não o pedido. `awardedTo` é quem recebeu.
+        awardedPoints = await publishTaskCompletionAward(
+          this.events,
+          taskWithAssignees.assignedTo,
+          command.taskId,
+          pointsToAward,
+        )
+        awardedTo = taskWithAssignees.assignedTo
       }
 
       await this.publishTaskApproved(command.taskId, task.title, taskWithAssignees.assignedTo)
     }
 
-    return updatedTask
+    return { task: updatedTask, awardedTo, awardedPoints }
   }
 
   private async publishTaskApproved(taskId: number, taskTitle: string, userId: number) {

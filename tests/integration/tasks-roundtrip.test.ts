@@ -159,7 +159,12 @@ describe("G4 roundtrip — task-management (isolated test DB)", () => {
     expect(reviewNotification?.title).toBe("Tarefa em Revisão");
 
     const approved = await taskModule.approveTask({ taskId: task.id!, approverId: leaderId });
-    expect(approved.status).toBe("done");
+    expect(approved.task.status).toBe("done");
+    // plan-v3 OND4-A: o contrato carrega para quem foi o crédito, e este módulo é montado SEM
+    // publisher de gamificação de propósito — então ninguém foi creditado e o valor é `null`.
+    // A interface trata `null` como "sem delta" (é o caminho sem award), que é o certo aqui.
+    expect(approved.awardedTo).toBe(anaId);
+    expect(approved.awardedPoints).toBeNull();
 
     const row = await prisma.tasks.findUnique({ where: { id: task.id! } });
     expect(row?.completedAt).not.toBeNull();
@@ -181,8 +186,13 @@ describe("G4 roundtrip — task-management (isolated test DB)", () => {
     createdTaskIds.push(task.id!);
 
     const completed = await taskModule.completeTask({ taskId: task.id!, userId: anaId });
-    expect(completed.status).toBe("in-review");
-    expect(completed.completed).toBe(true);
+    expect(completed.task.status).toBe("in-review");
+    expect(completed.task.completed).toBe(true);
+    // plan-v3 OND4-A: quem foi para revisão não é creditado agora — o prêmio fica para a
+    // aprovação. `null` nos dois campos (e não 0) é o que distingue "ninguém creditado" de
+    // "valeu zero pontos", que é a distinção que a animação da Onda 4.B usa.
+    expect(completed.awardedTo).toBeNull();
+    expect(completed.awardedPoints).toBeNull();
 
     const row = await prisma.tasks.findUnique({ where: { id: task.id! } });
     expect(row?.status).toBe("in-review");
@@ -219,8 +229,12 @@ describe("G4 roundtrip — task-management (isolated test DB)", () => {
     createdTaskIds.push(task.id!);
 
     const result = await taskModule.completeTask({ taskId: task.id!, userId: anaId });
-    expect(result.status).toBe("done");
-    expect(result.assignedTo).toBe(anaId);
+    expect(result.task.status).toBe("done");
+    expect(result.task.assignedTo).toBe(anaId);
+    // OND4-A: o caminho público credita a quem concluiu (ana), e `awardedPoints` é `null` porque
+    // este módulo é montado sem publisher de gamificação — o creditador não rodou.
+    expect(result.awardedTo).toBe(anaId);
+    expect(result.awardedPoints).toBeNull();
 
     const row = await prisma.tasks.findUnique({ where: { id: task.id! } });
     expect(row?.status).toBe("to-do"); // row NEVER closed by the public branch

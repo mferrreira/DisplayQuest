@@ -16,15 +16,21 @@ export async function POST(_request: NextRequest, context: { params: Promise<{ i
       return NextResponse.json({ error: "ID de tarefa inválido" }, { status: 400 })
     }
 
-    const task = await taskManagementModule.approveTask({
+    const { task, awardedTo, awardedPoints } = await taskManagementModule.approveTask({
       taskId,
       approverId: auth.actor.id,
     })
-    
-    return NextResponse.json({ 
-      success: true, 
+
+    // plan-v3 OND4-A: o prêmio creditado agora, do servidor. `awardedTo` é o responsável pela
+    // tarefa — quase nunca quem aprovou (autoaprovação é proibida sem MANAGE_USERS) — e é por
+    // isso que os dois campos viajam juntos: o cliente só anima o próprio contador quando quem
+    // ganhou foi a pessoa logada.
+    return NextResponse.json({
+      success: true,
       message: "Tarefa aprovada com sucesso",
-      task: task.toJSON()
+      task: task.toJSON(),
+      awardedTo,
+      awardedPoints,
     }, { status: 200 })
   } catch (error) {
     const mapped = domainErrorResponse(error)
