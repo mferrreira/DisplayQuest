@@ -160,7 +160,14 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
   usava `getByLabel("Senha")` e o botão "Mostrar senha" também é um `label` acessível desse texto
   (agora `getByLabel("Senha", { exact: true })`), e o teste de busca preenchia o input sem abrir a
   lupa (`?busca=` só existe depois de clicar em "Buscar tarefas"). Se a suíte e2e falhar no
-  primeiro teste com *strict mode violation*, sospeite de rótulo duplicado antes de olhar o DOM.
+  primeiro teste com *strict mode violation*, suspeite de rótulo duplicado antes de olhar o DOM.
+- **A mesma correção existia em duas cópias, e só uma recebeu (medido 2026-10-05):** o
+  `tests/e2e/shell.spec.ts` tinha `login()`/`CREDENTIALS` **próprios**, cópia do helper, e ficou
+  com `getByLabel("Senha")` sem `exact` — os 3 testes do shell caíam no primeiro `fill` enquanto
+  o quadro passava 7/7. Corrigido removendo a cópia e importando `login` de `./helpers`.
+  **Regra da casa:** corrigido um helper, `grep` o nome dele no diretório antes de commitar —
+  divergência entre cópia e original é o mesmo modo de falha que a 3.B achou nos dois menus do
+  cartão.
 - **Rodar um spec e2e exige o dev server no ar:** `playwright.config.ts` fixa
   `baseURL: http://localhost:3001` (o compose do repo serve em 3000, e a suíte de integração
   precisa do banco). O spec do quadro cria e apaga as próprias tarefas — depois de rodar, confira

@@ -1,19 +1,17 @@
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
+import { login } from "./helpers";
 
 /**
  * E1 shell smoke — server guard + auth round-trip + a11y baseline (CP-1 gate).
- * Credentials: seeded coordenador (scripts/capture-visual-baseline.mjs uses the same).
+ *
+ * O login vem de `./helpers` (não de uma cópia local): a suíte do quadro usa o helper e o
+ * shell usava uma cópia própria que ficou com `getByLabel("Senha")` sem `exact`. O formulário
+ * tem um botão "Mostrar senha", que também é um rótulo acessível desse texto, então a
+ * correspondência por fragmento achava dois elementos e os 3 testes deste arquivo caíam no
+ * primeiro `fill`. Mesma classe de bug da 3.B (dois menus, regra numa só) — a correção entra
+ * numa cópia e a outra passa a divergir.
  */
-const CREDENTIALS = { email: "coordenador@lab.com", password: "123" };
-
-async function login(page: import("@playwright/test").Page) {
-  await page.goto("/login");
-  await page.getByLabel("Email").fill(CREDENTIALS.email);
-  await page.getByLabel("Senha").fill(CREDENTIALS.password);
-  await page.getByRole("button", { name: /entrar/i }).click();
-  await expect(page).toHaveURL(/\/dashboard/, { timeout: 15_000 });
-}
 
 test("unauthenticated /dashboard is redirected to /login SERVER-side", async ({ request }) => {
   // request (no cookies) proves the redirect happens without client JS
