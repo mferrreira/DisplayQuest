@@ -112,6 +112,30 @@ que uma pessoa altere o próprio registro sem concessão específica, e permite 
 gestor altere o de qualquer outra desde que tenha a permissão de gestão. É o que torna a
 operação de sessões viável por um gestor sem que este precise ser dono da sessão.
 
+### Quem age quando não há uma pessoa
+
+Há uma quarta forma, e ela não aparece em nenhuma rota. Alguns casos de uso são chamados
+por rotinas do próprio sistema: a varredura noturna que fecha sessões deixadas abertas, a
+pausa agendada de responsabilidade, a reposição do histórico semanal de horas, e os eventos
+que descrevem algo que já aconteceu — uma issue do laboratório reportada, um relatório
+enviado, uma tarefa que entrou em revisão. Nessas chamadas não existe ator com papel, e a
+permissão exigida pelo caso de uso não tem a quem ser aplicada.
+
+O sistema resolve isso declarando o ator, em vez de dispensar a verificação. Toda chamada de
+um caso de uso autorizado informa quem age, e a informação é uma de duas formas: um ator de
+pessoa, construído a partir dos papéis da sessão, ou um ator de sistema, que nomeia a rotina
+que fez a chamada. Um ator de sistema passa sem checagem de permissão, porque uma varredura
+agendada não tem papel a segurar — e inventar uma permissão para ela seria uma concessão que
+ninguém pode revogar. O que limita esse caminho é que a rota só sabe construir o ator de
+pessoa, a partir da sessão, e uma verificação automática falha a construção do sistema se
+alguma rota HTTP declarar um ator de sistema.
+
+::: limite titulo="O ator de sistema não é uma permissão"
+O motivo declarado junto do ator de sistema é rótulo de auditoria: ele identifica a rotina que
+chamou, e nenhuma decisão de autorização o consulta. A garantia de que ele não é usado por
+uma rota vem de uma varredura de texto sobre as rotas da aplicação, não do tipo.
+:::
+
 ## Situação da conta
 
 O estado da conta é um atributo do usuário e controla o acesso antes de qualquer

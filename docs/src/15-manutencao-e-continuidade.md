@@ -113,7 +113,7 @@ quem responde pelo sistema.
 | --- | --- | --- | --- |
 | A agenda periódica roda em cada processo da aplicação | Serviço de agenda | Tarefa periódica executa uma vez por instância, sem trava | Assumido; a implantação de referência tem instância única |
 | Colunas de estado remanescentes são texto livre | Esquema de persistência de sessões e contas | O valor gravado depende do chamador; a reconciliação acontece na leitura | Herança do modelo anterior; a enumeração do domínio existe e é usada pelo núcleo |
-| A autorização de maior parte das rotas é avaliada na própria rota | Rotas HTTP com verificação direta de papel ou permissão | A regra efetiva está fora do caso de uso, e a matriz do domínio é permissiva | Herança consolidada; a extração para o caso de uso é alteração de médio porte |
+| A autorização da maioria das rotas ainda é avaliada na própria rota | Rotas HTTP com verificação direta de papel ou permissão | A regra efetiva está fora do caso de uso, e a matriz do domínio é permissiva | Em correção: a extração para o caso de uso está em curso, e o ator passou a ser declarado pela chamada (ator de pessoa ou de sistema). A matriz deixou de ser apenas documentação nas rotas já extraídas |
 | A camada de registros de entidade é adotada por um único módulo | Adaptadores de persistência do laboratório | A forma de construir registros não é uniforme entre módulos | Assumido; adotá-la nos demais módulos é alteração mecânica |
 | O processo grava em dois diretórios | Contêiner da aplicação | Caminho de escrita novo falha sem alteração da construção da imagem | Documentado e verificado |
 | A versão de execução da aplicação está fixada | Imagem de execução e versão declarada | Verificação local só vale se a versão local coincidir com a da imagem | Alinhado; divergir de novo reintroduz o risco |
@@ -123,9 +123,10 @@ quem responde pelo sistema.
 A divergência entre a autorização avaliada na rota e a matriz do domínio merece uma observação
 de método. A matriz do domínio descreve o que o sistema permite; a verificação na rota decide o
 que é efetivamente recusado. Enquanto as duas não coincidirem, a matriz é documentação com
-força normativa parcial. Qualquer regra nova de permissão deve ser escrita na matriz e, no
-mesmo movimento, avaliada por um caso de uso — escrever apenas na matriz cria a impressão de
-restrição sem produzir efeito.
+força normativa parcial — nas rotas cuja verificação já foi movida para o caso de uso ela passa
+a ter força plena, e nas demais continua parcial. Qualquer regra nova de permissão deve ser
+escrita na matriz e, no mesmo movimento, avaliada por um caso de uso — escrever apenas na matriz
+cria a impressão de restrição sem produzir efeito.
 
 ## Continuidade
 
