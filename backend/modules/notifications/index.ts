@@ -6,12 +6,14 @@ import { GetUnreadCountUseCase } from "@/backend/modules/notifications/applicati
 import { ListUserNotificationsUseCase } from "@/backend/modules/notifications/application/use-cases/list-user-notifications.use-case"
 import { MarkAllNotificationsAsReadUseCase } from "@/backend/modules/notifications/application/use-cases/mark-all-notifications-as-read.use-case"
 import { MarkNotificationAsReadUseCase } from "@/backend/modules/notifications/application/use-cases/mark-notification-as-read.use-case"
+import { AssertCanPublishNotificationEventUseCase } from "@/backend/modules/notifications/application/use-cases/assert-can-publish-notification-event.use-case"
 import { PublishNotificationEventUseCase } from "@/backend/modules/notifications/application/use-cases/publish-notification-event.use-case"
 import { createNotificationsGatewayAdapter } from "@/backend/modules/notifications/infrastructure/notifications.gateway"
 import { createPrismaNotificationRepository } from "@/backend/modules/notifications/infrastructure/repositories/prisma-notification.repository"
 
 export class NotificationsModule {
   constructor(
+    private readonly assertCanPublishNotificationEventUseCase: AssertCanPublishNotificationEventUseCase,
     private readonly publishNotificationEventUseCase: PublishNotificationEventUseCase,
     private readonly listUserNotificationsUseCase: ListUserNotificationsUseCase,
     private readonly getUnreadCountUseCase: GetUnreadCountUseCase,
@@ -19,6 +21,16 @@ export class NotificationsModule {
     private readonly markAllNotificationsAsReadUseCase: MarkAllNotificationsAsReadUseCase,
     private readonly deleteUserNotificationUseCase: DeleteUserNotificationUseCase,
   ) {}
+
+  /**
+   * D4/B6-2b: the route calls this BEFORE parsing the body, so a caller without
+   * MANAGE_NOTIFICATIONS gets 403 rather than one of the route-level 400s. See the use case for
+   * why the gate could not simply move into `publishEvent`. Internal system publishers must NOT
+   * call this — they have no actor and go straight to `publishEvent` with a `systemActor`.
+   */
+  async assertCanPublishEvent(command: Pick<PublishNotificationEventCommand, "actor">) {
+    return await this.assertCanPublishNotificationEventUseCase.execute(command)
+  }
 
   async publishEvent(command: PublishNotificationEventCommand) {
     return await this.publishNotificationEventUseCase.execute(command)
@@ -55,6 +67,7 @@ export function createNotificationsModule(options: NotificationsModuleFactoryOpt
   const gateway = createNotificationsGatewayAdapter({ repository })
 
   return new NotificationsModule(
+    new AssertCanPublishNotificationEventUseCase(),
     new PublishNotificationEventUseCase(gateway, repository),
     new ListUserNotificationsUseCase(gateway),
     new GetUnreadCountUseCase(gateway),

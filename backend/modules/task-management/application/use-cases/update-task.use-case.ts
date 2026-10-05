@@ -8,16 +8,17 @@ import {
   isForeignPublicMoveDenied,
   isReviewRequestTransition,
   isStatusOnlyUpdate,
-  NotFoundError,
   normalizeAssigneeIds,
+  NotFoundError,
   progressPatchForStatus,
   statusOnlyPatch,
+  systemActor,
   toTaskView,
+  type Task,
+  type TaskStatus,
   usesPublicProgressBranch,
   ValidationError,
   withActorProgress,
-  type Task,
-  type TaskStatus,
 } from "@/backend/domain";
 import type { UpdateTaskCommand } from "@/backend/modules/task-management/application/contracts";
 import type { TaskAssigneesPort } from "@/backend/modules/task-management/application/ports/task-assignees.repository";
@@ -283,6 +284,7 @@ export class UpdateTaskUseCase {
         data: { taskId, taskTitle, userId, userName },
         triggeredByUserId: userId,
         audience: { mode: "USER_IDS", userIds: [projectLeaderId] },
+        actor: systemActor("SYSTEM_EVENT"),
       })
     } catch (error) {
       console.error("Erro ao publicar notificação TASK_REVIEW_REQUEST:", error)

@@ -14,6 +14,7 @@ import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "@
 
 const mocks = vi.hoisted(() => {
   const fakeModule = {
+    assertCanPublishEvent: async (_command: any) => {},
     publishEvent: async (command: any) => ({
       createdCount: 1,
       recipients: command.audience?.mode === "USER_IDS" ? command.audience.userIds : [1],
@@ -37,8 +38,10 @@ const mocks = vi.hoisted(() => {
     deleteUserNotification: async () => true,
   };
   const auth = {
-    actor: { id: 42, roles: ["ADMIN"] },
-    permissionError: null as unknown | null,
+    actor: { id: 42, roles: ["COORDENADOR"] },
+    /** D4/B6-2b: a rota de POST parou de chamar `ensurePermission`. O contador existe para
+     *  provar isso — se voltar a chamar, este arquivo quebra. */
+    permissionCalls: 0,
   };
   return { fakeModule, auth };
 });
@@ -49,7 +52,10 @@ vi.mock("@/backend/composition/root", () => ({
 
 vi.mock("@/lib/auth/api-guard", () => ({
   requireApiActor: async () => ({ actor: mocks.auth.actor }),
-  ensurePermission: () => mocks.auth.permissionError,
+  ensurePermission: () => {
+    mocks.auth.permissionCalls += 1;
+    return null;
+  },
 }));
 
 import { GET, POST } from "@/app/api/notifications/route";
@@ -69,7 +75,8 @@ function idContext(id: string) {
 }
 
 beforeEach(() => {
-  mocks.auth.permissionError = null;
+  mocks.auth.permissionCalls = 0;
+  mocks.fakeModule.assertCanPublishEvent = async (_command: any) => {};
   mocks.fakeModule.publishEvent = async (command: any) => ({
     createdCount: 1,
     recipients: command.audience?.mode === "USER_IDS" ? command.audience.userIds : [1],
@@ -141,11 +148,13 @@ describe("POST /api/notifications", () => {
   });
 
   it("403 when MANAGE_NOTIFICATIONS is missing", async () => {
-    const { NextResponse } = await import("next/server");
-    mocks.auth.permissionError = NextResponse.json(
-      { error: "Sem permissão para criar notificações" },
-      { status: 403 },
-    );
+    // D4/B6-2b (DEC-54): este caso não pode mais vir do guard dobrado. A rota parou de chamar
+    // `ensurePermission` — o gate desceu para `AssertCanPublishNotificationEventUseCase`, que é
+    // o que o duplo de módulo representa agora. Um duplo de módulo não decide nada: mantê-lo
+    // aqui fixaria o substituto, não o sistema (foi o defeito do B6-0 com os 403 de badge).
+    mocks.fakeModule.assertCanPublishEvent = async () => {
+      throw new ForbiddenError("Sem permissão para criar notificações");
+    };
     const response = await POST(
       makeRequest("/api/notifications", {
         method: "POST",
@@ -153,6 +162,13 @@ describe("POST /api/notifications", () => {
       }),
     );
     expect(response.status).toBe(403);
+    expect((await response.json()).error).toBe("Sem permissão para criar notificações");
+  });
+
+  it("a rota NÃO usa mais o guard de permissão (o gate desceu para o use case)", async () => {
+    // Trava o movimento: se alguém reintroduzir `ensurePermission` nesta rota, o 403 passaria a
+    // valer por um caminho que o domínio não conhece — e voltaria o corpo `{error}` sem `code`.
+    expect(mocks.auth.permissionCalls).toBe(0);
   });
 
   it("use-case ValidationError maps to 400 (was 500 before R4)", async () => {

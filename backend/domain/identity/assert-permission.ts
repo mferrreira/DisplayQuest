@@ -20,6 +20,7 @@
  * is documented never to throw on dirty input (unknown role → denial, not an exception).
  */
 import { ForbiddenError } from "../errors";
+import type { ActorRef } from "./actor-ref";
 import { hasPermission } from "./has-permission";
 import type { Permission } from "./permissions";
 
@@ -34,4 +35,25 @@ export function assertPermission(
   if (!hasPermission(userRoles, permission)) {
     throw new ForbiddenError(message);
   }
+}
+
+/**
+ * requireActorPermission — the same rule as `assertPermission`, for a command that arrives with an
+ * `ActorRef` (D4, B6-2b, DEC-54).
+ *
+ * A `user` actor goes through `assertPermission` unchanged. A `system` actor passes, because a
+ * scheduled sweep has no role to hold and inventing a permission for it would be a grant that
+ * nobody can revoke. That bypass is deliberate and narrow: see `actor-ref.ts` for why it is
+ * typed, why it is not forgeable from a request, and what test enforces that.
+ *
+ * Prefer this over calling `isSystemActor` at the call site: the check belongs to the rule, so a
+ * use case cannot forget it by omitting an `if`.
+ */
+export function requireActorPermission(
+  actor: ActorRef,
+  permission: Permission,
+  message: string = ACCESS_DENIED_MESSAGE,
+): void {
+  if (actor.kind === "system") return;
+  assertPermission(actor.roles, permission, message);
 }

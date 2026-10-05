@@ -1,3 +1,4 @@
+import { systemActor, type ActorRef } from "@/backend/domain/identity"
 import {
   REPORT_SUBMISSION_EVENT,
   reportSubmissionMessage,
@@ -20,6 +21,12 @@ export interface ReportSubmittedEventSink {
     data: Record<string, unknown>
     audience: { mode: "USER_IDS"; userIds: number[] }
     triggeredByUserId?: number
+    /**
+     * D4/B6-2b (DEC-54): required, because the sink now asserts MANAGE_NOTIFICATIONS. A submitted
+     * report is a fact that already happened — there is no person to authorise, so this publisher
+     * declares itself a system actor. Without it, every "report sent" notification would 403.
+     */
+    actor: ActorRef
   }): Promise<unknown>
 }
 
@@ -39,6 +46,7 @@ export class NotificationsReportPublisher implements ReportSubmittedPublisherPor
       data: { reportId: event.reportId, projectId: event.projectId },
       audience: { mode: "USER_IDS", userIds: event.userIds },
       triggeredByUserId: event.authorId,
+      actor: systemActor("SYSTEM_EVENT"),
     })
   }
 }

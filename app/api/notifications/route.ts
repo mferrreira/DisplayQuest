@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
-import { ensurePermission, requireApiActor } from "@/lib/auth/api-guard"
+import { requireApiActor } from "@/lib/auth/api-guard"
 import { domainErrorResponse } from "@/lib/api/domain-error-response"
 import { getBackendComposition } from "@/backend/composition/root"
+import { userActor } from "@/backend/domain"
 
 const { notifications: notificationsModule } = getBackendComposition()
 export async function GET(request: NextRequest) {
@@ -33,12 +34,14 @@ export async function POST(request: NextRequest) {
     const auth = await requireApiActor()
     if (auth.error) return auth.error
 
-    const permissionError = ensurePermission(
-      auth.actor,
-      "MANAGE_NOTIFICATIONS",
-      "Sem permissão para criar notificações",
-    )
-    if (permissionError) return permissionError
+    // D4/B6-2a: o ator vem da sessão e de mais nenhum lugar — é o que impede uma rota de
+    // declarar um `systemActor` e furar o gate (há teste que falha o build se isso acontecer).
+    const actor = userActor(auth.actor.roles)
+
+    // D4/B6-2b: o gate desceu para o domínio, mas a ORDEM não pode mudar. As 400 abaixo usam
+    // mensagens de rota congeladas em teste, distintas das do use case, então elas não podem
+    // descer junto com o gate — e sem esta chamada o 403 passaria a vir depois delas.
+    await notificationsModule.assertCanPublishEvent({ actor })
 
     const body = await request.json()
     const title = typeof body.title === "string" ? body.title.trim() : ""
@@ -73,6 +76,7 @@ export async function POST(request: NextRequest) {
       data: body.data,
       triggeredByUserId: auth.actor.id,
       audience,
+      actor,
     })
 
     return NextResponse.json(

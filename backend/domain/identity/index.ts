@@ -24,7 +24,15 @@ export {
   type Permission,
 } from "./permissions";
 export { hasFeatureAccess, hasPermission, rolesFor, rolesForFeature } from "./has-permission";
-export { assertPermission, ACCESS_DENIED_MESSAGE } from "./assert-permission";
+export { assertPermission, requireActorPermission, ACCESS_DENIED_MESSAGE } from "./assert-permission";
+export {
+  SYSTEM_REASONS,
+  isSystemActor,
+  systemActor,
+  userActor,
+  type ActorRef,
+  type SystemReason,
+} from "./actor-ref";
 export { normalizeAvatar } from "./avatar";
 export { resolveUserListVisibility, type UserListVisibility } from "./user-visibility";
 export { toPublicUser, type PublicUser } from "./public-user";

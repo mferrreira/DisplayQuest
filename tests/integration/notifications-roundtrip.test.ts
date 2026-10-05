@@ -13,6 +13,15 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { prisma } from "@/lib/database/prisma";
 import { createNotificationsModule } from "@/backend/modules/notifications";
+import { userActor } from "@/backend/domain";
+
+/**
+ * D4/B6-2b (DEC-54): o comando de publicação passou a exigir um ator. Este roundtrip exercita
+ * PERSISTÊNCIA, não autorização — então ele se declara um usuário com a permissão, do mesmo jeito
+ * que os roundtrips de reward/badge do B6-2a passaram `actorRoles: ["COORDENADOR"]`. O caminho de
+ * sistema é coberto pelos testes de use case.
+ */
+const managerActor = userActor(["COORDENADOR"]);
 
 const notificationsModule = createNotificationsModule();
 const createdIds: number[] = [];
@@ -45,6 +54,7 @@ describe("G4 roundtrip — notifications (isolated test DB)", () => {
       message: "roundtrip",
       data: { probe: 1 },
       audience: { mode: "USER_IDS", userIds: [userId] },
+      actor: managerActor,
     });
     expect(result.createdCount).toBe(1);
     expect(result.recipients).toEqual([userId]);
@@ -86,6 +96,7 @@ describe("G4 roundtrip — notifications (isolated test DB)", () => {
       title: "G4 smoke 2",
       message: "ownership",
       audience: { mode: "USER_IDS", userIds: [userId] },
+      actor: managerActor,
     });
     const row = await prisma.notifications.findFirst({
       where: { userId, type: "G4_SMOKE_2" },

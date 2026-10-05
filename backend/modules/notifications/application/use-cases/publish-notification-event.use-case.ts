@@ -1,4 +1,4 @@
-import { ValidationError, normalizeUserIdAudience } from "@/backend/domain"
+import { ValidationError, normalizeUserIdAudience, requireActorPermission } from "@/backend/domain"
 import type {
   NotificationAudience,
   PublishNotificationEventCommand,
@@ -18,6 +18,18 @@ import type { ActiveUserDirectory } from "@/backend/modules/notifications/applic
  *     and converted to a normalized USER_IDS audience before reaching the gateway;
  *   - empty-recipient policy: short-circuit with { createdCount: 0, recipients: [] } and no
  *     gateway call (golden-frozen behavior).
+ *
+ * Authorisation (D4, B6-2b, DEC-53/DEC-54): `MANAGE_NOTIFICATIONS` was asserted in the route by
+ * `ensurePermission` and is asserted here now, FIRST — before the title/message validation. The
+ * order is the measured contract, not a detail: a caller without the permission gets 403 even
+ * with an empty title, which is what the route did by checking before it parsed the body. (The
+ * route keeps its own 400s with its own wording for the HTTP path; see
+ * `tests/unit/api/notification-authorization.test.ts`.)
+ *
+ * The `actor` on the command is required because the two internal publishers that also call this
+ * use case — lab issues and submitted reports — have no person to authorise. See
+ * `backend/domain/identity/actor-ref.ts` for why that is a typed `systemActor` and not an
+ * optional field.
  */
 export class PublishNotificationEventUseCase {
   constructor(
@@ -26,6 +38,12 @@ export class PublishNotificationEventUseCase {
   ) {}
 
   async execute(command: PublishNotificationEventCommand) {
+    requireActorPermission(
+      command.actor,
+      "MANAGE_NOTIFICATIONS",
+      "Sem permissão para criar notificações",
+    )
+
     if (!command.title?.trim()) {
       throw new ValidationError("Título é obrigatório")
     }

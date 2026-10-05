@@ -1,3 +1,4 @@
+import { systemActor, type ActorRef } from "@/backend/domain/identity"
 import type { LabIssuePublisherPort } from "@/backend/modules/lab-operations/application/ports/lab-issue-publisher.port"
 
 /**
@@ -5,6 +6,11 @@ import type { LabIssuePublisherPort } from "@/backend/modules/lab-operations/app
  * notificacoes (DEC-21: a infra do lab NAO importa factory de outro modulo; a
  * composition root injeta o sink). Payloads LAB_ISSUE_RAISED / LAB_ISSUE_ASSIGNED
  * VERBATIM do gateway legado (golden 8.1).
+ *
+ * D4/B6-2b (DEC-54): o sink passou a exigir `actor`. Uma issue reportada e uma issue atribuida
+ * sao fatos que JA ACONTECERAM — nao ha pessoa a autorizar, e o modulo de notificacoes passou a
+ * exigir MANAGE_NOTIFICATIONS para quem publica. O `systemActor` e o motivo declarado disso; sem
+ * ele, toda notificacao de issue passaria a levar 403 e o laboratorio emudeceria.
  */
 export interface LabEventPublishSink {
   publishEvent(event: {
@@ -14,6 +20,7 @@ export interface LabEventPublishSink {
     data: Record<string, unknown>
     audience: { mode: "USER_IDS"; userIds: number[] }
     triggeredByUserId?: number
+    actor: ActorRef
   }): Promise<unknown>
 }
 
@@ -39,6 +46,7 @@ export class NotificationsLabPublisher implements LabIssuePublisherPort {
       },
       audience: { mode: "USER_IDS", userIds: event.recipientIds },
       triggeredByUserId: event.reporterId,
+      actor: systemActor("SYSTEM_EVENT"),
     })
   }
 
@@ -58,6 +66,7 @@ export class NotificationsLabPublisher implements LabIssuePublisherPort {
         priority: event.priority,
       },
       audience: { mode: "USER_IDS", userIds: [event.assigneeId] },
+      actor: systemActor("SYSTEM_EVENT"),
     })
   }
 }

@@ -121,6 +121,29 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
   de forma confiável (a rota ainda via o `readFile` real). Padrão da casa: rotas leem via
   um seam em `lib/` (ex.: `readReportFileBytes` em `lib/storage/report-uploads.ts`) e o
    teste mocka a lib, não o builtin.
+- **Nem todo use case do D4 tem uma pessoa atrás dele (medido 2026-10-05, B6-2b / DEC-54):**
+  4 dos use cases que recebem gate são chamados **por uma rota e por rotinas derivadas ao mesmo
+  tempo** — `publishEvent` (rota + `NotificationsLabPublisher` ×2 + `NotificationsReportPublisher`
+  + os 3 use cases de `task-management`) e `listWorkSessions` / `pauseResponsibilityForUser` /
+  `resetWeeklyHoursHistory` (rota + `lib/services/cron-service.ts`). Colocar o gate dentro do use
+  case quebrava a notificação de issue do laboratório, a de relatório enviado e os 3 eventos de
+  revisão de tarefa, e **o sintoma não aparece em teste de rota nenhum** — só em produção. Resolvido
+  com `ActorRef` (`backend/domain/identity/actor-ref.ts`): `userActor(roles)` na rota,
+  `systemActor(reason)` nas rotinas, e `requireActorPermission` decide. Medi isso pela 4ª vez e a
+  família do `task-management` eu tinha classificado antes como "no-op, fora do raio": o *default*
+  do port é no-op, mas o composition root injeta o **módulo real**
+  (`backend/composition/root.ts:39`) — leia o *wiring*, não só a assinatura do port. O `reason` do
+  `systemActor` é rótulo de auditoria, não regra: `tests/unit/domain/identity/system-actor.test.ts`
+  fixa isso e faz **grep** de `systemActor(` em `app/api/**` para falhar o build se uma rota
+  declarar ator de sistema.
+- **Gate que não pode descer sozinho porque a rota valida com mensagens próprias (medido
+  2026-10-05, B6-2b):** `POST /api/notifications` tem 400s de rota cujas mensagens são
+  **diferentes** das congeladas no use case (`"Título e mensagem são obrigatórios"` na rota vs
+  `"Título é obrigatório"` no use case). As validações não podem descer junto com o gate, e sem uma
+  checagem **antes do parse** o 403 passaria a vir depois delas — quem não tem permissão com corpo
+  inválido levaria 400. Daí `AssertCanPublishNotificationEventUseCase`: a rota autoriza antes de ler
+  o corpo, e `publishEvent` recheca no próprio `actor` para proteger os demais chamadores. O par
+  403-antes-de-400 foi **medido antes** de mexer e não estava fixado em teste nenhum.
 - **Gate de autorização + teste de rota: o duplo de MÓDULO não decide nada (medido 2026-10-05,
   B6-2a).** Quando o `ensurePermission` da rota desce para o use case, um
   `vi.mock("@/backend/composition/root")` que devolve `{ store: { createReward: fake } }` faz o

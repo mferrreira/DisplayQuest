@@ -6,6 +6,7 @@ import {
   hasAnyRole,
   hasPermission,
   NotFoundError,
+  systemActor,
   type Task,
 } from "@/backend/domain";
 import type { ApproveTaskCommand, TaskCompletionResult } from "@/backend/modules/task-management/application/contracts";
@@ -136,6 +137,7 @@ export class ApproveTaskUseCase {
         message: `Sua tarefa "${taskTitle}" foi aprovada! Você recebeu os pontos.`,
         data: { taskId, taskTitle },
         audience: { mode: "USER_IDS", userIds: [userId] },
+        actor: systemActor("SYSTEM_EVENT"),
       })
     } catch (error) {
       console.error("Erro ao publicar notificação TASK_APPROVED:", error)

@@ -6,6 +6,7 @@ import {
   hasAnyRole,
   hasPermission,
   NotFoundError,
+  systemActor,
   type Task,
 } from "@/backend/domain";
 import type { RejectTaskCommand } from "@/backend/modules/task-management/application/contracts";
@@ -114,6 +115,7 @@ export class RejectTaskUseCase {
         message,
         data: { taskId, taskTitle, reason },
         audience: { mode: "USER_IDS", userIds: [userId] },
+        actor: systemActor("SYSTEM_EVENT"),
       })
     } catch (error) {
       console.error("Erro ao publicar notificação TASK_REJECTED:", error)

@@ -10,6 +10,8 @@ import { beforeEach, describe, expect, it } from "vitest";
 import {
   isDomainError,
   normalizeUserIdAudience,
+  systemActor,
+  userActor,
   ValidationError,
 } from "@/backend/domain";
 import { PublishNotificationEventUseCase } from "@/backend/modules/notifications/application/use-cases/publish-notification-event.use-case";
@@ -99,18 +101,26 @@ describe("PublishNotificationEventUseCase — rules owned by the use case (R2)",
     useCase = new PublishNotificationEventUseCase(gateway, directory);
   });
 
+  /**
+   * D4/B6-2b (DEC-54): o ator entrou no comando. Estes testes exercitam as regras de publicação
+   * (validação, audiência, normalização) com um ator de sistema, porque o caminho HTTP é coberto em
+   * `tests/unit/api/notification-authorization.test.ts` e a autorização em si em
+   * `tests/unit/domain/identity/system-actor.test.ts`. O gate do use case tem um teste próprio no
+   * fim deste arquivo.
+   */
   const baseCommand: PublishNotificationEventCommand = {
     eventType: "TASK_DONE",
     title: "Titulo",
     message: "Mensagem",
     audience: { mode: "USER_IDS", userIds: [2] },
+    actor: systemActor("SYSTEM_EVENT"),
   };
 
   it("empty title -> ValidationError (400) with the golden message, no gateway call", async () => {
     await expect(
-      useCase.execute({ ...baseCommand, title: "" }),
+      useCase.execute({ ...systemCommand, title: "" }),
     ).rejects.toThrow("Título é obrigatório");
-    const error = await useCase.execute({ ...baseCommand, title: "" }).catch((e) => e);
+    const error = await useCase.execute({ ...systemCommand, title: "" }).catch((e) => e);
     expect(isDomainError(error)).toBe(true);
     expect(error).toBeInstanceOf(ValidationError);
     expect(error.status).toBe(400);
@@ -118,7 +128,7 @@ describe("PublishNotificationEventUseCase — rules owned by the use case (R2)",
   });
 
   it("empty message -> ValidationError with the golden message", async () => {
-    const error = await useCase.execute({ ...baseCommand, message: " " }).catch((e) => e);
+    const error = await useCase.execute({ ...systemCommand, message: " " }).catch((e) => e);
     expect(error).toBeInstanceOf(ValidationError);
     expect(error.message).toBe("Mensagem é obrigatória");
     expect(gateway.publishCalls).toHaveLength(0);
@@ -126,7 +136,7 @@ describe("PublishNotificationEventUseCase — rules owned by the use case (R2)",
 
   it("USER_IDS with empty list -> ValidationError with the golden message", async () => {
     const error = await useCase
-      .execute({ ...baseCommand, audience: { mode: "USER_IDS", userIds: [] } })
+      .execute({ ...systemCommand, audience: { mode: "USER_IDS", userIds: [] } })
       .catch((e) => e);
     expect(error).toBeInstanceOf(ValidationError);
     expect(error.message).toBe("Nenhum destinatário informado");
@@ -135,7 +145,7 @@ describe("PublishNotificationEventUseCase — rules owned by the use case (R2)",
 
   it("normalizes USER_IDS recipients BEFORE the gateway (dedupe + filter)", async () => {
     const result = await useCase.execute({
-      ...baseCommand,
+      ...systemCommand,
       audience: { mode: "USER_IDS", userIds: [2, 2, 3, 0, -1, 2.5] },
     });
 
@@ -146,7 +156,7 @@ describe("PublishNotificationEventUseCase — rules owned by the use case (R2)",
 
   it("USER_IDS with only invalid ids -> { 0, [] } short-circuit, no gateway call", async () => {
     const result = await useCase.execute({
-      ...baseCommand,
+      ...systemCommand,
       audience: { mode: "USER_IDS", userIds: [0, -1] },
     });
 
@@ -157,7 +167,7 @@ describe("PublishNotificationEventUseCase — rules owned by the use case (R2)",
   it("ALL_ACTIVE_USERS is resolved via the directory port and converted to normalized USER_IDS", async () => {
     directory.activeIds = [5, 5, 6];
     const result = await useCase.execute({
-      ...baseCommand,
+      ...systemCommand,
       audience: { mode: "ALL_ACTIVE_USERS" },
     });
 
@@ -168,7 +178,7 @@ describe("PublishNotificationEventUseCase — rules owned by the use case (R2)",
 
   it("ALL_ACTIVE_USERS with no active users -> { 0, [] } short-circuit, no gateway call", async () => {
     directory.activeIds = [];
-    const result = await useCase.execute({ ...baseCommand, audience: { mode: "ALL_ACTIVE_USERS" } });
+    const result = await useCase.execute({ ...systemCommand, audience: { mode: "ALL_ACTIVE_USERS" } });
 
     expect(result).toEqual({ createdCount: 0, recipients: [] });
     expect(gateway.publishCalls).toHaveLength(0);
@@ -176,7 +186,7 @@ describe("PublishNotificationEventUseCase — rules owned by the use case (R2)",
 
   it("passes the rest of the command through untouched", async () => {
     await useCase.execute({
-      ...baseCommand,
+      ...systemCommand,
       data: { a: 1 },
       triggeredByUserId: 99,
     });
@@ -231,5 +241,58 @@ describe("pass-through use cases — ownership scope is in the signature (R2)", 
     const useCase = new DeleteUserNotificationUseCase(gateway);
     expect(await useCase.execute(7, 1)).toBe(false);
     expect(gateway.deleteCalls).toEqual([{ userId: 7, notificationId: 1 }]);
+  });
+});
+
+/** Base command com ator de SISTEMA — os testes de regra de publicação não são sobre autorização. */
+const systemCommand: PublishNotificationEventCommand = {
+  eventType: "TASK_DONE",
+  title: "Titulo",
+  message: "Mensagem",
+  audience: { mode: "USER_IDS", userIds: [2] },
+  actor: systemActor("SYSTEM_EVENT"),
+};
+
+describe("PublishNotificationEventUseCase — gate de MANAGE_NOTIFICATIONS (D4, B6-2b, DEC-54)", () => {
+  it("usuário SEM a permissão leva ForbiddenError e não chega ao gateway", async () => {
+    const gateway = new FakeGateway();
+    const useCase = new PublishNotificationEventUseCase(gateway, new FakeDirectory([1, 3]));
+    const error = await useCase
+      .execute({ ...systemCommand, actor: userActor(["VOLUNTARIO"]) })
+      .catch((e) => e);
+    expect(error).toBeInstanceOf(Error);
+    expect(error.message).toBe("Sem permissão para criar notificações");
+    expect(gateway.publishCalls).toEqual([]);
+  });
+
+  it("COORDENADOR e GERENTE publicam", async () => {
+    for (const roles of [["COORDENADOR"], ["GERENTE"]]) {
+      const gateway = new FakeGateway();
+      const useCase = new PublishNotificationEventUseCase(gateway, new FakeDirectory([1, 3]));
+      const result = await useCase.execute({ ...systemCommand, actor: userActor(roles) });
+      expect(result.createdCount).toBe(1);
+      expect(gateway.publishCalls).toHaveLength(1);
+    }
+  });
+
+  it("o gate vem ANTES da validação de título: sem permissão e título vazio é 403, não 400", async () => {
+    // A ordem é contrato medido: a rota checava permissão antes de parsear o corpo, e o
+    // `assertCanPublishEvent` da rota existe por causa disso (ver o use case dele).
+    const gateway = new FakeGateway();
+    const useCase = new PublishNotificationEventUseCase(gateway, new FakeDirectory([1, 3]));
+    const error = await useCase
+      .execute({ ...systemCommand, title: "", actor: userActor(["VOLUNTARIO"]) })
+      .catch((e) => e);
+    expect(error.message).toBe("Sem permissão para criar notificações");
+  });
+
+  it("o systemActor dos publishers internos publica — é o que impede o laboratório de emudecer", async () => {
+    // Sem este caso, o gate quebraria a notificação de issue do laboratório e a de relatório
+    // enviado, que são justamente os dois chamadores sem pessoa (DEC-54).
+    const gateway = new FakeGateway();
+    const useCase = new PublishNotificationEventUseCase(gateway, new FakeDirectory([1, 3]));
+    const result = await useCase.execute({ ...systemCommand, actor: systemActor("SYSTEM_EVENT") });
+    expect(result.createdCount).toBe(1);
+    expect(gateway.publishCalls[0].eventType).toBe("TASK_DONE");
   });
 });
