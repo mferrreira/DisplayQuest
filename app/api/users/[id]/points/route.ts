@@ -20,12 +20,24 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     const action = body?.action
     const points = Number(body?.points)
 
-    if (!Number.isFinite(points) || points < 0) {
+    // A ordem é do V4-6 (DEC-60) e não é cosmética: para saber se o número pode ser negativo a
+    // rota precisa conhecer a AÇÃO antes. Antes, `points < 0` vinha primeiro, e um corpo
+    // `{action:"bogus", points:-5}` denunciava o número em vez da ação inválida.
+    if (!["add", "remove", "set"].includes(action)) {
+      return NextResponse.json({ error: "Ação inválida" }, { status: 400 })
+    }
+
+    if (!Number.isFinite(points)) {
       return NextResponse.json({ error: "Pontos devem ser um número não negativo" }, { status: 400 })
     }
 
-    if (!["add", "remove", "set"].includes(action)) {
-      return NextResponse.json({ error: "Ação inválida" }, { status: 400 })
+    // DEC-60 (dono, 2026-10-05): `set` passa a aceitar negativo. Motivo medido: a premiação
+    // produz total negativo (DEC-39, penalidade sem piso — Coordenador em -20 e Gerente em
+    // -31030 na instância real), mas nenhum caminho de administração conseguia escrevê-lo de
+    // volta. `add` (chão em 0) e `remove` (exige suficiência) continuam não-negativos — o dono
+    // escolheu expressamente a alternativa estreita.
+    if (points < 0 && action !== "set") {
+      return NextResponse.json({ error: "Pontos devem ser um número não negativo" }, { status: 400 })
     }
 
     const user = await userManagementModule.updateUserPoints({

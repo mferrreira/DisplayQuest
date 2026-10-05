@@ -13,11 +13,12 @@
   },
   "baseline": {
     "measuredAt": "2026-10-05",
-    "measuredOn": "dev + V4-2 (antes do commit do lote)",
-    "unitAndFeatures": "76 arquivos / 957 testes",
-    "fullSuite": "86 arquivos / 1041 testes",
-    "archCheck": "767 modulos / 2919 dependencias, zero violacao, allow-list vazia",
-    "previousBaseline": "73/934 e 83/1017 em dev @ fe7b359; V4-1 levou a 76/948 e 86/1032; V4-2 somou 9 testes (23 no arquivo do contador, antes 14)",
+    "measuredOn": "dev + V4-6 (antes do commit do lote)",
+    "unitAndFeatures": "77 arquivos / 966 testes",
+    "fullSuite": "87 arquivos / 1050 testes",
+    "e2e": "12/12 verde (quadro 7/7) — estava 4/7 antes do V4-6",
+    "archCheck": "768 modulos / 2925 dependencias, zero violacao, allow-list vazia",
+    "previousBaseline": "73/934 e 83/1017 em dev @ fe7b359; V4-1 levou a 76/948 e 86/1032; V4-2 a 76/957 e 86/1041; V4-6 somou 1 arquivo e 9 testes",
     "timing": "completa ~47s, G3 ~35s (medidos em fe7b359; nao re-medidos neste lote)"
   },
   "gates": {
@@ -65,9 +66,17 @@
       "status": "pending",
       "decisions": ["DEC-57"],
       "scope": "criar/concluir subtask no card e no dialogo de detalhe; a UI desabilita o movimento ALEM de bloquear, nao em vez de."
+    },
+    {
+      "id": "V4-6",
+      "title": "pontos: `set` aceita negativo (a administração consegue escrever o que a premiação produz)",
+      "status": "done",
+      "decisions": ["DEC-60"],
+      "scope": "rota valida a ação antes do número e libera negativo só para `set`; use case idem; ModernAdminPanel libera o input para `set`. `add` e `remove` intactos."
     }
   ],
   "decisionRegistry": [
+    "DEC-60 (dono 2026-10-05, V4-6): PATCH /api/users/[id]/points passa a ACEITAR valor negativo quando a ação é `set`. Motivo medido: a premiação produz total negativo (DEC-39, penalidade sem piso — Coordenador em -20 e Gerente em -31030 na instância real), mas NENHUM caminho de administração conseguia escrever um negativo de volta: `add` chao em 0 via Math.max, `remove` exige suficiencia, `set` rejeitava entrada negativa — os tres congelados por teste. O dono escolheu a alternativa ESTREITA: so `set` ganha a capacidade; `add` e `remove` ficam como estavam. Consequencia medida e aceita: a rota passa a validar a AÇÃO antes do número, invertendo a precedência de dois 400 (hoje {action:'bogus', points:-5} denuncia o número; passa a denunciar a ação). Mudado em tres lugares: rota (ordem + condição), use case (ramo `set`) e UI (ModernAdminPanel: min='0' so para add/remove). O e2e do quadro, que estava vermelho porque a limpeza restaurava com set(-20) e recebia 400, ficou 7/7.",
     "DEC-55 (dono 2026-10-05, V4-1): DELETE /api/users/[id] passa a RECUSAR com ConflictError (409) quando o usuario tem dependencia, em vez de deixar o Prisma estourar P2003 e a rota devolver 500 com a mensagem crua no corpo. Cascade na migration foi rejeitado explicitamente pelo dono ('raramente a gente deleta um usuario de verdade' — a inativação é o caminho). Remover o endpoint foi considerado e rejeitado: o caso 'excluir cadastro sem historico' funciona hoje e continua funcionando. Medido antes: 16 das 23 FKs para users sao RESTRICT; usuarios 58 e 59 da base de teste falham com projects_createdBy_fkey e lab_responsibilities_userId_fkey. O caminho 'inactive' ja existe e nao foi criado aqui: lib/auth/config.ts:30 (login), lib/auth/server-auth.ts:36 (API), regras de laboratorio, bulk weekly reports, cron weekly reset, e 'Inativo' na UI em volunteers-management.tsx:404 e ModernAdminPanel.tsx:491.",
     "DEC-56 (dono 2026-10-05, V4-4): subtask soma à BASE da pontuação da mãe, e a penalidade de atraso CONTINUA fixa por dia. Formula: (10 + 10n) · (adiantada ? 1,5 : 1) − diasAtrasados · 10. A alternativa proporcional (dias · base) foi rejeitada: é a matemática pré-v3 que o plan-v3 corrigiu em OND1-B1 (DEC-31/32) porque comia os pontos de quem entregava no prazo. DEC-39 (sem piso) continua valendo sobre a base nova.",
     "DEC-57 (dono 2026-10-05, V4-4/V4-5): a trava 'a mãe não sai de Em Andamento enquanto houver subtask aberta' mora no DOMÍNIO e é aplicada no use case, devolvendo 400 com mensagem dizendo quantas subtasks faltam. Desabilitar só na UI foi rejeitado: a API aceitaria a mesma chamada e a regra existiria metade. A UI desabilita ALEM de bloquear, não em vez de.",
@@ -115,11 +124,32 @@
         "registrar a contagem por MutationObserver dentro da pagina, e nao por poll do Playwright: a animacao dura 1 s e o poll chega depois.",
         "a vida util do sinal e inclusiva na borda (`now - at <= LIFETIME`): avancar exatamente o prazo ainda deixa o sinal vivo. Teste de expiracao precisa de `+ 1`."
       ]
+    },
+    {
+      "id": "V4-6",
+      "at": "2026-10-05",
+      "title": "PATCH points: `set` passa a aceitar negativo — a administração consegue escrever o que a premiação produz (DEC-60)",
+      "actions": [
+        "medido antes de planejar: rejeitavam em DOIS lugares. Rota (app/api/users/[id]/points/route.ts:24) com `points < 0` ANTES do check de ação — entao nem add/remove negativos chegavam ao use case. Use case: o ramo `set` tambem rejeitava. Os tres comportamentos congelados por teste em use-cases.user-management.test.ts:307,311.",
+        "medido na instância real: Coordenador -20, Laboratorista -6190, Gerente -31030 (DEC-39). Nenhum caminho de administração conseguia escrever um total negativo de volta.",
+        "teste escrito ANTES do codigo (tests/unit/api/user-points-negative-set.test.ts): contra a producao vigente falhou 4/8, e a falha e a medicao — inclusive a precedencia dos 400.",
+        "rota passa a validar a AÇÃO antes do número. Consequencia aceita: {action:'bogus', points:-5} deixa de denunciar o número e passa a denunciar a ação. Fixado em teste.",
+        "use case: ramo `set` sem checagem de suficiência e sem checagem de sinal. `add` (Math.max 0) e `remove` (suficiencia) continuam intactos — o dono escolheu a alternativa estreita.",
+        "UI: ModernAdminPanel tinha `min=\"0\"` fixo no input de pontos; passa a `min` condicionado à ação (livre para `set`, 0 para add/remove) + aviso na legenda. Sem isso a capacidade nova nao seria alcançável pela interface que o dono usa. Registrado: ModernAdminPanel nao tem teste nenhum.",
+        "quirk novo medido ao escrever o teste, NAO corrigido: JSON não tem Infinity — JSON.stringify(Infinity) devolve null, e Number(null) é 0. Um corpo {action:'set', points:null} zera os pontos de um usuário em vez de ser recusado. Fixado como caraterização e aberto como ASK-V4-06.",
+        "e2e do quadro ficou 7/7 (e a suíte e2e inteira 12/12) exatamente porque a limpeza, que restaurava com set(-20) e recebia 400 engolido por .catch(() => {}), voltou a funcionar. Consequência colateral medida antes: cada corrida subia o total do Coordenador em 10 sem restaurar — foi assim que ele foi de -20 a 0. O dono decidiu NAO restaurar para -20.",
+        "verificado por mutacao: voltar a recusar negativo na rota e no use case derruba 3 testes."
+      ],
+      "gates": "G0 768/2925 zero violacao | G1 sem erro | G2 0 erros | G3 77/966 | G4 87/1050 | e2e 12/12 (quadro 7/7)",
+      "gotchas": [
+        "JSON nao transporta Infinity: vira null, e Number(null) é 0. Teste que envia Infinity num corpo JSON recebe 200 com points 0, nao 400.",
+        "a ordem das validações da rota é comportamento observável: quem manda ação inválida com número inválido recebe a mensagem da que vier primeiro."
+      ]
     }
   ],
   "openQuestions": [
-    "ASK-V4-05 (aberto, bloqueia o e2e do quadro ficar verde): a API de pontos NAO consegue expressar um total negativo, e o caminho de premiacao produz totais negativos. Medido: UpdateUserPointsUseCase — 'add' chao em 0 via Math.max, 'remove' exige suficiencia (user.points < command.points -> ValidationError), 'set' rejeita entrada negativa; os tres congelados por teste em tests/unit/modules/user-management/use-cases.user-management.test.ts:307,311. Na instancia real, Coordenador esta em -20 e Gerente em -31030 (DEC-39, penalidade sem piso). Consequencia medida: a limpeza do e2e (PATCH /api/users/[id]/points {action:'set', points: -20}) devolve 400 e o teste falha. As tres saidas possiveis estao em PLAN.md §5: permitir 'set' negativo, dar ao e2e uma saida pelo Prisma, ou aceitar a deriva.",
-    "D-D (escopo da subtask na v1) — RESPONDIDA em 2026-10-05: sem responsavel proprio, sem prazo proprio (herda da mae), so em tarefa delegada (fora de publica e de quest global), criada JUNTO com a mae no mesmo formulario, sem efeito em evaluateUserBadges. V4-4 esta destravado."
+    "ASK-V4-06 (aberto, aberto por acaso ao escrever o teste do V4-6): um corpo {action:'set', points:null} zera os pontos de um usuario em vez de ser recusado. Causa medida: JSON nao tem Infinity, JSON.stringify(Infinity) devolve null, e Number(null) é 0 — a checagem `!Number.isFinite(points)` nunca vê o null. Fixado como caraterização em tests/unit/api/user-points-negative-set.test.ts. Recusar null explicitamente é uma linha; é mudanca de contrato e por isso nao foi feita sem o dono.",
+    "ModernAdminPanel.tsx (~1000 linhas) nao tem teste nenhum, e foi tocado no V4-6 (o input de pontos passou a ter `min` condicionado à ação). A mudanca esta coberta so pelo gate de tipos. Registrar se o dono quer teste de UI para esse painel antes de mexer nele de novo."
   ],
   "blockers": [],
   "removedItems": [],
@@ -127,6 +157,9 @@
     { "id": "ASK-V4-01", "question": "o que fazer com DELETE /api/users/[id]", "answer": "recusar com 409 quando houver dependencia (DEC-55)", "answeredAt": "2026-10-05" },
     { "id": "ASK-V4-02", "question": "como o +10 por subtask convive com a penalidade de atraso", "answer": "soma à base, penalidade continua fixa por dia (DEC-56)", "answeredAt": "2026-10-05" },
     { "id": "ASK-V4-03", "question": "onde mora a trava da task mãe", "answer": "no dominio, aplicada no use case, com 400 e mensagem (DEC-57)", "answeredAt": "2026-10-05" },
-    { "id": "ASK-V4-04", "question": "animar toda mudança de pontos, mudando o significado do número", "answer": "aceito (DEC-58)", "answeredAt": "2026-10-05" }
+    { "id": "ASK-V4-04", "question": "animar toda mudança de pontos, mudando o significado do número", "answer": "aceito (DEC-58)", "answeredAt": "2026-10-05" },
+    { "id": "ASK-V4-05", "question": "a API de pontos não expressa total negativo, mas a premiação produz — o que fazer", "answer": "permitir `set` negativo; `add` e `remove` ficam como estavam (DEC-60)", "answeredAt": "2026-10-05" },
+    { "id": "ASK-V4-05b", "question": "restaurar o total do Coordenador para -20, depois que as corridas de e2e o levaram a 0", "answer": "não — deixar como está", "answeredAt": "2026-10-05" },
+    { "id": "ASK-V4-01b", "question": "D-D: escopo da subtask na v1 (responsável, prazo, pública/global, criação, badge)", "answer": "sem responsável próprio, sem prazo próprio (herda da mãe), só em tarefa delegada, criada JUNTO com a mãe no mesmo formulário, sem efeito em evaluateUserBadges", "answeredAt": "2026-10-05" }
   ]
 }

@@ -5,7 +5,7 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
 
 ## Verificação
 
-- **Gate de entrega:** `npm run arch:check` (exit 0, allow-list **vazia**) && `npm run lint` (nada de erro) && `npx tsc --noEmit` (0) && `npx vitest run` (zero failure). A contagem é **por branch**: no `dev` o baseline era **64 arquivos / 721 testes** quando o B8 removeu os 651 testes de paridade; no `plan/v3-operacional`, medido no encerramento do plan-v3 (2026-10-03), são **65 arquivos / 798 testes** em `tests/unit` + `features` e **75 / 881** na suíte completa. Na `dev` de hoje (2026-10-05, depois do merge do B6-0..B6-2b) são **73 arquivos / 934 testes** e **83 / 1017** na suíte completa. Compare sempre com o `STATE.json` do plano em que você está.
+- **Gate de entrega:** `npm run arch:check` (exit 0, allow-list **vazia**) && `npm run lint` (nada de erro) && `npx tsc --noEmit` (0) && `npx vitest run` (zero failure). A contagem é **por branch**: no `dev` o baseline era **64 arquivos / 721 testes** quando o B8 removeu os 651 testes de paridade; no `plan/v3-operacional`, medido no encerramento do plan-v3 (2026-10-03), são **65 arquivos / 798 testes** em `tests/unit` + `features` e **75 / 881** na suíte completa. Na `dev` de hoje (2026-10-05, depois do plan-v4 V4-1/V4-2/V4-6) são **77 arquivos / 966 testes** e **87 / 1050** na suíte completa; a suíte e2e está **12/12**. Compare sempre com o `STATE.json` do plano em que você está.
 - **G4/integração:** roundtrips Prisma real rodam **só** contra o banco de teste isolado `dq-dev-test-db` em `127.0.0.1:5433` (`$env:DATABASE_URL="postgresql://dq_dev:dq_dev_local_only@127.0.0.1:5433/dq_dev_test"; npx vitest run`) — nunca contra o `display-quest-db` (5432, produção local).
 - **Setup do G4 (corrigido 2026-10-02):** `npm run db:test:up` e `npm run db:test:setup` **existem**
   no `package.json` e fazem a sequência completa (`docker compose -f docker-compose.test.yml up -d`,
@@ -131,11 +131,16 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
   das asserções de coluna (orçamento de 15 s), senão o chip já expirou e o locator não acha nada.
   E a contagem do total se prova com um `MutationObserver` instalado **antes** da ação — poll do
   Playwright chega depois do segundo em que a animação acontece.
-- **A API de pontos não expressa total negativo** (`add` chao em 0, `remove` exige suficiencia,
-  `set` rejeita negativo — os três congelados por teste), mas a premiação produz totais negativos
-  (DEC-39; medido: Coordenador em −20, Gerente em −31030). Consequência: um administrador não
-  consegue ajustar um usuário de volta a um valor negativo. Registrado como `ASK-V4-05` em
-  `displayquest-v2/plan-v4/PLAN.md` §5.2.
+- **`set` de pontos aceita negativo (DEC-60, 2026-10-05):** `PATCH /api/users/[id]/points` com
+  `action: "set"` aceita valor negativo, porque a premiação produz totais negativos (DEC-39;
+  medido: Coordenador −20, Gerente −31030) e a administração não conseguia escrever um de volta.
+  `add` (chão em 0 via `Math.max`) e `remove` (exige suficiência) **continuam** não-negativos. A
+  rota valida a **ação antes do número** — necessário para saber se o negativo é permitido, e
+  inverte a precedência de dois 400. O input do `ModernAdminPanel` tem `min` condicionado à ação.
+- **Quirk aberto (ASK-V4-06):** `{action:"set", points: null}` zera os pontos em vez de recusar —
+  JSON não tem `Infinity`, `JSON.stringify(Infinity)` é `null`, e `Number(null)` é `0`.
+- **`components/admin/ModernAdminPanel.tsx` não tem teste nenhum** (~1000 linhas). Mudança nele é
+  coberta só por `tsc`.
 
 ## Perfil do sistema (2026-09-05)
 

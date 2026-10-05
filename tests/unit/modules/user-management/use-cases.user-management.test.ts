@@ -312,6 +312,16 @@ describe("UpdateUserPointsUseCase", () => {
     });
     expect(((await useCase().execute({ userId: 1, action: "set", points: 42 })) as { points: number }).points).toBe(42);
   });
+
+  it("V4-6 (DEC-60): set aceita negativo — a premiação produz total negativo (DEC-39) e a administração precisava escrevê-lo de volta", async () => {
+    expect(((await useCase().execute({ userId: 1, action: "set", points: -20 })) as { points: number }).points).toBe(-20);
+    // Sem checagem de suficiência: `set` não tira nada de ninguém, é valor absoluto. Um usuário
+    // em 0 vai para -31030 sem objeção — é exatamente o estado medido no Gerente da instância.
+    expect(((await useCase().execute({ userId: 1, action: "set", points: -31030 })) as { points: number }).points).toBe(-31030);
+    // As outras duas ações continuam como estavam.
+    expect(((await useCase().execute({ userId: 1, action: "set", points: 50 })) as { points: number }).points).toBe(50);
+    expect(((await useCase().execute({ userId: 1, action: "add", points: -60 })) as { points: number }).points).toBe(0);
+  });
 });
 
 describe("DeductUserHoursUseCase", () => {

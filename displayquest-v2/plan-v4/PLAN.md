@@ -173,6 +173,7 @@ Três ressalvas que precisam ser decididas junto:
 | **V4-3** | animação chega a quem não aprovou (baseline em `dq:points-seen:<userId>`) | médio — é mudança de semântica, DEC-58 já respondida | pendente |
 | **V4-4** | subtasks: schema + migration + domínio (`+10` na base, trava de status) | **alto** — schema novo, regra nova, **bloqueia em D-D** | pendente |
 | **V4-5** | subtasks na UI (criar/concluir/travar no card e no diálogo) | alto | pendente |
+| **V4-6** | `PATCH points`: `set` aceita negativo (a administração escreve o que a premiação produz) | médio — mexe em quirk congelado e na precedência de dois 400 | **done** (2026-10-05) |
 
 V4-1 está fechado. V4-2 e V4-3 são o mesmo arquivo e devem ir juntos se o dono quiser. V4-4/5
 precisam de D-D antes.
@@ -233,14 +234,36 @@ Ou seja: **o caminho de premiação escreve totais negativos no banco, e nenhum 
 administração consegue escrevê-los de volta.** Um coordenador que ficou em −20 por atraso não pode
 ser ajustado para −20 por um administrador — só para 0 ou para cima.
 
-Isso é uma inconsistência do produto, não só do teste. Três saídas:
+Isso é uma inconsistência do produto, não só do teste. Três saídas foram postas:
 
-| opção | o que muda |
-|---|---|
-| **E1 — permitir `set` negativo** | alinha a API com DEC-39; mexe num quirk congelado (3 testes movem) |
-| E2 — dar ao e2e uma saída pelo Prisma | o teste recupera o baseline escrevendo direto; a inconsistência do produto continua |
-| E3 — aceitar a deriva | o e2e para de restaurar; cada corrida deixa +10 no Coordenador da sua máquina |
+| opção | o que muda | decisão |
+|---|---|---|
+| **E1 — permitir `set` negativo** | alinha a API com DEC-39; mexe num quirk congelado | ✅ **escolhida (DEC-60)** |
+| E2 — dar ao e2e uma saída pelo Prisma | o teste recupera o baseline escrevendo direto; a inconsistência do produto continua | rejeitada |
+| E3 — aceitar a deriva | cada corrida deixa +10 no Coordenador | rejeitada |
 
-Nenhuma foi executada. É decisão do dono.
+Executado no **V4-6**. A suíte do quadro passou de 4/7 para **7/7**, e a suíte e2e inteira para
+**12/12**. Consequência medida antes da correção: cada corrida subia o total do Coordenador em 10
+sem restaurar — foi assim que ele foi de −20 para 0. O dono decidiu **não** restaurar para −20.
+
+---
+
+## 6. Aberto pelo V4-6 e ainda não decidido
+
+**`{action:"set", points: null}` zera os pontos de um usuário em vez de ser recusado.**
+
+Causa medida ao escrever o teste do V4-6 — a primeira versão do caso assumiu que `Infinity`
+chegava como `Infinity` e passou com 200:
+
+- JSON não tem `Infinity`: `JSON.stringify(Infinity)` devolve `null`;
+- `Number(null)` é `0`, que é finito e passa pela checagem `!Number.isFinite(points)`.
+
+Recusar `null` explicitamente é uma linha. Não foi feito porque é mudança de contrato, e o lote
+estava autorizado só para o `set` negativo. Está fixado como caraterização em
+`tests/unit/api/user-points-negative-set.test.ts` para não desaparecer como surpresa.
+
+**`components/admin/ModernAdminPanel.tsx` (~1000 linhas) não tem teste nenhum**, e o V4-6 tocou
+nele: o input de pontos passou a ter `min` condicionado à ação. A mudança está coberta só pelo
+gate de tipos.
 
 </content>

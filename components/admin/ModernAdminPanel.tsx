@@ -987,7 +987,12 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
                     </Select>
                     <Input
                       type="number"
-                      min="0"
+                      // DEC-60: "Definir" é valor absoluto e aceita negativo, porque a premiação
+                      // pode deixar o total de alguém negativo (DEC-39, penalidade sem piso) e a
+                      // administração precisava conseguir escrever esse valor de volta.
+                      // "Adicionar"/"Remover" continuam não-negativos — o chão em 0 e a
+                      // suficiência são regras próprias dessas duas ações.
+                      min={userPointsAction === "set" ? undefined : "0"}
                       value={userPointsValue}
                       onChange={(e) => setUserPointsValue(e.target.value)}
                       className="flex-1"
@@ -995,6 +1000,7 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
                     Atual: {selectedUserForSettings.points ?? 0} pontos
+                    {userPointsAction === "set" ? " · “Definir” aceita valor negativo" : ""}
                   </p>
                 </div>
               </div>
