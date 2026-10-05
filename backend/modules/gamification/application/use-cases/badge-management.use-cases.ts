@@ -1,5 +1,12 @@
 import type { Badge, UserBadge } from "@/backend/domain"
-import { ConflictError, NotFoundError, applyBadgeUpdate, validateBadgeCreateInput } from "@/backend/domain"
+import {
+  ConflictError,
+  NotFoundError,
+  ValidationError,
+  applyBadgeUpdate,
+  assertPermission,
+  validateBadgeCreateInput,
+} from "@/backend/domain"
 import type {
   AwardBadgeCommand,
   CreateBadgeCommand,
@@ -36,17 +43,38 @@ export class GetBadgeByIdUseCase {
 export class CreateBadgeUseCase {
   constructor(private readonly badges: BadgeCatalogPort) {}
 
-  async execute(command: CreateBadgeCommand): Promise<Badge> {
+  async execute(command: CreateBadgeCommand & { actorRoles: unknown }): Promise<Badge> {
+    // B6-2a (D4, DEC-53): o gate de MANAGE_REWARDS desceu da rota para aqui. A rota legacy
+    // passava a mensagem "Sem permissão para criar badges", e ela é o que o 403continua
+    // mostrando — o texto não pode mudar, só o dono da decisão.
+    assertPermission(command.actorRoles, "MANAGE_REWARDS", "Sem permissão para criar badges")
     const data = validateBadgeCreateInput(command)
     return await this.badges.create(data)
   }
 }
 
+/**
+ * B6-2a (DEC-53) — a validação do id saiu da rota e entrou aqui, DEPOIS do gate.
+ *
+ * A rota legacy fazia `ensurePermission` → `Number(params.id)` → 400 "Badge inválido". Se a
+ * validação ficasse na rota, ela rodaria antes da chamada e quem não tem permissão receberia
+ * 400 em vez de 403. Com o id validado no use case, a ordem do contrato é preservada e o 400
+ * continua sendo 400 — com o corpo acrescido de `code`/`details`, que é o superset documentado.
+ */
+function requireBadgeId(id: unknown): number {
+  if (!Number.isInteger(id) || (id as number) <= 0) {
+    throw new ValidationError("Badge inválido")
+  }
+  return id as number
+}
+
 export class UpdateBadgeUseCase {
   constructor(private readonly badges: BadgeCatalogPort) {}
 
-  async execute(command: UpdateBadgeCommand): Promise<Badge> {
-    const current = await this.badges.findById(command.id)
+  async execute(command: UpdateBadgeCommand & { actorRoles: unknown }): Promise<Badge> {
+    assertPermission(command.actorRoles, "MANAGE_REWARDS", "Sem permissão para atualizar badges")
+    const id = requireBadgeId(command.id)
+    const current = await this.badges.findById(id)
     if (!current) {
       throw new NotFoundError("Badge não encontrado")
     }
@@ -59,7 +87,9 @@ export class UpdateBadgeUseCase {
 export class DeleteBadgeUseCase {
   constructor(private readonly badges: BadgeCatalogPort) {}
 
-  async execute(id: number): Promise<void> {
+  async execute(command: { actorRoles: unknown; id: number }): Promise<void> {
+    assertPermission(command.actorRoles, "MANAGE_REWARDS", "Sem permissão para excluir badges")
+    const id = requireBadgeId(command.id)
     const badge = await this.badges.findById(id)
     if (!badge) {
       throw new NotFoundError("Badge não encontrado")

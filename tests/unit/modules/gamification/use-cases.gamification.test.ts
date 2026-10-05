@@ -6,7 +6,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { DomainError, NotFoundError } from "@/backend/domain";
+import { DomainError, ForbiddenError, NotFoundError } from "@/backend/domain";
 import type { Badge, UserBadge } from "@/backend/domain";
 import { createGamificationModule } from "@/backend/modules/gamification";
 import type { BadgeCatalogPort } from "@/backend/modules/gamification/application/ports/badge-catalog.port";
@@ -14,6 +14,15 @@ import type { AwardRecord, GamificationAwardHistoryPort } from "@/backend/module
 import type { GamificationUsersPort } from "@/backend/modules/gamification/application/ports/gamification-users.port";
 import type { UserBadgeCreateData, UserBadgePort } from "@/backend/modules/gamification/application/ports/user-badge.port";
 import type { UserStatsPort, WeeklyHoursSample } from "@/backend/modules/gamification/application/ports/user-stats.port";
+
+/**
+ * B6-2a (D4, DEC-53): os use cases de escrita de badge agora EXIGEM MANAGE_REWARDS e recebem o
+ * ator no comando. `COORDENADOR` tem a permissão (matriz real em
+ * `backend/domain/identity/permissions.ts`); o papel sem nenhuma permissão de gestão é
+ * `VOLUNTARIO`, usado nos casos de negação logo abaixo do bloco "badge management".
+ */
+const MANAGER_ROLES = ["COORDENADOR"];
+const NO_MANAGEMENT_ROLES = ["VOLUNTARIO"];
 
 // ---------------------------------------------------------------------------
 // Fakes de portas (com registro de chamadas)
@@ -349,11 +358,14 @@ describe("EvaluateUserBadgesUseCase", () => {
 
 describe("badge management use cases", () => {
   it("CreateBadgeUseCase: valida (mensagem legada) e entrega dados normalizados ao port", async () => {
-    await expect(module_.createBadge({ name: "  ", description: "d", category: "social", createdBy: 1 })).rejects.toThrow(
+    await expect(
+      module_.createBadge({ actorRoles: MANAGER_ROLES, name: "  ", description: "d", category: "social", createdBy: 1 }),
+    ).rejects.toThrow(
       "Nome do badge é obrigatório",
     );
 
     const badge = await module_.createBadge({
+      actorRoles: MANAGER_ROLES,
       name: " Novo ",
       description: " desc ",
       category: "milestone",
@@ -365,7 +377,7 @@ describe("badge management use cases", () => {
   });
 
   it("UpdateBadgeUseCase: NotFound legado + merge parcial", async () => {
-    await expect(module_.updateBadge({ id: 999, data: { name: "x" } })).rejects.toThrow("Badge não encontrado");
+    await expect(module_.updateBadge({ actorRoles: MANAGER_ROLES, id: 999, data: { name: "x" } })).rejects.toThrow("Badge não encontrado");
 
     fakes.badges.store.push({
       id: 1,
@@ -378,17 +390,90 @@ describe("badge management use cases", () => {
       isActive: true,
       createdBy: 1,
     });
-    const updated = await module_.updateBadge({ id: 1, data: { name: "Novo", isActive: false } });
+    const updated = await module_.updateBadge({ actorRoles: MANAGER_ROLES, id: 1, data: { name: "Novo", isActive: false } });
     expect(updated.name).toBe("Novo");
     expect(updated.isActive).toBe(false);
     expect(updated.criteria).toEqual({ tasks: 2 });
   });
 
   it("DeleteBadgeUseCase: NotFound legado; existente remove", async () => {
-    await expect(module_.deleteBadge(999)).rejects.toThrow("Badge não encontrado");
+    await expect(module_.deleteBadge({ actorRoles: MANAGER_ROLES, id: 999 })).rejects.toThrow("Badge não encontrado");
     fakes.badges.store.push({ id: 1, name: "a", description: "d", category: "social", isActive: true, createdBy: 1 });
-    await module_.deleteBadge(1);
+    await module_.deleteBadge({ actorRoles: MANAGER_ROLES, id: 1 });
     expect(fakes.badges.store).toHaveLength(0);
+  });
+
+  // -------------------------------------------------------------------------
+  // B6-2a (D4, DEC-53) — o gate de MANAGE_REWARDS desceu da rota para estes use
+  // cases. As mensagens são as MESMAS que a rota legacy passava ao ensurePermission:
+  // são elas que o 403 continua mostrando, e a ordem (permissão antes de validação)
+  // é o que mantém o contrato dos status.
+  // -------------------------------------------------------------------------
+
+  it("CreateBadgeUseCase: sem MANAGE_REWARDS lança ForbiddenError com a mensagem legada", async () => {
+    await expect(
+      module_.createBadge({
+        actorRoles: NO_MANAGEMENT_ROLES,
+        name: "Qualquer",
+        description: "d",
+        category: "social",
+        createdBy: 1,
+      }),
+    ).rejects.toThrow(ForbiddenError);
+    await expect(
+      module_.createBadge({
+        actorRoles: NO_MANAGEMENT_ROLES,
+        name: "Qualquer",
+        description: "d",
+        category: "social",
+        createdBy: 1,
+      }),
+    ).rejects.toThrow("Sem permissão para criar badges");
+    expect(fakes.badges.created).toHaveLength(0);
+  });
+
+  it("UpdateBadgeUseCase: sem MANAGE_REWARDS lança ForbiddenError com a mensagem legada", async () => {
+    await expect(
+      module_.updateBadge({ actorRoles: NO_MANAGEMENT_ROLES, id: 1, data: { name: "x" } }),
+    ).rejects.toThrow("Sem permissão para atualizar badges");
+  });
+
+  it("DeleteBadgeUseCase: sem MANAGE_REWARDS lança ForbiddenError com a mensagem legada", async () => {
+    fakes.badges.store.push({ id: 1, name: "a", description: "d", category: "social", isActive: true, createdBy: 1 });
+    await expect(module_.deleteBadge({ actorRoles: NO_MANAGEMENT_ROLES, id: 1 })).rejects.toThrow(
+      "Sem permissão para excluir badges",
+    );
+    // a porta nunca foi chamada: o gate barra antes do trabalho
+    expect(fakes.badges.store).toHaveLength(1);
+  });
+
+  it("gate vem ANTES da validação: sem permissão o id inválido é 403, não 400", async () => {
+    // A rota legacy rodava ensurePermission antes de Number(params.id); se a ordem
+    // invertesse, quem não tem permissão receberia 400 "Badge inválido".
+    await expect(module_.updateBadge({ actorRoles: NO_MANAGEMENT_ROLES, id: NaN, data: {} })).rejects.toThrow(
+      "Sem permissão para atualizar badges",
+    );
+    await expect(module_.deleteBadge({ actorRoles: NO_MANAGEMENT_ROLES, id: NaN })).rejects.toThrow(
+      "Sem permissão para excluir badges",
+    );
+    // com permissão, o id inválido volta a ser o 400 de ValidationError
+    await expect(module_.updateBadge({ actorRoles: MANAGER_ROLES, id: NaN, data: {} })).rejects.toThrow("Badge inválido");
+    await expect(module_.updateBadge({ actorRoles: MANAGER_ROLES, id: 0, data: {} })).rejects.toThrow("Badge inválido");
+    await expect(module_.deleteBadge({ actorRoles: MANAGER_ROLES, id: -1 })).rejects.toThrow("Badge inválido");
+  });
+
+  it("papel sujo nega em vez de estourar: assertPermission recebe a sessão como veio", async () => {
+    // `actorRoles` é `unknown` de propósito: a regra nunca lança sobre entrada suja
+    // (papel desconhecido = negação). Denegar é o comportamento, não um crash.
+    await expect(module_.createBadge({ actorRoles: undefined, name: "N", description: "d", category: "social", createdBy: 1 })).rejects.toThrow(
+      "Sem permissão para criar badges",
+    );
+    await expect(module_.createBadge({ actorRoles: "COORDENADOR", name: "N", description: "d", category: "social", createdBy: 1 })).rejects.toThrow(
+      "Sem permissão para criar badges",
+    );
+    await expect(module_.createBadge({ actorRoles: [], name: "N", description: "d", category: "social", createdBy: 1 })).rejects.toThrow(
+      "Sem permissão para criar badges",
+    );
   });
 
   it("ListRecentUserBadgesUseCase: default limit 10 (frozen golden)", async () => {

@@ -39,6 +39,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { createIdentityAccessModule } from "@/backend/modules/identity-access";
+import { createStoreModule } from "@/backend/modules/store";
+import type { PurchaseRepository } from "@/backend/modules/store/application/ports/purchase.repository";
+import type { RewardRepository } from "@/backend/modules/store/application/ports/reward.repository";
 
 const mocks = vi.hoisted(() => {
   const state = {
@@ -49,6 +52,9 @@ const mocks = vi.hoisted(() => {
     issueExiste: true,
     canEndResponsibility: true,
     listPurchasesDenied: null as null | string,
+    /** B6-2a: catálogo do duplo da porta de rewards (ver o factory do composition root). */
+    rewards: [] as Array<Record<string, unknown>>,
+    rewardSequence: 0,
   };
 
   const entidade = (payload: Record<string, unknown>) => ({ ...payload, toJSON: () => payload });
@@ -77,18 +83,24 @@ const mocks = vi.hoisted(() => {
       slots.map((slot, index) => entidade({ id: index, ...(slot as object) })),
   };
 
+  /**
+   * B6-2a (D4, DEC-53) — `store` deixou de ser um duplo único.
+   *
+   * As 6 escritas/leituras de **reward** saíram daqui porque o gate de MANAGE_REWARDS desceu
+   * para o use case: um duplo de módulo não decide nada, e o 403 leaving these routes deixou
+   * de existir no teste. Elas agora são os métodos do MÓDULO REAL sobre a porta falsa montada
+   * no factory do composition root. É a mesma forma de `cron-status-roles.test.ts`.
+   *
+   * `listPurchases`/`createPurchase` continuam dobrados porque o B6-2d ainda não aconteceu: lá
+   * a decisão é da ROTA (`hasPermission`), e o duplo é a costura certa. Quando o B6-2d mover o
+   * gate, estes dois também saem daqui para o módulo real.
+   */
   const store = {
     listPurchases: async () =>
       state.listPurchasesDenied
         ? { denied: true, message: state.listPurchasesDenied }
         : { denied: false, purchases: [{ id: 1, userId: 42 }] },
     createPurchase: async (data: Record<string, unknown>) => ({ id: 7, ...data }),
-    listRewards: async () => [{ id: 1, name: "Recompensa" }],
-    createReward: async (data: Record<string, unknown>) => ({ id: 3, ...data }),
-    getReward: async (id: number) => (id === 999 ? null : { id, name: "Recompensa" }),
-    updateReward: async (id: number, data: Record<string, unknown>) => ({ id, ...data }),
-    patchReward: async ({ rewardId }: { rewardId: number }) => ({ id: rewardId, patched: true }),
-    deleteReward: async (_id: number) => undefined,
   };
 
   const projectManagement = {
@@ -107,17 +119,81 @@ const mocks = vi.hoisted(() => {
   return { state, labOperations, store, projectManagement, reporting, taskManagement };
 });
 
-vi.mock("@/backend/composition/root", () => ({
-  getBackendComposition: () => ({
-    // módulo REAL: a matriz de permissões exercitada aqui é a de produção
-    identityAccess: createIdentityAccessModule(),
-    labOperations: mocks.labOperations,
-    store: mocks.store,
-    projectManagement: mocks.projectManagement,
-    reporting: mocks.reporting,
-    taskManagement: mocks.taskManagement,
-  }),
-}));
+vi.mock("@/backend/composition/root", () => {
+  /**
+   * Porta falsa de rewards. O que ela NÃO faz é decidir autorização: o 403 vem do use case
+   * real, e é exatamente esse o ponto do B6-2a — a rota deixou de ser a dona da decisão.
+   */
+  const rewards: RewardRepository = {
+    async findAll() {
+      return mocks.state.rewards as never;
+    },
+    async findById(id) {
+      return (mocks.state.rewards.find((r) => r.id === id) as never) ?? null;
+    },
+    async create(input) {
+      const reward = { id: ++mocks.state.rewardSequence, ...(input as object) };
+      mocks.state.rewards.push(reward);
+      return reward as never;
+    },
+    async update(id, fields) {
+      const index = mocks.state.rewards.findIndex((r) => r.id === id);
+      const next = { ...mocks.state.rewards[index], ...(fields as object) };
+      mocks.state.rewards[index] = next;
+      return next as never;
+    },
+    async delete(id) {
+      mocks.state.rewards.splice(
+        mocks.state.rewards.findIndex((r) => r.id === id),
+        1,
+      );
+    },
+  };
+
+  // `createStoreModule` constrói os 12 use cases, então a porta de compras precisa existir —
+  // mas listPurchases/createPurchase são sobrescritos pelo duplo abaixo, e nenhum outro
+  // método de compra é alcançado por estas 13 rotas. Se um dia for, o duplo falha alto.
+  const notUsed = (name: string) => (): never => {
+    throw new Error(`porta de compras não deveria ser usada neste teste: ${name}`);
+  };
+  const purchases = {
+    findById: notUsed("findById"),
+    findAll: notUsed("findAll"),
+    findByUserId: notUsed("findByUserId"),
+    findByRewardId: notUsed("findByRewardId"),
+    findByStatus: notUsed("findByStatus"),
+    findUserById: notUsed("findUserById"),
+    createWithPointDeduction: notUsed("createWithPointDeduction"),
+    update: notUsed("update"),
+    delete: notUsed("delete"),
+    refundPoints: notUsed("refundPoints"),
+  } as unknown as PurchaseRepository;
+
+  const realStore = createStoreModule({ ports: { rewards, purchases } });
+
+  return {
+    getBackendComposition: () => ({
+      // módulo REAL: a matriz de permissões exercitada aqui é a de produção
+      identityAccess: createIdentityAccessModule(),
+      labOperations: mocks.labOperations,
+      // B6-2a: os 6 métodos de reward são os do módulo real (o gate mora no use case);
+      // os 2 de compra seguem dobrados até o B6-2d, quando a rota ainda decide.
+      store: {
+        listRewards: realStore.listRewards,
+        getReward: realStore.getReward,
+        createReward: realStore.createReward,
+        updateReward: realStore.updateReward,
+        patchReward: realStore.patchReward,
+        deleteReward: realStore.deleteReward,
+        listPurchases: mocks.store.listPurchases,
+        createPurchase: mocks.store.createPurchase,
+      },
+      projectManagement: mocks.projectManagement,
+      reporting: mocks.reporting,
+      taskManagement: mocks.taskManagement,
+    }),
+  };
+});
 
 // Só a identidade é dobrada. `requireApiActor`, `ensurePermission`, `ensureAnyRole` e
 // `hasPermission` continuam sendo os de produção.
@@ -170,6 +246,10 @@ beforeEach(() => {
   mocks.state.issueExiste = true;
   mocks.state.canEndResponsibility = true;
   mocks.state.listPurchasesDenied = null;
+  // B6-2a: o catálogo do módulo real começa com a recompensa 1 (as rotas pedem /api/rewards/1)
+  // e nada com id 999 — é assim que o "404 não encontrado" é exercitado de verdade.
+  mocks.state.rewards = [{ id: 1, name: "Recompensa", price: 30, available: true }];
+  mocks.state.rewardSequence = 1;
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
@@ -424,19 +504,38 @@ describe("store — /api/purchases", () => {
 });
 
 describe("store — /api/rewards", () => {
-  it("GET é leitura aberta", async () => {
+  it("GET é leitura de catálogo: sessão, não permissão", async () => {
     login(["VOLUNTARIO"]);
     expect((await rewardsList()).status).toBe(200);
   });
 
   it("POST exige MANAGE_REWARDS; VOLUNTARIO barrado", async () => {
     login(["LABORATORISTA"]);
-    expect((await rewardsCreate(request("/api/rewards", { method: "POST", body: { name: "R" } }))).status).toBe(201);
+    expect((await rewardsCreate(request("/api/rewards", { method: "POST", body: { name: "R", price: 10 } }))).status).toBe(201);
 
+    login(["VOLUNTARIO"]);
+    const denied = await rewardsCreate(request("/api/rewards", { method: "POST", body: { name: "R", price: 10 } }));
+    expect(denied.status).toBe(403);
+    // B6-2a (DEC-53): o corpo do 403 passou a ser {error, code, details}. A mensagem e o
+    // status são os mesmos de quando a rota decidia — o acréscimo é o superset do OND8-B4.
+    expect(await body(denied)).toMatchObject({ error: "Acesso negado", code: "FORBIDDEN" });
+  });
+
+  it("POST: o gate vem ANTES da validação do payload (403 não vira 400)", async () => {
+    // CORREÇÃO DE MEDIÇÃO (B6-0 -> B6-2a): o teste do B6-0 afirmava 201 para {name:"R"} sem
+    // preco. Era artefato do duplo de modulo, nao comportamento de producao: com o modulo real,
+    // `normalizeRewardCreate` devolve 400 "Preco deve ser um numero nao negativo", antes e
+    // depois deste lote. Sem permissao, quem responde e o gate — mesmo com o payload invalido.
     login(["VOLUNTARIO"]);
     const denied = await rewardsCreate(request("/api/rewards", { method: "POST", body: { name: "R" } }));
     expect(denied.status).toBe(403);
-    expect(await body(denied)).toEqual({ error: "Acesso negado" });
+    expect(await body(denied)).toMatchObject({ error: "Acesso negado", code: "FORBIDDEN" });
+
+    // E com a permissao, o mesmo payload volta a ser o 400 de validacao legado.
+    login(["LABORATORISTA"]);
+    const invalid = await rewardsCreate(request("/api/rewards", { method: "POST", body: { name: "R" } }));
+    expect(invalid.status).toBe(400);
+    expect(await body(invalid)).toMatchObject({ error: "Preço deve ser um número não negativo" });
   });
 });
 
@@ -462,7 +561,8 @@ describe("store — /api/rewards/[id]", () => {
       await rewardDelete(request("/api/rewards/1", { method: "DELETE" }), params({ id: "1" })),
     ]) {
       expect(response.status).toBe(403);
-      expect(await body(response)).toEqual({ error: "Acesso negado" });
+      // B6-2a (DEC-53): superset do OND8-B4 — status e mensagem intactos, code acrescentado.
+      expect(await body(response)).toMatchObject({ error: "Acesso negado", code: "FORBIDDEN" });
     }
   });
 });

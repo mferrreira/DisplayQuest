@@ -47,11 +47,15 @@ export class StoreModule {
 
   readonly listRewards = () => this.listRewardsUseCase.execute()
   readonly getReward = (rewardId: number) => this.getRewardUseCase.execute(rewardId)
-  readonly createReward = (data: Record<string, unknown>) => this.createRewardUseCase.execute(data)
-  readonly updateReward = (rewardId: number, data: Record<string, unknown>) =>
-    this.updateRewardUseCase.execute(rewardId, data)
-  readonly patchReward = (command: PatchRewardCommand) => this.patchRewardUseCase.execute(command)
-  readonly deleteReward = (rewardId: number) => this.deleteRewardUseCase.execute(rewardId)
+  // B6-2a: o ator entra no comando — o gate de MANAGE_REWARDS mora nos use cases (DEC-53).
+  readonly createReward = (command: { actorRoles: unknown; data: Record<string, unknown> }) =>
+    this.createRewardUseCase.execute(command)
+  readonly updateReward = (command: { actorRoles: unknown; rewardId: number; data: Record<string, unknown> }) =>
+    this.updateRewardUseCase.execute(command)
+  readonly patchReward = (command: PatchRewardCommand & { actorRoles: unknown }) =>
+    this.patchRewardUseCase.execute(command)
+  readonly deleteReward = (command: { actorRoles: unknown; rewardId: number }) =>
+    this.deleteRewardUseCase.execute(command)
 
   readonly listPurchases = (input: ListPurchasesScopeInput): Promise<ListPurchasesResult> =>
     this.listPurchasesUseCase.execute(input)

@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server"
-import { ensurePermission, requireApiActor } from "@/lib/auth/api-guard";
+import { requireApiActor } from "@/lib/auth/api-guard";
 import { getBackendComposition } from "@/backend/composition/root"
 import { domainErrorResponse } from "@/lib/api/domain-error-response"
+
+// B6-2a (D4, DEC-53): os três gates de MANAGE_REWARDS (PUT/PATCH/DELETE) desceram para os use
+// cases de reward. A rota legacy passava `ensurePermission(actor, "MANAGE_REWARDS")` SEM
+// mensagem — daí o 403 continuar sendo "Acesso negado", agora vindo de ForbiddenError no domínio.
+// Nada de validação de id havia entre o gate e a chamada nesta rota, então nenhuma regra precisou
+// se mover junto (ao contrário de /api/badges/[id]).
+// GET é leitura de catálogo: exige sessão, não exige permissão.
 // OND8-B4 (R4): DomainErrors mapeados. EVOLUTIONS (documentadas, DEC-23):
 //  - PUT/PATCH rewards ANTES explodiam SEMPRE (QUIRK-8S1 -> 500 'Unknown argument categoryId');
 //    agora FUNCIONAM (adapter escreve so colunas reais) e validacao -> 400 ValidationError.
@@ -30,12 +37,13 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
   try {
     const auth = await requireApiActor();
     if (auth.error) return auth.error;
-    const deny = ensurePermission(auth.actor, "MANAGE_REWARDS");
-    if (deny) return deny;
-
     const params = await context.params;
     const data = await request.json();
-    const reward = await storeModule.updateReward(Number(params.id), data);
+    const reward = await storeModule.updateReward({
+      actorRoles: auth.actor.roles,
+      rewardId: Number(params.id),
+      data,
+    });
     return NextResponse.json({ reward });
   } catch (error: any) {
     const mapped = domainErrorResponse(error);
@@ -50,13 +58,11 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
   try {
     const auth = await requireApiActor();
     if (auth.error) return auth.error;
-    const deny = ensurePermission(auth.actor, "MANAGE_REWARDS");
-    if (deny) return deny;
-
     const params = await context.params;
     const data = await request.json();
     const { action, ...updateData } = data;
     const reward = await storeModule.patchReward({
+      actorRoles: auth.actor.roles,
       rewardId: Number(params.id),
       action,
       updateData,
@@ -76,11 +82,11 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
   try {
     const auth = await requireApiActor();
     if (auth.error) return auth.error;
-    const deny = ensurePermission(auth.actor, "MANAGE_REWARDS");
-    if (deny) return deny;
-
     const params = await context.params;
-    await storeModule.deleteReward(Number(params.id));
+    await storeModule.deleteReward({
+      actorRoles: auth.actor.roles,
+      rewardId: Number(params.id),
+    });
     return NextResponse.json({ success: true });
   } catch (error: any) {
     const mapped = domainErrorResponse(error);

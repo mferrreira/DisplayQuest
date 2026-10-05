@@ -22,6 +22,15 @@ import { createStoreModule } from "@/backend/modules/store";
 
 const store = createStoreModule();
 
+/**
+ * B6-2a (D4, DEC-53): createReward/updateReward/patchReward/deleteReward passaram a exigir
+ * MANAGE_REWARDS, que a rota decidia com `ensurePermission` SEM mensagem (por isso o 403
+ * continua sendo o "Acesso negado" default). Este roundtrip exercita persistencia, nao
+ * autorizacao — o ator e o proprio harness, e por isso ele se apresenta como COORDENADOR.
+ * A negacao por papel e testada no use case (`tests/unit/modules/store/`).
+ */
+const MANAGER_ROLES = ["COORDENADOR"];
+
 const stamp = Date.now();
 let userId = 0;
 let otherUserId = 0;
@@ -61,9 +70,9 @@ describe("G4 roundtrip — store (isolated test DB)", () => {
     userId = user.id;
     otherUserId = other.id;
 
-    const reward = await store.createReward({ name: ` G8 Kit ${stamp} `, price: 30, description: "kit de teste" });
+    const reward = await store.createReward({ actorRoles: MANAGER_ROLES, data: { name: ` G8 Kit ${stamp} `, price: 30, description: "kit de teste" } });
     rewardId = reward.id as number;
-    const off = await store.createReward({ name: `G8 Off ${stamp}`, price: 1, available: false });
+    const off = await store.createReward({ actorRoles: MANAGER_ROLES, data: { name: `G8 Off ${stamp}`, price: 1, available: false } });
     offRewardId = off.id as number;
   });
 
@@ -82,17 +91,17 @@ describe("G4 roundtrip — store (isolated test DB)", () => {
 
     // DEC-23: no legado isto SEMPRE explodia (PrismaClientValidationError 'Unknown argument
     // categoryId'); na wiring nova funciona contra o banco real.
-    const updated = await store.updateReward(rewardId, { price: 25 });
+    const updated = await store.updateReward({ actorRoles: MANAGER_ROLES, rewardId, data: { price: 25 } });
     expect(updated.price).toBe(25);
 
-    const toggled = await store.patchReward({ rewardId, action: "toggle-availability" });
+    const toggled = await store.patchReward({ actorRoles: MANAGER_ROLES, rewardId, action: "toggle-availability" });
     expect(toggled.available).toBe(false);
-    const back = await store.patchReward({ rewardId, action: "toggle-availability" });
+    const back = await store.patchReward({ actorRoles: MANAGER_ROLES, rewardId, action: "toggle-availability" });
     expect(back.available).toBe(true);
 
-    await expect(store.updateReward(rewardId, { price: -1 })).rejects.toThrow(ValidationError);
-    await expect(store.updateReward(999999, { price: 1 })).rejects.toThrow(NotFoundError);
-    await expect(store.createReward({ name: "  ", price: 1 })).rejects.toThrow(ValidationError);
+    await expect(store.updateReward({ actorRoles: MANAGER_ROLES, rewardId, data: { price: -1 } })).rejects.toThrow(ValidationError);
+    await expect(store.updateReward({ actorRoles: MANAGER_ROLES, rewardId: 999999, data: { price: 1 } })).rejects.toThrow(NotFoundError);
+    await expect(store.createReward({ actorRoles: MANAGER_ROLES, data: { name: "  ", price: 1 } })).rejects.toThrow(ValidationError);
   });
 
   it("createPurchase: happy com debito + validacoes tipadas (NotFound/Validation)", async () => {
@@ -159,11 +168,11 @@ describe("G4 roundtrip — store (isolated test DB)", () => {
     expect(await store.getPurchase(purchaseId)).toBeNull();
 
     // FK: deleteReward com compra existente -> P2003 propagado (compra de outro usuario)
-    await store.patchReward({ rewardId: offRewardId, action: "toggle-availability" }) // disponivel p/ compra
+    await store.patchReward({ actorRoles: MANAGER_ROLES, rewardId: offRewardId, action: "toggle-availability" }) // disponivel p/ compra
     const blocking = await store.createPurchase({ userId: otherUserId, rewardId: offRewardId });
-    await expect(store.deleteReward(offRewardId)).rejects.toThrow(/Foreign key constraint violated|P2003/);
+    await expect(store.deleteReward({ actorRoles: MANAGER_ROLES, rewardId: offRewardId })).rejects.toThrow(/Foreign key constraint violated|P2003/);
     await store.deletePurchase(blocking.id as number);
-    await store.deleteReward(offRewardId);
+    await store.deleteReward({ actorRoles: MANAGER_ROLES, rewardId: offRewardId });
     expect(await store.getReward(offRewardId)).toBeNull();
   });
 });

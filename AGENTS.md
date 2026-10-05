@@ -121,6 +121,21 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
   de forma confiável (a rota ainda via o `readFile` real). Padrão da casa: rotas leem via
   um seam em `lib/` (ex.: `readReportFileBytes` em `lib/storage/report-uploads.ts`) e o
    teste mocka a lib, não o builtin.
+- **Gate de autorização + teste de rota: o duplo de MÓDULO não decide nada (medido 2026-10-05,
+  B6-2a).** Quando o `ensurePermission` da rota desce para o use case, um
+  `vi.mock("@/backend/composition/root")` que devolve `{ store: { createReward: fake } }` faz o
+  403 **sumir do teste** — não falhar, sumir, porque a rota não decide mais e o duplo também não.
+  O que fazer: montar o **módulo real** sobre portas falsas
+  (`createStoreModule({ ports: { rewards, purchases } })`) dentro do factory do mock, que é
+  lazy. Dois avisos medidos no mesmo lote: (a) `createStoreModule`/`createGamificationModule`
+  constroem **todos** os use cases do módulo, então todas as portas precisam existir — use um
+  duplo que lança `"porta X não deveria ser usada"` para as não exercitadas, para o erro ser
+  alto em vez de silencioso; (b) `requireApiActor` normaliza com `normalizeRoles`, então
+  `login("COORDENADOR")` (string) vira `[]` e **nega todo mundo** — sempre `login(["COORDENADOR"])`.
+  E o reverso do mesmo risco: um duplo pode fixar o **comportamento do substituto** em vez do
+  do sistema. O B6-0 afirmava `POST /api/rewards {name:"R"}` → 201; a produção devolvia 400
+  (`normalizeRewardCreate`) antes e depois. Antes de confiar num status fixado por duplo, confira
+  o que o caminho real faz com aquele payload.
 - **`floating-session-timer` — gotcha CONFIRMADO nesta base (2026-10-01):** o arquivo
   `tests/unit/components/floating-session-timer.test.tsx` existe e está na baseline (5 testes,
   verdes). O auto-pause chama `ResponsibilitiesAPI.pause()` **depois** de `pauseSession()`;

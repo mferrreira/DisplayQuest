@@ -25,6 +25,14 @@ import { createGamificationModule } from "@/backend/modules/gamification";
 
 const gamification = createGamificationModule();
 
+/**
+ * B6-2a (D4, DEC-53): createBadge/updateBadge/deleteBadge passaram a exigir MANAGE_REWARDS, que
+ * a rota decidia. Este roundtrip exercita persistencia, nao autorizacao — o ator e o proprio
+ * harness, e por isso ele se apresenta como COORDENADOR (tem a permissão na matriz real).
+ * A negacao por papel e testada no use case (`tests/unit/modules/gamification/`).
+ */
+const MANAGER_ROLES = ["COORDENADOR"];
+
 const stamp = Date.now();
 const WORK_SESSION_ID = 900000 + (stamp % 1000);
 const TASK_ID = 910000 + (stamp % 1000);
@@ -50,6 +58,7 @@ describe("G4 roundtrip — gamification (isolated test DB)", () => {
     userId = user.id;
 
     const badge = await gamification.createBadge({
+      actorRoles: MANAGER_ROLES,
       name: "  G6 Pioneiro  ",
       description: "  badge de roundtrip  ",
       category: "milestone",
@@ -60,6 +69,7 @@ describe("G4 roundtrip — gamification (isolated test DB)", () => {
     badgeId = badge.id!;
 
     const manualBadge = await gamification.createBadge({
+      actorRoles: MANAGER_ROLES,
       name: `G6 Manual ${stamp}`,
       description: "concedido manualmente",
       category: "special",
@@ -99,7 +109,11 @@ describe("G4 roundtrip — gamification (isolated test DB)", () => {
   });
 
   it("updateBadge faz merge parcial (criteria preservado, isActive agora FALSE via Boolean())", async () => {
-    const updated = await gamification.updateBadge({ id: badgeId, data: { name: "G6 Pioneiro v2", isActive: false } });
+    const updated = await gamification.updateBadge({
+      actorRoles: MANAGER_ROLES,
+      id: badgeId,
+      data: { name: "G6 Pioneiro v2", isActive: false },
+    });
     expect(updated.name).toBe("G6 Pioneiro v2");
     expect(updated.isActive).toBe(false);
     expect(updated.criteria).toEqual({ points: 999999 });
@@ -169,6 +183,7 @@ describe("G4 roundtrip — gamification (isolated test DB)", () => {
 
   it("evaluateUserBadges: concessao automatica FUNCIONA na wiring nova (divergencia QUIRK-6A vs legado)", async () => {
     const criteriaBadge = await gamification.createBadge({
+      actorRoles: MANAGER_ROLES,
       name: `G6 Marcante ${stamp}`,
       description: "criterio atingivel no roundtrip",
       category: "achievement",
@@ -209,9 +224,9 @@ describe("G4 roundtrip — gamification (isolated test DB)", () => {
   });
 
   it("deleteBadge remove o badge (user_badges cascade com o badge); inexistente lanca 'Badge não encontrado'", async () => {
-    await gamification.deleteBadge(badgeId);
+    await gamification.deleteBadge({ actorRoles: MANAGER_ROLES, id: badgeId });
     expect(await prisma.badges.findUnique({ where: { id: badgeId } })).toBeNull();
-    await expect(gamification.deleteBadge(badgeId)).rejects.toThrow("Badge não encontrado");
+    await expect(gamification.deleteBadge({ actorRoles: MANAGER_ROLES, id: badgeId })).rejects.toThrow("Badge não encontrado");
   });
 
   it("usuario inexistente: getUserProgression -> 'Usuário não encontrado'; award falha no tx (sem history)", async () => {

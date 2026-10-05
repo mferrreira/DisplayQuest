@@ -24,6 +24,7 @@ export {
   type Permission,
 } from "./permissions";
 export { hasFeatureAccess, hasPermission, rolesFor, rolesForFeature } from "./has-permission";
+export { assertPermission, ACCESS_DENIED_MESSAGE } from "./assert-permission";
 export { normalizeAvatar } from "./avatar";
 export { resolveUserListVisibility, type UserListVisibility } from "./user-visibility";
 export { toPublicUser, type PublicUser } from "./public-user";

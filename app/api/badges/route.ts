@@ -1,11 +1,18 @@
 import { NextResponse } from "next/server"
-import { ensurePermission, requireApiActor } from "@/lib/auth/api-guard"
+import { requireApiActor } from "@/lib/auth/api-guard"
 import { getBackendComposition } from "@/backend/composition/root"
 import { domainErrorResponse } from "@/lib/api/domain-error-response"
 
 // OND6-B4 (R4): DomainErrors mapeados por domainErrorResponse. EVOLUTION: validacoes de
 // createBadge antes caíam no 500 com error.message; agora ValidationError -> 400
 // {error,code,details} (mensagens pinadas pelo contract OND6-B3).
+//
+// B6-2a (D4, DEC-53): o gate de MANAGE_REWARDS desceu para o CreateBadgeUseCase. A rota
+// decide, mapeia e pronto — `ensurePermission` saiu daqui. O 403 continua sendo
+// "Sem permissão para criar badges", agora lançado pelo domínio (o corpo ganha code/details:
+// superset do OND8-B4, status e mensagem intactos).
+//
+// GET segue sem auth: a lista de badges é leitura pública.
 
 const { gamification: gamificationModule } = getBackendComposition()
 export async function GET() {
@@ -25,13 +32,11 @@ export async function POST(request: Request) {
     const auth = await requireApiActor()
     if (auth.error) return auth.error
 
-    const deny = ensurePermission(auth.actor, "MANAGE_REWARDS", "Sem permissão para criar badges")
-    if (deny) return deny
-
     const body = await request.json()
     const badge = await gamificationModule.createBadge({
       ...body,
       createdBy: auth.actor.id,
+      actorRoles: auth.actor.roles,
     })
 
     return NextResponse.json({ badge }, { status: 201 })
