@@ -1,13 +1,21 @@
 import { NextResponse } from "next/server";
 import { cronService } from "@/lib/services/cron-service";
-import { ensureAnyRole, requireApiActor } from "@/lib/auth/api-guard";
+import { ensurePermission, requireApiActor } from "@/lib/auth/api-guard";
 import { domainErrorResponse } from "@/lib/api/domain-error-response"
+// B6-1a (DEC-51, 2026-10-05) — CORRECAO DE AUTORIZACAO (unica mudanca de comportamento do
+// B6, lote proprio para poder ser revertida sem desfazer o refactor). O gate era
+// ensureAnyRole(actor, ["COORDENADOR"]), mas COORDENADOR e GERENTE tem permissoes IDENTICAS
+// em backend/domain/identity/permissions.ts (comparadas linha a linha: nenhuma difere), e as
+// rotas irmas que protegem o mesmo tipo de gestao — /api/weekly-hours-history e
+// /api/projects/stats — usam MANAGE_USERS. Um papel com autoridade identica era barrado aqui e
+// nao la. Passa a ser MANAGE_USERS, com a mensagem das irmas. Contrato pinado em
+// tests/unit/api/cron-status-roles.test.ts. O B6-1b move este enforcement para o use case.
 
 export async function GET() {
   try {
     const auth = await requireApiActor()
     if (auth.error) return auth.error
-    const accessError = ensureAnyRole(auth.actor, ["COORDENADOR"], "Apenas coordenadores podem acessar.")
+    const accessError = ensurePermission(auth.actor, "MANAGE_USERS", "Apenas coordenadores e gerentes podem acessar.")
     if (accessError) return accessError
 
     const status = cronService.getStatus();
@@ -24,7 +32,7 @@ export async function POST(request: Request) {
   try {
     const auth = await requireApiActor()
     if (auth.error) return auth.error
-    const accessError = ensureAnyRole(auth.actor, ["COORDENADOR"], "Apenas coordenadores podem acessar.")
+    const accessError = ensurePermission(auth.actor, "MANAGE_USERS", "Apenas coordenadores e gerentes podem acessar.")
     if (accessError) return accessError
 
     const body = await request.json();

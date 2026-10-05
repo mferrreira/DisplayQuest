@@ -4,7 +4,7 @@
   "updatedAt": "2026-10-05T00:00:00-03:00",
   "status": "in_progress",
   "activeWave": "B6",
-  "activeBatch": "B6-0",
+  "activeBatch": "B6-1a",
   "awaitingInstruction": false,
   "target": "Eliminar dívidas de fluxo legado e código morto do repositorio, com gates por lote e rollback por revert. Ver PLAN.md (lotes B0..B11).",
   "lineage": {
@@ -50,7 +50,7 @@
     { "id": "B3", "title": "D1+D2: cron weekly reset via ResetWeeklyHoursHistoryUseCase + horarios cron derivados do dominio (golden antes)", "status": "done" },
     { "id": "B4", "title": "D3: api-guard via getBackendComposition().identityAccess", "status": "done" },
     { "id": "B5", "title": "D5: domainErrorResponse nas 9 rotas fora do mapper (urgente purchases/[id]) + rota-tests", "status": "done" },
-    { "id": "B6", "title": "D4: autorizacao rota->use case — 41 rotas medidas (o registro dizia 16), em 9 lotes B6-0..B6-8", "status": "in_progress", "reason": "DEC-29 cumpriu-se: o B8 rodou em 2026-10-01, entao a re-sequencia nao segura mais. DEC-50 (2026-10-05): escopo corrigido para 41 rotas (17 com hasPermission/hasRole + 29 com ensure*, 24 so por ensure*) e dividido em 9 lotes, do mais simples ao mais arriscado. B6-0 (rede de seguranca) verde em 2026-10-05. Motivo antigo do deferred — 'gates de rota sao o unico enforcement e o dominio e permissivo congelado' — continua verdadeiro e e o que torna a migracao segura: nenhum use case checa ator, entao mover o gate nao muda resultado para ninguem que ja chamasse." },
+    { "id": "B6", "title": "D4: autorizacao rota->use case — 41 rotas medidas (o registro dizia 16), em 10 lotes B6-0, B6-1a, B6-1b, B6-2..B6-7", "status": "in_progress", "reason": "DEC-29 cumpriu-se: o B8 rodou em 2026-10-01, entao a re-sequencia nao segura mais. DEC-50 (2026-10-05): escopo corrigido para 41 rotas (17 com hasPermission/hasRole + 29 com ensure*, 24 so por ensure*) e dividido em lotes do mais simples ao mais arriscado — B6-0 caraterizacao (38 testes, verde); B6-1a correcao de autorizacao em cron/status + B6-1b o use case dele; B6-2 gamification + notifications + store (10); B6-3 reporting + projects (8); B6-4 users x8; B6-5 work-execution x4 (o cron chama 3 destes use cases SEM ATOR); B6-6 lab-operations x7; B6-7 tasks x3. A lista primeira escrita no B6-0 somava 40 e omitia notifications (app/api/notifications/route.ts) — foi corrigida aqui ao recontar por modulo. B6-0 e B6-1a verdes em 2026-10-05. Motivo antigo do deferred — 'gates de rota sao o unico enforcement e o dominio e permissivo congelado' — continua verdadeiro e e o que torna a migracao segura: nenhum use case checa ator, entao mover o gate nao muda resultado para ninguem que ja chamasse." },
     { "id": "B7", "title": "D7: remover imports cruzados de fallback (task-management/index.ts, lab-operations/index.ts)", "status": "done" },
     { "id": "B8", "title": "OND9-B1: remocao de gateways legados + legacy-engines + backend/repositories + golden/contract", "status": "done", "reason": "DEC-26 + DEC-29; executado 2026-10-01 (commit ebf6798)" },
     { "id": "B9", "title": "Docs: corrigir APOO/12 4.1, docs/06, docs/03, AGENTS.md; verify.sh + arch:check; plugar assert-test-db.js; doc de feature", "status": "pending" },
@@ -196,6 +196,21 @@
       ],
       "gates": "G0 arch:check 0 (749 modules, 2833 deps) | G1 eslint 0 | G2 tsc 0 | G3 vitest 66 arquivos/836 testes verdes (era 65/798: +1 arquivo, +38 casos)",
       "result": "green"
+    },
+    {
+      "id": "B6-1a",
+      "at": "2026-10-05",
+      "title": "correcao de autorizacao em /api/cron/status: GERENTE passa a ter acesso (DEC-51) — unica mudanca de comportamento do B6",
+      "actions": [
+        "medido: COORDENADOR e GERENTE tem permissoes IDENTICAS em backend/domain/identity/permissions.ts; a rota gateava ensureAnyRole(actor, ['COORDENADOR']) e as irmas /api/weekly-hours-history e /api/projects/stats gateiam MANAGE_USERS (os dois papeis)",
+        "corrigido para ensurePermission(actor, 'MANAGE_USERS', 'Apenas coordenadores e gerentes podem acessar.') nos dois handlers (GET e POST)",
+        "novo tests/unit/api/cron-status-roles.test.ts: 10 casos com o guard REAL (identityAccess de producao + api-guard/rbac reais; so requireAuth e cronService dobrados) fixando os 2 papeis de gestao entrando, os 5 papeis restantes barrados com o corpo 403 exato, e 401 sem sessao",
+        "o teste foi escrito ANTES da correcao e falhou em 7 de 10 casos (GERENTE barrado; os outros 5 so divergiam na mensagem) — a falha e a prova do defeito",
+        "lote separado do B6-1b de proposito: mudanca de comportamento nao viaja dentro de refactor, para dar para reverter sem desfazer a migracao",
+        "mapped-routes.test.ts (que ja cobria esta rota) nao sentiu a mudanca: ele stubba ensureAnyRole/ensurePermission como () => null, ou seja, fixa o mapeamento de erro e nao o gate de papel"
+      ],
+      "gates": "G0 arch:check 0 (750 modules, 2837 deps) | G1 eslint 0 | G2 tsc 0 | G3 vitest 67 arquivos/846 testes verdes (era 66/836: +1 arquivo, +10 casos)",
+      "result": "green"
     }
   ],
   "gates": {
@@ -236,7 +251,8 @@
     "DEC-27 (dono 2026-10-01): tabela kanban_boards MANTIDA (zero uso de delegate no codigo, mas possivel feature futura de kanban).",
     "DEC-28 (dono 2026-10-01): docs/APOO MANTIDO e CORRIGIDO (nao arquivar nem deletar); contradicoes resolvidas no lote B9.",
     "DEC-29 (dono 2026-10-01): B6 (autorizacao rota->use case, D4) RE-SEQUENCIADO para depois do B8. Evidencia da varredura: os gates das 16 rotas sao o UNICO enforcement do sistema — os use cases novos portam fielmente o legado PERMISSIVO (gateways legacy sem check algum; delete-task tem quirk congelado documentado 'any authenticated actor deletes any task'). Remover o gate agora = regressao de seguranca; adicionar enforcement no use case novo = divergencia old-vs-new nos 667 testes de contract + ripple de assinatura em 7 facades, e endureceria o B8. Apos o B8 (legado+contract removidos), a migração dos gates vira refactor limpo pinado por golden + rota-tests. Ate la, os gates de rota permanecem como enforcement de fronteira (sem regressao).",
-    "DEC-50 (dono 2026-10-05, medido): o escopo do B6/D4 e de 41 rotas, nao 16 — 17 com hasPermission/hasRole direto e 29 com ensure* de api-guard, 24 delas so por ensure*. Executar as 41 em 9 lotes (B6-0 caraterizacao; B6-1 cron/status; B6-2 gamification+rewards+purchases; B6-3 weekly-reports+projects; B6-4 users x8; B6-5 work-execution x4, com o cron como chamador sem ator; B6-6 lab-operations x7; B6-7 tasks x3). Migracao parcial rejeitada: com parte decidindo na rota e parte no use case, ninguem sabe qual e a fonte da verdade. B6 deixa de ser deferred (B8 rodou em 2026-10-01, DEC-29 cumprida) e awaitingInstruction cai para false — o rebuild+smoke-test no PC do dono foi coberto pelo e2e 12/12 medido na arvore de hoje."
+    "DEC-50 (dono 2026-10-05, medido): o escopo do B6/D4 e de 41 rotas, nao 16 — 17 com hasPermission/hasRole direto e 29 com ensure* de api-guard, 24 delas so por ensure*. Executar as 41 em 9 lotes (B6-0 caraterizacao; B6-1 cron/status; B6-2 gamification+rewards+purchases; B6-3 weekly-reports+projects; B6-4 users x8; B6-5 work-execution x4, com o cron como chamador sem ator; B6-6 lab-operations x7; B6-7 tasks x3 — lista corrigida em DEC-51: ela somava 40 das 41 e omitia app/api/notifications/route.ts). Migracao parcial rejeitada: com parte decidindo na rota e parte no use case, ninguem sabe qual e a fonte da verdade. B6 deixa de ser deferred (B8 rodou em 2026-10-01, DEC-29 cumprida) e awaitingInstruction cai para false — o rebuild+smoke-test no PC do dono foi coberto pelo e2e 12/12 medido na arvore de hoje.",
+    "DEC-51 (dono 2026-10-05): medido em /api/cron/status — COORDENADOR e GERENTE tem permissoes IDENTICAS na matriz (backend/domain/identity/permissions.ts, comparadas linha a linha: nenhuma difere), mas a rota gateava ensureAnyRole(actor, ['COORDENADOR']), barrando o GERENTE; as rotas irmas /api/weekly-hours-history e /api/projects/stats usam MANAGE_USERS, que cobre os dois. Um papel com autoridade identica era barrado num endpoint de gestao e entrava nos outros dois, e nada congelava isso como quirk. CORRIGIDO para MANAGE_USERS com a mensagem das irmas. E a UNICA mudanca de comportamento do B6, por isso lote proprio (B6-1a) e nao dentro do refactor: assim da para reverter sem desfazer a migracao. O dono tambem definiu que o enforcement deste endpoint migra para um USE CASE do modulo work-execution (porta CronOperationsPort + adaptador que embrulha o singleton cronService + 2 use cases, ligado no composition root) — porque sem use case a rota nao teria onde morar o gate (B6-1b). E a lista de lotes do DEC-50 foi corrigida: somava 40 das 41, omitindo app/api/notifications/route.ts."
   ],
   "gapRegistry": [
     { "id": "GAP-01", "status": "carried", "summary": "store gateway port tipado por backend/models/{Purchase,Reward} (toPrisma em rota). Verificar em B8." },
@@ -282,6 +298,7 @@
     { "at": "2026-10-01", "event": "varredura de dividas e orfaos; decisoes do dono DEC-26/27/28; inicio do repo-cleanup" },
     { "at": "2026-10-01", "event": "B0-B5,B7 verdes; DEC-29 (B6 depois do B8); B8 executado (-31k linhas, baseline 50/619)" },
     { "at": "2026-10-01", "event": "checkpoint do dono: branch cleanup/repo-sweep + tag pre-cleanup pushadas para origin; B6/B9 aguardando rebuild+smoke-test no PC do dono" },
-    { "at": "2026-10-05", "event": "B6-0 verde (38 testes de caraterizacao, G0-G3) e DEC-50: escopo do D4 corrigido de 16 para 41 rotas medidas, dividido em 9 lotes. Duas crencas sobre POST /purchases foram refutadas pelo teste ao medir (o gate e cross-actor). Restricoes anotadas para o B6-5: o cron chama 3 use cases sem ator, e work-execution instancia use case inline por chamada. Baseline desta arvore: G3 66/836, G0 749 modulos/2833 deps." }
+    { "at": "2026-10-05", "event": "B6-0 verde (38 testes de caraterizacao, G0-G3) e DEC-50: escopo do D4 corrigido de 16 para 41 rotas medidas. Duas crencas sobre POST /purchases foram refutadas pelo teste ao medir (o gate e cross-actor). Restricoes anotadas para o B6-5: o cron chama 3 use cases sem ator, e work-execution instancia use case inline por chamada. Baseline desta arvore: G3 66/836, G0 749 modulos/2833 deps." },
+    { "at": "2026-10-05", "event": "B6-1a verde (DEC-51): /api/cron/status corrigido de ['COORDENADOR'] para MANAGE_USERS apos medir que COORDENADOR e GERENTE tem permissoes identicas e que as rotas irmas ja usavam MANAGE_USERS. Unica mudanca de comportamento do B6, em lote proprio para ser revertivel. 10 casos novos com o guard real. G3 67/846, G0 750 modulos/2837 deps. A lista de lotes do DEC-50 foi corrigida: somava 40 das 41 (omitia app/api/notifications/route.ts)." }
   ]
 }
