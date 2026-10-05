@@ -242,6 +242,24 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
   no `display-quest-db`/`display-quest`). O roundtrip antigo `tests/integration/entities-roundtrip.test.ts`
   usa `localhost:5432` via `docker compose up -d postgres` (nome do serviço = `postgres`,
   container = `display-quest-db`) — `db` **não** é o nome do serviço.
+- **Os roundtrips G4 colidiam entre si (medido 2026-10-05, corrigido no mesmo dia):** os
+  `tests/integration/**` compartilham o **mesmo** banco e o Vitest roda arquivos em paralelo por
+  padrão. `bulkGenerateWeeklyReports` resolve a lista de usuários ativos **uma vez** e itera
+  período por período, enquanto `users-roundtrip` cria, aprova e **apaga** um usuário no mesmo
+  intervalo. Dois modos, ambos medidos: o bulk encontra um usuário já apagado (`NotFoundError
+  "Usuário não encontrado"`) e o relatório criado para o usuário do outro arquivo trava o
+  `users.delete` pela FK `weekly_reports_userId_fkey`. Taxa medida: **~1 falha em 6** corridas de
+  `tests/integration`. Correção: `vitest.config.mts` agora tem `test.projects` com a integração em
+  projeto próprio e `fileParallelism: false`; unit/features continuam em paralelo. Custo medido:
+  completa 35s → 47s, G3 30s → 35s; verde em 6/6 na integração e 7/7 na completa. Rodar um
+  arquivo isolado não muda (2s).
+  **Projeto de workspace NÃO herda do config raiz** — cada item abaixo foi omitido uma vez e
+  quebrou de um jeito diferente: sem `resolve.alias` os roundtrips dão `Cannot find package
+  '@/lib/database/prisma'`; sem `exclude` o `tests/e2e/**` entra como suíte falha (170 arquivos /
+  1826 testes em vez de 83/1017); sem `plugins: [react()]` o `.tsx` falha no parse; sem
+  `setupFiles` os shims de jsdom somem e 84 testes falham; sem `environment` o default do projeto
+  é `node`. Serializar tudo (`fileParallelism: false` global) também conserta, mas custa 115s na
+  completa e 102s no G3 — pagar 72s por concorrência que não colide.
 - **Nunca imprimir/commitar o valor real do `NEXTAUTH_SECRET`** do `.env` local.
 - `tests/` é versionado por negações no `.gitignore` (`tests/*` + `!tests/unit`,
   `!tests/integration/**` etc.; screenshots de e2e continuam ignorados) — os testes
