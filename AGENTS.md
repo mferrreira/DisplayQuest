@@ -141,6 +141,15 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
   JSON não tem `Infinity`, `JSON.stringify(Infinity)` é `null`, e `Number(null)` é `0`.
 - **`components/admin/ModernAdminPanel.tsx` não tem teste nenhum** (~1000 linhas). Mudança nele é
   coberta só por `tsc`.
+- **jsdom não liga StrictMode, o `next dev` liga.** Um efeito que decide se anima a partir de um
+  ref que ele mesmo escreve passou verde em 35 testes de jsdom e travou no navegador: no modo
+  estrito a primeira passada consumia a diferença e a segunda não animava nada. Renderize em
+  `<StrictMode>` quando o comportamento depende de efeito (referência:
+  `tests/unit/components/points-catch-up.test.tsx`).
+- **Baseline de pontos por pessoa:** `dq:points-seen:<userId>` (`lib/points-seen.ts`, via
+  `lib/client-storage.ts`). O contador do cabeçalho parte do último total que aquele usuário viu
+  naquele navegador. `clientStorageKey` descarta `null`/`undefined` dos segmentos — sem guarda, a
+  chave viraria `dq:points-seen`, uma só para todos os usuários.
 
 ## Perfil do sistema (2026-09-05)
 

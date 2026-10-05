@@ -3,9 +3,9 @@
   "version": "4.0.0",
   "updatedAt": "2026-10-05T17:40:00-03:00",
   "status": "in_progress",
-  "activeWave": "V4-3",
+  "activeWave": "V4-4",
   "activeBatch": null,
-  "awaitingInstruction": true,
+  "awaitingInstruction": false,
   "lineage": {
     "previousPlan": "plan-v3 (qualidade operacional, ondas 0-4, 13 batches, DEC-30..49, status done em 2026-10-03)",
     "concurrentPlan": "repo-cleanup / clean-arch B6 (D4, autorizacao rota->use case) — PAUSADO em 2026-10-05 por decisao do dono; B6-0..B6-2b mergeados na dev, o resto em displayquest-v2/clean-arch/B6-RESTANTE.md",
@@ -13,12 +13,12 @@
   },
   "baseline": {
     "measuredAt": "2026-10-05",
-    "measuredOn": "dev + V4-6 (antes do commit do lote)",
-    "unitAndFeatures": "77 arquivos / 966 testes",
-    "fullSuite": "87 arquivos / 1050 testes",
-    "e2e": "12/12 verde (quadro 7/7) — estava 4/7 antes do V4-6",
-    "archCheck": "768 modulos / 2925 dependencias, zero violacao, allow-list vazia",
-    "previousBaseline": "73/934 e 83/1017 em dev @ fe7b359; V4-1 levou a 76/948 e 86/1032; V4-2 a 76/957 e 86/1041; V4-6 somou 1 arquivo e 9 testes",
+    "measuredOn": "dev + V4-3 (antes do commit do lote)",
+    "unitAndFeatures": "78 arquivos / 978 testes",
+    "fullSuite": "88 arquivos / 1062 testes",
+    "e2e": "13/13 verde (quadro 8, shell 5)",
+    "archCheck": "770 modulos / 2933 dependencias, zero violacao, allow-list vazia",
+    "previousBaseline": "73/934 e 83/1017 em dev @ fe7b359; V4-1 76/948 e 86/1032; V4-2 76/957 e 86/1041; V4-6 77/966 e 87/1050",
     "timing": "completa ~47s, G3 ~35s (medidos em fe7b359; nao re-medidos neste lote)"
   },
   "gates": {
@@ -49,9 +49,9 @@
     {
       "id": "V4-3",
       "title": "animação chega a quem não pode aprovar",
-      "status": "pending",
+      "status": "done",
       "decisions": ["DEC-58"],
-      "scope": "baseline do ultimo total visto por aquele usuario em dq:points-seen:<userId> via lib/client-storage.ts; ao montar, se o total da sessao difere, anuncia o delta."
+      "scope": "baseline do ultimo total visto por aquele usuario em dq:points-seen:<userId> via lib/client-storage.ts; ao montar, se o total da sessao difere, anuncia o delta e conta a partir do lembrado."
     },
     {
       "id": "V4-4",
@@ -123,6 +123,25 @@
         "o chip tem prazo de 1,9 s. No e2e, as asserções do chip precisam vir ANTES das asserções de coluna (orcamento de 15 s) — na primeira versao deste lote o poll do total veio antes e o chip ja tinha expirado: 'element(s) not found'.",
         "registrar a contagem por MutationObserver dentro da pagina, e nao por poll do Playwright: a animacao dura 1 s e o poll chega depois.",
         "a vida util do sinal e inclusiva na borda (`now - at <= LIFETIME`): avancar exatamente o prazo ainda deixa o sinal vivo. Teste de expiracao precisa de `+ 1`."
+      ]
+    },
+    {
+      "id": "V4-3",
+      "at": "2026-10-05",
+      "title": "a animação chega a quem não pode aprovar: baseline por pessoa em dq:points-seen:<userId> (DEC-58)",
+      "actions": [
+        "lib/points-seen.ts novo: read/write da baseline via lib/client-storage.ts. Guarda explicita de userId invalido: clientStorageKey descarta null/undefined, entao sem a guarda a chave seria dq:points-seen — uma so, compartilhada por todos os usuarios, fazendo uma pessoa animar a mudanca de outra. Valor corrompido devolve null: melhor nao animar do que animar a partir de lixo.",
+        "PointsCounter passa a comecar no valor lembrado e conta ate o atual; anuncia o chip quando a mudanca nao veio de mutacao (refresh/login). Local e nao session: o caso do dono e 'quando o usuario entra no sistema de novo', e sessionStorage morre ao fechar a aba.",
+        "baseline so avanca quando a contagem termina: quem fecha a aba no meio ve a contagem de novo na proxima visita.",
+        "BUG REAL achado pelo e2e e NAO pelos testes de jsdom: o gatilho da contagem era um ref escrito pelo proprio efeito. No modo estrito do React (que o next dev liga) a primeira passada consumia a diferenca, o clearInterval do desmonte simulado matava a contagem, e a segunda passada via from === points e nao animava nada — o contador ficava preso no valor lembrado (-30) para sempre. Corrigido lendo de onde o numero ESTÁ (displayed), o que torna a contagem idempotente.",
+        "Licao de teste: os testes de jsdom NAO ligam StrictMode, e o dev liga. points-catch-up.test.tsx agora renderiza em StrictMode. Verificado por mutacao: reintroduzir o bug derruba 4 testes com StrictMode ligado; sem ele, passavam todos.",
+        "e2e novo (catch-up): addInitScript semeia dq:points-seen:2 = real-30 ANTES de qualquer script da pagina e registra a sequencia por MutationObserver. Prova que o primeiro numero observado e o lembrado, que houve intermediarios, e que a baseline avancou. Suíte e2e: 13/13.",
+        "medição atômica do chip no e2e: caixa do chip + caixa da pilula + texto lidos na mesma passada. Asserções separadas somam ida e volta ao navegador e o chip vive 1,9 s — a ultima chegava depois de ele sair e boundingBox devolvia null (falha intermitente)."
+      ],
+      "gates": "G0 770/2933 zero violacao | G1 sem erro | G2 0 erros | G3 78/978 | G4 88/1062 | e2e 13/13",
+      "gotchas": [
+        "o ambiente de teste jsdom nao liga StrictMode; o next dev liga. Componente com efeito que decide comportamento a partir de ref escrito por si mesmo precisa de teste em StrictMode.",
+        "o container display-quest-db (5432) caiu com exit 137 no meio das corridas e derrubou o login de todos os testes de navegador. Nao era causa do codigo. Reerguido com docker start display-quest-db; o container do app (display-quest) nao foi tocado."
       ]
     },
     {

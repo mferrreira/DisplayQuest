@@ -170,7 +170,7 @@ Três ressalvas que precisam ser decididas junto:
 |---|---|---|---|
 | **V4-1** | inativação: `DeleteUserUseCase` passa a recusar com `ConflictError` quando há dependência; 409 legível no lugar do 500 com Prisma cru; teste de caraterização do estado atual antes | baixo — nenhuma UI usa o endpoint | **done** (2026-10-05) |
 | **V4-2** | animação: o **cabeçalho** passa a contar gradualmente; chip mostra o valor final; chip translada ±10px em Y (para cima no aumento, para baixo na diminuição), desktop-only | médio — toca `points-delta.tsx`, `lib/points-delta.ts`, `app-header.tsx` e os testes que congelam o desenho atual | **done** (2026-10-05) |
-| **V4-3** | animação chega a quem não aprovou (baseline em `dq:points-seen:<userId>`) | médio — é mudança de semântica, DEC-58 já respondida | pendente |
+| **V4-3** | animação chega a quem não aprovou (baseline em `dq:points-seen:<userId>`) | médio — é mudança de semântica, DEC-58 já respondida | **done** (2026-10-05) |
 | **V4-4** | subtasks: schema + migration + domínio (`+10` na base, trava de status) | **alto** — schema novo, regra nova, **bloqueia em D-D** | pendente |
 | **V4-5** | subtasks na UI (criar/concluir/travar no card e no diálogo) | alto | pendente |
 | **V4-6** | `PATCH points`: `set` aceita negativo (a administração escreve o que a premiação produz) | médio — mexe em quirk congelado e na precedência de dois 400 | **done** (2026-10-05) |

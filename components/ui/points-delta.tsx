@@ -38,6 +38,7 @@ import {
   POINTS_DELTA_LIFETIME_MS,
   POINTS_DELTA_STEP_MS,
   POINTS_DELTA_STEPS,
+  announcePointsDelta,
   clearPointsDelta,
   currentPointsDelta,
   isLivePointsDelta,
@@ -47,6 +48,7 @@ import {
   subscribeToPointsDelta,
   type PointsDeltaSignal,
 } from "@/lib/points-delta"
+import { readLastSeenPoints, writeLastSeenPoints } from "@/lib/points-seen"
 import { cn } from "@/lib/utils/utils"
 
 /** O navegador pede menos movimento? Sem `matchMedia` (navegador antigo, SSR) assume que sim. */
@@ -56,7 +58,7 @@ function prefersReducedMotion(): boolean {
 }
 
 /**
- * O contador do cabeçalho (V4-2, DEC-59).
+ * O contador do cabeçalho (V4-2, DEC-59; catch-up no V4-3, DEC-58).
  *
  * Anima de `from` até `to` quando o total que ele renderiza **muda**, e não quando um sinal
  * chega. Essa escolha é o que torna o desenho robusto à ordem real medida em `use-tasks.ts`:
@@ -64,22 +66,62 @@ function prefersReducedMotion(): boolean {
  * assíncrono — se a contagem dependesse do sinal, ela começaria com o total ainda velho e
  * contaria até o valor errado, para depois recomeçar quando a sessão chegasse.
  *
- * `useState(points)` no primeiro render é o que mantém o HTML do servidor e o do cliente
- * iguais: servidor e primeira hidratação mostram o total, e a contagem só existe depois de um
- * passo de tempo no cliente.
+ * V4-3 (DEC-58) acrescenta o caminho que faltava: quando o componente monta e o total é
+ * diferente do último que **aquele usuário** viu naquele navegador, ele começa no valor guardado
+ * e conta até o atual. É o caso medido que o dono relatou — voluntário conclui, o líder aprova,
+ * o prêmio é creditado na sessão do líder, e o cliente do voluntário nunca viu o número.
+ *
+ * `suppressHydrationWarning` no texto é deliberado: o primeiro valor é específico do navegador
+ * (depende do que foi guardado nele), então o HTML do servidor e o do cliente não têm de
+ * concordar nesse nó. Sem isso o React acusaria divergência de hidratação por algo que é
+ * comportamento, não bug.
  */
-export function PointsCounter({ points }: { points: number }) {
-  const [shown, setShown] = useState(points)
-  /** O total que este componente já entregou como definitivo. Começa no primeiro valor visto. */
-  const settled = useRef(points)
+export function PointsCounter({
+  points,
+  userId,
+}: {
+  points: number
+  /** Quem é a pessoa: a baseline é por usuário, para ninguém animar a mudança de outra. */
+  userId?: number | null
+}) {
+  const [shown, setShown] = useState(() => readLastSeenPoints(userId) ?? points)
+  /**
+   * O total que este componente entregou até aqui.
+   *
+   * É um ref e não o estado, e a razão é o modo estrito do React — que o `next dev` liga e que
+   * os testes de jsdom NÃO ligam. Medido no e2e: com o gatilho sendo um ref escrito pelo efeito
+   * (`settled = points`), a primeira passada do efeito consumia a diferença, o `clearInterval`
+   * do desmonte simulado matava a contagem, e a segunda passada via `from === points` e não
+   * animava nada. O contador ficava preso no valor lembrado (-30) para sempre.
+   *
+   * Lendo de onde o número **está**, e não de onde o efeito decidiu que ele estava, a contagem
+   * é idempotente: remontar no meio recomeça do mesmo ponto.
+   */
+  const displayed = useRef(shown)
+  const announcedCatchUp = useRef(false)
 
   useEffect(() => {
-    const from = settled.current
-    if (from === points) return undefined
-    settled.current = points
+    const from = displayed.current
+
+    if (from === points) {
+      // Sem mudança: só garante que a baseline existe, para a próxima visita ter de onde partir.
+      writeLastSeenPoints(userId, points)
+      return undefined
+    }
+
+    // O chip do catch-up: a mutação anuncia o próprio sinal (`use-tasks.ts`); uma mudança que
+    // chegou por refresh/login não tem mutação nenhuma por trás, então é aqui que o sinal nasce.
+    // Só na primeira passada do efeito — depois disso quem mudou o total foi uma mutação, que
+    // já anunciou.
+    if (!announcedCatchUp.current) {
+      announcedCatchUp.current = true
+      announcePointsDelta(points - from)
+    }
 
     if (prefersReducedMotion()) {
+      displayed.current = points
       setShown(points)
+      writeLastSeenPoints(userId, points)
       return undefined
     }
 
@@ -88,15 +130,22 @@ export function PointsCounter({ points }: { points: number }) {
     let step = 0
     const timer = setInterval(() => {
       step += 1
-      setShown(pointsTotalAt(from, points, step))
-      if (step >= POINTS_DELTA_STEPS) clearInterval(timer)
+      const value = pointsTotalAt(from, points, step)
+      displayed.current = value
+      setShown(value)
+      if (step >= POINTS_DELTA_STEPS) {
+        clearInterval(timer)
+        // A baseline só avança quando a contagem terminou: se o usuário fecha a aba no meio,
+        // a próxima visita ainda tem o valor antigo de onde partir.
+        writeLastSeenPoints(userId, points)
+      }
     }, POINTS_DELTA_STEP_MS)
 
     return () => clearInterval(timer)
-  }, [points])
+  }, [points, userId])
 
   return (
-    <span data-testid="points-total" aria-live="polite">
+    <span data-testid="points-total" aria-live="polite" suppressHydrationWarning>
       {shown}
     </span>
   )

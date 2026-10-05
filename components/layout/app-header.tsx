@@ -148,8 +148,10 @@ export function AppHeader() {
               <div className="relative flex items-center gap-2 rounded-full border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 px-3 py-1.5 dark:border-emerald-700 dark:from-emerald-900/20 dark:to-teal-900/20">
                 <Trophy className="h-4 w-4 text-amber-500 dark:text-emerald-400" />
                 <span className="bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-sm font-semibold text-transparent dark:from-emerald-400 dark:to-teal-400">
-                  {/* V4-2 (DEC-59): quem conta gradualmente é este número, não o chip. */}
-                  <PointsCounter points={points} />
+                  {/* V4-2 (DEC-59): quem conta gradualmente é este número, não o chip.
+                      V4-3 (DEC-58): o `userId` é o que permite animar uma mudança que chegou por
+                      refresh/login — a baseline do último total visto é por pessoa. */}
+                  <PointsCounter points={points} userId={user?.id} />
                 </span>
                 {/* plan-v3 OND4-B: o prêmio desta entrega, ancorado no contador que ele explica. */}
                 <PointsDelta />

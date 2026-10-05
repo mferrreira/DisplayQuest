@@ -215,7 +215,32 @@ test.describe("task board flows", () => {
     // sai da loja, e as asserções de coluna têm orçamento de 15 s.
     const delta = page.getByTestId("points-delta");
     await expect(delta).toBeVisible({ timeout: 10_000 });
-    await expect(delta).toHaveText(/\+10/, { timeout: 10_000 });
+
+    // Medição atômica: caixa do chip, caixa da pílula e texto lidos na MESMA passada, com o
+    // chip ainda na tela. Asserções separadas (`toBeVisible` → `toHaveText` → `boundingBox`)
+    // somam ida e volta ao navegador, e o chip vive 1,9 s a partir do anúncio — a última
+    // chegava depois de ele sair e `boundingBox` devolvia `null`. Foi assim que este teste
+    // falhou de forma intermitente.
+    let medida: { chip: NonNullable<Awaited<ReturnType<typeof delta.boundingBox>>>; pill: NonNullable<Awaited<ReturnType<typeof delta.boundingBox>>>; texto: string } | null = null;
+    await expect
+      .poll(
+        async () => {
+          const chip = await delta.boundingBox();
+          if (!chip) return false;
+          const pill = await delta.locator("xpath=..").boundingBox();
+          if (!pill) return false;
+          medida = { chip, pill, texto: (await delta.textContent()) ?? "" };
+          return true;
+        },
+        { timeout: 8000, intervals: [50] },
+      )
+      .toBe(true);
+
+    // plan-v3 OND4-B: o chip mostra o prêmio creditado. V4-2 mudou o que ele mostra: o valor
+    // FINAL de imediato (a contagem foi para o total). Só aparece aqui porque o fixture entrega
+    // a tarefa ao PRÓPRIO aprovador (`assignedTo: COORDENADOR_ID`): a aprovação credita o
+    // responsável, e sem essa coincidência o chip — e o próprio badge — não mexeriam (DEC-48).
+    expect(medida!.texto).toContain("+10");
     // Geometria é do navegador, não do jsdom. Duas coisas:
     //  (a) o chip precisa ficar dentro da janela. A versão primeira era `-top-5` e o topo da
     //      pílula fica a ~15px do topo da página — o chip saía pela borda.
@@ -223,13 +248,9 @@ test.describe("task board flows", () => {
     //      É a prova medida de que `translate` (o `-translate-x-1/2`) e `transform` (o
     //      `@keyframes enter`) compõem: se um sobrescrevesse o outro, o centro do chip sairia do
     //      centro da pílula em ~50% (o valor do `-translate-x-1/2`).
-    const chipBox = await delta.boundingBox();
-    expect(chipBox, "chip sem caixa no navegador").not.toBeNull();
-    expect(chipBox!.y, "chip cortado pelo topo da janela").toBeGreaterThan(0);
-    const pillBox = await delta.locator("xpath=..").boundingBox();
-    expect(pillBox, "pílula sem caixa no navegador").not.toBeNull();
-    const chipCenterX = chipBox!.x + chipBox!.width / 2;
-    const pillCenterX = pillBox!.x + pillBox!.width / 2;
+    expect(medida!.chip.y, "chip cortado pelo topo da janela").toBeGreaterThan(0);
+    const chipCenterX = medida!.chip.x + medida!.chip.width / 2;
+    const pillCenterX = medida!.pill.x + medida!.pill.width / 2;
     expect(
       Math.abs(chipCenterX - pillCenterX),
       "chip desalinhado da pílula: o movimento em Y comeu o -translate-x-1/2",
@@ -493,5 +514,83 @@ test.describe("task board flows", () => {
         await page.request.delete(`/api/tasks/${id}`).catch(() => {});
       }
     }
+  });
+
+  /**
+   * V4-3 (DEC-58) — o caso que o dono relatou, medido no navegador.
+   *
+   * "Um voluntário com 0 pts conclui a tarefa, ela vai pra revisão e o líder aprova. Quando o
+   * usuário entra no sistema de novo ou dá refresh na página, lá só aparece os 10, sem animação."
+   *
+   * O prêmio é creditado na sessão de quem aprova, então o cliente de quem concluiu nunca vê o
+   * número. O caminho é o baseline por pessoa no navegador. Este teste reproduz o essencial sem
+   * precisar de dois usuários: o navegador "lembra" de ter visto um valor 30 menor do que o real,
+   * e ao abrir o sistema o contador tem de percorrer essa distância — não mostrar o destino de
+   * imediato.
+   *
+   * O registro é feito por `addInitScript`, que roda antes de qualquer script da página: a
+   * contagem dura 1 s e começa na montagem do cabeçalho, que acontece durante a navegação do
+   * login. Um observador instalado depois do `login()` chega atrasado — foi assim que a primeira
+   * versão do teste da animação falhou.
+   */
+  test("catch-up: o número conta a partir do que o navegador lembra de ter visto (DEC-58)", async ({
+    page,
+    request,
+  }) => {
+    await apiSession(request);
+    const current = (await (await request.get(`/api/users/${COORDENADOR_ID}`)).json()).user.points as number;
+    const lembrado = current - 30;
+
+    await page.addInitScript(
+      ([chave, valor]: string[]) => {
+        window.localStorage.setItem(chave, valor);
+        const w = window as unknown as { __dqPointsSeen?: string[] };
+        w.__dqPointsSeen = [];
+        const attach = (): boolean => {
+          const el = document.querySelector("[data-testid='points-total']");
+          if (!el) return false;
+          const record = () => {
+            const value = (el.textContent ?? "").trim();
+            if (w.__dqPointsSeen && w.__dqPointsSeen.at(-1) !== value) w.__dqPointsSeen.push(value);
+          };
+          record();
+          new MutationObserver(record).observe(el, {
+            childList: true,
+            subtree: true,
+            characterData: true,
+          });
+          return true;
+        };
+        if (!attach()) {
+          const observer = new MutationObserver(() => {
+            if (attach()) observer.disconnect();
+          });
+          observer.observe(document, { childList: true, subtree: true });
+        }
+      },
+      [`dq:points-seen:${COORDENADOR_ID}`, String(lembrado)],
+    );
+
+    await login(page);
+
+    const badge = pointsBadge(page);
+    // O destino é alcançado.
+    await expect(badge).toHaveText(String(current), { timeout: 10_000 });
+
+    const visto = await page.evaluate(() => (window as unknown as { __dqPointsSeen?: string[] }).__dqPointsSeen ?? []);
+    const numeros = visto.map(Number).filter(Number.isFinite);
+
+    // Começou no valor lembrado, não no real: é isto que separa "animou a mudança" de "mostrou
+    // o total". Se o primeiro número observado já for o destino, não houve contagem nenhuma.
+    expect(numeros[0], `contador começou em ${numeros[0]}, não no valor lembrado`).toBe(lembrado);
+    const intermediarios = numeros.filter((v) => v > lembrado && v < current);
+    expect(intermediarios.length, `o total saltou direto (visto: ${numeros.join(", ")})`).toBeGreaterThan(0);
+
+    // E a baseline avançou: reabrir não conta a mesma coisa duas vezes.
+    const guardadoAgora = await page.evaluate(
+      (chave) => window.localStorage.getItem(chave),
+      `dq:points-seen:${COORDENADOR_ID}`,
+    );
+    expect(Number(guardadoAgora)).toBe(current);
   });
 });
