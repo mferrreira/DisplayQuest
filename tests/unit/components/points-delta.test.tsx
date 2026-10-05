@@ -1,14 +1,18 @@
 /**
- * plan-v3 OND4-B (F4) — o chip do prêmio creditado no contador do cabeçalho.
+ * O contador de pontos do cabeçalho: o total que conta (V4-2, DEC-59) e o chip que diz quanto.
  *
  * O que este arquivo segura:
  *  - o sinal (a loja em `lib/points-delta.ts`) só existe para delta de verdade: `null` (ninguém
  *    creditado) e `0` (o award já existia — DEC-48) não anunciam nada, porque um chip `+0`
  *    mentiria sobre uma entrega que não rendeu nada;
+ *  - **quem conta gradualmente é o total do cabeçalho, não o chip** (DEC-59 — o pedido do dono:
+ *    "o número aumentando gradativamente é o que fica no header, não o número da animação");
+ *  - o chip mostra o valor final de imediato e percorre ~10px no eixo Y na direção do que
+ *    aconteceu: para cima quando sobe, para baixo quando desce;
  *  - a contagem de 1 s é contável sem esperar um segundo de relógio: 20 passos de 50 ms;
  *  - `prefers-reduced-motion` mostra o valor final, sem contagem;
  *  - o chip some sozinho depois de ~1,9 s e limpa a loja — e um prêmio repetido (mesmo valor)
- *    anima de novo, porque o sinal é identificado por id, não por valor.
+ *    reaparece, porque o sinal é identificado por id, não por valor.
  *
  * Medido nesta base (2026-10-03): o jsdom do Vitest **não tem `window.matchMedia`**. Sem o stub
  * abaixo, a checagem cairia no caminho "sem suporte" — que trata como movimento reduzido e
@@ -18,17 +22,19 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, render, screen } from "@testing-library/react";
 
-import { PointsDelta } from "@/components/ui/points-delta";
+import { PointsCounter, PointsDelta } from "@/components/ui/points-delta";
 import {
   POINTS_DELTA_LIFETIME_MS,
   POINTS_DELTA_LINGER_MS,
+  POINTS_DELTA_SHIFT_PX,
   POINTS_DELTA_STEP_MS,
   POINTS_DELTA_STEPS,
   announcePointsDelta,
   currentPointsDelta,
   isLivePointsDelta,
   pointsDeltaLabel,
-  pointsDeltaValueAt,
+  pointsDeltaMotionClasses,
+  pointsTotalAt,
   resetPointsDeltaStore,
 } from "@/lib/points-delta";
 
@@ -59,6 +65,11 @@ function advance(ms: number) {
 /** O texto visível do chip (o sufixo "pontos" é `sr-only` e não entra aqui). */
 function chipText(): string | null {
   return screen.queryByTestId("points-delta")?.textContent?.replace(" pontos", "") ?? null;
+}
+
+/** O número que o cabeçalho está mostrando neste instante. */
+function totalText(): string | null {
+  return screen.queryByTestId("points-total")?.textContent ?? null;
 }
 
 beforeEach(() => {
@@ -107,115 +118,181 @@ describe("lib/points-delta — só existe sinal para delta de verdade", () => {
   });
 });
 
-describe("lib/points-delta — a contagem é pura", () => {
-  it("20 passos de 50 ms = 1 s, do 0 ao valor final", () => {
-    expect(pointsDeltaValueAt(15, 0)).toBe(0);
-    expect(pointsDeltaValueAt(15, POINTS_DELTA_STEPS / 2)).toBe(8); // round(7.5)
-    expect(pointsDeltaValueAt(15, POINTS_DELTA_STEPS)).toBe(15);
-    // Passou do fim não volta nem estoura: o passo final é o próprio delta.
-    expect(pointsDeltaValueAt(15, POINTS_DELTA_STEPS + 3)).toBe(15);
+describe("lib/points-delta — a contagem do total é pura (V4-2)", () => {
+  it("20 passos de 50 ms = 1 s, do total antigo ao novo", () => {
+    expect(pointsTotalAt(100, 115, 0)).toBe(100);
+    expect(pointsTotalAt(100, 115, POINTS_DELTA_STEPS / 2)).toBe(108); // round(7.5)
+    expect(pointsTotalAt(100, 115, POINTS_DELTA_STEPS)).toBe(115);
+    // Passou do fim não volta nem estoura: o passo final é o próprio destino.
+    expect(pointsTotalAt(100, 115, POINTS_DELTA_STEPS + 3)).toBe(115);
   });
 
-  it("nunca mostra +0 nem −0 no meio da contagem", () => {
-    //|round(-0.5)| no JavaScript é -0: sem arredondar a magnitude antes, um prêmio de 1 ponto
-    // passaria meio segundo exibindo "-0", que não é um número que o servidor creditou.
-    expect(pointsDeltaValueAt(-1, POINTS_DELTA_STEPS / 2)).toBe(-1);
-    expect(pointsDeltaValueAt(1, 1)).toBe(1);
-    expect(pointsDeltaLabel(pointsDeltaValueAt(-1, POINTS_DELTA_STEPS / 2))).toBe("−1");
+  it("contagem negativa desce até o valor", () => {
+    expect(pointsTotalAt(100, 80, 10)).toBe(90);
+    expect(pointsTotalAt(100, 80, POINTS_DELTA_STEPS)).toBe(80);
+    // O arredondamento é da MAGNITUDE, e não do deslocamento assinado: `Math.round(-0.5)` é `-0`
+    // no JavaScript, e `100 + -0` renderizaria `100` por acaso — mas `100 + (-1)` viria de um
+    // `-0` em outro passo. Medido: com delta −1, o passo 10 de 20 é 99, não 100.
+    expect(pointsTotalAt(100, 99, POINTS_DELTA_STEPS / 2)).toBe(99);
   });
 
-  it("contagem negativa desce até o valor (e o rótulo usa o sinal de menos tipográfico)", () => {
-    expect(pointsDeltaValueAt(-20, 10)).toBe(-10);
-    expect(pointsDeltaValueAt(-20, POINTS_DELTA_STEPS)).toBe(-20);
-    expect(pointsDeltaLabel(-20)).toBe("−20");
-    expect(pointsDeltaLabel(15)).toBe("+15");
+  it("delta pequeno segura o total antigo e salta — não inventa fração", () => {
+    // Diferente do chip antigo, que nunca podia mostrar `+0`: aqui segurar o valor antigo nos
+    // primeiros passos é dizer a verdade sobre o total que ainda é o total.
+    expect(pointsTotalAt(10, 11, 1)).toBe(10);
+    expect(pointsTotalAt(10, 11, POINTS_DELTA_STEPS / 2)).toBe(11);
+  });
+
+  it("from igual a to não produz movimento", () => {
+    expect(pointsTotalAt(50, 50, 5)).toBe(50);
   });
 });
 
-describe("PointsDelta — o chip do contador", () => {
+describe("lib/points-delta — a direção do movimento em Y", () => {
+  it("sobe quando o número sobe, desce quando o número desce", () => {
+    expect(pointsDeltaMotionClasses(15)).toContain("slide-in-from-bottom");
+    expect(pointsDeltaMotionClasses(-20)).toContain("slide-in-from-top");
+  });
+
+  it("o percurso é o valor nomeado, em pixels, nas duas direções", () => {
+    expect(POINTS_DELTA_SHIFT_PX).toBe(10);
+    expect(pointsDeltaMotionClasses(15)).toContain(`${POINTS_DELTA_SHIFT_PX}px`);
+    expect(pointsDeltaMotionClasses(-20)).toContain(`${POINTS_DELTA_SHIFT_PX}px`);
+  });
+});
+
+describe("PointsCounter — o número do cabeçalho é quem conta (DEC-59)", () => {
+  it("o primeiro desenho é o total, sem contagem a partir de zero", () => {
+    // Um usuário com 500 pts não pode ver contagem subindo do zero ao abrir o sistema.
+    render(<PointsCounter points={500} />);
+    expect(totalText()).toBe("500");
+
+    advance(POINTS_DELTA_STEP_MS);
+    expect(totalText()).toBe("500");
+  });
+
+  it("total que muda conta do valor antigo até o novo, em 1 s", () => {
+    const { rerender } = render(<PointsCounter points={100} />);
+
+    rerender(<PointsCounter points={110} />);
+    advance(POINTS_DELTA_STEP_MS);
+    expect(totalText()).toBe("101");
+
+    advance(POINTS_DELTA_STEP_MS * 9);
+    expect(totalText()).toBe("105"); // meio da contagem
+
+    advance(POINTS_DELTA_STEP_MS * POINTS_DELTA_STEPS);
+    expect(totalText()).toBe("110");
+  });
+
+  it("perda de pontos conta para baixo (DEC-39: penalidade sem piso)", () => {
+    const { rerender } = render(<PointsCounter points={100} />);
+
+    rerender(<PointsCounter points={80} />);
+    advance(POINTS_DELTA_STEP_MS * 10);
+    expect(totalText()).toBe("90");
+
+    advance(POINTS_DELTA_STEP_MS * POINTS_DELTA_STEPS);
+    expect(totalText()).toBe("80");
+  });
+
+  it("total que não muda não anima", () => {
+    const { rerender } = render(<PointsCounter points={100} />);
+    rerender(<PointsCounter points={100} />);
+    advance(POINTS_DELTA_STEP_MS * POINTS_DELTA_STEPS);
+    expect(totalText()).toBe("100");
+  });
+
+  it("com prefers-reduced-motion entrega o valor final, sem contagem", () => {
+    installMatchMedia(true);
+    const { rerender } = render(<PointsCounter points={100} />);
+
+    rerender(<PointsCounter points={115} />);
+    // Sem um único tick: o caminho reduzido já entrega o destino.
+    expect(totalText()).toBe("115");
+  });
+
+  it("dois aumentos em sequência contam a partir de onde pararam, não do começo", () => {
+    const { rerender } = render(<PointsCounter points={100} />);
+
+    rerender(<PointsCounter points={110} />);
+    advance(POINTS_DELTA_STEP_MS * POINTS_DELTA_STEPS);
+    expect(totalText()).toBe("110");
+
+    rerender(<PointsCounter points={120} />);
+    advance(POINTS_DELTA_STEP_MS);
+    expect(totalText()).toBe("111");
+  });
+});
+
+describe("PointsDelta — o chip diz quanto, e para que lado", () => {
   it("não renderiza nada antes de haver prêmio", () => {
     render(<PointsDelta />);
 
     expect(screen.queryByTestId("points-delta")).toBeNull();
   });
 
-  it("conta de 0 até o valor em 1 s e para no valor final", () => {
+  it("mostra o valor final de imediato — quem conta é o cabeçalho (DEC-59)", () => {
     render(<PointsDelta />);
 
     act(() => {
       announcePointsDelta(15);
     });
-    // Antes do primeiro passo não há chip: um "+0" piscado mentiria sobre um prêmio que existe.
-    expect(chipText()).toBeNull();
-
-    advance(POINTS_DELTA_STEP_MS);
-    expect(chipText()).toBe("+1");
-
-    advance(POINTS_DELTA_STEP_MS * 9);
-    expect(chipText()).toBe("+8"); // meio da contagem
+    // Antes, o chip contava: "+1" no primeiro passo, "+8" no meio, "+15" no fim. A contagem
+    // foi para o total; o chip é a legenda e chega inteira.
+    expect(chipText()).toBe("+15");
 
     advance(POINTS_DELTA_STEP_MS * POINTS_DELTA_STEPS);
     expect(chipText()).toBe("+15");
   });
 
-  it("prêmio negativo sai em vermelho e conta para baixo", () => {
+  it("prêmio negativo sai em vermelho e entra pelo topo", () => {
     render(<PointsDelta />);
 
     act(() => {
       announcePointsDelta(-20);
     });
-    advance(POINTS_DELTA_STEP_MS);
 
     const chip = screen.getByTestId("points-delta");
     expect(chip.className).toContain("text-red-700");
-    advance(POINTS_DELTA_STEP_MS * 9);
-    expect(chipText()).toBe("−10");
-    advance(POINTS_DELTA_STEP_MS * POINTS_DELTA_STEPS);
+    expect(chip.className).toContain("slide-in-from-top");
     expect(chipText()).toBe("−20");
   });
 
-  it("some sozinho depois de mostrar o valor final, e a loja fica limpa", () => {
+  it("prêmio positivo entra por baixo", () => {
     render(<PointsDelta />);
 
     act(() => {
       announcePointsDelta(15);
     });
-    advance(POINTS_DELTA_STEP_MS * POINTS_DELTA_STEPS);
-    expect(screen.getByTestId("points-delta")).toBeVisible();
 
-    advance(POINTS_DELTA_LINGER_MS);
+    expect(screen.getByTestId("points-delta").className).toContain("slide-in-from-bottom");
+  });
+
+  it("some sozinho depois de ~1,9 s, e a loja fica limpa", () => {
+    render(<PointsDelta />);
+
+    act(() => {
+      announcePointsDelta(15);
+    });
+    advance(POINTS_DELTA_LIFETIME_MS);
     expect(screen.queryByTestId("points-delta")).toBeNull();
     expect(currentPointsDelta()).toBeNull();
   });
 
-  it("com prefers-reduced-motion mostra o valor final, sem contar", () => {
-    installMatchMedia(true);
+  it("prêmio repetido reaparece (o sinal é por id, não por valor)", () => {
     render(<PointsDelta />);
 
     act(() => {
       announcePointsDelta(15);
     });
-
-    // Sem um único tick: o caminho reduzido entrega o valor final de imediato.
-    expect(chipText()).toBe("+15");
-    advance(POINTS_DELTA_STEP_MS * POINTS_DELTA_STEPS);
-    expect(chipText()).toBe("+15");
-  });
-
-  it("prêmio repetido anima de novo (o sinal é por id, não por valor)", () => {
-    render(<PointsDelta />);
-
-    act(() => {
-      announcePointsDelta(15);
-    });
-    advance(POINTS_DELTA_STEP_MS * POINTS_DELTA_STEPS + POINTS_DELTA_LINGER_MS);
+    advance(POINTS_DELTA_LIFETIME_MS);
     expect(screen.queryByTestId("points-delta")).toBeNull();
 
     act(() => {
       announcePointsDelta(15);
     });
-    advance(POINTS_DELTA_STEP_MS);
-    expect(chipText()).toBe("+1"); // a contagem recomeça, não fica no 15
+    expect(chipText()).toBe("+15");
   });
 
   it("sinal de sessão antiga não ressuscita quando o chip remonta", () => {
@@ -225,11 +302,12 @@ describe("PointsDelta — o chip do contador", () => {
     act(() => {
       announcePointsDelta(15);
     });
-    advance(POINTS_DELTA_STEP_MS);
-    expect(chipText()).toBe("+1");
+    expect(chipText()).toBe("+15");
     first.unmount();
 
-    advance(POINTS_DELTA_LIFETIME_MS);
+    // `+ 1` porque a vida útil é inclusiva na borda (`now - at <= LIFETIME`): avançar exatamente o
+    // prazo ainda deixa o sinal vivo, e o teste passaria por sorte se o prazo fosse exclusivo.
+    advance(POINTS_DELTA_LIFETIME_MS + 1);
     render(<PointsDelta />);
     expect(screen.queryByTestId("points-delta")).toBeNull();
   });
@@ -240,10 +318,9 @@ describe("PointsDelta — o chip do contador", () => {
     act(() => {
       announcePointsDelta(15);
     });
-    advance(POINTS_DELTA_STEP_MS);
 
     const chip = screen.getByTestId("points-delta");
     expect(chip).toHaveAttribute("role", "status");
-    expect(chip).toHaveTextContent("+1 pontos");
+    expect(chip).toHaveTextContent("+15 pontos");
   });
 });

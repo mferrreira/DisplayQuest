@@ -169,7 +169,7 @@ Três ressalvas que precisam ser decididas junto:
 | batch | o que faz | risco | status |
 |---|---|---|---|
 | **V4-1** | inativação: `DeleteUserUseCase` passa a recusar com `ConflictError` quando há dependência; 409 legível no lugar do 500 com Prisma cru; teste de caraterização do estado atual antes | baixo — nenhuma UI usa o endpoint | **done** (2026-10-05) |
-| **V4-2** | animação: o **cabeçalho** passa a contar gradualmente; chip mostra o valor final; chip translada ±10px em Y (para cima no aumento, para baixo na diminuição), desktop-only | médio — toca `points-delta.tsx`, `lib/points-delta.ts`, `app-header.tsx` e os testes que congelam o desenho atual | pendente |
+| **V4-2** | animação: o **cabeçalho** passa a contar gradualmente; chip mostra o valor final; chip translada ±10px em Y (para cima no aumento, para baixo na diminuição), desktop-only | médio — toca `points-delta.tsx`, `lib/points-delta.ts`, `app-header.tsx` e os testes que congelam o desenho atual | **done** (2026-10-05) |
 | **V4-3** | animação chega a quem não aprovou (baseline em `dq:points-seen:<userId>`) | médio — é mudança de semântica, DEC-58 já respondida | pendente |
 | **V4-4** | subtasks: schema + migration + domínio (`+10` na base, trava de status) | **alto** — schema novo, regra nova, **bloqueia em D-D** | pendente |
 | **V4-5** | subtasks na UI (criar/concluir/travar no card e no diálogo) | alto | pendente |
@@ -194,5 +194,53 @@ Medido de novo em 2026-10-05:
 Ou seja: a duplicação é local, e não se reproduz no deploy. O `prisma/seed.dev.js` continua na
 árvore como fonte do problema — o dono pediu para não mexer; a correção é uma linha (apagar o
 `.js` ou resolver para o `.ts`).
+
+---
+
+## 5. A suíte e2e do quadro estava quebrada, e por duas razões (medido 2026-10-05)
+
+O e2e **não faz parte dos gates G0–G4**, e por isso as duas coisas abaixo passaram despercebidas.
+Verifiquei que ambas já existiam antes de qualquer mudança do plan-v4: rodei a suíte com as
+mudanças guardadas no stash e ela falhou igual.
+
+### 5.1 A suíte assumia que pontos nunca são negativos — o banco refuta
+
+`tests/e2e/task-board.spec.ts` capturava o total do Coordenador e exigia `>= 0`. Medido na
+instância real:
+
+```
+id 2  Coordenador      -20
+id 4  Laboratorista  -6190
+id 3  Gerente      -31030
+```
+
+A penalidade de atraso **não tem piso** (DEC-39), e o dono usa o sistema de verdade. A suposição
+estava errada; o teste parava no primeiro caso. Corrigido no V4-2 para `Number.isFinite`.
+
+### 5.2 A API de pontos não consegue expressar um total negativo — ASK-V4-05
+
+A limpeza do e2e restaura o total do usuário com `PATCH /api/users/[id]/points {action:"set"}`.
+Com baseline `-20` isso devolve **400**. Os três caminhos de `UpdateUserPointsUseCase` estão
+congelados por teste (`use-cases.user-management.test.ts:307,311`) e nenhum produz negativo:
+
+| ação | regra congelada | efeito num usuário em −20 |
+|---|---|---|
+| `add` | `Math.max(0, points + delta)` | não pode descer abaixo de zero |
+| `remove` | exige `user.points >= command.points` | `-10 >= 10` é falso → rejeitado |
+| `set` | rejeita entrada negativa | 400 "Pontos não podem ser negativos" |
+
+Ou seja: **o caminho de premiação escreve totais negativos no banco, e nenhum caminho de
+administração consegue escrevê-los de volta.** Um coordenador que ficou em −20 por atraso não pode
+ser ajustado para −20 por um administrador — só para 0 ou para cima.
+
+Isso é uma inconsistência do produto, não só do teste. Três saídas:
+
+| opção | o que muda |
+|---|---|
+| **E1 — permitir `set` negativo** | alinha a API com DEC-39; mexe num quirk congelado (3 testes movem) |
+| E2 — dar ao e2e uma saída pelo Prisma | o teste recupera o baseline escrevendo direto; a inconsistência do produto continua |
+| E3 — aceitar a deriva | o e2e para de restaurar; cada corrida deixa +10 no Coordenador da sua máquina |
+
+Nenhuma foi executada. É decisão do dono.
 
 </content>

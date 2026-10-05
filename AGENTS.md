@@ -117,6 +117,25 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
 - **Gotcha do guarda:** a forma abreviada `{ userId }` do Prisma não é reconhecível como coluna por
   leitura de texto — o repositório escreve `userId: userId` por extenso de propósito. E ao parsear
   o schema, o nome do modelo precisa sair **sem** a chave (`tasks {` → `tasks`).
+- **`translate` × `transform` no Tailwind v4 (medido no CSS compilado da instância, 2026-10-05):**
+  `-translate-x-1/2` escreve a propriedade **`translate`**; o `animate-in`/`slide-in-from-*` do
+  `tw-animate-css` anima **`transform`** (`@keyframes enter`). São propriedades diferentes e
+  **compõem**. O comentário que estava em `components/ui/points-delta.tsx` — "as variantes com
+  transform sobrescrevem o `-translate-x-1/2`" — era verdade no Tailwind v3 com
+  `tailwindcss-animate` e **não vale mais nesta base**: o movimento em Y do chip entrou no mesmo
+  elemento. Valor do percurso: `POINTS_DELTA_SHIFT_PX` em `lib/points-delta.ts`.
+- **Utilitário de animação com comprimento:** `slide-in-from-bottom-*` aceita comprimento
+  arbitrário (`--value(--translate-*,[percentage],[length])`), mas o ramo de escala só aceita
+  **inteiro** — `slide-in-from-bottom-2.5` não funciona; `slide-in-from-bottom-[10px]` funciona.
+- **O chip do prêmio tem prazo de 1,9 s.** Em teste de navegador, as asserções do chip vêm **antes**
+  das asserções de coluna (orçamento de 15 s), senão o chip já expirou e o locator não acha nada.
+  E a contagem do total se prova com um `MutationObserver` instalado **antes** da ação — poll do
+  Playwright chega depois do segundo em que a animação acontece.
+- **A API de pontos não expressa total negativo** (`add` chao em 0, `remove` exige suficiencia,
+  `set` rejeita negativo — os três congelados por teste), mas a premiação produz totais negativos
+  (DEC-39; medido: Coordenador em −20, Gerente em −31030). Consequência: um administrador não
+  consegue ajustar um usuário de volta a um valor negativo. Registrado como `ASK-V4-05` em
+  `displayquest-v2/plan-v4/PLAN.md` §5.2.
 
 ## Perfil do sistema (2026-09-05)
 

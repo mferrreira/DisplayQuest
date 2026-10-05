@@ -3,7 +3,7 @@
   "version": "4.0.0",
   "updatedAt": "2026-10-05T17:40:00-03:00",
   "status": "in_progress",
-  "activeWave": "V4-2",
+  "activeWave": "V4-3",
   "activeBatch": null,
   "awaitingInstruction": true,
   "lineage": {
@@ -13,11 +13,11 @@
   },
   "baseline": {
     "measuredAt": "2026-10-05",
-    "measuredOn": "dev + V4-1 (antes do commit do lote)",
-    "unitAndFeatures": "76 arquivos / 948 testes",
-    "fullSuite": "86 arquivos / 1032 testes",
+    "measuredOn": "dev + V4-2 (antes do commit do lote)",
+    "unitAndFeatures": "76 arquivos / 957 testes",
+    "fullSuite": "86 arquivos / 1041 testes",
     "archCheck": "767 modulos / 2919 dependencias, zero violacao, allow-list vazia",
-    "previousBaseline": "73/934 e 83/1017 em dev @ fe7b359 — V4-1 somou 3 arquivos e 14 testes em unit/features, 15 na completa",
+    "previousBaseline": "73/934 e 83/1017 em dev @ fe7b359; V4-1 levou a 76/948 e 86/1032; V4-2 somou 9 testes (23 no arquivo do contador, antes 14)",
     "timing": "completa ~47s, G3 ~35s (medidos em fe7b359; nao re-medidos neste lote)"
   },
   "gates": {
@@ -41,7 +41,7 @@
     {
       "id": "V4-2",
       "title": "animação: quem conta é o cabeçalho; chip com movimento em Y, desktop-only",
-      "status": "pending",
+      "status": "done",
       "decisions": ["DEC-59"],
       "scope": "o numero do cabecalho passa a contar gradualmente; o chip passa a mostrar o valor FINAL e a transladar ~10px em Y (para cima no aumento, para baixo na diminuicao); desktop-only garantido."
     },
@@ -95,10 +95,31 @@
         "a forma abreviada { userId } do Prisma NAO e reconhecivel como coluna por leitura de texto — o repositorio escreve userId: userId por extenso para o guarda de deriva funcionar, com comentario dizendo o motivo.",
         "parser de schema: o chunk comeca com 'tasks {', e o nome do modelo precisa sair SEM a chave; com a chave cada relacao sai 'tasks {.x' e o conjunto parece vazio contra a lista esperada (falhou assim na primeira execucao)."
       ]
+    },
+    {
+      "id": "V4-2",
+      "at": "2026-10-05",
+      "title": "quem conta gradualmente passa a ser o numero do cabecalho; o chip mostra o valor final e percorre 10px em Y na direcao do que aconteceu (DEC-59)",
+      "actions": [
+        "medido antes de planejar, no CSS COMPILADO da instancia em execucao (dev server 3001, /_next/static/css/app/layout.css), e isso REFUTOU o comentario que estava em points-delta.tsx: '-translate-x-1/2' escreve a propriedade `translate` (`translate: var(--tw-translate-x) var(--tw-translate-y)`) e o `@keyframes enter` do tw-animate-css escreve `transform` (`translate3d(var(--tw-enter-translate-x,0),var(--tw-enter-translate-y,0),0)...`). Propriedades diferentes compõem. O aviso antigo — de que as variantes com transform sobrescrevem o -translate-x-1/2 — era verdade no Tailwind v3 + tailwindcss-animate; nesta base (Tailwind v4 + tw-animate-css) nao e mais. Por isso o movimento entrou no MESMO elemento, sem span extra.",
+        "lib/points-delta.ts: `pointsDeltaValueAt` sai (o chip parou de contar) e entra `pointsTotalAt(from, to, step)`; `POINTS_DELTA_SHIFT_PX = 10`; `pointsDeltaMotionClasses(value)` devolve `slide-in-from-bottom-[10px]` (sobe) ou `slide-in-from-top-[10px]` (desce). O colchete e obrigatorio: o `@utility slide-in-from-bottom-*` aceita `[length]`, mas o ramo de escala so aceita inteiro — `2.5` nao funciona.",
+        "a contagem do total e disparada pela MUDANCA do total que o componente renderiza, e nao pela chegada do sinal. Motivo medido em use-tasks.ts: onSuccess anuncia o sinal (linha 139) e so depois chama refreshPoints() (linha 142), que e assincrono — se a contagem dependesse do sinal ela comecaria com o total ainda velho, contaria ate o valor errado, e recomecaria quando a sessão chegasse.",
+        "desktop-only nao exigiu regra nova: o chip e o contador vivem dentro do contêiner `hidden md:flex` do cabeçalho (app-header.tsx:146). Sair de la e que quebraria o pedido do dono.",
+        "novo teste do contador (PointsCounter, 6 casos) + chip reescrito (mostra o valor final de imediato, direcao em Y fixada) + `pointsTotalAt` puro (4 casos). 23 casos no arquivo.",
+        "e2e do quadro reforçado: `pointsBadge` agora seleciona por `data-testid='points-total'` (antes era `header span.bg-clip-text` com filtro de visivel porque o menu do cabecalho tambem renderiza um span com a mesma classe); a contagem e provada por um MutationObserver instalado ANTES do clique, que registra a sequencia real de valores; e a geometria passa a conferir que o chip continua CENTRADO na pilula (|centro do chip - centro da pilula| <= 2px) enquanto percorre os 10px — a prova de que translate/transform compõem.",
+        "verificado por mutacao: fazer o cabecalho saltar direto e tirar a direcao em Y do chip derruba 5 testes."
+      ],
+      "gates": "G0 767/2919 zero violacao | G1 sem erro | G2 0 erros | G3 76/957 | G4 86/1041 | e2e do quadro: o teste da animacao passa, a suíte esta 4/7 (ver openQuestions — causa pre-existente)",
+      "gotchas": [
+        "o chip tem prazo de 1,9 s. No e2e, as asserções do chip precisam vir ANTES das asserções de coluna (orcamento de 15 s) — na primeira versao deste lote o poll do total veio antes e o chip ja tinha expirado: 'element(s) not found'.",
+        "registrar a contagem por MutationObserver dentro da pagina, e nao por poll do Playwright: a animacao dura 1 s e o poll chega depois.",
+        "a vida util do sinal e inclusiva na borda (`now - at <= LIFETIME`): avancar exatamente o prazo ainda deixa o sinal vivo. Teste de expiracao precisa de `+ 1`."
+      ]
     }
   ],
   "openQuestions": [
-    "D-D (escopo da subtask na v1): responsavel proprio? prazo proprio? existe em task publica e em quest global? criada junto com a mae ou depois? conta para evaluateUserBadges? Proposta registrada em PLAN.md §2 D-D: sem responsavel, sem prazo proprio, fora de publica e global, criada depois da mae, sem efeito em badge. Aguardando o dono antes de V4-4."
+    "ASK-V4-05 (aberto, bloqueia o e2e do quadro ficar verde): a API de pontos NAO consegue expressar um total negativo, e o caminho de premiacao produz totais negativos. Medido: UpdateUserPointsUseCase — 'add' chao em 0 via Math.max, 'remove' exige suficiencia (user.points < command.points -> ValidationError), 'set' rejeita entrada negativa; os tres congelados por teste em tests/unit/modules/user-management/use-cases.user-management.test.ts:307,311. Na instancia real, Coordenador esta em -20 e Gerente em -31030 (DEC-39, penalidade sem piso). Consequencia medida: a limpeza do e2e (PATCH /api/users/[id]/points {action:'set', points: -20}) devolve 400 e o teste falha. As tres saidas possiveis estao em PLAN.md §5: permitir 'set' negativo, dar ao e2e uma saida pelo Prisma, ou aceitar a deriva.",
+    "D-D (escopo da subtask na v1) — RESPONDIDA em 2026-10-05: sem responsavel proprio, sem prazo proprio (herda da mae), so em tarefa delegada (fora de publica e de quest global), criada JUNTO com a mae no mesmo formulario, sem efeito em evaluateUserBadges. V4-4 esta destravado."
   ],
   "blockers": [],
   "removedItems": [],

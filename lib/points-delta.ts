@@ -31,31 +31,79 @@
 // ---------------------------------------------------------------------------
 
 /** Passos da contagem: 20 passos de 50 ms = 1 s, o tempo que o PLAN.md pede. */
+/** Valor fixo de passos e cadência da contagem — compartilhados pelo chip e pelo cabeçalho. */
 export const POINTS_DELTA_STEPS = 20
 export const POINTS_DELTA_STEP_MS = 50
 /** Quanto o valor final fica na tela depois da contagem, antes do chip sumir. */
 export const POINTS_DELTA_LINGER_MS = 900
-/** Tempo de vida do sinal: a contagem inteira, mais a pausa com o valor final. */
+/**
+ * Tempo de vida do sinal: a contagem do cabeçalho inteira, mais a pausa com o valor final.
+ *
+ * V4-2 (DEC-59) mudou **quem** conta — o cabeçalho, não o chip — mas não mudou a duração. O
+ * chip continua vivendo o tempo inteiro da contagem para não sumir antes de o total terminar de
+ * subir: sinal que morre no meio deixaria o cabeçalho contando sem explicação ao lado.
+ */
 export const POINTS_DELTA_LIFETIME_MS =
   POINTS_DELTA_STEPS * POINTS_DELTA_STEP_MS + POINTS_DELTA_LINGER_MS
 
 /**
- * Valor mostrado no passo `step` (0 = ainda não começou).
+ * Total mostrado no passo `step` de uma contagem que vai de `from` até `to` (V4-2, DEC-59).
  *
- * Arredondado porque o número na tela é inteiro: sem isso apareceria `+7.5 pontos`, um valor
- * que o servidor nunca creditou. O arredondamento é **simétrico** (magnitude primeiro, sinal no
- * fim) para que o round do JavaScript, que arredonda `-0.5` para `-0`, não produza um `-0` no
- * meio da contagem de um prêmio negativo.
+ * É a matemática que estava em `pointsDeltaValueAt`, aplicada ao **total** em vez do delta — o
+ * chip parou de contar (DEC-59: quem conta é o cabeçalho), e a contagem foi para lá. Duas
+ * diferenças deliberadas em relação à versão antiga:
+ *
+ *  - **não existe o `Math.max(1, …)`.** O chip não podia mostrar `+0` porque isso mentiria sobre
+ *    um prêmio que existe; o cabeçalho mostrando o total antigo nos primeiros passos não mente
+ *    nada — o total antigo *era* o valor. Com `delta = 1` isso significa segurar o valor antigo
+ *    e dar o salto no meio da contagem, que é o comportamento honesto para um passo indivisível.
+ *  - **o arredondamento simétrico continua** (magnitude primeiro, sinal no fim) pela mesma razão
+ *    medida antes: `Math.round(-0.5)` é `-0` no JavaScript, e `from + -0` é inofensivo aqui, mas
+ *    a magnitude primeiro mantém a função legível nos dois sentidos.
  */
-export function pointsDeltaValueAt(delta: number, step: number): number {
-  if (step <= 0) return 0
-  if (step >= POINTS_DELTA_STEPS) return delta
+export function pointsTotalAt(from: number, to: number, step: number): number {
+  if (step <= 0) return from
+  if (step >= POINTS_DELTA_STEPS) return to
+  const delta = to - from
+  if (delta === 0) return to
   const magnitude = (Math.abs(delta) * step) / POINTS_DELTA_STEPS
-  // Nunca "+0" no meio da contagem: um chip que pisca zero mente sobre um prêmio que existe.
-  // O menor passo visível é 1 na direção do delta — para |delta| = 1 esse é o próprio valor
-  // final, então a contagem não inventa número nenhum.
-  const visible = Math.max(1, Math.round(magnitude))
-  return delta < 0 ? -visible : visible
+  const visible = Math.round(magnitude)
+  return from + (delta < 0 ? -visible : visible)
+}
+
+/**
+ * Quanto o chip percorre no eixo Y, em pixels (V4-2, DEC-59).
+ *
+ * O dono pediu "algo como 10 pixels". É um número nomeado e não um literal no JSX porque o
+ * mesmo valor precisa aparecer na classe utilitária (`slide-in-from-bottom-[10px]`) e num teste
+ * que afirma a direção do movimento sem medir pixel — pixel é do navegador, direção é do código.
+ */
+export const POINTS_DELTA_SHIFT_PX = 10
+
+/**
+ * Classes que dão o movimento em Y do chip: **para cima** quando o número sobe, **para baixo**
+ * quando desce.
+ *
+ * Medido em 2026-10-05 no CSS compilado da instância em execução (`/_next/static/css/app/layout.css`
+ * do dev server em 3001), e isso **refuta o comentário que estava aqui antes**:
+ *
+ *   `.-translate-x-1\/2 { --tw-translate-x: …; translate: var(--tw-translate-x) var(--tw-translate-y); }`
+ *   `@keyframes enter { from { transform: translate3d(var(--tw-enter-translate-x,0),var(--tw-enter-translate-y,0),0) … } }`
+ *
+ * Centralizar usa a propriedade `translate`; a animação usa `transform`. Propriedades diferentes
+ * compõem em vez de sobrescrever. O aviso anterior ("as variantes com transform sobrescrevem o
+ * `-translate-x-1/2`") era verdade no Tailwind v3 com `tailwindcss-animate`; nesta base
+ * (Tailwind v4 + `tw-animate-css`) não é mais. Por isso o movimento entra no mesmo elemento, sem
+ * span extra.
+ *
+ * O valor vai entre colchetes porque `slide-in-from-bottom-*` aceita comprimento arbitrário
+ * (`--value(--translate-*,[percentage],[length])` no `@utility` do plugin), e `2.5` não é
+ * reconhecido — o ramo de escala só aceita inteiro.
+ */
+export function pointsDeltaMotionClasses(value: number): string {
+  return value < 0
+    ? `slide-in-from-top-[${POINTS_DELTA_SHIFT_PX}px]`
+    : `slide-in-from-bottom-[${POINTS_DELTA_SHIFT_PX}px]`
 }
 
 /** O texto do chip: `+15` / `−10`. O sinal de menos é o tipográfico (U+2212), não o hífen. */

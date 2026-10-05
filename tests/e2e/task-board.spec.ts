@@ -89,9 +89,15 @@ async function createFixtureTask(page: Page) {
   createdTaskId = body.task.id as number;
 }
 
-/** Desktop header points badge — visible-only filter skips any hidden duplicates. */
+/**
+ * Desktop header points badge — o número que conta (V4-2).
+ *
+ * Antes era `header span.bg-clip-text` com filtro de visível, porque o menu do cabeçalho também
+ * renderiza um `span.bg-clip-text` com "N pontos" e o locator casava com os dois. O contador tem
+ * `data-testid` desde o V4-2, então a seleção não depende mais de classe de estilo.
+ */
 function pointsBadge(page: Page) {
-  return page.locator("header span.bg-clip-text").locator("visible=true").first();
+  return page.getByTestId("points-total");
 }
 
 test.describe("task board flows", () => {
@@ -130,7 +136,12 @@ test.describe("task board flows", () => {
     const res = await page.request.get(`/api/users/${COORDENADOR_ID}`);
     const user = await res.json();
     pointsBefore = user.user.points as number;
-    expect(pointsBefore).toBeGreaterThanOrEqual(0);
+    // `Number.isFinite`, e NAO `>= 0`. Medido na instância real em 2026-10-05: o Coordenador está
+    // em -20 e o Gerente em -31030, porque a penalidade de atraso **não tem piso** (DEC-39) e o
+    // dono usa o sistema de verdade. A suposição "pontos nunca são negativos" já estava sendo
+    // refutada pelo próprio banco — a suíte e2e parava no primeiro teste antes de qualquer
+    // mudança deste lote.
+    expect(Number.isFinite(pointsBefore)).toBe(true);
   });
 
   test("delegated task moved via Move menu lands in Em Revisão with review toast", async ({
@@ -172,28 +183,78 @@ test.describe("task board flows", () => {
     const badge = pointsBadge(page);
     await expect(badge).toHaveText(String(pointsBefore), { timeout: 10_000 });
 
+    // V4-2 (DEC-59): quem conta gradualmente é o número do CABEÇALHO. A prova é a **sequência**
+    // de valores que o elemento assumiu — um salto direto de `pointsBefore` para o valor novo não
+    // produz intermediário nenhum, e era exatamente isso que acontecia antes deste lote.
+    //
+    // O registro é feito por um MutationObserver dentro da página, e não por poll do Playwright,
+    // por causa de tempo: a contagem dura 1 s e o chip vive 1,9 s. Um poll que só começa depois
+    // das outras asserções chega depois da animação e não vê nada — foi assim que esta suíte
+    // falhou na primeira versão deste teste.
+    await page.evaluate(() => {
+      const el = document.querySelector("[data-testid='points-total']");
+      if (!el) throw new Error("contador do cabeçalho ausente na página");
+      const seen = new Set<string>();
+      const record = () => seen.add((el.textContent ?? "").trim());
+      record();
+      const observer = new MutationObserver(record);
+      observer.observe(el, { childList: true, subtree: true, characterData: true });
+      (window as unknown as Record<string, unknown>).__dqPointsSeen = seen;
+      (window as unknown as Record<string, unknown>).__dqPointsObserver = observer;
+    });
+
     await reviewColumn.getByRole("button", { name: /aprovar/i }).click();
+
+    // plan-v3 OND4-B: o chip do prêmio creditado aparece no contador e some sozinho. V4-2 mudou
+    // o que ele mostra: o valor FINAL de imediato (a contagem foi para o total). Só aparece aqui
+    // porque o fixture entrega a tarefa ao PRÓPRIO aprovador (`assignedTo: COORDENADOR_ID`): a
+    // aprovação credita o responsável, e sem essa coincidência o chip — e o próprio badge — não
+    // mexeriam (ver DEC-48).
+    //
+    // Vem antes das asserções do quadro porque o chip tem prazo: 1,9 s depois do anúncio ele
+    // sai da loja, e as asserções de coluna têm orçamento de 15 s.
+    const delta = page.getByTestId("points-delta");
+    await expect(delta).toBeVisible({ timeout: 10_000 });
+    await expect(delta).toHaveText(/\+10/, { timeout: 10_000 });
+    // Geometria é do navegador, não do jsdom. Duas coisas:
+    //  (a) o chip precisa ficar dentro da janela. A versão primeira era `-top-5` e o topo da
+    //      pílula fica a ~15px do topo da página — o chip saía pela borda.
+    //  (b) o chip precisa continuar CENTRADO na pílula enquanto percorre os 10px do eixo Y.
+    //      É a prova medida de que `translate` (o `-translate-x-1/2`) e `transform` (o
+    //      `@keyframes enter`) compõem: se um sobrescrevesse o outro, o centro do chip sairia do
+    //      centro da pílula em ~50% (o valor do `-translate-x-1/2`).
+    const chipBox = await delta.boundingBox();
+    expect(chipBox, "chip sem caixa no navegador").not.toBeNull();
+    expect(chipBox!.y, "chip cortado pelo topo da janela").toBeGreaterThan(0);
+    const pillBox = await delta.locator("xpath=..").boundingBox();
+    expect(pillBox, "pílula sem caixa no navegador").not.toBeNull();
+    const chipCenterX = chipBox!.x + chipBox!.width / 2;
+    const pillCenterX = pillBox!.x + pillBox!.width / 2;
+    expect(
+      Math.abs(chipCenterX - pillCenterX),
+      "chip desalinhado da pílula: o movimento em Y comeu o -translate-x-1/2",
+    ).toBeLessThanOrEqual(2);
+
+    // session refresh (use-tasks.ts refreshPoints) keeps the badge live without reload
+    await expect(badge).toHaveText(String(pointsBefore! + TASK_POINTS), { timeout: 10_000 });
+
+    // A contagem, lida do que a página registrou durante o segundo em que ela aconteceu.
+    const seenRaw = await page.evaluate(() => {
+      const observer = (window as unknown as Record<string, MutationObserver>).__dqPointsObserver;
+      observer?.disconnect();
+      return [...((window as unknown as Record<string, Set<string>>).__dqPointsSeen ?? [])];
+    });
+    const seen = seenRaw.map(Number).filter(Number.isFinite);
+    const intermediarios = seen.filter((v) => v > pointsBefore! && v < pointsBefore! + TASK_POINTS);
+    expect(
+      intermediarios.length,
+      `o total saltou direto, sem contar (visto na página: ${seen.join(", ")})`,
+    ).toBeGreaterThan(0);
 
     await expect(page.getByText(/Tarefa aprovada/i).first()).toBeVisible();
     const doneColumn = page.getByLabel("Coluna Concluído");
     await expect(doneColumn.getByText(TASK_TITLE)).toBeVisible({ timeout: 15_000 });
 
-    // session refresh (use-tasks.ts refreshPoints) keeps the badge live without reload
-    await expect(badge).toHaveText(String(pointsBefore! + TASK_POINTS), { timeout: 10_000 });
-
-    // plan-v3 OND4-B: o chip do prêmio creditado aparece no contador, conta até o valor do
-    // servidor e some sozinho. Só aparece aqui porque o fixture entrega a tarefa ao PRÓPRIO
-    // aprovador (`assignedTo: COORDENADOR_ID`): a aprovação credita o responsável, e sem essa
-    // coincidência o chip — e o próprio badge — não mexeriam (ver DEC-48).
-    const delta = page.getByTestId("points-delta");
-    await expect(delta).toBeVisible({ timeout: 10_000 });
-    await expect(delta).toHaveText(/\+10/, { timeout: 10_000 });
-    // Geometria é do navegador, não do jsdom: o chip precisa ficar dentro da janela. A versão
-    // primeira era `-top-5` e o topo da pílula fica a ~15px do topo da página — o chip saía pela
-    // borda. `boundingBox` é o que pega isso.
-    const chipBox = await delta.boundingBox();
-    expect(chipBox, "chip sem caixa no navegador").not.toBeNull();
-    expect(chipBox!.y, "chip cortado pelo topo da janela").toBeGreaterThan(0);
     await expect(delta).toBeHidden({ timeout: 10_000 });
 
     // server truth: done + completed (poll past optimistic window)
