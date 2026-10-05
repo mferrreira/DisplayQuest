@@ -1,5 +1,9 @@
 import type { WorkExecutionGateway } from "@/backend/modules/work-execution/application/ports/work-execution.gateway"
 import type { WorkExecutionEvents } from "@/backend/modules/work-execution/application/ports/work-execution.events"
+import type { CronOperationsPort } from "@/backend/modules/work-execution/application/ports/cron-operations.port"
+import { ExecuteManualCronResetUseCase } from "@/backend/modules/work-execution/application/use-cases/execute-manual-cron-reset.use-case"
+import { GetCronStatusUseCase } from "@/backend/modules/work-execution/application/use-cases/get-cron-status.use-case"
+import { createCronOperationsAdapter } from "@/backend/modules/work-execution/infrastructure/cron-operations.adapter"
 import type { DailyLogRepositoryPort } from "@/backend/modules/work-execution/application/ports/daily-log.repository"
 import type { ProjectAccessPort } from "@/backend/modules/work-execution/application/ports/project-access.port"
 import type { TaskVerificationPort } from "@/backend/modules/work-execution/application/ports/task-verification.port"
@@ -21,6 +25,12 @@ import { createPrismaWorkSessionRepository } from "@/backend/modules/work-execut
 
 type GatewayCall<T> = T extends (...args: infer A) => infer R ? (...args: A) => R : never
 
+/** B6-1b (D4): the cron surface is two use cases, not part of WorkExecutionGateway. */
+export interface WorkExecutionCronSurface {
+  getCronStatusForActor: GatewayCall<GetCronStatusUseCase["execute"]>
+  executeManualCronActionForActor: GatewayCall<ExecuteManualCronResetUseCase["execute"]>
+}
+
 /**
  * WorkExecutionModule — public surface: the same 10 methods the routes consume today
  * (WorkExecutionGateway). OND3-B2: the rules moved from the fat gateway into the use cases;
@@ -37,8 +47,11 @@ export class WorkExecutionModule {
   readonly updateWorkSession: GatewayCall<WorkExecutionGateway["updateWorkSession"]>
   readonly getSessionById: GatewayCall<WorkExecutionGateway["getSessionById"]>
   readonly getDailyLogById: GatewayCall<WorkExecutionGateway["getDailyLogById"]>
+  // B6-1b: the authorization for /api/cron/status is enforced here, not in the route.
+  readonly getCronStatusForActor: WorkExecutionCronSurface["getCronStatusForActor"]
+  readonly executeManualCronActionForActor: WorkExecutionCronSurface["executeManualCronActionForActor"]
 
-  constructor(private readonly service: WorkExecutionGateway) {
+  constructor(private readonly service: WorkExecutionGateway, cron: WorkExecutionCronSurface) {
     this.startWorkSession = this.service.startWorkSession.bind(this.service)
     this.completeWorkSession = this.service.completeWorkSession.bind(this.service)
     this.createDailyLogFromSession = this.service.createDailyLogFromSession.bind(this.service)
@@ -49,6 +62,8 @@ export class WorkExecutionModule {
     this.updateWorkSession = this.service.updateWorkSession.bind(this.service)
     this.getSessionById = this.service.getSessionById.bind(this.service)
     this.getDailyLogById = this.service.getDailyLogById.bind(this.service)
+    this.getCronStatusForActor = cron.getCronStatusForActor
+    this.executeManualCronActionForActor = cron.executeManualCronActionForActor
   }
 }
 
@@ -59,6 +74,8 @@ export interface WorkExecutionModuleFactoryOptions {
     dailyLogs?: DailyLogRepositoryPort
     projectAccess?: ProjectAccessPort
     taskVerification?: TaskVerificationPort
+    /** B6-1b: the scheduler seam. Defaults to the adapter over the cronService singleton. */
+    cronOperations?: CronOperationsPort
   }
   /** Events port; the composition root wires the gamification awards into the publisher. */
   events?: WorkExecutionEvents
@@ -69,6 +86,7 @@ export function createWorkExecutionModule(options: WorkExecutionModuleFactoryOpt
   const dailyLogs = options.ports?.dailyLogs ?? createPrismaDailyLogRepository()
   const projectAccess = options.ports?.projectAccess ?? createPrismaProjectAccess()
   const taskVerification = options.ports?.taskVerification ?? createPrismaTaskVerification()
+  const cronOperations = options.ports?.cronOperations ?? createCronOperationsAdapter()
 
   const completeWorkSessionUseCase = new CompleteWorkSessionUseCase(
     { workSessions, dailyLogs, projectAccess, taskVerification },
@@ -92,5 +110,12 @@ export function createWorkExecutionModule(options: WorkExecutionModuleFactoryOpt
     getDailyLogById: (logId) => new GetDailyLogByIdUseCase({ dailyLogs }).execute(logId),
   }
 
-  return new WorkExecutionModule(service)
+  const cron: WorkExecutionCronSurface = {
+    getCronStatusForActor: (command) =>
+      new GetCronStatusUseCase(() => cronOperations.getStatus()).execute(command),
+    executeManualCronActionForActor: (command) =>
+      new ExecuteManualCronResetUseCase(() => cronOperations.executeManualReset()).execute(command),
+  }
+
+  return new WorkExecutionModule(service, cron)
 }

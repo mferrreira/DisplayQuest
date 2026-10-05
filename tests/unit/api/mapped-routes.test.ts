@@ -34,8 +34,21 @@ const mocks = vi.hoisted(() => {
   return { fakeStore, fakeUsers, behavior };
 });
 
+// B6-1b: /api/cron/status não fala mais com o singleton de lib/ — a rota chama o use case de
+// work-execution, e o gate virou ValidationError do domínio. `workExecution` precisa existir aqui
+// pelo mesmo motivo que store/userManagement: a rota desempacota a composition root.
 vi.mock("@/backend/composition/root", () => ({
-  getBackendComposition: () => ({ store: mocks.fakeStore, userManagement: mocks.fakeUsers }),
+  getBackendComposition: () => ({
+    store: mocks.fakeStore,
+    userManagement: mocks.fakeUsers,
+    workExecution: {
+      getCronStatusForActor: async () => ({ isInitialized: true, weeklyResetRunning: true }),
+      executeManualCronActionForActor: async (command: { action: unknown }) => {
+        if (command.action !== "manual-reset") throw new ValidationError("Ação não reconhecida");
+        return { message: "Reset manual executado com sucesso" };
+      },
+    },
+  }),
 }));
 
 vi.mock("@/lib/auth/api-guard", () => ({
@@ -49,12 +62,9 @@ vi.mock("@/lib/auth/rbac", () => ({
   hasPermission: () => true,
 }));
 
-vi.mock("@/lib/services/cron-service", () => ({
-  cronService: {
-    getStatus: () => ({ isInitialized: true, weeklyResetRunning: true }),
-    executeManualReset: async () => undefined,
-  },
-}));
+// O cron-service não é mais mockado aqui de propósito (B6-1b): ele só entrava no grafo porque a
+// rota importava o singleton. O seam `createCronOperationsAdapter` cobre esse caminho agora, e o
+// gate real desta rota é testado em tests/unit/modules/work-execution/use-cases.cron-operations.test.ts.
 
 import {
   DELETE as purchaseDelete,

@@ -4,7 +4,7 @@
   "updatedAt": "2026-10-05T00:00:00-03:00",
   "status": "in_progress",
   "activeWave": "B6",
-  "activeBatch": "B6-1a",
+  "activeBatch": "B6-1b",
   "awaitingInstruction": false,
   "target": "Eliminar dívidas de fluxo legado e código morto do repositorio, com gates por lote e rollback por revert. Ver PLAN.md (lotes B0..B11).",
   "lineage": {
@@ -211,6 +211,27 @@
       ],
       "gates": "G0 arch:check 0 (750 modules, 2837 deps) | G1 eslint 0 | G2 tsc 0 | G3 vitest 67 arquivos/846 testes verdes (era 66/836: +1 arquivo, +10 casos)",
       "result": "green"
+    },
+    {
+      "id": "B6-1b",
+      "at": "2026-10-05",
+      "title": "D4 em /api/cron/status: o enforcement desceu para o modulo work-execution (rota so mapeia)",
+      "actions": [
+        "novo ports/cron-operations.port.ts (CronStatus + CronOperationsPort) e infrastructure/cron-operations.adapter.ts, que embrulha o singleton lib/services/cron-service",
+        "novo use-cases/internal/require-cron-operator.ts: a regra pura (hasPermission MANAGE_USERS -> ForbiddenError com a mensagem congelada do 403)",
+        "novo get-cron-status.use-case.ts e execute-manual-cron-reset.use-case.ts; a superficie do modulo ganhou getCronStatusForActor e executeManualCronActionForActor, fora do WorkExecutionGateway, que nao e o dono do agendador",
+        "a rota ficou com 3 linhas uteis por handler: requireApiActor, o use case e o mapper. O ensurePermission saiu de cron/status — nenhuma das 41 rotas decide mais papel na camada de rota",
+        "a porta do agendador e ARGUMENTO OBRIGATORIO do factory, sem default: um modulo sem agendador ligado deve falhar alto em vez de servir status vazio, e nenhum outro chamador passa a depender do getStatus() do singleton por acidente",
+        "ORDEM preservada: o action viaja no comando e o use case valida DEPOIS do gate. A rota legada checava o papel antes de ler o corpo, entao POST nao autorizado com acao invalida respondia 403 e nao 400 — inverter isso viraria 400 para todo caller nao autorizado",
+        "EVOLUTION documentada (padrao OND8-B4): POST com acao desconhecida era NextResponse.json({error}, 400) cru e agora e ValidationError, entao o corpo ganha code/details ao lado do mesmo error. Status e mensagem intactos",
+        "o adaptador le cronService DENTRO dos arrow bodies (late binding): cron-service chama getBackendComposition() nos proprios metodos e o root monta este modulo pelo adaptador, o que forma um ciclo root -> adaptador -> cron-service -> root. Ler a binding na hora do modulo a leria em inicializacao",
+        "novo tests/unit/modules/work-execution/use-cases.cron-operations.test.ts (25 casos) fixando a DECISAO: 2 papeis de gestao dentro, 5 barrados sem tocar a porta, mensagem congelada, roles sujas (undefined/null/[]/string/numero/objeto) nunca concedem, ordem 403-antes-de-400, e o erro do agendador subindo intacto para a rota mapear no 500 legado",
+        "tests/unit/api/cron-status-roles.test.ts reescrito (16 casos) com o modulo REAL (createWorkExecutionModule) e o guard REAL; so o singleton do agendador e dobrado. Fixa a traducao HTTP e usa contadores no duplo para provar que um 403 nao tocou o agendador",
+        "medido durante o lote: o primeiro esboco desse teste passava e travava (deadlock de await). O factory do mock do composition root importava work-execution de volta, e esse import passa pelo adaptador ate cron-service, que importa o proprio root entao mockado. Resolvido mockando tambem o cron-service (o ciclo some) e usando a porta real do adaptador em vez de uma porta escrita a mao",
+        "tests/unit/api/mapped-routes.test.ts: workExecution entrou no duplo da composition root (a rota desempacota o root) e o cron-service saiu dele (a rota nao fala mais com lib/). O POST de acao desconhecida obtem o 400 de um ValidationError lancado pelo duplo, preservando o que o teste fixava"
+      ],
+      "gates": "G0 arch:check 0 (756 modules, 2857 deps) | G1 eslint 0 | G2 tsc 0 | G3 vitest 68 arquivos/877 testes verdes (era 67/846: +1 arquivo, +31 casos)",
+      "result": "green"
     }
   ],
   "gates": {
@@ -252,7 +273,8 @@
     "DEC-28 (dono 2026-10-01): docs/APOO MANTIDO e CORRIGIDO (nao arquivar nem deletar); contradicoes resolvidas no lote B9.",
     "DEC-29 (dono 2026-10-01): B6 (autorizacao rota->use case, D4) RE-SEQUENCIADO para depois do B8. Evidencia da varredura: os gates das 16 rotas sao o UNICO enforcement do sistema — os use cases novos portam fielmente o legado PERMISSIVO (gateways legacy sem check algum; delete-task tem quirk congelado documentado 'any authenticated actor deletes any task'). Remover o gate agora = regressao de seguranca; adicionar enforcement no use case novo = divergencia old-vs-new nos 667 testes de contract + ripple de assinatura em 7 facades, e endureceria o B8. Apos o B8 (legado+contract removidos), a migração dos gates vira refactor limpo pinado por golden + rota-tests. Ate la, os gates de rota permanecem como enforcement de fronteira (sem regressao).",
     "DEC-50 (dono 2026-10-05, medido): o escopo do B6/D4 e de 41 rotas, nao 16 — 17 com hasPermission/hasRole direto e 29 com ensure* de api-guard, 24 delas so por ensure*. Executar as 41 em 9 lotes (B6-0 caraterizacao; B6-1 cron/status; B6-2 gamification+rewards+purchases; B6-3 weekly-reports+projects; B6-4 users x8; B6-5 work-execution x4, com o cron como chamador sem ator; B6-6 lab-operations x7; B6-7 tasks x3 — lista corrigida em DEC-51: ela somava 40 das 41 e omitia app/api/notifications/route.ts). Migracao parcial rejeitada: com parte decidindo na rota e parte no use case, ninguem sabe qual e a fonte da verdade. B6 deixa de ser deferred (B8 rodou em 2026-10-01, DEC-29 cumprida) e awaitingInstruction cai para false — o rebuild+smoke-test no PC do dono foi coberto pelo e2e 12/12 medido na arvore de hoje.",
-    "DEC-51 (dono 2026-10-05): medido em /api/cron/status — COORDENADOR e GERENTE tem permissoes IDENTICAS na matriz (backend/domain/identity/permissions.ts, comparadas linha a linha: nenhuma difere), mas a rota gateava ensureAnyRole(actor, ['COORDENADOR']), barrando o GERENTE; as rotas irmas /api/weekly-hours-history e /api/projects/stats usam MANAGE_USERS, que cobre os dois. Um papel com autoridade identica era barrado num endpoint de gestao e entrava nos outros dois, e nada congelava isso como quirk. CORRIGIDO para MANAGE_USERS com a mensagem das irmas. E a UNICA mudanca de comportamento do B6, por isso lote proprio (B6-1a) e nao dentro do refactor: assim da para reverter sem desfazer a migracao. O dono tambem definiu que o enforcement deste endpoint migra para um USE CASE do modulo work-execution (porta CronOperationsPort + adaptador que embrulha o singleton cronService + 2 use cases, ligado no composition root) — porque sem use case a rota nao teria onde morar o gate (B6-1b). E a lista de lotes do DEC-50 foi corrigida: somava 40 das 41, omitindo app/api/notifications/route.ts."
+    "DEC-51 (dono 2026-10-05): medido em /api/cron/status — COORDENADOR e GERENTE tem permissoes IDENTICAS na matriz (backend/domain/identity/permissions.ts, comparadas linha a linha: nenhuma difere), mas a rota gateava ensureAnyRole(actor, ['COORDENADOR']), barrando o GERENTE; as rotas irmas /api/weekly-hours-history e /api/projects/stats usam MANAGE_USERS, que cobre os dois. Um papel com autoridade identica era barrado num endpoint de gestao e entrava nos outros dois, e nada congelava isso como quirk. CORRIGIDO para MANAGE_USERS com a mensagem das irmas. E a UNICA mudanca de comportamento do B6, por isso lote proprio (B6-1a) e nao dentro do refactor: assim da para reverter sem desfazer a migracao. O dono tambem definiu que o enforcement deste endpoint migra para um USE CASE do modulo work-execution (porta CronOperationsPort + adaptador que embrulha o singleton cronService + 2 use cases, ligado no composition root) — porque sem use case a rota nao teria onde morar o gate (B6-1b). E a lista de lotes do DEC-50 foi corrigida: somava 40 das 41, omitindo app/api/notifications/route.ts.",
+    "DEC-52 (B6-1b, 2026-10-05): o gate de /api/cron/status desceu da rota para o modulo work-execution. Novo: ports/cron-operations.port.ts (CronStatus + CronOperationsPort), use-cases/internal/require-cron-operator.ts (a regra pura, ForbiddenError com a mensagem legada), use-cases/get-cron-status.use-case.ts e use-cases/execute-manual-cron-reset.use-case.ts, e infrastructure/cron-operations.adapter.ts. A porta e ARGUMENTO OBRIGATORIO do factory, sem default: um modulo sem agendador ligado deve falhar alto, nao servir um status silenciosamente vazio — e assim nenhum outro chamador depende do getStatus() do singleton por acidente."
   ],
   "gapRegistry": [
     { "id": "GAP-01", "status": "carried", "summary": "store gateway port tipado por backend/models/{Purchase,Reward} (toPrisma em rota). Verificar em B8." },
@@ -299,6 +321,7 @@
     { "at": "2026-10-01", "event": "B0-B5,B7 verdes; DEC-29 (B6 depois do B8); B8 executado (-31k linhas, baseline 50/619)" },
     { "at": "2026-10-01", "event": "checkpoint do dono: branch cleanup/repo-sweep + tag pre-cleanup pushadas para origin; B6/B9 aguardando rebuild+smoke-test no PC do dono" },
     { "at": "2026-10-05", "event": "B6-0 verde (38 testes de caraterizacao, G0-G3) e DEC-50: escopo do D4 corrigido de 16 para 41 rotas medidas. Duas crencas sobre POST /purchases foram refutadas pelo teste ao medir (o gate e cross-actor). Restricoes anotadas para o B6-5: o cron chama 3 use cases sem ator, e work-execution instancia use case inline por chamada. Baseline desta arvore: G3 66/836, G0 749 modulos/2833 deps." },
-    { "at": "2026-10-05", "event": "B6-1a verde (DEC-51): /api/cron/status corrigido de ['COORDENADOR'] para MANAGE_USERS apos medir que COORDENADOR e GERENTE tem permissoes identicas e que as rotas irmas ja usavam MANAGE_USERS. Unica mudanca de comportamento do B6, em lote proprio para ser revertivel. 10 casos novos com o guard real. G3 67/846, G0 750 modulos/2837 deps. A lista de lotes do DEC-50 foi corrigida: somava 40 das 41 (omitia app/api/notifications/route.ts)." }
+    { "at": "2026-10-05", "event": "B6-1a verde (DEC-51): /api/cron/status corrigido de ['COORDENADOR'] para MANAGE_USERS apos medir que COORDENADOR e GERENTE tem permissoes identicas e que as rotas irmas ja usavam MANAGE_USERS. Unica mudanca de comportamento do B6, em lote proprio para ser revertivel. 10 casos novos com o guard real. G3 67/846, G0 750 modulos/2837 deps. A lista de lotes do DEC-50 foi corrigida: somava 40 das 41 (omitia app/api/notifications/route.ts)." },
+    { "at": "2026-10-05", "event": "B6-1b verde (DEC-52): o gate de /api/cron/status desceu para work-execution (porta CronOperationsPort + adaptador sobre o singleton + 2 use cases), e a rota ficou so com auth, use case e mapper. Ordem do gate preservada (403 antes de 400) e a porta do agendador e obrigatoria, sem default. 41 casos novos: 25 no use case, 16 na rota com o modulo real. Medido no lote: o primeiro esboco do teste de rota travava por ciclo de import no mock do composition root. G3 68/877, G0 756 modulos/2857 deps." }
   ]
 }
