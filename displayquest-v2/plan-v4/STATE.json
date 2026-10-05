@@ -1,0 +1,111 @@
+{
+  "plan": "plan-v4",
+  "version": "4.0.0",
+  "updatedAt": "2026-10-05T17:40:00-03:00",
+  "status": "in_progress",
+  "activeWave": "V4-2",
+  "activeBatch": null,
+  "awaitingInstruction": true,
+  "lineage": {
+    "previousPlan": "plan-v3 (qualidade operacional, ondas 0-4, 13 batches, DEC-30..49, status done em 2026-10-03)",
+    "concurrentPlan": "repo-cleanup / clean-arch B6 (D4, autorizacao rota->use case) — PAUSADO em 2026-10-05 por decisao do dono; B6-0..B6-2b mergeados na dev, o resto em displayquest-v2/clean-arch/B6-RESTANTE.md",
+    "note": "a numeracao de decisoes CONTINUA a do clean-arch: DEC-01..29 clean-arch, DEC-30..49 plan-v3, DEC-50..54 B6/D4, DEC-55 em diante plan-v4"
+  },
+  "baseline": {
+    "measuredAt": "2026-10-05",
+    "measuredOn": "dev + V4-1 (antes do commit do lote)",
+    "unitAndFeatures": "76 arquivos / 948 testes",
+    "fullSuite": "86 arquivos / 1032 testes",
+    "archCheck": "767 modulos / 2919 dependencias, zero violacao, allow-list vazia",
+    "previousBaseline": "73/934 e 83/1017 em dev @ fe7b359 — V4-1 somou 3 arquivos e 14 testes em unit/features, 15 na completa",
+    "timing": "completa ~47s, G3 ~35s (medidos em fe7b359; nao re-medidos neste lote)"
+  },
+  "gates": {
+    "G0": "npm run arch:check — exit 0, allow-list VAZIA",
+    "G1": "npm run lint — exit 0 (warnings aceitos, nenhum erro)",
+    "G2": "npx tsc --noEmit — 0 erros",
+    "G3": "npx vitest run tests/unit features — zero failure",
+    "G4": "DATABASE_URL=...5433 npx vitest run — suíte completa, só contra dq-dev-test-db",
+    "G5": "npm run docs:build + docs:check em batch que muda comportamento visível",
+    "G6": "recapturar telas do guia quando a captura deixa de representar a tela"
+  },
+  "waves": [
+    {
+      "id": "V4-1",
+      "title": "inativação de usuário no lugar de exclusão",
+      "status": "done",
+      "decisions": ["DEC-55"],
+      "scope": "DeleteUserUseCase passa a recusar com ConflictError quando o usuario tem dependencia; 409 legivel no lugar do 500 com mensagem crua do Prisma. Nenhuma migration, nenhuma mudanca de schema.",
+      "why": "medido: 16 das 23 FKs para users sao RESTRICT; DELETE falha com P2003 para qualquer usuario com historico, e a rota devolve o bloco cru do Prisma no corpo. O caminho 'inactive' ja existe de ponta a ponta (login, API, laboratorio, relatorios, cron, UI) e nenhuma tela chama deleteUser."
+    },
+    {
+      "id": "V4-2",
+      "title": "animação: quem conta é o cabeçalho; chip com movimento em Y, desktop-only",
+      "status": "pending",
+      "decisions": ["DEC-59"],
+      "scope": "o numero do cabecalho passa a contar gradualmente; o chip passa a mostrar o valor FINAL e a transladar ~10px em Y (para cima no aumento, para baixo na diminuicao); desktop-only garantido."
+    },
+    {
+      "id": "V4-3",
+      "title": "animação chega a quem não pode aprovar",
+      "status": "pending",
+      "decisions": ["DEC-58"],
+      "scope": "baseline do ultimo total visto por aquele usuario em dq:points-seen:<userId> via lib/client-storage.ts; ao montar, se o total da sessao difere, anuncia o delta."
+    },
+    {
+      "id": "V4-4",
+      "title": "subtasks: schema + domínio",
+      "status": "pending",
+      "decisions": ["DEC-56", "DEC-57"],
+      "scope": "tabela task_subtasks + migration; +10 por subtask na BASE da pontuação (penalidade continua fixa por dia); trava de status no dominio: a mae nao sai de in-progress enquanto houver subtask aberta."
+    },
+    {
+      "id": "V4-5",
+      "title": "subtasks na UI",
+      "status": "pending",
+      "decisions": ["DEC-57"],
+      "scope": "criar/concluir subtask no card e no dialogo de detalhe; a UI desabilita o movimento ALEM de bloquear, nao em vez de."
+    }
+  ],
+  "decisionRegistry": [
+    "DEC-55 (dono 2026-10-05, V4-1): DELETE /api/users/[id] passa a RECUSAR com ConflictError (409) quando o usuario tem dependencia, em vez de deixar o Prisma estourar P2003 e a rota devolver 500 com a mensagem crua no corpo. Cascade na migration foi rejeitado explicitamente pelo dono ('raramente a gente deleta um usuario de verdade' — a inativação é o caminho). Remover o endpoint foi considerado e rejeitado: o caso 'excluir cadastro sem historico' funciona hoje e continua funcionando. Medido antes: 16 das 23 FKs para users sao RESTRICT; usuarios 58 e 59 da base de teste falham com projects_createdBy_fkey e lab_responsibilities_userId_fkey. O caminho 'inactive' ja existe e nao foi criado aqui: lib/auth/config.ts:30 (login), lib/auth/server-auth.ts:36 (API), regras de laboratorio, bulk weekly reports, cron weekly reset, e 'Inativo' na UI em volunteers-management.tsx:404 e ModernAdminPanel.tsx:491.",
+    "DEC-56 (dono 2026-10-05, V4-4): subtask soma à BASE da pontuação da mãe, e a penalidade de atraso CONTINUA fixa por dia. Formula: (10 + 10n) · (adiantada ? 1,5 : 1) − diasAtrasados · 10. A alternativa proporcional (dias · base) foi rejeitada: é a matemática pré-v3 que o plan-v3 corrigiu em OND1-B1 (DEC-31/32) porque comia os pontos de quem entregava no prazo. DEC-39 (sem piso) continua valendo sobre a base nova.",
+    "DEC-57 (dono 2026-10-05, V4-4/V4-5): a trava 'a mãe não sai de Em Andamento enquanto houver subtask aberta' mora no DOMÍNIO e é aplicada no use case, devolvendo 400 com mensagem dizendo quantas subtasks faltam. Desabilitar só na UI foi rejeitado: a API aceitaria a mesma chamada e a regra existiria metade. A UI desabilita ALEM de bloquear, não em vez de.",
+    "DEC-58 (dono 2026-10-05, V4-3): o cabeçalho passa a animar QUALQUER mudança de pontos desde a última vez que aquele usuário viu o número, não só o prêmio da tarefa que ele mesmo mutou. Baseline em dq:points-seen:<userId> via lib/client-storage.ts. O dono aceitou explicitamente a mudança de semântica. Consequências aceitas: primeira vez não anima (sem baseline); trocar de navegador anima de novo; ajuste de admin e compra aprovada também animam. Motivo medido: o sinal só nascia de mutação (use-tasks.ts:92) e só quando awardedTo === sessionUserId — o voluntário que não aprova nunca recebia o delta, e via 10 pts aparecerem sem contagem.",
+    "DEC-59 (V4-2): quem conta gradualmente passa a ser o número do CABEÇALHO, não o chip. O chip passa a mostrar o valor final e a transladar ~10px em Y — para cima quando o número sobe, para baixo quando desce — só em desktop. Atenção medida: o chip usa hoje APENAS `animate-in fade-in` porque as variantes com transform sobrescrevem o `-translate-x-1/2` e desalinham o chip (comentário em points-delta.tsx:112). O movimento em Y precisa resolver isso, não ignorar. O contêiner do chip já é `hidden md:flex` (app-header.tsx:146), então desktop-only já é verdade para o chip."
+  ],
+  "batchLog": [
+    {
+      "id": "V4-1",
+      "at": "2026-10-05",
+      "title": "inativação no lugar de exclusão: o use case recusa com ConflictError ANTES de deixar o banco estourar (DEC-55)",
+      "actions": [
+        "medido antes de planejar: 16 das 23 FKs para users sao RESTRICT (default do Prisma, sem onDelete); so 7 cascadeam. Na base de teste, com o caminho real: user 58 -> P2003 projects_createdBy_fkey, user 59 -> P2003 lab_responsibilities_userId_fkey. A rota devolvia 500 com a mensagem CRUA do Prisma no corpo, porque domainErrorResponse devolve null para nao-DomainError e o catch faz error.message || '...'.",
+        "medido antes de planejar: o caminho 'inactive' ja existe de ponta a ponta e NAO foi criado aqui — lib/auth/config.ts:30 bloqueia login, lib/auth/server-auth.ts:36 bloqueia API, assertUserCanCreateLabEvent/Notice recusam inativo, bulk weekly reports e cron weekly reset pulam inativo, e 'Inativo' ja e opcao em volunteers-management.tsx:404 e ModernAdminPanel.tsx:491. Nenhuma tela .tsx chama deleteUser: o DELETE so era alcancavel por chamada direta de API.",
+        "teste escrito ANTES do codigo (tests/unit/modules/user-management/delete-user-dependencies.test.ts): contra a producao vigente falhou 3/5, e a falha E a medicao — a ordem medida era findById -> delete, sem checagem nenhuma.",
+        "port ganhou countBlockingDependencies(userId); PrismaUserRepository implementa com 13 contagens independentes cobrindo as 16 FKs (projects, tasks e issues somam 2 FKs cada numa OR). As 7 cascade ficam FORA de proposito: contalas faria um cadastro recem-registrado parecer impossivel de excluir, e esse e justamente o caso que continua funcionando.",
+        "use case passa a ordem para findById -> countBlockingDependencies -> delete. 409 com mensagem que oferece o caminho ('Inative o usuario...') e nenhum vocabulario de persistencia no corpo.",
+        "HTTP fixado com o MODULO REAL sobre porta falsa (tests/unit/api/user-delete-dependencies.test.ts, 5 casos) — nao com duplo de modulo, que e a licao medida do B6-2a: duplo de modulo faz o 403 SUMIR do teste em vez de falhar. Inclui o par de ordem 403-antes-de-409: quem nao tem MANAGE_USERS nao descobre quem tem historico.",
+        "G4: users-roundtrip ganhou o caso de recusa contra Prisma real (tarefa criada para o usuario, ConflictError, a linha continua la). Ordem de limpeza invertida no afterAll — apagar a tarefa ANTES do usuario, senao o proprio deleteMany de limpeza falha com P2003 pela FK RESTRICT.",
+        "guarda de deriva novo (tests/unit/modules/user-management/user-delete-schema-drift.test.ts): le prisma/schema.prisma e o corpo de countBlockingDependencies e compara os conjuntos de modelo.coluna. Existe porque a lista do repositorio e uma COPIA do schema, e o tsc NAO protege contra tabela esquecida. Verificado por mutacao: remover a contagem de lab_events.userId faz o guarda falhar nomeando a coluna.",
+        "verificado por mutacao: remover a recusa do use case derruba 4 testes nos dois arquivos novos."
+      ],
+      "gates": "G0 767/2919 zero violacao | G1 sem erro | G2 0 erros | G3 76/948 | G4 86/1032 verde inclusive o caso novo contra Prisma real",
+      "gotchas": [
+        "a forma abreviada { userId } do Prisma NAO e reconhecivel como coluna por leitura de texto — o repositorio escreve userId: userId por extenso para o guarda de deriva funcionar, com comentario dizendo o motivo.",
+        "parser de schema: o chunk comeca com 'tasks {', e o nome do modelo precisa sair SEM a chave; com a chave cada relacao sai 'tasks {.x' e o conjunto parece vazio contra a lista esperada (falhou assim na primeira execucao)."
+      ]
+    }
+  ],
+  "openQuestions": [
+    "D-D (escopo da subtask na v1): responsavel proprio? prazo proprio? existe em task publica e em quest global? criada junto com a mae ou depois? conta para evaluateUserBadges? Proposta registrada em PLAN.md §2 D-D: sem responsavel, sem prazo proprio, fora de publica e global, criada depois da mae, sem efeito em badge. Aguardando o dono antes de V4-4."
+  ],
+  "blockers": [],
+  "removedItems": [],
+  "answeredInstructions": [
+    { "id": "ASK-V4-01", "question": "o que fazer com DELETE /api/users/[id]", "answer": "recusar com 409 quando houver dependencia (DEC-55)", "answeredAt": "2026-10-05" },
+    { "id": "ASK-V4-02", "question": "como o +10 por subtask convive com a penalidade de atraso", "answer": "soma à base, penalidade continua fixa por dia (DEC-56)", "answeredAt": "2026-10-05" },
+    { "id": "ASK-V4-03", "question": "onde mora a trava da task mãe", "answer": "no dominio, aplicada no use case, com 400 e mensagem (DEC-57)", "answeredAt": "2026-10-05" },
+    { "id": "ASK-V4-04", "question": "animar toda mudança de pontos, mudando o significado do número", "answer": "aceito (DEC-58)", "answeredAt": "2026-10-05" }
+  ]
+}

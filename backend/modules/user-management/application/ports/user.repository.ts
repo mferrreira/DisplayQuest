@@ -64,6 +64,19 @@ export interface UserRepositoryPort {
   create(data: NewUserRecord): Promise<UserRecord>;
   update(record: UserRecord): Promise<UserRecord>;
   delete(id: number): Promise<void>;
+  /**
+   * Quantas linhas de OUTROS registros ainda apontam para este usuário (V4-1, DEC-55).
+   *
+   * Existe porque 16 das 23 FKs que apontam para `users` são `RESTRICT` (default do Prisma, sem
+   * `onDelete`): deixar o `delete` correr produz P2003 e a rota devolve 500 com a mensagem crua
+   * do Prisma no corpo. Contar antes permite recusar com 409 e uma frase que o humano entende.
+   *
+   * Conta só as FKs que BLOQUEIAM. As 7 com `onDelete: Cascade` (`project_members`,
+   * `task_assignees`, `task_user_progress`, `work_sessions`, `weekly_hours_history`,
+   * `user_badges.userId`, `notifications`) somem junto com o usuário e não bloqueiam nada —
+   * contá-las faria um cadastro recém-registrado parecer impossível de excluir.
+   */
+  countBlockingDependencies(userId: number): Promise<number>;
   findPending(): Promise<UserRecord[]>;
   /** status=active, ordered by name asc, with every visibility-relevant field. */
   findActiveUsers(): Promise<UserSummaryRow[]>;

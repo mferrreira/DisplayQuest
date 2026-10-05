@@ -97,6 +97,27 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
   `docs:check` em batch que muda comportamento visível) e **G6** (recapturar as telas do guia
   quando a captura deixa de representar a tela).
 
+## plan-v4 — subtasks, animação de pontos, inativação de usuário (2026-10-05)
+
+- **Estado/decisões:** `displayquest-v2/plan-v4/{PLAN.md,STATE.json}` — V4-1 **done**, V4-2..V4-5
+  pendentes, `awaitingInstruction` apontando para **D-D** (escopo da subtask na v1). A numeração de
+  decisões continua: DEC-55..59 são do plan-v4.
+- **Excluir usuário não é o caminho (DEC-55):** `inactive` já funciona de ponta a ponta — login
+  (`lib/auth/config.ts:30`), API (`lib/auth/server-auth.ts:36`), regras de laboratório, bulk weekly
+  reports, cron weekly reset, e "Inativo" na UI. Nenhuma tela `.tsx` chamava `deleteUser`. O
+  `DELETE /api/users/[id]` agora **recusa com 409** quando há dependência; sem dependência continua
+  excluindo (é o caso "cadastro de teste").
+- **16 das 23 FKs para `users` são `RESTRICT`** (default do Prisma, sem `onDelete`); só 7
+  cascadeiam (`project_members`, `task_assignees`, `task_user_progress`, `work_sessions`,
+  `weekly_hours_history`, `user_badges.userId`, `notifications`). Se você mexer no schema e
+  adicionar uma FK para `users` **sem** `onDelete`, o guarda
+  `tests/unit/modules/user-management/user-delete-schema-drift.test.ts` falha e nomeia a coluna —
+  ele compara o schema com o corpo de `countBlockingDependencies`, porque o `tsc` não protege
+  contra tabela esquecida.
+- **Gotcha do guarda:** a forma abreviada `{ userId }` do Prisma não é reconhecível como coluna por
+  leitura de texto — o repositório escreve `userId: userId` por extenso de propósito. E ao parsear
+  o schema, o nome do modelo precisa sair **sem** a chave (`tasks {` → `tasks`).
+
 ## Perfil do sistema (2026-09-05)
 
 - **Papéis e permissões:** `ADMIN`/`COORDENADOR`/`LABORATORISTA` com `MANAGE_WORK_SESSIONS` gerenciam sessões alheias; `MANAGE_USERS` gerencia grade de horários. Voluntário e demais têm leitura liberada onde faz sentido.

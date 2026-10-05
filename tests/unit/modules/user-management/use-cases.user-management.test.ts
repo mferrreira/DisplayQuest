@@ -83,6 +83,10 @@ class FakeRepository implements UserRepositoryPort {
   async delete(id: number) {
     this.store = this.store.filter((u) => u.id !== id);
   }
+  /** V4-1 (DEC-55): 0 por default — nenhum usuário desta suíte tem dependência. */
+  async countBlockingDependencies() {
+    return 0;
+  }
   async findPending() {
     return this.store.filter((u) => u.status === "pending").map((u) => this.clone(u));
   }

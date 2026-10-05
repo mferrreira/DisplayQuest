@@ -19,10 +19,16 @@ import { createUserManagementModule } from "@/backend/modules/user-management";
 const userModule = createUserManagementModule();
 const uniqueEmail = `g4-users-${Date.now()}@test.local`;
 const createdUserIds: number[] = [];
+/** V4-1: tarefas criadas para o caso de dependência. Apagadas ANTES dos usuários. */
+const dependentTaskIds: number[] = [];
 let userId = 0;
 
 describe("G4 roundtrip — user-management (isolated test DB)", () => {
   afterAll(async () => {
+    // Ordem importa: as tarefas apontam para o usuário por FK RESTRICT.
+    if (dependentTaskIds.length > 0) {
+      await prisma.tasks.deleteMany({ where: { id: { in: dependentTaskIds } } });
+    }
     if (createdUserIds.length > 0) {
       await prisma.users.deleteMany({ where: { id: { in: createdUserIds } } });
     }
@@ -124,5 +130,43 @@ describe("G4 roundtrip — user-management (isolated test DB)", () => {
     await userModule.deleteUser(userId);
     expect(await prisma.users.findUnique({ where: { id: userId } })).toBeNull();
     await expect(userModule.deleteUser(userId)).rejects.toThrow("Usuário não encontrado");
+  });
+
+  /**
+   * V4-1 (DEC-55) — a recusa contada contra o Prisma real, não contra uma porta falsa.
+   *
+   * O que este caso prova que o teste de unidade não pode provar: que as 13 contagens de
+   * `countBlockingDependencies` apontam para colunas que EXISTEM e encontram a linha certa. Um
+   * nome de coluna errado seria pego pelo `tsc` (o cliente Prisma é tipado), mas uma TABELA
+   * esquecida não seria pega por nada — daí o guarda de deriva em
+   * `tests/unit/modules/user-management/user-delete-schema-drift.test.ts`.
+   *
+   * A tarefa é apagada antes do usuário no `afterAll`: `tasks.assignedTo` é RESTRICT, então
+   * deixar a linha pendurada faria o próprio `users.deleteMany` de limpeza falhar com P2003.
+   */
+  it("deleteUser recusa com ConflictError quando o usuário tem histórico (Prisma real)", async () => {
+    const withHistory = (await userModule.registerUser({
+      name: "G4 Com Historico",
+      email: `g4-users-hist-${Date.now()}@test.local`,
+      password: "g4-secret123",
+    })) as { id: number };
+    createdUserIds.push(withHistory.id);
+
+    const task = await prisma.tasks.create({
+      data: {
+        title: `G4 V4-1 tarefa de ${withHistory.id}`,
+        status: "to-do",
+        priority: "medium",
+        assignedTo: withHistory.id,
+        createdBy: withHistory.id,
+      },
+    });
+    dependentTaskIds.push(task.id);
+
+    const error = await userModule.deleteUser(withHistory.id).catch((e) => e);
+    expect(error).toBeInstanceOf(ConflictError);
+    expect(error).toMatchObject({ status: 409 });
+    // O usuário continua lá: a recusa veio antes, não depois de um delete parcial.
+    expect(await prisma.users.findUnique({ where: { id: withHistory.id } })).not.toBeNull();
   });
 });

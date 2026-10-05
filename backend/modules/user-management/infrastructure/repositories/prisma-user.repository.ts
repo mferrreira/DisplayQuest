@@ -93,6 +93,42 @@ export class PrismaUserRepository implements UserRepositoryPort {
     await prisma.users.delete({ where: { id } })
   }
 
+  /**
+   * V4-1 (DEC-55): conta as 16 FKs `RESTRICT` que apontam para `users`, ANTES de qualquer
+   * tentativa de apagar. A lista é as relações do `prisma/schema.prisma` cujo `@relation` para
+   * `users` não declara `onDelete` — conferida modelo por modelo, não por suposição.
+   *
+   * As 7 com `onDelete: Cascade` ficam de fora de propósito: elas somem junto com o usuário e não
+   * bloqueiam nada. Incluí-las faria um cadastro recém-registrado parecer impossível de excluir,
+   * e é justamente o caso que continua funcionando.
+   *
+   * `userId: userId` escrito por extenso, e não a forma abreviada `{ userId }`, porque o guarda
+   * `user-delete-schema-drift.test.ts` lê este corpo para conferir tabela por tabela contra o
+   * schema: se alguém adicionar uma FK nova para `users` sem `onDelete` e esquecer daqui, o guarda
+   * falha e diz qual coluna falta. Sem o nome explícito, a abreviação não é reconhecível.
+   *
+   * `Promise.all` porque são contagens independentes; o total é a soma, e o use case só precisa
+   * saber se é zero.
+   */
+  async countBlockingDependencies(userId: number): Promise<number> {
+    const counts = await Promise.all([
+      prisma.projects.count({ where: { OR: [{ createdBy: userId }, { leaderId: userId }] } }),
+      prisma.tasks.count({ where: { OR: [{ createdBy: userId }, { assignedTo: userId }] } }),
+      prisma.purchases.count({ where: { userId: userId } }),
+      prisma.lab_responsibilities.count({ where: { userId: userId } }),
+      prisma.daily_logs.count({ where: { userId: userId } }),
+      prisma.weekly_reports.count({ where: { userId: userId } }),
+      prisma.project_reports.count({ where: { authorId: userId } }),
+      prisma.user_schedules.count({ where: { userId: userId } }),
+      prisma.history.count({ where: { performedBy: userId } }),
+      prisma.lab_events.count({ where: { userId: userId } }),
+      prisma.badges.count({ where: { createdBy: userId } }),
+      prisma.user_badges.count({ where: { earnedBy: userId } }),
+      prisma.issues.count({ where: { OR: [{ assigneeId: userId }, { reporterId: userId }] } }),
+    ])
+    return counts.reduce((sum, n) => sum + n, 0)
+  }
+
   async findPending(): Promise<UserRecord[]> {
     const rows = await prisma.users.findMany({ where: { status: "pending" } })
     return rows.map(toRecord)
