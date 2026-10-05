@@ -43,6 +43,25 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
   (tag `pre-cleanup` = `12d9d6c`); o registro DEC-01..28 e os GAPs foram carregados no
   STATE.json v2 (`decisionRegistry`/`gapRegistry`) — comentários de código que citam
   `DEC-NN` continuam resolvíveis.
+- **D4 não são 16 rotas — são 41 (medido 2026-10-05, DEC-50):** se você for mexer na
+  autorização, não confie no número antigo. 17 rotas importam `hasPermission`/`hasRole` de
+  `@/lib/auth/rbac` e 29 usam `ensurePermission`/`ensureAnyRole`/`ensureSelfOrPermission` de
+  `@/lib/auth/api-guard` — as 24 que usam só `ensure*` são **a mesma dívida com outra grafia**,
+  porque `ensurePermission` delega no mesmo domínio. As outras 20 rotas já estão no formato
+  certo (o domínio lança, a rota só mapeia com `domainErrorResponse`) — são o padrão a seguir.
+  Note que a regra **já está no domínio** (`backend/domain/identity`); o que falta é
+  *enforcement* no use case, e nenhum dos use cases por trás dessas 41 checa ator.
+- **O cron é chamador sem ator de 3 use cases (medido 2026-10-05):**
+  `lib/services/cron-service.ts` chama `workExecution.listWorkSessions`,
+  `labOperations.pauseResponsibilityForUser` e `reporting.resetWeeklyHoursHistory` — todos sem
+  ator, porque é rotina de sistema (varredura de anti-farm, reset semanal). Mover a checagem
+  para dentro desses use cases sem desenhar o caminho de ator-de-sistema **quebra o cron**.
+  E `work-execution` é o único módulo sem factory: instancia use case *inline por chamada*
+  (`GatewayCall`), então a migração nele custa mais que nos outros seis.
+- **`POST /api/purchases` só barra compra PARA TERCEIRO (medido 2026-10-05):** a regra da rota
+  é `!canManagePurchases && targetUserId !== actor.id`, então um VOLUNTARIO comprando para si
+  recebe 201 e só quem compra para outro recebe 403. Eu acreditava o contrário e o teste de
+  caraterização refutou — em autorização, escreva o teste antes de mover o gate.
 - **Estado/decisões (plan-v3):** `displayquest-v2/plan-v3/{PLAN.md,STATE.json}` — STATE.json
   v3.0.0 monitora o plano operacional **plan-v3** (ondas 0–4, 13 batches, AC-P3-01..10,
   DEC-30..DEC-49, GAP-P3-01..04 fechados, GAP-P3-05 aberto, `blockers` vazio). A numeração de
