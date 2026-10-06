@@ -14,10 +14,10 @@
   "baseline": {
     "measuredAt": "2026-10-06",
     "measuredOn": "dev + V4-4 (antes do commit do lote)",
-    "unitAndFeatures": "84 arquivos / 1084 testes",
-    "fullSuite": "94 arquivos / 1169 testes",
+    "unitAndFeatures": "86 arquivos / 1095 testes",
+    "fullSuite": "96 arquivos / 1180 testes",
     "e2e": "quadro: 2 passando, 1 falha conhecida (strict mode violation em 'Em Revisao' — agora pela tarefa 50 'fazer reuniao com mamedes', antes pela 290), 5 did not run pelo spec serial; shell 5/5. Confirmado com git stash: o baseline falha identico.",
-    "archCheck": "784 modulos / 3055 dependencias, zero violacao, allow-list vazia",
+    "archCheck": "786 modulos / 3074 dependencias, zero violacao, allow-list vazia",
     "previousBaseline": "78/981 e 88/1065 em dev antes do V4-4; V4-4 81/1050 e 91/1135; V4-4b/V4-4c 82/1062 e 92/1147; V4-1 76/948 e 86/1032; V4-2 76/957 e 86/1041; V4-6 77/966 e 87/1050",
     "timing": "G3 ~17s, completa ~24s (medidos no lote do V4-4)"
   },
@@ -83,10 +83,17 @@
     },
     {
       "id": "V4-5c",
-      "title": "subtasks no formulario de nova tarefa + GAP-P3-05 + gates G5/G6",
+      "title": "subtasks no formulario de nova tarefa + GAP-P3-05 fechado",
+      "status": "done",
+      "decisions": ["DEC-93", "DEC-94"],
+      "scope": "Campo de subtasks no `task-dialog.tsx` so na CRIACAO (mãe nasce com a lista, DEC-82); GAP-P3-05 fechado — o toast da conclusao passa a anunciar o numero CREDITADO pela resposta, depois da mutacao, com uma funcao so para cartao e quadro."
+    },
+    {
+      "id": "V4-5d",
+      "title": "gates G5/G6 do guia (docs:build + recaptura das telas)",
       "status": "pending",
       "decisions": ["DEC-89"],
-      "scope": "Campo de subtasks no `task-dialog.tsx` (mãe criada JUNTO com as subtasks, DEC-82); corrigir GAP-P3-05 em `features/tasks/components/task-card.tsx:256` (o toast anuncia o projetado, nao o creditado pela resposta); `docs:build` + recaptura do guia."
+      "scope": "O cartao, o dialogo de detalhe e o formulario mudaram de cara (subtask visivel) e o aviso de conclusao mudou de hora e de numero. As capturas do guia deixaram de representar a tela. `docs:build` + `docs:check` e recapturar com `scripts/capture-user-guide.mjs` — que GRAVA de verdade na instancia em alguns passos, entao depende de decisao do dono."
     },
     {
       "id": "V4-6",
@@ -97,6 +104,8 @@
     }
   ],
   "decisionRegistry": [
+    "DEC-94 (2026-10-06, V4-5c): o campo de subtask existe so na CRIACAO de tarefa, e so quando `supportsSubtasks` diz sim — a MESMA funcao que o servidor usa para aceitar `subtasks` no corpo (DEC-82). Editar a lista de uma tarefa que ja existe e o que o dialogo de detalhe faz (DEC-89); oferecer os dois controles para a mesma lista na mesma tela convidaria duas regras a divergir. O campo nao entra no schema zod do react-hook-form: e uma lista de rascunho em state, enviada no POST como `subtasks: [{title}]`, e o mock passa a espelhar a rota real (mae com lista + base 10 + 10·n).",
+    "DEC-93 (2026-10-06, V4-5c, fecha GAP-P3-05 do plan-v3 §8): o aviso da conclusao passa a ser derivado da RESPOSTA e chega DEPOIS da mutacao. Antes o cartao calculava `projectedAward(task)` e anunciava esse numero antes de a mutacao acontecer. Medido neste lote com o mock: tarefa publica vencida ha 3 dias projeta -20 e a resposta credita 10 — os dois divergem, e a pessoa tem direito ao segundo. A frase e uma funcao pura so (`completionAwardMessage`) porque o menu do cartao e o soltar do arrasto anunciam a mesma conclusao, e a lição medida do plan-v3 e que a mesma regra em duas copias diverge. `null` nao e zero: e 'ninguem creditado agora' (DEC-48). Consequencia visivel: o toast chega um pouco mais tarde (depois da resposta), e o numero pode ser diferente do que a pessoa esperava.",
     "DEC-92 (2026-10-06, V4-5b): a porta de autoridade da UI para subtask e a porta do servidor, medida e nao chutada. O servidor aceita `MANAGE_TASKS` ou `MANAGE_USERS`, OU responsavel da tarefa, OU criador/lider/membro do projeto (`internal/task-view.ts:208-216`). No dialogo de detalhe, `canManageTasks` e exatamente a lista de `MANAGE_TASKS` (medido em `permissions.ts:22`: COORDENADOR, GERENTE, GERENTE_PROJETO, COLABORADOR, PESQUISADOR) e `isAssignee` e a segunda porta — entao a UI oferece `canManageTasks || isAssignee`. As duas portas restantes (membro/criador de projeto) exigem consulta que o dialogo nao faz; quem estiver nelas e nao vir o controle continua podendo pela API, e o 403 do servidor chega na tela. Janela (DEC-80) na UI: criar/renomear/apagar so com mae em `to-do`/`in-progress`/`adjust`; concluir NAO obedece a janela (so `done` fecha a conclusao) — e a frase exibida e `subtaskWindowMessage` do dominio, nao uma parafrase.",
     "DEC-91 (2026-10-06, V4-5a): as mutacoes de subtask do cliente sao otimistas SO NA LISTA; o STATUS da mae vem do servidor. A resposta de uma operacao de subtask carrega a mae (DEC-79) e ela mudou de tres coisas: a lista, a base do premio (10 + 10·n) e as vezes o status (DEC-81, auto-move para 'Em Revisao'). Aplicar o status otimistamente faria o cartao mostrar a mae na coluna errada quando o servidor nao movesse (mãe em `to-do` nao auto-move, por exemplo). O rollback cobre a lista; `applyMother` escreve a versao do servidor por cima.",
     "DEC-90 (2026-10-06, V4-5a): `subtaskWindowMessage` foi movida de `internal/task-view.ts` para `backend/domain/task/subtask-rules.ts`, e o mock de teste (`tests/mocks/handlers.ts`) passou a aplicar a trava, a janela e o auto-move com as MESMAS funcoes do dominio que a rota real usa (`openSubtasksCount`, `openSubtasksMessage`, `subtaskWindowMessage`, `SUBTASK_BLOCKED_TARGETS`, `SUBTASK_EDITABLE_STATUSES`). Motivo: o mock passou a ter que dizer exatamente a frase e o codigo de erro da rota real, e reimplementar a regra dentro do mock e a mesma 'regra em duas copias' que o AGENTS.md ja registrou como modo de falha. Consequencia de gate: mock verde com producao mentindo deixa de ser possivel nesse caminho.",
@@ -317,6 +326,25 @@
         "o dialogo de detalhe e uma instancia por tarefa e nao reage a mudanca de status da mae enquanto aberto: o auto-move chega na resposta da mutacao, e o texto que o dialogo mostra passa a ser o do novo status na proxima abertura.",
         "checkbox do Radix desabilitada continua encontravel por `getByRole('checkbox', { name })` e `toBeDisabled()` — desabilitar nao e esconder, e e isso que a DEC-89 pede (a UI desabilita ALEM de bloquear).",
         "dois botoes com nomes que se contem ('Apagar subtask Medir o ruído' e 'Apagar subtask') so nao colidem porque `getByRole({ name })` casa a string inteira por padrao no Testing Library. Com substring (Playwright `getByLabel`/`getByRole`) colidiria — mesma lição do 3.C do plan-v3."
+      ]
+    },
+    {
+      "id": "V4-5c",
+      "at": "2026-10-06",
+      "title": "subtask no formulario de nova tarefa + GAP-P3-05 fechado (DEC-93, DEC-94)",
+      "actions": [
+        "GAP-P3-05 (plan-v3 §8) fechado: o cartao calculava `projectedAward(task)` e anunciava o numero ANTES da mutacao. Passa a anunciar o creditado pela resposta, depois dela. Discriminante medido no teste: tarefa publica vencida ha 3 dias projeta -20 e o mock credita 10 (tests/mocks/handlers.ts:179) — se o toast mostra 10, leu a resposta.",
+        "DEC-93: `completionAwardMessage` e uma funcao pura so, usada pelo menu do cartao E pelo soltar do arrasto. Os dois caminhos tinham a conclusao escrita a mao dentro de cada um (o quadro nem numero mostrava). `null` nao e zero: 'Os pontos serão adicionados após aprovação.' (DEC-48).",
+        "DEC-94: campo de subtask no `task-dialog.tsx` so na CRIACAO e so quando `supportsSubtasks` diz sim — a mesma funcao do servidor. Lista fica em state (rascunho), nao no schema zod, e o POST leva `subtasks: [{title}]`. Na EDICAO o campo nao existe: a lista vive no dialogo de detalhe (DEC-89).",
+        "medido ao escrever o teste: 'Quest Global' do formulario e um `Switch` do Radix (role=\"switch\"), nao uma checkbox — o teste que buscava `getByRole('checkbox')` falhava por isso, nao pela regra.",
+        "o mock de POST /api/tasks passou a espelhar a rota real para subtask: le `subtasks` do corpo com `normalizeNewSubtasks` (400 se o corpo for inválido), cria as linhas com id e grava a base 10 + 10·n (DEC-83). Antes o mock ignorava a chave e o teste provaria o input, nao o estado gravado.",
+        "Enter no input de nova subtask faz `preventDefault()` e adiciona a linha: sem isso, a segunda subtask digitada pelo teclado enviava o formulario e a tarefa nascia com uma linha so."
+      ],
+      "gates": "G0 786/3074 zero violacao | G1 sem erro | G2 0 erros | G3 86/1095 | G4 completa 96/1180 | e2e quadro: 2 passando + 1 falha conhecida (git stash confirma baseline identico) | G5/G6 adiados para V4-5d",
+      "gotchas": [
+        "a falha conhecida do 3º teste do quadro piorou de numero sem mudar de natureza: `Coluna Em Revisão` resolve 3 botoes 'Aprovar tarefa' porque a instancia tem 50 'fazer reuniao com mamedes' e 304 '123' em `in-review`, alem do fixture. `git stash` do batch devolve a MESMA falha — nao e regressao.",
+        "mudar a hora do toast e mudanca de comportamento visivel: o aviso chega depois da resposta, entao o cartao ja se moveu (otimista) quando a frase aparece. Teste que assere toast precisa de `findByText`, nao `getByText`.",
+        "o mock que ignora uma chave do corpo esconde defeito do cliente: sem tratar `subtasks` no POST, o teste do formulario passaria verde provando que o input existia."
       ]
     }
   ],

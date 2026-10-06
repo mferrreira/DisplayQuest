@@ -7,6 +7,7 @@ export {
   resolveMove,
   allowedTargets,
   moveBlockedMessage,
+  completionAwardMessage,
   openSubtasksOf,
   optimisticStatusFor,
   isArchivedTask,

@@ -23,6 +23,7 @@ import {
   useTaskMutations,
   resolveMove,
   moveBlockedMessage,
+  completionAwardMessage,
   isArchivedTask,
   isTaskOverdue,
   isTaskDueToday,
@@ -141,10 +142,22 @@ export function TaskBoard() {
       }
       if (decision.kind === "complete") {
         const isDirectDone = task.isGlobal || task.taskVisibility === "public"
-        toast[isDirectDone ? "success" : "info"](
-          isDirectDone ? "🎉 Tarefa Concluída!" : "📋 Tarefa Enviada para Revisão",
-        )
-        complete.mutate({ id: task.id, userId: (session?.user as { id?: number } | undefined)?.id })
+        const actorId = (session?.user as { id?: number } | undefined)?.id
+        // Mesmo aviso do cartão (GAP-P3-05): depois da resposta, com o número creditado. Os dois
+        // caminhos anunciam a mesma conclusão e não podem divergir na frase nem na hora.
+        void complete
+          .mutateAsync({ id: task.id, userId: actorId })
+          .then((result) => {
+            toast[isDirectDone ? "success" : "info"](
+              isDirectDone ? "🎉 Tarefa Concluída!" : "📋 Tarefa Enviada para Revisão",
+              { description: completionAwardMessage(result, actorId) },
+            )
+          })
+          .catch((error: unknown) => {
+            toast.error("Não foi possível concluir a tarefa", {
+              description: error instanceof Error ? error.message : "Falha ao concluir a tarefa.",
+            })
+          })
         return
       }
       updateStatus.mutate({ id: task.id, status: decision.status })

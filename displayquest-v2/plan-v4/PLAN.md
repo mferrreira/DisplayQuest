@@ -550,3 +550,59 @@ na base inteira. Corrigido.
 
 G0 784/3055 zero violação · G1 sem erro · G2 0 erros · G3 **84 / 1084** · G4 completa **94 / 1169** ·
 e2e shell 5/5.
+
+---
+
+## 13. V4-5c executado (2026-10-06) — a mãe nasce com a lista, e o aviso diz o creditado
+
+11 testes novos em dois arquivos: `task-card-awarded-toast.test.tsx` (5) e
+`task-dialog-subtasks.test.tsx` (6).
+
+### 13.1 DEC-93 — GAP-P3-05 fechado (plan-v3 §8)
+
+| | antes | depois |
+|---|---|---|
+| número | `projectedAward(task)` calculado no cliente | `awardedPoints` da resposta |
+| hora | antes da mutação | depois da resposta |
+| cópias | cartão e quadro escreviam a conclusão cada um na sua | `completionAwardMessage`, função pura uma só |
+
+Discriminante medido no teste: tarefa pública vencida há 3 dias **projeta −20** e a resposta
+**credita 10** (`tests/mocks/handlers.ts:179`). Se o toast mostra 10, ele leu a resposta.
+`null` não é zero: é "ninguém creditado agora" (DEC-48).
+
+### 13.2 DEC-94 — o campo no formulário é só de criação
+
+`showSubtaskField = !task && supportsSubtasks(taskVisibility, isGlobal)` — a mesma função que o
+servidor usa para aceitar `subtasks` no corpo. Na edição o campo não existe: a lista vive no diálogo
+de detalhe (DEC-89). A lista é rascunho em `useState`, não campo do schema zod, e o POST leva
+`subtasks: [{title}]`.
+
+O mock de `POST /api/tasks` passou a espelhar a rota real: lê `subtasks` com `normalizeNewSubtasks`
+(400 se o corpo for inválido), cria as linhas e grava a base `10 + 10·n` (DEC-83). Sem isso o teste
+do formulário provava que o input existia, não o estado gravado.
+
+### 13.3 Medido ao escrever os testes
+
+- "Quest Global" do formulário é um `Switch` do Radix (`role="switch"`), não uma checkbox.
+- Enter no input de nova subtask precisa de `preventDefault()`: sem isso a segunda subtask digitada
+  pelo teclado enviava o formulário.
+- A falha conhecida do 3º teste do quadro piorou de número sem mudar de natureza: `Em Revisão` tem
+  hoje **3** botões "Aprovar tarefa" (fixture + tarefas 50 e 304 do dono). `git stash` do batch
+  devolve a mesma falha — não é regressão.
+
+### 13.4 Gates
+
+G0 786/3074 zero violação · G1 sem erro · G2 0 erros · G3 **86 / 1095** · G4 completa **96 / 1180** ·
+e2e quadro 2 passando + 1 falha conhecida. **G5/G6 adiados para V4-5d** (abaixo).
+
+---
+
+## 14. V4-5d — o que falta (G5/G6), e por que está parado
+
+O cartão, o diálogo de detalhe e o formulário de nova tarefa mudaram de cara, e o aviso de conclusão
+mudou de hora e de número. As capturas do guia (`docs/screens/`, 34 imagens) deixaram de representar
+a tela. G5 (`docs:build` + `docs:check`) e G6 (recapturar) se aplicam.
+
+G6 roda `scripts/capture-user-guide.mjs` contra a instância em execução, e **algumas capturas gravam
+de verdade** (a lista `INTERACTIONS` cria relatórios semanais na base real). Rodar contra os dados do
+dono é decisão dele, não do agente. Por isso V4-5d está `pending` com a pergunta aberta.

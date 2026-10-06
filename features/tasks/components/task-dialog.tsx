@@ -11,7 +11,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { useSession } from "next-auth/react"
 import { toast } from "sonner"
-import { HelpCircle, Info, Upload } from "lucide-react"
+import { HelpCircle, Info, ListTodo, Trash2, Upload } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -39,7 +39,7 @@ import { useProjects } from "@/features/projects"
 import { useUsers } from "@/features/users"
 import { useTaskMutations } from "../hooks/use-tasks"
 import { parseBacklogLines } from "../utils/move-rules"
-import { POINTS_PER_TASK } from ".."
+import { POINTS_PER_TASK, supportsSubtasks, SUBTASK_TITLE_MAX_LENGTH } from ".."
 import type { Task } from "@/entities/task"
 import { listProjectMembers, type ProjectMember } from "@/lib/api/project-members"
 
@@ -87,6 +87,12 @@ export function TaskDialog({ open, onOpenChange, task, defaultProjectId }: TaskD
   const [backlogRaw, setBacklogRaw] = useState("")
   const [backlogHelpOpen, setBacklogHelpOpen] = useState(false)
   const [backlogProjectId, setBacklogProjectId] = useState<string>("none")
+  // V4-5c — a mãe nasce com a lista (DEC-82): os títulos ficam aqui até o submit. Não entram no
+  // schema do react-hook-form porque não são um campo do formulário, são uma lista que o submit
+  // envia junto; e o `Input` do formulário é controlado por `register`, o que não combina com
+  // uma lista dinâmica.
+  const [subtaskDrafts, setSubtaskDrafts] = useState<string[]>([])
+  const [newSubtaskTitle, setNewSubtaskTitle] = useState("")
 
   const userRoles = (session?.user as { roles?: string[] } | undefined)?.roles ?? []
   const canManageUsers = userRoles.includes("COORDENADOR") || userRoles.includes("GERENTE")
@@ -123,6 +129,9 @@ export function TaskDialog({ open, onOpenChange, task, defaultProjectId }: TaskD
       setBacklogRaw("")
       setBacklogHelpOpen(false)
       setBacklogProjectId(defaultProjectId ? String(defaultProjectId) : "none")
+      // A lista é rascunho da criação: reabrir o diálogo não pode levar a lista da tarefa anterior.
+      setSubtaskDrafts([])
+      setNewSubtaskTitle("")
       reset({
         title: task?.title ?? "",
         description: task?.description ?? "",
@@ -144,6 +153,24 @@ export function TaskDialog({ open, onOpenChange, task, defaultProjectId }: TaskD
   const isGlobal = watch("isGlobal")
   const selectedProjectId = watch("projectId")
   const assigneeIds = watch("assigneeIds")
+  const taskVisibility = watch("taskVisibility")
+
+  /**
+   * V4-5c — o campo de subtask existe só na CRIAÇÃO e só para tarefa que suporta subtask
+   * (DEC-82). `supportsSubtasks` e a MESMA funcao que o servidor usa para aceitar `subtasks` no
+   * corpo — oferecer o campo para uma tarefa que o servidor recusaria e a UI mentir.
+   *
+   * Editar a lista de uma tarefa que ja existe e o que o dialogo de detalhe faz (DEC-89). Dois
+   * controles para a mesma lista na mesma tela convidam duas regras a divergir.
+   */
+  const showSubtaskField = !task && supportsSubtasks(taskVisibility, isGlobal)
+
+  const addSubtaskDraft = () => {
+    const title = newSubtaskTitle.trim()
+    if (!title) return
+    setSubtaskDrafts((prev) => [...prev, title])
+    setNewSubtaskTitle("")
+  }
 
   // When a project is selected, fetch its members as assignee candidates.
   // Falls back to all users when no project is selected.
@@ -199,6 +226,12 @@ export function TaskDialog({ open, onOpenChange, task, defaultProjectId }: TaskD
       if (!parsed.isGlobal && (parsed.assigneeIds?.length ?? 0) > 1) {
         body.creationMode = parsed.creationMode
       }
+    }
+    // V4-5c (DEC-82): a mãe nasce com a lista, no mesmo POST. So na criacao — a lista de uma
+    // tarefa que ja existe e editada no dialogo de detalhe (DEC-89). O servidor aceita `subtasks`
+    // no corpo de criacao (app/api/tasks/route.ts:114) e aplica a base 10 + 10·n (DEC-83).
+    if (!task && subtaskDrafts.length > 0) {
+      body.subtasks = subtaskDrafts.map((title) => ({ title }))
     }
 
     try {
@@ -393,6 +426,71 @@ export function TaskDialog({ open, onOpenChange, task, defaultProjectId }: TaskD
                       <SelectItem value="shared">Compartilhado</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+              )}
+
+              {showSubtaskField && (
+                // V4-5c (DEC-82): a mãe nasce com a lista. Cada linha vale POINTS_PER_TASK e a
+                // tarefa não entra em revisão enquanto houver subtask aberta (DEC-80) — a frase
+                // está aqui porque é aqui que a pessoa decide quantas parcelas a tarefa tem.
+                <div className="rounded-md border p-3">
+                  <div className="flex items-center gap-1">
+                    <ListTodo className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                    <Label>Subtasks</Label>
+                  </div>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    Cada subtask vale {POINTS_PER_TASK} pontos, pontuada pelo prazo da tarefa. A
+                    tarefa não vai para revisão enquanto houver subtask aberta.
+                  </p>
+
+                  {subtaskDrafts.length > 0 && (
+                    <ul className="mt-2 space-y-1">
+                      {subtaskDrafts.map((title, index) => (
+                        <li key={`${index}-${title}`} className="flex items-center gap-2">
+                          <span className="flex-1 text-sm text-foreground/90">{title}</span>
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7 text-destructive"
+                            aria-label={`Remover subtask ${title}`}
+                            onClick={() =>
+                              setSubtaskDrafts((prev) => prev.filter((_, i) => i !== index))
+                            }
+                          >
+                            <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                          </Button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  <div className="mt-2 flex gap-2">
+                    <Input
+                      aria-label="Nova subtask"
+                      value={newSubtaskTitle}
+                      onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                      onKeyDown={(e) => {
+                        // Enter adiciona a linha, não envia o formulário: sem isto, a segunda
+                        // subtask criada pelo teclado criaria a tarefa com uma linha só.
+                        if (e.key === "Enter") {
+                          e.preventDefault()
+                          addSubtaskDraft()
+                        }
+                      }}
+                      placeholder="Nova subtask"
+                      maxLength={SUBTASK_TITLE_MAX_LENGTH}
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={addSubtaskDraft}
+                      disabled={!newSubtaskTitle.trim()}
+                    >
+                      Adicionar subtask
+                    </Button>
+                  </div>
                 </div>
               )}
             </>

@@ -23,6 +23,7 @@ import {
   SUBTASK_BLOCKED_TARGETS,
   SUBTASK_EDITABLE_STATUSES,
   POINTS_PER_TASK,
+  normalizeNewSubtasks,
 } from "@/backend/domain";
 import { boardFixture, makeTask } from "./fixtures/tasks";
 import { boardUsersFixture, makeUser } from "./fixtures/users";
@@ -104,7 +105,27 @@ export const taskHandlers = [
         { status: 201 },
       );
     }
-    const created = makeTask(body as Partial<Task>);
+    // V4-5c (DEC-82): a mãe nasce com a lista, igual à rota real (app/api/tasks/route.ts:114), e
+    // a base gravada acompanha: 10 + 10·n (DEC-83). Sem isto o mock aceitaria a mãe sem lista e o
+    // teste do formulário provava o input, não o estado gravado.
+    const { subtasks: rawSubtasks, ...restOfBody } = body as Record<string, unknown>;
+    let subtaskTitles: string[];
+    try {
+      subtaskTitles = normalizeNewSubtasks(rawSubtasks).map((s) => s.title);
+    } catch (error) {
+      return jsonError(error instanceof Error ? error.message : "Subtasks inválidas", 400);
+    }
+    const created = makeTask({
+      ...(restOfBody as Partial<Task>),
+      points: POINTS_PER_TASK * (1 + subtaskTitles.length),
+    });
+    created.subtasks = subtaskTitles.map((title) => ({
+      id: nextSubtaskId++,
+      taskId: created.id,
+      title,
+      completed: false,
+      completedAt: null,
+    }));
     tasks = [...tasks, created];
     return HttpResponse.json(taskResponse.parse({ task: created }), { status: 201 });
   }),

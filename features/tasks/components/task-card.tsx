@@ -63,8 +63,8 @@ import {
   resolveMove,
   allowedTargets,
   moveBlockedMessage,
+  completionAwardMessage,
   openSubtasksMessage,
-  projectedAward,
   POINTS_PER_TASK,
   BOARD_COLUMNS,
 } from ".."
@@ -284,24 +284,23 @@ export function TaskCard({ task, index, isOverdue, isDueToday, isCompact, onEdit
     }
     if (decision.kind === "complete") {
       const isDirectDone = task.isGlobal || task.taskVisibility === "public"
-      // plan-v3 OND1-C: o número exibido é o mesmo que o servidor credita, porque agora existe
-      // uma aritmética só (points-rules). Antes o toast prometia `task.points`.
-      const award = projectedAward(task)
-      const awardDescription =
-        award > POINTS_PER_TASK
-          ? `${award} pts (bônus por entrega adiantada).`
-          : award < POINTS_PER_TASK
-            ? `${award} pts (penalidade por atraso aplicada).`
-            : `${POINTS_PER_TASK} pontos foram adicionados ao perfil do responsável.`
-      toast[isDirectDone ? "success" : "info"](
-        isDirectDone ? "🎉 Tarefa Concluída!" : "📋 Tarefa Enviada para Revisão",
-        {
-          description: isDirectDone
-            ? awardDescription
-            : "A tarefa foi enviada para revisão. Os pontos serão adicionados após aprovação.",
-        },
-      )
-      complete.mutate({ id: task.id, userId: user?.id })
+      // GAP-P3-05 (plan-v3 §8, fechado aqui): o aviso chega DEPOIS da resposta, porque é a
+      // resposta que sabe quantos pontos foram creditados. Antes o cartão calculava
+      // `projectedAward(task)` e anunciava esse número antes de a mutação acontecer — e numa
+      // tarefa vencida os dois divergem (medido neste lote: projetado −20, creditado 10).
+      void complete
+        .mutateAsync({ id: task.id, userId: user?.id })
+        .then((result) => {
+          toast[isDirectDone ? "success" : "info"](
+            isDirectDone ? "🎉 Tarefa Concluída!" : "📋 Tarefa Enviada para Revisão",
+            { description: completionAwardMessage(result, user?.id) },
+          )
+        })
+        .catch((error: unknown) => {
+          toast.error("Não foi possível concluir a tarefa", {
+            description: error instanceof Error ? error.message : "Falha ao concluir a tarefa.",
+          })
+        })
       return
     }
     updateStatus.mutate({ id: task.id, status: decision.status })

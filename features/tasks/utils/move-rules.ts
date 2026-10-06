@@ -28,6 +28,26 @@ export type MoveDecision =
   | { kind: "complete"; status: "done" }
   | { kind: "status-update"; status: TaskStatus };
 
+/**
+ * GAP-P3-05 (plan-v3 §8, fechado no V4-5c): a frase do prêmio depois de concluir.
+ *
+ * O cartão costumava calcular `projectedAward(task)` e anunciar esse número ANTES da mutação. O
+ * servidor credita o que ele calcula, e os dois divergem (tarefa vencida: projetado −20, creditado
+ * 10). A pessoa tem direito ao segundo, então a frase passa a ser derivada da RESPOSTA — e é uma
+ * função só, usada pelo menu do cartão e pelo soltar do arrasto, que anunciam a mesma conclusão.
+ *
+ * `null` não é zero: é "ninguém creditado agora" (a tarefa foi para revisão; o prêmio fica para a
+ * aprovação) — congelado desde a OND4-A / DEC-48.
+ */
+export function completionAwardMessage(
+  result: { awardedTo: number | null; awardedPoints: number | null },
+  actorId?: number,
+): string {
+  if (result.awardedPoints === null) return "Os pontos serão adicionados após aprovação.";
+  const who = result.awardedTo !== null && result.awardedTo === actorId ? "a você" : "ao responsável";
+  return `${result.awardedPoints} pts creditados ${who}.`;
+}
+
 /** Subtasks abertas de uma tarefa — zero quando a tarefa não tem lista nenhuma. */
 export function openSubtasksOf(task: { subtasks?: readonly { completed: boolean }[] }): number {
   return openSubtasksCount(task.subtasks ?? []);
