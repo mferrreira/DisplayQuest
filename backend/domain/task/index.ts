@@ -9,6 +9,7 @@ export {
   subtaskBasePoints,
   openSubtasksCount,
   openSubtasksMessage,
+  subtaskWindowMessage,
   isCompletionTargetStatus,
   assertSubtasksAllowTransition,
   canEditSubtasksOf,

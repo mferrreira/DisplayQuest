@@ -22,6 +22,7 @@ import {
   useTasks,
   useTaskMutations,
   resolveMove,
+  moveBlockedMessage,
   isArchivedTask,
   isTaskOverdue,
   isTaskDueToday,
@@ -124,8 +125,10 @@ export function TaskBoard() {
       const decision = resolveMove({ task, target, isLeader })
 
       if (decision.kind === "blocked") {
+        // O dono decidiu (V4-5): a trava desabilita o menu e o Aprovar, mas o arrasto continua
+        // possível — e aí a recusa chega com a MESMA frase do servidor, não um genérico.
         toast.error("Ação não permitida", {
-          description: "Apenas líderes de projeto podem mover tarefas concluídas.",
+          description: moveBlockedMessage(decision, target),
         })
         return
       }

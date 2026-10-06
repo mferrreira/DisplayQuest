@@ -10,10 +10,20 @@
  */
 import { HttpResponse, http } from "msw";
 import { z } from "zod";
-import { taskSchema, taskUserProgressSchema, type Task } from "@/entities/task";
+import { taskSchema, taskSubtaskSchema, taskUserProgressSchema, type Task } from "@/entities/task";
 import { userSchema, type User } from "@/entities/user";
 import { projectSchema, type Project } from "@/entities/project";
 import { labEventSchema, type LabEvent } from "@/entities/lab";
+// plan-v4 · V4-5 — o mock usa as MESMAS funções do domínio que a rota real usa (trava, janela,
+// mensagens). Um mock que reimplementasse a regra poderia ficar verde enquanto a produção mente.
+import {
+  openSubtasksCount,
+  openSubtasksMessage,
+  subtaskWindowMessage,
+  SUBTASK_BLOCKED_TARGETS,
+  SUBTASK_EDITABLE_STATUSES,
+  POINTS_PER_TASK,
+} from "@/backend/domain";
 import { boardFixture, makeTask } from "./fixtures/tasks";
 import { boardUsersFixture, makeUser } from "./fixtures/users";
 import { boardProjectsFixture, makeProject } from "./fixtures/projects";
@@ -21,9 +31,11 @@ import { labEventsFixture, makeLabEvent } from "./fixtures/lab-events";
 
 // ---- in-memory store (per test file via server.use / resetHandlers) ----
 let tasks: ReturnType<typeof boardFixture> = boardFixture();
+let nextSubtaskId = 900;
 
 export function resetTaskStore() {
   tasks = boardFixture();
+  nextSubtaskId = 900;
 }
 export function getTaskStore() {
   return tasks;
@@ -45,6 +57,9 @@ const awardedTaskResponse = z.object({
   awardedPoints: z.number().int().nullable(),
 });
 const backlogResponse = z.object({ tasks: z.array(taskSchema), createdCount: z.number().int() });
+// plan-v4 · V4-4 (DEC-79) — a resposta de uma operação de subtask carrega a MÃE junto, igual à
+// rota real (app/api/tasks/[id]/subtasks/**). Sem a mãe, o mock não exercita o auto-move.
+const subtaskResponse = z.object({ subtask: taskSubtaskSchema, task: taskSchema });
 const deleteResponse = z.object({ success: z.boolean() });
 const progressResponse = z.object({ progress: z.array(taskUserProgressSchema) });
 
@@ -117,6 +132,13 @@ export const taskHandlers = [
     // gateway :191 — status-only updates by non-managers hit different path; handlers stay shape-faithful
     const updated = { ...tasks[idx], ...body } as (typeof tasks)[number];
     if (body.status !== undefined) {
+      // plan-v4 · V4-5 — a mock espelha a trava real (DEC-57/DEC-80): a mãe não alcança
+      // `in-review` nem `done` com subtask aberta, vindo de qualquer coluna. A mensagem é a
+      // mesma função do domínio, para o mock não inventar vocabulário.
+      const open = openSubtasksCount(tasks[idx].subtasks ?? []);
+      if (open > 0 && SUBTASK_BLOCKED_TARGETS.includes(body.status)) {
+        return jsonError(openSubtasksMessage(open, body.status === "done" ? "complete" : "review"), 400);
+      }
       updated.completed = body.status === "done";
       updated.completedAt = body.status === "done" ? new Date().toISOString() : null;
     }
@@ -134,6 +156,9 @@ export const taskHandlers = [
     if (idx === -1) return jsonError("Tarefa não encontrada", 404);
     const task = tasks[idx];
     if (task.completed) return jsonError("Tarefa já concluída", 400);
+    // plan-v4 · V4-5 — trava também no caminho `action: "complete"` (DEC-57).
+    const openComplete = openSubtasksCount(task.subtasks ?? []);
+    if (openComplete > 0) return jsonError(openSubtasksMessage(openComplete, "complete"), 400);
     const updated: typeof task = {
       ...task,
       // gateway :401 — public/global → done; delegated/private → in-review
@@ -163,6 +188,9 @@ export const taskHandlers = [
     if (idx === -1) return jsonError("Tarefa não encontrada", 404);
     const task = tasks[idx];
     if (task.status !== "in-review") return jsonError("Tarefa não está em revisão", 400);
+    // plan-v4 · V4-5 — "nada termina com subtask aberta" vale também na aprovação (DEC-80).
+    const openApprove = openSubtasksCount(task.subtasks ?? []);
+    if (openApprove > 0) return jsonError(openSubtasksMessage(openApprove, "approve"), 400);
     const updated: typeof task = {
       ...task,
       status: "done",
@@ -205,6 +233,101 @@ export const taskHandlers = [
     };
     tasks[idx] = updated;
     return HttpResponse.json(taskResponse.parse({ task: updated }));
+  }),
+
+  // ---- plan-v4 · V4-5 — subtasks (shapes de app/api/tasks/[id]/subtasks/**/route.ts) ----
+  // A resposta carrega a MÃE junto: as duas consequências de mexer numa subtask são da mãe
+  // (a base do prêmio e o auto-move para "Em Revisão"). Mock sem a mãe não exercita o cartão.
+  http.post("*/api/tasks/:id/subtasks", async ({ request, params }) => {
+    await delay();
+    const id = Number(params.id);
+    const idx = tasks.findIndex((t) => t.id === id);
+    if (idx === -1) return jsonError("Tarefa não encontrada", 404);
+    const task = tasks[idx];
+    if (!SUBTASK_EDITABLE_STATUSES.includes(task.status)) {
+      return jsonError(subtaskWindowMessage(task.status), 409);
+    }
+    const body = (await request.json()) as { title?: string };
+    const title = (body?.title ?? "").trim();
+    if (!title) return jsonError("O título da subtask é obrigatório", 400);
+    const subtask = taskSubtaskSchema.parse({
+      id: nextSubtaskId++,
+      taskId: id,
+      title,
+      completed: false,
+      completedAt: null,
+    });
+    const updated: typeof task = {
+      ...task,
+      subtasks: [...(task.subtasks ?? []), subtask],
+      points: task.points + POINTS_PER_TASK,
+    };
+    tasks[idx] = updated;
+    return HttpResponse.json(subtaskResponse.parse({ subtask, task: updated }), { status: 201 });
+  }),
+
+  http.patch("*/api/tasks/:id/subtasks/:subtaskId", async ({ request, params }) => {
+    await delay();
+    const id = Number(params.id);
+    const subtaskId = Number(params.subtaskId);
+    const idx = tasks.findIndex((t) => t.id === id);
+    if (idx === -1) return jsonError("Tarefa não encontrada", 404);
+    const task = tasks[idx];
+    const subtask = (task.subtasks ?? []).find((s) => s.id === subtaskId);
+    if (!subtask) return jsonError("Subtask não encontrada", 404);
+    const body = (await request.json()) as { title?: string; completed?: boolean };
+
+    // Janela (DEC-80): renomear mexe na lista, então obedece à janela; concluir NÃO obedece —
+    // concluir é justamente o que destrava a mãe. Só `done` fecha a conclusão.
+    if (body.title !== undefined && !SUBTASK_EDITABLE_STATUSES.includes(task.status)) {
+      return jsonError(subtaskWindowMessage(task.status), 409);
+    }
+    if (body.completed === false && task.status === "done") {
+      return jsonError(subtaskWindowMessage(task.status), 409);
+    }
+
+    const nextSubtask = taskSubtaskSchema.parse({
+      ...subtask,
+      ...(body.title !== undefined ? { title: body.title.trim() } : {}),
+      ...(body.completed !== undefined
+        ? {
+            completed: body.completed,
+            completedAt: body.completed ? new Date().toISOString() : null,
+          }
+        : {}),
+    });
+    const subtasks = (task.subtasks ?? []).map((s) => (s.id === subtaskId ? nextSubtask : s));
+    // DEC-81 — a ÚLTIMA subtask concluída move a mãe de `in-progress` para `in-review`.
+    const stillOpen = subtasks.filter((s) => !s.completed).length;
+    const autoMoved = nextSubtask.completed && stillOpen === 0 && task.status === "in-progress";
+    const updated: typeof task = {
+      ...task,
+      subtasks,
+      ...(autoMoved ? { status: "in-review" as const } : {}),
+    };
+    tasks[idx] = updated;
+    return HttpResponse.json(subtaskResponse.parse({ subtask: nextSubtask, task: updated }));
+  }),
+
+  http.delete("*/api/tasks/:id/subtasks/:subtaskId", async ({ params }) => {
+    await delay();
+    const id = Number(params.id);
+    const subtaskId = Number(params.subtaskId);
+    const idx = tasks.findIndex((t) => t.id === id);
+    if (idx === -1) return jsonError("Tarefa não encontrada", 404);
+    const task = tasks[idx];
+    if (!SUBTASK_EDITABLE_STATUSES.includes(task.status)) {
+      return jsonError(subtaskWindowMessage(task.status), 409);
+    }
+    const subtask = (task.subtasks ?? []).find((s) => s.id === subtaskId);
+    if (!subtask) return jsonError("Subtask não encontrada", 404);
+    const updated: typeof task = {
+      ...task,
+      subtasks: (task.subtasks ?? []).filter((s) => s.id !== subtaskId),
+      points: Math.max(0, task.points - POINTS_PER_TASK),
+    };
+    tasks[idx] = updated;
+    return HttpResponse.json(subtaskResponse.parse({ subtask, task: updated }));
   }),
 
   http.delete("*/api/tasks/:id", async ({ params }) => {

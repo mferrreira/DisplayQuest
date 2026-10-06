@@ -5,7 +5,7 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
 
 ## Verificação
 
-- **Gate de entrega:** `npm run arch:check` (exit 0, allow-list **vazia**) && `npm run lint` (nada de erro) && `npx tsc --noEmit` (0) && `npx vitest run` (zero failure). A contagem é **por branch**: no `dev` o baseline era **64 arquivos / 721 testes** quando o B8 removeu os 651 testes de paridade; no `plan/v3-operacional`, medido no encerramento do plan-v3 (2026-10-03), são **65 arquivos / 798 testes** em `tests/unit` + `features` e **75 / 881** na suíte completa. Na `dev` de hoje (2026-10-06, depois do plan-v4 V4-1/V4-2/V4-3/V4-6, do V4-4 de subtasks e dos testes do painel V4-4b/V4-4c) são **82 arquivos / 1062 testes** e **92 / 1147** na suíte completa; a suíte e2e está em **7 passando** — o 3º teste do quadro quebra por cartão a mais na coluna `Em Revisão` (dado legítimo da instância, não código), e como o spec é serial os outros 5 **nem rodam** (ver "Gotchas reais"). Compare sempre com o `STATE.json` do plano em que você está.
+- **Gate de entrega:** `npm run arch:check` (exit 0, allow-list **vazia**) && `npm run lint` (nada de erro) && `npx tsc --noEmit` (0) && `npx vitest run` (zero failure). A contagem é **por branch**: no `dev` o baseline era **64 arquivos / 721 testes** quando o B8 removeu os 651 testes de paridade; no `plan/v3-operacional`, medido no encerramento do plan-v3 (2026-10-03), são **65 arquivos / 798 testes** em `tests/unit` + `features` e **75 / 881** na suíte completa. Na `dev` de hoje (2026-10-06, depois do plan-v4 V4-1/V4-2/V4-3/V4-6, do V4-4 de subtasks, dos testes do painel V4-4b/V4-4c e do V4-5a de subtask no cartão) são **83 arquivos / 1076 testes** e **93 / 1161** na suíte completa; a suíte e2e está em **7 passando** — o 3º teste do quadro quebra por cartão a mais na coluna `Em Revisão` (dado legítimo da instância, não código), e como o spec é serial os outros 5 **nem rodam** (ver "Gotchas reais"). Compare sempre com o `STATE.json` do plano em que você está.
 - **G4/integração:** roundtrips Prisma real rodam **só** contra o banco de teste isolado `dq-dev-test-db` em `127.0.0.1:5433` (`$env:DATABASE_URL="postgresql://dq_dev:dq_dev_local_only@127.0.0.1:5433/dq_dev_test"; npx vitest run`) — nunca contra o `display-quest-db` (5432, produção local).
 - **Setup do G4 (corrigido 2026-10-02):** `npm run db:test:up` e `npm run db:test:setup` **existem**
   no `package.json` e fazem a sequência completa (`docker compose -f docker-compose.test.yml up -d`,
@@ -100,14 +100,15 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
 ## plan-v4 — subtasks, animação de pontos, inativação de usuário (2026-10-05..10-06)
 
 - **Estado/decisões:** `displayquest-v2/plan-v4/{PLAN.md,STATE.json}` — V4-1, V4-2, V4-3, V4-4,
-  **V4-4b**, **V4-4c** e o fechamento do ASK-V4-06 **done**; **V4-5** (subtasks na UI) pendente.
-  `awaitingInstruction` está vazia. Em `openQuestions`: **`ASK-V4-28`** (o status `inactive` não existe
-  como estado escrevível — padronizar em `suspended` ou adicionar `inactive` ao enum?).
+  **V4-4b**, **V4-4c** e **V4-5a** (subtask no cartão) **done**; **V4-5b** (CRUD no diálogo de
+  detalhe) e **V4-5c** (formulário de nova tarefa + GAP-P3-05 + G5/G6) pendentes. `awaitingInstruction`
+  está vazia. Em `openQuestions`: **`ASK-V4-28`** (o status `inactive` não existe como estado
+  escrevível — padronizar em `suspended` ou adicionar `inactive` ao enum?).
 - **Numeração de decisão é global e JÁ tem buraco (medido 2026-10-06):** DEC-01..29 clean-arch,
   DEC-30..49 plan-v3, DEC-50..54 B6/D4, DEC-55..60 plan-v4, **DEC-61..77 plan-v5** (reservadas pelo
-  dono em `displayquest-v2/plan-v5/`, criado 2026-10-06 e ainda **não commitado**), DEC-78..88 plan-v4
-  (V4-4, ASK-V4-06, V4-4b e V4-4c). O V4-4 ia usar DEC-61..64 e colidiu; os 28 comentários de código
-  foram renumerados. **Antes de abrir decisão nova, `grep` os três `STATE.json`.**
+  dono em `displayquest-v2/plan-v5/`, criado 2026-10-06 e ainda **não commitado**), DEC-78..91 plan-v4
+  (V4-4, ASK-V4-06, V4-4b, V4-4c e V4-5a). O V4-4 ia usar DEC-61..64 e colidiu; os 28 comentários de
+  código foram renumerados. **Antes de abrir decisão nova, `grep` os três `STATE.json`.**
 - **Subtask (V4-4, DEC-78..83):** tabela `task_subtasks` (sem FK para `users` — subtask não tem
   responsável próprio), base gravada em `tasks.points` = `10 + 10·n`, e **cada subtask é pontuada pela
   mesma regra da mãe** (adiantada 15 / no prazo 10 / 1 dia 0 / 2 dias −10, sem piso), medida no instante
@@ -422,6 +423,23 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
 - **Filtro da lista de usuários do painel NÃO se aplica ao `ScheduleGrid`** (medido 2026-10-06): ele
   recebe a mesma lista e renderiza inteira. Provar "o filtro escondeu o usuário" exige escopo num
   controle que só existe na lista filtrada (o teste usa `Configurar <nome>`).
+- **Sonner só chega ao DOM se `<Toaster/>` estiver montado — e montar exige `matchMedia` (medido
+  2026-10-06, V4-5a):** nenhum teste antigo do quadro monta o Toaster, então nenhum prova texto de
+  toast. Montado no jsdom, ele explode com `window.matchMedia is not a function`. O stub precisa ser
+  **local ao teste**: um shim global em `tests/setup.ts` faria `useIsDesktop()` do quadro responder em
+  todos os testes, que hoje caem no caminho "mobile" justamente porque não há `matchMedia`.
+- **Mock que reimplementa a regra pode ficar verde com a produção mentindo (DEC-90, 2026-10-06):**
+  `tests/mocks/handlers.ts` agora aplica trava, janela e auto-move com as funções do domínio
+  (`openSubtasksCount`, `openSubtasksMessage`, `subtaskWindowMessage`, `SUBTASK_BLOCKED_TARGETS`,
+  `SUBTASK_EDITABLE_STATUSES`). Por isso `subtaskWindowMessage` foi movida de
+  `internal/task-view.ts` para o domínio: importar interno de módulo para o mock dizer a mesma frase
+  seria a regra em duas cópias.
+- **Mudar a regra pura já desabilita o menu (medido 2026-10-06, V4-5a):** `allowedTargets` é
+  derivado de `resolveMove`. Quando a trava de subtask entrou em `resolveMove`, o menu "Ações para …"
+  parou de oferecer Em Revisão/Concluído sem o cartão mudar uma linha — 4 testes vermelhos na função
+  pura bastaram. E a ordem importa: o `remap-to-review` (não-líder → "Concluído" vira Em Revisão)
+  precisa vir **depois** da trava, senão a UI oferece o movimento e a trava vira toast em vez de
+  botão desabilitado.
 - **Nunca imprimir/commitar o valor real do `NEXTAUTH_SECRET`** do `.env` local.
 - `tests/` é versionado por negações no `.gitignore` (`tests/*` + `!tests/unit`,
   `!tests/integration/**` etc.; screenshots de e2e continuam ignorados) — os testes

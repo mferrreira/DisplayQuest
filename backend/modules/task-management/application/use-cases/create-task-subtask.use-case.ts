@@ -4,6 +4,7 @@ import {
   ValidationError,
   canEditSubtasksOf,
   createSubtaskRecord,
+  subtaskWindowMessage,
   supportsSubtasks,
 } from "@/backend/domain";
 import type { SubtaskMutationResult } from "@/backend/modules/task-management/application/contracts";
@@ -15,7 +16,6 @@ import type { TaskRepositoryPort } from "@/backend/modules/task-management/appli
 import {
   assertCanOperateSubtasks,
   attachSubtasks,
-  subtaskWindowMessage,
   syncMotherBasePoints,
 } from "@/backend/modules/task-management/application/use-cases/internal/task-view";
 

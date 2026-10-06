@@ -4,7 +4,7 @@
  * the server remains the enforcer; these functions decide optimistic UI + which call to fire.
  */
 import type { Task, TaskStatus, TaskSubtask } from "@/entities/task";
-import { calculateLatePenalty, totalAwardForCompletion } from "@/backend/domain";
+import { calculateLatePenalty, openSubtasksCount, openSubtasksMessage, SUBTASK_BLOCKED_TARGETS, totalAwardForCompletion } from "@/backend/domain";
 
 export const TASK_STATUSES: TaskStatus[] = ["to-do", "in-progress", "in-review", "adjust", "done"];
 
@@ -19,19 +19,50 @@ export const BOARD_COLUMNS: Array<{ id: TaskStatus; title: string }> = [
 /** Legacy parity kanban-board.tsx:137 — "leader" = MANAGE_TASKS holders. */
 export type MoveDecision =
   | { kind: "blocked"; reason: "done-is-terminal-for-non-leaders" }
+  /**
+   * plan-v4 · V4-5 (DEC-57/DEC-80): o destino é que está barrado, não a pessoa. `openCount` vai
+   * junto porque a DEC-57 promete dizer **quantas** faltam, e a frase é a mesma do servidor.
+   */
+  | { kind: "blocked"; reason: "subtasks-open"; openCount: number }
   | { kind: "remap-to-review" }
   | { kind: "complete"; status: "done" }
   | { kind: "status-update"; status: TaskStatus };
 
+/** Subtasks abertas de uma tarefa — zero quando a tarefa não tem lista nenhuma. */
+export function openSubtasksOf(task: { subtasks?: readonly { completed: boolean }[] }): number {
+  return openSubtasksCount(task.subtasks ?? []);
+}
+
+/**
+ * A frase que sai quando um movimento está barrado — uma cópia só, usada pelo menu do cartão
+ * (`task-card.tsx`) e pelo soltar do arrasto (`task-board.tsx`). Os dois chamadores existiam com
+ * a mensagem escrita à mão dentro de cada um; a trava de subtask entrou com mensagem própria e
+ * seria a regra em duas cópias divergindo (AGENTS.md, lição do `tests/e2e/shell.spec.ts`).
+ *
+ * O `target` entra porque a mesma trava tem dois verbos: "antes de enviar para revisão" e
+ * "antes de concluir a tarefa". É o domínio que escreve os dois (`openSubtasksMessage`).
+ */
+export function moveBlockedMessage(
+  decision: Extract<MoveDecision, { kind: "blocked" }>,
+  target: TaskStatus,
+): string {
+  if (decision.reason === "subtasks-open") {
+    return openSubtasksMessage(decision.openCount, target === "done" ? "complete" : "review");
+  }
+  return "Apenas líderes de projeto podem mover tarefas concluídas.";
+}
+
 /**
  * Resolve what a drag/menu move means BEFORE calling the API.
  * - Non-leaders cannot move tasks OUT of done (legacy :139–146).
+ * - Any task with an open subtask cannot REACH in-review/done (plan-v4 · DEC-57) — checked
+ *   before the remap, because the remap's landing status IS in-review.
  * - Non-leaders moving TO done on a delegated/private task → remap to in-review (:164).
  * - done on public/global (or by leader) → completeTask (server decides done vs review,
  *   but optimistic state shows done for public/global, in-review otherwise — gateway :401).
  */
 export function resolveMove(params: {
-  task: Pick<Task, "taskVisibility" | "isGlobal" | "status">;
+  task: Pick<Task, "taskVisibility" | "isGlobal" | "status"> & { subtasks?: Task["subtasks"] };
   target: TaskStatus;
   isLeader: boolean;
 }): MoveDecision {
@@ -39,6 +70,14 @@ export function resolveMove(params: {
 
   if (task.status === "done" && target !== "done" && !isLeader) {
     return { kind: "blocked", reason: "done-is-terminal-for-non-leaders" };
+  }
+
+  // DEC-80: a trava governa o DESTINO, então vale vindo de qualquer coluna — inclusive o atalho
+  // `A Fazer → Em Revisão` que o quadro oferece, e inclusive o `Concluído` que o servidor
+  // remapearia para revisão. A lista de destinos barrados é a do domínio: uma cópia só.
+  const openCount = openSubtasksOf(task);
+  if (openCount > 0 && SUBTASK_BLOCKED_TARGETS.includes(target)) {
+    return { kind: "blocked", reason: "subtasks-open", openCount };
   }
 
   if (target === "done") {
@@ -69,7 +108,7 @@ export function resolveMove(params: {
  * delegada, `done` para pública/global). O que o menu esconde é o destino que seria barrado.
  */
 export function allowedTargets(
-  task: Pick<Task, "taskVisibility" | "isGlobal" | "status">,
+  task: Pick<Task, "taskVisibility" | "isGlobal" | "status"> & { subtasks?: Task["subtasks"] },
   isLeader: boolean,
 ): TaskStatus[] {
   return TASK_STATUSES.filter(

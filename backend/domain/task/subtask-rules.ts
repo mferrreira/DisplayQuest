@@ -98,6 +98,20 @@ export function isCompletionTargetStatus(status: TaskStatus): boolean {
 }
 
 /**
+ * A frase da JANELA (DEC-80): criar/renomear/apagar a lista só enquanto a mãe aceita. É 409
+ * porque o que está em conflito é o estado do mundo, não a transição pedida.
+ *
+ * Foi movida do `internal/task-view.ts` para o domínio no V4-5 porque passou a ter chamadores
+ * fora do módulo — o mock de teste (`tests/mocks/handlers.ts`) precisa dizer exatamente a mesma
+ * frase que a rota real diz, e importar interno de módulo para isso seria a regra em duas cópias.
+ */
+export function subtaskWindowMessage(motherStatus: TaskStatus): string {
+  return motherStatus === "done"
+    ? "A tarefa já foi concluída e a lista de subtasks não muda mais."
+    : "A tarefa está em revisão e a lista de subtasks não muda mais.";
+}
+
+/**
  * DEC-57 — a trava, aplicada antes de qualquer escrita. `ValidationError` porque é a
  * transição pedida que é inválida (400), não o estado do mundo (409): a distinção com a janela
  * está registrada em DEC-80.

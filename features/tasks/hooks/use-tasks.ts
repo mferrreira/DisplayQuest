@@ -7,7 +7,7 @@
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useSession } from "next-auth/react"
-import { tasksApi, type AwardedTaskResponse } from "@/lib/api/endpoints/tasks"
+import { tasksApi, type AwardedTaskResponse, type SubtaskMutationResponse } from "@/lib/api/endpoints/tasks"
 import { announcePointsDelta } from "@/lib/points-delta"
 import { queryKeys } from "@/lib/query/keys"
 import type { TaskFilters } from "@/lib/api/endpoints/tasks"
@@ -187,5 +187,99 @@ export function useTaskMutations() {
     onSettled: (_d, _e, _v, context) => context?.ctx.invalidate(),
   })
 
-  return { updateStatus, complete, create, createBacklog, update, approve, reject, remove }
+  /**
+   * plan-v4 · V4-5 — as três operações de subtask do cliente.
+   *
+   * O que é diferente das mutações de tarefa: a resposta carrega a MÃE (DEC-79), e é ela que o
+   * cliente aplica. Mexer numa subtask muda três coisas na mãe — a lista, a base do prêmio
+   * (10 + 10·n) e, às vezes, o STATUS (DEC-81: a última subtask concluída move a mãe para
+   * "Em Revisão"). Otimista só na lista; o status vem do servidor, porque é o servidor que decide
+   * se houve auto-move. Sem isso o cartão mostraria a mãe na coluna errada até o próximo refresh.
+   */
+  const queryClient = useQueryClient()
+  const applyMother = (result: SubtaskMutationResponse) => {
+    queryClient.setQueryData<Task[]>(queryKeys.tasks.list({}), (prev) =>
+      prev ? prev.map((t) => (t.id === result.task.id ? { ...t, ...result.task } : t)) : prev,
+    )
+  }
+  const patchSubtaskInCache = (
+    taskId: number,
+    subtaskId: number,
+    patch: { title?: string; completed?: boolean },
+  ) => {
+    queryClient.setQueryData<Task[]>(queryKeys.tasks.list({}), (prev) =>
+      prev
+        ? prev.map((t) =>
+            t.id === taskId
+              ? {
+                  ...t,
+                  subtasks: (t.subtasks ?? []).map((s) =>
+                    s.id === subtaskId ? { ...s, ...patch } : s,
+                  ),
+                }
+              : t,
+          )
+        : prev,
+    )
+  }
+
+  const createSubtask = useMutation({
+    mutationFn: ({ id, title }: { id: number; title: string }) => tasksApi.createSubtask(id, title),
+    onSuccess: applyMother,
+    onSettled: () => makeRollback().invalidate(),
+  })
+
+  const updateSubtask = useMutation({
+    mutationFn: ({
+      id,
+      subtaskId,
+      data,
+    }: {
+      id: number
+      subtaskId: number
+      data: { title?: string; completed?: boolean }
+    }) => tasksApi.updateSubtask(id, subtaskId, data),
+    onMutate: ({ id, subtaskId, data }) => {
+      const ctx = makeRollback()
+      patchSubtaskInCache(id, subtaskId, data)
+      return { ctx }
+    },
+    onSuccess: applyMother,
+    onError: (_err, _vars, context) => context?.ctx.rollback(),
+    // a última subtask concluída publica TASK_REVIEW_REQUEST (DEC-81)
+    onSettled: (_d, _e, _v, context) => context?.ctx.invalidate("notifications"),
+  })
+
+  const removeSubtask = useMutation({
+    mutationFn: ({ id, subtaskId }: { id: number; subtaskId: number }) =>
+      tasksApi.removeSubtask(id, subtaskId),
+    onMutate: ({ id, subtaskId }) => {
+      const ctx = makeRollback()
+      queryClient.setQueryData<Task[]>(queryKeys.tasks.list({}), (prev) =>
+        prev
+          ? prev.map((t) =>
+              t.id === id ? { ...t, subtasks: (t.subtasks ?? []).filter((s) => s.id !== subtaskId) } : t,
+            )
+          : prev,
+      )
+      return { ctx }
+    },
+    onSuccess: applyMother,
+    onError: (_err, _vars, context) => context?.ctx.rollback(),
+    onSettled: (_d, _e, _v, context) => context?.ctx.invalidate(),
+  })
+
+  return {
+    updateStatus,
+    complete,
+    create,
+    createBacklog,
+    update,
+    approve,
+    reject,
+    remove,
+    createSubtask,
+    updateSubtask,
+    removeSubtask,
+  }
 }

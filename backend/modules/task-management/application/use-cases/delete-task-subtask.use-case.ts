@@ -1,4 +1,4 @@
-import { ConflictError, NotFoundError, ValidationError, canEditSubtasksOf, supportsSubtasks } from "@/backend/domain";
+import { ConflictError, NotFoundError, ValidationError, canEditSubtasksOf, subtaskWindowMessage, supportsSubtasks } from "@/backend/domain";
 import type { SubtaskMutationResult } from "@/backend/modules/task-management/application/contracts";
 import type { TaskActorsPort } from "@/backend/modules/task-management/application/ports/task-actors.port";
 import type { TaskAssigneesPort } from "@/backend/modules/task-management/application/ports/task-assignees.repository";
@@ -8,7 +8,6 @@ import type { TaskRepositoryPort } from "@/backend/modules/task-management/appli
 import {
   assertCanOperateSubtasks,
   attachSubtasks,
-  subtaskWindowMessage,
   syncMotherBasePoints,
 } from "@/backend/modules/task-management/application/use-cases/internal/task-view";
 

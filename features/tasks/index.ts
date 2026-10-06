@@ -6,6 +6,8 @@ export { useTasks, useTaskMutations, useInvalidateTaskGraph } from "./hooks/use-
 export {
   resolveMove,
   allowedTargets,
+  moveBlockedMessage,
+  openSubtasksOf,
   optimisticStatusFor,
   isArchivedTask,
   isTaskOverdue,
@@ -40,4 +42,16 @@ export type { ColumnOrder } from "./utils/column-order"
  * componente nenhum precise conhecer caminho interno do backend (constituição A2) — mesmo
  * padrão de `lib/auth/features.ts`.
  */
-export { POINTS_PER_TASK } from "@/backend/domain"
+/**
+ * plan-v4 · V4-5 — mesma regra, mesma origem. O cartão e o diálogo de detalhe precisam dizer a
+ * MESMA frase que a rota real diz (trava e janela), então o vocabulário de subtask entra pela API
+ * pública da feature em vez de cada componente importar o caminho interno do backend.
+ */
+export {
+  POINTS_PER_TASK,
+  openSubtasksCount,
+  openSubtasksMessage,
+  subtaskWindowMessage,
+  SUBTASK_EDITABLE_STATUSES,
+  SUBTASK_TITLE_MAX_LENGTH,
+} from "@/backend/domain"

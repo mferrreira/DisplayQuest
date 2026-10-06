@@ -14,11 +14,11 @@
   "baseline": {
     "measuredAt": "2026-10-06",
     "measuredOn": "dev + V4-4 (antes do commit do lote)",
-    "unitAndFeatures": "82 arquivos / 1062 testes",
-    "fullSuite": "92 arquivos / 1147 testes",
+    "unitAndFeatures": "83 arquivos / 1076 testes",
+    "fullSuite": "93 arquivos / 1161 testes",
     "e2e": "quadro: 2 passando, 1 falha conhecida (strict mode violation em 'Em Revisao' — agora pela tarefa 50 'fazer reuniao com mamedes', antes pela 290), 5 did not run pelo spec serial; shell 5/5. Confirmado com git stash: o baseline falha identico.",
-    "archCheck": "782 modulos / 3031 dependencias, zero violacao, allow-list vazia",
-    "previousBaseline": "78/981 e 88/1065 em dev antes do V4-4; V4-4 81/1050 e 91/1135; V4-1 76/948 e 86/1032; V4-2 76/957 e 86/1041; V4-6 77/966 e 87/1050",
+    "archCheck": "783 modulos / 3044 dependencias, zero violacao, allow-list vazia",
+    "previousBaseline": "78/981 e 88/1065 em dev antes do V4-4; V4-4 81/1050 e 91/1135; V4-4b/V4-4c 82/1062 e 92/1147; V4-1 76/948 e 86/1032; V4-2 76/957 e 86/1041; V4-6 77/966 e 87/1050",
     "timing": "G3 ~17s, completa ~24s (medidos no lote do V4-4)"
   },
   "gates": {
@@ -68,11 +68,25 @@
       "scope": "10 testes em tests/unit/components/admin-panel-user-settings.test.tsx sobre o painel real (stack de providers real, Radix real, MSW gravando o corpo enviado). Escrever os testes expôs quatro defeitos; três foram corrigidos neste lote e dois ficaram registrados para o dono decidir."
     },
     {
-      "id": "V4-5",
-      "title": "subtasks na UI",
+      "id": "V4-5a",
+      "title": "subtask no cartao do quadro: aviso de trava, checkbox, destinos desabilitados",
+      "status": "done",
+      "decisions": ["DEC-89", "DEC-90", "DEC-91"],
+      "scope": "O cartao mostra o AVISO de trava com a contagem e uma checkbox por subtask ABERTA; a lista completa (criar/renomear/apagar) fica no dialogo de detalhe (V4-5b). O menu 'Acoes para ...' deixa de oferecer Em Revisao/Concluido e o botao Aprovar fica desabilitado; o arrasto continua possivel e a recusa chega com a frase do servidor. O auto-move (DEC-81) e anunciado com toast. Inclui as tres mutacoes de subtask no cliente e o mock de teste espelhando a trava/janela/auto-move com as funcoes do dominio."
+    },
+    {
+      "id": "V4-5b",
+      "title": "subtasks no dialogo de detalhe: criar, renomear, apagar",
       "status": "pending",
-      "decisions": ["DEC-57", "DEC-80"],
-      "scope": "criar/renomear/concluir/apagar subtask no card e no dialogo de detalhe, e o campo no formulario de nova tarefa; a UI desabilita o movimento ALEM de bloquear, nao em vez de. Aqui entra o GAP-P3-05 (o toast passa a anunciar o creditado, nao o projetado) e os gates G5/G6 do guia."
+      "decisions": ["DEC-89"],
+      "scope": "CRUD completo da lista no `features/tasks/components/task-detail-dialog.tsx`, com a janela (DEC-80) refletida na UI."
+    },
+    {
+      "id": "V4-5c",
+      "title": "subtasks no formulario de nova tarefa + GAP-P3-05 + gates G5/G6",
+      "status": "pending",
+      "decisions": ["DEC-89"],
+      "scope": "Campo de subtasks no `task-dialog.tsx` (mãe criada JUNTO com as subtasks, DEC-82); corrigir GAP-P3-05 em `features/tasks/components/task-card.tsx:256` (o toast anuncia o projetado, nao o creditado pela resposta); `docs:build` + recaptura do guia."
     },
     {
       "id": "V4-6",
@@ -83,6 +97,9 @@
     }
   ],
   "decisionRegistry": [
+    "DEC-91 (2026-10-06, V4-5a): as mutacoes de subtask do cliente sao otimistas SO NA LISTA; o STATUS da mae vem do servidor. A resposta de uma operacao de subtask carrega a mae (DEC-79) e ela mudou de tres coisas: a lista, a base do premio (10 + 10·n) e as vezes o status (DEC-81, auto-move para 'Em Revisao'). Aplicar o status otimistamente faria o cartao mostrar a mae na coluna errada quando o servidor nao movesse (mãe em `to-do` nao auto-move, por exemplo). O rollback cobre a lista; `applyMother` escreve a versao do servidor por cima.",
+    "DEC-90 (2026-10-06, V4-5a): `subtaskWindowMessage` foi movida de `internal/task-view.ts` para `backend/domain/task/subtask-rules.ts`, e o mock de teste (`tests/mocks/handlers.ts`) passou a aplicar a trava, a janela e o auto-move com as MESMAS funcoes do dominio que a rota real usa (`openSubtasksCount`, `openSubtasksMessage`, `subtaskWindowMessage`, `SUBTASK_BLOCKED_TARGETS`, `SUBTASK_EDITABLE_STATUSES`). Motivo: o mock passou a ter que dizer exatamente a frase e o codigo de erro da rota real, e reimplementar a regra dentro do mock e a mesma 'regra em duas copias' que o AGENTS.md ja registrou como modo de falha. Consequencia de gate: mock verde com producao mentindo deixa de ser possivel nesse caminho.",
+    "DEC-89 (dono 2026-10-06, V4-5): o cartao do quadro NAO e a lista de subtasks. Medido ao perguntar: o dono escolheu 'so o aviso de trava' para a lista e 'checkbox direta no cartao' para concluir — as duas respostas se reconciliam assim: o cartao mostra `N subtasks abertas` com uma checkbox por subtask ABERTA (o que destrava), e as concluidas nao aparecem; criar/renomear/apagar ficam no dialogo de detalhe. No modo compacto (`isCompact`) so o numero, com a frase do dominio no `title`. A trava desabilita: os destinos Em Revisao/Concluido somem do menu 'Acoes para ...' (derivado de `allowedTargets`, nao de uma lista a parte) e o botao Aprovar fica desabilitado com a frase no tooltip; o ARRASTO continua possivel e a recusa chega com a MESMA frase do servidor (`moveBlockedMessage`, uma copia so para cartao e quadro). O auto-move da mae e ANUNCIADO: 'Ultima subtask concluida — tarefa enviada para revisao'. Isto ESTREITA o escopo escrito no plano ('criar/renomear/concluir/apagar no card e no dialogo'), e a diferenca esta registrada aqui.",
     "DEC-88 (dono 2026-10-06, V4-4c, fecha ASK-V4-27): o filtro de status do painel ganha 'Rejeitado' e 'Suspenso'. Motivo medido: o PRÓPRIO painel escreve os dois — o botão 'Rejeitar' faz `status = 'rejected'` e 'Suspender' faz `status = 'suspended'` (update-user-status.use-case.ts:16-17) — mas o filtro só oferecia Ativo/Pendente/Inativo, então nenhum dos dois aparecia em filtro específico, só em 'Todos'. A opção 'Inativo' FOI MANTIDA (remover opção visível não estava autorizado) e registrada como ASK-V4-28: nenhum caminho do sistema escreve `inactive`. Os três `SelectTrigger` do caminho ganharam `aria-label` (classe DEC-86): sem nome acessível o Select não era alcançável por teste nem por leitor de tela.",
     "DEC-87 (dono 2026-10-06, V4-4c, fecha ASK-V4-26): o `confirm` do botão 'Rejeitar' passa a dizer a verdade. Antes: 'Esta ação irá removê-lo do sistema'. Medido: `reject` faz `status = 'rejected'` e a linha CONTINUA — login (`lib/auth/config.ts:30`) e API (`lib/auth/server-auth.ts:36`) bloqueiam porque status !== active. O guia já dizia a verdade (docs/src-usuario/12-perguntas-frequentes.md:47). Texto novo: 'A conta deixa de permitir entrada, mas continua no sistema e pode ser aprovada depois.' Motivo para não deixar como estava: prometer remoção a quem está só bloqueando acesso faz a pessoa NÃO clicar no botão que precisava clicar.",
     "DEC-86 (2026-10-06, V4-4b): os controles do diálogo de 'Configurar Usuário' passam a ter nome acessível. Medido ao escrever os testes: o botão da linha de usuário era só o ícone `Settings` (leitor de tela anunciava 'botão' e nada mais), o `Select` de ação de pontos não tinha `aria-label` nem placeholder, e o input de valor não tinha `id` nem rótulo associado — o único 'Pontos' próximo é o título da seção, sem `htmlFor`. Os três eram inalcançáveis por teste e invisíveis para leitor de tela. Nota deixada no código: o rótulo 'Valor de pontos' contém 'pontos', então `getByLabel('Pontos')` por substring casa com ele — usar rótulo exato.",
@@ -260,6 +277,28 @@
         "dois vocabularios de status convivem na base: o do modelo (`pending|active|rejected|suspended`) e o de `inactive`, que as REGRAS reconhecem (porque so checam `!== 'active'`) mas que NINGUEM escreve. `volunteers-management.tsx:55` tem um terceiro (`active|inactive|on_leave`).",
         "o filtro da lista de usuarios do painel nao se aplica ao `ScheduleGrid` — ele recebe a mesma lista e renderiza tudo."
       ]
+    },
+    {
+      "id": "V4-5a",
+      "at": "2026-10-06",
+      "title": "subtask no cartao do quadro: aviso de trava + checkbox + destinos desabilitados (DEC-89, DEC-90, DEC-91)",
+      "actions": [
+        "regra pura primeiro, testes vermelhos primeiro: 4 falhas em `move-rules.test.ts` antes de mexer no cartao. A trava entrou na DECISAO DE DISPLAY (`resolveMove`) derivada das mesmas funcoes do dominio, e `allowedTargets` passou a derivar o menu dela — nao existe uma lista de destinos proibidos escrita a segunda vez.",
+        "o ponto cego que a ordem das checagens esconde: quem nao e lider move delegada para 'Concluido' e o servidor remapeia para Em Revisao (`remap-to-review`). O destino FINAL e Em Revisao, entao a trava tem que entrar ANTES do remapeamento; se entrasse depois, a UI ofereceria o movimento e a trava viraria toast de erro em vez de botao desabilitado.",
+        "cartao (DEC-89): `N subtasks abertas` + checkbox por subtask ABERTA; as concluidas nao aparecem (a lista completa, com criar/renomear/apagar, fica no dialogo — V4-5b). Compacto: so o numero, com a frase do dominio no `title`.",
+        "menu 'Acoes para ...' deixa de oferecer Em Revisao/Concluido; botao Aprovar desabilitado com a frase do dominio no tooltip; arrasto continua possivel e a recusa chega com a MESMA frase do servidor (`moveBlockedMessage`, uma copia so para cartao e quadro — os dois tinham a mensagem escrita a mao dentro de cada um).",
+        "auto-move anunciado (DEC-81): 'Ultima subtask concluida — tarefa enviada para revisao'. Sem a frase, a tarefa muda de coluna diante da pessoa sem explicacao.",
+        "DEC-91: tres mutacoes de subtask no cliente (`createSubtask`/`updateSubtask`/`removeSubtask`). Otimista so na lista; `applyMother` escreve por cima a mae que o servidor devolve (subtasks + points + status).",
+        "DEC-90: `subtaskWindowMessage` movida do `internal/task-view.ts` para o dominio, e o mock (`tests/mocks/handlers.ts`) passou a aplicar trava/janela/auto-move com as funcoes do dominio. O mock agora devolve 400/409 com a frase real nos tres caminhos de conclusao e 409 na janela.",
+        "medido ao escrever o teste do cartao: `<Toaster/>` do sonner NAO monta no jsdom — `window.matchMedia is not a function`. O stub e LOCAL ao arquivo de proposito: um shim global em `tests/setup.ts` faria `useIsDesktop()` do quadro responder em todos os testes, que hoje caem no caminho 'mobile' justamente porque nao ha matchMedia."
+      ],
+      "gates": "G0 783/3044 zero violacao | G1 sem erro | G2 0 erros | G3 83/1076 | G4 completa 93/1161 | e2e shell 5/5",
+      "gotchas": [
+        "o cartao nao oferece o destino porque `allowedTargets` deriva de `resolveMove`: mudar a regra pura ja desabilita o menu sem tocar no componente. Teste que so muda a regra pura e ve o menu mudar e o mais barato que existe nesse caminho.",
+        "sonner so chega ao DOM se `<Toaster/>` estiver montado — os testes antigos do quadro nunca montaram, entao nenhum deles prova texto de toast. Montar exige stub de `matchMedia`.",
+        "frase com contagem interpolada no meio de outros nos nao e encontravel pela frase inteira: a contagem e montada como string antes (`openSubtasksLabel`), um no so.",
+        "o mock de teste que reimplementa a regra pode ficar verde com a producao mentindo. Usar as funcoes do dominio dentro do mock fecha esse modo de falha (DEC-90)."
+      ]
     }
   ],
   "openQuestions": [
@@ -301,6 +340,10 @@
     { "id": "ASK-V4-24", "question": "GAP-P3-05: o toast da conclusão direta anuncia o projetado em vez do creditado — corrigir no V4-5?", "answer": "sim, corrigir no V4-5", "answeredAt": "2026-10-06" },
     { "id": "ASK-V4-25", "question": "plan-v5 (não commitado, já ocupando DEC-61..77): renumerar o V4-4 e commitar o plan-v5?", "answer": "renumerar para DEC-78..84 está certo; NÃO commitar os arquivos do plan-v5", "answeredAt": "2026-10-06" },
     { "id": "ASK-V4-26", "question": "o confirm do 'Rejeitar' mente sobre remover o usuário — corrijo o texto?", "answer": "sim, corrigir o texto (DEC-87)", "answeredAt": "2026-10-06" },
-    { "id": "ASK-V4-27", "question": "o filtro de status do painel não conhece `rejected` nem `suspended` — adiciono as duas opções?", "answer": "sim, adicionar Rejeitado e Suspenso (DEC-88)", "answeredAt": "2026-10-06" }
+    { "id": "ASK-V4-27", "question": "o filtro de status do painel não conhece `rejected` nem `suspended` — adiciono as duas opções?", "answer": "sim, adicionar Rejeitado e Suspenso (DEC-88)", "answeredAt": "2026-10-06" },
+    { "id": "ASK-V4-29", "question": "o cartão tem dois modos (normal e `isCompact`): onde a lista de subtasks aparece?", "answer": "só o aviso de trava — a lista completa fica no diálogo de detalhe (DEC-89)", "answeredAt": "2026-10-06" },
+    { "id": "ASK-V4-30", "question": "quem executa pode concluir uma subtask direto no cartão?", "answer": "sim, checkbox direta no cartão (DEC-89)", "answeredAt": "2026-10-06" },
+    { "id": "ASK-V4-31", "question": "como a UI desabilita a trava: menu, Aprovar e alavanca de arrastar?", "answer": "desabilitar menu + Aprovar; arrastar continua possível e avisa com a mensagem do servidor (DEC-89)", "answeredAt": "2026-10-06" },
+    { "id": "ASK-V4-32", "question": "quando a última subtask move a mãe para Em Revisão (DEC-81), o que a UI mostra?", "answer": "movimento + toast explicando que foi a última subtask (DEC-89)", "answeredAt": "2026-10-06" }
   ]
 }

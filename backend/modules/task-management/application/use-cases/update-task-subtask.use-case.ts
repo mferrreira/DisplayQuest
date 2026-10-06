@@ -6,6 +6,7 @@ import {
   createSubtaskRecord,
   shouldAutoMoveMotherToReview,
   statusOnlyPatch,
+  subtaskWindowMessage,
   supportsSubtasks,
 } from "@/backend/domain";
 import type { SubtaskMutationResult } from "@/backend/modules/task-management/application/contracts";
@@ -19,7 +20,6 @@ import {
   assertCanOperateSubtasks,
   attachSubtasks,
   publishTaskReviewRequest,
-  subtaskWindowMessage,
 } from "@/backend/modules/task-management/application/use-cases/internal/task-view";
 
 /**

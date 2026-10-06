@@ -457,3 +457,60 @@ filtros e do contador), ou adicionar `inactive` ao enum e ao caminho de escrita.
 ### 10.2 Gates
 
 G0 782/3031 zero violação · G1 sem erro · G2 0 erros · G3 **82 / 1062** · G4 completa **92 / 1147**.
+
+---
+
+## 11. V4-5a executado (2026-10-06) — a subtask no cartão do quadro
+
+V4-5 foi dividido em **V4-5a** (cartão), **V4-5b** (diálogo de detalhe) e **V4-5c** (formulário de
+nova tarefa + GAP-P3-05 + G5/G6). Cada um com commit próprio.
+
+### 11.1 O que o dono respondeu (ASK-V4-29..32 → DEC-89)
+
+| pergunta | resposta |
+|---|---|
+| onde a lista aparece no cartão (normal × `isCompact`) | **só o aviso de trava** — a lista fica no diálogo |
+| concluir direto no cartão? | **checkbox direta no cartão** |
+| como desabilitar a trava | **menu + Aprovar desabilitados; arrastar continua e avisa** |
+| o que a UI mostra no auto-move | **movimento + toast explicando** |
+
+As duas primeiras respostas puxam em direções opostas, e a reconciliação é o desenho: o cartão
+mostra `N subtasks abertas` com **uma checkbox por subtask aberta** (o que destrava); as concluídas
+não aparecem; criar/renomear/apagar ficam no diálogo. No compacto: só o número, com a frase do
+domínio no `title`. **Isto estreita o escopo que estava escrito no plano** ("criar/renomear/
+concluir/apagar no card e no diálogo") — registrado na DEC-89.
+
+### 11.2 A trava entrou na decisão de display, não no componente
+
+`resolveMove` passou a devolver `{ kind: "blocked", reason: "subtasks-open", openCount }`, e
+`allowedTargets` — que já era derivado de `resolveMove` — parou de oferecer Em Revisão/Concluído
+sem que o cartão mudasse uma linha. Os 4 testes vermelhos do lote foram escritos contra a função
+pura, e o menu já veio certo.
+
+O ponto cego era a **ordem**: quem não é líder move delegada para "Concluído" e o servidor
+remapeia para Em Revisão (`remap-to-review`). O destino final é Em Revisão, então a trava tem que
+entrar **antes** do remapeamento. Depois, a UI ofereceria o movimento e a trava viraria toast de
+erro em vez de botão desabilitado.
+
+`moveBlockedMessage(decision, target)` é uma cópia só para o cartão e para o quadro — os dois
+tinham a mensagem escrita à mão dentro de cada um.
+
+### 11.3 DEC-90: o mock passou a usar a regra do domínio
+
+`subtaskWindowMessage` saiu de `internal/task-view.ts` para `backend/domain/task/subtask-rules.ts`
+e `tests/mocks/handlers.ts` passou a aplicar trava, janela e auto-move com `openSubtasksCount`,
+`openSubtasksMessage`, `subtaskWindowMessage`, `SUBTASK_BLOCKED_TARGETS` e
+`SUBTASK_EDITABLE_STATUSES`. Um mock que reimplementasse a regra poderia ficar verde com a produção
+mentindo — é o modo de falha que o AGENTS.md já registrou.
+
+### 11.4 DEC-91: otimista só na lista
+
+As três mutações de subtask do cliente aplicam a lista otimistamente e escrevem por cima **a mãe
+que o servidor devolve** (subtasks + points + status). O status não é otimista porque é o servidor
+que decide se houve auto-move: uma mãe em `to-do` não auto-move, e otimizar o status colocaria a
+tarefa na coluna errada.
+
+### 11.5 Gates
+
+G0 783 módulos / 3044 dependências, zero violação · G1 sem erro · G2 0 erros ·
+G3 **83 arquivos / 1076 testes** · G4 completa **93 / 1161** · e2e shell 5/5.

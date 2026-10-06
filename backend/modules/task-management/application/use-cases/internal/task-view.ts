@@ -236,16 +236,10 @@ export async function syncMotherBasePoints(
   return await tasks.update(task.id!, { ...task, points: base });
 }
 
-/**
- * A frase da janela (DEC-80): mexer na LISTA de subtasks para quando a mãe entra em revisão ou
- * é concluída. É 409 e não 400 porque o que está em conflito é o estado do mundo, não a
- * transição pedida — a mesma natureza de "Tarefa já concluída".
- */
-export function subtaskWindowMessage(motherStatus: TaskStatus): string {
-  return motherStatus === "done"
-    ? "A tarefa já foi concluída e a lista de subtasks não muda mais."
-    : "A tarefa está em revisão e a lista de subtasks não muda mais.";
-}
+// `subtaskWindowMessage` (a frase da janela, DEC-80) foi movida para
+// `backend/domain/task/subtask-rules.ts` no V4-5: passou a ter chamadores fora do módulo — os
+// três use cases de subtask e o mock de teste (`tests/mocks/handlers.ts`), que precisa dizer
+// exatamente a mesma frase que a rota real diz. Deixá-la aqui significava a regra em duas cópias.
 
 /**
  * TASK_REVIEW_REQUEST — movido para cá no V4-4 porque passou a ter dois chamadores: o

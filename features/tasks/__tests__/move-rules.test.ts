@@ -5,6 +5,7 @@ import {
   isTaskOverdue,
   isTaskDueToday,
   latePenalty,
+  moveBlockedMessage,
   optimisticStatusFor,
   parseBacklogLines,
   projectedAward,
@@ -13,7 +14,8 @@ import {
   TASK_STATUSES,
 } from "../utils/move-rules"
 import { POINTS_PER_TASK } from "../"
-import { awardPointsForCompletion, calculateLatePenalty } from "@/backend/domain"
+import type { MoveDecision } from "../utils/move-rules"
+import { awardPointsForCompletion, calculateLatePenalty, openSubtasksMessage } from "@/backend/domain"
 import { makeTask } from "@/tests/mocks/fixtures/tasks"
 import type { Task } from "@/entities/task"
 
@@ -61,6 +63,125 @@ describe("resolveMove (legacy kanban-board.tsx:137–164 parity)", () => {
       kind: "status-update",
       status: "in-progress",
     })
+  })
+})
+
+/**
+ * plan-v4 · V4-5 (DEC-57, DEC-80) — a trava também mora na decisão de DISPLAY.
+ *
+ * O servidor já recusa (V4-4). Aqui a regra entra porque o dono pediu que a UI **desabilite** o
+ * movimento, além de bloqueá-lo: "não em vez de". E ela é derivada das mesmas funções do domínio
+ * (`SUBTASK_BLOCKED_TARGETS`, `openSubtasksMessage`), não reescrita — o menu e o clique não podem
+ * divergir um do outro, e nenhum dos dois pode divergir do servidor.
+ */
+describe("trava de subtask na decisão de movimento (plan-v4 · V4-5)", () => {
+  const openTwo: Task["subtasks"] = [
+    { id: 1, taskId: 7, title: "Medir a bancada", completed: false, completedAt: null },
+    { id: 2, taskId: 7, title: "Registrar a leitura", completed: false, completedAt: null },
+  ]
+  const oneOpenOfThree: Task["subtasks"] = [
+    { id: 1, taskId: 7, title: "Medir a bancada", completed: true, completedAt: null },
+    { id: 2, taskId: 7, title: "Registrar a leitura", completed: false, completedAt: null },
+    { id: 3, taskId: 7, title: "Checar a escala", completed: true, completedAt: null },
+  ]
+  const allClosed: Task["subtasks"] = openTwo.map((s) => ({ ...s, completed: true }))
+
+  it("subtask aberta barra o destino Em Revisão vindo de QUALQUER coluna", () => {
+    for (const status of ["to-do", "in-progress", "adjust"] as const) {
+      const task = makeTask({ status, subtasks: openTwo })
+      // Até para líder: a trava é sobre o destino, não sobre quem move.
+      expect(resolveMove({ task, target: "in-review", isLeader: true })).toEqual({
+        kind: "blocked",
+        reason: "subtasks-open",
+        openCount: 2,
+      })
+    }
+  })
+
+  it("subtask aberta barra Concluído — inclusive o remapeamento que terminaria em Em Revisão", () => {
+    // Quem não é líder move delegada para "Concluído" e o servidor devolve para revisão
+    // (`remap-to-review`). O destino FINAL é Em Revisão, então a trava tem que entrar ANTES do
+    // remapeamento: senão a UI ofereceria o movimento, o servidor recusaria e a trava viraria
+    // toast de erro em vez de botão desabilitado.
+    const task = makeTask({ status: "in-progress", subtasks: openTwo })
+    expect(resolveMove({ task, target: "done", isLeader: false })).toEqual({
+      kind: "blocked",
+      reason: "subtasks-open",
+      openCount: 2,
+    })
+    expect(resolveMove({ task, target: "done", isLeader: true })).toEqual({
+      kind: "blocked",
+      reason: "subtasks-open",
+      openCount: 2,
+    })
+  })
+
+  it("voltar para A Fazer / Em Andamento / Ajustes continua livre (DEC-80)", () => {
+    const task = makeTask({ status: "in-review", subtasks: openTwo })
+    for (const target of ["to-do", "in-progress", "adjust"] as const) {
+      expect(resolveMove({ task, target, isLeader: false })).toEqual({
+        kind: "status-update",
+        status: target,
+      })
+    }
+  })
+
+  it("só a subtask ABERTA conta: uma concluída não trava nada", () => {
+    const task = makeTask({ status: "in-progress", subtasks: oneOpenOfThree })
+    expect(resolveMove({ task, target: "in-review", isLeader: false })).toEqual({
+      kind: "blocked",
+      reason: "subtasks-open",
+      openCount: 1,
+    })
+    expect(resolveMove({ task: makeTask({ status: "in-progress", subtasks: allClosed }), target: "in-review", isLeader: false })).toEqual({
+      kind: "status-update",
+      status: "in-review",
+    })
+  })
+
+  it("sem subtask, nada muda para tarefa simples", () => {
+    const task = makeTask({ status: "in-progress" })
+    expect(resolveMove({ task, target: "in-review", isLeader: false })).toEqual({
+      kind: "status-update",
+      status: "in-review",
+    })
+    expect(allowedTargets(task, false)).toEqual(["to-do", "in-review", "adjust", "done"])
+  })
+
+  it("allowedTargets não oferece o destino barrado — o menu é derivado da mesma regra", () => {
+    const task = makeTask({ status: "in-progress", subtasks: openTwo })
+    expect(allowedTargets(task, false)).toEqual(["to-do", "adjust"])
+    expect(allowedTargets(task, true)).toEqual(["to-do", "adjust"])
+  })
+
+  it("a mensagem é a MESMA do servidor (`openSubtasksMessage`), singular incluído", () => {
+    expect(openSubtasksMessage(2, "review")).toBe("Conclua as 2 subtasks restantes antes de enviar para revisão")
+    expect(openSubtasksMessage(1, "review")).toBe("Conclua a subtask restante antes de enviar para revisão")
+    expect(openSubtasksMessage(3, "approve")).toBe("Conclua as 3 subtasks restantes antes de aprovar a tarefa")
+  })
+
+  it("`moveBlockedMessage` diz o verbo do destino pedido — é uma cópia só para cartão e arrasto", () => {
+    const blocked = resolveMove({
+      task: makeTask({ status: "in-progress", subtasks: openTwo }),
+      target: "in-review",
+      isLeader: false,
+    })
+    expect(moveBlockedMessage(blocked as Extract<MoveDecision, { kind: "blocked" }>, "in-review")).toBe(
+      "Conclua as 2 subtasks restantes antes de enviar para revisão",
+    )
+    const blockedDone = resolveMove({
+      task: makeTask({ status: "in-progress", subtasks: openTwo }),
+      target: "done",
+      isLeader: true,
+    })
+    expect(moveBlockedMessage(blockedDone as Extract<MoveDecision, { kind: "blocked" }>, "done")).toBe(
+      "Conclua as 2 subtasks restantes antes de concluir a tarefa",
+    )
+    // A trava antiga continua com a frase antiga.
+    const legacy = resolveMove({ task: makeTask({ status: "done" }), target: "in-progress", isLeader: false })
+    expect(moveBlockedMessage(legacy as Extract<MoveDecision, { kind: "blocked" }>, "in-progress")).toBe(
+      "Apenas líderes de projeto podem mover tarefas concluídas.",
+    )
   })
 })
 
