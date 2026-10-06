@@ -294,8 +294,8 @@ test.describe("task board flows", () => {
     await login(page);
     await expect(page.getByLabel("Coluna A Fazer")).toBeVisible({ timeout: 15_000 });
 
-    // O buscador é expansível (ícone de lupa): sem abrir, o input existe mas fica oculto.
-    await page.getByRole("button", { name: "Buscar tarefas" }).click();
+    // No desktop (≥640px) o campo de busca já nasce aberto e não há toggle de lupa —
+    // por isso não há botão para clicar aqui, só o campo.
     const busca = page.getByLabel("Buscar tarefas por título");
     await busca.fill("xyzzy-nenhuma-correspondencia");
     await expect(page).toHaveURL(/busca=xyzzy/);

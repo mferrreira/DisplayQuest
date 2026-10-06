@@ -5,7 +5,7 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
 
 ## Verificação
 
-- **Gate de entrega:** `npm run arch:check` (exit 0, allow-list **vazia**) && `npm run lint` (nada de erro) && `npx tsc --noEmit` (0) && `npx vitest run` (zero failure). A contagem é **por branch**: no `dev` o baseline era **64 arquivos / 721 testes** quando o B8 removeu os 651 testes de paridade; no `plan/v3-operacional`, medido no encerramento do plan-v3 (2026-10-03), são **65 arquivos / 798 testes** em `tests/unit` + `features` e **75 / 881** na suíte completa. Na `dev` de hoje (2026-10-05, depois do plan-v4 V4-1/V4-2/V4-3/V4-6) são **78 arquivos / 978 testes** e **88 / 1062** na suíte completa; a suíte e2e está **13/13**. Compare sempre com o `STATE.json` do plano em que você está.
+- **Gate de entrega:** `npm run arch:check` (exit 0, allow-list **vazia**) && `npm run lint` (nada de erro) && `npx tsc --noEmit` (0) && `npx vitest run` (zero failure). A contagem é **por branch**: no `dev` o baseline era **64 arquivos / 721 testes** quando o B8 removeu os 651 testes de paridade; no `plan/v3-operacional`, medido no encerramento do plan-v3 (2026-10-03), são **65 arquivos / 798 testes** em `tests/unit` + `features` e **75 / 881** na suíte completa. Na `dev` de hoje (2026-10-05, depois do plan-v4 V4-1/V4-2/V4-3/V4-6 e do buscador do quadro) são **78 arquivos / 981 testes** e **88 / 1065** na suíte completa; a suíte e2e está em **7 passando** — o 3º teste do quadro quebra por dado de lixo da instância, não por código, e como o spec é serial os outros 5 **nem rodam** (ver "Gotchas reais"). Compare sempre com o `STATE.json` do plano em que você está.
 - **G4/integração:** roundtrips Prisma real rodam **só** contra o banco de teste isolado `dq-dev-test-db` em `127.0.0.1:5433` (`$env:DATABASE_URL="postgresql://dq_dev:dq_dev_local_only@127.0.0.1:5433/dq_dev_test"; npx vitest run`) — nunca contra o `display-quest-db` (5432, produção local).
 - **Setup do G4 (corrigido 2026-10-02):** `npm run db:test:up` e `npm run db:test:setup` **existem**
   no `package.json` e fazem a sequência completa (`docker compose -f docker-compose.test.yml up -d`,
@@ -270,8 +270,21 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
   coisas faziam `tests/e2e/task-board.spec.ts` nem entrar no quadro — `tests/e2e/helpers.ts`
   usava `getByLabel("Senha")` e o botão "Mostrar senha" também é um `label` acessível desse texto
   (agora `getByLabel("Senha", { exact: true })`), e o teste de busca preenchia o input sem abrir a
-  lupa (`?busca=` só existe depois de clicar em "Buscar tarefas"). Se a suíte e2e falhar no
-  primeiro teste com *strict mode violation*, suspeite de rótulo duplicado antes de olhar o DOM.
+  lupa — naquela versão `?busca=` só existia depois de clicar em "Buscar tarefas". Se a suíte e2e
+  falhar no primeiro teste com *strict mode violation*, suspeite de rótulo duplicado antes de olhar
+  o DOM.
+- **O buscador do quadro é desktop-first desde 2026-10-05 (`features/tasks/components/board-toolbar.tsx`):**
+  a lupa-toggle existe **só abaixo de `sm` (640px)**; no desktop o campo nasce aberto (`h-10`, igual
+  aos `SelectTrigger`), a lupa some e o blur nunca recolhe. O que importa ao mexer: **a visibilidade é
+  CSS puro** (`sm:w-[200px]` no contêiner, `sm:hidden` na lupa) e o JS via `useIsDesktop()`
+  (`useSyncExternalStore` sobre `matchMedia`, `getServerSnapshot` = `false`) decide **só**
+  `tabIndex` e o collapse de blur. Renderizar duas subárvores por breakpoint em vez disso duplica o
+  `aria-label` "Buscar tarefas por título" no DOM, e no jsdom (sem CSS carregado) as duas ficam
+  "visíveis" — o `getByRole("textbox")` acha dois e o teste cai. E a divergência CSS↔JS é o modo de
+  falha caro: se o `matchMedia` disser "mobile" e o CSS disser "desktop", o campo aparece aberto com
+  `tabIndex={-1}` e **não é alcançável pelo teclado**. `board-people-filter.test.tsx` fixa os dois
+  lados — mas note que o **jsdom desta base não tem `window.matchMedia`**, então sem o stub todo
+  teste cai no caminho mobile (é o `stubDesktopViewport` do arquivo que escolhe).
 - **A mesma correção existia em duas cópias, e só uma recebeu (medido 2026-10-05):** o
   `tests/e2e/shell.spec.ts` tinha `login()`/`CREDENTIALS` **próprios**, cópia do helper, e ficou
   com `getByLabel("Senha")` sem `exact` — os 3 testes do shell caíam no primeiro `fill` enquanto
@@ -283,6 +296,24 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
   `baseURL: http://localhost:3001` (o compose do repo serve em 3000, e a suíte de integração
   precisa do banco). O spec do quadro cria e apaga as próprias tarefas — depois de rodar, confira
   `select count(*) from tasks where title like 'E2E%'` na base (tem que dar 0).
+- **O spec do quadro é `mode: "serial"` e depende do estado do teste anterior (medido 2026-10-05):**
+  o teste 3 ("leader approves") só acha o fixture porque o **teste 2** o moveu para `Em Revisão` —
+  rodar `-g "leader approves"` sozinho falha na linha 181 (`element(s) not found`) e isso **não é
+  regressão**, é o filtro quebrando a dependência. E como é serial, uma falha no 3 faz os outros 5
+  aparecerem como "did not run": leia a contagem antes de concluir que cinco testes quebraram.
+- **O e2e do quadro quebra por uso manual da instância, não por código (medido 2026-10-05):** o
+  teste 3 morre com *strict mode violation* — `Coluna Em Revisão` resolve **2** botões "Aprovar
+  tarefa" porque há **mais de um cartão** na coluna. Em 2026-10-05 era a tarefa **id 290 "fasdfas"**
+  (`status='in-review'`, `assignedTo=1`), que o dono tinha criado **testando o fluxo de revisão à
+  mão** — não é lixo, é uso legítimo da instância. Medido com `git stash` do batch: **o baseline
+  falha 3/3 com o mesmo erro**, então nunca é regressão. **Isto é recorrente, não um episodio:**
+  sempre que o dono mover uma tarefa para `Em Revisão` testando, o 3º teste quebra de novo e, como
+  o spec é serial, os outros 5 nem rodam. O conserto durável é escopar o locator no cartão do
+  fixture (como os outros testes do arquivo já fazem, e como o próprio docstring do arquivo promete
+  com "Self-contained"); o dono **recusou** em 2026-10-05, então o gate fica vermelho por decisão
+  conhecida. Quando o e2e falhar no 3º teste do quadro, **confirme com `git stash` antes de caçar
+  regressão** — e o mesmo vale para qualquer coluna: o teste usa a base de verdade, então um cartão
+  a mais em `A Fazer`/`Em Revisão`/`Ajustes`/`Concluído` vira strict mode violation da mesma forma.
 - **WebAudio em jsdom = degradar em silêncio:** o jsdom não implementa `AudioContext`, então o seam
   `lib/notifications/alert-sound.ts` cai no caminho "sem suporte" (interruptor desabilitado, som
   inaudível). Para provar a parte cliente ele é testado em `// @vitest-environment node` com
@@ -394,5 +425,13 @@ leitura do texto visível. São observações medidas na instância real, **não
   acordeão fechado (o coordenador vê só os rótulos, nenhum destino); grupo com um único destino
   visível é achatado em link direto (o pesquisador vê "Laboratório" como link). O mesmo cabeçalho
   se apresenta de duas formas.
-- **Dados de lixo na instância real:** tarefas "rewqr" e "asfsa", projeto "asdfasdf" — aparecem no
-  quadro e nas capturas.
+- **Cartões de teste manual na instância real:** o dono testa os fluxos pela mão, e o que sobra fica
+  visível no quadro e **versionado nas capturas do guia** — tarefas "rewqr" (×3), "asfsa" (×2),
+  "asdasfasd", "321321", "sfdasadf", "fdsafdsa", "sfddsfa", "afsdasd", "fasdfas" (id 290) e o projeto
+  "asdfasdf". **Não é lixo a limpar** (confirmado pelo dono em 2026-10-05): é uso legítimo da
+  instância, e por isso **persiste**. O que pesa de verdade: a tarefa 290 está com
+  `status='in-review'` e é o que **derruba o 3º teste do spec e2e do quadro** por *strict mode
+  violation* (dois botões "Aprovar tarefa" em `Em Revisão`). Conferido com `git stash`: o baseline
+  falha igual, então não é regressão — e o dono decidiu **não** escopar o locator nem mexer no dado
+  (ver a nota de e2e em "Gotchas reais"). Se isso incomodar nas capturas, a saída é recapturar, não
+  apagar dado.
