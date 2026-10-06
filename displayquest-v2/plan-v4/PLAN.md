@@ -109,6 +109,14 @@ Falta só **D-D** (escopo da subtask na v1), registrada no §2.5 abaixo.
 | **B1 — subtask soma à base, penalidade continua fixa** ✅ | `(10 + 10n) · (adiantada ? 1,5 : 1) − dias · 10` | uma tarefa com 4 subtasks vale 50; um dia de atraso tira 10. Atraso relativo dói menos em tarefa grande |
 | B2 — penalidade proporcional à base | `(10 + 10n) · (adiantada ? 1,5 : 1) − dias · (10 + 10n)` | volta à matemática pré-v3, que é justamente o que o plan-v3 corrigiu (DEC-31/32) |
 
+> **Substituída em 2026-10-06 pela DEC-78**, ao medir com o dono o que "subtask atrasada" significa.
+> A fórmula acima trata a mãe como uma parcela só e ignora **quando** cada subtask foi concluída.
+> A regra executada é: cada subtask é pontuada pela mesma regra da mãe, contra o prazo herdado e
+> no instante em que ela própria foi concluída — e só as concluídas somam. O que a DEC-56 decidiu
+> de verdade continua: o `+10 por subtask` existe e é a base gravada em `tasks.points` (DEC-83).
+> Exemplo executado e congelado em teste: prazo 20/10, mãe aprovada em 25/10, subtasks em 19/10,
+> 21/10 e 24/10 → mãe −40, subtasks +15, 0, −30, total **−55**.
+
 ### 2.3 D-C. O que significa "travar a mãe no Em Andamento" — **DEC-57**
 
 | opção | o que a pessoa vê |
@@ -130,7 +138,7 @@ o delta. As três ressalvas foram aceitas junto com a decisão:
 - **mudança por outra razão** (admin ajustando pontos, compra aprovada) também anima — o número
   passa a significar "o que mudou desde a última vez que você viu", não "o prêmio desta tarefa".
 
-### 2.5 D-D. Escopo da subtask na v1 — **em aberto, bloqueia V4-4**
+### 2.5 D-D. Escopo da subtask na v1 — **respondido em 2026-10-05, detalhado em 2026-10-06**
 
 Perguntas abertas, todas com custo real de schema:
 
@@ -143,6 +151,27 @@ Perguntas abertas, todas com custo real de schema:
 
 Minha proposta de v1 (a mais pequena que satisfaz o pedido): **sem responsável próprio, sem prazo
 próprio, fora de pública e global, criada depois da mãe, sem efeito em badge.**
+
+**Resposta do dono (2026-10-05):** sem responsável próprio, sem prazo próprio (herda da mãe), só
+em tarefa delegada, criada JUNTO com a mãe no mesmo formulário, sem efeito em `evaluateUserBadges`.
+
+**As 12 lacunas que essa resposta deixava, respondidas em 2026-10-06 antes de escrever código**
+(registradas como DEC-78..83 e ASK-V4-07..20 no STATE.json):
+
+| lacuna | resposta |
+|---|---|
+| "'só delegada' — e a visibilidade `private`?" | delegada **e** privada; pública e quest global ficam fora (criar com subtask nelas é 400, não ignorado) |
+| subtask pode ser criada depois da mãe? | sim — junto com a mãe **e** depois, no card e no diálogo |
+| ciclo de vida | concluir, renomear e apagar |
+| o que a trava bloqueia, se o quadro deixa arrastar para qualquer coluna? | entrar em `in-review`/`done` vindo de **qualquer** coluna; voltar para A Fazer/Em Andamento/Ajustes é livre |
+| mãe já em revisão com subtask aberta: aprovar também é bloqueado? | sim — "nada termina com subtask aberta" nos três caminhos |
+| a última subtask concluída move a mãe sozinha? | **sim**, só a partir de Em Andamento, para Em Revisão, com a mesma notificação de um movimento humano |
+| quem opera subtask? | a mesma autoridade de editar a mãe |
+| aritmética | cada subtask pela mesma regra da mãe, no instante em que ela foi concluída; só as concluídas somam (DEC-78) |
+| subtask credita algo por si? | não — nem pontos nem `completedTasks` |
+| `tasks.points` | grava 10 + 10·n e fica sincronizado até a mãe concluir (DEC-83) |
+| mexer na lista de uma mãe em revisão/concluída? | não — 409 (DEC-80) |
+| modo individual (N cópias) e backlog | cada cópia recebe as suas subtasks; backlog não aceita subtask na v1 |
 
 ### D-E. Como fazer a animação chegar a quem não aprovou
 
@@ -266,4 +295,89 @@ estava autorizado só para o `set` negativo. Está fixado como caraterização e
 nele: o input de pontos passou a ter `min` condicionado à ação. A mudança está coberta só pelo
 gate de tipos.
 
-</content>
+**Status dos dois, em 2026-10-06:** o primeiro foi corrigido (DEC-84 — `{action:"set", points:null}`
+passa a ser recusado com 400, e a caraterização virou teste de recusa). O segundo foi aceito como
+trabalho: virou a onda **V4-4b**, a ser executada antes do V4-5.
+
+---
+
+## 7. V4-4 executado (2026-10-06) — subtasks: schema, domínio, read model e os três caminhos da trava
+
+### 7.1 O que a medição mudou em relação ao plano
+
+| o plano dizia | o que foi medido |
+|---|---|
+| "a mãe não sai de **Em Andamento** enquanto houver subtask aberta" | a mãe entra em `in-review` por **três** portas — `PUT status`, `PATCH action=complete` e `POST approve` — e o quadro oferece **qualquer** coluna a partir de qualquer uma, inclusive `A Fazer → Em Revisão` direto (`move-rules.ts:71`). A trava passou a governar o **destino**, não a origem, e entrou nos três casos de uso. |
+| "+10 por subtask na **base** da mãe" (DEC-56) | o dono, ao ver o exemplo numérico, escolheu outra aritmética: cada subtask é pontuada pela mesma regra da mãe, no instante em que **ela** foi concluída (DEC-78). A fórmula da DEC-56 está substituída; o `+10` continua existindo como base gravada em `tasks.points` (DEC-83). |
+| subtask é detalhe do cartão (V4-5) | o cartão e o diálogo de detalhe **calculam o prêmio no cliente** (`projectedAward`). Sem as subtasks no JSON, uma tarefa de 3 subtasks continuaria anunciando 10 pontos. Por isso o read model veio para o V4-4 (DEC-79). |
+| "trava devolve 400" | duas regras com naturezas diferentes: a **trava** é 400 (a transição pedida é inválida) e a **janela** — mexer na lista de uma mãe em revisão/concluída — é 409 (o estado do mundo é que está em conflito, a mesma natureza de "Tarefa já concluída"). DEC-80. |
+
+### 7.2 O que entrou
+
+- **schema**: `task_subtasks (id, taskId, title, completed, completedAt, createdAt)`, FK para
+  `tasks` com `onDelete: Cascade` (igual a `task_assignees`/`task_user_progress`), índices
+  `(taskId)` e `(taskId, completed)`. Migration `20261006171259_add_task_subtasks`, aplicada em
+  5432 e 5433. **Sem FK para `users`** — subtask não tem responsável próprio, e por isso o guarda
+  de deriva do V4-1 (`user-delete-schema-drift`) não é tocado.
+- **domínio** (`backend/domain/task/subtask-rules.ts` + acréscimo em `points-rules.ts`): título
+  obrigatório com o mesmo teto da tarefa (200), `subtaskBasePoints`, `openSubtasksCount`,
+  `assertSubtasksAllowTransition`, `canEditSubtasksOf`, `shouldAutoMoveMotherToReview`,
+  `supportsSubtasks`, `normalizeNewSubtasks`, `awardPointsForSubtask`, `totalAwardForCompletion`.
+- **casos de uso**: `CreateTaskSubtaskUseCase`, `UpdateTaskSubtaskUseCase`,
+  `DeleteTaskSubtaskUseCase`; `CreateTaskUseCase` passa a criar a lista junto com a mãe (e dá a
+  cada cópia do modo individual a sua); `UpdateTaskUseCase`, `CompleteTaskUseCase` e
+  `ApproveTaskUseCase` passam pela trava; `GetTaskByIdUseCase` e `ListTasksForActorUseCase`
+  anexam as subtasks (em lote no quadro).
+- **HTTP**: `POST /api/tasks/[id]/subtasks`, `PATCH`/`DELETE /api/tasks/[id]/subtasks/[subtaskId]`,
+  e `subtasks` no corpo de `POST /api/tasks`. As rotas novas não têm `ensurePermission`: seguem o
+  formato das 20 rotas já migradas — a rota autentica e mapeia erro, quem decide quem pode é o
+  caso de uso (DEC-82).
+- **cliente**: `entities/task.ts` valida `subtasks` com `default([])`, `lib/api/endpoints/tasks.ts`
+  ganha os três métodos, `projectedAward` passa a somar as subtasks, e o selo de pontos do cartão
+  diz a base real quando há subtask.
+
+### 7.3 Testes escritos antes do código
+
+| arquivo | contra a produção vigente |
+|---|---|
+| `tests/unit/modules/task-management/subtask-rules.test.ts` | falhou 20/20 — nada existia |
+| `tests/unit/modules/task-management/subtask-use-cases.test.ts` | falhou 25/25 — cobertura **nova**: o módulo `task-management` não tinha teste nenhum de caso de uso sobre portas falsas |
+| `tests/unit/api/task-subtasks.test.ts` | módulo REAL sobre portas falsas (a lição do B6-2a), 16 casos de status e precedência |
+| `tests/integration/tasks-roundtrip.test.ts` | ganhou o caso com Prisma real: base 30, trava sem escrever, auto-move com notificação no banco, aprovação destravada, janela recusando, cascade |
+
+### 7.4 Gates
+
+G0 781 módulos / 3021 dependências, zero violação, allow-list vazia · G1 sem erro · G2 0 erros ·
+G3 81 arquivos / 1050 testes · G4 suíte completa 91 arquivos / 1135 testes (integração 10 / 85) ·
+e2e do quadro 2 passando + 1 falha conhecida + 5 "did not run" (**confirmado com `git stash`: o
+baseline falha idêntico**) · shell 5/5.
+
+G5/G6 (docs) **não** rodam neste lote: a interface de subtask — criar, concluir, o campo no
+formulário — existe a partir do V4-5, e é então que o guia passa a descrever telas novas. O que
+mudou de visível aqui foi o texto do selo de pontos do cartão.
+
+### 7.5 Colisão de numeração de decisão (medida ao escrever este lote)
+
+`displayquest-v2/plan-v5/` (PLAN.md + STATE.json + README alterado), criado pelo dono em
+2026-10-06 e **ainda não commitado**, já ocupava **DEC-61..77**. O V4-4 ia usar DEC-61..64. As
+decisões do V4-4 foram renumeradas para **DEC-78..84** e os 28 comentários de código
+acompanharam. Antes de abrir decisão nova, `grep` os três `STATE.json`.
+
+### 7.6 ASK-V4-06 fechado (DEC-84) — commit separado, no mesmo dia
+
+O §6 ficou aberto porque o V4-6 estava autorizado só para o `set` negativo. Respondido em
+2026-10-06: `PATCH /api/users/[id]/points` passa a ler o número do **valor bruto** do corpo, não de
+`Number(body.points)`. `{action:"set", points:null}` deixa de zerar os pontos e passa a ser recusado
+com 400. A checagem é de **tipo** antes de ser de valor, porque `Number(null)`, `Number("")` são `0` e
+`Number(true)` é `1`. O que não mudou: string numérica continua aceita (`"12"` vale 12) e a mensagem de
+rejeição é a mesma. A caraterização do V4-6 foi convertida em teste de recusa.
+
+## 8. O que vem depois (ordem decidida pelo dono em 2026-10-06)
+
+1. **V4-4b** — testes de UI em `components/admin/ModernAdminPanel.tsx` (~1000 linhas, zero testes, já
+   tocado duas vezes). O dono pediu antes do V4-5.
+2. **V4-5** — subtasks na UI: criar/renomear/concluir/apagar no cartão e no diálogo, campo no
+   formulário de nova tarefa, e a UI **desabilitando** o movimento além de bloqueá-lo. Entra aqui o
+   **GAP-P3-05** (o toast da conclusão direta, `task-card.tsx:256`, passa a anunciar o valor
+   CREDITADO pela resposta, não o projetado) e os gates **G5/G6** do guia.
+3. **plan-v5** só executa depois que o plan-v4 fechar (DEC-73).

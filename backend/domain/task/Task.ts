@@ -10,6 +10,7 @@
  */
 import type { TaskStatus } from "./TaskStatus";
 import type { TaskVisibility } from "./TaskVisibility";
+import type { ISubtask } from "./subtask-rules";
 
 /** `tasks.priority` is a plain String column; these are the values the backend writes. */
 export type TaskPriority = "low" | "medium" | "high" | "urgent";
@@ -31,6 +32,12 @@ export interface ITask {
   isGlobal?: boolean;
   groupTaskId?: number | null;
   createdBy?: number | null;
+  /**
+   * plan-v4 · V4-4 — as subtasks da tarefa (DEC-78). É um read model, não uma coluna: o
+   * adaptador Prisma escreve `tasks` sem tocar aqui (ver `toRow` em
+   * `prisma-task.repository.ts`) e quem preenche é o caso de uso, pela `TaskSubtasksPort`.
+   */
+  subtasks?: ISubtask[];
 }
 
 /** What the ports return: the data plus the serialisation the route adapters call. */

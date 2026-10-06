@@ -1,10 +1,11 @@
-import { canListAllTasks, dedupeTasksById } from "@/backend/domain";
+import { canListAllTasks, dedupeTasksById, type Task } from "@/backend/domain";
 import type { ListTasksForActorQuery } from "@/backend/modules/task-management/application/contracts";
 import type { TaskAssigneesPort } from "@/backend/modules/task-management/application/ports/task-assignees.repository";
 import type { TaskActorsPort } from "@/backend/modules/task-management/application/ports/task-actors.port";
 import type { TaskProgressPort } from "@/backend/modules/task-management/application/ports/task-progress.repository";
+import type { TaskSubtasksPort } from "@/backend/modules/task-management/application/ports/task-subtasks.repository";
 import type { TaskRepositoryPort } from "@/backend/modules/task-management/application/ports/task.repository";
-import { applyActorProgressToTasks } from "@/backend/modules/task-management/application/use-cases/internal/task-view";
+import { applyActorProgressToTasks, batchAttachSubtasks } from "@/backend/modules/task-management/application/use-cases/internal/task-view";
 
 /**
  * ListTasksForActorUseCase — OND4-B3 (R2): visibility rules moved from the gateway.
@@ -14,12 +15,16 @@ import { applyActorProgressToTasks } from "@/backend/modules/task-management/app
  *   - global/public-without-project tasks are appended (listGlobalTasks semantics);
  *   - projectId query additionally includes PUBLIC tasks of that project;
  *   - the result is overlaid with the actor's own task_user_progress (public tasks).
+ *
+ * plan-v4 · V4-4: as subtasks são anexadas em lote (uma consulta, não N+1) — o cartão do quadro
+ * precisa delas para mostrar a trava e o valor real da tarefa (DEC-79).
  */
 export interface ListTasksForActorDependencies {
   tasks: TaskRepositoryPort
   assignees: TaskAssigneesPort
   progress: TaskProgressPort
   actors: TaskActorsPort
+  subtasks: TaskSubtasksPort
 }
 
 export class ListTasksForActorUseCase {
@@ -39,18 +44,26 @@ export class ListTasksForActorUseCase {
       const projectShared = sharedTasks.filter(
         (task) => task.projectId === query.projectId && task.taskVisibility === "public",
       )
-      return await applyActorProgressToTasks(
-        dedupeTasksById([...projectScoped, ...projectShared]),
-        query.actorId,
-        this.dependencies,
+      return await this.withSubtasks(
+        await applyActorProgressToTasks(
+          dedupeTasksById([...projectScoped, ...projectShared]),
+          query.actorId,
+          this.dependencies,
+        ),
       )
     }
 
-    return await applyActorProgressToTasks(
-      dedupeTasksById([...scopedTasks, ...sharedTasks]),
-      query.actorId,
-      this.dependencies,
+    return await this.withSubtasks(
+      await applyActorProgressToTasks(
+        dedupeTasksById([...scopedTasks, ...sharedTasks]),
+        query.actorId,
+        this.dependencies,
+      ),
     )
+  }
+
+  private async withSubtasks(tasks: Task[]) {
+    return await batchAttachSubtasks(tasks, this.dependencies.subtasks)
   }
 
   private async scopedForActor(actorId: number) {

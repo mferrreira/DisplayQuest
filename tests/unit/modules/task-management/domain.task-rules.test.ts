@@ -213,11 +213,16 @@ describe("read-model clone", () => {
     expect(json.completedAt).toBe(NOW.toISOString());
     expect(json.assigneeIds).toEqual([]);
     expect(json.groupTaskId).toBeNull();
+    // plan-v4 · V4-4 (DEC-79): a lista de chaves ganhou `subtasks`. É mudança deliberada do read
+    // model, aprovada pelo dono: sem as subtasks no JSON, o cartão e o diálogo de detalhe — que
+    // calculam o prêmio no cliente (`features/tasks/utils/move-rules.ts:174`) — continuariam
+    // anunciando 10 pontos numa tarefa que vale 10 + 10·n.
     expect(Object.keys(json)).toEqual([
       "id", "title", "description", "status", "priority", "assignedTo", "assigneeIds",
       "projectId", "dueDate", "points", "completed", "completedAt", "taskVisibility",
-      "isGlobal", "groupTaskId", "createdBy",
+      "isGlobal", "groupTaskId", "createdBy", "subtasks",
     ]);
+    expect(json.subtasks).toEqual([]);
   });
 });
 

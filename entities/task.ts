@@ -48,6 +48,20 @@ export const taskUserProgressSchema = z.object({
 });
 export type TaskUserProgress = z.infer<typeof taskUserProgressSchema>;
 
+/**
+ * plan-v4 · V4-4 (DEC-79) — a subtask da tarefa mãe. Não tem responsável nem prazo próprios (D-D),
+ * por isso não há `userId` nem `dueDate` aqui. `completedAt` é o instante que a regra de
+ * pontuação lê: cada subtask é pontuada pela mesma regra da mãe, no dia em que ELA foi concluída.
+ */
+export const taskSubtaskSchema = z.object({
+  id: z.number().int(),
+  taskId: z.number().int(),
+  title: z.string(),
+  completed: z.boolean(),
+  completedAt: nullableDateTimeString.nullable().optional(),
+});
+export type TaskSubtask = z.infer<typeof taskSubtaskSchema>;
+
 export const taskSchema = z.object({
   id: z.number().int(),
   title: z.string(),
@@ -70,6 +84,12 @@ export const taskSchema = z.object({
   isGlobal: z.boolean().default(false),
   groupTaskId: z.number().int().nullable().optional(),
   createdBy: z.number().int().nullable().optional(),
+  /**
+   * plan-v4 · V4-4: `default([])` é tolerância de wire, não frouxidão de contrato. Uma tarefa sem
+   * subtask e uma resposta de servidor antigo (pré-migration) são a mesma coisa para o cliente, e
+   * o cartão não pode quebrar por não encontrar a chave.
+   */
+  subtasks: z.array(taskSubtaskSchema).default([]),
 });
 export type Task = z.infer<typeof taskSchema>;
 

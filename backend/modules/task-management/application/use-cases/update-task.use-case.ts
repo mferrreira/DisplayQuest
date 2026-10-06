@@ -1,4 +1,5 @@
 import {
+  assertSubtasksAllowTransition,
   canManipulateStatusOnly,
   canModifyCompletedTask,
   fallThroughStatusPatch,
@@ -8,11 +9,12 @@ import {
   isForeignPublicMoveDenied,
   isReviewRequestTransition,
   isStatusOnlyUpdate,
+  isCompletionTargetStatus,
   normalizeAssigneeIds,
   NotFoundError,
   progressPatchForStatus,
   statusOnlyPatch,
-  systemActor,
+  supportsSubtasks,
   toTaskView,
   type Task,
   type TaskStatus,
@@ -26,11 +28,13 @@ import type { TaskActorsPort } from "@/backend/modules/task-management/applicati
 import type { TaskNotificationsPort } from "@/backend/modules/task-management/application/ports/task-notifications.port";
 import type { TaskProgressPort } from "@/backend/modules/task-management/application/ports/task-progress.repository";
 import type { TaskProjectsPort } from "@/backend/modules/task-management/application/ports/task-projects.port";
+import type { TaskSubtasksPort } from "@/backend/modules/task-management/application/ports/task-subtasks.repository";
 import type { TaskRepositoryPort } from "@/backend/modules/task-management/application/ports/task.repository";
 import {
   attachAssignees,
   claimTaskIfUnclaimed,
   isActorAssignedToTask,
+  publishTaskReviewRequest,
   syncAssignees,
 } from "@/backend/modules/task-management/application/use-cases/internal/task-view";
 
@@ -52,6 +56,7 @@ export interface UpdateTaskDependencies {
   actors: TaskActorsPort
   projects: TaskProjectsPort
   notifications: TaskNotificationsPort
+  subtasks: TaskSubtasksPort
 }
 
 export class UpdateTaskUseCase {
@@ -140,6 +145,9 @@ export class UpdateTaskUseCase {
         throw new ValidationError("Status inválido")
       }
 
+      // plan-v4 · V4-4 (DEC-57): a trava antes de qualquer escrita.
+      await this.assertSubtasksAllowTransition(workingTask, nextStatus)
+
       const oldStatus = workingTask.status
       const patch = statusOnlyPatch(nextStatus, new Date())
       workingTask = toTaskView({ ...workingTask, ...patch })
@@ -147,12 +155,12 @@ export class UpdateTaskUseCase {
       if (isReviewRequestTransition(oldStatus, nextStatus) && workingTask.projectId) {
         const project = await this.dependencies.projects.findById(workingTask.projectId)
         if (project && project.leaderId) {
-          await this.publishTaskReviewRequest(
-            workingTask.id!,
-            workingTask.title,
-            command.actorId,
-            project.leaderId,
-          )
+          await publishTaskReviewRequest(this.dependencies.notifications, this.dependencies.actors, {
+            taskId: workingTask.id!,
+            taskTitle: workingTask.title,
+            userId: command.actorId,
+            projectLeaderId: project.leaderId,
+          })
         }
       }
 
@@ -197,6 +205,10 @@ export class UpdateTaskUseCase {
 
     if (data.status !== undefined) {
       const oldStatus = next.status
+      // plan-v4 · V4-4 (DEC-57): mesmo gate do branch status-only, para quem tem MANAGE_TASKS
+      // e cai aqui. Sem isto a trava existiria só para quem não é gestor.
+      await this.assertSubtasksAllowTransition(next, data.status as TaskStatus)
+
       const patch = fallThroughStatusPatch(oldStatus, data.status as TaskStatus, new Date())
       next = {
         ...next,
@@ -208,12 +220,12 @@ export class UpdateTaskUseCase {
       if (isReviewRequestTransition(oldStatus, data.status as TaskStatus) && next.projectId) {
         const project = await this.dependencies.projects.findById(next.projectId)
         if (project && project.leaderId) {
-          await this.publishTaskReviewRequest(
-            next.id!,
-            next.title,
-            command.actorId,
-            project.leaderId,
-          )
+          await publishTaskReviewRequest(this.dependencies.notifications, this.dependencies.actors, {
+            taskId: next.id!,
+            taskTitle: next.title,
+            userId: command.actorId,
+            projectLeaderId: project.leaderId,
+          })
         }
       }
     }
@@ -268,26 +280,20 @@ export class UpdateTaskUseCase {
     }
   }
 
-  private async publishTaskReviewRequest(
-    taskId: number,
-    taskTitle: string,
-    userId: number,
-    projectLeaderId: number,
-  ) {
-    try {
-      const user = await this.dependencies.actors.findById(userId)
-      const userName = user?.name || "Um usuário"
-      await this.dependencies.notifications.publishEvent({
-        eventType: "TASK_REVIEW_REQUEST",
-        title: "Tarefa em Revisão",
-        message: `${userName} marcou a tarefa "${taskTitle}" como "Em Revisão"`,
-        data: { taskId, taskTitle, userId, userName },
-        triggeredByUserId: userId,
-        audience: { mode: "USER_IDS", userIds: [projectLeaderId] },
-        actor: systemActor("SYSTEM_EVENT"),
-      })
-    } catch (error) {
-      console.error("Erro ao publicar notificação TASK_REVIEW_REQUEST:", error)
-    }
+  /**
+   * plan-v4 · V4-4 (DEC-57) — a mãe não entra em `in-review` nem em `done` enquanto houver
+   * subtask aberta. A tabela é consultada só quando o destino é um dos que a trava governa:
+   * mover para A Fazer, Em Andamento ou Ajustes não custa leitura nenhuma.
+   *
+   * O branch de progresso público não passa daqui de propósito: tarefa pública não tem subtask
+   * (`supportsSubtasks`), e é a mesma razão pela qual `supportsSubtasks` é checado aqui também.
+   */
+  private async assertSubtasksAllowTransition(task: Task, nextStatus: TaskStatus): Promise<void> {
+    if (!isCompletionTargetStatus(nextStatus)) return
+    if (!supportsSubtasks(task.taskVisibility, Boolean(task.isGlobal))) return
+    if (!task.id) return
+
+    const openCount = await this.dependencies.subtasks.countOpenByTaskId(task.id)
+    assertSubtasksAllowTransition(nextStatus, openCount)
   }
 }

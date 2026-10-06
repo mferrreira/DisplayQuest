@@ -190,6 +190,25 @@ function unusedPort(name: string): never {
   ) as never;
 }
 
+/**
+ * plan-v4 · V4-4 — a trava de subtask é consultada por `updateTask`/`approveTask` antes de
+ * escrever, então a porta existe mesmo neste arquivo, que fala do ATOR da notificação e não da
+ * subtask. Devolver zero aberta é o estado do mundo que estes testes assumem; as operações de
+ * escrita respondem com erro alto (a mesma regra do `unusedPort` acima).
+ */
+function subtasksPort() {
+  return {
+    listByTaskId: async () => [],
+    listByTaskIds: async () => new Map(),
+    findById: async () => null,
+    countOpenByTaskId: async () => 0,
+    create: unusedPort("subtasks.create"),
+    createMany: unusedPort("subtasks.createMany"),
+    update: unusedPort("subtasks.update"),
+    delete: unusedPort("subtasks.delete"),
+  } as never;
+}
+
 /** A task in review — o estado que approve/reject exigem. */
 const TASK: Record<string, unknown> = {
   id: 11,
@@ -232,6 +251,7 @@ function approveDependencies(notifications: unknown) {
     assignees: assigneesPort(),
     actors: { ...actorPort(), incrementCompletedTasks: async () => undefined },
     projects: unusedPort("projects"),
+    subtasks: subtasksPort(),
     notifications,
     awards: { awardForTaskCompletion: async () => ({}) },
   } as never;
@@ -255,6 +275,7 @@ function updateDependencies(notifications: unknown) {
     progress: { isAvailable: () => false },
     actors: actorPort(),
     projects: { findById: async () => ({ id: 1, name: "P", leaderId: 3, status: "ACTIVE" }) },
+    subtasks: subtasksPort(),
     notifications,
   } as never;
 }

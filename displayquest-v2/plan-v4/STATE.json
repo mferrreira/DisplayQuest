@@ -1,25 +1,25 @@
 {
   "plan": "plan-v4",
   "version": "4.0.0",
-  "updatedAt": "2026-10-05T17:40:00-03:00",
+  "updatedAt": "2026-10-06T15:20:00-03:00",
   "status": "in_progress",
-  "activeWave": "V4-4",
+  "activeWave": "V4-5",
   "activeBatch": null,
   "awaitingInstruction": false,
   "lineage": {
     "previousPlan": "plan-v3 (qualidade operacional, ondas 0-4, 13 batches, DEC-30..49, status done em 2026-10-03)",
-    "concurrentPlan": "repo-cleanup / clean-arch B6 (D4, autorizacao rota->use case) — PAUSADO em 2026-10-05 por decisao do dono; B6-0..B6-2b mergeados na dev, o resto em displayquest-v2/clean-arch/B6-RESTANTE.md",
-    "note": "a numeracao de decisoes CONTINUA a do clean-arch: DEC-01..29 clean-arch, DEC-30..49 plan-v3, DEC-50..54 B6/D4, DEC-55 em diante plan-v4"
+    "concurrentPlan": "repo-cleanup / clean-arch B6 (D4, autorizacao rota->use case) — PAUSADO em 2026-10-05 por decisao do dono; B6-0..B6-2b mergeados na dev, o resto em displayquest-v2/clean-arch/B6-RESTANTE.md. plan-v5 (dominio de projetos) criado em 2026-10-06 pelo dono: status `ready`, executa DEPOIS do plan-v4 fechar (DEC-73).",
+    "note": "a numeracao de decisoes CONTINUA a do clean-arch e NAO reinicia em outro plano: DEC-01..29 clean-arch, DEC-30..49 plan-v3, DEC-50..54 B6/D4, DEC-55..60 plan-v4 (V4-1..V4-6), DEC-61..77 plan-v5 (reservadas e respondidas pelo dono em 2026-10-06), DEC-78..84 plan-v4 (V4-4 e o fechamento do ASK-V4-06). A colisao foi medida ao escrever este lote: o plano ia usar DEC-61..64 para subtask e o plan-v5 ja os tinha ocupado; as decisoes do V4-4 foram renumeradas para DEC-78..83 e os 28 comentarios de codigo acompanharam."
   },
   "baseline": {
-    "measuredAt": "2026-10-05",
-    "measuredOn": "dev + V4-3 (antes do commit do lote)",
-    "unitAndFeatures": "78 arquivos / 978 testes",
-    "fullSuite": "88 arquivos / 1062 testes",
-    "e2e": "13/13 verde (quadro 8, shell 5)",
-    "archCheck": "770 modulos / 2933 dependencias, zero violacao, allow-list vazia",
-    "previousBaseline": "73/934 e 83/1017 em dev @ fe7b359; V4-1 76/948 e 86/1032; V4-2 76/957 e 86/1041; V4-6 77/966 e 87/1050",
-    "timing": "completa ~47s, G3 ~35s (medidos em fe7b359; nao re-medidos neste lote)"
+    "measuredAt": "2026-10-06",
+    "measuredOn": "dev + V4-4 (antes do commit do lote)",
+    "unitAndFeatures": "81 arquivos / 1050 testes",
+    "fullSuite": "91 arquivos / 1135 testes",
+    "e2e": "quadro: 2 passando, 1 falha conhecida (strict mode violation em 'Em Revisao' — agora pela tarefa 50 'fazer reuniao com mamedes', antes pela 290), 5 did not run pelo spec serial; shell 5/5. Confirmado com git stash: o baseline falha identico.",
+    "archCheck": "781 modulos / 3021 dependencias, zero violacao, allow-list vazia",
+    "previousBaseline": "78/981 e 88/1065 em dev antes do V4-4; V4-1 76/948 e 86/1032; V4-2 76/957 e 86/1041; V4-6 77/966 e 87/1050",
+    "timing": "G3 ~17s, integracao ~8s (medidos neste lote)"
   },
   "gates": {
     "G0": "npm run arch:check — exit 0, allow-list VAZIA",
@@ -55,17 +55,24 @@
     },
     {
       "id": "V4-4",
-      "title": "subtasks: schema + domínio",
+      "title": "subtasks: schema + domínio + read model",
+      "status": "done",
+      "decisions": ["DEC-56", "DEC-57", "DEC-78", "DEC-79", "DEC-80", "DEC-81", "DEC-82", "DEC-83"],
+      "scope": "tabela task_subtasks (migration 20261006171259) + regras puras no dominio + tres casos de uso novos + trava nos tres caminhos que terminam a mae (PUT status, PATCH complete, POST approve) + subtasks no JSON da tarefa. A formula gravada na DEC-56 foi SUBSTITUIDA pela DEC-78: cada subtask e pontuada pela mesma regra da mae, no instante em que ela propria foi concluida."
+    },
+    {
+      "id": "V4-4b",
+      "title": "testes de UI do ModernAdminPanel antes de mexer nele de novo",
       "status": "pending",
-      "decisions": ["DEC-56", "DEC-57"],
-      "scope": "tabela task_subtasks + migration; +10 por subtask na BASE da pontuação (penalidade continua fixa por dia); trava de status no dominio: a mae nao sai de in-progress enquanto houver subtask aberta."
+      "decisions": [],
+      "scope": "components/admin/ModernAdminPanel.tsx tem ~1000 linhas e ZERO testes, e ja foi tocado duas vezes (V4-6: o `min` do input de pontos passou a ser condicionado à ação). O dono decidiu em 2026-10-06: fazer ANTES do V4-5. Cobertura minima: o painel renderiza, o input de pontos muda de `min` conforme a ação, e as ações add/remove/set chegam à API."
     },
     {
       "id": "V4-5",
       "title": "subtasks na UI",
       "status": "pending",
-      "decisions": ["DEC-57"],
-      "scope": "criar/concluir subtask no card e no dialogo de detalhe; a UI desabilita o movimento ALEM de bloquear, nao em vez de."
+      "decisions": ["DEC-57", "DEC-80"],
+      "scope": "criar/renomear/concluir/apagar subtask no card e no dialogo de detalhe, e o campo no formulario de nova tarefa; a UI desabilita o movimento ALEM de bloquear, nao em vez de. Aqui entra o GAP-P3-05 (o toast passa a anunciar o creditado, nao o projetado) e os gates G5/G6 do guia."
     },
     {
       "id": "V4-6",
@@ -76,6 +83,13 @@
     }
   ],
   "decisionRegistry": [
+    "DEC-84 (dono 2026-10-06, fecha ASK-V4-06): PATCH /api/users/[id]/points passa a ler o número do VALOR BRUTO do corpo, não de `Number(body.points)`. `{action:'set', points:null}` deixa de zerar os pontos e passa a ser recusado com 400. Motivo medido no V4-6: JSON não tem `Infinity` (`JSON.stringify(Infinity)` devolve `null`) e `Number(null)` é 0; `Number('')` também é 0 e `Number(true)` é 1. A checagem passa a ser de TIPO antes de ser de valor. O que continua igual: string numérica é aceita (`'12'` vale 12, é o que alguns clientes mandam), a mensagem de rejeição é a mesma de antes, e `{action:'set', points:undefined}` já era 400. Caraterização do V4-6 convertida em recusa.",
+    "DEC-83 (dono 2026-10-06, V4-4): `tasks.points` passa a gravar a base real 10 + 10·n e é mantida sincronizada enquanto a mãe aceita mexer na lista (criar/apagar subtask). Uma mãe em `in-review` ou `done` NUNCA é reescrita — a janela (DEC-80) é o que garante isso, e é assim que DEC-40 (nenhum UPDATE em tasks.points histórico) continua valendo. Concluir subtask NÃO mexe na coluna: a base conta subtasks, não concluídas. Resposta do dono ao ver as duas opções: 'gravado na criação e mantido sincronizado até concluir'.",
+    "DEC-82 (dono 2026-10-06, V4-4): quatro regras de escopo. (a) Autoridade de subtask é A MESMA de editar a mãe — implementada como a união das portas que hoje editam a mãe: MANAGE_TASKS/MANAGE_USERS, atribuído à tarefa, criador/líder do projeto, membro do projeto. Regra nova de permissão foi evitada de propósito. (b) Subtask só existe em tarefa DELEGADA ou PRIVADA — pública e quest global ficam fora porque não têm responsável único, então a trava e o '+10' não teriam a quem pertencer; criar com subtask nesses casos é 400, não ignorado em silêncio. (c) Modo individual (2+ responsáveis → N linhas de tarefa) dá a CADA cópia a sua própria lista: uma lista compartilhada não travaria as N mães. (d) Subtask não credita ponto próprio nem incrementa `completedTasks` — o que ela faz é mudar o valor da mãe. Backlog (uma tarefa por linha) não aceita subtask na v1.",
+    "DEC-81 (dono 2026-10-06, V4-4): a ÚLTIMA subtask concluída empurra a mãe de `in-progress` para `in-review`, e só dessa coluna. O dono respondeu 'Sim' à pergunta 'a mãe deve se mover sozinha?' e escolheu 'só a partir de Em Andamento, com notificação'. De `to-do` a mãe ainda não foi começada e não entra na fila de aprovação sozinha; de `in-review`/`done` não há para onde mover. O auto-move usa o MESMO patch de uma pessoa arrastando para Em Revisão (`statusOnlyPatch`) e publica a MESMA notificação TASK_REVIEW_REQUEST ao líder — não inventa um terceiro jeito nem um segundo texto. Auto-mover não é concluir: ninguém é creditado e `completedTasks` não mexe; o prêmio continua sendo creditado na aprovação.",
+    "DEC-80 (dono 2026-10-06, V4-4): a distinção entre TRAVA e JANELA, com status HTTP diferentes. Trava (DEC-57): a mãe não ENTRA em `in-review` nem `done` com subtask aberta — 400 (`ValidationError`), porque a transição pedida é que é inválida; vale vindo de QUALQUER coluna, o que fecha o atalho `A Fazer → Em Revisão` que o quadro oferece (move-rules.ts:71). Janela: criar/renomear/apagar a LISTA só enquanto a mãe não está em `in-review` nem `done` — 409 (`ConflictError`), porque o que está em conflito é o estado do mundo, a mesma natureza de 'Tarefa já concluída'. Concluir uma subtask NÃO obedece à janela: uma mãe em revisão com subtask aberta é estado real (tarefa que já estava lá antes das subtasks existirem), e concluir é justamente o que a destrava. Só `done` fecha a conclusão.",
+    "DEC-79 (dono 2026-10-06, V4-4): as subtasks entram no read model da tarefa — `serializeTask`/`toJSON` ganha a chave `subtasks` e `entities/task.ts` valida com `default([])`. Motivo medido: o cartão e o diálogo de detalhe CALCULAM o prêmio no cliente (`projectedAward` em task-card.tsx:256 e task-detail-dialog.tsx:93); sem as subtasks no JSON, uma tarefa de 3 subtasks continuaria sendo anunciada como 10 pontos. A lista de chaves congelada em domain.task-rules.test.ts:216 foi atualizada de propósito. No quadro a anexação é em lote (uma consulta, não N+1).",
+    "DEC-78 (dono 2026-10-06, V4-4): SUBSTITUI a fórmula gravada na DEC-56. Cada subtask é pontuada pela MESMA regra da mãe — adiantada 15, no prazo 10, 1 dia atrasada 0, 2 dias −10, sem piso (DEC-39) — medida no instante em que ELA própria foi concluída, contra o prazo HERDADO da mãe. O prêmio creditado é o da mãe mais o de cada subtask CONCLUÍDA. O dono escolheu esta leitura ao ver o exemplo medido: prazo 20/10, mãe aprovada em 25/10, subtasks em 19/10, 21/10 e 24/10 → mãe −40, subtasks +15, 0, −30, total −55. Consequências escritas: o atraso de uma subtask não é o atraso da mãe (uma subtask no prazo vale 10 mesmo com a mãe aprovada 5 dias depois); uma subtask 4 dias atrasada SUBTRAI 30 do prêmio da mãe; subtask aberta não entra na conta. A DEC-56 continua válida para o que ela realmente decidiu: o `+10 por subtask` existe e é a base gravada em `tasks.points` (DEC-83).",
     "DEC-60 (dono 2026-10-05, V4-6): PATCH /api/users/[id]/points passa a ACEITAR valor negativo quando a ação é `set`. Motivo medido: a premiação produz total negativo (DEC-39, penalidade sem piso — Coordenador em -20 e Gerente em -31030 na instância real), mas NENHUM caminho de administração conseguia escrever um negativo de volta: `add` chao em 0 via Math.max, `remove` exige suficiencia, `set` rejeitava entrada negativa — os tres congelados por teste. O dono escolheu a alternativa ESTREITA: so `set` ganha a capacidade; `add` e `remove` ficam como estavam. Consequencia medida e aceita: a rota passa a validar a AÇÃO antes do número, invertendo a precedência de dois 400 (hoje {action:'bogus', points:-5} denuncia o número; passa a denunciar a ação). Mudado em tres lugares: rota (ordem + condição), use case (ramo `set`) e UI (ModernAdminPanel: min='0' so para add/remove). O e2e do quadro, que estava vermelho porque a limpeza restaurava com set(-20) e recebia 400, ficou 7/7.",
     "DEC-55 (dono 2026-10-05, V4-1): DELETE /api/users/[id] passa a RECUSAR com ConflictError (409) quando o usuario tem dependencia, em vez de deixar o Prisma estourar P2003 e a rota devolver 500 com a mensagem crua no corpo. Cascade na migration foi rejeitado explicitamente pelo dono ('raramente a gente deleta um usuario de verdade' — a inativação é o caminho). Remover o endpoint foi considerado e rejeitado: o caso 'excluir cadastro sem historico' funciona hoje e continua funcionando. Medido antes: 16 das 23 FKs para users sao RESTRICT; usuarios 58 e 59 da base de teste falham com projects_createdBy_fkey e lab_responsibilities_userId_fkey. O caminho 'inactive' ja existe e nao foi criado aqui: lib/auth/config.ts:30 (login), lib/auth/server-auth.ts:36 (API), regras de laboratorio, bulk weekly reports, cron weekly reset, e 'Inativo' na UI em volunteers-management.tsx:404 e ModernAdminPanel.tsx:491.",
     "DEC-56 (dono 2026-10-05, V4-4): subtask soma à BASE da pontuação da mãe, e a penalidade de atraso CONTINUA fixa por dia. Formula: (10 + 10n) · (adiantada ? 1,5 : 1) − diasAtrasados · 10. A alternativa proporcional (dias · base) foi rejeitada: é a matemática pré-v3 que o plan-v3 corrigiu em OND1-B1 (DEC-31/32) porque comia os pontos de quem entregava no prazo. DEC-39 (sem piso) continua valendo sobre a base nova.",
@@ -164,11 +178,49 @@
         "JSON nao transporta Infinity: vira null, e Number(null) é 0. Teste que envia Infinity num corpo JSON recebe 200 com points 0, nao 400.",
         "a ordem das validações da rota é comportamento observável: quem manda ação inválida com número inválido recebe a mensagem da que vier primeiro."
       ]
+    },
+    {
+      "id": "V4-4",
+      "at": "2026-10-06",
+      "title": "subtasks: tabela, regras puras, trava nos tres caminhos que terminam a mae, e o premio que passa a somar cada parcela (DEC-78..83)",
+      "actions": [
+        "medido antes de escrever, e isso mudou o desenho: a mae entra em 'Em Revisao' por TRES portas (PUT status, PATCH action=complete, POST approve) e o quadro oferece QUALQUER coluna a partir de qualquer uma — inclusive A Fazer → Em Revisao direto (move-rules.ts:71). Uma trava que so olhasse 'sair de Em Andamento' deixaria esse atalho passar. Por isso a trava governa o DESTINO (in-review/done), nao a origem.",
+        "medido antes: o cartao e o dialogo de detalhe calculam o premio NO CLIENTE (projectedAward). Se a soma das subtasks morasse so no servidor, uma tarefa de 3 subtasks continuaria sendo anunciada como 10 pontos. Dai DEC-79 (subtasks no JSON) e projectedAward passar a usar totalAwardForCompletion.",
+        "17 perguntas respondidas pelo dono antes do codigo (escopo, trava, aprovacao, auto-move, autoridade, arimetica, coluna points, janela, backlog, copies individuais). A resposta 'cada subtask pela mesma regra da mae' SUBSTITUIU a formula que estava gravada na DEC-56 — registrada como DEC-78, com o exemplo numerado que o dono viu e escolheu (total −55).",
+        "testes escritos ANTES do codigo, e a falha e a medicao: subtask-rules.test.ts falhou 20/20 (nada existia) e subtask-use-cases.test.ts falhou 25/25 (module.createTaskSubtask is not a function). Cobertura nova de proposito: o modulo task-management NAO tinha teste nenhum de caso de uso sobre portas falsas — so regras puras e o roundtrip G4.",
+        "schema: task_subtasks (taskId, title, completed, completedAt, createdAt) com onDelete: Cascade igual as outras filhas de tasks. Sem FK para users de proposito (subtask nao tem responsavel proprio, D-D), entao o guarda de deriva do V4-1 (user-delete-schema-drift) nao e tocado e continua verde.",
+        "migration feita SEM `prisma migrate dev`: `prisma migrate diff --from-schema-datamodel <schema salvo antes> --to-schema-datamodel <schema novo> --script` gerou o delta offline, e `migrate deploy` aplicou em 5432 e 5433. `migrate dev` pode pedir RESET quando detecta deriva — e a 5432 e a instancia com os dados reais do dono.",
+        "dominio novo em backend/domain/task/subtask-rules.ts (título, janela, trava, auto-move, base 10+10·n, supportsSubtasks, normalizeNewSubtasks) e acréscimo em points-rules.ts (awardPointsForSubtask, totalAwardForCompletion). `completed` e OBRIGATORIO em AwardableSubtask de proposito: com a conclusao opcional, uma linha esquecida valeria zero em silencio — e foi assim que a primeira versao passou nos testes contando subtask aberta.",
+        "a trava entrou nos tres casos de uso que terminam a mae, sempre DEPOIS da checagem de autoridade e ANTES de qualquer escrita: quem nao pode aprovar nao descobre que a tarefa tem subtask pendente (a mesma precedencia 403-antes-de-409 do B6-2b).",
+        "publishTaskReviewRequest saiu de dentro do UpdateTaskUseCase para internal/task-view.ts: passou a ter dois chamadores (o movimento humano e o auto-move da ultima subtask). A licao medida de 2026-10-05 no tests/e2e/shell.spec.ts e exatamente esta — a mesma regra em duas copias diverge.",
+        "HTTP fixado com o MODULO REAL sobre portas falsas (tests/unit/api/task-subtasks.test.ts, 16 casos): 201/400/403/404/409/401 e a precedencia entre eles. As rotas novas nao tem ensurePermission: seguem o formato das 20 rotas ja migradas (a rota autentica e mapeia; quem decide quem pode e o caso de uso).",
+        "G4: tasks-roundtrip ganhou o caso com Prisma real — base 30 gravada, trava recusando sem escrever, auto-move com notificacao do lider no banco, aprovacao passando quando destrava, janela recusando em mae concluida, e cascade apagando a mae com as subtasks. O teste NAO entra em createdTaskIds: ele apaga a propria linha, e listTasksForActor abaixo afirma que toda id daquela lista ainda e listada.",
+        "verificado por mutacao: contar subtask ABERTA no premio (voltar ao filtro ausente) nao derruba teste nenhum — por isso a assinatura passou a exigir `completed` e o caso 'subtask aberta nao entra na conta' foi escrito."
+      ],
+      "gates": "G0 781/3021 zero violacao | G1 sem erro | G2 0 erros | G3 81/1050 | G4 completa 91/1135 (integracao 10/85) | e2e quadro 2 passando + 1 falha conhecida + 5 did not run (confirmado com git stash: baseline falha identico); shell 5/5",
+      "gotchas": [
+        "COLISAO de numeracao de decisao medida ao escrever o lote: displayquest-v2/plan-v5/ (criado pelo dono em 2026-10-06, ainda nao commitado) ja ocupava DEC-61..77. O V4-4 ia usar DEC-61..64. As decisoes do V4-4 foram renumeradas para DEC-78..83 e os 28 comentarios de codigo acompanharam. Antes de abrir uma decisao nova, grep os tres STATE.json.",
+        "o dev server em 3001 estava de pe desde antes da migration: o Prisma client em memoria NAO conhece task_subtasks, e a trava chamaria prisma.task_subtasks.count() num client velho e devolveria 500 no navegador. `prisma generate` nao alcanga processo em execucao — foi preciso reiniciar o `next dev -p 3001`.",
+        "a falha conhecida do 3o teste do quadro mudou de causa aparente: em 2026-10-05 era a tarefa 290 'fasdfas'; em 2026-10-06 e a tarefa 50 'fazer reuniao com mamedes', que o dono moveu para Em Revisao. E o mesmo modo de falha previsto no AGENTS.md — um cartao a mais na coluna vira strict mode violation — e o git stash confirma que nao e regressao.",
+        "CreateTaskCommand e Omit<ITask,...> e exige completed e taskVisibility: um teste que monta o comando a mao precisa deles. O contrato nao foi afrouxado por isso; o teste ganhou um helper newTask().",
+        "zod com .default([]) torna a chave OBRIGATORIA no tipo de saida: Task passa a exigir subtasks, e todo literal de Task (tests/mocks/fixtures/tasks.ts) precisa dela. Tolerancia de wire no parse nao e tolerancia no tipo."
+      ]
+    },
+    {
+      "id": "V4-4b-pre · ASK-V4-06",
+      "at": "2026-10-06",
+      "title": "`{action:'set', points:null}` passa a ser recusado (DEC-84) — commit separado do V4-4",
+      "actions": [
+        "testes primeiro: o caso de caraterizacao do V4-6 ('quirk preservado, nao adotado') foi CONVERTIDO em recusa, e entraram `undefined`, `''`, `true`, `{}`, `[]` e a string numerica '12' (continua aceita). Vermelho antes do codigo: 2 falhas.",
+        "a checagem passou a ser de TIPO antes de ser de valor: `Number(null)` e 0, `Number('')` e 0, `Number(true)` e 1 — `!Number.isFinite(Number(x))` nunca ve esses casos. A mensagem de rejeicao e a mesma de antes, para nao mover contrato a toa."
+      ],
+      "gates": "G2 0 erros | G3 81/1050 | G4 completa 91/1135"
     }
   ],
   "openQuestions": [
-    "ASK-V4-06 (aberto, aberto por acaso ao escrever o teste do V4-6): um corpo {action:'set', points:null} zera os pontos de um usuario em vez de ser recusado. Causa medida: JSON nao tem Infinity, JSON.stringify(Infinity) devolve null, e Number(null) é 0 — a checagem `!Number.isFinite(points)` nunca vê o null. Fixado como caraterização em tests/unit/api/user-points-negative-set.test.ts. Recusar null explicitamente é uma linha; é mudanca de contrato e por isso nao foi feita sem o dono.",
-    "ModernAdminPanel.tsx (~1000 linhas) nao tem teste nenhum, e foi tocado no V4-6 (o input de pontos passou a ter `min` condicionado à ação). A mudanca esta coberta so pelo gate de tipos. Registrar se o dono quer teste de UI para esse painel antes de mexer nele de novo."
+    "ASK-V4-06 FECHADO em 2026-10-06 (DEC-84): `{action:'set', points:null}` passou a ser recusado com 400. A caraterização do V4-6 virou teste de recusa, e entraram os casos `undefined`, `''`, `true`, `{}`, `[]` e a string numérica `'12'` (continua aceita).",
+    "ModernAdminPanel.tsx: o dono decidiu FAZER os testes de UI antes do V4-5 — virou a onda V4-4b, pendente.",
+    "Pendência conhecida e aceita do e2e: o 3º teste do quadro quebra por CARTÃO A MAIS na coluna 'Em Revisão' (era a tarefa 290 'fasdfas', em 2026-10-06 é a 50 'fazer reuniao com mamedes'). O dono recusou escopar o locator no cartão do fixture e recusou mexer no dado. Como o spec é serial, a falha faz os outros 5 aparecerem como 'did not run'. Confirmar com git stash antes de caçar regressão."
   ],
   "blockers": [],
   "removedItems": [],
@@ -179,6 +231,25 @@
     { "id": "ASK-V4-04", "question": "animar toda mudança de pontos, mudando o significado do número", "answer": "aceito (DEC-58)", "answeredAt": "2026-10-05" },
     { "id": "ASK-V4-05", "question": "a API de pontos não expressa total negativo, mas a premiação produz — o que fazer", "answer": "permitir `set` negativo; `add` e `remove` ficam como estavam (DEC-60)", "answeredAt": "2026-10-05" },
     { "id": "ASK-V4-05b", "question": "restaurar o total do Coordenador para -20, depois que as corridas de e2e o levaram a 0", "answer": "não — deixar como está", "answeredAt": "2026-10-05" },
-    { "id": "ASK-V4-01b", "question": "D-D: escopo da subtask na v1 (responsável, prazo, pública/global, criação, badge)", "answer": "sem responsável próprio, sem prazo próprio (herda da mãe), só em tarefa delegada, criada JUNTO com a mãe no mesmo formulário, sem efeito em evaluateUserBadges", "answeredAt": "2026-10-05" }
+    { "id": "ASK-V4-01b", "question": "D-D: escopo da subtask na v1 (responsável, prazo, pública/global, criação, badge)", "answer": "sem responsável próprio, sem prazo próprio (herda da mãe), só em tarefa delegada, criada JUNTO com a mãe no mesmo formulário, sem efeito em evaluateUserBadges", "answeredAt": "2026-10-05" },
+    { "id": "ASK-V4-07", "question": "'só em tarefa delegada' — o formulário tem Delegada/Pública/Privada; 'Privada' entra?", "answer": "delegada E privada: tudo que não é pública nem quest global (DEC-82)", "answeredAt": "2026-10-06" },
+    { "id": "ASK-V4-08", "question": "subtask pode ser criada depois da mãe existir (card/diálogo), ou só junto com ela?", "answer": "criação junto com a mãe E depois, no card e no diálogo", "answeredAt": "2026-10-06" },
+    { "id": "ASK-V4-09", "question": "o que dá para fazer com uma subtask já criada?", "answer": "concluir, renomear e apagar (CRUD completo)", "answeredAt": "2026-10-06" },
+    { "id": "ASK-V4-10", "question": "a trava bloqueia quais movimentos, se o quadro deixa arrastar para qualquer coluna?", "answer": "entrar em Em Revisão ou Concluído vindo de QUALQUER coluna; voltar para A Fazer/Em Andamento/Ajustes fica livre (DEC-80)", "answeredAt": "2026-10-06" },
+    { "id": "ASK-V4-11", "question": "a mãe já está em Em Revisão com subtask aberta — aprovar também é bloqueado?", "answer": "sim, aprovar também recusa: 'nada termina com subtask aberta' nos três caminhos", "answeredAt": "2026-10-06" },
+    { "id": "ASK-V4-12", "question": "quando a última subtask é concluída, a mãe deve se mover sozinha? de qual coluna, e com notificação?", "answer": "sim — só a partir de Em Andamento, para Em Revisão, com a mesma notificação de um movimento humano (DEC-81)", "answeredAt": "2026-10-06" },
+    { "id": "ASK-V4-13", "question": "quem pode criar/concluir/apagar uma subtask?", "answer": "a mesma autoridade de editar a mãe (DEC-82)", "answeredAt": "2026-10-06" },
+    { "id": "ASK-V4-14", "question": "a base do prêmio conta todas as subtasks ou só as concluídas? e qual aritmética, com o exemplo medido", "answer": "cada subtask pela mesma regra da mãe, medida no instante em que ela foi concluída; só as concluídas somam (DEC-78)", "answeredAt": "2026-10-06" },
+    { "id": "ASK-V4-15", "question": "subtask concluída credita pontos por si ou conta em 'tarefas concluídas'?", "answer": "não, nada (DEC-82)", "answeredAt": "2026-10-06" },
+    { "id": "ASK-V4-16", "question": "tasks.points (coluna histórica) passa a gravar a base real? como convive com subtask criada/apagada depois?", "answer": "gravado na criação e mantido sincronizado até a mãe concluir; mãe concluída nunca é reescrita (DEC-83)", "answeredAt": "2026-10-06" },
+    { "id": "ASK-V4-17", "question": "dá para criar/renomear/apagar subtask numa mãe já em Em Revisão, Ajustes ou Concluído?", "answer": "só enquanto a mãe não está em revisão nem concluída (A Fazer, Em Andamento e Ajustes aceitam) — DEC-80", "answeredAt": "2026-10-06" },
+    { "id": "ASK-V4-18", "question": "o JSON da tarefa já expõe as subtasks no V4-4?", "answer": "sim (DEC-79) — senão o cartão e o detalhe continuam anunciando 10 numa tarefa que vale 10 + 10·n", "answeredAt": "2026-10-06" },
+    { "id": "ASK-V4-19", "question": "criação com 2+ responsáveis no modo Individual: as subtasks vão para cada cópia?", "answer": "sim, cada cópia tem as suas (DEC-82)", "answeredAt": "2026-10-06" },
+    { "id": "ASK-V4-20", "question": "a importação de backlog precisa aceitar subtask na v1?", "answer": "não (DEC-82)", "answeredAt": "2026-10-06" },
+    { "id": "ASK-V4-21", "question": "ASK-V4-06: corrigir agora o `{action:'set', points:null}` que zera os pontos?", "answer": "sim, recusar null (DEC-84)", "answeredAt": "2026-10-06" },
+    { "id": "ASK-V4-22", "question": "fazer testes de UI do ModernAdminPanel (~1000 linhas, zero testes)?", "answer": "sim, antes do V4-5 — virou a onda V4-4b", "answeredAt": "2026-10-06" },
+    { "id": "ASK-V4-23", "question": "o seam órfão lib/notifications/browser-notifications.ts (134 linhas, zero chamadores): manter ou apagar?", "answer": "manter — a notificação nativa está adiada, não abandonada", "answeredAt": "2026-10-06" },
+    { "id": "ASK-V4-24", "question": "GAP-P3-05: o toast da conclusão direta anuncia o projetado em vez do creditado — corrigir no V4-5?", "answer": "sim, corrigir no V4-5", "answeredAt": "2026-10-06" },
+    { "id": "ASK-V4-25", "question": "plan-v5 (não commitado, já ocupando DEC-61..77): renumerar o V4-4 e commitar o plan-v5?", "answer": "renumerar para DEC-78..84 está certo; NÃO commitar os arquivos do plan-v5", "answeredAt": "2026-10-06" }
   ]
 }

@@ -1,12 +1,15 @@
 import {
   approvalDecision,
-  awardPointsForCompletion,
-  ConflictError,
-  ForbiddenError,
+  assertSubtasksAllowTransition,
   hasAnyRole,
   hasPermission,
+  ConflictError,
+  ForbiddenError,
   NotFoundError,
+  openSubtasksCount,
+  supportsSubtasks,
   systemActor,
+  totalAwardForCompletion,
   type Task,
 } from "@/backend/domain";
 import type { ApproveTaskCommand, TaskCompletionResult } from "@/backend/modules/task-management/application/contracts";
@@ -15,9 +18,11 @@ import type { TaskActorsPort } from "@/backend/modules/task-management/applicati
 import type { TaskNotificationsPort } from "@/backend/modules/task-management/application/ports/task-notifications.port";
 import type { TaskProgressEvents } from "@/backend/modules/task-management/application/ports/task-progress.events";
 import type { TaskProjectsPort } from "@/backend/modules/task-management/application/ports/task-projects.port";
+import type { TaskSubtasksPort } from "@/backend/modules/task-management/application/ports/task-subtasks.repository";
 import type { TaskRepositoryPort } from "@/backend/modules/task-management/application/ports/task.repository";
 import {
   attachAssignees,
+  awardableSubtasks,
   publishTaskCompletionAward,
 } from "@/backend/modules/task-management/application/use-cases/internal/task-view";
 
@@ -45,6 +50,7 @@ export interface ApproveTaskDependencies {
   actors: TaskActorsPort
   projects: TaskProjectsPort
   notifications: TaskNotificationsPort
+  subtasks: TaskSubtasksPort
 }
 
 export class ApproveTaskUseCase {
@@ -94,6 +100,14 @@ export class ApproveTaskUseCase {
       }
     }
 
+    // plan-v4 · V4-4 (DEC-57 + resposta do dono): aprovar também recusa com subtask aberta — a
+    // regra é "nada termina com subtask aberta", nos três caminhos. A autoridade foi checada
+    // antes de propósito: quem não pode aprovar não descobre que a tarefa tem subtask pendente.
+    const subtaskRows = supportsSubtasks(task.taskVisibility, Boolean(task.isGlobal))
+      ? await this.dependencies.subtasks.listByTaskId(command.taskId)
+      : []
+    assertSubtasksAllowTransition("done", openSubtasksCount(subtaskRows), "approve")
+
     const updatedTask = await this.dependencies.tasks.update(command.taskId, {
       ...taskWithAssignees,
       status: "done",
@@ -112,7 +126,7 @@ export class ApproveTaskUseCase {
         if (task.taskVisibility !== "public" && !task.isGlobal) {
           await this.dependencies.actors.incrementCompletedTasks(taskWithAssignees.assignedTo)
         }
-        const pointsToAward = awardPointsForCompletion(task, new Date())
+        const pointsToAward = totalAwardForCompletion(task, awardableSubtasks(task, subtaskRows), new Date())
         // plan-v3 OND4-A: o creditado, não o pedido. `awardedTo` é quem recebeu.
         awardedPoints = await publishTaskCompletionAward(
           this.events,

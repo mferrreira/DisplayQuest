@@ -4,10 +4,18 @@
  */
 import { z } from "zod";
 import { apiFetch, qs, type QueryParams } from "@/lib/api/client";
-import { wireTaskSchema, taskUserProgressSchema, type Task } from "@/entities/task";
+import { taskSubtaskSchema, wireTaskSchema, taskUserProgressSchema, type Task, type TaskSubtask } from "@/entities/task";
 
 const taskListResponse = z.object({ tasks: z.array(wireTaskSchema) });
 const taskResponse = z.object({ task: wireTaskSchema });
+
+/**
+ * plan-v4 · V4-4 — a resposta de uma operação de subtask carrega a MÃE junto. As duas
+ * consequências de mexer numa subtask são da mãe: a base do prêmio (10 + 10·n) muda, e a última
+ * subtask concluída move a mãe para "Em Revisão". Sem a mãe na resposta, o cliente teria que
+ * recarregar o quadro para ver o que acabou de acontecer.
+ */
+const subtaskMutationResponse = z.object({ subtask: taskSubtaskSchema, task: wireTaskSchema });
 
 /**
  * plan-v3 OND4-A (AC-P3-08) — a resposta de concluir/aprovar carrega o prêmio creditado.
@@ -30,6 +38,11 @@ export interface AwardedTaskResponse {
   task: Task;
   awardedTo: number | null;
   awardedPoints: number | null;
+}
+
+export interface SubtaskMutationResponse {
+  subtask: TaskSubtask;
+  task: Task;
 }
 
 /** Client-side filter params (nuqs-backed in E2); the server filters by session actor. */
@@ -111,6 +124,38 @@ export const tasksApi = {
 
   remove(id: number) {
     return apiFetch({ path: `/api/tasks/${id}`, method: "DELETE", schema: deleteResponse });
+  },
+
+  /** plan-v4 · V4-4 — criar subtask de uma mãe que já existe. */
+  createSubtask(id: number, title: string): Promise<SubtaskMutationResponse> {
+    return apiFetch({
+      path: `/api/tasks/${id}/subtasks`,
+      method: "POST",
+      body: { title },
+      schema: subtaskMutationResponse,
+    });
+  },
+
+  /** Renomear e/ou concluir. Concluir a última move a mãe para "Em Revisão". */
+  updateSubtask(
+    id: number,
+    subtaskId: number,
+    data: { title?: string; completed?: boolean },
+  ): Promise<SubtaskMutationResponse> {
+    return apiFetch({
+      path: `/api/tasks/${id}/subtasks/${subtaskId}`,
+      method: "PATCH",
+      body: data,
+      schema: subtaskMutationResponse,
+    });
+  },
+
+  removeSubtask(id: number, subtaskId: number): Promise<SubtaskMutationResponse> {
+    return apiFetch({
+      path: `/api/tasks/${id}/subtasks/${subtaskId}`,
+      method: "DELETE",
+      schema: subtaskMutationResponse,
+    });
   },
 
   globalProgress(userId: number) {

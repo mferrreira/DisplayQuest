@@ -2,6 +2,25 @@ export { TaskStatus, TASK_STATUSES, isTaskStatus } from "./TaskStatus";
 export { TaskVisibility, TASK_VISIBILITIES, isTaskVisibility } from "./TaskVisibility";
 export type { ITask, Task, TaskPriority } from "./Task";
 export {
+  SUBTASK_TITLE_MAX_LENGTH,
+  SUBTASK_EDITABLE_STATUSES,
+  SUBTASK_BLOCKED_TARGETS,
+  createSubtaskRecord,
+  subtaskBasePoints,
+  openSubtasksCount,
+  openSubtasksMessage,
+  isCompletionTargetStatus,
+  assertSubtasksAllowTransition,
+  canEditSubtasksOf,
+  shouldAutoMoveMotherToReview,
+  serializeSubtask,
+  supportsSubtasks,
+  normalizeNewSubtasks,
+  type ISubtask,
+  type NewSubtaskInput,
+  type SubtaskLockAction,
+} from "./subtask-rules";
+export {
   isPublicProgressOnlyUpdate,
   isStatusOnlyUpdate,
   normalizeAssigneeIds,
@@ -11,6 +30,8 @@ export {
   isReviewRequestTransition,
   calculateLatePenalty,
   awardPointsForCompletion,
+  awardPointsForSubtask,
+  totalAwardForCompletion,
   daysLateForTask,
   POINTS_PER_TASK,
   EARLY_DELIVERY_MULTIPLIER,
@@ -39,4 +60,5 @@ export {
   type ProgressPatch,
   type ApprovalDecision,
   type AwardableTask,
+  type AwardableSubtask,
 } from "./task-rules";

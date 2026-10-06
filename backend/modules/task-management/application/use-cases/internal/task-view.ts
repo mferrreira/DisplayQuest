@@ -1,13 +1,25 @@
 import {
   applyAssigneeIds,
+  ForbiddenError,
+  hasPermission,
   isClaimable,
+  subtaskBasePoints,
   toTaskView,
   withActorProgress,
+  systemActor,
+  type AwardableSubtask,
+  type ISubtask,
   type Task,
+  type TaskStatus,
 } from "@/backend/domain";
 import type { TaskAssigneesPort } from "@/backend/modules/task-management/application/ports/task-assignees.repository";
+import type { TaskActorsPort } from "@/backend/modules/task-management/application/ports/task-actors.port";
+import type { TaskNotificationsPort } from "@/backend/modules/task-management/application/ports/task-notifications.port";
+import type { TaskProjectsPort } from "@/backend/modules/task-management/application/ports/task-projects.port";
 import type { TaskProgressPort } from "@/backend/modules/task-management/application/ports/task-progress.repository";
 import type { TaskProgressEvents } from "@/backend/modules/task-management/application/ports/task-progress.events";
+import type { TaskRepositoryPort } from "@/backend/modules/task-management/application/ports/task.repository";
+import type { TaskSubtasksPort } from "@/backend/modules/task-management/application/ports/task-subtasks.repository";
 
 /**
  * OND4-B3 — shared view/compat helpers for the task use cases. Semantics frozen by the
@@ -132,5 +144,134 @@ export async function publishTaskCompletionAward(
   } catch (error) {
     console.error("Erro ao publicar progressão de gamificação para conclusão de task:", error);
     return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// plan-v4 · V4-4 — subtasks: read model, autoridade, janela e sincronização da base
+// ---------------------------------------------------------------------------
+
+/** Read model: as subtasks da mãe vão no JSON da tarefa (DEC-79). */
+export async function attachSubtasks(task: Task, subtasks: TaskSubtasksPort): Promise<Task> {
+  if (!task.id) return task;
+  return toTaskView({ ...task, subtasks: await subtasks.listByTaskId(task.id) });
+}
+
+/**
+ * DEC-78 — a única tradução entre a linha lida da tabela e o que a regra de pontuação lê.
+ * A subtask não tem prazo próprio: o prazo usado é o **da mãe**, e o instante é o da própria
+ * subtask. Existe um lugar só porque `completeTask` e `approveTask` creditam, e a lição medida
+ * de 2026-10-05 é que a mesma conta em dois lugares diverge.
+ */
+export function awardableSubtasks(
+  mother: Pick<Task, "dueDate">,
+  subtasks: ReadonlyArray<ISubtask>,
+): AwardableSubtask[] {
+  return subtasks.map((subtask) => ({
+    dueDate: mother.dueDate ?? null,
+    completed: subtask.completed,
+    completedAt: subtask.completedAt ?? null,
+  }));
+}
+
+/** Variante em lote — a lista do quadro tem uma consulta só, não N+1. */
+export async function batchAttachSubtasks(tasks: Task[], subtasks: TaskSubtasksPort): Promise<Task[]> {
+  const taskIds = tasks.filter((task) => task.id).map((task) => task.id!);
+  if (taskIds.length === 0) return tasks;
+  const grouped = await subtasks.listByTaskIds(taskIds);
+  return tasks.map((task) => (task.id ? toTaskView({ ...task, subtasks: grouped.get(task.id) ?? [] }) : task));
+}
+
+export interface SubtaskAuthorityDeps {
+  assignees: TaskAssigneesPort;
+  actors: TaskActorsPort;
+  projects: TaskProjectsPort;
+}
+
+/**
+ * "A mesma autoridade de editar a mãe" (resposta do dono, DEC-82), traduzida para as portas
+ * deste módulo.
+ * A mãe é editada hoje por três portas no `UpdateTaskUseCase`, e a união delas é esta:
+ *   - quem tem MANAGE_TASKS ou MANAGE_USERS;
+ *   - quem está atribuído à tarefa (coluna `assignedTo` ou `task_assignees`);
+ *   - quem criou ou lidera o projeto da tarefa;
+ *   - quem é membro do projeto da tarefa.
+ * Sem projeto, sem atribuição e sem gestão: barrado.
+ */
+export async function assertCanOperateSubtasks(
+  task: Task,
+  actorId: number,
+  actorRoles: string[],
+  deps: SubtaskAuthorityDeps,
+): Promise<void> {
+  const denied = new ForbiddenError("Usuário não pode gerenciar as subtasks desta tarefa");
+  if (hasPermission(actorRoles, "MANAGE_TASKS") || hasPermission(actorRoles, "MANAGE_USERS")) return;
+  if (await isActorAssignedToTask(task, actorId, deps.assignees)) return;
+  if (!task.projectId) throw denied;
+
+  const project = await deps.projects.findById(task.projectId);
+  if (project && (project.createdBy === actorId || project.leaderId === actorId)) return;
+
+  const memberships = await deps.actors.getUserProjectMemberships(actorId);
+  if (memberships.some((membership) => membership.projectId === task.projectId)) return;
+  throw denied;
+}
+
+/**
+ * A base gravada em `tasks.points` é 10 + 10·n (resposta do dono). Ela é sincronizada quando a
+ * LISTA muda — criar e apagar — e não quando uma subtask é concluída: a base conta subtasks,
+ * não concluídas.
+ *
+ * `tasks.update` é substituição completa (congelado desde OND4-B3), então a sincronização escreve
+ * a linha inteira a partir da view que o caso de uso já tem em mãos — o mesmo que `updateTask`
+ * faz em todos os caminhos.
+ */
+export async function syncMotherBasePoints(
+  task: Task,
+  subtaskCount: number,
+  tasks: TaskRepositoryPort,
+): Promise<Task> {
+  const base = subtaskBasePoints(subtaskCount);
+  if (task.points === base) return task;
+  return await tasks.update(task.id!, { ...task, points: base });
+}
+
+/**
+ * A frase da janela (DEC-80): mexer na LISTA de subtasks para quando a mãe entra em revisão ou
+ * é concluída. É 409 e não 400 porque o que está em conflito é o estado do mundo, não a
+ * transição pedida — a mesma natureza de "Tarefa já concluída".
+ */
+export function subtaskWindowMessage(motherStatus: TaskStatus): string {
+  return motherStatus === "done"
+    ? "A tarefa já foi concluída e a lista de subtasks não muda mais."
+    : "A tarefa está em revisão e a lista de subtasks não muda mais.";
+}
+
+/**
+ * TASK_REVIEW_REQUEST — movido para cá no V4-4 porque passou a ter dois chamadores: o
+ * `UpdateTaskUseCase` (pessoa moveu a mãe) e o auto-move da última subtask. A lição medida de
+ * 2026-10-05 no `tests/e2e/shell.spec.ts` é esta: a mesma regra em duas cópias diverge.
+ *
+ * Publicação nunca quebra a ação (congelado): o erro é registrado e engolido.
+ */
+export async function publishTaskReviewRequest(
+  notifications: TaskNotificationsPort,
+  actors: TaskActorsPort,
+  input: { taskId: number; taskTitle: string; userId: number; projectLeaderId: number },
+): Promise<void> {
+  try {
+    const user = await actors.findById(input.userId);
+    const userName = user?.name || "Um usuário";
+    await notifications.publishEvent({
+      eventType: "TASK_REVIEW_REQUEST",
+      title: "Tarefa em Revisão",
+      message: `${userName} marcou a tarefa "${input.taskTitle}" como "Em Revisão"`,
+      data: { taskId: input.taskId, taskTitle: input.taskTitle, userId: input.userId, userName },
+      triggeredByUserId: input.userId,
+      audience: { mode: "USER_IDS", userIds: [input.projectLeaderId] },
+      actor: systemActor("SYSTEM_EVENT"),
+    });
+  } catch (error) {
+    console.error("Erro ao publicar notificação TASK_REVIEW_REQUEST:", error);
   }
 }

@@ -7,8 +7,14 @@ import { DeleteTaskUseCase } from "@/backend/modules/task-management/application
 import { CompleteTaskUseCase } from "@/backend/modules/task-management/application/use-cases/complete-task.use-case"
 import { ApproveTaskUseCase } from "@/backend/modules/task-management/application/use-cases/approve-task.use-case"
 import { RejectTaskUseCase } from "@/backend/modules/task-management/application/use-cases/reject-task.use-case"
+import { CreateTaskSubtaskUseCase } from "@/backend/modules/task-management/application/use-cases/create-task-subtask.use-case"
+import { UpdateTaskSubtaskUseCase } from "@/backend/modules/task-management/application/use-cases/update-task-subtask.use-case"
+import { DeleteTaskSubtaskUseCase } from "@/backend/modules/task-management/application/use-cases/delete-task-subtask.use-case"
 import { ListGlobalProgressUseCase, type GlobalProgressEntry } from "@/backend/modules/task-management/application/use-cases/list-global-progress.use-case"
-import type { CreateTaskCommand } from "@/backend/modules/task-management/application/contracts"
+import type { CreateTaskCommand, SubtaskMutationResult } from "@/backend/modules/task-management/application/contracts"
+import type { CreateTaskSubtaskCommand } from "@/backend/modules/task-management/application/use-cases/create-task-subtask.use-case"
+import type { DeleteTaskSubtaskCommand } from "@/backend/modules/task-management/application/use-cases/delete-task-subtask.use-case"
+import type { UpdateTaskSubtaskCommand } from "@/backend/modules/task-management/application/use-cases/update-task-subtask.use-case"
 import type { TaskAssigneesPort } from "@/backend/modules/task-management/application/ports/task-assignees.repository"
 import type { TaskActorsPort } from "@/backend/modules/task-management/application/ports/task-actors.port"
 import type { TaskNotificationEvent, TaskNotificationsPort } from "@/backend/modules/task-management/application/ports/task-notifications.port"
@@ -16,12 +22,14 @@ import type { TaskProgressEvents } from "@/backend/modules/task-management/appli
 import type { TaskCompletionResult } from "@/backend/modules/task-management/application/contracts"
 import type { TaskProgressPort } from "@/backend/modules/task-management/application/ports/task-progress.repository"
 import type { TaskProjectsPort } from "@/backend/modules/task-management/application/ports/task-projects.port"
+import type { TaskSubtasksPort } from "@/backend/modules/task-management/application/ports/task-subtasks.repository"
 import type { TaskRepositoryPort } from "@/backend/modules/task-management/application/ports/task.repository"
 import { createPrismaTaskRepository } from "@/backend/modules/task-management/infrastructure/repositories/prisma-task.repository"
 import { createPrismaTaskAssigneesRepository } from "@/backend/modules/task-management/infrastructure/repositories/prisma-task-assignees.repository"
 import { createPrismaTaskProgressRepository } from "@/backend/modules/task-management/infrastructure/repositories/prisma-task-progress.repository"
 import { createPrismaTaskActorsRepository } from "@/backend/modules/task-management/infrastructure/repositories/prisma-task-actors.repository"
 import { createPrismaTaskProjectsRepository } from "@/backend/modules/task-management/infrastructure/repositories/prisma-task-projects.repository"
+import { createPrismaTaskSubtasksRepository } from "@/backend/modules/task-management/infrastructure/repositories/prisma-task-subtasks.repository"
 
 /**
  * TaskManagementModule — public surface unchanged for the routes (OND4-B3). The rules now
@@ -44,6 +52,11 @@ export class TaskManagementModule {
   readonly approveTask: (command: { taskId: number; approverId: number }) => Promise<TaskCompletionResult>
   readonly rejectTask: (command: { taskId: number; approverId: number; reason?: string }) => Promise<any>
   readonly globalProgress: () => Promise<GlobalProgressEntry[]>
+  // plan-v4 · V4-4 — subtasks. Devolvem a mãe junto com a subtask porque as duas consequências
+  // de mexer numa subtask são da mãe: a base do prêmio muda, e a última concluída move a mãe.
+  readonly createTaskSubtask: (command: CreateTaskSubtaskCommand) => Promise<SubtaskMutationResult>
+  readonly updateTaskSubtask: (command: UpdateTaskSubtaskCommand) => Promise<SubtaskMutationResult>
+  readonly deleteTaskSubtask: (command: DeleteTaskSubtaskCommand) => Promise<SubtaskMutationResult>
 
   constructor(ports: {
     tasks: TaskRepositoryPort
@@ -52,17 +65,20 @@ export class TaskManagementModule {
     actors: TaskActorsPort
     projects: TaskProjectsPort
     notifications: TaskNotificationsPort
+    subtasks: TaskSubtasksPort
     events?: TaskProgressEvents
   }) {
     const getTaskByIdUseCase = new GetTaskByIdUseCase({
       tasks: ports.tasks,
       assignees: ports.assignees,
+      subtasks: ports.subtasks,
     })
     const listTasksForActorUseCase = new ListTasksForActorUseCase({
       tasks: ports.tasks,
       assignees: ports.assignees,
       progress: ports.progress,
       actors: ports.actors,
+      subtasks: ports.subtasks,
     })
     const listActorProjectIdsUseCase = new ListActorProjectIdsUseCase(ports.actors)
     const createTaskUseCase = new CreateTaskUseCase({
@@ -70,6 +86,7 @@ export class TaskManagementModule {
       assignees: ports.assignees,
       actors: ports.actors,
       projects: ports.projects,
+      subtasks: ports.subtasks,
     })
     const updateTaskUseCase = new UpdateTaskUseCase({
       tasks: ports.tasks,
@@ -78,6 +95,7 @@ export class TaskManagementModule {
       actors: ports.actors,
       projects: ports.projects,
       notifications: ports.notifications,
+      subtasks: ports.subtasks,
     })
     const deleteTaskUseCase = new DeleteTaskUseCase(ports.tasks)
     const completeTaskUseCase = new CompleteTaskUseCase(
@@ -87,6 +105,7 @@ export class TaskManagementModule {
         progress: ports.progress,
         actors: ports.actors,
         projects: ports.projects,
+        subtasks: ports.subtasks,
       },
       ports.events,
     )
@@ -97,6 +116,7 @@ export class TaskManagementModule {
         actors: ports.actors,
         projects: ports.projects,
         notifications: ports.notifications,
+        subtasks: ports.subtasks,
       },
       ports.events,
     )
@@ -112,6 +132,28 @@ export class TaskManagementModule {
       actors: ports.actors,
       progress: ports.progress,
     })
+    const createTaskSubtaskUseCase = new CreateTaskSubtaskUseCase({
+      tasks: ports.tasks,
+      subtasks: ports.subtasks,
+      assignees: ports.assignees,
+      actors: ports.actors,
+      projects: ports.projects,
+    })
+    const updateTaskSubtaskUseCase = new UpdateTaskSubtaskUseCase({
+      tasks: ports.tasks,
+      subtasks: ports.subtasks,
+      assignees: ports.assignees,
+      actors: ports.actors,
+      projects: ports.projects,
+      notifications: ports.notifications,
+    })
+    const deleteTaskSubtaskUseCase = new DeleteTaskSubtaskUseCase({
+      tasks: ports.tasks,
+      subtasks: ports.subtasks,
+      assignees: ports.assignees,
+      actors: ports.actors,
+      projects: ports.projects,
+    })
 
     this.getTaskById = (taskId) => getTaskByIdUseCase.execute(taskId)
     this.listTasksForActor = (query) => listTasksForActorUseCase.execute(query)
@@ -125,6 +167,9 @@ export class TaskManagementModule {
     this.approveTask = (command) => approveTaskUseCase.execute(command)
     this.rejectTask = (command) => rejectTaskUseCase.execute(command)
     this.globalProgress = () => listGlobalProgressUseCase.execute()
+    this.createTaskSubtask = (command) => createTaskSubtaskUseCase.execute(command)
+    this.updateTaskSubtask = (command) => updateTaskSubtaskUseCase.execute(command)
+    this.deleteTaskSubtask = (command) => deleteTaskSubtaskUseCase.execute(command)
   }
 }
 
@@ -136,6 +181,8 @@ export interface TaskManagementModulePorts {
   actors?: TaskActorsPort
   projects?: TaskProjectsPort
   notifications?: TaskNotificationsPort
+  /** plan-v4 · V4-4: a costura das subtasks (DEC-78). */
+  subtasks?: TaskSubtasksPort
   /** Awards port; the composition root wires the gamification module into the publisher. */
   events?: TaskProgressEvents
 }
@@ -164,6 +211,7 @@ export function createTaskManagementModule(options: TaskManagementModulePorts = 
     actors: options.actors ?? createPrismaTaskActorsRepository(),
     projects: options.projects ?? createPrismaTaskProjectsRepository(),
     notifications: options.notifications ?? new UnwiredTaskNotifications(),
+    subtasks: options.subtasks ?? createPrismaTaskSubtasksRepository(),
     events: options.events,
   })
 }

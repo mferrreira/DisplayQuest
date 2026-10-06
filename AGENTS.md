@@ -5,7 +5,7 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
 
 ## Verificação
 
-- **Gate de entrega:** `npm run arch:check` (exit 0, allow-list **vazia**) && `npm run lint` (nada de erro) && `npx tsc --noEmit` (0) && `npx vitest run` (zero failure). A contagem é **por branch**: no `dev` o baseline era **64 arquivos / 721 testes** quando o B8 removeu os 651 testes de paridade; no `plan/v3-operacional`, medido no encerramento do plan-v3 (2026-10-03), são **65 arquivos / 798 testes** em `tests/unit` + `features` e **75 / 881** na suíte completa. Na `dev` de hoje (2026-10-05, depois do plan-v4 V4-1/V4-2/V4-3/V4-6 e do buscador do quadro) são **78 arquivos / 981 testes** e **88 / 1065** na suíte completa; a suíte e2e está em **7 passando** — o 3º teste do quadro quebra por dado de lixo da instância, não por código, e como o spec é serial os outros 5 **nem rodam** (ver "Gotchas reais"). Compare sempre com o `STATE.json` do plano em que você está.
+- **Gate de entrega:** `npm run arch:check` (exit 0, allow-list **vazia**) && `npm run lint` (nada de erro) && `npx tsc --noEmit` (0) && `npx vitest run` (zero failure). A contagem é **por branch**: no `dev` o baseline era **64 arquivos / 721 testes** quando o B8 removeu os 651 testes de paridade; no `plan/v3-operacional`, medido no encerramento do plan-v3 (2026-10-03), são **65 arquivos / 798 testes** em `tests/unit` + `features` e **75 / 881** na suíte completa. Na `dev` de hoje (2026-10-06, depois do plan-v4 V4-1/V4-2/V4-3/V4-6 e do V4-4 de subtasks) são **81 arquivos / 1050 testes** e **91 / 1135** na suíte completa; a suíte e2e está em **7 passando** — o 3º teste do quadro quebra por cartão a mais na coluna `Em Revisão` (dado legítimo da instância, não código), e como o spec é serial os outros 5 **nem rodam** (ver "Gotchas reais"). Compare sempre com o `STATE.json` do plano em que você está.
 - **G4/integração:** roundtrips Prisma real rodam **só** contra o banco de teste isolado `dq-dev-test-db` em `127.0.0.1:5433` (`$env:DATABASE_URL="postgresql://dq_dev:dq_dev_local_only@127.0.0.1:5433/dq_dev_test"; npx vitest run`) — nunca contra o `display-quest-db` (5432, produção local).
 - **Setup do G4 (corrigido 2026-10-02):** `npm run db:test:up` e `npm run db:test:setup` **existem**
   no `package.json` e fazem a sequência completa (`docker compose -f docker-compose.test.yml up -d`,
@@ -97,11 +97,26 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
   `docs:check` em batch que muda comportamento visível) e **G6** (recapturar as telas do guia
   quando a captura deixa de representar a tela).
 
-## plan-v4 — subtasks, animação de pontos, inativação de usuário (2026-10-05)
+## plan-v4 — subtasks, animação de pontos, inativação de usuário (2026-10-05..10-06)
 
-- **Estado/decisões:** `displayquest-v2/plan-v4/{PLAN.md,STATE.json}` — V4-1 **done**, V4-2..V4-5
-  pendentes, `awaitingInstruction` apontando para **D-D** (escopo da subtask na v1). A numeração de
-  decisões continua: DEC-55..59 são do plan-v4.
+- **Estado/decisões:** `displayquest-v2/plan-v4/{PLAN.md,STATE.json}` — V4-1, V4-2, V4-3, V4-4 e o
+  fechamento do ASK-V4-06 **done**; **V4-4b** (testes de UI do `ModernAdminPanel`, pedido pelo dono
+  para antes do V4-5) e V4-5 (subtasks na UI) pendentes. `awaitingInstruction` está vazia: as 17
+  perguntas do escopo de subtask foram respondidas em 2026-10-05/10-06 e estão em `answeredInstructions`.
+- **Numeração de decisão é global e JÁ tem buraco (medido 2026-10-06):** DEC-01..29 clean-arch,
+  DEC-30..49 plan-v3, DEC-50..54 B6/D4, DEC-55..60 plan-v4, **DEC-61..77 plan-v5** (reservadas pelo
+  dono em `displayquest-v2/plan-v5/`, criado 2026-10-06 e ainda **não commitado**), DEC-78..84 plan-v4
+  (V4-4 + ASK-V4-06). O V4-4 ia usar DEC-61..64 e colidiu; os 28 comentários de código foram
+  renumerados. **Antes de abrir decisão nova, `grep` os três `STATE.json`.**
+- **Subtask (V4-4, DEC-78..83):** tabela `task_subtasks` (sem FK para `users` — subtask não tem
+  responsável próprio), base gravada em `tasks.points` = `10 + 10·n`, e **cada subtask é pontuada pela
+  mesma regra da mãe** (adiantada 15 / no prazo 10 / 1 dia 0 / 2 dias −10, sem piso), medida no instante
+  em que ELA foi concluída, contra o prazo HERDADO da mãe; só as CONCLUÍDAS somam. Exemplo congelado em
+  teste: mãe −40 + subtasks (+15, 0, −30) = **−55**. A **trava** (não entrar em `in-review`/`done` com
+  subtask aberta, vindo de QUALQUER coluna, nos três caminhos `PUT status` / `PATCH complete` / `POST
+  approve`) é 400; a **janela** (criar/renomear/apagar a lista de uma mãe em `in-review`/`done`) é 409.
+  Concluir subtask não obedece à janela. A última subtask concluída **move a mãe** de `in-progress` para
+  `in-review` com a mesma notificação de um movimento humano.
 - **Excluir usuário não é o caminho (DEC-55):** `inactive` já funciona de ponta a ponta — login
   (`lib/auth/config.ts:30`), API (`lib/auth/server-auth.ts:36`), regras de laboratório, bulk weekly
   reports, cron weekly reset, e "Inativo" na UI. Nenhuma tela `.tsx` chamava `deleteUser`. O
@@ -345,6 +360,32 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
   `setupFiles` os shims de jsdom somem e 84 testes falham; sem `environment` o default do projeto
   é `node`. Serializar tudo (`fileParallelism: false` global) também conserta, mas custa 115s na
   completa e 102s no G3 — pagar 72s por concorrência que não colide.
+- **Migration de schema sem pôr a instância em risco (medido 2026-10-06, V4-4):** `prisma migrate dev`
+  pode pedir **RESET** quando detecta deriva — e a 5432 é o banco com os dados reais do dono. A sequência
+  usada: salvar o `schema.prisma` de antes, `prisma migrate diff --from-schema-datamodel <antes>
+  --to-schema-datamodel <novo> --script` (delta offline), gravar como
+  `prisma/migrations/<timestamp>_nome/migration.sql`, `prisma migrate deploy` (5432 **e** 5433),
+  `prisma generate`.
+- **`prisma generate` NÃO alcança processo em execução (medido 2026-10-06):** o `next dev -p 3001` que
+  estava de pe desde antes da migration tinha o client antigo em memória — `prisma.task_subtasks` era
+  `undefined`, e a primeira chamada da trava devolveria **500 no navegador** com o gate de tipos verde.
+  Depois de gerar client, reiniciar o dev server antes de rodar e2e.
+- **zod com `.default([])` torna a chave OBRIGATÓRIA no tipo de saída (medido 2026-10-06):** `entities/task.ts`
+  aceita `subtasks` ausente no *wire*, mas `Task` (saída de `z.infer`) passa a **exigir** a chave — todo
+  literal de `Task` (ex.: `tests/mocks/fixtures/tasks.ts`) precisa dela. Tolerância de parse não é
+  tolerância de tipo.
+- **Assinatura de regra de pontuação: `completed` é obrigatório de propósito (medido 2026-10-06).**
+  `AwardableSubtask` com `completed?` opcional fez a primeira versão contar subtask **aberta** no prêmio e
+  passar verde em todos os testes, porque os objetos de teste não diziam nada. Verificado por mutação
+  (remover o filtro não derrubava teste nenhum) e corrigido: campo obrigatório + caso explícito
+  "subtask aberta não entra na conta".
+- **`tests/unit/domain/identity/system-callers.test.ts` monta use cases de task à mão** com fakes `as never`:
+  um port novo (`subtasks`) não é pego pelo `tsc` e aparece como crash em tempo de execução. Precisa de
+  `subtasksPort()` (`countOpenByTaskId → 0`).
+- **A causa aparente da falha conhecida do 3º teste do quadro mudou (2026-10-06):** em 2026-10-05 era a
+  tarefa 290 "fasdfas"; agora é a **50 "fazer reuniao com mamedes"**, que o dono moveu para `in-review`.
+  É o mesmo modo de falha previsto acima (um cartão a mais na coluna → *strict mode violation*), e o
+  `git stash` confirma que o baseline falha idêntico.
 - **Nunca imprimir/commitar o valor real do `NEXTAUTH_SECRET`** do `.env` local.
 - `tests/` é versionado por negações no `.gitignore` (`tests/*` + `!tests/unit`,
   `!tests/integration/**` etc.; screenshots de e2e continuam ignorados) — os testes

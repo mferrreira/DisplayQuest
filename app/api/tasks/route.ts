@@ -105,11 +105,14 @@ export async function POST(request: Request) {
       completed,
       taskVisibility,
       isGlobal,
-      creationMode
+      creationMode,
+      subtasks
     } = body
 
     // plan-v3 OND1-D (AC-P3-03): `points` não é lido do corpo. createTaskRecord aplica
     // POINTS_PER_TASK quando o caller não informa — a superfície deixou de definir valor.
+    // plan-v4 · V4-4 (D-D): `subtasks` é lido do corpo — a mãe nasce com a lista, no mesmo
+    // formulário. O backlog (branch acima) não aceita subtask de propósito.
     const task = await taskManagementModule.createTask({
       title,
       description,
@@ -123,6 +126,7 @@ export async function POST(request: Request) {
       taskVisibility,
       isGlobal,
       creationMode,
+      subtasks,
     }, auth.actor.id);
 
     return NextResponse.json({ task: task.toJSON() }, { status: 201 })

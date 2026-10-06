@@ -3,8 +3,8 @@
  * Mirrors backend authority (task-service.gateway.ts) for DISPLAY decisions only:
  * the server remains the enforcer; these functions decide optimistic UI + which call to fire.
  */
-import type { Task, TaskStatus } from "@/entities/task";
-import { awardPointsForCompletion, calculateLatePenalty } from "@/backend/domain";
+import type { Task, TaskStatus, TaskSubtask } from "@/entities/task";
+import { calculateLatePenalty, totalAwardForCompletion } from "@/backend/domain";
 
 export const TASK_STATUSES: TaskStatus[] = ["to-do", "in-progress", "in-review", "adjust", "done"];
 
@@ -170,9 +170,22 @@ export function latePenalty(task: Pick<Task, "dueDate">, completion: Date = new 
   return calculateLatePenalty(task, completion);
 }
 
-/** Pontos que a pessoa receberia se concluí agora (pode ser ≤ 0 — DEC-39). */
-export function projectedAward(task: Pick<Task, "dueDate">, now: Date = new Date()): number {
-  return awardPointsForCompletion(task, now);
+/**
+ * Pontos que a pessoa receberia se concluí agora (pode ser ≤ 0 — DEC-39).
+ *
+ * plan-v4 · V4-4 (DEC-78): passa a somar as subtasks. `subtasks` é opcional na assinatura porque
+ * o espelho é chamado também com objetos mínimos (`{ dueDate }`) nos testes de caraterização do
+ * plan-v3 — sem a chave, o número é exatamente o de antes.
+ *
+ * Por que isto tem que ser aqui e não no servidor: o cartão e o diálogo de detalhe ANUNCIAM o
+ * número antes da mutação (`task-card.tsx:256`, `task-detail-dialog.tsx:93`). Se a soma morasse
+ * só no servidor, uma tarefa com três subtasks continuaria sendo anunciada como 10 pontos.
+ */
+export function projectedAward(
+  task: Pick<Task, "dueDate"> & { subtasks?: readonly TaskSubtask[] },
+  now: Date = new Date(),
+): number {
+  return totalAwardForCompletion(task, task.subtasks ?? [], now);
 }
 
 // ---- backlog parser (legacy backlog-dialog parity) ----

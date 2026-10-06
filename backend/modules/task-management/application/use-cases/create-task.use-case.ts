@@ -2,17 +2,20 @@ import {
   canCreateGlobalQuest,
   createTaskRecord,
   ForbiddenError,
-  normalizeAssigneeIds,
   NotFoundError,
+  normalizeAssigneeIds,
+  supportsSubtasks,
   toTaskView,
+  ValidationError,
   type Task,
 } from "@/backend/domain";
 import type { CreateTaskCommand } from "@/backend/modules/task-management/application/contracts";
 import type { TaskAssigneesPort } from "@/backend/modules/task-management/application/ports/task-assignees.repository";
 import type { TaskActorsPort } from "@/backend/modules/task-management/application/ports/task-actors.port";
 import type { TaskProjectsPort } from "@/backend/modules/task-management/application/ports/task-projects.port";
+import type { TaskSubtasksPort } from "@/backend/modules/task-management/application/ports/task-subtasks.repository";
 import type { TaskRepositoryPort } from "@/backend/modules/task-management/application/ports/task.repository";
-import { syncAssignees } from "@/backend/modules/task-management/application/use-cases/internal/task-view";
+import { attachSubtasks, syncAssignees } from "@/backend/modules/task-management/application/use-cases/internal/task-view";
 
 /**
  * CreateTaskUseCase — OND4-B3 (R2): rules moved from TaskServiceGateway.createTask.
@@ -21,12 +24,17 @@ import { syncAssignees } from "@/backend/modules/task-management/application/use
  * on mid-loop failure); shared mode creates one task with all assignees; global quests
  * need MANAGE_USERS on the creator and force assignedTo/projectId null + public + no
  * assignees; assignees are validated to exist; task_assignees are synced after creation.
+ *
+ * plan-v4 · V4-4 (D-D): a mãe pode nascer com subtasks, criadas no mesmo formulário. No modo
+ * individual cada cópia recebe as SUAS (cada mãe tem trava e prêmio próprios). Subtask em tarefa
+ * pública ou quest global é recusada — não é ignorada em silêncio.
  */
 export interface CreateTaskDependencies {
   tasks: TaskRepositoryPort
   assignees: TaskAssigneesPort
   actors: TaskActorsPort
   projects: TaskProjectsPort
+  subtasks: TaskSubtasksPort
 }
 
 export class CreateTaskUseCase {
@@ -75,9 +83,17 @@ export class CreateTaskUseCase {
       }
     }
 
-    const createdTask = await this.dependencies.tasks.create(
-      createTaskRecord({ ...data, status: data.status, priority: data.priority }, new Date()),
-    )
+    const record = createTaskRecord({ ...data, status: data.status, priority: data.priority }, new Date())
+    const subtaskTitles = titlesOf(record.subtasks)
+    if (subtaskTitles.length > 0 && !supportsSubtasks(record.taskVisibility, Boolean(record.isGlobal))) {
+      throw new ValidationError("Subtask só existe em tarefa delegada ou privada")
+    }
+
+    const createdTask = await this.dependencies.tasks.create(record)
+
+    if (subtaskTitles.length > 0) {
+      await this.dependencies.subtasks.createMany(createdTask.id!, subtaskTitles)
+    }
 
     if (!data.isGlobal) {
       const assigneeIdsToPersist = normalizedAssigneeIds.length > 0
@@ -86,11 +102,14 @@ export class CreateTaskUseCase {
           ? [createdTask.assignedTo]
           : []
       await syncAssignees(createdTask.id!, assigneeIdsToPersist, actorId, this.dependencies.assignees)
-      return toTaskView({
-        ...createdTask,
-        assigneeIds: assigneeIdsToPersist,
-        assignedTo: assigneeIdsToPersist[0] ?? null,
-      })
+      return await attachSubtasks(
+        toTaskView({
+          ...createdTask,
+          assigneeIds: assigneeIdsToPersist,
+          assignedTo: assigneeIdsToPersist[0] ?? null,
+        }),
+        this.dependencies.subtasks,
+      )
     }
 
     return toTaskView({ ...createdTask, assigneeIds: [], assignedTo: null })
@@ -112,14 +131,26 @@ export class CreateTaskUseCase {
           { ...data, assigneeIds: [assigneeId], assignedTo: assigneeId },
           new Date(),
         )
+        const subtaskTitles = titlesOf(record.subtasks)
         const created = await this.dependencies.tasks.create(record)
+
+        // Cada cópia é uma mãe: recebe a sua própria lista de subtasks, com trava e prêmio
+        // próprios. Uma lista compartilhada não travaria as N tarefas.
+        if (subtaskTitles.length > 0) {
+          await this.dependencies.subtasks.createMany(created.id!, subtaskTitles)
+        }
 
         if (!groupTaskId) groupTaskId = created.id!
         const withGroup = { ...created, groupTaskId }
         await this.dependencies.tasks.update(created.id!, withGroup)
 
         await syncAssignees(created.id!, [assigneeId], actorId, this.dependencies.assignees)
-        createdTasks.push(toTaskView({ ...withGroup, assigneeIds: [assigneeId], assignedTo: assigneeId }))
+        createdTasks.push(
+          await attachSubtasks(
+            toTaskView({ ...withGroup, assigneeIds: [assigneeId], assignedTo: assigneeId }),
+            this.dependencies.subtasks,
+          ),
+        )
       }
 
       return createdTasks[0]
@@ -143,4 +174,9 @@ export class CreateTaskUseCase {
       }
     }
   }
+}
+
+/** `createTaskRecord` já validou e aparou os títulos; aqui só se extrai o que vai para a tabela. */
+function titlesOf(subtasks: { title: string }[] | undefined): string[] {
+  return (subtasks ?? []).map((subtask) => subtask.title)
 }

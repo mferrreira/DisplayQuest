@@ -207,10 +207,16 @@ export function TaskCard({ task, index, isOverdue, isDueToday, isCompact, onEdit
 
   const isPublicTask = task.taskVisibility === "public"
   const isGlobalTask = task.isGlobal
-  // plan-v3 OND1-D (DEC-30): o selo mostra a base fixa da regla, nunca `task.points` — a
+  // plan-v3 OND1-D (DEC-30): o selo mostra a base da regla, nunca `task.points` — a
   // coluna virou histórico (DEC-40) e o valor creditado depende do prazo (ver task-card.tsx
   // toast e task-detail-dialog.tsx). O antigo `isHighPoints` (>= 50) morreu aqui.
-  const pointsBadgeTitle = `Tarefa vale ${POINTS_PER_TASK} pontos — bônus de 50% se entregue adiantada, penalidade de ${POINTS_PER_TASK} por dia de atraso`
+  // plan-v4 · V4-4 (DEC-56): a base é 10 + 10 por subtask. Sem subtask é o texto de sempre.
+  const subtaskCount = task.subtasks?.length ?? 0
+  const basePoints = POINTS_PER_TASK * (1 + subtaskCount)
+  const pointsBadgeTitle =
+    subtaskCount > 0
+      ? `Tarefa vale ${basePoints} pontos: ${POINTS_PER_TASK} da tarefa e ${POINTS_PER_TASK} por subtask (${subtaskCount}) — bônus de 50% por parcela entregue adiantada, penalidade de ${POINTS_PER_TASK} por dia de atraso de cada parcela`
+      : `Tarefa vale ${POINTS_PER_TASK} pontos — bônus de 50% se entregue adiantada, penalidade de ${POINTS_PER_TASK} por dia de atraso`
 
   const userRoles = user?.roles ?? []
   const isLeader =

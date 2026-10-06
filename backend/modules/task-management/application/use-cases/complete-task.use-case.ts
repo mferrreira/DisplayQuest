@@ -1,4 +1,5 @@
 import {
+  assertSubtasksAllowTransition,
   awardPointsForCompletion,
   canBeCompleted,
   ConflictError,
@@ -9,7 +10,10 @@ import {
   isLeaderSelfCompleteDenied,
   isProgressAlreadyCompleted,
   NotFoundError,
+  openSubtasksCount,
   progressPatchForCompletion,
+  supportsSubtasks,
+  totalAwardForCompletion,
   withActorProgress,
   type Task,
 } from "@/backend/domain";
@@ -19,9 +23,11 @@ import type { TaskActorsPort } from "@/backend/modules/task-management/applicati
 import type { TaskProgressEvents } from "@/backend/modules/task-management/application/ports/task-progress.events";
 import type { TaskProgressPort } from "@/backend/modules/task-management/application/ports/task-progress.repository";
 import type { TaskProjectsPort } from "@/backend/modules/task-management/application/ports/task-projects.port";
+import type { TaskSubtasksPort } from "@/backend/modules/task-management/application/ports/task-subtasks.repository";
 import type { TaskRepositoryPort } from "@/backend/modules/task-management/application/ports/task.repository";
 import {
   attachAssignees,
+  awardableSubtasks,
   claimTaskIfUnclaimed,
   isActorAssignedToTask,
   publishTaskCompletionAward,
@@ -49,6 +55,7 @@ export interface CompleteTaskDependencies {
   progress: TaskProgressPort
   actors: TaskActorsPort
   projects: TaskProjectsPort
+  subtasks: TaskSubtasksPort
 }
 
 export class CompleteTaskUseCase {
@@ -160,6 +167,14 @@ export class CompleteTaskUseCase {
     }
 
     const finalStatus = workingTask.isGlobal || workingTask.taskVisibility === "public" ? "done" : "in-review"
+
+    // plan-v4 · V4-4 (DEC-57): a mãe não vai para revisão nem é concluída com subtask aberta.
+    // As linhas lidas aqui servem duas coisas: contar as abertas e compor o prêmio (DEC-78).
+    const subtaskRows = supportsSubtasks(workingTask.taskVisibility, Boolean(workingTask.isGlobal))
+      ? await this.dependencies.subtasks.listByTaskId(command.taskId)
+      : []
+    assertSubtasksAllowTransition(finalStatus, openSubtasksCount(subtaskRows))
+
     workingTask = { ...workingTask, status: finalStatus, completed: true }
     if (finalStatus === "done") {
       workingTask.completedAt = new Date()
@@ -173,7 +188,7 @@ export class CompleteTaskUseCase {
     let awardedPoints: number | null = null
     if (finalStatus === "done") {
       await this.dependencies.actors.incrementCompletedTasks(command.userId)
-      const pointsToAward = awardPointsForCompletion(workingTask, new Date())
+      const pointsToAward = totalAwardForCompletion(workingTask, awardableSubtasks(workingTask, subtaskRows), new Date())
       awardedPoints = await publishTaskCompletionAward(
         this.events,
         command.userId,

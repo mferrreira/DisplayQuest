@@ -12,6 +12,12 @@
 import { hasAnyRole, hasPermission } from "../identity";
 import { ValidationError } from "../errors";
 import { POINTS_PER_TASK } from "./points-rules";
+import {
+  normalizeNewSubtasks,
+  serializeSubtask,
+  subtaskBasePoints,
+  type NewSubtaskInput,
+} from "./subtask-rules";
 import type { ITask, Task } from "./Task";
 import type { TaskStatus } from "./TaskStatus";
 import type { TaskVisibility } from "./TaskVisibility";
@@ -115,9 +121,12 @@ export {
   POINTS_PER_TASK,
   EARLY_DELIVERY_MULTIPLIER,
   awardPointsForCompletion,
+  awardPointsForSubtask,
+  totalAwardForCompletion,
   calculateLatePenalty,
   daysLateForTask,
   type AwardableTask,
+  type AwardableSubtask,
 } from "./points-rules";
 
 /** `status !== "done" && (public || assignedTo !== null)` (gateway :487-489). */
@@ -205,6 +214,10 @@ export function serializeTask(task: Omit<Task, "toJSON">): any {
     isGlobal: task.isGlobal,
     groupTaskId: task.groupTaskId ?? null,
     createdBy: task.createdBy,
+    // plan-v4 · V4-4: as subtasks fazem parte do read model da tarefa. Sem elas o cartão e o
+    // diálogo de detalhe continuariam anunciando 10 pontos numa tarefa que vale 10 + 10·n — o
+    // número projetado é calculado no cliente (`features/tasks/utils/move-rules.ts`).
+    subtasks: (task.subtasks ?? []).map(serializeSubtask),
   };
 }
 
@@ -380,6 +393,8 @@ export interface NewTaskInput {
   isGlobal?: boolean;
   groupTaskId?: number | null;
   createdBy?: number | null;
+  /** plan-v4 · V4-4: subtasks criadas junto com a mãe (D-D). Aceita string ou `{title}`. */
+  subtasks?: unknown;
 }
 
 /**
@@ -394,7 +409,10 @@ export function createTaskRecord(data: NewTaskInput, now: Date): ITask {
   if (data.description && data.description.length > 1000) {
     throw new ValidationError("Descrição da tarefa não pode ter mais de 1000 caracteres");
   }
-  const points = data.points ?? POINTS_PER_TASK; // plan-v3 DEC-30: sem entrada do cliente, toda tarefa vale 10
+  // plan-v4 · V4-4 (DEC-56): a base passa a ser 10 + 10·n. Sem subtask é POINTS_PER_TASK, que é
+  // exatamente o valor de antes — por isso os testes congelados do plan-v3 não se movem.
+  const subtasks = normalizeNewSubtasks(data.subtasks);
+  const points = data.points ?? subtaskBasePoints(subtasks.length);
   if (points < 0) throw new ValidationError("Pontos da tarefa não podem ser negativos");
 
   return {
@@ -413,6 +431,7 @@ export function createTaskRecord(data: NewTaskInput, now: Date): ITask {
     isGlobal: data.isGlobal || false,
     groupTaskId: data.groupTaskId ?? null,
     createdBy: data.createdBy ?? null,
+    subtasks,
   };
 }
 

@@ -19,7 +19,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { prisma } from "@/lib/database/prisma";
 import { createTaskManagementModule } from "@/backend/modules/task-management";
 import { createNotificationsModule } from "@/backend/modules/notifications";
-import { civilDayOfInstant } from "@/backend/domain";
+import { ConflictError, civilDayOfInstant } from "@/backend/domain";
 
 // B7 (D7): o fallback cruzado da factory virou no-op; o roundtrip ASSERTA notificacoes
 // reais no banco, entao injeta o modulo de notifications explicitamente (a composition
@@ -279,6 +279,71 @@ describe("G4 roundtrip — task-management (isolated test DB)", () => {
     });
     expect(progress?.status).toBe("done");
     expect(progress?.awardedPoints).toBe(10);
+  });
+
+  it("V4-4 (DEC-56/57/61/64) — subtask no banco: base 10+10·n, trava, auto-move, janela, cascade", async () => {
+    const title = `G4 subtasks ${stamp}`;
+    const task = await taskModule.createTask(
+      {
+        title,
+        completed: false,
+        status: "in-progress",
+        priority: "medium",
+        taskVisibility: "delegated",
+        projectId,
+        assignedTo: anaId,
+        subtasks: [{ title: "Medir a bancada" }, { title: "Registrar a leitura" }],
+      },
+      leaderId,
+    );
+    // Não entra em `createdTaskIds`: o teste apaga a própria linha no fim (é assim que a
+    // cascata é provada), e `listTasksForActor` abaixo afirma que TODA id daquela lista ainda
+    // é listada — uma linha apagada lá dentro quebraria um teste de outro assunto.
+
+    const row = await prisma.tasks.findUnique({ where: { id: task.id! } });
+    expect(row?.points).toBe(30); // DEC-56: 10 da mãe + 10 por subtask
+
+    const rows = await prisma.task_subtasks.findMany({ where: { taskId: task.id! }, orderBy: { id: "asc" } });
+    expect(rows.map((r) => r.title)).toEqual(["Medir a bancada", "Registrar a leitura"]);
+    expect(rows.every((r) => r.completed === false && r.completedAt === null)).toBe(true);
+
+    // DEC-57 — a trava recusa e NÃO escreve: a coluna continua Em Andamento.
+    await expect(taskModule.updateTask({ taskId: task.id!, actorId: anaId, data: { status: "in-review" } })).rejects.toThrow(
+      /as 2 subtasks restantes/,
+    );
+    expect((await prisma.tasks.findUnique({ where: { id: task.id! } }))?.status).toBe("in-progress");
+
+    // DEC-81 — a primeira concluída não move; a última move a mãe e notifica o líder.
+    await taskModule.updateTaskSubtask({ taskId: task.id!, subtaskId: rows[0].id, actorId: anaId, completed: true });
+    expect((await prisma.tasks.findUnique({ where: { id: task.id! } }))?.status).toBe("in-progress");
+
+    const moved = await taskModule.updateTaskSubtask({ taskId: task.id!, subtaskId: rows[1].id, actorId: anaId, completed: true });
+    expect(moved.task.status).toBe("in-review");
+    expect((await prisma.tasks.findUnique({ where: { id: task.id! } }))?.status).toBe("in-review");
+
+    const closed = await prisma.task_subtasks.findMany({ where: { taskId: task.id! }, orderBy: { id: "asc" } });
+    expect(closed.every((r) => r.completed && r.completedAt !== null)).toBe(true);
+
+    const reviewNotification = await prisma.notifications.findFirst({
+      where: { userId: leaderId, type: "TASK_REVIEW_REQUEST", message: { contains: title } },
+    });
+    expect(reviewNotification).not.toBeNull();
+
+    // A mãe destravada: aprovar passa.
+    const approved = await taskModule.approveTask({ taskId: task.id!, approverId: leaderId });
+    expect(approved.task.status).toBe("done");
+
+    // DEC-80 — a janela: a lista de uma mãe concluída não muda mais.
+    await expect(taskModule.createTaskSubtask({ taskId: task.id!, actorId: anaId, title: "Tardia" })).rejects.toThrow(
+      /já foi concluída/,
+    );
+    await expect(
+      taskModule.deleteTaskSubtask({ taskId: task.id!, subtaskId: closed[0].id, actorId: anaId }),
+    ).rejects.toThrow(ConflictError);
+
+    // Cascade igual às outras filhas de `tasks`: apagar a mãe apaga as subtasks.
+    await prisma.tasks.delete({ where: { id: task.id! } });
+    expect(await prisma.task_subtasks.count({ where: { taskId: task.id! } })).toBe(0);
   });
 
   it("global quest (MANAGE_USERS creator) + globalProgress roster aggregation", async () => {
