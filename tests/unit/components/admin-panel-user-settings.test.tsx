@@ -113,8 +113,8 @@ const alvo = () =>
     status: "active",
   });
 
-function renderPanel() {
-  const user = alvo();
+function renderPanel(users?: any[]) {
+  const list = users ?? [alvo()];
   render(
     // Medido ao escrever: o painel não renderiza sozinho. Ele monta `ManageWorkSessionsDialog`
     // (linha 1054) e `UserApproval` (linha 499) SEMPRE, e os dois chamam contexto no primeiro
@@ -125,17 +125,17 @@ function renderPanel() {
       <ProjectProvider>
         <WorkSessionsProvider>
           <ModernAdminPanel
-            users={[user]}
+            users={list}
             projects={[]}
             tasks={[]}
             sessions={[]}
-            stats={{ totalUsers: 1, totalProjects: 0, totalTasks: 0, activeSessions: 0 }}
+            stats={{ totalUsers: list.length, totalProjects: 0, totalTasks: 0, activeSessions: 0 }}
           />
         </WorkSessionsProvider>
       </ProjectProvider>
     </UserProvider>,
   );
-  return user;
+  return list[0];
 }
 
 beforeEach(() => {
@@ -299,5 +299,58 @@ describe("V4-4b · o que acontece quando a API recusa", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Usuário não encontrado");
     expect(mocks.refresh).not.toHaveBeenCalled();
+  });
+
+  it("o confirm do 'Rejeitar' diz a verdade: a conta continua no sistema (ASK-V4-26)", async () => {
+    // Medido: `reject` faz `status = "rejected"` (update-user-status.use-case.ts:16) e a linha
+    // fica — login e API bloqueiam porque status !== active. O texto dizia o contrário:
+    // "Esta ação irá removê-lo do sistema". O guia já diz a verdade em
+    // docs/src-usuario/12-perguntas-frequentes.md:47.
+    const confirmMock = vi.fn<(message?: string) => boolean>(() => true);
+    vi.stubGlobal("confirm", confirmMock);
+
+    renderPanel();
+    await openSettingsFor("Maria Silva");
+    await userEvent.click(screen.getByRole("button", { name: "Rejeitar" }));
+
+    expect(confirmMock).toHaveBeenCalledTimes(1);
+    const message = confirmMock.mock.calls[0]?.[0] ?? "";
+    expect(message).not.toMatch(/remov/i);
+    expect(message).toMatch(/continua no sistema/);
+  });
+});
+
+describe("V4-4b · o filtro de status do painel", () => {
+  it("o filtro conhece os dois status que o próprio painel cria (ASK-V4-27)", async () => {
+    // Medido: o painel cria `rejected` (botão Rejeitar) e `suspended` (botão Suspender), mas o
+    // filtro só oferecia Ativo / Pendente / Inativo — então nenhum dos dois aparecia em filtro
+    // específico, só em "Todos". E "Inativo" é opção morta: nenhum caminho do sistema escreve o
+    // status `inactive` (a rota escreve active/rejected/suspended; entities/user.ts:31 enumera
+    // pending/active/rejected/suspended). Registrado como ASK-V4-28.
+    renderPanel([
+      alvo(),
+      makeUser({ id: 78, name: "Rita Rejeitada", email: "rita@lab.com", status: "rejected" }),
+      makeUser({ id: 79, name: "Rui Suspenso", email: "rui@lab.com", status: "suspended" }),
+    ]);
+    await userEvent.click(screen.getByRole("tab", { name: /usuários/i }));
+
+    await userEvent.click(screen.getByRole("combobox", { name: "Status" }));
+    const options = await screen.findAllByRole("option");
+    expect(options.map((o) => o.textContent)).toEqual(
+      expect.arrayContaining(["Todos", "Ativo", "Pendente", "Inativo", "Rejeitado", "Suspenso"]),
+    );
+
+    // Escopo: o botão "Configurar <nome>" só existe na lista filtrada ("Usuários do Sistema").
+    // Medido ao escrever: o `ScheduleGrid` recebe a MESMA lista de usuários e a renderiza
+    // inteira, sem o filtro do painel — então buscar pelo nome achava a pessoa na grade de
+    // horários e o teste provava o oposto do que pretendia.
+    await userEvent.click(screen.getByRole("option", { name: "Rejeitado" }));
+    expect(screen.getByRole("button", { name: "Configurar Rita Rejeitada" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Configurar Maria Silva" })).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("combobox", { name: "Status" }));
+    await userEvent.click(await screen.findByRole("option", { name: "Suspenso" }));
+    expect(screen.getByRole("button", { name: "Configurar Rui Suspenso" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Configurar Rita Rejeitada" })).not.toBeInTheDocument();
   });
 });

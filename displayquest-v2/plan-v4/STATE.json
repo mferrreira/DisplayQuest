@@ -14,8 +14,8 @@
   "baseline": {
     "measuredAt": "2026-10-06",
     "measuredOn": "dev + V4-4 (antes do commit do lote)",
-    "unitAndFeatures": "82 arquivos / 1060 testes",
-    "fullSuite": "92 arquivos / 1145 testes",
+    "unitAndFeatures": "82 arquivos / 1062 testes",
+    "fullSuite": "92 arquivos / 1147 testes",
     "e2e": "quadro: 2 passando, 1 falha conhecida (strict mode violation em 'Em Revisao' — agora pela tarefa 50 'fazer reuniao com mamedes', antes pela 290), 5 did not run pelo spec serial; shell 5/5. Confirmado com git stash: o baseline falha identico.",
     "archCheck": "782 modulos / 3031 dependencias, zero violacao, allow-list vazia",
     "previousBaseline": "78/981 e 88/1065 em dev antes do V4-4; V4-4 81/1050 e 91/1135; V4-1 76/948 e 86/1032; V4-2 76/957 e 86/1041; V4-6 77/966 e 87/1050",
@@ -83,7 +83,9 @@
     }
   ],
   "decisionRegistry": [
-    "DEC-86 (2026-10-06, V4-4b): os controles do diálogo 'Configurar Usuário' passam a ter nome acessível. Medido ao escrever os testes: o botão da linha de usuário era só o ícone `Settings` (leitor de tela anunciava 'botão' e nada mais), o `Select` de ação de pontos não tinha `aria-label` nem placeholder, e o input de valor não tinha `id` nem rótulo associado — o único 'Pontos' próximo é o título da seção, sem `htmlFor`. Os três eram inalcançáveis por teste e invisíveis para leitor de tela. Nota deixada no código: o rótulo 'Valor de pontos' contém 'pontos', então `getByLabel('Pontos')` por substring casa com ele — usar rótulo exato.",
+    "DEC-88 (dono 2026-10-06, V4-4c, fecha ASK-V4-27): o filtro de status do painel ganha 'Rejeitado' e 'Suspenso'. Motivo medido: o PRÓPRIO painel escreve os dois — o botão 'Rejeitar' faz `status = 'rejected'` e 'Suspender' faz `status = 'suspended'` (update-user-status.use-case.ts:16-17) — mas o filtro só oferecia Ativo/Pendente/Inativo, então nenhum dos dois aparecia em filtro específico, só em 'Todos'. A opção 'Inativo' FOI MANTIDA (remover opção visível não estava autorizado) e registrada como ASK-V4-28: nenhum caminho do sistema escreve `inactive`. Os três `SelectTrigger` do caminho ganharam `aria-label` (classe DEC-86): sem nome acessível o Select não era alcançável por teste nem por leitor de tela.",
+    "DEC-87 (dono 2026-10-06, V4-4c, fecha ASK-V4-26): o `confirm` do botão 'Rejeitar' passa a dizer a verdade. Antes: 'Esta ação irá removê-lo do sistema'. Medido: `reject` faz `status = 'rejected'` e a linha CONTINUA — login (`lib/auth/config.ts:30`) e API (`lib/auth/server-auth.ts:36`) bloqueiam porque status !== active. O guia já dizia a verdade (docs/src-usuario/12-perguntas-frequentes.md:47). Texto novo: 'A conta deixa de permitir entrada, mas continua no sistema e pode ser aprovada depois.' Motivo para não deixar como estava: prometer remoção a quem está só bloqueando acesso faz a pessoa NÃO clicar no botão que precisava clicar.",
+    "DEC-86 (2026-10-06, V4-4b): os controles do diálogo de 'Configurar Usuário' passam a ter nome acessível. Medido ao escrever os testes: o botão da linha de usuário era só o ícone `Settings` (leitor de tela anunciava 'botão' e nada mais), o `Select` de ação de pontos não tinha `aria-label` nem placeholder, e o input de valor não tinha `id` nem rótulo associado — o único 'Pontos' próximo é o título da seção, sem `htmlFor`. Os três eram inalcançáveis por teste e invisíveis para leitor de tela. Nota deixada no código: o rótulo 'Valor de pontos' contém 'pontos', então `getByLabel('Pontos')` por substring casa com ele — usar rótulo exato.",
     "DEC-85 (2026-10-06, V4-4b): falha de salvamento no painel vira mensagem no diálogo. Medido ao escrever o teste: `saveUserSettings` e `updateUserStatus` LANÇAVAM em toda falância e ninguém capturava — o `onClick` devolvia a promise rejeitada, o React não tratava, e o resultado era (a) o administrador com o diálogo aberto sem uma linha de erro, (b) rejeição não tratada no console, (c) `npx vitest run` saindo com EXIT 1 por 'Unhandled Rejection' — ou seja, o defeito quebrava o gate de entrega desta casa. Agora o erro do servidor (409 do guarda de dependência do V4-1, 404, 400) aparece num `<p role='alert'>` dentro do diálogo, na forma da casa (`text-red-600 dark:text-red-400 text-sm`, como em components/features/project-dialog.tsx:210).",
     "DEC-84 (dono 2026-10-06, fecha ASK-V4-06): PATCH /api/users/[id]/points passa a ler o número do VALOR BRUTO do corpo, não de `Number(body.points)`. `{action:'set', points:null}` deixa de zerar os pontos e passa a ser recusado com 400. Motivo medido no V4-6: JSON não tem `Infinity` (`JSON.stringify(Infinity)` devolve `null`) e `Number(null)` é 0; `Number('')` também é 0 e `Number(true)` é 1. A checagem passa a ser de TIPO antes de ser de valor. O que continua igual: string numérica é aceita (`'12'` vale 12, é o que alguns clientes mandam), a mensagem de rejeição é a mesma de antes, e `{action:'set', points:undefined}` já era 400. Caraterização do V4-6 convertida em recusa.",
     "DEC-83 (dono 2026-10-06, V4-4): `tasks.points` passa a gravar a base real 10 + 10·n e é mantida sincronizada enquanto a mãe aceita mexer na lista (criar/apagar subtask). Uma mãe em `in-review` ou `done` NUNCA é reescrita — a janela (DEC-80) é o que garante isso, e é assim que DEC-40 (nenhum UPDATE em tasks.points histórico) continua valendo. Concluir subtask NÃO mexe na coluna: a base conta subtasks, não concluídas. Resposta do dono ao ver as duas opções: 'gravado na criação e mantido sincronizado até concluir'.",
@@ -239,13 +241,34 @@
         "texto montado em varios nos ('Atual: ' + 120 + ' pontos' + a dica da acao) nao e encontravel pela frase inteira: `getByText('Atual: 120 pontos')` falha; o caminho e regex no no do paragrafo.",
         "o painel decide permissao a partir de `hasAccess(user.roles, ...)` do `useAuth` — sem mock do contexto, `canManageUsers` e false e a aba de usuarios renderiza vazia: o teste passaria provando o oposto do que pretende."
       ]
+    },
+    {
+      "id": "V4-4c",
+      "at": "2026-10-06",
+      "title": "os dois defeitos que o dono autorizou corrigir: o confirm do 'Rejeitar' e o filtro de status (DEC-87, DEC-88)",
+      "actions": [
+        "testes primeiro, vermelhos primeiro: 2 falhas antes de mexer no componente — uma afirmando que o texto do confirm NAO continha 'remov', outra procurando um combobox de nome 'Status' que nao existia.",
+        "DEC-87: o confirm do 'Rejeitar' dizia 'Esta acao ira removelo do sistema'. Medido: `reject` faz `status = 'rejected'` e a linha continua. Texto novo diz o que de fato acontece.",
+        "DEC-88: o filtro de status ganhou 'Rejeitado' e 'Suspenso' — os dois status que o proprio painel escreve. 'Inativo' mantido (remover opcao visivel nao estava autorizado) e registrado como ASK-V4-28.",
+        "medido ao escrever o teste do filtro: provar 'o filtro escondeu o usuario' pelo nome FALHA porque o `ScheduleGrid` recebe a MESMA lista e a renderiza inteira, sem o filtro do painel. O teste passou a usar o botao 'Configurar <nome>', que so existe na lista filtrada.",
+        "medido ao escrever a nota do filtro: o status `inactive` nao existe como estado escrevivel. O enum e `pending|active|rejected|suspended` (entities/user.ts:31), a rota escreve active/rejected/suspended, a instancia real so tem `active` (10 linhas), e a unica ocorrencia de 'inactive' no backend e um contador que sempre da zero (prisma-user.repository.ts:231). A nota do AGENTS.md sobre a DEC-55 estava meio errada e foi corrigida."
+      ],
+      "gates": "G0 782/3031 zero violacao | G1 sem erro | G2 0 erros | G3 82/1062 | G4 completa 92/1147",
+      "gotchas": [
+        "SelectTrigger do Radix com so `<SelectValue placeholder=...>` nao tem nome acessivel: `getByRole('combobox', { name: 'Status' })` nao acha. Precisa de `aria-label` no trigger.",
+        "vi.fn(() => true) tem `mock.calls` tipado como tupla vazia — acessar `[0][0]` da TS2352/TS2493. Forma correta: `vi.fn<(message?: string) => boolean>(() => true)`.",
+        "dois vocabularios de status convivem na base: o do modelo (`pending|active|rejected|suspended`) e o de `inactive`, que as REGRAS reconhecem (porque so checam `!== 'active'`) mas que NINGUEM escreve. `volunteers-management.tsx:55` tem um terceiro (`active|inactive|on_leave`).",
+        "o filtro da lista de usuarios do painel nao se aplica ao `ScheduleGrid` — ele recebe a mesma lista e renderiza tudo."
+      ]
     }
   ],
   "openQuestions": [
-    "ASK-V4-26 (aberto pelo V4-4b, precisa do dono): o `confirm` do botao 'Rejeitar' no painel diz 'Esta acao ira remove-lo do sistema'. Medido: `reject` faz `status = 'rejected'` e a linha CONTINUA (login e API bloqueiam porque status != active). O guia ja diz a verdade (docs/src-usuario/12-perguntas-frequentes.md:47). Corrigir o texto e uma linha; e mudanca de texto visivel, entao toca os gates G5/G6.",
-    "ASK-V4-27 (aberto pelo V4-4b, precisa do dono): o filtro de status do painel so oferece Ativo/Pendente/Inativo. Um usuario `rejected` ou `suspended` (os dois status que o proprio painel cria) nao aparece em nenhum filtro especifico — so em 'Todos'. Adicionar 'Rejeitado' e 'Suspenso' sao duas opcoes no Select.",
+    "ASK-V4-28 (aberto pelo V4-4c, precisa do dono — e corrige uma nota do AGENTS.md): o status `inactive` NAO EXISTE como estado escrevivel neste sistema. Medido 2026-10-06: `entities/user.ts:31` enumera `pending|active|rejected|suspended`; a rota de status escreve `active`/`rejected`/`suspended`; `select status, count(*) from users` na instancia real da so `active` (10 linhas); a UNICA ocorrencia de 'inactive' no backend e um contador fantasma em `prisma-user.repository.ts:231` (`allUsers.filter(u => u.status === 'inactive').length`, sempre 0). O que funciona de ponta a ponta e o BLOQUEIO de qualquer status !== 'active' (login, API, regras de laboratorio, bulk weekly reports, cron) — nao a inativacao por `inactive`. Consequencias medidas: (a) a nota do AGENTS.md sobre a DEC-55 diz 'inactive ja funciona de ponta a ponta' e isso esta meio errado, ja corrigido no AGENTS.md; (b) `components/features/volunteers-management.tsx:55` tem um TERCEIRO vocabulario (`'active' | 'inactive' | 'on_leave'`) e um filtro com 'Inativo'; (c) o filtro do painel mantem 'Inativo' porque remover opcao visivel nao estava autorizado. Decisao pedida: padronizar em `suspended` (e apagar `inactive` dos filtros e do contador), ou adicionar `inactive` ao enum e ao caminho de escrita.",
+    "ASK-V4-27 FECHADO em 2026-10-06 (DEC-88): o filtro de status do painel ganhou 'Rejeitado' e 'Suspenso'.",
+    "ASK-V4-26 FECHADO em 2026-10-06 (DEC-87): o `confirm` do 'Rejeitar' passou a dizer a verdade sobre o que acontece com a conta.",
     "ASK-V4-06 FECHADO em 2026-10-06 (DEC-84): `{action:'set', points:null}` passou a ser recusado com 400. A caraterizacao do V4-6 virou teste de recusa, e entraram os casos `undefined`, `''`, `true`, `{}`, `[]` e a string numerica `'12'` (continua aceita).",
-    "ModernAdminPanel.tsx: FECHADO em 2026-10-06 (V4-4b) — 10 testes sobre o painel real. O arquivo continua sem teste para as abas Projetos/Horas/Tarefas/Notificacoes/Configuracoes e para os dialogos filhos; o que esta coberto e o caminho de configuracao de usuario (perfil, funcoes, carga horaria, pontos, status).",
+    "ModernAdminPanel.tsx: FECHADO em 2026-10-06 (V4-4b/V4-4c) — 12 testes sobre o painel real. O arquivo continua sem teste para as abas Projetos/Horas/Tarefas/Notificacoes/Configuracoes e para os dialogos filhos; o que esta coberto e o caminho de configuracao de usuario (perfil, funcoes, carga horaria, pontos, status) e os filtros da lista.",
+    "Achado menor, sem decisao pedida: o filtro da lista de usuarios do painel NAO se aplica ao `ScheduleGrid`, que recebe a MESMA lista e a renderiza inteira. Provar 'o filtro escondeu o usuario' exige escopo no card certo (o teste usa o botao 'Configurar <nome>').",
     "Pendencia conhecida e aceita do e2e: o 3o teste do quadro quebra por CARTAO A MAIS na coluna 'Em Revisao' (era a tarefa 290 'fasdfas', em 2026-10-06 e a 50 'fazer reuniao com mamedes'). O dono recusou escopar o locator no cartao do fixture e recusou mexer no dado. Como o spec e serial, a falha faz os outros 5 aparecerem como 'did not run'. Confirmar com git stash antes de cacar regressao."
   ],
   "blockers": [],
@@ -276,6 +299,8 @@
     { "id": "ASK-V4-22", "question": "fazer testes de UI do ModernAdminPanel (~1000 linhas, zero testes)?", "answer": "sim, antes do V4-5 — virou a onda V4-4b", "answeredAt": "2026-10-06" },
     { "id": "ASK-V4-23", "question": "o seam órfão lib/notifications/browser-notifications.ts (134 linhas, zero chamadores): manter ou apagar?", "answer": "manter — a notificação nativa está adiada, não abandonada", "answeredAt": "2026-10-06" },
     { "id": "ASK-V4-24", "question": "GAP-P3-05: o toast da conclusão direta anuncia o projetado em vez do creditado — corrigir no V4-5?", "answer": "sim, corrigir no V4-5", "answeredAt": "2026-10-06" },
-    { "id": "ASK-V4-25", "question": "plan-v5 (não commitado, já ocupando DEC-61..77): renumerar o V4-4 e commitar o plan-v5?", "answer": "renumerar para DEC-78..84 está certo; NÃO commitar os arquivos do plan-v5", "answeredAt": "2026-10-06" }
+    { "id": "ASK-V4-25", "question": "plan-v5 (não commitado, já ocupando DEC-61..77): renumerar o V4-4 e commitar o plan-v5?", "answer": "renumerar para DEC-78..84 está certo; NÃO commitar os arquivos do plan-v5", "answeredAt": "2026-10-06" },
+    { "id": "ASK-V4-26", "question": "o confirm do 'Rejeitar' mente sobre remover o usuário — corrijo o texto?", "answer": "sim, corrigir o texto (DEC-87)", "answeredAt": "2026-10-06" },
+    { "id": "ASK-V4-27", "question": "o filtro de status do painel não conhece `rejected` nem `suspended` — adiciono as duas opções?", "answer": "sim, adicionar Rejeitado e Suspenso (DEC-88)", "answeredAt": "2026-10-06" }
   ]
 }

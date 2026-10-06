@@ -5,7 +5,7 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
 
 ## Verificação
 
-- **Gate de entrega:** `npm run arch:check` (exit 0, allow-list **vazia**) && `npm run lint` (nada de erro) && `npx tsc --noEmit` (0) && `npx vitest run` (zero failure). A contagem é **por branch**: no `dev` o baseline era **64 arquivos / 721 testes** quando o B8 removeu os 651 testes de paridade; no `plan/v3-operacional`, medido no encerramento do plan-v3 (2026-10-03), são **65 arquivos / 798 testes** em `tests/unit` + `features` e **75 / 881** na suíte completa. Na `dev` de hoje (2026-10-06, depois do plan-v4 V4-1/V4-2/V4-3/V4-6, do V4-4 de subtasks e do V4-4b de testes do painel) são **82 arquivos / 1060 testes** e **92 / 1145** na suíte completa; a suíte e2e está em **7 passando** — o 3º teste do quadro quebra por cartão a mais na coluna `Em Revisão` (dado legítimo da instância, não código), e como o spec é serial os outros 5 **nem rodam** (ver "Gotchas reais"). Compare sempre com o `STATE.json` do plano em que você está.
+- **Gate de entrega:** `npm run arch:check` (exit 0, allow-list **vazia**) && `npm run lint` (nada de erro) && `npx tsc --noEmit` (0) && `npx vitest run` (zero failure). A contagem é **por branch**: no `dev` o baseline era **64 arquivos / 721 testes** quando o B8 removeu os 651 testes de paridade; no `plan/v3-operacional`, medido no encerramento do plan-v3 (2026-10-03), são **65 arquivos / 798 testes** em `tests/unit` + `features` e **75 / 881** na suíte completa. Na `dev` de hoje (2026-10-06, depois do plan-v4 V4-1/V4-2/V4-3/V4-6, do V4-4 de subtasks e dos testes do painel V4-4b/V4-4c) são **82 arquivos / 1062 testes** e **92 / 1147** na suíte completa; a suíte e2e está em **7 passando** — o 3º teste do quadro quebra por cartão a mais na coluna `Em Revisão` (dado legítimo da instância, não código), e como o spec é serial os outros 5 **nem rodam** (ver "Gotchas reais"). Compare sempre com o `STATE.json` do plano em que você está.
 - **G4/integração:** roundtrips Prisma real rodam **só** contra o banco de teste isolado `dq-dev-test-db` em `127.0.0.1:5433` (`$env:DATABASE_URL="postgresql://dq_dev:dq_dev_local_only@127.0.0.1:5433/dq_dev_test"; npx vitest run`) — nunca contra o `display-quest-db` (5432, produção local).
 - **Setup do G4 (corrigido 2026-10-02):** `npm run db:test:up` e `npm run db:test:setup` **existem**
   no `package.json` e fazem a sequência completa (`docker compose -f docker-compose.test.yml up -d`,
@@ -100,15 +100,14 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
 ## plan-v4 — subtasks, animação de pontos, inativação de usuário (2026-10-05..10-06)
 
 - **Estado/decisões:** `displayquest-v2/plan-v4/{PLAN.md,STATE.json}` — V4-1, V4-2, V4-3, V4-4,
-  **V4-4b** e o fechamento do ASK-V4-06 **done**; **V4-5** (subtasks na UI) pendente. `awaitingInstruction`
-  está vazia: as 17 perguntas do escopo de subtask foram respondidas em 2026-10-05/10-06 e estão em
-  `answeredInstructions`. Em `openQuestions`: `ASK-V4-26` (o `confirm` do "Rejeitar" mente sobre remover)
-  e `ASK-V4-27` (o filtro de status do painel não conhece `rejected`/`suspended`).
+  **V4-4b**, **V4-4c** e o fechamento do ASK-V4-06 **done**; **V4-5** (subtasks na UI) pendente.
+  `awaitingInstruction` está vazia. Em `openQuestions`: **`ASK-V4-28`** (o status `inactive` não existe
+  como estado escrevível — padronizar em `suspended` ou adicionar `inactive` ao enum?).
 - **Numeração de decisão é global e JÁ tem buraco (medido 2026-10-06):** DEC-01..29 clean-arch,
   DEC-30..49 plan-v3, DEC-50..54 B6/D4, DEC-55..60 plan-v4, **DEC-61..77 plan-v5** (reservadas pelo
-  dono em `displayquest-v2/plan-v5/`, criado 2026-10-06 e ainda **não commitado**), DEC-78..86 plan-v4
-  (V4-4, ASK-V4-06 e V4-4b). O V4-4 ia usar DEC-61..64 e colidiu; os 28 comentários de código foram
-  renumerados. **Antes de abrir decisão nova, `grep` os três `STATE.json`.**
+  dono em `displayquest-v2/plan-v5/`, criado 2026-10-06 e ainda **não commitado**), DEC-78..88 plan-v4
+  (V4-4, ASK-V4-06, V4-4b e V4-4c). O V4-4 ia usar DEC-61..64 e colidiu; os 28 comentários de código
+  foram renumerados. **Antes de abrir decisão nova, `grep` os três `STATE.json`.**
 - **Subtask (V4-4, DEC-78..83):** tabela `task_subtasks` (sem FK para `users` — subtask não tem
   responsável próprio), base gravada em `tasks.points` = `10 + 10·n`, e **cada subtask é pontuada pela
   mesma regra da mãe** (adiantada 15 / no prazo 10 / 1 dia 0 / 2 dias −10, sem piso), medida no instante
@@ -118,11 +117,17 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
   approve`) é 400; a **janela** (criar/renomear/apagar a lista de uma mãe em `in-review`/`done`) é 409.
   Concluir subtask não obedece à janela. A última subtask concluída **move a mãe** de `in-progress` para
   `in-review` com a mesma notificação de um movimento humano.
-- **Excluir usuário não é o caminho (DEC-55):** `inactive` já funciona de ponta a ponta — login
-  (`lib/auth/config.ts:30`), API (`lib/auth/server-auth.ts:36`), regras de laboratório, bulk weekly
-  reports, cron weekly reset, e "Inativo" na UI. Nenhuma tela `.tsx` chamava `deleteUser`. O
-  `DELETE /api/users/[id]` agora **recusa com 409** quando há dependência; sem dependência continua
-  excluindo (é o caso "cadastro de teste").
+- **Excluir usuário não é o caminho (DEC-55):** o que funciona de ponta a ponta é o **bloqueio de
+  qualquer status `!== "active"`** — login (`lib/auth/config.ts:30`), API (`lib/auth/server-auth.ts:36`),
+  regras de laboratório, bulk weekly reports, cron weekly reset. **Correção medida em 2026-10-06:**
+  uma nota anterior aqui dizia que "`inactive` já funciona de ponta a ponta" — meio errado. O status
+  `inactive` **não existe como estado escrevível**: o enum é `pending|active|rejected|suspended`
+  (`entities/user.ts:31`), a rota de status escreve `active`/`rejected`/`suspended`
+  (`update-user-status.use-case.ts:15-18`), e a única ocorrência de `"inactive"` no backend é um
+  contador que sempre dá zero (`prisma-user.repository.ts:231`). O caminho real de inativação é
+  **"Suspender" → `suspended`**. Registrado como `ASK-V4-28` no `STATE.json` do plan-v4. Nenhuma tela
+  `.tsx` chamava `deleteUser`. O `DELETE /api/users/[id]` agora **recusa com 409** quando há
+  dependência; sem dependência continua excluindo (é o caso "cadastro de teste").
 - **16 das 23 FKs para `users` são `RESTRICT`** (default do Prisma, sem `onDelete`); só 7
   cascadeiam (`project_members`, `task_assignees`, `task_user_progress`, `work_sessions`,
   `weekly_hours_history`, `user_badges.userId`, `notifications`). Se você mexer no schema e
@@ -402,6 +407,21 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
 - **Texto montado em vários nós não é encontrável pela frase inteira:** `Atual: {n} pontos` + a dica da
   ação viram três nós, e `getByText("Atual: 120 pontos")` falha com "text is broken up by multiple
   elements". Caminho: regex no nó do parágrafo (`getByText(/Atual: 120/)`).
+- **Dois vocabulários de status de usuário convivem nesta base (medido 2026-10-06):** o do modelo é
+  `pending | active | rejected | suspended` (`entities/user.ts:31`), e é isso que a rota escreve
+  (`update-user-status.use-case.ts:15-18`). `inactive` aparece em regras, testes, filtros da UI e num
+  contador de estatística (`prisma-user.repository.ts:231`, sempre 0), mas **nenhum caminho escreve
+  esse status** — as regras só chegam nele porque testam `!== "active"`. `components/features/volunteers-management.tsx:55`
+  tem um terceiro vocabulário (`active | inactive | on_leave`). Na instância real: 10 usuários, todos
+  `active`.
+- **`SelectTrigger` do Radix com só `<SelectValue placeholder=…>` não tem nome acessível (medido
+  2026-10-06):** `getByRole("combobox", { name: "Status" })` não acha. Precisa de `aria-label` no
+  trigger. Mesma classe do botão-ícone do painel (DEC-86).
+- **`vi.fn(() => true)` tem `mock.calls` tipado como tupla vazia:** acessar `mock.calls[0][0]` dá
+  TS2352 + TS2493. Forma correta: `vi.fn<(message?: string) => boolean>(() => true)`.
+- **Filtro da lista de usuários do painel NÃO se aplica ao `ScheduleGrid`** (medido 2026-10-06): ele
+  recebe a mesma lista e renderiza inteira. Provar "o filtro escondeu o usuário" exige escopo num
+  controle que só existe na lista filtrada (o teste usa `Configurar <nome>`).
 - **Nunca imprimir/commitar o valor real do `NEXTAUTH_SECRET`** do `.env` local.
 - `tests/` é versionado por negações no `.gitignore` (`tests/*` + `!tests/unit`,
   `!tests/integration/**` etc.; screenshots de e2e continuam ignorados) — os testes

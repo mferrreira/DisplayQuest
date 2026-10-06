@@ -494,7 +494,7 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
                       Novo Usuário
                     </Button>
                     <Select value={filterRole} onValueChange={setFilterRole}>
-                      <SelectTrigger className="w-40">
+                      <SelectTrigger className="w-40" aria-label="Função">
                         <SelectValue placeholder="Função" />
                       </SelectTrigger>
                       <SelectContent>
@@ -509,14 +509,24 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
                       </SelectContent>
                     </Select>
                     <Select value={filterStatus} onValueChange={setFilterStatus}>
-                      <SelectTrigger className="w-40">
+                      <SelectTrigger className="w-40" aria-label="Status">
                         <SelectValue placeholder="Status" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">Todos</SelectItem>
                         <SelectItem value="active">Ativo</SelectItem>
                         <SelectItem value="pending">Pendente</SelectItem>
+                        {/* ASK-V4-28: "Inativo" é opção morta — nenhum caminho do sistema escreve
+                            o status `inactive` (a rota escreve active/rejected/suspended;
+                            entities/user.ts:31 enumera pending/active/rejected/suspended). Mantida
+                            porque remover opção visível não estava autorizado; registrada no STATE.json. */}
                         <SelectItem value="inactive">Inativo</SelectItem>
+                        {/* ASK-V4-27 (dono 2026-10-06): os dois status que o PRÓPRIO painel cria
+                            — botão "Rejeitar" escreve `rejected`, "Suspender" escreve `suspended`
+                            (update-user-status.use-case.ts:16-17) — não tinham filtro. Um usuário
+                            suspenso só aparecia em "Todos". */}
+                        <SelectItem value="rejected">Rejeitado</SelectItem>
+                        <SelectItem value="suspended">Suspenso</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -1069,7 +1079,13 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
                     <AlertTriangle className="h-3 w-3 mr-1" /> Suspender
                   </Button>
                   <Button variant="destructive" size="sm" onClick={() => {
-                    if (confirm("Tem certeza que deseja rejeitar este usuário? Esta ação irá removê-lo do sistema.")) {
+                    // ASK-V4-26 (dono 2026-10-06): o texto dizia "Esta ação irá removê-lo do
+                    // sistema". Medido: `reject` faz `status = "rejected"` e a linha continua —
+                    // login e API bloqueiam porque status !== active. O guia já diz a verdade
+                    // (docs/src-usuario/12-perguntas-frequentes.md:47). Prometer remoção a um
+                    // administrador que está só bloqueando o acesso é o tipo de mentira que faz
+                    // alguém NÃO clicar no botão que precisava clicar.
+                    if (confirm("Tem certeza que deseja rejeitar este usuário? A conta deixa de permitir entrada, mas continua no sistema e pode ser aprovada depois.")) {
                       updateUserStatus(selectedUserForSettings.id, "reject")
                     }
                   }}>

@@ -419,3 +419,41 @@ Radix são os reais. A rede é MSW gravando o corpo recebido — é assim que "c
 
 G0 782 módulos / 3031 dependências, zero violação · G1 sem erro · G2 0 erros ·
 G3 **82 arquivos / 1060 testes** · G4 completa **92 / 1145** · e2e shell 5/5.
+
+---
+
+## 10. V4-4c executado (2026-10-06) — os dois defeitos autorizados, e uma nota do AGENTS.md corrigida
+
+Os defeitos 5 e 6 do §9 foram apresentados ao dono e autorizados. Testes primeiro: 2 vermelhos antes
+de mexer no componente.
+
+- **DEC-87 — o `confirm` do "Rejeitar" dizia *"Esta ação irá removê-lo do sistema"*.** Medido: `reject`
+  faz `status = "rejected"` e a linha continua (`update-user-status.use-case.ts:16`); login e API
+  bloqueiam porque status `!== "active"`. O guia já dizia a verdade. Texto novo: *"A conta deixa de
+  permitir entrada, mas continua no sistema e pode ser aprovada depois."*
+- **DEC-88 — o filtro de status ganhou "Rejeitado" e "Suspenso"**, os dois status que o próprio painel
+  escreve. Os três `SelectTrigger` do caminho ganharam `aria-label` (classe DEC-86): com só
+  `<SelectValue placeholder="Status" />` o Select não tem nome acessível.
+
+### 10.1 O que medir aquilo abriu (ASK-V4-28, precisa do dono)
+
+**O status `inactive` não existe como estado escrevível nesta base.** Medido:
+
+| onde | o que está |
+|---|---|
+| `entities/user.ts:31` | enum `pending \| active \| rejected \| suspended` |
+| `update-user-status.use-case.ts:15-18` | approve→`active`, reject→`rejected`, suspend→`suspended` |
+| `prisma-user.repository.ts:231` | a **única** ocorrência de `"inactive"` no backend: um contador `filter(u => u.status === "inactive")`, sempre 0 |
+| instância real (5432) | `select status, count(*) from users` → `active`, 10 linhas |
+| `volunteers-management.tsx:55` | terceiro vocabulário: `active \| inactive \| on_leave` |
+
+O que funciona de ponta a ponta é o **bloqueio de qualquer status `!== "active"`** — não a inativação
+por `inactive`. As regras de laboratório, o bulk weekly reports e o cron aceitam `"inactive"` nos
+testes só porque testam `!== "active"`. **Consequência:** a nota do AGENTS.md sobre a DEC-55 dizia
+"`inactive` já funciona de ponta a ponta" — está corrigida no AGENTS.md, com o caminho real sendo
+**"Suspender" → `suspended`**. Decisão pedida: padronizar em `suspended` (e apagar `inactive` dos
+filtros e do contador), ou adicionar `inactive` ao enum e ao caminho de escrita.
+
+### 10.2 Gates
+
+G0 782/3031 zero violação · G1 sem erro · G2 0 erros · G3 **82 / 1062** · G4 completa **92 / 1147**.
