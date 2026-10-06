@@ -164,15 +164,29 @@ describe("PATCH /api/users/[id]/points — set aceita negativo (DEC-60)", () => 
     expect((await read(response)).error).toBe("Pontos devem ser um número não negativo");
   });
 
-  it("quirk medido e preservado, não adotado: `points: null` chega como 0 e escreve 0", async () => {
+  it("ASK-V4-06 corrigido (DEC-84): `points: null` é recusado, não lido como 0", async () => {
     // JSON não tem `Infinity`: `JSON.stringify(Infinity)` devolve `null`, e `Number(null)` é 0.
-    // Medido ao escrever este lote (a primeira versão deste caso assumiu que Infinity chegava
-    // como Infinity e passou com 200). Consequência real: um corpo `{action:"set", points:null}`
-    // zera os pontos de um usuário em vez de ser recusado. Não é corrigido aqui porque está fora
-    // do alcance da DEC-60; está registrado em PLAN.md §6 para o dono decidir.
+    // Caraterizado no V4-6 (o caso dizia "quirk preservado, não adotado") e recusado agora por
+    // decisão do dono em 2026-10-06. Consequência antes: um corpo {action:"set", points:null}
+    // ZERAVA os pontos de um usuário — a administração escrevia zero sem querer.
     const response = await patch({ action: "set", points: null });
+    expect(response.status).toBe(400);
+    expect((await read(response)).error).toBe("Pontos devem ser um número não negativo");
+    expect(mocks.written).toBeNull();
+  });
+
+  it("ASK-V4-06: `undefined`, string vazia e booleano também são recusados — Number('') é 0", async () => {
+    for (const points of [undefined, "", true, {}, []]) {
+      const response = await patch({ action: "set", points });
+      expect(response.status).toBe(400);
+      expect(mocks.written).toBeNull();
+    }
+  });
+
+  it("número em string continua aceito (é o que alguns clientes mandam): \"12\" vale 12", async () => {
+    const response = await patch({ action: "set", points: "12" });
     expect(response.status).toBe(200);
-    expect((await read(response)).user.points).toBe(0);
+    expect((await read(response)).user.points).toBe(12);
   });
 
   it("quem não tem MANAGE_USERS leva 403 antes de qualquer 400", async () => {

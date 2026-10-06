@@ -18,7 +18,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 
     const body = await request.json()
     const action = body?.action
-    const points = Number(body?.points)
+    const rawPoints = body?.points
 
     // A ordem é do V4-6 (DEC-60) e não é cosmética: para saber se o número pode ser negativo a
     // rota precisa conhecer a AÇÃO antes. Antes, `points < 0` vinha primeiro, e um corpo
@@ -27,7 +27,16 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       return NextResponse.json({ error: "Ação inválida" }, { status: 400 })
     }
 
-    if (!Number.isFinite(points)) {
+    // DEC-84 (dono, 2026-10-06, fechando ASK-V4-06): o número é lido do VALOR BRUTO, não de
+    // `Number(body.points)`. Motivo medido no V4-6: JSON não tem `Infinity` — `JSON.stringify(Infinity)`
+    // devolve `null` — e `Number(null)` é 0. Um corpo `{action:"set", points:null}` zerava os pontos
+    // de um usuário em vez de ser recusado. `Number("")` também é 0, e `Number(true)` é 1: a checagem
+    // é de TIPO antes de ser de valor. String numérica continua aceita (é o que alguns clientes mandam).
+    const points = typeof rawPoints === "string" ? Number(rawPoints.trim()) : Number(rawPoints);
+    const isNumeric =
+      (typeof rawPoints === "number" || (typeof rawPoints === "string" && rawPoints.trim() !== "")) &&
+      Number.isFinite(points);
+    if (!isNumeric) {
       return NextResponse.json({ error: "Pontos devem ser um número não negativo" }, { status: 400 })
     }
 
