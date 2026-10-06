@@ -14,10 +14,10 @@
   "baseline": {
     "measuredAt": "2026-10-06",
     "measuredOn": "dev + V4-4 (antes do commit do lote)",
-    "unitAndFeatures": "83 arquivos / 1076 testes",
-    "fullSuite": "93 arquivos / 1161 testes",
+    "unitAndFeatures": "84 arquivos / 1084 testes",
+    "fullSuite": "94 arquivos / 1169 testes",
     "e2e": "quadro: 2 passando, 1 falha conhecida (strict mode violation em 'Em Revisao' — agora pela tarefa 50 'fazer reuniao com mamedes', antes pela 290), 5 did not run pelo spec serial; shell 5/5. Confirmado com git stash: o baseline falha identico.",
-    "archCheck": "783 modulos / 3044 dependencias, zero violacao, allow-list vazia",
+    "archCheck": "784 modulos / 3055 dependencias, zero violacao, allow-list vazia",
     "previousBaseline": "78/981 e 88/1065 em dev antes do V4-4; V4-4 81/1050 e 91/1135; V4-4b/V4-4c 82/1062 e 92/1147; V4-1 76/948 e 86/1032; V4-2 76/957 e 86/1041; V4-6 77/966 e 87/1050",
     "timing": "G3 ~17s, completa ~24s (medidos no lote do V4-4)"
   },
@@ -77,8 +77,8 @@
     {
       "id": "V4-5b",
       "title": "subtasks no dialogo de detalhe: criar, renomear, apagar",
-      "status": "pending",
-      "decisions": ["DEC-89"],
+      "status": "done",
+      "decisions": ["DEC-89", "DEC-92"],
       "scope": "CRUD completo da lista no `features/tasks/components/task-detail-dialog.tsx`, com a janela (DEC-80) refletida na UI."
     },
     {
@@ -97,6 +97,7 @@
     }
   ],
   "decisionRegistry": [
+    "DEC-92 (2026-10-06, V4-5b): a porta de autoridade da UI para subtask e a porta do servidor, medida e nao chutada. O servidor aceita `MANAGE_TASKS` ou `MANAGE_USERS`, OU responsavel da tarefa, OU criador/lider/membro do projeto (`internal/task-view.ts:208-216`). No dialogo de detalhe, `canManageTasks` e exatamente a lista de `MANAGE_TASKS` (medido em `permissions.ts:22`: COORDENADOR, GERENTE, GERENTE_PROJETO, COLABORADOR, PESQUISADOR) e `isAssignee` e a segunda porta — entao a UI oferece `canManageTasks || isAssignee`. As duas portas restantes (membro/criador de projeto) exigem consulta que o dialogo nao faz; quem estiver nelas e nao vir o controle continua podendo pela API, e o 403 do servidor chega na tela. Janela (DEC-80) na UI: criar/renomear/apagar so com mae em `to-do`/`in-progress`/`adjust`; concluir NAO obedece a janela (so `done` fecha a conclusao) — e a frase exibida e `subtaskWindowMessage` do dominio, nao uma parafrase.",
     "DEC-91 (2026-10-06, V4-5a): as mutacoes de subtask do cliente sao otimistas SO NA LISTA; o STATUS da mae vem do servidor. A resposta de uma operacao de subtask carrega a mae (DEC-79) e ela mudou de tres coisas: a lista, a base do premio (10 + 10·n) e as vezes o status (DEC-81, auto-move para 'Em Revisao'). Aplicar o status otimistamente faria o cartao mostrar a mae na coluna errada quando o servidor nao movesse (mãe em `to-do` nao auto-move, por exemplo). O rollback cobre a lista; `applyMother` escreve a versao do servidor por cima.",
     "DEC-90 (2026-10-06, V4-5a): `subtaskWindowMessage` foi movida de `internal/task-view.ts` para `backend/domain/task/subtask-rules.ts`, e o mock de teste (`tests/mocks/handlers.ts`) passou a aplicar a trava, a janela e o auto-move com as MESMAS funcoes do dominio que a rota real usa (`openSubtasksCount`, `openSubtasksMessage`, `subtaskWindowMessage`, `SUBTASK_BLOCKED_TARGETS`, `SUBTASK_EDITABLE_STATUSES`). Motivo: o mock passou a ter que dizer exatamente a frase e o codigo de erro da rota real, e reimplementar a regra dentro do mock e a mesma 'regra em duas copias' que o AGENTS.md ja registrou como modo de falha. Consequencia de gate: mock verde com producao mentindo deixa de ser possivel nesse caminho.",
     "DEC-89 (dono 2026-10-06, V4-5): o cartao do quadro NAO e a lista de subtasks. Medido ao perguntar: o dono escolheu 'so o aviso de trava' para a lista e 'checkbox direta no cartao' para concluir — as duas respostas se reconciliam assim: o cartao mostra `N subtasks abertas` com uma checkbox por subtask ABERTA (o que destrava), e as concluidas nao aparecem; criar/renomear/apagar ficam no dialogo de detalhe. No modo compacto (`isCompact`) so o numero, com a frase do dominio no `title`. A trava desabilita: os destinos Em Revisao/Concluido somem do menu 'Acoes para ...' (derivado de `allowedTargets`, nao de uma lista a parte) e o botao Aprovar fica desabilitado com a frase no tooltip; o ARRASTO continua possivel e a recusa chega com a MESMA frase do servidor (`moveBlockedMessage`, uma copia so para cartao e quadro). O auto-move da mae e ANUNCIADO: 'Ultima subtask concluida — tarefa enviada para revisao'. Isto ESTREITA o escopo escrito no plano ('criar/renomear/concluir/apagar no card e no dialogo'), e a diferenca esta registrada aqui.",
@@ -298,6 +299,24 @@
         "sonner so chega ao DOM se `<Toaster/>` estiver montado — os testes antigos do quadro nunca montaram, entao nenhum deles prova texto de toast. Montar exige stub de `matchMedia`.",
         "frase com contagem interpolada no meio de outros nos nao e encontravel pela frase inteira: a contagem e montada como string antes (`openSubtasksLabel`), um no so.",
         "o mock de teste que reimplementa a regra pode ficar verde com a producao mentindo. Usar as funcoes do dominio dentro do mock fecha esse modo de falha (DEC-90)."
+      ]
+    },
+    {
+      "id": "V4-5b",
+      "at": "2026-10-06",
+      "title": "subtasks no dialogo de detalhe: a lista inteira mora aqui (DEC-92)",
+      "actions": [
+        "testes primeiro, vermelhos primeiro: 7 falhas antes de mexer no componente (a 8a, de tarefa publica/quest global, passou trivialmente porque afirma ausencia).",
+        "DEC-92: a porta de autoridade da UI foi MEDIDA, nao chutada. O servidor aceita MANAGE_TASKS/MANAGE_USERS, OU responsavel, OU criador/lider/membro do projeto (internal/task-view.ts:208-216). No dialogo, `canManageTasks` ja era exatamente a lista de MANAGE_TASKS (permissions.ts:22) e `isAssignee` a segunda porta — a UI oferece as duas. As duas portas de projeto exigem consulta que o dialogo nao faz; quem estiver nelas e nao vir o controle continua podendo pela API, e o 403 chega na tela.",
+        "janela (DEC-80) na UI: criar/renomear/apagar so com mae em to-do/in-progress/adjust; concluir NAO obedece a janela (so `done` fecha a conclusao). A frase exibida e `subtaskWindowMessage` do dominio, nao uma parafrase da UI.",
+        "delete de subtask usa AlertDialog (A3, sem `confirm()`), com a consequencia dita: 'remove a linha da lista e muda a base de pontos da tarefa'.",
+        "consertado no caminho: um comentario do `task-detail-dialog.tsx` tinha caractere cirillico ('aвариado') — o ruido de texto que o AGENTS.md ja registra nos docs foi medido no codigo por grep `[а-яА-Я]` e so havia esta ocorrencia na base."
+      ],
+      "gates": "G0 784/3055 zero violacao | G1 sem erro | G2 0 erros | G3 84/1084 | G4 completa 94/1169 | e2e shell 5/5",
+      "gotchas": [
+        "o dialogo de detalhe e uma instancia por tarefa e nao reage a mudanca de status da mae enquanto aberto: o auto-move chega na resposta da mutacao, e o texto que o dialogo mostra passa a ser o do novo status na proxima abertura.",
+        "checkbox do Radix desabilitada continua encontravel por `getByRole('checkbox', { name })` e `toBeDisabled()` — desabilitar nao e esconder, e e isso que a DEC-89 pede (a UI desabilita ALEM de bloquear).",
+        "dois botoes com nomes que se contem ('Apagar subtask Medir o ruído' e 'Apagar subtask') so nao colidem porque `getByRole({ name })` casa a string inteira por padrao no Testing Library. Com substring (Playwright `getByLabel`/`getByRole`) colidiria — mesma lição do 3.C do plan-v3."
       ]
     }
   ],

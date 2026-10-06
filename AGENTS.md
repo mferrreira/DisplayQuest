@@ -5,7 +5,7 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
 
 ## Verificação
 
-- **Gate de entrega:** `npm run arch:check` (exit 0, allow-list **vazia**) && `npm run lint` (nada de erro) && `npx tsc --noEmit` (0) && `npx vitest run` (zero failure). A contagem é **por branch**: no `dev` o baseline era **64 arquivos / 721 testes** quando o B8 removeu os 651 testes de paridade; no `plan/v3-operacional`, medido no encerramento do plan-v3 (2026-10-03), são **65 arquivos / 798 testes** em `tests/unit` + `features` e **75 / 881** na suíte completa. Na `dev` de hoje (2026-10-06, depois do plan-v4 V4-1/V4-2/V4-3/V4-6, do V4-4 de subtasks, dos testes do painel V4-4b/V4-4c e do V4-5a de subtask no cartão) são **83 arquivos / 1076 testes** e **93 / 1161** na suíte completa; a suíte e2e está em **7 passando** — o 3º teste do quadro quebra por cartão a mais na coluna `Em Revisão` (dado legítimo da instância, não código), e como o spec é serial os outros 5 **nem rodam** (ver "Gotchas reais"). Compare sempre com o `STATE.json` do plano em que você está.
+- **Gate de entrega:** `npm run arch:check` (exit 0, allow-list **vazia**) && `npm run lint` (nada de erro) && `npx tsc --noEmit` (0) && `npx vitest run` (zero failure). A contagem é **por branch**: no `dev` o baseline era **64 arquivos / 721 testes** quando o B8 removeu os 651 testes de paridade; no `plan/v3-operacional`, medido no encerramento do plan-v3 (2026-10-03), são **65 arquivos / 798 testes** em `tests/unit` + `features` e **75 / 881** na suíte completa. Na `dev` de hoje (2026-10-06, depois do plan-v4 V4-1/V4-2/V4-3/V4-6, do V4-4 de subtasks, dos testes do painel V4-4b/V4-4c e do V4-5a/V4-5b de subtask na UI) são **84 arquivos / 1084 testes** e **94 / 1169** na suíte completa; a suíte e2e está em **7 passando** — o 3º teste do quadro quebra por cartão a mais na coluna `Em Revisão` (dado legítimo da instância, não código), e como o spec é serial os outros 5 **nem rodam** (ver "Gotchas reais"). Compare sempre com o `STATE.json` do plano em que você está.
 - **G4/integração:** roundtrips Prisma real rodam **só** contra o banco de teste isolado `dq-dev-test-db` em `127.0.0.1:5433` (`$env:DATABASE_URL="postgresql://dq_dev:dq_dev_local_only@127.0.0.1:5433/dq_dev_test"; npx vitest run`) — nunca contra o `display-quest-db` (5432, produção local).
 - **Setup do G4 (corrigido 2026-10-02):** `npm run db:test:up` e `npm run db:test:setup` **existem**
   no `package.json` e fazem a sequência completa (`docker compose -f docker-compose.test.yml up -d`,
@@ -100,15 +100,15 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
 ## plan-v4 — subtasks, animação de pontos, inativação de usuário (2026-10-05..10-06)
 
 - **Estado/decisões:** `displayquest-v2/plan-v4/{PLAN.md,STATE.json}` — V4-1, V4-2, V4-3, V4-4,
-  **V4-4b**, **V4-4c** e **V4-5a** (subtask no cartão) **done**; **V4-5b** (CRUD no diálogo de
-  detalhe) e **V4-5c** (formulário de nova tarefa + GAP-P3-05 + G5/G6) pendentes. `awaitingInstruction`
+  **V4-4b**, **V4-4c**, **V4-5a** (subtask no cartão) e **V4-5b** (CRUD no diálogo de detalhe)
+  **done**; **V4-5c** (formulário de nova tarefa + GAP-P3-05 + G5/G6) pendente. `awaitingInstruction`
   está vazia. Em `openQuestions`: **`ASK-V4-28`** (o status `inactive` não existe como estado
   escrevível — padronizar em `suspended` ou adicionar `inactive` ao enum?).
 - **Numeração de decisão é global e JÁ tem buraco (medido 2026-10-06):** DEC-01..29 clean-arch,
   DEC-30..49 plan-v3, DEC-50..54 B6/D4, DEC-55..60 plan-v4, **DEC-61..77 plan-v5** (reservadas pelo
-  dono em `displayquest-v2/plan-v5/`, criado 2026-10-06 e ainda **não commitado**), DEC-78..91 plan-v4
-  (V4-4, ASK-V4-06, V4-4b, V4-4c e V4-5a). O V4-4 ia usar DEC-61..64 e colidiu; os 28 comentários de
-  código foram renumerados. **Antes de abrir decisão nova, `grep` os três `STATE.json`.**
+  dono em `displayquest-v2/plan-v5/`, criado 2026-10-06 e ainda **não commitado**), DEC-78..92 plan-v4
+  (V4-4, ASK-V4-06, V4-4b, V4-4c, V4-5a e V4-5b). O V4-4 ia usar DEC-61..64 e colidiu; os 28 comentários
+  de código foram renumerados. **Antes de abrir decisão nova, `grep` os três `STATE.json`.**
 - **Subtask (V4-4, DEC-78..83):** tabela `task_subtasks` (sem FK para `users` — subtask não tem
   responsável próprio), base gravada em `tasks.points` = `10 + 10·n`, e **cada subtask é pontuada pela
   mesma regra da mãe** (adiantada 15 / no prazo 10 / 1 dia 0 / 2 dias −10, sem piso), medida no instante
@@ -440,6 +440,16 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
   pura bastaram. E a ordem importa: o `remap-to-review` (não-líder → "Concluído" vira Em Revisão)
   precisa vir **depois** da trava, senão a UI oferece o movimento e a trava vira toast em vez de
   botão desabilitado.
+- **Porta de autoridade da UI: medir a do servidor antes de escrever o gate (DEC-92, 2026-10-06):**
+  em `task-detail-dialog.tsx`, `canManageTasks` **já era** exatamente a lista de `MANAGE_TASKS`
+  (`backend/domain/identity/permissions.ts:22`), e o servidor aceita `MANAGE_TASKS`/`MANAGE_USERS` **ou**
+  responsável **ou** criador/líder/membro do projeto (`internal/task-view.ts:208-216`). A UI oferece as
+  duas portas que tem; as duas de projeto exigem consulta que o diálogo não faz, e o 403 do servidor
+  chega na tela.
+- **Caractere não latino também aparece no CÓDIGO, não só nos docs (medido 2026-10-06):** um
+  comentário de `task-detail-dialog.tsx` tinha `aвариado` (cirílico). `docs:check` não cobre código.
+  Caminho: `grep -rn "[а-яА-Я]" backend features components lib app tests entities contexts`. Uma
+  ocorrência na base inteira, corrigida no V4-5b.
 - **Nunca imprimir/commitar o valor real do `NEXTAUTH_SECRET`** do `.env` local.
 - `tests/` é versionado por negações no `.gitignore` (`tests/*` + `!tests/unit`,
   `!tests/integration/**` etc.; screenshots de e2e continuam ignorados) — os testes

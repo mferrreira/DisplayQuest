@@ -52,6 +52,7 @@ export {
   openSubtasksCount,
   openSubtasksMessage,
   subtaskWindowMessage,
+  supportsSubtasks,
   SUBTASK_EDITABLE_STATUSES,
   SUBTASK_TITLE_MAX_LENGTH,
 } from "@/backend/domain"

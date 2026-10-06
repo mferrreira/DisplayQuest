@@ -514,3 +514,39 @@ tarefa na coluna errada.
 
 G0 783 módulos / 3044 dependências, zero violação · G1 sem erro · G2 0 erros ·
 G3 **83 arquivos / 1076 testes** · G4 completa **93 / 1161** · e2e shell 5/5.
+
+---
+
+## 12. V4-5b executado (2026-10-06) — a lista inteira mora no diálogo de detalhe
+
+8 testes em `features/tasks/__tests__/task-detail-dialog-subtasks.test.tsx`, 7 vermelhos antes de
+mexer no componente.
+
+### 12.1 DEC-92 — a porta de autoridade foi medida, não chutada
+
+| porta | servidor (`internal/task-view.ts:208-216`) | diálogo (`task-detail-dialog.tsx`) |
+|---|---|---|
+| `MANAGE_TASKS` / `MANAGE_USERS` | `hasPermission(actorRoles, …)` | `canManageTasks` — **medido**: é exatamente a lista de `MANAGE_TASKS` (`permissions.ts:22`) |
+| responsável da tarefa | `isActorAssignedToTask` | `isAssignee` |
+| criador/líder do projeto | `project.createdBy/leaderId` | não consultado aqui |
+| membro do projeto | `getUserProjectMemberships` | não consultado aqui |
+
+A UI oferece as duas primeiras. As duas de projeto exigem consulta que o diálogo não faz; quem
+estiver nelas e não vir o controle continua podendo pela API, e o 403 do servidor chega na tela.
+
+### 12.2 A janela na UI (DEC-80)
+
+Criar/renomear/apagar só com a mãe em `to-do`/`in-progress`/`adjust`. **Concluir não obedece à
+janela** — concluir é o que destrava a mãe; só `done` fecha a conclusão. A frase exibida é
+`subtaskWindowMessage` do domínio, não uma paráfrase da UI.
+
+### 12.3 Conserto no caminho
+
+Um comentário do `task-detail-dialog.tsx` tinha caractere cirílico (`aвариado`) — o ruído de texto
+que o AGENTS.md registra nos docs apareceu no código. `grep '[а-яА-Я]'` no código: **uma** ocorrência
+na base inteira. Corrigido.
+
+### 12.4 Gates
+
+G0 784/3055 zero violação · G1 sem erro · G2 0 erros · G3 **84 / 1084** · G4 completa **94 / 1169** ·
+e2e shell 5/5.
