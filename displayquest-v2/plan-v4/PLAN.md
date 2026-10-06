@@ -381,3 +381,41 @@ rejeição é a mesma. A caraterização do V4-6 foi convertida em teste de recu
    **GAP-P3-05** (o toast da conclusão direta, `task-card.tsx:256`, passa a anunciar o valor
    CREDITADO pela resposta, não o projetado) e os gates **G5/G6** do guia.
 3. **plan-v5** só executa depois que o plan-v4 fechar (DEC-73).
+
+---
+
+## 9. V4-4b executado (2026-10-06) — testes de UI do `ModernAdminPanel`
+
+`components/admin/ModernAdminPanel.tsx`: 1063 linhas, zero testes, já tocado duas vezes. O dono
+pediu cobertura antes de mexer nele de novo. Resultado: **10 testes** em
+`tests/unit/components/admin-panel-user-settings.test.tsx` e **seis defeitos achados**, quatro
+corrigidos neste lote.
+
+### 9.1 Como os testes montam o painel
+
+Medido ao escrever: **o painel não renderiza sozinho.** Ele monta `ManageWorkSessionsDialog`
+(linha 1054) e `UserApproval` (linha 499) sempre, e os dois chamam contexto no primeiro render —
+`useWorkSessions deve ser usado dentro de um WorkSessionsProvider`, depois
+`useProject deve ser usado dentro de um ProjectProvider`. O teste usa a stack real do app
+(`app/client-layout.tsx:26-34`): `UserProvider > ProjectProvider > WorkSessionsProvider`.
+
+Seams mockados: `useAuth` (é dele que o painel tira a permissão testada — sem mock,
+`canManageUsers` é `false` e a aba de usuários renderiza vazia, e o teste passaria provando o
+oposto do que pretende), `useTask` e `useRouter`. O painel, os diálogos e o `Select`/`Dialog` do
+Radix são os reais. A rede é MSW gravando o corpo recebido — é assim que "chegou à API" é provado.
+
+### 9.2 Os seis defeitos que os testes acharam
+
+| # | o que está medido | o que foi feito |
+|---|---|---|
+| 1 | **DEC-60 inacabada.** O V4-6 abriu o negativo na rota, no use case e no `min` do input; o guard do salvamento ainda era `pointsNum >= 0`. O administrador digitava `-20` (o input deixava) e a chamada era **pulada em silêncio**. Mesma regra em três cópias, duas receberam a correção. | **corrigido** — `set` aceita negativo, `add`/`remove` continuam não-negativos; caso congelado em teste |
+| 2 | `Number("")` é `0`, `!isNaN(0)` e `0 >= 0`: esvaziar o campo de pontos enviava `{action:"set", points:0}` e **zerava a conta** de um usuário. É o mesmo quirk que a DEC-84 recusou no servidor, do lado do cliente. | **corrigido** — vazio não é número; caso congelado em teste |
+| 3 | `saveUserSettings` e `updateUserStatus` **lançavam** em toda falância e ninguém capturava: diálogo aberto sem mensagem de erro, rejeição não tratada no console e **`npx vitest run` saindo com exit 1** por "Unhandled Rejection" — o defeito quebrava o gate de entrega. | **corrigido (DEC-85)** — o erro do servidor aparece em `<p role="alert">` dentro do diálogo |
+| 4 | Os três controles do caminho não tinham nome acessível: botão da linha era só o ícone `Settings`; o `Select` de ação sem `aria-label`; o input de valor sem `id` nem rótulo associado (o único "Pontos" próximo é o título da seção, sem `htmlFor`). | **corrigido (DEC-86)** — `aria-label` nos três |
+| 5 | O `confirm` do botão "Rejeitar" diz *"Esta ação irá removê-lo do sistema"*. Medido: `reject` faz `status = "rejected"` e a linha **continua**. O guia já diz a verdade (`docs/src-usuario/12-perguntas-frequentes.md:47`). | **não corrigido** — `ASK-V4-26`, é texto visível e toca G5/G6 |
+| 6 | O filtro de status do painel só oferece Ativo/Pendente/Inativo. `rejected` e `suspended` — os dois status que o próprio painel cria — não aparecem em **nenhum** filtro específico, só em "Todos". | **não corrigido** — `ASK-V4-27` |
+
+### 9.3 Gates
+
+G0 782 módulos / 3031 dependências, zero violação · G1 sem erro · G2 0 erros ·
+G3 **82 arquivos / 1060 testes** · G4 completa **92 / 1145** · e2e shell 5/5.

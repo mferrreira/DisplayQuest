@@ -5,7 +5,7 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
 
 ## Verificação
 
-- **Gate de entrega:** `npm run arch:check` (exit 0, allow-list **vazia**) && `npm run lint` (nada de erro) && `npx tsc --noEmit` (0) && `npx vitest run` (zero failure). A contagem é **por branch**: no `dev` o baseline era **64 arquivos / 721 testes** quando o B8 removeu os 651 testes de paridade; no `plan/v3-operacional`, medido no encerramento do plan-v3 (2026-10-03), são **65 arquivos / 798 testes** em `tests/unit` + `features` e **75 / 881** na suíte completa. Na `dev` de hoje (2026-10-06, depois do plan-v4 V4-1/V4-2/V4-3/V4-6 e do V4-4 de subtasks) são **81 arquivos / 1050 testes** e **91 / 1135** na suíte completa; a suíte e2e está em **7 passando** — o 3º teste do quadro quebra por cartão a mais na coluna `Em Revisão` (dado legítimo da instância, não código), e como o spec é serial os outros 5 **nem rodam** (ver "Gotchas reais"). Compare sempre com o `STATE.json` do plano em que você está.
+- **Gate de entrega:** `npm run arch:check` (exit 0, allow-list **vazia**) && `npm run lint` (nada de erro) && `npx tsc --noEmit` (0) && `npx vitest run` (zero failure). A contagem é **por branch**: no `dev` o baseline era **64 arquivos / 721 testes** quando o B8 removeu os 651 testes de paridade; no `plan/v3-operacional`, medido no encerramento do plan-v3 (2026-10-03), são **65 arquivos / 798 testes** em `tests/unit` + `features` e **75 / 881** na suíte completa. Na `dev` de hoje (2026-10-06, depois do plan-v4 V4-1/V4-2/V4-3/V4-6, do V4-4 de subtasks e do V4-4b de testes do painel) são **82 arquivos / 1060 testes** e **92 / 1145** na suíte completa; a suíte e2e está em **7 passando** — o 3º teste do quadro quebra por cartão a mais na coluna `Em Revisão` (dado legítimo da instância, não código), e como o spec é serial os outros 5 **nem rodam** (ver "Gotchas reais"). Compare sempre com o `STATE.json` do plano em que você está.
 - **G4/integração:** roundtrips Prisma real rodam **só** contra o banco de teste isolado `dq-dev-test-db` em `127.0.0.1:5433` (`$env:DATABASE_URL="postgresql://dq_dev:dq_dev_local_only@127.0.0.1:5433/dq_dev_test"; npx vitest run`) — nunca contra o `display-quest-db` (5432, produção local).
 - **Setup do G4 (corrigido 2026-10-02):** `npm run db:test:up` e `npm run db:test:setup` **existem**
   no `package.json` e fazem a sequência completa (`docker compose -f docker-compose.test.yml up -d`,
@@ -99,14 +99,15 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
 
 ## plan-v4 — subtasks, animação de pontos, inativação de usuário (2026-10-05..10-06)
 
-- **Estado/decisões:** `displayquest-v2/plan-v4/{PLAN.md,STATE.json}` — V4-1, V4-2, V4-3, V4-4 e o
-  fechamento do ASK-V4-06 **done**; **V4-4b** (testes de UI do `ModernAdminPanel`, pedido pelo dono
-  para antes do V4-5) e V4-5 (subtasks na UI) pendentes. `awaitingInstruction` está vazia: as 17
-  perguntas do escopo de subtask foram respondidas em 2026-10-05/10-06 e estão em `answeredInstructions`.
+- **Estado/decisões:** `displayquest-v2/plan-v4/{PLAN.md,STATE.json}` — V4-1, V4-2, V4-3, V4-4,
+  **V4-4b** e o fechamento do ASK-V4-06 **done**; **V4-5** (subtasks na UI) pendente. `awaitingInstruction`
+  está vazia: as 17 perguntas do escopo de subtask foram respondidas em 2026-10-05/10-06 e estão em
+  `answeredInstructions`. Em `openQuestions`: `ASK-V4-26` (o `confirm` do "Rejeitar" mente sobre remover)
+  e `ASK-V4-27` (o filtro de status do painel não conhece `rejected`/`suspended`).
 - **Numeração de decisão é global e JÁ tem buraco (medido 2026-10-06):** DEC-01..29 clean-arch,
   DEC-30..49 plan-v3, DEC-50..54 B6/D4, DEC-55..60 plan-v4, **DEC-61..77 plan-v5** (reservadas pelo
-  dono em `displayquest-v2/plan-v5/`, criado 2026-10-06 e ainda **não commitado**), DEC-78..84 plan-v4
-  (V4-4 + ASK-V4-06). O V4-4 ia usar DEC-61..64 e colidiu; os 28 comentários de código foram
+  dono em `displayquest-v2/plan-v5/`, criado 2026-10-06 e ainda **não commitado**), DEC-78..86 plan-v4
+  (V4-4, ASK-V4-06 e V4-4b). O V4-4 ia usar DEC-61..64 e colidiu; os 28 comentários de código foram
   renumerados. **Antes de abrir decisão nova, `grep` os três `STATE.json`.**
 - **Subtask (V4-4, DEC-78..83):** tabela `task_subtasks` (sem FK para `users` — subtask não tem
   responsável próprio), base gravada em `tasks.points` = `10 + 10·n`, e **cada subtask é pontuada pela
@@ -386,6 +387,21 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
   tarefa 290 "fasdfas"; agora é a **50 "fazer reuniao com mamedes"**, que o dono moveu para `in-review`.
   É o mesmo modo de falha previsto acima (um cartão a mais na coluna → *strict mode violation*), e o
   `git stash` confirma que o baseline falha idêntico.
+- **Rejeição não tratada em `onClick` quebra o GATE, não só o console (medido 2026-10-06, V4-4b):**
+  um `async` handler que lança sem `catch` devolve promise rejeitada que o React não trata. O Vitest
+  desta casa reporta `Unhandled Rejection` e sai com **exit 1** mesmo com todos os testes passando —
+  `Test Files 1 passed / Tests 9 passed / Errors 1 error`. Referência do conserto:
+  `components/admin/ModernAdminPanel.tsx` (`userSettingsError` + `<p role="alert">`, DEC-85).
+- **`ModernAdminPanel` não renderiza sozinho (medido 2026-10-06):** monta `ManageWorkSessionsDialog`
+  e `UserApproval` sempre, e os dois chamam contexto no primeiro render. Precisa da stack real do app
+  (`UserProvider > ProjectProvider > WorkSessionsProvider`, `app/client-layout.tsx:26-34`) e de mock de
+  `useAuth` — sem ele `canManageUsers` é `false` e a aba de usuários renderiza vazia, e o teste passaria
+  provando o oposto do que pretende.
+- **jsdom não implementa `window.confirm`** (lança "Not implemented"). Botões que confirmam antes de
+  chamar a API ("Suspender", "Rejeitar") precisam de `vi.stubGlobal("confirm", vi.fn(() => true))`.
+- **Texto montado em vários nós não é encontrável pela frase inteira:** `Atual: {n} pontos` + a dica da
+  ação viram três nós, e `getByText("Atual: 120 pontos")` falha com "text is broken up by multiple
+  elements". Caminho: regex no nó do parágrafo (`getByText(/Atual: 120/)`).
 - **Nunca imprimir/commitar o valor real do `NEXTAUTH_SECRET`** do `.env` local.
 - `tests/` é versionado por negações no `.gitignore` (`tests/*` + `!tests/unit`,
   `!tests/integration/**` etc.; screenshots de e2e continuam ignorados) — os testes

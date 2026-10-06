@@ -1,25 +1,25 @@
 {
   "plan": "plan-v4",
   "version": "4.0.0",
-  "updatedAt": "2026-10-06T15:20:00-03:00",
+  "updatedAt": "2026-10-06T16:10:00-03:00",
   "status": "in_progress",
-  "activeWave": "V4-4b",
+  "activeWave": "V4-5",
   "activeBatch": null,
   "awaitingInstruction": false,
   "lineage": {
     "previousPlan": "plan-v3 (qualidade operacional, ondas 0-4, 13 batches, DEC-30..49, status done em 2026-10-03)",
     "concurrentPlan": "repo-cleanup / clean-arch B6 (D4, autorizacao rota->use case) — PAUSADO em 2026-10-05 por decisao do dono; B6-0..B6-2b mergeados na dev, o resto em displayquest-v2/clean-arch/B6-RESTANTE.md. plan-v5 (dominio de projetos) criado em 2026-10-06 pelo dono: status `ready`, executa DEPOIS do plan-v4 fechar (DEC-73).",
-    "note": "a numeracao de decisoes CONTINUA a do clean-arch e NAO reinicia em outro plano: DEC-01..29 clean-arch, DEC-30..49 plan-v3, DEC-50..54 B6/D4, DEC-55..60 plan-v4 (V4-1..V4-6), DEC-61..77 plan-v5 (reservadas e respondidas pelo dono em 2026-10-06), DEC-78..84 plan-v4 (V4-4 e o fechamento do ASK-V4-06). A colisao foi medida ao escrever este lote: o plano ia usar DEC-61..64 para subtask e o plan-v5 ja os tinha ocupado; as decisoes do V4-4 foram renumeradas para DEC-78..83 e os 28 comentarios de codigo acompanharam."
+    "note": "a numeracao de decisoes CONTINUA a do clean-arch e NAO reinicia em outro plano: DEC-01..29 clean-arch, DEC-30..49 plan-v3, DEC-50..54 B6/D4, DEC-55..60 plan-v4 (V4-1..V4-6), DEC-61..77 plan-v5 (reservadas e respondidas pelo dono em 2026-10-06), DEC-78..86 plan-v4 (V4-4, o fechamento do ASK-V4-06 e o V4-4b). A colisao foi medida ao escrever o lote do V4-4: o plano ia usar DEC-61..64 para subtask e o plan-v5 ja os tinha ocupado; as decisoes do V4-4 foram renumeradas para DEC-78..83 e os 28 comentarios de codigo acompanharam."
   },
   "baseline": {
     "measuredAt": "2026-10-06",
     "measuredOn": "dev + V4-4 (antes do commit do lote)",
-    "unitAndFeatures": "81 arquivos / 1050 testes",
-    "fullSuite": "91 arquivos / 1135 testes",
+    "unitAndFeatures": "82 arquivos / 1060 testes",
+    "fullSuite": "92 arquivos / 1145 testes",
     "e2e": "quadro: 2 passando, 1 falha conhecida (strict mode violation em 'Em Revisao' — agora pela tarefa 50 'fazer reuniao com mamedes', antes pela 290), 5 did not run pelo spec serial; shell 5/5. Confirmado com git stash: o baseline falha identico.",
-    "archCheck": "781 modulos / 3021 dependencias, zero violacao, allow-list vazia",
-    "previousBaseline": "78/981 e 88/1065 em dev antes do V4-4; V4-1 76/948 e 86/1032; V4-2 76/957 e 86/1041; V4-6 77/966 e 87/1050",
-    "timing": "G3 ~17s, integracao ~8s (medidos neste lote)"
+    "archCheck": "782 modulos / 3031 dependencias, zero violacao, allow-list vazia",
+    "previousBaseline": "78/981 e 88/1065 em dev antes do V4-4; V4-4 81/1050 e 91/1135; V4-1 76/948 e 86/1032; V4-2 76/957 e 86/1041; V4-6 77/966 e 87/1050",
+    "timing": "G3 ~17s, completa ~24s (medidos no lote do V4-4)"
   },
   "gates": {
     "G0": "npm run arch:check — exit 0, allow-list VAZIA",
@@ -63,9 +63,9 @@
     {
       "id": "V4-4b",
       "title": "testes de UI do ModernAdminPanel antes de mexer nele de novo",
-      "status": "pending",
-      "decisions": [],
-      "scope": "components/admin/ModernAdminPanel.tsx tem ~1000 linhas e ZERO testes, e ja foi tocado duas vezes (V4-6: o `min` do input de pontos passou a ser condicionado à ação). O dono decidiu em 2026-10-06: fazer ANTES do V4-5. Cobertura minima: o painel renderiza, o input de pontos muda de `min` conforme a ação, e as ações add/remove/set chegam à API."
+      "status": "done",
+      "decisions": ["DEC-85", "DEC-86"],
+      "scope": "10 testes em tests/unit/components/admin-panel-user-settings.test.tsx sobre o painel real (stack de providers real, Radix real, MSW gravando o corpo enviado). Escrever os testes expôs quatro defeitos; três foram corrigidos neste lote e dois ficaram registrados para o dono decidir."
     },
     {
       "id": "V4-5",
@@ -83,6 +83,8 @@
     }
   ],
   "decisionRegistry": [
+    "DEC-86 (2026-10-06, V4-4b): os controles do diálogo 'Configurar Usuário' passam a ter nome acessível. Medido ao escrever os testes: o botão da linha de usuário era só o ícone `Settings` (leitor de tela anunciava 'botão' e nada mais), o `Select` de ação de pontos não tinha `aria-label` nem placeholder, e o input de valor não tinha `id` nem rótulo associado — o único 'Pontos' próximo é o título da seção, sem `htmlFor`. Os três eram inalcançáveis por teste e invisíveis para leitor de tela. Nota deixada no código: o rótulo 'Valor de pontos' contém 'pontos', então `getByLabel('Pontos')` por substring casa com ele — usar rótulo exato.",
+    "DEC-85 (2026-10-06, V4-4b): falha de salvamento no painel vira mensagem no diálogo. Medido ao escrever o teste: `saveUserSettings` e `updateUserStatus` LANÇAVAM em toda falância e ninguém capturava — o `onClick` devolvia a promise rejeitada, o React não tratava, e o resultado era (a) o administrador com o diálogo aberto sem uma linha de erro, (b) rejeição não tratada no console, (c) `npx vitest run` saindo com EXIT 1 por 'Unhandled Rejection' — ou seja, o defeito quebrava o gate de entrega desta casa. Agora o erro do servidor (409 do guarda de dependência do V4-1, 404, 400) aparece num `<p role='alert'>` dentro do diálogo, na forma da casa (`text-red-600 dark:text-red-400 text-sm`, como em components/features/project-dialog.tsx:210).",
     "DEC-84 (dono 2026-10-06, fecha ASK-V4-06): PATCH /api/users/[id]/points passa a ler o número do VALOR BRUTO do corpo, não de `Number(body.points)`. `{action:'set', points:null}` deixa de zerar os pontos e passa a ser recusado com 400. Motivo medido no V4-6: JSON não tem `Infinity` (`JSON.stringify(Infinity)` devolve `null`) e `Number(null)` é 0; `Number('')` também é 0 e `Number(true)` é 1. A checagem passa a ser de TIPO antes de ser de valor. O que continua igual: string numérica é aceita (`'12'` vale 12, é o que alguns clientes mandam), a mensagem de rejeição é a mesma de antes, e `{action:'set', points:undefined}` já era 400. Caraterização do V4-6 convertida em recusa.",
     "DEC-83 (dono 2026-10-06, V4-4): `tasks.points` passa a gravar a base real 10 + 10·n e é mantida sincronizada enquanto a mãe aceita mexer na lista (criar/apagar subtask). Uma mãe em `in-review` ou `done` NUNCA é reescrita — a janela (DEC-80) é o que garante isso, e é assim que DEC-40 (nenhum UPDATE em tasks.points histórico) continua valendo. Concluir subtask NÃO mexe na coluna: a base conta subtasks, não concluídas. Resposta do dono ao ver as duas opções: 'gravado na criação e mantido sincronizado até concluir'.",
     "DEC-82 (dono 2026-10-06, V4-4): quatro regras de escopo. (a) Autoridade de subtask é A MESMA de editar a mãe — implementada como a união das portas que hoje editam a mãe: MANAGE_TASKS/MANAGE_USERS, atribuído à tarefa, criador/líder do projeto, membro do projeto. Regra nova de permissão foi evitada de propósito. (b) Subtask só existe em tarefa DELEGADA ou PRIVADA — pública e quest global ficam fora porque não têm responsável único, então a trava e o '+10' não teriam a quem pertencer; criar com subtask nesses casos é 400, não ignorado em silêncio. (c) Modo individual (2+ responsáveis → N linhas de tarefa) dá a CADA cópia a sua própria lista: uma lista compartilhada não travaria as N mães. (d) Subtask não credita ponto próprio nem incrementa `completedTasks` — o que ela faz é mudar o valor da mãe. Backlog (uma tarefa por linha) não aceita subtask na v1.",
@@ -215,12 +217,36 @@
         "a checagem passou a ser de TIPO antes de ser de valor: `Number(null)` e 0, `Number('')` e 0, `Number(true)` e 1 — `!Number.isFinite(Number(x))` nunca ve esses casos. A mensagem de rejeicao e a mesma de antes, para nao mover contrato a toa."
       ],
       "gates": "G2 0 erros | G3 81/1050 | G4 completa 91/1135"
+    },
+    {
+      "id": "V4-4b",
+      "at": "2026-10-06",
+      "title": "testes de UI do ModernAdminPanel: 10 testes sobre o painel real, e quatro defeitos que eles acharam (DEC-85, DEC-86)",
+      "actions": [
+        "testes primeiro, vermelhos primeiro: 7/7 falhando antes de qualquer mudança no componente.",
+        "medido ao montar: o painel NAO renderiza sozinho. Ele monta `ManageWorkSessionsDialog` (linha 1054) e `UserApproval` (linha 499) sempre, e os dois chamam contexto no primeiro render — 'useWorkSessions deve ser usado dentro de um WorkSessionsProvider', depois 'useProject deve ser usado dentro de um ProjectProvider'. O teste usa a stack real do app (UserProvider > ProjectProvider > WorkSessionsProvider, app/client-layout.tsx:26-34), sem stub.",
+        "seams mockados: `useAuth` (é dele que o painel tira a permissão testada), `useTask` (só a aba de tarefas usa) e `useRouter`. O painel, os diálogos e o Select/Dialog do Radix são os REAIS. A rede é MSW local gravando o corpo — é assim que 'chegou à API' é provado.",
+        "DEFECTO 1 corrigido (DEC-60 inacabada): o V4-6 abriu o negativo na rota, no use case e no `min` do input, mas o guard do salvamento ainda era `pointsNum >= 0`. O administrador digitava -20 (o input deixava) e a chamada era PULADA em silencio. Mesma regra em tres copias, duas receberam a correção — o modo de falha que o AGENTS.md ja registrou. Agora: `set` aceita negativo, `add`/`remove` continuam nao-negativos.",
+        "DEFECTO 2 corrigido (o mesmo quirk da DEC-84, do lado do cliente): `Number('')` e 0, `!isNaN(0)` e `0 >= 0` — esvaziar o campo de pontos enviava `{action:'set', points:0}` e ZERAVA a conta de um usuario.",
+        "DEFECTO 3 corrigido (DEC-85): `saveUserSettings` e `updateUserStatus` lancavam em toda falancia e ninguem capturava. O `onClick` devolvia promise rejeitada, o React nao tratava: dialogo aberto sem mensagem de erro, rejeicao nao tratada no console e `npx vitest run` saindo com EXIT 1 por 'Unhandled Rejection' — o defeito quebrava o gate de entrega. O erro do servidor passa a aparecer em `<p role='alert'>` dentro do dialogo.",
+        "DEFECTO 4 corrigido (DEC-86): os tres controles do dialogo de pontos/linha de usuario nao tinham nome acessivel — botao-so-icone `Settings`, Select sem aria-label, input sem id nem rotulo associado. Invisiveis para leitor de tela e inalcancaveis por teste.",
+        "DEFECTOS 5 e 6 NAO corrigidos, registrados para o dono: (a) o confirm do botao 'Rejeitar' diz 'Esta acao ira remove-lo do sistema', mas `reject` faz `status = 'rejected'` — a linha continua (o guia ja diz a verdade em docs/src-usuario/12-perguntas-frequentes.md:47); (b) o filtro de status do painel so tem Ativo/Pendente/Inativo, entao um usuario `rejected` ou `suspended` NAO aparece em nenhum filtro especifico — so em 'Todos'."
+      ],
+      "gates": "G0 782/3031 zero violacao | G1 sem erro | G2 0 erros | G3 82/1060 | G4 completa 92/1145 | e2e shell 5/5",
+      "gotchas": [
+        "um lancamento sem captura dentro de `onClick` nao e so ruido de console: no Vitest desta casa vira 'Unhandled Rejection' e o processo sai com EXIT 1, ou seja, quebra o gate G3/G4 mesmo com todos os testes passando.",
+        "o jsdom nao implementa `window.confirm` (lanca 'Not implemented'). O botao 'Suspender' usa confirm antes de chamar a API — o teste stuba com `vi.stubGlobal('confirm', vi.fn(() => true))`.",
+        "texto montado em varios nos ('Atual: ' + 120 + ' pontos' + a dica da acao) nao e encontravel pela frase inteira: `getByText('Atual: 120 pontos')` falha; o caminho e regex no no do paragrafo.",
+        "o painel decide permissao a partir de `hasAccess(user.roles, ...)` do `useAuth` — sem mock do contexto, `canManageUsers` e false e a aba de usuarios renderiza vazia: o teste passaria provando o oposto do que pretende."
+      ]
     }
   ],
   "openQuestions": [
-    "ASK-V4-06 FECHADO em 2026-10-06 (DEC-84): `{action:'set', points:null}` passou a ser recusado com 400. A caraterização do V4-6 virou teste de recusa, e entraram os casos `undefined`, `''`, `true`, `{}`, `[]` e a string numérica `'12'` (continua aceita).",
-    "ModernAdminPanel.tsx: o dono decidiu FAZER os testes de UI antes do V4-5 — virou a onda V4-4b, pendente.",
-    "Pendência conhecida e aceita do e2e: o 3º teste do quadro quebra por CARTÃO A MAIS na coluna 'Em Revisão' (era a tarefa 290 'fasdfas', em 2026-10-06 é a 50 'fazer reuniao com mamedes'). O dono recusou escopar o locator no cartão do fixture e recusou mexer no dado. Como o spec é serial, a falha faz os outros 5 aparecerem como 'did not run'. Confirmar com git stash antes de caçar regressão."
+    "ASK-V4-26 (aberto pelo V4-4b, precisa do dono): o `confirm` do botao 'Rejeitar' no painel diz 'Esta acao ira remove-lo do sistema'. Medido: `reject` faz `status = 'rejected'` e a linha CONTINUA (login e API bloqueiam porque status != active). O guia ja diz a verdade (docs/src-usuario/12-perguntas-frequentes.md:47). Corrigir o texto e uma linha; e mudanca de texto visivel, entao toca os gates G5/G6.",
+    "ASK-V4-27 (aberto pelo V4-4b, precisa do dono): o filtro de status do painel so oferece Ativo/Pendente/Inativo. Um usuario `rejected` ou `suspended` (os dois status que o proprio painel cria) nao aparece em nenhum filtro especifico — so em 'Todos'. Adicionar 'Rejeitado' e 'Suspenso' sao duas opcoes no Select.",
+    "ASK-V4-06 FECHADO em 2026-10-06 (DEC-84): `{action:'set', points:null}` passou a ser recusado com 400. A caraterizacao do V4-6 virou teste de recusa, e entraram os casos `undefined`, `''`, `true`, `{}`, `[]` e a string numerica `'12'` (continua aceita).",
+    "ModernAdminPanel.tsx: FECHADO em 2026-10-06 (V4-4b) — 10 testes sobre o painel real. O arquivo continua sem teste para as abas Projetos/Horas/Tarefas/Notificacoes/Configuracoes e para os dialogos filhos; o que esta coberto e o caminho de configuracao de usuario (perfil, funcoes, carga horaria, pontos, status).",
+    "Pendencia conhecida e aceita do e2e: o 3o teste do quadro quebra por CARTAO A MAIS na coluna 'Em Revisao' (era a tarefa 290 'fasdfas', em 2026-10-06 e a 50 'fazer reuniao com mamedes'). O dono recusou escopar o locator no cartao do fixture e recusou mexer no dado. Como o spec e serial, a falha faz os outros 5 aparecerem como 'did not run'. Confirmar com git stash antes de cacar regressao."
   ],
   "blockers": [],
   "removedItems": [],

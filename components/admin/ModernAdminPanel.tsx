@@ -85,6 +85,11 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
   const [userPointsAction, setUserPointsAction] = useState<"set" | "add" | "remove">("set")
   const [userPointsValue, setUserPointsValue] = useState<string>("0")
   const [savingUserSettings, setSavingUserSettings] = useState(false)
+  // DEC-85 (medido ao escrever os testes do V4-4b): `saveUserSettings` e `updateUserStatus`
+  // LANÇAM em toda falância e ninguém captura. O `onClick` devolve a promise rejeitada, o React
+  // não trata: o administrador fica com o diálogo aberto sem uma linha de erro, o console fica
+  // com uma rejeição não tratada, e o `vitest` desta casa sai com exit 1 por causa disso.
+  const [userSettingsError, setUserSettingsError] = useState<string | null>(null)
   const [globalTasksProgress, setGlobalTasksProgress] = useState<any[]>([])
   const [loadingGlobalTasks, setLoadingGlobalTasks] = useState(false)
   const [createUserOpen, setCreateUserOpen] = useState(false)
@@ -123,19 +128,28 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
     setUserBioDraft(targetUser?.bio || "")
     setUserPointsAction("set")
     setUserPointsValue(String(targetUser?.points ?? 0))
+    setUserSettingsError(null)
   }
 
   const updateUserStatus = async (targetUserId: number, action: "approve" | "reject" | "suspend" | "activate") => {
-    const response = await fetch(`/api/users/${targetUserId}/status`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action }),
-    })
-    if (!response.ok) {
-      const payload = await response.json().catch(() => ({}))
-      throw new Error(payload?.error || "Erro ao atualizar status")
+    // DEC-85: a falância era lançada para o chamador — um `onClick` que não trata. Agora o
+    // painel mostra o erro do servidor (é dele a mensagem: 409 do guarda de dependência do V4-1,
+    // 400 de ação inválida) dentro do diálogo, onde a pessoa está olhando.
+    try {
+      const response = await fetch(`/api/users/${targetUserId}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      })
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}))
+        throw new Error(payload?.error || "Erro ao atualizar status")
+      }
+      setUserSettingsError(null)
+      router.refresh()
+    } catch (error: unknown) {
+      setUserSettingsError(error instanceof Error ? error.message : "Erro ao atualizar status")
     }
-    router.refresh()
   }
 
   const saveUserSettings = async () => {
@@ -171,8 +185,19 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
         throw new Error(payload?.error || "Erro ao atualizar usuário")
       }
 
+      // DEC-60 na ponta que faltava (medido ao escrever os testes do V4-4b): o V4-6 abriu o
+      // negativo na rota, no use case e no `min` do input — mas o guard do salvamento ainda era
+      // `pointsNum >= 0`. Resultado: o administrador digitava -20 (o input deixava) e a chamada
+      // era PULADA em silêncio, sem aviso nenhum. É a mesma regra em três cópias e só duas
+      // receberam a correção — o modo de falha que o AGENTS.md já registrou.
+      // `set` aceita negativo (DEC-39 produz totais negativos); `add`/`remove` continuam
+      // não-negativos: chão em 0 e suficiência são regras próprias dessas duas ações.
+      // Vazio não é número: antes, `Number("")` é 0 e o painel enviava `set 0`, zerando os
+      // pontos de alguém por um campo esvaziado — o mesmo quirk que a DEC-84 recusou no servidor.
       const pointsNum = Number(userPointsValue)
-      if (!isNaN(pointsNum) && pointsNum >= 0) {
+      const pointsIsNumeric = userPointsValue.trim() !== "" && Number.isFinite(pointsNum)
+      const pointsAllowed = pointsIsNumeric && (userPointsAction === "set" || pointsNum >= 0)
+      if (pointsAllowed) {
         const pointsResponse = await fetch(`/api/users/${selectedUserForSettings.id}/points`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -189,6 +214,9 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
 
       setSelectedUserForSettings(null)
       router.refresh()
+    } catch (error: unknown) {
+      // DEC-85: antes, o `throw` ia para fora do `onClick` como rejeição não tratada.
+      setUserSettingsError(error instanceof Error ? error.message : "Erro ao salvar o usuário")
     } finally {
       setSavingUserSettings(false)
     }
@@ -543,7 +571,15 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
                             >
                               {user.status}
                             </Badge>
-                            <Button variant="outline" size="sm" onClick={() => openUserSettings(user)}>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openUserSettings(user)}
+                              // Medido ao escrever os testes do V4-4b: o botão era só o ícone
+                              // `Settings`, sem nome acessível — um leitor de tela anunciava
+                              // "botão" e nada mais, e o teste não tinha como alcançá-lo.
+                              aria-label={`Configurar ${user.name}`}
+                            >
                               <Settings className="h-4 w-4" />
                             </Button>
                           </div>
@@ -976,7 +1012,7 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
                 <div className="pl-6">
                   <div className="flex gap-2">
                     <Select value={userPointsAction} onValueChange={(v) => setUserPointsAction(v as "set" | "add" | "remove")}>
-                      <SelectTrigger className="w-36">
+                      <SelectTrigger className="w-36" aria-label="Ação de pontos">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -987,6 +1023,13 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
                     </Select>
                     <Input
                       type="number"
+                      id="userPointsValue"
+                      // Medido ao escrever os testes do V4-4b: o input não tinha id nem rótulo
+                      // associado — o único "Pontos" próximo é o título da seção, sem `htmlFor`.
+                      // Sem nome acessível o campo é invisível para leitor de tela e inalcançável
+                      // por teste. (Nota: o texto contém "pontos"; quem buscar por substring
+                      // `getByLabel("Pontos")` casa com ele — use rótulo exato.)
+                      aria-label="Valor de pontos"
                       // DEC-60: "Definir" é valor absoluto e aceita negativo, porque a premiação
                       // pode deixar o total de alguém negativo (DEC-39, penalidade sem piso) e a
                       // administração precisava conseguir escrever esse valor de volta.
@@ -1034,6 +1077,14 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
                   </Button>
                 </div>
               </div>
+
+              {userSettingsError && (
+                // Mesma forma da casa para erro inline (components/features/project-dialog.tsx:210).
+                // `role="alert"` para que a mensagem seja anunciada, não só pintada de vermelho.
+                <p role="alert" className="text-red-600 dark:text-red-400 text-sm">
+                  {userSettingsError}
+                </p>
+              )}
 
               <div className="flex justify-end gap-2 pt-2 border-t">
                 <Button variant="outline" onClick={() => setSelectedUserForSettings(null)}>Cancelar</Button>
