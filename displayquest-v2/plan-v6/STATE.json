@@ -1,0 +1,218 @@
+{
+  "plan": "plan-v6",
+  "title": "refatoração visual UI/UX: linguagem DisplayQuest em todas as telas",
+  "version": "1.0.0",
+  "updatedAt": "2026-10-07T12:00:00-03:00",
+  "status": "ready",
+  "activeWave": null,
+  "activeBatch": null,
+  "awaitingInstruction": true,
+  "lineage": {
+    "previousPlan": "plan-v5 (domínio de projetos maduro — ready, activeWave: null; não iniciado)",
+    "concurrentPlan": "plan-v5 (ready, não iniciado) — ORDEM RESOLVIDA na DEC-113: nas colisões o plan-v5 executa ANTES (V6-4 × V5-4 wizard, V6-5 × V5-2 banner/logo, V6-7 × V5-3 banner de perfil/pódio). V6-0..V6-3 não tocam o plan-v5.",
+    "note": "a numeracao de decisoes e GLOBAL: DEC-01..29 clean-arch, DEC-30..49 plan-v3, DEC-50..54 B6/D4, DEC-55..60 plan-v4, DEC-61..77 plan-v5, DEC-78..98 plan-v4, DEC-99..104 plan-v5. Este plano usa DEC-105..114. Proxima decisao: DEC-115. Antes de abrir DEC nova, grep os STATE.json (clean-arch, plan-v3, plan-v4, plan-v5, plan-v6)."
+  },
+  "baseline": {
+    "measuredAt": "2026-10-07",
+    "measuredOn": "dev com o lote POS-1 do plan-v4 fechado (DEC-97/98); nenhum commit do plan-v6 existe ainda",
+    "unitAndFeatures": "87 arquivos / 1107 testes",
+    "fullSuite": "97 arquivos / 1192 testes (referencia AGENTS.md 2026-10-07)",
+    "e2e": "quadro: 2 passando + 1 falha conhecida (cartão a mais na coluna, dado legítimo da instância — confirmar com git stash) + 5 did not run (spec serial); shell: 5 passando. Requer dev server em :3001",
+    "archCheck": "787 modulos / 3077 dependencias, zero violacao, allow-list vazia",
+    "expectedAtEnd": "tests/unit + features >= 95 arquivos / >= 1180 testes (87/1107 + os 8 arquivos novos da SPEC §8.1)",
+    "timing": "G3 ~22s (medido em 2026-10-07)"
+  },
+  "gates": {
+    "G0": "npm run arch:check — exit 0, allow-list VAZIA (baseline 787/3077)",
+    "G1": "npm run lint — exit 0 (warnings aceitos, nenhum erro; em worktree: npx eslint --no-eslintrc --config .eslintrc.json <arquivos>)",
+    "G2": "npx tsc --noEmit — 0 erros",
+    "G3": "npx vitest run — zero failure (baseline 87/1107)",
+    "G4": "NAO SE APLICA — plano sem backend. Se algum diff tocar prisma/, backend/ ou app/api/, e erro de escopo (RF-V6.10 R1/R3)",
+    "G5": "npm run docs:build + docs:check — obrigatório nas ondas V6-3, V6-4, V6-5, V6-6, V6-7, V6-8, V6-9, V6-10 e no fechamento V6-11",
+    "G6": "recapturar docs/screens/ quando a captura deixa de representar a tela (todas as telas mudam de visual nesta rodada)",
+    "e2e": "npx playwright test tests/e2e/shell.spec.ts (5 passando) e tests/e2e/task-board.spec.ts (2 passando + 1 falha conhecida + 5 did not run) — requer dev server em :3001"
+  },
+  "waves": [
+    {
+      "id": "V6-0",
+      "title": "skill e ferramenta alinhadas (dark mode + fim das ilustrações + gates)",
+      "status": "pending",
+      "decisions": [
+        "DEC-109",
+        "DEC-110"
+      ],
+      "scope": "Só .opencode/**: SKILL.md passa a listar as 4 imagens (home, projects, project, home-darkmode); design-system.md/visual-language.md ganham contraparte dark e deixam de dizer 'light'/'pastel' sem qualificar tema; as seções que MANDAM usar ilustração e texto manuscrito saem (visual-language.md:16-17,28-50,52-62; anti-patterns.md:50-54; layout-patterns.md:135; design-system.md:93; components.md:36); agents/ui-reviewer.md:31 deixa de exigir ilustração e passa a verificar a ausência de artwork; commands/ui-refactor.md:33 nomeia o gate concreto (arch:check + lint + tsc --noEmit + vitest run) com baseline.",
+      "why": "é pré-condição: /ui-review e ui-reviewer guiam todas as outras ondas, e hoje a prioridade 9 do revisor cobraria ilustração (DEC-109). Zero gate técnico depende desta onda."
+    },
+    {
+      "id": "V6-1",
+      "title": "tokens + primitivos compartilhados (PageHeader, StatCard, EmptyState, SearchInput, status.ts)",
+      "status": "pending",
+      "decisions": [
+        "DEC-111"
+      ],
+      "scope": "Novos components/ui/{page-header,stat-card,empty-state,search-input}.tsx e components/ui/status.ts (única fonte status→cor/label). Nesta onda as duas cópias de statusColors/statusLabels passam a importar de status.ts (project-list.tsx:15/:21 e project-detail-dialog.tsx:73/:79 — troca mecânica, o dialog inteiro sai em V6-5; taskStatusColors :85 fica até lá; as do task-card migram em V6-3). Telas NÃO são convertidas ainda. Testes: tests/unit/ui/{page-header,stat-card,empty-state,search-input,status-badges}.test.tsx. Primitivos puros: props declarativas, sem fetch e sem useContext.",
+      "why": "pré-condição central (DEC-111): sem ela, cada uma das 11 telas recria PageHeader/StatCard de novo e o plano reproduz exatamente a dor medida (6 stat cards, 11 h1 com 5 grafias). Adicionar sem aplicar torna o revert seguro."
+    },
+    {
+      "id": "V6-2",
+      "title": "shell: sidebar desktop persistente + header compacto",
+      "status": "pending",
+      "decisions": [
+        "DEC-106"
+      ],
+      "scope": "components/layout/app-sidebar.tsx novo a partir de nav-config.ts (fonte única, sem destino novo); app-header.tsx reduzido a identidade + sino + tema + avatar, com <header> PRESERVADO no DOM (shell.spec.ts:31); item de nav extraído e compartilhado com mobile-menu.tsx; rounded-full sai da navegação (anti-pattern Excessive pills); container de conteúdo mantém container mx-auto p-4 md:p-6. Tokens --sidebar-* existentes passam a ser usados (zero CSS novo). Caracterização ANTES: tests/unit/layout/app-sidebar.test.tsx + teste de nav-config/AppHeader.",
+      "why": "DEC-106 (fase 2 do plano original): a sidebar é a maior divergência da referência (D1) e precisa existir antes das telas nascerem dentro do layout novo."
+    },
+    {
+      "id": "V6-3",
+      "title": "Home: região de cabeçalho + resumo + quadro sem degradê/emoji",
+      "status": "pending",
+      "decisions": [
+        "DEC-111",
+        "DEC-112",
+        "DEC-114"
+      ],
+      "scope": "app/(dashboard)/dashboard/page.tsx ganha PageHeader com saudação e blocos de resumo SÓ com dado já em memória (overdueCount, isTaskDueToday, status==='done', useProjects(), user.points) — sem Atividade recente, sem Status do sistema, sem fetch de ranking. SEM coluna secundaria: o quadro de 5 colunas ocupa a largura horizontal toda e os blocos de resumo ficam na regiao de cabecalho, acima do quadro (DEC-114). board-column.tsx: tinta chapada no lugar do degradê saturado, lucide no lugar do emoji, sem pill bg-white/20. task-card.tsx: superfície chapada, badges por token (sem gradiente/font-bold text-white/animate-pulse), lucide. rounded-xl/shadow-2xl/hover:shadow-md saem. TRAVA: nenhum aria-label, h2 exato, 'Ordenar tarefas de X', toast ou testid do quadro muda.",
+      "why": "a Home é a tela de destino E a mais testada do repo (7 arquivos em features/tasks/__tests__ + task-board.spec.ts) — é o primeiro teste real da nova linguagem com rede de segurança. O dono recusou a coluna secundaria em 2026-10-07 (DEC-114): 5 colunas + largura cheia para nao espremer as tasks."
+    },
+    {
+      "id": "V6-4",
+      "title": "Projetos: um título só + chips com contagem + lista vertical",
+      "status": "pending",
+      "decisions": [
+        "DEC-111",
+        "DEC-112",
+        "DEC-113"
+      ],
+      "scope": "Caracterização features/projects/__tests__/project-list.test.tsx ANTES de qualquer mudança de layout. page.tsx: PageHeader único (o h2 'Projetos' da ProjectList sai — D10), 4 stat cards → StatCard, Select de status → chips com contagem de cada status. project-list.tsx: lista vertical no lugar da grade de 3 colunas, progresso derivado de tasks (dado já carregado), statusColors local some (usa status.ts). SEM tags, SEM avatares de membros na lista (dado inexistente/N+1). Contextos legados useProject/useTask NÃO mudam de caminho nesta onda. ORDEM (DEC-113): executa DEPOIS do plan-v5 nesta tela — wizard de criacao V5-4. O backend e a fonte de verdade e o front segue o back.",
+      "why": "D14/D10 + reaproveitamento dos primitivos do V6-1; a tela não tem NENHUM teste hoje, então a caracterização é obrigatória (AC-V6-16)."
+    },
+    {
+      "id": "V6-5",
+      "title": "Projeto vira rota /dashboard/projetos/[id] (o Dialog sai)",
+      "status": "pending",
+      "decisions": [
+        "DEC-107",
+        "DEC-113"
+      ],
+      "scope": "app/(dashboard)/dashboard/projetos/[id]/page.tsx novo com o conteúdo do ProjectDetailDialog em seções separadas (sem h-[90vh], sem scroll duplo em :135 + :174); leitura por projectsApi.getById(id) + projectsApi.members(id) — 1 fetch por rota, sem N+1; os 2 pontos de entrada navegam; ProjectDetailDialog removido. As 7 OCORRÊNCIAS de porta em 7 linhas / 5 expressões (:150 EDIT_PROJECT, :254 e :276 CREATE_TASK, :389 EDIT_PROJECT no form de links, :441 leaderId, :446 leaderId||MANAGE_USERS, :452 MANAGE_PROJECT_MEMBERS||COORDENADOR||GERENTE) preservadas com resultado idêntico — medir a porta do servidor ANTES (DEC-92). Checklist de 13 blocos na SPEC §8.4. nav-config (:45) já tem matchPrefix, então 'Projetos' segue ativo; client-layout.tsx:21-23 já dá provider nesse caminho, NÃO mexer. 'Editar' continua abrindo o ProjectDialog. Quirks não visuais intocados: mutação project.links=[...] (:122) e handleDeleteProject no-op. ORDEM (DEC-113): executa DEPOIS do plan-v5 nesta tela — V5-2 (banner/logo no detail). O backend e a fonte de verdade e o front segue o back.",
+      "why": "DEC-107: rota dedicada resolve D5 (card explosion + scroll duplo num Dialog de 90vh) e viabiliza 1 fetch de membros em vez de N+1. Conferir colisão com plan-v5 V5-2 antes de executar."
+    },
+    {
+      "id": "V6-6",
+      "title": "Laboratório + Relatórios Semanais",
+      "status": "pending",
+      "decisions": [
+        "DEC-108",
+        "DEC-111"
+      ],
+      "scope": "PageHeader + tokens no lugar de paleta cravada/degradê + reaproveitar primitivos do V6-1. Nenhuma guarda de permissao, chamada de API ou rótulo muda.",
+      "why": "DEC-108 (todas as telas nesta rodada); baixo risco, mesmo roteiro de V6-6..V6-10."
+    },
+    {
+      "id": "V6-7",
+      "title": "Perfil + Ranking",
+      "status": "pending",
+      "decisions": [
+        "DEC-108",
+        "DEC-111",
+        "DEC-113"
+      ],
+      "scope": "Mesmo roteiro de V6-6. Ranking perde font-black/md:text-4xl e herda PageHeader. CONFERIR colisão com plan-v5 V5-3 (banner de perfil + pódio do quadro) antes de executar. ORDEM (DEC-113): executa DEPOIS do plan-v5 nesta tela — V5-3 (banner de perfil + pódio). O backend e a fonte de verdade e o front segue o back.",
+      "why": "Ranking é filho do Perfil; juntos evitam retrabalho na mesma árvore de componentes."
+    },
+    {
+      "id": "V6-8",
+      "title": "Loja + Loja/Gerenciar",
+      "status": "pending",
+      "decisions": [
+        "DEC-108",
+        "DEC-111"
+      ],
+      "scope": "Mesmo roteiro de V6-6. As 15 ocorrências de paleta de loja e os badges de compra entram no escopo do grep da onda.",
+      "why": "tela independente do shell de gestão; escopo DEC-108."
+    },
+    {
+      "id": "V6-9",
+      "title": "Admin (ModernAdminPanel + arredores)",
+      "status": "pending",
+      "decisions": [
+        "DEC-108",
+        "DEC-111"
+      ],
+      "scope": "Caracterização de components/admin/ModernAdminPanel.tsx ANTES de qualquer mudança (1165 linhas, zero testes hoje — só tsc o cobre). Depois: PageHeader, tokens (28 ocorrências de paleta neste arquivo), primitivos. Travar padrão de erro de mutação (userSettingsError + <p role='alert'>) para não abrir unhandled rejection que fecha o gate com exit 1.",
+      "why": "última tela grande por ser a de maior risco da rodada; a caracterização protege comportamento que hoje nenhum teste fixa."
+    },
+    {
+      "id": "V6-10",
+      "title": "Login + Register",
+      "status": "pending",
+      "decisions": [
+        "DEC-108",
+        "DEC-111"
+      ],
+      "scope": "Mesmo roteiro de V6-6, mais: ganham um <h1> (hoje o DOM tem ZERO h1/h2/h3). Fora do shell, sem dependência de V6-2.",
+      "why": "escopo DEC-108; isolada e pequena, roda perto do fim para reaproveitar madureza do roteiro."
+    },
+    {
+      "id": "V6-11",
+      "title": "fechamento: greps finais + G5/G6 + dívida + docs",
+      "status": "pending",
+      "decisions": [
+        "DEC-108",
+        "DEC-109",
+        "DEC-110",
+        "DEC-111",
+        "DEC-112",
+        "DEC-113",
+        "DEC-114"
+      ],
+      "scope": "Greps globais do escopo em zero (AC-V6-01..06, exceto exceção registrada em DEC); git diff package.json vazio; G0–G6 inteiros; G5 docs:build + docs:check; G6 recaptura de docs/screens/ das telas mudadas; displayquest-v2/README.md e AGENTS.md atualizados; STATE.json → done.",
+      "why": "só depois de todas as telas: os greps só dão zero quando o último consumidor sai, e o G5/G6 é obrigatório em batch que muda comportamento visível."
+    }
+  ],
+  "decisionRegistry": [
+    "DEC-105 (dono 2026-10-06, D-A): a leitura das referências visuais é feita por modelo COM visão (strata/muse/longcat funcionam; nemotron = NO_VISION; big-pickle não lê imagem). O inventário das 4 imagens está gravado na SPEC §2.3 e §2.6 como evidência — não reler a imagem a cada onda.",
+    "DEC-106 (dono 2026-10-06, D-B): a sidebar desktop entra (fase 2 do plano), mantendo o <header> exigido por tests/e2e/shell.spec.ts:31 e nav-config.ts como fonte única de destinos. Alternativa rejeitada: trocar o topo inteiro por sidebar sem header.",
+    "DEC-107 (dono 2026-10-06, D-C): o detalhe do projeto vira ROTA /dashboard/projetos/[id] e o ProjectDetailDialog sai. Alternativa rejeitada: continuar com Dialog de 90vh.",
+    "DEC-108 (dono 2026-10-07, D-D): escopo TODAS as telas nesta rodada (admin, loja, laboratório, ranking, perfil, login incluídos) — não só as 3 centrais.",
+    "DEC-109 (dono 2026-10-07, D-E): ilustrações e texto manuscrito FORA da linguagem. A skill deixa de mandá-los (visual-language, anti-patterns, layout-patterns, design-system, components) e ui-reviewer passa a verificar a AUSÊNCIA de artwork decorativo. Fase 'identidade ilustrada' do plano anterior foi removida.",
+    "DEC-110 (dono 2026-10-07, D-F): tema escuro é variante de primeira classe. Medido: o bloco .dark de app/globals.css:55-99 JÁ implementa a referência home-darkmode.png (background 222 15% 8%, sidebar 7%, card 11%, border 220 10% 20%, foreground 210 20% 93%, primary 217 91% 50%), então NÃO se mexe nos valores — só se documenta na skill e se consome nos componentes.",
+    "DEC-111 (dono 2026-10-07, D-G): execução por /ui-refactor + gate /ui-review, com os primitivos centrais (V6-1) ANTES de qualquer tela. Se uma tela precisar de primitivo inexistente, volta para V6-1 — não cria local.",
+    "DEC-112 (dono 2026-10-07, D-H): nenhuma funcionalidade nova. Sem tags de projeto, sem feed 'Atividade recente', sem busca global ⌘K, sem destino de navegação novo (Times/Inventário/Gamificação), sem gráfico com dependência nova (recharts não está no package.json), sem datas de início/fim, sem avatares de membros na lista.",
+    "DEC-113 (dono 2026-10-07, ASK-V6-01): NAO — o plan-v6 nao roda primeiro. Regra do dono, palavra por extensa: 'o backend e a fonte de verdade, e o front e implementado seguindo o back'. Consequencia: nas telas em colisao o plan-v5 executa ANTES do plan-v6 (V6-4 Projetos x wizard V5-4; V6-5 detail x V5-2 banner/logo; V6-7 perfil/ranking x V5-3 banner). Ondas V6-0..V6-3 (skill, primitivos, shell, Home) nao tocam nada do plan-v5 e podem executar antes.",
+    "DEC-114 (dono 2026-10-07, ASK-V6-02): SEM coluna secundaria na Home. O draft de referencia tem 4 colunas, o DisplayQuest mantem 5 (DEC-112 preserva Ajustes), entao o quadro REAPROVEITA A LARGURA HORIZONTAL TODA para nao espremer as tasks. Os blocos de resumo ficam na regiao de cabecalho, ACIMA do quadro — nao em coluna lateral. Cai junto a regra R2 de RF-V6.4 ('coluna secundaria so se o dono aprovar') e o alinhamento com layout-patterns.md:133."
+  ],
+  "batchLog": [],
+  "openQuestions": [],
+  "blockers": [],
+  "removedItems": [
+    {
+      "item": "Fase 8 do plano anterior — identidade ilustrada (ilustrações SVG desenhadas a mão + rótulos manuscritos)",
+      "removedAt": "2026-10-07",
+      "reason": "decisão do dono: 'as ilustrações não vão entrar, o modelo viajou' (DEC-109)"
+    },
+    {
+      "item": "Criação dos destinos da referência que não existem (Times, Inventário, tags, datas início/fim, activity feed, recharts)",
+      "removedAt": "2026-10-07",
+      "reason": "não inventar funcionalidade nem dependência nova (DEC-112); SPEC §2.5 mede que o dado não existe"
+    }
+  ],
+  "answeredInstructions": [
+    {
+      "id": "ASK-V6-01",
+      "question": "Ordem frente ao plan-v5: o plan-v6 roda primeiro nas telas em colisão (V6-5 detail, V6-7 perfil/ranking), e o plan-v5 reaproveita o layout novo?",
+      "answer": "Não. O backend é a fonte de verdade e o front é implementado seguindo o back — nas colisões o plan-v5 executa antes (V6-4 × V5-4, V6-5 × V5-2, V6-7 × V5-3). Ondas V6-0..V6-3 não tocam o plan-v5.",
+      "answeredAt": "2026-10-07",
+      "decision": "DEC-113"
+    },
+    {
+      "id": "ASK-V6-02",
+      "question": "A Home ganha coluna secundária com os blocos de prazo/pontos, ou o quadro fica com largura cheia?",
+      "answer": "Largura cheia: o draft tem 4 colunas, mas mantemos as 5 — melhor reaproveitar todo o espaço horizontal para não espremer as tasks. Sem coluna secundária; resumo vai na região de cabeçalho.",
+      "answeredAt": "2026-10-07",
+      "decision": "DEC-114"
+    }
+  ]
+}
