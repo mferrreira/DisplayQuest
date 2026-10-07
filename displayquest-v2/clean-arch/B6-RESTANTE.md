@@ -2,8 +2,9 @@
 
 > Onde o trabalho de autorização rota→use case está hoje e o que resta.
 > Escrito em 2026-10-05 no encerramento do B6-2b (`6d620bd`, mergeado na `dev`), para o plano
-> poder ser retomado sem re-medir do zero. Estado vivo em `STATE.json`; este arquivo é a
-> **medição** que sustenta os lotes seguintes.
+> poder ser retomado sem re-medir do zero. **Re-medido em 2026-10-07 na retomada** (ver §"O que
+> mudou"): a contagem corrigida é **35 rotas**, não 33 — as somas dos próprios lotes já davam 35.
+> Estado vivo em `STATE.json`; este arquivo é a **medição** que sustenta os lotes seguintes.
 
 ## Onde estamos
 
@@ -17,10 +18,59 @@ Lotes fechados, cada um 1 commit revertível, todos em G0–G4:
 | B6-2a | 4 gates `MANAGE_REWARDS` descem (badges ×3, rewards ×4) + `assertPermission` no domínio | `b8e0039` |
 | B6-2b | gate de `MANAGE_NOTIFICATIONS` desce + **ator-de-sistema** (`ActorRef`, DEC-54) | `6d620bd` |
 
-Baseline de testes: 65/798 (início do B6) → 68/877 (2a) → 70/909 (2a) → **73/934** (2b); suíte
-completa **83/1017**. G0: 748/2817 → **764/2906**.
+Baseline de testes no encerramento do B6-2b (2026-10-05): 65/798 (início do B6) → 73/934 (2b);
+suíte completa **83/1017**. G0: 748/2817 → 764/2906.
 
-Restam **33 rotas** em 6 lotes: B6-2c, B6-2d, B6-3, B6-4, B6-5, B6-6, B6-7.
+**Baseline medido na retomada (2026-10-07, após plan-v3/v4 + lote POS-1):** G0 **787 módulos /
+3077 deps**, allow-list vazia (rodado ao vivo); G3 **87 arquivos / 1107 testes**, suíte completa
+**97 / 1192** (documentado no `plan-v4/STATE.json` do lote POS-1). Os testes de caraterização do
+B6 continuam todos verdes: `authorization-characterization.test.ts` 39/39 rodado ao vivo em
+2026-10-07.
+
+Restam **35 rotas** em 6 lotes — **41 originais − 6 já migradas** (`cron/status`, `badges` ×2,
+`rewards` ×2, `notifications`), re-conferrido com o mesmo grep em 2026-10-07:
+
+| lote | módulo (composition) | rotas | arquivos |
+|---|---|---|---|
+| B6-2c | gamification | 3 | `user-badges`, `user-badges/[userId]/[badgeId]`, `users/[id]/gamification` |
+| B6-2d | store | 2 | `purchases`, `purchases/[id]` |
+| B6-3 | reporting + projectManagement | 8 | `weekly-reports` ×4, `weekly-hours-history`, `users/statistics`, `projects`, `projects/stats` |
+| B6-4 | userManagement | 8 | `users`, `users/[id]`, `[id]/status`, `[id]/roles`, `[id]/profile`, `[id]/points`, `[id]/project-hours`, `users/approve` |
+| B6-5 | workExecution | 4 | `work-sessions` ×2, `daily_logs` ×2 |
+| B6-6 | labOperations | 7 | `issues` ×4, `responsibilities` ×2, `schedules/bulk` |
+| B6-7 | taskManagement | 3 | `tasks`, `tasks/[id]`, `tasks/global-progress` |
+
+Os 6 lotes somam 35, e a distribuição por módulo bate **exatamente** com a do DEC-50 (user-management 8,
+reporting 7, lab-operations 7, work-execution 4, task-management 3; gamification 5 → 3 e store
+4 → 2 depois das migrações do B6-2a/2b). Os 3 call sites do cron ficam em B6-3
+(`resetWeeklyHoursHistory`/WEEKLY_RESET), B6-5 (`listWorkSessions`/NIGHTLY_SWEEP) e B6-6
+(`pauseResponsibilityForUser`/SCHEDULED_PAUSE) — como previsto no DEC-54.
+
+## O que mudou desde 2026-10-05 (re-medição 2026-10-07)
+
+- **Retomada acordada com o dono (2026-10-07):** escopo do fechamento = **B6 restante + B9**
+  (B10 fica como backlog opcional registrado; B11 excluído, DEC-27). Execução em **branch nova
+  com merge fast-forward na dev** no fim, como no B6-0..2b (tag de rollback no ponto de partida).
+- **A árvore estava suja na retomada:** o lote **POS-1** do plan-v4 (DEC-97/98, 41 arquivos) está
+  modificado **não commitado**, e `plan-v5/` + `plan-v6/` estão **untracked**. O dono decidiu
+  **não commitar nada agora** — a árvore precisa estar limpa antes do primeiro commit do B6, e
+  essa resolução é dele.
+- **Numeração de decisão é global e avançou:** DEC-01..29 clean-arch, 30..49 plan-v3, 50..54
+  B6/D4, 55..98 plan-v4 (com o POS-1), 99..104 plan-v5, 105..114 plan-v6. **Próxima decisão
+  livre: DEC-115.** Antes de abrir DEC nova, grep os **cinco** `STATE.json` (clean-arch, plan-v3,
+  plan-v4, plan-v5, plan-v6) — a nota do AGENTS.md que diz "três" está velha.
+- **Planos novos no meio do B6:** plan-v3 e plan-v4 **encerrados**; plan-v5 (domínio de projetos)
+  e plan-v6 (refatoração visual UI/UX) **criados, nada executado**. O plan-v6 vai tocar em
+  praticamente todas as telas, e o plan-v5 estende `projects`/`project_members` — os gates que o
+  B6-3/B6-4/B6-7 vão mover estão em rotas que esses planos vão ler. Não há dependência de
+  execução, mas se um dos dois começar antes do B6 terminar, re-medir as listas dos lotes afetados.
+- **Rota nova desde a medição original: `POST /api/tasks/[id]/subtasks`** (plan-v4 V4-4) — já
+  nasceu no **formato certo** (rota só autentica e mapeia; a autoridade é
+  `assertCanOperateSubtasks` em `internal/task-view.ts:207`, que checa `MANAGE_TASKS`/`MANAGE_USERS`
+  + as portas da tarefa mãe). **Fora do D4** e serve de **modelo** do estado final dos lotes.
+- **`GET /api/user-badges` (decisão pendente do B6-2c) segue sem gate nenhum** — leitura aberta
+  de qualquer `userId`. A pergunta do dono (deixar aberta e fixar em teste, ou gatear = mudança
+  de comportamento) continua **em aberto** antes de executar o lote.
 
 ## B6-2c — as 3 rotas self-or-manage
 
