@@ -201,7 +201,7 @@ Três ressalvas que precisam ser decididas junto:
 | **V4-2** | animação: o **cabeçalho** passa a contar gradualmente; chip mostra o valor final; chip translada ±10px em Y (para cima no aumento, para baixo na diminuição), desktop-only | médio — toca `points-delta.tsx`, `lib/points-delta.ts`, `app-header.tsx` e os testes que congelam o desenho atual | **done** (2026-10-05) |
 | **V4-3** | animação chega a quem não aprovou (baseline em `dq:points-seen:<userId>`) | médio — é mudança de semântica, DEC-58 já respondida | **done** (2026-10-05) |
 | **V4-4** | subtasks: schema + migration + domínio (`+10` na base, trava de status) | **alto** — schema novo, regra nova, **bloqueia em D-D** | **done** (2026-10-06, §7; mais V4-4b §9 e V4-4c §10) |
-| **V4-5** | subtasks na UI (criar/concluir/travar no card e no diálogo) | alto | **done** (2026-10-06, §11–13: V4-5a/b/c; V4-5d = G5/G6, §14) |
+| **V4-5** | subtasks na UI (criar/concluir/travar no card e no diálogo) | alto | **done** (2026-10-06, §11–13: V4-5a/b/c; V4-5d = G5/G6, §14, executado 2026-10-07) |
 | **V4-6** | `PATCH points`: `set` aceita negativo (a administração escreve o que a premiação produz) | médio — mexe em quirk congelado e na precedência de dois 400 | **done** (2026-10-05) |
 | **V4-6b** | vocabulário de status de usuário padronizado em `suspended` (fecha ASK-V4-28) | baixo — sai opção morta de filtro e contador sempre-0; enum intocado | **done** (2026-10-06, §15) |
 
@@ -598,7 +598,7 @@ e2e quadro 2 passando + 1 falha conhecida. **G5/G6 adiados para V4-5d** (abaixo)
 
 ---
 
-## 14. V4-5d — o que falta (G5/G6)
+## 14. V4-5d executado (2026-10-07) — G5/G6 do guia: recaptura restrita + prosa pelo manifesto
 
 O cartão, o diálogo de detalhe e o formulário de nova tarefa mudaram de cara, e o aviso de conclusão
 mudou de hora e de número. As capturas do guia (`docs/screens/`, 34 imagens) deixaram de representar
@@ -613,8 +613,28 @@ Medido no script: de os quatro, `dialogo-nova-tarefa` e `dialogo-detalhe-tarefa`
 `INTERACTIONS`, mas o loop de captura (`capture-user-guide.mjs:236-283`) só **abre** o diálogo,
 valida o texto e tira screenshot — nunca submete. O único `INTERACTIONS` que grava de verdade é
 `relatorios-gerar-lote` (o clique em "Gerar em Lote" é a ação), e ele fica de fora do `--only`.
-Depois: atualizar a prosa de `docs/src-usuario` a partir do manifesto medido e fechar com
-`docs:build` + `docs:check`.
+
+Executado em 2026-10-07: os 4 PNGs foram recapturados (exatamente `quadro-tarefas`,
+`quadro-tarefas-participante`, `dialogo-nova-tarefa`, `dialogo-detalhe-tarefa` mudaram; o manifesto
+subiu para 35 telas, sem efeitos colaterais na instância). A prosa de `docs/src-usuario` foi
+atualizada pelo manifesto medido:
+
+- **cap. 03**: o campo **Subtasks** na criação (só visibilidade Delegada/Privada, só na criação,
+  base `10 + 10·n`); o aviso âmbar do cartão com o número de etapas abertas, o progresso
+  `X/Y concluídas` e a checkbox por etapa; a seção **Subtasks** do detalhe com a **janela** (a lista
+  muda só em A Fazer/Em Andamento/Ajustes — a frase da janela é a do domínio, `subtaskWindowMessage`);
+  a trava de entrega (`Mover para` sem Em Revisão/Concluído, **Aprovar** do cartão desabilitado, drag
+  recusado, sempre `openSubtasksMessage`); o auto-move da última subtask com o toast *"📋 Última
+  subtask concluída — tarefa enviada para revisão"*; a base de pontos `10 + 10·n` na ordenação por
+  Pontos e no bloco "Pontos e atraso" (cada subtask pontuada na própria data de conclusão, contra o
+  prazo herdado; só as concluídas somam).
+- **cap. 07 e cap. 12 (FAQ)**: frases "toda tarefa vale 10 pontos" corrigidas para a base com
+  subtasks; a FAQ "Por que não consigo aprovar" ganhou o caso da subtask aberta.
+
+Fechado com `docs:build` verde (15 seções técnicas / 12 de usuário, 35 figuras) e `docs:check` sem
+caracteres suspeitos, nenhum `AVISO:` no build. Nenhuma decisão nova no batch (sem DEC novo — o
+escopo já tinha sido respondido pelo dono); registro no `STATE.json` v4.0.0 (wave V4-5d → done,
+batchLog V4-5d, status do plano → done).
 
 ---
 

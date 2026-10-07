@@ -1,426 +1,640 @@
 {
-  "plan": "plan-v4",
-  "version": "4.0.0",
-  "updatedAt": "2026-10-06T18:30:00-03:00",
-  "status": "in_progress",
-  "activeWave": "V4-5",
-  "activeBatch": null,
-  "awaitingInstruction": false,
-  "lineage": {
-    "previousPlan": "plan-v3 (qualidade operacional, ondas 0-4, 13 batches, DEC-30..49, status done em 2026-10-03)",
-    "concurrentPlan": "repo-cleanup / clean-arch B6 (D4, autorizacao rota->use case) — PAUSADO em 2026-10-05 por decisao do dono; B6-0..B6-2b mergeados na dev, o resto em displayquest-v2/clean-arch/B6-RESTANTE.md. plan-v5 (dominio de projetos) criado em 2026-10-06 pelo dono: status `ready`, executa DEPOIS do plan-v4 fechar (DEC-73).",
-    "note": "a numeracao de decisoes CONTINUA a do clean-arch e NAO reinicia em outro plano: DEC-01..29 clean-arch, DEC-30..49 plan-v3, DEC-50..54 B6/D4, DEC-55..60 plan-v4 (V4-1..V4-6), DEC-61..77 plan-v5 (reservadas e respondidas pelo dono em 2026-10-06), DEC-78..86 plan-v4 (V4-4, o fechamento do ASK-V4-06 e o V4-4b). A colisao foi medida ao escrever o lote do V4-4: o plano ia usar DEC-61..64 para subtask e o plan-v5 ja os tinha ocupado; as decisoes do V4-4 foram renumeradas para DEC-78..83 e os 28 comentarios de codigo acompanharam."
+ "plan": "plan-v4",
+ "version": "4.0.0",
+ "updatedAt": "2026-10-07T12:00:00-03:00",
+ "status": "done",
+ "activeWave": "V4-5",
+ "activeBatch": null,
+ "awaitingInstruction": false,
+ "lineage": {
+  "previousPlan": "plan-v3 (qualidade operacional, ondas 0-4, 13 batches, DEC-30..49, status done em 2026-10-03)",
+  "concurrentPlan": "repo-cleanup / clean-arch B6 (D4, autorizacao rota->use case) — PAUSADO em 2026-10-05 por decisao do dono; B6-0..B6-2b mergeados na dev, o resto em displayquest-v2/clean-arch/B6-RESTANTE.md. plan-v5 (dominio de projetos) criado em 2026-10-06 pelo dono: status `ready`, executa DEPOIS do plan-v4 fechar (DEC-73).",
+  "note": "a numeracao de decisoes CONTINUA a do clean-arch e NAO reinicia em outro plano: DEC-01..29 clean-arch, DEC-30..49 plan-v3, DEC-50..54 B6/D4, DEC-55..60 plan-v4 (V4-1..V4-6), DEC-61..77 plan-v5 (reservadas e respondidas pelo dono em 2026-10-06), DEC-78..86 plan-v4 (V4-4, o fechamento do ASK-V4-06 e o V4-4b). A colisao foi medida ao escrever o lote do V4-4: o plano ia usar DEC-61..64 para subtask e o plan-v5 ja os tinha ocupado; as decisoes do V4-4 foram renumeradas para DEC-78..83 e os 28 comentarios de codigo acompanharam."
+ },
+ "baseline": {
+  "measuredAt": "2026-10-06",
+  "measuredOn": "dev + V4-4 (antes do commit do lote)",
+  "unitAndFeatures": "86 arquivos / 1095 testes",
+  "fullSuite": "96 arquivos / 1180 testes",
+  "e2e": "quadro: 2 passando, 1 falha conhecida (strict mode violation em 'Em Revisao' — agora pela tarefa 50 'fazer reuniao com mamedes', antes pela 290), 5 did not run pelo spec serial; shell 5/5. Confirmado com git stash: o baseline falha identico.",
+  "archCheck": "786 modulos / 3074 dependencias, zero violacao, allow-list vazia",
+  "previousBaseline": "78/981 e 88/1065 em dev antes do V4-4; V4-4 81/1050 e 91/1135; V4-4b/V4-4c 82/1062 e 92/1147; V4-1 76/948 e 86/1032; V4-2 76/957 e 86/1041; V4-6 77/966 e 87/1050",
+  "timing": "G3 ~17s, completa ~24s (medidos no lote do V4-4)"
+ },
+ "gates": {
+  "G0": "npm run arch:check — exit 0, allow-list VAZIA",
+  "G1": "npm run lint — exit 0 (warnings aceitos, nenhum erro)",
+  "G2": "npx tsc --noEmit — 0 erros",
+  "G3": "npx vitest run tests/unit features — zero failure",
+  "G4": "DATABASE_URL=...5433 npx vitest run — suíte completa, só contra dq-dev-test-db",
+  "G5": "npm run docs:build + docs:check em batch que muda comportamento visível",
+  "G6": "recapturar telas do guia quando a captura deixa de representar a tela"
+ },
+ "waves": [
+  {
+   "id": "V4-1",
+   "title": "inativação de usuário no lugar de exclusão",
+   "status": "done",
+   "decisions": [
+    "DEC-55"
+   ],
+   "scope": "DeleteUserUseCase passa a recusar com ConflictError quando o usuario tem dependencia; 409 legivel no lugar do 500 com mensagem crua do Prisma. Nenhuma migration, nenhuma mudanca de schema.",
+   "why": "medido: 16 das 23 FKs para users sao RESTRICT; DELETE falha com P2003 para qualquer usuario com historico, e a rota devolve o bloco cru do Prisma no corpo. O caminho 'inactive' ja existe de ponta a ponta (login, API, laboratorio, relatorios, cron, UI) e nenhuma tela chama deleteUser."
   },
-  "baseline": {
-    "measuredAt": "2026-10-06",
-    "measuredOn": "dev + V4-4 (antes do commit do lote)",
-    "unitAndFeatures": "86 arquivos / 1095 testes",
-    "fullSuite": "96 arquivos / 1180 testes",
-    "e2e": "quadro: 2 passando, 1 falha conhecida (strict mode violation em 'Em Revisao' — agora pela tarefa 50 'fazer reuniao com mamedes', antes pela 290), 5 did not run pelo spec serial; shell 5/5. Confirmado com git stash: o baseline falha identico.",
-    "archCheck": "786 modulos / 3074 dependencias, zero violacao, allow-list vazia",
-    "previousBaseline": "78/981 e 88/1065 em dev antes do V4-4; V4-4 81/1050 e 91/1135; V4-4b/V4-4c 82/1062 e 92/1147; V4-1 76/948 e 86/1032; V4-2 76/957 e 86/1041; V4-6 77/966 e 87/1050",
-    "timing": "G3 ~17s, completa ~24s (medidos no lote do V4-4)"
+  {
+   "id": "V4-2",
+   "title": "animação: quem conta é o cabeçalho; chip com movimento em Y, desktop-only",
+   "status": "done",
+   "decisions": [
+    "DEC-59"
+   ],
+   "scope": "o numero do cabecalho passa a contar gradualmente; o chip passa a mostrar o valor FINAL e a transladar ~10px em Y (para cima no aumento, para baixo na diminuicao); desktop-only garantido."
   },
-  "gates": {
-    "G0": "npm run arch:check — exit 0, allow-list VAZIA",
-    "G1": "npm run lint — exit 0 (warnings aceitos, nenhum erro)",
-    "G2": "npx tsc --noEmit — 0 erros",
-    "G3": "npx vitest run tests/unit features — zero failure",
-    "G4": "DATABASE_URL=...5433 npx vitest run — suíte completa, só contra dq-dev-test-db",
-    "G5": "npm run docs:build + docs:check em batch que muda comportamento visível",
-    "G6": "recapturar telas do guia quando a captura deixa de representar a tela"
+  {
+   "id": "V4-3",
+   "title": "animação chega a quem não pode aprovar",
+   "status": "done",
+   "decisions": [
+    "DEC-58"
+   ],
+   "scope": "baseline do ultimo total visto por aquele usuario em dq:points-seen:<userId> via lib/client-storage.ts; ao montar, se o total da sessao difere, anuncia o delta e conta a partir do lembrado."
   },
-  "waves": [
-    {
-      "id": "V4-1",
-      "title": "inativação de usuário no lugar de exclusão",
-      "status": "done",
-      "decisions": ["DEC-55"],
-      "scope": "DeleteUserUseCase passa a recusar com ConflictError quando o usuario tem dependencia; 409 legivel no lugar do 500 com mensagem crua do Prisma. Nenhuma migration, nenhuma mudanca de schema.",
-      "why": "medido: 16 das 23 FKs para users sao RESTRICT; DELETE falha com P2003 para qualquer usuario com historico, e a rota devolve o bloco cru do Prisma no corpo. O caminho 'inactive' ja existe de ponta a ponta (login, API, laboratorio, relatorios, cron, UI) e nenhuma tela chama deleteUser."
-    },
-    {
-      "id": "V4-2",
-      "title": "animação: quem conta é o cabeçalho; chip com movimento em Y, desktop-only",
-      "status": "done",
-      "decisions": ["DEC-59"],
-      "scope": "o numero do cabecalho passa a contar gradualmente; o chip passa a mostrar o valor FINAL e a transladar ~10px em Y (para cima no aumento, para baixo na diminuicao); desktop-only garantido."
-    },
-    {
-      "id": "V4-3",
-      "title": "animação chega a quem não pode aprovar",
-      "status": "done",
-      "decisions": ["DEC-58"],
-      "scope": "baseline do ultimo total visto por aquele usuario em dq:points-seen:<userId> via lib/client-storage.ts; ao montar, se o total da sessao difere, anuncia o delta e conta a partir do lembrado."
-    },
-    {
-      "id": "V4-4",
-      "title": "subtasks: schema + domínio + read model",
-      "status": "done",
-      "decisions": ["DEC-56", "DEC-57", "DEC-78", "DEC-79", "DEC-80", "DEC-81", "DEC-82", "DEC-83"],
-      "scope": "tabela task_subtasks (migration 20261006171259) + regras puras no dominio + tres casos de uso novos + trava nos tres caminhos que terminam a mae (PUT status, PATCH complete, POST approve) + subtasks no JSON da tarefa. A formula gravada na DEC-56 foi SUBSTITUIDA pela DEC-78: cada subtask e pontuada pela mesma regra da mae, no instante em que ela propria foi concluida."
-    },
-    {
-      "id": "V4-4b",
-      "title": "testes de UI do ModernAdminPanel antes de mexer nele de novo",
-      "status": "done",
-      "decisions": ["DEC-85", "DEC-86"],
-      "scope": "10 testes em tests/unit/components/admin-panel-user-settings.test.tsx sobre o painel real (stack de providers real, Radix real, MSW gravando o corpo enviado). Escrever os testes expôs quatro defeitos; três foram corrigidos neste lote e dois ficaram registrados para o dono decidir."
-    },
-    {
-      "id": "V4-5a",
-      "title": "subtask no cartao do quadro: aviso de trava, checkbox, destinos desabilitados",
-      "status": "done",
-      "decisions": ["DEC-89", "DEC-90", "DEC-91"],
-      "scope": "O cartao mostra o AVISO de trava com a contagem e uma checkbox por subtask ABERTA; a lista completa (criar/renomear/apagar) fica no dialogo de detalhe (V4-5b). O menu 'Acoes para ...' deixa de oferecer Em Revisao/Concluido e o botao Aprovar fica desabilitado; o arrasto continua possivel e a recusa chega com a frase do servidor. O auto-move (DEC-81) e anunciado com toast. Inclui as tres mutacoes de subtask no cliente e o mock de teste espelhando a trava/janela/auto-move com as funcoes do dominio."
-    },
-    {
-      "id": "V4-5b",
-      "title": "subtasks no dialogo de detalhe: criar, renomear, apagar",
-      "status": "done",
-      "decisions": ["DEC-89", "DEC-92"],
-      "scope": "CRUD completo da lista no `features/tasks/components/task-detail-dialog.tsx`, com a janela (DEC-80) refletida na UI."
-    },
-    {
-      "id": "V4-5c",
-      "title": "subtasks no formulario de nova tarefa + GAP-P3-05 fechado",
-      "status": "done",
-      "decisions": ["DEC-93", "DEC-94"],
-      "scope": "Campo de subtasks no `task-dialog.tsx` so na CRIACAO (mãe nasce com a lista, DEC-82); GAP-P3-05 fechado — o toast da conclusao passa a anunciar o numero CREDITADO pela resposta, depois da mutacao, com uma funcao so para cartao e quadro."
-    },
-    {
-      "id": "V4-5d",
-      "title": "gates G5/G6 do guia (docs:build + recaptura das telas)",
-      "status": "pending",
-      "decisions": ["DEC-89"],
-      "scope": "O cartao, o dialogo de detalhe e o formulario mudaram de cara (subtask visivel) e o aviso de conclusao mudou de hora e de numero. As capturas do guia deixaram de representar a tela. Respondido pelo dono em 2026-10-06: recaptura RESTRITA, SEM GRAVAR — `--only=quadro-tarefas,quadro-tarefas-participante,dialogo-nova-tarefa,dialogo-detalhe-tarefa` (os dois dialogos de INTERACTIONS so abrem e fotografam, nunca submetem; o unico que grava e `relatorios-gerar-lote`, fora do `--only`), depois prosa de `docs/src-usuario` pelo manifesto medido e `docs:build` + `docs:check`."
-    },
-    {
-      "id": "V4-6",
-      "title": "pontos: `set` aceita negativo (a administração consegue escrever o que a premiação produz)",
-      "status": "done",
-      "decisions": ["DEC-60"],
-      "scope": "rota valida a ação antes do número e libera negativo só para `set`; use case idem; ModernAdminPanel libera o input para `set`. `add` e `remove` intactos."
-    },
-    {
-      "id": "V4-6b",
-      "title": "vocabulario de status de usuario padronizado em `suspended` (fecha ASK-V4-28)",
-      "status": "done",
-      "decisions": ["DEC-95"],
-      "scope": "sai do filtro do painel a opcao 'Inativo', sai `UserStatistics.inactive` da porta e do repositorio, sai o contador que sempre dava zero em `getUsersByStatus`; fixtures e comentarios passam a citar `suspended`; guarda estrutural `user-status-vocabulary.test.ts` contra status inventado. Divergencia da tela de voluntarios registrada como ASK-V4-33."
-    }
-  ],
-  "decisionRegistry": [
-    "DEC-95 (2026-10-06, V4-6b, fecha ASK-V4-28): padronizar o vocabulario de status de usuario em `suspended` — NAO adicionar `inactive` ao enum. 'Suspender' e o unico caminho de inativacao de ponta a ponta. Sai do filtro do painel a opcao 'Inativo' (mantida pela DEC-88 porque remover opcao visivel nao estava autorizado), sai o campo `UserStatistics.inactive` da porta e do repositorio, e sai o contador fantasma de `getUsersByStatus` (sempre 0). Fixtures de teste que descreviam `status: 'inactive'` — um estado que a producao nao escreve — passaram a descrever `suspended` em reporting/cron/lab, porque um fixture impossivel deixa o teste verde mentindo sobre o caminho que decide. O tsc nao pega isso (`inactive` e string), entao o guarda e estrutural: `tests/unit/modules/user-management/user-status-vocabulary.test.ts` fixa o enum, varre os caminhos de decisao contra `inactive` como valor, e falha se a divida registrada mudar sem atualizar o registro. Divergencia fora do escopo registrada como ASK-V4-33.",
-    "DEC-94 (2026-10-06, V4-5c): o campo de subtask existe so na CRIACAO de tarefa, e so quando `supportsSubtasks` diz sim — a MESMA funcao que o servidor usa para aceitar `subtasks` no corpo (DEC-82). Editar a lista de uma tarefa que ja existe e o que o dialogo de detalhe faz (DEC-89); oferecer os dois controles para a mesma lista na mesma tela convidaria duas regras a divergir. O campo nao entra no schema zod do react-hook-form: e uma lista de rascunho em state, enviada no POST como `subtasks: [{title}]`, e o mock passa a espelhar a rota real (mae com lista + base 10 + 10·n).",
-    "DEC-93 (2026-10-06, V4-5c, fecha GAP-P3-05 do plan-v3 §8): o aviso da conclusao passa a ser derivado da RESPOSTA e chega DEPOIS da mutacao. Antes o cartao calculava `projectedAward(task)` e anunciava esse numero antes de a mutacao acontecer. Medido neste lote com o mock: tarefa publica vencida ha 3 dias projeta -20 e a resposta credita 10 — os dois divergem, e a pessoa tem direito ao segundo. A frase e uma funcao pura so (`completionAwardMessage`) porque o menu do cartao e o soltar do arrasto anunciam a mesma conclusao, e a lição medida do plan-v3 e que a mesma regra em duas copias diverge. `null` nao e zero: e 'ninguem creditado agora' (DEC-48). Consequencia visivel: o toast chega um pouco mais tarde (depois da resposta), e o numero pode ser diferente do que a pessoa esperava.",
-    "DEC-92 (2026-10-06, V4-5b): a porta de autoridade da UI para subtask e a porta do servidor, medida e nao chutada. O servidor aceita `MANAGE_TASKS` ou `MANAGE_USERS`, OU responsavel da tarefa, OU criador/lider/membro do projeto (`internal/task-view.ts:208-216`). No dialogo de detalhe, `canManageTasks` e exatamente a lista de `MANAGE_TASKS` (medido em `permissions.ts:22`: COORDENADOR, GERENTE, GERENTE_PROJETO, COLABORADOR, PESQUISADOR) e `isAssignee` e a segunda porta — entao a UI oferece `canManageTasks || isAssignee`. As duas portas restantes (membro/criador de projeto) exigem consulta que o dialogo nao faz; quem estiver nelas e nao vir o controle continua podendo pela API, e o 403 do servidor chega na tela. Janela (DEC-80) na UI: criar/renomear/apagar so com mae em `to-do`/`in-progress`/`adjust`; concluir NAO obedece a janela (so `done` fecha a conclusao) — e a frase exibida e `subtaskWindowMessage` do dominio, nao uma parafrase.",
-    "DEC-91 (2026-10-06, V4-5a): as mutacoes de subtask do cliente sao otimistas SO NA LISTA; o STATUS da mae vem do servidor. A resposta de uma operacao de subtask carrega a mae (DEC-79) e ela mudou de tres coisas: a lista, a base do premio (10 + 10·n) e as vezes o status (DEC-81, auto-move para 'Em Revisao'). Aplicar o status otimistamente faria o cartao mostrar a mae na coluna errada quando o servidor nao movesse (mãe em `to-do` nao auto-move, por exemplo). O rollback cobre a lista; `applyMother` escreve a versao do servidor por cima.",
-    "DEC-90 (2026-10-06, V4-5a): `subtaskWindowMessage` foi movida de `internal/task-view.ts` para `backend/domain/task/subtask-rules.ts`, e o mock de teste (`tests/mocks/handlers.ts`) passou a aplicar a trava, a janela e o auto-move com as MESMAS funcoes do dominio que a rota real usa (`openSubtasksCount`, `openSubtasksMessage`, `subtaskWindowMessage`, `SUBTASK_BLOCKED_TARGETS`, `SUBTASK_EDITABLE_STATUSES`). Motivo: o mock passou a ter que dizer exatamente a frase e o codigo de erro da rota real, e reimplementar a regra dentro do mock e a mesma 'regra em duas copias' que o AGENTS.md ja registrou como modo de falha. Consequencia de gate: mock verde com producao mentindo deixa de ser possivel nesse caminho.",
-    "DEC-89 (dono 2026-10-06, V4-5): o cartao do quadro NAO e a lista de subtasks. Medido ao perguntar: o dono escolheu 'so o aviso de trava' para a lista e 'checkbox direta no cartao' para concluir — as duas respostas se reconciliam assim: o cartao mostra `N subtasks abertas` com uma checkbox por subtask ABERTA (o que destrava), e as concluidas nao aparecem; criar/renomear/apagar ficam no dialogo de detalhe. No modo compacto (`isCompact`) so o numero, com a frase do dominio no `title`. A trava desabilita: os destinos Em Revisao/Concluido somem do menu 'Acoes para ...' (derivado de `allowedTargets`, nao de uma lista a parte) e o botao Aprovar fica desabilitado com a frase no tooltip; o ARRASTO continua possivel e a recusa chega com a MESMA frase do servidor (`moveBlockedMessage`, uma copia so para cartao e quadro). O auto-move da mae e ANUNCIADO: 'Ultima subtask concluida — tarefa enviada para revisao'. Isto ESTREITA o escopo escrito no plano ('criar/renomear/concluir/apagar no card e no dialogo'), e a diferenca esta registrada aqui.",
-    "DEC-88 (dono 2026-10-06, V4-4c, fecha ASK-V4-27): o filtro de status do painel ganha 'Rejeitado' e 'Suspenso'. Motivo medido: o PRÓPRIO painel escreve os dois — o botão 'Rejeitar' faz `status = 'rejected'` e 'Suspender' faz `status = 'suspended'` (update-user-status.use-case.ts:16-17) — mas o filtro só oferecia Ativo/Pendente/Inativo, então nenhum dos dois aparecia em filtro específico, só em 'Todos'. A opção 'Inativo' FOI MANTIDA (remover opção visível não estava autorizado) e registrada como ASK-V4-28: nenhum caminho do sistema escreve `inactive`. Os três `SelectTrigger` do caminho ganharam `aria-label` (classe DEC-86): sem nome acessível o Select não era alcançável por teste nem por leitor de tela.",
-    "DEC-87 (dono 2026-10-06, V4-4c, fecha ASK-V4-26): o `confirm` do botão 'Rejeitar' passa a dizer a verdade. Antes: 'Esta ação irá removê-lo do sistema'. Medido: `reject` faz `status = 'rejected'` e a linha CONTINUA — login (`lib/auth/config.ts:30`) e API (`lib/auth/server-auth.ts:36`) bloqueiam porque status !== active. O guia já dizia a verdade (docs/src-usuario/12-perguntas-frequentes.md:47). Texto novo: 'A conta deixa de permitir entrada, mas continua no sistema e pode ser aprovada depois.' Motivo para não deixar como estava: prometer remoção a quem está só bloqueando acesso faz a pessoa NÃO clicar no botão que precisava clicar.",
-    "DEC-86 (2026-10-06, V4-4b): os controles do diálogo de 'Configurar Usuário' passam a ter nome acessível. Medido ao escrever os testes: o botão da linha de usuário era só o ícone `Settings` (leitor de tela anunciava 'botão' e nada mais), o `Select` de ação de pontos não tinha `aria-label` nem placeholder, e o input de valor não tinha `id` nem rótulo associado — o único 'Pontos' próximo é o título da seção, sem `htmlFor`. Os três eram inalcançáveis por teste e invisíveis para leitor de tela. Nota deixada no código: o rótulo 'Valor de pontos' contém 'pontos', então `getByLabel('Pontos')` por substring casa com ele — usar rótulo exato.",
-    "DEC-85 (2026-10-06, V4-4b): falha de salvamento no painel vira mensagem no diálogo. Medido ao escrever o teste: `saveUserSettings` e `updateUserStatus` LANÇAVAM em toda falância e ninguém capturava — o `onClick` devolvia a promise rejeitada, o React não tratava, e o resultado era (a) o administrador com o diálogo aberto sem uma linha de erro, (b) rejeição não tratada no console, (c) `npx vitest run` saindo com EXIT 1 por 'Unhandled Rejection' — ou seja, o defeito quebrava o gate de entrega desta casa. Agora o erro do servidor (409 do guarda de dependência do V4-1, 404, 400) aparece num `<p role='alert'>` dentro do diálogo, na forma da casa (`text-red-600 dark:text-red-400 text-sm`, como em components/features/project-dialog.tsx:210).",
-    "DEC-84 (dono 2026-10-06, fecha ASK-V4-06): PATCH /api/users/[id]/points passa a ler o número do VALOR BRUTO do corpo, não de `Number(body.points)`. `{action:'set', points:null}` deixa de zerar os pontos e passa a ser recusado com 400. Motivo medido no V4-6: JSON não tem `Infinity` (`JSON.stringify(Infinity)` devolve `null`) e `Number(null)` é 0; `Number('')` também é 0 e `Number(true)` é 1. A checagem passa a ser de TIPO antes de ser de valor. O que continua igual: string numérica é aceita (`'12'` vale 12, é o que alguns clientes mandam), a mensagem de rejeição é a mesma de antes, e `{action:'set', points:undefined}` já era 400. Caraterização do V4-6 convertida em recusa.",
-    "DEC-83 (dono 2026-10-06, V4-4): `tasks.points` passa a gravar a base real 10 + 10·n e é mantida sincronizada enquanto a mãe aceita mexer na lista (criar/apagar subtask). Uma mãe em `in-review` ou `done` NUNCA é reescrita — a janela (DEC-80) é o que garante isso, e é assim que DEC-40 (nenhum UPDATE em tasks.points histórico) continua valendo. Concluir subtask NÃO mexe na coluna: a base conta subtasks, não concluídas. Resposta do dono ao ver as duas opções: 'gravado na criação e mantido sincronizado até concluir'.",
-    "DEC-82 (dono 2026-10-06, V4-4): quatro regras de escopo. (a) Autoridade de subtask é A MESMA de editar a mãe — implementada como a união das portas que hoje editam a mãe: MANAGE_TASKS/MANAGE_USERS, atribuído à tarefa, criador/líder do projeto, membro do projeto. Regra nova de permissão foi evitada de propósito. (b) Subtask só existe em tarefa DELEGADA ou PRIVADA — pública e quest global ficam fora porque não têm responsável único, então a trava e o '+10' não teriam a quem pertencer; criar com subtask nesses casos é 400, não ignorado em silêncio. (c) Modo individual (2+ responsáveis → N linhas de tarefa) dá a CADA cópia a sua própria lista: uma lista compartilhada não travaria as N mães. (d) Subtask não credita ponto próprio nem incrementa `completedTasks` — o que ela faz é mudar o valor da mãe. Backlog (uma tarefa por linha) não aceita subtask na v1.",
-    "DEC-81 (dono 2026-10-06, V4-4): a ÚLTIMA subtask concluída empurra a mãe de `in-progress` para `in-review`, e só dessa coluna. O dono respondeu 'Sim' à pergunta 'a mãe deve se mover sozinha?' e escolheu 'só a partir de Em Andamento, com notificação'. De `to-do` a mãe ainda não foi começada e não entra na fila de aprovação sozinha; de `in-review`/`done` não há para onde mover. O auto-move usa o MESMO patch de uma pessoa arrastando para Em Revisão (`statusOnlyPatch`) e publica a MESMA notificação TASK_REVIEW_REQUEST ao líder — não inventa um terceiro jeito nem um segundo texto. Auto-mover não é concluir: ninguém é creditado e `completedTasks` não mexe; o prêmio continua sendo creditado na aprovação.",
-    "DEC-80 (dono 2026-10-06, V4-4): a distinção entre TRAVA e JANELA, com status HTTP diferentes. Trava (DEC-57): a mãe não ENTRA em `in-review` nem `done` com subtask aberta — 400 (`ValidationError`), porque a transição pedida é que é inválida; vale vindo de QUALQUER coluna, o que fecha o atalho `A Fazer → Em Revisão` que o quadro oferece (move-rules.ts:71). Janela: criar/renomear/apagar a LISTA só enquanto a mãe não está em `in-review` nem `done` — 409 (`ConflictError`), porque o que está em conflito é o estado do mundo, a mesma natureza de 'Tarefa já concluída'. Concluir uma subtask NÃO obedece à janela: uma mãe em revisão com subtask aberta é estado real (tarefa que já estava lá antes das subtasks existirem), e concluir é justamente o que a destrava. Só `done` fecha a conclusão.",
-    "DEC-79 (dono 2026-10-06, V4-4): as subtasks entram no read model da tarefa — `serializeTask`/`toJSON` ganha a chave `subtasks` e `entities/task.ts` valida com `default([])`. Motivo medido: o cartão e o diálogo de detalhe CALCULAM o prêmio no cliente (`projectedAward` em task-card.tsx:256 e task-detail-dialog.tsx:93); sem as subtasks no JSON, uma tarefa de 3 subtasks continuaria sendo anunciada como 10 pontos. A lista de chaves congelada em domain.task-rules.test.ts:216 foi atualizada de propósito. No quadro a anexação é em lote (uma consulta, não N+1).",
-    "DEC-78 (dono 2026-10-06, V4-4): SUBSTITUI a fórmula gravada na DEC-56. Cada subtask é pontuada pela MESMA regra da mãe — adiantada 15, no prazo 10, 1 dia atrasada 0, 2 dias −10, sem piso (DEC-39) — medida no instante em que ELA própria foi concluída, contra o prazo HERDADO da mãe. O prêmio creditado é o da mãe mais o de cada subtask CONCLUÍDA. O dono escolheu esta leitura ao ver o exemplo medido: prazo 20/10, mãe aprovada em 25/10, subtasks em 19/10, 21/10 e 24/10 → mãe −40, subtasks +15, 0, −30, total −55. Consequências escritas: o atraso de uma subtask não é o atraso da mãe (uma subtask no prazo vale 10 mesmo com a mãe aprovada 5 dias depois); uma subtask 4 dias atrasada SUBTRAI 30 do prêmio da mãe; subtask aberta não entra na conta. A DEC-56 continua válida para o que ela realmente decidiu: o `+10 por subtask` existe e é a base gravada em `tasks.points` (DEC-83).",
-    "DEC-60 (dono 2026-10-05, V4-6): PATCH /api/users/[id]/points passa a ACEITAR valor negativo quando a ação é `set`. Motivo medido: a premiação produz total negativo (DEC-39, penalidade sem piso — Coordenador em -20 e Gerente em -31030 na instância real), mas NENHUM caminho de administração conseguia escrever um negativo de volta: `add` chao em 0 via Math.max, `remove` exige suficiencia, `set` rejeitava entrada negativa — os tres congelados por teste. O dono escolheu a alternativa ESTREITA: so `set` ganha a capacidade; `add` e `remove` ficam como estavam. Consequencia medida e aceita: a rota passa a validar a AÇÃO antes do número, invertendo a precedência de dois 400 (hoje {action:'bogus', points:-5} denuncia o número; passa a denunciar a ação). Mudado em tres lugares: rota (ordem + condição), use case (ramo `set`) e UI (ModernAdminPanel: min='0' so para add/remove). O e2e do quadro, que estava vermelho porque a limpeza restaurava com set(-20) e recebia 400, ficou 7/7.",
-    "DEC-55 (dono 2026-10-05, V4-1): DELETE /api/users/[id] passa a RECUSAR com ConflictError (409) quando o usuario tem dependencia, em vez de deixar o Prisma estourar P2003 e a rota devolver 500 com a mensagem crua no corpo. Cascade na migration foi rejeitado explicitamente pelo dono ('raramente a gente deleta um usuario de verdade' — a inativação é o caminho). Remover o endpoint foi considerado e rejeitado: o caso 'excluir cadastro sem historico' funciona hoje e continua funcionando. Medido antes: 16 das 23 FKs para users sao RESTRICT; usuarios 58 e 59 da base de teste falham com projects_createdBy_fkey e lab_responsibilities_userId_fkey. O caminho 'inactive' ja existe e nao foi criado aqui: lib/auth/config.ts:30 (login), lib/auth/server-auth.ts:36 (API), regras de laboratorio, bulk weekly reports, cron weekly reset, e 'Inativo' na UI em volunteers-management.tsx:404 e ModernAdminPanel.tsx:491.",
-    "DEC-56 (dono 2026-10-05, V4-4): subtask soma à BASE da pontuação da mãe, e a penalidade de atraso CONTINUA fixa por dia. Formula: (10 + 10n) · (adiantada ? 1,5 : 1) − diasAtrasados · 10. A alternativa proporcional (dias · base) foi rejeitada: é a matemática pré-v3 que o plan-v3 corrigiu em OND1-B1 (DEC-31/32) porque comia os pontos de quem entregava no prazo. DEC-39 (sem piso) continua valendo sobre a base nova.",
-    "DEC-57 (dono 2026-10-05, V4-4/V4-5): a trava 'a mãe não sai de Em Andamento enquanto houver subtask aberta' mora no DOMÍNIO e é aplicada no use case, devolvendo 400 com mensagem dizendo quantas subtasks faltam. Desabilitar só na UI foi rejeitado: a API aceitaria a mesma chamada e a regra existiria metade. A UI desabilita ALEM de bloquear, não em vez de.",
-    "DEC-58 (dono 2026-10-05, V4-3): o cabeçalho passa a animar QUALQUER mudança de pontos desde a última vez que aquele usuário viu o número, não só o prêmio da tarefa que ele mesmo mutou. Baseline em dq:points-seen:<userId> via lib/client-storage.ts. O dono aceitou explicitamente a mudança de semântica. Consequências aceitas: primeira vez não anima (sem baseline); trocar de navegador anima de novo; ajuste de admin e compra aprovada também animam. Motivo medido: o sinal só nascia de mutação (use-tasks.ts:92) e só quando awardedTo === sessionUserId — o voluntário que não aprova nunca recebia o delta, e via 10 pts aparecerem sem contagem.",
-    "DEC-59 (V4-2): quem conta gradualmente passa a ser o número do CABEÇALHO, não o chip. O chip passa a mostrar o valor final e a transladar ~10px em Y — para cima quando o número sobe, para baixo quando desce — só em desktop. Atenção medida: o chip usa hoje APENAS `animate-in fade-in` porque as variantes com transform sobrescrevem o `-translate-x-1/2` e desalinham o chip (comentário em points-delta.tsx:112). O movimento em Y precisa resolver isso, não ignorar. O contêiner do chip já é `hidden md:flex` (app-header.tsx:146), então desktop-only já é verdade para o chip."
-  ],
-  "batchLog": [
-    {
-      "id": "V4-1",
-      "at": "2026-10-05",
-      "title": "inativação no lugar de exclusão: o use case recusa com ConflictError ANTES de deixar o banco estourar (DEC-55)",
-      "actions": [
-        "medido antes de planejar: 16 das 23 FKs para users sao RESTRICT (default do Prisma, sem onDelete); so 7 cascadeam. Na base de teste, com o caminho real: user 58 -> P2003 projects_createdBy_fkey, user 59 -> P2003 lab_responsibilities_userId_fkey. A rota devolvia 500 com a mensagem CRUA do Prisma no corpo, porque domainErrorResponse devolve null para nao-DomainError e o catch faz error.message || '...'.",
-        "medido antes de planejar: o caminho 'inactive' ja existe de ponta a ponta e NAO foi criado aqui — lib/auth/config.ts:30 bloqueia login, lib/auth/server-auth.ts:36 bloqueia API, assertUserCanCreateLabEvent/Notice recusam inativo, bulk weekly reports e cron weekly reset pulam inativo, e 'Inativo' ja e opcao em volunteers-management.tsx:404 e ModernAdminPanel.tsx:491. Nenhuma tela .tsx chama deleteUser: o DELETE so era alcancavel por chamada direta de API.",
-        "teste escrito ANTES do codigo (tests/unit/modules/user-management/delete-user-dependencies.test.ts): contra a producao vigente falhou 3/5, e a falha E a medicao — a ordem medida era findById -> delete, sem checagem nenhuma.",
-        "port ganhou countBlockingDependencies(userId); PrismaUserRepository implementa com 13 contagens independentes cobrindo as 16 FKs (projects, tasks e issues somam 2 FKs cada numa OR). As 7 cascade ficam FORA de proposito: contalas faria um cadastro recem-registrado parecer impossivel de excluir, e esse e justamente o caso que continua funcionando.",
-        "use case passa a ordem para findById -> countBlockingDependencies -> delete. 409 com mensagem que oferece o caminho ('Inative o usuario...') e nenhum vocabulario de persistencia no corpo.",
-        "HTTP fixado com o MODULO REAL sobre porta falsa (tests/unit/api/user-delete-dependencies.test.ts, 5 casos) — nao com duplo de modulo, que e a licao medida do B6-2a: duplo de modulo faz o 403 SUMIR do teste em vez de falhar. Inclui o par de ordem 403-antes-de-409: quem nao tem MANAGE_USERS nao descobre quem tem historico.",
-        "G4: users-roundtrip ganhou o caso de recusa contra Prisma real (tarefa criada para o usuario, ConflictError, a linha continua la). Ordem de limpeza invertida no afterAll — apagar a tarefa ANTES do usuario, senao o proprio deleteMany de limpeza falha com P2003 pela FK RESTRICT.",
-        "guarda de deriva novo (tests/unit/modules/user-management/user-delete-schema-drift.test.ts): le prisma/schema.prisma e o corpo de countBlockingDependencies e compara os conjuntos de modelo.coluna. Existe porque a lista do repositorio e uma COPIA do schema, e o tsc NAO protege contra tabela esquecida. Verificado por mutacao: remover a contagem de lab_events.userId faz o guarda falhar nomeando a coluna.",
-        "verificado por mutacao: remover a recusa do use case derruba 4 testes nos dois arquivos novos."
-      ],
-      "gates": "G0 767/2919 zero violacao | G1 sem erro | G2 0 erros | G3 76/948 | G4 86/1032 verde inclusive o caso novo contra Prisma real",
-      "gotchas": [
-        "a forma abreviada { userId } do Prisma NAO e reconhecivel como coluna por leitura de texto — o repositorio escreve userId: userId por extenso para o guarda de deriva funcionar, com comentario dizendo o motivo.",
-        "parser de schema: o chunk comeca com 'tasks {', e o nome do modelo precisa sair SEM a chave; com a chave cada relacao sai 'tasks {.x' e o conjunto parece vazio contra a lista esperada (falhou assim na primeira execucao)."
-      ]
-    },
-    {
-      "id": "V4-2",
-      "at": "2026-10-05",
-      "title": "quem conta gradualmente passa a ser o numero do cabecalho; o chip mostra o valor final e percorre 10px em Y na direcao do que aconteceu (DEC-59)",
-      "actions": [
-        "medido antes de planejar, no CSS COMPILADO da instancia em execucao (dev server 3001, /_next/static/css/app/layout.css), e isso REFUTOU o comentario que estava em points-delta.tsx: '-translate-x-1/2' escreve a propriedade `translate` (`translate: var(--tw-translate-x) var(--tw-translate-y)`) e o `@keyframes enter` do tw-animate-css escreve `transform` (`translate3d(var(--tw-enter-translate-x,0),var(--tw-enter-translate-y,0),0)...`). Propriedades diferentes compõem. O aviso antigo — de que as variantes com transform sobrescrevem o -translate-x-1/2 — era verdade no Tailwind v3 + tailwindcss-animate; nesta base (Tailwind v4 + tw-animate-css) nao e mais. Por isso o movimento entrou no MESMO elemento, sem span extra.",
-        "lib/points-delta.ts: `pointsDeltaValueAt` sai (o chip parou de contar) e entra `pointsTotalAt(from, to, step)`; `POINTS_DELTA_SHIFT_PX = 10`; `pointsDeltaMotionClasses(value)` devolve `slide-in-from-bottom-[10px]` (sobe) ou `slide-in-from-top-[10px]` (desce). O colchete e obrigatorio: o `@utility slide-in-from-bottom-*` aceita `[length]`, mas o ramo de escala so aceita inteiro — `2.5` nao funciona.",
-        "a contagem do total e disparada pela MUDANCA do total que o componente renderiza, e nao pela chegada do sinal. Motivo medido em use-tasks.ts: onSuccess anuncia o sinal (linha 139) e so depois chama refreshPoints() (linha 142), que e assincrono — se a contagem dependesse do sinal ela comecaria com o total ainda velho, contaria ate o valor errado, e recomecaria quando a sessão chegasse.",
-        "desktop-only nao exigiu regra nova: o chip e o contador vivem dentro do contêiner `hidden md:flex` do cabeçalho (app-header.tsx:146). Sair de la e que quebraria o pedido do dono.",
-        "novo teste do contador (PointsCounter, 6 casos) + chip reescrito (mostra o valor final de imediato, direcao em Y fixada) + `pointsTotalAt` puro (4 casos). 23 casos no arquivo.",
-        "e2e do quadro reforçado: `pointsBadge` agora seleciona por `data-testid='points-total'` (antes era `header span.bg-clip-text` com filtro de visivel porque o menu do cabecalho tambem renderiza um span com a mesma classe); a contagem e provada por um MutationObserver instalado ANTES do clique, que registra a sequencia real de valores; e a geometria passa a conferir que o chip continua CENTRADO na pilula (|centro do chip - centro da pilula| <= 2px) enquanto percorre os 10px — a prova de que translate/transform compõem.",
-        "verificado por mutacao: fazer o cabecalho saltar direto e tirar a direcao em Y do chip derruba 5 testes."
-      ],
-      "gates": "G0 767/2919 zero violacao | G1 sem erro | G2 0 erros | G3 76/957 | G4 86/1041 | e2e do quadro: o teste da animacao passa, a suíte esta 4/7 (ver openQuestions — causa pre-existente)",
-      "gotchas": [
-        "o chip tem prazo de 1,9 s. No e2e, as asserções do chip precisam vir ANTES das asserções de coluna (orcamento de 15 s) — na primeira versao deste lote o poll do total veio antes e o chip ja tinha expirado: 'element(s) not found'.",
-        "registrar a contagem por MutationObserver dentro da pagina, e nao por poll do Playwright: a animacao dura 1 s e o poll chega depois.",
-        "a vida util do sinal e inclusiva na borda (`now - at <= LIFETIME`): avancar exatamente o prazo ainda deixa o sinal vivo. Teste de expiracao precisa de `+ 1`."
-      ]
-    },
-    {
-      "id": "V4-3",
-      "at": "2026-10-05",
-      "title": "a animação chega a quem não pode aprovar: baseline por pessoa em dq:points-seen:<userId> (DEC-58)",
-      "actions": [
-        "lib/points-seen.ts novo: read/write da baseline via lib/client-storage.ts. Guarda explicita de userId invalido: clientStorageKey descarta null/undefined, entao sem a guarda a chave seria dq:points-seen — uma so, compartilhada por todos os usuarios, fazendo uma pessoa animar a mudanca de outra. Valor corrompido devolve null: melhor nao animar do que animar a partir de lixo.",
-        "PointsCounter passa a comecar no valor lembrado e conta ate o atual; anuncia o chip quando a mudanca nao veio de mutacao (refresh/login). Local e nao session: o caso do dono e 'quando o usuario entra no sistema de novo', e sessionStorage morre ao fechar a aba.",
-        "baseline so avanca quando a contagem termina: quem fecha a aba no meio ve a contagem de novo na proxima visita.",
-        "BUG REAL achado pelo e2e e NAO pelos testes de jsdom: o gatilho da contagem era um ref escrito pelo proprio efeito. No modo estrito do React (que o next dev liga) a primeira passada consumia a diferenca, o clearInterval do desmonte simulado matava a contagem, e a segunda passada via from === points e nao animava nada — o contador ficava preso no valor lembrado (-30) para sempre. Corrigido lendo de onde o numero ESTÁ (displayed), o que torna a contagem idempotente.",
-        "Licao de teste: os testes de jsdom NAO ligam StrictMode, e o dev liga. points-catch-up.test.tsx agora renderiza em StrictMode. Verificado por mutacao: reintroduzir o bug derruba 4 testes com StrictMode ligado; sem ele, passavam todos.",
-        "e2e novo (catch-up): addInitScript semeia dq:points-seen:2 = real-30 ANTES de qualquer script da pagina e registra a sequencia por MutationObserver. Prova que o primeiro numero observado e o lembrado, que houve intermediarios, e que a baseline avancou. Suíte e2e: 13/13.",
-        "medição atômica do chip no e2e: caixa do chip + caixa da pilula + texto lidos na mesma passada. Asserções separadas somam ida e volta ao navegador e o chip vive 1,9 s — a ultima chegava depois de ele sair e boundingBox devolvia null (falha intermitente)."
-      ],
-      "gates": "G0 770/2933 zero violacao | G1 sem erro | G2 0 erros | G3 78/978 | G4 88/1062 | e2e 13/13",
-      "gotchas": [
-        "o ambiente de teste jsdom nao liga StrictMode; o next dev liga. Componente com efeito que decide comportamento a partir de ref escrito por si mesmo precisa de teste em StrictMode.",
-        "o container display-quest-db (5432) caiu com exit 137 no meio das corridas e derrubou o login de todos os testes de navegador. Nao era causa do codigo. Reerguido com docker start display-quest-db; o container do app (display-quest) nao foi tocado."
-      ]
-    },
-    {
-      "id": "V4-6",
-      "at": "2026-10-05",
-      "title": "PATCH points: `set` passa a aceitar negativo — a administração consegue escrever o que a premiação produz (DEC-60)",
-      "actions": [
-        "medido antes de planejar: rejeitavam em DOIS lugares. Rota (app/api/users/[id]/points/route.ts:24) com `points < 0` ANTES do check de ação — entao nem add/remove negativos chegavam ao use case. Use case: o ramo `set` tambem rejeitava. Os tres comportamentos congelados por teste em use-cases.user-management.test.ts:307,311.",
-        "medido na instância real: Coordenador -20, Laboratorista -6190, Gerente -31030 (DEC-39). Nenhum caminho de administração conseguia escrever um total negativo de volta.",
-        "teste escrito ANTES do codigo (tests/unit/api/user-points-negative-set.test.ts): contra a producao vigente falhou 4/8, e a falha e a medicao — inclusive a precedencia dos 400.",
-        "rota passa a validar a AÇÃO antes do número. Consequencia aceita: {action:'bogus', points:-5} deixa de denunciar o número e passa a denunciar a ação. Fixado em teste.",
-        "use case: ramo `set` sem checagem de suficiência e sem checagem de sinal. `add` (Math.max 0) e `remove` (suficiencia) continuam intactos — o dono escolheu a alternativa estreita.",
-        "UI: ModernAdminPanel tinha `min=\"0\"` fixo no input de pontos; passa a `min` condicionado à ação (livre para `set`, 0 para add/remove) + aviso na legenda. Sem isso a capacidade nova nao seria alcançável pela interface que o dono usa. Registrado: ModernAdminPanel nao tem teste nenhum.",
-        "quirk novo medido ao escrever o teste, NAO corrigido: JSON não tem Infinity — JSON.stringify(Infinity) devolve null, e Number(null) é 0. Um corpo {action:'set', points:null} zera os pontos de um usuário em vez de ser recusado. Fixado como caraterização e aberto como ASK-V4-06.",
-        "e2e do quadro ficou 7/7 (e a suíte e2e inteira 12/12) exatamente porque a limpeza, que restaurava com set(-20) e recebia 400 engolido por .catch(() => {}), voltou a funcionar. Consequência colateral medida antes: cada corrida subia o total do Coordenador em 10 sem restaurar — foi assim que ele foi de -20 a 0. O dono decidiu NAO restaurar para -20.",
-        "verificado por mutacao: voltar a recusar negativo na rota e no use case derruba 3 testes."
-      ],
-      "gates": "G0 768/2925 zero violacao | G1 sem erro | G2 0 erros | G3 77/966 | G4 87/1050 | e2e 12/12 (quadro 7/7)",
-      "gotchas": [
-        "JSON nao transporta Infinity: vira null, e Number(null) é 0. Teste que envia Infinity num corpo JSON recebe 200 com points 0, nao 400.",
-        "a ordem das validações da rota é comportamento observável: quem manda ação inválida com número inválido recebe a mensagem da que vier primeiro."
-      ]
-    },
-    {
-      "id": "V4-4",
-      "at": "2026-10-06",
-      "title": "subtasks: tabela, regras puras, trava nos tres caminhos que terminam a mae, e o premio que passa a somar cada parcela (DEC-78..83)",
-      "actions": [
-        "medido antes de escrever, e isso mudou o desenho: a mae entra em 'Em Revisao' por TRES portas (PUT status, PATCH action=complete, POST approve) e o quadro oferece QUALQUER coluna a partir de qualquer uma — inclusive A Fazer → Em Revisao direto (move-rules.ts:71). Uma trava que so olhasse 'sair de Em Andamento' deixaria esse atalho passar. Por isso a trava governa o DESTINO (in-review/done), nao a origem.",
-        "medido antes: o cartao e o dialogo de detalhe calculam o premio NO CLIENTE (projectedAward). Se a soma das subtasks morasse so no servidor, uma tarefa de 3 subtasks continuaria sendo anunciada como 10 pontos. Dai DEC-79 (subtasks no JSON) e projectedAward passar a usar totalAwardForCompletion.",
-        "17 perguntas respondidas pelo dono antes do codigo (escopo, trava, aprovacao, auto-move, autoridade, arimetica, coluna points, janela, backlog, copies individuais). A resposta 'cada subtask pela mesma regra da mae' SUBSTITUIU a formula que estava gravada na DEC-56 — registrada como DEC-78, com o exemplo numerado que o dono viu e escolheu (total −55).",
-        "testes escritos ANTES do codigo, e a falha e a medicao: subtask-rules.test.ts falhou 20/20 (nada existia) e subtask-use-cases.test.ts falhou 25/25 (module.createTaskSubtask is not a function). Cobertura nova de proposito: o modulo task-management NAO tinha teste nenhum de caso de uso sobre portas falsas — so regras puras e o roundtrip G4.",
-        "schema: task_subtasks (taskId, title, completed, completedAt, createdAt) com onDelete: Cascade igual as outras filhas de tasks. Sem FK para users de proposito (subtask nao tem responsavel proprio, D-D), entao o guarda de deriva do V4-1 (user-delete-schema-drift) nao e tocado e continua verde.",
-        "migration feita SEM `prisma migrate dev`: `prisma migrate diff --from-schema-datamodel <schema salvo antes> --to-schema-datamodel <schema novo> --script` gerou o delta offline, e `migrate deploy` aplicou em 5432 e 5433. `migrate dev` pode pedir RESET quando detecta deriva — e a 5432 e a instancia com os dados reais do dono.",
-        "dominio novo em backend/domain/task/subtask-rules.ts (título, janela, trava, auto-move, base 10+10·n, supportsSubtasks, normalizeNewSubtasks) e acréscimo em points-rules.ts (awardPointsForSubtask, totalAwardForCompletion). `completed` e OBRIGATORIO em AwardableSubtask de proposito: com a conclusao opcional, uma linha esquecida valeria zero em silencio — e foi assim que a primeira versao passou nos testes contando subtask aberta.",
-        "a trava entrou nos tres casos de uso que terminam a mae, sempre DEPOIS da checagem de autoridade e ANTES de qualquer escrita: quem nao pode aprovar nao descobre que a tarefa tem subtask pendente (a mesma precedencia 403-antes-de-409 do B6-2b).",
-        "publishTaskReviewRequest saiu de dentro do UpdateTaskUseCase para internal/task-view.ts: passou a ter dois chamadores (o movimento humano e o auto-move da ultima subtask). A licao medida de 2026-10-05 no tests/e2e/shell.spec.ts e exatamente esta — a mesma regra em duas copias diverge.",
-        "HTTP fixado com o MODULO REAL sobre portas falsas (tests/unit/api/task-subtasks.test.ts, 16 casos): 201/400/403/404/409/401 e a precedencia entre eles. As rotas novas nao tem ensurePermission: seguem o formato das 20 rotas ja migradas (a rota autentica e mapeia; quem decide quem pode e o caso de uso).",
-        "G4: tasks-roundtrip ganhou o caso com Prisma real — base 30 gravada, trava recusando sem escrever, auto-move com notificacao do lider no banco, aprovacao passando quando destrava, janela recusando em mae concluida, e cascade apagando a mae com as subtasks. O teste NAO entra em createdTaskIds: ele apaga a propria linha, e listTasksForActor abaixo afirma que toda id daquela lista ainda e listada.",
-        "verificado por mutacao: contar subtask ABERTA no premio (voltar ao filtro ausente) nao derruba teste nenhum — por isso a assinatura passou a exigir `completed` e o caso 'subtask aberta nao entra na conta' foi escrito."
-      ],
-      "gates": "G0 781/3021 zero violacao | G1 sem erro | G2 0 erros | G3 81/1050 | G4 completa 91/1135 (integracao 10/85) | e2e quadro 2 passando + 1 falha conhecida + 5 did not run (confirmado com git stash: baseline falha identico); shell 5/5",
-      "gotchas": [
-        "COLISAO de numeracao de decisao medida ao escrever o lote: displayquest-v2/plan-v5/ (criado pelo dono em 2026-10-06, ainda nao commitado) ja ocupava DEC-61..77. O V4-4 ia usar DEC-61..64. As decisoes do V4-4 foram renumeradas para DEC-78..83 e os 28 comentarios de codigo acompanharam. Antes de abrir uma decisao nova, grep os tres STATE.json.",
-        "o dev server em 3001 estava de pe desde antes da migration: o Prisma client em memoria NAO conhece task_subtasks, e a trava chamaria prisma.task_subtasks.count() num client velho e devolveria 500 no navegador. `prisma generate` nao alcanga processo em execucao — foi preciso reiniciar o `next dev -p 3001`.",
-        "a falha conhecida do 3o teste do quadro mudou de causa aparente: em 2026-10-05 era a tarefa 290 'fasdfas'; em 2026-10-06 e a tarefa 50 'fazer reuniao com mamedes', que o dono moveu para Em Revisao. E o mesmo modo de falha previsto no AGENTS.md — um cartao a mais na coluna vira strict mode violation — e o git stash confirma que nao e regressao.",
-        "CreateTaskCommand e Omit<ITask,...> e exige completed e taskVisibility: um teste que monta o comando a mao precisa deles. O contrato nao foi afrouxado por isso; o teste ganhou um helper newTask().",
-        "zod com .default([]) torna a chave OBRIGATORIA no tipo de saida: Task passa a exigir subtasks, e todo literal de Task (tests/mocks/fixtures/tasks.ts) precisa dela. Tolerancia de wire no parse nao e tolerancia no tipo."
-      ]
-    },
-    {
-      "id": "V4-4b-pre · ASK-V4-06",
-      "at": "2026-10-06",
-      "title": "`{action:'set', points:null}` passa a ser recusado (DEC-84) — commit separado do V4-4",
-      "actions": [
-        "testes primeiro: o caso de caraterizacao do V4-6 ('quirk preservado, nao adotado') foi CONVERTIDO em recusa, e entraram `undefined`, `''`, `true`, `{}`, `[]` e a string numerica '12' (continua aceita). Vermelho antes do codigo: 2 falhas.",
-        "a checagem passou a ser de TIPO antes de ser de valor: `Number(null)` e 0, `Number('')` e 0, `Number(true)` e 1 — `!Number.isFinite(Number(x))` nunca ve esses casos. A mensagem de rejeicao e a mesma de antes, para nao mover contrato a toa."
-      ],
-      "gates": "G2 0 erros | G3 81/1050 | G4 completa 91/1135"
-    },
-    {
-      "id": "V4-4b",
-      "at": "2026-10-06",
-      "title": "testes de UI do ModernAdminPanel: 10 testes sobre o painel real, e quatro defeitos que eles acharam (DEC-85, DEC-86)",
-      "actions": [
-        "testes primeiro, vermelhos primeiro: 7/7 falhando antes de qualquer mudança no componente.",
-        "medido ao montar: o painel NAO renderiza sozinho. Ele monta `ManageWorkSessionsDialog` (linha 1054) e `UserApproval` (linha 499) sempre, e os dois chamam contexto no primeiro render — 'useWorkSessions deve ser usado dentro de um WorkSessionsProvider', depois 'useProject deve ser usado dentro de um ProjectProvider'. O teste usa a stack real do app (UserProvider > ProjectProvider > WorkSessionsProvider, app/client-layout.tsx:26-34), sem stub.",
-        "seams mockados: `useAuth` (é dele que o painel tira a permissão testada), `useTask` (só a aba de tarefas usa) e `useRouter`. O painel, os diálogos e o Select/Dialog do Radix são os REAIS. A rede é MSW local gravando o corpo — é assim que 'chegou à API' é provado.",
-        "DEFECTO 1 corrigido (DEC-60 inacabada): o V4-6 abriu o negativo na rota, no use case e no `min` do input, mas o guard do salvamento ainda era `pointsNum >= 0`. O administrador digitava -20 (o input deixava) e a chamada era PULADA em silencio. Mesma regra em tres copias, duas receberam a correção — o modo de falha que o AGENTS.md ja registrou. Agora: `set` aceita negativo, `add`/`remove` continuam nao-negativos.",
-        "DEFECTO 2 corrigido (o mesmo quirk da DEC-84, do lado do cliente): `Number('')` e 0, `!isNaN(0)` e `0 >= 0` — esvaziar o campo de pontos enviava `{action:'set', points:0}` e ZERAVA a conta de um usuario.",
-        "DEFECTO 3 corrigido (DEC-85): `saveUserSettings` e `updateUserStatus` lancavam em toda falancia e ninguem capturava. O `onClick` devolvia promise rejeitada, o React nao tratava: dialogo aberto sem mensagem de erro, rejeicao nao tratada no console e `npx vitest run` saindo com EXIT 1 por 'Unhandled Rejection' — o defeito quebrava o gate de entrega. O erro do servidor passa a aparecer em `<p role='alert'>` dentro do dialogo.",
-        "DEFECTO 4 corrigido (DEC-86): os tres controles do dialogo de pontos/linha de usuario nao tinham nome acessivel — botao-so-icone `Settings`, Select sem aria-label, input sem id nem rotulo associado. Invisiveis para leitor de tela e inalcancaveis por teste.",
-        "DEFECTOS 5 e 6 NAO corrigidos, registrados para o dono: (a) o confirm do botao 'Rejeitar' diz 'Esta acao ira remove-lo do sistema', mas `reject` faz `status = 'rejected'` — a linha continua (o guia ja diz a verdade em docs/src-usuario/12-perguntas-frequentes.md:47); (b) o filtro de status do painel so tem Ativo/Pendente/Inativo, entao um usuario `rejected` ou `suspended` NAO aparece em nenhum filtro especifico — so em 'Todos'."
-      ],
-      "gates": "G0 782/3031 zero violacao | G1 sem erro | G2 0 erros | G3 82/1060 | G4 completa 92/1145 | e2e shell 5/5",
-      "gotchas": [
-        "um lancamento sem captura dentro de `onClick` nao e so ruido de console: no Vitest desta casa vira 'Unhandled Rejection' e o processo sai com EXIT 1, ou seja, quebra o gate G3/G4 mesmo com todos os testes passando.",
-        "o jsdom nao implementa `window.confirm` (lanca 'Not implemented'). O botao 'Suspender' usa confirm antes de chamar a API — o teste stuba com `vi.stubGlobal('confirm', vi.fn(() => true))`.",
-        "texto montado em varios nos ('Atual: ' + 120 + ' pontos' + a dica da acao) nao e encontravel pela frase inteira: `getByText('Atual: 120 pontos')` falha; o caminho e regex no no do paragrafo.",
-        "o painel decide permissao a partir de `hasAccess(user.roles, ...)` do `useAuth` — sem mock do contexto, `canManageUsers` e false e a aba de usuarios renderiza vazia: o teste passaria provando o oposto do que pretende."
-      ]
-    },
-    {
-      "id": "V4-4c",
-      "at": "2026-10-06",
-      "title": "os dois defeitos que o dono autorizou corrigir: o confirm do 'Rejeitar' e o filtro de status (DEC-87, DEC-88)",
-      "actions": [
-        "testes primeiro, vermelhos primeiro: 2 falhas antes de mexer no componente — uma afirmando que o texto do confirm NAO continha 'remov', outra procurando um combobox de nome 'Status' que nao existia.",
-        "DEC-87: o confirm do 'Rejeitar' dizia 'Esta acao ira removelo do sistema'. Medido: `reject` faz `status = 'rejected'` e a linha continua. Texto novo diz o que de fato acontece.",
-        "DEC-88: o filtro de status ganhou 'Rejeitado' e 'Suspenso' — os dois status que o proprio painel escreve. 'Inativo' mantido (remover opcao visivel nao estava autorizado) e registrado como ASK-V4-28.",
-        "medido ao escrever o teste do filtro: provar 'o filtro escondeu o usuario' pelo nome FALHA porque o `ScheduleGrid` recebe a MESMA lista e a renderiza inteira, sem o filtro do painel. O teste passou a usar o botao 'Configurar <nome>', que so existe na lista filtrada.",
-        "medido ao escrever a nota do filtro: o status `inactive` nao existe como estado escrevivel. O enum e `pending|active|rejected|suspended` (entities/user.ts:31), a rota escreve active/rejected/suspended, a instancia real so tem `active` (10 linhas), e a unica ocorrencia de 'inactive' no backend e um contador que sempre da zero (prisma-user.repository.ts:231). A nota do AGENTS.md sobre a DEC-55 estava meio errada e foi corrigida."
-      ],
-      "gates": "G0 782/3031 zero violacao | G1 sem erro | G2 0 erros | G3 82/1062 | G4 completa 92/1147",
-      "gotchas": [
-        "SelectTrigger do Radix com so `<SelectValue placeholder=...>` nao tem nome acessivel: `getByRole('combobox', { name: 'Status' })` nao acha. Precisa de `aria-label` no trigger.",
-        "vi.fn(() => true) tem `mock.calls` tipado como tupla vazia — acessar `[0][0]` da TS2352/TS2493. Forma correta: `vi.fn<(message?: string) => boolean>(() => true)`.",
-        "dois vocabularios de status convivem na base: o do modelo (`pending|active|rejected|suspended`) e o de `inactive`, que as REGRAS reconhecem (porque so checam `!== 'active'`) mas que NINGUEM escreve. `volunteers-management.tsx:55` tem um terceiro (`active|inactive|on_leave`).",
-        "o filtro da lista de usuarios do painel nao se aplica ao `ScheduleGrid` — ele recebe a mesma lista e renderiza tudo."
-      ]
-    },
-    {
-      "id": "V4-5a",
-      "at": "2026-10-06",
-      "title": "subtask no cartao do quadro: aviso de trava + checkbox + destinos desabilitados (DEC-89, DEC-90, DEC-91)",
-      "actions": [
-        "regra pura primeiro, testes vermelhos primeiro: 4 falhas em `move-rules.test.ts` antes de mexer no cartao. A trava entrou na DECISAO DE DISPLAY (`resolveMove`) derivada das mesmas funcoes do dominio, e `allowedTargets` passou a derivar o menu dela — nao existe uma lista de destinos proibidos escrita a segunda vez.",
-        "o ponto cego que a ordem das checagens esconde: quem nao e lider move delegada para 'Concluido' e o servidor remapeia para Em Revisao (`remap-to-review`). O destino FINAL e Em Revisao, entao a trava tem que entrar ANTES do remapeamento; se entrasse depois, a UI ofereceria o movimento e a trava viraria toast de erro em vez de botao desabilitado.",
-        "cartao (DEC-89): `N subtasks abertas` + checkbox por subtask ABERTA; as concluidas nao aparecem (a lista completa, com criar/renomear/apagar, fica no dialogo — V4-5b). Compacto: so o numero, com a frase do dominio no `title`.",
-        "menu 'Acoes para ...' deixa de oferecer Em Revisao/Concluido; botao Aprovar desabilitado com a frase do dominio no tooltip; arrasto continua possivel e a recusa chega com a MESMA frase do servidor (`moveBlockedMessage`, uma copia so para cartao e quadro — os dois tinham a mensagem escrita a mao dentro de cada um).",
-        "auto-move anunciado (DEC-81): 'Ultima subtask concluida — tarefa enviada para revisao'. Sem a frase, a tarefa muda de coluna diante da pessoa sem explicacao.",
-        "DEC-91: tres mutacoes de subtask no cliente (`createSubtask`/`updateSubtask`/`removeSubtask`). Otimista so na lista; `applyMother` escreve por cima a mae que o servidor devolve (subtasks + points + status).",
-        "DEC-90: `subtaskWindowMessage` movida do `internal/task-view.ts` para o dominio, e o mock (`tests/mocks/handlers.ts`) passou a aplicar trava/janela/auto-move com as funcoes do dominio. O mock agora devolve 400/409 com a frase real nos tres caminhos de conclusao e 409 na janela.",
-        "medido ao escrever o teste do cartao: `<Toaster/>` do sonner NAO monta no jsdom — `window.matchMedia is not a function`. O stub e LOCAL ao arquivo de proposito: um shim global em `tests/setup.ts` faria `useIsDesktop()` do quadro responder em todos os testes, que hoje caem no caminho 'mobile' justamente porque nao ha matchMedia."
-      ],
-      "gates": "G0 783/3044 zero violacao | G1 sem erro | G2 0 erros | G3 83/1076 | G4 completa 93/1161 | e2e shell 5/5",
-      "gotchas": [
-        "o cartao nao oferece o destino porque `allowedTargets` deriva de `resolveMove`: mudar a regra pura ja desabilita o menu sem tocar no componente. Teste que so muda a regra pura e ve o menu mudar e o mais barato que existe nesse caminho.",
-        "sonner so chega ao DOM se `<Toaster/>` estiver montado — os testes antigos do quadro nunca montaram, entao nenhum deles prova texto de toast. Montar exige stub de `matchMedia`.",
-        "frase com contagem interpolada no meio de outros nos nao e encontravel pela frase inteira: a contagem e montada como string antes (`openSubtasksLabel`), um no so.",
-        "o mock de teste que reimplementa a regra pode ficar verde com a producao mentindo. Usar as funcoes do dominio dentro do mock fecha esse modo de falha (DEC-90)."
-      ]
-    },
-    {
-      "id": "V4-5b",
-      "at": "2026-10-06",
-      "title": "subtasks no dialogo de detalhe: a lista inteira mora aqui (DEC-92)",
-      "actions": [
-        "testes primeiro, vermelhos primeiro: 7 falhas antes de mexer no componente (a 8a, de tarefa publica/quest global, passou trivialmente porque afirma ausencia).",
-        "DEC-92: a porta de autoridade da UI foi MEDIDA, nao chutada. O servidor aceita MANAGE_TASKS/MANAGE_USERS, OU responsavel, OU criador/lider/membro do projeto (internal/task-view.ts:208-216). No dialogo, `canManageTasks` ja era exatamente a lista de MANAGE_TASKS (permissions.ts:22) e `isAssignee` a segunda porta — a UI oferece as duas. As duas portas de projeto exigem consulta que o dialogo nao faz; quem estiver nelas e nao vir o controle continua podendo pela API, e o 403 chega na tela.",
-        "janela (DEC-80) na UI: criar/renomear/apagar so com mae em to-do/in-progress/adjust; concluir NAO obedece a janela (so `done` fecha a conclusao). A frase exibida e `subtaskWindowMessage` do dominio, nao uma parafrase da UI.",
-        "delete de subtask usa AlertDialog (A3, sem `confirm()`), com a consequencia dita: 'remove a linha da lista e muda a base de pontos da tarefa'.",
-        "consertado no caminho: um comentario do `task-detail-dialog.tsx` tinha caractere cirillico ('aвариado') — o ruido de texto que o AGENTS.md ja registra nos docs foi medido no codigo por grep `[а-яА-Я]` e so havia esta ocorrencia na base."
-      ],
-      "gates": "G0 784/3055 zero violacao | G1 sem erro | G2 0 erros | G3 84/1084 | G4 completa 94/1169 | e2e shell 5/5",
-      "gotchas": [
-        "o dialogo de detalhe e uma instancia por tarefa e nao reage a mudanca de status da mae enquanto aberto: o auto-move chega na resposta da mutacao, e o texto que o dialogo mostra passa a ser o do novo status na proxima abertura.",
-        "checkbox do Radix desabilitada continua encontravel por `getByRole('checkbox', { name })` e `toBeDisabled()` — desabilitar nao e esconder, e e isso que a DEC-89 pede (a UI desabilita ALEM de bloquear).",
-        "dois botoes com nomes que se contem ('Apagar subtask Medir o ruído' e 'Apagar subtask') so nao colidem porque `getByRole({ name })` casa a string inteira por padrao no Testing Library. Com substring (Playwright `getByLabel`/`getByRole`) colidiria — mesma lição do 3.C do plan-v3."
-      ]
-    },
-    {
-      "id": "V4-5c",
-      "at": "2026-10-06",
-      "title": "subtask no formulario de nova tarefa + GAP-P3-05 fechado (DEC-93, DEC-94)",
-      "actions": [
-        "GAP-P3-05 (plan-v3 §8) fechado: o cartao calculava `projectedAward(task)` e anunciava o numero ANTES da mutacao. Passa a anunciar o creditado pela resposta, depois dela. Discriminante medido no teste: tarefa publica vencida ha 3 dias projeta -20 e o mock credita 10 (tests/mocks/handlers.ts:179) — se o toast mostra 10, leu a resposta.",
-        "DEC-93: `completionAwardMessage` e uma funcao pura so, usada pelo menu do cartao E pelo soltar do arrasto. Os dois caminhos tinham a conclusao escrita a mao dentro de cada um (o quadro nem numero mostrava). `null` nao e zero: 'Os pontos serão adicionados após aprovação.' (DEC-48).",
-        "DEC-94: campo de subtask no `task-dialog.tsx` so na CRIACAO e so quando `supportsSubtasks` diz sim — a mesma funcao do servidor. Lista fica em state (rascunho), nao no schema zod, e o POST leva `subtasks: [{title}]`. Na EDICAO o campo nao existe: a lista vive no dialogo de detalhe (DEC-89).",
-        "medido ao escrever o teste: 'Quest Global' do formulario e um `Switch` do Radix (role=\"switch\"), nao uma checkbox — o teste que buscava `getByRole('checkbox')` falhava por isso, nao pela regra.",
-        "o mock de POST /api/tasks passou a espelhar a rota real para subtask: le `subtasks` do corpo com `normalizeNewSubtasks` (400 se o corpo for inválido), cria as linhas com id e grava a base 10 + 10·n (DEC-83). Antes o mock ignorava a chave e o teste provaria o input, nao o estado gravado.",
-        "Enter no input de nova subtask faz `preventDefault()` e adiciona a linha: sem isso, a segunda subtask digitada pelo teclado enviava o formulario e a tarefa nascia com uma linha so."
-      ],
-      "gates": "G0 786/3074 zero violacao | G1 sem erro | G2 0 erros | G3 86/1095 | G4 completa 96/1180 | e2e quadro: 2 passando + 1 falha conhecida (git stash confirma baseline identico) | G5/G6 adiados para V4-5d",
-      "gotchas": [
-        "a falha conhecida do 3º teste do quadro piorou de numero sem mudar de natureza: `Coluna Em Revisão` resolve 3 botoes 'Aprovar tarefa' porque a instancia tem 50 'fazer reuniao com mamedes' e 304 '123' em `in-review`, alem do fixture. `git stash` do batch devolve a MESMA falha — nao e regressao.",
-        "mudar a hora do toast e mudanca de comportamento visivel: o aviso chega depois da resposta, entao o cartao ja se moveu (otimista) quando a frase aparece. Teste que assere toast precisa de `findByText`, nao `getByText`.",
-        "o mock que ignora uma chave do corpo esconde defeito do cliente: sem tratar `subtasks` no POST, o teste do formulario passaria verde provando que o input existia."
-      ]
-    },
-    {
-      "id": "V4-6b",
-      "at": "2026-10-06",
-      "title": "vocabulario de status de usuario padronizado em `suspended` (DEC-95, fecha ASK-V4-28)",
-      "actions": [
-        "guarda primeiro, vermelho: `tests/unit/modules/user-management/user-status-vocabulary.test.ts` (4 casos, ambiente node, le arquivo do disco) — o enum tem que ser exatamente `pending|active|rejected|suspended`; nenhum caminho de decisao (entities/user.ts, backend/domain/identity, user-management, lib/auth, app/api/users, ModernAdminPanel) pode citar `inactive` como VALOR; a divida fora do caminho estrito tem que ser EXATAMENTE a registrada; e o painel nao pode oferecer a opcao morta.",
-        "DEC-95 (dono, 2026-10-06): padronizar em `suspended`, sem mudar o enum. Saiu a opcao 'Inativo' do filtro do painel (a DEC-88 a manteve porque remover opcao visivel nao estava autorizado — agora esta), o campo `UserStatistics.inactive` da porta e do repositorio, e o contador fantasma de `getUsersByStatus`.",
-        "fixtures que descreviam estado impossivel (`status: 'inactive'`) passaram a descrever `suspended` em bulk-weekly-reports, cron-weekly-reset golden, lab-rules e no proprio teste de dependencias do delete — e o guarda agora testa `pending`/`rejected`/`suspended` explicitamente, para o fixture voltar a provar o caminho que decide.",
-        "comentarios de `User.ts`, `delete-user.use-case.ts` e `delete-user-dependencies.test.ts` corrigidos para dizer o caminho real: 'Suspender' -> `suspended`, e bloqueio de `!== 'active'`.",
-        "ASK-V4-33 registrada (nao corrigida): `components/features/volunteers-management.tsx` tem terceiro vocabulario (`active|inactive|on_leave`) e filtro que nunca casa, porque `toVolunteerEntry` (backend/domain/project/project-rules.ts:295) escreve `status: 'active'` para todo mundo. Fixada como KNOWN_DIVERGENCES no guarda, para a divida nao sumir silenciosamente nem o registro mentir.",
-        "no caminho: flake do `task-dialog-subtasks.test.tsx` (caso 'a mae nasce com a lista' estourou 5041ms sob carga paralela, verde isolado e no rerun) — causa medida: o arquivo chamava `userEvent.type/click` sem `setup()`, e cada tecla vira um `setTimeout(0)`. Passou para `userEvent.setup({ delay: null })` no beforeEach, padrao da casa (task-board.test.tsx).",
-        "no caminho: a suite completa sem `DATABASE_URL` exportado falha no `entities-roundtrip.test.ts` (roundtrip antigo, `new PrismaClient()` sem URL propria) conectando na 5432 — e la `purchases` so tem status legado (`delivered`/`processing`), entao o caso D-8 morre com 'no purchase row with a current-domain status'. Nao e regressao, e ambiente: exportar para 5433 antes da corrida completa."
-      ],
-      "gates": "G0 787/3077 zero violacao | G1 sem erro | G2 0 erros | G3 87/1099 | G4 completa 97/1184 (2 corridas, DATABASE_URL na 5433)",
-      "gotchas": [
-        "userEvent sem `userEvent.setup()` usa delay 0 e cada tecla vira um `setTimeout(0)`: sob carga paralela isso estourou o timeout de 5041ms num caso que passa isolado. Padrao da casa: `userEvent.setup({ delay: null })` criado no `beforeEach`.",
-        "o `entities-roundtrip.test.ts` e o unico roundtrip que NAO le `DATABASE_URL` de variavel propria: com o env na 5433 ele passa, sem ela cai na 5432 e falha por dado legado da instancia. Corrida completa exige `export DATABASE_URL=...5433`.",
-        "reescrever o STATE.json com `json.dump(indent=2)` explode os arrays inline que o arquivo escreve numa linha so e gera 270 linhas de diff de ruido — editar com edicao cirurgica."
-      ]
-    }
-  ],
-  "openQuestions": [
-    "ASK-V4-33 (aberto pelo V4-6b, precisa do dono): a tela de voluntarios (`components/features/volunteers-management.tsx:55`) tem um TERCEIRO vocabulario (`'active' | 'inactive' | 'on_leave'`) e um filtro com 'Inativo'/'De licenca' que NUNCA encontra ninguem — medido: `toVolunteerEntry` (backend/domain/project/project-rules.ts:295) escreve `status: 'active'` para todo mundo, entao o filtro e um controle morto alem de mentir sobre o vocabulario. Duas saidas possiveis: levar o status real ate a tela (o backend ja escreve `pending|active|rejected|suspended`), ou tirar o filtro. Enquanto nao decidir, a divergencia esta fixada como `KNOWN_DIVERGENCES` em `tests/unit/modules/user-management/user-status-vocabulary.test.ts` — o guarda falha se ela mudar sem atualizar o registro.",
-    "ASK-V4-28 FECHADO em 2026-10-06 (DEC-95): padronizar em `suspended`, sem adicionar `inactive` ao enum. 'Inativo' saiu do filtro do painel, o contador fantasma saiu do repositorio, e os fixtures passaram a citar `suspended`. O que o AGENTS.md dizia ('inactive ja funciona de ponta a ponta') estava meio errado e ja estava corrigido.",
-    "ASK-V4-27 FECHADO em 2026-10-06 (DEC-88): o filtro de status do painel ganhou 'Rejeitado' e 'Suspenso'.",
-    "ASK-V4-26 FECHADO em 2026-10-06 (DEC-87): o `confirm` do 'Rejeitar' passou a dizer a verdade sobre o que acontece com a conta.",
-    "ASK-V4-06 FECHADO em 2026-10-06 (DEC-84): `{action:'set', points:null}` passou a ser recusado com 400. A caraterizacao do V4-6 virou teste de recusa, e entraram os casos `undefined`, `''`, `true`, `{}`, `[]` e a string numerica `'12'` (continua aceita).",
-    "ModernAdminPanel.tsx: FECHADO em 2026-10-06 (V4-4b/V4-4c) — 12 testes sobre o painel real. O arquivo continua sem teste para as abas Projetos/Horas/Tarefas/Notificacoes/Configuracoes e para os dialogos filhos; o que esta coberto e o caminho de configuracao de usuario (perfil, funcoes, carga horaria, pontos, status) e os filtros da lista.",
-    "Achado menor, sem decisao pedida: o filtro da lista de usuarios do painel NAO se aplica ao `ScheduleGrid`, que recebe a MESMA lista e a renderiza inteira. Provar 'o filtro escondeu o usuario' exige escopo no card certo (o teste usa o botao 'Configurar <nome>').",
-    "Pendencia conhecida e aceita do e2e: o 3o teste do quadro quebra por CARTAO A MAIS na coluna 'Em Revisao' (era a tarefa 290 'fasdfas', em 2026-10-06 e a 50 'fazer reuniao com mamedes'). O dono recusou escopar o locator no cartao do fixture e recusou mexer no dado. Como o spec e serial, a falha faz os outros 5 aparecerem como 'did not run'. Confirmar com git stash antes de cacar regressao."
-  ],
-  "blockers": [],
-  "removedItems": [],
-  "answeredInstructions": [
-    { "id": "ASK-V4-01", "question": "o que fazer com DELETE /api/users/[id]", "answer": "recusar com 409 quando houver dependencia (DEC-55)", "answeredAt": "2026-10-05" },
-    { "id": "ASK-V4-02", "question": "como o +10 por subtask convive com a penalidade de atraso", "answer": "soma à base, penalidade continua fixa por dia (DEC-56)", "answeredAt": "2026-10-05" },
-    { "id": "ASK-V4-03", "question": "onde mora a trava da task mãe", "answer": "no dominio, aplicada no use case, com 400 e mensagem (DEC-57)", "answeredAt": "2026-10-05" },
-    { "id": "ASK-V4-04", "question": "animar toda mudança de pontos, mudando o significado do número", "answer": "aceito (DEC-58)", "answeredAt": "2026-10-05" },
-    { "id": "ASK-V4-05", "question": "a API de pontos não expressa total negativo, mas a premiação produz — o que fazer", "answer": "permitir `set` negativo; `add` e `remove` ficam como estavam (DEC-60)", "answeredAt": "2026-10-05" },
-    { "id": "ASK-V4-05b", "question": "restaurar o total do Coordenador para -20, depois que as corridas de e2e o levaram a 0", "answer": "não — deixar como está", "answeredAt": "2026-10-05" },
-    { "id": "ASK-V4-01b", "question": "D-D: escopo da subtask na v1 (responsável, prazo, pública/global, criação, badge)", "answer": "sem responsável próprio, sem prazo próprio (herda da mãe), só em tarefa delegada, criada JUNTO com a mãe no mesmo formulário, sem efeito em evaluateUserBadges", "answeredAt": "2026-10-05" },
-    { "id": "ASK-V4-07", "question": "'só em tarefa delegada' — o formulário tem Delegada/Pública/Privada; 'Privada' entra?", "answer": "delegada E privada: tudo que não é pública nem quest global (DEC-82)", "answeredAt": "2026-10-06" },
-    { "id": "ASK-V4-08", "question": "subtask pode ser criada depois da mãe existir (card/diálogo), ou só junto com ela?", "answer": "criação junto com a mãe E depois, no card e no diálogo", "answeredAt": "2026-10-06" },
-    { "id": "ASK-V4-09", "question": "o que dá para fazer com uma subtask já criada?", "answer": "concluir, renomear e apagar (CRUD completo)", "answeredAt": "2026-10-06" },
-    { "id": "ASK-V4-10", "question": "a trava bloqueia quais movimentos, se o quadro deixa arrastar para qualquer coluna?", "answer": "entrar em Em Revisão ou Concluído vindo de QUALQUER coluna; voltar para A Fazer/Em Andamento/Ajustes fica livre (DEC-80)", "answeredAt": "2026-10-06" },
-    { "id": "ASK-V4-11", "question": "a mãe já está em Em Revisão com subtask aberta — aprovar também é bloqueado?", "answer": "sim, aprovar também recusa: 'nada termina com subtask aberta' nos três caminhos", "answeredAt": "2026-10-06" },
-    { "id": "ASK-V4-12", "question": "quando a última subtask é concluída, a mãe deve se mover sozinha? de qual coluna, e com notificação?", "answer": "sim — só a partir de Em Andamento, para Em Revisão, com a mesma notificação de um movimento humano (DEC-81)", "answeredAt": "2026-10-06" },
-    { "id": "ASK-V4-13", "question": "quem pode criar/concluir/apagar uma subtask?", "answer": "a mesma autoridade de editar a mãe (DEC-82)", "answeredAt": "2026-10-06" },
-    { "id": "ASK-V4-14", "question": "a base do prêmio conta todas as subtasks ou só as concluídas? e qual aritmética, com o exemplo medido", "answer": "cada subtask pela mesma regra da mãe, medida no instante em que ela foi concluída; só as concluídas somam (DEC-78)", "answeredAt": "2026-10-06" },
-    { "id": "ASK-V4-15", "question": "subtask concluída credita pontos por si ou conta em 'tarefas concluídas'?", "answer": "não, nada (DEC-82)", "answeredAt": "2026-10-06" },
-    { "id": "ASK-V4-16", "question": "tasks.points (coluna histórica) passa a gravar a base real? como convive com subtask criada/apagada depois?", "answer": "gravado na criação e mantido sincronizado até a mãe concluir; mãe concluída nunca é reescrita (DEC-83)", "answeredAt": "2026-10-06" },
-    { "id": "ASK-V4-17", "question": "dá para criar/renomear/apagar subtask numa mãe já em Em Revisão, Ajustes ou Concluído?", "answer": "só enquanto a mãe não está em revisão nem concluída (A Fazer, Em Andamento e Ajustes aceitam) — DEC-80", "answeredAt": "2026-10-06" },
-    { "id": "ASK-V4-18", "question": "o JSON da tarefa já expõe as subtasks no V4-4?", "answer": "sim (DEC-79) — senão o cartão e o detalhe continuam anunciando 10 numa tarefa que vale 10 + 10·n", "answeredAt": "2026-10-06" },
-    { "id": "ASK-V4-19", "question": "criação com 2+ responsáveis no modo Individual: as subtasks vão para cada cópia?", "answer": "sim, cada cópia tem as suas (DEC-82)", "answeredAt": "2026-10-06" },
-    { "id": "ASK-V4-20", "question": "a importação de backlog precisa aceitar subtask na v1?", "answer": "não (DEC-82)", "answeredAt": "2026-10-06" },
-    { "id": "ASK-V4-21", "question": "ASK-V4-06: corrigir agora o `{action:'set', points:null}` que zera os pontos?", "answer": "sim, recusar null (DEC-84)", "answeredAt": "2026-10-06" },
-    { "id": "ASK-V4-22", "question": "fazer testes de UI do ModernAdminPanel (~1000 linhas, zero testes)?", "answer": "sim, antes do V4-5 — virou a onda V4-4b", "answeredAt": "2026-10-06" },
-    { "id": "ASK-V4-23", "question": "o seam órfão lib/notifications/browser-notifications.ts (134 linhas, zero chamadores): manter ou apagar?", "answer": "manter — a notificação nativa está adiada, não abandonada", "answeredAt": "2026-10-06" },
-    { "id": "ASK-V4-24", "question": "GAP-P3-05: o toast da conclusão direta anuncia o projetado em vez do creditado — corrigir no V4-5?", "answer": "sim, corrigir no V4-5", "answeredAt": "2026-10-06" },
-    { "id": "ASK-V4-25", "question": "plan-v5 (não commitado, já ocupando DEC-61..77): renumerar o V4-4 e commitar o plan-v5?", "answer": "renumerar para DEC-78..84 está certo; NÃO commitar os arquivos do plan-v5", "answeredAt": "2026-10-06" },
-    { "id": "ASK-V4-26", "question": "o confirm do 'Rejeitar' mente sobre remover o usuário — corrijo o texto?", "answer": "sim, corrigir o texto (DEC-87)", "answeredAt": "2026-10-06" },
-    { "id": "ASK-V4-27", "question": "o filtro de status do painel não conhece `rejected` nem `suspended` — adiciono as duas opções?", "answer": "sim, adicionar Rejeitado e Suspenso (DEC-88)", "answeredAt": "2026-10-06" },
-    { "id": "ASK-V4-29", "question": "o cartão tem dois modos (normal e `isCompact`): onde a lista de subtasks aparece?", "answer": "só o aviso de trava — a lista completa fica no diálogo de detalhe (DEC-89)", "answeredAt": "2026-10-06" },
-    { "id": "ASK-V4-30", "question": "quem executa pode concluir uma subtask direto no cartão?", "answer": "sim, checkbox direta no cartão (DEC-89)", "answeredAt": "2026-10-06" },
-    { "id": "ASK-V4-31", "question": "como a UI desabilita a trava: menu, Aprovar e alavanca de arrastar?", "answer": "desabilitar menu + Aprovar; arrastar continua possível e avisa com a mensagem do servidor (DEC-89)", "answeredAt": "2026-10-06" },
-    { "id": "ASK-V4-32", "question": "quando a última subtask move a mãe para Em Revisão (DEC-81), o que a UI mostra?", "answer": "movimento + toast explicando que foi a última subtask (DEC-89)", "answeredAt": "2026-10-06" },
-    { "id": "ASK-V4-28", "question": "o status `inactive` não existe como estado escrevível: padronizar em `suspended` ou adicionar `inactive` ao enum?", "answer": "padronizar em `suspended`, sem mudar o enum (DEC-95); 'Suspender' é o único caminho de inativação", "answeredAt": "2026-10-06" }
-  ]
+  {
+   "id": "V4-4",
+   "title": "subtasks: schema + domínio + read model",
+   "status": "done",
+   "decisions": [
+    "DEC-56",
+    "DEC-57",
+    "DEC-78",
+    "DEC-79",
+    "DEC-80",
+    "DEC-81",
+    "DEC-82",
+    "DEC-83"
+   ],
+   "scope": "tabela task_subtasks (migration 20261006171259) + regras puras no dominio + tres casos de uso novos + trava nos tres caminhos que terminam a mae (PUT status, PATCH complete, POST approve) + subtasks no JSON da tarefa. A formula gravada na DEC-56 foi SUBSTITUIDA pela DEC-78: cada subtask e pontuada pela mesma regra da mae, no instante em que ela propria foi concluida."
+  },
+  {
+   "id": "V4-4b",
+   "title": "testes de UI do ModernAdminPanel antes de mexer nele de novo",
+   "status": "done",
+   "decisions": [
+    "DEC-85",
+    "DEC-86"
+   ],
+   "scope": "10 testes em tests/unit/components/admin-panel-user-settings.test.tsx sobre o painel real (stack de providers real, Radix real, MSW gravando o corpo enviado). Escrever os testes expôs quatro defeitos; três foram corrigidos neste lote e dois ficaram registrados para o dono decidir."
+  },
+  {
+   "id": "V4-5a",
+   "title": "subtask no cartao do quadro: aviso de trava, checkbox, destinos desabilitados",
+   "status": "done",
+   "decisions": [
+    "DEC-89",
+    "DEC-90",
+    "DEC-91"
+   ],
+   "scope": "O cartao mostra o AVISO de trava com a contagem e uma checkbox por subtask ABERTA; a lista completa (criar/renomear/apagar) fica no dialogo de detalhe (V4-5b). O menu 'Acoes para ...' deixa de oferecer Em Revisao/Concluido e o botao Aprovar fica desabilitado; o arrasto continua possivel e a recusa chega com a frase do servidor. O auto-move (DEC-81) e anunciado com toast. Inclui as tres mutacoes de subtask no cliente e o mock de teste espelhando a trava/janela/auto-move com as funcoes do dominio."
+  },
+  {
+   "id": "V4-5b",
+   "title": "subtasks no dialogo de detalhe: criar, renomear, apagar",
+   "status": "done",
+   "decisions": [
+    "DEC-89",
+    "DEC-92"
+   ],
+   "scope": "CRUD completo da lista no `features/tasks/components/task-detail-dialog.tsx`, com a janela (DEC-80) refletida na UI."
+  },
+  {
+   "id": "V4-5c",
+   "title": "subtasks no formulario de nova tarefa + GAP-P3-05 fechado",
+   "status": "done",
+   "decisions": [
+    "DEC-93",
+    "DEC-94"
+   ],
+   "scope": "Campo de subtasks no `task-dialog.tsx` so na CRIACAO (mãe nasce com a lista, DEC-82); GAP-P3-05 fechado — o toast da conclusao passa a anunciar o numero CREDITADO pela resposta, depois da mutacao, com uma funcao so para cartao e quadro."
+  },
+  {
+   "id": "V4-5d",
+   "title": "gates G5/G6 do guia (docs:build + recaptura das telas)",
+   "status": "done",
+   "decisions": [
+    "DEC-89"
+   ],
+   "scope": "O cartao, o dialogo de detalhe e o formulario mudaram de cara (subtask visivel) e o aviso de conclusao mudou de hora e de numero. As capturas do guia deixaram de representar a tela. Respondido pelo dono em 2026-10-06: recaptura RESTRITA, SEM GRAVAR — `--only=quadro-tarefas,quadro-tarefas-participante,dialogo-nova-tarefa,dialogo-detalhe-tarefa` (os dois dialogos de INTERACTIONS so abrem e fotografam, nunca submetem; o unico que grava e `relatorios-gerar-lote`, fora do `--only`), depois prosa de `docs/src-usuario` pelo manifesto medido e `docs:build` + `docs:check`."
+  },
+  {
+   "id": "V4-6",
+   "title": "pontos: `set` aceita negativo (a administração consegue escrever o que a premiação produz)",
+   "status": "done",
+   "decisions": [
+    "DEC-60"
+   ],
+   "scope": "rota valida a ação antes do número e libera negativo só para `set`; use case idem; ModernAdminPanel libera o input para `set`. `add` e `remove` intactos."
+  },
+  {
+   "id": "V4-6b",
+   "title": "vocabulario de status de usuario padronizado em `suspended` (fecha ASK-V4-28)",
+   "status": "done",
+   "decisions": [
+    "DEC-95"
+   ],
+   "scope": "sai do filtro do painel a opcao 'Inativo', sai `UserStatistics.inactive` da porta e do repositorio, sai o contador que sempre dava zero em `getUsersByStatus`; fixtures e comentarios passam a citar `suspended`; guarda estrutural `user-status-vocabulary.test.ts` contra status inventado. Divergencia da tela de voluntarios registrada como ASK-V4-33."
+  }
+ ],
+ "decisionRegistry": [
+  "DEC-95 (2026-10-06, V4-6b, fecha ASK-V4-28): padronizar o vocabulario de status de usuario em `suspended` — NAO adicionar `inactive` ao enum. 'Suspender' e o unico caminho de inativacao de ponta a ponta. Sai do filtro do painel a opcao 'Inativo' (mantida pela DEC-88 porque remover opcao visivel nao estava autorizado), sai o campo `UserStatistics.inactive` da porta e do repositorio, e sai o contador fantasma de `getUsersByStatus` (sempre 0). Fixtures de teste que descreviam `status: 'inactive'` — um estado que a producao nao escreve — passaram a descrever `suspended` em reporting/cron/lab, porque um fixture impossivel deixa o teste verde mentindo sobre o caminho que decide. O tsc nao pega isso (`inactive` e string), entao o guarda e estrutural: `tests/unit/modules/user-management/user-status-vocabulary.test.ts` fixa o enum, varre os caminhos de decisao contra `inactive` como valor, e falha se a divida registrada mudar sem atualizar o registro. Divergencia fora do escopo registrada como ASK-V4-33.",
+  "DEC-94 (2026-10-06, V4-5c): o campo de subtask existe so na CRIACAO de tarefa, e so quando `supportsSubtasks` diz sim — a MESMA funcao que o servidor usa para aceitar `subtasks` no corpo (DEC-82). Editar a lista de uma tarefa que ja existe e o que o dialogo de detalhe faz (DEC-89); oferecer os dois controles para a mesma lista na mesma tela convidaria duas regras a divergir. O campo nao entra no schema zod do react-hook-form: e uma lista de rascunho em state, enviada no POST como `subtasks: [{title}]`, e o mock passa a espelhar a rota real (mae com lista + base 10 + 10·n).",
+  "DEC-93 (2026-10-06, V4-5c, fecha GAP-P3-05 do plan-v3 §8): o aviso da conclusao passa a ser derivado da RESPOSTA e chega DEPOIS da mutacao. Antes o cartao calculava `projectedAward(task)` e anunciava esse numero antes de a mutacao acontecer. Medido neste lote com o mock: tarefa publica vencida ha 3 dias projeta -20 e a resposta credita 10 — os dois divergem, e a pessoa tem direito ao segundo. A frase e uma funcao pura so (`completionAwardMessage`) porque o menu do cartao e o soltar do arrasto anunciam a mesma conclusao, e a lição medida do plan-v3 e que a mesma regra em duas copias diverge. `null` nao e zero: e 'ninguem creditado agora' (DEC-48). Consequencia visivel: o toast chega um pouco mais tarde (depois da resposta), e o numero pode ser diferente do que a pessoa esperava.",
+  "DEC-92 (2026-10-06, V4-5b): a porta de autoridade da UI para subtask e a porta do servidor, medida e nao chutada. O servidor aceita `MANAGE_TASKS` ou `MANAGE_USERS`, OU responsavel da tarefa, OU criador/lider/membro do projeto (`internal/task-view.ts:208-216`). No dialogo de detalhe, `canManageTasks` e exatamente a lista de `MANAGE_TASKS` (medido em `permissions.ts:22`: COORDENADOR, GERENTE, GERENTE_PROJETO, COLABORADOR, PESQUISADOR) e `isAssignee` e a segunda porta — entao a UI oferece `canManageTasks || isAssignee`. As duas portas restantes (membro/criador de projeto) exigem consulta que o dialogo nao faz; quem estiver nelas e nao vir o controle continua podendo pela API, e o 403 do servidor chega na tela. Janela (DEC-80) na UI: criar/renomear/apagar so com mae em `to-do`/`in-progress`/`adjust`; concluir NAO obedece a janela (so `done` fecha a conclusao) — e a frase exibida e `subtaskWindowMessage` do dominio, nao uma parafrase.",
+  "DEC-91 (2026-10-06, V4-5a): as mutacoes de subtask do cliente sao otimistas SO NA LISTA; o STATUS da mae vem do servidor. A resposta de uma operacao de subtask carrega a mae (DEC-79) e ela mudou de tres coisas: a lista, a base do premio (10 + 10·n) e as vezes o status (DEC-81, auto-move para 'Em Revisao'). Aplicar o status otimistamente faria o cartao mostrar a mae na coluna errada quando o servidor nao movesse (mãe em `to-do` nao auto-move, por exemplo). O rollback cobre a lista; `applyMother` escreve a versao do servidor por cima.",
+  "DEC-90 (2026-10-06, V4-5a): `subtaskWindowMessage` foi movida de `internal/task-view.ts` para `backend/domain/task/subtask-rules.ts`, e o mock de teste (`tests/mocks/handlers.ts`) passou a aplicar a trava, a janela e o auto-move com as MESMAS funcoes do dominio que a rota real usa (`openSubtasksCount`, `openSubtasksMessage`, `subtaskWindowMessage`, `SUBTASK_BLOCKED_TARGETS`, `SUBTASK_EDITABLE_STATUSES`). Motivo: o mock passou a ter que dizer exatamente a frase e o codigo de erro da rota real, e reimplementar a regra dentro do mock e a mesma 'regra em duas copias' que o AGENTS.md ja registrou como modo de falha. Consequencia de gate: mock verde com producao mentindo deixa de ser possivel nesse caminho.",
+  "DEC-89 (dono 2026-10-06, V4-5): o cartao do quadro NAO e a lista de subtasks. Medido ao perguntar: o dono escolheu 'so o aviso de trava' para a lista e 'checkbox direta no cartao' para concluir — as duas respostas se reconciliam assim: o cartao mostra `N subtasks abertas` com uma checkbox por subtask ABERTA (o que destrava), e as concluidas nao aparecem; criar/renomear/apagar ficam no dialogo de detalhe. No modo compacto (`isCompact`) so o numero, com a frase do dominio no `title`. A trava desabilita: os destinos Em Revisao/Concluido somem do menu 'Acoes para ...' (derivado de `allowedTargets`, nao de uma lista a parte) e o botao Aprovar fica desabilitado com a frase no tooltip; o ARRASTO continua possivel e a recusa chega com a MESMA frase do servidor (`moveBlockedMessage`, uma copia so para cartao e quadro). O auto-move da mae e ANUNCIADO: 'Ultima subtask concluida — tarefa enviada para revisao'. Isto ESTREITA o escopo escrito no plano ('criar/renomear/concluir/apagar no card e no dialogo'), e a diferenca esta registrada aqui.",
+  "DEC-88 (dono 2026-10-06, V4-4c, fecha ASK-V4-27): o filtro de status do painel ganha 'Rejeitado' e 'Suspenso'. Motivo medido: o PRÓPRIO painel escreve os dois — o botão 'Rejeitar' faz `status = 'rejected'` e 'Suspender' faz `status = 'suspended'` (update-user-status.use-case.ts:16-17) — mas o filtro só oferecia Ativo/Pendente/Inativo, então nenhum dos dois aparecia em filtro específico, só em 'Todos'. A opção 'Inativo' FOI MANTIDA (remover opção visível não estava autorizado) e registrada como ASK-V4-28: nenhum caminho do sistema escreve `inactive`. Os três `SelectTrigger` do caminho ganharam `aria-label` (classe DEC-86): sem nome acessível o Select não era alcançável por teste nem por leitor de tela.",
+  "DEC-87 (dono 2026-10-06, V4-4c, fecha ASK-V4-26): o `confirm` do botão 'Rejeitar' passa a dizer a verdade. Antes: 'Esta ação irá removê-lo do sistema'. Medido: `reject` faz `status = 'rejected'` e a linha CONTINUA — login (`lib/auth/config.ts:30`) e API (`lib/auth/server-auth.ts:36`) bloqueiam porque status !== active. O guia já dizia a verdade (docs/src-usuario/12-perguntas-frequentes.md:47). Texto novo: 'A conta deixa de permitir entrada, mas continua no sistema e pode ser aprovada depois.' Motivo para não deixar como estava: prometer remoção a quem está só bloqueando acesso faz a pessoa NÃO clicar no botão que precisava clicar.",
+  "DEC-86 (2026-10-06, V4-4b): os controles do diálogo de 'Configurar Usuário' passam a ter nome acessível. Medido ao escrever os testes: o botão da linha de usuário era só o ícone `Settings` (leitor de tela anunciava 'botão' e nada mais), o `Select` de ação de pontos não tinha `aria-label` nem placeholder, e o input de valor não tinha `id` nem rótulo associado — o único 'Pontos' próximo é o título da seção, sem `htmlFor`. Os três eram inalcançáveis por teste e invisíveis para leitor de tela. Nota deixada no código: o rótulo 'Valor de pontos' contém 'pontos', então `getByLabel('Pontos')` por substring casa com ele — usar rótulo exato.",
+  "DEC-85 (2026-10-06, V4-4b): falha de salvamento no painel vira mensagem no diálogo. Medido ao escrever o teste: `saveUserSettings` e `updateUserStatus` LANÇAVAM em toda falância e ninguém capturava — o `onClick` devolvia a promise rejeitada, o React não tratava, e o resultado era (a) o administrador com o diálogo aberto sem uma linha de erro, (b) rejeição não tratada no console, (c) `npx vitest run` saindo com EXIT 1 por 'Unhandled Rejection' — ou seja, o defeito quebrava o gate de entrega desta casa. Agora o erro do servidor (409 do guarda de dependência do V4-1, 404, 400) aparece num `<p role='alert'>` dentro do diálogo, na forma da casa (`text-red-600 dark:text-red-400 text-sm`, como em components/features/project-dialog.tsx:210).",
+  "DEC-84 (dono 2026-10-06, fecha ASK-V4-06): PATCH /api/users/[id]/points passa a ler o número do VALOR BRUTO do corpo, não de `Number(body.points)`. `{action:'set', points:null}` deixa de zerar os pontos e passa a ser recusado com 400. Motivo medido no V4-6: JSON não tem `Infinity` (`JSON.stringify(Infinity)` devolve `null`) e `Number(null)` é 0; `Number('')` também é 0 e `Number(true)` é 1. A checagem passa a ser de TIPO antes de ser de valor. O que continua igual: string numérica é aceita (`'12'` vale 12, é o que alguns clientes mandam), a mensagem de rejeição é a mesma de antes, e `{action:'set', points:undefined}` já era 400. Caraterização do V4-6 convertida em recusa.",
+  "DEC-83 (dono 2026-10-06, V4-4): `tasks.points` passa a gravar a base real 10 + 10·n e é mantida sincronizada enquanto a mãe aceita mexer na lista (criar/apagar subtask). Uma mãe em `in-review` ou `done` NUNCA é reescrita — a janela (DEC-80) é o que garante isso, e é assim que DEC-40 (nenhum UPDATE em tasks.points histórico) continua valendo. Concluir subtask NÃO mexe na coluna: a base conta subtasks, não concluídas. Resposta do dono ao ver as duas opções: 'gravado na criação e mantido sincronizado até concluir'.",
+  "DEC-82 (dono 2026-10-06, V4-4): quatro regras de escopo. (a) Autoridade de subtask é A MESMA de editar a mãe — implementada como a união das portas que hoje editam a mãe: MANAGE_TASKS/MANAGE_USERS, atribuído à tarefa, criador/líder do projeto, membro do projeto. Regra nova de permissão foi evitada de propósito. (b) Subtask só existe em tarefa DELEGADA ou PRIVADA — pública e quest global ficam fora porque não têm responsável único, então a trava e o '+10' não teriam a quem pertencer; criar com subtask nesses casos é 400, não ignorado em silêncio. (c) Modo individual (2+ responsáveis → N linhas de tarefa) dá a CADA cópia a sua própria lista: uma lista compartilhada não travaria as N mães. (d) Subtask não credita ponto próprio nem incrementa `completedTasks` — o que ela faz é mudar o valor da mãe. Backlog (uma tarefa por linha) não aceita subtask na v1.",
+  "DEC-81 (dono 2026-10-06, V4-4): a ÚLTIMA subtask concluída empurra a mãe de `in-progress` para `in-review`, e só dessa coluna. O dono respondeu 'Sim' à pergunta 'a mãe deve se mover sozinha?' e escolheu 'só a partir de Em Andamento, com notificação'. De `to-do` a mãe ainda não foi começada e não entra na fila de aprovação sozinha; de `in-review`/`done` não há para onde mover. O auto-move usa o MESMO patch de uma pessoa arrastando para Em Revisão (`statusOnlyPatch`) e publica a MESMA notificação TASK_REVIEW_REQUEST ao líder — não inventa um terceiro jeito nem um segundo texto. Auto-mover não é concluir: ninguém é creditado e `completedTasks` não mexe; o prêmio continua sendo creditado na aprovação.",
+  "DEC-80 (dono 2026-10-06, V4-4): a distinção entre TRAVA e JANELA, com status HTTP diferentes. Trava (DEC-57): a mãe não ENTRA em `in-review` nem `done` com subtask aberta — 400 (`ValidationError`), porque a transição pedida é que é inválida; vale vindo de QUALQUER coluna, o que fecha o atalho `A Fazer → Em Revisão` que o quadro oferece (move-rules.ts:71). Janela: criar/renomear/apagar a LISTA só enquanto a mãe não está em `in-review` nem `done` — 409 (`ConflictError`), porque o que está em conflito é o estado do mundo, a mesma natureza de 'Tarefa já concluída'. Concluir uma subtask NÃO obedece à janela: uma mãe em revisão com subtask aberta é estado real (tarefa que já estava lá antes das subtasks existirem), e concluir é justamente o que a destrava. Só `done` fecha a conclusão.",
+  "DEC-79 (dono 2026-10-06, V4-4): as subtasks entram no read model da tarefa — `serializeTask`/`toJSON` ganha a chave `subtasks` e `entities/task.ts` valida com `default([])`. Motivo medido: o cartão e o diálogo de detalhe CALCULAM o prêmio no cliente (`projectedAward` em task-card.tsx:256 e task-detail-dialog.tsx:93); sem as subtasks no JSON, uma tarefa de 3 subtasks continuaria sendo anunciada como 10 pontos. A lista de chaves congelada em domain.task-rules.test.ts:216 foi atualizada de propósito. No quadro a anexação é em lote (uma consulta, não N+1).",
+  "DEC-78 (dono 2026-10-06, V4-4): SUBSTITUI a fórmula gravada na DEC-56. Cada subtask é pontuada pela MESMA regra da mãe — adiantada 15, no prazo 10, 1 dia atrasada 0, 2 dias −10, sem piso (DEC-39) — medida no instante em que ELA própria foi concluída, contra o prazo HERDADO da mãe. O prêmio creditado é o da mãe mais o de cada subtask CONCLUÍDA. O dono escolheu esta leitura ao ver o exemplo medido: prazo 20/10, mãe aprovada em 25/10, subtasks em 19/10, 21/10 e 24/10 → mãe −40, subtasks +15, 0, −30, total −55. Consequências escritas: o atraso de uma subtask não é o atraso da mãe (uma subtask no prazo vale 10 mesmo com a mãe aprovada 5 dias depois); uma subtask 4 dias atrasada SUBTRAI 30 do prêmio da mãe; subtask aberta não entra na conta. A DEC-56 continua válida para o que ela realmente decidiu: o `+10 por subtask` existe e é a base gravada em `tasks.points` (DEC-83).",
+  "DEC-60 (dono 2026-10-05, V4-6): PATCH /api/users/[id]/points passa a ACEITAR valor negativo quando a ação é `set`. Motivo medido: a premiação produz total negativo (DEC-39, penalidade sem piso — Coordenador em -20 e Gerente em -31030 na instância real), mas NENHUM caminho de administração conseguia escrever um negativo de volta: `add` chao em 0 via Math.max, `remove` exige suficiencia, `set` rejeitava entrada negativa — os tres congelados por teste. O dono escolheu a alternativa ESTREITA: so `set` ganha a capacidade; `add` e `remove` ficam como estavam. Consequencia medida e aceita: a rota passa a validar a AÇÃO antes do número, invertendo a precedência de dois 400 (hoje {action:'bogus', points:-5} denuncia o número; passa a denunciar a ação). Mudado em tres lugares: rota (ordem + condição), use case (ramo `set`) e UI (ModernAdminPanel: min='0' so para add/remove). O e2e do quadro, que estava vermelho porque a limpeza restaurava com set(-20) e recebia 400, ficou 7/7.",
+  "DEC-55 (dono 2026-10-05, V4-1): DELETE /api/users/[id] passa a RECUSAR com ConflictError (409) quando o usuario tem dependencia, em vez de deixar o Prisma estourar P2003 e a rota devolver 500 com a mensagem crua no corpo. Cascade na migration foi rejeitado explicitamente pelo dono ('raramente a gente deleta um usuario de verdade' — a inativação é o caminho). Remover o endpoint foi considerado e rejeitado: o caso 'excluir cadastro sem historico' funciona hoje e continua funcionando. Medido antes: 16 das 23 FKs para users sao RESTRICT; usuarios 58 e 59 da base de teste falham com projects_createdBy_fkey e lab_responsibilities_userId_fkey. O caminho 'inactive' ja existe e nao foi criado aqui: lib/auth/config.ts:30 (login), lib/auth/server-auth.ts:36 (API), regras de laboratorio, bulk weekly reports, cron weekly reset, e 'Inativo' na UI em volunteers-management.tsx:404 e ModernAdminPanel.tsx:491.",
+  "DEC-56 (dono 2026-10-05, V4-4): subtask soma à BASE da pontuação da mãe, e a penalidade de atraso CONTINUA fixa por dia. Formula: (10 + 10n) · (adiantada ? 1,5 : 1) − diasAtrasados · 10. A alternativa proporcional (dias · base) foi rejeitada: é a matemática pré-v3 que o plan-v3 corrigiu em OND1-B1 (DEC-31/32) porque comia os pontos de quem entregava no prazo. DEC-39 (sem piso) continua valendo sobre a base nova.",
+  "DEC-57 (dono 2026-10-05, V4-4/V4-5): a trava 'a mãe não sai de Em Andamento enquanto houver subtask aberta' mora no DOMÍNIO e é aplicada no use case, devolvendo 400 com mensagem dizendo quantas subtasks faltam. Desabilitar só na UI foi rejeitado: a API aceitaria a mesma chamada e a regra existiria metade. A UI desabilita ALEM de bloquear, não em vez de.",
+  "DEC-58 (dono 2026-10-05, V4-3): o cabeçalho passa a animar QUALQUER mudança de pontos desde a última vez que aquele usuário viu o número, não só o prêmio da tarefa que ele mesmo mutou. Baseline em dq:points-seen:<userId> via lib/client-storage.ts. O dono aceitou explicitamente a mudança de semântica. Consequências aceitas: primeira vez não anima (sem baseline); trocar de navegador anima de novo; ajuste de admin e compra aprovada também animam. Motivo medido: o sinal só nascia de mutação (use-tasks.ts:92) e só quando awardedTo === sessionUserId — o voluntário que não aprova nunca recebia o delta, e via 10 pts aparecerem sem contagem.",
+  "DEC-59 (V4-2): quem conta gradualmente passa a ser o número do CABEÇALHO, não o chip. O chip passa a mostrar o valor final e a transladar ~10px em Y — para cima quando o número sobe, para baixo quando desce — só em desktop. Atenção medida: o chip usa hoje APENAS `animate-in fade-in` porque as variantes com transform sobrescrevem o `-translate-x-1/2` e desalinham o chip (comentário em points-delta.tsx:112). O movimento em Y precisa resolver isso, não ignorar. O contêiner do chip já é `hidden md:flex` (app-header.tsx:146), então desktop-only já é verdade para o chip."
+ ],
+ "batchLog": [
+  {
+   "id": "V4-1",
+   "at": "2026-10-05",
+   "title": "inativação no lugar de exclusão: o use case recusa com ConflictError ANTES de deixar o banco estourar (DEC-55)",
+   "actions": [
+    "medido antes de planejar: 16 das 23 FKs para users sao RESTRICT (default do Prisma, sem onDelete); so 7 cascadeam. Na base de teste, com o caminho real: user 58 -> P2003 projects_createdBy_fkey, user 59 -> P2003 lab_responsibilities_userId_fkey. A rota devolvia 500 com a mensagem CRUA do Prisma no corpo, porque domainErrorResponse devolve null para nao-DomainError e o catch faz error.message || '...'.",
+    "medido antes de planejar: o caminho 'inactive' ja existe de ponta a ponta e NAO foi criado aqui — lib/auth/config.ts:30 bloqueia login, lib/auth/server-auth.ts:36 bloqueia API, assertUserCanCreateLabEvent/Notice recusam inativo, bulk weekly reports e cron weekly reset pulam inativo, e 'Inativo' ja e opcao em volunteers-management.tsx:404 e ModernAdminPanel.tsx:491. Nenhuma tela .tsx chama deleteUser: o DELETE so era alcancavel por chamada direta de API.",
+    "teste escrito ANTES do codigo (tests/unit/modules/user-management/delete-user-dependencies.test.ts): contra a producao vigente falhou 3/5, e a falha E a medicao — a ordem medida era findById -> delete, sem checagem nenhuma.",
+    "port ganhou countBlockingDependencies(userId); PrismaUserRepository implementa com 13 contagens independentes cobrindo as 16 FKs (projects, tasks e issues somam 2 FKs cada numa OR). As 7 cascade ficam FORA de proposito: contalas faria um cadastro recem-registrado parecer impossivel de excluir, e esse e justamente o caso que continua funcionando.",
+    "use case passa a ordem para findById -> countBlockingDependencies -> delete. 409 com mensagem que oferece o caminho ('Inative o usuario...') e nenhum vocabulario de persistencia no corpo.",
+    "HTTP fixado com o MODULO REAL sobre porta falsa (tests/unit/api/user-delete-dependencies.test.ts, 5 casos) — nao com duplo de modulo, que e a licao medida do B6-2a: duplo de modulo faz o 403 SUMIR do teste em vez de falhar. Inclui o par de ordem 403-antes-de-409: quem nao tem MANAGE_USERS nao descobre quem tem historico.",
+    "G4: users-roundtrip ganhou o caso de recusa contra Prisma real (tarefa criada para o usuario, ConflictError, a linha continua la). Ordem de limpeza invertida no afterAll — apagar a tarefa ANTES do usuario, senao o proprio deleteMany de limpeza falha com P2003 pela FK RESTRICT.",
+    "guarda de deriva novo (tests/unit/modules/user-management/user-delete-schema-drift.test.ts): le prisma/schema.prisma e o corpo de countBlockingDependencies e compara os conjuntos de modelo.coluna. Existe porque a lista do repositorio e uma COPIA do schema, e o tsc NAO protege contra tabela esquecida. Verificado por mutacao: remover a contagem de lab_events.userId faz o guarda falhar nomeando a coluna.",
+    "verificado por mutacao: remover a recusa do use case derruba 4 testes nos dois arquivos novos."
+   ],
+   "gates": "G0 767/2919 zero violacao | G1 sem erro | G2 0 erros | G3 76/948 | G4 86/1032 verde inclusive o caso novo contra Prisma real",
+   "gotchas": [
+    "a forma abreviada { userId } do Prisma NAO e reconhecivel como coluna por leitura de texto — o repositorio escreve userId: userId por extenso para o guarda de deriva funcionar, com comentario dizendo o motivo.",
+    "parser de schema: o chunk comeca com 'tasks {', e o nome do modelo precisa sair SEM a chave; com a chave cada relacao sai 'tasks {.x' e o conjunto parece vazio contra a lista esperada (falhou assim na primeira execucao)."
+   ]
+  },
+  {
+   "id": "V4-2",
+   "at": "2026-10-05",
+   "title": "quem conta gradualmente passa a ser o numero do cabecalho; o chip mostra o valor final e percorre 10px em Y na direcao do que aconteceu (DEC-59)",
+   "actions": [
+    "medido antes de planejar, no CSS COMPILADO da instancia em execucao (dev server 3001, /_next/static/css/app/layout.css), e isso REFUTOU o comentario que estava em points-delta.tsx: '-translate-x-1/2' escreve a propriedade `translate` (`translate: var(--tw-translate-x) var(--tw-translate-y)`) e o `@keyframes enter` do tw-animate-css escreve `transform` (`translate3d(var(--tw-enter-translate-x,0),var(--tw-enter-translate-y,0),0)...`). Propriedades diferentes compõem. O aviso antigo — de que as variantes com transform sobrescrevem o -translate-x-1/2 — era verdade no Tailwind v3 + tailwindcss-animate; nesta base (Tailwind v4 + tw-animate-css) nao e mais. Por isso o movimento entrou no MESMO elemento, sem span extra.",
+    "lib/points-delta.ts: `pointsDeltaValueAt` sai (o chip parou de contar) e entra `pointsTotalAt(from, to, step)`; `POINTS_DELTA_SHIFT_PX = 10`; `pointsDeltaMotionClasses(value)` devolve `slide-in-from-bottom-[10px]` (sobe) ou `slide-in-from-top-[10px]` (desce). O colchete e obrigatorio: o `@utility slide-in-from-bottom-*` aceita `[length]`, mas o ramo de escala so aceita inteiro — `2.5` nao funciona.",
+    "a contagem do total e disparada pela MUDANCA do total que o componente renderiza, e nao pela chegada do sinal. Motivo medido em use-tasks.ts: onSuccess anuncia o sinal (linha 139) e so depois chama refreshPoints() (linha 142), que e assincrono — se a contagem dependesse do sinal ela comecaria com o total ainda velho, contaria ate o valor errado, e recomecaria quando a sessão chegasse.",
+    "desktop-only nao exigiu regra nova: o chip e o contador vivem dentro do contêiner `hidden md:flex` do cabeçalho (app-header.tsx:146). Sair de la e que quebraria o pedido do dono.",
+    "novo teste do contador (PointsCounter, 6 casos) + chip reescrito (mostra o valor final de imediato, direcao em Y fixada) + `pointsTotalAt` puro (4 casos). 23 casos no arquivo.",
+    "e2e do quadro reforçado: `pointsBadge` agora seleciona por `data-testid='points-total'` (antes era `header span.bg-clip-text` com filtro de visivel porque o menu do cabecalho tambem renderiza um span com a mesma classe); a contagem e provada por um MutationObserver instalado ANTES do clique, que registra a sequencia real de valores; e a geometria passa a conferir que o chip continua CENTRADO na pilula (|centro do chip - centro da pilula| <= 2px) enquanto percorre os 10px — a prova de que translate/transform compõem.",
+    "verificado por mutacao: fazer o cabecalho saltar direto e tirar a direcao em Y do chip derruba 5 testes."
+   ],
+   "gates": "G0 767/2919 zero violacao | G1 sem erro | G2 0 erros | G3 76/957 | G4 86/1041 | e2e do quadro: o teste da animacao passa, a suíte esta 4/7 (ver openQuestions — causa pre-existente)",
+   "gotchas": [
+    "o chip tem prazo de 1,9 s. No e2e, as asserções do chip precisam vir ANTES das asserções de coluna (orcamento de 15 s) — na primeira versao deste lote o poll do total veio antes e o chip ja tinha expirado: 'element(s) not found'.",
+    "registrar a contagem por MutationObserver dentro da pagina, e nao por poll do Playwright: a animacao dura 1 s e o poll chega depois.",
+    "a vida util do sinal e inclusiva na borda (`now - at <= LIFETIME`): avancar exatamente o prazo ainda deixa o sinal vivo. Teste de expiracao precisa de `+ 1`."
+   ]
+  },
+  {
+   "id": "V4-3",
+   "at": "2026-10-05",
+   "title": "a animação chega a quem não pode aprovar: baseline por pessoa em dq:points-seen:<userId> (DEC-58)",
+   "actions": [
+    "lib/points-seen.ts novo: read/write da baseline via lib/client-storage.ts. Guarda explicita de userId invalido: clientStorageKey descarta null/undefined, entao sem a guarda a chave seria dq:points-seen — uma so, compartilhada por todos os usuarios, fazendo uma pessoa animar a mudanca de outra. Valor corrompido devolve null: melhor nao animar do que animar a partir de lixo.",
+    "PointsCounter passa a comecar no valor lembrado e conta ate o atual; anuncia o chip quando a mudanca nao veio de mutacao (refresh/login). Local e nao session: o caso do dono e 'quando o usuario entra no sistema de novo', e sessionStorage morre ao fechar a aba.",
+    "baseline so avanca quando a contagem termina: quem fecha a aba no meio ve a contagem de novo na proxima visita.",
+    "BUG REAL achado pelo e2e e NAO pelos testes de jsdom: o gatilho da contagem era um ref escrito pelo proprio efeito. No modo estrito do React (que o next dev liga) a primeira passada consumia a diferenca, o clearInterval do desmonte simulado matava a contagem, e a segunda passada via from === points e nao animava nada — o contador ficava preso no valor lembrado (-30) para sempre. Corrigido lendo de onde o numero ESTÁ (displayed), o que torna a contagem idempotente.",
+    "Licao de teste: os testes de jsdom NAO ligam StrictMode, e o dev liga. points-catch-up.test.tsx agora renderiza em StrictMode. Verificado por mutacao: reintroduzir o bug derruba 4 testes com StrictMode ligado; sem ele, passavam todos.",
+    "e2e novo (catch-up): addInitScript semeia dq:points-seen:2 = real-30 ANTES de qualquer script da pagina e registra a sequencia por MutationObserver. Prova que o primeiro numero observado e o lembrado, que houve intermediarios, e que a baseline avancou. Suíte e2e: 13/13.",
+    "medição atômica do chip no e2e: caixa do chip + caixa da pilula + texto lidos na mesma passada. Asserções separadas somam ida e volta ao navegador e o chip vive 1,9 s — a ultima chegava depois de ele sair e boundingBox devolvia null (falha intermitente)."
+   ],
+   "gates": "G0 770/2933 zero violacao | G1 sem erro | G2 0 erros | G3 78/978 | G4 88/1062 | e2e 13/13",
+   "gotchas": [
+    "o ambiente de teste jsdom nao liga StrictMode; o next dev liga. Componente com efeito que decide comportamento a partir de ref escrito por si mesmo precisa de teste em StrictMode.",
+    "o container display-quest-db (5432) caiu com exit 137 no meio das corridas e derrubou o login de todos os testes de navegador. Nao era causa do codigo. Reerguido com docker start display-quest-db; o container do app (display-quest) nao foi tocado."
+   ]
+  },
+  {
+   "id": "V4-6",
+   "at": "2026-10-05",
+   "title": "PATCH points: `set` passa a aceitar negativo — a administração consegue escrever o que a premiação produz (DEC-60)",
+   "actions": [
+    "medido antes de planejar: rejeitavam em DOIS lugares. Rota (app/api/users/[id]/points/route.ts:24) com `points < 0` ANTES do check de ação — entao nem add/remove negativos chegavam ao use case. Use case: o ramo `set` tambem rejeitava. Os tres comportamentos congelados por teste em use-cases.user-management.test.ts:307,311.",
+    "medido na instância real: Coordenador -20, Laboratorista -6190, Gerente -31030 (DEC-39). Nenhum caminho de administração conseguia escrever um total negativo de volta.",
+    "teste escrito ANTES do codigo (tests/unit/api/user-points-negative-set.test.ts): contra a producao vigente falhou 4/8, e a falha e a medicao — inclusive a precedencia dos 400.",
+    "rota passa a validar a AÇÃO antes do número. Consequencia aceita: {action:'bogus', points:-5} deixa de denunciar o número e passa a denunciar a ação. Fixado em teste.",
+    "use case: ramo `set` sem checagem de suficiência e sem checagem de sinal. `add` (Math.max 0) e `remove` (suficiencia) continuam intactos — o dono escolheu a alternativa estreita.",
+    "UI: ModernAdminPanel tinha `min=\"0\"` fixo no input de pontos; passa a `min` condicionado à ação (livre para `set`, 0 para add/remove) + aviso na legenda. Sem isso a capacidade nova nao seria alcançável pela interface que o dono usa. Registrado: ModernAdminPanel nao tem teste nenhum.",
+    "quirk novo medido ao escrever o teste, NAO corrigido: JSON não tem Infinity — JSON.stringify(Infinity) devolve null, e Number(null) é 0. Um corpo {action:'set', points:null} zera os pontos de um usuário em vez de ser recusado. Fixado como caraterização e aberto como ASK-V4-06.",
+    "e2e do quadro ficou 7/7 (e a suíte e2e inteira 12/12) exatamente porque a limpeza, que restaurava com set(-20) e recebia 400 engolido por .catch(() => {}), voltou a funcionar. Consequência colateral medida antes: cada corrida subia o total do Coordenador em 10 sem restaurar — foi assim que ele foi de -20 a 0. O dono decidiu NAO restaurar para -20.",
+    "verificado por mutacao: voltar a recusar negativo na rota e no use case derruba 3 testes."
+   ],
+   "gates": "G0 768/2925 zero violacao | G1 sem erro | G2 0 erros | G3 77/966 | G4 87/1050 | e2e 12/12 (quadro 7/7)",
+   "gotchas": [
+    "JSON nao transporta Infinity: vira null, e Number(null) é 0. Teste que envia Infinity num corpo JSON recebe 200 com points 0, nao 400.",
+    "a ordem das validações da rota é comportamento observável: quem manda ação inválida com número inválido recebe a mensagem da que vier primeiro."
+   ]
+  },
+  {
+   "id": "V4-4",
+   "at": "2026-10-06",
+   "title": "subtasks: tabela, regras puras, trava nos tres caminhos que terminam a mae, e o premio que passa a somar cada parcela (DEC-78..83)",
+   "actions": [
+    "medido antes de escrever, e isso mudou o desenho: a mae entra em 'Em Revisao' por TRES portas (PUT status, PATCH action=complete, POST approve) e o quadro oferece QUALQUER coluna a partir de qualquer uma — inclusive A Fazer → Em Revisao direto (move-rules.ts:71). Uma trava que so olhasse 'sair de Em Andamento' deixaria esse atalho passar. Por isso a trava governa o DESTINO (in-review/done), nao a origem.",
+    "medido antes: o cartao e o dialogo de detalhe calculam o premio NO CLIENTE (projectedAward). Se a soma das subtasks morasse so no servidor, uma tarefa de 3 subtasks continuaria sendo anunciada como 10 pontos. Dai DEC-79 (subtasks no JSON) e projectedAward passar a usar totalAwardForCompletion.",
+    "17 perguntas respondidas pelo dono antes do codigo (escopo, trava, aprovacao, auto-move, autoridade, arimetica, coluna points, janela, backlog, copies individuais). A resposta 'cada subtask pela mesma regra da mae' SUBSTITUIU a formula que estava gravada na DEC-56 — registrada como DEC-78, com o exemplo numerado que o dono viu e escolheu (total −55).",
+    "testes escritos ANTES do codigo, e a falha e a medicao: subtask-rules.test.ts falhou 20/20 (nada existia) e subtask-use-cases.test.ts falhou 25/25 (module.createTaskSubtask is not a function). Cobertura nova de proposito: o modulo task-management NAO tinha teste nenhum de caso de uso sobre portas falsas — so regras puras e o roundtrip G4.",
+    "schema: task_subtasks (taskId, title, completed, completedAt, createdAt) com onDelete: Cascade igual as outras filhas de tasks. Sem FK para users de proposito (subtask nao tem responsavel proprio, D-D), entao o guarda de deriva do V4-1 (user-delete-schema-drift) nao e tocado e continua verde.",
+    "migration feita SEM `prisma migrate dev`: `prisma migrate diff --from-schema-datamodel <schema salvo antes> --to-schema-datamodel <schema novo> --script` gerou o delta offline, e `migrate deploy` aplicou em 5432 e 5433. `migrate dev` pode pedir RESET quando detecta deriva — e a 5432 e a instancia com os dados reais do dono.",
+    "dominio novo em backend/domain/task/subtask-rules.ts (título, janela, trava, auto-move, base 10+10·n, supportsSubtasks, normalizeNewSubtasks) e acréscimo em points-rules.ts (awardPointsForSubtask, totalAwardForCompletion). `completed` e OBRIGATORIO em AwardableSubtask de proposito: com a conclusao opcional, uma linha esquecida valeria zero em silencio — e foi assim que a primeira versao passou nos testes contando subtask aberta.",
+    "a trava entrou nos tres casos de uso que terminam a mae, sempre DEPOIS da checagem de autoridade e ANTES de qualquer escrita: quem nao pode aprovar nao descobre que a tarefa tem subtask pendente (a mesma precedencia 403-antes-de-409 do B6-2b).",
+    "publishTaskReviewRequest saiu de dentro do UpdateTaskUseCase para internal/task-view.ts: passou a ter dois chamadores (o movimento humano e o auto-move da ultima subtask). A licao medida de 2026-10-05 no tests/e2e/shell.spec.ts e exatamente esta — a mesma regra em duas copias diverge.",
+    "HTTP fixado com o MODULO REAL sobre portas falsas (tests/unit/api/task-subtasks.test.ts, 16 casos): 201/400/403/404/409/401 e a precedencia entre eles. As rotas novas nao tem ensurePermission: seguem o formato das 20 rotas ja migradas (a rota autentica e mapeia; quem decide quem pode e o caso de uso).",
+    "G4: tasks-roundtrip ganhou o caso com Prisma real — base 30 gravada, trava recusando sem escrever, auto-move com notificacao do lider no banco, aprovacao passando quando destrava, janela recusando em mae concluida, e cascade apagando a mae com as subtasks. O teste NAO entra em createdTaskIds: ele apaga a propria linha, e listTasksForActor abaixo afirma que toda id daquela lista ainda e listada.",
+    "verificado por mutacao: contar subtask ABERTA no premio (voltar ao filtro ausente) nao derruba teste nenhum — por isso a assinatura passou a exigir `completed` e o caso 'subtask aberta nao entra na conta' foi escrito."
+   ],
+   "gates": "G0 781/3021 zero violacao | G1 sem erro | G2 0 erros | G3 81/1050 | G4 completa 91/1135 (integracao 10/85) | e2e quadro 2 passando + 1 falha conhecida + 5 did not run (confirmado com git stash: baseline falha identico); shell 5/5",
+   "gotchas": [
+    "COLISAO de numeracao de decisao medida ao escrever o lote: displayquest-v2/plan-v5/ (criado pelo dono em 2026-10-06, ainda nao commitado) ja ocupava DEC-61..77. O V4-4 ia usar DEC-61..64. As decisoes do V4-4 foram renumeradas para DEC-78..83 e os 28 comentarios de codigo acompanharam. Antes de abrir uma decisao nova, grep os tres STATE.json.",
+    "o dev server em 3001 estava de pe desde antes da migration: o Prisma client em memoria NAO conhece task_subtasks, e a trava chamaria prisma.task_subtasks.count() num client velho e devolveria 500 no navegador. `prisma generate` nao alcanga processo em execucao — foi preciso reiniciar o `next dev -p 3001`.",
+    "a falha conhecida do 3o teste do quadro mudou de causa aparente: em 2026-10-05 era a tarefa 290 'fasdfas'; em 2026-10-06 e a tarefa 50 'fazer reuniao com mamedes', que o dono moveu para Em Revisao. E o mesmo modo de falha previsto no AGENTS.md — um cartao a mais na coluna vira strict mode violation — e o git stash confirma que nao e regressao.",
+    "CreateTaskCommand e Omit<ITask,...> e exige completed e taskVisibility: um teste que monta o comando a mao precisa deles. O contrato nao foi afrouxado por isso; o teste ganhou um helper newTask().",
+    "zod com .default([]) torna a chave OBRIGATORIA no tipo de saida: Task passa a exigir subtasks, e todo literal de Task (tests/mocks/fixtures/tasks.ts) precisa dela. Tolerancia de wire no parse nao e tolerancia no tipo."
+   ]
+  },
+  {
+   "id": "V4-4b-pre · ASK-V4-06",
+   "at": "2026-10-06",
+   "title": "`{action:'set', points:null}` passa a ser recusado (DEC-84) — commit separado do V4-4",
+   "actions": [
+    "testes primeiro: o caso de caraterizacao do V4-6 ('quirk preservado, nao adotado') foi CONVERTIDO em recusa, e entraram `undefined`, `''`, `true`, `{}`, `[]` e a string numerica '12' (continua aceita). Vermelho antes do codigo: 2 falhas.",
+    "a checagem passou a ser de TIPO antes de ser de valor: `Number(null)` e 0, `Number('')` e 0, `Number(true)` e 1 — `!Number.isFinite(Number(x))` nunca ve esses casos. A mensagem de rejeicao e a mesma de antes, para nao mover contrato a toa."
+   ],
+   "gates": "G2 0 erros | G3 81/1050 | G4 completa 91/1135"
+  },
+  {
+   "id": "V4-4b",
+   "at": "2026-10-06",
+   "title": "testes de UI do ModernAdminPanel: 10 testes sobre o painel real, e quatro defeitos que eles acharam (DEC-85, DEC-86)",
+   "actions": [
+    "testes primeiro, vermelhos primeiro: 7/7 falhando antes de qualquer mudança no componente.",
+    "medido ao montar: o painel NAO renderiza sozinho. Ele monta `ManageWorkSessionsDialog` (linha 1054) e `UserApproval` (linha 499) sempre, e os dois chamam contexto no primeiro render — 'useWorkSessions deve ser usado dentro de um WorkSessionsProvider', depois 'useProject deve ser usado dentro de um ProjectProvider'. O teste usa a stack real do app (UserProvider > ProjectProvider > WorkSessionsProvider, app/client-layout.tsx:26-34), sem stub.",
+    "seams mockados: `useAuth` (é dele que o painel tira a permissão testada), `useTask` (só a aba de tarefas usa) e `useRouter`. O painel, os diálogos e o Select/Dialog do Radix são os REAIS. A rede é MSW local gravando o corpo — é assim que 'chegou à API' é provado.",
+    "DEFECTO 1 corrigido (DEC-60 inacabada): o V4-6 abriu o negativo na rota, no use case e no `min` do input, mas o guard do salvamento ainda era `pointsNum >= 0`. O administrador digitava -20 (o input deixava) e a chamada era PULADA em silencio. Mesma regra em tres copias, duas receberam a correção — o modo de falha que o AGENTS.md ja registrou. Agora: `set` aceita negativo, `add`/`remove` continuam nao-negativos.",
+    "DEFECTO 2 corrigido (o mesmo quirk da DEC-84, do lado do cliente): `Number('')` e 0, `!isNaN(0)` e `0 >= 0` — esvaziar o campo de pontos enviava `{action:'set', points:0}` e ZERAVA a conta de um usuario.",
+    "DEFECTO 3 corrigido (DEC-85): `saveUserSettings` e `updateUserStatus` lancavam em toda falancia e ninguem capturava. O `onClick` devolvia promise rejeitada, o React nao tratava: dialogo aberto sem mensagem de erro, rejeicao nao tratada no console e `npx vitest run` saindo com EXIT 1 por 'Unhandled Rejection' — o defeito quebrava o gate de entrega. O erro do servidor passa a aparecer em `<p role='alert'>` dentro do dialogo.",
+    "DEFECTO 4 corrigido (DEC-86): os tres controles do dialogo de pontos/linha de usuario nao tinham nome acessivel — botao-so-icone `Settings`, Select sem aria-label, input sem id nem rotulo associado. Invisiveis para leitor de tela e inalcancaveis por teste.",
+    "DEFECTOS 5 e 6 NAO corrigidos, registrados para o dono: (a) o confirm do botao 'Rejeitar' diz 'Esta acao ira remove-lo do sistema', mas `reject` faz `status = 'rejected'` — a linha continua (o guia ja diz a verdade em docs/src-usuario/12-perguntas-frequentes.md:47); (b) o filtro de status do painel so tem Ativo/Pendente/Inativo, entao um usuario `rejected` ou `suspended` NAO aparece em nenhum filtro especifico — so em 'Todos'."
+   ],
+   "gates": "G0 782/3031 zero violacao | G1 sem erro | G2 0 erros | G3 82/1060 | G4 completa 92/1145 | e2e shell 5/5",
+   "gotchas": [
+    "um lancamento sem captura dentro de `onClick` nao e so ruido de console: no Vitest desta casa vira 'Unhandled Rejection' e o processo sai com EXIT 1, ou seja, quebra o gate G3/G4 mesmo com todos os testes passando.",
+    "o jsdom nao implementa `window.confirm` (lanca 'Not implemented'). O botao 'Suspender' usa confirm antes de chamar a API — o teste stuba com `vi.stubGlobal('confirm', vi.fn(() => true))`.",
+    "texto montado em varios nos ('Atual: ' + 120 + ' pontos' + a dica da acao) nao e encontravel pela frase inteira: `getByText('Atual: 120 pontos')` falha; o caminho e regex no no do paragrafo.",
+    "o painel decide permissao a partir de `hasAccess(user.roles, ...)` do `useAuth` — sem mock do contexto, `canManageUsers` e false e a aba de usuarios renderiza vazia: o teste passaria provando o oposto do que pretende."
+   ]
+  },
+  {
+   "id": "V4-4c",
+   "at": "2026-10-06",
+   "title": "os dois defeitos que o dono autorizou corrigir: o confirm do 'Rejeitar' e o filtro de status (DEC-87, DEC-88)",
+   "actions": [
+    "testes primeiro, vermelhos primeiro: 2 falhas antes de mexer no componente — uma afirmando que o texto do confirm NAO continha 'remov', outra procurando um combobox de nome 'Status' que nao existia.",
+    "DEC-87: o confirm do 'Rejeitar' dizia 'Esta acao ira removelo do sistema'. Medido: `reject` faz `status = 'rejected'` e a linha continua. Texto novo diz o que de fato acontece.",
+    "DEC-88: o filtro de status ganhou 'Rejeitado' e 'Suspenso' — os dois status que o proprio painel escreve. 'Inativo' mantido (remover opcao visivel nao estava autorizado) e registrado como ASK-V4-28.",
+    "medido ao escrever o teste do filtro: provar 'o filtro escondeu o usuario' pelo nome FALHA porque o `ScheduleGrid` recebe a MESMA lista e a renderiza inteira, sem o filtro do painel. O teste passou a usar o botao 'Configurar <nome>', que so existe na lista filtrada.",
+    "medido ao escrever a nota do filtro: o status `inactive` nao existe como estado escrevivel. O enum e `pending|active|rejected|suspended` (entities/user.ts:31), a rota escreve active/rejected/suspended, a instancia real so tem `active` (10 linhas), e a unica ocorrencia de 'inactive' no backend e um contador que sempre da zero (prisma-user.repository.ts:231). A nota do AGENTS.md sobre a DEC-55 estava meio errada e foi corrigida."
+   ],
+   "gates": "G0 782/3031 zero violacao | G1 sem erro | G2 0 erros | G3 82/1062 | G4 completa 92/1147",
+   "gotchas": [
+    "SelectTrigger do Radix com so `<SelectValue placeholder=...>` nao tem nome acessivel: `getByRole('combobox', { name: 'Status' })` nao acha. Precisa de `aria-label` no trigger.",
+    "vi.fn(() => true) tem `mock.calls` tipado como tupla vazia — acessar `[0][0]` da TS2352/TS2493. Forma correta: `vi.fn<(message?: string) => boolean>(() => true)`.",
+    "dois vocabularios de status convivem na base: o do modelo (`pending|active|rejected|suspended`) e o de `inactive`, que as REGRAS reconhecem (porque so checam `!== 'active'`) mas que NINGUEM escreve. `volunteers-management.tsx:55` tem um terceiro (`active|inactive|on_leave`).",
+    "o filtro da lista de usuarios do painel nao se aplica ao `ScheduleGrid` — ele recebe a mesma lista e renderiza tudo."
+   ]
+  },
+  {
+   "id": "V4-5a",
+   "at": "2026-10-06",
+   "title": "subtask no cartao do quadro: aviso de trava + checkbox + destinos desabilitados (DEC-89, DEC-90, DEC-91)",
+   "actions": [
+    "regra pura primeiro, testes vermelhos primeiro: 4 falhas em `move-rules.test.ts` antes de mexer no cartao. A trava entrou na DECISAO DE DISPLAY (`resolveMove`) derivada das mesmas funcoes do dominio, e `allowedTargets` passou a derivar o menu dela — nao existe uma lista de destinos proibidos escrita a segunda vez.",
+    "o ponto cego que a ordem das checagens esconde: quem nao e lider move delegada para 'Concluido' e o servidor remapeia para Em Revisao (`remap-to-review`). O destino FINAL e Em Revisao, entao a trava tem que entrar ANTES do remapeamento; se entrasse depois, a UI ofereceria o movimento e a trava viraria toast de erro em vez de botao desabilitado.",
+    "cartao (DEC-89): `N subtasks abertas` + checkbox por subtask ABERTA; as concluidas nao aparecem (a lista completa, com criar/renomear/apagar, fica no dialogo — V4-5b). Compacto: so o numero, com a frase do dominio no `title`.",
+    "menu 'Acoes para ...' deixa de oferecer Em Revisao/Concluido; botao Aprovar desabilitado com a frase do dominio no tooltip; arrasto continua possivel e a recusa chega com a MESMA frase do servidor (`moveBlockedMessage`, uma copia so para cartao e quadro — os dois tinham a mensagem escrita a mao dentro de cada um).",
+    "auto-move anunciado (DEC-81): 'Ultima subtask concluida — tarefa enviada para revisao'. Sem a frase, a tarefa muda de coluna diante da pessoa sem explicacao.",
+    "DEC-91: tres mutacoes de subtask no cliente (`createSubtask`/`updateSubtask`/`removeSubtask`). Otimista so na lista; `applyMother` escreve por cima a mae que o servidor devolve (subtasks + points + status).",
+    "DEC-90: `subtaskWindowMessage` movida do `internal/task-view.ts` para o dominio, e o mock (`tests/mocks/handlers.ts`) passou a aplicar trava/janela/auto-move com as funcoes do dominio. O mock agora devolve 400/409 com a frase real nos tres caminhos de conclusao e 409 na janela.",
+    "medido ao escrever o teste do cartao: `<Toaster/>` do sonner NAO monta no jsdom — `window.matchMedia is not a function`. O stub e LOCAL ao arquivo de proposito: um shim global em `tests/setup.ts` faria `useIsDesktop()` do quadro responder em todos os testes, que hoje caem no caminho 'mobile' justamente porque nao ha matchMedia."
+   ],
+   "gates": "G0 783/3044 zero violacao | G1 sem erro | G2 0 erros | G3 83/1076 | G4 completa 93/1161 | e2e shell 5/5",
+   "gotchas": [
+    "o cartao nao oferece o destino porque `allowedTargets` deriva de `resolveMove`: mudar a regra pura ja desabilita o menu sem tocar no componente. Teste que so muda a regra pura e ve o menu mudar e o mais barato que existe nesse caminho.",
+    "sonner so chega ao DOM se `<Toaster/>` estiver montado — os testes antigos do quadro nunca montaram, entao nenhum deles prova texto de toast. Montar exige stub de `matchMedia`.",
+    "frase com contagem interpolada no meio de outros nos nao e encontravel pela frase inteira: a contagem e montada como string antes (`openSubtasksLabel`), um no so.",
+    "o mock de teste que reimplementa a regra pode ficar verde com a producao mentindo. Usar as funcoes do dominio dentro do mock fecha esse modo de falha (DEC-90)."
+   ]
+  },
+  {
+   "id": "V4-5b",
+   "at": "2026-10-06",
+   "title": "subtasks no dialogo de detalhe: a lista inteira mora aqui (DEC-92)",
+   "actions": [
+    "testes primeiro, vermelhos primeiro: 7 falhas antes de mexer no componente (a 8a, de tarefa publica/quest global, passou trivialmente porque afirma ausencia).",
+    "DEC-92: a porta de autoridade da UI foi MEDIDA, nao chutada. O servidor aceita MANAGE_TASKS/MANAGE_USERS, OU responsavel, OU criador/lider/membro do projeto (internal/task-view.ts:208-216). No dialogo, `canManageTasks` ja era exatamente a lista de MANAGE_TASKS (permissions.ts:22) e `isAssignee` a segunda porta — a UI oferece as duas. As duas portas de projeto exigem consulta que o dialogo nao faz; quem estiver nelas e nao vir o controle continua podendo pela API, e o 403 chega na tela.",
+    "janela (DEC-80) na UI: criar/renomear/apagar so com mae em to-do/in-progress/adjust; concluir NAO obedece a janela (so `done` fecha a conclusao). A frase exibida e `subtaskWindowMessage` do dominio, nao uma parafrase da UI.",
+    "delete de subtask usa AlertDialog (A3, sem `confirm()`), com a consequencia dita: 'remove a linha da lista e muda a base de pontos da tarefa'.",
+    "consertado no caminho: um comentario do `task-detail-dialog.tsx` tinha caractere cirillico ('aвариado') — o ruido de texto que o AGENTS.md ja registra nos docs foi medido no codigo por grep `[а-яА-Я]` e so havia esta ocorrencia na base."
+   ],
+   "gates": "G0 784/3055 zero violacao | G1 sem erro | G2 0 erros | G3 84/1084 | G4 completa 94/1169 | e2e shell 5/5",
+   "gotchas": [
+    "o dialogo de detalhe e uma instancia por tarefa e nao reage a mudanca de status da mae enquanto aberto: o auto-move chega na resposta da mutacao, e o texto que o dialogo mostra passa a ser o do novo status na proxima abertura.",
+    "checkbox do Radix desabilitada continua encontravel por `getByRole('checkbox', { name })` e `toBeDisabled()` — desabilitar nao e esconder, e e isso que a DEC-89 pede (a UI desabilita ALEM de bloquear).",
+    "dois botoes com nomes que se contem ('Apagar subtask Medir o ruído' e 'Apagar subtask') so nao colidem porque `getByRole({ name })` casa a string inteira por padrao no Testing Library. Com substring (Playwright `getByLabel`/`getByRole`) colidiria — mesma lição do 3.C do plan-v3."
+   ]
+  },
+  {
+   "id": "V4-5c",
+   "at": "2026-10-06",
+   "title": "subtask no formulario de nova tarefa + GAP-P3-05 fechado (DEC-93, DEC-94)",
+   "actions": [
+    "GAP-P3-05 (plan-v3 §8) fechado: o cartao calculava `projectedAward(task)` e anunciava o numero ANTES da mutacao. Passa a anunciar o creditado pela resposta, depois dela. Discriminante medido no teste: tarefa publica vencida ha 3 dias projeta -20 e o mock credita 10 (tests/mocks/handlers.ts:179) — se o toast mostra 10, leu a resposta.",
+    "DEC-93: `completionAwardMessage` e uma funcao pura so, usada pelo menu do cartao E pelo soltar do arrasto. Os dois caminhos tinham a conclusao escrita a mao dentro de cada um (o quadro nem numero mostrava). `null` nao e zero: 'Os pontos serão adicionados após aprovação.' (DEC-48).",
+    "DEC-94: campo de subtask no `task-dialog.tsx` so na CRIACAO e so quando `supportsSubtasks` diz sim — a mesma funcao do servidor. Lista fica em state (rascunho), nao no schema zod, e o POST leva `subtasks: [{title}]`. Na EDICAO o campo nao existe: a lista vive no dialogo de detalhe (DEC-89).",
+    "medido ao escrever o teste: 'Quest Global' do formulario e um `Switch` do Radix (role=\"switch\"), nao uma checkbox — o teste que buscava `getByRole('checkbox')` falhava por isso, nao pela regra.",
+    "o mock de POST /api/tasks passou a espelhar a rota real para subtask: le `subtasks` do corpo com `normalizeNewSubtasks` (400 se o corpo for inválido), cria as linhas com id e grava a base 10 + 10·n (DEC-83). Antes o mock ignorava a chave e o teste provaria o input, nao o estado gravado.",
+    "Enter no input de nova subtask faz `preventDefault()` e adiciona a linha: sem isso, a segunda subtask digitada pelo teclado enviava o formulario e a tarefa nascia com uma linha so."
+   ],
+   "gates": "G0 786/3074 zero violacao | G1 sem erro | G2 0 erros | G3 86/1095 | G4 completa 96/1180 | e2e quadro: 2 passando + 1 falha conhecida (git stash confirma baseline identico) | G5/G6 adiados para V4-5d",
+   "gotchas": [
+    "a falha conhecida do 3º teste do quadro piorou de numero sem mudar de natureza: `Coluna Em Revisão` resolve 3 botoes 'Aprovar tarefa' porque a instancia tem 50 'fazer reuniao com mamedes' e 304 '123' em `in-review`, alem do fixture. `git stash` do batch devolve a MESMA falha — nao e regressao.",
+    "mudar a hora do toast e mudanca de comportamento visivel: o aviso chega depois da resposta, entao o cartao ja se moveu (otimista) quando a frase aparece. Teste que assere toast precisa de `findByText`, nao `getByText`.",
+    "o mock que ignora uma chave do corpo esconde defeito do cliente: sem tratar `subtasks` no POST, o teste do formulario passaria verde provando que o input existia."
+   ]
+  },
+  {
+   "id": "V4-6b",
+   "at": "2026-10-06",
+   "title": "vocabulario de status de usuario padronizado em `suspended` (DEC-95, fecha ASK-V4-28)",
+   "actions": [
+    "guarda primeiro, vermelho: `tests/unit/modules/user-management/user-status-vocabulary.test.ts` (4 casos, ambiente node, le arquivo do disco) — o enum tem que ser exatamente `pending|active|rejected|suspended`; nenhum caminho de decisao (entities/user.ts, backend/domain/identity, user-management, lib/auth, app/api/users, ModernAdminPanel) pode citar `inactive` como VALOR; a divida fora do caminho estrito tem que ser EXATAMENTE a registrada; e o painel nao pode oferecer a opcao morta.",
+    "DEC-95 (dono, 2026-10-06): padronizar em `suspended`, sem mudar o enum. Saiu a opcao 'Inativo' do filtro do painel (a DEC-88 a manteve porque remover opcao visivel nao estava autorizado — agora esta), o campo `UserStatistics.inactive` da porta e do repositorio, e o contador fantasma de `getUsersByStatus`.",
+    "fixtures que descreviam estado impossivel (`status: 'inactive'`) passaram a descrever `suspended` em bulk-weekly-reports, cron-weekly-reset golden, lab-rules e no proprio teste de dependencias do delete — e o guarda agora testa `pending`/`rejected`/`suspended` explicitamente, para o fixture voltar a provar o caminho que decide.",
+    "comentarios de `User.ts`, `delete-user.use-case.ts` e `delete-user-dependencies.test.ts` corrigidos para dizer o caminho real: 'Suspender' -> `suspended`, e bloqueio de `!== 'active'`.",
+    "ASK-V4-33 registrada (nao corrigida): `components/features/volunteers-management.tsx` tem terceiro vocabulario (`active|inactive|on_leave`) e filtro que nunca casa, porque `toVolunteerEntry` (backend/domain/project/project-rules.ts:295) escreve `status: 'active'` para todo mundo. Fixada como KNOWN_DIVERGENCES no guarda, para a divida nao sumir silenciosamente nem o registro mentir.",
+    "no caminho: flake do `task-dialog-subtasks.test.tsx` (caso 'a mae nasce com a lista' estourou 5041ms sob carga paralela, verde isolado e no rerun) — causa medida: o arquivo chamava `userEvent.type/click` sem `setup()`, e cada tecla vira um `setTimeout(0)`. Passou para `userEvent.setup({ delay: null })` no beforeEach, padrao da casa (task-board.test.tsx).",
+    "no caminho: a suite completa sem `DATABASE_URL` exportado falha no `entities-roundtrip.test.ts` (roundtrip antigo, `new PrismaClient()` sem URL propria) conectando na 5432 — e la `purchases` so tem status legado (`delivered`/`processing`), entao o caso D-8 morre com 'no purchase row with a current-domain status'. Nao e regressao, e ambiente: exportar para 5433 antes da corrida completa."
+   ],
+   "gates": "G0 787/3077 zero violacao | G1 sem erro | G2 0 erros | G3 87/1099 | G4 completa 97/1184 (2 corridas, DATABASE_URL na 5433)",
+   "gotchas": [
+    "userEvent sem `userEvent.setup()` usa delay 0 e cada tecla vira um `setTimeout(0)`: sob carga paralela isso estourou o timeout de 5041ms num caso que passa isolado. Padrao da casa: `userEvent.setup({ delay: null })` criado no `beforeEach`.",
+    "o `entities-roundtrip.test.ts` e o unico roundtrip que NAO le `DATABASE_URL` de variavel propria: com o env na 5433 ele passa, sem ela cai na 5432 e falha por dado legado da instancia. Corrida completa exige `export DATABASE_URL=...5433`.",
+    "reescrever o STATE.json com `json.dump(indent=2)` explode os arrays inline que o arquivo escreve numa linha so e gera 270 linhas de diff de ruido — editar com edicao cirurgica."
+   ]
+  },
+  {
+   "id": "V4-5d",
+   "at": "2026-10-07",
+   "title": "gates G5/G6 do guia: recaptura restrita + prosa (resposta do dono de 2026-10-06)",
+   "actions": [
+    "captura restrita, sem gravar: node scripts/capture-user-guide.mjs --only=quadro-tarefas,quadro-tarefas-participante,dialogo-nova-tarefa,dialogo-detalhe-tarefa contra a instancia em http://localhost:3000 — exatamente 4 PNGs mudaram em docs/screens/ e o manifesto foi atualizado (35 telas); nenhum write na instancia (o unico INTERACTION que grava, relatorios-gerar-lote, esta fora do --only)",
+    "prosa de docs/src-usuario pelo manifesto medido: cap. 03 ganhou o campo Subtasks na criacao (so Delegada/Privada, so na criacao, base 10 + 10 por etapa), o aviso ambar do cartao com checkbox por etapa aberta, a secao Subtasks do detalhe com a janela (lista muda so em to-do/in-progress/adjust; concluir etapa liberado ate done) e a trava de entrega (menu Mover para sem os destinos Em Revisao/Concluido, Aprovar do cartao desabilitado, drag recusado — sempre a frase do dominio openSubtasksMessage) + auto-move da ultima subtask (in-progress para in-review com o toast explicito)",
+    "frases corrigidas de pontos que ficaram desatualizadas: base 10 + 10·n no cap. 03 (secao Pontos, limites, backlog), cap. 07 e FAQ cap. 12; a FAQ 'Por que nao consigo aprovar' ganhou o caso subtask aberta",
+    "docs:build verde (15 secoes tecnicas / 12 de usuario com 35 figuras) e docs:check sem caracteres suspeitos — nenhum AVISO no build"
+   ],
+   "gates": {
+    "G5": "docs:build + docs:check verdes em 2026-10-07",
+    "G6": "recaptura restrita conforme resposta do dono; 4 PNGs atualizados; prosa reescrita pelo manifesto"
+   }
+  }
+ ],
+ "openQuestions": [
+  "ASK-V4-33 (aberto pelo V4-6b, precisa do dono): a tela de voluntarios (`components/features/volunteers-management.tsx:55`) tem um TERCEIRO vocabulario (`'active' | 'inactive' | 'on_leave'`) e um filtro com 'Inativo'/'De licenca' que NUNCA encontra ninguem — medido: `toVolunteerEntry` (backend/domain/project/project-rules.ts:295) escreve `status: 'active'` para todo mundo, entao o filtro e um controle morto alem de mentir sobre o vocabulario. Duas saidas possiveis: levar o status real ate a tela (o backend ja escreve `pending|active|rejected|suspended`), ou tirar o filtro. Enquanto nao decidir, a divergencia esta fixada como `KNOWN_DIVERGENCES` em `tests/unit/modules/user-management/user-status-vocabulary.test.ts` — o guarda falha se ela mudar sem atualizar o registro.",
+  "ASK-V4-28 FECHADO em 2026-10-06 (DEC-95): padronizar em `suspended`, sem adicionar `inactive` ao enum. 'Inativo' saiu do filtro do painel, o contador fantasma saiu do repositorio, e os fixtures passaram a citar `suspended`. O que o AGENTS.md dizia ('inactive ja funciona de ponta a ponta') estava meio errado e ja estava corrigido.",
+  "ASK-V4-27 FECHADO em 2026-10-06 (DEC-88): o filtro de status do painel ganhou 'Rejeitado' e 'Suspenso'.",
+  "ASK-V4-26 FECHADO em 2026-10-06 (DEC-87): o `confirm` do 'Rejeitar' passou a dizer a verdade sobre o que acontece com a conta.",
+  "ASK-V4-06 FECHADO em 2026-10-06 (DEC-84): `{action:'set', points:null}` passou a ser recusado com 400. A caraterizacao do V4-6 virou teste de recusa, e entraram os casos `undefined`, `''`, `true`, `{}`, `[]` e a string numerica `'12'` (continua aceita).",
+  "ModernAdminPanel.tsx: FECHADO em 2026-10-06 (V4-4b/V4-4c) — 12 testes sobre o painel real. O arquivo continua sem teste para as abas Projetos/Horas/Tarefas/Notificacoes/Configuracoes e para os dialogos filhos; o que esta coberto e o caminho de configuracao de usuario (perfil, funcoes, carga horaria, pontos, status) e os filtros da lista.",
+  "Achado menor, sem decisao pedida: o filtro da lista de usuarios do painel NAO se aplica ao `ScheduleGrid`, que recebe a MESMA lista e a renderiza inteira. Provar 'o filtro escondeu o usuario' exige escopo no card certo (o teste usa o botao 'Configurar <nome>').",
+  "Pendencia conhecida e aceita do e2e: o 3o teste do quadro quebra por CARTAO A MAIS na coluna 'Em Revisao' (era a tarefa 290 'fasdfas', em 2026-10-06 e a 50 'fazer reuniao com mamedes'). O dono recusou escopar o locator no cartao do fixture e recusou mexer no dado. Como o spec e serial, a falha faz os outros 5 aparecerem como 'did not run'. Confirmar com git stash antes de cacar regressao."
+ ],
+ "blockers": [],
+ "removedItems": [],
+ "answeredInstructions": [
+  {
+   "id": "ASK-V4-01",
+   "question": "o que fazer com DELETE /api/users/[id]",
+   "answer": "recusar com 409 quando houver dependencia (DEC-55)",
+   "answeredAt": "2026-10-05"
+  },
+  {
+   "id": "ASK-V4-02",
+   "question": "como o +10 por subtask convive com a penalidade de atraso",
+   "answer": "soma à base, penalidade continua fixa por dia (DEC-56)",
+   "answeredAt": "2026-10-05"
+  },
+  {
+   "id": "ASK-V4-03",
+   "question": "onde mora a trava da task mãe",
+   "answer": "no dominio, aplicada no use case, com 400 e mensagem (DEC-57)",
+   "answeredAt": "2026-10-05"
+  },
+  {
+   "id": "ASK-V4-04",
+   "question": "animar toda mudança de pontos, mudando o significado do número",
+   "answer": "aceito (DEC-58)",
+   "answeredAt": "2026-10-05"
+  },
+  {
+   "id": "ASK-V4-05",
+   "question": "a API de pontos não expressa total negativo, mas a premiação produz — o que fazer",
+   "answer": "permitir `set` negativo; `add` e `remove` ficam como estavam (DEC-60)",
+   "answeredAt": "2026-10-05"
+  },
+  {
+   "id": "ASK-V4-05b",
+   "question": "restaurar o total do Coordenador para -20, depois que as corridas de e2e o levaram a 0",
+   "answer": "não — deixar como está",
+   "answeredAt": "2026-10-05"
+  },
+  {
+   "id": "ASK-V4-01b",
+   "question": "D-D: escopo da subtask na v1 (responsável, prazo, pública/global, criação, badge)",
+   "answer": "sem responsável próprio, sem prazo próprio (herda da mãe), só em tarefa delegada, criada JUNTO com a mãe no mesmo formulário, sem efeito em evaluateUserBadges",
+   "answeredAt": "2026-10-05"
+  },
+  {
+   "id": "ASK-V4-07",
+   "question": "'só em tarefa delegada' — o formulário tem Delegada/Pública/Privada; 'Privada' entra?",
+   "answer": "delegada E privada: tudo que não é pública nem quest global (DEC-82)",
+   "answeredAt": "2026-10-06"
+  },
+  {
+   "id": "ASK-V4-08",
+   "question": "subtask pode ser criada depois da mãe existir (card/diálogo), ou só junto com ela?",
+   "answer": "criação junto com a mãe E depois, no card e no diálogo",
+   "answeredAt": "2026-10-06"
+  },
+  {
+   "id": "ASK-V4-09",
+   "question": "o que dá para fazer com uma subtask já criada?",
+   "answer": "concluir, renomear e apagar (CRUD completo)",
+   "answeredAt": "2026-10-06"
+  },
+  {
+   "id": "ASK-V4-10",
+   "question": "a trava bloqueia quais movimentos, se o quadro deixa arrastar para qualquer coluna?",
+   "answer": "entrar em Em Revisão ou Concluído vindo de QUALQUER coluna; voltar para A Fazer/Em Andamento/Ajustes fica livre (DEC-80)",
+   "answeredAt": "2026-10-06"
+  },
+  {
+   "id": "ASK-V4-11",
+   "question": "a mãe já está em Em Revisão com subtask aberta — aprovar também é bloqueado?",
+   "answer": "sim, aprovar também recusa: 'nada termina com subtask aberta' nos três caminhos",
+   "answeredAt": "2026-10-06"
+  },
+  {
+   "id": "ASK-V4-12",
+   "question": "quando a última subtask é concluída, a mãe deve se mover sozinha? de qual coluna, e com notificação?",
+   "answer": "sim — só a partir de Em Andamento, para Em Revisão, com a mesma notificação de um movimento humano (DEC-81)",
+   "answeredAt": "2026-10-06"
+  },
+  {
+   "id": "ASK-V4-13",
+   "question": "quem pode criar/concluir/apagar uma subtask?",
+   "answer": "a mesma autoridade de editar a mãe (DEC-82)",
+   "answeredAt": "2026-10-06"
+  },
+  {
+   "id": "ASK-V4-14",
+   "question": "a base do prêmio conta todas as subtasks ou só as concluídas? e qual aritmética, com o exemplo medido",
+   "answer": "cada subtask pela mesma regra da mãe, medida no instante em que ela foi concluída; só as concluídas somam (DEC-78)",
+   "answeredAt": "2026-10-06"
+  },
+  {
+   "id": "ASK-V4-15",
+   "question": "subtask concluída credita pontos por si ou conta em 'tarefas concluídas'?",
+   "answer": "não, nada (DEC-82)",
+   "answeredAt": "2026-10-06"
+  },
+  {
+   "id": "ASK-V4-16",
+   "question": "tasks.points (coluna histórica) passa a gravar a base real? como convive com subtask criada/apagada depois?",
+   "answer": "gravado na criação e mantido sincronizado até a mãe concluir; mãe concluída nunca é reescrita (DEC-83)",
+   "answeredAt": "2026-10-06"
+  },
+  {
+   "id": "ASK-V4-17",
+   "question": "dá para criar/renomear/apagar subtask numa mãe já em Em Revisão, Ajustes ou Concluído?",
+   "answer": "só enquanto a mãe não está em revisão nem concluída (A Fazer, Em Andamento e Ajustes aceitam) — DEC-80",
+   "answeredAt": "2026-10-06"
+  },
+  {
+   "id": "ASK-V4-18",
+   "question": "o JSON da tarefa já expõe as subtasks no V4-4?",
+   "answer": "sim (DEC-79) — senão o cartão e o detalhe continuam anunciando 10 numa tarefa que vale 10 + 10·n",
+   "answeredAt": "2026-10-06"
+  },
+  {
+   "id": "ASK-V4-19",
+   "question": "criação com 2+ responsáveis no modo Individual: as subtasks vão para cada cópia?",
+   "answer": "sim, cada cópia tem as suas (DEC-82)",
+   "answeredAt": "2026-10-06"
+  },
+  {
+   "id": "ASK-V4-20",
+   "question": "a importação de backlog precisa aceitar subtask na v1?",
+   "answer": "não (DEC-82)",
+   "answeredAt": "2026-10-06"
+  },
+  {
+   "id": "ASK-V4-21",
+   "question": "ASK-V4-06: corrigir agora o `{action:'set', points:null}` que zera os pontos?",
+   "answer": "sim, recusar null (DEC-84)",
+   "answeredAt": "2026-10-06"
+  },
+  {
+   "id": "ASK-V4-22",
+   "question": "fazer testes de UI do ModernAdminPanel (~1000 linhas, zero testes)?",
+   "answer": "sim, antes do V4-5 — virou a onda V4-4b",
+   "answeredAt": "2026-10-06"
+  },
+  {
+   "id": "ASK-V4-23",
+   "question": "o seam órfão lib/notifications/browser-notifications.ts (134 linhas, zero chamadores): manter ou apagar?",
+   "answer": "manter — a notificação nativa está adiada, não abandonada",
+   "answeredAt": "2026-10-06"
+  },
+  {
+   "id": "ASK-V4-24",
+   "question": "GAP-P3-05: o toast da conclusão direta anuncia o projetado em vez do creditado — corrigir no V4-5?",
+   "answer": "sim, corrigir no V4-5",
+   "answeredAt": "2026-10-06"
+  },
+  {
+   "id": "ASK-V4-25",
+   "question": "plan-v5 (não commitado, já ocupando DEC-61..77): renumerar o V4-4 e commitar o plan-v5?",
+   "answer": "renumerar para DEC-78..84 está certo; NÃO commitar os arquivos do plan-v5",
+   "answeredAt": "2026-10-06"
+  },
+  {
+   "id": "ASK-V4-26",
+   "question": "o confirm do 'Rejeitar' mente sobre remover o usuário — corrijo o texto?",
+   "answer": "sim, corrigir o texto (DEC-87)",
+   "answeredAt": "2026-10-06"
+  },
+  {
+   "id": "ASK-V4-27",
+   "question": "o filtro de status do painel não conhece `rejected` nem `suspended` — adiciono as duas opções?",
+   "answer": "sim, adicionar Rejeitado e Suspenso (DEC-88)",
+   "answeredAt": "2026-10-06"
+  },
+  {
+   "id": "ASK-V4-29",
+   "question": "o cartão tem dois modos (normal e `isCompact`): onde a lista de subtasks aparece?",
+   "answer": "só o aviso de trava — a lista completa fica no diálogo de detalhe (DEC-89)",
+   "answeredAt": "2026-10-06"
+  },
+  {
+   "id": "ASK-V4-30",
+   "question": "quem executa pode concluir uma subtask direto no cartão?",
+   "answer": "sim, checkbox direta no cartão (DEC-89)",
+   "answeredAt": "2026-10-06"
+  },
+  {
+   "id": "ASK-V4-31",
+   "question": "como a UI desabilita a trava: menu, Aprovar e alavanca de arrastar?",
+   "answer": "desabilitar menu + Aprovar; arrastar continua possível e avisa com a mensagem do servidor (DEC-89)",
+   "answeredAt": "2026-10-06"
+  },
+  {
+   "id": "ASK-V4-32",
+   "question": "quando a última subtask move a mãe para Em Revisão (DEC-81), o que a UI mostra?",
+   "answer": "movimento + toast explicando que foi a última subtask (DEC-89)",
+   "answeredAt": "2026-10-06"
+  },
+  {
+   "id": "ASK-V4-28",
+   "question": "o status `inactive` não existe como estado escrevível: padronizar em `suspended` ou adicionar `inactive` ao enum?",
+   "answer": "padronizar em `suspended`, sem mudar o enum (DEC-95); 'Suspender' é o único caminho de inativação",
+   "answeredAt": "2026-10-06"
+  }
+ ]
 }

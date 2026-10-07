@@ -104,12 +104,15 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
 
 - **Estado/decisões:** `displayquest-v2/plan-v4/{PLAN.md,STATE.json}` — V4-1, V4-2, V4-3, V4-4,
   **V4-4b**, **V4-4c**, **V4-5a** (subtask no cartão), **V4-5b** (CRUD no diálogo de detalhe),
-  **V4-5c** (formulário de nova tarefa + GAP-P3-05 fechado) e **V4-6b** (vocabulário de status
-  padronizado em `suspended`, fecha ASK-V4-28) **done**; **V4-5d** (gates G5/G6 do guia) pendente
-  mas **decidido**: recaptura restrita, sem gravar — `capture-user-guide.mjs --only=quadro-tarefas,
-  quadro-tarefas-participante,dialogo-nova-tarefa,dialogo-detalhe-tarefa` (os dois diálogos de
-  `INTERACTIONS` só abrem e fotografam; o único que grava é `relatorios-gerar-lote`, fora do
-  `--only`), depois a prosa de `docs/src-usuario` pelo manifesto e `docs:build` + `docs:check`.
+  **V4-5c** (formulário de nova tarefa + GAP-P3-05 fechado), **V4-6b** (vocabulário de status
+  padronizado em `suspended`, fecha ASK-V4-28) e **V4-5d** (G5/G6 do guia, executado 2026-10-07)
+  **done**; o plano está **encerrado**. O V4-5d foi a recaptura restrita, sem gravar —
+  `capture-user-guide.mjs --only=quadro-tarefas,quadro-tarefas-participante,dialogo-nova-tarefa,
+  dialogo-detalhe-tarefa` (exatamente 4 PNGs mudaram; os dois diálogos de `INTERACTIONS` só abrem e
+  fotografam; o único que grava é `relatorios-gerar-lote`, fora do `--only`), depois a prosa de
+  `docs/src-usuario` pelo manifesto (campo Subtasks na criação, aviso âmbar e checkbox no cartão,
+  seção Subtasks + janela no detalhe, trava de entrega + auto-move, base `10 + 10·n` em 03/07/12)
+  e `docs:build` (15 seções técnicas / 12 de usuário, 35 figuras) + `docs:check` em verde.
   `awaitingInstruction` está vazia. Em `openQuestions`: **`ASK-V4-33`** (a tela de voluntários tem
   vocabulário próprio e um filtro que nunca casa — `toVolunteerEntry` escreve `status:"active"` para
   todo mundo; levar o status real até a tela ou tirar o filtro?).

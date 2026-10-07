@@ -26,11 +26,11 @@ Não é bug, é função. Relatórios Semanais é de Coordenador, Gerente e Labo
 
 ## Por que não consigo aprovar uma tarefa?
 
-Os botões **Aprovar** e **Rejeitar** só aparecem na coluna **Em Revisão**, e só para Coordenador, Gerente ou o Gerente de Projeto daquele projeto. Um Gerente de Projeto nunca aprova a própria tarefa. Fora dessas condições, os botões não existem na tela.
+Os botões **Aprovar** e **Rejeitar** só aparecem na coluna **Em Revisão**, e só para Coordenador, Gerente ou o Gerente de Projeto daquele projeto. Um Gerente de Projeto nunca aprova a própria tarefa. Fora dessas condições, os botões não existem na tela. E mesmo para quem tem permissão, uma tarefa com subtask aberta não é aprovada: o botão fica desabilitado até a última etapa ser concluída.
 
 ## Por que a tarefa aparece com pontos negativos?
 
-Porque foi aprovada depois do prazo. Toda tarefa vale 10 pontos e a penalidade é de 10 pontos por dia de atraso, contados em dias de calendário — sem limite inferior, então o valor pode ficar negativo. Para evitar, aprove antes do vencimento ou ajuste o prazo antes da aprovação.
+Porque foi aprovada depois do prazo. A tarefa vale 10 pontos, e cada subtask concluída soma mais 10 — e a penalidade é de 10 pontos por dia de atraso de cada parcela, contados em dias de calendário — sem limite inferior, então o valor pode ficar negativo. Para evitar, aprove antes do vencimento ou ajuste o prazo antes da aprovação.
 
 ## Dá para transferir horas ou pontos entre pessoas?
 

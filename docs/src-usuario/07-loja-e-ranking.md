@@ -2,7 +2,7 @@
 
 Pontos são a moeda interna do sistema. Eles vêm das tarefas aprovadas e são gastos nas recompensas da loja. Horas não compram nada: horas medem trabalho, pontos medem entrega.
 
-Cada tarefa aprovada rende 10 pontos, com 15 pontos quando a aprovação acontece antes do prazo e menos 10 pontos por dia de atraso quando acontece depois. O valor não é escolhido na criação da tarefa: é o sistema que calcula.
+Cada tarefa aprovada rende 10 pontos — mais 10 por subtask concluída, quando a tarefa tem etapas — com 15 pontos quando a aprovação acontece antes do prazo e menos 10 pontos por dia de atraso quando acontece depois. O valor não é escolhido na criação da tarefa: é o sistema que calcula.
 
 ## A loja
 
