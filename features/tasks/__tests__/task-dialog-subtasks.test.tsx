@@ -43,13 +43,16 @@ function renderDialog(task: ReturnType<typeof makeTask> | null) {
   );
 }
 
-async function createWithTitle(title: string) {
-  await userEvent.type(await screen.findByRole("textbox", { name: "Título" }), title);
-  await userEvent.click(screen.getByRole("button", { name: "Criar Tarefa" }));
-}
+let user: ReturnType<typeof userEvent.setup>;
 
 describe("V4-5c · subtask no formulário de nova tarefa", () => {
-  beforeEach(() => resetTaskStore());
+  beforeEach(() => {
+    resetTaskStore();
+    // `delay: null` (padrão da casa, ver task-board.test.tsx): sem ele cada tecla vira
+    // um `setTimeout(0)` e a suíte completa flakou aqui — "a mãe nasce com a lista e com
+    // a base 10 + 10·n" estourou 5041ms sob carga paralela (verde isolado e no rerun).
+    user = userEvent.setup({ delay: null });
+  });
 
   it("o campo existe na criação de tarefa delegada", async () => {
     renderDialog(null);
@@ -60,12 +63,12 @@ describe("V4-5c · subtask no formulário de nova tarefa", () => {
   it("a mãe nasce com a lista e com a base 10 + 10·n (DEC-83)", async () => {
     renderDialog(null);
 
-    await userEvent.type(await screen.findByRole("textbox", { name: "Título" }), "Montar o espectrômetro");
+    await user.type(await screen.findByRole("textbox", { name: "Título" }), "Montar o espectrômetro");
     for (const title of ["Ligar a fonte", "Ajustar o zero"]) {
-      await userEvent.type(screen.getByRole("textbox", { name: "Nova subtask" }), title);
-      await userEvent.click(screen.getByRole("button", { name: "Adicionar subtask" }));
+      await user.type(screen.getByRole("textbox", { name: "Nova subtask" }), title);
+      await user.click(screen.getByRole("button", { name: "Adicionar subtask" }));
     }
-    await userEvent.click(screen.getByRole("button", { name: "Criar Tarefa" }));
+    await user.click(screen.getByRole("button", { name: "Criar Tarefa" }));
 
     await waitFor(() => {
       const created = getTaskStore().find((t) => t.title === "Montar o espectrômetro");
@@ -77,11 +80,11 @@ describe("V4-5c · subtask no formulário de nova tarefa", () => {
 
   it("subtask vazia não entra na lista", async () => {
     renderDialog(null);
-    await userEvent.type(await screen.findByRole("textbox", { name: "Título" }), "Tarefa sem subtask");
-    await userEvent.click(screen.getByRole("button", { name: "Adicionar subtask" }));
+    await user.type(await screen.findByRole("textbox", { name: "Título" }), "Tarefa sem subtask");
+    await user.click(screen.getByRole("button", { name: "Adicionar subtask" }));
 
     expect(screen.queryAllByRole("button", { name: "Remover subtask" })).toHaveLength(0);
-    await userEvent.click(screen.getByRole("button", { name: "Criar Tarefa" }));
+    await user.click(screen.getByRole("button", { name: "Criar Tarefa" }));
 
     await waitFor(() => {
       const created = getTaskStore().find((t) => t.title === "Tarefa sem subtask");
@@ -92,18 +95,18 @@ describe("V4-5c · subtask no formulário de nova tarefa", () => {
 
   it("tarefa pública não oferece o campo (DEC-82)", async () => {
     renderDialog(null);
-    await userEvent.type(await screen.findByRole("textbox", { name: "Título" }), "Pública qualquer");
-    await userEvent.click(screen.getByRole("combobox", { name: "Visibilidade da tarefa" }));
-    await userEvent.click(await screen.findByRole("option", { name: /^Pública/ }));
+    await user.type(await screen.findByRole("textbox", { name: "Título" }), "Pública qualquer");
+    await user.click(screen.getByRole("combobox", { name: "Visibilidade da tarefa" }));
+    await user.click(await screen.findByRole("option", { name: /^Pública/ }));
 
     expect(screen.queryByRole("textbox", { name: "Nova subtask" })).not.toBeInTheDocument();
   });
 
   it("quest global não oferece o campo (DEC-82)", async () => {
     renderDialog(null);
-    await userEvent.type(await screen.findByRole("textbox", { name: "Título" }), "Quest com subtask?");
+    await user.type(await screen.findByRole("textbox", { name: "Título" }), "Quest com subtask?");
     // Medido: "Quest Global" é um `Switch` do Radix (role="switch"), não uma checkbox.
-    await userEvent.click(await screen.findByRole("switch", { name: "Quest Global" }));
+    await user.click(await screen.findByRole("switch", { name: "Quest Global" }));
 
     expect(screen.queryByRole("textbox", { name: "Nova subtask" })).not.toBeInTheDocument();
   });

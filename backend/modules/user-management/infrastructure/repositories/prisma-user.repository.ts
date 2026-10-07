@@ -209,7 +209,6 @@ export class PrismaUserRepository implements UserRepositoryPort {
       pending: 0,
       rejected: 0,
       suspended: 0,
-      inactive: 0,
     }
     for (const user of allUsers) {
       statusCounts[user.status] = (statusCounts[user.status] ?? 0) + 1
@@ -228,7 +227,6 @@ export class PrismaUserRepository implements UserRepositoryPort {
       pending: allUsers.filter((u) => u.status === "pending").length,
       rejected: allUsers.filter((u) => u.status === "rejected").length,
       suspended: allUsers.filter((u) => u.status === "suspended").length,
-      inactive: allUsers.filter((u) => u.status === "inactive").length,
       totalPoints,
       totalTasks,
       averagePoints: total > 0 ? Math.round(totalPoints / total) : 0,

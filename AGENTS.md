@@ -5,7 +5,7 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
 
 ## Verificação
 
-- **Gate de entrega:** `npm run arch:check` (exit 0, allow-list **vazia**) && `npm run lint` (nada de erro) && `npx tsc --noEmit` (0) && `npx vitest run` (zero failure). A contagem é **por branch**: no `dev` o baseline era **64 arquivos / 721 testes** quando o B8 removeu os 651 testes de paridade; no `plan/v3-operacional`, medido no encerramento do plan-v3 (2026-10-03), são **65 arquivos / 798 testes** em `tests/unit` + `features` e **75 / 881** na suíte completa. Na `dev` de hoje (2026-10-06, depois do plan-v4 V4-1/V4-2/V4-3/V4-6, do V4-4 de subtasks, dos testes do painel V4-4b/V4-4c e do V4-5a/V4-5b/V4-5c de subtask na UI) são **86 arquivos / 1095 testes** e **96 / 1180** na suíte completa; a suíte e2e do quadro está em **2 passando + 1 falha conhecida + 5 "did not run"** (medido 2026-10-06
+- **Gate de entrega:** `npm run arch:check` (exit 0, allow-list **vazia**) && `npm run lint` (nada de erro) && `npx tsc --noEmit` (0) && `npx vitest run` (zero failure). A contagem é **por branch**: no `dev` o baseline era **64 arquivos / 721 testes** quando o B8 removeu os 651 testes de paridade; no `plan/v3-operacional`, medido no encerramento do plan-v3 (2026-10-03), são **65 arquivos / 798 testes** em `tests/unit` + `features` e **75 / 881** na suíte completa. Na `dev` de hoje (2026-10-06, depois do plan-v4 V4-1/V4-2/V4-3/V4-6, do V4-4 de subtasks, dos testes do painel V4-4b/V4-4c, do V4-5a/V4-5b/V4-5c de subtask na UI e do V4-6b de vocabulário de status) são **87 arquivos / 1099 testes** e **97 / 1184** na suíte completa; a suíte e2e do quadro está em **2 passando + 1 falha conhecida + 5 "did not run"** (medido 2026-10-06
 no V4-5c; eram 7 quando a coluna `Em Revisão` tinha um cartão a menos) — o 3º teste quebra por cartão a
 mais na coluna (dado legítimo da instância, não código: hoje são as tarefas 50 e 304), e como o spec é
 serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 5 passando. Compare sempre com o `STATE.json` do plano em que você está.
@@ -103,16 +103,20 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
 ## plan-v4 — subtasks, animação de pontos, inativação de usuário (2026-10-05..10-06)
 
 - **Estado/decisões:** `displayquest-v2/plan-v4/{PLAN.md,STATE.json}` — V4-1, V4-2, V4-3, V4-4,
-  **V4-4b**, **V4-4c**, **V4-5a** (subtask no cartão), **V4-5b** (CRUD no diálogo de detalhe) e
-  **V4-5c** (formulário de nova tarefa + GAP-P3-05 fechado) **done**; **V4-5d** (gates G5/G6 do guia)
-  pendente e **parado por decisão a tomar**: recapturar exige rodar `scripts/capture-user-guide.mjs`
-  contra a instância real, e algumas capturas gravam de verdade. `awaitingInstruction` está vazia. Em
-  `openQuestions`: **`ASK-V4-28`** (o status `inactive` não existe como estado escrevível —
-  padronizar em `suspended` ou adicionar `inactive` ao enum?).
+  **V4-4b**, **V4-4c**, **V4-5a** (subtask no cartão), **V4-5b** (CRUD no diálogo de detalhe),
+  **V4-5c** (formulário de nova tarefa + GAP-P3-05 fechado) e **V4-6b** (vocabulário de status
+  padronizado em `suspended`, fecha ASK-V4-28) **done**; **V4-5d** (gates G5/G6 do guia) pendente
+  mas **decidido**: recaptura restrita, sem gravar — `capture-user-guide.mjs --only=quadro-tarefas,
+  quadro-tarefas-participante,dialogo-nova-tarefa,dialogo-detalhe-tarefa` (os dois diálogos de
+  `INTERACTIONS` só abrem e fotografam; o único que grava é `relatorios-gerar-lote`, fora do
+  `--only`), depois a prosa de `docs/src-usuario` pelo manifesto e `docs:build` + `docs:check`.
+  `awaitingInstruction` está vazia. Em `openQuestions`: **`ASK-V4-33`** (a tela de voluntários tem
+  vocabulário próprio e um filtro que nunca casa — `toVolunteerEntry` escreve `status:"active"` para
+  todo mundo; levar o status real até a tela ou tirar o filtro?).
 - **Numeração de decisão é global e JÁ tem buraco (medido 2026-10-06):** DEC-01..29 clean-arch,
   DEC-30..49 plan-v3, DEC-50..54 B6/D4, DEC-55..60 plan-v4, **DEC-61..77 plan-v5** (reservadas pelo
-  dono em `displayquest-v2/plan-v5/`, criado 2026-10-06 e ainda **não commitado**), DEC-78..94 plan-v4
-  (V4-4, ASK-V4-06, V4-4b, V4-4c, V4-5a, V4-5b e V4-5c). O V4-4 ia usar DEC-61..64 e colidiu; os 28
+  dono em `displayquest-v2/plan-v5/`, criado 2026-10-06 e ainda **não commitado**), DEC-78..95 plan-v4
+  (V4-4, ASK-V4-06, V4-4b, V4-4c, V4-5a, V4-5b, V4-5c e V4-6b). O V4-4 ia usar DEC-61..64 e colidiu; os 28
   comentários de código foram renumerados. **Antes de abrir decisão nova, `grep` os três `STATE.json`.**
 - **Subtask (V4-4, DEC-78..83):** tabela `task_subtasks` (sem FK para `users` — subtask não tem
   responsável próprio), base gravada em `tasks.points` = `10 + 10·n`, e **cada subtask é pontuada pela
@@ -131,7 +135,14 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   (`entities/user.ts:31`), a rota de status escreve `active`/`rejected`/`suspended`
   (`update-user-status.use-case.ts:15-18`), e a única ocorrência de `"inactive"` no backend é um
   contador que sempre dá zero (`prisma-user.repository.ts:231`). O caminho real de inativação é
-  **"Suspender" → `suspended`**. Registrado como `ASK-V4-28` no `STATE.json` do plan-v4. Nenhuma tela
+  **"Suspender" → `suspended`** — e em 2026-10-06 o dono decidiu (**DEC-95**, fecha ASK-V4-28):
+  padronizar em `suspended`, sem adicionar `inactive` ao enum. A opção "Inativo" do filtro do
+  painel, o campo `UserStatistics.inactive` e o contador fantasma **saíram**; os fixtures de teste
+  que descreviam `status:"inactive"` (estado que a produção não escreve) passaram a citar
+  `suspended`. O `tsc` não pega isso (`inactive` é string), então o guarda é estrutural:
+  `tests/unit/modules/user-management/user-status-vocabulary.test.ts` (enum, caminhos de decisão,
+  dívida registrada, opção do painel). A dívida restante é **`ASK-V4-33`**: a tela de voluntários
+  (`volunteers-management.tsx:55`) tem vocabulário próprio e filtro morto. Nenhuma tela
   `.tsx` chamava `deleteUser`. O `DELETE /api/users/[id]` agora **recusa com 409** quando há
   dependência; sem dependência continua excluindo (é o caso "cadastro de teste").
 - **16 das 23 FKs para `users` são `RESTRICT`** (default do Prisma, sem `onDelete`); só 7
@@ -353,7 +364,11 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   "Can't reach database server"; re-arme com `docker start dq-dev-test-db` (NUNCA tocar
   no `display-quest-db`/`display-quest`). O roundtrip antigo `tests/integration/entities-roundtrip.test.ts`
   usa `localhost:5432` via `docker compose up -d postgres` (nome do serviço = `postgres`,
-  container = `display-quest-db`) — `db` **não** é o nome do serviço.
+  container = `display-quest-db`) — `db` **não** é o nome do serviço. **Medido em 2026-10-06
+  (V4-6b):** ele cria o `PrismaClient()` sem URL própria, então **sem `DATABASE_URL` exportado ele
+  cai na 5432** (a instância real) e o caso D-8 falha com *"no purchase row with a current-domain
+  status"* — lá `purchases` só tem `delivered`/`processing` (legado). A suíte completa **só fecha
+  verde com `export DATABASE_URL=...5433`**; a falha em 5432 é ambiente, não regressão.
 - **Os roundtrips G4 colidiam entre si (medido 2026-10-05, corrigido no mesmo dia):** os
   `tests/integration/**` compartilham o **mesmo** banco e o Vitest roda arquivos em paralelo por
   padrão. `bulkGenerateWeeklyReports` resolve a lista de usuários ativos **uma vez** e itera
@@ -413,13 +428,23 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
 - **Texto montado em vários nós não é encontrável pela frase inteira:** `Atual: {n} pontos` + a dica da
   ação viram três nós, e `getByText("Atual: 120 pontos")` falha com "text is broken up by multiple
   elements". Caminho: regex no nó do parágrafo (`getByText(/Atual: 120/)`).
-- **Dois vocabulários de status de usuário convivem nesta base (medido 2026-10-06):** o do modelo é
+- **`userEvent` sem `userEvent.setup()` é lento sob carga — flake medido (2026-10-06, V4-6b):**
+  chamar `userEvent.type/click` direto usa `delay: 0`, e **cada tecla vira um `setTimeout(0)`**. O
+  caso "a mãe nasce com a lista e com a base 10 + 10·n" (`task-dialog-subtasks.test.tsx`) estourou
+  **5041 ms** numa corrida completa da suíte, verde isolado e no rerun. Correção: `userEvent.setup({
+  delay: null })` criado no `beforeEach` e usado como `user.type/user.click` — padrão já usado em
+  `task-board.test.tsx`. Suspeitar disso quando um teste de digitação falha **só** sob carga paralela.
+- **Dois vocabulários de status de usuário convivem nesta base (medido 2026-10-06; o do caminho de
+  decisão saiu no V4-6b/DEC-95):** o do modelo é
   `pending | active | rejected | suspended` (`entities/user.ts:31`), e é isso que a rota escreve
-  (`update-user-status.use-case.ts:15-18`). `inactive` aparece em regras, testes, filtros da UI e num
+  (`update-user-status.use-case.ts:15-18`). `inactive` aparecia em regras, testes, filtros da UI e num
   contador de estatística (`prisma-user.repository.ts:231`, sempre 0), mas **nenhum caminho escreve
-  esse status** — as regras só chegam nele porque testam `!== "active"`. `components/features/volunteers-management.tsx:55`
-  tem um terceiro vocabulário (`active | inactive | on_leave`). Na instância real: 10 usuários, todos
-  `active`.
+  esse status** — as regras só chegam nele porque testam `!== "active"`. DEC-95 tirou `inactive` do
+  filtro do painel, do campo de estatística e dos fixtures; o guarda
+  `tests/unit/modules/user-management/user-status-vocabulary.test.ts` segura o caminho estrito.
+  `components/features/volunteers-management.tsx:55` tem um terceiro vocabulário
+  (`active | inactive | on_leave`) — **`ASK-V4-33`, ainda aberto**. Na instância real: 10 usuários,
+  todos `active`.
 - **`SelectTrigger` do Radix com só `<SelectValue placeholder=…>` não tem nome acessível (medido
   2026-10-06):** `getByRole("combobox", { name: "Status" })` não acha. Precisa de `aria-label` no
   trigger. Mesma classe do botão-ícone do painel (DEC-86).

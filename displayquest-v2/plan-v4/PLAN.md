@@ -200,9 +200,10 @@ Três ressalvas que precisam ser decididas junto:
 | **V4-1** | inativação: `DeleteUserUseCase` passa a recusar com `ConflictError` quando há dependência; 409 legível no lugar do 500 com Prisma cru; teste de caraterização do estado atual antes | baixo — nenhuma UI usa o endpoint | **done** (2026-10-05) |
 | **V4-2** | animação: o **cabeçalho** passa a contar gradualmente; chip mostra o valor final; chip translada ±10px em Y (para cima no aumento, para baixo na diminuição), desktop-only | médio — toca `points-delta.tsx`, `lib/points-delta.ts`, `app-header.tsx` e os testes que congelam o desenho atual | **done** (2026-10-05) |
 | **V4-3** | animação chega a quem não aprovou (baseline em `dq:points-seen:<userId>`) | médio — é mudança de semântica, DEC-58 já respondida | **done** (2026-10-05) |
-| **V4-4** | subtasks: schema + migration + domínio (`+10` na base, trava de status) | **alto** — schema novo, regra nova, **bloqueia em D-D** | pendente |
-| **V4-5** | subtasks na UI (criar/concluir/travar no card e no diálogo) | alto | pendente |
+| **V4-4** | subtasks: schema + migration + domínio (`+10` na base, trava de status) | **alto** — schema novo, regra nova, **bloqueia em D-D** | **done** (2026-10-06, §7; mais V4-4b §9 e V4-4c §10) |
+| **V4-5** | subtasks na UI (criar/concluir/travar no card e no diálogo) | alto | **done** (2026-10-06, §11–13: V4-5a/b/c; V4-5d = G5/G6, §14) |
 | **V4-6** | `PATCH points`: `set` aceita negativo (a administração escreve o que a premiação produz) | médio — mexe em quirk congelado e na precedência de dois 400 | **done** (2026-10-05) |
+| **V4-6b** | vocabulário de status de usuário padronizado em `suspended` (fecha ASK-V4-28) | baixo — sai opção morta de filtro e contador sempre-0; enum intocado | **done** (2026-10-06, §15) |
 
 V4-1 está fechado. V4-2 e V4-3 são o mesmo arquivo e devem ir juntos se o dono quiser. V4-4/5
 precisam de D-D antes.
@@ -597,12 +598,77 @@ e2e quadro 2 passando + 1 falha conhecida. **G5/G6 adiados para V4-5d** (abaixo)
 
 ---
 
-## 14. V4-5d — o que falta (G5/G6), e por que está parado
+## 14. V4-5d — o que falta (G5/G6)
 
 O cartão, o diálogo de detalhe e o formulário de nova tarefa mudaram de cara, e o aviso de conclusão
 mudou de hora e de número. As capturas do guia (`docs/screens/`, 34 imagens) deixaram de representar
 a tela. G5 (`docs:build` + `docs:check`) e G6 (recapturar) se aplicam.
 
 G6 roda `scripts/capture-user-guide.mjs` contra a instância em execução, e **algumas capturas gravam
-de verdade** (a lista `INTERACTIONS` cria relatórios semanais na base real). Rodar contra os dados do
-dono é decisão dele, não do agente. Por isso V4-5d está `pending` com a pergunta aberta.
+de verdade** (a lista `INTERACTIONS` cria relatórios semanais na base real).
+
+**Respondido pelo dono em 2026-10-06:** recaptura **restrita, sem gravar** — rodar o capturador só
+com `--only=quadro-tarefas,quadro-tarefas-participante,dialogo-nova-tarefa,dialogo-detalhe-tarefa`.
+Medido no script: de os quatro, `dialogo-nova-tarefa` e `dialogo-detalhe-tarefa` estão em
+`INTERACTIONS`, mas o loop de captura (`capture-user-guide.mjs:236-283`) só **abre** o diálogo,
+valida o texto e tira screenshot — nunca submete. O único `INTERACTIONS` que grava de verdade é
+`relatorios-gerar-lote` (o clique em "Gerar em Lote" é a ação), e ele fica de fora do `--only`.
+Depois: atualizar a prosa de `docs/src-usuario` a partir do manifesto medido e fechar com
+`docs:build` + `docs:check`.
+
+---
+
+## 15. V4-6b executado (2026-10-06) — um vocabulário de status, e o `inactive` saiu do caminho
+
+Fecha **ASK-V4-28** (aberta pelo V4-4c, §10.1) com **DEC-95**: padronizar em `suspended`, **sem**
+mudar o enum. Inativar de verdade é "Suspender". A alternativa (adicionar `inactive` ao enum e ao
+caminho de escrita) foi rejeitada porque criaria um segundo estado de bloqueio para a mesma coisa que
+`suspended` já faz — login, API, regras, bulk e cron já bloqueiam qualquer `!== "active"`.
+
+### 15.1 O que saiu
+
+| onde | o que mudou |
+|---|---|
+| `ModernAdminPanel.tsx` | opção "Inativo" do filtro de status removida (a DEC-88 a manteve porque remover opção visível não estava autorizado; agora está) |
+| `user.repository.ts` (porta) | campo `UserStatistics.inactive` removido |
+| `prisma-user.repository.ts` | contador `filter(u => u.status === 'inactive')` removido — sempre deu 0 |
+| fixtures de teste | `status: 'inactive'` em reporting/cron/lab virou `suspended` — fixture impossível deixa o teste verde mentindo sobre o caminho que decide |
+| comentários | `User.ts`, `delete-user.use-case.ts`, `delete-user-dependencies.test.ts` dizem agora o caminho real: "Suspender" → `suspended` |
+
+### 15.2 Por que o guarda é estrutural
+
+O `tsc` não pega `inactive`: é `string`, e um `status: "inactive"` num objeto literal de teste
+compila enquanto descreve um estado que a produção não escreve. Então
+`tests/unit/modules/user-management/user-status-vocabulary.test.ts` (4 casos, ambiente `node`, lê
+arquivo do disco) fixa quatro coisas: o enum é exatamente `pending|active|rejected|suspended`; nenhum
+caminho de decisão citar `inactive` como **valor**; a dívida fora do caminho estrito é **exatamente**
+a registrada; e o painel não oferece a opção morta. Mesma classe dos guards da casa
+(`system-actor.test.ts`, `user-delete-schema-drift.test.ts`).
+
+### 15.3 ASK-V4-33 — o que a medição deixou aberto
+
+A tela de voluntários (`components/features/volunteers-management.tsx:55`) tem um **terceiro**
+vocabulário (`active | inactive | on_leave`) e um filtro que nunca casa com nada: medido,
+`toVolunteerEntry` (`backend/domain/project/project-rules.ts:295`) escreve `status: "active"` para
+todo mundo, então "Inativo" e "De licença" são controles mortos. Duas saídas — levar o status real
+até a tela, ou tirar o filtro — e nenhuma delas cabe nesta DEC-95, que só fecha o vocabulário do
+**caminho que decide**. Registrada como ASK-V4-33 e fixada como `KNOWN_DIVERGENCES` no guarda: se a
+dívida mudar sem o registro mudar junto, o teste falha.
+
+### 15.4 Dois achados no caminho (gates)
+
+- **Flake do `task-dialog-subtasks.test.tsx` consertado.** O caso "a mãe nasce com a lista e com a
+  base 10 + 10·n" estourou **5041 ms** numa corrida completa (verde isolado e no rerun). Causa
+  medida: o arquivo chamava `userEvent.type/click` **sem** `setup()`, e cada tecla vira um
+  `setTimeout(0)`. Passou para `userEvent.setup({ delay: null })` no `beforeEach` — padrão da casa
+  (`task-board.test.tsx`). Duas corridas completas depois, sem repetição.
+- **A suíte completa exige `DATABASE_URL` exportado.** Sem ele, `entities-roundtrip.test.ts`
+  (roundtrip antigo, `new PrismaClient()` sem URL própria) conecta na **5432**, e lá `purchases` só
+  tem status legado (`delivered`/`processing`) — o caso D-8 morre com *"no purchase row with a
+  current-domain status"*. Não é regressão, é ambiente: com a URL na 5433, **97 arquivos / 1184
+  testes** verdes em duas corridas.
+
+### 15.5 Gates
+
+G0 787/3077 zero violação · G1 sem erro (exit 0) · G2 0 erros · G3 **87 / 1099** · G4 completa
+**97 / 1184** (2 corridas, `DATABASE_URL` na 5433).

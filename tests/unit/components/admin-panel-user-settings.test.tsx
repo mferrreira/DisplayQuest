@@ -321,12 +321,13 @@ describe("V4-4b · o que acontece quando a API recusa", () => {
 });
 
 describe("V4-4b · o filtro de status do painel", () => {
-  it("o filtro conhece os dois status que o próprio painel cria (ASK-V4-27)", async () => {
-    // Medido: o painel cria `rejected` (botão Rejeitar) e `suspended` (botão Suspender), mas o
+  it("o filtro oferece os status que o sistema escreve, e não oferece o que ninguém escreve (ASK-V4-27, ASK-V4-28)", async () => {
+    // Medido no V4-4c: o painel cria `rejected` (botão Rejeitar) e `suspended` (botão Suspender), mas o
     // filtro só oferecia Ativo / Pendente / Inativo — então nenhum dos dois aparecia em filtro
     // específico, só em "Todos". E "Inativo" é opção morta: nenhum caminho do sistema escreve o
     // status `inactive` (a rota escreve active/rejected/suspended; entities/user.ts:31 enumera
     // pending/active/rejected/suspended). Registrado como ASK-V4-28.
+    // DEC-95 (dono, 2026-10-06) autoriza remover a opção: inativar de verdade é "Suspender".
     renderPanel([
       alvo(),
       makeUser({ id: 78, name: "Rita Rejeitada", email: "rita@lab.com", status: "rejected" }),
@@ -336,9 +337,11 @@ describe("V4-4b · o filtro de status do painel", () => {
 
     await userEvent.click(screen.getByRole("combobox", { name: "Status" }));
     const options = await screen.findAllByRole("option");
-    expect(options.map((o) => o.textContent)).toEqual(
-      expect.arrayContaining(["Todos", "Ativo", "Pendente", "Inativo", "Rejeitado", "Suspenso"]),
+    const labels = options.map((o) => o.textContent);
+    expect(labels).toEqual(
+      expect.arrayContaining(["Todos", "Ativo", "Pendente", "Rejeitado", "Suspenso"]),
     );
+    expect(labels).not.toContain("Inativo");
 
     // Escopo: o botão "Configurar <nome>" só existe na lista filtrada ("Usuários do Sistema").
     // Medido ao escrever: o `ScheduleGrid` recebe a MESMA lista de usuários e a renderiza

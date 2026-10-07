@@ -22,8 +22,9 @@ import type { UserRepositoryPort } from "@/backend/modules/user-management/appli
  * The message names no table and no constraint on purpose: what the client needs is the
  * alternative (inactivate), not the schema. Inactivation already works end to end and is not
  * introduced here — `lib/auth/config.ts:30` blocks login, `lib/auth/server-auth.ts:36` blocks the
- * API, the lab rules refuse inactive users, bulk weekly reports and the cron weekly reset skip
- * them, and "Inativo" is already a choice in the volunteers screen and the admin panel.
+ * API, the lab rules refuse users who are not `active`, bulk weekly reports and the cron weekly
+ * reset skip them. The status that does this is `suspended` ("Suspender" in the panel): DEC-95
+ * standardized the vocabulary and `inactive` is not a status the system writes.
  */
 export class DeleteUserUseCase {
   constructor(private readonly repository: UserRepositoryPort) {}

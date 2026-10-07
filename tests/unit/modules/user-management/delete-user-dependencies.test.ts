@@ -16,11 +16,15 @@
  * `Invalid prisma.users.delete() invocation`, porque `domainErrorResponse` devolve `null` para
  * não-DomainError e o `catch` faz `error.message || ...`.
  *
- * O dono decidiu inativar em vez de excluir (DEC-55), e o caminho `inactive` já existe de ponta a
- * ponta — login (`lib/auth/config.ts:30`), API (`lib/auth/server-auth.ts:36`), regras de
- * laboratório, relatórios em lote, reset semanal do cron e a opção "Inativo" na UI. Nada disso é
- * criado aqui. O que este lote muda é só a recusa: `ConflictError` (409) com mensagem legível
- * quando há dependência, em vez de deixar o banco estourar.
+ * O dono decidiu inativar em vez de excluir (DEC-55). O caminho que inativa é `suspended` — o
+ * status `inactive` não existe como estado escrevível (medido no V4-4c: o enum é
+ * pending/active/rejected/suspended em `entities/user.ts:31`, a rota escreve
+ * active/rejected/suspended, e o único `inactive` do backend era um contador que sempre dava zero;
+ * DEC-95 removeu o contador e a opção "Inativo" do painel). O que bloqueia é qualquer status
+ * `!== "active"`: login (`lib/auth/config.ts:30`), API (`lib/auth/server-auth.ts:36`), regras de
+ * laboratório, relatórios em lote e reset semanal do cron. Nada disso é criado aqui. O que este
+ * lote muda é só a recusa: `ConflictError` (409) com mensagem legível quando há dependência, em
+ * vez de deixar o banco estourar.
  *
  * O caso que já funcionava continua funcionando: um cadastro sem histórico algum (o usuário de
  * teste recém-registrado) é excluído de verdade. Isso é o que separa esta decisão de "remover o

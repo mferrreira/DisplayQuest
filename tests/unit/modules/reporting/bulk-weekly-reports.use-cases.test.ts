@@ -91,7 +91,7 @@ describe("BulkGenerateWeeklyReportsUseCase (wiring nova, merge 64a6095)", () => 
     it("gera um relatorio por usuario ATIVO por periodo (inativos ignorados)", async () => {
       seedUser(world, { id: 1, name: "Ana" })
       seedUser(world, { id: 2, name: "Bruno" })
-      seedUser(world, { id: 3, name: "Carla", status: "inactive" })
+      seedUser(world, { id: 3, name: "Carla", status: "suspended" })
 
       const from = "2026-09-07"
       const to = "2026-09-20"
@@ -187,7 +187,7 @@ describe("BulkGenerateWeeklyReportsUseCase (wiring nova, merge 64a6095)", () => 
     })
 
     it("falta quando nao ha usuarios ativos (e nao escreve nada)", async () => {
-      seedUser(world, { id: 1, status: "inactive" })
+      seedUser(world, { id: 1, status: "suspended" })
       const before = snapshotReportingWorld(world)
 
       const error = await captureError(() =>

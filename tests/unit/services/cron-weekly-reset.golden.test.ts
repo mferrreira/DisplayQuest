@@ -48,7 +48,7 @@ function seedWorld(world: typeof reportingHarness.world) {
   world.users.push(
     { id: 1, name: "Ativo Com Horas", status: "active", currentWeekHours: 5, weekHours: 0 },
     { id: 2, name: "Ativo Sem Horas", status: "active", currentWeekHours: 7, weekHours: 0 },
-    { id: 3, name: "Inativo Com Horas", status: "inactive", currentWeekHours: 9, weekHours: 0 },
+    { id: 3, name: "Suspenso Com Horas", status: "suspended", currentWeekHours: 9, weekHours: 0 },
   )
   world.workSessions.push(
     // 2.5h completed DENTRO do window -> única linha de history esperada

@@ -516,11 +516,11 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
                         <SelectItem value="all">Todos</SelectItem>
                         <SelectItem value="active">Ativo</SelectItem>
                         <SelectItem value="pending">Pendente</SelectItem>
-                        {/* ASK-V4-28: "Inativo" é opção morta — nenhum caminho do sistema escreve
-                            o status `inactive` (a rota escreve active/rejected/suspended;
-                            entities/user.ts:31 enumera pending/active/rejected/suspended). Mantida
-                            porque remover opção visível não estava autorizado; registrada no STATE.json. */}
-                        <SelectItem value="inactive">Inativo</SelectItem>
+                        {/* DEC-95 (fecha ASK-V4-28, dono 2026-10-06): "Inativo" saiu. Nenhum caminho
+                            do sistema escreve o status `inactive` — o enum é
+                            pending/active/rejected/suspended (entities/user.ts:31) e a rota escreve
+                            active/rejected/suspended. A opção existia para filtrar um estado que
+                            ninguém produz; inativar de verdade é "Suspender". */}
                         {/* ASK-V4-27 (dono 2026-10-06): os dois status que o PRÓPRIO painel cria
                             — botão "Rejeitar" escreve `rejected`, "Suspender" escreve `suspended`
                             (update-user-status.use-case.ts:16-17) — não tinham filtro. Um usuário

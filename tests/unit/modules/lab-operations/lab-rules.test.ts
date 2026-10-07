@@ -197,8 +197,14 @@ describe("lab event rules", () => {
 
   it("guardas de criação (usuário ativo)", () => {
     expect(() => assertUserCanCreateLabEvent(null)).toThrow("Usuário não encontrado");
-    expect(() => assertUserCanCreateLabEvent({ status: "inactive" })).toThrow("Usuário não tem permissão para criar eventos");
-    expect(() => assertUserCanCreateLabNotice({ status: "inactive" })).toThrow("Usuário não tem permissão para criar avisos");
+    // DEC-95: os status aqui são os que o sistema escreve (`entities/user.ts:31`). Antes este
+    // teste usava `inactive`, um valor que nenhuma rota produz — a guarda passava verde contra
+    // um estado impossível. O que a regra checa é `status !== "active"`, então os três reais
+    // bloqueiam.
+    expect(() => assertUserCanCreateLabEvent({ status: "suspended" })).toThrow("Usuário não tem permissão para criar eventos");
+    expect(() => assertUserCanCreateLabEvent({ status: "pending" })).toThrow("Usuário não tem permissão para criar eventos");
+    expect(() => assertUserCanCreateLabEvent({ status: "rejected" })).toThrow("Usuário não tem permissão para criar eventos");
+    expect(() => assertUserCanCreateLabNotice({ status: "suspended" })).toThrow("Usuário não tem permissão para criar avisos");
     expect(() => assertUserCanCreateLabEvent({ status: "active" })).not.toThrow();
   });
 

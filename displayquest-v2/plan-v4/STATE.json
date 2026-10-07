@@ -1,7 +1,7 @@
 {
   "plan": "plan-v4",
   "version": "4.0.0",
-  "updatedAt": "2026-10-06T16:10:00-03:00",
+  "updatedAt": "2026-10-06T18:30:00-03:00",
   "status": "in_progress",
   "activeWave": "V4-5",
   "activeBatch": null,
@@ -93,7 +93,7 @@
       "title": "gates G5/G6 do guia (docs:build + recaptura das telas)",
       "status": "pending",
       "decisions": ["DEC-89"],
-      "scope": "O cartao, o dialogo de detalhe e o formulario mudaram de cara (subtask visivel) e o aviso de conclusao mudou de hora e de numero. As capturas do guia deixaram de representar a tela. `docs:build` + `docs:check` e recapturar com `scripts/capture-user-guide.mjs` — que GRAVA de verdade na instancia em alguns passos, entao depende de decisao do dono."
+      "scope": "O cartao, o dialogo de detalhe e o formulario mudaram de cara (subtask visivel) e o aviso de conclusao mudou de hora e de numero. As capturas do guia deixaram de representar a tela. Respondido pelo dono em 2026-10-06: recaptura RESTRITA, SEM GRAVAR — `--only=quadro-tarefas,quadro-tarefas-participante,dialogo-nova-tarefa,dialogo-detalhe-tarefa` (os dois dialogos de INTERACTIONS so abrem e fotografam, nunca submetem; o unico que grava e `relatorios-gerar-lote`, fora do `--only`), depois prosa de `docs/src-usuario` pelo manifesto medido e `docs:build` + `docs:check`."
     },
     {
       "id": "V4-6",
@@ -101,9 +101,17 @@
       "status": "done",
       "decisions": ["DEC-60"],
       "scope": "rota valida a ação antes do número e libera negativo só para `set`; use case idem; ModernAdminPanel libera o input para `set`. `add` e `remove` intactos."
+    },
+    {
+      "id": "V4-6b",
+      "title": "vocabulario de status de usuario padronizado em `suspended` (fecha ASK-V4-28)",
+      "status": "done",
+      "decisions": ["DEC-95"],
+      "scope": "sai do filtro do painel a opcao 'Inativo', sai `UserStatistics.inactive` da porta e do repositorio, sai o contador que sempre dava zero em `getUsersByStatus`; fixtures e comentarios passam a citar `suspended`; guarda estrutural `user-status-vocabulary.test.ts` contra status inventado. Divergencia da tela de voluntarios registrada como ASK-V4-33."
     }
   ],
   "decisionRegistry": [
+    "DEC-95 (2026-10-06, V4-6b, fecha ASK-V4-28): padronizar o vocabulario de status de usuario em `suspended` — NAO adicionar `inactive` ao enum. 'Suspender' e o unico caminho de inativacao de ponta a ponta. Sai do filtro do painel a opcao 'Inativo' (mantida pela DEC-88 porque remover opcao visivel nao estava autorizado), sai o campo `UserStatistics.inactive` da porta e do repositorio, e sai o contador fantasma de `getUsersByStatus` (sempre 0). Fixtures de teste que descreviam `status: 'inactive'` — um estado que a producao nao escreve — passaram a descrever `suspended` em reporting/cron/lab, porque um fixture impossivel deixa o teste verde mentindo sobre o caminho que decide. O tsc nao pega isso (`inactive` e string), entao o guarda e estrutural: `tests/unit/modules/user-management/user-status-vocabulary.test.ts` fixa o enum, varre os caminhos de decisao contra `inactive` como valor, e falha se a divida registrada mudar sem atualizar o registro. Divergencia fora do escopo registrada como ASK-V4-33.",
     "DEC-94 (2026-10-06, V4-5c): o campo de subtask existe so na CRIACAO de tarefa, e so quando `supportsSubtasks` diz sim — a MESMA funcao que o servidor usa para aceitar `subtasks` no corpo (DEC-82). Editar a lista de uma tarefa que ja existe e o que o dialogo de detalhe faz (DEC-89); oferecer os dois controles para a mesma lista na mesma tela convidaria duas regras a divergir. O campo nao entra no schema zod do react-hook-form: e uma lista de rascunho em state, enviada no POST como `subtasks: [{title}]`, e o mock passa a espelhar a rota real (mae com lista + base 10 + 10·n).",
     "DEC-93 (2026-10-06, V4-5c, fecha GAP-P3-05 do plan-v3 §8): o aviso da conclusao passa a ser derivado da RESPOSTA e chega DEPOIS da mutacao. Antes o cartao calculava `projectedAward(task)` e anunciava esse numero antes de a mutacao acontecer. Medido neste lote com o mock: tarefa publica vencida ha 3 dias projeta -20 e a resposta credita 10 — os dois divergem, e a pessoa tem direito ao segundo. A frase e uma funcao pura so (`completionAwardMessage`) porque o menu do cartao e o soltar do arrasto anunciam a mesma conclusao, e a lição medida do plan-v3 e que a mesma regra em duas copias diverge. `null` nao e zero: e 'ninguem creditado agora' (DEC-48). Consequencia visivel: o toast chega um pouco mais tarde (depois da resposta), e o numero pode ser diferente do que a pessoa esperava.",
     "DEC-92 (2026-10-06, V4-5b): a porta de autoridade da UI para subtask e a porta do servidor, medida e nao chutada. O servidor aceita `MANAGE_TASKS` ou `MANAGE_USERS`, OU responsavel da tarefa, OU criador/lider/membro do projeto (`internal/task-view.ts:208-216`). No dialogo de detalhe, `canManageTasks` e exatamente a lista de `MANAGE_TASKS` (medido em `permissions.ts:22`: COORDENADOR, GERENTE, GERENTE_PROJETO, COLABORADOR, PESQUISADOR) e `isAssignee` e a segunda porta — entao a UI oferece `canManageTasks || isAssignee`. As duas portas restantes (membro/criador de projeto) exigem consulta que o dialogo nao faz; quem estiver nelas e nao vir o controle continua podendo pela API, e o 403 do servidor chega na tela. Janela (DEC-80) na UI: criar/renomear/apagar so com mae em `to-do`/`in-progress`/`adjust`; concluir NAO obedece a janela (so `done` fecha a conclusao) — e a frase exibida e `subtaskWindowMessage` do dominio, nao uma parafrase.",
@@ -346,10 +354,31 @@
         "mudar a hora do toast e mudanca de comportamento visivel: o aviso chega depois da resposta, entao o cartao ja se moveu (otimista) quando a frase aparece. Teste que assere toast precisa de `findByText`, nao `getByText`.",
         "o mock que ignora uma chave do corpo esconde defeito do cliente: sem tratar `subtasks` no POST, o teste do formulario passaria verde provando que o input existia."
       ]
+    },
+    {
+      "id": "V4-6b",
+      "at": "2026-10-06",
+      "title": "vocabulario de status de usuario padronizado em `suspended` (DEC-95, fecha ASK-V4-28)",
+      "actions": [
+        "guarda primeiro, vermelho: `tests/unit/modules/user-management/user-status-vocabulary.test.ts` (4 casos, ambiente node, le arquivo do disco) — o enum tem que ser exatamente `pending|active|rejected|suspended`; nenhum caminho de decisao (entities/user.ts, backend/domain/identity, user-management, lib/auth, app/api/users, ModernAdminPanel) pode citar `inactive` como VALOR; a divida fora do caminho estrito tem que ser EXATAMENTE a registrada; e o painel nao pode oferecer a opcao morta.",
+        "DEC-95 (dono, 2026-10-06): padronizar em `suspended`, sem mudar o enum. Saiu a opcao 'Inativo' do filtro do painel (a DEC-88 a manteve porque remover opcao visivel nao estava autorizado — agora esta), o campo `UserStatistics.inactive` da porta e do repositorio, e o contador fantasma de `getUsersByStatus`.",
+        "fixtures que descreviam estado impossivel (`status: 'inactive'`) passaram a descrever `suspended` em bulk-weekly-reports, cron-weekly-reset golden, lab-rules e no proprio teste de dependencias do delete — e o guarda agora testa `pending`/`rejected`/`suspended` explicitamente, para o fixture voltar a provar o caminho que decide.",
+        "comentarios de `User.ts`, `delete-user.use-case.ts` e `delete-user-dependencies.test.ts` corrigidos para dizer o caminho real: 'Suspender' -> `suspended`, e bloqueio de `!== 'active'`.",
+        "ASK-V4-33 registrada (nao corrigida): `components/features/volunteers-management.tsx` tem terceiro vocabulario (`active|inactive|on_leave`) e filtro que nunca casa, porque `toVolunteerEntry` (backend/domain/project/project-rules.ts:295) escreve `status: 'active'` para todo mundo. Fixada como KNOWN_DIVERGENCES no guarda, para a divida nao sumir silenciosamente nem o registro mentir.",
+        "no caminho: flake do `task-dialog-subtasks.test.tsx` (caso 'a mae nasce com a lista' estourou 5041ms sob carga paralela, verde isolado e no rerun) — causa medida: o arquivo chamava `userEvent.type/click` sem `setup()`, e cada tecla vira um `setTimeout(0)`. Passou para `userEvent.setup({ delay: null })` no beforeEach, padrao da casa (task-board.test.tsx).",
+        "no caminho: a suite completa sem `DATABASE_URL` exportado falha no `entities-roundtrip.test.ts` (roundtrip antigo, `new PrismaClient()` sem URL propria) conectando na 5432 — e la `purchases` so tem status legado (`delivered`/`processing`), entao o caso D-8 morre com 'no purchase row with a current-domain status'. Nao e regressao, e ambiente: exportar para 5433 antes da corrida completa."
+      ],
+      "gates": "G0 787/3077 zero violacao | G1 sem erro | G2 0 erros | G3 87/1099 | G4 completa 97/1184 (2 corridas, DATABASE_URL na 5433)",
+      "gotchas": [
+        "userEvent sem `userEvent.setup()` usa delay 0 e cada tecla vira um `setTimeout(0)`: sob carga paralela isso estourou o timeout de 5041ms num caso que passa isolado. Padrao da casa: `userEvent.setup({ delay: null })` criado no `beforeEach`.",
+        "o `entities-roundtrip.test.ts` e o unico roundtrip que NAO le `DATABASE_URL` de variavel propria: com o env na 5433 ele passa, sem ela cai na 5432 e falha por dado legado da instancia. Corrida completa exige `export DATABASE_URL=...5433`.",
+        "reescrever o STATE.json com `json.dump(indent=2)` explode os arrays inline que o arquivo escreve numa linha so e gera 270 linhas de diff de ruido — editar com edicao cirurgica."
+      ]
     }
   ],
   "openQuestions": [
-    "ASK-V4-28 (aberto pelo V4-4c, precisa do dono — e corrige uma nota do AGENTS.md): o status `inactive` NAO EXISTE como estado escrevivel neste sistema. Medido 2026-10-06: `entities/user.ts:31` enumera `pending|active|rejected|suspended`; a rota de status escreve `active`/`rejected`/`suspended`; `select status, count(*) from users` na instancia real da so `active` (10 linhas); a UNICA ocorrencia de 'inactive' no backend e um contador fantasma em `prisma-user.repository.ts:231` (`allUsers.filter(u => u.status === 'inactive').length`, sempre 0). O que funciona de ponta a ponta e o BLOQUEIO de qualquer status !== 'active' (login, API, regras de laboratorio, bulk weekly reports, cron) — nao a inativacao por `inactive`. Consequencias medidas: (a) a nota do AGENTS.md sobre a DEC-55 diz 'inactive ja funciona de ponta a ponta' e isso esta meio errado, ja corrigido no AGENTS.md; (b) `components/features/volunteers-management.tsx:55` tem um TERCEIRO vocabulario (`'active' | 'inactive' | 'on_leave'`) e um filtro com 'Inativo'; (c) o filtro do painel mantem 'Inativo' porque remover opcao visivel nao estava autorizado. Decisao pedida: padronizar em `suspended` (e apagar `inactive` dos filtros e do contador), ou adicionar `inactive` ao enum e ao caminho de escrita.",
+    "ASK-V4-33 (aberto pelo V4-6b, precisa do dono): a tela de voluntarios (`components/features/volunteers-management.tsx:55`) tem um TERCEIRO vocabulario (`'active' | 'inactive' | 'on_leave'`) e um filtro com 'Inativo'/'De licenca' que NUNCA encontra ninguem — medido: `toVolunteerEntry` (backend/domain/project/project-rules.ts:295) escreve `status: 'active'` para todo mundo, entao o filtro e um controle morto alem de mentir sobre o vocabulario. Duas saidas possiveis: levar o status real ate a tela (o backend ja escreve `pending|active|rejected|suspended`), ou tirar o filtro. Enquanto nao decidir, a divergencia esta fixada como `KNOWN_DIVERGENCES` em `tests/unit/modules/user-management/user-status-vocabulary.test.ts` — o guarda falha se ela mudar sem atualizar o registro.",
+    "ASK-V4-28 FECHADO em 2026-10-06 (DEC-95): padronizar em `suspended`, sem adicionar `inactive` ao enum. 'Inativo' saiu do filtro do painel, o contador fantasma saiu do repositorio, e os fixtures passaram a citar `suspended`. O que o AGENTS.md dizia ('inactive ja funciona de ponta a ponta') estava meio errado e ja estava corrigido.",
     "ASK-V4-27 FECHADO em 2026-10-06 (DEC-88): o filtro de status do painel ganhou 'Rejeitado' e 'Suspenso'.",
     "ASK-V4-26 FECHADO em 2026-10-06 (DEC-87): o `confirm` do 'Rejeitar' passou a dizer a verdade sobre o que acontece com a conta.",
     "ASK-V4-06 FECHADO em 2026-10-06 (DEC-84): `{action:'set', points:null}` passou a ser recusado com 400. A caraterizacao do V4-6 virou teste de recusa, e entraram os casos `undefined`, `''`, `true`, `{}`, `[]` e a string numerica `'12'` (continua aceita).",
@@ -391,6 +420,7 @@
     { "id": "ASK-V4-29", "question": "o cartão tem dois modos (normal e `isCompact`): onde a lista de subtasks aparece?", "answer": "só o aviso de trava — a lista completa fica no diálogo de detalhe (DEC-89)", "answeredAt": "2026-10-06" },
     { "id": "ASK-V4-30", "question": "quem executa pode concluir uma subtask direto no cartão?", "answer": "sim, checkbox direta no cartão (DEC-89)", "answeredAt": "2026-10-06" },
     { "id": "ASK-V4-31", "question": "como a UI desabilita a trava: menu, Aprovar e alavanca de arrastar?", "answer": "desabilitar menu + Aprovar; arrastar continua possível e avisa com a mensagem do servidor (DEC-89)", "answeredAt": "2026-10-06" },
-    { "id": "ASK-V4-32", "question": "quando a última subtask move a mãe para Em Revisão (DEC-81), o que a UI mostra?", "answer": "movimento + toast explicando que foi a última subtask (DEC-89)", "answeredAt": "2026-10-06" }
+    { "id": "ASK-V4-32", "question": "quando a última subtask move a mãe para Em Revisão (DEC-81), o que a UI mostra?", "answer": "movimento + toast explicando que foi a última subtask (DEC-89)", "answeredAt": "2026-10-06" },
+    { "id": "ASK-V4-28", "question": "o status `inactive` não existe como estado escrevível: padronizar em `suspended` ou adicionar `inactive` ao enum?", "answer": "padronizar em `suspended`, sem mudar o enum (DEC-95); 'Suspender' é o único caminho de inativação", "answeredAt": "2026-10-06" }
   ]
 }

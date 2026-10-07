@@ -7,7 +7,8 @@
  * class satisfies it without nominal gaps (contrast DEC-14: TS enums are nominal, unions are not).
  *
  * `status` stays `string` (GAP-02 pattern): `users.status` is a plain String column
- * (pending/active/rejected/suspended/inactive are the values the backend writes today).
+ * (pending/active/rejected/suspended — DEC-95: this is the whole vocabulary the backend writes;
+ * `inactive` is not a writable status, inactivating means `suspended`).
  * The rich entity (invariants, creation rules) arrives in OND2-B2.
  */
 import type { UserRole } from "./UserRole";

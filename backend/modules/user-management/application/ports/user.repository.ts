@@ -51,7 +51,6 @@ export interface UserStatistics {
   pending: number;
   rejected: number;
   suspended: number;
-  inactive: number;
   totalPoints: number;
   totalTasks: number;
   averagePoints: number;
