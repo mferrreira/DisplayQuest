@@ -6,6 +6,7 @@
  *
  *   pré-v3   daysLate = ceil((completion − new Date(dueDate)) / 24h)  →  award = points − daysLate·points
  *   v3       dias inteiros de CALENDÁRIO em America/Sao_Paulo          →  award = 10 · (adiantada ? 1,5 : 1) − daysLate·10
+ *   v4-ajuste (DEC-97, 2026-10-07)                                     →  award = (10 + 5·n) · (≥2 dias adiantada ? 1,5 : 1) − daysLate·10
  *
  * O efeito que originou o plano: `dueDate` entra como `YYYY-MM-DD` e virava meia-noite UTC,
  * então entregar no dia do prazo somava uma fração de 24h, `ceil` virava 1 e a penalidade comia
@@ -24,8 +25,20 @@ import { civilDayOfDate, civilDayOfInstant, civilDaysBetween } from "../time/civ
 /** Valor fixo de toda tarefa, editável em um único lugar (DEC-30). */
 export const POINTS_PER_TASK = 10;
 
-/** Entrega estritamente antes do dia do prazo (DEC-32). */
+/**
+ * O que cada subtask SOMA à base da mãe (DEC-97, 2026-10-07 — ajuste do dono ao V4-4).
+ * Substitui os 10 por subtask da DEC-56/DEC-83: a base gravada em `tasks.points` passa a ser
+ * `10 + 5·n`. É valor FIXO — a subtask não tem pontuação própria pelo prazo (a DEC-78 morreu aqui).
+ */
+export const SUBTASK_POINTS = 5;
+
+/**
+ * Bônus de entrega antecipada: ×1,5 só com pelo menos `EARLY_DELIVERY_MIN_DAYS` dias civis de
+ * antecedência (DEC-97). A DEC-32 pedia bônus para QUALQUER entrega antes do prazo; o dono
+ * endureceu a régua para 2 dias, e a régua vale para toda tarefa, com ou sem subtask.
+ */
 export const EARLY_DELIVERY_MULTIPLIER = 1.5;
+export const EARLY_DELIVERY_MIN_DAYS = 2;
 
 /** `points` não é mais parâmetro da regra: manter o campo no tipo só registra o histórico. */
 export interface AwardableTask {
@@ -49,86 +62,80 @@ export function calculateLatePenalty(task: AwardableTask, completionDate: Date):
 }
 
 /**
- * Pontos creditados por concluir a tarefa.
+ * Núcleo da premiação: um `base` (a regra da mãe, ou a da mãe já somada com as subtasks)
+ * atravessando o mesmo calendário. Sem prazo o base fica inteiro; com prazo o calendário só
+ * multiplica ou desconta.
  *
- * - sem prazo → 10
- * - antes do dia do prazo → 15 (10 × 1,5)
- * - no dia do prazo → 10
- * - depois do dia do prazo → 10 − diasAtrasados × 10, podendo ficar negativo
+ * - sem prazo (ou ilegível) → o próprio base
+ * - pelo menos 2 dias antes do prazo → base × 1,5 (DEC-97; a régua da DEC-32 era 1 dia)
+ * - no dia do prazo ou 1 dia adiantado → base
+ * - depois do prazo → base − diasAtrasados × 10, podendo ficar negativo (DEC-39, sem piso)
  */
-export function awardPointsForCompletion(task: AwardableTask, completionDate: Date): number {
-  if (!task.dueDate) return POINTS_PER_TASK;
+function awardFromBase(base: number, task: AwardableTask, completionDate: Date): number {
+  if (!task.dueDate) return base;
   const dueDay = civilDayOfDate(task.dueDate);
-  if (!dueDay) return POINTS_PER_TASK;
+  if (!dueDay) return base;
 
   const completionDay = civilDayOfInstant(completionDate);
   const deltaDays = civilDaysBetween(dueDay, completionDay);
 
-  if (deltaDays < 0) return Math.round(POINTS_PER_TASK * EARLY_DELIVERY_MULTIPLIER);
-  return POINTS_PER_TASK - deltaDays * POINTS_PER_TASK;
+  if (deltaDays <= -EARLY_DELIVERY_MIN_DAYS) return Math.round(base * EARLY_DELIVERY_MULTIPLIER);
+  if (deltaDays > 0) return base - deltaDays * POINTS_PER_TASK;
+  return base;
+}
+
+/**
+ * Pontos creditados por concluir a tarefa SEM subtask (a conta com subtask é
+ * `totalAwardForCompletion`, mais abaixo).
+ *
+ * - sem prazo → 10
+ * - 2 ou mais dias antes do prazo → 15 (10 × 1,5)
+ * - no prazo ou 1 dia adiantado → 10
+ * - depois do prazo → 10 − diasAtrasados × 10, podendo ficar negativo
+ */
+export function awardPointsForCompletion(task: AwardableTask, completionDate: Date): number {
+  return awardFromBase(POINTS_PER_TASK, task, completionDate);
 }
 
 // ---------------------------------------------------------------------------
-// plan-v4 · V4-4 — subtask (DEC-78)
+// plan-v4 · V4-4 — subtask (DEC-78 → substituída pela DEC-97)
 // ---------------------------------------------------------------------------
 
 /**
- * Uma subtask pontuável. `dueDate` é o prazo **da mãe**, herdado (D-D: subtask não tem prazo
- * próprio); `completedAt` é o instante em que a subtask foi concluída — não o da mãe.
+ * Uma subtask na conta de premiação. Só o que importa é se ela foi CONCLUÍDA: a subtask não
+ * tem prazo próprio (D-D) e, desde a DEC-97, não tem pontuação própria — ela soma `SUBTASK_POINTS`
+ * fixos à base da mãe.
  *
  * `completed` é obrigatório de propósito: "não pontuar uma subtask aberta" é a regra, e uma
  * assinatura onde a conclusão é opcional faria uma linha esquecida valer zero em silêncio.
  */
 export interface AwardableSubtask {
-  dueDate?: string | null;
   completed: boolean;
-  completedAt?: Date | string | null;
 }
 
 /**
- * DEC-78 (substitui a fórmula gravada na DEC-56): cada subtask é pontuada pela **mesma regra da
- * mãe** — adiantada 15, no prazo 10, um dia atrasada 0, dois dias −10 — medida no instante em
- * que ela própria foi concluída. O dono escolheu esta leitura ao ver o exemplo medido: prazo
- * 20/10, mãe aprovada em 25/10, subtasks em 19/10, 21/10 e 24/10 → mãe −40, subtasks +15, 0, −30,
- * total **−55**.
+ * O que creditar quando a mãe termina (DEC-97, ajuste do dono de 2026-10-07): a base
+ * `10 + 5·n`, onde `n` é o número de subtasks CONCLUÍDAS, atravessando o mesmo calendário da
+ * mãe — bônus ×1,5 com pelo menos 2 dias de antecedência, penalidade de 10 por dia de atraso
+ * (DEC-39, sem piso).
  *
- * Duas consequências que precisam ficar escritas:
- *   - o atraso de uma subtask **não** é o atraso da mãe: uma subtask entregue no prazo vale 10
- *     mesmo que a mãe só seja aprovada cinco dias depois;
- *   - DEC-39 continua valendo sobre cada parcela: sem prazo, sem piso. Uma subtask concluída
- *     quatro dias atrasada **subtrai** 30 do prêmio da mãe.
+ * A subtask NÃO é mais pontuada pelo próprio prazo no instante da própria conclusão (a leitura
+ * da DEC-78 — mãe −40, subtasks +15/0/−30 → −55 — morreu aqui, por decisão do dono): o que ela
+ * faz é valer 5 quando concluída, e mais nada. O atraso da mãe é quem desconta, uma vez só.
  *
- * Sem `completedAt` a subtask é medida no instante em que a mãe é concluída — caminho defensivo
- * para linha antiga escrita antes de a coluna existir, não para comportamento normal.
- */
-export function awardPointsForSubtask(subtask: AwardableSubtask, fallbackCompletion: Date): number {
-  const parsed = subtask.completedAt ? new Date(subtask.completedAt) : null;
-  const completion = parsed && !Number.isNaN(parsed.getTime()) ? parsed : fallbackCompletion;
-  return awardPointsForCompletion({ dueDate: subtask.dueDate ?? null }, completion);
-}
-
-/**
- * O que creditar quando a mãe termina: o prêmio da mãe **mais** o de cada subtask CONCLUÍDA
- * (DEC-78). Uma subtask aberta não entra na conta: ela ainda não representou trabalho feito.
+ * Subtask aberta não entra na conta: ela ainda não representou trabalho feito. Com a trava
+ * (DEC-57) essa distinção seria inalcançável — nenhuma mãe termina com subtask aberta —, mas a
+ * conta não pode depender de a trava estar aplicada em todo caminho: se um caminho novo deixar
+ * uma mãe terminar aberta, o resultado é não pagar o que não foi feito.
  *
- * Com a trava (DEC-57) essa distinção seria inalcançável — nenhuma mãe termina com subtask
- * aberta. Ela existe no código porque a conta não pode depender de que a trava esteja sendo
- * aplicada em todo caminho, hoje e depois: se um caminho novo deixar uma mãe terminar aberta,
- * o resultado é não pagar o que não foi feito, e não pagar o que não foi feito.
- *
- * Sem subtask é exatamente `awardPointsForCompletion` — nada muda para tarefa simples, e é por
- * isso que os testes congelados da Onda 1 do plan-v3 continuam verdes.
+ * Sem subtask concluída o valor é exatamente `awardPointsForCompletion` — nada muda para tarefa
+ * simples além da régua de 2 dias (que é de toda tarefa, subtask ou não).
  */
 export function totalAwardForCompletion(
   task: AwardableTask,
   subtasks: ReadonlyArray<AwardableSubtask>,
   completionDate: Date,
 ): number {
-  return (
-    awardPointsForCompletion(task, completionDate) +
-    subtasks.reduce(
-      (sum, subtask) => (subtask.completed ? sum + awardPointsForSubtask(subtask, completionDate) : sum),
-      0,
-    )
-  );
+  const completedCount = subtasks.reduce((count, subtask) => (subtask.completed ? count + 1 : count), 0);
+  return awardFromBase(POINTS_PER_TASK + completedCount * SUBTASK_POINTS, task, completionDate);
 }

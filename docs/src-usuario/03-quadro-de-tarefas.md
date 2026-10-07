@@ -48,7 +48,7 @@ Três coisas que valem saber:
 - tarefa **sem prazo** vai para o fim da coluna em **Urgência** e em **Prazo**, e o empate de duas tarefas é resolvido com a mais recente primeiro — a lista não se embaralha sozinha quando os dados chegam.
 
 ::: limite titulo="O que a opção Pontos ordena"
-Uma tarefa nova nasce com **10 pontos de base, mais 10 por subtask listada** — então **Pontos** também separa uma tarefa com etapas de uma sem: o número gravado é 10, 20, 30 ou 40 conforme a lista. Nas tarefas antigas o valor gravado pode ser 15, 20, 25, 40 ou 60. Em ambos os casos, não é o quanto a tarefa rende hoje — esse valor depende do prazo e aparece no detalhe da tarefa.
+Uma tarefa nova nasce com **10 pontos de base, mais 5 por subtask listada** — então **Pontos** também separa uma tarefa com etapas de uma sem: o número gravado é 10, 15, 20 ou 25 conforme a lista. Nas tarefas criadas antes de outubro de 2026 o gravado pode ser 20, 30, 40 ou 60 — a regra anterior somava 10 por subtask. Em nenhum dos casos é o quanto a tarefa rende hoje: o valor creditado depende do prazo e aparece no detalhe da tarefa.
 :::
 
 ## Os filtros
@@ -67,8 +67,8 @@ Título, projeto, pessoas responsáveis, prazo e prioridade. Além disso:
 - **⚡** marca tarefa **pública**: qualquer pessoa pode pegá-la. A mesma marca aparece como coroa no canto do cartão.
 - **🌍** marca **Quest Global**: tarefa do laboratório inteiro, sem projeto. Só Coordenador e Gerente criam uma.
 - **ATRASADA** aparece em vermelho quando o prazo já passou.
-- **10 pts** no selo azul é o valor base da tarefa; com subtasks, o selo continua mostrando 10 e a conta completa (10 + 10 por subtask) fica no título, ao passar o mouse.
-- Com **subtask aberta**, o cartão ganha um aviso âmbar: o número de etapas pendentes (*"2 subtasks abertas"*), o progresso (*"1/3 concluídas"*) e uma **checkbox** ao lado de cada etapa para concluí-la ali mesmo, sem abrir o cartão. Enquanto houver etapa aberta, o cartão não vai para **Em Revisão** nem para **Concluído** (veja *Enviar para revisão e aprovar*).
+- O selo azul mostra a **base** da pontuação: **10 pts** de começo, mais **5 pts por subtask concluída** — com 3 etapas e 1 concluída, o selo diz **15 pts**. A conta completa (bônus de 50% com pelo menos 2 dias de antecedência, penalidade de 10 por dia de atraso) fica no título, ao passar o mouse.
+- Com **subtask aberta**, o cartão ganha um aviso âmbar: o número de etapas pendentes (*"2 subtasks abertas"*), o progresso (*"1/3 concluídas"*) e uma **checkbox** ao lado de cada etapa para concluí-la ali mesmo, sem abrir o cartão — desde que a tarefa esteja em **Em Andamento** (veja *Ver, editar e excluir*). Enquanto houver etapa aberta, o cartão não vai para **Em Revisão** nem para **Concluído** (veja *Enviar para revisão e aprovar*).
 
 ## Criar uma tarefa
 
@@ -77,7 +77,7 @@ Título, projeto, pessoas responsáveis, prazo e prioridade. Além disso:
 3. Escolha o destino: **Quest Global** (sem projeto, visível para todo o laboratório) ou **Projeto**.
 4. Em **Responsáveis**, defina quem executa. Com mais de uma pessoa escolhida aparece **Modo de atribuição**: **Individual** (cada responsável recebe uma tarefa independente) ou **Compartilhado** (todos compartilham o mesmo estado).
 5. Em **Visibilidade**, escolha **Delegada (responsáveis específicos)**, **Pública (qualquer um pode pegar)** ou **Privada (restrita aos responsáveis)**.
-6. Se a visibilidade for **Delegada** ou **Privada**, o campo **Subtasks** aparece: em cada linha, escreva uma etapa da tarefa e clique em **Adicionar subtask** para incluí-la na lista. Cada etapa listada soma 10 pontos à base da tarefa. O campo não aparece para tarefa **Pública** nem para **Quest Global**, e só existe na criação — depois, a lista se edita no detalhe da tarefa (*Ver, editar e excluir*).
+6. Se a visibilidade for **Delegada** ou **Privada**, o campo **Subtasks** aparece: em cada linha, escreva uma etapa da tarefa — o campo traz o exemplo *Ex.: Revisar a introdução* — e clique no ícone **+** ao lado para incluí-la na lista. Cada etapa listada soma 5 pontos à base da tarefa. O campo não aparece para tarefa **Pública** nem para **Quest Global**, e só existe na criação — depois, a lista se edita no detalhe da tarefa (*Ver, editar e excluir*).
 7. Ajuste **Prazo** e **Prioridade** (**Baixa**, **Média**, **Alta**).
 8. Salve.
 
@@ -85,15 +85,17 @@ Título, projeto, pessoas responsáveis, prazo e prioridade. Além disso:
 A opção Quest Global aparece apenas para quem tem permissão de gerenciar contas.
 ```
 
-Limites que o sistema aplica: título com até 200 caracteres, descrição com até 1000 e título de subtask com o mesmo limite de 200 (o campo **Subtasks** limita o texto de cada etapa). A pontuação não é preenchida: a tarefa vale 10 pontos, mais 10 por subtask listada, e quem cria não escolhe o valor.
+Limites que o sistema aplica: título com até 200 caracteres, descrição com até 1000 e título de subtask com o mesmo limite de 200 (o campo **Subtasks** limita o texto de cada etapa). A pontuação não é preenchida: a tarefa vale 10 pontos, mais 5 por subtask listada, e quem cria não escolhe o valor.
 
 ## Ver, editar e excluir
 
 Clique no título do cartão para abrir o detalhe da tarefa, que traz projeto, visibilidade, descrição, criador, pontos, prioridade, prazo, status e os botões **Editar** e **Excluir**.
 
-Quando a tarefa tem lista de subtasks (visibilidade **Delegada** ou **Privada**), o detalhe traz a seção **Subtasks**: a contagem *"2/3 concluídas"* no alto, uma **checkbox** ao lado de cada etapa para concluí-la, o lápis para renomear o título e a lixeira para apagar a etapa, confirmando antes com o diálogo **Apagar subtask**. No fim da lista, o campo **Nova subtask** com o botão **Adicionar subtask** cria a próxima etapa.
+Quando a tarefa tem lista de subtasks (visibilidade **Delegada** ou **Privada**), o detalhe traz a seção **Subtasks**: a contagem *"2/3 concluídas"* no alto, uma **checkbox** ao lado de cada etapa para concluí-la, o lápis para renomear o título e a lixeira para apagar a etapa, confirmando antes com o diálogo **Apagar subtask**. No fim da lista, o campo **Nova subtask** — com o exemplo *Ex.: Revisar a introdução* — e o ícone **+** ao lado criam a próxima etapa.
 
-A lista **muda** (criar, renomear, apagar) só enquanto a tarefa está em **A Fazer**, **Em Andamento** ou **Ajustes**. A partir de **Em Revisão**, o detalhe diz *"A tarefa está em revisão e a lista de subtasks não muda mais."* — e depois de **Concluído**, *"A tarefa já foi concluída e a lista de subtasks não muda mais."*. Concluir uma etapa continua liberado até a tarefa ser aprovada; só o que trava é mexer na lista.
+A lista **muda** (criar, renomear, apagar) só enquanto a tarefa está em **A Fazer**, **Em Andamento** ou **Ajustes**. A partir de **Em Revisão**, o detalhe diz *"A tarefa está em revisão e a lista de subtasks não muda mais."* — e depois de **Concluído**, *"A tarefa já foi concluída e a lista de subtasks não muda mais."*.
+
+**Marcar** uma etapa como concluída é outra regra: exige que a tarefa esteja em **Em Andamento**, no cartão ou no detalhe. Fora dela, a checkbox responde com o aviso **Ação não permitida** — *"A tarefa precisa estar em Andamento para marcar subtasks."* — e nada muda; a saída é devolver a tarefa para **Em Andamento** e marcar de novo. **Desmarcar** não tem essa exigência: continua liberada até a tarefa ser concluída.
 
 ```foto dialogo-detalhe-tarefa titulo="O detalhe de uma tarefa"
 O detalhe mostra o valor que a tarefa rende se for concluída agora, com o bônus ou a penalidade do prazo.
@@ -121,7 +123,7 @@ A aprovação credita **o responsável pela tarefa**, que quase nunca é quem ap
 :::
 
 ::: limite titulo="Pontos e atraso"
-Pontos são creditados na aprovação, não na entrega. A tarefa vale 10 pontos, e cada subtask concluída vale mais 10 — cada parcela segue a mesma regra: 15 quando é aprovada **antes** do prazo, 10 quando é aprovada **no dia** do prazo ou quando não tem prazo, e 10 menos 10 por dia de atraso quando é aprovada depois. A subtask é pontuada na data em que ela mesma foi concluída, contra o prazo da tarefa; só as concluídas entram na conta. A contagem é por dia de calendário: aprovar no dia do vencimento não gera atraso. O valor resultante pode ser negativo — tarefa muito atrasada reduz o saldo — e o detalhe da tarefa mostra o número sem disfarce. Uma tarefa concluída não volta para revisão por botão: é preciso editá-la.
+Pontos são creditados na aprovação, não na entrega. A tarefa vale **10 pontos, mais 5 por subtask concluída** — só as etapas já concluídas entram na conta — e esse valor atravessa o prazo: entregue pelo menos **2 dias antes** do vencimento vale **1,5 vezes**; entregue no vencimento, ou sem prazo, vale o valor cheio; entregue depois, **10 pontos são descontados por dia de atraso**. A contagem é por dia de calendário e olha a data da entrega contra o prazo: aprovar no dia do vencimento não gera atraso. O valor resultante pode ficar negativo — tarefa muito atrasada reduz o saldo — e o detalhe da tarefa mostra os dois números, a base de hoje e o que a tarefa renderia se fosse concluída agora, sem disfarce. Uma tarefa concluída não volta para revisão por botão: é preciso editá-la.
 :::
 
 ## Quem pode o quê no quadro

@@ -9,7 +9,7 @@
  * oferecer os dois controles para a mesma lista na mesma tela é convidar duas regras a divergir.
  *
  * O que o teste prova no fim é o estado gravado no mock: a mãe chega com a lista e com a base
- * `10 + 10·n` (DEC-83) — não "o input existia".
+ * `10 + 5·n` (DEC-97) — não "o input existia".
  */
 import { describe, expect, it, beforeEach, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
@@ -50,7 +50,7 @@ describe("V4-5c · subtask no formulário de nova tarefa", () => {
     resetTaskStore();
     // `delay: null` (padrão da casa, ver task-board.test.tsx): sem ele cada tecla vira
     // um `setTimeout(0)` e a suíte completa flakou aqui — "a mãe nasce com a lista e com
-    // a base 10 + 10·n" estourou 5041ms sob carga paralela (verde isolado e no rerun).
+    // a base 10 + 5·n" estourou 5041ms sob carga paralela (verde isolado e no rerun).
     user = userEvent.setup({ delay: null });
   });
 
@@ -60,7 +60,7 @@ describe("V4-5c · subtask no formulário de nova tarefa", () => {
     expect(screen.getByRole("button", { name: "Adicionar subtask" })).toBeInTheDocument();
   });
 
-  it("a mãe nasce com a lista e com a base 10 + 10·n (DEC-83)", async () => {
+  it("a mãe nasce com a lista e com a base 10 + 5·n (DEC-97)", async () => {
     renderDialog(null);
 
     await user.type(await screen.findByRole("textbox", { name: "Título" }), "Montar o espectrômetro");
@@ -74,7 +74,7 @@ describe("V4-5c · subtask no formulário de nova tarefa", () => {
       const created = getTaskStore().find((t) => t.title === "Montar o espectrômetro");
       expect(created).toBeDefined();
       expect(created!.subtasks.map((s) => s.title)).toEqual(["Ligar a fonte", "Ajustar o zero"]);
-      expect(created!.points).toBe(30);
+      expect(created!.points).toBe(20);
     });
   });
 

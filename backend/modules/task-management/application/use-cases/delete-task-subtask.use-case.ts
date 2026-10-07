@@ -15,7 +15,7 @@ import {
  * DeleteTaskSubtaskUseCase — plano-v4 · V4-4.
  *
  * Apagar é mexer na lista, então obedece à janela (DEC-80): mãe em `in-review` ou `done` recusa.
- * Apagar também derruba a base da mãe (10 + 10·n com o `n` que sobrou) — e isso só alcança
+ * Apagar também derruba a base da mãe (10 + 5·n com o `n` que sobrou, DEC-97) — e isso só alcança
  * tarefa que ainda não foi aprovada, porque a janela fecha a lista antes.
  */
 export interface DeleteTaskSubtaskCommand {

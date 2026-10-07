@@ -1991,17 +1991,17 @@ a realiza.</p>
 </tr>
 <tr>
 <td>RB-66</td>
-<td>A pontuação de uma tarefa é fixa em 10 e não é informada pelo cliente na criação nem na edição</td>
+<td>A base da pontuação de uma tarefa é 10 mais 5 por subtask da lista, acompanha a lista e não é informada pelo cliente na criação nem na edição</td>
 <td>RF-04</td>
 </tr>
 <tr>
 <td>RB-67</td>
-<td>A entrega antes do prazo multiplica a pontuação por 1,5, resultando em 15 pontos</td>
+<td>A entrega pelo menos 2 dias antes do prazo multiplica a pontuação por 1,5</td>
 <td>RF-09</td>
 </tr>
 <tr>
 <td>RB-68</td>
-<td>A entrega sem prazo, ou no próprio dia do prazo, rende a pontuação cheia</td>
+<td>A entrega sem prazo, ou a menos de 2 dias do prazo, rende a pontuação cheia</td>
 <td>RF-09</td>
 </tr>
 <tr>
@@ -2013,6 +2013,16 @@ a realiza.</p>
 <td>RB-70</td>
 <td>O award resultante não tem piso: tarefa vencida rende valor negativo, que reduz o saldo</td>
 <td>RF-09</td>
+</tr>
+<tr>
+<td>RB-71</td>
+<td>Marcar uma subtask como concluída exige que a tarefa esteja em Andamento; desmarcar não tem essa exigência enquanto a tarefa não está concluída</td>
+<td>RF-04</td>
+</tr>
+<tr>
+<td>RB-72</td>
+<td>Criar, renomear e apagar subtasks de uma tarefa em revisão ou concluída é recusado, enquanto concluir uma subtask não obedece a essa janela</td>
+<td>RF-04</td>
 </tr>
 </tbody>
 </table>
@@ -3405,7 +3415,7 @@ responder, a partir de qualquer um dos níveis, onde o comportamento é decidido
 <tr>
 <td>RF-04 · Tarefa revisada por terceiro</td>
 <td>Mover no quadro, Concluir, Submeter, Aprovar, Rejeitar</td>
-<td>RB-12 a RB-19, RB-66</td>
+<td>RB-12 a RB-19, RB-66, RB-71, RB-72</td>
 <td>Tarefa, Responsável, Progresso individual</td>
 <td><code>task-management</code></td>
 </tr>
@@ -3478,7 +3488,7 @@ enunciados na forma de condição observável.</p>
 </tr>
 <tr>
 <td>RF-04</td>
-<td>Aprovar uma tarefa que não está em revisão produz 409. Um gerente de projeto não aprova a própria entrega. Uma tarefa concluída registra instante de conclusão. Aprovar no dia do prazo credita 10 pontos; aprovar depois desconta 10 por dia de atraso.</td>
+<td>Aprovar uma tarefa que não está em revisão produz 409. Um gerente de projeto não aprova a própria entrega. Uma tarefa concluída registra instante de conclusão. Aprovar no dia do prazo credita a base (10, mais 5 por subtask concluída); aprovar pelo menos 2 dias antes multiplica por 1,5; aprovar depois desconta 10 por dia de atraso. Marcar subtask com a tarefa fora de Andamento produz 409 com a mesma frase do aviso na tela.</td>
 </tr>
 <tr>
 <td>RF-05</td>
@@ -4370,7 +4380,7 @@ expressa como migração versionada não pertence a este sistema.</p>
 <footer class="dq-footer">
   <p>
     Conteúdo gerado a partir de <code>docs/src/</code> e <code>docs/diagrams/</code>. Diagramas em notação UML (PlantUML). O conteúdo reflete o estado do
-    código no commit <code>78e9cdd (2026-10-07)</code>.
+    código no commit <code>2b180cb (2026-10-07)</code>.
   </p>
 </footer>
 

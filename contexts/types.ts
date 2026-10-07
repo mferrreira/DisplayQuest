@@ -150,6 +150,12 @@ export interface Task {
   completedAt?: string | null
   taskVisibility?: string
   isGlobal?: boolean
+  /**
+   * plan-v4 · V4-4 (DEC-79): o GET /api/tasks serializa a lista junto (`serializeTask`). Opcional
+   * porque este tipo é o mais antigo da casa — o painel admin lê com tolerância (item 4 do ajuste
+   * pós-encerramento, 2026-10-07).
+   */
+  subtasks?: { id: number; title: string; completed: boolean }[]
 }
 
 export interface TaskFormData {

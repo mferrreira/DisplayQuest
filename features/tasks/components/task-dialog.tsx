@@ -11,7 +11,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { useSession } from "next-auth/react"
 import { toast } from "sonner"
-import { HelpCircle, Info, ListTodo, Trash2, Upload } from "lucide-react"
+import { HelpCircle, Info, ListTodo, Plus, Trash2, Upload } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -229,7 +229,7 @@ export function TaskDialog({ open, onOpenChange, task, defaultProjectId }: TaskD
     }
     // V4-5c (DEC-82): a mãe nasce com a lista, no mesmo POST. So na criacao — a lista de uma
     // tarefa que ja existe e editada no dialogo de detalhe (DEC-89). O servidor aceita `subtasks`
-    // no corpo de criacao (app/api/tasks/route.ts:114) e aplica a base 10 + 10·n (DEC-83).
+    // no corpo de criacao (app/api/tasks/route.ts:114) e aplica a base 10 + 5·n (DEC-97).
     if (!task && subtaskDrafts.length > 0) {
       body.subtasks = subtaskDrafts.map((title) => ({ title }))
     }
@@ -430,18 +430,16 @@ export function TaskDialog({ open, onOpenChange, task, defaultProjectId }: TaskD
               )}
 
               {showSubtaskField && (
-                // V4-5c (DEC-82): a mãe nasce com a lista. Cada linha vale POINTS_PER_TASK e a
-                // tarefa não entra em revisão enquanto houver subtask aberta (DEC-80) — a frase
-                // está aqui porque é aqui que a pessoa decide quantas parcelas a tarefa tem.
+                // V4-5c (DEC-82): a mãe nasce com a lista. Cada linha vale SUBTASK_POINTS (5) na
+                // base da mãe (DEC-97) e a tarefa não entra em revisão enquanto houver subtask
+                // aberta (DEC-80). Ajuste pós-encerramento (2026-10-07): o texto de regra saiu daqui
+                // — o bloco repete "subtask" três vezes e a regra mora no guia; sobra o rótulo, o
+                // exemplo no placeholder e o botão-ícone.
                 <div className="rounded-md border p-3">
                   <div className="flex items-center gap-1">
                     <ListTodo className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
                     <Label>Subtasks</Label>
                   </div>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    Cada subtask vale {POINTS_PER_TASK} pontos, pontuada pelo prazo da tarefa. A
-                    tarefa não vai para revisão enquanto houver subtask aberta.
-                  </p>
 
                   {subtaskDrafts.length > 0 && (
                     <ul className="mt-2 space-y-1">
@@ -478,17 +476,18 @@ export function TaskDialog({ open, onOpenChange, task, defaultProjectId }: TaskD
                           addSubtaskDraft()
                         }
                       }}
-                      placeholder="Nova subtask"
+                      placeholder="Ex.: Revisar a introdução"
                       maxLength={SUBTASK_TITLE_MAX_LENGTH}
                       className="flex-1"
                     />
                     <Button
                       type="button"
-                      variant="outline"
+                      size="icon"
+                      aria-label="Adicionar subtask"
                       onClick={addSubtaskDraft}
                       disabled={!newSubtaskTitle.trim()}
                     >
-                      Adicionar subtask
+                      <Plus className="h-4 w-4" aria-hidden="true" />
                     </Button>
                   </div>
                 </div>

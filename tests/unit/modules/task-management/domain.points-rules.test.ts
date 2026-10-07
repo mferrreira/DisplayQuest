@@ -12,8 +12,10 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  EARLY_DELIVERY_MIN_DAYS,
   EARLY_DELIVERY_MULTIPLIER,
   POINTS_PER_TASK,
+  SUBTASK_POINTS,
   awardPointsForCompletion,
   calculateLatePenalty,
   daysLateForTask,
@@ -21,10 +23,12 @@ import {
 
 const DUE = "2026-06-15";
 
-describe("plan-v3 · constantes da premiação", () => {
-  it("10 pontos por tarefa, 1,5x para entrega adiantada (DEC-30, DEC-32)", () => {
+describe("plan-v3/v4 · constantes da premiação (DEC-30, DEC-97)", () => {
+  it("10 pontos por tarefa, 5 por subtask, 1,5x só com 2 dias de antecedência", () => {
     expect(POINTS_PER_TASK).toBe(10);
+    expect(SUBTASK_POINTS).toBe(5);
     expect(EARLY_DELIVERY_MULTIPLIER).toBe(1.5);
+    expect(EARLY_DELIVERY_MIN_DAYS).toBe(2);
   });
 });
 
@@ -45,10 +49,11 @@ describe("plan-v3 · AC-P3-01 — entregar no dia do prazo rende inteiro, não z
     }
   });
 
-  it("meia-noite UTC do dia do prazo é 21h de Brasília do dia 14: entrega adiantada -> 15", () => {
+  it("meia-noite UTC do dia do prazo é 21h de Brasília do dia 14: entrega adiantada -> 10 (DEC-97)", () => {
     // Pré-v3 esta instância ERA o prazo, e qualquer hora do dia contava como 1 dia de atraso.
-    // Em v3 ela pertence ao dia civil 14/06, que é antes do prazo.
-    expect(awardPointsForCompletion({ dueDate: DUE }, new Date("2026-06-15T00:00:00.000Z"))).toBe(15);
+    // Em v3 ela pertence ao dia civil 14/06, que é antes do prazo. Desde a DEC-97 (2026-10-07)
+    // o bônus exige 2 dias civis — 1 dia adiantada rende o base, como no prazo.
+    expect(awardPointsForCompletion({ dueDate: DUE }, new Date("2026-06-15T00:00:00.000Z"))).toBe(10);
   });
 
   it("tarefa sem prazo -> 10, sem bônus e sem penalidade", () => {
@@ -58,18 +63,24 @@ describe("plan-v3 · AC-P3-01 — entregar no dia do prazo rende inteiro, não z
   });
 });
 
-describe("plan-v3 · entrega adiantada", () => {
-  it("um dia antes do prazo -> 15", () => {
+describe("plan-v3 · entrega adiantada (régua reescrita pela DEC-97, 2026-10-07)", () => {
+  it("um dia antes do prazo -> 10 (a DEC-32 pagava 15; o dono endureceu para 2 dias)", () => {
     expect(daysLateForTask({ dueDate: DUE }, new Date("2026-06-14T12:00:00.000Z"))).toBe(0);
-    expect(awardPointsForCompletion({ dueDate: DUE }, new Date("2026-06-14T12:00:00.000Z"))).toBe(15);
+    expect(awardPointsForCompletion({ dueDate: DUE }, new Date("2026-06-14T12:00:00.000Z"))).toBe(10);
+  });
+
+  it("dois dias civis antes do prazo -> 15 (o bônus de 1,5x mora aqui)", () => {
+    expect(awardPointsForCompletion({ dueDate: DUE }, new Date("2026-06-13T12:00:00.000Z"))).toBe(15);
   });
 
   it("adiantamento largo continua em 15 (o multiplicador não escala com o antecipamento)", () => {
     expect(awardPointsForCompletion({ dueDate: DUE }, new Date("2026-05-01T12:00:00.000Z"))).toBe(15);
   });
 
-  it("a fronteira é o dia civil, não a hora: 23h59min59s UTC de 14/06 ainda é adiantada", () => {
-    expect(awardPointsForCompletion({ dueDate: DUE }, new Date("2026-06-15T02:59:59.999Z"))).toBe(15);
+  it("a fronteira é o dia civil, não a hora: 23h59min59s UTC de 14/06 ainda é dia 14 -> 10", () => {
+    expect(awardPointsForCompletion({ dueDate: DUE }, new Date("2026-06-15T02:59:59.999Z"))).toBe(10);
+    // 00h00 de Brasília do dia 13/06 é 2 dias antes: aí o bônus vale.
+    expect(awardPointsForCompletion({ dueDate: DUE }, new Date("2026-06-13T03:00:00.000Z"))).toBe(15);
   });
 });
 

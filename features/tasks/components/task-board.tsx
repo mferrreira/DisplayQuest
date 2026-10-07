@@ -181,6 +181,15 @@ export function TaskBoard() {
     setDetailOpen(true)
   }, [])
 
+  // Item 1 do ajuste pós-encerramento (2026-10-07): `viewTask` é um snapshot do instante do
+  // clique e as mutações de subtask escrevem só no cache de consultas — sem re-derivar aqui, o
+  // diálogo envelhece atrás do cartão (marcar "parecia" funcionar porque o cartão atualizava;
+  // desmarcar não). A cópia viva vem do cache; o snapshot só entra se a tarefa sumir dele.
+  const liveViewTask = useMemo(() => {
+    if (!viewTask) return null
+    return (tasks ?? []).find((t) => t.id === viewTask.id) ?? viewTask
+  }, [viewTask, tasks])
+
   const handleColumnOrderChange = useCallback(
     (status: TaskStatus, order: ColumnOrder) => setColumnOrder(status, order),
     [setColumnOrder],
@@ -316,7 +325,7 @@ export function TaskBoard() {
         defaultProjectId={projetoParam ?? undefined}
       />
       <TaskDetailDialog
-        task={viewTask}
+        task={liveViewTask}
         open={detailOpen}
         onOpenChange={setDetailOpen}
         onEdit={openEdit}

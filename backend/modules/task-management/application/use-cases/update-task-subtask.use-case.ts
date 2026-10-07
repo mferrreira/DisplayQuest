@@ -3,9 +3,11 @@ import {
   NotFoundError,
   ValidationError,
   canEditSubtasksOf,
+  canMarkSubtasksOf,
   createSubtaskRecord,
   shouldAutoMoveMotherToReview,
   statusOnlyPatch,
+  subtaskMarkMessage,
   subtaskWindowMessage,
   supportsSubtasks,
 } from "@/backend/domain";
@@ -29,10 +31,13 @@ import {
  *
  *   - mexer na **lista** (criar, renomear, apagar) para quando a mãe entra em `in-review` ou
  *     `done` — 409;
- *   - **concluir** uma subtask continua aberto em `in-review`, porque concluir é a coisa que
- *     destrava a mãe, e uma mãe em revisão com subtask aberta é um estado real (tarefa que já
- *     estava lá antes das subtasks existirem). Só `done` fecha a conclusão, e aí a recusa é a
- *     mesma frase da janela.
+ *   - **marcar** (`completed: true`) exige a mãe em `in-progress` (DEC-98, 2026-10-07 — resposta
+ *     do dono ao impasse com o auto-move): fora de lá é 409 com `subtaskMarkMessage`, a MESMA
+ *     frase que o cliente mostra no toast. A janela de `done` continua vindo primeiro, para que
+ *     `done` responda com a frase congelada da janela (DEC-80). **Desmarcar** não é marcar:
+ *     continua livre em qualquer status que não `done`.
+ *   - o auto-move (DEC-81) é o que devolve a mãe a `in-progress`→`in-review`; com a trava de
+ *     DEC-97 no lugar, uma mãe em `in-review` com subtask aberta só nasce de dado legado.
  *
  * Auto-move (DEC-81): a última subtask concluída empurra a mãe de `in-progress` para
  * `in-review`, com a mesma notificação que um movimento humano teria. Auto-mover **não** é
@@ -88,6 +93,12 @@ export class UpdateTaskSubtaskUseCase {
 
     if (command.completed !== undefined && task.status === "done") {
       throw new ConflictError(subtaskWindowMessage(task.status));
+    }
+
+    // DEC-98: marcar exige a mãe em Andamento. A frase é a do domínio — o toast do cliente
+    // mostra exatamente o que a rota recusou.
+    if (command.completed === true && !canMarkSubtasksOf(task.status)) {
+      throw new ConflictError(subtaskMarkMessage());
     }
 
     const updated = await this.dependencies.subtasks.update(command.subtaskId, {

@@ -83,14 +83,18 @@ describe("plan-v3 · o comportamento pré-v3, preservado como execução", () =>
   });
 });
 
-describe("plan-v3 1.B · legado × v3 — o que mudou para quem entrega no prazo", () => {
+describe("plan-v3 1.B · legado × v3 × DEC-97 — o que mudou para quem entrega no prazo", () => {
+  // O campo `v3` é o valor da regra DEPOIS da DEC-97 (2026-10-07), que endureceu o bônus de
+  // "qualquer entrega adiantada" (DEC-32) para "pelo menos 2 dias civis": os dois casos de 1 dia
+  // de antecedência pagam o base, como no dia do prazo.
   const cases: Array<{ nome: string; iso: string; legado: number; v3: number }> = [
-    { nome: "00h UTC do dia do prazo (21h de Brasília do dia 14)", iso: "2026-06-15T00:00:00.000Z", legado: 10, v3: 15 },
+    { nome: "00h UTC do dia do prazo (21h de Brasília do dia 14)", iso: "2026-06-15T00:00:00.000Z", legado: 10, v3: 10 },
     { nome: "08h de Brasília do dia do prazo", iso: "2026-06-15T11:00:00.000Z", legado: 0, v3: 10 },
     { nome: "15h de Brasília do dia do prazo", iso: "2026-06-15T18:00:00.000Z", legado: 0, v3: 10 },
     { nome: "23h de Brasília do dia do prazo", iso: "2026-06-16T02:00:00.000Z", legado: -10, v3: 10 },
     { nome: "00h de Brasília do dia seguinte", iso: "2026-06-16T03:00:00.000Z", legado: -10, v3: 0 },
-    { nome: "um dia antes do prazo", iso: "2026-06-14T12:00:00.000Z", legado: 10, v3: 15 },
+    { nome: "um dia antes do prazo", iso: "2026-06-14T12:00:00.000Z", legado: 10, v3: 10 },
+    { nome: "dois dias antes do prazo (aí o bônus de 1,5x vale)", iso: "2026-06-13T12:00:00.000Z", legado: 10, v3: 15 },
     { nome: "dois dias depois do prazo", iso: "2026-06-17T12:00:00.000Z", legado: -20, v3: -10 },
   ];
 
@@ -140,7 +144,8 @@ describe("plan-v3 1.C · o espelho do frontend convergeu com o backend (R5 encer
   const cases: Array<{ nome: string; iso: string; esperado: number }> = [
     { nome: "08h de Brasília do dia do prazo", iso: "2026-06-15T11:00:00.000Z", esperado: 10 },
     { nome: "23h de Brasília do dia do prazo", iso: "2026-06-16T02:00:00.000Z", esperado: 10 },
-    { nome: "um dia antes do prazo", iso: "2026-06-14T12:00:00.000Z", esperado: 15 },
+    { nome: "um dia antes do prazo", iso: "2026-06-14T12:00:00.000Z", esperado: 10 },
+    { nome: "dois dias antes do prazo", iso: "2026-06-13T12:00:00.000Z", esperado: 15 },
     { nome: "dois dias depois do prazo", iso: "2026-06-17T12:00:00.000Z", esperado: -10 },
   ];
 

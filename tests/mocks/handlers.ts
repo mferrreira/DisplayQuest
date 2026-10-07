@@ -20,9 +20,12 @@ import {
   openSubtasksCount,
   openSubtasksMessage,
   subtaskWindowMessage,
+  canMarkSubtasksOf,
+  subtaskMarkMessage,
   SUBTASK_BLOCKED_TARGETS,
   SUBTASK_EDITABLE_STATUSES,
   POINTS_PER_TASK,
+  SUBTASK_POINTS,
   normalizeNewSubtasks,
 } from "@/backend/domain";
 import { boardFixture, makeTask } from "./fixtures/tasks";
@@ -106,8 +109,8 @@ export const taskHandlers = [
       );
     }
     // V4-5c (DEC-82): a mãe nasce com a lista, igual à rota real (app/api/tasks/route.ts:114), e
-    // a base gravada acompanha: 10 + 10·n (DEC-83). Sem isto o mock aceitaria a mãe sem lista e o
-    // teste do formulário provava o input, não o estado gravado.
+    // a base gravada acompanha: 10 + 5·n (DEC-97, substituiu o 10 + 10·n da DEC-83). Sem isto o
+    // mock aceitaria a mãe sem lista e o teste do formulário provava o input, não o estado gravado.
     const { subtasks: rawSubtasks, ...restOfBody } = body as Record<string, unknown>;
     let subtaskTitles: string[];
     try {
@@ -117,7 +120,7 @@ export const taskHandlers = [
     }
     const created = makeTask({
       ...(restOfBody as Partial<Task>),
-      points: POINTS_PER_TASK * (1 + subtaskTitles.length),
+      points: POINTS_PER_TASK + subtaskTitles.length * SUBTASK_POINTS,
     });
     created.subtasks = subtaskTitles.map((title) => ({
       id: nextSubtaskId++,
@@ -281,7 +284,7 @@ export const taskHandlers = [
     const updated: typeof task = {
       ...task,
       subtasks: [...(task.subtasks ?? []), subtask],
-      points: task.points + POINTS_PER_TASK,
+      points: task.points + SUBTASK_POINTS,
     };
     tasks[idx] = updated;
     return HttpResponse.json(subtaskResponse.parse({ subtask, task: updated }), { status: 201 });
@@ -298,13 +301,17 @@ export const taskHandlers = [
     if (!subtask) return jsonError("Subtask não encontrada", 404);
     const body = (await request.json()) as { title?: string; completed?: boolean };
 
-    // Janela (DEC-80): renomear mexe na lista, então obedece à janela; concluir NÃO obedece —
-    // concluir é justamente o que destrava a mãe. Só `done` fecha a conclusão.
+    // Janela (DEC-80): renomear mexe na lista, então obedece à janela. Marcar obedece à trava de
+    // status da DEC-98 (mãe em Andamento) — as duas recusas vêm ANTES de qualquer escrita, na
+    // mesma ordem do UpdateTaskSubtaskUseCase. Desmarcar não é marcar, mas `done` fecha os dois.
     if (body.title !== undefined && !SUBTASK_EDITABLE_STATUSES.includes(task.status)) {
       return jsonError(subtaskWindowMessage(task.status), 409);
     }
-    if (body.completed === false && task.status === "done") {
+    if (body.completed !== undefined && task.status === "done") {
       return jsonError(subtaskWindowMessage(task.status), 409);
+    }
+    if (body.completed === true && !canMarkSubtasksOf(task.status)) {
+      return jsonError(subtaskMarkMessage(), 409);
     }
 
     const nextSubtask = taskSubtaskSchema.parse({
@@ -345,7 +352,7 @@ export const taskHandlers = [
     const updated: typeof task = {
       ...task,
       subtasks: (task.subtasks ?? []).filter((s) => s.id !== subtaskId),
-      points: Math.max(0, task.points - POINTS_PER_TASK),
+      points: Math.max(0, task.points - SUBTASK_POINTS),
     };
     tasks[idx] = updated;
     return HttpResponse.json(subtaskResponse.parse({ subtask, task: updated }));

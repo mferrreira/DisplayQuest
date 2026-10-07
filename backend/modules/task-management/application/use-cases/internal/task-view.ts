@@ -218,9 +218,10 @@ export async function assertCanOperateSubtasks(
 }
 
 /**
- * A base gravada em `tasks.points` é 10 + 10·n (resposta do dono). Ela é sincronizada quando a
+ * A base gravada em `tasks.points` é 10 + 5·n (DEC-97, substituiu o 10 + 10·n da DEC-56). Ela é
+ * sincronizada quando a
  * LISTA muda — criar e apagar — e não quando uma subtask é concluída: a base conta subtasks,
- * não concluídas.
+ * não concluídas (o prêmio creditado é que conta as concluídas, no instante da conclusão).
  *
  * `tasks.update` é substituição completa (congelado desde OND4-B3), então a sincronização escreve
  * a linha inteira a partir da view que o caso de uso já tem em mãos — o mesmo que `updateTask`

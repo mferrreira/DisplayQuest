@@ -285,7 +285,7 @@ describe("POST /api/tasks/[id]/subtasks", () => {
 
     const body = await read(response);
     expect(body.subtask).toMatchObject({ title: "Ler o protocolo", completed: false });
-    expect(body.task.points).toBe(20);
+    expect(body.task.points).toBe(15); // DEC-97: 10 + 5·n
   });
 
   it("400 quando o título está vazio", async () => {
@@ -373,12 +373,39 @@ describe("PATCH /api/tasks/[id]/subtasks/[subtaskId]", () => {
     expect(response.status).toBe(200);
     expect((await read(response)).subtask.title).toBe("Texto certo");
   });
+
+  it("409 ao marcar fora de Em Andamento (DEC-98) — a frase é a do domínio", async () => {
+    login(VOLUNTARIO, 7);
+    addTask({ id: 116, status: "to-do" });
+    const row = addSubtask(116, "Aberta");
+
+    const response = await patchSubtaskRoute(
+      request(`/api/tasks/116/subtasks/${row.id}`, "PATCH", { completed: true }),
+      context({ id: "116", subtaskId: String(row.id) }),
+    );
+    expect(response.status).toBe(409);
+    expect((await read(response)).error).toBe("A tarefa precisa estar em Andamento para marcar subtasks.");
+    expect(world.subtasks.get(row.id)!.completed).toBe(false);
+  });
+
+  it("200 ao DESMARCAR fora de Em Andamento — corrigir não é marcar", async () => {
+    login(VOLUNTARIO, 7);
+    addTask({ id: 117, status: "in-review" });
+    const row = addSubtask(117, "Marcada por engano", true);
+
+    const response = await patchSubtaskRoute(
+      request(`/api/tasks/117/subtasks/${row.id}`, "PATCH", { completed: false }),
+      context({ id: "117", subtaskId: String(row.id) }),
+    );
+    expect(response.status).toBe(200);
+    expect((await read(response)).subtask.completed).toBe(false);
+  });
 });
 
 describe("DELETE /api/tasks/[id]/subtasks/[subtaskId]", () => {
-  it("200 e a base da mãe cai junto", async () => {
+  it("200 e a base da mãe cai junto (10 + 5·n recalculado, DEC-97)", async () => {
     login(VOLUNTARIO, 7);
-    addTask({ id: 109, points: 30 });
+    addTask({ id: 109, points: 25 });
     addSubtask(109, "Fica");
     const doomed = addSubtask(109, "Sobra");
 
@@ -387,7 +414,7 @@ describe("DELETE /api/tasks/[id]/subtasks/[subtaskId]", () => {
       context({ id: "109", subtaskId: String(doomed.id) }),
     );
     expect(response.status).toBe(200);
-    expect((await read(response)).task.points).toBe(20);
+    expect((await read(response)).task.points).toBe(15);
   });
 
   it("409 quando a mãe está concluída", async () => {
@@ -445,10 +472,9 @@ describe("V4-4 · a trava nos três caminhos HTTP que terminam a mãe", () => {
     const response = await approveTaskRoute(request("/api/tasks/114", "POST"), context({ id: "114" }));
     expect(response.status).toBe(200);
     const body = await read(response);
-    // mãe 10 (aprovada no dia do prazo, relógio congelado em 15/10) + subtask 15: ela foi
-    // concluída em 10/10, cinco dias ANTES do prazo, e DEC-78 dá a ela o mesmo bônus de 50% que
-    // a mãe recebe. É a regra funcionando, não um arredondamento.
-    expect(body.awardedPoints).toBe(25);
+    // mãe 10 (aprovada no dia do prazo, relógio congelado em 15/10) + 5 da subtask concluída.
+    // O instante em que a subtask foi feita não pesa mais: desde a DEC-97 ela é +5 fixo.
+    expect(body.awardedPoints).toBe(15);
   });
 });
 

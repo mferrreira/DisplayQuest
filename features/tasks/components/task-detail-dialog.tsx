@@ -28,7 +28,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Calendar, Check, ListTodo, Pencil, Trash2, X } from "lucide-react"
+import { Calendar, Check, ListTodo, Pencil, Plus, Trash2, X } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import type { Task, TaskSubtask } from "@/entities/task"
@@ -38,7 +38,10 @@ import {
   useTaskMutations,
   projectedAward,
   POINTS_PER_TASK,
+  SUBTASK_POINTS,
+  canMarkSubtasksOf,
   openSubtasksMessage,
+  subtaskMarkMessage,
   subtaskWindowMessage,
   supportsSubtasks,
   SUBTASK_EDITABLE_STATUSES,
@@ -118,15 +121,20 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit }: TaskDetai
    * segunda. As demais exigem consulta que este diálogo não faz; se a pessoa estiver numa delas e a
    * UI não oferecer, o servidor continua sendo quem decide (e o erro chega na tela).
    *
-   * Janela (DEC-80): criar/renomear/apagar obedecem à janela; CONCLUIR não obedece — concluir é o
-   * que destrava a mãe. Só `done` fecha a conclusão.
+   * Janela (DEC-80): criar/renomear/apagar obedecem à janela; a MARCAÇÃO (`completed: true`)
+   * obedece à trava de status da DEC-98 — mãe em Andamento, ou o servidor recusa com a mesma
+   * frase que o toast mostra. Desmarcar não é marcação: livre fora de `done`.
    */
   const hasSubtaskSection = supportsSubtasks(task.taskVisibility, task.isGlobal)
   const subtasks = task.subtasks ?? []
   const openSubtasks = subtasks.filter((s) => !s.completed)
+  const completedSubtasks = subtasks.filter((s) => s.completed)
   const canEditSubtasks = canManageTasks || isAssignee
   const subtaskWindowOpen = SUBTASK_EDITABLE_STATUSES.includes(task.status)
   const canCompleteSubtasks = task.status !== "done"
+  // DEC-97 (2026-10-07): a base mostrada é a de HOJE — 10 + 5 por subtask concluída. A projeção
+  // acima (`projectedAward`) conta as mesmas subtasks, então os dois números conversam.
+  const basePoints = POINTS_PER_TASK + completedSubtasks.length * SUBTASK_POINTS
 
   const handleApprove = async () => {
     try {
@@ -210,6 +218,12 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit }: TaskDetai
   }
 
   const handleToggleSubtask = async (subtask: TaskSubtask, completed: boolean) => {
+    // DEC-98: marcar exige a mãe em Andamento. A frase é a do domínio — a MESMA que a rota
+    // devolve, então quem chega aqui por fora do gate ouve a mesma frase que quem passa.
+    if (completed && !canMarkSubtasksOf(task.status)) {
+      toast.error("Ação não permitida", { description: subtaskMarkMessage() })
+      return
+    }
     try {
       const result = await updateSubtask.mutateAsync({
         id: task.id,
@@ -277,13 +291,13 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit }: TaskDetai
                   {task.completed ? "Pontos (base)" : "Pontos"}
                 </p>
                 <p className="font-semibold">
-                  {POINTS_PER_TASK} pts
-                  {!task.completed && projected !== POINTS_PER_TASK && (
+                  {basePoints} pts
+                  {!task.completed && projected !== basePoints && (
                     <span
-                      className={`ml-2 text-xs font-normal ${projected < POINTS_PER_TASK ? "text-destructive" : "text-emerald-600 dark:text-emerald-400"}`}
+                      className={`ml-2 text-xs font-normal ${projected < basePoints ? "text-destructive" : "text-emerald-600 dark:text-emerald-400"}`}
                     >
                       (se concluir agora: {projected} pts
-                      {projected < POINTS_PER_TASK ? " com penalidade" : " de bônus"})
+                      {projected < basePoints ? " com penalidade" : " de bônus"})
                     </span>
                   )}
                 </p>
@@ -412,16 +426,17 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit }: TaskDetai
                       aria-label="Nova subtask"
                       value={newSubtaskTitle}
                       onChange={(e) => setNewSubtaskTitle(e.target.value)}
-                      placeholder="Nova subtask"
+                      placeholder="Ex.: Revisar a introdução"
                       maxLength={SUBTASK_TITLE_MAX_LENGTH}
                       className="h-8 flex-1"
                     />
                     <Button
-                      size="sm"
+                      size="icon"
+                      aria-label="Adicionar subtask"
                       onClick={() => void handleAddSubtask()}
                       disabled={!newSubtaskTitle.trim() || createSubtask.isPending}
                     >
-                      Adicionar subtask
+                      <Plus className="h-4 w-4" aria-hidden="true" />
                     </Button>
                   </div>
                 ) : (

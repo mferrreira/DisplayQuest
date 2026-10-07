@@ -40,7 +40,7 @@ A aba **Horas** é a leitura consolidada do tempo registrado. As colunas são **
 | Aba | Para que serve |
 | --- | --- |
 | **Projetos** | revisar o conjunto de projetos e seu andamento |
-| **Tarefas** | ver tarefas de todos os projetos, além do que o quadro mostra |
+| **Tarefas** | ver tarefas de todos os projetos, além do que o quadro mostra — com a lista de subtasks de cada tarefa em leitura: a contagem (por exemplo *"2/5 concluídas"*) e cada etapa marcada com ✓ ou ○, sem checkbox |
 | **Notificações** | enviar aviso para uma pessoa ou para o laboratório |
 | **Badges** | criar e editar distintivos: **Nome**, **Descrição**, **Categoria** e quem criou |
 | **Configurações** | parâmetros do sistema |

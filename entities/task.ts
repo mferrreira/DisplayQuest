@@ -50,8 +50,10 @@ export type TaskUserProgress = z.infer<typeof taskUserProgressSchema>;
 
 /**
  * plan-v4 · V4-4 (DEC-79) — a subtask da tarefa mãe. Não tem responsável nem prazo próprios (D-D),
- * por isso não há `userId` nem `dueDate` aqui. `completedAt` é o instante que a regra de
- * pontuação lê: cada subtask é pontuada pela mesma regra da mãe, no dia em que ELA foi concluída.
+ * por isso não há `userId` nem `dueDate` aqui. `completedAt` fica registrado como marca de quando
+ * a linha foi concluída; a PONTUAÇÃO, desde a DEC-97 (2026-10-07), é um +5 fixo por subtask
+ * CONCLUÍDA na conta única da mãe — a subtask não é mais pontuada pelo próprio prazo (a leitura
+ * da DEC-78 morreu aqui).
  */
 export const taskSubtaskSchema = z.object({
   id: z.number().int(),

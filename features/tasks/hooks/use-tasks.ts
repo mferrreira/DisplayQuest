@@ -47,16 +47,21 @@ function useRollback(): () => RollbackContext {
   const queryClient = useQueryClient()
   const invalidateAll = useInvalidateTaskGraph()
 
+  // Ajuste pós-encerramento item 1 (2026-10-07): as listas de tarefa têm mais de uma variante
+  // (filtros diferentes = chaves diferentes). Escrever/snapshotar SÓ `list({})` deixava o quadro
+  // com projeto selecionado sem atualizar. `lists()` é o prefixo comum de todas elas.
   return () => {
-    const snapshot = queryClient.getQueryData<Task[]>(queryKeys.tasks.list({}))
+    const snapshot = queryClient.getQueriesData<Task[]>({ queryKey: queryKeys.tasks.lists() })
     return {
       applyOptimistic: (updater) => {
-        queryClient.setQueryData<Task[]>(queryKeys.tasks.list({}), (prev) =>
+        queryClient.setQueriesData<Task[]>({ queryKey: queryKeys.tasks.lists() }, (prev) =>
           prev ? updater(prev) : prev,
         )
       },
       rollback: () => {
-        if (snapshot) queryClient.setQueryData(queryKeys.tasks.list({}), snapshot)
+        for (const [key, data] of snapshot) {
+          if (data) queryClient.setQueryData(key, data)
+        }
       },
       invalidate: invalidateAll,
     }
@@ -192,13 +197,15 @@ export function useTaskMutations() {
    *
    * O que é diferente das mutações de tarefa: a resposta carrega a MÃE (DEC-79), e é ela que o
    * cliente aplica. Mexer numa subtask muda três coisas na mãe — a lista, a base do prêmio
-   * (10 + 10·n) e, às vezes, o STATUS (DEC-81: a última subtask concluída move a mãe para
+   * (10 + 5·n) e, às vezes, o STATUS (DEC-81: a última subtask concluída move a mãe para
    * "Em Revisão"). Otimista só na lista; o status vem do servidor, porque é o servidor que decide
    * se houve auto-move. Sem isso o cartão mostraria a mãe na coluna errada até o próximo refresh.
    */
   const queryClient = useQueryClient()
+  // Item 1: escrever em TODAS as variantes de lista (prefixo `lists()`), senão o diálogo/quadro
+  // filtrado fica com o snapshot antigo enquanto `list({})` já foi atualizado.
   const applyMother = (result: SubtaskMutationResponse) => {
-    queryClient.setQueryData<Task[]>(queryKeys.tasks.list({}), (prev) =>
+    queryClient.setQueriesData<Task[]>({ queryKey: queryKeys.tasks.lists() }, (prev) =>
       prev ? prev.map((t) => (t.id === result.task.id ? { ...t, ...result.task } : t)) : prev,
     )
   }
@@ -207,7 +214,7 @@ export function useTaskMutations() {
     subtaskId: number,
     patch: { title?: string; completed?: boolean },
   ) => {
-    queryClient.setQueryData<Task[]>(queryKeys.tasks.list({}), (prev) =>
+    queryClient.setQueriesData<Task[]>({ queryKey: queryKeys.tasks.lists() }, (prev) =>
       prev
         ? prev.map((t) =>
             t.id === taskId
@@ -255,7 +262,7 @@ export function useTaskMutations() {
       tasksApi.removeSubtask(id, subtaskId),
     onMutate: ({ id, subtaskId }) => {
       const ctx = makeRollback()
-      queryClient.setQueryData<Task[]>(queryKeys.tasks.list({}), (prev) =>
+      queryClient.setQueriesData<Task[]>({ queryKey: queryKeys.tasks.lists() }, (prev) =>
         prev
           ? prev.map((t) =>
               t.id === id ? { ...t, subtasks: (t.subtasks ?? []).filter((s) => s.id !== subtaskId) } : t,

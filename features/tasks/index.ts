@@ -50,9 +50,15 @@ export type { ColumnOrder } from "./utils/column-order"
  */
 export {
   POINTS_PER_TASK,
+  SUBTASK_POINTS,
+  EARLY_DELIVERY_MULTIPLIER,
+  EARLY_DELIVERY_MIN_DAYS,
   openSubtasksCount,
   openSubtasksMessage,
   subtaskWindowMessage,
+  SUBTASK_MARKABLE_STATUSES,
+  canMarkSubtasksOf,
+  subtaskMarkMessage,
   supportsSubtasks,
   SUBTASK_EDITABLE_STATUSES,
   SUBTASK_TITLE_MAX_LENGTH,

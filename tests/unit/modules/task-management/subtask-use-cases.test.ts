@@ -288,13 +288,13 @@ function newTask(overrides: Partial<CreateTaskCommand> & { title: string }): Cre
 // ---------------------------------------------------------------------------
 
 describe("V4-4 · criar subtask junto com a mãe", () => {
-  it("a base gravada em tasks.points passa a ser 10 + 10·n", async () => {
+  it("a base gravada em tasks.points passa a ser 10 + 5·n (DEC-97)", async () => {
     const task = await module.createTask(
       newTask({ title: "Montar a bancada", assignedTo: 7, projectId: 3, subtasks: [{ title: "Comprar parafusos" }, { title: "Ajustar o suporte" }] }),
       1,
     );
 
-    expect(task.points).toBe(30);
+    expect(task.points).toBe(20);
     expect(store.subtasks.size).toBe(2);
   });
 
@@ -311,7 +311,7 @@ describe("V4-4 · criar subtask junto com a mãe", () => {
 
     const tasks = [...store.tasks.values()];
     expect(tasks).toHaveLength(2);
-    expect(tasks.map((task) => task.points)).toEqual([20, 20]);
+    expect(tasks.map((task) => task.points)).toEqual([15, 15]);
     const byTask = [...store.subtasks.values()];
     expect(byTask).toHaveLength(2);
     expect(new Set(byTask.map((row) => row.taskId))).toEqual(new Set(tasks.map((task) => task.id)));
@@ -333,13 +333,13 @@ describe("V4-4 · criar subtask junto com a mãe", () => {
     ).rejects.toThrow(ValidationError);
   });
 
-  it("criar subtask depois da mãe: a base da mãe é sincronizada", async () => {
+  it("criar subtask depois da mãe: a base da mãe é sincronizada (DEC-97)", async () => {
     const mother = addTask({ id: 40, points: 10 });
     const result = await createSubtask(mother.id!, 7, "Ler o protocolo");
 
     expect(result.subtask.title).toBe("Ler o protocolo");
     expect(result.subtask.completed).toBe(false);
-    expect(store.tasks.get(40)!.points).toBe(20);
+    expect(store.tasks.get(40)!.points).toBe(15);
   });
 });
 
@@ -416,22 +416,29 @@ describe("V4-4 · janela — criar/renomear/apagar só enquanto a mãe não est�
     expect(result.subtask.title).toBe("Texto certo");
   });
 
-  it("concluir subtask NÃO obedece à janela da lista: uma mãe em revisão pode ter subtask concluída", async () => {
+  it("marcar em Em Revisão é recusado pela trava de status da DEC-98; DESMARCAR continua aberto", async () => {
     addTask({ id: 49, status: "in-review" });
     const row = addSubtask(49, "Aberta");
 
-    const result = await updateSubtask({ taskId: 49, subtaskId: row.id, actorId: 7, completed: true });
-    expect(result.subtask.completed).toBe(true);
+    await expect(
+      updateSubtask({ taskId: 49, subtaskId: row.id, actorId: 7, completed: true }),
+    ).rejects.toThrow(/precisa estar em Andamento/);
+    expect(store.subtasks.get(row.id)!.completed).toBe(false);
+
+    // Corrigir uma marcação errada não é marcação: a mãe em revisão aceita desmarcar.
+    const marked = addSubtask(49, "Já marcada", true, new Date("2026-10-10T12:00:00.000Z"));
+    const result = await updateSubtask({ taskId: 49, subtaskId: marked.id, actorId: 7, completed: false });
+    expect(result.subtask.completed).toBe(false);
     expect(result.task.status).toBe("in-review"); // não houve auto-move: a mãe já está lá
   });
 
-  it("apagar uma subtask derruba a base da mãe", async () => {
-    addTask({ id: 50, points: 30 });
+  it("apagar uma subtask derruba a base da mãe (10 + 5·n recalculado)", async () => {
+    addTask({ id: 50, points: 25 });
     const row = addSubtask(50, "Sobra");
     addSubtask(50, "Fica");
 
     await deleteSubtask(50, row.id, 7);
-    expect(store.tasks.get(50)!.points).toBe(20);
+    expect(store.tasks.get(50)!.points).toBe(15);
   });
 
   it("concluir subtask não mexe na base: a base conta subtasks, não concluídas", async () => {
@@ -504,12 +511,15 @@ describe("V4-4 · auto-mover a mãe quando a última subtask é concluída", () 
     expect(store.published).toEqual([]);
   });
 
-  it("mãe em A Fazer não entra na fila de aprovação sozinha", async () => {
+  it("mãe em A Fazer nem aceita a marcação (DEC-98): quem não começou não entra na fila sozinho", async () => {
     addTask({ id: 60, status: "to-do" });
     const row = addSubtask(60, "Única");
 
-    const result = await updateSubtask({ taskId: 60, subtaskId: row.id, actorId: 7, completed: true });
-    expect(result.task.status).toBe("to-do");
+    await expect(
+      updateSubtask({ taskId: 60, subtaskId: row.id, actorId: 7, completed: true }),
+    ).rejects.toThrow(/precisa estar em Andamento/);
+    expect(store.subtasks.get(row.id)!.completed).toBe(false);
+    expect(store.tasks.get(60)!.status).toBe("to-do");
     expect(store.published).toEqual([]);
   });
 
@@ -524,8 +534,8 @@ describe("V4-4 · auto-mover a mãe quando a última subtask é concluída", () 
   });
 });
 
-describe("V4-4 · DEC-78 — o prêmio creditado na aprovação é a mãe mais cada subtask", () => {
-  it("mãe no prazo com duas subtasks no prazo credita 30", async () => {
+describe("V4-4/V4-5 · DEC-97 — o prêmio creditado na aprovação é a mãe + 5 por subtask concluída", () => {
+  it("mãe no prazo com duas subtasks no prazo credita 20", async () => {
     // A aprovação acontece NO dia do prazo: sem isto o relógio congelado do beforeEach (15/10)
     // aprovaria uma tarefa com prazo 20/10 adiantada, e a mãe valeria 15, não 10.
     vi.setSystemTime(new Date("2026-10-20T12:00:00.000Z"));
@@ -535,19 +545,21 @@ describe("V4-4 · DEC-78 — o prêmio creditado na aprovação é a mãe mais c
 
     const result = await module.approveTask({ taskId: 62, approverId: 1 });
 
-    expect(result.awardedPoints).toBe(30);
-    expect(store.awards).toEqual([{ userId: 7, taskId: 62, taskPoints: 30 }]);
+    expect(result.awardedPoints).toBe(20);
+    expect(store.awards).toEqual([{ userId: 7, taskId: 62, taskPoints: 20 }]);
   });
 
-  it("o exemplo combinado com o dono: mãe −40 + subtasks +15, 0, −30 = −55", async () => {
+  it("o exemplo da DEC-78 recalculado pela DEC-97: mãe −40, base com 3 subtasks 25 → −25", async () => {
     vi.setSystemTime(new Date("2026-10-25T12:00:00.000Z"));
     addTask({ id: 63, status: "in-review", completed: true, dueDate: "2026-10-20", assignedTo: 7 });
     addSubtask(63, "Adiantada", true, new Date("2026-10-19T12:00:00.000Z"));
     addSubtask(63, "Um dia atrasada", true, new Date("2026-10-21T12:00:00.000Z"));
     addSubtask(63, "Quatro dias atrasada", true, new Date("2026-10-24T12:00:00.000Z"));
 
+    // O instante de conclusão de CADA subtask não pesa mais: só a contagem entra na base
+    // (10 + 3·5 = 25) e o atraso da mãe (5 dias × 10) desconta uma vez só.
     const result = await module.approveTask({ taskId: 63, approverId: 1 });
-    expect(result.awardedPoints).toBe(-55);
+    expect(result.awardedPoints).toBe(-25);
   });
 
   it("tarefa sem subtask continua creditando exatamente o que creditava antes", async () => {

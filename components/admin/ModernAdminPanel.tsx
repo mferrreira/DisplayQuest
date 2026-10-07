@@ -743,6 +743,41 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
                                   <Badge variant="secondary" className="text-xs">{project.name}</Badge>
                                 )}
                               </div>
+                              {(task.subtasks?.length ?? 0) > 0 && (
+                                // Item 4 do ajuste pós-encerramento (2026-10-07): a aba Tarefas
+                                // MOSTRA as subtasks — lista somente-leitura com a contagem. Sem
+                                // checkbox aqui: decidir é papel do quadro, o painel só lê.
+                                <div className="mt-2">
+                                  <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                                    Subtasks · {task.subtasks!.filter((s) => s.completed).length}/
+                                    {task.subtasks!.length} concluídas
+                                  </p>
+                                  <ul className="mt-1 space-y-0.5">
+                                    {task.subtasks!.map((subtask) => (
+                                      <li key={subtask.id} className="flex items-center gap-1.5 text-xs">
+                                        <span
+                                          aria-hidden="true"
+                                          className={subtask.completed ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground/60"}
+                                        >
+                                          {subtask.completed ? "✓" : "○"}
+                                        </span>
+                                        <span className="sr-only">
+                                          {subtask.completed ? "Concluída:" : "Aberta:"}
+                                        </span>
+                                        <span
+                                          className={
+                                            subtask.completed
+                                              ? "text-muted-foreground line-through"
+                                              : "text-foreground/80"
+                                          }
+                                        >
+                                          {subtask.title}
+                                        </span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
                             </div>
                             {isInReview && (
                               <div className="flex gap-2 shrink-0">

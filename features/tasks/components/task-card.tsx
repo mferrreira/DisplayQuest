@@ -65,7 +65,10 @@ import {
   moveBlockedMessage,
   completionAwardMessage,
   openSubtasksMessage,
+  canMarkSubtasksOf,
+  subtaskMarkMessage,
   POINTS_PER_TASK,
+  SUBTASK_POINTS,
   BOARD_COLUMNS,
 } from ".."
 import { toast } from "sonner"
@@ -220,13 +223,16 @@ export function TaskCard({ task, index, isOverdue, isDueToday, isCompact, onEdit
   // plan-v3 OND1-D (DEC-30): o selo mostra a base da regla, nunca `task.points` — a
   // coluna virou histórico (DEC-40) e o valor creditado depende do prazo (ver task-card.tsx
   // toast e task-detail-dialog.tsx). O antigo `isHighPoints` (>= 50) morreu aqui.
-  // plan-v4 · V4-4 (DEC-56): a base é 10 + 10 por subtask. Sem subtask é o texto de sempre.
+  // plan-v4 · V4-4 (DEC-56) → DEC-97 (2026-10-07): a base é 10 + 5 por subtask CONCLUÍDA — o
+  // prêmio conta o que já foi feito no instante da conclusão da mãe. Sem subtask concluída o
+  // selo volta a dizer 10, que é o valor de sempre.
   const subtaskCount = task.subtasks?.length ?? 0
-  const basePoints = POINTS_PER_TASK * (1 + subtaskCount)
+  const completedSubtaskCount = (task.subtasks ?? []).filter((s) => s.completed).length
+  const basePoints = POINTS_PER_TASK + completedSubtaskCount * SUBTASK_POINTS
   const pointsBadgeTitle =
     subtaskCount > 0
-      ? `Tarefa vale ${basePoints} pontos: ${POINTS_PER_TASK} da tarefa e ${POINTS_PER_TASK} por subtask (${subtaskCount}) — bônus de 50% por parcela entregue adiantada, penalidade de ${POINTS_PER_TASK} por dia de atraso de cada parcela`
-      : `Tarefa vale ${POINTS_PER_TASK} pontos — bônus de 50% se entregue adiantada, penalidade de ${POINTS_PER_TASK} por dia de atraso`
+      ? `Tarefa vale ${basePoints} pontos: ${POINTS_PER_TASK} da tarefa + ${SUBTASK_POINTS} por subtask concluída (${completedSubtaskCount} de ${subtaskCount}) — bônus de 50% se concluída pelo menos 2 dias adiantada, penalidade de ${POINTS_PER_TASK} por dia de atraso`
+      : `Tarefa vale ${POINTS_PER_TASK} pontos — bônus de 50% se concluída pelo menos 2 dias adiantada, penalidade de ${POINTS_PER_TASK} por dia de atraso`
 
   const userRoles = user?.roles ?? []
   const isLeader =
@@ -322,8 +328,15 @@ export function TaskCard({ task, index, isOverdue, isDueToday, isCompact, onEdit
    * diálogo). O que faz a mais que um checkbox comum é o auto-move: se esta era a última aberta,
    * a mãe vai sozinha para "Em Revisão" (DEC-81), e a interface DIZ isso — sem a frase, a tarefa
    * muda de coluna diante da pessoa sem explicação.
+   *
+   * DEC-98 (2026-10-07): marcar exige a mãe em Andamento. A checkbox continua clicável para que
+   * a RECUSA chegue como toast com a frase do domínio — a mesma que a rota devolve.
    */
   const handleCompleteSubtask = async (subtask: TaskSubtask) => {
+    if (!canMarkSubtasksOf(task.status)) {
+      toast.error("Ação não permitida", { description: subtaskMarkMessage() })
+      return
+    }
     try {
       const result = await updateSubtask.mutateAsync({
         id: task.id,
@@ -438,7 +451,7 @@ export function TaskCard({ task, index, isOverdue, isDueToday, isCompact, onEdit
                         className="bg-gradient-to-r from-blue-500 to-indigo-500 text-[10px] font-bold text-white dark:from-blue-500/20 dark:to-indigo-500/20 dark:text-blue-300"
                         title={pointsBadgeTitle}
                       >
-                        {POINTS_PER_TASK} pts
+                        {basePoints} pts
                       </Badge>
                       <TaskCardMenu
                         task={task}
@@ -504,7 +517,7 @@ export function TaskCard({ task, index, isOverdue, isDueToday, isCompact, onEdit
                         className="bg-gradient-to-r from-blue-500 to-indigo-500 text-xs font-bold text-white dark:from-blue-500/20 dark:to-indigo-500/20 dark:text-blue-300"
                         title={pointsBadgeTitle}
                       >
-                        {POINTS_PER_TASK} pts
+                        {basePoints} pts
                       </Badge>
                     </div>
 

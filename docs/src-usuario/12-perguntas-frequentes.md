@@ -30,7 +30,11 @@ Os botões **Aprovar** e **Rejeitar** só aparecem na coluna **Em Revisão**, e 
 
 ## Por que a tarefa aparece com pontos negativos?
 
-Porque foi aprovada depois do prazo. A tarefa vale 10 pontos, e cada subtask concluída soma mais 10 — e a penalidade é de 10 pontos por dia de atraso de cada parcela, contados em dias de calendário — sem limite inferior, então o valor pode ficar negativo. Para evitar, aprove antes do vencimento ou ajuste o prazo antes da aprovação.
+Porque foi aprovada depois do prazo. A tarefa vale 10 pontos, e cada subtask concluída soma mais 5 — e a penalidade é de 10 pontos por dia de atraso, contados em dias de calendário — sem limite inferior, então o valor pode ficar negativo. O caminho contrário existe: entrega feita pelo menos 2 dias antes do prazo multiplica o valor por 1,5. Para evitar a perda, aprove antes do vencimento ou ajuste o prazo antes da aprovação.
+
+## Por que não consigo concluir uma etapa da tarefa?
+
+Marcar uma subtask como concluída só é permitido com a tarefa em **Em Andamento** — no cartão ou no detalhe. Fora dela, a checkbox responde com o aviso **Ação não permitida**: *"A tarefa precisa estar em Andamento para marcar subtasks."*. Desmarcar uma etapa não tem essa exigência. Se a tarefa está em **Em Revisão** ou **Concluído**, quem pode movê-la a devolve para **Em Andamento** e a marcação volta a funcionar.
 
 ## Dá para transferir horas ou pontos entre pessoas?
 

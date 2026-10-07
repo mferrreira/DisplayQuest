@@ -87,7 +87,7 @@ export interface RejectTaskCommand {
 
 /**
  * plan-v4 · V4-4 — o que uma operação de subtask devolve: a subtask tocada **e a mãe**, já com
- * a base sincronizada (10 + 10·n) e com o status resultante do auto-move, se ele aconteceu.
+ * a base sincronizada (10 + 5·n, DEC-97) e com o status resultante do auto-move, se ele aconteceu.
  *
  * A mãe vem junto porque as duas consequências de mexer numa subtask são da mãe: a base do
  * prêmio muda, e a última subtask concluída move a mãe para "Em Revisão". Sem a mãe na resposta,

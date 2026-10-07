@@ -119,9 +119,10 @@ export function isReviewRequestTransition(oldStatus: TaskStatus, nextStatus: Tas
 
 export {
   POINTS_PER_TASK,
+  SUBTASK_POINTS,
   EARLY_DELIVERY_MULTIPLIER,
+  EARLY_DELIVERY_MIN_DAYS,
   awardPointsForCompletion,
-  awardPointsForSubtask,
   totalAwardForCompletion,
   calculateLatePenalty,
   daysLateForTask,
@@ -215,7 +216,7 @@ export function serializeTask(task: Omit<Task, "toJSON">): any {
     groupTaskId: task.groupTaskId ?? null,
     createdBy: task.createdBy,
     // plan-v4 · V4-4: as subtasks fazem parte do read model da tarefa. Sem elas o cartão e o
-    // diálogo de detalhe continuariam anunciando 10 pontos numa tarefa que vale 10 + 10·n — o
+    // diálogo de detalhe continuariam anunciando 10 pontos numa tarefa que vale 10 + 5·n — o
     // número projetado é calculado no cliente (`features/tasks/utils/move-rules.ts`).
     subtasks: (task.subtasks ?? []).map(serializeSubtask),
   };
@@ -409,8 +410,9 @@ export function createTaskRecord(data: NewTaskInput, now: Date): ITask {
   if (data.description && data.description.length > 1000) {
     throw new ValidationError("Descrição da tarefa não pode ter mais de 1000 caracteres");
   }
-  // plan-v4 · V4-4 (DEC-56): a base passa a ser 10 + 10·n. Sem subtask é POINTS_PER_TASK, que é
-  // exatamente o valor de antes — por isso os testes congelados do plan-v3 não se movem.
+  // plan-v4 · V4-4 (DEC-56) → DEC-97 (2026-10-07): a base passou de 10 + 10·n para
+  // 10 + 5·n (subtask é +5 fixo). Sem subtask continua POINTS_PER_TASK — os testes
+  // congelados do plan-v3 que não usam subtask não se movem.
   const subtasks = normalizeNewSubtasks(data.subtasks);
   const points = data.points ?? subtaskBasePoints(subtasks.length);
   if (points < 0) throw new ValidationError("Pontos da tarefa não podem ser negativos");

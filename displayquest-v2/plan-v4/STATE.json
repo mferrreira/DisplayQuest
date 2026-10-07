@@ -1,7 +1,7 @@
 {
  "plan": "plan-v4",
  "version": "4.0.0",
- "updatedAt": "2026-10-07T14:00:00-03:00",
+ "updatedAt": "2026-10-07T09:20:00-03:00",
  "status": "done",
  "activeWave": "V4-5",
  "activeBatch": null,
@@ -145,6 +145,8 @@
   }
  ],
  "decisionRegistry": [
+  "DEC-97 (dono 2026-10-07, lote POS-1): NOVA REGRA DE PONTUACAO. A base gravada em `tasks.points` passa a `10 + 5·n` (`subtaskBasePoints` — DEC-56/DEC-83 substituidas), e o premio da mae e a base `10 + 5·n_concluidas` atravessando o calendario: x1,5 com pelo menos 2 DIAS CIVIS de antecedencia (`EARLY_DELIVERY_MIN_DAYS = 2`, `EARLY_DELIVERY_MULTIPLIER = 1.5`), base cheio no prazo ou sem prazo, -10 por dia de atraso sem piso (DEC-39). Fracionario arredondado com `Math.round` (25 x 1,5 → 38, congelado em teste). A regua de bonus vale para TODA tarefa, com ou sem subtask, e substitui o “1 dia adiantado” da DEC-32. Mata a DEC-78: subtask nao tem pontuacao propria pelo prazo (`awardPointsForSubtask` removido do dominio) — cada subtask CONCLUIDA vale +5 fixos dentro da base (`SUBTASK_POINTS = 5`). O selo azul do cartao e o “Pontos” do detalhe passam a mostrar a base de HOJE (10 + 5·concluidas), nao o valor gravado, que continua sendo só ordenacao (DEC-47).",
+  "DEC-98 (dono 2026-10-07, lote POS-1): MARCAR subtask (`completed: true`) exige a mae em `in-progress`. Frase unica de dominio `subtaskMarkMessage()` — “A tarefa precisa estar em Andamento para marcar subtasks.” — devolvida como 409 pelo `UpdateTaskSubtaskUseCase` DEPOIS da checagem de janela de `done` (então `done` continua respondendo com a frase congelada da DEC-80) e mostrada com o MESMO texto no toast do cliente, titulo “Ação não permitida”, em `task-card.tsx` e `task-detail-dialog.tsx`. DESMARCAR nao e marcar: livre em qualquer status que nao `done`. Consequencia de estado: mae em `in-review` com subtask aberta so nasce de dado legado — o auto-move (DEC-81) e a trava de entrega (DEC-57) nao deixam esse estado se formar. O mock (`tests/mocks/handlers.ts`) espelha a mesma ordem de recusa usando as funcoes do dominio (DEC-90).",
   "DEC-95 (2026-10-06, V4-6b, fecha ASK-V4-28): padronizar o vocabulario de status de usuario em `suspended` — NAO adicionar `inactive` ao enum. 'Suspender' e o unico caminho de inativacao de ponta a ponta. Sai do filtro do painel a opcao 'Inativo' (mantida pela DEC-88 porque remover opcao visivel nao estava autorizado), sai o campo `UserStatistics.inactive` da porta e do repositorio, e sai o contador fantasma de `getUsersByStatus` (sempre 0). Fixtures de teste que descreviam `status: 'inactive'` — um estado que a producao nao escreve — passaram a descrever `suspended` em reporting/cron/lab, porque um fixture impossivel deixa o teste verde mentindo sobre o caminho que decide. O tsc nao pega isso (`inactive` e string), entao o guarda e estrutural: `tests/unit/modules/user-management/user-status-vocabulary.test.ts` fixa o enum, varre os caminhos de decisao contra `inactive` como valor, e falha se a divida registrada mudar sem atualizar o registro. Divergencia fora do escopo registrada como ASK-V4-33.",
   "DEC-94 (2026-10-06, V4-5c): o campo de subtask existe so na CRIACAO de tarefa, e so quando `supportsSubtasks` diz sim — a MESMA funcao que o servidor usa para aceitar `subtasks` no corpo (DEC-82). Editar a lista de uma tarefa que ja existe e o que o dialogo de detalhe faz (DEC-89); oferecer os dois controles para a mesma lista na mesma tela convidaria duas regras a divergir. O campo nao entra no schema zod do react-hook-form: e uma lista de rascunho em state, enviada no POST como `subtasks: [{title}]`, e o mock passa a espelhar a rota real (mae com lista + base 10 + 10·n).",
   "DEC-93 (2026-10-06, V4-5c, fecha GAP-P3-05 do plan-v3 §8): o aviso da conclusao passa a ser derivado da RESPOSTA e chega DEPOIS da mutacao. Antes o cartao calculava `projectedAward(task)` e anunciava esse numero antes de a mutacao acontecer. Medido neste lote com o mock: tarefa publica vencida ha 3 dias projeta -20 e a resposta credita 10 — os dois divergem, e a pessoa tem direito ao segundo. A frase e uma funcao pura so (`completionAwardMessage`) porque o menu do cartao e o soltar do arrasto anunciam a mesma conclusao, e a lição medida do plan-v3 e que a mesma regra em duas copias diverge. `null` nao e zero: e 'ninguem creditado agora' (DEC-48). Consequencia visivel: o toast chega um pouco mais tarde (depois da resposta), e o numero pode ser diferente do que a pessoa esperava.",
@@ -440,6 +442,28 @@
     "G2": "tsc --noEmit 0",
     "G3": "87 arquivos / 1099 testes em tests/unit+features (na suite completa 97/1184)",
     "G4": "roundtrips Prisma contra 127.0.0.1:5433 (suite completa inclui integracao)"
+   }
+  },
+  {
+   "id": "POS-1",
+   "at": "2026-10-07",
+   "title": "ajuste pós-encerramento do dono: desmarcar atualiza a tela, nova pontuação (DEC-97), trava de marcação em Andamento (DEC-98), subtasks em leitura na aba Tarefas do painel, e o par 'subtask' sem duplicar nos dois diálogos",
+   "actions": [
+    "(1) desmarcar sem refresh: `task-board.tsx` deriva `liveViewTask` do cache por id (fallback no snapshot) e `use-tasks.ts` passa a gravar applyMother/patchSubtask/removeSubtask/rollback com `queryClient.setQueriesData({queryKey: queryKeys.tasks.lists()})`, cobrindo todas as variantes de lista",
+    "(2) DEC-97: `points-rules.ts` reescrito (`SUBTASK_POINTS = 5`, `EARLY_DELIVERY_MIN_DAYS = 2`, `EARLY_DELIVERY_MULTIPLIER = 1.5`, núcleo privado `awardFromBase`, `AwardableSubtask.completed` obrigatório); `subtask-rules.ts` passa a `subtaskBasePoints = 10 + 5·n` e ganha `SUBTASK_MARKABLE_STATUSES`/`canMarkSubtasksOf`/`subtaskMarkMessage`; `awardPointsForSubtask` removido; re-exports atualizados nos três barrels (domain/task, domain, features/tasks)",
+    "(3) DEC-98 no servidor (`ConflictError(subtaskMarkMessage())` depois da janela de `done`) + gate no cliente com toast em `task-card.tsx` e `task-detail-dialog.tsx` (checkbox continua clicável; `done` segue desabilitado); mock espelha a mesma ordem: janela → done → marcação",
+    "(4) `contexts/types.ts`: `Task` ganha `subtasks` opcional; `ModernAdminPanel.tsx` renderiza na aba Tarefas a lista somente-leitura com contagem 'x/y concluídas' (marcadores ✓/○ + sr-only, SEM checkbox)",
+    "(5) os dois diálogos sem o par 'subtask' duplicado: sem o parágrafo de ajuda, placeholder 'Ex.: Revisar a introdução', botão 'Adicionar subtask' só-ícone (`Plus` + `aria-label`)",
+    "docs: RB-66/RB-67/RB-68 corrigidos e RB-71/RB-72 acrescentados em `docs/src/07-regras-de-negocio.md`, RF-04 de `13-rastreabilidade.md` atualizado, guia (03/07/09/11/12) reescrito na regra nova — base 10+5·n, bônus de 2 dias, trava de marcação, aba Tarefas com a lista em leitura",
+    "testes: domain.points-rules / points-characterization / subtask-rules / subtask-use-cases / api-task-subtasks regravados (+2 casos de API: 409 fora de Andamento e 200 ao desmarcar), +2 no cartão (badge da base 15 pts e toast DEC-98), o caso de janela do detalhe virou 'lista fecha e marcação avisa', roundtrip G4 com base 20 e recusa em in-review"
+   ],
+   "gates": {
+    "G0": "arch:check 787/3077 zero (allow-list vazia)",
+    "G1": "lint exit 0 (warnings aceitos, nenhum erro)",
+    "G2": "tsc --noEmit 0",
+    "G3": "87 arquivos / 1107 testes em tests/unit+features; suíte completa 97 / 1192 (DATABASE_URL na 5433)",
+    "G4": "roundtrips Prisma contra 127.0.0.1:5433 — tasks-roundtrip 12 casos, inclui a recusa DEC-98 e a base 20",
+    "G5": "docs:build (15 seções técnicas / 12 de usuário, 35 figuras) + docs:check: nenhum caractere suspeito"
    }
   }
  ],

@@ -5,7 +5,7 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
 
 ## Verificação
 
-- **Gate de entrega:** `npm run arch:check` (exit 0, allow-list **vazia**) && `npm run lint` (nada de erro) && `npx tsc --noEmit` (0) && `npx vitest run` (zero failure). A contagem é **por branch**: no `dev` o baseline era **64 arquivos / 721 testes** quando o B8 removeu os 651 testes de paridade; no `plan/v3-operacional`, medido no encerramento do plan-v3 (2026-10-03), são **65 arquivos / 798 testes** em `tests/unit` + `features` e **75 / 881** na suíte completa. Na `dev` de hoje (2026-10-06, depois do plan-v4 V4-1/V4-2/V4-3/V4-6, do V4-4 de subtasks, dos testes do painel V4-4b/V4-4c, do V4-5a/V4-5b/V4-5c de subtask na UI e do V4-6b de vocabulário de status) são **87 arquivos / 1099 testes** e **97 / 1184** na suíte completa; a suíte e2e do quadro está em **2 passando + 1 falha conhecida + 5 "did not run"** (medido 2026-10-06
+- **Gate de entrega:** `npm run arch:check` (exit 0, allow-list **vazia**) && `npm run lint` (nada de erro) && `npx tsc --noEmit` (0) && `npx vitest run` (zero failure). A contagem é **por branch**: no `dev` o baseline era **64 arquivos / 721 testes** quando o B8 removeu os 651 testes de paridade; no `plan/v3-operacional`, medido no encerramento do plan-v3 (2026-10-03), são **65 arquivos / 798 testes** em `tests/unit` + `features` e **75 / 881** na suíte completa. Na `dev` de hoje (medido em 2026-10-07, depois do plan-v4 V4-1/V4-2/V4-3/V4-6, do V4-4 de subtasks, dos testes do painel V4-4b/V4-4c, do V4-5a/V4-5b/V4-5c de subtask na UI, do V4-6b de vocabulário de status e do lote pós-encerramento POS-1 — DEC-97/98) são **87 arquivos / 1107 testes** e **97 / 1192** na suíte completa; a suíte e2e do quadro está em **2 passando + 1 falha conhecida + 5 "did not run"** (medido 2026-10-06
 no V4-5c; eram 7 quando a coluna `Em Revisão` tinha um cartão a menos) — o 3º teste quebra por cartão a
 mais na coluna (dado legítimo da instância, não código: hoje são as tarefas 50 e 304), e como o spec é
 serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 5 passando. Compare sempre com o `STATE.json` do plano em que você está.
@@ -111,26 +111,41 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   dialogo-detalhe-tarefa` (exatamente 4 PNGs mudaram; os dois diálogos de `INTERACTIONS` só abrem e
   fotografam; o único que grava é `relatorios-gerar-lote`, fora do `--only`), depois a prosa de
   `docs/src-usuario` pelo manifesto (campo Subtasks na criação, aviso âmbar e checkbox no cartão,
-  seção Subtasks + janela no detalhe, trava de entrega + auto-move, base `10 + 10·n` em 03/07/12)
-  e `docs:build` (15 seções técnicas / 12 de usuário, 35 figuras) + `docs:check` em verde.
+  seção Subtasks + janela no detalhe, trava de entrega + auto-move) e `docs:build` (15 seções técnicas
+  / 12 de usuário, 35 figuras) + `docs:check` em verde.
   `awaitingInstruction` está vazia. Em `openQuestions`: **nada** — o **`ASK-V4-33`** foi respondido
   em 2026-10-07 (**DEC-96**): **tirar o filtro** da tela de voluntários (o controle morto saiu, a tela
   fala o vocabulário real e a dívida do guarda ficou vazia).
+- **Ajuste pós-encerramento de 2026-10-07 (lote `POS-1`, DEC-97/DEC-98):** cinco mudanças pedidas pelo
+  dono depois do `done` — (1) desmarcar subtask atualiza o estado sem refresh manual (cache de listas
+  escrito por id em todas as variantes de `queryKeys.tasks.lists()`), (2) **nova regra de pontuação**
+  (DEC-97), (3) **marcação exige mãe em Andamento** com toast (DEC-98), (4) lista de subtasks em
+  **leitura** + contagem na aba **Tarefas** do painel admin (sem checkbox), (5) o par "subtask"
+  duplicado sumiu dos dois diálogos (rótulo/título no topo, placeholder com exemplo
+  `Ex.: Revisar a introdução`, botão **Adicionar subtask** virou só-ícone `Plus` com `aria-label`).
 - **Numeração de decisão é global e JÁ tem buraco (medido 2026-10-06):** DEC-01..29 clean-arch,
   DEC-30..49 plan-v3, DEC-50..54 B6/D4, DEC-55..60 plan-v4, **DEC-61..77 plan-v5** (reservadas pelo
   dono em `displayquest-v2/plan-v5/`, criado 2026-10-06 e ainda **não commitado**), DEC-78..95 plan-v4
-  (V4-4, ASK-V4-06, V4-4b, V4-4c, V4-5a, V4-5b, V4-5c e V4-6b), **DEC-96 plan-v4 (2026-10-07,
-  pós-encerramento: ASK-V4-33 — tira o filtro morto da tela de voluntários)**. O V4-4 ia usar DEC-61..64 e colidiu; os 28
+  (V4-4, ASK-V4-06, V4-4b, V4-4c, V4-5a, V4-5b, V4-5c e V4-6b), **DEC-96..98 plan-v4 (2026-10-07,
+  pós-encerramento: ASK-V4-33 — tira o filtro morto da tela de voluntários — e o lote POS-1 de pontuação
+  + trava de marcação)**. O V4-4 ia usar DEC-61..64 e colidiu; os 28
   comentários de código foram renumerados. **Antes de abrir decisão nova, `grep` os três `STATE.json`.**
-- **Subtask (V4-4, DEC-78..83):** tabela `task_subtasks` (sem FK para `users` — subtask não tem
-  responsável próprio), base gravada em `tasks.points` = `10 + 10·n`, e **cada subtask é pontuada pela
-  mesma regra da mãe** (adiantada 15 / no prazo 10 / 1 dia 0 / 2 dias −10, sem piso), medida no instante
-  em que ELA foi concluída, contra o prazo HERDADO da mãe; só as CONCLUÍDAS somam. Exemplo congelado em
-  teste: mãe −40 + subtasks (+15, 0, −30) = **−55**. A **trava** (não entrar em `in-review`/`done` com
+- **Subtask (V4-4, DEC-78..83 → regra atual = DEC-97/98):** tabela `task_subtasks` (sem FK para
+  `users` — subtask não tem
+  responsável próprio), base gravada em `tasks.points` = `10 + 5·n` (DEC-97) e **cada subtask CONCLUÍDA
+  vale +5 fixos dentro dessa base** — a leitura antiga da DEC-78 (subtask pontuada pela regra da mãe no
+  instante da própria conclusão; exemplo mãe −40 + (+15, 0, −30) = −55) **morreu na DEC-97**. O prêmio da
+  mãe é `(10 + 5·n_concluídas)` atravessando o calendário: **×1,5 se a entrega for ≥2 dias civis
+  antecipada** (régua nova, vale para toda tarefa, com ou sem subtask — substitui o "1 dia adiantado" da
+  DEC-32), no prazo/sem prazo o base cheio, atraso −10/dia sem piso (DEC-39); fracionário arredondado com
+  `Math.round` (25 × 1,5 → 38, congelado em teste). A **trava** (não entrar em `in-review`/`done` com
   subtask aberta, vindo de QUALQUER coluna, nos três caminhos `PUT status` / `PATCH complete` / `POST
   approve`) é 400; a **janela** (criar/renomear/apagar a lista de uma mãe em `in-review`/`done`) é 409.
-  Concluir subtask não obedece à janela. A última subtask concluída **move a mãe** de `in-progress` para
-  `in-review` com a mesma notificação de um movimento humano.
+  A **trava de marcação (DEC-98)**: `completed: true` exige mãe em `in-progress` — 409 com a MESMA frase
+  que o toast do cliente (`subtaskMarkMessage`, título "Ação não permitida"); a janela de `done` corre
+  **antes**, então `done` responde com a frase da janela; **desmarcar** não é marcar e fica livre fora de
+  `done`. Concluir subtask não obedece à janela. A última subtask concluída **move a mãe** de
+  `in-progress` para `in-review` com a mesma notificação de um movimento humano.
 - **Excluir usuário não é o caminho (DEC-55):** o que funciona de ponta a ponta é o **bloqueio de
   qualquer status `!== "active"`** — login (`lib/auth/config.ts:30`), API (`lib/auth/server-auth.ts:36`),
   regras de laboratório, bulk weekly reports, cron weekly reset. **Correção medida em 2026-10-06:**
@@ -437,7 +452,7 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   elements". Caminho: regex no nó do parágrafo (`getByText(/Atual: 120/)`).
 - **`userEvent` sem `userEvent.setup()` é lento sob carga — flake medido (2026-10-06, V4-6b):**
   chamar `userEvent.type/click` direto usa `delay: 0`, e **cada tecla vira um `setTimeout(0)`**. O
-  caso "a mãe nasce com a lista e com a base 10 + 10·n" (`task-dialog-subtasks.test.tsx`) estourou
+  caso "a mãe nasce com a lista e com a base 10 + 5·n" (`task-dialog-subtasks.test.tsx`) estourou
   **5041 ms** numa corrida completa da suíte, verde isolado e no rerun. Correção: `userEvent.setup({
   delay: null })` criado no `beforeEach` e usado como `user.type/user.click` — padrão já usado em
   `task-board.test.tsx`. Suspeitar disso quando um teste de digitação falha **só** sob carga paralela.
@@ -498,7 +513,7 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
 - **Mock que ignora uma chave do corpo esconde defeito do cliente (medido 2026-10-06, V4-5c):** o POST
   `/api/tasks` do mock não tratava `subtasks`, então o teste do formulário passaria verde provando que o
   input existia. Agora ele espelha a rota real: `normalizeNewSubtasks` (400 se inválido), linhas com id
-  e base `10 + 10·n`.
+  e base `10 + 5·n`.
 - **"Quest Global" do formulário é um `Switch` do Radix (`role="switch"`), não uma checkbox** (medido ao
   escrever o teste do V4-5c). O teste que buscava `getByRole("checkbox", { name: "Quest Global" })` falhava
   por isso, não pela regra.

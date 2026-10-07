@@ -22,6 +22,9 @@ Toda recusa do sistema tem um motivo, e o motivo está na mensagem. Esta lista r
 | **Pontos da tarefa não podem ser negativos** | pontuação abaixo de zero | use zero ou um valor positivo |
 | **Prioridade inválida** | a prioridade enviada não é uma das três conhecidas | escolha **Baixa**, **Média** ou **Alta** |
 | **📋 Tarefa Enviada para Revisão** | a tarefa passou para **Em Revisão** | aguarda a aprovação; não é erro |
+| **Ação não permitida — A tarefa precisa estar em Andamento para marcar subtasks.** | marcar uma etapa com a tarefa fora de **Em Andamento** | devolva a tarefa para **Em Andamento** e marque; desmarcar não tem essa exigência |
+| **A tarefa já foi concluída e a lista de subtasks não muda mais.** | em **Concluído** a lista fecha | nada a fazer: a janela é definitiva |
+| **Conclua as N subtasks restantes antes de enviar para revisão** (ou *… antes de aprovar a tarefa*) | a trava de entrega: há etapa aberta | conclua as etapas restantes no cartão ou no detalhe |
 | **Tarefa aprovada** | a revisão aceitou a entrega | os pontos já foram creditados |
 | **Tarefa rejeitada — Retornou para ajustes.** | a revisão devolveu a entrega | corrija e mova para **Em Revisão** outra vez |
 | **Erro ao aprovar tarefa** / **Erro ao salvar tarefa** | a operação não chegou ao fim | tente de novo; se persistir, o problema é do sistema, não seu |

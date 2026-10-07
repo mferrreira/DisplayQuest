@@ -11,7 +11,7 @@ const taskResponse = z.object({ task: wireTaskSchema });
 
 /**
  * plan-v4 · V4-4 — a resposta de uma operação de subtask carrega a MÃE junto. As duas
- * consequências de mexer numa subtask são da mãe: a base do prêmio (10 + 10·n) muda, e a última
+ * consequências de mexer numa subtask são da mãe: a base do prêmio (10 + 5·n) muda, e a última
  * subtask concluída move a mãe para "Em Revisão". Sem a mãe na resposta, o cliente teria que
  * recarregar o quadro para ver o que acabou de acontecer.
  */

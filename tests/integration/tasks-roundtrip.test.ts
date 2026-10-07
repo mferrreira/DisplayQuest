@@ -281,7 +281,7 @@ describe("G4 roundtrip — task-management (isolated test DB)", () => {
     expect(progress?.awardedPoints).toBe(10);
   });
 
-  it("V4-4 (DEC-56/57/61/64) — subtask no banco: base 10+10·n, trava, auto-move, janela, cascade", async () => {
+  it("V4-4 — subtask no banco: base 10+5·n (DEC-97), trava (DEC-57), marcação só em Andamento (DEC-98), auto-move, janela, cascade", async () => {
     const title = `G4 subtasks ${stamp}`;
     const task = await taskModule.createTask(
       {
@@ -301,7 +301,7 @@ describe("G4 roundtrip — task-management (isolated test DB)", () => {
     // é listada — uma linha apagada lá dentro quebraria um teste de outro assunto.
 
     const row = await prisma.tasks.findUnique({ where: { id: task.id! } });
-    expect(row?.points).toBe(30); // DEC-56: 10 da mãe + 10 por subtask
+    expect(row?.points).toBe(20); // DEC-97: 10 da mãe + 5 por subtask (2 subtasks)
 
     const rows = await prisma.task_subtasks.findMany({ where: { taskId: task.id! }, orderBy: { id: "asc" } });
     expect(rows.map((r) => r.title)).toEqual(["Medir a bancada", "Registrar a leitura"]);
@@ -317,9 +317,26 @@ describe("G4 roundtrip — task-management (isolated test DB)", () => {
     await taskModule.updateTaskSubtask({ taskId: task.id!, subtaskId: rows[0].id, actorId: anaId, completed: true });
     expect((await prisma.tasks.findUnique({ where: { id: task.id! } }))?.status).toBe("in-progress");
 
+    // DEC-98 — desmarcar NÃO é marcar: livre em qualquer status que não `done`. Aqui a mãe
+    // segue em Andamento, então remarcar também passa (e ainda falta uma aberta: não auto-move).
+    await taskModule.updateTaskSubtask({ taskId: task.id!, subtaskId: rows[0].id, actorId: anaId, completed: false });
+    expect(
+      (await prisma.task_subtasks.findUnique({ where: { id: rows[0].id } }))?.completed,
+    ).toBe(false);
+    await taskModule.updateTaskSubtask({ taskId: task.id!, subtaskId: rows[0].id, actorId: anaId, completed: true });
+    expect((await prisma.tasks.findUnique({ where: { id: task.id! } }))?.status).toBe("in-progress");
+
     const moved = await taskModule.updateTaskSubtask({ taskId: task.id!, subtaskId: rows[1].id, actorId: anaId, completed: true });
     expect(moved.task.status).toBe("in-review");
     expect((await prisma.tasks.findUnique({ where: { id: task.id! } }))?.status).toBe("in-review");
+
+    // DEC-98 — fora de Em Andamento marcar é 409 com a MESMA frase do toast do cliente, e não
+    // escreve. (Em `done` a janela DEC-80 vem primeiro e responde com a frase congelada dela.)
+    await expect(
+      taskModule.updateTaskSubtask({ taskId: task.id!, subtaskId: rows[0].id, actorId: anaId, completed: true }),
+    ).rejects.toThrow("A tarefa precisa estar em Andamento para marcar subtasks.");
+    expect((await prisma.tasks.findUnique({ where: { id: task.id! } }))?.status).toBe("in-review");
+    expect((await prisma.task_subtasks.findUnique({ where: { id: rows[0].id } }))?.completed).toBe(true);
 
     const closed = await prisma.task_subtasks.findMany({ where: { taskId: task.id! }, orderBy: { id: "asc" } });
     expect(closed.every((r) => r.completed && r.completedAt !== null)).toBe(true);
