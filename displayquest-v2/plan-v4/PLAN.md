@@ -204,6 +204,7 @@ Três ressalvas que precisam ser decididas junto:
 | **V4-5** | subtasks na UI (criar/concluir/travar no card e no diálogo) | alto | **done** (2026-10-06, §11–13: V4-5a/b/c; V4-5d = G5/G6, §14, executado 2026-10-07) |
 | **V4-6** | `PATCH points`: `set` aceita negativo (a administração escreve o que a premiação produz) | médio — mexe em quirk congelado e na precedência de dois 400 | **done** (2026-10-05) |
 | **V4-6b** | vocabulário de status de usuário padronizado em `suspended` (fecha ASK-V4-28) | baixo — sai opção morta de filtro e contador sempre-0; enum intocado | **done** (2026-10-06, §15) |
+| — | **DEC-96** (pós-encerramento): ASK-V4-33 respondido — filtro morto sai da tela de voluntários, vocabulário real | baixo — UI morta e vocabulário-terceiro | **done** (2026-10-07, §16) |
 
 V4-1 está fechado. V4-2 e V4-3 são o mesmo arquivo e devem ir juntos se o dono quiser. V4-4/5
 precisam de D-D antes.
@@ -692,3 +693,33 @@ dívida mudar sem o registro mudar junto, o teste falha.
 
 G0 787/3077 zero violação · G1 sem erro (exit 0) · G2 0 erros · G3 **87 / 1099** · G4 completa
 **97 / 1184** (2 corridas, `DATABASE_URL` na 5433).
+
+---
+
+## 16. DEC-96 executado (2026-10-07) — ASK-V4-33 respondido: o filtro morto sai da tela de voluntários
+
+O dono respondeu a pergunta que §15.3 deixou aberta: **tirar o filtro**, em vez de levar o status real
+até a tela. Do jeito que o backend está, a segunda opção seria desenhar um canal para um dado que
+nunca varia — `VolunteerEntryOutput.status` é literal `"active"` (`project-rules.ts:273`) e
+`toVolunteerEntry` (`:295`) escreve `"active"` para todo mundo, então "Inativo" e "Afastado" nunca
+encontrariam ninguém em nenhuma das duas saídas. A diferença é que o filtro é o controle morto; tirá-lo
+é a mudança mínima que fala a verdade sobre a tela.
+
+### 16.1 O que mudou
+
+| onde | o que mudou |
+|---|---|
+| `volunteers-management.tsx` | tipo `Volunteer.status` passa para o vocabulário real (`active \| pending \| rejected \| suspended`, enums iguais aos do painel); estado `statusFilter` e o `Select` de Status (Todos/Ativo/Inativo/Afastado) removidos; `matchesStatus` saiu do `filteredVolunteers`; `getStatusBadge` cobre só os 4 status reais com os rótulos do painel (Ativo/Pendente/Rejeitado/Suspenso); import órfão `Filter` removido; o caso "lista vazia" passa a depender só do `searchTerm` |
+| `user-status-vocabulary.test.ts` | `KNOWN_DIVERGENCES` vira `[]` — a dívida foi quitada, não escondida; docstring passa a citar o DEC-96 |
+
+### 16.2 Testes primeiro
+
+O guarda foi atualizado **antes** do componente: `KNOWN_DIVERGENCES = []` e o teste 3 falhou vermelho
+enquanto a tela ainda tinha `inactive` como valor (1 falha / 3 passos), depois ficou verde com a tela
+limpa (4/4). A prova de que o controle saiu é estrutural, não visual: `inactive`/`on_leave` deixam de
+existir como valor no arquivo, e qualquer reaparição quebra o guarda.
+
+### 16.3 Gates
+
+G0 787/3077 zero · G1 exit 0 · G2 0 · G3 **87 / 1099** · G4 completa **97 / 1184**
+(`DATABASE_URL` na 5433, baseline exato — zero regressão). Nenhuma rota, schema ou use case tocado.

@@ -13,7 +13,6 @@ import {
   CheckCircle2, 
   Award, 
   Search,
-  Filter,
   MoreHorizontal,
   Mail,
   Phone,
@@ -52,7 +51,7 @@ interface Volunteer {
   hoursWorked: number
   tasksCompleted: number
   pointsEarned: number
-  status: 'active' | 'inactive' | 'on_leave'
+  status: 'active' | 'pending' | 'rejected' | 'suspended'
   lastActivity: string
 }
 
@@ -76,7 +75,6 @@ export function VolunteersManagement() {
   })
   const [loading, setLoading] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState<string>("all")
   const [showManagementDialog, setShowManagementDialog] = useState(false)
 
   // Filtrar projetos baseado no usuário
@@ -170,20 +168,20 @@ export function VolunteersManagement() {
   }
 
   const filteredVolunteers = volunteers.filter(volunteer => {
-    const matchesSearch = volunteer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    return volunteer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          volunteer.email.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesStatus = statusFilter === "all" || volunteer.status === statusFilter
-    return matchesSearch && matchesStatus
   })
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: Volunteer["status"]) => {
     switch (status) {
       case 'active':
         return <Badge variant="default" className="bg-green-100 dark:bg-success/15 text-green-800 dark:text-green-300">Ativo</Badge>
-      case 'inactive':
-        return <Badge variant="secondary">Inativo</Badge>
-      case 'on_leave':
-        return <Badge variant="outline" className="border-yellow-200 dark:border-warning/25 text-yellow-800 dark:text-yellow-300">Afastado</Badge>
+      case 'pending':
+        return <Badge variant="secondary">Pendente</Badge>
+      case 'rejected':
+        return <Badge variant="destructive">Rejeitado</Badge>
+      case 'suspended':
+        return <Badge variant="outline" className="border-yellow-200 dark:border-warning/25 text-yellow-800 dark:text-yellow-300">Suspenso</Badge>
       default:
         return <Badge variant="secondary">{status}</Badge>
     }
@@ -394,17 +392,6 @@ export function VolunteersManagement() {
                     className="pl-10 pr-4 py-2 w-full border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
                   />
                 </div>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-[150px]">
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos</SelectItem>
-                    <SelectItem value="active">Ativo</SelectItem>
-                    <SelectItem value="inactive">Inativo</SelectItem>
-                    <SelectItem value="on_leave">Afastado</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
 
               {/* Lista de Voluntários */}
@@ -419,7 +406,7 @@ export function VolunteersManagement() {
                     <Users className="h-12 w-12 mx-auto mb-4" />
                     <h3 className="text-lg font-semibold mb-2">Nenhum voluntário encontrado</h3>
                     <p className="text-sm">
-                      {searchTerm || statusFilter !== "all" 
+                      {searchTerm
                         ? "Tente ajustar os filtros de busca"
                         : "Este projeto ainda não possui voluntários"
                       }

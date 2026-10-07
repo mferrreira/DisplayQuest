@@ -1,7 +1,7 @@
 {
  "plan": "plan-v4",
  "version": "4.0.0",
- "updatedAt": "2026-10-07T12:00:00-03:00",
+ "updatedAt": "2026-10-07T14:00:00-03:00",
  "status": "done",
  "activeWave": "V4-5",
  "activeBatch": null,
@@ -168,7 +168,8 @@
   "DEC-56 (dono 2026-10-05, V4-4): subtask soma à BASE da pontuação da mãe, e a penalidade de atraso CONTINUA fixa por dia. Formula: (10 + 10n) · (adiantada ? 1,5 : 1) − diasAtrasados · 10. A alternativa proporcional (dias · base) foi rejeitada: é a matemática pré-v3 que o plan-v3 corrigiu em OND1-B1 (DEC-31/32) porque comia os pontos de quem entregava no prazo. DEC-39 (sem piso) continua valendo sobre a base nova.",
   "DEC-57 (dono 2026-10-05, V4-4/V4-5): a trava 'a mãe não sai de Em Andamento enquanto houver subtask aberta' mora no DOMÍNIO e é aplicada no use case, devolvendo 400 com mensagem dizendo quantas subtasks faltam. Desabilitar só na UI foi rejeitado: a API aceitaria a mesma chamada e a regra existiria metade. A UI desabilita ALEM de bloquear, não em vez de.",
   "DEC-58 (dono 2026-10-05, V4-3): o cabeçalho passa a animar QUALQUER mudança de pontos desde a última vez que aquele usuário viu o número, não só o prêmio da tarefa que ele mesmo mutou. Baseline em dq:points-seen:<userId> via lib/client-storage.ts. O dono aceitou explicitamente a mudança de semântica. Consequências aceitas: primeira vez não anima (sem baseline); trocar de navegador anima de novo; ajuste de admin e compra aprovada também animam. Motivo medido: o sinal só nascia de mutação (use-tasks.ts:92) e só quando awardedTo === sessionUserId — o voluntário que não aprova nunca recebia o delta, e via 10 pts aparecerem sem contagem.",
-  "DEC-59 (V4-2): quem conta gradualmente passa a ser o número do CABEÇALHO, não o chip. O chip passa a mostrar o valor final e a transladar ~10px em Y — para cima quando o número sobe, para baixo quando desce — só em desktop. Atenção medida: o chip usa hoje APENAS `animate-in fade-in` porque as variantes com transform sobrescrevem o `-translate-x-1/2` e desalinham o chip (comentário em points-delta.tsx:112). O movimento em Y precisa resolver isso, não ignorar. O contêiner do chip já é `hidden md:flex` (app-header.tsx:146), então desktop-only já é verdade para o chip."
+  "DEC-59 (V4-2): quem conta gradualmente passa a ser o número do CABEÇALHO, não o chip. O chip passa a mostrar o valor final e a transladar ~10px em Y — para cima quando o número sobe, para baixo quando desce — só em desktop. Atenção medida: o chip usa hoje APENAS `animate-in fade-in` porque as variantes com transform sobrescrevem o `-translate-x-1/2` e desalinham o chip (comentário em points-delta.tsx:112). O movimento em Y precisa resolver isso, não ignorar. O contêiner do chip já é `hidden md:flex` (app-header.tsx:146), então desktop-only já é verdade para o chip.",
+  "DEC-96 (dono 2026-10-07, responde ASK-V4-33): TIRAR o filtro de status da tela de voluntarios (`components/features/volunteers-management.tsx`) em vez de levar o status real ate a tela. Medido: `VolunteerEntryOutput.status` e literal `\"active\"` (`backend/domain/project/project-rules.ts:273`) e `toVolunteerEntry` (:295) escreve `status: \"active\"` para todo mundo — o filtro 'Inativo'/'Afastado' era controle morto. O Select de status, o estado `statusFilter`, o `matchesStatus` e o import orfao `Filter` saem; a tela passa a falar o vocabulario real (`pending | active | rejected | suspended`, mesmos rotulos do painel: Pendente/Ativo/Rejeitado/Suspenso). A dívida registrada no guarda `user-status-vocabulary.test.ts` fica VAZIA (`KNOWN_DIVERGENCES = []`) — quitada, nao escondida; um `inactive` novo em qualquer lugar da base quebra o teste 3."
  ],
  "batchLog": [
   {
@@ -423,10 +424,26 @@
     "G5": "docs:build + docs:check verdes em 2026-10-07",
     "G6": "recaptura restrita conforme resposta do dono; 4 PNGs atualizados; prosa reescrita pelo manifesto"
    }
+  },
+  {
+   "id": "DEC-96",
+   "at": "2026-10-07",
+   "title": "ASK-V4-33 respondido: filtro de status morto sai da tela de voluntarios (DEC-96)",
+   "actions": [
+    "guarda primeiro, vermelho: KNOWN_DIVERGENCES vira [] em user-status-vocabulary.test.ts e o teste 3 falha enquanto a tela ainda tem `inactive` como valor",
+    "components/features/volunteers-management.tsx: tipo Volunteer.status para o vocabulario real (pending|active|rejected|suspended), getStatusBadge com os 4 rotulos do painel, remove estado statusFilter, matchesStatus, o Select de Status (Todos/Ativo/Inativo/Afastado) e o import orfao Filter; o ternario de lista vazia passa a depender so do searchTerm",
+    "gates G0-G4 verdes: arch 787/3077 zero, lint exit 0, tsc 0, suite completa 97 arquivos / 1184 testes (baseline exato, zero regressao)"
+   ],
+   "gates": {
+    "G0": "arch:check 787/3077 zero (allow-list vazia)",
+    "G1": "lint exit 0",
+    "G2": "tsc --noEmit 0",
+    "G3": "87 arquivos / 1099 testes em tests/unit+features (na suite completa 97/1184)",
+    "G4": "roundtrips Prisma contra 127.0.0.1:5433 (suite completa inclui integracao)"
+   }
   }
  ],
  "openQuestions": [
-  "ASK-V4-33 (aberto pelo V4-6b, precisa do dono): a tela de voluntarios (`components/features/volunteers-management.tsx:55`) tem um TERCEIRO vocabulario (`'active' | 'inactive' | 'on_leave'`) e um filtro com 'Inativo'/'De licenca' que NUNCA encontra ninguem — medido: `toVolunteerEntry` (backend/domain/project/project-rules.ts:295) escreve `status: 'active'` para todo mundo, entao o filtro e um controle morto alem de mentir sobre o vocabulario. Duas saidas possiveis: levar o status real ate a tela (o backend ja escreve `pending|active|rejected|suspended`), ou tirar o filtro. Enquanto nao decidir, a divergencia esta fixada como `KNOWN_DIVERGENCES` em `tests/unit/modules/user-management/user-status-vocabulary.test.ts` — o guarda falha se ela mudar sem atualizar o registro.",
   "ASK-V4-28 FECHADO em 2026-10-06 (DEC-95): padronizar em `suspended`, sem adicionar `inactive` ao enum. 'Inativo' saiu do filtro do painel, o contador fantasma saiu do repositorio, e os fixtures passaram a citar `suspended`. O que o AGENTS.md dizia ('inactive ja funciona de ponta a ponta') estava meio errado e ja estava corrigido.",
   "ASK-V4-27 FECHADO em 2026-10-06 (DEC-88): o filtro de status do painel ganhou 'Rejeitado' e 'Suspenso'.",
   "ASK-V4-26 FECHADO em 2026-10-06 (DEC-87): o `confirm` do 'Rejeitar' passou a dizer a verdade sobre o que acontece com a conta.",
@@ -635,6 +652,12 @@
    "question": "o status `inactive` não existe como estado escrevível: padronizar em `suspended` ou adicionar `inactive` ao enum?",
    "answer": "padronizar em `suspended`, sem mudar o enum (DEC-95); 'Suspender' é o único caminho de inativação",
    "answeredAt": "2026-10-06"
+  },
+  {
+   "id": "ASK-V4-33",
+   "question": "a tela de voluntarios tem vocabulario proprio (active|inactive|on_leave) e um filtro 'Inativo'/'Afastado' que nunca casa porque toVolunteerEntry escreve status:active para todo mundo — levar o status real ate a tela ou tirar o filtro?",
+   "answer": "tirar o filtro (DEC-96): o controle morto sai, a tela fala o vocabulario real e a dívida registrada no guarda de vocabulario fica vazia",
+   "answeredAt": "2026-10-07"
   }
  ]
 }

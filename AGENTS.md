@@ -113,13 +113,14 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   `docs/src-usuario` pelo manifesto (campo Subtasks na criação, aviso âmbar e checkbox no cartão,
   seção Subtasks + janela no detalhe, trava de entrega + auto-move, base `10 + 10·n` em 03/07/12)
   e `docs:build` (15 seções técnicas / 12 de usuário, 35 figuras) + `docs:check` em verde.
-  `awaitingInstruction` está vazia. Em `openQuestions`: **`ASK-V4-33`** (a tela de voluntários tem
-  vocabulário próprio e um filtro que nunca casa — `toVolunteerEntry` escreve `status:"active"` para
-  todo mundo; levar o status real até a tela ou tirar o filtro?).
+  `awaitingInstruction` está vazia. Em `openQuestions`: **nada** — o **`ASK-V4-33`** foi respondido
+  em 2026-10-07 (**DEC-96**): **tirar o filtro** da tela de voluntários (o controle morto saiu, a tela
+  fala o vocabulário real e a dívida do guarda ficou vazia).
 - **Numeração de decisão é global e JÁ tem buraco (medido 2026-10-06):** DEC-01..29 clean-arch,
   DEC-30..49 plan-v3, DEC-50..54 B6/D4, DEC-55..60 plan-v4, **DEC-61..77 plan-v5** (reservadas pelo
   dono em `displayquest-v2/plan-v5/`, criado 2026-10-06 e ainda **não commitado**), DEC-78..95 plan-v4
-  (V4-4, ASK-V4-06, V4-4b, V4-4c, V4-5a, V4-5b, V4-5c e V4-6b). O V4-4 ia usar DEC-61..64 e colidiu; os 28
+  (V4-4, ASK-V4-06, V4-4b, V4-4c, V4-5a, V4-5b, V4-5c e V4-6b), **DEC-96 plan-v4 (2026-10-07,
+  pós-encerramento: ASK-V4-33 — tira o filtro morto da tela de voluntários)**. O V4-4 ia usar DEC-61..64 e colidiu; os 28
   comentários de código foram renumerados. **Antes de abrir decisão nova, `grep` os três `STATE.json`.**
 - **Subtask (V4-4, DEC-78..83):** tabela `task_subtasks` (sem FK para `users` — subtask não tem
   responsável próprio), base gravada em `tasks.points` = `10 + 10·n`, e **cada subtask é pontuada pela
@@ -144,8 +145,11 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   que descreviam `status:"inactive"` (estado que a produção não escreve) passaram a citar
   `suspended`. O `tsc` não pega isso (`inactive` é string), então o guarda é estrutural:
   `tests/unit/modules/user-management/user-status-vocabulary.test.ts` (enum, caminhos de decisão,
-  dívida registrada, opção do painel). A dívida restante é **`ASK-V4-33`**: a tela de voluntários
-  (`volunteers-management.tsx:55`) tem vocabulário próprio e filtro morto. Nenhuma tela
+  dívida registrada, opção do painel). A dívida era o **`ASK-V4-33`** — a tela de voluntários
+  (`volunteers-management.tsx:55`) tinha vocabulário próprio e filtro morto — e o dono respondeu em
+  2026-10-07 (**DEC-96**): **tirar o filtro**. O Select de status, o estado `statusFilter` e os
+  vocabulários `inactive`/`on_leave` saíram; a tela fala `pending|active|rejected|suspended` e
+  `KNOWN_DIVERGENCES` ficou vazio. Nenhuma tela
   `.tsx` chamava `deleteUser`. O `DELETE /api/users/[id]` agora **recusa com 409** quando há
   dependência; sem dependência continua excluindo (é o caso "cadastro de teste").
 - **16 das 23 FKs para `users` são `RESTRICT`** (default do Prisma, sem `onDelete`); só 7
@@ -445,8 +449,10 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   esse status** — as regras só chegam nele porque testam `!== "active"`. DEC-95 tirou `inactive` do
   filtro do painel, do campo de estatística e dos fixtures; o guarda
   `tests/unit/modules/user-management/user-status-vocabulary.test.ts` segura o caminho estrito.
-  `components/features/volunteers-management.tsx:55` tem um terceiro vocabulário
-  (`active | inactive | on_leave`) — **`ASK-V4-33`, ainda aberto**. Na instância real: 10 usuários,
+  `components/features/volunteers-management.tsx:55` tinha um terceiro vocabulário
+  (`active | inactive | on_leave`) e um filtro que nunca casava — **fechado em 2026-10-07**
+  (**DEC-96**): o dono mandou **tirar o filtro**, a tela passou a falar o vocabulário real e o guarda
+  ficou com dívida vazia. Na instância real: 10 usuários,
   todos `active`.
 - **`SelectTrigger` do Radix com só `<SelectValue placeholder=…>` não tem nome acessível (medido
   2026-10-06):** `getByRole("combobox", { name: "Status" })` não acha. Precisa de `aria-label` no
