@@ -16,6 +16,7 @@ export type {
 
 // OND8-B2 — regras puras (SPEC §4.5, DEC-20)
 export * from "./issue-rules";
+export * from "./issue-access";
 export * from "./lab-access-rules";
 export * from "./lab-event-rules";
 export * from "./schedule-rules";

@@ -50,6 +50,7 @@ import {
   UpdateResponsibilityNotesUseCase,
 } from "@/backend/modules/lab-operations/application/use-cases/responsibility.use-cases"
 import {
+  AssertCanManageUserSchedulesUseCase,
   CreateUserScheduleUseCase,
   DeleteUserScheduleUseCase,
   GetUserScheduleUseCase,
@@ -105,6 +106,7 @@ export class LabOperationsModule {
   readonly updateUserSchedule: GatewayCall<LabOperationsGateway["updateUserSchedule"]>
   readonly deleteUserSchedule: GatewayCall<LabOperationsGateway["deleteUserSchedule"]>
   readonly replaceUserSchedules: GatewayCall<LabOperationsGateway["replaceUserSchedules"]>
+  readonly assertCanManageUserSchedules: GatewayCall<LabOperationsGateway["assertCanManageUserSchedules"]>
 
   constructor(private readonly gateway: LabOperationsGateway) {
     this.listIssues = this.gateway.listIssues.bind(this.gateway)
@@ -144,6 +146,7 @@ export class LabOperationsModule {
     this.updateUserSchedule = this.gateway.updateUserSchedule.bind(this.gateway)
     this.deleteUserSchedule = this.gateway.deleteUserSchedule.bind(this.gateway)
     this.replaceUserSchedules = this.gateway.replaceUserSchedules.bind(this.gateway)
+    this.assertCanManageUserSchedules = this.gateway.assertCanManageUserSchedules.bind(this.gateway)
   }
 }
 
@@ -218,8 +221,10 @@ export function createLabOperationsModule(options: LabOperationsModuleFactoryOpt
       listResponsibilities: new ListResponsibilitiesUseCase(responsibilities),
       startResponsibility: new StartResponsibilityUseCase(responsibilities, directory),
       canEndResponsibility,
-      endResponsibility: new EndResponsibilityUseCase(responsibilities),
-      updateResponsibilityNotes: new UpdateResponsibilityNotesUseCase(responsibilities, directory, canEndResponsibility),
+      // B6-6 (D4): end/updateNotes agora decidem o canEnd por dentro (com a mensagem congelada
+      // da rota), entao recebem o use case irmao — o mesmo que a rota chamava por fora.
+      endResponsibility: new EndResponsibilityUseCase(responsibilities, canEndResponsibility),
+      updateResponsibilityNotes: new UpdateResponsibilityNotesUseCase(responsibilities, canEndResponsibility),
       deleteResponsibility: new DeleteResponsibilityUseCase(responsibilities),
       pauseResponsibilityForUser: new PauseResponsibilityUseCase(responsibilities),
       resumeResponsibilityForUser: new ResumeResponsibilityUseCase(responsibilities),
@@ -230,6 +235,7 @@ export function createLabOperationsModule(options: LabOperationsModuleFactoryOpt
       updateUserSchedule: new UpdateUserScheduleUseCase(userSchedules),
       deleteUserSchedule: new DeleteUserScheduleUseCase(userSchedules),
       replaceUserSchedules: new ReplaceUserSchedulesUseCase(userSchedules),
+      assertCanManageUserSchedules: new AssertCanManageUserSchedulesUseCase(),
     }),
   )
 }

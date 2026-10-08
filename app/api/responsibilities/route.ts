@@ -1,11 +1,16 @@
 import { NextResponse } from "next/server"
-import { ensureAnyRole, requireApiActor } from "@/lib/auth/api-guard";
+import { userActor } from "@/backend/domain"
+import { requireApiActor } from "@/lib/auth/api-guard";
 import { getBackendComposition } from "@/backend/composition/root"
 import { domainErrorResponse } from "@/lib/api/domain-error-response"
 // OND8-B4 (R4): DomainErrors mapeados. EVOLUTION (documentada): startResponsibility
 // ("Ja existe uma responsabilidade ativa..." -> ConflictError 409; "Usuario nao
-// encontrado" -> 404) antes caia no 500 com error.message. Gate de papel da rota
-// (ensureAnyRole) preservado com corpo legado.
+// encontrado" -> 404) antes caia no 500 com error.message.
+// B6-6 (D4): o gate ensureAnyRole [COORDENADOR, GERENTE, LABORATORISTA] da rota desceu para o
+// StartResponsibilityUseCase com a mensagem congelada ("Sem permissão para iniciar
+// responsabilidade do laboratório"), ANTES da busca do usuario. assertCanStartResponsibility
+// (papéis do BANCO) continua como segunda linha do use case — sessao e banco podem divergir.
+// Evolucao medida: o 403 passou a {error, code, details} (superset, DEC-53) mantendo a mensagem.
 const { labOperations: labOperationsModule } = getBackendComposition();
 
 export async function GET(request: Request) {
@@ -56,17 +61,12 @@ export async function POST(request: Request) {
   try {
     const auth = await requireApiActor();
     if (auth.error) return auth.error;
-    const deny = ensureAnyRole(
-      auth.actor,
-      ["COORDENADOR", "GERENTE", "LABORATORISTA"],
-      "Sem permissão para iniciar responsabilidade do laboratório",
-    );
-    if (deny) return deny;
+    const actor = userActor(auth.actor.id, auth.actor.roles);
 
     const body = await request.json()
 
     const responsibility = await labOperationsModule.startResponsibility({
-      actorUserId: auth.actor.id,
+      actor,
       actorName: auth.actor.name ?? "Usuário",
       notes: body.notes || "",
     })

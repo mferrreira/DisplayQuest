@@ -76,7 +76,7 @@ export class CronService {
       ]
       for (const userId of affectedUserIds) {
         try {
-          await labOperations.pauseResponsibilityForUser(userId)
+          await labOperations.pauseResponsibilityForUser({ actor: systemActor(SYSTEM_REASONS.SCHEDULED_PAUSE), userId })
         } catch (err) {
           console.error(`⚠️ Não foi possível pausar responsabilidade do usuário ${userId}:`, err)
         }

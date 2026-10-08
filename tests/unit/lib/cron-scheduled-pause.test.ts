@@ -9,6 +9,7 @@ vi.mock("node-cron", () => ({
 }));
 
 const listWorkSessionsMock = vi.hoisted(() => vi.fn().mockResolvedValue([]));
+const pauseResponsibilityMock = vi.hoisted(() => vi.fn().mockResolvedValue(null));
 vi.mock("@/backend/composition/root", async (importOriginal) => {
   const actual =
     await importOriginal<typeof import("@/backend/composition/root")>();
@@ -17,6 +18,9 @@ vi.mock("@/backend/composition/root", async (importOriginal) => {
     getBackendComposition: () => ({
       workExecution: {
         listWorkSessions: listWorkSessionsMock,
+      },
+      labOperations: {
+        pauseResponsibilityForUser: pauseResponsibilityMock,
       },
     }),
   };
@@ -48,6 +52,8 @@ describe("CronService scheduled pause jobs", () => {
   beforeEach(() => {
     scheduleMock.mockClear();
     listWorkSessionsMock.mockClear();
+    pauseResponsibilityMock.mockClear();
+    listWorkSessionsMock.mockResolvedValue([]);
     // fresh instance to bypass singleton init guard
   });
 
@@ -87,6 +93,25 @@ describe("CronService scheduled pause jobs", () => {
 
     // B6-5 (D4): a varredura do job de pausa e rotina sem pessoa — systemActor(SCHEDULED_PAUSE).
     expect(listWorkSessionsMock).toHaveBeenCalledWith({ actor: systemActor(SYSTEM_REASONS.SCHEDULED_PAUSE), status: "active" });
+    service.stop();
+  });
+
+  it("pause job propaga o MESMO systemActor à pausa de responsabilidade, uma vez por usuário afetado", async () => {
+    // B6-6 (D4): o terceiro call site do cron (pauseResponsibilityForUser) passou a carregar
+    // ator. Sem systemActor aqui, o guarda de self do PauseResponsibilityUseCase barrava a
+    // varredura em producao — o sintoma nao aparece em teste de rota nenhum (DEC-54).
+    listWorkSessionsMock.mockResolvedValue([{ userId: 7 }, { userId: 7 }, { userId: 8 }]);
+
+    const service = new CronService();
+    service.init();
+    const pauseJob = scheduleMock.mock.calls.find(([expr]) => expr === "30 9 * * *");
+    const handler = pauseJob![1] as () => Promise<void>;
+    await handler();
+
+    const expectedActor = systemActor(SYSTEM_REASONS.SCHEDULED_PAUSE);
+    expect(pauseResponsibilityMock).toHaveBeenCalledTimes(2); // dedup: 7 aparece duas vezes
+    expect(pauseResponsibilityMock).toHaveBeenCalledWith({ actor: expectedActor, userId: 7 });
+    expect(pauseResponsibilityMock).toHaveBeenCalledWith({ actor: expectedActor, userId: 8 });
     service.stop();
   });
 });

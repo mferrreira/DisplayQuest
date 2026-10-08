@@ -1,3 +1,4 @@
+import type { ActorRef } from "@/backend/domain"
 import type {
   CreateLabEventCommand,
   CreateLabNoticeCommand,
@@ -60,6 +61,7 @@ import type {
   UpdateResponsibilityNotesUseCase,
 } from "@/backend/modules/lab-operations/application/use-cases/responsibility.use-cases"
 import type {
+  AssertCanManageUserSchedulesUseCase,
   CreateUserScheduleUseCase,
   DeleteUserScheduleUseCase,
   GetUserScheduleUseCase,
@@ -117,6 +119,7 @@ export interface LabOperationsUseCases {
   updateUserSchedule: UpdateUserScheduleUseCase
   deleteUserSchedule: DeleteUserScheduleUseCase
   replaceUserSchedules: ReplaceUserSchedulesUseCase
+  assertCanManageUserSchedules: AssertCanManageUserSchedulesUseCase
 }
 
 export class LabOperationsUseCaseFacade implements LabOperationsGateway {
@@ -131,29 +134,29 @@ export class LabOperationsUseCaseFacade implements LabOperationsGateway {
   createIssue(command: Record<string, unknown>) {
     return this.useCases.createIssue.execute(command)
   }
-  updateIssue(issueId: number, command: Record<string, unknown>) {
-    return this.useCases.updateIssue.execute(issueId, command)
+  updateIssue(command: { actor: ActorRef; issueId: number; data: Record<string, unknown> }) {
+    return this.useCases.updateIssue.execute(command)
   }
-  deleteIssue(issueId: number) {
-    return this.useCases.deleteIssue.execute(issueId)
+  deleteIssue(command: { actor: ActorRef; issueId: number }) {
+    return this.useCases.deleteIssue.execute(command)
   }
-  assignIssue(issueId: number, assigneeId: number) {
-    return this.useCases.assignIssue.execute(issueId, assigneeId)
+  assignIssue(command: { actor: ActorRef; issueId: number; assigneeId?: number }) {
+    return this.useCases.assignIssue.execute(command)
   }
-  unassignIssue(issueId: number) {
-    return this.useCases.unassignIssue.execute(issueId)
+  unassignIssue(command: { actor: ActorRef; issueId: number; deniedMessage?: string }) {
+    return this.useCases.unassignIssue.execute(command)
   }
-  startIssueProgress(issueId: number) {
-    return this.useCases.startIssueProgress.execute(issueId)
+  startIssueProgress(command: { actor: ActorRef; issueId: number; deniedMessage?: string }) {
+    return this.useCases.startIssueProgress.execute(command)
   }
-  resolveIssue(issueId: number, resolution?: string) {
-    return this.useCases.resolveIssue.execute(issueId, resolution)
+  resolveIssue(command: { actor: ActorRef; issueId: number; resolution?: string; deniedMessage?: string }) {
+    return this.useCases.resolveIssue.execute(command)
   }
-  closeIssue(issueId: number) {
-    return this.useCases.closeIssue.execute(issueId)
+  closeIssue(command: { actor: ActorRef; issueId: number; deniedMessage?: string }) {
+    return this.useCases.closeIssue.execute(command)
   }
-  reopenIssue(issueId: number) {
-    return this.useCases.reopenIssue.execute(issueId)
+  reopenIssue(command: { actor: ActorRef; issueId: number; deniedMessage?: string }) {
+    return this.useCases.reopenIssue.execute(command)
   }
 
   listLabEventsByDate(date: Date) {
@@ -204,20 +207,23 @@ export class LabOperationsUseCaseFacade implements LabOperationsGateway {
   canEndResponsibility(actorUserId: number, responsibilityId: number) {
     return this.useCases.canEndResponsibility.execute(actorUserId, responsibilityId)
   }
-  endResponsibility(responsibilityId: number, notes?: string) {
-    return this.useCases.endResponsibility.execute(responsibilityId, notes)
+  endResponsibility(command: { actor: ActorRef; responsibilityId: number; notes?: string }) {
+    return this.useCases.endResponsibility.execute(command)
   }
-  updateResponsibilityNotes(responsibilityId: number, actorUserId: number, notes: string) {
-    return this.useCases.updateResponsibilityNotes.execute(responsibilityId, actorUserId, notes)
+  updateResponsibilityNotes(command: { actor: ActorRef; responsibilityId: number; notes: string }) {
+    return this.useCases.updateResponsibilityNotes.execute(command)
   }
-  deleteResponsibility(responsibilityId: number) {
-    return this.useCases.deleteResponsibility.execute(responsibilityId)
+  deleteResponsibility(command: { actor: ActorRef; responsibilityId: number }) {
+    return this.useCases.deleteResponsibility.execute(command)
   }
-  pauseResponsibilityForUser(userId: number) {
-    return this.useCases.pauseResponsibilityForUser.execute(userId)
+  pauseResponsibilityForUser(command: { actor: ActorRef; userId: number }) {
+    return this.useCases.pauseResponsibilityForUser.execute(command)
   }
-  resumeResponsibilityForUser(userId: number) {
-    return this.useCases.resumeResponsibilityForUser.execute(userId)
+  resumeResponsibilityForUser(command: { actor: ActorRef; userId: number }) {
+    return this.useCases.resumeResponsibilityForUser.execute(command)
+  }
+  assertCanManageUserSchedules(command: { actor: ActorRef }) {
+    return this.useCases.assertCanManageUserSchedules.execute(command)
   }
 
   listUserSchedules(query: ListUserSchedulesQuery) {

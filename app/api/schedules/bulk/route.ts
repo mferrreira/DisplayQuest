@@ -1,8 +1,15 @@
 import { NextResponse } from "next/server"
-import { requireApiActor, ensurePermission } from "@/lib/auth/api-guard"
+import { userActor } from "@/backend/domain"
+import { requireApiActor } from "@/lib/auth/api-guard"
 import { getBackendComposition } from "@/backend/composition/root"
 import { domainErrorResponse } from "@/lib/api/domain-error-response"
 // OND8-B4 (R4): DomainErrors mapeados; heuristic legado (toHttpStatus) como fallback.
+// B6-6 (D4): o ensurePermission(MANAGE_USERS) da rota era DUPLICADO do assertManageUsers do use
+// case (mesma regra, mesma mensagem "Acesso negado"). O que a rota ainda precisa fazer e
+// AUTORIZAR ANTES de ler o corpo — os 400 de entrada ("JSON inválido", "userId inválido",
+// "Dados inválidos: ...") vem depois do 403 na ordem medida (molde do
+// AssertCanPublishNotificationEventUseCase, B6-2b). Daí o assertCanManageUserSchedules antes do
+// parse; replaceUserSchedules recheca no proprio ator.
 const { labOperations: labOperationsModule } = getBackendComposition()
 
 interface BulkSlot {
@@ -25,8 +32,9 @@ export async function PUT(request: Request) {
     const auth = await requireApiActor()
     if (auth.error) return auth.error
 
-    const denied = ensurePermission(auth.actor, "MANAGE_USERS")
-    if (denied) return denied
+    const actor = userActor(auth.actor.id, auth.actor.roles)
+    const denied = labOperationsModule.assertCanManageUserSchedules({ actor })
+    void denied
 
     const raw = await request.text()
     let data: any
@@ -66,8 +74,7 @@ export async function PUT(request: Request) {
     }
 
     const schedules = await labOperationsModule.replaceUserSchedules({
-      actorUserId: auth.actor.id,
-      actorRoles: auth.actor.roles,
+      actor,
       targetUserId,
       slots,
     })

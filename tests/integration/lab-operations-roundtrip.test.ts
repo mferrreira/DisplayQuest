@@ -20,7 +20,7 @@
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { prisma } from "@/lib/database/prisma";
-import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "@/backend/domain";
+import { ConflictError, ForbiddenError, NotFoundError, userActor, ValidationError } from "@/backend/domain";
 import { createLabOperationsModule } from "@/backend/modules/lab-operations";
 import type { LabIssuePublisherPort } from "@/backend/modules/lab-operations/application/ports/lab-issue-publisher.port";
 
@@ -40,6 +40,10 @@ const stamp = Date.now()
 let labUserId = 0
 let gerenteUserId = 0
 let voluntarioUserId = 0
+
+// B6-6 (D4): os comandos de issue/responsabilidade/grade carregam ActorRef. O ator do dono nos
+// testes de fluxo: LABORATORISTA (sem MANAGE_USERS — as mutacoes passam pelo papel de reporter).
+const labActor = () => userActor(labUserId, ["LABORATORISTA"]);
 let issueId = 0
 let eventId = 0
 let noticeId = 0
@@ -114,30 +118,36 @@ describe("G4 roundtrip — lab-operations (isolated test DB)", () => {
     const listed = await lab.listIssues({ status: "open", search: `IMPRESSORA ${stamp}` })
     expect(listed.some((i) => i.id === issueId)).toBe(true)
 
-    const updated = await lab.updateIssue(issueId, { category: "maquinas" })
+    const updated = await lab.updateIssue({ actor: labActor(), issueId, data: { category: "maquinas" } })
     expect(updated.category).toBe("maquinas")
-    await expect(lab.updateIssue(issueId, { priority: "urgente" })).rejects.toThrow(/priority|Invalid/); // 8L4 enum real
+    await expect(lab.updateIssue({ actor: labActor(), issueId, data: { priority: "urgente" } })).rejects.toThrow(/priority|Invalid/); // 8L4 enum real
 
-    const assigned = await lab.assignIssue(issueId, voluntarioUserId)
+    // B6-6 (D4): gate medido — terceiro (nem reporter nem assignee) e barrado no use case.
+    await expect(lab.updateIssue({ actor: userActor(999999, ["VOLUNTARIO"]), issueId, data: { category: "x" } })).rejects.toThrow(ForbiddenError)
+
+    const assigned = await lab.assignIssue({ actor: labActor(), issueId, assigneeId: voluntarioUserId })
     expect(assigned).toMatchObject({ assigneeId: voluntarioUserId, status: "in_progress" }) // 8L6
     expect(published.some((e) => e.type === "assigned" && e.issueId === issueId)).toBe(true)
 
-    const resolved = await lab.resolveIssue(issueId, "troquei o papel")
+    // B6-6 (D4): assignee NAO reatribui (medido no gate legado de assign: MANAGE_USERS OU reporter)
+    await expect(lab.assignIssue({ actor: userActor(voluntarioUserId, ["VOLUNTARIO"]), issueId, assigneeId: labUserId })).rejects.toThrow(ForbiddenError)
+
+    const resolved = await lab.resolveIssue({ actor: labActor(), issueId, resolution: "troquei o papel" })
     expect(resolved.status).toBe("resolved")
     expect(resolved.resolvedAt).toBeInstanceOf(Date)
 
-    const closed = await lab.closeIssue(issueId)
+    const closed = await lab.closeIssue({ actor: labActor(), issueId })
     expect(closed.status).toBe("closed")
 
-    const reopened = await lab.reopenIssue(issueId)
+    const reopened = await lab.reopenIssue({ actor: labActor(), issueId })
     expect(reopened).toMatchObject({ status: "open", resolvedAt: null })
 
-    await expect(lab.resolveIssue(issueId, "   ")).rejects.toThrow(ValidationError)
-    await lab.closeIssue(issueId) // open -> closed
-    await expect(lab.closeIssue(issueId)).rejects.toThrow(ConflictError) // ja esta fechado
-    await lab.reopenIssue(issueId) // closed -> open
-    await expect(lab.reopenIssue(issueId)).rejects.toThrow(ConflictError) // nao esta fechado
-    await expect(lab.assignIssue(issueId, 999999)).rejects.toThrow(NotFoundError)
+    await expect(lab.resolveIssue({ actor: labActor(), issueId, resolution: "   " })).rejects.toThrow(ValidationError)
+    await lab.closeIssue({ actor: labActor(), issueId }) // open -> closed
+    await expect(lab.closeIssue({ actor: labActor(), issueId })).rejects.toThrow(ConflictError) // ja esta fechado
+    await lab.reopenIssue({ actor: labActor(), issueId }) // closed -> open
+    await expect(lab.reopenIssue({ actor: labActor(), issueId })).rejects.toThrow(ConflictError) // nao esta fechado
+    await expect(lab.assignIssue({ actor: labActor(), issueId, assigneeId: 999999 })).rejects.toThrow(NotFoundError)
     await expect(lab.getIssue(999999)).resolves.toBeNull()
   });
 
@@ -221,47 +231,57 @@ describe("G4 roundtrip — lab-operations (isolated test DB)", () => {
   });
 
   it("responsibilities: gate de papel + ativa GLOBAL 8L10 + pause/resume 8L15 + end/notes/delete", async () => {
-    await expect(lab.startResponsibility({ actorUserId: voluntarioUserId, actorName: "Vol" })).rejects.toThrow(/permissão/)
+    // B6-6 (D4): o gate de papel (antes ensureAnyRole na rota) e do StartResponsibilityUseCase
+    // com a mensagem congelada da rota; o gate do DELETE idem.
+    await expect(lab.startResponsibility({ actor: userActor(voluntarioUserId, ["VOLUNTARIO"]), actorName: "Vol" })).rejects.toThrow(/permissão/)
 
-    const resp = await lab.startResponsibility({ actorUserId: labUserId, actorName: `G8 Lab ${stamp}`, notes: "manha" })
+    const resp = await lab.startResponsibility({ actor: userActor(labUserId, ["LABORATORISTA"]), actorName: `G8 Lab ${stamp}`, notes: "manha" })
     responsibilityId = resp.id as number
     expect(resp).toMatchObject({ userId: labUserId, endTime: null, totalPausedMs: 0 })
     expect(resp.startTime).toBeInstanceOf(Date)
 
     // ativa GLOBAL bloqueia outro usuario
-    await expect(lab.startResponsibility({ actorUserId: gerenteUserId, actorName: "Ger" })).rejects.toThrow(ConflictError)
+    await expect(lab.startResponsibility({ actor: userActor(gerenteUserId, ["GERENTE"]), actorName: "Ger" })).rejects.toThrow(ConflictError)
 
-    const paused = await lab.pauseResponsibilityForUser(labUserId)
+    const paused = await lab.pauseResponsibilityForUser({ actor: userActor(labUserId, ["LABORATORISTA"]), userId: labUserId })
     expect(paused?.pausedAt).toBeInstanceOf(Date)
-    const resumed = await lab.resumeResponsibilityForUser(labUserId)
+    const resumed = await lab.resumeResponsibilityForUser({ actor: userActor(labUserId, ["LABORATORISTA"]), userId: labUserId })
     expect(resumed?.pausedAt).toBeNull()
     expect((resumed?.totalPausedMs ?? -1)).toBeGreaterThanOrEqual(0)
+
+    // B6-6 (D4): pessoa so pausa a PROPRIA responsabilidade (guarda de self no use case).
+    await expect(
+      lab.pauseResponsibilityForUser({ actor: userActor(gerenteUserId, ["GERENTE"]), userId: labUserId }),
+    ).rejects.toThrow(ForbiddenError)
 
     expect(await lab.canEndResponsibility(voluntarioUserId, responsibilityId)).toBe(false)
     expect(await lab.canEndResponsibility(labUserId, responsibilityId)).toBe(true)
 
-    await expect(lab.updateResponsibilityNotes(responsibilityId, voluntarioUserId, "x")).rejects.toThrow(ForbiddenError)
-    const noted = await lab.updateResponsibilityNotes(responsibilityId, labUserId, "  editado  ")
+    await expect(lab.updateResponsibilityNotes({ actor: userActor(voluntarioUserId, ["VOLUNTARIO"]), responsibilityId, notes: "x" })).rejects.toThrow(ForbiddenError)
+    const noted = await lab.updateResponsibilityNotes({ actor: userActor(labUserId, ["LABORATORISTA"]), responsibilityId, notes: "  editado  " })
     expect(noted.notes).toBe("editado")
-    const cleared = await lab.updateResponsibilityNotes(responsibilityId, labUserId, "   ")
+    const cleared = await lab.updateResponsibilityNotes({ actor: userActor(labUserId, ["LABORATORISTA"]), responsibilityId, notes: "   " })
     expect(cleared.notes).toBeNull() // trim -> null (legado)
 
-    const ended = await lab.endResponsibility(responsibilityId, undefined)
+    const ended = await lab.endResponsibility({ actor: userActor(labUserId, ["LABORATORISTA"]), responsibilityId })
     expect(ended.endTime).toBeInstanceOf(Date)
     expect(ended.notes).toBeNull() // notes falsy preserva as existentes (8L11)
-    await expect(lab.endResponsibility(responsibilityId, undefined)).rejects.toThrow(ConflictError)
-    await expect(lab.endResponsibility(999999, undefined)).rejects.toThrow(NotFoundError)
-    await expect(lab.deleteResponsibility(999999)).rejects.toThrow(NotFoundError)
+    await expect(lab.endResponsibility({ actor: userActor(labUserId, ["LABORATORISTA"]), responsibilityId })).rejects.toThrow(ConflictError)
+    // B6-6 (D4): quirk medido da ordem — canEnd ANTES do lookup: responsabilidade ausente e 403
+    // (canEnd false para null), nao 404. O NotFoundError do end so dispara em corrida interna.
+    await expect(lab.endResponsibility({ actor: userActor(labUserId, ["LABORATORISTA"]), responsibilityId: 999999 })).rejects.toThrow(ForbiddenError)
+    await expect(lab.deleteResponsibility({ actor: userActor(gerenteUserId, ["GERENTE"]), responsibilityId: 999999 })).rejects.toThrow(NotFoundError)
+    // gate de papel do DELETE (antes ensureAnyRole na rota): VOLUNTARIO e barrado antes do lookup
+    await expect(lab.deleteResponsibility({ actor: userActor(voluntarioUserId, ["VOLUNTARIO"]), responsibilityId })).rejects.toThrow(ForbiddenError)
   });
 
   it("user schedules: leitura aberta + escrita MANAGE_USERS (GERENTE) + replace cru 8L13", async () => {
     await expect(
-      lab.createUserSchedule({ actorUserId: voluntarioUserId, actorRoles: ["VOLUNTARIO"], targetUserId: voluntarioUserId, dayOfWeek: 1, startTime: "08:00", endTime: "12:00" }),
+      lab.createUserSchedule({ actor: userActor(voluntarioUserId, ["VOLUNTARIO"]), targetUserId: voluntarioUserId, dayOfWeek: 1, startTime: "08:00", endTime: "12:00" }),
     ).rejects.toThrow(ForbiddenError) // "Acesso negado" (sem MANAGE_USERS)
 
     const slot = await lab.createUserSchedule({
-      actorUserId: gerenteUserId,
-      actorRoles: ["GERENTE"],
+      actor: userActor(gerenteUserId, ["GERENTE"]),
       targetUserId: voluntarioUserId,
       dayOfWeek: 1,
       startTime: "08:00",
@@ -270,12 +290,11 @@ describe("G4 roundtrip — lab-operations (isolated test DB)", () => {
     userScheduleId = slot.id as number
 
     // leitura aberta: voluntario ve os proprios horarios sem MANAGE_USERS
-    const own = await lab.listUserSchedules({ actorUserId: voluntarioUserId, actorRoles: ["VOLUNTARIO"] })
+    const own = await lab.listUserSchedules({ actor: userActor(voluntarioUserId, ["VOLUNTARIO"]) })
     expect(own.some((s) => s.id === userScheduleId)).toBe(true)
 
     const updated = await lab.updateUserSchedule({
-      actorUserId: gerenteUserId,
-      actorRoles: ["GERENTE"],
+      actor: userActor(gerenteUserId, ["GERENTE"]),
       scheduleId: userScheduleId,
       dayOfWeek: 5,
       endTime: "13:00",
@@ -283,8 +302,7 @@ describe("G4 roundtrip — lab-operations (isolated test DB)", () => {
     expect(updated.endTime).toBe("13:00") // 8L13: dayOfWeek ignorado
 
     const replaced = await lab.replaceUserSchedules({
-      actorUserId: gerenteUserId,
-      actorRoles: ["GERENTE"],
+      actor: userActor(gerenteUserId, ["GERENTE"]),
       targetUserId: voluntarioUserId,
       slots: [
         { dayOfWeek: 9, startTime: "99:99", endTime: "aa" }, // cru — sem validacao (8L13)
@@ -295,7 +313,7 @@ describe("G4 roundtrip — lab-operations (isolated test DB)", () => {
     expect(replaced.some((s) => s.dayOfWeek === 9 && s.startTime === "99:99")).toBe(true)
     await expect(lab.getUserSchedule(userScheduleId)).resolves.toBeNull() // replace apagou o slot original
 
-    await lab.deleteUserSchedule({ actorUserId: gerenteUserId, actorRoles: ["GERENTE"], scheduleId: replaced[0].id as number })
+    await lab.deleteUserSchedule({ actor: userActor(gerenteUserId, ["GERENTE"]), scheduleId: replaced[0].id as number })
     await expect(lab.getUserSchedule(replaced[0].id as number)).resolves.toBeNull()
   });
 });

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { userActor } from "@/backend/domain"
 import { requireApiActor } from "@/lib/auth/api-guard"
 import { getBackendComposition } from "@/backend/composition/root"
 import { domainErrorResponse } from "@/lib/api/domain-error-response"
@@ -30,8 +31,7 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
     }
 
     const visible = await labOperationsModule.listUserSchedules({
-      actorUserId: auth.actor.id,
-      actorRoles: auth.actor.roles,
+      actor: userActor(auth.actor.id, auth.actor.roles),
       targetUserId: (schedule as any).userId,
     })
 
@@ -68,8 +68,7 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
       return NextResponse.json({ error: "JSON inválido" }, { status: 400 })
     }
     const schedule = await labOperationsModule.updateUserSchedule({
-      actorUserId: auth.actor.id,
-      actorRoles: auth.actor.roles,
+      actor: userActor(auth.actor.id, auth.actor.roles),
       scheduleId: id,
       dayOfWeek: body?.dayOfWeek !== undefined ? Number(body.dayOfWeek) : undefined,
       startTime: body?.startTime,
@@ -98,8 +97,7 @@ export async function DELETE(_request: Request, context: { params: Promise<{ id:
     }
 
     await labOperationsModule.deleteUserSchedule({
-      actorUserId: auth.actor.id,
-      actorRoles: auth.actor.roles,
+      actor: userActor(auth.actor.id, auth.actor.roles),
       scheduleId: id,
     })
 

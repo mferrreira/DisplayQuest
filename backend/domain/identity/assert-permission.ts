@@ -21,6 +21,7 @@
  */
 import { ForbiddenError } from "../errors";
 import type { ActorRef } from "./actor-ref";
+import { hasAnyRole, type Role } from "./roles";
 import { hasPermission } from "./has-permission";
 import type { Permission } from "./permissions";
 
@@ -81,4 +82,20 @@ export function requireActorSelfOrPermission(
   if (actor.kind === "system") return;
   if (actor.id === ownerUserId) return;
   assertPermission(actor.roles, permission, message);
+}
+
+/**
+ * requireActorAnyRole — a forma tipada de `ensureAnyRole` (D4, B6-6). A decisao e sobre PAPEIS
+ * (nao permissao): os gates de responsabilidades do laboratorio sao listas de papel na rota
+ * legado. System passa (bypass declarado, DEC-54) — o que barra rota e o guarda system-actor.
+ */
+export function requireActorAnyRole(
+  actor: ActorRef,
+  roles: readonly string[],
+  message: string = ACCESS_DENIED_MESSAGE,
+): void {
+  if (actor.kind === "system") return;
+  if (!hasAnyRole(actor.roles, roles as Role[])) {
+    throw new ForbiddenError(message);
+  }
 }

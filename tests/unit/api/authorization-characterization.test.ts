@@ -40,6 +40,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { createIdentityAccessModule } from "@/backend/modules/identity-access";
 import { createStoreModule } from "@/backend/modules/store";
+import { createLabOperationsModule } from "@/backend/modules/lab-operations";
 import { CreateProjectUseCase } from "@/backend/modules/project-management/application/use-cases/create-project.use-case";
 import { AssertCanCreateProjectUseCase } from "@/backend/modules/project-management/application/use-cases/assert-can-create-project.use-case";
 import { UpsertWeeklyReportUseCase } from "@/backend/modules/reporting/application/use-cases/upsert-weekly-report.use-case";
@@ -52,10 +53,16 @@ const mocks = vi.hoisted(() => {
   const state = {
     /** null = sem sessão (401). Objeto = usuário logado. */
     session: null as null | { id: number; email: string; name: string; roles: string[]; status: string },
-    /** issue usada pelas 4 rotas /issues/*: reporterId e assigneeId controlam o acesso. */
-    issue: { id: 5, reporterId: 100, assigneeId: 200, status: "open", title: "Issue de teste" },
-    issueExiste: true,
-    canEndResponsibility: true,
+    /**
+     * B6-6 (D4): issue/responsabilidade/grade viram catalogos em memoria para o MODULO REAL
+     * de lab-operations montado no factory do composition root. reporterId/assigneeId da
+     * issue 5 controlam o acesso; o dono da responsabilidade 1 decide o canEnd (dono sempre
+     * pode; senao papel de laboratorio — a regra do dominio, nao um toggle do duplo).
+     */
+    issueRows: [] as Array<Record<string, unknown>>,
+    responsibilityRows: [] as Array<Record<string, unknown>>,
+    userScheduleRows: [] as Array<Record<string, unknown>>,
+    responsibilityOwnerUserId: 42,
     /** B6-2d: catálogo do duplo da porta de compras (ver o factory do composition root). */
     purchases: [] as Array<Record<string, unknown>>,
     purchaseSequence: 0,
@@ -66,29 +73,13 @@ const mocks = vi.hoisted(() => {
 
   const entidade = (payload: Record<string, unknown>) => ({ ...payload, toJSON: () => payload });
 
-  const labOperations = {
-    getIssue: async (id: number) => (state.issueExiste ? { ...state.issue, id } : null),
-    assignIssue: async (id: number, assigneeId: number) => ({ ...state.issue, id, assigneeId }),
-    updateIssue: async (id: number, data: Record<string, unknown>) => ({ ...state.issue, id, ...data }),
-    deleteIssue: async (_id: number) => undefined,
-    resolveIssue: async (id: number) => ({ ...state.issue, id, status: "resolved" }),
-    startIssueProgress: async (id: number) => ({ ...state.issue, id, status: "in_progress" }),
-    closeIssue: async (id: number) => ({ ...state.issue, id, status: "closed" }),
-    reopenIssue: async (id: number) => ({ ...state.issue, id, status: "open" }),
-    unassignIssue: async (id: number) => ({ ...state.issue, id, assigneeId: null }),
-    listResponsibilities: async () => ({ responsibilities: [entidade({ id: 1, notes: "nota" })] }),
-    canEndResponsibility: async () => state.canEndResponsibility,
-    endResponsibility: async (id: number) => entidade({ id, ended: true }),
-    updateResponsibilityNotes: async (id: number, _actorId: number, notes: string) =>
-      entidade({ id, notes }),
-    pauseResponsibilityForUser: async () => entidade({ id: 1, paused: true }),
-    resumeResponsibilityForUser: async () => entidade({ id: 1, paused: false }),
-    startResponsibility: async (command: Record<string, unknown>) =>
-      entidade({ id: 9, notes: command.notes }),
-    deleteResponsibility: async (_id: number) => undefined,
-    replaceUserSchedules: async ({ slots }: { slots: unknown[] }) =>
-      slots.map((slot, index) => entidade({ id: index, ...(slot as object) })),
-  };
+  /**
+   * B6-6 (D4): o duplo de `labOperations` SAIU inteiro. As 4 rotas de issue, as 2 de
+   * responsabilidade e schedules/bulk decidem agora nos use cases (requireIssueManager /
+   * requireIssueAssigner / requireActorAnyRole / canEnd / assertManageUsers) — um duplo de
+   * modulo faria o 403 sumir do teste (a licao medida no B6-2a). O que e montado no factory
+   * do composition root e o MODULO REAL sobre portas falsas em memoria (molde DEC-90).
+   */
 
   /**
    * B6-2a (D4, DEC-53) — `store` deixou de ser um duplo único.
@@ -118,7 +109,7 @@ const mocks = vi.hoisted(() => {
     globalProgress: async () => ({ total: 10, done: 4 }),
   };
 
-  return { state, labOperations, projectManagement, taskManagement };
+  return { state, entidade, projectManagement, taskManagement };
 });
 
 vi.mock("@/backend/composition/root", () => {
@@ -245,11 +236,162 @@ vi.mock("@/backend/composition/root", () => {
   const realBulkGenerate = new BulkGenerateWeeklyReportsUseCase(realUpsertWeeklyReport, directoryPort as never);
   const realAssertBulk = new AssertCanGenerateReportsInBulkUseCase();
 
+  /**
+   * B6-6 (D4): lab-operations montado como MODULO REAL sobre portas falsas em memoria — os
+   * gates de issue (requireIssueManager/requireIssueAssigner), responsabilidade
+   * (requireActorAnyRole/canEnd/self) e grade (assertManageUsers) moram nos use cases. A
+   * decisao exercitada e a do dominio; o duplo so fornece dados.
+   */
+  const labIssues = {
+    async findById(id: number) {
+      return mocks.state.issueRows.find((i) => i.id === id) ?? null;
+    },
+    async findAll() {
+      return [...mocks.state.issueRows];
+    },
+    async findByStatus(status: string) {
+      return mocks.state.issueRows.filter((i) => i.status === status);
+    },
+    async findByPriority(priority: string) {
+      return mocks.state.issueRows.filter((i) => i.priority === priority);
+    },
+    async findByCategory(category: string) {
+      return mocks.state.issueRows.filter((i) => i.category === category);
+    },
+    async findByReporterId(reporterId: number) {
+      return mocks.state.issueRows.filter((i) => i.reporterId === reporterId);
+    },
+    async findByAssigneeId(assigneeId: number) {
+      return mocks.state.issueRows.filter((i) => i.assigneeId === assigneeId);
+    },
+    async create(input: Record<string, unknown>) {
+      const row = { id: 91, ...(input as object) };
+      mocks.state.issueRows.push(row);
+      return row;
+    },
+    async update(id: number, fields: Record<string, unknown>) {
+      const index = mocks.state.issueRows.findIndex((i) => i.id === id);
+      if (index === -1) throw new Error("issue ausente na porta falsa");
+      mocks.state.issueRows[index] = { ...mocks.state.issueRows[index], ...(fields as object) };
+      return mocks.state.issueRows[index];
+    },
+    async delete(id: number) {
+      mocks.state.issueRows = mocks.state.issueRows.filter((i) => i.id !== id);
+    },
+  };
+
+  const labDirectory = {
+    async findUserById(id: number) {
+      const session = mocks.state.session;
+      if (session && session.id === id) {
+        return { id, name: session.name, roles: session.roles, status: session.status };
+      }
+      if ([7, 100, 200].includes(id)) {
+        return { id, name: `U${id}`, roles: ["VOLUNTARIO"], status: "active" };
+      }
+      return null;
+    },
+    async findUsersWithRoles() {
+      return [];
+    },
+  };
+
+  const labResponsibilities = {
+    async findActive() {
+      return mocks.state.responsibilityRows.find((r) => !r.endTime) ?? null;
+    },
+    async findAll() {
+      return [...mocks.state.responsibilityRows];
+    },
+    async findByDateRange() {
+      return [...mocks.state.responsibilityRows];
+    },
+    async findById(id: number) {
+      return mocks.state.responsibilityRows.find((r) => r.id === id) ?? null;
+    },
+    async findActiveForUser(userId: number) {
+      return mocks.state.responsibilityRows.find((r) => r.userId === userId && !r.endTime) ?? null;
+    },
+    async findPausedForUser(userId: number) {
+      return (
+        mocks.state.responsibilityRows.find((r) => r.userId === userId && !r.endTime && r.pausedAt) ?? null
+      );
+    },
+    async create(input: Record<string, unknown>) {
+      const row = mocks.entidade({ id: 9, ...(input as object) });
+      mocks.state.responsibilityRows.push(row);
+      return row;
+    },
+    async update(id: number, patch: Record<string, unknown>) {
+      const index = mocks.state.responsibilityRows.findIndex((r) => r.id === id);
+      if (index === -1) throw new Error("responsabilidade ausente na porta falsa");
+      mocks.state.responsibilityRows[index] = mocks.entidade({
+        ...mocks.state.responsibilityRows[index],
+        ...(patch as object),
+      });
+      return mocks.state.responsibilityRows[index];
+    },
+    async delete(id: number) {
+      mocks.state.responsibilityRows = mocks.state.responsibilityRows.filter((r) => r.id !== id);
+    },
+  };
+
+  const labUserSchedules = {
+    async findAll() {
+      return [...mocks.state.userScheduleRows];
+    },
+    async findByUserId(userId: number) {
+      return mocks.state.userScheduleRows.filter((s) => s.userId === userId);
+    },
+    async findById(id: number) {
+      return mocks.state.userScheduleRows.find((s) => s.id === id) ?? null;
+    },
+    async create(input: Record<string, unknown>) {
+      const row = mocks.entidade({ id: 77, ...(input as object) });
+      mocks.state.userScheduleRows.push(row);
+      return row;
+    },
+    async update(id: number, patch: Record<string, unknown>) {
+      const index = mocks.state.userScheduleRows.findIndex((s) => s.id === id);
+      if (index === -1) throw new Error("horario ausente na porta falsa");
+      mocks.state.userScheduleRows[index] = mocks.entidade({
+        ...mocks.state.userScheduleRows[index],
+        ...(patch as object),
+      });
+      return mocks.state.userScheduleRows[index];
+    },
+    async delete(id: number) {
+      mocks.state.userScheduleRows = mocks.state.userScheduleRows.filter((s) => s.id !== id);
+    },
+    async replaceForUser(userId: number, slots: Array<Record<string, unknown>>) {
+      void userId;
+      // o corpo legado do PUT bulk NAO expoe userId — os slots voltam como vieram (id = index)
+      mocks.state.userScheduleRows = slots.map((slot, index) => mocks.entidade({ id: index, ...(slot as object) }));
+      return mocks.state.userScheduleRows;
+    },
+  };
+
+  const labPublisher = {
+    async publishIssueRaised() {},
+    async publishIssueAssigned() {},
+  };
+
+  const realLab = createLabOperationsModule({
+    ports: {
+      issues: labIssues as never,
+      responsibilities: labResponsibilities as never,
+      userSchedules: labUserSchedules as never,
+      directory: labDirectory as never,
+      publisher: labPublisher as never,
+    },
+  });
+
   return {
     getBackendComposition: () => ({
       // módulo REAL: a matriz de permissões exercitada aqui é a de produção
       identityAccess: createIdentityAccessModule(),
-      labOperations: mocks.labOperations,
+      // B6-6: os gates de issue/responsabilidade/grade sao dos use cases do modulo REAL
+      labOperations: realLab,
       // B6-2a/2d: os 12 métodos do store + o assert de gate do PUT são os do módulo REAL
       // (os gates moram nos use cases); a dobragem restante é só a porta, em memória.
       store: realStore,
@@ -314,9 +456,33 @@ const body = async (response: Response) => await response.json();
 
 beforeEach(() => {
   mocks.state.session = null;
-  mocks.state.issue = { id: 5, reporterId: 100, assigneeId: 200, status: "open", title: "Issue de teste" };
-  mocks.state.issueExiste = true;
-  mocks.state.canEndResponsibility = true;
+  // B6-6: issue 5 (reporter 100, assignee 200) e responsabilidade 1 (dono 42) em memoria —
+  // o modulo REAL decide a partir delas (reporterId/assigneeId no gate; dono no canEnd).
+  mocks.state.issueRows = [
+    {
+      id: 5,
+      reporterId: 100,
+      assigneeId: 200,
+      status: "open",
+      title: "Issue de teste",
+      priority: "medium",
+      category: "equipamento",
+      description: "descricao",
+    },
+  ];
+  mocks.state.responsibilityRows = [
+    mocks.entidade({
+      id: 1,
+      userId: mocks.state.responsibilityOwnerUserId,
+      userName: "Lab",
+      startTime: new Date(Date.now() - 60_000), // no passado — senao o end cai no 400 "fim <= inicio"
+      endTime: null,
+      pausedAt: null,
+      totalPausedMs: 0,
+      notes: "nota",
+    }),
+  ];
+  mocks.state.userScheduleRows = [];
   mocks.state.purchases = [];
   mocks.state.purchaseSequence = 0;
   // B6-2a: o catálogo do módulo real começa com a recompensa 1 (as rotas pedem /api/rewards/1)
@@ -335,17 +501,18 @@ describe("lab-operations — /api/issues/[id]", () => {
     login(["VOLUNTARIO"]);
     const response = await issueGet(request("/api/issues/5"), params({ id: "5" }));
     expect(response.status).toBe(200);
-    expect(await body(response)).toEqual({ issue: { ...mocks.state.issue, id: 5 } });
+    expect(await body(response)).toEqual({ issue: mocks.state.issueRows[0] });
   });
 
-  it("PUT: MANAGER (reporter) passa; terceiro recebe 403 com corpo legado", async () => {
+  it("PUT: MANAGER (reporter) passa; terceiro recebe 403 com a mensagem congelada", async () => {
     login(["LABORATORISTA"], 100); // reporterId
     expect((await issueUpdate(request("/api/issues/5", { method: "PUT", body: { title: "x" } }), params({ id: "5" }))).status).toBe(200);
 
     login(["VOLUNTARIO"], 999);
     const denied = await issueUpdate(request("/api/issues/5", { method: "PUT", body: { title: "x" } }), params({ id: "5" }));
     expect(denied.status).toBe(403);
-    expect(await body(denied)).toEqual({ error: "Sem permissão para atualizar issue" });
+    // B6-6: corpo mapeado (superset, DEC-53) — status e mensagem intactos
+    expect(await body(denied)).toMatchObject({ error: "Sem permissão para atualizar issue", code: "FORBIDDEN" });
   });
 
   it("PUT: assignee também pode (reporterId OU assigneeId)", async () => {
@@ -357,15 +524,16 @@ describe("lab-operations — /api/issues/[id]", () => {
     login(["VOLUNTARIO"], 999);
     const denied = await issueDelete(request("/api/issues/5", { method: "DELETE" }), params({ id: "5" }));
     expect(denied.status).toBe(403);
-    expect(await body(denied)).toEqual({ error: "Sem permissão para excluir issue" });
+    expect(await body(denied)).toMatchObject({ error: "Sem permissão para excluir issue", code: "FORBIDDEN" });
   });
 
   it("404 vem ANTES do 403: issue inexistente não vaza autorização", async () => {
-    mocks.state.issueExiste = false;
+    mocks.state.issueRows = [];
     login(["VOLUNTARIO"], 999);
     const response = await issueUpdate(request("/api/issues/5", { method: "PUT", body: {} }), params({ id: "5" }));
     expect(response.status).toBe(404);
-    expect(await body(response)).toEqual({ error: "Issue não encontrado" });
+    // B6-6: lookup do use case — NotFoundError mapeado (superset); o 404 do GET segue legado
+    expect(await body(response)).toMatchObject({ error: "Issue não encontrado", code: "NOT_FOUND" });
   });
 });
 
@@ -377,7 +545,7 @@ describe("lab-operations — /api/issues/[id]/assign", () => {
     login(["VOLUNTARIO"], 999);
     const denied = await issueAssign(request("/api/issues/5/assign", { method: "POST", body: { assigneeId: 7 } }), params({ id: "5" }));
     expect(denied.status).toBe(403);
-    expect(await body(denied)).toEqual({ error: "Sem permissão para atribuir issue" });
+    expect(await body(denied)).toMatchObject({ error: "Sem permissão para atribuir issue", code: "FORBIDDEN" });
   });
 
   it("reporter pode atribuir a própria issue", async () => {
@@ -385,35 +553,43 @@ describe("lab-operations — /api/issues/[id]/assign", () => {
     expect((await issueAssign(request("/api/issues/5/assign", { method: "POST", body: { assigneeId: 7 } }), params({ id: "5" }))).status).toBe(200);
   });
 
+  it("assignee NÃO reatribui (gate medido: MANAGE_USERS OU reporter)", async () => {
+    login(["LABORATORISTA"], 200); // assigneeId da issue 5
+    const denied = await issueAssign(request("/api/issues/5/assign", { method: "POST", body: { assigneeId: 7 } }), params({ id: "5" }));
+    expect(denied.status).toBe(403);
+    expect(await body(denied)).toMatchObject({ error: "Sem permissão para atribuir issue", code: "FORBIDDEN" });
+  });
+
   it("403 vem ANTES da validação: assigneeId ausente devolve 403, não 400", async () => {
     login(["VOLUNTARIO"], 999);
     const response = await issueAssign(request("/api/issues/5/assign", { method: "POST", body: {} }), params({ id: "5" }));
     expect(response.status).toBe(403);
-    expect(await body(response)).toEqual({ error: "Sem permissão para atribuir issue" });
+    expect(await body(response)).toMatchObject({ error: "Sem permissão para atribuir issue", code: "FORBIDDEN" });
   });
 
   it("quem passa pelo gate recebe 400 de assigneeId ausente", async () => {
     login(["COORDENADOR"]);
     const response = await issueAssign(request("/api/issues/5/assign", { method: "POST", body: {} }), params({ id: "5" }));
     expect(response.status).toBe(400);
-    expect(await body(response)).toEqual({ error: "assigneeId é obrigatório" });
+    // B6-6: ValidationError mapeado (superset) mantendo a mensagem
+    expect(await body(response)).toMatchObject({ error: "assigneeId é obrigatório", code: "VALIDATION_ERROR" });
   });
 });
 
 describe("lab-operations — /api/issues/[id]/resolve", () => {
-  it("assignee resolve; terceiro recebe 403", async () => {
+  it("assignee resolve; terceiro recebe 403 com a mensagem DESTA rota (distinta da de status)", async () => {
     login(["LABORATORISTA"], 200);
     expect((await issueResolve(request("/api/issues/5/resolve", { method: "POST", body: { resolution: "ok" } }), params({ id: "5" }))).status).toBe(200);
 
     login(["VOLUNTARIO"], 999);
     const denied = await issueResolve(request("/api/issues/5/resolve", { method: "POST", body: { resolution: "ok" } }), params({ id: "5" }));
     expect(denied.status).toBe(403);
-    expect(await body(denied)).toEqual({ error: "Sem permissão para resolver issue" });
+    expect(await body(denied)).toMatchObject({ error: "Sem permissão para resolver issue", code: "FORBIDDEN" });
   });
 });
 
 describe("lab-operations — /api/issues/[id]/status", () => {
-  it("uma ação por vez; terceira pessoa recebe 403 antes do switch", async () => {
+  it("uma ação por vez; terceira pessoa recebe 403 antes do conflito de estado", async () => {
     login(["COORDENADOR"]);
     for (const action of ["start", "resolve", "closed", "reopen", "unassign"]) {
       expect((await issueStatus(request("/api/issues/5/status", { method: "PATCH", body: { action } }), params({ id: "5" }))).status).toBe(200);
@@ -422,10 +598,10 @@ describe("lab-operations — /api/issues/[id]/status", () => {
     login(["VOLUNTARIO"], 999);
     const denied = await issueStatus(request("/api/issues/5/status", { method: "PATCH", body: { action: "start" } }), params({ id: "5" }));
     expect(denied.status).toBe(403);
-    expect(await body(denied)).toEqual({ error: "Sem permissão para atualizar status do issue" });
+    expect(await body(denied)).toMatchObject({ error: "Sem permissão para atualizar status do issue", code: "FORBIDDEN" });
   });
 
-  it("ação desconhecida é 400 para quem tem o gate", async () => {
+  it("ação desconhecida é 400 (despacho de rota, depois do gate para ações válidas)", async () => {
     login(["COORDENADOR"]);
     const response = await issueStatus(request("/api/issues/5/status", { method: "PATCH", body: { action: "nope" } }), params({ id: "5" }));
     expect(response.status).toBe(400);
@@ -440,44 +616,67 @@ describe("lab-operations — /api/responsibilities", () => {
   });
 
   it("POST exige um dos três papéis; GERENTE_PROJETO é barrado mesmo tendo MANAGE_PROJECTS", async () => {
+    // sem responsabilidade ativa (a 1 do fixture bloquearia por QUIRK-8L10, nao pelo gate)
+    mocks.state.responsibilityRows = [];
     login(["LABORATORISTA"]);
     expect((await responsibilitiesStart(request("/api/responsibilities", { method: "POST", body: {} }))).status).toBe(201);
 
     login(["GERENTE_PROJETO"]);
     const denied = await responsibilitiesStart(request("/api/responsibilities", { method: "POST", body: {} }));
     expect(denied.status).toBe(403);
-    expect(await body(denied)).toEqual({ error: "Sem permissão para iniciar responsabilidade do laboratório" });
+    // B6-6: gate desceu para o StartResponsibilityUseCase com a mensagem congelada da rota
+    expect(await body(denied)).toMatchObject({
+      error: "Sem permissão para iniciar responsabilidade do laboratório",
+      code: "FORBIDDEN",
+    });
   });
 });
 
 describe("lab-operations — /api/responsibilities/[id]", () => {
-  it("PATCH end: canEndResponsibility decide (a rota só mapeia o 403)", async () => {
-    login(["LABORATORISTA"]);
+  it("PATCH end: dono pode; quem nao e dono nem papel de lab recebe 403 (canEnd decide no use case)", async () => {
+    login(["LABORATORISTA"]); // id 42 = dono da responsabilidade 1
     expect((await responsibilityPatch(request("/api/responsibilities/1", { method: "PATCH", body: { action: "end" } }), params({ id: "1" }))).status).toBe(200);
 
-    mocks.state.canEndResponsibility = false;
+    login(["VOLUNTARIO"], 999); // nem dono (42) nem COORD/GER/LAB
     const denied = await responsibilityPatch(request("/api/responsibilities/1", { method: "PATCH", body: { action: "end" } }), params({ id: "1" }));
     expect(denied.status).toBe(403);
-    expect(await body(denied)).toEqual({
+    expect(await body(denied)).toMatchObject({
       error: "Apenas o laboratorista atual ou um administrador pode encerrar a responsabilidade",
+      code: "FORBIDDEN",
     });
   });
 
+  it("PATCH end em responsabilidade AUSENTE é 403, não 404 (canEnd antes do lookup — quirk medido)", async () => {
+    login(["VOLUNTARIO"], 999);
+    const denied = await responsibilityPatch(request("/api/responsibilities/999", { method: "PATCH", body: { action: "end" } }), params({ id: "999" }));
+    expect(denied.status).toBe(403);
+  });
+
   it("PATCH updateNotes tem mensagem própria de 403", async () => {
-    login(["LABORATORISTA"]);
-    mocks.state.canEndResponsibility = false;
+    login(["VOLUNTARIO"], 999); // canEnd false: nem dono nem papel de lab
     const denied = await responsibilityPatch(
       request("/api/responsibilities/1", { method: "PATCH", body: { action: "updateNotes", notes: "x" } }),
       params({ id: "1" }),
     );
     expect(denied.status).toBe(403);
-    expect(await body(denied)).toEqual({ error: "Sem permissão para atualizar notas desta responsabilidade" });
+    expect(await body(denied)).toMatchObject({
+      error: "Sem permissão para atualizar notas desta responsabilidade",
+      code: "FORBIDDEN",
+    });
   });
 
-  it("PATCH pause/resume não têm gate além da autenticação", async () => {
-    login(["VOLUNTARIO"]);
+  it("PATCH pause/resume não têm gate além da autenticação (a rota só opera sobre si — userId vem do ator)", async () => {
+    login(["VOLUNTARIO"]); // id 42 = dono
     expect((await responsibilityPatch(request("/api/responsibilities/1", { method: "PATCH", body: { action: "pause" } }), params({ id: "1" }))).status).toBe(200);
     expect((await responsibilityPatch(request("/api/responsibilities/1", { method: "PATCH", body: { action: "resume" } }), params({ id: "1" }))).status).toBe(200);
+
+    // COORDENADOR logado como OUTRO usuario (999): a rota passa userId = ator, entao ele procura
+    // a PROPRIA responsabilidade (nao existe) e recebe null 200 — nunca a de outro. A guarda de
+    // self do use case (para chamadores diretos, ex. cron) e provada no roundtrip G4.
+    login(["COORDENADOR"], 999);
+    const response = await responsibilityPatch(request("/api/responsibilities/1", { method: "PATCH", body: { action: "pause" } }), params({ id: "1" }));
+    expect(response.status).toBe(200);
+    expect(await body(response)).toEqual({ responsibility: null });
   });
 
   it("PATCH ação desconhecida é 400", async () => {
@@ -494,7 +693,7 @@ describe("lab-operations — /api/responsibilities/[id]", () => {
     login(["PESQUISADOR"]);
     const denied = await responsibilityDelete(request("/api/responsibilities/1", { method: "DELETE" }), params({ id: "1" }));
     expect(denied.status).toBe(403);
-    expect(await body(denied)).toEqual({ error: "Sem permissão para excluir responsabilidade" });
+    expect(await body(denied)).toMatchObject({ error: "Sem permissão para excluir responsabilidade", code: "FORBIDDEN" });
   });
 });
 
@@ -503,14 +702,15 @@ describe("lab-operations — /api/schedules/bulk", () => {
     login(["VOLUNTARIO"]);
     const denied = await schedulesBulk(request("/api/schedules/bulk", { method: "PUT", body: { userId: 9, slots: [] } }));
     expect(denied.status).toBe(403);
-    expect(await body(denied)).toEqual({ error: "Acesso negado" });
+    // B6-6: assertCanManageUserSchedules (ForbiddenError) — mesma mensagem, corpo mapeado
+    expect(await body(denied)).toMatchObject({ error: "Acesso negado", code: "FORBIDDEN" });
   });
 
   it("o gate vem ANTES do parse: JSON inválido de um não-autorizado é 403, não 400", async () => {
     login(["VOLUNTARIO"]);
     const denied = await schedulesBulk(request("/api/schedules/bulk", { method: "PUT", raw: "{quebrado" }));
     expect(denied.status).toBe(403);
-    expect(await body(denied)).toEqual({ error: "Acesso negado" });
+    expect(await body(denied)).toMatchObject({ error: "Acesso negado", code: "FORBIDDEN" });
   });
 
   it("COORDENADOR grava a grade de outro usuário", async () => {

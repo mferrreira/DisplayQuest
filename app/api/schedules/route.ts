@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { userActor } from "@/backend/domain"
 import { requireApiActor } from "@/lib/auth/api-guard"
 import { getBackendComposition } from "@/backend/composition/root"
 import { domainErrorResponse } from "@/lib/api/domain-error-response"
@@ -26,8 +27,7 @@ export async function GET(request: Request) {
     }
 
     const schedules = await labOperationsModule.listUserSchedules({
-      actorUserId: auth.actor.id,
-      actorRoles: auth.actor.roles,
+      actor: userActor(auth.actor.id, auth.actor.roles),
       targetUserId,
     })
 
@@ -62,8 +62,7 @@ export async function POST(request: Request) {
     }
 
     const schedule = await labOperationsModule.createUserSchedule({
-      actorUserId: auth.actor.id,
-      actorRoles: auth.actor.roles,
+      actor: userActor(auth.actor.id, auth.actor.roles),
       targetUserId,
       dayOfWeek: Number(data?.dayOfWeek),
       startTime: data?.startTime,
