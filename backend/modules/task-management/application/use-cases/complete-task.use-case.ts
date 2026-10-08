@@ -12,12 +12,14 @@ import {
   NotFoundError,
   openSubtasksCount,
   progressPatchForCompletion,
+  requireActorSelfOrPermission,
   supportsSubtasks,
   totalAwardForCompletion,
   withActorProgress,
   type Task,
 } from "@/backend/domain";
 import type { CompleteTaskCommand, TaskCompletionResult } from "@/backend/modules/task-management/application/contracts";
+import { requireTaskPersonActor } from "@/backend/modules/task-management/application/use-cases/internal/require-task-actor";
 import type { TaskAssigneesPort } from "@/backend/modules/task-management/application/ports/task-assignees.repository";
 import type { TaskActorsPort } from "@/backend/modules/task-management/application/ports/task-actors.port";
 import type { TaskProgressEvents } from "@/backend/modules/task-management/application/ports/task-progress.events";
@@ -65,6 +67,13 @@ export class CompleteTaskUseCase {
   ) {}
 
   async execute(command: CompleteTaskCommand): Promise<TaskCompletionResult> {
+    // B6-7 (D4): o gate cross-actor da rota desceu para ca, ANTES do lookup (ordem medida):
+    // creditar a OUTRO usuario exige MANAGE_TASKS ("Sem permissão para concluir tarefa para
+    // outro usuario"); o default do premiado e o proprio ator (medido).
+    const person = requireTaskPersonActor(command.actor)
+    const userId = command.userId ?? person.id
+    requireActorSelfOrPermission(person, userId, "MANAGE_TASKS", "Sem permissão para concluir tarefa para outro usuário")
+
     const task = await this.dependencies.tasks.findById(command.taskId)
     if (!task) {
       throw new NotFoundError("Tarefa não encontrada")
@@ -74,7 +83,7 @@ export class CompleteTaskUseCase {
       throw new ConflictError("Tarefa já concluída")
     }
 
-    const user = await this.dependencies.actors.findById(command.userId)
+    const user = await this.dependencies.actors.findById(userId)
     if (!user) {
       throw new NotFoundError("Usuário não encontrado")
     }
@@ -83,7 +92,7 @@ export class CompleteTaskUseCase {
     const canManageUsers = hasPermission(user.roles, "MANAGE_USERS")
 
     if (task.taskVisibility !== "public") {
-      const isAssigned = await isActorAssignedToTask(task, command.userId, this.dependencies.assignees)
+      const isAssigned = await isActorAssignedToTask(task, userId, this.dependencies.assignees)
       if (isCompletePermissionDenied(task.taskVisibility, isAssigned, canManageTasks, canManageUsers)) {
         throw new ForbiddenError("Usuário não pode concluir tarefa atribuída a outro usuário")
       }
@@ -91,7 +100,7 @@ export class CompleteTaskUseCase {
 
     // Public + progress table: per-user completion, the task row is NOT touched.
     if (task.taskVisibility === "public" && this.dependencies.progress.isAvailable()) {
-      const existingProgress = await this.dependencies.progress.findByTaskAndUser(task.id!, command.userId)
+      const existingProgress = await this.dependencies.progress.findByTaskAndUser(task.id!, userId)
       if (isProgressAlreadyCompleted(existingProgress)) {
         throw new ConflictError("Tarefa pública já concluída por este usuário")
       }
@@ -101,35 +110,35 @@ export class CompleteTaskUseCase {
 
       await this.dependencies.progress.upsert({
         taskId: task.id!,
-        userId: command.userId,
+        userId: userId,
         ...progressPatchForCompletion(existingProgress, now, pointsToAward),
       })
 
       // completedTasks counts the individual completion itself, not the points: a 0-point
       // completion still counts.
-      await this.dependencies.actors.incrementCompletedTasks(command.userId)
+      await this.dependencies.actors.incrementCompletedTasks(userId)
 
       const creditedPoints = await publishTaskCompletionAward(
         this.events,
-        command.userId,
+        userId,
         command.taskId,
         pointsToAward,
       )
 
       return {
-        task: withActorProgress(task, { status: "done", completedAt: now }, command.userId),
-        awardedTo: command.userId,
+        task: withActorProgress(task, { status: "done", completedAt: now }, userId),
+        awardedTo: userId,
         awardedPoints: creditedPoints,
       }
     }
 
     if (task.projectId && hasAnyRole(user.roles, ["GERENTE_PROJETO"])) {
       const project = await this.dependencies.projects.findById(task.projectId)
-      const leaderIsAssigned = await isActorAssignedToTask(task, command.userId, this.dependencies.assignees)
+      const leaderIsAssigned = await isActorAssignedToTask(task, userId, this.dependencies.assignees)
       if (
         isLeaderSelfCompleteDenied(
           hasAnyRole(user.roles, ["GERENTE_PROJETO"]),
-          Boolean(project && project.leaderId === command.userId),
+          Boolean(project && project.leaderId === userId),
           leaderIsAssigned,
         )
       ) {
@@ -146,7 +155,7 @@ export class CompleteTaskUseCase {
     if (task.taskVisibility !== "public" && !task.isGlobal && task.assignedTo == null) {
       const { claimed, task: claimedTask } = await claimTaskIfUnclaimed(
         workingTask,
-        command.userId,
+        userId,
         this.dependencies.assignees,
       )
       workingTask = claimedTask
@@ -163,7 +172,7 @@ export class CompleteTaskUseCase {
     }
 
     if (workingTask.taskVisibility === "public" && !workingTask.assignedTo) {
-      workingTask = { ...workingTask, assignedTo: command.userId }
+      workingTask = { ...workingTask, assignedTo: userId }
     }
 
     const finalStatus = workingTask.isGlobal || workingTask.taskVisibility === "public" ? "done" : "in-review"
@@ -187,11 +196,11 @@ export class CompleteTaskUseCase {
     // tasks never land here (they go to "in-review"); their counter lives in approveTask.
     let awardedPoints: number | null = null
     if (finalStatus === "done") {
-      await this.dependencies.actors.incrementCompletedTasks(command.userId)
+      await this.dependencies.actors.incrementCompletedTasks(userId)
       const pointsToAward = totalAwardForCompletion(workingTask, awardableSubtasks(workingTask, subtaskRows), new Date())
       awardedPoints = await publishTaskCompletionAward(
         this.events,
-        command.userId,
+        userId,
         command.taskId,
         pointsToAward,
       )
@@ -201,7 +210,7 @@ export class CompleteTaskUseCase {
       task: updatedTaskWithAssignees,
       // delegated lands "in-review" without awarding (approveTask credits): null, not 0 —
       // "ninguém creditado agora" e "valeu zero pontos" são coisas diferentes na interface.
-      awardedTo: finalStatus === "done" ? command.userId : null,
+      awardedTo: finalStatus === "done" ? userId : null,
       awardedPoints,
     }
   }

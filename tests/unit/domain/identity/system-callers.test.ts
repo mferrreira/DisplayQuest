@@ -34,6 +34,7 @@ import { ApproveTaskUseCase } from "@/backend/modules/task-management/applicatio
 import { RejectTaskUseCase } from "@/backend/modules/task-management/application/use-cases/reject-task.use-case";
 import { UpdateTaskUseCase } from "@/backend/modules/task-management/application/use-cases/update-task.use-case";
 import type { TaskNotificationEvent } from "@/backend/modules/task-management/application/ports/task-notifications.port";
+import { userActor } from "@/backend/domain";
 
 /** O contrato do bypass: sistema, e o motivo que o identifica na auditoria. */
 function expectSystemActor(actor: unknown) {
@@ -141,9 +142,11 @@ describe("task-management — os três eventos de revisão", () => {
     const notifications = recordingSink();
     const useCase = new UpdateTaskUseCase(updateDependencies(notifications));
 
+    // B6-7 (D4): o comando de update carrega ActorRef. {status} e progresso publico —
+    // passa o gate de campo mesmo sem MANAGE_TASKS (papel aqui e irrelevante para o gate).
     await useCase.execute({
+      actor: userActor(5, ["VOLUNTARIO"]),
       taskId: 11,
-      actorId: 5,
       data: { status: "in-review" },
     });
 

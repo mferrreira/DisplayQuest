@@ -14,7 +14,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ConflictError, ForbiddenError, ValidationError, toTaskView, type ISubtask, type Task } from "@/backend/domain";
+import { ConflictError, ForbiddenError, ValidationError, toTaskView, userActor, type ISubtask, type Task } from "@/backend/domain";
 import { createTaskManagementModule } from "@/backend/modules/task-management";
 import type { CreateTaskCommand } from "@/backend/modules/task-management/application/contracts";
 import type { TaskActorRecord } from "@/backend/modules/task-management/application/ports/task-actors.port";
@@ -32,6 +32,9 @@ import type { TaskRepositoryPort } from "@/backend/modules/task-management/appli
 const VOLUNTARIO = ["VOLUNTARIO"];
 const COORDENADOR = ["COORDENADOR"]; // MANAGE_USERS
 const GERENTE_PROJETO = ["GERENTE_PROJETO"];
+// B6-7 (D4): createTask passou a exigir ActorRef com MANAGE_TASKS (o gate da rota POST,
+// congelado "Sem permissão para criar tarefa"). O criador do fixture e o coordenador 1.
+const coordinatorActor = () => userActor(1, COORDENADOR);
 
 type Store = {
   tasks: Map<number, Task>;
@@ -228,7 +231,7 @@ function buildModule() {
   return createTaskManagementModule({ tasks, subtasks, assignees, actors, projects, progress, notifications, events });
 }
 
-let module: ReturnType<typeof buildModule>;
+let taskModule: ReturnType<typeof buildModule>;
 
 beforeEach(() => {
   // Os casos de uso chamam `new Date()` (o domínio recebe `now` por parâmetro; os casos de uso
@@ -252,7 +255,7 @@ beforeEach(() => {
     completedTasks: [],
   };
   seq = { task: 0, subtask: 0 };
-  module = buildModule();
+  taskModule = buildModule();
 });
 
 afterEach(() => {
@@ -260,11 +263,11 @@ afterEach(() => {
 });
 
 const createSubtask = (taskId: number, actorId: number, title: string) =>
-  module.createTaskSubtask({ taskId, actorId, title });
+  taskModule.createTaskSubtask({ taskId, actorId, title });
 const updateSubtask = (command: { taskId: number; subtaskId: number; actorId: number; title?: string; completed?: boolean }) =>
-  module.updateTaskSubtask(command);
+  taskModule.updateTaskSubtask(command);
 const deleteSubtask = (taskId: number, subtaskId: number, actorId: number) =>
-  module.deleteTaskSubtask({ taskId, subtaskId, actorId });
+  taskModule.deleteTaskSubtask({ taskId, subtaskId, actorId });
 
 /** `CreateTaskCommand` é o contrato do módulo e exige as colunas todas; o teste só quer falar de subtask. */
 function newTask(overrides: Partial<CreateTaskCommand> & { title: string }): CreateTaskCommand {
@@ -289,9 +292,9 @@ function newTask(overrides: Partial<CreateTaskCommand> & { title: string }): Cre
 
 describe("V4-4 · criar subtask junto com a mãe", () => {
   it("a base gravada em tasks.points passa a ser 10 + 5·n (DEC-97)", async () => {
-    const task = await module.createTask(
+    const task = await taskModule.createTask(
       newTask({ title: "Montar a bancada", assignedTo: 7, projectId: 3, subtasks: [{ title: "Comprar parafusos" }, { title: "Ajustar o suporte" }] }),
-      1,
+      coordinatorActor(),
     );
 
     expect(task.points).toBe(20);
@@ -299,14 +302,14 @@ describe("V4-4 · criar subtask junto com a mãe", () => {
   });
 
   it("sem subtask a mãe vale exatamente 10 como antes", async () => {
-    const task = await module.createTask(newTask({ title: "Sem subtask", assignedTo: 7, projectId: 3 }), 1);
+    const task = await taskModule.createTask(newTask({ title: "Sem subtask", assignedTo: 7, projectId: 3 }), coordinatorActor());
     expect(task.points).toBe(10);
   });
 
   it("modo individual: cada cópia recebe as SUAS subtasks, cada uma com trava e prêmio próprios", async () => {
-    await module.createTask(
+    await taskModule.createTask(
       newTask({ title: "Limpeza", projectId: 3, assigneeIds: [7, 8], creationMode: "individual", subtasks: [{ title: "Desligar equipamentos" }] }),
-      1,
+      coordinatorActor(),
     );
 
     const tasks = [...store.tasks.values()];
@@ -319,17 +322,17 @@ describe("V4-4 · criar subtask junto com a mãe", () => {
 
   it("título vazio é recusado antes de qualquer escrita", async () => {
     await expect(
-      module.createTask(newTask({ title: "Com subtask ruim", assignedTo: 7, projectId: 3, subtasks: [{ title: "   " }] }), 1),
+      taskModule.createTask(newTask({ title: "Com subtask ruim", assignedTo: 7, projectId: 3, subtasks: [{ title: "   " }] }), coordinatorActor()),
     ).rejects.toThrow(ValidationError);
     expect(store.tasks.size).toBe(0);
   });
 
   it("tarefa pública e quest global não têm subtask (D-D)", async () => {
     await expect(
-      module.createTask(newTask({ title: "Pública", projectId: 3, taskVisibility: "public", subtasks: [{ title: "x" }] }), 1),
+      taskModule.createTask(newTask({ title: "Pública", projectId: 3, taskVisibility: "public", subtasks: [{ title: "x" }] }), coordinatorActor()),
     ).rejects.toThrow(ValidationError);
     await expect(
-      module.createTask(newTask({ title: "Global", isGlobal: true, subtasks: [{ title: "x" }] }), 1),
+      taskModule.createTask(newTask({ title: "Global", isGlobal: true, subtasks: [{ title: "x" }] }), coordinatorActor()),
     ).rejects.toThrow(ValidationError);
   });
 
@@ -349,7 +352,7 @@ describe("V4-4 · DEC-57 — a trava nos três caminhos que terminam a mãe", ()
     addSubtask(41, "Uma aberta", false);
     addSubtask(41, "Outra aberta", false);
 
-    await expect(module.updateTask({ taskId: 41, actorId: 7, data: { status: "in-review" } })).rejects.toThrow(/as 2 subtasks restantes/);
+    await expect(taskModule.updateTask({ taskId: 41, actor: userActor(7, VOLUNTARIO), data: { status: "in-review" } })).rejects.toThrow(/as 2 subtasks restantes/);
     expect(store.tasks.get(41)!.status).toBe("in-progress");
   });
 
@@ -357,24 +360,24 @@ describe("V4-4 · DEC-57 — a trava nos três caminhos que terminam a mãe", ()
     const mother = addTask({ id: 42, status: "to-do" });
     addSubtask(42, "Aberta", false);
 
-    await expect(module.updateTask({ taskId: 42, actorId: 7, data: { status: "in-review" } })).rejects.toThrow(ValidationError);
-    await expect(module.updateTask({ taskId: 42, actorId: 1, data: { status: "done" } })).rejects.toThrow(ValidationError);
+    await expect(taskModule.updateTask({ taskId: 42, actor: userActor(7, VOLUNTARIO), data: { status: "in-review" } })).rejects.toThrow(ValidationError);
+    await expect(taskModule.updateTask({ taskId: 42, actor: userActor(1, COORDENADOR), data: { status: "done" } })).rejects.toThrow(ValidationError);
   });
 
   it("voltar para A Fazer, Em Andamento ou Ajustes com subtask aberta é livre", async () => {
     addTask({ id: 43, status: "in-progress" });
     addSubtask(43, "Aberta", false);
 
-    expect((await module.updateTask({ taskId: 43, actorId: 7, data: { status: "adjust" } })).status).toBe("adjust");
-    expect((await module.updateTask({ taskId: 43, actorId: 7, data: { status: "to-do" } })).status).toBe("to-do");
-    expect((await module.updateTask({ taskId: 43, actorId: 7, data: { status: "in-progress" } })).status).toBe("in-progress");
+    expect((await taskModule.updateTask({ taskId: 43, actor: userActor(7, VOLUNTARIO), data: { status: "adjust" } })).status).toBe("adjust");
+    expect((await taskModule.updateTask({ taskId: 43, actor: userActor(7, VOLUNTARIO), data: { status: "to-do" } })).status).toBe("to-do");
+    expect((await taskModule.updateTask({ taskId: 43, actor: userActor(7, VOLUNTARIO), data: { status: "in-progress" } })).status).toBe("in-progress");
   });
 
   it("concluir (PATCH complete) com subtask aberta é recusado", async () => {
     addTask({ id: 44, status: "in-progress" });
     addSubtask(44, "Aberta", false);
 
-    await expect(module.completeTask({ taskId: 44, userId: 7 })).rejects.toThrow(/a subtask restante/);
+    await expect(taskModule.completeTask({ taskId: 44, actor: userActor(7, VOLUNTARIO), userId: 7 })).rejects.toThrow(/a subtask restante/);
     expect(store.tasks.get(44)!.status).toBe("in-progress");
     expect(store.awards).toEqual([]);
   });
@@ -383,7 +386,7 @@ describe("V4-4 · DEC-57 — a trava nos três caminhos que terminam a mãe", ()
     addTask({ id: 45, status: "in-review", completed: true });
     addSubtask(45, "Aberta", false);
 
-    await expect(module.approveTask({ taskId: 45, approverId: 1 })).rejects.toThrow(/antes de aprovar a tarefa/);
+    await expect(taskModule.approveTask({ taskId: 45, approverId: 1 })).rejects.toThrow(/antes de aprovar a tarefa/);
     expect(store.tasks.get(45)!.status).toBe("in-review");
     expect(store.awards).toEqual([]);
     expect(store.completedTasks).toEqual([]);
@@ -393,7 +396,7 @@ describe("V4-4 · DEC-57 — a trava nos três caminhos que terminam a mãe", ()
     addTask({ id: 46, status: "in-progress" });
     addSubtask(46, "Feita", true, new Date("2026-10-10T12:00:00.000Z"));
 
-    const moved = await module.updateTask({ taskId: 46, actorId: 7, data: { status: "in-review" } });
+    const moved = await taskModule.updateTask({ taskId: 46, actor: userActor(7, VOLUNTARIO), data: { status: "in-review" } });
     expect(moved.status).toBe("in-review");
   });
 });
@@ -543,7 +546,7 @@ describe("V4-4/V4-5 · DEC-97 — o prêmio creditado na aprovação é a mãe +
     addSubtask(62, "No prazo", true, new Date("2026-10-20T12:00:00.000Z"));
     addSubtask(62, "No prazo também", true, new Date("2026-10-20T12:00:00.000Z"));
 
-    const result = await module.approveTask({ taskId: 62, approverId: 1 });
+    const result = await taskModule.approveTask({ taskId: 62, approverId: 1 });
 
     expect(result.awardedPoints).toBe(20);
     expect(store.awards).toEqual([{ userId: 7, taskId: 62, taskPoints: 20 }]);
@@ -558,7 +561,7 @@ describe("V4-4/V4-5 · DEC-97 — o prêmio creditado na aprovação é a mãe +
 
     // O instante de conclusão de CADA subtask não pesa mais: só a contagem entra na base
     // (10 + 3·5 = 25) e o atraso da mãe (5 dias × 10) desconta uma vez só.
-    const result = await module.approveTask({ taskId: 63, approverId: 1 });
+    const result = await taskModule.approveTask({ taskId: 63, approverId: 1 });
     expect(result.awardedPoints).toBe(-25);
   });
 
@@ -566,7 +569,7 @@ describe("V4-4/V4-5 · DEC-97 — o prêmio creditado na aprovação é a mãe +
     vi.setSystemTime(new Date("2026-10-20T12:00:00.000Z"));
     addTask({ id: 64, status: "in-review", completed: true, dueDate: "2026-10-20", assignedTo: 7 });
 
-    const result = await module.approveTask({ taskId: 64, approverId: 1 });
+    const result = await taskModule.approveTask({ taskId: 64, approverId: 1 });
     expect(result.awardedPoints).toBe(10);
   });
 });

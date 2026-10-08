@@ -1,3 +1,4 @@
+import { requireActorPermission, type ActorRef } from "@/backend/domain";
 import type { TaskActorsPort } from "@/backend/modules/task-management/application/ports/task-actors.port"
 import type { TaskProgressPort } from "@/backend/modules/task-management/application/ports/task-progress.repository"
 import type { TaskRepositoryPort } from "@/backend/modules/task-management/application/ports/task.repository"
@@ -40,7 +41,11 @@ export interface ListGlobalProgressDependencies {
 export class ListGlobalProgressUseCase {
   constructor(private readonly dependencies: ListGlobalProgressDependencies) {}
 
-  async execute(): Promise<GlobalProgressEntry[]> {
+  async execute(command: { actor: ActorRef }): Promise<GlobalProgressEntry[]> {
+    // B6-7 (D4): o gate MANAGE_USERS da rota GET desceu para ca (mensagem
+    // congelada "Acesso negado", o default do ensurePermission legado).
+    requireActorPermission(command.actor, "MANAGE_USERS", "Acesso negado")
+
     const globalTasks = (await this.dependencies.tasks.findAll()).filter((task) => task.isGlobal)
 
     const targetUsers = (await this.dependencies.actors.listActiveUsers()).filter((user) =>

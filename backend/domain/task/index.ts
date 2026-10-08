@@ -1,4 +1,6 @@
 export { TaskStatus, TASK_STATUSES, isTaskStatus } from "./TaskStatus";
+// B6-7 (D4): filtro de campos do PUT de tarefa (o gate de campo usa isPublicProgressOnlyUpdate, de task-rules)
+export { TASK_EDITABLE_FIELDS, filterTaskEditFields } from "./task-access";
 export { TaskVisibility, TASK_VISIBILITIES, isTaskVisibility } from "./TaskVisibility";
 export type { ITask, Task, TaskPriority } from "./Task";
 export {

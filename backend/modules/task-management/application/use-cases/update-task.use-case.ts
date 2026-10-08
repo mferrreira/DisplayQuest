@@ -3,10 +3,12 @@ import {
   canManipulateStatusOnly,
   canModifyCompletedTask,
   fallThroughStatusPatch,
+  filterTaskEditFields,
   ForbiddenError,
   hasAnyRole,
   hasPermission,
   isForeignPublicMoveDenied,
+  isPublicProgressOnlyUpdate,
   isReviewRequestTransition,
   isStatusOnlyUpdate,
   isCompletionTargetStatus,
@@ -23,6 +25,7 @@ import {
   withActorProgress,
 } from "@/backend/domain";
 import type { UpdateTaskCommand } from "@/backend/modules/task-management/application/contracts";
+import { requireTaskPersonActor } from "@/backend/modules/task-management/application/use-cases/internal/require-task-actor";
 import type { TaskAssigneesPort } from "@/backend/modules/task-management/application/ports/task-assignees.repository";
 import type { TaskActorsPort } from "@/backend/modules/task-management/application/ports/task-actors.port";
 import type { TaskNotificationsPort } from "@/backend/modules/task-management/application/ports/task-notifications.port";
@@ -48,6 +51,13 @@ import {
  *      completedAt is ALWAYS rewritten; transition into in-review notifies the leader.
  *   4. Fall-through: membership gate, completed-task gate, field-by-field application
  *      (completedAt only on transitions), full-row update, assignee sync.
+ *
+ * B6-7 (D4): o gate de CAMPO do PUT desceu da rota para cá, na ordem medida: gate sobre o
+ * corpo CRU (quem nao tem MANAGE_TASKS so edita corpo exclusivamente {status, assignedTo} —
+ * 'Sem permissão para editar tarefa', medido: ate corpo VAZIO ou {points: 5} barra) -> filtro
+ * allowedFields (que era da rota e veio junto) -> lookup -> decisoes internas (papéis do
+ * BANCO, segunda linha — sessao e banco podem divergir). Guarda de pessoa: update tem logica
+ * dependente de id e nenhuma rotina de sistema o chama; systemActor aqui e erro de wiring.
  */
 export interface UpdateTaskDependencies {
   tasks: TaskRepositoryPort
@@ -63,17 +73,26 @@ export class UpdateTaskUseCase {
   constructor(private readonly dependencies: UpdateTaskDependencies) {}
 
   async execute(command: UpdateTaskCommand): Promise<Task> {
+    const person = requireTaskPersonActor(command.actor)
+    const actorId = person.id
+
+    // gate de campo da rota legado, sobre o corpo CRU (antes do filtro e do lookup — ordem medida)
+    if (!hasPermission(person.roles, "MANAGE_TASKS") && !isPublicProgressOnlyUpdate(command.data)) {
+      throw new ForbiddenError("Sem permissão para editar tarefa")
+    }
+
+    const data = filterTaskEditFields(command.data)
+
     const existingTask = await this.dependencies.tasks.findById(command.taskId)
     if (!existingTask) {
       throw new NotFoundError("Tarefa não encontrada")
     }
 
-    const user = await this.dependencies.actors.findById(command.actorId)
+    const user = await this.dependencies.actors.findById(actorId)
     if (!user) {
       throw new NotFoundError("Usuário não encontrado")
     }
 
-    const data = command.data
     const userRoles = user.roles || []
     const canManageTasks = hasPermission(userRoles, "MANAGE_TASKS")
     const canManageUsers = hasPermission(userRoles, "MANAGE_USERS")
@@ -83,16 +102,16 @@ export class UpdateTaskUseCase {
       const requestedAssignee =
         data.assignedTo === undefined ? undefined : data.assignedTo === null ? null : Number(data.assignedTo)
 
-      if (isForeignPublicMoveDenied(requestedAssignee, command.actorId, canManageTasks || canManageUsers)) {
+      if (isForeignPublicMoveDenied(requestedAssignee, actorId, canManageTasks || canManageUsers)) {
         throw new ForbiddenError("Usuário não pode mover task pública em nome de outro usuário")
       }
 
       if (existingTask.projectId && !canManageTasks && !canManageUsers) {
-        await this.ensureProjectMember(command.actorId, existingTask.projectId)
+        await this.ensureProjectMember(actorId, existingTask.projectId)
       }
 
       const actorProgressUserId =
-        requestedAssignee && requestedAssignee > 0 ? requestedAssignee : command.actorId
+        requestedAssignee && requestedAssignee > 0 ? requestedAssignee : actorId
 
       const status = String(data.status || "to-do") as TaskStatus
       const currentProgress = await this.dependencies.progress.findByTaskAndUser(
@@ -123,11 +142,11 @@ export class UpdateTaskUseCase {
       && (data.assigneeIds === undefined || (Array.isArray(data.assigneeIds) && data.assigneeIds.length === 0))
     ) {
       if (existingTask.projectId && !canManageTasks && !canManageUsers) {
-        await this.ensureProjectMember(command.actorId, existingTask.projectId)
+        await this.ensureProjectMember(actorId, existingTask.projectId)
       }
       const { task: claimedTask } = await claimTaskIfUnclaimed(
         workingTask,
-        command.actorId,
+        actorId,
         this.dependencies.assignees,
       )
       workingTask = claimedTask
@@ -135,7 +154,7 @@ export class UpdateTaskUseCase {
 
     // --- 3. status-only branch for non-managers ----------------------------------------
     if (!canManageTasks && !canManageUsers && isStatusOnlyUpdate(data)) {
-      const isAssigned = await isActorAssignedToTask(workingTask, command.actorId, this.dependencies.assignees)
+      const isAssigned = await isActorAssignedToTask(workingTask, actorId, this.dependencies.assignees)
       if (!canManipulateStatusOnly(workingTask.taskVisibility, isAssigned)) {
         throw new ForbiddenError("Usuário não pode manipular esta tarefa")
       }
@@ -158,7 +177,7 @@ export class UpdateTaskUseCase {
           await publishTaskReviewRequest(this.dependencies.notifications, this.dependencies.actors, {
             taskId: workingTask.id!,
             taskTitle: workingTask.title,
-            userId: command.actorId,
+            userId: actorId,
             projectLeaderId: project.leaderId,
           })
         }
@@ -173,13 +192,13 @@ export class UpdateTaskUseCase {
       if (!workingTask.projectId) {
         throw new ForbiddenError("Usuário não pode modificar esta tarefa")
       }
-      await this.ensureProjectMember(command.actorId, workingTask.projectId)
+      await this.ensureProjectMember(actorId, workingTask.projectId)
     }
 
     let canModifyCompleted = hasAnyRole(userRoles, ["COORDENADOR", "LABORATORISTA", "GERENTE_PROJETO", "GERENTE"])
     if (!canModifyCompleted && workingTask.projectId) {
       const project = await this.dependencies.projects.findById(workingTask.projectId)
-      if (project && (project.createdBy === command.actorId || project.leaderId === command.actorId)) {
+      if (project && (project.createdBy === actorId || project.leaderId === actorId)) {
         canModifyCompleted = true
       }
     }
@@ -223,7 +242,7 @@ export class UpdateTaskUseCase {
           await publishTaskReviewRequest(this.dependencies.notifications, this.dependencies.actors, {
             taskId: next.id!,
             taskTitle: next.title,
-            userId: command.actorId,
+            userId: actorId,
             projectLeaderId: project.leaderId,
           })
         }
@@ -251,12 +270,12 @@ export class UpdateTaskUseCase {
     const updatedTask = await this.dependencies.tasks.update(command.taskId, next)
 
     if (normalizedAssigneeIds !== undefined) {
-      await syncAssignees(command.taskId, normalizedAssigneeIds, command.actorId, this.dependencies.assignees)
+      await syncAssignees(command.taskId, normalizedAssigneeIds, actorId, this.dependencies.assignees)
     } else if (data.assignedTo !== undefined) {
       await syncAssignees(
         command.taskId,
         updatedTask.assignedTo ? [updatedTask.assignedTo] : [],
-        command.actorId,
+        actorId,
         this.dependencies.assignees,
       )
     }

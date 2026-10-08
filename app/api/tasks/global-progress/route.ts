@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { getBackendComposition } from "@/backend/composition/root"
-import { ensurePermission, requireApiActor } from "@/lib/auth/api-guard"
+import { userActor } from "@/backend/domain"
+import { requireApiActor } from "@/lib/auth/api-guard"
 import { domainErrorResponse } from "@/lib/api/domain-error-response"
 
 const { taskManagement: taskManagementModule } = getBackendComposition()
@@ -15,10 +16,12 @@ export async function GET() {
     const auth = await requireApiActor()
     if (auth.error) return auth.error
 
-    const deny = ensurePermission(auth.actor, "MANAGE_USERS", "Acesso negado")
-    if (deny) return deny
+    // B6-7 (D4): o gate MANAGE_USERS ("Acesso negado", default do ensurePermission legado)
+    // desceu para o ListGlobalProgressUseCase. Sem corpo nesta rota, entao nao ha par
+    // 403-vs-400 de parse a preservar — a decisao inteira e do use case.
+    const actor = userActor(auth.actor.id, auth.actor.roles)
 
-    const data = await taskManagementModule.globalProgress()
+    const data = await taskManagementModule.globalProgress({ actor })
 
     return NextResponse.json({ globalTasks: data }, { status: 200 })
   } catch (error) {

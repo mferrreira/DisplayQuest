@@ -23,7 +23,7 @@
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
-import { POINTS_PER_TASK } from "@/backend/domain";
+import { POINTS_PER_TASK, filterTaskEditFields, requireActorPermission } from "@/backend/domain";
 
 const mocks = vi.hoisted(() => {
   const calls = {
@@ -50,6 +50,10 @@ const mocks = vi.hoisted(() => {
 vi.mock("@/backend/composition/root", () => ({
   getBackendComposition: () => ({
     taskManagement: {
+      // B6-7 (D4): o assert antes do parse e o filtro de campos sao do dominio — o duplo
+      // aplica as MESMAS funcoes (molde DEC-90) em vez de reimplementar a regra.
+      assertCanManageTasks: ({ actor }: any) =>
+        requireActorPermission(actor, "MANAGE_TASKS", "Sem permissão para criar tarefa"),
       createTask: async (command: any) => {
         mocks.calls.createTask.push(command);
         return mocks.fakeTask;
@@ -59,7 +63,9 @@ vi.mock("@/backend/composition/root", () => ({
         return [mocks.fakeTask];
       },
       updateTask: async (command: any) => {
-        mocks.calls.updateTask.push(command);
+        // o use case real recebe o corpo CRU (o gate de campo decide sobre ele) e filtra com
+        // filterTaskEditFields antes de mutar — o duplo captura o que o use case mutaria
+        mocks.calls.updateTask.push({ ...command, data: filterTaskEditFields(command.data) });
         return mocks.fakeTask;
       },
       approveTask: async (command: any) => {
@@ -166,6 +172,9 @@ describe("PUT /api/tasks/[id] — edição não redefine pontuação (DEC-40)", 
     expect(res.status).toBe(200);
     const [command] = mocks.calls.updateTask;
     expect(command.data.title).toBe("Comprar reagentes (revisto)");
+    // B6-7: o filtro allowedFields saiu da rota e virou filterTaskEditFields (dominio,
+    // aplicado pelo use case). "points" continua fora da lista (DEC-40) — agora provado pela
+    // funcao do dominio que o duplo aplica, nao por uma lista local da rota.
     expect(command.data).not.toHaveProperty("points");
   });
 });
@@ -246,7 +255,11 @@ describe("PATCH /api/tasks/[id] (complete) — a conclusão também devolve o pr
     const res = await taskPatch(patch("/api/tasks/7", { action: "complete" }), idContext("7"));
 
     expect(res.status).toBe(200);
-    expect(mocks.calls.completeTask).toEqual([{ taskId: 7, userId: 42 }]);
+    // B6-7 (D4): o comando carrega ActorRef; sem `userId` no corpo a rota nao envia o campo
+    // e o default "premiado = o proprio ator" passou para dentro do CompleteTaskUseCase.
+    expect(mocks.calls.completeTask).toEqual([
+      { actor: { kind: "user", id: 42, roles: ["COORDENADOR"] }, taskId: 7 },
+    ]);
     const body = await res.json();
     expect(body.awardedTo).toBe(42);
     expect(body.awardedPoints).toBe(10);

@@ -1,4 +1,5 @@
-import { canListAllTasks, dedupeTasksById, type Task } from "@/backend/domain";
+import { canListAllTasks, dedupeTasksById, hasPermission, type Task } from "@/backend/domain";
+import { requireTaskPersonActor } from "@/backend/modules/task-management/application/use-cases/internal/require-task-actor";
 import type { ListTasksForActorQuery } from "@/backend/modules/task-management/application/contracts";
 import type { TaskAssigneesPort } from "@/backend/modules/task-management/application/ports/task-assignees.repository";
 import type { TaskActorsPort } from "@/backend/modules/task-management/application/ports/task-actors.port";
@@ -31,9 +32,23 @@ export class ListTasksForActorUseCase {
   constructor(private readonly dependencies: ListTasksForActorDependencies) {}
 
   async execute(query: ListTasksForActorQuery) {
-    const scopedTasks = canListAllTasks(query.actorRoles)
+    const person = requireTaskPersonActor(query.actor)
+    const actorId = person.id
+    const actorRoles = person.roles
+
+    // B6-7 (D4): a checagem de projeto da rota GET desceu para ca, preservando o quirk
+    // medido: quem nao tem MANAGE_USERS e pede um projeto do qual NAO e membro recebe LISTA
+    // VAZIA (200 { tasks: [] }), nao 403. MANAGE_USERS ve qualquer projeto pedido.
+    if (query.projectId && !hasPermission(actorRoles, "MANAGE_USERS")) {
+      const memberships = await this.dependencies.actors.getUserProjectMemberships(actorId)
+      if (!memberships.some((membership) => membership.projectId === query.projectId)) {
+        return []
+      }
+    }
+
+    const scopedTasks = canListAllTasks(actorRoles)
       ? await this.dependencies.tasks.findAll()
-      : await this.scopedForActor(query.actorId)
+      : await this.scopedForActor(actorId)
 
     const sharedTasks = (await this.dependencies.tasks.findAll()).filter(
       (task) => task.isGlobal || (task.taskVisibility === "public" && !task.projectId),
@@ -47,7 +62,7 @@ export class ListTasksForActorUseCase {
       return await this.withSubtasks(
         await applyActorProgressToTasks(
           dedupeTasksById([...projectScoped, ...projectShared]),
-          query.actorId,
+          actorId,
           this.dependencies,
         ),
       )
@@ -56,7 +71,7 @@ export class ListTasksForActorUseCase {
     return await this.withSubtasks(
       await applyActorProgressToTasks(
         dedupeTasksById([...scopedTasks, ...sharedTasks]),
-        query.actorId,
+        actorId,
         this.dependencies,
       ),
     )

@@ -1,9 +1,11 @@
-import type { ISubtask, ITask, Task } from "@/backend/domain"
+import type { ActorRef, ISubtask, ITask, Task } from "@/backend/domain"
 import type { NewSubtaskInput } from "@/backend/domain"
 
+// B6-7 (D4): os comandos das 3 rotas migradas carregam o ActorRef. Approve/Reject/subtasks
+// continuam com id cru de proposito: a autoridade deles ja mora nos use cases desde OND4/V4-4
+// (approvalDecision, assertCanOperateSubtasks) e nenhuma rota decide neles.
 export interface ListTasksForActorQuery {
-  actorId: number
-  actorRoles: string[]
+  actor: ActorRef
   projectId?: number
 }
 
@@ -24,19 +26,23 @@ export interface CreateTaskBacklogCommand {
 }
 
 export interface UpdateTaskCommand {
+  actor: ActorRef
   taskId: number
-  actorId: number
+  /** corpo CRU do PUT: o gate de campo decide sobre estas chaves; a mutacao ve o filtro
+   * `filterTaskEditFields` (o que a rota legado fazia antes de chamar o use case). */
   data: Record<string, unknown>
 }
 
 export interface DeleteTaskCommand {
+  actor: ActorRef
   taskId: number
-  actorId: number
 }
 
 export interface CompleteTaskCommand {
+  actor: ActorRef
   taskId: number
-  userId: number
+  /** quem recebe o premio (default = o proprio ator, medido na rota legado) */
+  userId?: number
 }
 
 export interface ApproveTaskCommand {

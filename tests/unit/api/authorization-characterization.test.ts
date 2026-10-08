@@ -46,6 +46,8 @@ import { AssertCanCreateProjectUseCase } from "@/backend/modules/project-managem
 import { UpsertWeeklyReportUseCase } from "@/backend/modules/reporting/application/use-cases/upsert-weekly-report.use-case";
 import { BulkGenerateWeeklyReportsUseCase } from "@/backend/modules/reporting/application/use-cases/bulk-generate-weekly-reports.use-case";
 import { AssertCanGenerateReportsInBulkUseCase } from "@/backend/modules/reporting/application/use-cases/assert-can-generate-reports-in-bulk.use-case";
+import type { ActorRef } from "@/backend/domain";
+import { requireActorPermission } from "@/backend/domain";
 import type { PurchaseRepository } from "@/backend/modules/store/application/ports/purchase.repository";
 import type { RewardRepository } from "@/backend/modules/store/application/ports/reward.repository";
 
@@ -63,6 +65,7 @@ const mocks = vi.hoisted(() => {
     responsibilityRows: [] as Array<Record<string, unknown>>,
     userScheduleRows: [] as Array<Record<string, unknown>>,
     responsibilityOwnerUserId: 42,
+    createdTasks: [] as Array<Record<string, unknown>>,
     /** B6-2d: catálogo do duplo da porta de compras (ver o factory do composition root). */
     purchases: [] as Array<Record<string, unknown>>,
     purchaseSequence: 0,
@@ -106,7 +109,24 @@ const mocks = vi.hoisted(() => {
   // use case + assert antes do parse na rota).
 
   const taskManagement = {
-    globalProgress: async () => ({ total: 10, done: 4 }),
+    // B6-7 (D4): o gate MANAGE_USERS desceu para o ListGlobalProgressUseCase. O duplo
+    // delega a DECISAO a regra do dominio (molde DEC-90) — assim o 403 exercitado e o
+    // do use case real, nao um if inventado no substituto.
+    globalProgress: ({ actor }: { actor: ActorRef }) => {
+      requireActorPermission(actor, "MANAGE_USERS", "Acesso negado");
+      return Promise.resolve({ total: 10, done: 4 });
+    },
+    // B6-7 (D4): o POST /api/tasks autoriza via assert ANTES do parse (molde B6-2b) e o
+    // CreateTaskUseCase recheca. O duplo delega as DUAS decisoes ao dominio (DEC-90).
+    assertCanManageTasks: ({ actor }: { actor: ActorRef }) => {
+      requireActorPermission(actor, "MANAGE_TASKS", "Sem permissão para criar tarefa");
+    },
+    createTask: (command: Record<string, unknown>, actor: ActorRef) => {
+      requireActorPermission(actor, "MANAGE_TASKS", "Sem permissão para criar tarefa");
+      const row = { id: 92, ...command, toJSON: () => ({ id: 92, ...command }) };
+      mocks.state.createdTasks.push(row);
+      return Promise.resolve(row);
+    },
   };
 
   return { state, entidade, projectManagement, taskManagement };
@@ -431,6 +451,7 @@ import { DELETE as rewardDelete, GET as rewardGet, PATCH as rewardPatch, PUT as 
 import { GET as projectsList, POST as projectsCreate } from "@/app/api/projects/route";
 import { POST as weeklyReportsBulk } from "@/app/api/weekly-reports/bulk/route";
 import { GET as tasksGlobalProgress } from "@/app/api/tasks/global-progress/route";
+import { POST as tasksCreate } from "@/app/api/tasks/route";
 
 function login(roles: string[], id = 42) {
   mocks.state.session = { id, email: "user@lab.com", name: "Usuário", roles, status: "active" };
@@ -483,6 +504,7 @@ beforeEach(() => {
     }),
   ];
   mocks.state.userScheduleRows = [];
+  mocks.state.createdTasks = [];
   mocks.state.purchases = [];
   mocks.state.purchaseSequence = 0;
   // B6-2a: o catálogo do módulo real começa com a recompensa 1 (as rotas pedem /api/rewards/1)
@@ -913,15 +935,40 @@ describe("reporting — /api/weekly-reports/bulk", () => {
   });
 });
 
-describe("task-management — /api/tasks/global-progress", () => {
-  it("exige MANAGE_USERS; VOLUNTARIO barrado", async () => {
+describe("task-management — /api/tasks (POST)", () => {
+  it("MANAGE_TASKS decide; terceiro recebe 403 com a mensagem congelada da rota", async () => {
+    login(["COORDENADOR"]);
+    expect((await tasksCreate(request("/api/tasks", { method: "POST", body: { title: "T", status: "to-do" } }))).status).toBe(201);
+
+    login(["VOLUNTARIO"]);
+    const denied = await tasksCreate(request("/api/tasks", { method: "POST", body: { title: "T", status: "to-do" } }));
+    expect(denied.status).toBe(403);
+    expect(await body(denied)).toMatchObject({ error: "Sem permissão para criar tarefa", code: "FORBIDDEN" });
+  });
+
+  it("o gate vem ANTES do parse: backlog vazio de um não-autorizado é 403, não 400", async () => {
+    login(["VOLUNTARIO"]);
+    const denied = await tasksCreate(request("/api/tasks", { method: "POST", body: { tasks: [] } }));
+    expect(denied.status).toBe(403);
+    expect(await body(denied)).toMatchObject({ error: "Sem permissão para criar tarefa", code: "FORBIDDEN" });
+
+    // quem passa no gate recebe o 400 de entrada
+    login(["COORDENADOR"]);
+    const invalid = await tasksCreate(request("/api/tasks", { method: "POST", body: { tasks: [] } }));
+    expect(invalid.status).toBe(400);
+    expect(await body(invalid)).toEqual({ error: "Nenhuma task informada para backlog" });
+  });
+});
+
+describe("task-management — /api/tasks/global-progress", () => {  it("exige MANAGE_USERS; VOLUNTARIO barrado", async () => {
     login(["COORDENADOR"]);
     expect((await tasksGlobalProgress()).status).toBe(200);
 
     login(["VOLUNTARIO"]);
     const denied = await tasksGlobalProgress();
     expect(denied.status).toBe(403);
-    expect(await body(denied)).toEqual({ error: "Acesso negado" });
+    // B6-7: gate desceu para o ListGlobalProgressUseCase (ForbiddenError) — corpo mapeado
+    expect(await body(denied)).toMatchObject({ error: "Acesso negado", code: "FORBIDDEN" });
   });
 });
 
@@ -950,6 +997,7 @@ describe("todas as 13 rotas — sem sessão", () => {
       projectsList(),
       weeklyReportsBulk(request("/api/weekly-reports/bulk", { method: "POST", body: {} })),
       tasksGlobalProgress(),
+      tasksCreate(request("/api/tasks", { method: "POST", body: {} })),
     ]);
     for (const response of responses) {
       expect(response.status).toBe(401);

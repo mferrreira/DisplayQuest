@@ -19,7 +19,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { prisma } from "@/lib/database/prisma";
 import { createTaskManagementModule } from "@/backend/modules/task-management";
 import { createNotificationsModule } from "@/backend/modules/notifications";
-import { ConflictError, civilDayOfInstant } from "@/backend/domain";
+import { ConflictError, ForbiddenError, civilDayOfInstant, userActor } from "@/backend/domain";
 
 // B7 (D7): o fallback cruzado da factory virou no-op; o roundtrip ASSERTA notificacoes
 // reais no banco, entao injeta o modulo de notifications explicitamente (a composition
@@ -31,6 +31,14 @@ let leaderId = 0;
 let coordinatorId = 0;
 let projectId = 0;
 const createdTaskIds: number[] = [];
+
+// B6-7 (D4): os comandos das rotas migradas carregam ActorRef. Os atores do fluxo:
+// ana (VOLUNTARIO — sem MANAGE_TASKS: cria/elimina/edita campo privado NAO pode; move
+// status/assignedTo pode), leader (GERENTE_PROJETO — tem MANAGE_TASKS), coordinator
+// (COORDENADOR — MANAGE_TASKS + MANAGE_USERS).
+const anaActor = () => userActor(anaId, ["VOLUNTARIO"]);
+const leaderActor = () => userActor(leaderId, ["GERENTE_PROJETO"]);
+const coordinatorActor = () => userActor(coordinatorId, ["COORDENADOR"]);
 
 describe("G4 roundtrip — task-management (isolated test DB)", () => {
   beforeAll(async () => {
@@ -104,7 +112,7 @@ describe("G4 roundtrip — task-management (isolated test DB)", () => {
         points: 7,
         taskVisibility: "delegated",
       },
-      leaderId,
+      leaderActor(),
     );
     createdTaskIds.push(task.id!);
 
@@ -117,7 +125,7 @@ describe("G4 roundtrip — task-management (isolated test DB)", () => {
     expect(assignees.map((a) => a.userId)).toEqual([anaId]);
     expect(assignees[0].assignedBy).toBe(leaderId);
 
-    const view = await taskModule.getTaskById(task.id!);
+    const view = await taskModule.getTaskById({ actor: anaActor(), taskId: task.id! });
     expect(view?.assigneeIds).toEqual([anaId]);
     expect(view?.assignedTo).toBe(anaId);
   });
@@ -125,11 +133,11 @@ describe("G4 roundtrip — task-management (isolated test DB)", () => {
   it("D-41 claim: pulling an unclaimed project task to in-progress makes the volunteer the owner", async () => {
     const task = await taskModule.createTask(
       { title: "G4 unclaimed task", completed: false, status: "to-do", priority: "medium", points: 5, taskVisibility: "delegated", projectId },
-      leaderId,
+      leaderActor(),
     );
     createdTaskIds.push(task.id!);
 
-    const updated = await taskModule.updateTask({ taskId: task.id!, actorId: anaId, data: { status: "in-progress" } });
+    const updated = await taskModule.updateTask({ taskId: task.id!, actor: anaActor(), data: { status: "in-progress" } });
     expect(updated.assignedTo).toBe(anaId);
     expect(updated.assigneeIds).toEqual([anaId]);
 
@@ -144,12 +152,12 @@ describe("G4 roundtrip — task-management (isolated test DB)", () => {
   it("updateTask into in-review notifies the leader; approveTask closes it and counts the completion", async () => {
     const task = await taskModule.createTask(
       { title: "G4 review flow", completed: false, status: "in-progress", priority: "medium", points: 5, taskVisibility: "delegated", projectId, assignedTo: anaId },
-      leaderId,
+      leaderActor(),
     );
     createdTaskIds.push(task.id!);
 
     // Status-only transition by the assigned volunteer -> TASK_REVIEW_REQUEST to the leader.
-    const review = await taskModule.updateTask({ taskId: task.id!, actorId: anaId, data: { status: "in-review" } });
+    const review = await taskModule.updateTask({ taskId: task.id!, actor: anaActor(), data: { status: "in-review" } });
     expect(review.status).toBe("in-review");
 
     const reviewNotification = await prisma.notifications.findFirst({
@@ -181,11 +189,11 @@ describe("G4 roundtrip — task-management (isolated test DB)", () => {
   it("completeTask (delegated) lands in-review with completed=true, completedAt NOT set, no counter", async () => {
     const task = await taskModule.createTask(
       { title: "G4 complete flow", completed: false, status: "in-progress", priority: "medium", points: 6, taskVisibility: "delegated", projectId, assignedTo: anaId },
-      leaderId,
+      leaderActor(),
     );
     createdTaskIds.push(task.id!);
 
-    const completed = await taskModule.completeTask({ taskId: task.id!, userId: anaId });
+    const completed = await taskModule.completeTask({ taskId: task.id!, actor: anaActor(), userId: anaId });
     expect(completed.task.status).toBe("in-review");
     expect(completed.task.completed).toBe(true);
     // plan-v3 OND4-A: quem foi para revisão não é creditado agora — o prêmio fica para a
@@ -206,7 +214,7 @@ describe("G4 roundtrip — task-management (isolated test DB)", () => {
   it("rejectTask sends the task back to adjust with the FIX instruction appended", async () => {
     const task = await taskModule.createTask(
       { title: "G4 rejected task", completed: false, description: "Desc original", status: "in-review", priority: "medium", points: 3, taskVisibility: "delegated", projectId, assignedTo: anaId },
-      leaderId,
+      leaderActor(),
     );
     createdTaskIds.push(task.id!);
 
@@ -224,11 +232,11 @@ describe("G4 roundtrip — task-management (isolated test DB)", () => {
   it("public completion lives in task_user_progress and leaves the task row untouched", async () => {
     const task = await taskModule.createTask(
       { title: "G4 public quest", completed: false, status: "to-do", priority: "medium", points: 8, taskVisibility: "public" },
-      leaderId,
+      leaderActor(),
     );
     createdTaskIds.push(task.id!);
 
-    const result = await taskModule.completeTask({ taskId: task.id!, userId: anaId });
+    const result = await taskModule.completeTask({ taskId: task.id!, actor: anaActor(), userId: anaId });
     expect(result.task.status).toBe("done");
     expect(result.task.assignedTo).toBe(anaId);
     // OND4-A: o caminho público credita a quem concluiu (ana), e `awardedPoints` é `null` porque
@@ -249,7 +257,7 @@ describe("G4 roundtrip — task-management (isolated test DB)", () => {
     expect(ana?.completedTasks).toBe(2);
 
     // Idempotent per user: a second completion is rejected.
-    await expect(taskModule.completeTask({ taskId: task.id!, userId: anaId })).rejects.toThrow(
+    await expect(taskModule.completeTask({ taskId: task.id!, actor: anaActor(), userId: anaId })).rejects.toThrow(
       "Tarefa pública já concluída por este usuário",
     );
   });
@@ -268,11 +276,11 @@ describe("G4 roundtrip — task-management (isolated test DB)", () => {
         taskVisibility: "public",
         dueDate: today,
       },
-      leaderId,
+      leaderActor(),
     );
     createdTaskIds.push(task.id!);
 
-    await taskModule.completeTask({ taskId: task.id!, userId: coordinatorId });
+    await taskModule.completeTask({ taskId: task.id!, actor: coordinatorActor(), userId: coordinatorId });
 
     const progress = await prisma.task_user_progress.findFirst({
       where: { taskId: task.id!, userId: coordinatorId },
@@ -294,7 +302,7 @@ describe("G4 roundtrip — task-management (isolated test DB)", () => {
         assignedTo: anaId,
         subtasks: [{ title: "Medir a bancada" }, { title: "Registrar a leitura" }],
       },
-      leaderId,
+      leaderActor(),
     );
     // Não entra em `createdTaskIds`: o teste apaga a própria linha no fim (é assim que a
     // cascata é provada), e `listTasksForActor` abaixo afirma que TODA id daquela lista ainda
@@ -308,7 +316,7 @@ describe("G4 roundtrip — task-management (isolated test DB)", () => {
     expect(rows.every((r) => r.completed === false && r.completedAt === null)).toBe(true);
 
     // DEC-57 — a trava recusa e NÃO escreve: a coluna continua Em Andamento.
-    await expect(taskModule.updateTask({ taskId: task.id!, actorId: anaId, data: { status: "in-review" } })).rejects.toThrow(
+    await expect(taskModule.updateTask({ taskId: task.id!, actor: anaActor(), data: { status: "in-review" } })).rejects.toThrow(
       /as 2 subtasks restantes/,
     );
     expect((await prisma.tasks.findUnique({ where: { id: task.id! } }))?.status).toBe("in-progress");
@@ -366,7 +374,7 @@ describe("G4 roundtrip — task-management (isolated test DB)", () => {
   it("global quest (MANAGE_USERS creator) + globalProgress roster aggregation", async () => {
     const quest = await taskModule.createTask(
       { title: "G4 global quest", completed: false, status: "to-do", priority: "low", points: 2, isGlobal: true, taskVisibility: "public" },
-      coordinatorId,
+      coordinatorActor(),
     );
     createdTaskIds.push(quest.id!);
 
@@ -376,7 +384,7 @@ describe("G4 roundtrip — task-management (isolated test DB)", () => {
     expect(row?.assignedTo).toBeNull();
     expect(row?.projectId).toBeNull();
 
-    const entries = await taskModule.globalProgress();
+    const entries = await taskModule.globalProgress({ actor: coordinatorActor() });
     const entry = entries.find((e) => e.id === quest.id);
     expect(entry).toBeDefined();
     expect(entry?.pendingUsers.map((u) => u.id)).toContain(anaId);
@@ -385,7 +393,7 @@ describe("G4 roundtrip — task-management (isolated test DB)", () => {
   });
 
   it("listTasksForActor (volunteer): own + project + public/global shared, with progress overlay", async () => {
-    const tasks = await taskModule.listTasksForActor({ actorId: anaId, actorRoles: ["VOLUNTARIO"] });
+    const tasks = await taskModule.listTasksForActor({ actor: anaActor() });
     const ids = tasks.map((t) => t.id);
 
     expect(ids).toEqual(expect.arrayContaining(createdTaskIds.filter((id) => id !== undefined)));
@@ -398,10 +406,91 @@ describe("G4 roundtrip — task-management (isolated test DB)", () => {
 
   it("deleteTask removes the row and cascades task_assignees + task_user_progress", async () => {
     const targetId = createdTaskIds[0];
-    await taskModule.deleteTask({ taskId: targetId, actorId: leaderId });
+    await taskModule.deleteTask({ taskId: targetId, actor: leaderActor() });
 
     expect(await prisma.tasks.findUnique({ where: { id: targetId } })).toBeNull();
     expect(await prisma.task_assignees.findMany({ where: { taskId: targetId } })).toHaveLength(0);
     expect(await prisma.task_user_progress.findMany({ where: { taskId: targetId } })).toHaveLength(0);
+  });
+
+  // B6-7 (D4): os gates que as rotas sempre cobraram agora decidem nos use cases — os
+  // chamadores diretos (esta suíte) passam pela MESMA autoridade. Negacoes provadas com o
+  // Prisma real, na ordem medida (gate antes do lookup quando a rota assim decidia).
+  it("gates migrados: VOLUNTARIO cria/edita-campo-privado/exclui e barado; self-award e livre", async () => {
+    // fixture proprio (o deleteTask acima consumiu o createdTaskIds[0])
+    const target = await taskModule.createTask(
+      { title: "G4 gates", completed: false, status: "in-progress", priority: "medium", taskVisibility: "delegated", projectId, assignedTo: anaId },
+      leaderActor(),
+    );
+    createdTaskIds.push(target.id!);
+    const someTaskId = target.id!;
+
+    await expect(taskModule.createTask({ title: "G4 negada", completed: false, status: "to-do", priority: "medium", taskVisibility: "delegated" }, anaActor()))
+      .rejects.toThrow(ForbiddenError);
+    await expect(taskModule.createTask({ title: "G4 negada", completed: false, status: "to-do", priority: "medium", taskVisibility: "delegated" }, anaActor()))
+      .rejects.toThrow("Sem permissão para criar tarefa");
+
+    // gate de CAMPO sobre o corpo cru, antes do lookup: {title} nao e progresso publico
+    await expect(taskModule.updateTask({ taskId: someTaskId, actor: anaActor(), data: { title: "mudanca negada" } }))
+      .rejects.toThrow("Sem permissão para editar tarefa");
+    // corpo VAZIO de nao-gestor tambem barra (medido na rota legado)
+    await expect(taskModule.updateTask({ taskId: someTaskId, actor: anaActor(), data: {} }))
+      .rejects.toThrow("Sem permissão para editar tarefa");
+    // corpo EXCLUSIVAMENTE {status} passa o gate de campo (a decisao interna continua a do use case)
+    const moved = await taskModule.updateTask({ taskId: someTaskId, actor: anaActor(), data: { status: "in-progress" } });
+    expect(moved.status).toBe("in-progress");
+
+    // filtro allowedFields DENTRO do use case real (era da rota): {title, points} mutar o
+    // titulo e NUNCA o valor (DEC-40) — provado contra o Prisma, nao contra um duplo
+    const edited = await taskModule.updateTask({
+      taskId: someTaskId,
+      actor: leaderActor(),
+      data: { title: "G4 gates (editado)", points: 9999 },
+    });
+    expect(edited.title).toBe("G4 gates (editado)");
+    expect(edited.points).not.toBe(9999);
+    expect((await prisma.tasks.findUnique({ where: { id: someTaskId } }))?.points).toBe(target.points);
+
+    // cross-actor: ana (sem MANAGE_TASKS) creditando a OUTRO barra; creditar a si mesma nao
+    await expect(taskModule.completeTask({ taskId: someTaskId, actor: anaActor(), userId: coordinatorId }))
+      .rejects.toThrow("Sem permissão para concluir tarefa para outro usuário");
+
+    // DELETE: gate antes do lookup — a linha sobrevive à tentativa negada
+    await expect(taskModule.deleteTask({ taskId: someTaskId, actor: anaActor() })).rejects.toThrow("Sem permissão para excluir tarefa");
+    expect(await prisma.tasks.findUnique({ where: { id: someTaskId } })).not.toBeNull();
+
+    // ORDEM medida (gate ANTES do lookup): tarefa inexistente de quem nao tem autoridade
+    // responde com a mensagem do gate, nao com "Tarefa não encontrada"
+    await expect(taskModule.updateTask({ taskId: 999999, actor: anaActor(), data: { title: "x" } }))
+      .rejects.toThrow("Sem permissão para editar tarefa");
+    await expect(taskModule.deleteTask({ taskId: 999999, actor: anaActor() }))
+      .rejects.toThrow("Sem permissão para excluir tarefa");
+  });
+
+  it("escopo do GET e do global-progress: terceiro sem papel barado; lista de projeto estranho e VAZIA (quirk medido)", async () => {
+    const owned = await taskModule.createTask(
+      { title: "G4 escopo", completed: false, status: "to-do", priority: "medium", taskVisibility: "delegated", projectId, assignedTo: anaId },
+      leaderActor(),
+    );
+    createdTaskIds.push(owned.id!);
+    const someTaskId = owned.id!;
+
+    // 999999: nem dono, nem MANAGE_USERS, nem membro do projeto da tarefa
+    await expect(taskModule.getTaskById({ taskId: someTaskId, actor: userActor(999999, ["VOLUNTARIO"]) }))
+      .rejects.toThrow("Acesso negado");
+    // o dono (ana, assignedTo) continua lendo
+    const view = await taskModule.getTaskById({ taskId: someTaskId, actor: anaActor() });
+    expect(view?.id).toBe(someTaskId);
+
+    // global-progress exige MANAGE_USERS (ana nao tem)
+    await expect(taskModule.globalProgress({ actor: anaActor() })).rejects.toThrow("Acesso negado");
+
+    // quirk legado preservado: projeto pedido sem membership devolve LISTA VAZIA, nao 403.
+    // O caso que decide e o COLABORADOR (canListAllTasks, mas SEM MANAGE_USERS): sem a
+    // checagem ele veria o projeto inteiro.
+    const stranger = await taskModule.listTasksForActor({ actor: userActor(999999, ["COLABORADOR"]), projectId });
+    expect(stranger).toEqual([]);
+    const empty = await taskModule.listTasksForActor({ actor: anaActor(), projectId: 999999 });
+    expect(empty).toEqual([]);
   });
 });

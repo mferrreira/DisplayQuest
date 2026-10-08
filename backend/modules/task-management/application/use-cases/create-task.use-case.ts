@@ -4,11 +4,14 @@ import {
   ForbiddenError,
   NotFoundError,
   normalizeAssigneeIds,
+  requireActorPermission,
   supportsSubtasks,
   toTaskView,
   ValidationError,
   type Task,
 } from "@/backend/domain";
+import type { ActorRef } from "@/backend/domain";
+import { requireTaskPersonActor } from "@/backend/modules/task-management/application/use-cases/internal/require-task-actor";
 import type { CreateTaskCommand } from "@/backend/modules/task-management/application/contracts";
 import type { TaskAssigneesPort } from "@/backend/modules/task-management/application/ports/task-assignees.repository";
 import type { TaskActorsPort } from "@/backend/modules/task-management/application/ports/task-actors.port";
@@ -40,7 +43,14 @@ export interface CreateTaskDependencies {
 export class CreateTaskUseCase {
   constructor(private readonly dependencies: CreateTaskDependencies) {}
 
-  async execute(command: CreateTaskCommand, actorId: number): Promise<Task> {
+  async execute(command: CreateTaskCommand, actor: ActorRef): Promise<Task> {
+    // B6-7 (D4): o gate MANAGE_TASKS da rota POST desceu para ca (mensagem congelada
+    // "Sem permissão para criar tarefa"). A rota chama o assert ANTES do parse para
+    // preservar o 403-antes-dos-400 de corpo; aqui ele protege os demais chamadores.
+    requireActorPermission(actor, "MANAGE_TASKS", "Sem permissão para criar tarefa")
+    const person = requireTaskPersonActor(actor)
+    const actorId = person.id
+
     const creator = await this.dependencies.actors.findById(actorId)
     if (!creator) {
       throw new NotFoundError("Criador não encontrado")

@@ -44,11 +44,12 @@ Restam **14 rotas** em 3 lotes — **41 originais − 27 já migradas** (`cron/s
 | ~~B6-4~~ | ~~userManagement~~ | ~~8~~ | ✅ fechado 2026-10-08 (DEC-119/DEC-120) |
 | ~~B6-5~~ | ~~workExecution~~ | ~~4~~ | ✅ fechado 2026-10-08 (DEC-121 — escopo desce inteiro; compostas em `backend/domain/work/daily-log-access.ts`) |
 | ~~B6-6~~ | ~~labOperations~~ | ~~7~~ | ✅ fechado 2026-10-08 (DEC-122 — regra de issue em `backend/domain/lab/issue-access.ts`; canEnd dentro de end/notes preservando 403-antes-do-404; cron fechado) |
-| B6-7 | taskManagement | 3 | `tasks`, `tasks/[id]`, `tasks/global-progress` |
+| ~~B6-7~~ | ~~taskManagement~~ | ~~3~~ | ✅ fechado 2026-10-08 (DEC-123 — gate de campo do PUT em `backend/domain/task/task-access.ts`; quirk do deleteTask superado; escopo dos GETs nos use cases) |
 
-O lote restante e 1 (taskManagement x3), e a distribuicao por modulo bate **exatamente** com a do DEC-50
-(user-management e work-execution zeradas no B6-4/B6-5, lab-operations zerada no B6-6, task-management 3;
-gamification e store zerados; reporting 7 → 0 e projects migrados no B6-3). Os 3 call sites do cron estao
+**B6 FECHADO 2026-10-08.** Os 41 medidos pelo DEC-50 estao todos migrados, e a distribuicao por modulo
+bate **exatamente** com a medicao (user-management x8, work-execution x4, lab-operations x7,
+task-management x3, gamification x3, store x2, reporting x7, projects x1 — 35 rotas com gate descido
+nos lotes B6-2c..B6-7 + 6 no B6-2a/B6-2b originais). Os 3 call sites do cron estao
 **todos aplicados**: `resetWeeklyHoursHistory`/WEEKLY_RESET (B6-3), `listWorkSessions` x2 com
 SCHEDULED_PAUSE + x1 com NIGHTLY_SWEEP (B6-5), `pauseResponsibilityForUser`/SCHEDULED_PAUSE (B6-6) —
 como previsto no DEC-54.
