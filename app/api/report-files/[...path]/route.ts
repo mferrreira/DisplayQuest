@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server"
+import { routeErrorResponse } from "@/lib/api/route-error-response"
 import path from "node:path"
 import { requireApiActor } from "@/lib/auth/api-guard"
 import { getBackendComposition } from "@/backend/composition/root"
 import { absolutePathOf, readReportFileBytes } from "@/lib/storage/report-uploads"
-import { domainErrorResponse } from "@/lib/api/domain-error-response"
 
 const { reporting: reportingModule } = getBackendComposition()
 
@@ -73,10 +73,6 @@ export async function GET(
       },
     })
   } catch (error: unknown) {
-    const mapped = domainErrorResponse(error)
-    if (mapped) return mapped
-    console.error("Erro ao servir arquivo de relatório:", error)
-    const message = error instanceof Error ? error.message : "Erro ao servir arquivo"
-    return NextResponse.json({ error: message }, { status: 500 })
+    return routeErrorResponse(error, { fallback: "Erro ao servir arquivo", exposeMessage: true })
   }
 }

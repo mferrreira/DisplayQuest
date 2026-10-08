@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
+import { routeErrorResponse } from "@/lib/api/route-error-response"
 import { requireApiActor } from "@/lib/auth/api-guard"
-import { domainErrorResponse } from "@/lib/api/domain-error-response"
 import { getBackendComposition } from "@/backend/composition/root"
 
 const { notifications: notificationsModule } = getBackendComposition()
@@ -27,10 +27,7 @@ export async function PUT(request: NextRequest, context: { params: Promise<{ id:
 
     return NextResponse.json({ success: true, message: "Notificação marcada como lida" }, { status: 200 })
   } catch (error) {
-    const mapped = domainErrorResponse(error)
-    if (mapped) return mapped
-    console.error("Erro ao atualizar notificação:", error)
-    return NextResponse.json({ error: "Erro ao atualizar notificação" }, { status: 500 })
+    return routeErrorResponse(error, { fallback: "Erro ao atualizar notificação" })
   }
 }
 
@@ -52,9 +49,6 @@ export async function DELETE(_request: NextRequest, context: { params: Promise<{
 
     return NextResponse.json({ success: true, message: "Notificação excluída" }, { status: 200 })
   } catch (error) {
-    const mapped = domainErrorResponse(error)
-    if (mapped) return mapped
-    console.error("Erro ao excluir notificação:", error)
-    return NextResponse.json({ error: "Erro ao excluir notificação" }, { status: 500 })
+    return routeErrorResponse(error, { fallback: "Erro ao excluir notificação" })
   }
 }

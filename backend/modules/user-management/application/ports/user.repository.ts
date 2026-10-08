@@ -10,7 +10,7 @@
  * quirk that `projectId` may be undefined (Prisma then ignores the filter — frozen behavior;
  * the adapter reproduces it with a conditional where).
  */
-import type { ProfileVisibility, UserRole } from "@/backend/domain";
+import type { ProfileVisibility, UserRole, UserStatus } from "@/backend/domain";
 
 export interface UserRecord {
   id: number;
@@ -19,7 +19,7 @@ export interface UserRecord {
   points: number;
   completedTasks: number;
   password: string | null;
-  status: string;
+  status: UserStatus;
   weekHours: number;
   currentWeekHours: number;
   profileVisibility: ProfileVisibility;
@@ -35,7 +35,7 @@ export interface UserSummaryRow {
   name: string;
   email: string;
   roles: UserRole[];
-  status: string;
+  status: UserStatus;
   weekHours: number;
   points: number;
   completedTasks: number;

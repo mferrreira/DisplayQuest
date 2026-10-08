@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
+import { routeErrorResponse } from "@/lib/api/route-error-response"
 import { requireApiActor } from "@/lib/auth/api-guard"
 import { userActor } from "@/backend/domain"
-import { domainErrorResponse } from "@/lib/api/domain-error-response"
 import { getBackendComposition } from "@/backend/composition/root"
 // B6-3 (D4): o gate MANAGE_USERS desceu para ListUserStatisticsUseCase (mensagem default
 // "Acesso negado", a do ensurePermission legado). A leitura e so sessao + permissao; nao ha
@@ -20,9 +20,6 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ statistics })
   } catch (error: unknown) {
-    const mapped = domainErrorResponse(error)
-    if (mapped) return mapped
-    console.error("Erro ao buscar estatísticas dos usuários:", error)
-    return NextResponse.json({ error: "Erro ao buscar estatísticas dos usuários" }, { status: 500 })
+    return routeErrorResponse(error, { fallback: "Erro ao buscar estatísticas dos usuários" })
   }
 }

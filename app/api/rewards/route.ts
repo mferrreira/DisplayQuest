@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { routeErrorResponse } from "@/lib/api/route-error-response"
 import { requireApiActor } from "@/lib/auth/api-guard";
 import { getBackendComposition } from "@/backend/composition/root"
 import { domainErrorResponse } from "@/lib/api/domain-error-response"
@@ -18,10 +19,7 @@ export async function GET() {
     const rewards = await storeModule.listRewards();
     return NextResponse.json({ rewards });
   } catch (error: any) {
-    const mapped = domainErrorResponse(error);
-    if (mapped) return mapped;
-    console.error('Erro ao buscar recompensas:', error);
-    return NextResponse.json({ error: 'Erro ao buscar recompensas', details: error?.message }, { status: 500 });
+    return routeErrorResponse(error, { fallback: "Erro ao buscar recompensas", details: true })
   }
 }
 

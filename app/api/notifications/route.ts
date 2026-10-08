@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
+import { routeErrorResponse } from "@/lib/api/route-error-response"
 import { requireApiActor } from "@/lib/auth/api-guard"
-import { domainErrorResponse } from "@/lib/api/domain-error-response"
 import { getBackendComposition } from "@/backend/composition/root"
 import { userActor } from "@/backend/domain"
 
@@ -22,10 +22,7 @@ export async function GET(request: NextRequest) {
     const notifications = await notificationsModule.listUserNotifications(auth.actor.id, unreadOnly)
     return NextResponse.json({ success: true, notifications }, { status: 200 })
   } catch (error) {
-    const mapped = domainErrorResponse(error)
-    if (mapped) return mapped
-    console.error("Erro ao buscar notificações:", error)
-    return NextResponse.json({ error: "Erro ao buscar notificações" }, { status: 500 })
+    return routeErrorResponse(error, { fallback: "Erro ao buscar notificações" })
   }
 }
 
@@ -88,10 +85,6 @@ export async function POST(request: NextRequest) {
       { status: 201 },
     )
   } catch (error) {
-    const mapped = domainErrorResponse(error)
-    if (mapped) return mapped
-    console.error("Erro ao criar notificação:", error)
-    const message = error instanceof Error ? error.message : "Erro ao criar notificação"
-    return NextResponse.json({ error: message }, { status: 500 })
+    return routeErrorResponse(error, { fallback: "Erro ao criar notificação", exposeMessage: true })
   }
 }

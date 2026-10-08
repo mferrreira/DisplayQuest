@@ -1,5 +1,4 @@
 import type { PublishNotificationEventCommand } from "@/backend/modules/notifications/application/contracts"
-import type { NotificationsGateway } from "@/backend/modules/notifications/application/ports/notifications.gateway"
 import type { NotificationRepository } from "@/backend/modules/notifications/application/ports/notification.repository"
 import { DeleteUserNotificationUseCase } from "@/backend/modules/notifications/application/use-cases/delete-user-notification.use-case"
 import { GetUnreadCountUseCase } from "@/backend/modules/notifications/application/use-cases/get-unread-count.use-case"
@@ -8,7 +7,6 @@ import { MarkAllNotificationsAsReadUseCase } from "@/backend/modules/notificatio
 import { MarkNotificationAsReadUseCase } from "@/backend/modules/notifications/application/use-cases/mark-notification-as-read.use-case"
 import { AssertCanPublishNotificationEventUseCase } from "@/backend/modules/notifications/application/use-cases/assert-can-publish-notification-event.use-case"
 import { PublishNotificationEventUseCase } from "@/backend/modules/notifications/application/use-cases/publish-notification-event.use-case"
-import { createNotificationsGatewayAdapter } from "@/backend/modules/notifications/infrastructure/notifications.gateway"
 import { createPrismaNotificationRepository } from "@/backend/modules/notifications/infrastructure/repositories/prisma-notification.repository"
 
 export class NotificationsModule {
@@ -64,15 +62,18 @@ export interface NotificationsModuleFactoryOptions {
 
 export function createNotificationsModule(options: NotificationsModuleFactoryOptions = {}) {
   const repository = options.repository ?? createPrismaNotificationRepository()
-  const gateway = createNotificationsGatewayAdapter({ repository })
 
+  // B10 · D8 (DEC-125): a fachada `NotificationsGateway` (port + adapter de passagem) saiu —
+  // os seis use cases falam com a porta fina de persistencia. As unicas regras que o adapter
+  // carregava (codificacao do envelope, contagem->boolean, relogio readAt) entraram nos use
+  // cases, onde ja moravam as demais regras de publicacao.
   return new NotificationsModule(
     new AssertCanPublishNotificationEventUseCase(),
-    new PublishNotificationEventUseCase(gateway, repository),
-    new ListUserNotificationsUseCase(gateway),
-    new GetUnreadCountUseCase(gateway),
-    new MarkNotificationAsReadUseCase(gateway),
-    new MarkAllNotificationsAsReadUseCase(gateway),
-    new DeleteUserNotificationUseCase(gateway),
+    new PublishNotificationEventUseCase(repository),
+    new ListUserNotificationsUseCase(repository),
+    new GetUnreadCountUseCase(repository),
+    new MarkNotificationAsReadUseCase(repository),
+    new MarkAllNotificationsAsReadUseCase(repository),
+    new DeleteUserNotificationUseCase(repository),
   )
 }

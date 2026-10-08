@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { routeErrorResponse } from "@/lib/api/route-error-response"
 import { requireApiActor } from "@/lib/auth/api-guard"
 import { getBackendComposition } from "@/backend/composition/root"
 import { domainErrorResponse } from "@/lib/api/domain-error-response"
@@ -26,10 +27,6 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
 
     return NextResponse.json({ success: true })
   } catch (error: unknown) {
-    const mapped = domainErrorResponse(error)
-    if (mapped) return mapped
-    console.error("Erro ao remover anexo:", error)
-    const message = error instanceof Error ? error.message : "Erro ao remover anexo"
-    return NextResponse.json({ error: message }, { status: 500 })
+    return routeErrorResponse(error, { fallback: "Erro ao remover anexo", exposeMessage: true })
   }
 }

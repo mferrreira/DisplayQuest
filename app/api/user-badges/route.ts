@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { routeErrorResponse } from "@/lib/api/route-error-response"
 import { requireApiActor } from "@/lib/auth/api-guard"
 import { getBackendComposition } from "@/backend/composition/root"
 import { domainErrorResponse } from "@/lib/api/domain-error-response"
@@ -48,10 +49,7 @@ export async function GET(request: Request) {
       count: badges.length,
     })
   } catch (error: unknown) {
-    const mapped = domainErrorResponse(error)
-    if (mapped) return mapped
-    console.error("Erro ao buscar badges do usuário:", error)
-    return NextResponse.json({ error: "Erro ao buscar badges do usuário" }, { status: 500 })
+    return routeErrorResponse(error, { fallback: "Erro ao buscar badges do usuário" })
   }
 }
 
@@ -86,10 +84,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ userBadge }, { status: 201 })
   } catch (error: unknown) {
-    const mapped = domainErrorResponse(error)
-    if (mapped) return mapped
-    console.error("Erro ao conceder badge:", error)
-    const message = error instanceof Error ? error.message : undefined
-    return NextResponse.json({ error: message || "Erro ao conceder badge" }, { status: 500 })
+    return routeErrorResponse(error, { fallback: "Erro ao conceder badge", exposeMessage: true })
   }
 }

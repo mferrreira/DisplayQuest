@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server"
+import { routeErrorResponse } from "@/lib/api/route-error-response"
 import { getBackendComposition } from "@/backend/composition/root"
 import { userActor } from "@/backend/domain"
 import { requireApiActor } from "@/lib/auth/api-guard"
-import { domainErrorResponse } from "@/lib/api/domain-error-response"
 
 const { taskManagement: taskManagementModule } = getBackendComposition()
 
@@ -32,10 +32,7 @@ export async function GET(request: Request) {
     
     return NextResponse.json({ tasks: tasks.map(task => task.toJSON()) })
   } catch (error) {
-    const mapped = domainErrorResponse(error)
-    if (mapped) return mapped
-    console.error("Erro ao buscar tarefas:", error)
-    return NextResponse.json({ error: "Erro ao buscar tarefas" }, { status: 500 })
+    return routeErrorResponse(error, { fallback: "Erro ao buscar tarefas" })
   }
 }
 
@@ -122,9 +119,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ task: task.toJSON() }, { status: 201 })
   } catch (error: any) {
-    const mapped = domainErrorResponse(error)
-    if (mapped) return mapped
-    console.error("Erro ao criar tarefa:", error)
-    return NextResponse.json({ error: error.message || "Erro ao criar tarefa" }, { status: 500 })
+    return routeErrorResponse(error, { fallback: "Erro ao criar tarefa", exposeMessage: true })
   }
 }

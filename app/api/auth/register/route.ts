@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { routeErrorResponse } from "@/lib/api/route-error-response"
 import { domainErrorResponse } from '@/lib/api/domain-error-response'
 import { getBackendComposition } from '@/backend/composition/root'
 
@@ -42,12 +43,6 @@ export async function POST(request: Request) {
       { status: 201 },
     )
   } catch (error) {
-    const mapped = domainErrorResponse(error)
-    if (mapped) return mapped
-    console.error('Erro no registro:', error)
-    return NextResponse.json(
-      { error: 'Erro interno do servidor' },
-      { status: 500 },
-    )
+    return routeErrorResponse(error, { fallback: "Erro interno do servidor" })
   }
 }

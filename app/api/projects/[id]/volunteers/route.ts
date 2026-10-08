@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
+import { routeErrorResponse } from "@/lib/api/route-error-response"
 import { requireApiActor } from "@/lib/auth/api-guard"
 import { getBackendComposition } from "@/backend/composition/root"
-import { domainErrorResponse } from "@/lib/api/domain-error-response"
 
 const { projectManagement: projectManagementModule } = getBackendComposition()
 
@@ -24,9 +24,6 @@ export async function GET(_request: NextRequest, context: { params: Promise<{ id
 
     return NextResponse.json(result, { status: 200 })
   } catch (error: unknown) {
-    const mapped = domainErrorResponse(error)
-    if (mapped) return mapped
-    console.error("Erro ao buscar estatísticas dos voluntários:", error)
-    return NextResponse.json({ error: "Erro ao buscar estatísticas dos voluntários" }, { status: 500 })
+    return routeErrorResponse(error, { fallback: "Erro ao buscar estatísticas dos voluntários" })
   }
 }

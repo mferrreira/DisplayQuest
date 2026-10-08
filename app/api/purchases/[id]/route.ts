@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
+import { routeErrorResponse } from "@/lib/api/route-error-response"
 import { requireApiActor } from "@/lib/auth/api-guard";
 import { userActor } from "@/backend/domain";
-import { domainErrorResponse } from "@/lib/api/domain-error-response"
 import { getBackendComposition } from "@/backend/composition/root"
 
 // B6-2d (D4): as quatro metodos pararam de decidir autorizacao na rota (hasPermission +
@@ -26,10 +26,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     }
     return NextResponse.json({ purchase });
   } catch (error: any) {
-    const mapped = domainErrorResponse(error)
-    if (mapped) return mapped
-    console.error('Erro ao buscar compra:', error);
-    return NextResponse.json({ error: 'Erro ao buscar compra' }, { status: 500 });
+    return routeErrorResponse(error, { fallback: "Erro ao buscar compra" })
   }
 }
 
@@ -47,10 +44,7 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
     const purchase = await storeModule.updatePurchase({ actor, purchaseId: Number(params.id), data });
     return NextResponse.json({ purchase });
   } catch (error: any) {
-    const mapped = domainErrorResponse(error)
-    if (mapped) return mapped
-    console.error('Erro ao atualizar compra:', error);
-    return NextResponse.json({ error: 'Erro ao atualizar compra' }, { status: 500 });
+    return routeErrorResponse(error, { fallback: "Erro ao atualizar compra" })
   }
 }
 
@@ -75,10 +69,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 
     return NextResponse.json({ purchase });
   } catch (error: any) {
-    const mapped = domainErrorResponse(error)
-    if (mapped) return mapped
-    console.error('Erro ao atualizar compra:', error);
-    return NextResponse.json({ error: 'Erro ao atualizar compra' }, { status: 500 });
+    return routeErrorResponse(error, { fallback: "Erro ao atualizar compra" })
   }
 }
 
@@ -93,9 +84,6 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
     await storeModule.deletePurchase({ actor, purchaseId: Number(params.id) });
     return NextResponse.json({ success: true });
   } catch (error: any) {
-    const mapped = domainErrorResponse(error)
-    if (mapped) return mapped
-    console.error('Erro ao excluir compra:', error);
-    return NextResponse.json({ error: 'Erro ao excluir compra' }, { status: 500 });
+    return routeErrorResponse(error, { fallback: "Erro ao excluir compra" })
   }
 }

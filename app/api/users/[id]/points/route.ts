@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
+import { routeErrorResponse } from "@/lib/api/route-error-response"
 import { requireApiActor } from "@/lib/auth/api-guard"
-import { domainErrorResponse } from "@/lib/api/domain-error-response"
 import { userActor } from "@/backend/domain"
 import { getBackendComposition } from "@/backend/composition/root"
 const { userManagement: userManagementModule } = getBackendComposition()
@@ -62,9 +62,6 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 
     return NextResponse.json({ user })
   } catch (error: any) {
-    const mapped = domainErrorResponse(error)
-    if (mapped) return mapped
-    console.error("Erro ao atualizar pontos do usuário:", error)
-    return NextResponse.json({ error: error.message || "Erro ao atualizar pontos do usuário" }, { status: 500 })
+    return routeErrorResponse(error, { fallback: "Erro ao atualizar pontos do usuário", exposeMessage: true })
   }
 }

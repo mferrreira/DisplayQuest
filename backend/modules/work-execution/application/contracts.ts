@@ -92,6 +92,11 @@ export interface UpdateWorkSessionCommand {
   actor: ActorRef
   activity?: string
   location?: string
+  // B10 · D9 (DEC-125): o comando continua com o valor CRU da borda (molde B6-7 — o gate
+  // decide sobre o corpo cru); o use case reconcilia com toWorkSessionStatus antes de
+  // escrever. O quirk golden "unknown status assigned verbatim" e superado pela forca
+  // normativa do vocabulario: status fora de {active, paused, completed} agora e
+  // ValidationError (400), nao uma escrita na coluna String.
   status?: string
   endTime?: string
   startTime?: string

@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/database/prisma"
-import type { DailyLog, WorkSession } from "@/backend/domain"
+import { toWorkSessionStatus, type DailyLog, type WorkSession } from "@/backend/domain"
 import type {
   LeaderLogsAudit,
   ProjectAccessPort,
@@ -54,7 +54,7 @@ function toWorkSession(row: {
     activity: row.activity,
     location: row.location,
     projectId: row.projectId,
-    status: row.status,
+    status: toWorkSessionStatus(row.status),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   }

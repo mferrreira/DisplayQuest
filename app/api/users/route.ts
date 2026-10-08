@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { routeErrorResponse } from "@/lib/api/route-error-response"
 import { requireApiActor } from '@/lib/auth/api-guard'
 import { domainErrorResponse } from '@/lib/api/domain-error-response'
 import { CREATE_USER_DENIED_MESSAGE, userActor } from '@/backend/domain'
@@ -20,13 +21,7 @@ export async function GET() {
 
     return NextResponse.json({ users }, { status: 200 })
   } catch (error: any) {
-    const mapped = domainErrorResponse(error)
-    if (mapped) return mapped
-    console.error('Erro na API de usuários:', error)
-    return NextResponse.json(
-      { error: error.message || 'Erro interno do servidor' },
-      { status: 500 }
-    )
+    return routeErrorResponse(error, { fallback: "Erro interno do servidor", exposeMessage: true })
   }
 }
 

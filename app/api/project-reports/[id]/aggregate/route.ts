@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { routeErrorResponse } from "@/lib/api/route-error-response"
 import { requireApiActor } from "@/lib/auth/api-guard"
 import { getBackendComposition } from "@/backend/composition/root"
 import { domainErrorResponse } from "@/lib/api/domain-error-response"
@@ -21,10 +22,6 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     const aggregate = await reportingModule.aggregateProjectReport(auth.actor.id, auth.actor.roles, reportId)
     return NextResponse.json(aggregate)
   } catch (error: unknown) {
-    const mapped = domainErrorResponse(error)
-    if (mapped) return mapped
-    console.error("Erro ao agregar relatório de projeto:", error)
-    const message = error instanceof Error ? error.message : "Erro ao agregar relatório de projeto"
-    return NextResponse.json({ error: message }, { status: 500 })
+    return routeErrorResponse(error, { fallback: "Erro ao agregar relatório de projeto", exposeMessage: true })
   }
 }

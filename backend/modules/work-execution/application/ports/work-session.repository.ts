@@ -1,4 +1,4 @@
-import type { WorkSession } from "@/backend/domain";
+import type { WorkSession, WorkSessionStatus } from "@/backend/domain";
 
 /**
  * WorkSessionRepositoryPort (OND3-B2, R2) — persistence seam of the work-session aggregate.
@@ -7,6 +7,10 @@ import type { WorkSession } from "@/backend/domain";
  * `backend/repositories/WorkSessionRepository`: reads ordered by startTime desc;
  * `findActiveByUserId` = first ACTIVE session of the user; `update` merges only the keys
  * present in the partial and returns the persisted row.
+ *
+ * B10 · D9 (DEC-125): the RECORD status is `WorkSessionStatus` (write paths and reads);
+ * `findByStatus` keeps a plain string — it is a query filter, not a record value, and the
+ * measured behavior of an unknown filter is "no match" (frozen).
  */
 export interface NewWorkSession {
   userId: number;
@@ -17,7 +21,7 @@ export interface NewWorkSession {
   activity?: string | null;
   location?: string | null;
   projectId?: number | null;
-  status: string;
+  status: WorkSessionStatus;
 }
 
 export interface WorkSessionRepositoryPort {

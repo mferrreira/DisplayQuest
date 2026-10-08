@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { routeErrorResponse } from "@/lib/api/route-error-response"
 import { requireApiActor } from "@/lib/auth/api-guard"
 import { domainErrorResponse } from "@/lib/api/domain-error-response"
 import { PENDING_MODERATION_DENIED_MESSAGE, userActor } from "@/backend/domain"
@@ -17,10 +18,7 @@ export async function GET() {
     )
     return NextResponse.json({ pendingUsers }, { status: 200 })
   } catch (error) {
-    const mapped = domainErrorResponse(error)
-    if (mapped) return mapped
-    console.error("Erro ao buscar usuários pendentes:", error)
-    return NextResponse.json({ error: "Erro ao buscar usuários pendentes" }, { status: 500 })
+    return routeErrorResponse(error, { fallback: "Erro ao buscar usuários pendentes" })
   }
 }
 

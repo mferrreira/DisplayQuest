@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
+import { routeErrorResponse } from "@/lib/api/route-error-response"
 import { requireApiActor } from "@/lib/auth/api-guard"
-import { domainErrorResponse } from "@/lib/api/domain-error-response"
 import { getBackendComposition } from "@/backend/composition/root"
 const { userManagement: userManagementModule } = getBackendComposition()
 export async function GET(request: Request) {
@@ -14,9 +14,6 @@ export async function GET(request: Request) {
     const users = await userManagementModule.listProfiles({ type })
     return NextResponse.json({ users, type })
   } catch (error) {
-    const mapped = domainErrorResponse(error)
-    if (mapped) return mapped
-    console.error("Erro ao buscar perfis dos usuários:", error)
-    return NextResponse.json({ error: "Erro ao buscar perfis dos usuários" }, { status: 500 })
+    return routeErrorResponse(error, { fallback: "Erro ao buscar perfis dos usuários" })
   }
 }

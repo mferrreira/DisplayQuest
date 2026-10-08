@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
+import { routeErrorResponse } from "@/lib/api/route-error-response"
 import { userActor } from "@/backend/domain";
 import { requireApiActor } from "@/lib/auth/api-guard";
 import { getBackendComposition } from "@/backend/composition/root"
-import { domainErrorResponse } from "@/lib/api/domain-error-response"
 // OND8-B4 (R4): DomainErrors mapeados. Erros de enum do Prisma (QUIRK-8L4) seguem para o 500
 // legado — nao sao DomainError.
 // B6-6 (D4): o pre-check `getIssue` + `canManageIssue` da rota SAIU — os use cases update/delete
@@ -29,10 +29,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
 
     return NextResponse.json({ issue });
   } catch (error) {
-    const mapped = domainErrorResponse(error);
-    if (mapped) return mapped;
-    console.error("Erro ao buscar issue:", error);
-    return NextResponse.json({ error: "Erro ao buscar issue" }, { status: 500 });
+    return routeErrorResponse(error, { fallback: "Erro ao buscar issue" })
   }
 }
 
@@ -53,10 +50,7 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
     });
     return NextResponse.json({ issue });
   } catch (error: any) {
-    const mapped = domainErrorResponse(error);
-    if (mapped) return mapped;
-    console.error("Erro ao atualizar issue:", error);
-    return NextResponse.json({ error: error.message || "Erro ao atualizar issue" }, { status: 500 });
+    return routeErrorResponse(error, { fallback: "Erro ao atualizar issue", exposeMessage: true })
   }
 }
 
@@ -75,9 +69,6 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
     });
     return NextResponse.json({ success: true });
   } catch (error: any) {
-    const mapped = domainErrorResponse(error);
-    if (mapped) return mapped;
-    console.error("Erro ao excluir issue:", error);
-    return NextResponse.json({ error: error.message || "Erro ao excluir issue" }, { status: 500 });
+    return routeErrorResponse(error, { fallback: "Erro ao excluir issue", exposeMessage: true })
   }
 }

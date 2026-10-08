@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server"
+import { routeErrorResponse } from "@/lib/api/route-error-response"
 import { getBackendComposition } from "@/backend/composition/root"
 import { serializeSubtask } from "@/backend/domain"
 import { requireApiActor } from "@/lib/auth/api-guard"
-import { domainErrorResponse } from "@/lib/api/domain-error-response"
 
 const { taskManagement: taskManagementModule } = getBackendComposition()
 
@@ -36,10 +36,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 
     return NextResponse.json({ subtask: serializeSubtask(subtask), task: task.toJSON() })
   } catch (error) {
-    const mapped = domainErrorResponse(error)
-    if (mapped) return mapped
-    console.error("Erro ao atualizar subtask:", error)
-    return NextResponse.json({ error: "Erro ao atualizar subtask" }, { status: 500 })
+    return routeErrorResponse(error, { fallback: "Erro ao atualizar subtask" })
   }
 }
 
@@ -63,9 +60,6 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
 
     return NextResponse.json({ subtask: serializeSubtask(subtask), task: task.toJSON() })
   } catch (error) {
-    const mapped = domainErrorResponse(error)
-    if (mapped) return mapped
-    console.error("Erro ao excluir subtask:", error)
-    return NextResponse.json({ error: "Erro ao excluir subtask" }, { status: 500 })
+    return routeErrorResponse(error, { fallback: "Erro ao excluir subtask" })
   }
 }

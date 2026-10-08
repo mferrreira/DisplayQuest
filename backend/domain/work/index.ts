@@ -1,4 +1,4 @@
-export { WorkSessionStatus, WORK_SESSION_STATUSES, isWorkSessionStatus } from "./WorkSessionStatus";
+export { WorkSessionStatus, WORK_SESSION_STATUSES, isWorkSessionStatus, toWorkSessionStatus } from "./WorkSessionStatus";
 export type { WorkSession } from "./WorkSession";
 export type { DailyLog } from "./DailyLog";
 export {

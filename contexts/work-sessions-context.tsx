@@ -4,6 +4,9 @@ import { createContext, useContext, useState, useEffect, useCallback, useMemo, t
 import { WorkSessionsAPI } from "@/contexts/api-client"
 import { useAuth } from "@/contexts/auth-context"
 import type { WorkSession } from "@/contexts/types"
+// B10 · D11 (DEC-125): o teto anti-farm e do dominio (backend/domain/work/schedule.ts).
+// A copia local `9 * 3600` saiu — mudar o teto no dominio agora muda o cliente junto.
+import { MAX_STRETCH_SEC } from "@/backend/domain"
 
 type StartSessionPayload = {
   userId: number
@@ -90,7 +93,6 @@ export function WorkSessionsProvider({ children }: { children: ReactNode }) {
   const getElapsedSeconds = useCallback((session?: WorkSession | null) => {
     if (!session) return 0
 
-    const MAX_STRETCH_SEC = 9 * 3600
     const accumulated = typeof session.duration === "number" ? session.duration : 0
     if (session.status === "active" && session.startTime) {
       const start = new Date(session.startTime).getTime()

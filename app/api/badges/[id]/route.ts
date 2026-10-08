@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { routeErrorResponse } from "@/lib/api/route-error-response"
 import { requireApiActor } from "@/lib/auth/api-guard"
 import { getBackendComposition } from "@/backend/composition/root"
 import { domainErrorResponse } from "@/lib/api/domain-error-response"
@@ -29,10 +30,7 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
 
     return NextResponse.json({ badge })
   } catch (error: unknown) {
-    const mapped = domainErrorResponse(error)
-    if (mapped) return mapped
-    console.error("Erro ao buscar badge:", error)
-    return NextResponse.json({ error: "Erro ao buscar badge" }, { status: 500 })
+    return routeErrorResponse(error, { fallback: "Erro ao buscar badge" })
   }
 }
 
@@ -50,11 +48,7 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
     })
     return NextResponse.json({ badge })
   } catch (error: unknown) {
-    const mapped = domainErrorResponse(error)
-    if (mapped) return mapped
-    console.error("Erro ao atualizar badge:", error)
-    const message = error instanceof Error ? error.message : undefined
-    return NextResponse.json({ error: message || "Erro ao atualizar badge" }, { status: 500 })
+    return routeErrorResponse(error, { fallback: "Erro ao atualizar badge", exposeMessage: true })
   }
 }
 
@@ -70,10 +64,6 @@ export async function DELETE(_request: Request, context: { params: Promise<{ id:
     })
     return NextResponse.json({ success: true })
   } catch (error: unknown) {
-    const mapped = domainErrorResponse(error)
-    if (mapped) return mapped
-    console.error("Erro ao excluir badge:", error)
-    const message = error instanceof Error ? error.message : undefined
-    return NextResponse.json({ error: message || "Erro ao excluir badge" }, { status: 500 })
+    return routeErrorResponse(error, { fallback: "Erro ao excluir badge", exposeMessage: true })
   }
 }

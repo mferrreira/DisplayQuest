@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { routeErrorResponse } from "@/lib/api/route-error-response"
 import { requireApiActor } from "@/lib/auth/api-guard"
 import { getBackendComposition } from "@/backend/composition/root"
 import { domainErrorResponse } from "@/lib/api/domain-error-response"
@@ -35,10 +36,6 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
 
     return NextResponse.json({ history }, { status: 200 })
   } catch (error: unknown) {
-    const mapped = domainErrorResponse(error)
-    if (mapped) return mapped
-    console.error("Erro na API de histórico de horas do projeto:", error)
-    const message = error instanceof Error ? error.message : "Erro interno do servidor"
-    return NextResponse.json({ error: message }, { status: 500 })
+    return routeErrorResponse(error, { fallback: "Erro interno do servidor", exposeMessage: true })
   }
 }

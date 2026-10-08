@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
+import { routeErrorResponse } from "@/lib/api/route-error-response"
 import { requireApiActor } from "@/lib/auth/api-guard"
-import { domainErrorResponse } from "@/lib/api/domain-error-response"
 import { getBackendComposition } from "@/backend/composition/root"
 
 const { notifications: notificationsModule } = getBackendComposition()
@@ -19,9 +19,6 @@ export async function POST() {
       { status: 200 },
     )
   } catch (error) {
-    const mapped = domainErrorResponse(error)
-    if (mapped) return mapped
-    console.error("Erro ao marcar todas as notificações como lidas:", error)
-    return NextResponse.json({ error: "Erro ao marcar todas as notificações como lidas" }, { status: 500 })
+    return routeErrorResponse(error, { fallback: "Erro ao marcar todas as notificações como lidas" })
   }
 }

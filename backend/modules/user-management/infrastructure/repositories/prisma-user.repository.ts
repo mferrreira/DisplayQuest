@@ -7,7 +7,7 @@
  * UserRepository.ts` exactly (frozen by the golden matrix).
  */
 import { prisma } from "@/lib/database/prisma"
-import type { ProfileVisibility, UserRole } from "@/backend/domain"
+import { toUserStatus, type ProfileVisibility, type UserRole } from "@/backend/domain"
 import type {
   NewUserRecord,
   UserRecord,
@@ -41,7 +41,7 @@ function toRecord(row: UserRow): UserRecord {
     points: row.points,
     completedTasks: row.completedTasks,
     password: row.password,
-    status: row.status,
+    status: toUserStatus(row.status),
     weekHours: row.weekHours,
     currentWeekHours: row.currentWeekHours,
     profileVisibility: row.profileVisibility,
@@ -151,7 +151,9 @@ export class PrismaUserRepository implements UserRepositoryPort {
       },
       orderBy: { name: "asc" },
     })
-    return rows
+    // B10 · D9 (DEC-125): a linha Prisma traz `status: string`; o resumo e consumido pela
+    // politica de visibilidade da lista, que compara com o vocabulario — reconciliado aqui.
+    return rows.map((row) => ({ ...row, status: toUserStatus(row.status) }))
   }
 
   async findTopByPoints(limit: number): Promise<UserRecord[]> {

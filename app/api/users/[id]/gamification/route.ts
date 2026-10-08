@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
+import { routeErrorResponse } from "@/lib/api/route-error-response"
 import { requireApiActor } from "@/lib/auth/api-guard"
 import { getBackendComposition } from "@/backend/composition/root"
-import { domainErrorResponse } from "@/lib/api/domain-error-response"
 import { userActor } from "@/backend/domain"
 
 // OND6-B4 (R4): "Usuário não encontrado" antes caía no 500; agora NotFoundError -> 404
@@ -29,9 +29,6 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
     const progression = await gamificationModule.readUserProgression({ actor, userId })
     return NextResponse.json({ progression }, { status: 200 })
   } catch (error: unknown) {
-    const mapped = domainErrorResponse(error)
-    if (mapped) return mapped
-    const message = error instanceof Error ? error.message : "Erro ao buscar progressão"
-    return NextResponse.json({ error: message }, { status: 500 })
+    return routeErrorResponse(error, { fallback: "Erro ao buscar progressão", exposeMessage: true })
   }
 }

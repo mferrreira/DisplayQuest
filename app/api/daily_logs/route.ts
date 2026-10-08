@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
+import { routeErrorResponse } from "@/lib/api/route-error-response"
 import { requireApiActor } from "@/lib/auth/api-guard"
-import { domainErrorResponse } from "@/lib/api/domain-error-response"
 import { userActor } from "@/backend/domain"
 import { getBackendComposition } from "@/backend/composition/root"
 
@@ -42,10 +42,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ logs })
   } catch (error) {
-    const mapped = domainErrorResponse(error)
-    if (mapped) return mapped
-    console.error("Erro ao buscar logs diários:", error)
-    return NextResponse.json({ error: "Erro ao buscar logs diários" }, { status: 500 })
+    return routeErrorResponse(error, { fallback: "Erro ao buscar logs diários" })
   }
 }
 

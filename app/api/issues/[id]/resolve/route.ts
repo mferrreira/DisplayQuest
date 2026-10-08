@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
+import { routeErrorResponse } from "@/lib/api/route-error-response"
 import { userActor } from "@/backend/domain";
 import { requireApiActor } from "@/lib/auth/api-guard";
 import { getBackendComposition } from "@/backend/composition/root"
-import { domainErrorResponse } from "@/lib/api/domain-error-response"
 // OND8-B4 (R4): DomainErrors mapeados. EVOLUTION: "Descricao da resolucao e obrigatoria"
 // (ValidationError) e conflitos de estado antes caíam no 500 com error.message; agora
 // 400/409 {error,code,details}.
@@ -30,9 +30,6 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     });
     return NextResponse.json({ issue });
   } catch (error: any) {
-    const mapped = domainErrorResponse(error);
-    if (mapped) return mapped;
-    console.error("Erro ao resolver issue:", error);
-    return NextResponse.json({ error: error.message || "Erro ao resolver issue" }, { status: 500 });
+    return routeErrorResponse(error, { fallback: "Erro ao resolver issue", exposeMessage: true })
   }
 }

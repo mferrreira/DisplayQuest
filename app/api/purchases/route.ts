@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { routeErrorResponse } from "@/lib/api/route-error-response"
 import { requireApiActor } from "@/lib/auth/api-guard";
 import { userActor } from "@/backend/domain";
 import { getBackendComposition } from "@/backend/composition/root"
@@ -38,10 +39,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ purchases: result.purchases });
   } catch (error: any) {
-    const mapped = domainErrorResponse(error);
-    if (mapped) return mapped;
-    console.error('Erro ao buscar compras:', error);
-    return NextResponse.json({ error: 'Erro ao buscar compras', details: error?.message }, { status: 500 });
+    return routeErrorResponse(error, { fallback: "Erro ao buscar compras", details: true })
   }
 }
 
@@ -64,9 +62,6 @@ export async function POST(request: Request) {
     const purchase = await storeModule.createPurchase({ actor, data });
     return NextResponse.json({ purchase }, { status: 201 });
   } catch (error: any) {
-    const mapped = domainErrorResponse(error);
-    if (mapped) return mapped;
-    console.error('Erro ao criar compra:', error);
-    return NextResponse.json({ error: 'Erro ao criar compra', details: error?.message }, { status: 500 });
+    return routeErrorResponse(error, { fallback: "Erro ao criar compra", details: true })
   }
 }

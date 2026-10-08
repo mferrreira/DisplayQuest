@@ -1,4 +1,4 @@
-import { ConflictError, filterSelfEditableUserFields, hasPermission, NotFoundError, requireActorSelfOrPermission, ValidationError, normalizeAvatar, toPublicUser } from "@/backend/domain"
+import { ConflictError, filterSelfEditableUserFields, hasPermission, NotFoundError, requireActorSelfOrPermission, toUserStatus, ValidationError, normalizeAvatar, toPublicUser } from "@/backend/domain"
 import type { ActorRef } from "@/backend/domain"
 import type { UserRepositoryPort } from "@/backend/modules/user-management/application/ports/user.repository"
 
@@ -46,7 +46,7 @@ export class UpdateUserUseCase {
     if (editableData.avatar !== undefined) currentUser.avatar = normalizeAvatar(editableData.avatar)
     if (editableData.profileVisibility !== undefined) currentUser.profileVisibility = editableData.profileVisibility as never
     if (editableData.weekHours !== undefined) currentUser.weekHours = Number(editableData.weekHours)
-    if (editableData.status !== undefined) currentUser.status = String(editableData.status)
+    if (editableData.status !== undefined) currentUser.status = toUserStatus(editableData.status)
 
     if (editableData.roles !== undefined && Array.isArray(editableData.roles)) {
       currentUser.roles = [...new Set(editableData.roles as never[])]

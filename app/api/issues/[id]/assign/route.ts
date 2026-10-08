@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
+import { routeErrorResponse } from "@/lib/api/route-error-response"
 import { userActor } from "@/backend/domain";
 import { requireApiActor } from "@/lib/auth/api-guard";
 import { getBackendComposition } from "@/backend/composition/root"
-import { domainErrorResponse } from "@/lib/api/domain-error-response"
 // OND8-B4 (R4): DomainErrors mapeados. EVOLUTION: "Usuario nao encontrado" (assignee
 // invalido) antes caia no 500 com error.message; agora NotFoundError -> 404.
 // B6-6 (D4): o gate (MANAGE_USERS OU reporter — o assignee NAO reatribui, medido) e o 400 de
@@ -30,9 +30,6 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     });
     return NextResponse.json({ issue });
   } catch (error: any) {
-    const mapped = domainErrorResponse(error);
-    if (mapped) return mapped;
-    console.error("Erro ao atribuir issue:", error);
-    return NextResponse.json({ error: error.message || "Erro ao atribuir issue" }, { status: 500 });
+    return routeErrorResponse(error, { fallback: "Erro ao atribuir issue", exposeMessage: true })
   }
 }

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
+import { routeErrorResponse } from "@/lib/api/route-error-response"
 import { ImageProcessor } from "@/lib/utils/image-processor"
 import { requireApiActor } from "@/lib/auth/api-guard"
 import { userActor } from "@/backend/domain"
-import { domainErrorResponse } from "@/lib/api/domain-error-response"
 import { getBackendComposition } from "@/backend/composition/root"
 const { userManagement: userManagementModule } = getBackendComposition()
 export async function POST(request: NextRequest) {
@@ -52,9 +52,6 @@ export async function POST(request: NextRequest) {
       message: "Avatar atualizado com sucesso",
     })
   } catch (error) {
-    const mapped = domainErrorResponse(error)
-    if (mapped) return mapped
-    console.error("Erro ao fazer upload do avatar:", error)
-    return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 })
+    return routeErrorResponse(error, { fallback: "Erro interno do servidor" })
   }
 }

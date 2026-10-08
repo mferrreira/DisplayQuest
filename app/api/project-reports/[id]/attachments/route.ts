@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { routeErrorResponse } from "@/lib/api/route-error-response"
 import { requireApiActor } from "@/lib/auth/api-guard"
 import { getBackendComposition } from "@/backend/composition/root"
 import {
@@ -60,11 +61,6 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 
     return NextResponse.json({ projectReport }, { status: 201 })
   } catch (error: unknown) {
-    const mapped = domainErrorResponse(error)
-    if (mapped) return mapped
-    console.error("Erro ao anexar arquivos:", error)
-    const message = error instanceof Error ? error.message : "Erro ao anexar arquivos"
-    // Arquivos órfãos eventuais são removidos pelo sweep lazy (D6)
-    return NextResponse.json({ error: message }, { status: 500 })
+    return routeErrorResponse(error, { fallback: "Erro ao anexar arquivos", exposeMessage: true })
   }
 }

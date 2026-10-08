@@ -1,17 +1,18 @@
 /**
  * User — pure domain contract of the identity aggregate (OND2-B1, SPEC §4.5).
  *
- * Type-only mirror of `backend/models/user/User.ts` (IUser), with the Prisma types replaced:
  * `ProfileVisibility` is declared here as a string-union enum object mirroring the schema enum
- * (public | members_only | private) — structurally identical to the Prisma union, so the model
- * class satisfies it without nominal gaps (contrast DEC-14: TS enums are nominal, unions are not).
+ * (public | members_only | private) — structurally identical to the Prisma union (contrast
+ * DEC-14: TS enums are nominal, unions are not).
  *
- * `status` stays `string` (GAP-02 pattern): `users.status` is a plain String column
- * (pending/active/rejected/suspended — DEC-95: this is the whole vocabulary the backend writes;
- * `inactive` is not a writable status, inactivating means `suspended`).
- * The rich entity (invariants, creation rules) arrives in OND2-B2.
+ * `status` is `UserStatus` (B10 · D9, fecha GAP-02 — DEC-125): `users.status` remains a plain
+ * String column, but the domain record carries the vocabulary the backend writes
+ * (pending/active/rejected/suspended — DEC-95: `inactive` is not a writable status, inactivating
+ * means `suspended`). Repository adapters reconcile the column through `toUserStatus`, so a row
+ * outside the vocabulary fails loudly at the boundary instead of leaking an untyped string.
  */
 import type { UserRole } from "./UserRole";
+import type { UserStatus } from "./UserStatus";
 
 export const ProfileVisibility = {
   PUBLIC: "public",
@@ -34,7 +35,7 @@ export interface IUser {
   points?: number;
   completedTasks?: number;
   password?: string | null;
-  status?: string;
+  status?: UserStatus;
   weekHours?: number;
   createdAt?: Date;
   currentWeekHours?: number;

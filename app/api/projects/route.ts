@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { routeErrorResponse } from "@/lib/api/route-error-response"
 import { requireApiActor } from "@/lib/auth/api-guard"
 import { userActor } from "@/backend/domain"
 import { getBackendComposition } from "@/backend/composition/root"
@@ -26,10 +27,7 @@ export async function GET() {
 
     return NextResponse.json({ projects }, { status: 200 })
   } catch (error: unknown) {
-    const mapped = domainErrorResponse(error)
-    if (mapped) return mapped
-    console.error("Erro ao buscar projetos:", error)
-    return NextResponse.json({ error: "Erro ao buscar projetos" }, { status: 500 })
+    return routeErrorResponse(error, { fallback: "Erro ao buscar projetos" })
   }
 }
 
@@ -73,9 +71,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ project }, { status: 201 })
   } catch (error: unknown) {
-    const mapped = domainErrorResponse(error)
-    if (mapped) return mapped
-    console.error("Erro ao criar projeto:", error)
-    return NextResponse.json({ error: "Erro ao criar projeto" }, { status: 500 })
+    return routeErrorResponse(error, { fallback: "Erro ao criar projeto" })
   }
 }

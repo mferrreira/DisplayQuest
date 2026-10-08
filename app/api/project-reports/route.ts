@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { routeErrorResponse } from "@/lib/api/route-error-response"
 import { requireApiActor } from "@/lib/auth/api-guard"
 import { getBackendComposition } from "@/backend/composition/root"
 import { isReportPeriodType } from "@/lib/constants/report-periods"
@@ -51,11 +52,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ projectReports: reports })
   } catch (error: unknown) {
-    const mapped = domainErrorResponse(error)
-    if (mapped) return mapped
-    console.error("Erro ao listar relatórios de projeto:", error)
-    const message = error instanceof Error ? error.message : "Erro ao listar relatórios de projeto"
-    return NextResponse.json({ error: message }, { status: 500 })
+    return routeErrorResponse(error, { fallback: "Erro ao listar relatórios de projeto", exposeMessage: true })
   }
 }
 
@@ -132,10 +129,6 @@ export async function POST(request: Request) {
       { status: created ? 201 : 200 },
     )
   } catch (error: unknown) {
-    const mapped = domainErrorResponse(error)
-    if (mapped) return mapped
-    console.error("Erro ao criar relatório de projeto:", error)
-    const message = error instanceof Error ? error.message : "Erro ao criar relatório de projeto"
-    return NextResponse.json({ error: message }, { status: 500 })
+    return routeErrorResponse(error, { fallback: "Erro ao criar relatório de projeto", exposeMessage: true })
   }
 }

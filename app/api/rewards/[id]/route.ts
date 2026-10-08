@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
+import { routeErrorResponse } from "@/lib/api/route-error-response"
 import { requireApiActor } from "@/lib/auth/api-guard";
 import { getBackendComposition } from "@/backend/composition/root"
-import { domainErrorResponse } from "@/lib/api/domain-error-response"
 
 // B6-2a (D4, DEC-53): os três gates de MANAGE_REWARDS (PUT/PATCH/DELETE) desceram para os use
 // cases de reward. A rota legacy passava `ensurePermission(actor, "MANAGE_REWARDS")` SEM
@@ -26,10 +26,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     }
     return NextResponse.json({ reward });
   } catch (error: any) {
-    const mapped = domainErrorResponse(error);
-    if (mapped) return mapped;
-    console.error('Erro ao buscar recompensa:', error);
-    return NextResponse.json({ error: 'Erro ao buscar recompensa', details: error?.message }, { status: 500 });
+    return routeErrorResponse(error, { fallback: "Erro ao buscar recompensa", details: true })
   }
 }
 
@@ -46,10 +43,7 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
     });
     return NextResponse.json({ reward });
   } catch (error: any) {
-    const mapped = domainErrorResponse(error);
-    if (mapped) return mapped;
-    console.error('Erro ao atualizar recompensa:', error);
-    return NextResponse.json({ error: 'Erro ao atualizar recompensa', details: error?.message }, { status: 500 });
+    return routeErrorResponse(error, { fallback: "Erro ao atualizar recompensa", details: true })
   }
 }
 
@@ -70,10 +64,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 
     return NextResponse.json({ reward });
   } catch (error: any) {
-    const mapped = domainErrorResponse(error);
-    if (mapped) return mapped;
-    console.error('Erro ao atualizar recompensa:', error);
-    return NextResponse.json({ error: 'Erro ao atualizar recompensa', details: error?.message }, { status: 500 });
+    return routeErrorResponse(error, { fallback: "Erro ao atualizar recompensa", details: true })
   }
 }
 
@@ -89,9 +80,6 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
     });
     return NextResponse.json({ success: true });
   } catch (error: any) {
-    const mapped = domainErrorResponse(error);
-    if (mapped) return mapped;
-    console.error('Erro ao excluir recompensa:', error);
-    return NextResponse.json({ error: 'Erro ao excluir recompensa', details: error?.message }, { status: 500 });
+    return routeErrorResponse(error, { fallback: "Erro ao excluir recompensa", details: true })
   }
 }

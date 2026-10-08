@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { routeErrorResponse } from "@/lib/api/route-error-response"
 import { getBackendComposition } from "@/backend/composition/root"
 import { requireApiActor } from "@/lib/auth/api-guard"
 import { domainErrorResponse } from "@/lib/api/domain-error-response"
@@ -80,9 +81,6 @@ export async function DELETE(
 
     return NextResponse.json({ success: true })
   } catch (error: any) {
-    const mapped = domainErrorResponse(error)
-    if (mapped) return mapped
-    console.error("Erro ao remover evento:", error)
-    return NextResponse.json({ error: error.message || "Erro ao remover evento" }, { status: 500 })
+    return routeErrorResponse(error, { fallback: "Erro ao remover evento", exposeMessage: true })
   }
 }

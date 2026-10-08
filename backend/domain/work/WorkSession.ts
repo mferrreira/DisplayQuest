@@ -1,15 +1,18 @@
 /**
  * WorkSession — pure domain contract of the work aggregate (SPEC §4.5).
  *
- * `status` is intentionally `string`, NOT `WorkSessionStatus`: `work_sessions.status` is a plain
- * String column and the current gateway reads/writes it as a string (`status: string` in
- * backend/models/WorkSession.ts). Narrowing it here would make the domain stricter than the
- * value the adapters carry, which is a behaviour change — batch 0.4 is types-only. Recorded in
- * STATE.json as gap `work-execution.status`; closes in OND3-B2 with the rich entity.
+ * `status` is `WorkSessionStatus` (B10 · D9, fecha GAP-02 — DEC-125): the column remains a
+ * plain String, but the domain record carries the three-value vocabulary the backend writes,
+ * and repository adapters reconcile the column through `toWorkSessionStatus`. The old note
+ * ("narrowing would make the domain stricter than the adapters carry") described the legacy
+ * gateway, removed in OND9-B1; the live repositories write only enum values (measured: the
+ * instance holds only `completed` rows today).
  *
- * `duration` stays `number | null` for the same reason (the column is a String, the model class
- * types it as a nullable number).
+ * `duration` stays `number | null` (the column is a String, the mappers type it as a nullable
+ * number).
  */
+import type { WorkSessionStatus } from "./WorkSessionStatus";
+
 export interface WorkSession {
   id?: number;
   userId: number;
@@ -20,7 +23,7 @@ export interface WorkSession {
   activity?: string | null;
   location?: string | null;
   projectId?: number | null;
-  status: string;
+  status: WorkSessionStatus;
   createdAt?: Date;
   updatedAt?: Date;
 }

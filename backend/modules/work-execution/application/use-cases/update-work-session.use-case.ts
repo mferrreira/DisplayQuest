@@ -6,6 +6,7 @@ import {
   normalizeTaskIds,
   pauseInstantFor,
   stretchSeconds,
+  toWorkSessionStatus,
   ValidationError,
   type WorkSession,
 } from "@/backend/domain"
@@ -107,7 +108,10 @@ export class UpdateWorkSessionUseCase {
       next.endTime = null
       next.startTime = new Date()
     } else if (command.status !== undefined) {
-      next.status = command.status
+      // B10 · D9 (DEC-125): reconciliacao na borda do use case (molde B6-7 — o gate decide
+      // sobre o corpo cru). O golden antigo "unknown status assigned verbatim" e superado:
+      // status fora de {active, paused, completed} agora e ValidationError (400).
+      next.status = toWorkSessionStatus(command.status)
     }
 
     // Duration is server-computed on pause; a plain status switch must never be

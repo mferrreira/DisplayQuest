@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { routeErrorResponse } from "@/lib/api/route-error-response"
 import { requireApiActor } from "@/lib/auth/api-guard"
 import { getBackendComposition } from "@/backend/composition/root"
 import { domainErrorResponse } from "@/lib/api/domain-error-response"
@@ -26,11 +27,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
 
     return NextResponse.json({ projectReport: report })
   } catch (error: unknown) {
-    const mapped = domainErrorResponse(error)
-    if (mapped) return mapped
-    console.error("Erro ao buscar relatório de projeto:", error)
-    const message = error instanceof Error ? error.message : "Erro ao buscar relatório de projeto"
-    return NextResponse.json({ error: message }, { status: 500 })
+    return routeErrorResponse(error, { fallback: "Erro ao buscar relatório de projeto", exposeMessage: true })
   }
 }
 
@@ -60,11 +57,7 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
 
     return NextResponse.json({ projectReport })
   } catch (error: unknown) {
-    const mapped = domainErrorResponse(error)
-    if (mapped) return mapped
-    console.error("Erro ao atualizar relatório de projeto:", error)
-    const message = error instanceof Error ? error.message : "Erro ao atualizar relatório de projeto"
-    return NextResponse.json({ error: message }, { status: 500 })
+    return routeErrorResponse(error, { fallback: "Erro ao atualizar relatório de projeto", exposeMessage: true })
   }
 }
 
@@ -85,10 +78,6 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
 
     return NextResponse.json({ success: true })
   } catch (error: unknown) {
-    const mapped = domainErrorResponse(error)
-    if (mapped) return mapped
-    console.error("Erro ao excluir relatório de projeto:", error)
-    const message = error instanceof Error ? error.message : "Erro ao excluir relatório de projeto"
-    return NextResponse.json({ error: message }, { status: 500 })
+    return routeErrorResponse(error, { fallback: "Erro ao excluir relatório de projeto", exposeMessage: true })
   }
 }

@@ -1,4 +1,5 @@
 export { UserRole, USER_ROLES, isUserRole } from "./UserRole";
+export { UserStatus, USER_STATUSES, isUserStatus, toUserStatus } from "./UserStatus";
 export {
   ProfileVisibility,
   PROFILE_VISIBILITIES,

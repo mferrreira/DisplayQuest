@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server"
+import { routeErrorResponse } from "@/lib/api/route-error-response"
 import { getBackendComposition } from "@/backend/composition/root"
 import { userActor } from "@/backend/domain"
 import { requireApiActor } from "@/lib/auth/api-guard"
-import { domainErrorResponse } from "@/lib/api/domain-error-response"
 
 // B6-7 (D4): as decisoes das 4 metodos desta rota desceram para os use cases, na ordem
 // medida em cada um:
@@ -36,10 +36,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
 
     return NextResponse.json({ task: task.toJSON() })
   } catch (error) {
-    const mapped = domainErrorResponse(error)
-    if (mapped) return mapped
-    console.error("Erro ao buscar tarefa:", error)
-    return NextResponse.json({ error: "Erro ao buscar tarefa" }, { status: 500 })
+    return routeErrorResponse(error, { fallback: "Erro ao buscar tarefa" })
   }
 }
 
@@ -62,12 +59,7 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
     })
     return NextResponse.json({ task: task.toJSON() })
   } catch (error: any) {
-    // OND4-B4 (R4): typed DomainErrors carry their own status (404/403/400/409); the old
-    // string heuristics ('not found' never matched the Portuguese messages) are gone.
-    const mapped = domainErrorResponse(error)
-    if (mapped) return mapped
-    console.error("Erro ao atualizar tarefa:", error)
-    return NextResponse.json({ error: error.message || "Erro ao atualizar tarefa" }, { status: 500 })
+    return routeErrorResponse(error, { fallback: "Erro ao atualizar tarefa", exposeMessage: true })
   }
 }
 
@@ -85,10 +77,7 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
     })
     return NextResponse.json({ success: true })
   } catch (error: any) {
-    const mapped = domainErrorResponse(error)
-    if (mapped) return mapped
-    console.error("Erro ao excluir tarefa:", error)
-    return NextResponse.json({ error: error.message || "Erro ao excluir tarefa" }, { status: 500 })
+    return routeErrorResponse(error, { fallback: "Erro ao excluir tarefa", exposeMessage: true })
   }
 }
 
@@ -128,9 +117,6 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 
     return NextResponse.json({ task: task.toJSON(), awardedTo, awardedPoints })
   } catch (error: any) {
-    const mapped = domainErrorResponse(error)
-    if (mapped) return mapped
-    console.error("Erro ao completar tarefa:", error)
-    return NextResponse.json({ error: error.message || "Erro ao completar tarefa" }, { status: 500 })
+    return routeErrorResponse(error, { fallback: "Erro ao completar tarefa", exposeMessage: true })
   }
 }

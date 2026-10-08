@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
+import { routeErrorResponse } from "@/lib/api/route-error-response"
 import { requireApiActor } from "@/lib/auth/api-guard"
-import { domainErrorResponse } from "@/lib/api/domain-error-response"
 import { userActor } from "@/backend/domain"
 import { getBackendComposition } from "@/backend/composition/root"
 const { userManagement: userManagementModule } = getBackendComposition()
@@ -30,10 +30,7 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
 
     return NextResponse.json({ user })
   } catch (error) {
-    const mapped = domainErrorResponse(error)
-    if (mapped) return mapped
-    console.error("Erro ao buscar usuário:", error)
-    return NextResponse.json({ error: "Erro ao buscar usuário" }, { status: 500 })
+    return routeErrorResponse(error, { fallback: "Erro ao buscar usuário" })
   }
 }
 
@@ -53,10 +50,7 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
     const user = await userManagementModule.updateUser(actor, id, body)
     return NextResponse.json({ user })
   } catch (error: any) {
-    const mapped = domainErrorResponse(error)
-    if (mapped) return mapped
-    console.error("Erro ao atualizar usuário:", error)
-    return NextResponse.json({ error: error.message || "Erro ao atualizar usuário" }, { status: 500 })
+    return routeErrorResponse(error, { fallback: "Erro ao atualizar usuário", exposeMessage: true })
   }
 }
 
@@ -75,9 +69,6 @@ export async function DELETE(_request: Request, context: { params: Promise<{ id:
     await userManagementModule.deleteUser(actor, id)
     return NextResponse.json({ success: true })
   } catch (error: any) {
-    const mapped = domainErrorResponse(error)
-    if (mapped) return mapped
-    console.error("Erro ao excluir usuário:", error)
-    return NextResponse.json({ error: error.message || "Erro ao excluir usuário" }, { status: 500 })
+    return routeErrorResponse(error, { fallback: "Erro ao excluir usuário", exposeMessage: true })
   }
 }

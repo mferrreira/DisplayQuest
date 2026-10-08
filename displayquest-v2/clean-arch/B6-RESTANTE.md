@@ -54,6 +54,12 @@ nos lotes B6-2c..B6-7 + 6 no B6-2a/B6-2b originais). Os 3 call sites do cron est
 SCHEDULED_PAUSE + x1 com NIGHTLY_SWEEP (B6-5), `pauseResponsibilityForUser`/SCHEDULED_PAUSE (B6-6) —
 como previsto no DEC-54.
 
+**PLANO ENCERRADO 2026-10-08.** B9 (docs pos-B6 + verify.sh com o guard de banco plugado, DEC-124) e
+B10 (D8 portas finas no notifications, D9/GAP-02 status tipados com reconciliacao nos limites,
+D10 `routeErrorResponse` como mapper unico das rotas, D11 `MAX_STRETCH_SEC` unico no dominio,
+DEC-125) fechados. B11 permanece excluido (DEC-27). STATE.json `status: done`; proxima decisao
+livre: DEC-126.
+
 ## O que mudou desde 2026-10-05 (re-medição 2026-10-07)
 
 - **Retomada acordada com o dono (2026-10-07):** escopo do fechamento = **B6 restante + B9**

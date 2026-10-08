@@ -91,6 +91,18 @@ describe("o vocabulário de status de usuário (DEC-95 + DEC-96)", () => {
     expect(values).toEqual(REAL_STATUSES);
   });
 
+  it("o enum do domínio (D9/GAP-02, DEC-125) é o MESMO vocabulário — sem deriva entre as duas fontes", () => {
+    // `User.status` passou a carregar `UserStatus` (backend/domain/identity/UserStatus.ts).
+    // Se alguém adicionar um quinto status ao zod sem adicionar ao domínio (ou vice-versa),
+    // a reconciliação `toUserStatus` começa a recusar linhas legítimas — o guarda nomeia a
+    // deriva em vez de deixar as duas fontes divergirem em silêncio.
+    const source = readFileSync(path.join(REPO_ROOT, "backend/domain/identity/UserStatus.ts"), "utf8");
+    const match = /export const UserStatus = \{([\s\S]*?)\} as const;/.exec(source);
+    expect(match, "UserStatus não encontrado em backend/domain/identity/UserStatus.ts").not.toBeNull();
+    const values = [...match![1].matchAll(/:\s*"([^"]+)"/g)].map((m) => m[1]);
+    expect(values).toEqual(REAL_STATUSES);
+  });
+
   it("nenhum caminho que decide status de usuário usa `inactive` como valor", () => {
     const found = hitsFor(INACTIVE_AS_VALUE, STRICT_PATHS);
     const report = found

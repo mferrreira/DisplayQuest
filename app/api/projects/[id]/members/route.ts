@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { routeErrorResponse } from "@/lib/api/route-error-response"
 import { requireApiActor } from "@/lib/auth/api-guard"
 import { normalizeRoles } from "@/backend/domain"
 import { getBackendComposition } from "@/backend/composition/root"
@@ -35,10 +36,7 @@ export async function GET(
 
     return NextResponse.json({ members }, { status: 200 })
   } catch (error: unknown) {
-    const mapped = domainErrorResponse(error)
-    if (mapped) return mapped
-    console.error("Erro na API de membros do projeto:", error)
-    return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 })
+    return routeErrorResponse(error, { fallback: "Erro interno do servidor" })
   }
 }
 
@@ -150,10 +148,7 @@ async function handleMutation(
 
     return NextResponse.json({ leader }, { status: 200 })
   } catch (error: unknown) {
-    const mapped = domainErrorResponse(error)
-    if (mapped) return mapped
-    console.error("Erro na API de membros do projeto (mutação):", error)
-    return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 })
+    return routeErrorResponse(error, { fallback: "Erro interno do servidor" })
   }
 }
 

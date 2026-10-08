@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server"
+import { routeErrorResponse } from "@/lib/api/route-error-response"
 import { userActor } from "@/backend/domain"
 import { requireApiActor } from "@/lib/auth/api-guard";
 import { getBackendComposition } from "@/backend/composition/root"
-import { domainErrorResponse } from "@/lib/api/domain-error-response"
 // OND8-B4 (R4): DomainErrors mapeados. EVOLUTION (documentada): "Responsabilidade nao
 // encontrada" -> 404 (antes 500), "Responsabilidade ja foi finalizada" -> 409 (antes 500),
 // "Dados invalidos: ..." -> 400 (antes 500).
@@ -52,12 +52,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 
     return NextResponse.json({ error: "Ação não suportada" }, { status: 400 })
   } catch (error: any) {
-    const mapped = domainErrorResponse(error);
-    if (mapped) return mapped;
-    console.error("Erro ao atualizar responsabilidade:", error)
-    return NextResponse.json({
-      error: error.message || "Erro ao atualizar responsabilidade"
-    }, { status: 500 })
+    return routeErrorResponse(error, { fallback: "Erro ao atualizar responsabilidade", exposeMessage: true })
   }
 }
 
@@ -74,11 +69,6 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
     await labOperationsModule.deleteResponsibility({ actor, responsibilityId: id });
     return NextResponse.json({ success: true }, { status: 200 })
   } catch (error: any) {
-    const mapped = domainErrorResponse(error);
-    if (mapped) return mapped;
-    console.error("Erro ao excluir responsabilidade:", error)
-    return NextResponse.json({
-      error: error.message || "Erro ao excluir responsabilidade"
-    }, { status: 500 })
+    return routeErrorResponse(error, { fallback: "Erro ao excluir responsabilidade", exposeMessage: true })
   }
 }

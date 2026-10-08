@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
+import { routeErrorResponse } from "@/lib/api/route-error-response"
 import { requireApiActor } from "@/lib/auth/api-guard"
 import { getBackendComposition } from "@/backend/composition/root"
-import { domainErrorResponse } from "@/lib/api/domain-error-response"
 import { userActor } from "@/backend/domain"
 
 // OND6-B4 (R4): "Usuário não possui este badge" antes caía no 500 com error.message;
@@ -33,10 +33,6 @@ export async function DELETE(_request: Request, context: { params: Promise<{ use
     await gamificationModule.removeUserBadge({ actor, userId, badgeId })
     return NextResponse.json({ success: true })
   } catch (error: unknown) {
-    const mapped = domainErrorResponse(error)
-    if (mapped) return mapped
-    console.error("Erro ao remover badge do usuário:", error)
-    const message = error instanceof Error ? error.message : undefined
-    return NextResponse.json({ error: message || "Erro ao remover badge do usuário" }, { status: 500 })
+    return routeErrorResponse(error, { fallback: "Erro ao remover badge do usuário", exposeMessage: true })
   }
 }

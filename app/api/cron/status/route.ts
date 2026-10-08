@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
+import { routeErrorResponse } from "@/lib/api/route-error-response"
 import { requireApiActor } from "@/lib/auth/api-guard";
 import { getBackendComposition } from "@/backend/composition/root";
-import { domainErrorResponse } from "@/lib/api/domain-error-response"
 // B6-1a (DEC-51, 2026-10-05) — CORRECAO DE AUTORIZACAO (unica mudanca de comportamento do
 // B6, lote proprio para poder ser revertido sem desfazer o refactor). O gate era
 // ensureAnyRole(actor, ["COORDENADOR"]), mas COORDENADOR e GERENTE tem permissoes IDENTICAS
@@ -35,10 +35,7 @@ export async function GET() {
     const status = await workExecution.getCronStatusForActor({ actorRoles: auth.actor.roles });
     return NextResponse.json({ status });
   } catch (error: any) {
-    const mapped = domainErrorResponse(error)
-    if (mapped) return mapped
-    console.error("Erro ao buscar status do cron:", error);
-    return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 });
+    return routeErrorResponse(error, { fallback: "Erro interno do servidor" })
   }
 }
 
@@ -57,9 +54,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json(result);
   } catch (error: any) {
-    const mapped = domainErrorResponse(error)
-    if (mapped) return mapped
-    console.error("Erro ao executar ação do cron:", error);
-    return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 });
+    return routeErrorResponse(error, { fallback: "Erro interno do servidor" })
   }
 }

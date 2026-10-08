@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { routeErrorResponse } from "@/lib/api/route-error-response"
 import { requireApiActor } from "@/lib/auth/api-guard"
 import { getBackendComposition } from "@/backend/composition/root"
 import { domainErrorResponse } from "@/lib/api/domain-error-response"
@@ -20,10 +21,7 @@ export async function GET() {
     const badges = await gamificationModule.listBadges()
     return NextResponse.json({ badges })
   } catch (error: unknown) {
-    const mapped = domainErrorResponse(error)
-    if (mapped) return mapped
-    console.error("Erro ao buscar badges:", error)
-    return NextResponse.json({ error: "Erro ao buscar badges" }, { status: 500 })
+    return routeErrorResponse(error, { fallback: "Erro ao buscar badges" })
   }
 }
 
@@ -41,10 +39,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ badge }, { status: 201 })
   } catch (error: unknown) {
-    const mapped = domainErrorResponse(error)
-    if (mapped) return mapped
-    console.error("Erro ao criar badge:", error)
-    const message = error instanceof Error ? error.message : undefined
-    return NextResponse.json({ error: message || "Erro ao criar badge" }, { status: 500 })
+    return routeErrorResponse(error, { fallback: "Erro ao criar badge", exposeMessage: true })
   }
 }

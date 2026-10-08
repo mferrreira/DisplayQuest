@@ -482,16 +482,30 @@ describe("UpdateWorkSessionUseCase (server-authoritative transitions)", () => {
     expect(resumed.duration).toBe(1800);
   });
 
-  it("unknown status assigned verbatim; explicit duration coerced when not pausing", async () => {
+  it("status fora do vocabulario e recusado (D9/GAP-02 fecha o verbatim legado); duration coerced when not pausing", async () => {
     workSessions.seed({ id: 1, userId: 7, startTime: new Date(T_11Z), status: "completed", duration: 100 });
+
+    // B10 · D9 (DEC-125): o golden antigo ("unknown status assigned verbatim") congelava a
+    // escrita de qualquer string na coluna. Com o vocabulario tipado (WorkSessionStatus +
+    // toWorkSessionStatus no use case), status fora de {active, paused, completed} agora e
+    // ValidationError — a forca normativa passa a valer na borda, como no resto do D4.
+    await expect(
+      new UpdateWorkSessionUseCase(deps()).execute({
+        sessionId: 1,
+        actor: ownerActor,
+        status: "arbitrary-status",
+        duration: "4321" as never,
+      }),
+    ).rejects.toThrow("Status de sessão inválido");
+    expect(workSessions.rows.find((s) => s.id === 1)!.status).toBe("completed");
 
     const updated = await new UpdateWorkSessionUseCase(deps()).execute({
       sessionId: 1,
       actor: ownerActor,
-      status: "arbitrary-status",
+      status: "active",
       duration: "4321" as never,
     });
-    expect(updated.status).toBe("arbitrary-status");
+    expect(updated.status).toBe("active");
     expect(updated.duration).toBe(4321);
   });
 
