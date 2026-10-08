@@ -29,9 +29,12 @@ atraso, teto de duração ou expiração seja verificada com um instante fixo.
 como retornos ambíguos nem como exceções genéricas. O mapeamento para código de estado HTTP
 é feito em um único lugar.
 
-**A rota é fina.** Uma rota HTTP autentica, autoriza, valida a forma da entrada, invoca um
-caso de uso e traduz o resultado. Ela não contém regra de negócio, não conhece o ORM e não
-monta consulta.
+**A rota é fina.** Uma rota HTTP autentica, valida a forma da entrada, invoca um caso de
+uso e traduz o resultado. A autorização é decisão do caso de uso: quem age entra no
+comando como ator, e a negação volta como erro de domínio mapeado. Uma rota consulta a
+matriz antes de ler o corpo apenas quando a ordem entre o 403 e os 400 de entrada foi
+medida e é contrato. Ela não contém regra de negócio, não conhece o ORM e não monta
+consulta.
 
 **O módulo não conhece outro módulo.** Um módulo declara suas necessidades como portas
 locais. Quem satisfaz essas portas é o ponto de composição, com um adaptador fino.

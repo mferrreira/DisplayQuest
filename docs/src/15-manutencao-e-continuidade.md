@@ -39,12 +39,19 @@ O caso de uso vive na camada de aplicação do módulo responsável, com o contr
 resultado em `application/contracts` e, se precisar falar com o exterior, a interface necessária
 em `application/ports`. A orquestração chama o domínio e as portas; ela não conhece adaptador.
 A fábrica do módulo passa a aceitar a porta como parâmetro, e o ponto de composição fornece a
-implementação.
+implementação. Se a operação exige autoridade, o comando carrega o ator — ator de pessoa para
+chamada que vem de sessão, ator de sistema apenas para rotina sem ninguém atrás — e o caso de
+uso decide com as funções do domínio sobre a matriz (permissão, qualquer papel, autoria ou
+permissão). Um caso de uso autorizado que não recebe ator é um caso de uso que não decide nada.
 
 ### Nova rota
 
-A rota autentica, autoriza, valida a forma da entrada, invoca o caso de uso e traduz o resultado.
-Ela não contém regra de negócio, não monta consulta e não instancia módulo: resolve a composição
+A rota autentica, valida a forma da entrada, invoca o caso de uso e traduz o resultado. A
+autorização é decisão do caso de uso, não da rota: a rota constrói o ator de pessoa a partir da
+sessão e o entrega no comando. O único caso em que a rota consulta a matriz antes de ler o corpo
+é quando a ordem entre o 403 de autorização e os 400 de entrada foi medida e congelada por
+teste — então a rota autoriza antes do parse com o mesmo assert que o caso de uso recheca. Ela
+não contém regra de negócio, não monta consulta e não instancia módulo: resolve a composição
 pelo acesso único. O mapeamento de erro de domínio é aplicado para que validação, proibição,
 ausência e conflito cheguem como códigos de estado correspondentes.
 
@@ -113,20 +120,22 @@ quem responde pelo sistema.
 | --- | --- | --- | --- |
 | A agenda periódica roda em cada processo da aplicação | Serviço de agenda | Tarefa periódica executa uma vez por instância, sem trava | Assumido; a implantação de referência tem instância única |
 | Colunas de estado remanescentes são texto livre | Esquema de persistência de sessões e contas | O valor gravado depende do chamador; a reconciliação acontece na leitura | Herança do modelo anterior; a enumeração do domínio existe e é usada pelo núcleo |
-| A autorização da maioria das rotas ainda é avaliada na própria rota | Rotas HTTP com verificação direta de papel ou permissão | A regra efetiva está fora do caso de uso, e a matriz do domínio é permissiva | Em correção: a extração para o caso de uso está em curso, e o ator passou a ser declarado pela chamada (ator de pessoa ou de sistema). A matriz deixou de ser apenas documentação nas rotas já extraídas |
+| A autorização da maioria das rotas ainda é avaliada na própria rota | Rotas HTTP com verificação direta de papel ou permissão | A regra efetiva está fora do caso de uso, e a matriz do domínio é permissiva | Resolvida em 2026-10-08 (B6-0..B6-7): as 41 rotas medidas tiveram a decisão extraída para o caso de uso, com o ator declarado pela chamada. A matriz passou a ter força plena em todas elas |
 | A camada de registros de entidade é adotada por um único módulo | Adaptadores de persistência do laboratório | A forma de construir registros não é uniforme entre módulos | Assumido; adotá-la nos demais módulos é alteração mecânica |
 | O processo grava em dois diretórios | Contêiner da aplicação | Caminho de escrita novo falha sem alteração da construção da imagem | Documentado e verificado |
 | A versão de execução da aplicação está fixada | Imagem de execução e versão declarada | Verificação local só vale se a versão local coincidir com a da imagem | Alinhado; divergir de novo reintroduz o risco |
 | Uma peça de interface grava no armazenamento do navegador sem a costura de estado do cliente | Aviso de sessão iniciada, no cronômetro | Uma chave fora do namespace `dq:`, sem leitura tolerante a conteúdo corrompido | Divergência única e consciente: trocar de `sessionStorage` para o armazenamento persistente mudaria a semântica do aviso |
 | A costura de notificação do navegador existe e não está ligada a nenhum ponto | Notificação do navegador, na biblioteca compartilhada | A pausa automática avisa só quem está olhando a tela: o sinal visual do cronômetro e, se ligado, o som | Fora do escopo por decisão (DEC-49, 2026-10-03): a instância é servida em HTTP num endereço de rede e os navegadores recusam pedido de permissão fora de contexto seguro. A costura ficou na árvore sem chamador; se a notificação nativa voltar, precisa de HTTPS e a ligação é uma chamada no cronômetro |
 
-A divergência entre a autorização avaliada na rota e a matriz do domínio merece uma observação
-de método. A matriz do domínio descreve o que o sistema permite; a verificação na rota decide o
-que é efetivamente recusado. Enquanto as duas não coincidirem, a matriz é documentação com
-força normativa parcial — nas rotas cuja verificação já foi movida para o caso de uso ela passa
-a ter força plena, e nas demais continua parcial. Qualquer regra nova de permissão deve ser
-escrita na matriz e, no mesmo movimento, avaliada por um caso de uso — escrever apenas na matriz
-cria a impressão de restrição sem produzir efeito.
+A divergência entre a autorização avaliada na rota e a matriz do domínio foi o defeito que o
+lote de extração corrigiu, e merece uma observação de método. A matriz do domínio descreve o que
+o sistema permite; a verificação na rota decidia o que era efetivamente recusado. Enquanto as
+duas não coincidiam, a matriz era documentação com força normativa parcial. Concluída a
+extração — nas 41 rotas medidas a decisão agora mora no caso de uso, exercida sobre o ator
+declarado pela chamada — a matriz passou a ter força plena. A lição permanece como regra de
+escrita: qualquer regra nova de permissão deve ser escrita na matriz e, no mesmo movimento,
+avaliada por um caso de uso — escrever apenas na matriz cria a impressão de restrição sem
+produzir efeito.
 
 ## Continuidade
 

@@ -23,10 +23,14 @@ explicitamente quais papéis a exercem.
 
 ## Matriz de permissões de back-end
 
-A matriz de permissões é a autoridade do servidor. Ela é verificada em cada rota antes que
-qualquer caso de uso seja executado. O papel primário de uma pessoa é resolvido por uma
-ordem de precedência fixa: coordenador, gerente, laboratorista, gerente de projeto,
-pesquisador, colaborador e voluntário.
+A matriz de permissões é a autoridade do servidor. Ela é verificada nos casos de uso
+autorizados: a decisão de autorização mora no caso de uso que executa a operação, não na
+rota que a recebe — quem age entra no comando como ator, e a negação volta como erro de
+domínio mapeado. Onde uma rota ainda consulta a matriz antes de ler o corpo, a razão é
+medida: preservar a ordem entre o 403 de quem não tem permissão e o 400 de um corpo
+inválido. O papel primário de uma pessoa é resolvido por uma ordem de precedência fixa:
+coordenador, gerente, laboratorista, gerente de projeto, pesquisador, colaborador e
+voluntário.
 
 | Permissão |COORDENADOR | GERENTE | LABORATORISTA | GERENTE_PROJETO | PESQUISADOR | COLABORADOR | VOLUNTARIO |
 | --- | :-: | :-: | :-: | :-: | :-: | :-: | :-: |
@@ -98,14 +102,16 @@ com a liderança do projeto.
 
 ## Regras de autorização de referência
 
-O servidor avalia a autorização em dois níveis, e cada rota declara o nível
-que aplica.
+O servidor avalia a autorização em dois níveis, e a decisão pertence ao caso de uso que
+executa a operação — a rota autentica, valida a forma da entrada e traduz o resultado.
+Onde uma rota consulta a matriz antes do caso de uso, é para preservar uma ordem medida
+entre o 403 de autorização e os 400 de entrada, não porque a decisão more nela.
 
 | Nível | Verificação | Aplicação típica |
 | --- | --- | --- |
 | Autenticação | Existência de sessão válida com usuário inteiro e positivo | Todas as rotas da aplicação |
-| Papel ou permissão | `hasPermission` ou `hasAnyRole` sobre a matriz de permissões | Rotas administrativas |
-| Autoria ou permissão | O ator é o dono do recurso, ou tem a permissão exigida | Rotas de sessão, log e perfil |
+| Papel ou permissão | `hasPermission` ou `hasAnyRole` sobre a matriz de permissões | Operações administrativas |
+| Autoria ou permissão | O ator é o dono do recurso, ou tem a permissão exigida | Operações de sessão, log e perfil |
 
 A terceira forma é a mais frequente nas rotas de recurso individual: o sistema permite
 que uma pessoa altere o próprio registro sem concessão específica, e permite que um

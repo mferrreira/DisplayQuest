@@ -939,10 +939,14 @@ Todo o restante da fronteira pressupõe uma conta aprovada.</p>
 coordenador, e não há um papel que conceda tudo por construção: cada permissão declara
 explicitamente quais papéis a exercem.</p>
 <h2 id="matriz-de-permissoes-de-back-end">Matriz de permissões de back-end</h2>
-<p>A matriz de permissões é a autoridade do servidor. Ela é verificada em cada rota antes que
-qualquer caso de uso seja executado. O papel primário de uma pessoa é resolvido por uma
-ordem de precedência fixa: coordenador, gerente, laboratorista, gerente de projeto,
-pesquisador, colaborador e voluntário.</p>
+<p>A matriz de permissões é a autoridade do servidor. Ela é verificada nos casos de uso
+autorizados: a decisão de autorização mora no caso de uso que executa a operação, não na
+rota que a recebe — quem age entra no comando como ator, e a negação volta como erro de
+domínio mapeado. Onde uma rota ainda consulta a matriz antes de ler o corpo, a razão é
+medida: preservar a ordem entre o 403 de quem não tem permissão e o 400 de um corpo
+inválido. O papel primário de uma pessoa é resolvido por uma ordem de precedência fixa:
+coordenador, gerente, laboratorista, gerente de projeto, pesquisador, colaborador e
+voluntário.</p>
 <table>
 <thead>
 <tr>
@@ -1188,8 +1192,10 @@ com a liderança do projeto.</p>
 </tbody>
 </table>
 <h2 id="regras-de-autorizacao-de-referencia">Regras de autorização de referência</h2>
-<p>O servidor avalia a autorização em dois níveis, e cada rota declara o nível
-que aplica.</p>
+<p>O servidor avalia a autorização em dois níveis, e a decisão pertence ao caso de uso que
+executa a operação — a rota autentica, valida a forma da entrada e traduz o resultado.
+Onde uma rota consulta a matriz antes do caso de uso, é para preservar uma ordem medida
+entre o 403 de autorização e os 400 de entrada, não porque a decisão more nela.</p>
 <table>
 <thead>
 <tr>
@@ -1207,12 +1213,12 @@ que aplica.</p>
 <tr>
 <td>Papel ou permissão</td>
 <td><code>hasPermission</code> ou <code>hasAnyRole</code> sobre a matriz de permissões</td>
-<td>Rotas administrativas</td>
+<td>Operações administrativas</td>
 </tr>
 <tr>
 <td>Autoria ou permissão</td>
 <td>O ator é o dono do recurso, ou tem a permissão exigida</td>
-<td>Rotas de sessão, log e perfil</td>
+<td>Operações de sessão, log e perfil</td>
 </tr>
 </tbody>
 </table>
@@ -3119,9 +3125,12 @@ atraso, teto de duração ou expiração seja verificada com um instante fixo.</
 <p><strong>O erro é tipado.</strong> Falhas de negócio são lançadas como erros de domínio nomeados, e não
 como retornos ambíguos nem como exceções genéricas. O mapeamento para código de estado HTTP
 é feito em um único lugar.</p>
-<p><strong>A rota é fina.</strong> Uma rota HTTP autentica, autoriza, valida a forma da entrada, invoca um
-caso de uso e traduz o resultado. Ela não contém regra de negócio, não conhece o ORM e não
-monta consulta.</p>
+<p><strong>A rota é fina.</strong> Uma rota HTTP autentica, valida a forma da entrada, invoca um caso de
+uso e traduz o resultado. A autorização é decisão do caso de uso: quem age entra no
+comando como ator, e a negação volta como erro de domínio mapeado. Uma rota consulta a
+matriz antes de ler o corpo apenas quando a ordem entre o 403 e os 400 de entrada foi
+medida e é contrato. Ela não contém regra de negócio, não conhece o ORM e não monta
+consulta.</p>
 <p><strong>O módulo não conhece outro módulo.</strong> Um módulo declara suas necessidades como portas
 locais. Quem satisfaz essas portas é o ponto de composição, com um adaptador fino.</p>
 <p><strong>A regra pura não conhece infraestrutura.</strong> O núcleo de domínio não importa ORM, framework,
@@ -4168,10 +4177,17 @@ de dependências confirma que o núcleo continua sem ORM, framework, entrada e s
 resultado em <code>application/contracts</code> e, se precisar falar com o exterior, a interface necessária
 em <code>application/ports</code>. A orquestração chama o domínio e as portas; ela não conhece adaptador.
 A fábrica do módulo passa a aceitar a porta como parâmetro, e o ponto de composição fornece a
-implementação.</p>
+implementação. Se a operação exige autoridade, o comando carrega o ator — ator de pessoa para
+chamada que vem de sessão, ator de sistema apenas para rotina sem ninguém atrás — e o caso de
+uso decide com as funções do domínio sobre a matriz (permissão, qualquer papel, autoria ou
+permissão). Um caso de uso autorizado que não recebe ator é um caso de uso que não decide nada.</p>
 <h3 id="nova-rota">Nova rota</h3>
-<p>A rota autentica, autoriza, valida a forma da entrada, invoca o caso de uso e traduz o resultado.
-Ela não contém regra de negócio, não monta consulta e não instancia módulo: resolve a composição
+<p>A rota autentica, valida a forma da entrada, invoca o caso de uso e traduz o resultado. A
+autorização é decisão do caso de uso, não da rota: a rota constrói o ator de pessoa a partir da
+sessão e o entrega no comando. O único caso em que a rota consulta a matriz antes de ler o corpo
+é quando a ordem entre o 403 de autorização e os 400 de entrada foi medida e congelada por
+teste — então a rota autoriza antes do parse com o mesmo assert que o caso de uso recheca. Ela
+não contém regra de negócio, não monta consulta e não instancia módulo: resolve a composição
 pelo acesso único. O mapeamento de erro de domínio é aplicado para que validação, proibição,
 ausência e conflito cheguem como códigos de estado correspondentes.</p>
 <h3 id="nova-dependencia-entre-modulos">Nova dependência entre módulos</h3>
@@ -4276,7 +4292,7 @@ quem responde pelo sistema.</p>
 <td>A autorização da maioria das rotas ainda é avaliada na própria rota</td>
 <td>Rotas HTTP com verificação direta de papel ou permissão</td>
 <td>A regra efetiva está fora do caso de uso, e a matriz do domínio é permissiva</td>
-<td>Em correção: a extração para o caso de uso está em curso, e o ator passou a ser declarado pela chamada (ator de pessoa ou de sistema). A matriz deixou de ser apenas documentação nas rotas já extraídas</td>
+<td>Resolvida em 2026-10-08 (B6-0..B6-7): as 41 rotas medidas tiveram a decisão extraída para o caso de uso, com o ator declarado pela chamada. A matriz passou a ter força plena em todas elas</td>
 </tr>
 <tr>
 <td>A camada de registros de entidade é adotada por um único módulo</td>
@@ -4310,13 +4326,15 @@ quem responde pelo sistema.</p>
 </tr>
 </tbody>
 </table>
-<p>A divergência entre a autorização avaliada na rota e a matriz do domínio merece uma observação
-de método. A matriz do domínio descreve o que o sistema permite; a verificação na rota decide o
-que é efetivamente recusado. Enquanto as duas não coincidirem, a matriz é documentação com
-força normativa parcial — nas rotas cuja verificação já foi movida para o caso de uso ela passa
-a ter força plena, e nas demais continua parcial. Qualquer regra nova de permissão deve ser
-escrita na matriz e, no mesmo movimento, avaliada por um caso de uso — escrever apenas na matriz
-cria a impressão de restrição sem produzir efeito.</p>
+<p>A divergência entre a autorização avaliada na rota e a matriz do domínio foi o defeito que o
+lote de extração corrigiu, e merece uma observação de método. A matriz do domínio descreve o que
+o sistema permite; a verificação na rota decidia o que era efetivamente recusado. Enquanto as
+duas não coincidiam, a matriz era documentação com força normativa parcial. Concluída a
+extração — nas 41 rotas medidas a decisão agora mora no caso de uso, exercida sobre o ator
+declarado pela chamada — a matriz passou a ter força plena. A lição permanece como regra de
+escrita: qualquer regra nova de permissão deve ser escrita na matriz e, no mesmo movimento,
+avaliada por um caso de uso — escrever apenas na matriz cria a impressão de restrição sem
+produzir efeito.</p>
 <h2 id="continuidade">Continuidade</h2>
 <p>O conhecimento do sistema é contínuo porque é versionado junto com ele. O texto e os diagramas
 deste documento são fontes no repositório, e a geração é reproduzível; o comportamento anterior
@@ -4380,7 +4398,7 @@ expressa como migração versionada não pertence a este sistema.</p>
 <footer class="dq-footer">
   <p>
     Conteúdo gerado a partir de <code>docs/src/</code> e <code>docs/diagrams/</code>. Diagramas em notação UML (PlantUML). O conteúdo reflete o estado do
-    código no commit <code>2b180cb (2026-10-07)</code>.
+    código no commit <code>d5bccb4 (2026-10-08)</code>.
   </p>
 </footer>
 

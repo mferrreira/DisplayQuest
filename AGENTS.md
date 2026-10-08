@@ -8,7 +8,7 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
 - **Gate de entrega:** `npm run arch:check` (exit 0, allow-list **vazia**) && `npm run lint` (nada de erro) && `npx tsc --noEmit` (0) && `npx vitest run` (zero failure). A contagem é **por branch**: no `dev` o baseline era **64 arquivos / 721 testes** quando o B8 removeu os 651 testes de paridade; no `plan/v3-operacional`, medido no encerramento do plan-v3 (2026-10-03), são **65 arquivos / 798 testes** em `tests/unit` + `features` e **75 / 881** na suíte completa. Na `dev` de hoje (medido em 2026-10-07, depois do plan-v4 V4-1/V4-2/V4-3/V4-6, do V4-4 de subtasks, dos testes do painel V4-4b/V4-4c, do V4-5a/V4-5b/V4-5c de subtask na UI, do V4-6b de vocabulário de status e do lote pós-encerramento POS-1 — DEC-97/98) são **87 arquivos / 1107 testes** e **97 / 1192** na suíte completa; a suíte e2e do quadro está em **2 passando + 1 falha conhecida + 5 "did not run"** (medido 2026-10-06
 no V4-5c; eram 7 quando a coluna `Em Revisão` tinha um cartão a menos) — o 3º teste quebra por cartão a
 mais na coluna (dado legítimo da instância, não código: hoje são as tarefas 50 e 304), e como o spec é
-serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 5 passando. Compare sempre com o `STATE.json` do plano em que você está.
+serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 5 passando. Compare sempre com o `STATE.json` do plano em que você está. Na branch do fechamento do repo-cleanup (`refactor/b6-restante`, medido 2026-10-08 depois do B6-2c..B6-7) o baseline é **95 arquivos / 1280 testes** em `tests/unit` + `features` e **105 / 1367** na suíte completa (G0 810 módulos / 3295 dependências).
 - **G4/integração:** roundtrips Prisma real rodam **só** contra o banco de teste isolado `dq-dev-test-db` em `127.0.0.1:5433` (`$env:DATABASE_URL="postgresql://dq_dev:dq_dev_local_only@127.0.0.1:5433/dq_dev_test"; npx vitest run`) — nunca contra o `display-quest-db` (5432, produção local).
 - **Setup do G4 (corrigido 2026-10-02):** `npm run db:test:up` e `npm run db:test:setup` **existem**
   no `package.json` e fazem a sequência completa (`docker compose -f docker-compose.test.yml up -d`,
@@ -46,21 +46,24 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   (tag `pre-cleanup` = `12d9d6c`); o registro DEC-01..28 e os GAPs foram carregados no
   STATE.json v2 (`decisionRegistry`/`gapRegistry`) — comentários de código que citam
   `DEC-NN` continuam resolvíveis.
-- **D4 não são 16 rotas — são 41 (medido 2026-10-05, DEC-50):** se você for mexer na
-  autorização, não confie no número antigo. 17 rotas importam `hasPermission`/`hasRole` de
-  `@/lib/auth/rbac` e 29 usam `ensurePermission`/`ensureAnyRole`/`ensureSelfOrPermission` de
-  `@/lib/auth/api-guard` — as 24 que usam só `ensure*` são **a mesma dívida com outra grafia**,
-  porque `ensurePermission` delega no mesmo domínio. As outras 20 rotas já estão no formato
-  certo (o domínio lança, a rota só mapeia com `domainErrorResponse`) — são o padrão a seguir.
-  Note que a regra **já está no domínio** (`backend/domain/identity`); o que falta é
-  *enforcement* no use case, e nenhum dos use cases por trás dessas 41 checa ator.
-- **O cron é chamador sem ator de 3 use cases (medido 2026-10-05):**
-  `lib/services/cron-service.ts` chama `workExecution.listWorkSessions`,
-  `labOperations.pauseResponsibilityForUser` e `reporting.resetWeeklyHoursHistory` — todos sem
-  ator, porque é rotina de sistema (varredura de anti-farm, reset semanal). Mover a checagem
-  para dentro desses use cases sem desenhar o caminho de ator-de-sistema **quebra o cron**.
-  E `work-execution` é o único módulo sem factory: instancia use case *inline por chamada*
-  (`GatewayCall`), então a migração nele custa mais que nos outros seis.
+- **D4 não são 16 rotas — são 41 (medido 2026-10-05, DEC-50) — FECHADO em 2026-10-08 (B6-0..B6-7,
+  DEC-115..DEC-123):** as 41 rotas migraram; o gate decide nos use cases lendo o `ActorRef`, e a
+  rota autentica, valida entrada, monta o ator e mapeia com `domainErrorResponse`. Restam na rota
+  apenas as autorizações **antes do parse** (`AssertCan*UseCase`: notifications B6-2b, schedules/bulk
+  B6-6, POST tasks B6-7) — preservam o par medido 403-antes-dos-400 de corpo — e os 400/404 legados
+  montados pela rota onde o contrato antigo era verbatim (ex.: 404 do GET issue/daily_log/tarefa).
+  Approve/Reject/subtasks de tarefa e lab-event/notice/schedule continuam com id cru de propósito:
+  a autoridade já morava nos use cases. O número antigo ("16") e a nota "nenhum use case checa
+  ator" estão superados.
+- **O cron é chamador sem ator de 3 use cases (medido 2026-10-05) — TODOS aplicados:**
+  `lib/services/cron-service.ts` chama `workExecution.listWorkSessions` (×2 com
+  `systemActor(SCHEDULED_PAUSE)` + ×1 com `NIGHTLY_SWEEP`, B6-5), `labOperations.pauseResponsibilityForUser`
+  (`systemActor(SCHEDULED_PAUSE)`, B6-6) e `reporting.resetWeeklyHoursHistory` (`WEEKLY_RESET`, B6-3).
+  A lição permanece: mover checagem para dentro de um use case chamado por rotina **sem** desenhar
+  o ator-de-sistema quebra a rotina, e o sintoma não aparece em teste de rota nenhum (DEC-54).
+  `work-execution` continua o módulo de wiring mais caro: a factory existe, mas instancia o use case
+  *inline por chamada* (`new ListWorkSessionsUseCase(...).execute(query)` nos bindings do módulo) —
+  o B6-5 migrou assim, como medido.
 - **`POST /api/purchases` só barra compra PARA TERCEIRO (medido 2026-10-05):** a regra da rota
   é `!canManagePurchases && targetUserId !== actor.id`, então um VOLUNTARIO comprando para si
   recebe 201 e só quem compra para outro recebe 403. Eu acreditava o contrário e o teste de
@@ -123,13 +126,16 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   **leitura** + contagem na aba **Tarefas** do painel admin (sem checkbox), (5) o par "subtask"
   duplicado sumiu dos dois diálogos (rótulo/título no topo, placeholder com exemplo
   `Ex.: Revisar a introdução`, botão **Adicionar subtask** virou só-ícone `Plus` com `aria-label`).
-- **Numeração de decisão é global e JÁ tem buraco (medido 2026-10-06):** DEC-01..29 clean-arch,
+- **Numeração de decisão é global e JÁ tem buraco (medido 2026-10-06, atualizado 2026-10-08):** DEC-01..29 clean-arch,
   DEC-30..49 plan-v3, DEC-50..54 B6/D4, DEC-55..60 plan-v4, **DEC-61..77 plan-v5** (reservadas pelo
   dono em `displayquest-v2/plan-v5/`, criado 2026-10-06 e ainda **não commitado**), DEC-78..95 plan-v4
   (V4-4, ASK-V4-06, V4-4b, V4-4c, V4-5a, V4-5b, V4-5c e V4-6b), **DEC-96..98 plan-v4 (2026-10-07,
   pós-encerramento: ASK-V4-33 — tira o filtro morto da tela de voluntários — e o lote POS-1 de pontuação
-  + trava de marcação)**. O V4-4 ia usar DEC-61..64 e colidiu; os 28
-  comentários de código foram renumerados. **Antes de abrir decisão nova, `grep` os três `STATE.json`.**
+  + trava de marcação)**, DEC-99..104 plan-v5, DEC-105..114 plan-v6, **DEC-115..123 clean-arch/B6-restante
+  (2026-10-08: B6-2c..B6-7 + acordos da retomada)**. O V4-4 ia usar DEC-61..64 e colidiu; os 28
+  comentários de código foram renumerados. **Antes de abrir decisão nova, `grep` os CINCO `STATE.json`
+  (clean-arch, plan-v3, plan-v4, plan-v5, plan-v6) — a nota antiga que dizia "três" está velha.
+  Próxima livre: DEC-124.**
 - **Subtask (V4-4, DEC-78..83 → regra atual = DEC-97/98):** tabela `task_subtasks` (sem FK para
   `users` — subtask não tem
   responsável próprio), base gravada em `tasks.points` = `10 + 5·n` (DEC-97) e **cada subtask CONCLUÍDA
