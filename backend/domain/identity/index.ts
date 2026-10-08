@@ -24,7 +24,7 @@ export {
   type Permission,
 } from "./permissions";
 export { hasFeatureAccess, hasPermission, rolesFor, rolesForFeature } from "./has-permission";
-export { assertPermission, requireActorPermission, ACCESS_DENIED_MESSAGE } from "./assert-permission";
+export { assertPermission, requireActorPermission, requireActorSelfOrPermission, ACCESS_DENIED_MESSAGE } from "./assert-permission";
 export {
   SYSTEM_REASONS,
   isSystemActor,

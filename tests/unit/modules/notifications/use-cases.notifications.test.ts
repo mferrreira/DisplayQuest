@@ -258,7 +258,7 @@ describe("PublishNotificationEventUseCase — gate de MANAGE_NOTIFICATIONS (D4, 
     const gateway = new FakeGateway();
     const useCase = new PublishNotificationEventUseCase(gateway, new FakeDirectory([1, 3]));
     const error = await useCase
-      .execute({ ...systemCommand, actor: userActor(["VOLUNTARIO"]) })
+      .execute({ ...systemCommand, actor: userActor(42, ["VOLUNTARIO"]) })
       .catch((e) => e);
     expect(error).toBeInstanceOf(Error);
     expect(error.message).toBe("Sem permissão para criar notificações");
@@ -269,7 +269,7 @@ describe("PublishNotificationEventUseCase — gate de MANAGE_NOTIFICATIONS (D4, 
     for (const roles of [["COORDENADOR"], ["GERENTE"]]) {
       const gateway = new FakeGateway();
       const useCase = new PublishNotificationEventUseCase(gateway, new FakeDirectory([1, 3]));
-      const result = await useCase.execute({ ...systemCommand, actor: userActor(roles) });
+      const result = await useCase.execute({ ...systemCommand, actor: userActor(42, roles) });
       expect(result.createdCount).toBe(1);
       expect(gateway.publishCalls).toHaveLength(1);
     }
@@ -281,7 +281,7 @@ describe("PublishNotificationEventUseCase — gate de MANAGE_NOTIFICATIONS (D4, 
     const gateway = new FakeGateway();
     const useCase = new PublishNotificationEventUseCase(gateway, new FakeDirectory([1, 3]));
     const error = await useCase
-      .execute({ ...systemCommand, title: "", actor: userActor(["VOLUNTARIO"]) })
+      .execute({ ...systemCommand, title: "", actor: userActor(42, ["VOLUNTARIO"]) })
       .catch((e) => e);
     expect(error.message).toBe("Sem permissão para criar notificações");
   });

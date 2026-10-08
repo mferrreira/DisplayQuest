@@ -17,6 +17,7 @@ Lotes fechados, cada um 1 commit revertível, todos em G0–G4:
 | B6-1b | gate do `cron/status` desce para `work-execution` (porta + adaptador sobre o singleton) | `eba53f8` |
 | B6-2a | 4 gates `MANAGE_REWARDS` descem (badges ×3, rewards ×4) + `assertPermission` no domínio | `b8e0039` |
 | B6-2b | gate de `MANAGE_NOTIFICATIONS` desce + **ator-de-sistema** (`ActorRef`, DEC-54) | `6d620bd` |
+| B6-2c | 3 rotas self-or-manage do gamification descem (DEC-115: `ActorRef.user` com `id`, `requireActorSelfOrPermission`, GET user-badges = leitura aberta por decisão do dono) | commit deste registro |
 
 Baseline de testes no encerramento do B6-2b (2026-10-05): 65/798 (início do B6) → 73/934 (2b);
 suíte completa **83/1017**. G0: 748/2817 → 764/2906.
@@ -27,12 +28,12 @@ suíte completa **83/1017**. G0: 748/2817 → 764/2906.
 B6 continuam todos verdes: `authorization-characterization.test.ts` 39/39 rodado ao vivo em
 2026-10-07.
 
-Restam **35 rotas** em 6 lotes — **41 originais − 6 já migradas** (`cron/status`, `badges` ×2,
-`rewards` ×2, `notifications`), re-conferrido com o mesmo grep em 2026-10-07:
+Restam **32 rotas** em 5 lotes — **41 originais − 9 já migradas** (`cron/status`, `badges` ×2,
+`rewards` ×2, `notifications`, `user-badges` ×2, `users/[id]/gamification`):
 
 | lote | módulo (composition) | rotas | arquivos |
 |---|---|---|---|
-| B6-2c | gamification | 3 | `user-badges`, `user-badges/[userId]/[badgeId]`, `users/[id]/gamification` |
+| ~~B6-2c~~ | ~~gamification~~ | ~~3~~ | ✅ fechado 2026-10-08 (DEC-115) |
 | B6-2d | store | 2 | `purchases`, `purchases/[id]` |
 | B6-3 | reporting + projectManagement | 8 | `weekly-reports` ×4, `weekly-hours-history`, `users/statistics`, `projects`, `projects/stats` |
 | B6-4 | userManagement | 8 | `users`, `users/[id]`, `[id]/status`, `[id]/roles`, `[id]/profile`, `[id]/points`, `[id]/project-hours`, `users/approve` |
@@ -40,9 +41,10 @@ Restam **35 rotas** em 6 lotes — **41 originais − 6 já migradas** (`cron/st
 | B6-6 | labOperations | 7 | `issues` ×4, `responsibilities` ×2, `schedules/bulk` |
 | B6-7 | taskManagement | 3 | `tasks`, `tasks/[id]`, `tasks/global-progress` |
 
-Os 6 lotes somam 35, e a distribuição por módulo bate **exatamente** com a do DEC-50 (user-management 8,
-reporting 7, lab-operations 7, work-execution 4, task-management 3; gamification 5 → 3 e store
-4 → 2 depois das migrações do B6-2a/2b). Os 3 call sites do cron ficam em B6-3
+Os 5 lotes restantes somam 32, e a distribuição por módulo bate **exatamente** com a do DEC-50
+(user-management 8, reporting 7, lab-operations 7, work-execution 4, task-management 3; gamification
+5 → 0 depois das migrações do B6-2a/2b/2c e store 4 → 2 depois do B6-2d). Os 3 call sites do cron
+ficam em B6-3
 (`resetWeeklyHoursHistory`/WEEKLY_RESET), B6-5 (`listWorkSessions`/NIGHTLY_SWEEP) e B6-6
 (`pauseResponsibilityForUser`/SCHEDULED_PAUSE) — como previsto no DEC-54.
 
@@ -68,13 +70,21 @@ reporting 7, lab-operations 7, work-execution 4, task-management 3; gamification
   nasceu no **formato certo** (rota só autentica e mapeia; a autoridade é
   `assertCanOperateSubtasks` em `internal/task-view.ts:207`, que checa `MANAGE_TASKS`/`MANAGE_USERS`
   + as portas da tarefa mãe). **Fora do D4** e serve de **modelo** do estado final dos lotes.
-- **`GET /api/user-badges` (decisão pendente do B6-2c) segue sem gate nenhum** — leitura aberta
-  de qualquer `userId`. A pergunta do dono (deixar aberta e fixar em teste, ou gatear = mudança
-  de comportamento) continua **em aberto** antes de executar o lote.
+- **`GET /api/user-badges` — RESPONDIDO pelo dono (2026-10-07) e executado no B6-2c:** leitura
+  aberta, só exige sessão. Fixado em teste (`user-badges-authorization.test.ts`): se algum dia
+  ganhar gate, o teste quebra.
 
-## B6-2c — as 3 rotas self-or-manage
+## B6-2c — as 3 rotas self-or-manage ✅ EXECUTADO 2026-10-08 (DEC-115)
 
-Medidas hoje, exatamente como estão:
+O que a execução fez, além do que a medição abaixo previa: `AwardBadgeCommand`/`RemoveUserBadge`
+passaram a exigir `actor: ActorRef`; `AssertCanManageUserBadgesUseCase` é chamado pela rota ANTES
+de ler corpo/params (as duas rotas validam depois do gate hoje); `ReadUserProgressionUseCase` foi
+separado de `GetUserProgressionUseCase` porque este último tem chamadores internos (award flows);
+`ActorRef.user` ganhou `id` e o domínio ganhou `requireActorSelfOrPermission`. A medição original
+estava certa nos três pontos: ordem diferente por rota, leitura aberta na primeira, nenhum chamador
+interno nos alvos.
+
+Medidas na época, exatamente como estavam:
 
 | rota | gate de hoje | ordem medida |
 |---|---|---|

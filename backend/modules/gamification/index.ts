@@ -1,7 +1,9 @@
 import { AwardFromTaskCompletionUseCase } from "@/backend/modules/gamification/application/use-cases/award-from-task-completion.use-case"
 import { AwardFromWorkSessionUseCase } from "@/backend/modules/gamification/application/use-cases/award-from-work-session.use-case"
+import { AssertCanManageUserBadgesUseCase } from "@/backend/modules/gamification/application/use-cases/assert-can-manage-user-badges.use-case"
 import { EvaluateUserBadgesUseCase } from "@/backend/modules/gamification/application/use-cases/evaluate-user-badges.use-case"
 import { GetUserProgressionUseCase } from "@/backend/modules/gamification/application/use-cases/get-user-progression.use-case"
+import { ReadUserProgressionUseCase } from "@/backend/modules/gamification/application/use-cases/read-user-progression.use-case"
 import {
   AwardBadgeUseCase,
   CreateBadgeUseCase,
@@ -51,6 +53,10 @@ export class GamificationModule {
   readonly listRecentUserBadges: UseCaseExecute<ListRecentUserBadgesUseCase>
   readonly awardBadge: UseCaseExecute<AwardBadgeUseCase>
   readonly removeUserBadge: UseCaseExecute<RemoveUserBadgeUseCase>
+  /** D4/B6-2c: o gate que a rota chama ANTES de ler corpo/params (ordem congelada em teste). */
+  readonly assertCanManageUserBadges: UseCaseExecute<AssertCanManageUserBadgesUseCase>
+  /** D4/B6-2c: self-or-manage sobre a progressão; o lookup sem ator continua em `getUserProgression`. */
+  readonly readUserProgression: UseCaseExecute<ReadUserProgressionUseCase>
 
   constructor(
     private readonly awardFromWorkSessionUseCase: AwardFromWorkSessionUseCase,
@@ -66,6 +72,8 @@ export class GamificationModule {
     private readonly listRecentUserBadgesUseCase: ListRecentUserBadgesUseCase,
     private readonly awardBadgeUseCase: AwardBadgeUseCase,
     private readonly removeUserBadgeUseCase: RemoveUserBadgeUseCase,
+    private readonly assertCanManageUserBadgesUseCase: AssertCanManageUserBadgesUseCase,
+    private readonly readUserProgressionUseCase: ReadUserProgressionUseCase,
   ) {
     this.awardFromWorkSession = this.awardFromWorkSessionUseCase.execute.bind(this.awardFromWorkSessionUseCase)
     this.awardFromTaskCompletion = this.awardFromTaskCompletionUseCase.execute.bind(this.awardFromTaskCompletionUseCase)
@@ -80,6 +88,8 @@ export class GamificationModule {
     this.listRecentUserBadges = this.listRecentUserBadgesUseCase.execute.bind(this.listRecentUserBadgesUseCase)
     this.awardBadge = this.awardBadgeUseCase.execute.bind(this.awardBadgeUseCase)
     this.removeUserBadge = this.removeUserBadgeUseCase.execute.bind(this.removeUserBadgeUseCase)
+    this.assertCanManageUserBadges = this.assertCanManageUserBadgesUseCase.execute.bind(this.assertCanManageUserBadgesUseCase)
+    this.readUserProgression = this.readUserProgressionUseCase.execute.bind(this.readUserProgressionUseCase)
   }
 }
 
@@ -134,5 +144,7 @@ export function createGamificationModule(options: GamificationModuleFactoryOptio
     new ListRecentUserBadgesUseCase(ports.userBadges),
     new AwardBadgeUseCase(ports.badges, ports.userBadges),
     new RemoveUserBadgeUseCase(ports.userBadges),
+    new AssertCanManageUserBadgesUseCase(),
+    new ReadUserProgressionUseCase(progression),
   )
 }

@@ -27,10 +27,15 @@
  * `systemActor(reason)` IS a bypass, and it is meant to be: a scheduled sweep has no meaningful
  * permission to hold, so inventing `SYSTEM_SWEEP` as a grant would be ceremony without security.
  * What makes it safe is that it cannot be reached from a request: `userActor` is what every route
- * builds, always from `auth.actor.roles`, and `tests/unit/domain/identity/system-actor.test.ts`
- * greps `app/api/**` to fail the build if a route ever calls `systemActor`. The `reason` is a
- * LABEL, not a runtime check — it is not consulted while deciding anything. It exists so the
+ * builds, always from `auth.actor.id` + `auth.actor.roles`, and
+ * `tests/unit/domain/identity/system-actor.test.ts` greps `app/api/**` to fail the build if a
+ * route ever calls `systemActor`. The `reason` is a LABEL, not a runtime check — it is not
+ * consulted while deciding anything. It exists so the
  * bypass is auditable: five call sites, each with a test naming it.
+ *
+ * B6-2c (DEC-115) added `id` to the `user` variant: `GET /api/users/[id]/gamification` moved a
+ * self-or-manage gate into its use case, and "self" is a comparison of ids — without `id` on the
+ * actor that rule could only be answered in the route, which is the place D4 is emptying.
  */
 /** The system routines that legitimately reach a use case with no person behind them. */
 export const SYSTEM_REASONS = {
@@ -47,14 +52,16 @@ export const SYSTEM_REASONS = {
 export type SystemReason = (typeof SYSTEM_REASONS)[keyof typeof SYSTEM_REASONS];
 
 export type ActorRef =
-  /** A person, identified by the roles their session carried. `unknown` on purpose: it arrives
-   *  straight from the session and `hasPermission` is documented never to throw on dirty input. */
-  | { readonly kind: "user"; readonly roles: unknown }
+  /** A person, identified by the id their session carried and by its roles. `roles` is
+   *  `unknown` on purpose: it arrives straight from the session and `hasPermission` is
+   *  documented never to throw on dirty input. `id` is what makes the *self* half of
+   *  self-or-manage expressible (`requireActorSelfOrPermission`) — B6-2c, DEC-115. */
+  | { readonly kind: "user"; readonly id: number; readonly roles: unknown }
   | { readonly kind: "system"; readonly reason: SystemReason };
 
-/** The route-side constructor. `roles` comes from the session and from nowhere else. */
-export function userActor(roles: unknown): ActorRef {
-  return { kind: "user", roles };
+/** The route-side constructor. `id` and `roles` come from the session and from nowhere else. */
+export function userActor(id: number, roles: unknown): ActorRef {
+  return { kind: "user", id, roles };
 }
 
 /** The system-side constructor. Never call this from a route — a test fails the build if you do. */

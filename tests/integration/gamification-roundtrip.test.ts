@@ -22,6 +22,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { prisma } from "@/lib/database/prisma";
 import { createGamificationModule } from "@/backend/modules/gamification";
+import { userActor } from "@/backend/domain";
 
 const gamification = createGamificationModule();
 
@@ -207,20 +208,22 @@ describe("G4 roundtrip — gamification (isolated test DB)", () => {
   });
 
   it("awardBadge manual: earnedBy = awardedBy; duplicado lanca 'Usuário já possui este badge'", async () => {
-    const userBadge = await gamification.awardBadge({ badgeId: manualBadgeId, userId, awardedBy: userId });
+    const actor = userActor(userId, MANAGER_ROLES);
+    const userBadge = await gamification.awardBadge({ badgeId: manualBadgeId, userId, awardedBy: userId, actor });
     expect(userBadge.earnedBy).toBe(userId);
 
-    await expect(gamification.awardBadge({ badgeId: manualBadgeId, userId })).rejects.toThrow("Usuário já possui este badge");
+    await expect(gamification.awardBadge({ badgeId: manualBadgeId, userId, actor })).rejects.toThrow("Usuário já possui este badge");
   });
 
   it("removeUserBadge remove; inexistente lanca 'Usuário não possui este badge'", async () => {
-    await gamification.removeUserBadge(userId, manualBadgeId);
+    const actor = userActor(userId, MANAGER_ROLES);
+    await gamification.removeUserBadge({ actor, userId, badgeId: manualBadgeId });
     const gone = await prisma.user_badges.findUnique({
       where: { userId_badgeId: { userId, badgeId: manualBadgeId } },
     });
     expect(gone).toBeNull();
 
-    await expect(gamification.removeUserBadge(userId, manualBadgeId)).rejects.toThrow("Usuário não possui este badge");
+    await expect(gamification.removeUserBadge({ actor, userId, badgeId: manualBadgeId })).rejects.toThrow("Usuário não possui este badge");
   });
 
   it("deleteBadge remove o badge (user_badges cascade com o badge); inexistente lanca 'Badge não encontrado'", async () => {

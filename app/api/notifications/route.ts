@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
 
     // D4/B6-2a: o ator vem da sessão e de mais nenhum lugar — é o que impede uma rota de
     // declarar um `systemActor` e furar o gate (há teste que falha o build se isso acontecer).
-    const actor = userActor(auth.actor.roles)
+    const actor = userActor(auth.actor.id, auth.actor.roles)
 
     // D4/B6-2b: o gate desceu para o domínio, mas a ORDEM não pode mudar. As 400 abaixo usam
     // mensagens de rota congeladas em teste, distintas das do use case, então elas não podem

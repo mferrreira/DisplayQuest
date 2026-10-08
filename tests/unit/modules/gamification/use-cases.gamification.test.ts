@@ -6,7 +6,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { DomainError, ForbiddenError, NotFoundError } from "@/backend/domain";
+import { DomainError, ForbiddenError, NotFoundError, userActor } from "@/backend/domain";
 import type { Badge, UserBadge } from "@/backend/domain";
 import { createGamificationModule } from "@/backend/modules/gamification";
 import type { BadgeCatalogPort } from "@/backend/modules/gamification/application/ports/badge-catalog.port";
@@ -485,13 +485,14 @@ describe("badge management use cases", () => {
   });
 
   it("AwardBadgeUseCase: NotFound legado, Conflict legado, earnedBy = awardedBy || null", async () => {
-    await expect(module_.awardBadge({ badgeId: 999, userId: 1 })).rejects.toThrow("Badge não encontrado");
+    const actor = userActor(1, MANAGER_ROLES);
+    await expect(module_.awardBadge({ badgeId: 999, userId: 1, actor })).rejects.toThrow("Badge não encontrado");
 
     fakes.badges.store.push({ id: 10, name: "a", description: "d", category: "social", isActive: true, createdBy: 1 });
-    const ub = await module_.awardBadge({ badgeId: 10, userId: 1, awardedBy: 7 });
+    const ub = await module_.awardBadge({ badgeId: 10, userId: 1, awardedBy: 7, actor });
     expect(ub.earnedBy).toBe(7);
 
-    const conflict = module_.awardBadge({ badgeId: 10, userId: 1 });
+    const conflict = module_.awardBadge({ badgeId: 10, userId: 1, actor });
     await expect(conflict).rejects.toThrow("Usuário já possui este badge");
     try {
       await conflict;
@@ -500,10 +501,22 @@ describe("badge management use cases", () => {
     }
   });
 
+  it("B6-2c (D4): sem MANAGE_USERS award/remove levam ForbiddenError e não tocam a porta", async () => {
+    const stranger = userActor(9, NO_MANAGEMENT_ROLES);
+    const storeBefore = fakes.userBadges.store.length;
+
+    await expect(module_.awardBadge({ badgeId: 10, userId: 1, actor: stranger })).rejects.toThrow("Acesso negado");
+    await expect(module_.removeUserBadge({ actor: stranger, userId: 1, badgeId: 10 })).rejects.toThrow("Acesso negado");
+    // o gate é a PRIMEIRA linha dos dois: nenhuma porta chega a ser consultada
+    expect(fakes.userBadges.store).toHaveLength(storeBefore);
+    expect(fakes.badges.store).toHaveLength(0);
+  });
+
   it("RemoveUserBadgeUseCase: NotFound legado; existente remove por id", async () => {
-    await expect(module_.removeUserBadge(1, 999)).rejects.toThrow("Usuário não possui este badge");
+    const actor = userActor(1, MANAGER_ROLES);
+    await expect(module_.removeUserBadge({ actor, userId: 1, badgeId: 999 })).rejects.toThrow("Usuário não possui este badge");
     fakes.userBadges.store.push({ id: 42, userId: 1, badgeId: 10, earnedAt: new Date(), earnedBy: null });
-    await module_.removeUserBadge(1, 10);
+    await module_.removeUserBadge({ actor, userId: 1, badgeId: 10 });
     expect(fakes.userBadges.store).toHaveLength(0);
   });
 });

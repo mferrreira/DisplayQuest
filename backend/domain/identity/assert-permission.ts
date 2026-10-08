@@ -57,3 +57,28 @@ export function requireActorPermission(
   if (actor.kind === "system") return;
   assertPermission(actor.roles, permission, message);
 }
+
+/**
+ * requireActorSelfOrPermission — "age em si mesmo OU tem a permissão" (D4, B6-2c, DEC-115).
+ *
+ * The typed form of `ensureSelfOrPermission`, which 7 routes still answer themselves and which
+ * already delegated to `identityAccess().canAccessSelfOrPermission`. The rule is byte-identical
+ * to the gateway it replaces: `actor.id === ownerUserId` passes, otherwise the permission decides
+ * (`rbac-identity-access.gateway.ts:15-21`). What changed is only where it lives — a route can no
+ * longer read the answer without going through this function.
+ *
+ * `actor.id` is why the `user` variant of `ActorRef` carries an id: "self" is a comparison, and
+ * the comparison belongs to the person's identity, which the route builds from the session and
+ * hands over. A `system` actor passes, like in `requireActorPermission` — there is no person to
+ * be "self", and the bypass is the same declared one (see `actor-ref.ts`).
+ */
+export function requireActorSelfOrPermission(
+  actor: ActorRef,
+  ownerUserId: number,
+  permission: Permission,
+  message: string = ACCESS_DENIED_MESSAGE,
+): void {
+  if (actor.kind === "system") return;
+  if (actor.id === ownerUserId) return;
+  assertPermission(actor.roles, permission, message);
+}

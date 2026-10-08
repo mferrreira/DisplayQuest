@@ -21,7 +21,7 @@ import { userActor } from "@/backend/domain";
  * que os roundtrips de reward/badge do B6-2a passaram `actorRoles: ["COORDENADOR"]`. O caminho de
  * sistema é coberto pelos testes de use case.
  */
-const managerActor = userActor(["COORDENADOR"]);
+const managerActor = userActor(1, ["COORDENADOR"]);
 
 const notificationsModule = createNotificationsModule();
 const createdIds: number[] = [];

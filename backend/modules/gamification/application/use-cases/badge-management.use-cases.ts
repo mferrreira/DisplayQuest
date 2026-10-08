@@ -1,10 +1,11 @@
-import type { Badge, UserBadge } from "@/backend/domain"
+import type { ActorRef, Badge, UserBadge } from "@/backend/domain"
 import {
   ConflictError,
   NotFoundError,
   ValidationError,
   applyBadgeUpdate,
   assertPermission,
+  requireActorPermission,
   validateBadgeCreateInput,
 } from "@/backend/domain"
 import type {
@@ -123,6 +124,12 @@ export class AwardBadgeUseCase {
   ) {}
 
   async execute(command: AwardBadgeCommand): Promise<UserBadge> {
+    // B6-2c (D4): o gate de MANAGE_USERS desceu da rota para aqui. A rota legacy chamava
+    // `hasPermission` ANTES de ler o corpo, então quem não tinha permissão recebia 403 mesmo com
+    // corpo vazio — `assertCanManageUserBadges` é quem segura essa ordem antes do parse; este
+    // assert é a garantia para qualquer outro chamador (padrão do B6-2b).
+    requireActorPermission(command.actor, "MANAGE_USERS")
+
     const badge = await this.badges.findById(command.badgeId)
     if (!badge) {
       throw new NotFoundError("Badge não encontrado")
@@ -141,11 +148,18 @@ export class AwardBadgeUseCase {
   }
 }
 
+/**
+ * B6-2c (D4): o gate de MANAGE_USERS também desceu para cá, e a validação dos params ficou na
+ * rota DEPOIS dele — a ordem medida era gate → 400 "Parâmetros inválidos", e `assertCanManageUserBadges`
+ * (chamado antes de a rota tocar em `context.params`) é o que a preserva.
+ */
 export class RemoveUserBadgeUseCase {
   constructor(private readonly userBadges: UserBadgePort) {}
 
-  async execute(userId: number, badgeId: number): Promise<void> {
-    const userBadge = await this.userBadges.findByUserAndBadge(userId, badgeId)
+  async execute(command: { actor: ActorRef; userId: number; badgeId: number }): Promise<void> {
+    requireActorPermission(command.actor, "MANAGE_USERS")
+
+    const userBadge = await this.userBadges.findByUserAndBadge(command.userId, command.badgeId)
     if (!userBadge) {
       throw new NotFoundError("Usuário não possui este badge")
     }

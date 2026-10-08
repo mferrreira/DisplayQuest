@@ -21,12 +21,18 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
-import { ConflictError, NotFoundError, ValidationError } from "@/backend/domain";
+import {
+  ConflictError,
+  NotFoundError,
+  ValidationError,
+  requireActorPermission,
+  requireActorSelfOrPermission,
+} from "@/backend/domain";
+import type { ActorRef } from "@/backend/domain";
 
 const mocks = vi.hoisted(() => {
   const state = {
     throwKind: null as null | "validation" | "notfound-badge" | "notfound-user" | "conflict" | "plain",
-    canManageUsers: true,
   };
   const fakeModule = {
     listBadges: async () => {
@@ -61,6 +67,17 @@ const mocks = vi.hoisted(() => {
       if (state.throwKind === "notfound-user") throw new NotFoundError("Usuário não encontrado");
       return { userId, points: 250, xp: 250, level: 2, elo: "BRONZE", nextLevelXp: 300, progressToNextLevel: 50 };
     },
+    // B6-2c (D4): os dois gates que desceram para o módulo. Este duplo NÃO reimplementa a
+    // regra — ele delega nas funções do domínio (DEC-90), com o ator que a rota construiu a
+    // partir da sessão. O que prova que a produção decide certo é o módulo REAL de
+    // tests/unit/api/user-badges-authorization.test.ts; aqui se fixa o MAPEAMENTO HTTP.
+    assertCanManageUserBadges: async (command: { actor: ActorRef }) => {
+      requireActorPermission(command.actor, "MANAGE_USERS");
+    },
+    readUserProgression: async (command: { actor: ActorRef; userId: number }) => {
+      requireActorSelfOrPermission(command.actor, command.userId, "MANAGE_USERS");
+      return await fakeModule.getUserProgression(command.userId);
+    },
   };
   const auth = {
     actor: { id: 42, name: "Ana", roles: ["COORDENADOR"] } as { id: number; name: string; roles: string[] },
@@ -72,14 +89,11 @@ vi.mock("@/backend/composition/root", () => ({
   getBackendComposition: () => ({ gamification: mocks.fakeModule }),
 }));
 
+// Só `requireApiActor` é dobrado. `ensurePermission`/`ensureSelfOrPermission`/`hasPermission`
+// saíram destas rotas no B6-2a/B6-2c: o mock deles foi REMOVIDO de propósito, para que uma rota
+// que venha a chamá-los de novo caia em `undefined is not a function` em vez de passar em silêncio.
 vi.mock("@/lib/auth/api-guard", () => ({
   requireApiActor: async () => ({ actor: mocks.auth.actor }),
-  ensurePermission: () => null,
-  ensureSelfOrPermission: () => null,
-}));
-
-vi.mock("@/lib/auth/rbac", () => ({
-  hasPermission: () => mocks.state.canManageUsers,
 }));
 
 import { GET as badgesList, POST as badgesCreate } from "@/app/api/badges/route";
@@ -106,7 +120,9 @@ async function bodyOf(response: Response) {
 
 beforeEach(() => {
   mocks.state.throwKind = null;
-  mocks.state.canManageUsers = true;
+  // gestor por default; os casos de negação trocam o papel da sessão, que é de onde o gate
+  // (agora no módulo) tira os roles.
+  mocks.auth.actor.roles = ["COORDENADOR"];
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
@@ -215,11 +231,13 @@ describe("GET/POST /api/user-badges", () => {
     expect(body.recentBadges.map((b: { badgeId: number }) => b.badgeId)).toEqual([12, 11]);
   });
 
-  it("POST sem MANAGE_USERS => 403 'Acesso negado' (congelado)", async () => {
-    mocks.state.canManageUsers = false;
+  it("POST sem MANAGE_USERS => 403 'Acesso negado' (mensagem congelada; corpo ganha code/details, DEC-53)", async () => {
+    // O gate real é o do módulo (proven em user-badges-authorization.test.ts); aqui o duplo
+    // delega na mesma função do domínio e este caso fixa o MAPEAMENTO: ForbiddenError -> 403.
+    mocks.auth.actor.roles = ["VOLUNTARIO"];
     const response = await userBadgesAward(makeRequest("/api/user-badges", { method: "POST", body: { badgeId: 10, userId: 7 } }));
     expect(response.status).toBe(403);
-    expect(await bodyOf(response)).toEqual({ error: "Acesso negado" });
+    expect(await bodyOf(response)).toMatchObject({ error: "Acesso negado", code: "FORBIDDEN" });
   });
 
   it("POST ids invalidos => 400 'badgeId e userId são obrigatórios' (congelado)", async () => {

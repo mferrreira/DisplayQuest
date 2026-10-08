@@ -27,19 +27,20 @@ import {
   ForbiddenError,
   assertPermission,
   requireActorPermission,
+  requireActorSelfOrPermission,
   systemActor,
   userActor,
 } from "@/backend/domain";
 
 describe("requireActorPermission", () => {
   it("usuário com a permissão passa", () => {
-    expect(() => requireActorPermission(userActor(["COORDENADOR"]), "MANAGE_NOTIFICATIONS")).not.toThrow();
-    expect(() => requireActorPermission(userActor(["GERENTE"]), "MANAGE_NOTIFICATIONS")).not.toThrow();
+    expect(() => requireActorPermission(userActor(42, ["COORDENADOR"]), "MANAGE_NOTIFICATIONS")).not.toThrow();
+    expect(() => requireActorPermission(userActor(42, ["GERENTE"]), "MANAGE_NOTIFICATIONS")).not.toThrow();
   });
 
   it("usuário sem a_permissions leva ForbiddenError com a mensagem passada", () => {
     try {
-      requireActorPermission(userActor(["VOLUNTARIO"]), "MANAGE_NOTIFICATIONS", "Sem permissão para criar notificações");
+      requireActorPermission(userActor(42, ["VOLUNTARIO"]), "MANAGE_NOTIFICATIONS", "Sem permissão para criar notificações");
       throw new Error("deveria ter lançado ForbiddenError");
     } catch (error) {
       expect(error).toBeInstanceOf(ForbiddenError);
@@ -50,7 +51,7 @@ describe("requireActorPermission", () => {
   it("a mensagem default é a mesma de assertPermission (bytes idênticos)", () => {
     const viaActor = (() => {
       try {
-        requireActorPermission(userActor(["VOLUNTARIO"]), "MANAGE_REWARDS");
+        requireActorPermission(userActor(42, ["VOLUNTARIO"]), "MANAGE_REWARDS");
       } catch (error) {
         return (error as Error).message;
       }
@@ -78,7 +79,7 @@ describe("requireActorPermission", () => {
 
   it("roles sujos NEGAM, não estouram (mesmo contrato de hasPermission)", () => {
     for (const dirty of [undefined, null, "COORDENADOR", 42, {}, [], ["DESCONHECIDO"]]) {
-      expect(() => requireActorPermission(userActor(dirty), "MANAGE_USERS")).toThrow(ForbiddenError);
+      expect(() => requireActorPermission(userActor(42, dirty), "MANAGE_USERS")).toThrow(ForbiddenError);
     }
   });
 
@@ -87,6 +88,44 @@ describe("requireActorPermission", () => {
     // existe para auditoria — cinco call sites, cada um com teste nomeando o motivo.
     expect(() => requireActorPermission(systemActor("SYSTEM_EVENT"), "MANAGE_USERS")).not.toThrow();
     expect(() => requireActorPermission(systemActor("WEEKLY_RESET"), "MANAGE_USERS")).not.toThrow();
+  });
+});
+
+describe("requireActorSelfOrPermission — o gate que saiu de GET /api/users/[id]/gamification (B6-2c, DEC-115)", () => {
+  it("o dono lê o próprio recurso SEM ter a permissão", () => {
+    expect(() => requireActorSelfOrPermission(userActor(7, ["VOLUNTARIO"]), 7, "MANAGE_USERS")).not.toThrow();
+    // o papel nem importa quando os ids batem — é a mesma decisão de
+    // `rbac-identity-access.gateway.ts:16`
+    expect(() => requireActorSelfOrPermission(userActor(7, []), 7, "MANAGE_USERS")).not.toThrow();
+  });
+
+  it("outro sem a permissão leva ForbiddenError com a mensagem passada", () => {
+    try {
+      requireActorSelfOrPermission(userActor(42, ["VOLUNTARIO"]), 7, "MANAGE_USERS");
+      throw new Error("deveria ter lançado ForbiddenError");
+    } catch (error) {
+      expect(error).toBeInstanceOf(ForbiddenError);
+      expect((error as ForbiddenError).message).toBe("Acesso negado");
+    }
+    expect(() =>
+      requireActorSelfOrPermission(userActor(42, ["VOLUNTARIO"]), 7, "MANAGE_USERS", "Não autorizado"),
+    ).toThrow("Não autorizado");
+  });
+
+  it("outro COM a permissão passa (COORDENADOR/GERENTE leem de qualquer um)", () => {
+    for (const roles of [["COORDENADOR"], ["GERENTE"]]) {
+      expect(() => requireActorSelfOrPermission(userActor(42, roles), 7, "MANAGE_USERS")).not.toThrow();
+    }
+  });
+
+  it("ator de sistema passa — mesmo sem ser 'dono' de nada (o mesmo bypass nomeado)", () => {
+    expect(() => requireActorSelfOrPermission(systemActor("WEEKLY_RESET"), 7, "MANAGE_USERS")).not.toThrow();
+  });
+
+  it("roles sujos NEGAM quando o ator não é o dono, sem estourar", () => {
+    for (const dirty of [undefined, null, "COORDENADOR", 42, {}, [], ["DESCONHECIDO"]]) {
+      expect(() => requireActorSelfOrPermission(userActor(99, dirty), 7, "MANAGE_USERS")).toThrow(ForbiddenError);
+    }
   });
 });
 
