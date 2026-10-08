@@ -14,7 +14,9 @@ import {
   ListPurchasesUseCase,
   PatchPurchaseUseCase,
   UpdatePurchaseUseCase,
+  AssertCanManagePurchasesUseCase,
 } from "@/backend/modules/store/application/use-cases/purchase.use-cases"
+import type { ActorRef } from "@/backend/domain"
 import type { PurchaseRepository } from "@/backend/modules/store/application/ports/purchase.repository"
 import type { RewardRepository } from "@/backend/modules/store/application/ports/reward.repository"
 import { PrismaPurchaseRepository } from "@/backend/modules/store/infrastructure/repositories/prisma-purchase.repository"
@@ -38,6 +40,7 @@ export class StoreModule {
     private readonly patchRewardUseCase: PatchRewardUseCase,
     private readonly deleteRewardUseCase: DeleteRewardUseCase,
     private readonly listPurchasesUseCase: ListPurchasesUseCase,
+    private readonly assertCanManagePurchasesUseCase: AssertCanManagePurchasesUseCase,
     private readonly getPurchaseUseCase: GetPurchaseUseCase,
     private readonly createPurchaseUseCase: CreatePurchaseUseCase,
     private readonly updatePurchaseUseCase: UpdatePurchaseUseCase,
@@ -57,14 +60,24 @@ export class StoreModule {
   readonly deleteReward = (command: { actorRoles: unknown; rewardId: number }) =>
     this.deleteRewardUseCase.execute(command)
 
+  // B6-2d (D4): os seis metodos de compra passaram a levar o ator — a autoridade mora nos
+  // use cases (self-or-manage em create/get/cancel, MANAGE_PURCHASES puro em update/delete/
+  // demais actions). `assertCanManagePurchases` existe porque o gate do PUT rodava ANTES de
+  // o corpo ser lido: a rota autoriza antes do parse e updatePurchase recheca no proprio ator.
   readonly listPurchases = (input: ListPurchasesScopeInput): Promise<ListPurchasesResult> =>
     this.listPurchasesUseCase.execute(input)
-  readonly getPurchase = (purchaseId: number) => this.getPurchaseUseCase.execute(purchaseId)
-  readonly createPurchase = (data: Record<string, unknown>) => this.createPurchaseUseCase.execute(data)
-  readonly updatePurchase = (purchaseId: number, data: Record<string, unknown>) =>
-    this.updatePurchaseUseCase.execute(purchaseId, data)
-  readonly patchPurchase = (command: PatchPurchaseCommand) => this.patchPurchaseUseCase.execute(command)
-  readonly deletePurchase = (purchaseId: number) => this.deletePurchaseUseCase.execute(purchaseId)
+  readonly assertCanManagePurchases = (command: { actor: ActorRef }): void =>
+    this.assertCanManagePurchasesUseCase.execute(command)
+  readonly getPurchase = (actor: ActorRef, purchaseId: number) =>
+    this.getPurchaseUseCase.execute(actor, purchaseId)
+  readonly createPurchase = (command: { actor: ActorRef; data: Record<string, unknown> }) =>
+    this.createPurchaseUseCase.execute(command)
+  readonly updatePurchase = (command: { actor: ActorRef; purchaseId: number; data: Record<string, unknown> }) =>
+    this.updatePurchaseUseCase.execute(command)
+  readonly patchPurchase = (command: PatchPurchaseCommand & { actor: ActorRef }) =>
+    this.patchPurchaseUseCase.execute(command)
+  readonly deletePurchase = (command: { actor: ActorRef; purchaseId: number }) =>
+    this.deletePurchaseUseCase.execute(command)
 }
 
 export interface StoreModulePorts {
@@ -90,6 +103,7 @@ export function createStoreModule(options: StoreModuleFactoryOptions = {}) {
     new PatchRewardUseCase(rewards),
     new DeleteRewardUseCase(rewards),
     new ListPurchasesUseCase(purchases),
+    new AssertCanManagePurchasesUseCase(),
     new GetPurchaseUseCase(purchases),
     new CreatePurchaseUseCase(purchases, rewards),
     updatePurchase,

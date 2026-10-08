@@ -10,10 +10,11 @@ export interface ListPurchasesQuery {
  * OND8-B4 — entrada de listPurchases com o ESCOPO do ator (A2): a resolução de escopo
  * (purchase-query-scope) passou a VIVER NO USE CASE (task OND8-B2 da allow-list); a rota
  * nao importa mais caminho interno do modulo.
+ * B6-2d (D4): o campo `canManagePurchases` (veredito calculado pela ROTA com hasPermission)
+ * saiu — a entrada leva o ActorRef e a regra decide a partir do ator.
  */
 export interface ListPurchasesScopeInput {
-  actorId: number
-  canManagePurchases: boolean
+  actor: import("@/backend/domain").ActorRef
   userId?: string | null
   rewardId?: string | null
   status?: string | null

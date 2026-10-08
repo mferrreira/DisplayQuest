@@ -28,13 +28,13 @@ suíte completa **83/1017**. G0: 748/2817 → 764/2906.
 B6 continuam todos verdes: `authorization-characterization.test.ts` 39/39 rodado ao vivo em
 2026-10-07.
 
-Restam **32 rotas** em 5 lotes — **41 originais − 9 já migradas** (`cron/status`, `badges` ×2,
-`rewards` ×2, `notifications`, `user-badges` ×2, `users/[id]/gamification`):
+Restam **30 rotas** em 4 lotes — **41 originais − 11 já migradas** (`cron/status`, `badges` ×2,
+`rewards` ×2, `notifications`, `user-badges` ×2, `users/[id]/gamification`, `purchases` ×2):
 
 | lote | módulo (composition) | rotas | arquivos |
 |---|---|---|---|
 | ~~B6-2c~~ | ~~gamification~~ | ~~3~~ | ✅ fechado 2026-10-08 (DEC-115) |
-| B6-2d | store | 2 | `purchases`, `purchases/[id]` |
+| ~~B6-2d~~ | ~~store~~ | ~~2~~ | ✅ fechado 2026-10-08 (gate cross-actor + escopo lendo o ActorRef) |
 | B6-3 | reporting + projectManagement | 8 | `weekly-reports` ×4, `weekly-hours-history`, `users/statistics`, `projects`, `projects/stats` |
 | B6-4 | userManagement | 8 | `users`, `users/[id]`, `[id]/status`, `[id]/roles`, `[id]/profile`, `[id]/points`, `[id]/project-hours`, `users/approve` |
 | B6-5 | workExecution | 4 | `work-sessions` ×2, `daily_logs` ×2 |
@@ -125,13 +125,20 @@ de `POST /api/user-badges`, e ela vem do `hasPermission` dobrado — ou seja, **
 `tests/unit/api/user-badges-authorization.test.ts` com módulo real sobre porta falsa, no molde de
 `badge-authorization.test.ts`.
 
-## B6-2d — `purchases` ×2 (o mais arriscado, ainda sem medição própria)
+## B6-2d — `purchases` ×2 ✅ EXECUTADO 2026-10-08
 
 Medido apenas no B6-0: a regra da rota é `!canManagePurchases && targetUserId !== actor.id`, então
 um **VOLUNTARIO comprando para si recebe 201** e só quem compra para terceiro recebe 403. O teste de
 caraterização refutou a minha crença anterior. Em autorização, escrever o teste antes de mover o
 gate. `listPurchases`/`createPurchase` ainda estão dobrados no teste de caraterização — quando o
 lote acontecer, trocam pelo módulo real.
+
+O que a execução confirmou e acrescentou: os 6 métodos das 2 rotas têm **quatro ordens diferentes**
+(POST 400→403; GET 404→403; PUT/DELETE 403→404; PATCH 404→gate-por-ação→400/409), o gate de POST é
+`requireActorSelfOrPermission`, o escopo A2 passou a ler o `ActorRef` (o veredito
+`canManagePurchases` pré-calculado pela rota era a dívida com outra grafia), e o PUT precisou de
+`AssertCanManagePurchasesUseCase` para preservar o 403-antes-do-parse (padrão do B6-2b). Registro
+completo em `STATE.json` (batch B6-2d).
 
 ## B6-5 — o cron, agora com resposta pronta
 

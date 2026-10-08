@@ -17,7 +17,7 @@
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { prisma } from "@/lib/database/prisma";
-import { ConflictError, NotFoundError, ValidationError } from "@/backend/domain";
+import { ConflictError, NotFoundError, userActor, ValidationError } from "@/backend/domain";
 import { createStoreModule } from "@/backend/modules/store";
 
 const store = createStoreModule();
@@ -28,8 +28,17 @@ const store = createStoreModule();
  * continua sendo o "Acesso negado" default). Este roundtrip exercita persistencia, nao
  * autorizacao — o ator e o proprio harness, e por isso ele se apresenta como COORDENADOR.
  * A negacao por papel e testada no use case (`tests/unit/modules/store/`).
+ *
+ * B6-2d (D4): os seis metodos de compra passaram a exigir ator. Dois atores de harness:
+ * `buyer` (o VOLUNTARIO da semente, comprando PARA SI — o caminho que nao precisa de
+ * MANAGE_PURCHASES) e `manager` (COORDENADOR, o unico que pode comprar PARA OUTRO, ler/
+ * atualizar/excluir compra alheia e fazer approve/reject/complete). Onde o teste anterior
+ * exercitava validacao de compra PARA OUTRO com um ator sem permissao, o ator agora e o
+ * manager — senao o gate (403) chegaria antes da validacao que o teste quer provar.
  */
 const MANAGER_ROLES = ["COORDENADOR"];
+let buyer = userActor(0, ["VOLUNTARIO"]);
+let manager = userActor(0, MANAGER_ROLES);
 
 const stamp = Date.now();
 let userId = 0;
@@ -69,6 +78,8 @@ describe("G4 roundtrip — store (isolated test DB)", () => {
     });
     userId = user.id;
     otherUserId = other.id;
+    buyer = userActor(userId, ["VOLUNTARIO"]);
+    manager = userActor(otherUserId, MANAGER_ROLES);
 
     const reward = await store.createReward({ actorRoles: MANAGER_ROLES, data: { name: ` G8 Kit ${stamp} `, price: 30, description: "kit de teste" } });
     rewardId = reward.id as number;
@@ -105,73 +116,77 @@ describe("G4 roundtrip — store (isolated test DB)", () => {
   });
 
   it("createPurchase: happy com debito + validacoes tipadas (NotFound/Validation)", async () => {
-    const purchase = await store.createPurchase({ userId, rewardId });
+    const purchase = await store.createPurchase({ actor: buyer, data: { userId, rewardId } });
     purchaseId = purchase.id as number;
     expect(purchase).toMatchObject({ userId, rewardId, rewardName: `G8 Kit ${stamp}`, price: 25, status: "pending" });
     expect(await points(userId)).toBe(75);
 
-    await expect(store.createPurchase({ userId: "abc", rewardId })).rejects.toThrow(ValidationError);
-    await expect(store.createPurchase({ userId: 999999, rewardId })).rejects.toThrow(NotFoundError);
-    await expect(store.createPurchase({ userId, rewardId: 999999 })).rejects.toThrow(NotFoundError);
-    await expect(store.createPurchase({ userId, rewardId: offRewardId })).rejects.toThrow(ValidationError);
+    // "PARA OUTRO" e "userId invalido" so chegam na validacao de compra com quem PODE comprar
+    // para outro (gate 403 viria antes) — o ator dessas chamadas e o manager.
+    await expect(store.createPurchase({ actor: manager, data: { userId: "abc", rewardId } })).rejects.toThrow(ValidationError);
+    await expect(store.createPurchase({ actor: manager, data: { userId: 999999, rewardId } })).rejects.toThrow(NotFoundError);
+    await expect(store.createPurchase({ actor: buyer, data: { userId, rewardId: 999999 } })).rejects.toThrow(NotFoundError);
+    await expect(store.createPurchase({ actor: buyer, data: { userId, rewardId: offRewardId } })).rejects.toThrow(ValidationError);
 
-    await expect(store.createPurchase({ userId: otherUserId, rewardId })).rejects.toThrow(ValidationError);
+    await expect(store.createPurchase({ actor: manager, data: { userId: otherUserId, rewardId } })).rejects.toThrow(ValidationError);
     expect(await points(otherUserId)).toBe(5);
   });
 
   it("listPurchases: escopo A2 no use case (deny preservado) + proprias compras", async () => {
-    const own = await store.listPurchases({ actorId: userId, canManagePurchases: false });
+    const own = await store.listPurchases({ actor: buyer });
     expect(own.denied).toBe(false);
     if (own.denied) throw new Error("escopo deveria permitir as proprias compras")
     expect(own.purchases.some((p) => p.id === purchaseId)).toBe(true);
 
-    const denyOther = await store.listPurchases({ actorId: userId, canManagePurchases: false, userId: String(otherUserId) });
+    const denyOther = await store.listPurchases({ actor: buyer, userId: String(otherUserId) });
     expect(denyOther).toMatchObject({ denied: true, message: "Acesso negado" });
 
-    const denyGlobal = await store.listPurchases({ actorId: userId, canManagePurchases: false, status: "pending" });
+    const denyGlobal = await store.listPurchases({ actor: buyer, status: "pending" });
     expect(denyGlobal).toMatchObject({ denied: true, message: "Acesso negado" });
 
-    const all = await store.listPurchases({ actorId: otherUserId, canManagePurchases: true });
+    const all = await store.listPurchases({ actor: manager });
     expect(all.denied).toBe(false);
   });
 
   it("patchPurchase: reject com refund (QUIRK-8S5) + guards tipados", async () => {
-    const rejected = await store.patchPurchase({ purchaseId, action: "reject" });
+    // approve/reject/complete exigem MANAGE_PURCHASES ate para o dono (medido na rota legada);
+    // o ator e o manager. A negacao por papel e testada em use-cases.purchase-authorization.
+    const rejected = await store.patchPurchase({ actor: manager, purchaseId, action: "reject" });
     expect(rejected.status).toBe("rejected");
     expect(await points(userId)).toBe(100); // reembolso pelo preco congelado no snapshot (25)
 
-    await expect(store.patchPurchase({ purchaseId, action: "approve" })).rejects.toThrow(ConflictError);
-    await expect(store.patchPurchase({ purchaseId, action: "complete" })).rejects.toThrow(ConflictError);
+    await expect(store.patchPurchase({ actor: manager, purchaseId, action: "approve" })).rejects.toThrow(ConflictError);
+    await expect(store.patchPurchase({ actor: manager, purchaseId, action: "complete" })).rejects.toThrow(ConflictError);
   });
 
   it("updatePurchase cego (QUIRK-8S4) + approve->complete->cancel guardado + delete", async () => {
-    const second = await store.createPurchase({ userId, rewardId });
+    const second = await store.createPurchase({ actor: buyer, data: { userId, rewardId } });
     expect(await points(userId)).toBe(75);
 
-    const approved = await store.patchPurchase({ purchaseId: second.id as number, action: "approve" });
+    const approved = await store.patchPurchase({ actor: manager, purchaseId: second.id as number, action: "approve" });
     expect(approved.status).toBe("approved");
-    const completed = await store.patchPurchase({ purchaseId: second.id as number, action: "complete" });
+    const completed = await store.patchPurchase({ actor: manager, purchaseId: second.id as number, action: "complete" });
     expect(completed.status).toBe("completed");
-    await expect(store.patchPurchase({ purchaseId: second.id as number, action: "cancel" })).rejects.toThrow(ConflictError);
+    await expect(store.patchPurchase({ actor: manager, purchaseId: second.id as number, action: "cancel" })).rejects.toThrow(ConflictError);
 
     // update cego: escreve status arbitrario SEM guardas (legado)
-    const blind = await store.updatePurchase(second.id as number, { status: "qualquer-coisa" });
+    const blind = await store.updatePurchase({ actor: manager, purchaseId: second.id as number, data: { status: "qualquer-coisa" } });
     expect(blind.status).toBe("qualquer-coisa");
 
     // cancel agora passa (status != completed) e NAO reembolsa (status nao-pending/approved)
-    const cancelled = await store.patchPurchase({ purchaseId: second.id as number, action: "cancel" });
+    const cancelled = await store.patchPurchase({ actor: manager, purchaseId: second.id as number, action: "cancel" });
     expect(cancelled.status).toBe("cancelled");
     expect(await points(userId)).toBe(75);
 
-    await store.deletePurchase(second.id as number);
-    await store.deletePurchase(purchaseId);
-    expect(await store.getPurchase(purchaseId)).toBeNull();
+    await store.deletePurchase({ actor: manager, purchaseId: second.id as number });
+    await store.deletePurchase({ actor: manager, purchaseId });
+    expect(await store.getPurchase(manager, purchaseId)).toBeNull();
 
     // FK: deleteReward com compra existente -> P2003 propagado (compra de outro usuario)
     await store.patchReward({ actorRoles: MANAGER_ROLES, rewardId: offRewardId, action: "toggle-availability" }) // disponivel p/ compra
-    const blocking = await store.createPurchase({ userId: otherUserId, rewardId: offRewardId });
+    const blocking = await store.createPurchase({ actor: manager, data: { userId: otherUserId, rewardId: offRewardId } });
     await expect(store.deleteReward({ actorRoles: MANAGER_ROLES, rewardId: offRewardId })).rejects.toThrow(/Foreign key constraint violated|P2003/);
-    await store.deletePurchase(blocking.id as number);
+    await store.deletePurchase({ actor: manager, purchaseId: blocking.id as number });
     await store.deleteReward({ actorRoles: MANAGER_ROLES, rewardId: offRewardId });
     expect(await store.getReward(offRewardId)).toBeNull();
   });

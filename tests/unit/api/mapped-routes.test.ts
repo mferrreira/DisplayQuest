@@ -16,10 +16,14 @@ import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "@
 
 const mocks = vi.hoisted(() => {
   const fakeStore = {
-    getPurchase: async (id: number): Promise<{ id: number; userId: number; status: string } | null> => ({ id, userId: 42, status: "pending" }),
-    updatePurchase: async (id: number) => ({ id }),
-    patchPurchase: async (id: number) => ({ id }),
-    deletePurchase: async () => undefined,
+    // B6-2d: as assinaturas agora levam ator (os gates moram nos use cases; aqui o duplo é
+    // o caminho do MAPPER, e o actor é ignorado de propósito — a autorização é testada em
+    // purchases-authorization.test.ts com o módulo real).
+    getPurchase: async (_actor: unknown, id: number): Promise<{ id: number; userId: number; status: string } | null> => ({ id, userId: 42, status: "pending" }),
+    assertCanManagePurchases: (_command: unknown) => undefined,
+    updatePurchase: async (_command: unknown) => ({ id: 1 }),
+    patchPurchase: async (_command: unknown) => ({ id: 1 }),
+    deletePurchase: async (_command: unknown) => undefined,
   };
   const fakeUsers = {
     listUserStatistics: async () => [],
@@ -58,9 +62,9 @@ vi.mock("@/lib/auth/api-guard", () => ({
   ensureSelfOrPermission: () => null,
 }));
 
-vi.mock("@/lib/auth/rbac", () => ({
-  hasPermission: () => true,
-}));
+// B6-2d: o mock de `@/lib/auth/rbac` (hasPermission) saiu — nenhuma rota deste arquivo importa
+// rbac desde que os gates desceram para os use cases. Se uma rota voltar a importar, o teste
+// falha alto em vez de receber `true` de graça (mesmo motivo do B6-2c em gamification).
 
 // O cron-service não é mais mockado aqui de propósito (B6-1b): ele só entrava no grafo porque a
 // rota importava o singleton. O seam `createCronOperationsAdapter` cobre esse caminho agora, e o
@@ -92,20 +96,20 @@ beforeEach(() => {
   mocks.behavior.storeError = null;
   mocks.behavior.usersError = null;
   mocks.behavior.purchaseNull = false;
-  mocks.fakeStore.getPurchase = async (id: number) => {
+  mocks.fakeStore.getPurchase = async (_actor: unknown, id: number) => {
     if (mocks.behavior.storeError) throw mocks.behavior.storeError;
     if (mocks.behavior.purchaseNull) return null;
     return { id, userId: 42, status: "pending" };
   };
-  mocks.fakeStore.updatePurchase = async (id: number) => {
+  mocks.fakeStore.updatePurchase = async (_command: unknown) => {
     if (mocks.behavior.storeError) throw mocks.behavior.storeError;
-    return { id };
+    return { id: 1 };
   };
-  mocks.fakeStore.patchPurchase = async (id: number) => {
+  mocks.fakeStore.patchPurchase = async (_command: unknown) => {
     if (mocks.behavior.storeError) throw mocks.behavior.storeError;
-    return { id };
+    return { id: 1 };
   };
-  mocks.fakeStore.deletePurchase = async () => {
+  mocks.fakeStore.deletePurchase = async (_command: unknown) => {
     if (mocks.behavior.storeError) throw mocks.behavior.storeError;
   };
   mocks.fakeUsers.listUserStatistics = async () => {

@@ -11,7 +11,17 @@
  *
  * O tipo do query é declarado localmente (RG-01: o core não importa contratos de módulo);
  * é estruturalmente idêntico a `ListPurchasesQuery` do módulo.
+ *
+ * B6-2d (D4): a entrada passou a levar o `ActorRef` em vez do veredito `canManagePurchases`
+ * que a ROTA calculava com `hasPermission` e entregava pronto. O veredito pré-calculado era
+ * exatamente a dívida do D4 — a decisão morava na rota e o use case só obedecia. A regra
+ * agora decide a partir do ator: `user` passa pela matriz de permissões; `system` pode
+ * (mesmo bypass declarado de `requireActorPermission`, DEC-54 — medido: nenhuma rotina de
+ * sistema chama listPurchases, o ramo existe só para o tipo do ator ser honesto).
+ * O deny continua `{ deny, message }` em vez de lançar: é resolução de escopo, não gate
+ * único, e preserva o corpo 403 legado EXATO { error: "Acesso negado" } que a rota mapeia.
  */
+import { hasPermission, isSystemActor, type ActorRef } from "@/backend/domain/identity";
 
 export interface PurchaseQueryScope {
   userId?: number
@@ -22,8 +32,7 @@ export interface PurchaseQueryScope {
 }
 
 export interface PurchaseScopeInput {
-  actorId: number
-  canManagePurchases: boolean
+  actor: ActorRef
   userId?: string | null
   rewardId?: string | null
   status?: string | null
@@ -36,15 +45,21 @@ export type PurchaseScopeResult =
   | { deny: false; query: PurchaseQueryScope }
 
 export function resolvePurchaseQueryScope(input: PurchaseScopeInput): PurchaseScopeResult {
+  const canManagePurchases =
+    isSystemActor(input.actor) || hasPermission(input.actor.roles, "MANAGE_PURCHASES")
+  // `actorId` só é lido nos ramos em que `canManagePurchases` é false — e esses ramos são
+  // inalcançáveis para um system actor (ele sempre pode), então o NaN é unreachable, não rota.
+  const actorId = input.actor.kind === "user" ? input.actor.id : Number.NaN
+
   if (input.userId) {
     const targetId = Number(input.userId)
-    if (!input.canManagePurchases && (Number.isNaN(targetId) || targetId !== input.actorId)) {
+    if (!canManagePurchases && (Number.isNaN(targetId) || targetId !== actorId)) {
       return { deny: true, message: "Acesso negado" }
     }
     return { deny: false, query: { userId: targetId } }
   }
 
-  if (!input.canManagePurchases) {
+  if (!canManagePurchases) {
     const hasGlobalFilter = Boolean(
       input.rewardId || input.status || (input.startDate && input.endDate),
     )
@@ -66,8 +81,8 @@ export function resolvePurchaseQueryScope(input: PurchaseScopeInput): PurchaseSc
     }
   }
 
-  if (input.canManagePurchases) {
+  if (canManagePurchases) {
     return { deny: false, query: {} }
   }
-  return { deny: false, query: { userId: input.actorId } }
+  return { deny: false, query: { userId: actorId } }
 }

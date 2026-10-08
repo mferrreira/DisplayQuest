@@ -51,7 +51,9 @@ const mocks = vi.hoisted(() => {
     issue: { id: 5, reporterId: 100, assigneeId: 200, status: "open", title: "Issue de teste" },
     issueExiste: true,
     canEndResponsibility: true,
-    listPurchasesDenied: null as null | string,
+    /** B6-2d: catálogo do duplo da porta de compras (ver o factory do composition root). */
+    purchases: [] as Array<Record<string, unknown>>,
+    purchaseSequence: 0,
     /** B6-2a: catálogo do duplo da porta de rewards (ver o factory do composition root). */
     rewards: [] as Array<Record<string, unknown>>,
     rewardSequence: 0,
@@ -91,17 +93,10 @@ const mocks = vi.hoisted(() => {
    * de existir no teste. Elas agora são os métodos do MÓDULO REAL sobre a porta falsa montada
    * no factory do composition root. É a mesma forma de `cron-status-roles.test.ts`.
    *
-   * `listPurchases`/`createPurchase` continuam dobrados porque o B6-2d ainda não aconteceu: lá
-   * a decisão é da ROTA (`hasPermission`), e o duplo é a costura certa. Quando o B6-2d mover o
-   * gate, estes dois também saem daqui para o módulo real.
+   * B6-2d (D4): `listPurchases`/`createPurchase` saíram também — a decisão desceu para os
+   * use cases (escopo A2 decide a partir do ActorRef; o gate cross-actor de POST mora em
+   * CreatePurchaseUseCase). O que resta dobrado aqui é a PORTA (memória), nunca o módulo.
    */
-  const store = {
-    listPurchases: async () =>
-      state.listPurchasesDenied
-        ? { denied: true, message: state.listPurchasesDenied }
-        : { denied: false, purchases: [{ id: 1, userId: 42 }] },
-    createPurchase: async (data: Record<string, unknown>) => ({ id: 7, ...data }),
-  };
 
   const projectManagement = {
     listProjectsForActor: async () => [{ id: 1, name: "Projeto" }],
@@ -116,7 +111,7 @@ const mocks = vi.hoisted(() => {
     globalProgress: async () => ({ total: 10, done: 4 }),
   };
 
-  return { state, labOperations, store, projectManagement, reporting, taskManagement };
+  return { state, labOperations, projectManagement, reporting, taskManagement };
 });
 
 vi.mock("@/backend/composition/root", () => {
@@ -150,20 +145,36 @@ vi.mock("@/backend/composition/root", () => {
     },
   };
 
-  // `createStoreModule` constrói os 12 use cases, então a porta de compras precisa existir —
-  // mas listPurchases/createPurchase são sobrescritos pelo duplo abaixo, e nenhum outro
-  // método de compra é alcançado por estas 13 rotas. Se um dia for, o duplo falha alto.
+  // B6-2d: a porta de compras deixou de ser "não deveria ser usada" — listPurchases/createPurchase
+  // agora passam pelo módulo REAL (a decisão desceu para os use cases). O duplo é a PORTA em
+  // memória; o que ele NÃO faz é decidir autorização. update/delete/refundPoints/findById seguem
+  // inacessíveis pelas 13 rotas deste arquivo — se um dia forem, o duplo falha alto.
   const notUsed = (name: string) => (): never => {
     throw new Error(`porta de compras não deveria ser usada neste teste: ${name}`);
   };
-  const purchases = {
+  const purchases: PurchaseRepository = {
+    async findAll() {
+      return mocks.state.purchases as never;
+    },
+    async findByUserId(userId: number) {
+      return mocks.state.purchases.filter((p) => p.userId === userId) as never;
+    },
+    async findByStatus(status: string) {
+      return mocks.state.purchases.filter((p) => p.status === status) as never;
+    },
+    async findByRewardId(rewardId: number) {
+      return mocks.state.purchases.filter((p) => p.rewardId === rewardId) as never;
+    },
+    async findUserById(userId: number) {
+      // 42 e 77 são os usuários das fixtures de POST; qualquer outro id não existe.
+      return (userId === 42 || userId === 77 ? { id: userId, name: `Usuário ${userId}`, points: 100 } : null) as never;
+    },
+    async createWithPointDeduction(snapshot: object) {
+      const purchase = { id: ++mocks.state.purchaseSequence, ...(snapshot as object) };
+      mocks.state.purchases.push(purchase);
+      return purchase as never;
+    },
     findById: notUsed("findById"),
-    findAll: notUsed("findAll"),
-    findByUserId: notUsed("findByUserId"),
-    findByRewardId: notUsed("findByRewardId"),
-    findByStatus: notUsed("findByStatus"),
-    findUserById: notUsed("findUserById"),
-    createWithPointDeduction: notUsed("createWithPointDeduction"),
     update: notUsed("update"),
     delete: notUsed("delete"),
     refundPoints: notUsed("refundPoints"),
@@ -176,18 +187,9 @@ vi.mock("@/backend/composition/root", () => {
       // módulo REAL: a matriz de permissões exercitada aqui é a de produção
       identityAccess: createIdentityAccessModule(),
       labOperations: mocks.labOperations,
-      // B6-2a: os 6 métodos de reward são os do módulo real (o gate mora no use case);
-      // os 2 de compra seguem dobrados até o B6-2d, quando a rota ainda decide.
-      store: {
-        listRewards: realStore.listRewards,
-        getReward: realStore.getReward,
-        createReward: realStore.createReward,
-        updateReward: realStore.updateReward,
-        patchReward: realStore.patchReward,
-        deleteReward: realStore.deleteReward,
-        listPurchases: mocks.store.listPurchases,
-        createPurchase: mocks.store.createPurchase,
-      },
+      // B6-2a/2d: os 12 métodos do store + o assert de gate do PUT são os do módulo REAL
+      // (os gates moram nos use cases); a dobragem restante é só a porta, em memória.
+      store: realStore,
       projectManagement: mocks.projectManagement,
       reporting: mocks.reporting,
       taskManagement: mocks.taskManagement,
@@ -245,7 +247,8 @@ beforeEach(() => {
   mocks.state.issue = { id: 5, reporterId: 100, assigneeId: 200, status: "open", title: "Issue de teste" };
   mocks.state.issueExiste = true;
   mocks.state.canEndResponsibility = true;
-  mocks.state.listPurchasesDenied = null;
+  mocks.state.purchases = [];
+  mocks.state.purchaseSequence = 0;
   // B6-2a: o catálogo do módulo real começa com a recompensa 1 (as rotas pedem /api/rewards/1)
   // e nada com id 999 — é assim que o "404 não encontrado" é exercitado de verdade.
   mocks.state.rewards = [{ id: 1, name: "Recompensa", price: 30, available: true }];
@@ -471,35 +474,60 @@ describe("store — /api/purchases", () => {
   });
 
   it("POST: o gate é cross-actor — comprar PARA SI é sempre permitido", async () => {
-    // Medido: a regra da rota é `!canManagePurchases && targetUserId !== actor.id`. Ou seja, o
-    // que exige MANAGE_PURCHASES é comprar PARA OUTRO, não comprar. Um VOLUNTARIO comprando
-    // para si passa (201) — e quem barra é o use case, por pontos insuficientes.
+    // Medido no B6-0 e re-confirmado com o MÓDULO REAL (B6-2d): a regra é
+    // `!canManagePurchases && targetUserId !== actor.id` — o que exige MANAGE_PURCHASES é
+    // comprar PARA OUTRO, não comprar. O payload agora é válido de verdade (userId + rewardId):
+    // o 201 antigo vinha do duplo que ignorava o corpo — a lição do B6-2a (duplo que fixa o
+    // comportamento do substituto). Quem barra o VOLUNTARIO para si é a elegibilidade, não o gate.
     login(["VOLUNTARIO"], 42);
-    expect((await purchasesCreate(request("/api/purchases", { method: "POST", body: { userId: 42 } }))).status).toBe(201);
+    const own = await purchasesCreate(request("/api/purchases", { method: "POST", body: { userId: 42, rewardId: 1 } }));
+    expect(own.status).toBe(201);
+    expect((await body(own)).purchase).toMatchObject({ userId: 42, rewardId: 1 });
 
-    const denied = await purchasesCreate(request("/api/purchases", { method: "POST", body: { userId: 77 } }));
+    const denied = await purchasesCreate(request("/api/purchases", { method: "POST", body: { userId: 77, rewardId: 1 } }));
     expect(denied.status).toBe(403);
-    expect(await body(denied)).toEqual({ error: "Acesso negado" });
+    // B6-2d (DEC-53): o gate desceu para CreatePurchaseUseCase — corpo superset, mensagem intacta.
+    expect(await body(denied)).toMatchObject({ error: "Acesso negado", code: "FORBIDDEN" });
+  });
+
+  it("POST: o gate vem ANTES do parse do rewardId — quem não pode comprar para outro recebe 403, não 400", async () => {
+    login(["VOLUNTARIO"], 42);
+    const denied = await purchasesCreate(request("/api/purchases", { method: "POST", body: { userId: 77, rewardId: "abc" } }));
+    expect(denied.status).toBe(403);
   });
 
   it("POST: quem tem MANAGE_PURCHASES (LABORATORISTA) compra para terceiro", async () => {
     login(["LABORATORISTA"], 42);
-    expect((await purchasesCreate(request("/api/purchases", { method: "POST", body: { userId: 77 } }))).status).toBe(201);
+    const response = await purchasesCreate(request("/api/purchases", { method: "POST", body: { userId: 77, rewardId: 1 } }));
+    expect(response.status).toBe(201);
+    expect((await body(response)).purchase).toMatchObject({ userId: 77 });
   });
 
-  it("GET: o 403 vem do use case (denied+message), a rota só mapeia", async () => {
+  it("GET: o 403 vem da resolução de escopo no use case — corpo legado EXATO preservado", async () => {
+    // B6-2d: antes o deny era injetado no duplo; agora é a regra real (filtro global sem
+    // MANAGE_PURCHASES). O deny continua { error } sem code: é resolução de escopo, não gate
+    // migrado — a ressalva da DEC-53 não toca aqui.
     login(["VOLUNTARIO"]);
-    mocks.state.listPurchasesDenied = "Acesso negado";
-    const denied = await purchasesList(request("/api/purchases"));
+    const denied = await purchasesList(request("/api/purchases?status=pending"));
     expect(denied.status).toBe(403);
     expect(await body(denied)).toEqual({ error: "Acesso negado" });
   });
 
-  it("GET: sem deny devolve as compras", async () => {
+  it("GET: sem filtro, VOLUNTARIO vê as próprias compras; COORDENADOR vê todas", async () => {
+    login(["VOLUNTARIO"], 42);
+    await purchasesCreate(request("/api/purchases", { method: "POST", body: { userId: 42, rewardId: 1 } }));
+
+    const own = await purchasesList(request("/api/purchases"));
+    expect(own.status).toBe(200);
+    expect((await body(own)).purchases).toMatchObject([{ userId: 42 }]);
+
+    login(["VOLUNTARIO"], 999);
+    expect((await body(await purchasesList(request("/api/purchases")))).purchases).toEqual([]);
+
     login(["COORDENADOR"]);
-    const response = await purchasesList(request("/api/purchases"));
-    expect(response.status).toBe(200);
-    expect(await body(response)).toEqual({ purchases: [{ id: 1, userId: 42 }] });
+    const all = await purchasesList(request("/api/purchases"));
+    expect(all.status).toBe(200);
+    expect((await body(all)).purchases).toMatchObject([{ userId: 42 }]);
   });
 });
 

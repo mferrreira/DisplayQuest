@@ -1,4 +1,3 @@
-import { NotFoundError } from "@/backend/domain"
 import {
   assertApprovedForComplete,
   assertNotCompletedForCancel,
@@ -6,12 +5,16 @@ import {
   assertPendingForReject,
   assertPurchaseEligibility,
   buildPurchaseSnapshot,
+  NotFoundError,
   parsePurchaseRequest,
+  requireActorPermission,
+  requireActorSelfOrPermission,
   resolvePurchaseQueryScope,
   shouldRefundOnCancel,
   shouldRefundOnReject,
+  ValidationError,
 } from "@/backend/domain"
-import type { IPurchase } from "@/backend/domain"
+import type { ActorRef, IPurchase } from "@/backend/domain"
 import type { ListPurchasesResult, ListPurchasesScopeInput } from "@/backend/modules/store/application/contracts"
 import type { PurchaseRepository } from "@/backend/modules/store/application/ports/purchase.repository"
 import type { RewardRepository } from "@/backend/modules/store/application/ports/reward.repository"
@@ -27,6 +30,19 @@ import type { RewardRepository } from "@/backend/modules/store/application/ports
  *    escreve só as colunas conhecidas, como o toPrisma legado).
  *  - reject reembolsa sempre (QUIRK-8S5); cancel reembolsa pending/approved; refund depois
  *    do update (ordem legada).
+ *
+ * B6-2d (D4, DEC-53) — os seis use cases de compra passaram a RECEBER o ator. Medido antes
+ * de mexer: nenhum deles tem chamador interno (só as duas rotas de purchases), e a regra da
+ * rota POST é CROSS-ACTOR (`!canManagePurchases && targetUserId !== actor.id`): o que exige
+ * MANAGE_PURCHASES é comprar PARA OUTRO, não comprar — um VOLUNTARIO comprando para si passa
+ * (201) e quem barra é a elegibilidade. É `requireActorSelfOrPermission` (DEC-115), não o gate
+ * puro. As ORDENS medidas por método foram preservadas uma a uma:
+ *  - POST: 400 "userId inválido" (validação de entrada, fica na rota — precede o gate hoje)
+ *    → 403 do gate → parse do rewardId (400) → 404s → elegibilidade (400).
+ *  - GET [id]: 404 antes do 403 (a compra é lida primeiro; o dono decide depois).
+ *  - PUT/DELETE: 403 antes de 404 (gate antes de qualquer leitura).
+ *  - PATCH: 404 antes do gate; gate por AÇÃO — cancel é self-or-manage (o dono cancela a
+ *    própria compra), approve/reject/complete exigem MANAGE_PURCHASES até para o dono.
  */
 
 export class ListPurchasesUseCase {
@@ -35,7 +51,8 @@ export class ListPurchasesUseCase {
   /**
    * OND8-B4: a RESOLUCAO DE ESCOPO (A2) vive aqui (task OND8-B2 da allow-list).
    * Retorna deny em vez de lancar para a rota preservar o corpo 403 legado exato
-   * { error: "Acesso negado" }.
+   * { error: "Acesso negado" }. B6-2d: a entrada leva o ActorRef — a regra decide a partir
+   * do ator em vez de receber o veredito `canManagePurchases` que a rota calculava.
    */
   async execute(input: ListPurchasesScopeInput): Promise<ListPurchasesResult> {
     const scope = resolvePurchaseQueryScope(input)
@@ -63,8 +80,30 @@ export class ListPurchasesUseCase {
 export class GetPurchaseUseCase {
   constructor(private readonly purchases: PurchaseRepository) {}
 
-  async execute(purchaseId: number) {
-    return await this.purchases.findById(purchaseId)
+  /**
+   * B6-2d: leitura de UMA compra — 404 primeiro (a compra é buscada antes de decidir quem é
+   * o dono; ordem medida na rota), depois self-or-manage. Devolve `null` em vez de lancar no
+   * 404 para a rota preservar o corpo legado { error: "Compra não encontrada" } (pinnado em
+   * mapped-routes.test.ts: "GET sem purchase (null) -> 404 legado preservado").
+   */
+  async execute(actor: ActorRef, purchaseId: number): Promise<IPurchase | null> {
+    const purchase = await this.purchases.findById(purchaseId)
+    if (!purchase) return null
+    requireActorSelfOrPermission(actor, purchase.userId, "MANAGE_PURCHASES")
+    return purchase
+  }
+}
+
+/**
+ * B6-2b (AssertCanPublishNotificationEventUseCase) — o mesmo padrão, para o PUT: o gate legado
+ * rodava ANTES de o corpo ser lido. Com o gate dentro de `updatePurchase`, a rota precisaria
+ * parsear o corpo antes de chamar o use case, e um corpo inválido daria 500 a quem não tem
+ * permissão (hoje dá 403). A rota autoriza aqui antes de ler o corpo; `updatePurchase`
+ * recheca no próprio ator.
+ */
+export class AssertCanManagePurchasesUseCase {
+  execute(command: { actor: ActorRef }): void {
+    requireActorPermission(command.actor, "MANAGE_PURCHASES")
   }
 }
 
@@ -74,8 +113,18 @@ export class CreatePurchaseUseCase {
     private readonly rewards: RewardRepository,
   ) {}
 
-  async execute(data: Record<string, unknown>) {
-    const { userId, rewardId } = parsePurchaseRequest(data)
+  /**
+   * Ordem medida (B6-0, caraterização): a validação de `userId` (400 "userId inválido") vem
+   * ANTES do 403 — fica na rota, é validação de entrada, não autorização. Aqui: gate
+   * cross-actor primeiro (comprar PARA OUTRO exige MANAGE_PURCHASES; para si, qualquer
+   * autenticado passa), depois o parse completo (rewardId inválido é 400 DEPOIS do 403 —
+   * ordem pinnada em purchases-authorization.test.ts), depois os 404s e a elegibilidade.
+   */
+  async execute(command: { actor: ActorRef; data: Record<string, unknown> }) {
+    const targetUserId = Number(command.data.userId)
+    requireActorSelfOrPermission(command.actor, targetUserId, "MANAGE_PURCHASES")
+
+    const { userId, rewardId } = parsePurchaseRequest(command.data)
 
     const user = await this.purchases.findUserById(userId)
     if (!user) throw new NotFoundError("Usuário não encontrado")
@@ -93,13 +142,16 @@ export class CreatePurchaseUseCase {
 export class UpdatePurchaseUseCase {
   constructor(private readonly purchases: PurchaseRepository) {}
 
-  async execute(purchaseId: number, data: Record<string, unknown>): Promise<IPurchase> {
-    const current = await this.purchases.findById(purchaseId)
+  /** Gate puro ANTES da leitura (ordem medida: PUT barrava antes mesmo de existir compra). */
+  async execute(command: { actor: ActorRef; purchaseId: number; data: Record<string, unknown> }): Promise<IPurchase> {
+    requireActorPermission(command.actor, "MANAGE_PURCHASES")
+
+    const current = await this.purchases.findById(command.purchaseId)
     if (!current) throw new NotFoundError("Compra não encontrada")
 
     // QUIRK-8S4: merge cego preservado (Object.assign legado).
-    const merged = { ...current, ...data } as IPurchase
-    return await this.purchases.update(purchaseId, merged)
+    const merged = { ...current, ...command.data } as IPurchase
+    return await this.purchases.update(command.purchaseId, merged)
   }
 }
 
@@ -109,11 +161,25 @@ export class PatchPurchaseUseCase {
     private readonly updatePurchase: UpdatePurchaseUseCase,
   ) {}
 
+  /**
+   * Ordem medida: a compra é lida primeiro (404 "Compra não encontrada" antes do 403), e o
+   * gate depende da AÇÃO — `cancel` é self-or-manage (o dono cancela a própria compra),
+   * qualquer outra ação exige MANAGE_PURCHASES até para o dono. O gate vem antes das asserções
+   * de status (400/409), como na rota.
+   */
   async execute(command: {
+    actor: ActorRef
     purchaseId: number
     action?: "approve" | "reject" | "deny" | "complete" | "cancel"
     updateData?: Record<string, unknown>
   }): Promise<IPurchase> {
+    const purchase = await this.requirePurchase(command.purchaseId)
+    if (command.action === "cancel") {
+      requireActorSelfOrPermission(command.actor, purchase.userId, "MANAGE_PURCHASES")
+    } else {
+      requireActorPermission(command.actor, "MANAGE_PURCHASES")
+    }
+
     switch (command.action) {
       case "approve":
         return await this.approve(command.purchaseId)
@@ -125,7 +191,11 @@ export class PatchPurchaseUseCase {
       case "cancel":
         return await this.cancel(command.purchaseId)
       default:
-        return await this.updatePurchase.execute(command.purchaseId, command.updateData || {})
+        return await this.updatePurchase.execute({
+          actor: command.actor,
+          purchaseId: command.purchaseId,
+          data: command.updateData || {},
+        })
     }
   }
 
@@ -175,9 +245,12 @@ export class PatchPurchaseUseCase {
 export class DeletePurchaseUseCase {
   constructor(private readonly purchases: PurchaseRepository) {}
 
-  async execute(purchaseId: number): Promise<void> {
-    const purchase = await this.purchases.findById(purchaseId)
+  /** Gate puro ANTES da leitura (ordem medida: DELETE barrava antes mesmo de existir compra). */
+  async execute(command: { actor: ActorRef; purchaseId: number }): Promise<void> {
+    requireActorPermission(command.actor, "MANAGE_PURCHASES")
+
+    const purchase = await this.purchases.findById(command.purchaseId)
     if (!purchase) throw new NotFoundError("Compra não encontrada")
-    await this.purchases.delete(purchaseId)
+    await this.purchases.delete(command.purchaseId)
   }
 }
