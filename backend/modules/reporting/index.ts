@@ -1,3 +1,4 @@
+import type { ActorRef } from "@/backend/domain"
 import type {
   BulkGenerateWeeklyReportsCommand,
   CreateProjectReportCommand,
@@ -15,6 +16,9 @@ import type {
 } from "@/backend/modules/reporting/application/contracts"
 import { AggregateProjectReportUseCase } from "@/backend/modules/reporting/application/use-cases/aggregate-project-report.use-case"
 import { BulkGenerateWeeklyReportsUseCase } from "@/backend/modules/reporting/application/use-cases/bulk-generate-weekly-reports.use-case"
+import { AssertCanGenerateReportsInBulkUseCase } from "@/backend/modules/reporting/application/use-cases/assert-can-generate-reports-in-bulk.use-case"
+import { AssertCanManageWeeklyHoursUseCase } from "@/backend/modules/reporting/application/use-cases/assert-can-manage-weekly-hours.use-case"
+import { GenerateWeeklyReportUseCase } from "@/backend/modules/reporting/application/use-cases/generate-weekly-report.use-case"
 import { CreateProjectReportUseCase } from "@/backend/modules/reporting/application/use-cases/create-project-report.use-case"
 import { CreateWeeklyHoursHistoryUseCase } from "@/backend/modules/reporting/application/use-cases/create-weekly-hours-history.use-case"
 import { DeleteProjectReportUseCase } from "@/backend/modules/reporting/application/use-cases/delete-project-report.use-case"
@@ -67,6 +71,9 @@ export class ReportingModule {
     private readonly upsertWeeklyReportUseCase: UpsertWeeklyReportUseCase,
     private readonly deleteWeeklyReportUseCase: DeleteWeeklyReportUseCase,
     private readonly bulkGenerateWeeklyReportsUseCase: BulkGenerateWeeklyReportsUseCase,
+    private readonly generateWeeklyReportUseCase: GenerateWeeklyReportUseCase,
+    private readonly assertCanGenerateReportsInBulkUseCase: AssertCanGenerateReportsInBulkUseCase,
+    private readonly assertCanManageWeeklyHoursUseCase: AssertCanManageWeeklyHoursUseCase,
     private readonly getProjectHoursUseCase: GetProjectHoursUseCase,
     private readonly getProjectWeeklyHoursUseCase: GetProjectWeeklyHoursUseCase,
     private readonly getProjectHoursHistoryUseCase: GetProjectHoursHistoryUseCase,
@@ -87,24 +94,39 @@ export class ReportingModule {
     private readonly sweepStaleReportUploadsUseCase: SweepStaleReportUploadsUseCase,
   ) {}
 
+  // B6-3 (D4): os metodos de weekly-reports/historico de horas passaram a receber o ator —
+  // a autoridade (composta MANAGE_USERS||LABORATORISTA, self-or-view, MANAGE_USERS puro)
+  // morava nas rotas. `assertCanGenerateReportsInBulk` preserva o 403-antes-do-parse do bulk.
   async listWeeklyReports(query: WeeklyReportListQuery) {
     return await this.listWeeklyReportsUseCase.execute(query)
   }
 
-  async getWeeklyReportById(id: number) {
-    return await this.getWeeklyReportByIdUseCase.execute(id)
+  async getWeeklyReportById(actor: ActorRef, id: number) {
+    return await this.getWeeklyReportByIdUseCase.execute(actor, id)
   }
 
   async upsertWeeklyReport(command: UpsertWeeklyReportCommand) {
     return await this.upsertWeeklyReportUseCase.execute(command)
   }
 
+  async generateWeeklyReport(command: UpsertWeeklyReportCommand) {
+    return await this.generateWeeklyReportUseCase.execute(command)
+  }
+
+  async assertCanGenerateReportsInBulk(command: { actor: ActorRef }) {
+    return this.assertCanGenerateReportsInBulkUseCase.execute(command)
+  }
+
+  async assertCanManageWeeklyHours(command: { actor: ActorRef }) {
+    return this.assertCanManageWeeklyHoursUseCase.execute(command)
+  }
+
   async bulkGenerateWeeklyReports(command: BulkGenerateWeeklyReportsCommand) {
     return await this.bulkGenerateWeeklyReportsUseCase.execute(command)
   }
 
-  async deleteWeeklyReport(id: number) {
-    return await this.deleteWeeklyReportUseCase.execute(id)
+  async deleteWeeklyReport(actor: ActorRef, id: number) {
+    return await this.deleteWeeklyReportUseCase.execute(actor, id)
   }
 
   async getProjectHours(query: ProjectHoursQuery) {
@@ -127,20 +149,20 @@ export class ReportingModule {
     return await this.listWeeklyHoursHistoryUseCase.execute(query)
   }
 
-  async getWeeklyHoursStats() {
-    return await this.getWeeklyHoursStatsUseCase.execute()
+  async getWeeklyHoursStats(actor: ActorRef) {
+    return await this.getWeeklyHoursStatsUseCase.execute(actor)
   }
 
-  async resetWeeklyHoursHistory() {
-    return await this.resetWeeklyHoursHistoryUseCase.execute()
+  async resetWeeklyHoursHistory(actor: ActorRef) {
+    return await this.resetWeeklyHoursHistoryUseCase.execute(actor)
   }
 
-  async createWeeklyHoursHistory(weekStart: string) {
-    return await this.createWeeklyHoursHistoryUseCase.execute(weekStart)
+  async createWeeklyHoursHistory(actor: ActorRef, weekStart: string) {
+    return await this.createWeeklyHoursHistoryUseCase.execute(actor, weekStart)
   }
 
-  async getProjectStats() {
-    return await this.getProjectStatsUseCase.execute()
+  async getProjectStats(actor: ActorRef) {
+    return await this.getProjectStatsUseCase.execute(actor)
   }
 
   async createProjectReport(command: CreateProjectReportCommand) {
@@ -225,6 +247,9 @@ export function createReportingModule(options: ReportingModuleFactoryOptions = {
     // Bulk (feature 64a6095) portado para a wiring nova: compoe o MESMO UpsertWeeklyReportUseCase
     // (paridade do upsert ja pinada no contract suite) + directory.findActiveUsers.
     new BulkGenerateWeeklyReportsUseCase(upsertWeeklyReport, directory),
+    new GenerateWeeklyReportUseCase(upsertWeeklyReport),
+    new AssertCanGenerateReportsInBulkUseCase(),
+    new AssertCanManageWeeklyHoursUseCase(),
     new GetProjectHoursUseCase(hoursRead),
     new GetProjectWeeklyHoursUseCase(hoursRead),
     new GetProjectHoursHistoryUseCase(hoursRead),

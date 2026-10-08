@@ -22,6 +22,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { endOfWeek, startOfWeek } from "date-fns";
 import { prisma } from "@/lib/database/prisma";
+import { systemActor, userActor } from "@/backend/domain";
 import { createReportingModule } from "@/backend/modules/reporting";
 import type { ReportStoragePort } from "@/backend/modules/reporting/application/ports/report-storage.port";
 import type { ReportSubmittedEvent, ReportSubmittedPublisherPort } from "@/backend/modules/reporting/application/ports/report-submitted-publisher.port";
@@ -57,6 +58,14 @@ const stamp = Date.now();
 let authorId = 0;
 let managerId = 0;
 let outsiderId = 0;
+/**
+ * B6-3 (D4): os metodos de weekly-reports/historico de horas passaram a exigir ator.
+ * `authorActor` e o VOLUNTARIO da semente (self-or-view pelo proprio id), `managerActor` e o
+ * COORDENADOR (MANAGE_USERS — entra na composta e no gate puro do historico/bulk), e o reset
+ * roda com `systemActor("WEEKLY_RESET")` — o caminho do cron (DEC-54), provado no G4.
+ */
+let authorActor = userActor(0, ["VOLUNTARIO"]);
+let managerActor = userActor(0, ["COORDENADOR"]);
 let projectId = 0;
 let weeklyReportId = 0;
 let projectReportId = 0;
@@ -97,6 +106,8 @@ describe("G4 roundtrip — reporting (isolated test DB)", () => {
     authorId = author.id;
     managerId = manager.id;
     outsiderId = outsider.id;
+    authorActor = userActor(authorId, ["VOLUNTARIO"]);
+    managerActor = userActor(managerId, ["COORDENADOR"]);
 
     const project = await prisma.projects.create({
       data: {
@@ -178,6 +189,7 @@ describe("G4 roundtrip — reporting (isolated test DB)", () => {
 
   it("upsertWeeklyReport: cria com totalLogs das concluidas; segundo upsert atualiza a MESMA linha", async () => {
     const created = await reporting.upsertWeeklyReport({
+      actor: authorActor,
       userId: authorId,
       weekStart: WEEK_START.toISOString(),
       weekEnd: WEEK_END.toISOString(),
@@ -187,6 +199,7 @@ describe("G4 roundtrip — reporting (isolated test DB)", () => {
     expect(created.totalLogs).toBe(2); // 2 concluidas; a active fica fora
 
     const updated = await reporting.upsertWeeklyReport({
+      actor: authorActor,
       userId: authorId,
       weekStart: WEEK_START.toISOString(),
       weekEnd: WEEK_END.toISOString(),
@@ -200,13 +213,15 @@ describe("G4 roundtrip — reporting (isolated test DB)", () => {
   });
 
   it("upsertWeeklyReport usuario inexistente -> NotFoundError 'Usuário não encontrado'", async () => {
+    // O ator e o manager: para o autor, o gate self-or-view barraria ANTES do 404 —
+    // a ordem (gate -> lookup) e provada nos testes de use case/rota.
     await expect(
-      reporting.upsertWeeklyReport({ userId: 999999, weekStart: WEEK_START.toISOString(), weekEnd: WEEK_END.toISOString() }),
+      reporting.upsertWeeklyReport({ actor: managerActor, userId: 999999, weekStart: WEEK_START.toISOString(), weekEnd: WEEK_END.toISOString() }),
     ).rejects.toThrow("Usuário não encontrado");
   });
 
   it("getWeeklyReportById: logs das concluidas com nota do dailyLog e fallback legado", async () => {
-    const report = await reporting.getWeeklyReportById(weeklyReportId);
+    const report = await reporting.getWeeklyReportById(authorActor, weeklyReportId);
     expect(report).not.toBeNull();
     const logs = (report as any).logs;
     expect(logs).toHaveLength(2);
@@ -214,10 +229,10 @@ describe("G4 roundtrip — reporting (isolated test DB)", () => {
   });
 
   it("listWeeklyReports: gestor ve o relatorio; autor ve o proprio", async () => {
-    const all = await reporting.listWeeklyReports({});
+    const all = await reporting.listWeeklyReports({ actor: managerActor });
     expect(all.map((r) => r.id)).toContain(weeklyReportId);
 
-    const own = await reporting.listWeeklyReports({ userId: authorId });
+    const own = await reporting.listWeeklyReports({ actor: authorActor, userId: authorId });
     expect(own.map((r) => r.id)).toEqual([weeklyReportId]);
   });
 
@@ -316,11 +331,11 @@ describe("G4 roundtrip — reporting (isolated test DB)", () => {
   });
 
   it("weekly hours: create cria por usuario com sessoes (totalHours numerico), segunda passada dedup", async () => {
-    const results = await reporting.createWeeklyHoursHistory(WEEK_START.toISOString());
+    const results = await reporting.createWeeklyHoursHistory(managerActor, WEEK_START.toISOString());
     expect(results.find((r: any) => r.userId === authorId)?.totalHours).toBe(3);
     expect(results.find((r: any) => r.userId === outsiderId)?.totalHours).toBe(1);
 
-    const again = await reporting.createWeeklyHoursHistory(WEEK_START.toISOString());
+    const again = await reporting.createWeeklyHoursHistory(managerActor, WEEK_START.toISOString());
     expect(again.find((r: any) => r.userId === authorId)).toBeUndefined();
 
     const rows = await prisma.weekly_hours_history.findMany({ where: { userId: authorId } });
@@ -329,11 +344,11 @@ describe("G4 roundtrip — reporting (isolated test DB)", () => {
   });
 
   it("listWeeklyHoursHistory + getWeeklyHoursStats enxergam a semana corrente", async () => {
-    const history = await reporting.listWeeklyHoursHistory({ weekStart: new Date().toISOString() });
+    const history = await reporting.listWeeklyHoursHistory({ actor: managerActor, weekStart: new Date().toISOString() });
     const mine = history.filter((r) => r.userId === authorId || r.userId === outsiderId);
     expect(mine.map((r) => r.totalHours).sort((a, b) => b - a)).toEqual([3, 1]);
 
-    const stats = await reporting.getWeeklyHoursStats();
+    const stats = await reporting.getWeeklyHoursStats(managerActor);
     expect(stats.last4Weeks).toHaveLength(4);
     expect(stats.currentWeek.totalHours).toBeGreaterThanOrEqual(4);
   });
@@ -346,7 +361,7 @@ describe("G4 roundtrip — reporting (isolated test DB)", () => {
     let resetResults: any[] | null = null
     for (let attempt = 0; attempt < 4 && resetResults === null; attempt++) {
       try {
-        resetResults = await reporting.resetWeeklyHoursHistory()
+        resetResults = await reporting.resetWeeklyHoursHistory(systemActor("WEEKLY_RESET"))
       } catch {
         // corrida com afterAll de outro arquivo — tenta de novo
       }
@@ -380,19 +395,19 @@ describe("G4 roundtrip — reporting (isolated test DB)", () => {
     expect(userHours).toHaveLength(1);
     expect(userHours[0]).toMatchObject({ projectId, userHours: 3, projectTotalHours: 4, sessionCount: 2 });
 
-    const stats = await reporting.getProjectStats();
+    const stats = await reporting.getProjectStats(managerActor);
     expect(stats).toBeTruthy();
   });
 
-  it("deleteWeeklyReport remove; segunda exclusao propaga P2025 (QUIRK-7K)", async () => {
-    await reporting.deleteWeeklyReport(weeklyReportId);
+  it("deleteWeeklyReport remove; segunda exclusao devolve NotFoundError (pre-check desceu com o gate; P2025 segue para corrida)", async () => {
+    await reporting.deleteWeeklyReport(authorActor, weeklyReportId);
     expect(await prisma.weekly_reports.findUnique({ where: { id: weeklyReportId } })).toBeNull();
 
-    await expect(reporting.deleteWeeklyReport(weeklyReportId)).rejects.toThrow();
+    await expect(reporting.deleteWeeklyReport(authorActor, weeklyReportId)).rejects.toThrow("Relatório não encontrado");
   });
 
   it("bulkGenerateWeeklyReports (merge 64a6095): gera por usuario ativo; reexecucao nao duplica", async () => {
-    const command = { periodType: "weekly" as const, from: WEEK_START.toISOString(), to: WEEK_END.toISOString() };
+    const command = { actor: managerActor, periodType: "weekly" as const, from: WEEK_START.toISOString(), to: WEEK_END.toISOString() };
 
     const first = await reporting.bulkGenerateWeeklyReports(command);
     expect(first.periodCount).toBeGreaterThanOrEqual(1);
@@ -420,6 +435,7 @@ describe("G4 roundtrip — reporting (isolated test DB)", () => {
   it("bulkGenerateWeeklyReports validacao: periodicidade invalida -> mensagem legada (ValidationError)", async () => {
     await expect(
       reporting.bulkGenerateWeeklyReports({
+        actor: managerActor,
         periodType: "quinzenal" as never,
         from: WEEK_START.toISOString(),
         to: WEEK_END.toISOString(),

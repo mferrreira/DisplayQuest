@@ -40,6 +40,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { createIdentityAccessModule } from "@/backend/modules/identity-access";
 import { createStoreModule } from "@/backend/modules/store";
+import { CreateProjectUseCase } from "@/backend/modules/project-management/application/use-cases/create-project.use-case";
+import { AssertCanCreateProjectUseCase } from "@/backend/modules/project-management/application/use-cases/assert-can-create-project.use-case";
+import { UpsertWeeklyReportUseCase } from "@/backend/modules/reporting/application/use-cases/upsert-weekly-report.use-case";
+import { BulkGenerateWeeklyReportsUseCase } from "@/backend/modules/reporting/application/use-cases/bulk-generate-weekly-reports.use-case";
+import { AssertCanGenerateReportsInBulkUseCase } from "@/backend/modules/reporting/application/use-cases/assert-can-generate-reports-in-bulk.use-case";
 import type { PurchaseRepository } from "@/backend/modules/store/application/ports/purchase.repository";
 import type { RewardRepository } from "@/backend/modules/store/application/ports/reward.repository";
 
@@ -100,18 +105,20 @@ const mocks = vi.hoisted(() => {
 
   const projectManagement = {
     listProjectsForActor: async () => [{ id: 1, name: "Projeto" }],
-    createProject: async (data: Record<string, unknown>) => ({ id: 2, ...data }),
+    // B6-3: `createProject` saiu do duplo — o gate de MANAGE_PROJECTS desceu para o use case
+    // e um duplo de modulo faria o 403 desaparecer. A montagem real esta no factory do
+    // composition root (use cases reais sobre portas falsas). GET segue dobrado: nao ha gate
+    // migrado nele (a escopo ja morava no use case).
   };
 
-  const reporting = {
-    bulkGenerateWeeklyReports: async () => ({ generated: 2 }),
-  };
+  // B6-3: `bulkGenerateWeeklyReports` saiu do duplo pelo mesmo motivo (gate MANAGE_USERS no
+  // use case + assert antes do parse na rota).
 
   const taskManagement = {
     globalProgress: async () => ({ total: 10, done: 4 }),
   };
 
-  return { state, labOperations, projectManagement, reporting, taskManagement };
+  return { state, labOperations, projectManagement, taskManagement };
 });
 
 vi.mock("@/backend/composition/root", () => {
@@ -182,6 +189,62 @@ vi.mock("@/backend/composition/root", () => {
 
   const realStore = createStoreModule({ ports: { rewards, purchases } });
 
+  // B6-3 (D4): os gates de projects-POST e weekly-reports/bulk desceram para os use cases —
+  // os use cases REAIS sobre portas falsas em memoria (mesmo molde do store). O duplo que
+  // nao decide nada faria o 403 desaparecer (licao medida do B6-2a).
+  const projectsDb: Array<Record<string, unknown>> = [];
+  const membershipsDb: Array<Record<string, unknown>> = [];
+  const realCreateProject = new CreateProjectUseCase({
+    projects: {
+      async create(input: Record<string, unknown>) {
+        const created = { id: 2 + projectsDb.length, ...input };
+        projectsDb.push(created);
+        return created as never;
+      },
+    } as never,
+    memberships: {
+      async findMembership() {
+        return null;
+      },
+      async createMembership(membership: Record<string, unknown>) {
+        membershipsDb.push(membership);
+      },
+      async updateMembershipRoles() {},
+    } as never,
+  });
+  const realAssertCreateProject = new AssertCanCreateProjectUseCase();
+
+  const weeklyReportsDb: Array<Record<string, unknown>> = [];
+  const directoryPort = {
+    async findActiveUsers() {
+      return [{ id: 1, name: "Usuário ativo" }];
+    },
+    async findUserById(id: number) {
+      return id === 1 ? { id: 1, name: "Usuário ativo" } : null;
+    },
+  };
+  const realUpsertWeeklyReport = new UpsertWeeklyReportUseCase(
+    {
+      async findFirstByWindow() {
+        return null;
+      },
+      async create(data: Record<string, unknown>) {
+        // O mapper do upsert lê createdAt (record builder) — a porta real grava o server-clock.
+        const created = { id: 1 + weeklyReportsDb.length, createdAt: new Date(), ...data };
+        weeklyReportsDb.push(created);
+        return created as never;
+      },
+    } as never,
+    {
+      async findCompletedWithRelations() {
+        return [];
+      },
+    } as never,
+    directoryPort as never,
+  );
+  const realBulkGenerate = new BulkGenerateWeeklyReportsUseCase(realUpsertWeeklyReport, directoryPort as never);
+  const realAssertBulk = new AssertCanGenerateReportsInBulkUseCase();
+
   return {
     getBackendComposition: () => ({
       // módulo REAL: a matriz de permissões exercitada aqui é a de produção
@@ -190,8 +253,15 @@ vi.mock("@/backend/composition/root", () => {
       // B6-2a/2d: os 12 métodos do store + o assert de gate do PUT são os do módulo REAL
       // (os gates moram nos use cases); a dobragem restante é só a porta, em memória.
       store: realStore,
-      projectManagement: mocks.projectManagement,
-      reporting: mocks.reporting,
+      projectManagement: {
+        listProjectsForActor: mocks.projectManagement.listProjectsForActor,
+        createProject: (command: never) => realCreateProject.execute(command),
+        assertCanCreateProject: (command: never) => realAssertCreateProject.execute(command),
+      },
+      reporting: {
+        bulkGenerateWeeklyReports: (command: never) => realBulkGenerate.execute(command),
+        assertCanGenerateReportsInBulk: (command: never) => realAssertBulk.execute(command),
+      },
       taskManagement: mocks.taskManagement,
     }),
   };
@@ -608,7 +678,10 @@ describe("project-management — /api/projects", () => {
     login(["VOLUNTARIO"]);
     const denied = await projectsCreate(request("/api/projects", { method: "POST", body: { name: "P" } }));
     expect(denied.status).toBe(403);
-    expect(await body(denied)).toEqual({ error: "Sem permissão para criar projeto" });
+    // B6-3 (DEC-53): gate migrado para CreateProjectUseCase — corpo superset, mensagem
+    // própria da rota intacta. O assert da rota roda ANTES do parse: ate corpo invalido
+    // (ou ausente) para quem nao pode e 403, nunca 400/500.
+    expect(await body(denied)).toMatchObject({ error: "Sem permissão para criar projeto", code: "FORBIDDEN" });
   });
 });
 
@@ -622,14 +695,16 @@ describe("reporting — /api/weekly-reports/bulk", () => {
     login(["LABORATORISTA"]);
     const denied = await weeklyReportsBulk(request("/api/weekly-reports/bulk", { method: "POST", body: valido }));
     expect(denied.status).toBe(403);
-    expect(await body(denied)).toEqual({ error: "Acesso negado" });
+    // B6-3 (DEC-53): gate MANAGE_USERS PURO desceu para BulkGenerateWeeklyReportsUseCase
+    // (e o assert da rota roda antes do parse). Corpo superset, mensagem default intacta.
+    expect(await body(denied)).toMatchObject({ error: "Acesso negado", code: "FORBIDDEN" });
   });
 
   it("o gate vem ANTES da validação do corpo: quem não tem MANAGE_USERS nem vê o 400", async () => {
     login(["VOLUNTARIO"]);
     const denied = await weeklyReportsBulk(request("/api/weekly-reports/bulk", { method: "POST", body: {} }));
     expect(denied.status).toBe(403);
-    expect(await body(denied)).toEqual({ error: "Acesso negado" });
+    expect(await body(denied)).toMatchObject({ error: "Acesso negado", code: "FORBIDDEN" });
 
     login(["COORDENADOR"]);
     const invalid = await weeklyReportsBulk(request("/api/weekly-reports/bulk", { method: "POST", body: {} }));

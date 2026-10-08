@@ -13,6 +13,7 @@ import {
   ForbiddenError,
   NotFoundError,
   ValidationError,
+  userActor,
 } from "@/backend/domain";
 import { CreateUserUseCase } from "@/backend/modules/user-management/application/use-cases/create-user.use-case";
 import { DeleteUserUseCase } from "@/backend/modules/user-management/application/use-cases/delete-user.use-case";
@@ -437,7 +438,7 @@ describe("Moderate / Roles / Status / reads", () => {
   });
 
   it("statistics dispatch, leaderboard default limit, profiles quirk (both call 'public')", async () => {
-    expect(await new ListUserStatisticsUseCase(repository).execute("roles")).toEqual({ VOLUNTARIO: 1, COORDENADOR: 1, GERENTE_PROJETO: 1 });
+    expect(await new ListUserStatisticsUseCase(repository).execute(userActor(1, ["COORDENADOR"]), "roles")).toEqual({ VOLUNTARIO: 1, COORDENADOR: 1, GERENTE_PROJETO: 1 });
 
     const leaderboard = (await new ListLeaderboardUseCase(repository).execute({ type: "points" })) as unknown[];
     expect(leaderboard).toHaveLength(3); // active only, limit 10

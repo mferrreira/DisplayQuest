@@ -1,4 +1,4 @@
-import { ValidationError, mergeRoles, normalizeVolunteerIds, projectValidationMessage, validateProjectInput } from "@/backend/domain"
+import { ValidationError, mergeRoles, normalizeVolunteerIds, projectValidationMessage, requireActorPermission, validateProjectInput } from "@/backend/domain"
 import type { Role } from "@/backend/domain"
 import type { CreateProjectCommand } from "@/backend/modules/project-management/application/contracts"
 import type { ProjectManagementMembershipPort } from "@/backend/modules/project-management/application/ports/project-membership.repository"
@@ -22,6 +22,12 @@ export class CreateProjectUseCase {
   constructor(private readonly dependencies: CreateProjectDependencies) {}
 
   async execute(command: CreateProjectCommand) {
+    // B6-3 (D4): o gate de MANAGE_PROJECTS desceu da rota (`ensurePermission` com mensagem
+    // propria) para aqui, ANTES de qualquer validacao ou escrita — a ordem medida. A rota
+    // chama `assertCanCreateProject` antes de ler o corpo (padrao B6-2b/2d) e este use case
+    // recheca. A mensagem "Sem permissão para criar projeto" e a da rota legado, preservada.
+    requireActorPermission(command.actor, "MANAGE_PROJECTS", "Sem permissão para criar projeto")
+
     const record = {
       name: command.data.name,
       description: command.data.description ?? null,

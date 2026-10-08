@@ -17,7 +17,9 @@ Lotes fechados, cada um 1 commit revertível, todos em G0–G4:
 | B6-1b | gate do `cron/status` desce para `work-execution` (porta + adaptador sobre o singleton) | `eba53f8` |
 | B6-2a | 4 gates `MANAGE_REWARDS` descem (badges ×3, rewards ×4) + `assertPermission` no domínio | `b8e0039` |
 | B6-2b | gate de `MANAGE_NOTIFICATIONS` desce + **ator-de-sistema** (`ActorRef`, DEC-54) | `6d620bd` |
-| B6-2c | 3 rotas self-or-manage do gamification descem (DEC-115: `ActorRef.user` com `id`, `requireActorSelfOrPermission`, GET user-badges = leitura aberta por decisão do dono) | commit deste registro |
+| B6-2c | 3 rotas self-or-manage do gamification descem (DEC-115: `ActorRef.user` com `id`, `requireActorSelfOrPermission`, GET user-badges = leitura aberta por decisão do dono) | `79cab8f` |
+| B6-2d | 6 use cases de compra passam a exigir ator (gate cross-actor, 4 ordens preservadas, escopo lendo o `ActorRef`) | `f519a17` |
+| B6-3 | 8 rotas de reporting+projects descem (DEC-117: composta `MANAGE_USERS \|\| LABORATORISTA` como medida; DEC-118: 404 tipado no DELETE) | commit deste registro |
 
 Baseline de testes no encerramento do B6-2b (2026-10-05): 65/798 (início do B6) → 73/934 (2b);
 suíte completa **83/1017**. G0: 748/2817 → 764/2906.
@@ -28,25 +30,26 @@ suíte completa **83/1017**. G0: 748/2817 → 764/2906.
 B6 continuam todos verdes: `authorization-characterization.test.ts` 39/39 rodado ao vivo em
 2026-10-07.
 
-Restam **30 rotas** em 4 lotes — **41 originais − 11 já migradas** (`cron/status`, `badges` ×2,
-`rewards` ×2, `notifications`, `user-badges` ×2, `users/[id]/gamification`, `purchases` ×2):
+Restam **22 rotas** em 4 lotes — **41 originais − 19 já migradas** (`cron/status`, `badges` ×2,
+`rewards` ×2, `notifications`, `user-badges` ×2, `users/[id]/gamification`, `purchases` ×2,
+`weekly-reports` ×4, `weekly-hours-history`, `users/statistics`, `projects`, `projects/stats`):
 
 | lote | módulo (composition) | rotas | arquivos |
 |---|---|---|---|
 | ~~B6-2c~~ | ~~gamification~~ | ~~3~~ | ✅ fechado 2026-10-08 (DEC-115) |
 | ~~B6-2d~~ | ~~store~~ | ~~2~~ | ✅ fechado 2026-10-08 (gate cross-actor + escopo lendo o ActorRef) |
-| B6-3 | reporting + projectManagement | 8 | `weekly-reports` ×4, `weekly-hours-history`, `users/statistics`, `projects`, `projects/stats` |
+| ~~B6-3~~ | ~~reporting + projectManagement~~ | ~~8~~ | ✅ fechado 2026-10-08 (DEC-117/DEC-118) |
 | B6-4 | userManagement | 8 | `users`, `users/[id]`, `[id]/status`, `[id]/roles`, `[id]/profile`, `[id]/points`, `[id]/project-hours`, `users/approve` |
 | B6-5 | workExecution | 4 | `work-sessions` ×2, `daily_logs` ×2 |
 | B6-6 | labOperations | 7 | `issues` ×4, `responsibilities` ×2, `schedules/bulk` |
 | B6-7 | taskManagement | 3 | `tasks`, `tasks/[id]`, `tasks/global-progress` |
 
-Os 5 lotes restantes somam 32, e a distribuição por módulo bate **exatamente** com a do DEC-50
-(user-management 8, reporting 7, lab-operations 7, work-execution 4, task-management 3; gamification
-5 → 0 depois das migrações do B6-2a/2b/2c e store 4 → 2 depois do B6-2d). Os 3 call sites do cron
-ficam em B6-3
-(`resetWeeklyHoursHistory`/WEEKLY_RESET), B6-5 (`listWorkSessions`/NIGHTLY_SWEEP) e B6-6
-(`pauseResponsibilityForUser`/SCHEDULED_PAUSE) — como previsto no DEC-54.
+Os 4 lotes restantes somam 22, e a distribuição por módulo bate **exatamente** com a do DEC-50
+(user-management 8, lab-operations 7, work-execution 4, task-management 3; gamification e store
+zerados; reporting 7 → 0 e projects migrados no B6-3). Dos 3 call sites do cron, **1 já aplicado**
+(`resetWeeklyHoursHistory`/`systemActor("WEEKLY_RESET")` no B6-3); faltam B6-5
+(`listWorkSessions`/NIGHTLY_SWEEP) e B6-6 (`pauseResponsibilityForUser`/SCHEDULED_PAUSE) — como
+previsto no DEC-54.
 
 ## O que mudou desde 2026-10-05 (re-medição 2026-10-07)
 
@@ -140,12 +143,35 @@ O que a execução confirmou e acrescentou: os 6 métodos das 2 rotas têm **qua
 `AssertCanManagePurchasesUseCase` para preservar o 403-antes-do-parse (padrão do B6-2b). Registro
 completo em `STATE.json` (batch B6-2d).
 
+## B6-3 — reporting + projects ✅ EXECUTADO 2026-10-08 (DEC-117/DEC-118)
+
+O que a execução fez, além do que a medição previa: a composta `MANAGE_USERS || LABORATORISTA` das
+4 rotas de weekly-reports virou regra no domínio (`report-access-rules.ts`) **como foi medida** —
+re-expressar como `FEATURE_ACCESS.VIEW_WEEKLY_REPORTS` foi considerado e **rejeitado** (a matriz tem
+`VIEW_WEEKLY_REPORTS` com outro conjunto; coincidem hoje por acaso). `POST /generate` tem gate
+**diferente** do POST irmão (self || MANAGE_USERS puro) e ganhou `GenerateWeeklyReportUseCase`
+próprio, que delega no Upsert sem flag de modo. Bulk/histórico/stats/projects/user-statistics são
+MANAGE_USERS puro com assert antes do parse. O cron reset passou por `systemActor("WEEKLY_RESET")`
+(o 1º dos 3 call sites do DEC-54 aplicado). Evolução aceita (DEC-118): DELETE weekly-report ausente
+virou 404 tipado em vez de P2025/500.
+
+Achados do lote (medidos, não previstos): o assert da fachada é **async** e a rota precisa
+**awaitar** — sem await o 403 virava promise rejeitada e o parse devolvia 500; o guarda
+`system-actor.test.ts` faz grep textual e pegou `systemActor(` em **comentário** de rota; o recheck
+interno do `CreateProjectUseCase` não era exercitado por teste nenhum (a caraterização decide pelo
+assert da rota) — o teste novo de use case fixou também a matriz medida: **ADMIN não tem
+MANAGE_PROJECTS**. O `reporting-routes.test.ts` (duplo de módulo) foi adaptado ao padrão DEC-90: o
+duplo delega nas funções do domínio, o mock de `@/lib/auth/rbac` saiu do arquivo, e a negação passou
+a vir dos papéis do ator. Registro completo em `STATE.json` (batch B6-3).
+
 ## B6-5 — o cron, agora com resposta pronta
 
-`lib/services/cron-service.ts` chama 3 use cases sem ator: `workExecution.listWorkSessions`
+`lib/services/cron-service.ts` chamava 3 use cases sem ator: `workExecution.listWorkSessions`
 (:69,:70,:90), `labOperations.pauseResponsibilityForUser` (:76), `reporting.resetWeeklyHoursHistory`
 (:109). O DEC-54 já definiu como isso passa: `systemActor("NIGHTLY_SWEEP")`,
-`systemActor("SCHEDULED_PAUSE")`, `systemActor("WEEKLY_RESET")`. Falta aplicar.
+`systemActor("SCHEDULED_PAUSE")`, `systemActor("WEEKLY_RESET")`. **Aplicado em parte:** o
+WEEKLY_RESET entrou no B6-3 (2026-10-08, com o caminho provado no reporting-roundtrip contra o
+banco real); NIGHTLY_SWEEP e SCHEDULED_PAUSE ficam nos seus lotes.
 
 Aviso que continua válido: `work-execution` é o único módulo **sem factory** — instancia use case
 inline por chamada (`GatewayCall`), então a migração nele custa mais que nos outros seis.

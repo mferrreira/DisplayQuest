@@ -1,4 +1,5 @@
 import { ValidationError } from "@/backend/domain"
+import { requireActorPermission } from "@/backend/domain/identity"
 import { isReportPeriod, listReportPeriods } from "@/backend/domain/reporting"
 import type {
   BulkGenerateWeeklyReportsCommand,
@@ -24,6 +25,12 @@ export class BulkGenerateWeeklyReportsUseCase {
   ) {}
 
   async execute(command: BulkGenerateWeeklyReportsCommand): Promise<BulkGenerateWeeklyReportsResult> {
+    // B6-3 (D4): MANAGE_USERS PURO (medido: LABORATORISTA é barrado no bulk, ao contrário
+    // das outras rotas de weekly-reports onde ele entra pela regra composta). Gate antes de
+    // qualquer validação — a rota barrava antes de ler o corpo; a validação 400
+    // "periodType, from e to são obrigatórios" ficou na rota, depois do assert.
+    requireActorPermission(command.actor, "MANAGE_USERS")
+
     if (!isReportPeriod(command.periodType)) {
       throw new ValidationError("Periodicidade inválida")
     }
@@ -56,6 +63,7 @@ export class BulkGenerateWeeklyReportsUseCase {
     for (const period of periods) {
       for (const user of users) {
         await this.upsertWeeklyReport.execute({
+          actor: command.actor,
           userId: user.id,
           weekStart: period.start.toISOString(),
           weekEnd: period.end.toISOString(),

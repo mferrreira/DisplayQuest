@@ -100,7 +100,7 @@ export function createUserManagementModule(options: UserManagementModuleFactoryO
     deductUserHours: (command) => new DeductUserHoursUseCase(repository).execute(command),
     updateUserRoles: (command) => new UpdateUserRolesUseCase(repository).execute(command),
     updateUserStatus: (command) => new UpdateUserStatusUseCase(repository).execute(command),
-    listUserStatistics: (type) => new ListUserStatisticsUseCase(repository).execute(type),
+    listUserStatistics: (actor, type) => new ListUserStatisticsUseCase(repository).execute(actor, type),
     listLeaderboard: (query) => new ListLeaderboardUseCase(repository).execute(query),
     listProfiles: (query) => new ListProfilesUseCase(repository).execute(query),
     registerUser: (command) => new RegisterUserUseCase(repository, passwordHasher).execute(command),

@@ -1,6 +1,13 @@
+import type { ActorRef } from "@/backend/domain"
 import type { ReportPeriod } from "@/backend/domain/reporting"
 
+/**
+ * B6-3 (D4): as entradas das rotas de relatórios semanais passaram a levar o `ActorRef` —
+ * a autoridade (regra composta MANAGE_USERS||LABORATORISTA, self-or-view, MANAGE_USERS puro
+ * no histórico de horas e no bulk) morava nas rotas com `hasPermission`/`ensure*`.
+ */
 export interface WeeklyReportListQuery {
+  actor: ActorRef
   userId?: number
   weekStart?: string
   weekEnd?: string
@@ -24,11 +31,13 @@ export interface UserProjectHoursQuery {
 }
 
 export interface WeeklyHoursHistoryQuery {
+  actor: ActorRef
   weekStart?: string
   userId?: number
 }
 
 export interface UpsertWeeklyReportCommand {
+  actor: ActorRef
   userId: number
   weekStart: string
   weekEnd: string
@@ -36,6 +45,7 @@ export interface UpsertWeeklyReportCommand {
 }
 
 export interface BulkGenerateWeeklyReportsCommand {
+  actor: ActorRef
   periodType: ReportPeriod
   from: string
   to: string

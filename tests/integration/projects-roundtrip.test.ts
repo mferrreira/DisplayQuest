@@ -21,6 +21,7 @@
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { prisma } from "@/lib/database/prisma";
+import { userActor } from "@/backend/domain";
 import { createProjectManagementModule } from "@/backend/modules/project-management";
 import { createProjectMembershipModule } from "@/backend/modules/project-membership";
 
@@ -115,6 +116,9 @@ describe("G4 roundtrip — project-management + project-membership (isolated tes
 
   it("createProject: record + creator/leader/volunteer memberships + server-clock createdAt", async () => {
     const project = await projectModule.createProject({
+      // B6-3 (D4): o gate MANAGE_PROJECTS desceu para o use case; coordId e COORDENADOR na
+      // semente deste roundtrip — o ator e a pessoa que ja criava o projeto.
+      actor: userActor(coordId, ["COORDENADOR"]),
       actorId: coordId,
       data: {
         name: `G5 Project ${stamp}`,
@@ -261,6 +265,7 @@ describe("G4 roundtrip — project-management + project-membership (isolated tes
 
     // Ana now leads `projectId` -> she cannot lead a second project.
     const second = await projectModule.createProject({
+      actor: userActor(coordId, ["COORDENADOR"]),
       actorId: coordId,
       data: { name: `G5 Project 2 ${stamp}`, status: "active" as never },
     });

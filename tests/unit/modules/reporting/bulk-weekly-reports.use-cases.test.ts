@@ -24,7 +24,7 @@ import {
   snapshotReportingWorld,
   type ReportingFakeWorld,
 } from "./reporting-fake-prisma"
-import { ValidationError } from "@/backend/domain"
+import { ValidationError, userActor } from "@/backend/domain"
 import type { ReportPeriod } from "@/backend/domain/reporting"
 import { createReportingModule } from "@/backend/modules/reporting"
 import { PrismaHoursReadRepository } from "@/backend/modules/reporting/infrastructure/repositories/prisma-hours-read.repository"
@@ -46,6 +46,13 @@ vi.mock("@/lib/storage/report-uploads", () => ({
 }))
 
 type ReportingModuleNew = ReturnType<typeof createReportingModule>
+
+/**
+ * B6-3 (D4): bulkGenerateWeeklyReports passou a exigir ator (MANAGE_USERS puro, gate antes
+ * das validacoes). Este arquivo exercita orquestracao e mensagens — o ator e o harness com
+ * MANAGE_USERS; a negacao por papel esta em use-cases.weekly-report-authorization.test.ts.
+ */
+const managerActor = userActor(1, ["COORDENADOR"])
 
 function newModule(): ReportingModuleNew {
   return createReportingModule({
@@ -99,6 +106,7 @@ describe("BulkGenerateWeeklyReportsUseCase (wiring nova, merge 64a6095)", () => 
       expect(expectedPeriods.length).toBeGreaterThan(0)
 
       const result = await newModule().bulkGenerateWeeklyReports({
+        actor: managerActor,
         periodType: "weekly",
         from,
         to,
@@ -129,11 +137,13 @@ describe("BulkGenerateWeeklyReportsUseCase (wiring nova, merge 64a6095)", () => 
 
       const reportingModule = newModule()
       const first = await reportingModule.bulkGenerateWeeklyReports({
+        actor: managerActor,
         periodType: "weekly",
         from: "2026-09-07",
         to: "2026-09-20",
       })
       const second = await reportingModule.bulkGenerateWeeklyReports({
+        actor: managerActor,
         periodType: "weekly",
         from: "2026-09-07",
         to: "2026-09-20",
@@ -146,12 +156,12 @@ describe("BulkGenerateWeeklyReportsUseCase (wiring nova, merge 64a6095)", () => 
 
   describe("validacoes (mensagens verbatim, ValidationError tipado)", () => {
     const cases: Array<{ title: string; command: any }> = [
-      { title: "periodicidade invalida", command: { periodType: "quinzenal", from: "2026-09-07", to: "2026-09-20" } },
-      { title: "datas invalidas", command: { periodType: "weekly", from: "banana", to: "2026-09-20" } },
-      { title: "data final anterior a inicial", command: { periodType: "weekly", from: "2026-09-20", to: "2026-09-07" } },
+      { title: "periodicidade invalida", command: { actor: managerActor, periodType: "quinzenal", from: "2026-09-07", to: "2026-09-20" } },
+      { title: "datas invalidas", command: { actor: managerActor, periodType: "weekly", from: "banana", to: "2026-09-20" } },
+      { title: "data final anterior a inicial", command: { actor: managerActor, periodType: "weekly", from: "2026-09-20", to: "2026-09-07" } },
       {
         title: "limite de 52 periodos excedido",
-        command: { periodType: "weekly", from: "2025-01-06", to: "2026-09-20" },
+        command: { actor: managerActor, periodType: "weekly", from: "2025-01-06", to: "2026-09-20" },
       },
     ]
 
@@ -173,16 +183,16 @@ describe("BulkGenerateWeeklyReportsUseCase (wiring nova, merge 64a6095)", () => 
       const reportingModule = newModule()
 
       expect(
-        (await captureError(() => reportingModule.bulkGenerateWeeklyReports({ periodType: "x" as unknown as ReportPeriod, from: "2026-09-07", to: "2026-09-20" })) as Error).message,
+        (await captureError(() => reportingModule.bulkGenerateWeeklyReports({ actor: managerActor, periodType: "x" as unknown as ReportPeriod, from: "2026-09-07", to: "2026-09-20" })) as Error).message,
       ).toBe("Periodicidade inválida")
       expect(
-        (await captureError(() => reportingModule.bulkGenerateWeeklyReports({ periodType: "weekly", from: "banana", to: "2026-09-20" })) as Error).message,
+        (await captureError(() => reportingModule.bulkGenerateWeeklyReports({ actor: managerActor, periodType: "weekly", from: "banana", to: "2026-09-20" })) as Error).message,
       ).toBe("Intervalo de datas inválido")
       expect(
-        (await captureError(() => reportingModule.bulkGenerateWeeklyReports({ periodType: "weekly", from: "2026-09-20", to: "2026-09-07" })) as Error).message,
+        (await captureError(() => reportingModule.bulkGenerateWeeklyReports({ actor: managerActor, periodType: "weekly", from: "2026-09-20", to: "2026-09-07" })) as Error).message,
       ).toBe("A data final não pode ser anterior à data inicial")
       expect(
-        (await captureError(() => reportingModule.bulkGenerateWeeklyReports({ periodType: "weekly", from: "2025-01-06", to: "2026-09-20" })) as Error).message,
+        (await captureError(() => reportingModule.bulkGenerateWeeklyReports({ actor: managerActor, periodType: "weekly", from: "2025-01-06", to: "2026-09-20" })) as Error).message,
       ).toBe("Limite de 52 períodos por geração em lote excedido")
     })
 
@@ -191,7 +201,7 @@ describe("BulkGenerateWeeklyReportsUseCase (wiring nova, merge 64a6095)", () => 
       const before = snapshotReportingWorld(world)
 
       const error = await captureError(() =>
-        newModule().bulkGenerateWeeklyReports({ periodType: "weekly", from: "2026-09-07", to: "2026-09-20" }),
+        newModule().bulkGenerateWeeklyReports({ actor: managerActor, periodType: "weekly", from: "2026-09-07", to: "2026-09-20" }),
       )
 
       expect(error).toBeInstanceOf(ValidationError)

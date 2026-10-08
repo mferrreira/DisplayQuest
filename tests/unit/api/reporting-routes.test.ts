@@ -17,16 +17,30 @@
  *   - weekly-reports/[id] DELETE: P2025 (não-DomainError) mantém 500 com mensagem fixa
  *     legado (não vaza message) — congelado.
  *   Não-DomainError: fallback 500 legado preservado verbatim em todas as rotas.
+ *
+ * B6-3 (D4): os gates de weekly-reports/historico de horas/estatisticas desceram para os
+ * use cases. Este arquivo e o contrato HTTP+MAPPER (mantem o duplo de modulo), e o duplo
+ * passou a DELEGAR nas funcoes do dominio que os use cases chamam (padrao DEC-90) — a
+ * negacao por papel e exercitada pela MATRIZ REAL via papeis do ator (`login([...])`), nao
+ * por estado de mock rbac. Autorizacao com o MODULO REAL: reporting-authorization.test.ts.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
-import { ForbiddenError, NotFoundError, ValidationError } from "@/backend/domain";
+import {
+  canViewWeeklyReports,
+  ForbiddenError,
+  NotFoundError,
+  requireActorPermission,
+  requireActorSelfOrPermission,
+  requireWeeklyReportSelfOrView,
+  ValidationError,
+  type ActorRef,
+} from "@/backend/domain";
+import { WEEKLY_HOURS_DENIED_MESSAGE } from "@/backend/modules/reporting/application/use-cases/list-weekly-hours-history.use-case";
 
 const mocks = vi.hoisted(() => {
   const state = {
     throwKind: null as null | "forbidden" | "notfound" | "notfound-user" | "validation" | "plain" | "p2025",
-    canManageUsers: true,
-    isLaboratorista: false,
     projectAccess: true,
     fileBytes: null as Uint8Array | null,
     absPath: null as string | null,
@@ -42,34 +56,72 @@ const mocks = vi.hoisted(() => {
     if (state.throwKind === "p2025") throw new Error("Record not found: WeeklyReport 5");
   };
   const fakeModule = {
-    listWeeklyReports: async (arg: unknown) => {
-      record("listWeeklyReports", arg);
+    // B6-3 (D4): os gates das rotas de weekly-reports/historico/estatisticas desceram para os
+    // use cases. Este duplo nao reimplementa a regra — ele DELEGA nas MESMAS funcoes do
+    // dominio que os use cases chamam (padrao DEC-90, o mesmo do gamification-routes e dos
+    // handlers MSW): assim o teste continua provando a rota + o mapper sobre a regra real,
+    // e a decisao deixa de vir do estado do mock rbac. A autorizacao por papel em si e
+    // provada com o MODULO REAL em reporting-authorization.test.ts.
+    listWeeklyReports: async (query: { actor: ActorRef; userId?: number }) => {
+      let effectiveUserId = query.userId;
+      if (effectiveUserId !== undefined) {
+        requireWeeklyReportSelfOrView(query.actor, effectiveUserId);
+      } else if (!canViewWeeklyReports(query.actor)) {
+        effectiveUserId = query.actor.kind === "user" ? query.actor.id : undefined;
+      }
+      record("listWeeklyReports", { userId: effectiveUserId });
       return [{ id: 1, userId: 42 }];
     },
-    upsertWeeklyReport: async (arg: unknown) => {
-      record("upsertWeeklyReport", arg);
+    upsertWeeklyReport: async (command: { actor: ActorRef; userId: number }) => {
+      requireWeeklyReportSelfOrView(command.actor, command.userId);
+      record("upsertWeeklyReport", command);
       if (state.throwKind === "notfound-user") throw new NotFoundError("Usuário não encontrado");
       if (state.throwKind === "plain") throw new Error("db down");
       return { id: 7, userId: 42, summary: null };
     },
-    getWeeklyReportById: async (id: number) => (id === 999 ? null : { id, userId: id === 2 ? 7 : 42 }),
-    deleteWeeklyReport: async (id: number) => {
+    generateWeeklyReport: async (command: { actor: ActorRef; userId: number }) => {
+      // Gate DIFERENTE do POST irmao: self || MANAGE_USERS puro (LABORATORISTA nao cria para
+      // terceiro por aqui) — a diferenca medida que virou GenerateWeeklyReportUseCase.
+      requireActorSelfOrPermission(command.actor, command.userId, "MANAGE_USERS");
+      record("generateWeeklyReport", command);
+      if (state.throwKind === "notfound-user") throw new NotFoundError("Usuário não encontrado");
+      return { id: 8, userId: command.userId, summary: null };
+    },
+    getWeeklyReportById: async (actor: ActorRef, id: number) => {
+      if (id === 999) return null;
+      const report = { id, userId: id === 2 ? 7 : 42 };
+      requireWeeklyReportSelfOrView(actor, report.userId);
+      return report;
+    },
+    deleteWeeklyReport: async (actor: ActorRef, id: number) => {
+      requireWeeklyReportSelfOrView(actor, id === 2 ? 7 : 42);
       record("deleteWeeklyReport", id);
+    },
+    assertCanManageWeeklyHours: (command: { actor: ActorRef }) => {
+      requireActorPermission(command.actor, "MANAGE_USERS", WEEKLY_HOURS_DENIED_MESSAGE);
     },
     deleteReportAttachment: async (arg: unknown) => {
       record("deleteReportAttachment", arg);
     },
-    getWeeklyHoursStats: async () => ({
-      currentWeek: { totalHours: 10, topUsers: [] },
-      last4Weeks: [],
-    }),
-    listWeeklyHoursHistory: async (arg: unknown) => {
-      record("listWeeklyHoursHistory", arg);
+    getWeeklyHoursStats: async (actor: ActorRef) => {
+      requireActorPermission(actor, "MANAGE_USERS", WEEKLY_HOURS_DENIED_MESSAGE);
+      return {
+        currentWeek: { totalHours: 10, topUsers: [] },
+        last4Weeks: [],
+      };
+    },
+    listWeeklyHoursHistory: async (query: { actor: ActorRef }) => {
+      requireActorPermission(query.actor, "MANAGE_USERS", WEEKLY_HOURS_DENIED_MESSAGE);
+      record("listWeeklyHoursHistory", query);
       return [{ id: 1, userId: 2, totalHours: 3 }];
     },
-    resetWeeklyHoursHistory: async () => [{ userId: 1, savedHours: "0" }],
-    createWeeklyHoursHistory: async (arg: unknown) => {
-      record("createWeeklyHoursHistory", arg);
+    resetWeeklyHoursHistory: async (actor: ActorRef) => {
+      requireActorPermission(actor, "MANAGE_USERS", WEEKLY_HOURS_DENIED_MESSAGE);
+      return [{ userId: 1, savedHours: "0" }];
+    },
+    createWeeklyHoursHistory: async (actor: ActorRef, weekStart: string) => {
+      requireActorPermission(actor, "MANAGE_USERS", WEEKLY_HOURS_DENIED_MESSAGE);
+      record("createWeeklyHoursHistory", weekStart);
       return [{ userId: 1, totalHours: 1 }];
     },
     sweepStaleReportUploads: async () => {
@@ -130,7 +182,10 @@ const mocks = vi.hoisted(() => {
       record("getUserProjectHours", arg);
       return [{ projectId: 10, hours: 5 }];
     },
-    getProjectStats: async () => ({ totalProjects: 3 }),
+    getProjectStats: async (actor: ActorRef) => {
+      requireActorPermission(actor, "MANAGE_USERS", "Apenas coordenadores e gerentes podem acessar estatísticas gerais");
+      return { totalProjects: 3 };
+    },
     getProjectHours: async (arg: unknown) => {
       record("getProjectHours", arg);
       return [{ userId: 1, hours: 2 }];
@@ -162,10 +217,10 @@ vi.mock("@/lib/auth/api-guard", () => ({
   ensureSelfOrPermission: () => null,
 }));
 
-vi.mock("@/lib/auth/rbac", () => ({
-  hasPermission: () => mocks.state.canManageUsers,
-  hasRole: (_roles: unknown, role: string) => role === "LABORATORISTA" && mocks.state.isLaboratorista,
-}));
+// B6-3: o mock de `@/lib/auth/rbac` saiu — nenhuma rota deste arquivo importa rbac desde que
+// os gates desceram para os use cases (a decisao agora e a matriz real, exercitada pelos duplos
+// que delegam em requireWeeklyReportSelfOrView/requireActorPermission). Se uma rota voltar a
+// importar rbac, o teste falha alto em vez de receber `true` de graca.
 
 vi.mock("@/lib/storage/report-uploads", () => ({
   validateReportFile: async () => ({ ok: true }),
@@ -213,14 +268,18 @@ async function bodyOf(response: Response) {
 
 beforeEach(() => {
   mocks.state.throwKind = null;
-  mocks.state.canManageUsers = true;
-  mocks.state.isLaboratorista = false;
   mocks.state.projectAccess = true;
   mocks.state.fileBytes = null;
   mocks.state.absPath = null;
   mocks.state.calls = [];
+  mocks.auth.actor.roles = ["COORDENADOR"];
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
+
+/** B6-3: a negacao agora vem dos PAPEIS do ator (matriz real), nao do estado do mock rbac. */
+function login(roles: string[]) {
+  mocks.auth.actor.roles = roles;
+}
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -228,10 +287,12 @@ afterEach(() => {
 
 describe("GET/POST /api/weekly-reports", () => {
   it("GET lista (shape { weeklyReports }); sem permissão vê só os próprios (userId=actor)", async () => {
-    mocks.state.canManageUsers = false;
+    login(["VOLUNTARIO"]);
     const response = await weeklyList(makeRequest("/api/weekly-reports"));
     expect(response.status).toBe(200);
     expect(await bodyOf(response)).toEqual({ weeklyReports: [{ id: 1, userId: 42 }] });
+    // B6-3: a resolução de escopo (userId=actor para quem não vê todos) agora é do use case —
+    // o duplo delega na mesma regra e registra o userId efetivo.
     expect(mocks.state.calls[0]).toMatchObject({ method: "listWeeklyReports", arg: { userId: 42 } });
   });
 
@@ -240,10 +301,11 @@ describe("GET/POST /api/weekly-reports", () => {
     expect(invalid.status).toBe(400);
     expect(await bodyOf(invalid)).toEqual({ error: "userId inválido" });
 
-    mocks.state.canManageUsers = false;
+    login(["VOLUNTARIO"]);
     const denied = await weeklyList(makeRequest("/api/weekly-reports?userId=7"));
     expect(denied.status).toBe(403);
-    expect(await bodyOf(denied)).toEqual({ error: "Sem permissão" });
+    // B6-3 (DEC-53): gate migrado — corpo superset, mensagem "Sem permissão" intacta.
+    expect(await bodyOf(denied)).toMatchObject({ error: "Sem permissão", code: "FORBIDDEN" });
   });
 
   it("GET erro nao-DomainError mantem 500 com mensagem fixa legado", async () => {
@@ -298,15 +360,15 @@ describe("GET/DELETE /api/weekly-reports/[id]", () => {
   });
 
   it("GET nao-dono sem permissão => 403 'Sem permissão' (congelado)", async () => {
-    mocks.state.canManageUsers = false;
-    mocks.state.isLaboratorista = false;
+    login(["VOLUNTARIO"]);
     const response = await weeklyGet(makeRequest("/api/weekly-reports/2"), params({ id: "2" }));
     expect(response.status).toBe(403);
-    expect(await bodyOf(response)).toEqual({ error: "Sem permissão" });
+    // B6-3 (DEC-53): corpo superset, mensagem intacta.
+    expect(await bodyOf(response)).toMatchObject({ error: "Sem permissão", code: "FORBIDDEN" });
   });
 
   it("DELETE valido => { success: true } (dono pode, mesmo sem gestão)", async () => {
-    mocks.state.canManageUsers = false;
+    login(["VOLUNTARIO"]);
     const ok = await weeklyDelete(makeRequest("/api/weekly-reports/1", { method: "DELETE" }), params({ id: "1" }));
     expect(ok.status).toBe(200);
     expect(await bodyOf(ok)).toEqual({ data: { success: true } });

@@ -1,4 +1,4 @@
-import type { IProject, Role } from "@/backend/domain"
+import type { ActorRef, IProject, Role } from "@/backend/domain"
 
 export interface ListProjectsForActorQuery {
   actorId: number
@@ -14,6 +14,8 @@ export interface GetProjectForActorQuery {
 export interface CreateProjectCommand {
   data: Omit<IProject, "id" | "createdAt" | "createdBy">
   actorId: number
+  /** B6-3 (D4): o ator para o gate de MANAGE_PROJECTS (mensagem própria da rota, preservada). */
+  actor: ActorRef
   volunteerIds?: number[]
 }
 

@@ -1,5 +1,5 @@
 import { NotFoundError, ValidationError } from "@/backend/domain/errors"
-import { buildWeeklySummary, mapSessionToWeeklyLog, normalizeLocalWeekWindow } from "@/backend/domain/reporting"
+import { buildWeeklySummary, mapSessionToWeeklyLog, normalizeLocalWeekWindow, requireWeeklyReportSelfOrView } from "@/backend/domain/reporting"
 import type { UpsertWeeklyReportCommand, WeeklyReportReadModel, WeeklyReportSessionLog } from "@/backend/modules/reporting/application/contracts"
 import type { HoursReadRepository } from "@/backend/modules/reporting/application/ports/hours-read.repository"
 import type { ReportingDirectory } from "@/backend/modules/reporting/application/ports/reporting-directory.port"
@@ -10,6 +10,13 @@ import type { WeeklyReportsRepository } from "@/backend/modules/reporting/applic
  * previous thin use case already enforced in production ("Usuário inválido").
  * QUIRK-7I: window normalized with LOCAL setHours; "existing" matched by EXACT instant
  * equality of the normalized pair (same-local-day raw instants collapse).
+ *
+ * B6-3 (D4): gate self-or-view (regra composta MANAGE_USERS||LABORATORISTA, mensagem
+ * "Sem permissão") logo no início — a rota validava o corpo (400) antes do gate, e essas
+ * validações de entrada ficaram na rota; aqui o gate vem antes de qualquer leitura. O
+ * chamador interno do bulk (que já passou pelo próprio gate de MANAGE_USERS) atravessa
+ * este gate de novo: quem pode gerar em lote sempre passa a composta — o gate duplo é
+ * redundante por segurança, não por bug.
  */
 export class UpsertWeeklyReportUseCase {
   constructor(
@@ -19,6 +26,8 @@ export class UpsertWeeklyReportUseCase {
   ) {}
 
   async execute(command: UpsertWeeklyReportCommand): Promise<WeeklyReportReadModel> {
+    requireWeeklyReportSelfOrView(command.actor, command.userId)
+
     if (!Number.isInteger(command.userId) || command.userId <= 0) {
       throw new ValidationError("Usuário inválido")
     }

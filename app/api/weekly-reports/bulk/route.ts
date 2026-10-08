@@ -1,9 +1,15 @@
 import { createApiError, createApiResponse } from "@/lib/utils/utils"
-import { ensurePermission, requireApiActor } from "@/lib/auth/api-guard"
+import { requireApiActor } from "@/lib/auth/api-guard"
+import { userActor } from "@/backend/domain"
 import { getBackendComposition } from "@/backend/composition/root"
 import { isReportPeriodType } from "@/lib/constants/report-periods"
 import { domainErrorResponse } from "@/lib/api/domain-error-response"
 
+// B6-3 (D4): o gate MANAGE_USERS PURO (medido: LABORATORISTA e barrado no bulk, ao contrario
+// das rotas irmas) desceu para BulkGenerateWeeklyReportsUseCase, e a rota chama
+// assertCanGenerateReportsInBulk ANTES de ler o corpo — o gate legado vinha antes do parse, e
+// um corpo invalido para quem nao tem permissao deve seguir devolvendo 403, nao 500 (padrao
+// do AssertCanPublishNotificationEventUseCase, B6-2b). bulkGenerate recheca no proprio ator.
 const { reporting: reportingModule } = getBackendComposition()
 
 export async function POST(request: Request) {
@@ -11,8 +17,8 @@ export async function POST(request: Request) {
     const auth = await requireApiActor()
     if (auth.error) return auth.error
 
-    const permissionError = ensurePermission(auth.actor, "MANAGE_USERS")
-    if (permissionError) return permissionError
+    const actor = userActor(auth.actor.id, auth.actor.roles)
+    await reportingModule.assertCanGenerateReportsInBulk({ actor })
 
     const body = await request.json()
     const periodType = typeof body.periodType === "string" ? body.periodType : ""
@@ -23,7 +29,7 @@ export async function POST(request: Request) {
       return createApiError("periodType, from e to são obrigatórios", 400)
     }
 
-    const result = await reportingModule.bulkGenerateWeeklyReports({ periodType, from, to })
+    const result = await reportingModule.bulkGenerateWeeklyReports({ actor, periodType, from, to })
 
     return createApiResponse({ result })
   } catch (error: unknown) {

@@ -1,3 +1,4 @@
+import type { ActorRef } from "@/backend/domain"
 import type {
   CreateUserCommand,
   DeductUserHoursCommand,
@@ -22,7 +23,8 @@ export interface UserManagementGateway {
   deductUserHours(command: DeductUserHoursCommand): Promise<unknown>
   updateUserRoles(command: UpdateUserRolesCommand): Promise<unknown>
   updateUserStatus(command: UpdateUserStatusCommand): Promise<unknown>
-  listUserStatistics(type?: string | null): Promise<unknown>
+  // B6-3 (D4): leva o ator — o gate de MANAGE_USERS mora no use case.
+  listUserStatistics(actor: ActorRef, type?: string | null): Promise<unknown>
   listLeaderboard(query: ListLeaderboardQuery): Promise<unknown>
   listProfiles(query: ListUserProfilesQuery): Promise<unknown>
 }

@@ -4,6 +4,7 @@ import { GetProjectForActorUseCase } from "@/backend/modules/project-management/
 import { CanActorAccessProjectUseCase } from "@/backend/modules/project-management/application/use-cases/can-actor-access-project.use-case"
 import { CanActorManageProjectUseCase } from "@/backend/modules/project-management/application/use-cases/can-actor-manage-project.use-case"
 import { CreateProjectUseCase } from "@/backend/modules/project-management/application/use-cases/create-project.use-case"
+import { AssertCanCreateProjectUseCase } from "@/backend/modules/project-management/application/use-cases/assert-can-create-project.use-case"
 import { UpdateProjectUseCase } from "@/backend/modules/project-management/application/use-cases/update-project.use-case"
 import { DeleteProjectUseCase } from "@/backend/modules/project-management/application/use-cases/delete-project.use-case"
 import { GetProjectVolunteersUseCase } from "@/backend/modules/project-management/application/use-cases/get-project-volunteers.use-case"
@@ -33,6 +34,7 @@ export class ProjectManagementModule {
   readonly canActorAccessProject: UseCaseExecute<CanActorAccessProjectUseCase>
   readonly canActorManageProject: UseCaseExecute<CanActorManageProjectUseCase>
   readonly createProject: UseCaseExecute<CreateProjectUseCase>
+  readonly assertCanCreateProject: UseCaseExecute<AssertCanCreateProjectUseCase>
   readonly updateProject: UseCaseExecute<UpdateProjectUseCase>
   readonly deleteProject: UseCaseExecute<DeleteProjectUseCase>
   readonly getProjectVolunteers: UseCaseExecute<GetProjectVolunteersUseCase>
@@ -44,6 +46,7 @@ export class ProjectManagementModule {
     private readonly canActorAccessProjectUseCase: CanActorAccessProjectUseCase,
     private readonly canActorManageProjectUseCase: CanActorManageProjectUseCase,
     private readonly createProjectUseCase: CreateProjectUseCase,
+    private readonly assertCanCreateProjectUseCase: AssertCanCreateProjectUseCase,
     private readonly updateProjectUseCase: UpdateProjectUseCase,
     private readonly deleteProjectUseCase: DeleteProjectUseCase,
     private readonly getProjectVolunteersUseCase: GetProjectVolunteersUseCase,
@@ -54,6 +57,7 @@ export class ProjectManagementModule {
     this.canActorAccessProject = this.canActorAccessProjectUseCase.execute.bind(this.canActorAccessProjectUseCase)
     this.canActorManageProject = this.canActorManageProjectUseCase.execute.bind(this.canActorManageProjectUseCase)
     this.createProject = this.createProjectUseCase.execute.bind(this.createProjectUseCase)
+    this.assertCanCreateProject = this.assertCanCreateProjectUseCase.execute.bind(this.assertCanCreateProjectUseCase)
     this.updateProject = this.updateProjectUseCase.execute.bind(this.updateProjectUseCase)
     this.deleteProject = this.deleteProjectUseCase.execute.bind(this.deleteProjectUseCase)
     this.getProjectVolunteers = this.getProjectVolunteersUseCase.execute.bind(this.getProjectVolunteersUseCase)
@@ -86,6 +90,7 @@ export function createProjectManagementModule(options: ProjectManagementModuleFa
     new CanActorAccessProjectUseCase({ actors: ports.actors }),
     new CanActorManageProjectUseCase({ memberships: ports.memberships, actors: ports.actors }),
     new CreateProjectUseCase({ projects: ports.projects, memberships: ports.memberships }),
+    new AssertCanCreateProjectUseCase(),
     new UpdateProjectUseCase({ projects: ports.projects, memberships: ports.memberships, actors: ports.actors }),
     new DeleteProjectUseCase({ projects: ports.projects, memberships: ports.memberships, actors: ports.actors }),
     new GetProjectVolunteersUseCase({ memberships: ports.memberships, actors: ports.actors, hours: ports.hours }),

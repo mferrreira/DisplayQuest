@@ -1,6 +1,7 @@
 import * as cron from 'node-cron'
 import { getBackendComposition } from '@/backend/composition/root'
 import { SCHEDULED_PAUSE_TIMES } from '@/backend/domain/work'
+import { SYSTEM_REASONS, systemActor } from '@/backend/domain/identity'
 
 /**
  * repo-cleanup B3 (D2): as expressões cron de pausa são DERIVADAS de
@@ -106,7 +107,11 @@ export class CronService {
   private async executeWeeklyReset() {
     try {
       const { reporting } = getBackendComposition()
-      await reporting.resetWeeklyHoursHistory()
+      // B6-3 (D4, DEC-54): o reset passou a exigir ator. O cron e rotina de sistema sem
+      // pessoa atras — systemActor("WEEKLY_RESET"), o bypass declarado. Sem isso, o gate de
+      // MANAGE_USERS que desceu para o use case derrubava o reset noturno em producao, e
+      // nenhum teste de rota exercitaria a quebra.
+      await reporting.resetWeeklyHoursHistory(systemActor(SYSTEM_REASONS.WEEKLY_RESET))
     } catch (error) {
       console.error('❌ Erro ao executar reset automático:', error)
     }

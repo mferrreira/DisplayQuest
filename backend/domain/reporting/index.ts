@@ -46,3 +46,8 @@ export {
   hasValidReportContent,
   type ReportAccessDecision,
 } from "./project-report-rules";
+export {
+  canViewWeeklyReports,
+  requireWeeklyReportSelfOrView,
+  WEEKLY_REPORT_DENIED_MESSAGE,
+} from "./report-access-rules";

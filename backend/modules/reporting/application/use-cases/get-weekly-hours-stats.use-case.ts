@@ -1,16 +1,22 @@
+import { requireActorPermission } from "@/backend/domain/identity"
 import { formatWeekDate, rollingWeekWindows, sumWeeklyHours, TOP_USERS_LIMIT, weekWindowFor } from "@/backend/domain/reporting"
+import type { ActorRef } from "@/backend/domain"
 import type { WeeklyHoursHistoryItem } from "@/backend/modules/reporting/application/contracts"
 import type { WeeklyHoursHistoryRepository } from "@/backend/modules/reporting/application/ports/weekly-hours-history.repository"
+import { WEEKLY_HOURS_DENIED_MESSAGE } from "@/backend/modules/reporting/application/use-cases/list-weekly-hours-history.use-case"
 
 /**
  * OND7-B3 — frozen from getWeeklyHoursStats (gateway:315-349): current week (Monday-based)
  * with totalHours/userCount/topUsers (5 first of the totalHours-desc ordering) + last4Weeks
  * i=1..4 over subWeeks(now, i) windows.
+ *
+ * B6-3 (D4): mesmo gate MANAGE_USERS puro e a MESMA mensagem do histórico de horas — as duas
+ * leituras vivem na rota /api/weekly-hours-history e compartilhavam o `ensurePermission`.
  */
 export class GetWeeklyHoursStatsUseCase {
   constructor(private readonly weeklyHoursHistory: WeeklyHoursHistoryRepository) {}
 
-  async execute(): Promise<{
+  async execute(actor: ActorRef): Promise<{
     currentWeek: {
       weekStart: string
       weekEnd: string
@@ -25,6 +31,8 @@ export class GetWeeklyHoursStatsUseCase {
       userCount: number
     }>
   }> {
+    requireActorPermission(actor, "MANAGE_USERS", WEEKLY_HOURS_DENIED_MESSAGE)
+
     const now = new Date()
     const currentWeek = weekWindowFor(now)
 
