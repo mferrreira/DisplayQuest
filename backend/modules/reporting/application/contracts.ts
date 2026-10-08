@@ -25,6 +25,8 @@ export interface ProjectHoursHistoryQuery {
 }
 
 export interface UserProjectHoursQuery {
+  /** B6-4 (D4): self || MANAGE_USERS (mensagem default) — a rota gateava com ensureSelfOrPermission. */
+  actor: ActorRef
   userId: number
   weekStart?: string
   weekEnd?: string

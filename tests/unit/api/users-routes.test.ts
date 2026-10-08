@@ -13,15 +13,52 @@
  *   - approve missing user: 500 (P2025 branch only) -> 404 "Usuário não encontrado" (mapped).
  *   - register duplicate email: 400 -> 409.
  * Avatar upload routes (fs/ImageProcessor seams) are exercised by the G4 roundtrip instead.
+ *
+ * B6-4 (D4): os gates das 8 rotas desceram para os use cases. Este arquivo continua o contrato
+ * HTTP+MAPPER (mantem o duplo de módulo), e o duplo passou a DELEGAR nas MESMAS funções do
+ * domínio que os use cases chamam (padrão DEC-90, o mesmo do reporting-routes): a negação vem
+ * dos PAPEIS do ator (`login([...])`), não do mock de `ensurePermission`/`ensureSelfOrPermission`
+ * — que saiu (nenhuma rota deste arquivo importa guard de permissão ha; se voltar, falha alto).
+ * O fallback legado de 403 do GET (match por mensagem "não tem permissão") foi REMOVIDO da rota:
+ * era código morto — ForbiddenError já era mapeado por domainErrorResponse antes mesmo do lote.
+ * Autorização com o MÓDULO REAL: users-authorization.test.ts.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
-import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "@/backend/domain";
+import {
+  ConflictError,
+  CREATE_USER_DENIED_MESSAGE,
+  ForbiddenError,
+  NotFoundError,
+  PENDING_MODERATION_DENIED_MESSAGE,
+  PROFILE_DENIED_MESSAGE,
+  resolveUserListVisibility,
+  requireActorPermission,
+  requireActorSelfOrPermission,
+  ValidationError,
+  type ActorRef,
+} from "@/backend/domain";
 
 const mocks = vi.hoisted(() => {
   const fakeModule = {
-    listUsersForActor: async () => [{ id: 1, name: "Ana" }],
-    createUser: async (command: any) => ({ id: 10, name: command.name, email: command.email, status: "active" }),
+    // B6-4 (D4): os métodos migrados DELEGAM nas funções do domínio que os use cases chamam
+    // (padrão DEC-90). O duplo fornece os dados; a decisão é a matriz real via papéis do ator.
+    listUsersForActor: async (query: { actor: ActorRef }) => {
+      const visibility = resolveUserListVisibility(
+        query.actor.kind === "user" ? (query.actor.roles as readonly string[]) : [],
+      );
+      if (!visibility.canViewBasicUsers) {
+        throw new ForbiddenError("Usuário não tem permissão para visualizar outros usuários");
+      }
+      return [{ id: 1, name: "Ana" }];
+    },
+    assertCanManageUsers: (command: { actor: ActorRef; deniedMessage?: string }) => {
+      requireActorPermission(command.actor, "MANAGE_USERS", command.deniedMessage);
+    },
+    createUser: async (command: { actor: ActorRef; name?: string; email?: string }) => {
+      requireActorPermission(command.actor, "MANAGE_USERS", CREATE_USER_DENIED_MESSAGE);
+      return { id: 10, name: command.name, email: command.email, status: "active" };
+    },
     registerUser: async (command: any) => ({
       id: 11,
       name: command.name,
@@ -29,22 +66,45 @@ const mocks = vi.hoisted(() => {
       status: "pending",
       createdAt: new Date("2026-01-01T00:00:00.000Z"),
     }),
-    findUserById: async (id: number) => ({ id, name: "Ana", email: "ana@x.com" }),
-    updateUser: async (id: number) => ({ id, name: "Ana" }),
-    deleteUser: async () => undefined,
-    listPendingUsers: async () => [{ id: 4, name: "Pendente" }],
-    moderatePendingUser: async (id: number, action: string) =>
-      action === "approve" ? { id, status: "active" } : undefined,
-    updateUserProfile: async (id: number) => ({ id, name: "Ana" }),
-    updateUserPoints: async (id: number) => ({ id, points: 15 }),
+    findUserById: async (actor: ActorRef, id: number, deniedMessage?: string) => {
+      requireActorSelfOrPermission(actor, id, "MANAGE_USERS", deniedMessage);
+      return { id, name: "Ana", email: "ana@x.com" };
+    },
+    updateUser: async (actor: ActorRef, id: number) => {
+      requireActorSelfOrPermission(actor, id, "MANAGE_USERS");
+      return { id, name: "Ana" };
+    },
+    deleteUser: async (actor: ActorRef) => {
+      requireActorPermission(actor, "MANAGE_USERS");
+    },
+    listPendingUsers: async (actor: ActorRef) => {
+      requireActorPermission(actor, "MANAGE_USERS", PENDING_MODERATION_DENIED_MESSAGE);
+      return [{ id: 4, name: "Pendente" }];
+    },
+    moderatePendingUser: async (actor: ActorRef, id: number, action: string) => {
+      requireActorPermission(actor, "MANAGE_USERS", PENDING_MODERATION_DENIED_MESSAGE);
+      return action === "approve" ? { id, status: "active" } : undefined;
+    },
+    updateUserProfile: async (actor: ActorRef, id: number) => {
+      requireActorSelfOrPermission(actor, id, "MANAGE_USERS", PROFILE_DENIED_MESSAGE);
+      return { id, name: "Ana" };
+    },
+    updateUserPoints: async (command: { actor: ActorRef; userId: number }) => {
+      requireActorPermission(command.actor, "MANAGE_USERS");
+      return { id: command.userId, points: 15 };
+    },
     deductUserHours: async () => ({ message: "5 horas retiradas com sucesso", user: { id: 1 } }),
-    updateUserRoles: async (id: number) => ({ id, roles: ["VOLUNTARIO"] }),
-    updateUserStatus: async (id: number) => ({ id, status: "suspended" }),
+    updateUserRoles: async (command: { actor: ActorRef; userId: number }) => {
+      requireActorPermission(command.actor, "MANAGE_USERS");
+      return { id: command.userId, roles: ["VOLUNTARIO"] };
+    },
+    updateUserStatus: async (command: { actor: ActorRef; userId: number }) => {
+      requireActorPermission(command.actor, "MANAGE_USERS");
+      return { id: command.userId, status: "suspended" };
+    },
   };
   const auth = {
     actor: { id: 42, roles: ["COORDENADOR"] },
-    permissionError: null as unknown | null,
-    selfOrPermissionError: null as unknown | null,
   };
   return { fakeModule, auth };
 });
@@ -53,10 +113,11 @@ vi.mock("@/backend/composition/root", () => ({
   getBackendComposition: () => ({ userManagement: mocks.fakeModule }),
 }));
 
+// B6-4: so `requireApiActor` e dobrado. `ensurePermission`/`ensureSelfOrPermission` sairam —
+// nenhuma rota deste arquivo importa guard de permissao ha; a decisao e a matriz real via
+// delegacao do duplo. Se uma rota voltar a importar rbac/guard, o teste falha alto.
 vi.mock("@/lib/auth/api-guard", () => ({
   requireApiActor: async () => ({ actor: mocks.auth.actor }),
-  ensurePermission: () => mocks.auth.permissionError,
-  ensureSelfOrPermission: () => mocks.auth.selfOrPermissionError,
 }));
 
 import { GET as usersList, POST as usersCreate } from "@/app/api/users/route";
@@ -81,17 +142,25 @@ function idContext(id: string) {
   return { params: Promise.resolve({ id }) };
 }
 
+function login(roles: string[], id = 42) {
+  mocks.auth.actor = { id, roles };
+}
+
 beforeEach(() => {
-  mocks.auth.actor = { id: 42, roles: ["COORDENADOR"] };
-  mocks.auth.permissionError = null;
-  mocks.auth.selfOrPermissionError = null;
-  mocks.fakeModule.listUsersForActor = async () => [{ id: 1, name: "Ana" }];
-  mocks.fakeModule.createUser = async (command: any) => ({
-    id: 10,
-    name: command.name,
-    email: command.email,
-    status: "active",
-  });
+  login(["COORDENADOR"]);
+  mocks.fakeModule.listUsersForActor = async (query: { actor: ActorRef }) => {
+    const visibility = resolveUserListVisibility(
+      query.actor.kind === "user" ? (query.actor.roles as readonly string[]) : [],
+    );
+    if (!visibility.canViewBasicUsers) {
+      throw new ForbiddenError("Usuário não tem permissão para visualizar outros usuários");
+    }
+    return [{ id: 1, name: "Ana" }];
+  };
+  mocks.fakeModule.createUser = async (command: { actor: ActorRef; name?: string; email?: string }) => {
+    requireActorPermission(command.actor, "MANAGE_USERS", CREATE_USER_DENIED_MESSAGE);
+    return { id: 10, name: command.name, email: command.email, status: "active" };
+  };
   mocks.fakeModule.registerUser = async (command: any) => ({
     id: 11,
     name: command.name,
@@ -99,13 +168,29 @@ beforeEach(() => {
     status: "pending",
     createdAt: new Date("2026-01-01T00:00:00.000Z"),
   });
-  mocks.fakeModule.findUserById = async (id: number) => ({ id, name: "Ana", email: "ana@x.com" });
-  mocks.fakeModule.updateUser = async (id: number) => ({ id, name: "Ana" });
-  mocks.fakeModule.deleteUser = async () => undefined;
-  mocks.fakeModule.moderatePendingUser = async (id: number, action: string) =>
-    action === "approve" ? { id, status: "active" } : undefined;
-  mocks.fakeModule.updateUserProfile = async (id: number) => ({ id, name: "Ana" });
-  mocks.fakeModule.updateUserPoints = async (id: number) => ({ id, points: 15 });
+  mocks.fakeModule.findUserById = async (actor: ActorRef, id: number, deniedMessage?: string) => {
+    requireActorSelfOrPermission(actor, id, "MANAGE_USERS", deniedMessage);
+    return { id, name: "Ana", email: "ana@x.com" };
+  };
+  mocks.fakeModule.updateUser = async (actor: ActorRef, id: number) => {
+    requireActorSelfOrPermission(actor, id, "MANAGE_USERS");
+    return { id, name: "Ana" };
+  };
+  mocks.fakeModule.deleteUser = async (actor: ActorRef) => {
+    requireActorPermission(actor, "MANAGE_USERS");
+  };
+  mocks.fakeModule.moderatePendingUser = async (actor: ActorRef, id: number, action: string) => {
+    requireActorPermission(actor, "MANAGE_USERS", PENDING_MODERATION_DENIED_MESSAGE);
+    return action === "approve" ? { id, status: "active" } : undefined;
+  };
+  mocks.fakeModule.updateUserProfile = async (actor: ActorRef, id: number) => {
+    requireActorSelfOrPermission(actor, id, "MANAGE_USERS", PROFILE_DENIED_MESSAGE);
+    return { id, name: "Ana" };
+  };
+  mocks.fakeModule.updateUserPoints = async (command: { actor: ActorRef; userId: number }) => {
+    requireActorPermission(command.actor, "MANAGE_USERS");
+    return { id: command.userId, points: 15 };
+  };
   mocks.fakeModule.deductUserHours = async () => ({
     message: "5 horas retiradas com sucesso",
     user: { id: 1 },
@@ -119,10 +204,8 @@ describe("GET/POST /api/users", () => {
     expect(await response.json()).toEqual({ users: [{ id: 1, name: "Ana" }] });
   });
 
-  it("GET ForbiddenError -> 403 with stable code (replaces message-matching)", async () => {
-    mocks.fakeModule.listUsersForActor = async () => {
-      throw new ForbiddenError("Usuário não tem permissão para visualizar outros usuários");
-    };
+  it("GET sem papel de visibilidade -> 403 com a mensagem congelada do use case (matriz real)", async () => {
+    login([]);
     const response = await usersList();
     expect(response.status).toBe(403);
     expect(await response.json()).toMatchObject({
@@ -131,13 +214,9 @@ describe("GET/POST /api/users", () => {
     });
   });
 
-  it("GET non-typed permission error keeps the legacy 403 fallback", async () => {
-    mocks.fakeModule.listUsersForActor = async () => {
-      throw new Error("não tem permissão (legacy)");
-    };
-    const response = await usersList();
-    expect(response.status).toBe(403);
-  });
+  // B6-4: o caso "non-typed permission error keeps the legacy 403 fallback" saiu junto com o
+  // fallback da rota — codigo morto (ForbiddenError ja era mapeado por domainErrorResponse).
+  // Um Error cru com "nao tem permissao" na mensagem agora e 500, como qualquer nao-DomainError.
 
   it("GET unknown error -> 500 (generic preserved)", async () => {
     mocks.fakeModule.listUsersForActor = async () => {
@@ -180,30 +259,45 @@ describe("GET/POST /api/users", () => {
     expect((await response.json()).error).toBe("Este email já está em uso");
   });
 
-  it("POST without MANAGE_USERS -> ensurePermission passthrough (403)", async () => {
-    const { NextResponse } = await import("next/server");
-    mocks.auth.permissionError = NextResponse.json({ error: "Sem permissão para criar usuários" }, { status: 403 });
+  it("POST sem MANAGE_USERS -> 403 com a mensagem própria (gate no use case, assert na rota)", async () => {
+    login(["VOLUNTARIO"]);
     const response = await usersCreate(
       makeRequest("/api/users", { method: "POST", body: { name: "Ana", email: "a@x.com", password: "secret123" } }),
     );
     expect(response.status).toBe(403);
+    // B6-4 (DEC-53): corpo superset, mensagem própria intacta.
+    expect(await response.json()).toMatchObject({
+      error: "Sem permissão para criar usuários",
+      code: "FORBIDDEN",
+    });
   });
 });
 
 describe("/api/users/[id] GET/PUT/DELETE", () => {
-  it("GET 200 / invalid id 400 / NotFoundError 404", async () => {
+  it("GET 200 / invalid id 400 / ausente => 404 legado {error} preservado (null do use case)", async () => {
     const ok = await userGet(makeRequest("/api/users/1"), idContext("1"));
     expect(ok.status).toBe(200);
 
     const invalid = await userGet(makeRequest("/api/users/abc"), idContext("abc"));
     expect(invalid.status).toBe(400);
 
-    mocks.fakeModule.findUserById = async () => {
-      throw new NotFoundError("Usuário não encontrado");
-    };
+    // B6-4: o use case devolve null (nao lanca) — a rota monta o 404 legado {error} verbatim,
+    // sem code (mesma decisao do GET de purchases/[id] no B6-2d).
+    mocks.fakeModule.findUserById = async () => null as never;
     const missing = await userGet(makeRequest("/api/users/99"), idContext("99"));
     expect(missing.status).toBe(404);
-    expect((await missing.json()).code).toBe("NOT_FOUND");
+    expect(await missing.json()).toEqual({ error: "Usuário não encontrado" });
+  });
+
+  it("GET de outro sem MANAGE_USERS => 403 'Acesso negado' (self-or-manage no use case)", async () => {
+    login(["VOLUNTARIO"], 42);
+    const denied = await userGet(makeRequest("/api/users/1"), idContext("1"));
+    expect(denied.status).toBe(403);
+    expect(await denied.json()).toMatchObject({ error: "Acesso negado", code: "FORBIDDEN" });
+
+    // o dono (self) passa sem qualquer gestao
+    login(["VOLUNTARIO"], 1);
+    expect((await userGet(makeRequest("/api/users/1"), idContext("1"))).status).toBe(200);
   });
 
   it("PUT ValidationError (avatar) -> 400; NotFoundError -> 404", async () => {

@@ -1,4 +1,4 @@
-import { NotFoundError, ValidationError, toPublicUser } from "@/backend/domain"
+import { NotFoundError, requireActorPermission, ValidationError, toPublicUser } from "@/backend/domain"
 import type { UpdateUserPointsCommand } from "@/backend/modules/user-management/application/contracts"
 import type { UserRepositoryPort } from "@/backend/modules/user-management/application/ports/user.repository"
 
@@ -8,11 +8,18 @@ import type { UserRepositoryPort } from "@/backend/modules/user-management/appli
  * negative input and requires sufficiency. Changed in V4-6 (DEC-60): "set" no longer rejects
  * negative input — the award path produces negative totals (DEC-39, penalty without floor) and
  * administration had no way to write one back.
+ *
+ * B6-4 (D4): MANAGE_USERS PURO (mensagem default). A rota gateava ANTES da validacao de id/
+ * corpo/acao — ordem preservada com AssertCanManageUsersUseCase antes do parse; aqui o gate
+ * recheca e protege chamadores futuros. As validacoes DEC-60/DEC-84 (acao antes do numero,
+ * leitura do valor bruto) continuam na rota: sao validacao de entrada com corpo proprio.
  */
 export class UpdateUserPointsUseCase {
   constructor(private readonly repository: UserRepositoryPort) {}
 
   async execute(command: UpdateUserPointsCommand) {
+    requireActorPermission(command.actor, "MANAGE_USERS")
+
     const user = await this.repository.findById(command.userId)
     if (!user) {
       throw new NotFoundError("Usuário não encontrado")

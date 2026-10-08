@@ -1,4 +1,5 @@
-import { ConflictError, NotFoundError } from "@/backend/domain"
+import { ConflictError, NotFoundError, requireActorPermission } from "@/backend/domain"
+import type { ActorRef } from "@/backend/domain"
 import type { UserRepositoryPort } from "@/backend/modules/user-management/application/ports/user.repository"
 
 /**
@@ -29,7 +30,13 @@ import type { UserRepositoryPort } from "@/backend/modules/user-management/appli
 export class DeleteUserUseCase {
   constructor(private readonly repository: UserRepositoryPort) {}
 
-  async execute(userId: number): Promise<void> {
+  async execute(actor: ActorRef, userId: number): Promise<void> {
+    // B6-4 (D4): MANAGE_USERS PURO (mensagem default "Acesso negado", a da rota). Excluir
+    // usuario NAO e caminho self — DEC-55 ja tinha medido que o caminho de inativacao e o
+    // bloqueio por status, nao a exclusao por dono. O chamador interno (reject do fluxo de
+    // aprovacao) traz a pessoa que moderou: o gate passa por ele, nao por um ator inventado.
+    requireActorPermission(actor, "MANAGE_USERS")
+
     const user = await this.repository.findById(userId)
     if (!user) {
       throw new NotFoundError("Usuário não encontrado")

@@ -1,9 +1,16 @@
 import { NextResponse } from "next/server"
 import { requireApiActor } from "@/lib/auth/api-guard"
-import { hasPermission } from "@/lib/auth/rbac"
 import { domainErrorResponse } from "@/lib/api/domain-error-response"
+import { userActor } from "@/backend/domain"
 import { getBackendComposition } from "@/backend/composition/root"
 const { userManagement: userManagementModule } = getBackendComposition()
+// B6-4 (D4): as 3 decisoes desta rota desceram para os use cases —
+//   GET:    self || MANAGE_USERS ("Acesso negado") em FindUserByIdUseCase; o 404 legado {error}
+//           e preservado (null do use case, corpo montado aqui como antes).
+//   PUT:    self || MANAGE_USERS + a TRAVA DE CAMPOS (filterSelfEditableUserFields) em
+//           UpdateUserUseCase — o `Object.fromEntries` inline da rota era escopo na camada HTTP.
+//   DELETE: MANAGE_USERS PURO em DeleteUserUseCase (excluir nao e caminho self — DEC-55).
+// A validacao do id (400 "Usuário inválido") continua na rota, antes do gate, como medido.
 export async function GET(_request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const auth = await requireApiActor()
@@ -15,12 +22,8 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
       return NextResponse.json({ error: "Usuário inválido" }, { status: 400 })
     }
 
-    const canManageUsers = hasPermission(auth.actor.roles, "MANAGE_USERS")
-    if (!canManageUsers && auth.actor.id !== id) {
-      return NextResponse.json({ error: "Acesso negado" }, { status: 403 })
-    }
-
-    const user = await userManagementModule.findUserById(id)
+    const actor = userActor(auth.actor.id, auth.actor.roles)
+    const user = await userManagementModule.findUserById(actor, id)
     if (!user) {
       return NextResponse.json({ error: "Usuário não encontrado" }, { status: 404 })
     }
@@ -46,17 +49,8 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
     }
 
     const body = await request.json()
-    const canManageUsers = hasPermission(auth.actor.roles, "MANAGE_USERS")
-    if (!canManageUsers && auth.actor.id !== id) {
-      return NextResponse.json({ error: "Acesso negado" }, { status: 403 })
-    }
-
-    const allowedSelfFields = ["name", "email", "bio", "avatar", "profileVisibility", "password"]
-    const filteredBody = canManageUsers
-      ? body
-      : Object.fromEntries(Object.entries(body).filter(([key]) => allowedSelfFields.includes(key)))
-
-    const user = await userManagementModule.updateUser(id, filteredBody)
+    const actor = userActor(auth.actor.id, auth.actor.roles)
+    const user = await userManagementModule.updateUser(actor, id, body)
     return NextResponse.json({ user })
   } catch (error: any) {
     const mapped = domainErrorResponse(error)
@@ -77,12 +71,8 @@ export async function DELETE(_request: Request, context: { params: Promise<{ id:
       return NextResponse.json({ error: "Usuário inválido" }, { status: 400 })
     }
 
-    const canManageUsers = hasPermission(auth.actor.roles, "MANAGE_USERS")
-    if (!canManageUsers) {
-      return NextResponse.json({ error: "Acesso negado" }, { status: 403 })
-    }
-
-    await userManagementModule.deleteUser(id)
+    const actor = userActor(auth.actor.id, auth.actor.roles)
+    await userManagementModule.deleteUser(actor, id)
     return NextResponse.json({ success: true })
   } catch (error: any) {
     const mapped = domainErrorResponse(error)

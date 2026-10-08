@@ -19,7 +19,8 @@ Lotes fechados, cada um 1 commit revertível, todos em G0–G4:
 | B6-2b | gate de `MANAGE_NOTIFICATIONS` desce + **ator-de-sistema** (`ActorRef`, DEC-54) | `6d620bd` |
 | B6-2c | 3 rotas self-or-manage do gamification descem (DEC-115: `ActorRef.user` com `id`, `requireActorSelfOrPermission`, GET user-badges = leitura aberta por decisão do dono) | `79cab8f` |
 | B6-2d | 6 use cases de compra passam a exigir ator (gate cross-actor, 4 ordens preservadas, escopo lendo o `ActorRef`) | `f519a17` |
-| B6-3 | 8 rotas de reporting+projects descem (DEC-117: composta `MANAGE_USERS \|\| LABORATORISTA` como medida; DEC-118: 404 tipado no DELETE) | commit deste registro |
+| B6-3 | 8 rotas de reporting+projects descem (DEC-117: composta `MANAGE_USERS \|\| LABORATORISTA` como medida; DEC-118: 404 tipado no DELETE) | `9359b95` |
+| B6-4 | 8 rotas de usuários descem (DEC-119: puros vs self-or-manage como medidos, assert com mensagem por rota, trava de campos no domínio; DEC-120: mensagens congeladas no domínio) | commit deste registro |
 
 Baseline de testes no encerramento do B6-2b (2026-10-05): 65/798 (início do B6) → 73/934 (2b);
 suíte completa **83/1017**. G0: 748/2817 → 764/2906.
@@ -30,23 +31,24 @@ suíte completa **83/1017**. G0: 748/2817 → 764/2906.
 B6 continuam todos verdes: `authorization-characterization.test.ts` 39/39 rodado ao vivo em
 2026-10-07.
 
-Restam **22 rotas** em 4 lotes — **41 originais − 19 já migradas** (`cron/status`, `badges` ×2,
+Restam **14 rotas** em 3 lotes — **41 originais − 27 já migradas** (`cron/status`, `badges` ×2,
 `rewards` ×2, `notifications`, `user-badges` ×2, `users/[id]/gamification`, `purchases` ×2,
-`weekly-reports` ×4, `weekly-hours-history`, `users/statistics`, `projects`, `projects/stats`):
+`weekly-reports` ×4, `weekly-hours-history`, `users/statistics`, `projects`, `projects/stats`,
+`users` ×8):
 
 | lote | módulo (composition) | rotas | arquivos |
 |---|---|---|---|
 | ~~B6-2c~~ | ~~gamification~~ | ~~3~~ | ✅ fechado 2026-10-08 (DEC-115) |
 | ~~B6-2d~~ | ~~store~~ | ~~2~~ | ✅ fechado 2026-10-08 (gate cross-actor + escopo lendo o ActorRef) |
 | ~~B6-3~~ | ~~reporting + projectManagement~~ | ~~8~~ | ✅ fechado 2026-10-08 (DEC-117/DEC-118) |
-| B6-4 | userManagement | 8 | `users`, `users/[id]`, `[id]/status`, `[id]/roles`, `[id]/profile`, `[id]/points`, `[id]/project-hours`, `users/approve` |
+| ~~B6-4~~ | ~~userManagement~~ | ~~8~~ | ✅ fechado 2026-10-08 (DEC-119/DEC-120) |
 | B6-5 | workExecution | 4 | `work-sessions` ×2, `daily_logs` ×2 |
 | B6-6 | labOperations | 7 | `issues` ×4, `responsibilities` ×2, `schedules/bulk` |
 | B6-7 | taskManagement | 3 | `tasks`, `tasks/[id]`, `tasks/global-progress` |
 
-Os 4 lotes restantes somam 22, e a distribuição por módulo bate **exatamente** com a do DEC-50
-(user-management 8, lab-operations 7, work-execution 4, task-management 3; gamification e store
-zerados; reporting 7 → 0 e projects migrados no B6-3). Dos 3 call sites do cron, **1 já aplicado**
+Os 3 lotes restantes somam 14, e a distribuição por módulo bate **exatamente** com a do DEC-50
+(user-management zerada no B6-4, lab-operations 7, work-execution 4, task-management 3; gamification
+e store zerados; reporting 7 → 0 e projects migrados no B6-3). Dos 3 call sites do cron, **1 já aplicado**
 (`resetWeeklyHoursHistory`/`systemActor("WEEKLY_RESET")` no B6-3); faltam B6-5
 (`listWorkSessions`/NIGHTLY_SWEEP) e B6-6 (`pauseResponsibilityForUser`/SCHEDULED_PAUSE) — como
 previsto no DEC-54.
@@ -163,6 +165,31 @@ assert da rota) — o teste novo de use case fixou também a matriz medida: **AD
 MANAGE_PROJECTS**. O `reporting-routes.test.ts` (duplo de módulo) foi adaptado ao padrão DEC-90: o
 duplo delega nas funções do domínio, o mock de `@/lib/auth/rbac` saiu do arquivo, e a negação passou
 a vir dos papéis do ator. Registro completo em `STATE.json` (batch B6-3).
+
+## B6-4 — usuários ✅ EXECUTADO 2026-10-08 (DEC-119/DEC-120)
+
+O que a execução fez, além do que a medição previa: a mesma família de rotas tem **duas regras**
+medidas — `self || MANAGE_USERS` (GET/PUT `users/[id]`, profile, project-hours) e `MANAGE_USERS`
+**puro** (delete, points, roles, status, approve, POST users — no puro, nem o dono passa). A ordem
+403-antes-de-400/parse de status/roles/points/POST users/POST approve foi preservada com um
+**assert compartilhado** (`AssertCanManageUsersUseCase`) cuja **mensagem congelada de cada rota
+entra como parâmetro**; os use cases de destino rechecam no mesmo ator. A trava de campos do PUT
+(seis campos self-editáveis para quem não gerencia) era um `Object.fromEntries` inline na rota e
+virou `filterSelfEditableUserFields` no domínio. As mensagens próprias (`"Sem permissão para criar
+usuários"`, `"Acesso negado."` com ponto final, `"Não autorizado"`) foram para
+`backend/domain/identity/user-denied-messages.ts` porque RG-06 barra a rota importar o módulo e a
+allow-list está vazia (DEC-120). `FindUserByIdUseCase` recebe a mensagem como parâmetro: `"Acesso
+negado"` e `"Não autorizado"` são a mesma regra com textos diferentes. O reject da aprovação delega
+no delete com o **mesmo ator** (DEC-54). `users/[id]/project-hours` é rota de usuário cujo use case
+mora no reporting — o gate desceu lá.
+
+Achados do lote (medidos, não previstos): `systemActor` **passa** no `requireActorPermission`
+(bypass declarado do DEC-54) — o que impede rota de usá-lo é o guarda `system-actor.test.ts`, e um
+teste meu que assumia o contrário foi refutado; `ListUsersForActorUseCase` **nega** o systemActor
+porque visibilidade de lista é sobre papéis. O fallback legado de 403 do GET users (match por
+mensagem) era código morto e saiu da rota. O `users-routes.test.ts` foi adaptado ao padrão DEC-90
+(duplo delega no domínio; mock de `ensure*` saiu; negação vem dos papéis do ator). Registro
+completo em `STATE.json` (batch B6-4).
 
 ## B6-5 — o cron, agora com resposta pronta
 

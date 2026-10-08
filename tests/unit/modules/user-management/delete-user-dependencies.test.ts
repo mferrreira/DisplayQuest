@@ -32,7 +32,10 @@
  */
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { ConflictError, NotFoundError } from "@/backend/domain";
+import { ConflictError, NotFoundError, userActor } from "@/backend/domain";
+
+/** B6-4 (D4): DeleteUserUseCase exige ator MANAGE_USERS puro; este arquivo exercita a recusa por dependencia. */
+const managerActor = userActor(1, ["COORDENADOR"]);
 import { DeleteUserUseCase } from "@/backend/modules/user-management/application/use-cases/delete-user.use-case";
 import type { UserRepositoryPort, UserRecord } from "@/backend/modules/user-management/application/ports/user.repository";
 
@@ -88,7 +91,7 @@ beforeEach(() => {
 describe("DeleteUserUseCase — a recusa antes do banco (DEC-55)", () => {
   it("usuário inexistente continua NotFoundError (404) — a ordem não mudou", async () => {
     const error = await new DeleteUserUseCase(repository as unknown as UserRepositoryPort)
-      .execute(99)
+      .execute(managerActor, 99)
       .catch((e) => e);
     expect(error).toBeInstanceOf(NotFoundError);
     expect(error).toMatchObject({ status: 404, message: "Usuário não encontrado" });
@@ -96,14 +99,14 @@ describe("DeleteUserUseCase — a recusa antes do banco (DEC-55)", () => {
   });
 
   it("usuário SEM dependência é excluído de verdade (o caso que já funcionava)", async () => {
-    await new DeleteUserUseCase(repository as unknown as UserRepositoryPort).execute(4);
+    await new DeleteUserUseCase(repository as unknown as UserRepositoryPort).execute(managerActor, 4);
     expect(repository.deleteCalls).toEqual([4]);
     expect(repository.store.find((u) => u.id === 4)).toBeUndefined();
   });
 
   it("usuário COM dependência leva ConflictError (409) e o delete NUNCA é chamado", async () => {
     const error = await new DeleteUserUseCase(repository as unknown as UserRepositoryPort)
-      .execute(5)
+      .execute(managerActor, 5)
       .catch((e) => e);
     expect(error).toBeInstanceOf(ConflictError);
     expect(error).toMatchObject({ status: 409 });
@@ -115,7 +118,7 @@ describe("DeleteUserUseCase — a recusa antes do banco (DEC-55)", () => {
 
   it("a mensagem explica o que fazer no lugar, sem expor tabela nem constraint", async () => {
     const error = await new DeleteUserUseCase(repository as unknown as UserRepositoryPort)
-      .execute(5)
+      .execute(managerActor, 5)
       .catch((e) => e);
     // A mensagem oferece o caminho no lugar da recusa seca. Comparado em minúsculas porque a
     // frase começa a frase mesmo: "Inative o usuário...".
@@ -144,7 +147,7 @@ describe("DeleteUserUseCase — a recusa antes do banco (DEC-55)", () => {
       },
     } as unknown as UserRepositoryPort;
 
-    await new DeleteUserUseCase(traced).execute(5).catch(() => undefined);
+    await new DeleteUserUseCase(traced).execute(managerActor, 5).catch(() => undefined);
     // `delete` não aparece na lista: a recusa aconteceu antes de qualquer tentativa de apagar.
     expect(order).toEqual(["findById", "count"]);
   });

@@ -1,14 +1,18 @@
 import { NextResponse } from "next/server"
-import { ensurePermission, requireApiActor } from "@/lib/auth/api-guard"
+import { requireApiActor } from "@/lib/auth/api-guard"
 import { domainErrorResponse } from "@/lib/api/domain-error-response"
+import { userActor } from "@/backend/domain"
 import { getBackendComposition } from "@/backend/composition/root"
 const { userManagement: userManagementModule } = getBackendComposition()
+// B6-4 (D4): o gate MANAGE_USERS mora em UpdateUserPointsUseCase; o assert roda ANTES da
+// validacao de id/acao/numero (ordem medida). As validacoes DEC-60/DEC-84 sao de ENTRADA com
+// mensagens proprias e continuam aqui, na ordem que o V4-6 congelou (acao antes do numero).
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const auth = await requireApiActor()
     if (auth.error) return auth.error
-    const deny = ensurePermission(auth.actor, "MANAGE_USERS")
-    if (deny) return deny
+    const actor = userActor(auth.actor.id, auth.actor.roles)
+    userManagementModule.assertCanManageUsers({ actor })
 
     const params = await context.params
     const id = Number(params.id)
@@ -50,6 +54,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     }
 
     const user = await userManagementModule.updateUserPoints({
+      actor,
       userId: id,
       action,
       points,

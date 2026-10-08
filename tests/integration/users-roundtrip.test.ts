@@ -12,11 +12,17 @@
  * Only rows created by this file are deleted in afterAll; seeded data is left in place.
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { ConflictError } from "@/backend/domain";
+import { ConflictError, userActor } from "@/backend/domain";
 import { prisma } from "@/lib/database/prisma";
 import { createUserManagementModule } from "@/backend/modules/user-management";
 
 const userModule = createUserManagementModule();
+/**
+ * B6-4 (D4): os metodos do modulo passaram a exigir ator. O harness usa um COORDENADOR
+ * (MANAGE_USERS) — este arquivo exercita o fluxo de administracao (moderar, pontuar, mudar
+ * roles/status, excluir); a negacao por papel e provada nos testes de autorizacao do lote.
+ */
+const managerActor = userActor(1, ["COORDENADOR"]);
 const uniqueEmail = `g4-users-${Date.now()}@test.local`;
 const createdUserIds: number[] = [];
 /** V4-1: tarefas criadas para o caso de dependência. Apagadas ANTES dos usuários. */
@@ -59,17 +65,17 @@ describe("G4 roundtrip — user-management (isolated test DB)", () => {
   });
 
   it("moderation queue: listPendingUsers -> approve activates", async () => {
-    const pending = (await userModule.listPendingUsers()) as Array<Record<string, unknown>>;
+    const pending = (await userModule.listPendingUsers(managerActor)) as Array<Record<string, unknown>>;
     expect(pending.some((user) => user.id === userId)).toBe(true);
     expect(pending[0]).not.toHaveProperty("password");
 
-    const approved = (await userModule.moderatePendingUser(userId, "approve")) as { status: string };
+    const approved = (await userModule.moderatePendingUser(managerActor, userId, "approve")) as { status: string };
     expect(approved.status).toBe("active");
     expect((await prisma.users.findUnique({ where: { id: userId } }))?.status).toBe("active");
   });
 
   it("listUsersForActor (COORDENADOR) includes the new active user with email+bio fields", async () => {
-    const rows = (await userModule.listUsersForActor({ actorRoles: ["COORDENADOR"] })) as Array<
+    const rows = (await userModule.listUsersForActor({ actor: userActor(1, ["COORDENADOR"]) })) as Array<
       Record<string, unknown>
     >;
     const mine = rows.find((row) => row.id === userId);
@@ -78,7 +84,7 @@ describe("G4 roundtrip — user-management (isolated test DB)", () => {
     expect(mine).toHaveProperty("bio");
     expect(mine).not.toHaveProperty("password");
 
-    const basic = (await userModule.listUsersForActor({ actorRoles: ["VOLUNTARIO"] })) as Array<
+    const basic = (await userModule.listUsersForActor({ actor: userActor(1, ["VOLUNTARIO"]) })) as Array<
       Record<string, unknown>
     >;
     const basicMine = basic.find((row) => row.id === userId);
@@ -87,12 +93,13 @@ describe("G4 roundtrip — user-management (isolated test DB)", () => {
   });
 
   it("points/roles/hours/status mutations persist and project the public shape", async () => {
-    const withPoints = (await userModule.updateUserPoints({ userId, action: "add", points: 7 })) as {
+    const withPoints = (await userModule.updateUserPoints({ actor: managerActor, userId, action: "add", points: 7 })) as {
       points: number;
     };
     expect(withPoints.points).toBe(7);
 
     const withRoles = (await userModule.updateUserRoles({
+      actor: managerActor,
       userId,
       action: "add",
       role: "PESQUISADOR",
@@ -101,7 +108,8 @@ describe("G4 roundtrip — user-management (isolated test DB)", () => {
 
     // harness setup: give the user a schedule the way the admin UI does (updateUser),
     // and currentWeekHours the way the work-session flow does (direct row write).
-    await userModule.updateUser(userId, { weekHours: 10 });
+    // weekHours NAO e campo self-editavel — por isso o ator aqui e o manager.
+    await userModule.updateUser(managerActor, userId, { weekHours: 10 });
     await prisma.users.update({ where: { id: userId }, data: { currentWeekHours: 8 } });
 
     const deducted = (await userModule.deductUserHours({
@@ -120,16 +128,16 @@ describe("G4 roundtrip — user-management (isolated test DB)", () => {
     expect(row?.currentWeekHours).toBe(5);
     expect(row?.points).toBe(7);
 
-    const suspended = (await userModule.updateUserStatus({ userId, action: "suspend" })) as {
+    const suspended = (await userModule.updateUserStatus({ actor: managerActor, userId, action: "suspend" })) as {
       status: string;
     };
     expect(suspended.status).toBe("suspended");
   });
 
   it("deleteUser removes the row; a second delete raises NotFoundError", async () => {
-    await userModule.deleteUser(userId);
+    await userModule.deleteUser(managerActor, userId);
     expect(await prisma.users.findUnique({ where: { id: userId } })).toBeNull();
-    await expect(userModule.deleteUser(userId)).rejects.toThrow("Usuário não encontrado");
+    await expect(userModule.deleteUser(managerActor, userId)).rejects.toThrow("Usuário não encontrado");
   });
 
   /**
@@ -163,7 +171,7 @@ describe("G4 roundtrip — user-management (isolated test DB)", () => {
     });
     dependentTaskIds.push(task.id);
 
-    const error = await userModule.deleteUser(withHistory.id).catch((e) => e);
+    const error = await userModule.deleteUser(managerActor, withHistory.id).catch((e) => e);
     expect(error).toBeInstanceOf(ConflictError);
     expect(error).toMatchObject({ status: 409 });
     // O usuário continua lá: a recusa veio antes, não depois de um delete parcial.

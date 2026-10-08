@@ -1,8 +1,10 @@
+import type { ActorRef } from "@/backend/domain"
 import type { UserManagementGateway } from "@/backend/modules/user-management/application/ports/user-management.gateway"
 import type { RegisterUserCommand } from "@/backend/modules/user-management/application/contracts"
 import type { PasswordHasher } from "@/backend/modules/user-management/application/ports/password-hasher"
 import type { UserRepositoryPort } from "@/backend/modules/user-management/application/ports/user.repository"
 import { CreateUserUseCase } from "@/backend/modules/user-management/application/use-cases/create-user.use-case"
+import { AssertCanManageUsersUseCase } from "@/backend/modules/user-management/application/use-cases/assert-can-manage-users.use-case"
 import { DeleteUserUseCase } from "@/backend/modules/user-management/application/use-cases/delete-user.use-case"
 import { DeductUserHoursUseCase } from "@/backend/modules/user-management/application/use-cases/deduct-user-hours.use-case"
 import { FindUserByIdUseCase } from "@/backend/modules/user-management/application/use-cases/find-user-by-id.use-case"
@@ -52,8 +54,14 @@ export class UserManagementModule {
   readonly listLeaderboard: GatewayCall<UserManagementGateway["listLeaderboard"]>
   readonly listProfiles: GatewayCall<UserManagementGateway["listProfiles"]>
   readonly registerUser: GatewayCall<RegisterUserCapability["registerUser"]>
+  /** B6-4 (D4): assert 403-antes-do-parse/validação; os use cases de destino rechecam. */
+  readonly assertCanManageUsers: (command: { actor: ActorRef; deniedMessage?: string }) => void
 
-  constructor(private readonly service: UserManagementService) {
+  constructor(
+    private readonly service: UserManagementService,
+    assertCanManageUsersUseCase: AssertCanManageUsersUseCase,
+  ) {
+    this.assertCanManageUsers = (command) => assertCanManageUsersUseCase.execute(command)
     this.createUser = this.service.createUser.bind(this.service)
     this.listUsersForActor = this.service.listUsersForActor.bind(this.service)
     this.findUserById = this.service.findUserById.bind(this.service)
@@ -88,14 +96,15 @@ export function createUserManagementModule(options: UserManagementModuleFactoryO
   const service: UserManagementService = {
     createUser: (command) => new CreateUserUseCase(repository, passwordHasher).execute(command),
     listUsersForActor: (query) => new ListUsersForActorUseCase(repository).execute(query),
-    findUserById: (userId) => new FindUserByIdUseCase(repository).execute(userId),
-    updateUser: (userId, data) => new UpdateUserUseCase(repository).execute(userId, data),
-    deleteUser: (userId) => deleteUserUseCase.execute(userId),
-    listPendingUsers: () => new ListPendingUsersUseCase(repository).execute(),
-    moderatePendingUser: (userId, action) =>
-      new ModeratePendingUserUseCase(repository, deleteUserUseCase).execute(userId, action),
-    updateUserProfile: (userId, data) =>
-      new UpdateUserProfileUseCase(repository, passwordHasher).execute(userId, data),
+    findUserById: (actor, userId, deniedMessage) =>
+      new FindUserByIdUseCase(repository).execute(actor, userId, deniedMessage),
+    updateUser: (actor, userId, data) => new UpdateUserUseCase(repository).execute(actor, userId, data),
+    deleteUser: (actor, userId) => deleteUserUseCase.execute(actor, userId),
+    listPendingUsers: (actor) => new ListPendingUsersUseCase(repository).execute(actor),
+    moderatePendingUser: (actor, userId, action) =>
+      new ModeratePendingUserUseCase(repository, deleteUserUseCase).execute(actor, userId, action),
+    updateUserProfile: (actor, userId, data) =>
+      new UpdateUserProfileUseCase(repository, passwordHasher).execute(actor, userId, data),
     updateUserPoints: (command) => new UpdateUserPointsUseCase(repository).execute(command),
     deductUserHours: (command) => new DeductUserHoursUseCase(repository).execute(command),
     updateUserRoles: (command) => new UpdateUserRolesUseCase(repository).execute(command),
@@ -106,5 +115,5 @@ export function createUserManagementModule(options: UserManagementModuleFactoryO
     registerUser: (command) => new RegisterUserUseCase(repository, passwordHasher).execute(command),
   }
 
-  return new UserManagementModule(service)
+  return new UserManagementModule(service, new AssertCanManageUsersUseCase())
 }

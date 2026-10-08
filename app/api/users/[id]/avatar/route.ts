@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { ImageProcessor } from "@/lib/utils/image-processor"
 import { requireApiActor } from "@/lib/auth/api-guard"
+import { userActor } from "@/backend/domain"
 import { domainErrorResponse } from "@/lib/api/domain-error-response"
 import { getBackendComposition } from "@/backend/composition/root"
 const { userManagement: userManagementModule } = getBackendComposition()
@@ -19,13 +20,15 @@ export async function DELETE(request: NextRequest, context: { params: Promise<{ 
       return NextResponse.json({ error: "Usuário não autorizado" }, { status: 403 })
     }
 
-    const currentUser = await userManagementModule.findUserById(userId)
+    // B6-4 (D4): idem users/avatar — trava self-only na rota, ator entregue ao use case.
+    const actor = userActor(auth.actor.id, auth.actor.roles)
+    const currentUser = await userManagementModule.findUserById(actor, userId)
 
     if ((currentUser as any)?.avatar) {
       await ImageProcessor.deleteImage((currentUser as any).avatar)
     }
 
-    await userManagementModule.updateUserProfile(userId, { avatar: null })
+    await userManagementModule.updateUserProfile(actor, userId, { avatar: null })
 
     return NextResponse.json({
       success: true,

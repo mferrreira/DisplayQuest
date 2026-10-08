@@ -34,6 +34,14 @@ import { UpdateUserStatusUseCase } from "@/backend/modules/user-management/appli
 import type { PasswordHasher } from "@/backend/modules/user-management/application/ports/password-hasher";
 import type { UserRecord, UserRepositoryPort } from "@/backend/modules/user-management/application/ports/user.repository";
 
+/**
+ * B6-4 (D4): os use cases de escrita passaram a exigir ator. Este arquivo exercita a REGRAS
+ * interna (validações, aritmética, quirks) — o ator do harness é um COORDENADOR (MANAGE_USERS)
+ * com id fora do store, para o gate self-or-manage decidir pela PERMISSÃO e não por acaso de id.
+ * A negação por papel é provada em use-cases.user-management-authorization.test.ts.
+ */
+const managerActor = userActor(999, ["COORDENADOR"]);
+
 class FakeRepository implements UserRepositoryPort {
   store: UserRecord[] = [];
   memberships: Array<{ userId: number; projectId: number }> = [];
@@ -158,22 +166,23 @@ describe("CreateUserUseCase", () => {
   const useCase = () => new CreateUserUseCase(repository, fakeHasher);
 
   it("typed validation errors (400) with the frozen messages", async () => {
-    await expect(useCase().execute({ name: "", email: "a@x.com", password: "secret123", roles: [], weekHours: 0 }))
+    await expect(useCase().execute({ actor: managerActor, name: "", email: "a@x.com", password: "secret123", roles: [], weekHours: 0 }))
       .rejects.toMatchObject({ name: "ValidationError", status: 400, code: "VALIDATION_ERROR", message: "Nome é obrigatório" });
-    await expect(useCase().execute({ name: "N", email: " ", password: "secret123", roles: [], weekHours: 0 }))
+    await expect(useCase().execute({ actor: managerActor, name: "N", email: " ", password: "secret123", roles: [], weekHours: 0 }))
       .rejects.toBeInstanceOf(ValidationError);
-    await expect(useCase().execute({ name: "N", email: "a@x.com", password: "12345", roles: [], weekHours: 0 }))
+    await expect(useCase().execute({ actor: managerActor, name: "N", email: "a@x.com", password: "12345", roles: [], weekHours: 0 }))
       .rejects.toThrow("A senha deve ter pelo menos 6 caracteres");
   });
 
   it("duplicate email -> ConflictError (409)", async () => {
     await expect(
-      useCase().execute({ name: "Dup", email: "ANA@x.com", password: "secret123", roles: [], weekHours: 0 }),
+      useCase().execute({ actor: managerActor, name: "Dup", email: "ANA@x.com", password: "secret123", roles: [], weekHours: 0 }),
     ).rejects.toMatchObject({ name: "ConflictError", status: 409, message: "Este email já está em uso" });
   });
 
   it("happy path: public shape, no password, hash cost 12", async () => {
     const created = (await useCase().execute({
+      actor: managerActor,
       name: "  Novo  ",
       email: " NOVO@X.com ",
       password: "secret123",
@@ -194,7 +203,7 @@ describe("ListUsersForActorUseCase", () => {
   const useCase = () => new ListUsersForActorUseCase(repository);
 
   it("no basic-view role -> ForbiddenError (403) with the frozen message", async () => {
-    await expect(useCase().execute({ actorRoles: [] })).rejects.toMatchObject({
+    await expect(useCase().execute({ actor: userActor(999, []) })).rejects.toMatchObject({
       name: "ForbiddenError",
       status: 403,
       message: "Usuário não tem permissão para visualizar outros usuários",
@@ -202,15 +211,15 @@ describe("ListUsersForActorUseCase", () => {
   });
 
   it("field-level visibility: COORDENADOR email+bio, GERENTE_PROJETO email only, VOLUNTARIO neither", async () => {
-    const full = (await useCase().execute({ actorRoles: ["COORDENADOR"] })) as Array<Record<string, unknown>>;
+    const full = (await useCase().execute({ actor: userActor(999, ["COORDENADOR"]) })) as Array<Record<string, unknown>>;
     expect(full[0]).toHaveProperty("email");
     expect(full[0]).toHaveProperty("bio");
 
-    const project = (await useCase().execute({ actorRoles: ["GERENTE_PROJETO"] })) as Array<Record<string, unknown>>;
+    const project = (await useCase().execute({ actor: userActor(999, ["GERENTE_PROJETO"]) })) as Array<Record<string, unknown>>;
     expect(project[0]).toHaveProperty("email");
     expect(project[0]).not.toHaveProperty("bio");
 
-    const basic = (await useCase().execute({ actorRoles: ["VOLUNTARIO"] })) as Array<Record<string, unknown>>;
+    const basic = (await useCase().execute({ actor: userActor(999, ["VOLUNTARIO"]) })) as Array<Record<string, unknown>>;
     expect(basic[0]).not.toHaveProperty("email");
     expect(basic[0]).not.toHaveProperty("bio");
   });
@@ -219,23 +228,23 @@ describe("ListUsersForActorUseCase", () => {
 describe("FindUserById / Delete / ListPending", () => {
   it("findUserById returns the public shape (no password)", async () => {
     repository.store[0].password = "bcrypt:x";
-    const user = (await new FindUserByIdUseCase(repository).execute(1)) as unknown as Record<string, unknown>;
+    const user = (await new FindUserByIdUseCase(repository).execute(managerActor, 1)) as unknown as Record<string, unknown>;
     expect(user).not.toHaveProperty("password");
-    expect(await new FindUserByIdUseCase(repository).execute(99)).toBeNull();
+    expect(await new FindUserByIdUseCase(repository).execute(managerActor, 99)).toBeNull();
   });
 
   it("deleteUser missing -> NotFoundError (404)", async () => {
-    await expect(new DeleteUserUseCase(repository).execute(99)).rejects.toMatchObject({
+    await expect(new DeleteUserUseCase(repository).execute(managerActor, 99)).rejects.toMatchObject({
       name: "NotFoundError",
       status: 404,
       message: "Usuário não encontrado",
     });
-    await new DeleteUserUseCase(repository).execute(4);
+    await new DeleteUserUseCase(repository).execute(managerActor, 4);
     expect(repository.store.find((u) => u.id === 4)).toBeUndefined();
   });
 
   it("listPendingUsers only pending", async () => {
-    const pending = (await new ListPendingUsersUseCase(repository).execute()) as unknown as Array<Record<string, unknown>>;
+    const pending = (await new ListPendingUsersUseCase(repository).execute(managerActor)) as unknown as Array<Record<string, unknown>>;
     expect(pending.map((u) => u.email)).toEqual(["p@x.com"]);
   });
 });
@@ -244,19 +253,19 @@ describe("UpdateUserUseCase", () => {
   const useCase = () => new UpdateUserUseCase(repository);
 
   it("missing -> NotFoundError; duplicate email -> ConflictError; empty email -> ValidationError", async () => {
-    await expect(useCase().execute(99, { name: "X" })).rejects.toBeInstanceOf(NotFoundError);
-    await expect(useCase().execute(1, { email: "beto@x.com" })).rejects.toMatchObject({
+    await expect(useCase().execute(managerActor, 99, { name: "X" })).rejects.toBeInstanceOf(NotFoundError);
+    await expect(useCase().execute(managerActor, 1, { email: "beto@x.com" })).rejects.toMatchObject({
       name: "ConflictError",
       message: "Email já está em uso",
     });
-    await expect(useCase().execute(1, { email: "" })).rejects.toMatchObject({
+    await expect(useCase().execute(managerActor, 1, { email: "" })).rejects.toMatchObject({
       name: "ValidationError",
       message: "Email inválido",
     });
   });
 
   it("invalid avatar -> ValidationError from the pure domain policy", async () => {
-    await expect(useCase().execute(1, { avatar: "https://evil.com/a.png" })).rejects.toMatchObject({
+    await expect(useCase().execute(managerActor, 1, { avatar: "https://evil.com/a.png" })).rejects.toMatchObject({
       name: "ValidationError",
       status: 400,
       message: "Imagem de perfil inválida",
@@ -265,7 +274,7 @@ describe("UpdateUserUseCase", () => {
 
   it("happy path: name trimmed, email lowercased, roles deduped, output has no password", async () => {
     repository.store[0].password = "bcrypt:x";
-    const updated = (await useCase().execute(1, {
+    const updated = (await useCase().execute(managerActor, 1, {
       name: "  Ana Maria ",
       email: " NOVO@X.com ",
       roles: ["VOLUNTARIO", "PESQUISADOR", "VOLUNTARIO"],
@@ -283,15 +292,15 @@ describe("UpdateUserProfileUseCase", () => {
   it("blank password keeps the old hash; valid password hashes with cost 10; short -> ValidationError", async () => {
     repository.store[0].password = "bcrypt:old";
 
-    await useCase().execute(1, { password: "   " });
+    await useCase().execute(managerActor, 1, { password: "   " });
     expect(repository.store[0].password).toBe("bcrypt:old");
     expect(hasherCalls).toHaveLength(0);
 
-    await useCase().execute(1, { password: "abc123" });
+    await useCase().execute(managerActor, 1, { password: "abc123" });
     expect(repository.store[0].password).toBe("bcrypt:abc123");
     expect(hasherCalls).toEqual([{ plain: "abc123", rounds: 10 }]);
 
-    await expect(useCase().execute(1, { password: "short" })).rejects.toMatchObject({
+    await expect(useCase().execute(managerActor, 1, { password: "short" })).rejects.toMatchObject({
       name: "ValidationError",
       message: "Senha deve ter pelo menos 6 caracteres",
     });
@@ -302,26 +311,26 @@ describe("UpdateUserPointsUseCase", () => {
   const useCase = () => new UpdateUserPointsUseCase(repository);
 
   it("add floors at 0; remove rejects negative/insufficient (ValidationError); set assigns", async () => {
-    expect(((await useCase().execute({ userId: 1, action: "add", points: -50 })) as { points: number }).points).toBe(0);
-    await expect(useCase().execute({ userId: 1, action: "remove", points: -1 })).rejects.toMatchObject({
+    expect(((await useCase().execute({ actor: managerActor, userId: 1, action: "add", points: -50 })) as { points: number }).points).toBe(0);
+    await expect(useCase().execute({ actor: managerActor, userId: 1, action: "remove", points: -1 })).rejects.toMatchObject({
       name: "ValidationError",
       message: "Pontos não podem ser negativos",
     });
-    await expect(useCase().execute({ userId: 1, action: "remove", points: 999 })).rejects.toMatchObject({
+    await expect(useCase().execute({ actor: managerActor, userId: 1, action: "remove", points: 999 })).rejects.toMatchObject({
       name: "ValidationError",
       message: "Usuário não possui pontos suficientes",
     });
-    expect(((await useCase().execute({ userId: 1, action: "set", points: 42 })) as { points: number }).points).toBe(42);
+    expect(((await useCase().execute({ actor: managerActor, userId: 1, action: "set", points: 42 })) as { points: number }).points).toBe(42);
   });
 
   it("V4-6 (DEC-60): set aceita negativo — a premiação produz total negativo (DEC-39) e a administração precisava escrevê-lo de volta", async () => {
-    expect(((await useCase().execute({ userId: 1, action: "set", points: -20 })) as { points: number }).points).toBe(-20);
+    expect(((await useCase().execute({ actor: managerActor, userId: 1, action: "set", points: -20 })) as { points: number }).points).toBe(-20);
     // Sem checagem de suficiência: `set` não tira nada de ninguém, é valor absoluto. Um usuário
     // em 0 vai para -31030 sem objeção — é exatamente o estado medido no Gerente da instância.
-    expect(((await useCase().execute({ userId: 1, action: "set", points: -31030 })) as { points: number }).points).toBe(-31030);
+    expect(((await useCase().execute({ actor: managerActor, userId: 1, action: "set", points: -31030 })) as { points: number }).points).toBe(-31030);
     // As outras duas ações continuam como estavam.
-    expect(((await useCase().execute({ userId: 1, action: "set", points: 50 })) as { points: number }).points).toBe(50);
-    expect(((await useCase().execute({ userId: 1, action: "add", points: -60 })) as { points: number }).points).toBe(0);
+    expect(((await useCase().execute({ actor: managerActor, userId: 1, action: "set", points: 50 })) as { points: number }).points).toBe(50);
+    expect(((await useCase().execute({ actor: managerActor, userId: 1, action: "add", points: -60 })) as { points: number }).points).toBe(0);
   });
 });
 
@@ -417,24 +426,24 @@ describe("Moderate / Roles / Status / reads", () => {
     const deleteUser = new DeleteUserUseCase(repository);
     const useCase = () => new ModeratePendingUserUseCase(repository, deleteUser);
 
-    const approved = (await useCase().execute(4, "approve")) as { status: string };
+    const approved = (await useCase().execute(managerActor, 4, "approve")) as { status: string };
     expect(approved.status).toBe("active");
 
-    await useCase().execute(4, "reject");
+    await useCase().execute(managerActor, 4, "reject");
     expect(repository.store.find((u) => u.id === 4)).toBeUndefined();
 
-    await expect(useCase().execute(99, "approve")).rejects.toBeInstanceOf(NotFoundError);
+    await expect(useCase().execute(managerActor, 99, "approve")).rejects.toBeInstanceOf(NotFoundError);
   });
 
   it("roles add/remove/set and status mapping", async () => {
     const roles = new UpdateUserRolesUseCase(repository);
-    expect(((await roles.execute({ userId: 1, action: "add", role: "PESQUISADOR" })) as { roles: string[] }).roles).toEqual(["VOLUNTARIO", "PESQUISADOR"]);
-    expect(((await roles.execute({ userId: 1, action: "remove", role: "VOLUNTARIO" })) as { roles: string[] }).roles).toEqual(["PESQUISADOR"]);
-    expect(((await roles.execute({ userId: 1, action: "set", roles: ["GERENTE", "GERENTE"] })) as { roles: string[] }).roles).toEqual(["GERENTE"]);
+    expect(((await roles.execute({ actor: managerActor, userId: 1, action: "add", role: "PESQUISADOR" })) as { roles: string[] }).roles).toEqual(["VOLUNTARIO", "PESQUISADOR"]);
+    expect(((await roles.execute({ actor: managerActor, userId: 1, action: "remove", role: "VOLUNTARIO" })) as { roles: string[] }).roles).toEqual(["PESQUISADOR"]);
+    expect(((await roles.execute({ actor: managerActor, userId: 1, action: "set", roles: ["GERENTE", "GERENTE"] })) as { roles: string[] }).roles).toEqual(["GERENTE"]);
 
     const status = new UpdateUserStatusUseCase(repository);
-    expect(((await status.execute({ userId: 1, action: "suspend" })) as { status: string }).status).toBe("suspended");
-    expect(((await status.execute({ userId: 1, action: "estranho" as never })) as { status: string }).status).toBe("active");
+    expect(((await status.execute({ actor: managerActor, userId: 1, action: "suspend" })) as { status: string }).status).toBe("suspended");
+    expect(((await status.execute({ actor: managerActor, userId: 1, action: "estranho" as never })) as { status: string }).status).toBe("active");
   });
 
   it("statistics dispatch, leaderboard default limit, profiles quirk (both call 'public')", async () => {

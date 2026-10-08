@@ -1,17 +1,20 @@
 import { NextResponse } from "next/server"
-import { ensurePermission, requireApiActor } from "@/lib/auth/api-guard"
+import { requireApiActor } from "@/lib/auth/api-guard"
 import { normalizeRoles } from "@/lib/auth/rbac"
 import { domainErrorResponse } from "@/lib/api/domain-error-response"
-import { type UserRole } from "@/backend/domain"
+import { type UserRole, userActor } from "@/backend/domain"
 import { getBackendComposition } from "@/backend/composition/root"
 const { userManagement: userManagementModule } = getBackendComposition()
+// B6-4 (D4): o gate MANAGE_USERS mora em UpdateUserRolesUseCase; o assert roda ANTES da
+// validacao de id/acao/role (ordem medida). As validacoes de entrada com mensagens proprias
+// continuam na rota.
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const auth = await requireApiActor()
     if (auth.error) return auth.error
 
-    const deny = ensurePermission(auth.actor, "MANAGE_USERS")
-    if (deny) return deny
+    const actor = userActor(auth.actor.id, auth.actor.roles)
+    userManagementModule.assertCanManageUsers({ actor })
 
     const params = await context.params
     const id = Number(params.id)
@@ -38,6 +41,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     }
 
     const user = await userManagementModule.updateUserRoles({
+      actor,
       userId: id,
       action,
       role: role as UserRole | undefined,

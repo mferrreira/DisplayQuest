@@ -391,7 +391,8 @@ describe("G4 roundtrip — reporting (isolated test DB)", () => {
     expect(history.weeks).toHaveLength(8); // months*4
     expect(history.totalHours).toBe(4);
 
-    const userHours = await reporting.getUserProjectHours({ userId: authorId });
+    // B6-4 (D4): self || MANAGE_USERS — o autor le as proprias horas (self).
+    const userHours = await reporting.getUserProjectHours({ actor: authorActor, userId: authorId });
     expect(userHours).toHaveLength(1);
     expect(userHours[0]).toMatchObject({ projectId, userHours: 3, projectTotalHours: 4, sessionCount: 2 });
 
