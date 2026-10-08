@@ -1,4 +1,4 @@
-import type { DailyLog, WorkSession } from "@/backend/domain"
+import type { ActorRef, DailyLog, WorkSession } from "@/backend/domain"
 import type {
   StartWorkSessionCommand,
   CompleteWorkSessionCommand,
@@ -21,5 +21,6 @@ export interface WorkExecutionGateway {
   deleteWorkSession(command: DeleteWorkSessionCommand): Promise<void>
   updateWorkSession(command: UpdateWorkSessionCommand): Promise<WorkSession>
   getSessionById(sessionId: number): Promise<WorkSession | null>
-  getDailyLogById(logId: number): Promise<DailyLog | null>
+  /** B6-5 (D4): o gate LABORATORISTA/self/MANAGE_USERS desceu para o use case; lookup primeiro. */
+  getDailyLogById(actor: ActorRef, logId: number): Promise<DailyLog | null>
 }

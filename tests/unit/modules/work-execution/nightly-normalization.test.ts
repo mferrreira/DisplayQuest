@@ -13,8 +13,9 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { MAX_STRETCH_SEC, type WorkSession } from "@/backend/domain";
+import { MAX_STRETCH_SEC, systemActor, SYSTEM_REASONS, userActor, type WorkSession } from "@/backend/domain";
 import { GetWorkSessionByIdUseCase } from "@/backend/modules/work-execution/application/use-cases/get-work-session-by-id.use-case";
+import { ListProjectLogsForLeaderUseCase } from "@/backend/modules/work-execution/application/use-cases/list-project-logs-for-leader.use-case";
 import { ListWorkSessionsUseCase } from "@/backend/modules/work-execution/application/use-cases/list-work-sessions.use-case";
 import { UpdateWorkSessionUseCase } from "@/backend/modules/work-execution/application/use-cases/update-work-session.use-case";
 
@@ -147,7 +148,21 @@ describe("nightly sweep — list normalization (the sweep closes ALL open sessio
     workSessions.seed({ id: 3, userId: 9, userName: "Caio", startTime: new Date("2026-06-22T12:45:00.000Z"), status: "active" }); // Mon 09:45 SP — no pause crossed yet
     freeze("2026-06-22T13:00:00.000Z"); // Mon 10:00 SP — the Mon 09:30 pause (12:30Z) was crossed
 
-    const active = await new ListWorkSessionsUseCase({ workSessions }).execute({ status: "active" });
+    // B6-5 (D4): o sweep e rotina sem pessoa — systemActor(NIGHTLY_SWEEP), o bypass declarado
+    // (DEC-54): varredura crua, sem resolucao de escopo.
+    const leaderLogs = new ListProjectLogsForLeaderUseCase({
+      projectAccess: {
+        async isProjectMember() { return false; },
+        async ledProjectIds() { return []; },
+        async listProjectLogs() { return []; },
+        async listProjectSessions() { return []; },
+        async recordLeaderLogsAudit() { return undefined; },
+      },
+    });
+    const active = await new ListWorkSessionsUseCase({ workSessions, leaderLogs }).execute({
+      actor: systemActor(SYSTEM_REASONS.NIGHTLY_SWEEP),
+      status: "active",
+    });
     expect(active.map((s) => s.id)).toEqual([3]);
 
     const stored1 = await workSessions.findById(1);
@@ -181,7 +196,7 @@ describe("nightly sweep — explicit pause at 23:59 freezes at the crossed pause
         async recordLeaderLogsAudit() { return undefined; },
       },
       taskVerification: { async findCompletedAssignedTasks() { return []; } },
-    }).execute({ sessionId: 1, actorUserId: 7, actorRoles: ["VOLUNTARIO"], status: "paused" });
+    }).execute({ sessionId: 1, actor: userActor(7, ["VOLUNTARIO"]), status: "paused" });
 
     expect(paused.status).toBe("paused");
     expect(paused.endTime).toEqual(new Date("2026-06-15T18:00:00.000Z"));

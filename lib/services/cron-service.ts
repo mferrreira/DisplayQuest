@@ -66,9 +66,11 @@ export class CronService {
   async executeScheduledPause() {
     try {
       const { workExecution, labOperations } = getBackendComposition()
-      // Persist work_sessions auto-pause (list normalizes active→paused)
-      await workExecution.listWorkSessions({ status: 'active' })
-      const sessions = await workExecution.listWorkSessions({ status: 'active' })
+      // Persist work_sessions auto-pause (list normalizes active→paused).
+      // B6-5 (D4): rotina sem pessoa — systemActor(SCHEDULED_PAUSE), o bypass declarado
+      // (DEC-54). A label e de auditoria: este job e a pausa agendada, nao o sweep 23:59.
+      await workExecution.listWorkSessions({ actor: systemActor(SYSTEM_REASONS.SCHEDULED_PAUSE), status: 'active' })
+      const sessions = await workExecution.listWorkSessions({ actor: systemActor(SYSTEM_REASONS.SCHEDULED_PAUSE), status: 'active' })
       const affectedUserIds = [
         ...new Set((sessions ?? []).map((s: any) => s.userId as number).filter((uid: number) => Number.isInteger(uid) && uid > 0)),
       ]
@@ -88,7 +90,8 @@ export class CronService {
   async executeNightlySweep() {
     try {
       const { workExecution } = getBackendComposition()
-      await workExecution.listWorkSessions({ status: 'active' })
+      // B6-5 (D4): varredura anti-farm sem pessoa — systemActor(NIGHTLY_SWEEP) (DEC-54).
+      await workExecution.listWorkSessions({ actor: systemActor(SYSTEM_REASONS.NIGHTLY_SWEEP), status: 'active' })
     } catch (error) {
       console.error('❌ Erro no sweep noturno de sessões:', error)
     }

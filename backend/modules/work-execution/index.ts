@@ -93,21 +93,26 @@ export function createWorkExecutionModule(options: WorkExecutionModuleFactoryOpt
     options.events,
   )
 
+  // B6-5 (D4): o use case do lider e compartilhado pelos dois caminhos de escopo (GET
+  // /api/work-sessions e GET /api/daily_logs) — instanciado uma vez e injetado nos dois.
+  const listProjectLogsForLeaderUseCase = new ListProjectLogsForLeaderUseCase({ projectAccess })
+
   const service: WorkExecutionGateway = {
     startWorkSession: (command) =>
       new StartWorkSessionUseCase({ workSessions, projectAccess }).execute(command),
     completeWorkSession: (command) => completeWorkSessionUseCase.execute(command),
     createDailyLogFromSession: (command) =>
       new CreateDailyLogFromSessionUseCase({ workSessions, dailyLogs }).execute(command),
-    listWorkSessions: (query) => new ListWorkSessionsUseCase({ workSessions }).execute(query),
-    listDailyLogs: (query) => new ListDailyLogsUseCase({ dailyLogs }).execute(query),
-    listProjectLogsForLeader: (command) =>
-      new ListProjectLogsForLeaderUseCase({ projectAccess }).execute(command),
+    listWorkSessions: (query) =>
+      new ListWorkSessionsUseCase({ workSessions, leaderLogs: listProjectLogsForLeaderUseCase }).execute(query),
+    listDailyLogs: (query) =>
+      new ListDailyLogsUseCase({ dailyLogs, leaderLogs: listProjectLogsForLeaderUseCase }).execute(query),
+    listProjectLogsForLeader: (command) => listProjectLogsForLeaderUseCase.execute(command),
     deleteWorkSession: (command) => new DeleteWorkSessionUseCase({ workSessions }).execute(command),
     updateWorkSession: (command) =>
       new UpdateWorkSessionUseCase({ workSessions, projectAccess, taskVerification }).execute(command),
     getSessionById: (sessionId) => new GetWorkSessionByIdUseCase({ workSessions }).execute(sessionId),
-    getDailyLogById: (logId) => new GetDailyLogByIdUseCase({ dailyLogs }).execute(logId),
+    getDailyLogById: (actor, logId) => new GetDailyLogByIdUseCase({ dailyLogs }).execute(actor, logId),
   }
 
   const cron: WorkExecutionCronSurface = {

@@ -1,7 +1,7 @@
 import {
+  canActorManageWorkSessions,
   closedSessionDuration,
   ForbiddenError,
-  hasPermission,
   NotFoundError,
   normalizeTaskIds,
   resolveLogDate,
@@ -16,6 +16,7 @@ import type { ProjectAccessPort } from "@/backend/modules/work-execution/applica
 import type { TaskVerificationPort } from "@/backend/modules/work-execution/application/ports/task-verification.port"
 import type { WorkExecutionEvents } from "@/backend/modules/work-execution/application/ports/work-execution.events"
 import type { WorkSessionRepositoryPort } from "@/backend/modules/work-execution/application/ports/work-session.repository"
+import { requireSessionActor } from "@/backend/modules/work-execution/application/use-cases/internal/require-session-actor"
 
 /**
  * CompleteWorkSessionUseCase — OND3-B2 (R2): rules moved from WorkSessionServiceGateway.
@@ -46,13 +47,15 @@ export class CompleteWorkSessionUseCase {
       throw new NotFoundError("Sessão não encontrada")
     }
 
-    if (existingSession.userId !== command.actorUserId && !hasPermission(command.actorRoles ?? [], "MANAGE_WORK_SESSIONS")) {
-      throw new ForbiddenError("Não autorizado a atualizar esta sessão")
-    }
+    const actorUserId = requireSessionActor(
+      command.actor,
+      existingSession.userId,
+      "Não autorizado a atualizar esta sessão",
+    )
 
     if (command.projectId !== undefined && command.projectId !== null) {
-      if (!hasPermission(command.actorRoles ?? [], "MANAGE_WORK_SESSIONS")) {
-        const isMember = await this.dependencies.projectAccess.isProjectMember(command.actorUserId, command.projectId)
+      if (!canActorManageWorkSessions(command.actor)) {
+        const isMember = await this.dependencies.projectAccess.isProjectMember(actorUserId, command.projectId)
         if (!isMember) {
           throw new ForbiddenError("Usuário não é membro do projeto informado")
         }
@@ -74,7 +77,7 @@ export class CompleteWorkSessionUseCase {
       }
 
       taskIdsToAttach = normalizeTaskIds(command.completedTaskIds)
-      await this.validateCompletedTasks(command.actorUserId, targetProjectId, taskIdsToAttach)
+      await this.validateCompletedTasks(actorUserId, targetProjectId, taskIdsToAttach)
     }
 
     const endTime = command.endTime !== undefined

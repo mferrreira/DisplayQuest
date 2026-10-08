@@ -24,6 +24,7 @@ vi.mock("@/backend/composition/root", async (importOriginal) => {
 
 import { CronService } from "@/lib/services/cron-service";
 import { SCHEDULED_PAUSE_TIMES } from "@/backend/domain/work";
+import { SYSTEM_REASONS, systemActor } from "@/backend/domain/identity";
 
 /**
  * repo-cleanup B3 (D2) derivou as expressões de SCHEDULED_PAUSE_TIMES agrupando por
@@ -84,7 +85,8 @@ describe("CronService scheduled pause jobs", () => {
     const handler = pauseJob![1] as () => Promise<void>;
     await handler();
 
-    expect(listWorkSessionsMock).toHaveBeenCalledWith({ status: "active" });
+    // B6-5 (D4): a varredura do job de pausa e rotina sem pessoa — systemActor(SCHEDULED_PAUSE).
+    expect(listWorkSessionsMock).toHaveBeenCalledWith({ actor: systemActor(SYSTEM_REASONS.SCHEDULED_PAUSE), status: "active" });
     service.stop();
   });
 });

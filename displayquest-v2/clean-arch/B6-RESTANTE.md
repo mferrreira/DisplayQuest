@@ -42,16 +42,16 @@ Restam **14 rotas** em 3 lotes — **41 originais − 27 já migradas** (`cron/s
 | ~~B6-2d~~ | ~~store~~ | ~~2~~ | ✅ fechado 2026-10-08 (gate cross-actor + escopo lendo o ActorRef) |
 | ~~B6-3~~ | ~~reporting + projectManagement~~ | ~~8~~ | ✅ fechado 2026-10-08 (DEC-117/DEC-118) |
 | ~~B6-4~~ | ~~userManagement~~ | ~~8~~ | ✅ fechado 2026-10-08 (DEC-119/DEC-120) |
-| B6-5 | workExecution | 4 | `work-sessions` ×2, `daily_logs` ×2 |
+| ~~B6-5~~ | ~~workExecution~~ | ~~4~~ | ✅ fechado 2026-10-08 (DEC-121 — escopo desce inteiro; compostas em `backend/domain/work/daily-log-access.ts`) |
 | B6-6 | labOperations | 7 | `issues` ×4, `responsibilities` ×2, `schedules/bulk` |
 | B6-7 | taskManagement | 3 | `tasks`, `tasks/[id]`, `tasks/global-progress` |
 
-Os 3 lotes restantes somam 14, e a distribuição por módulo bate **exatamente** com a do DEC-50
-(user-management zerada no B6-4, lab-operations 7, work-execution 4, task-management 3; gamification
-e store zerados; reporting 7 → 0 e projects migrados no B6-3). Dos 3 call sites do cron, **1 já aplicado**
-(`resetWeeklyHoursHistory`/`systemActor("WEEKLY_RESET")` no B6-3); faltam B6-5
-(`listWorkSessions`/NIGHTLY_SWEEP) e B6-6 (`pauseResponsibilityForUser`/SCHEDULED_PAUSE) — como
-previsto no DEC-54.
+Os 2 lotes restantes somam 10, e a distribuição por módulo bate **exatamente** com a do DEC-50
+(user-management e work-execution zeradas no B6-4/B6-5, lab-operations 7, task-management 3;
+gamification e store zerados; reporting 7 → 0 e projects migrados no B6-3). Dos 3 call sites do cron,
+**2 já aplicados** (`resetWeeklyHoursHistory`/WEEKLY_RESET no B6-3; `listWorkSessions` ×2 com
+SCHEDULED_PAUSE + ×1 com NIGHTLY_SWEEP no B6-5 — labels medidos por job, não só NIGHTLY_SWEEP como
+previa a medição); falta B6-6 (`pauseResponsibilityForUser`/SCHEDULED_PAUSE) — como previsto no DEC-54.
 
 ## O que mudou desde 2026-10-05 (re-medição 2026-10-07)
 
@@ -191,17 +191,18 @@ mensagem) era código morto e saiu da rota. O `users-routes.test.ts` foi adaptad
 (duplo delega no domínio; mock de `ensure*` saiu; negação vem dos papéis do ator). Registro
 completo em `STATE.json` (batch B6-4).
 
-## B6-5 — o cron, agora com resposta pronta
+## B6-5 — o cron, resposta aplicada (2026-10-08)
 
 `lib/services/cron-service.ts` chamava 3 use cases sem ator: `workExecution.listWorkSessions`
 (:69,:70,:90), `labOperations.pauseResponsibilityForUser` (:76), `reporting.resetWeeklyHoursHistory`
-(:109). O DEC-54 já definiu como isso passa: `systemActor("NIGHTLY_SWEEP")`,
-`systemActor("SCHEDULED_PAUSE")`, `systemActor("WEEKLY_RESET")`. **Aplicado em parte:** o
-WEEKLY_RESET entrou no B6-3 (2026-10-08, com o caminho provado no reporting-roundtrip contra o
-banco real); NIGHTLY_SWEEP e SCHEDULED_PAUSE ficam nos seus lotes.
+(:109). O DEC-54 já definiu como isso passa: `systemActor(SYSTEM_REASONS.*)`. **Aplicado:** WEEKLY_RESET
+no B6-3; os 3 `listWorkSessions` no B6-5 — **medido por job**: 2 estão no job de pausa agendada
+(`SCHEDULED_PAUSE`) e 1 no sweep 23:59 (`NIGHTLY_SWEEP`); a previsão de "só NIGHTLY_SWEEP" foi
+corrigida na execução. Falta só `pauseResponsibilityForUser` (`SCHEDULED_PAUSE`), no B6-6.
 
-Aviso que continua válido: `work-execution` é o único módulo **sem factory** — instancia use case
-inline por chamada (`GatewayCall`), então a migração nele custa mais que nos outros seis.
+Aviso que se desfez: `work-execution` **tem factory** (`createWorkExecutionModule`, usada pelo
+composition root e montada sobre portas falsas no teste de rota do B6-5) — a nota antiga de
+"único módulo sem factory" está superada.
 
 ## Regras que valem para todos os lotes restantes
 

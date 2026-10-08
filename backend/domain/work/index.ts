@@ -2,6 +2,11 @@ export { WorkSessionStatus, WORK_SESSION_STATUSES, isWorkSessionStatus } from ".
 export type { WorkSession } from "./WorkSession";
 export type { DailyLog } from "./DailyLog";
 export {
+  canActorManageWorkSessions,
+  canReadDailyLog,
+  canViewAllDailyLogs,
+} from "./daily-log-access";
+export {
   canActOnSession,
   closedSessionDuration,
   expiredPausePatch,

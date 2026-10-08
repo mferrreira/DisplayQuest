@@ -1,7 +1,14 @@
-import { ensureSelfOrPermission, requireApiActor } from "@/lib/auth/api-guard";
+import { userActor } from "@/backend/domain"
+import { requireApiActor } from "@/lib/auth/api-guard";
 import { domainErrorResponse } from "@/lib/api/domain-error-response"
 import { getBackendComposition } from "@/backend/composition/root"
 
+// B6-5 (D4): o pre-lookup `getSessionById` + `ensureSelfOrPermission` da rota SAIU — os use
+// cases complete/update/delete ja decidiam a MESMA regra (lookup 404 -> gate 403) com as
+// mensagens proprias ("Não autorizado a atualizar/excluir esta sessão"). O gate da rota era
+// um duplicado com o default "Acesso negado"; removido, a mensagem do use case virou fonte
+// unica (evolucão medida, mesma classe da DEC-118). O 404 de sessao ausente passou de corpo
+// manual para NotFoundError mapeado: {error, code, details} (superset, DEC-53).
 const { workExecution: workExecutionModule } = getBackendComposition();
 
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
@@ -9,22 +16,11 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     const auth = await requireApiActor();
     if (auth.error) return auth.error;
 
-    const actor = auth.actor;
+    const actor = userActor(auth.actor.id, auth.actor.roles);
     const params = await context.params;
     const data = await request.json();
     const id = Number(params.id);
-    const existingSession = await workExecutionModule.getSessionById(id);
-    if (!existingSession) {
-      return new Response(JSON.stringify({ error: "Sessão não encontrada" }), {
-        status: 404,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
 
-    const accessError = ensureSelfOrPermission(actor, existingSession.userId, "MANAGE_WORK_SESSIONS");
-    if (accessError) {
-      return accessError;
-    }
     const completedTaskIds = Array.isArray(data.completedTaskIds)
       ? data.completedTaskIds.map((taskId: unknown) => Number(taskId)).filter((taskId: number) => Number.isInteger(taskId) && taskId > 0)
       : undefined;
@@ -39,8 +35,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     const session = data.status === "completed"
       ? await workExecutionModule.completeWorkSession({
           sessionId: id,
-          actorUserId: actor.id,
-          actorRoles: actor.roles,
+          actor,
           activity: data.activity,
           location: data.location,
           endTime: data.endTime,
@@ -51,8 +46,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
         })
       : await workExecutionModule.updateWorkSession({
           sessionId: id,
-          actorUserId: actor.id,
-          actorRoles: actor.roles,
+          actor,
           activity: data.activity,
           location: data.location,
           status: data.status,
@@ -62,7 +56,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
           projectId: data.projectId,
           completedTaskIds,
         });
-    
+
     return new Response(JSON.stringify({ data: session }), {
       status: 200,
       headers: { "Content-Type": "application/json" }
@@ -83,28 +77,15 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
     const auth = await requireApiActor();
     if (auth.error) return auth.error;
 
-    const actor = auth.actor;
+    const actor = userActor(auth.actor.id, auth.actor.roles);
     const params = await context.params;
     const id = Number(params.id);
-    const existingSession = await workExecutionModule.getSessionById(id);
-    if (!existingSession) {
-      return new Response(JSON.stringify({ error: "Sessão não encontrada" }), {
-        status: 404,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
 
-    const accessError = ensureSelfOrPermission(actor, existingSession.userId, "MANAGE_WORK_SESSIONS");
-    if (accessError) {
-      return accessError;
-    }
-    
     await workExecutionModule.deleteWorkSession({
       sessionId: id,
-      actorUserId: actor.id,
-      actorRoles: actor.roles,
+      actor,
     });
-    
+
     return new Response(JSON.stringify({ success: true }), {
       status: 200,
       headers: { "Content-Type": "application/json" }
@@ -118,4 +99,4 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
       headers: { "Content-Type": "application/json" }
     });
   }
-} 
+}

@@ -17,12 +17,18 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { prisma } from "@/lib/database/prisma";
 import { createWorkExecutionModule } from "@/backend/modules/work-execution";
+import { ForbiddenError, userActor } from "@/backend/domain";
 
 const workModule = createWorkExecutionModule();
 const uniqueEmail = `g4-work-${Date.now()}@test.local`;
 const userName = "G4 Work Volunteer";
 let userId = 0;
 let sessionId = 0;
+
+// B6-5 (D4): os comandos carregam ActorRef. O harness opera como o DONO (self) e um ator sem
+// gestao de FORA do store (id 999) para provar a negacao — a decisao sai da PERMISSAO.
+const ownerActor = () => userActor(userId, ["VOLUNTARIO"]);
+const strangerActor = () => userActor(999, ["VOLUNTARIO"]);
 
 describe("G4 roundtrip — work-execution (isolated test DB)", () => {
   beforeAll(async () => {
@@ -41,7 +47,7 @@ describe("G4 roundtrip — work-execution (isolated test DB)", () => {
   });
 
   it("startWorkSession persists an ACTIVE row with server startTime and null endTime/duration", async () => {
-    const session = await workModule.startWorkSession({ userId, userName, activity: "Lab G4" });
+    const session = await workModule.startWorkSession({ actor: ownerActor(), userId, actorName: userName, activity: "Lab G4" });
     sessionId = session.id!;
 
     const row = await prisma.work_sessions.findUnique({ where: { id: sessionId } });
@@ -56,8 +62,7 @@ describe("G4 roundtrip — work-execution (isolated test DB)", () => {
   it("pause freezes the stretch (server-computed, capped) and persists status=paused", async () => {
     const paused = await workModule.updateWorkSession({
       sessionId,
-      actorUserId: userId,
-      actorRoles: ["VOLUNTARIO"],
+      actor: ownerActor(),
       status: "paused",
     });
 
@@ -75,8 +80,7 @@ describe("G4 roundtrip — work-execution (isolated test DB)", () => {
     const before = await prisma.work_sessions.findUnique({ where: { id: sessionId } });
     const resumed = await workModule.updateWorkSession({
       sessionId,
-      actorUserId: userId,
-      actorRoles: ["VOLUNTARIO"],
+      actor: ownerActor(),
       status: "active",
     });
 
@@ -89,8 +93,7 @@ describe("G4 roundtrip — work-execution (isolated test DB)", () => {
   it("completeWorkSession closes at the server clock and UPSERTS the daily log with the auto-note", async () => {
     const completed = await workModule.completeWorkSession({
       sessionId,
-      actorUserId: userId,
-      actorRoles: ["VOLUNTARIO"],
+      actor: ownerActor(),
     });
 
     expect(completed.status).toBe("completed");
@@ -109,8 +112,7 @@ describe("G4 roundtrip — work-execution (isolated test DB)", () => {
 
     const again = await workModule.completeWorkSession({
       sessionId,
-      actorUserId: userId,
-      actorRoles: ["VOLUNTARIO"],
+      actor: ownerActor(),
       dailyLogNote: "  revisado  ",
     });
 
@@ -122,17 +124,20 @@ describe("G4 roundtrip — work-execution (isolated test DB)", () => {
     expect(logs[0].note).toBe("revisado");
   });
 
-  it("listWorkSessions(userId) returns the completed session; getSessionById reads it back", async () => {
-    const sessions = await workModule.listWorkSessions({ userId });
+  it("listWorkSessions(userId) returns the completed session; getSessionById reads it back; outro sem gestao e barrado (B6-5)", async () => {
+    const sessions = await workModule.listWorkSessions({ actor: ownerActor(), userId });
     expect(sessions.map((s) => s.id)).toContain(sessionId);
 
     const single = await workModule.getSessionById(sessionId);
     expect(single?.id).toBe(sessionId);
     expect(single?.status).toBe("completed");
+
+    // gate medido na rota legado (ensureSelfOrPermission): nao-gestor pedindo outro usuario e 403.
+    await expect(workModule.listWorkSessions({ actor: strangerActor(), userId })).rejects.toThrow(ForbiddenError);
   });
 
   it("deleteWorkSession removes the session and the daily log cascades", async () => {
-    await workModule.deleteWorkSession({ sessionId, actorUserId: userId, actorRoles: ["VOLUNTARIO"] });
+    await workModule.deleteWorkSession({ sessionId, actor: ownerActor() });
 
     expect(await prisma.work_sessions.findUnique({ where: { id: sessionId } })).toBeNull();
     expect(await prisma.daily_logs.findUnique({ where: { workSessionId: sessionId } })).toBeNull();

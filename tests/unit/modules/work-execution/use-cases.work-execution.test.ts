@@ -14,6 +14,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   ForbiddenError,
   NotFoundError,
+  userActor,
   ValidationError,
   type DailyLog,
   type WorkSession,
@@ -34,6 +35,14 @@ import type { LeaderLogsAudit } from "@/backend/modules/work-execution/applicati
 const T_11Z = "2026-06-15T11:00:00.000Z"; // SP 08:00 — no pause elapsed
 const T_13Z = "2026-06-15T13:00:00.000Z"; // SP 10:00 — the 12:30Z pause was crossed
 const PAUSE_1230Z = new Date("2026-06-15T12:30:00.000Z");
+
+// B6-5 (D4): os comandos agora carregam ActorRef (antes actorUserId/actorRoles crus). Os atores
+// do golden: dono (7), Beto (8), gestor (999 — MANAGE_WORK_SESSIONS via COORDENADOR, id FORA do
+// store para a decisao sair da PERMISSAO e nao de acaso de id) e sem papéis (7, []).
+const ownerActor = userActor(7, ["VOLUNTARIO"]);
+const betoActor = userActor(8, ["VOLUNTARIO"]);
+const managerActor = userActor(999, ["COORDENADOR"]);
+const noRolesActor = userActor(7, []);
 
 class FakeWorkSessions {
   private nextId = 1000;
@@ -217,7 +226,14 @@ let projectAccess: FakeProjectAccess;
 let taskVerification: FakeTaskVerification;
 
 function deps() {
-  return { workSessions, dailyLogs, projectAccess, taskVerification };
+  // B6-5: os use cases de lista agora recebem o use case do lider (mesmo wiring da fabrica).
+  return {
+    workSessions,
+    dailyLogs,
+    projectAccess,
+    taskVerification,
+    leaderLogs: new ListProjectLogsForLeaderUseCase({ projectAccess }),
+  };
 }
 
 function freeze(clock: string) {
@@ -242,7 +258,7 @@ describe("StartWorkSessionUseCase", () => {
     freeze(T_13Z);
     workSessions.seed({ id: 1, userId: 7, startTime: new Date("2026-06-15T12:00:00.000Z"), status: "active" });
 
-    const session = await new StartWorkSessionUseCase(deps()).execute({ userId: 7, userName: "Ana" });
+    const session = await new StartWorkSessionUseCase(deps()).execute({ actor: ownerActor, userId: 7, actorName: "Ana" });
 
     const closed = await workSessions.findById(1);
     expect(closed?.status).toBe("completed");
@@ -254,24 +270,26 @@ describe("StartWorkSessionUseCase", () => {
   it("membership required for non-managers; MANAGE_WORK_SESSIONS skips it", async () => {
     const useCase = new StartWorkSessionUseCase(deps());
     await expect(
-      useCase.execute({ userId: 7, userName: "Ana", projectId: 5, actorRoles: ["VOLUNTARIO"] }),
+      useCase.execute({ actor: ownerActor, userId: 7, actorName: "Ana", projectId: 5 }),
     ).rejects.toThrow(ForbiddenError);
     await expect(
-      useCase.execute({ userId: 7, userName: "Ana", projectId: 5, actorRoles: ["VOLUNTARIO"] }),
+      useCase.execute({ actor: ownerActor, userId: 7, actorName: "Ana", projectId: 5 }),
     ).rejects.toThrow("Usuário não é membro do projeto informado");
 
     projectAccess.memberships.push({ projectId: 5, userId: 7 });
-    expect((await useCase.execute({ userId: 7, userName: "Ana", projectId: 5, actorRoles: ["VOLUNTARIO"] })).projectId).toBe(5);
+    expect((await useCase.execute({ actor: ownerActor, userId: 7, actorName: "Ana", projectId: 5 })).projectId).toBe(5);
 
-    expect((await useCase.execute({ userId: 8, userName: "Beto", projectId: 9, actorRoles: ["COORDENADOR"] })).projectId).toBe(9);
+    // gestor criando PARA OUTRO (999 vs 8): o gate passa pela PERMISSAO e o nome PEDIDO vale
+    // (escopo medido na rota legado: gestor pede qualquer nome; nao-gestor escreve o proprio).
+    expect((await useCase.execute({ actor: managerActor, userId: 8, userName: "Beto", projectId: 9 })).projectId).toBe(9);
   });
 
   it("typed validation: invalid userName and invalid startTime (messages frozen)", async () => {
     const useCase = new StartWorkSessionUseCase(deps());
-    await expect(useCase.execute({ userId: 7, userName: "  " })).rejects.toThrow(ValidationError);
-    await expect(useCase.execute({ userId: 7, userName: "  " })).rejects.toThrow("Dados inválidos para criar sessão de trabalho");
+    await expect(useCase.execute({ actor: ownerActor, userId: 7, actorName: "  " })).rejects.toThrow(ValidationError);
+    await expect(useCase.execute({ actor: ownerActor, userId: 7, actorName: "  " })).rejects.toThrow("Dados inválidos para criar sessão de trabalho");
     await expect(
-      useCase.execute({ userId: 7, userName: "Ana", startTime: "not-a-date" }),
+      useCase.execute({ actor: ownerActor, userId: 7, actorName: "Ana", startTime: "not-a-date" }),
     ).rejects.toThrow("startTime inválido");
   });
 });
@@ -280,12 +298,12 @@ describe("CompleteWorkSessionUseCase", () => {
   it("typed NotFound/Forbidden with frozen messages", async () => {
     const useCase = new CompleteWorkSessionUseCase(deps());
     await expect(
-      useCase.execute({ sessionId: 99, actorUserId: 7, actorRoles: ["VOLUNTARIO"] }),
+      useCase.execute({ sessionId: 99, actor: ownerActor }),
     ).rejects.toThrow(NotFoundError);
 
     workSessions.seed({ id: 1, userId: 8, startTime: new Date(T_11Z), status: "active" });
     await expect(
-      useCase.execute({ sessionId: 1, actorUserId: 7, actorRoles: ["VOLUNTARIO"] }),
+      useCase.execute({ sessionId: 1, actor: ownerActor }),
     ).rejects.toThrow("Não autorizado a atualizar esta sessão");
   });
 
@@ -295,9 +313,9 @@ describe("CompleteWorkSessionUseCase", () => {
     workSessions.seed({ id: 3, userId: 7, startTime: new Date(T_11Z), status: "paused", duration: 5678 });
 
     const useCase = new CompleteWorkSessionUseCase(deps());
-    expect((await useCase.execute({ sessionId: 1, actorUserId: 7, actorRoles: ["VOLUNTARIO"] })).duration).toBe(3600);
-    expect((await useCase.execute({ sessionId: 2, actorUserId: 7, actorRoles: ["VOLUNTARIO"] })).duration).toBe(1234);
-    expect((await useCase.execute({ sessionId: 3, actorUserId: 7, actorRoles: ["VOLUNTARIO"] })).duration).toBe(5678);
+    expect((await useCase.execute({ sessionId: 1, actor: ownerActor })).duration).toBe(3600);
+    expect((await useCase.execute({ sessionId: 2, actor: ownerActor })).duration).toBe(1234);
+    expect((await useCase.execute({ sessionId: 3, actor: ownerActor })).duration).toBe(5678);
   });
 
   it("client endTime honored, truncated at crossed pause; invalid endTime -> ValidationError", async () => {
@@ -307,15 +325,14 @@ describe("CompleteWorkSessionUseCase", () => {
     const useCase = new CompleteWorkSessionUseCase(deps());
     const completed = await useCase.execute({
       sessionId: 1,
-      actorUserId: 7,
-      actorRoles: ["VOLUNTARIO"],
+      actor: ownerActor,
       endTime: "2026-06-15T12:45:00.000Z",
     });
     expect(completed.endTime).toEqual(new Date("2026-06-15T12:45:00.000Z"));
     expect(completed.duration).toBe(1800);
 
     await expect(
-      useCase.execute({ sessionId: 1, actorUserId: 7, actorRoles: ["VOLUNTARIO"], endTime: "lixo" }),
+      useCase.execute({ sessionId: 1, actor: ownerActor, endTime: "lixo" }),
     ).rejects.toThrow("endTime inválido");
   });
 
@@ -324,7 +341,7 @@ describe("CompleteWorkSessionUseCase", () => {
     const useCase = new CompleteWorkSessionUseCase(deps());
 
     await expect(
-      useCase.execute({ sessionId: 1, actorUserId: 7, actorRoles: ["VOLUNTARIO"], completedTaskIds: [10] }),
+      useCase.execute({ sessionId: 1, actor: ownerActor, completedTaskIds: [10] }),
     ).rejects.toThrow("Só é possível vincular tasks em sessões finalizadas");
 
     taskVerification.tasks.push(
@@ -333,8 +350,7 @@ describe("CompleteWorkSessionUseCase", () => {
     );
     await useCase.execute({
       sessionId: 1,
-      actorUserId: 7,
-      actorRoles: ["VOLUNTARIO"],
+      actor: ownerActor,
       endTime: "2026-06-15T11:30:00.000Z",
       completedTaskIds: [10, 10, 11, 0, -3, Number.NaN],
     });
@@ -343,7 +359,7 @@ describe("CompleteWorkSessionUseCase", () => {
     taskVerification.tasks.length = 0;
     taskVerification.tasks.push({ id: 10, projectId: 6, completed: true, assignedTo: 7 });
     await expect(
-      useCase.execute({ sessionId: 1, actorUserId: 7, actorRoles: ["VOLUNTARIO"], completedTaskIds: [10] }),
+      useCase.execute({ sessionId: 1, actor: ownerActor, completedTaskIds: [10] }),
     ).rejects.toThrow("Todas as tasks vinculadas devem pertencer ao projeto da sessão");
   });
 
@@ -351,13 +367,13 @@ describe("CompleteWorkSessionUseCase", () => {
     workSessions.seed({ id: 1, userId: 7, startTime: new Date("2026-06-15T10:00:00.000Z"), status: "active", activity: "Lab", location: "Sala 1" });
 
     const useCase = new CompleteWorkSessionUseCase(deps());
-    const completed = await useCase.execute({ sessionId: 1, actorUserId: 7, actorRoles: ["VOLUNTARIO"] });
+    const completed = await useCase.execute({ sessionId: 1, actor: ownerActor });
 
     const log = await dailyLogs.findByWorkSessionId(1);
     expect(log?.note).toBe("Sessão de trabalho finalizada - 60 minutos\nAtividade: Lab\nLocal: Sala 1");
     expect(log?.date).toEqual(completed.endTime);
 
-    await useCase.execute({ sessionId: 1, actorUserId: 7, actorRoles: ["VOLUNTARIO"], dailyLogNote: "  revisado  " });
+    await useCase.execute({ sessionId: 1, actor: ownerActor, dailyLogNote: "  revisado  " });
     const all = await dailyLogs.findAll();
     expect(all).toHaveLength(1);
     expect(all[0].note).toBe("revisado");
@@ -370,7 +386,7 @@ describe("CompleteWorkSessionUseCase", () => {
       onWorkSessionCompleted: vi.fn(async (_event: { session: WorkSession; completedTaskIds?: number[] }) => undefined),
     };
     const useCase = new CompleteWorkSessionUseCase(deps(), events);
-    await useCase.execute({ sessionId: 1, actorUserId: 7, actorRoles: ["VOLUNTARIO"] });
+    await useCase.execute({ sessionId: 1, actor: ownerActor });
 
     expect(events.onWorkSessionCompleted).toHaveBeenCalledTimes(1);
     expect(events.onWorkSessionCompleted.mock.calls[0][0]).toMatchObject({ completedTaskIds: undefined });
@@ -382,7 +398,7 @@ describe("CompleteWorkSessionUseCase", () => {
       }),
     };
     const useCase2 = new CompleteWorkSessionUseCase(deps(), brokenEvents);
-    const completed = await useCase2.execute({ sessionId: 1, actorUserId: 7, actorRoles: ["VOLUNTARIO"] });
+    const completed = await useCase2.execute({ sessionId: 1, actor: ownerActor });
     expect(completed.status).toBe("completed"); // event failure never breaks completion
     expect(spy).toHaveBeenCalled();
     spy.mockRestore();
@@ -395,8 +411,7 @@ describe("UpdateWorkSessionUseCase (server-authoritative transitions)", () => {
 
     const updated = await new UpdateWorkSessionUseCase(deps()).execute({
       sessionId: 1,
-      actorUserId: 7,
-      actorRoles: ["VOLUNTARIO"],
+      actor: ownerActor,
       endTime: "2020-01-01T00:00:00.000Z",
     });
     expect(updated.endTime).toEqual(new Date(T_11Z));
@@ -416,8 +431,7 @@ describe("UpdateWorkSessionUseCase (server-authoritative transitions)", () => {
 
     const updated = await new UpdateWorkSessionUseCase(deps()).execute({
       sessionId: 1,
-      actorUserId: 7,
-      actorRoles: ["VOLUNTARIO"],
+      actor: ownerActor,
       endTime: "2026-06-15T11:00:00.000Z",
     });
     expect(updated.duration).toBe(7200);
@@ -430,17 +444,16 @@ describe("UpdateWorkSessionUseCase (server-authoritative transitions)", () => {
     workSessions.seed({ id: 3, userId: 7, startTime: new Date("2026-06-15T12:00:00.000Z"), status: "active" });
 
     const useCase = new UpdateWorkSessionUseCase(deps());
-    const paused = await useCase.execute({ sessionId: 1, actorUserId: 7, actorRoles: ["VOLUNTARIO"], status: "paused" });
+    const paused = await useCase.execute({ sessionId: 1, actor: ownerActor, status: "paused" });
     expect(paused.endTime).toEqual(PAUSE_1230Z);
     expect(paused.duration).toBe(2400);
 
-    const capped = await useCase.execute({ sessionId: 2, actorUserId: 8, actorRoles: ["VOLUNTARIO"], status: "paused" });
+    const capped = await useCase.execute({ sessionId: 2, actor: betoActor, status: "paused" });
     expect(capped.duration).toBe(32400);
 
     const withClientDuration = await useCase.execute({
       sessionId: 3,
-      actorUserId: 7,
-      actorRoles: ["VOLUNTARIO"],
+      actor: ownerActor,
       status: "paused",
       duration: 999999,
     });
@@ -460,8 +473,7 @@ describe("UpdateWorkSessionUseCase (server-authoritative transitions)", () => {
 
     const resumed = await new UpdateWorkSessionUseCase(deps()).execute({
       sessionId: 1,
-      actorUserId: 7,
-      actorRoles: ["VOLUNTARIO"],
+      actor: ownerActor,
       status: "active",
     });
     expect(resumed.status).toBe("active");
@@ -475,8 +487,7 @@ describe("UpdateWorkSessionUseCase (server-authoritative transitions)", () => {
 
     const updated = await new UpdateWorkSessionUseCase(deps()).execute({
       sessionId: 1,
-      actorUserId: 7,
-      actorRoles: ["VOLUNTARIO"],
+      actor: ownerActor,
       status: "arbitrary-status",
       duration: "4321" as never,
     });
@@ -486,23 +497,23 @@ describe("UpdateWorkSessionUseCase (server-authoritative transitions)", () => {
 
   it("typed NotFound/Forbidden/membership errors (messages frozen)", async () => {
     const useCase = new UpdateWorkSessionUseCase(deps());
-    await expect(useCase.execute({ sessionId: 99, actorUserId: 7, actorRoles: [] })).rejects.toThrow(NotFoundError);
+    await expect(useCase.execute({ sessionId: 99, actor: noRolesActor })).rejects.toThrow(NotFoundError);
 
     workSessions.seed({ id: 1, userId: 8, startTime: new Date(T_11Z), status: "active" });
     await expect(
-      useCase.execute({ sessionId: 1, actorUserId: 7, actorRoles: ["VOLUNTARIO"] }),
+      useCase.execute({ sessionId: 1, actor: ownerActor }),
     ).rejects.toThrow("Não autorizado a atualizar esta sessão");
 
     workSessions.seed({ id: 2, userId: 7, startTime: new Date(T_11Z), status: "active" });
     await expect(
-      useCase.execute({ sessionId: 2, actorUserId: 7, actorRoles: ["VOLUNTARIO"], projectId: 5 }),
+      useCase.execute({ sessionId: 2, actor: ownerActor, projectId: 5 }),
     ).rejects.toThrow("Usuário não é membro do projeto informado");
   });
 });
 
 describe("List/Get normalization", () => {
   it("userId+status -> ValidationError; expired active normalized BEFORE the status filter", async () => {
-    await expect(new ListWorkSessionsUseCase(deps()).execute({ userId: 7, status: "active" })).rejects.toThrow(
+    await expect(new ListWorkSessionsUseCase(deps()).execute({ actor: managerActor, userId: 7, status: "active" })).rejects.toThrow(
       "Consulta de sessões inválida",
     );
 
@@ -510,7 +521,7 @@ describe("List/Get normalization", () => {
     workSessions.seed({ id: 1, userId: 7, startTime: new Date("2026-06-15T12:00:00.000Z"), status: "active" });
     workSessions.seed({ id: 2, userId: 8, startTime: new Date("2026-06-15T12:45:00.000Z"), status: "active" });
 
-    const active = await new ListWorkSessionsUseCase(deps()).execute({ status: "active" });
+    const active = await new ListWorkSessionsUseCase(deps()).execute({ actor: managerActor, status: "active" });
     expect(active.map((s) => s.id)).toEqual([2]); // session 1 was normalized to paused and excluded
 
     const stored = await workSessions.findById(1);
@@ -535,9 +546,9 @@ describe("List/Get normalization", () => {
     dailyLogs.seed({ id: 2, userId: 7, date: new Date(2026, 5, 14, 12, 0, 0), projectId: 5 });
 
     const useCase = new ListDailyLogsUseCase(deps());
-    expect((await useCase.execute({ userId: 7, date: "2026-06-15T12:00:00" })).map((l) => l.id)).toEqual([1]);
-    expect((await useCase.execute({ userId: 7 })).map((l) => l.id)).toEqual([1, 2]);
-    expect((await useCase.execute({ projectId: 5 })).map((l) => l.id)).toEqual([1, 2]);
+    expect((await useCase.execute({ actor: managerActor, userId: 7, date: "2026-06-15T12:00:00" })).map((l) => l.id)).toEqual([1]);
+    expect((await useCase.execute({ actor: managerActor, userId: 7 })).map((l) => l.id)).toEqual([1, 2]);
+    expect((await useCase.execute({ actor: managerActor, projectId: 5 })).map((l) => l.id)).toEqual([1, 2]);
   });
 });
 
@@ -578,14 +589,14 @@ describe("CreateDailyLogFromSessionUseCase (owner-only)", () => {
 });
 
 describe("ListProjectLogsForLeaderUseCase", () => {
-  it("empty scope early-returns WITHOUT audit; foreign projectId -> ForbiddenError", async () => {
+  it("empty scope agora e ForbiddenError SEM audit (B6-5: era early-return vazio porque a decisao de 403 morava na rota); foreign projectId -> ForbiddenError", async () => {
     const useCase = new ListProjectLogsForLeaderUseCase(deps());
-    expect(await useCase.execute({ leaderId: 42 })).toEqual({ logs: [], sessions: [], ledProjectIds: [] });
+    await expect(useCase.execute({ actor: userActor(42, []) })).rejects.toThrow("Acesso negado");
     expect(projectAccess.audits).toHaveLength(0);
 
     projectAccess.led = [5];
-    await expect(useCase.execute({ leaderId: 7, projectId: 8 })).rejects.toThrow("Acesso negado");
-    await expect(useCase.execute({ leaderId: 7, projectId: 8 })).rejects.toThrow(ForbiddenError);
+    await expect(useCase.execute({ actor: userActor(7, []), projectId: 8 })).rejects.toThrow("Acesso negado");
+    await expect(useCase.execute({ actor: userActor(7, []), projectId: 8 })).rejects.toThrow(ForbiddenError);
   });
 
   it("scope union, member filter and audit written for non-empty scope", async () => {
@@ -599,7 +610,7 @@ describe("ListProjectLogsForLeaderUseCase", () => {
       { id: 10, userId: 8, userName: "Beto", startTime: new Date("2026-06-15T08:00:00Z"), projectId: 5, status: "completed" },
     ];
 
-    const result = await new ListProjectLogsForLeaderUseCase(deps()).execute({ leaderId: 7 });
+    const result = await new ListProjectLogsForLeaderUseCase(deps()).execute({ actor: userActor(7, []) });
     expect(result.ledProjectIds.sort()).toEqual([5, 6]);
     expect(result.logs.map((l) => l.id)).toEqual([1, 2]);
 
@@ -614,26 +625,33 @@ describe("ListProjectLogsForLeaderUseCase", () => {
     });
 
     const filtered = await new ListProjectLogsForLeaderUseCase(deps()).execute({
-      leaderId: 7,
+      actor: userActor(7, []),
       projectId: 5,
       memberUserId: 99,
     });
     expect(filtered.logs).toEqual([]);
     expect(filtered.sessions).toEqual([]);
   });
+
+  it("B6-5: a mensagem negada e a da rota chamadora (parametro deniedMessage)", async () => {
+    projectAccess.led = [];
+    await expect(
+      new ListProjectLogsForLeaderUseCase(deps()).execute({ actor: userActor(7, []), deniedMessage: "Acesso negado." }),
+    ).rejects.toThrow("Acesso negado.");
+  });
 });
 
 describe("DeleteWorkSessionUseCase", () => {
   it("typed NotFound/Forbidden; owner and MANAGE_WORK_SESSIONS may delete", async () => {
     const useCase = new DeleteWorkSessionUseCase(deps());
-    await expect(useCase.execute({ sessionId: 99, actorUserId: 7, actorRoles: [] })).rejects.toThrow(NotFoundError);
+    await expect(useCase.execute({ sessionId: 99, actor: noRolesActor })).rejects.toThrow(NotFoundError);
 
     workSessions.seed({ id: 1, userId: 8, startTime: new Date(T_11Z), status: "active" });
     await expect(
-      useCase.execute({ sessionId: 1, actorUserId: 7, actorRoles: ["VOLUNTARIO"] }),
+      useCase.execute({ sessionId: 1, actor: ownerActor }),
     ).rejects.toThrow("Não autorizado a excluir esta sessão");
 
-    await useCase.execute({ sessionId: 1, actorUserId: 7, actorRoles: ["COORDENADOR"] });
+    await useCase.execute({ sessionId: 1, actor: managerActor });
     expect(await workSessions.findById(1)).toBeNull();
   });
 });

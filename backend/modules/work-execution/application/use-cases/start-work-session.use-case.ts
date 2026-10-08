@@ -1,7 +1,8 @@
 import {
+  canActorManageWorkSessions,
   closedSessionDuration,
   ForbiddenError,
-  hasPermission,
+  requireActorSelfOrPermission,
   ValidationError,
 } from "@/backend/domain"
 import type { StartWorkSessionCommand } from "@/backend/modules/work-execution/application/contracts"
@@ -16,6 +17,12 @@ import type { WorkSessionRepositoryPort } from "@/backend/modules/work-execution
  *     (stretch truncated at a crossed scheduled pause),
  *   - then the new session is created (custom startTime validated).
  * `throw new Error` became typed errors (R2); messages preserved verbatim.
+ *
+ * B6-5 (D4): o gate self-ou-gestao que a rota POST fazia (`ensureSelfOrPermission`, default
+ * "Acesso negado") desceu para o topo do use case — a rota mantem so a validacao de entrada
+ * (400 "userId inválido") antes, como media. E o ESCOPO DO NOME (medido na rota: gestor pode
+ * pedir qualquer nome; nao-gestor escreve sempre o proprio) passou para aqui: `userName` e o
+ * nome PEDIDO, `actorName` e o nome da sessao do ator.
  */
 export interface StartWorkSessionDependencies {
   workSessions: WorkSessionRepositoryPort
@@ -26,8 +33,16 @@ export class StartWorkSessionUseCase {
   constructor(private readonly dependencies: StartWorkSessionDependencies) {}
 
   async execute(command: StartWorkSessionCommand) {
+    requireActorSelfOrPermission(command.actor, command.userId, "MANAGE_WORK_SESSIONS")
+
+    const canManage = canActorManageWorkSessions(command.actor)
+    // `||` e nao `??`: a rota legado tratava nome VAZIO como ausente (`data.userName || actor.name`).
+    const userName = canManage
+      ? String(command.userName || command.actorName || "")
+      : String(command.actorName || "")
+
     if (command.projectId !== undefined && command.projectId !== null) {
-      if (!hasPermission(command.actorRoles ?? [], "MANAGE_WORK_SESSIONS")) {
+      if (!canManage) {
         const isMember = await this.dependencies.projectAccess.isProjectMember(command.userId, command.projectId)
         if (!isMember) {
           throw new ForbiddenError("Usuário não é membro do projeto informado")
@@ -47,7 +62,7 @@ export class StartWorkSessionUseCase {
       })
     }
 
-    if (!command.userId || !command.userName?.trim()) {
+    if (!command.userId || !userName.trim()) {
       throw new ValidationError("Dados inválidos para criar sessão de trabalho")
     }
 
@@ -62,7 +77,7 @@ export class StartWorkSessionUseCase {
 
     return await this.dependencies.workSessions.create({
       userId: command.userId,
-      userName: command.userName,
+      userName,
       startTime,
       endTime: null,
       duration: null,
