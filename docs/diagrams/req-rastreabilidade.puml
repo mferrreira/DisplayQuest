@@ -1,0 +1,112 @@
+@startuml
+!include _base.puml
+
+title Requisitos — rastreabilidade até os casos de uso
+
+hide empty description
+hide circle
+
+skinparam class<<casoDeUso>> {
+  BorderColor     #1F4E79
+  BackgroundColor #F7FAFD
+  FontColor       #1F4E79
+  BorderStyle     dashed
+}
+skinparam classBorderStyle<<requisito>> dashed
+
+package "requisitos funcionais" {
+  class "RF-01\nConta sob aprovação" as RF01 <<requisito>>
+  class "RF-02\nPapéis e permissões" as RF02 <<requisito>>
+  class "RF-03\nProjeto com\nlíder único" as RF03 <<requisito>>
+  class "RF-04\nTarefa revisada\npor terceiro" as RF04 <<requisito>>
+  class "RF-05\nSessão regida pelo\nrelógio do servidor" as RF05 <<requisito>>
+  class "RF-06\nRelatório de projeto\ncom anexo" as RF06 <<requisito>>
+  class "RF-07\nPlantão único\ne visível" as RF07 <<requisito>>
+  class "RF-08\nGrade de horários\ncom escrita restrita" as RF08 <<requisito>>
+  class "RF-09\nPontos, distintivos\ne recompensa" as RF09 <<requisito>>
+  class "RF-10\nComunicado interno\nsem correio" as RF10 <<requisito>>
+}
+
+package "requisitos não funcionais" {
+  class "RNF-01\nAnexo nunca é\narquivo público" as RNF01 <<requisito>>
+  class "RNF-02\nBanco fora da\nrede externa" as RNF02 <<requisito>>
+  class "RNF-03\nDependência entre\ncamadas verificada" as RNF03 <<requisito>>
+  class "RNF-04\nComportamento\nverificável por teste" as RNF04 <<requisito>>
+  class "RNF-05\nPlanta reproduzível\npor configuração" as RNF05 <<requisito>>
+  class "RNF-06\nPersistência por\nvolume nomeado" as RNF06 <<requisito>>
+}
+
+package "casos de uso" {
+  class "Criar conta" as CU01 <<casoDeUso>>
+  class "Aprovar conta" as CU02 <<casoDeUso>>
+  class "Gerenciar usuários" as CU03 <<casoDeUso>>
+  class "Criar projeto" as CU04 <<casoDeUso>>
+  class "Definir líder" as CU05 <<casoDeUso>>
+  class "Mover no quadro" as CU06 <<casoDeUso>>
+  class "Aprovar entrega" as CU07 <<casoDeUso>>
+  class "Iniciar sessão de trabalho" as CU08 <<casoDeUso>>
+  class "Finalizar sessão" as CU09 <<casoDeUso>>
+  class "Emitir relatório de projeto" as CU10 <<casoDeUso>>
+  class "Assumir responsabilidade" as CU11 <<casoDeUso>>
+  class "Editar a própria grade de horários" as CU12 <<casoDeUso>>
+  class "Resgatar recompensa" as CU13 <<casoDeUso>>
+  class "Transmitir comunicado" as CU14 <<casoDeUso>>
+}
+
+RF01 ..> CU01 : <<rastreia>>
+RF01 ..> CU02
+RF02 ..> CU03
+RF03 ..> CU04
+RF03 ..> CU05
+RF04 ..> CU06
+RF04 ..> CU07
+RF05 ..> CU08
+RF05 ..> CU09
+RF06 ..> CU10
+RF07 ..> CU11
+RF08 ..> CU12
+RF09 ..> CU13
+RF10 ..> CU14
+
+RNF01 ..> CU10
+RNF02 ..> CU03
+RNF03 ..> CU06
+RNF04 ..> CU07
+RNF05 ..> CU08
+RNF06 ..> CU10
+
+note right of RF05
+  O relógio é do servidor em toda a
+  fronteira: o cliente pode pedir a
+  pausa ou o encerramento, mas
+  nunca declara o horário nem a
+  duração.
+end note
+
+note bottom of RNF03
+  A regra de dependência entre camadas
+  é verificada automaticamente por
+  análise estática. Uma importação na
+  direção proibida derruba a
+  verificação, e a verificação faz
+  parte do critério de entrega.
+end note
+
+note bottom of RNF01
+  Um anexo nunca é um arquivo público.
+  A regra de acesso é a permissão de
+  leitura do relatório que o
+  contém, e o caminho de gravação
+  fica fora da pasta servida.
+end note
+
+note left of CU07
+  A aprovação é o caso de uso que
+  concentra mais regras: estado
+  exigido, autoridade por papel,
+  liderança do projeto, vedação à
+  autoaprovação e efeitos colaterais
+  de contagem e award.
+end note
+
+@enduml

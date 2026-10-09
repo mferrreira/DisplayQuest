@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
-import path from "path"
+import { routeErrorResponse } from "@/lib/api/route-error-response"
+import path from "node:path"
 import { requireApiActor } from "@/lib/auth/api-guard"
 import { getBackendComposition } from "@/backend/composition/root"
 import { absolutePathOf, readReportFileBytes } from "@/lib/storage/report-uploads"
@@ -72,13 +73,6 @@ export async function GET(
       },
     })
   } catch (error: unknown) {
-    console.error("Erro ao servir arquivo de relatório:", error)
-    const message = error instanceof Error ? error.message : "Erro ao servir arquivo"
-    const status = message.includes("Acesso negado")
-      ? 403
-      : message.includes("não encontrado")
-        ? 404
-        : 500
-    return NextResponse.json({ error: message }, { status })
+    return routeErrorResponse(error, { fallback: "Erro ao servir arquivo", exposeMessage: true })
   }
 }

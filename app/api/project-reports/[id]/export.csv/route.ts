@@ -1,7 +1,10 @@
 import { requireApiActor } from "@/lib/auth/api-guard"
 import { getBackendComposition } from "@/backend/composition/root"
 import { csvCell } from "@/lib/reports/csv-utils"
+import { domainErrorResponse } from "@/lib/api/domain-error-response"
 
+// OND7-B4 (R4): DomainErrors mapeados por domainErrorResponse — mesmos status do
+// mapeamento por mensagem anterior (403/404), agora tipados (contract OND7-B3).
 const { reporting: reportingModule } = getBackendComposition()
 
 export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
@@ -47,9 +50,19 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     }
     lines.push("")
     lines.push(`Logs diarios (${totals.logCount})`)
-    lines.push(["Usuario", "Data", "Nota"].map(csvCell).join(";"))
+    lines.push(["Usuario", "Data", "Inicio", "Fim", "Nota"].map(csvCell).join(";"))
     for (const log of logs) {
-      lines.push([log.userName ?? "-", new Date(log.date).toLocaleDateString("pt-BR"), log.note ?? "-"].map(csvCell).join(";"))
+      lines.push(
+        [
+          log.userName ?? "-",
+          new Date(log.date).toLocaleDateString("pt-BR"),
+          log.startTime ? new Date(log.startTime).toLocaleString("pt-BR") : "-",
+          log.endTime ? new Date(log.endTime).toLocaleString("pt-BR") : "-",
+          log.note ?? "-",
+        ]
+          .map(csvCell)
+          .join(";"),
+      )
     }
 
     const csv = "\uFEFF" + lines.join("\n")
@@ -63,11 +76,12 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
       },
     })
   } catch (error: unknown) {
+    const mapped = domainErrorResponse(error)
+    if (mapped) return mapped
     console.error("Erro ao exportar relatório CSV:", error)
     const message = error instanceof Error ? error.message : "Erro ao exportar relatório CSV"
-    const status = message.includes("Acesso negado") ? 403 : message.includes("não encontrado") ? 404 : 500
     return new Response(JSON.stringify({ error: message }), {
-      status,
+      status: 500,
       headers: { "Content-Type": "application/json" },
     })
   }

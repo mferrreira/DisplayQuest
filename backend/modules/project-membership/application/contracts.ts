@@ -1,5 +1,4 @@
-import type { UserRole } from "@prisma/client"
-import type { Role } from "@/lib/auth/rbac"
+import type { Role, UserRole } from "@/backend/domain"
 
 export interface ListProjectMembersQuery {
   projectId: number

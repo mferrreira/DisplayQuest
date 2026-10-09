@@ -48,6 +48,22 @@ export const taskUserProgressSchema = z.object({
 });
 export type TaskUserProgress = z.infer<typeof taskUserProgressSchema>;
 
+/**
+ * plan-v4 · V4-4 (DEC-79) — a subtask da tarefa mãe. Não tem responsável nem prazo próprios (D-D),
+ * por isso não há `userId` nem `dueDate` aqui. `completedAt` fica registrado como marca de quando
+ * a linha foi concluída; a PONTUAÇÃO, desde a DEC-97 (2026-10-07), é um +5 fixo por subtask
+ * CONCLUÍDA na conta única da mãe — a subtask não é mais pontuada pelo próprio prazo (a leitura
+ * da DEC-78 morreu aqui).
+ */
+export const taskSubtaskSchema = z.object({
+  id: z.number().int(),
+  taskId: z.number().int(),
+  title: z.string(),
+  completed: z.boolean(),
+  completedAt: nullableDateTimeString.nullable().optional(),
+});
+export type TaskSubtask = z.infer<typeof taskSubtaskSchema>;
+
 export const taskSchema = z.object({
   id: z.number().int(),
   title: z.string(),
@@ -70,6 +86,12 @@ export const taskSchema = z.object({
   isGlobal: z.boolean().default(false),
   groupTaskId: z.number().int().nullable().optional(),
   createdBy: z.number().int().nullable().optional(),
+  /**
+   * plan-v4 · V4-4: `default([])` é tolerância de wire, não frouxidão de contrato. Uma tarefa sem
+   * subtask e uma resposta de servidor antigo (pré-migration) são a mesma coisa para o cliente, e
+   * o cartão não pode quebrar por não encontrar a chave.
+   */
+  subtasks: z.array(taskSubtaskSchema).default([]),
 });
 export type Task = z.infer<typeof taskSchema>;
 
@@ -79,7 +101,13 @@ export type Task = z.infer<typeof taskSchema>;
  * The backend passes them through unvalidated (tasks.status is a plain String column), so the
  * wire can carry values outside taskStatusSchema. taskSchema stays STRICT (contract truth,
  * round-trip tests); the WIRE layer uses this explicit, loud normalization map so the board
- * keeps working while the cleanup migration is a pending user decision (state/backlog.md).
+ * keeps working while the cleanup migration is a pending user decision.
+ *
+ * DEVIDA RASTREADA: GAP-05 em displayquest-v2/clean-arch/STATE.json (gapRegistry).
+ * Medido em 2026-10-01 no 5432: 14 de 18 tasks com status legado. A tolerância aqui é
+ * a ÚNICA coisa segurando isso — qualquer leitura nova de tasks.status que não passe por
+ * wireTaskSchema vaza os valores crus. A correção é a migration de cleanup (D-18), não
+ * mais código de tolerância.
  */
 const LEGACY_STATUS_MAP: Record<string, TaskStatus> = {
   completed: "done",

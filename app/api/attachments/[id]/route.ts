@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server"
+import { routeErrorResponse } from "@/lib/api/route-error-response"
 import { requireApiActor } from "@/lib/auth/api-guard"
 import { getBackendComposition } from "@/backend/composition/root"
+import { domainErrorResponse } from "@/lib/api/domain-error-response"
 
+// OND7-B4 (R4): DomainErrors ("Acesso negado" 403 / "Anexo não encontrado" 404) mapeados
+// por domainErrorResponse — mesmos status do mapeamento por mensagem anterior.
 const { reporting: reportingModule } = getBackendComposition()
 
 export async function DELETE(request: Request, context: { params: Promise<{ id: string }> }) {
@@ -23,9 +27,6 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
 
     return NextResponse.json({ success: true })
   } catch (error: unknown) {
-    console.error("Erro ao remover anexo:", error)
-    const message = error instanceof Error ? error.message : "Erro ao remover anexo"
-    const status = message.includes("Acesso negado") ? 403 : message.includes("não encontrado") ? 404 : 500
-    return NextResponse.json({ error: message }, { status })
+    return routeErrorResponse(error, { fallback: "Erro ao remover anexo", exposeMessage: true })
   }
 }

@@ -2,16 +2,94 @@
   "extends": "next/core-web-vitals",
   "overrides": [
     {
-      "files": [
-        "**/laboratorio/page.tsx",
-        "**/loja/gerenciar/page.tsx",
-        "**/loja/page.tsx",
-        "**/user-approval.tsx",
-        "**/volunteer-actions.tsx"
-      ],
+      "files": ["**/laboratorio/page.tsx", "**/loja/gerenciar/page.tsx", "**/loja/page.tsx", "**/user-approval.tsx", "**/volunteer-actions.tsx"],
       "rules": {
         "react-hooks/rules-of-hooks": "warn",
         "react/no-unescaped-entities": "warn"
+      }
+    },
+    {
+      "files": ["backend/domain/**/*.ts", "backend/modules/*/domain/**/*.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "@prisma/client",
+                  "@prisma/client/*",
+                  "next",
+                  "next/*",
+                  "@/lib/*",
+                  "@/lib/**",
+                  "@/app/*",
+                  "@/app/**",
+                  "@/backend/modules/*",
+                  "@/backend/modules/**",
+                  "@/backend/repositories/*",
+                  "@/backend/repositories/**",
+                  "@/backend/composition/*",
+                  "@/backend/composition/**",
+                  "@/backend/models/*",
+                  "@/backend/models/**"
+                ],
+                "message": "RG-01/RG-02 (clean-arch SPEC \u00a73): o nucleo \u2014 backend/domain e backend/modules/<m>/domain \u2014 nao conhece ORM, framework, HTTP, adapters ou camadas de fora. Importe por @/backend/domain (barrel, RG-07)."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["backend/modules/*/application/**/*.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "@prisma/client",
+                  "@prisma/client/*",
+                  "@/lib/database/*",
+                  "@/lib/database/**",
+                  "@/lib/auth/*",
+                  "@/lib/auth/**",
+                  "@/backend/repositories/*",
+                  "@/backend/repositories/**",
+                  "@/backend/composition/*",
+                  "@/backend/composition/**"
+                ],
+                "message": "RG-03 (clean-arch SPEC \u00a73): application ve backend/domain + os proprios ports. Autorizacao/DB sao ports implementados pela infrastructure e injetados pela composition root."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["app/api/**/*.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "@prisma/client",
+                  "@prisma/client/*",
+                  "@/lib/database/prisma",
+                  "@/backend/repositories/*",
+                  "@/backend/repositories/**",
+                  "@/backend/modules/*",
+                  "@/backend/modules/**"
+                ],
+                "message": "RG-06 (clean-arch SPEC \u00a73): rota HTTP faz parse/auth/mapeamento e alcanca o backend por @/backend/composition/root. Divida atual registrada na allow-list do dep-cruiser (DEC-01)."
+              }
+            ]
+          }
+        ]
       }
     }
   ]

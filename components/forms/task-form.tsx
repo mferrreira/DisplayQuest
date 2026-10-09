@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle } from "lucide-react"
 import type { Task, TaskFormData, User, Project } from "@/contexts/types"
+import { POINTS_PER_TASK } from "@/features/tasks"
 import { hasAccess } from "@/lib/utils/utils"
 
 interface TaskFormProps {
@@ -41,20 +42,6 @@ interface FormFieldProps {
   error?: string
 }
 
-/**
- * Number input field component
- */
-interface NumberFieldProps {
-  label: string
-  id: string
-  name: string
-  value: number
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void
-  min?: number
-  disabled?: boolean
-  helperText?: string
-}
-
 function FormField({ 
   label, 
   id, 
@@ -85,36 +72,6 @@ function FormField({
       />
       {error && (
         <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
-      )}
-    </div>
-  )
-}
-
-function NumberField({ 
-  label, 
-  id, 
-  name, 
-  value, 
-  onChange, 
-  min,
-  disabled = false,
-  helperText
-}: NumberFieldProps) {
-  return (
-    <div className="grid gap-2">
-      <Label htmlFor={id}>{label}</Label>
-      <Input
-        id={id}
-        name={name}
-        type="number"
-        min={min}
-        value={value}
-        onChange={onChange}
-        disabled={disabled}
-        className={disabled ? "bg-gray-100 dark:bg-muted/40 cursor-not-allowed" : ""}
-      />
-      {helperText && (
-        <p className="text-xs text-gray-600 dark:text-gray-400">{helperText}</p>
       )}
     </div>
   )
@@ -202,7 +159,6 @@ export function TaskForm({
     assigneeIds: [],
     project: "",
     dueDate: "",
-    points: 50, // Default para medium priority
     completed: false,
     taskVisibility: "delegated",
     isGlobal: false,
@@ -221,27 +177,9 @@ export function TaskForm({
     setIsPastDate(selectedDate < today)
   }, [])
 
-  // Sistema de pontuação baseado em prioridade
-  const PRIORITY_POINTS = {
-    'low': 25,
-    'medium': 50,
-    'high': 100,
-    'urgent': 150
-  } as const;
-
-  // Verificar se usuário pode definir pontos customizados
-  const canSetCustomPoints = currentUser && (
-    currentUser.roles.includes('COORDENADOR') || 
-    currentUser.roles.includes('GERENTE')
-  );
-
-  // Atualizar pontos quando prioridade mudar — apenas em criação (não em edição, para preservar pontos salvos)
-  useEffect(() => {
-    if (!canSetCustomPoints && !task) {
-      const priorityPoints = PRIORITY_POINTS[formData.priority];
-      setFormData(prev => ({ ...prev, points: priorityPoints }));
-    }
-  }, [formData.priority, canSetCustomPoints, task]);
+  // plan-v3 OND1-D (DEC-30): sem campo de pontos e sem default por prioridade — a premiação
+  // é fixa (POINTS_PER_TASK) e decidedora no domínio. O valor gravado em `tasks.points` é
+  // histórico e nunca é reescrito (DEC-40).
 
   // Reset form when task changes
   useEffect(() => {
@@ -255,7 +193,6 @@ export function TaskForm({
         assigneeIds: (task.assigneeIds?.length ? task.assigneeIds : (task.assignedTo ? [task.assignedTo] : [])).map(String),
         project: task.projectId?.toString() || "",
         dueDate: task.dueDate || "",
-        points: task.points,
         completed: task.completed || false,
         taskVisibility: (task.taskVisibility as TaskFormData["taskVisibility"]) || "delegated",
         isGlobal: task.isGlobal || false,
@@ -272,7 +209,6 @@ export function TaskForm({
         assigneeIds: currentUser?.roles?.includes("GERENTE_PROJETO") ? [currentUser.id.toString()] : [],
         project: projectId || "",
         dueDate: "",
-        points: 10,
         completed: false,
         taskVisibility: "delegated",
         isGlobal: false,
@@ -305,11 +241,6 @@ export function TaskForm({
         assignedTo: nextAssigneeIds[0] || "",
       }
     })
-  }, [])
-
-  const handleNumberChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: parseInt(value) || 0 }))
   }, [])
 
   const handleCheckboxChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -481,16 +412,11 @@ export function TaskForm({
           type="date"
           error={isPastDate ? "A data selecionada já passou" : undefined}
         />
-        <NumberField
-          label={canSetCustomPoints ? "Pontos (Personalizado)" : "Pontos (Baseado na Prioridade)"}
-          id="points"
-          name="points"
-          value={formData.points}
-          onChange={handleNumberChange}
-          min={0}
-          disabled={!canSetCustomPoints}
-          helperText={!canSetCustomPoints ? `Pontos automáticos: ${PRIORITY_POINTS[formData.priority]} (${formData.priority})` : "Defina a pontuação personalizada"}
-        />
+        {/* plan-v3 OND1-D (DEC-30): o campo de pontos saiu — a premiação é fixa e decidedora
+            no domínio. O texto abaixo é informação, não entrada: nada aqui grava valor. */}
+        <p className="self-end pb-2 text-sm text-muted-foreground">
+          Pontuação fixa: {POINTS_PER_TASK} pontos por tarefa (bônus ou penalidade conforme o prazo).
+        </p>
       </div>
 
       {/* Quest Global Checkbox - Only show for managers/coordinators in creation mode */}

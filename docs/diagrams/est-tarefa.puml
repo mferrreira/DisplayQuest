@@ -1,0 +1,47 @@
+@startuml
+!include _base.puml
+
+title Máquina de estados — tarefa
+
+hide empty description
+scale 1.1
+
+[*] --> A_Fazer
+
+state "A fazer" as A_Fazer
+state "Em andamento" as Andamento
+state "Em revisão" as Revisao
+state "Em ajuste" as Ajuste
+state "Concluída" as Feita <<final>>
+
+A_Fazer     --> Andamento : assumir ou mover
+Andamento   --> Revisao   : submeter para revisão
+Andamento   --> A_Fazer   : devolver / mover
+Revisao     --> Feita     : aprovar
+Revisao     --> Ajuste    : rejeitar (com motivo)
+Ajuste      --> Revisao   : reenviar
+Ajuste      --> Andamento : corrigir em curso
+Feita       --> Ajuste    : reabrir (Coord., Gerente,\nLaboratorista ou líder do projeto)
+
+Andamento : <<tarefa>>\nprogresso individual por usuário
+Revisao   : <<tarefa>>\ngera notificação para o aprovador
+Feita     : <<tarefa>>\ncompletedAt gravado · pontos creditados
+
+note right of Revisao
+  A notificação de revisão só
+  é disparada na entrada em
+  Em revisão, e apenas se a
+  tarefa pertence a um projeto.
+end note
+
+note bottom of Feita
+  Concluir creditou ao usuário
+  a diferença entre o valor da
+  tarefa e a multa por atraso
+  (dias de atraso × pontos).
+  A regra admite resultado
+  negativo quando o atraso
+  supera o valor da tarefa.
+end note
+
+@enduml

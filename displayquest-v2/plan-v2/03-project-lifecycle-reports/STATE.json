@@ -1,0 +1,209 @@
+{
+  "featureId": "03",
+  "name": "project-lifecycle-reports",
+  "status": "draft",
+  "version": "0.1.0",
+
+  "dependencies": {
+    "list": ["01", "02"],
+    "allDone": false
+  },
+
+  "artifacts": {
+    "PLAN": "PLAN.md",
+    "SPEC": "SPEC.md",
+    "AGENT": "AGENT.md",
+    "STATE": "STATE.json"
+  },
+
+  "currentMilestone": null,
+  "currentBatch": null,
+
+  "acceptanceCriteria": [
+    {
+      "id": "AC-03-01",
+      "summary": "periodType vira enum ProjectPeriod com migracao versionada e legado normalizado sem db push; migrate status sem drift",
+      "testRef": "tests/integration/period-migration-backfill.test.ts + G5 (npx prisma migrate dev)",
+      "status": "pending"
+    },
+    {
+      "id": "AC-03-02",
+      "summary": "Anchor relativo: startedAt quando presente; senao weekStart (segunda) da atividade mais antiga; sem atividade, erro tipado",
+      "testRef": "tests/unit/lib/constants/report-periods.test.ts (resolveProjectAnchor)",
+      "status": "pending"
+    },
+    {
+      "id": "AC-03-03",
+      "summary": "Periodos relativos 'Semana N do projeto'/'Mes N do projeto' com janela calendar-relativa em America/Sao_Paulo",
+      "testRef": "tests/unit/lib/constants/report-periods.test.ts (computeRelativePeriod)",
+      "status": "pending"
+    },
+    {
+      "id": "AC-03-04",
+      "summary": "Agregacao por periodo deriva das sessoes (duration/3600, status completed) e concorda com weekly_hours_history quando snapshot cobre a janela",
+      "testRef": "tests/unit/backend/reporting/period-aggregation.test.ts + tests/integration/period-reporting-roundtrip.test.ts",
+      "status": "pending"
+    },
+    {
+      "id": "AC-03-05",
+      "summary": "Endpoints de periodo (MONTHLY/SEMESTER/YEARLY/WHOLE_PROJECT) retornam janela, label pt-BR, logs, sessoes, task stats e breakdown por usuario",
+      "testRef": "tests/unit/backend/reporting/period-routes.test.ts",
+      "status": "pending"
+    },
+    {
+      "id": "AC-03-06",
+      "summary": "RBAC de view: MANAGE_USERS | VIEW_ALL_REPORTS | lider do projeto -> 200; nao-autorizado -> 403; sem sessao -> 401 (default-deny)",
+      "testRef": "tests/unit/backend/reporting/reporting-rbac.test.ts + period-routes.test.ts",
+      "status": "pending"
+    },
+    {
+      "id": "AC-03-07",
+      "summary": "Generate restrito: lider do projeto + COORDENADOR + GERENTE; GERENTE_PROJETO de outro projeto e VOLUNTARIO -> 403",
+      "testRef": "tests/unit/backend/reporting/reporting-rbac.test.ts + period-routes.test.ts",
+      "status": "pending"
+    },
+    {
+      "id": "AC-03-08",
+      "summary": "Upload de attachments com regra atual (gestao OU lider) inalterada",
+      "testRef": "suite existente de attachments + G3",
+      "status": "pending"
+    },
+    {
+      "id": "AC-03-09",
+      "summary": "Contrato da brochura: DTO tipado construido pela agregacao; sem template -> 501 (BrochureTemplateUnavailableError); fake renderer recebe DTO e devolve bytes",
+      "testRef": "tests/unit/backend/reporting/brochure-dto.test.ts + tests/unit/backend/reporting/generate-report.test.ts",
+      "status": "pending"
+    },
+    {
+      "id": "AC-03-10",
+      "summary": "RF-39..43 (weekly upsert/list/get/delete + consolidacao semanal) sem regressao; baseline unit = 256/257 + novos verdes",
+      "testRef": "suites existentes de reporting + G3",
+      "status": "pending"
+    },
+    {
+      "id": "AC-03-11",
+      "summary": "Paridade de flags: VIEW_ALL_REPORTS identico entre rbac.ts e features.ts",
+      "testRef": "tests/unit/lib/auth/features-parity.test.ts",
+      "status": "pending"
+    },
+    {
+      "id": "AC-03-12",
+      "summary": "Export CSV e report-files funcionam com novo enum (incl. WHOLE_PROJECT) via getProjectReport",
+      "testRef": "tests/unit/backend/reporting/period-routes.test.ts + suite report-files + integration roundtrip",
+      "status": "pending"
+    },
+    {
+      "id": "AC-03-13",
+      "summary": "Backfill deterministico: conversoes e dedup (menor id vence) registrados como evidencia de migracao; coluna enum so aceita os 5 valores",
+      "testRef": "tests/integration/period-migration-backfill.test.ts + STATE evidence",
+      "status": "pending"
+    }
+  ],
+
+  "gates": {
+    "lint": "pending",
+    "types": "pending",
+    "unit": "pending",
+    "integration": "pending",
+    "migration": "pending"
+  },
+
+  "evidence": [],
+
+  "rollbacks": [],
+  "blockers": [
+    {
+      "id": "BLK-03-01",
+      "subject": "Template da brochura final em PDF",
+      "blocker": true,
+      "detail": "O render real do PDF depende do template fornecido pelo dono (D-03-01). A data layer (enum, ancoragem, agregacao, endpoints) e o contrato DTO/port seguem na v0; o milestone do render fica 'blocked'. Sem template nao ha PDF, apenas resposta 501 tipada.",
+      "ownerAction": "Fornecer o template de brochura (ex.: arquivo de markup/modelo aprovado) para o renderer real.",
+      "unblocksWhen": "Template entregue; entao abrir a extensao do port 'BrochureRenderer' (nova revisao da SPEC/PLAN)."
+    },
+    {
+      "id": "BLK-03-02",
+      "subject": "Ratificacao do mapeamento do legado 'biweekly'",
+      "blocker": false,
+      "detail": "biweekly nao tem alvo direto no enum fechado (D-03-05). Proposta: mapear para MONTHLY com dedup deterministico (menor id vence). Pode haver colisao com MONTHLY existente na mesma (projectId, periodStart, authorId).",
+      "ownerAction": "Confirmar o mapeamento de biweekly antes da Etapa 1 em prod.",
+      "unblocksWhen": "Decisao D-03-05 com status accepted."
+    }
+  ],
+
+  "checks": [
+    {
+      "id": "CHK-03-01",
+      "subject": "Set de roles da permission nova VIEW_ALL_REPORTS",
+      "detail": "D-03-07 proposto: [COORDENADOR, GERENTE, LABORATORISTA] (staff de lab ganha leitura ampla sem poderes de gestao). Confirmar o set exato antes da Etapa 3.",
+      "status": "proposed"
+    }
+  ],
+
+  "decisions": [
+    {
+      "id": "D-03-01",
+      "subject": "Brochura PDF bloqueada no template; data layer segue",
+      "decision": "A geracao da brochura final em PDF fica BLOCKED ate o dono fornecer o template. A camada de dados (enum, ancoragem, agregacao, endpoints) prossegue agora; o render e amarrado a um contrato (input DTO tipado + port BrochureRenderer). Sem template, o endpoint de generate responde 501 via BrochureTemplateUnavailableError.",
+      "rationale": "External dependency identica ao padrao do plano (template define o render). Contrato isola o renderer: quando o template chegar, implementa-se apenas o port, sem tocar agregacao/endpoints.",
+      "owner": "projeto",
+      "status": "accepted"
+    },
+    {
+      "id": "D-03-02",
+      "subject": "periodType vira enum fechado ProjectPeriod",
+      "decision": "periodType deixa de ser String livre e vira enum Postgres Prisma com WEEKLY, MONTHLY, SEMESTER, YEARLY, WHOLE_PROJECT, via migracao versionada com normalizacao de legado (weekly->WEEKLY, monthly->MONTHLY, semiannual->SEMESTER, annual->YEARLY; biweekly conforme D-03-05). Ancoragem relativa opcional por projeto via projects.startedAt DateTime?; quando ausente, periodos ancoram no weekStart (segunda) da atividade mais antiga (menor work_sessions.startTime; fallback menor daily_logs.date).",
+      "rationale": "String livre permite valores arbitrarios e nao cobre projeto-completo. Enum fecha o dominio; startedAt (optional) da semantica de 'Semana N/Mes N do projeto' com fallback deterministico para projetos sem data de inicio informada.",
+      "owner": "projeto",
+      "status": "accepted"
+    },
+    {
+      "id": "D-03-03",
+      "subject": "Regras de acesso",
+      "decision": "Listar/ver relatorios: lider (GERENTE_PROJETO com leaderId), COORDENADOR e staff com VIEW_ALL_REPORTS. Gerar relatorio de projeto (generate): SOMENTE lider do projeto, COORDENADOR ou GERENTE; GERENTE_PROJETO de outro projeto nao gera. Attachments: upload apenas por membros, regra atual (assertCanCreateOnProject = gestao OU lider) inalterada.",
+      "rationale": "Leitura ampla vira permission explicita (least privilege para staff); geracao continua restrita a gestao/lideranca, evitando que qualquer GERENTE_PROJETO gere relatorio de projeto alheio.",
+      "owner": "projeto",
+      "status": "accepted"
+    },
+    {
+      "id": "D-03-04",
+      "subject": "Agregacao por periodo reutiliza primitivas de RF-43",
+      "decision": "A consolidacao semanal (RF-43, weekly_hours_history + startOfWeek/endOfWeek Monday + duration/3600 de sessoes completed) permanece. A agregacao monthly/semester/yearly/whole-project e derivada dessas mesmas primitivas/query; NAO cria consolidacao paralela nova nem tabela de horas adicional.",
+      "rationale": "Uma so fonte de verdade de horas; paridade mensal verificavel por construcao (soma das semanas = soma das sessoes da janela). Evita drift entre resumos.",
+      "owner": "projeto",
+      "status": "accepted"
+    },
+    {
+      "id": "D-03-05",
+      "subject": "Normalizacao do legado biweekly/semiannual na migracao",
+      "decision": "semiannual -> SEMESTER; annual -> YEARLY; monthly -> MONTHLY; weekly -> WEEKLY. biweekly (sem alvo direto) -> MONTHLY com dedup deterministico em (projectId, periodType, periodStart, authorId): mantem a menor id e descarta duplicatas; contagens de afetados entram na evidencia do STATE.",
+      "rationale": "Enum fechado nao comporta biweekly. Dedup deterministico evita colisao do UNIQUE composto mantendo o registo mais antigo. Ratificacao do dono pendente (BLK-03-02) antes da Etapa 1 em prod.",
+      "owner": "projeto",
+      "status": "proposed"
+    },
+    {
+      "id": "D-03-06",
+      "subject": "Cadeia de resolucao do anchor relativo",
+      "decision": "resolveProjectAnchor usa, nesta ordem: projects.startedAt (normalizado) -> MIN(work_sessions.startTime) do projeto -> MIN(daily_logs.date); todos normalizados por startOfWeek(segunda). Projeto sem startedAt e sem nenhuma atividade -> erro tipado (periodo relativo indisponivel). WHOLE_PROJECT sem atividades e sem startedAt tambem nao gera.",
+      "rationale": "Determinismo e testabilidade; sem atividades nao existe 'inicio' a referenciar. createdBy/createdAt String de projects (schema.prisma:54) nao e data confiavel, por isso fica fora da cadeia.",
+      "owner": "projeto",
+      "status": "accepted"
+    },
+    {
+      "id": "D-03-07",
+      "subject": "Permission nova VIEW_ALL_REPORTS (RBAC + feature flag)",
+      "decision": "Adicionar VIEW_ALL_REPORTS em lib/auth/rbac.ts com set proposto [COORDENADOR, GERENTE, LABORATORISTA] e espelho identico em features.ts; paridade garantida por teste. List/view usa MANAGE_USERS | VIEW_ALL_REPORTS | lider. Nao reabre matrizes existentes de 01.",
+      "rationale": "Leitura ampla de relatorios sem poderes de gestao (least privilege). Set exato de staff aguarda confirmacao (CHK-03-01); enforcement continua 100% backend, UI apenas espelha a flag.",
+      "owner": "projeto",
+      "status": "proposed"
+    }
+  ],
+
+  "timeline": [
+    {
+      "at": "2026-09-19T22:10:00-03:00",
+      "event": "created",
+      "from": null,
+      "to": "draft"
+    }
+  ]
+}

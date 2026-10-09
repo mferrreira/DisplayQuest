@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { routeErrorResponse } from "@/lib/api/route-error-response"
 import { requireApiActor } from "@/lib/auth/api-guard"
 import { getBackendComposition } from "@/backend/composition/root"
 import {
@@ -6,15 +7,11 @@ import {
   storeReportFile,
   validateReportFile,
 } from "@/lib/storage/report-uploads"
+import { domainErrorResponse } from "@/lib/api/domain-error-response"
 
+// OND7-B4 (R4): DomainErrors mapeados por domainErrorResponse — mesmos status do
+// toHttpStatus por mensagem anterior (403/404), agora tipados (contract OND7-B3).
 const { reporting: reportingModule } = getBackendComposition()
-
-function toHttpStatus(error: unknown) {
-  const message = error instanceof Error ? error.message : "Erro interno do servidor"
-  if (message.includes("Acesso negado")) return 403
-  if (message.includes("não encontrado")) return 404
-  return 500
-}
 
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
@@ -64,9 +61,6 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 
     return NextResponse.json({ projectReport }, { status: 201 })
   } catch (error: unknown) {
-    console.error("Erro ao anexar arquivos:", error)
-    const message = error instanceof Error ? error.message : "Erro ao anexar arquivos"
-    // Arquivos órfãos eventuais são removidos pelo sweep lazy (D6)
-    return NextResponse.json({ error: message }, { status: toHttpStatus(error) })
+    return routeErrorResponse(error, { fallback: "Erro ao anexar arquivos", exposeMessage: true })
   }
 }

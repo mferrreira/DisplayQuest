@@ -1,0 +1,100 @@
+@startuml
+!include _base.puml
+
+title Sequência — aprovação de uma tarefa em revisão
+
+hide empty description
+autonumber
+
+actor "Aprovador" as AP
+participant "Rota\n/api/tasks/[id]/approve" as R
+participant "identidade-e-acesso" as IDENT
+participant "ApproveTaskUseCase" as UC
+participant "domínio\napprovalDecision" as REG
+participant "task-management\nrepositórios" as REPO
+database "tarefas e usuários" as DB
+participant "gamificação" as GAME
+participant "notificações" as NOT
+
+AP -> R : POST /api/tasks/7/approve
+R -> IDENT : exige permissão e ator
+IDENT --> R : ator, papéis
+
+R -> UC : execute({ taskId, approverId })
+
+UC -> REPO : findById(taskId)
+REPO --> UC : tarefa
+alt tarefa ausente
+  UC --> R : NotFoundError
+  R --> AP : 404
+else status ≠ in-review
+  UC --> R : ConflictError
+  R --> AP : 409 Tarefa não está em revisão
+else em revisão
+  UC -> REPO : findById(approverId)
+  alt aprovador inexistente
+    REPO --> UC : —
+    UC --> R : NotFoundError
+    R --> AP : 404
+  else aprovador existe
+    UC -> REPO : attachAssignees(tarefa)
+    REPO --> UC : responsible e lista de responsáveis
+
+    UC -> REG : approvalDecision(\n canApproveAny, isSelf, canApproveProjectTask )
+    REG --> UC : allowed
+
+    alt allowed = false · autoaprovação
+      UC --> R : ForbiddenError
+      R --> AP : 403 Líder não pode aprovar a própria tarefa
+    else allowed = false · sem autoridade
+      UC --> R : ForbiddenError
+      R --> AP : 403 Não tem permissão para aprovar
+    else allowed = needs-leader-check
+      UC -> REPO : findById(projectId)
+      REPO --> UC : projeto
+      alt o aprovador não lidera o projeto
+        UC --> R : ForbiddenError
+        R --> AP : 403 Não é líder do projeto
+      else lidera o projeto
+      end
+    else allowed = true · administra usuários
+    end
+
+    UC -> REPO : update(status = done,\ncompleted, completedAt, responsáveis)
+    REPO --> UC : tarefa persistida
+
+    UC -> REPO : incrementCompletedTasks(responsável)
+    note right
+      Só quando a tarefa não é pública
+      nem global. A contagem sobe mesmo
+      com zero pontos.
+    end note
+
+    opt a tarefa carrega pontos
+      UC -> GAME : awardFromTaskCompletion
+      GAME --> UC : award registrado
+    end
+
+    UC -> NOT : TASK_APPROVED para o responsável
+    UC --> R : tarefa atualizada
+    R --> AP : 200 Tarefa aprovada
+  end
+end
+
+note over REG
+  A autoridade tem três degraus: quem
+  administra usuários aprova qualquer
+  tarefa; o líder de projeto aprova as
+  tarefas do próprio projeto; ninguém
+  aprova a si mesmo.
+end note
+
+note over UC, NOT
+  O incremento do contador e a
+  publicação da notificação ficam
+  fora da transação da atualização e
+  são absorvidos em caso de falha:
+  a aprovação é um fato consumado.
+end note
+
+@enduml

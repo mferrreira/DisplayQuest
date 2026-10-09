@@ -422,6 +422,13 @@ export const WeeklyReportsAPI = {
       body: JSON.stringify({ userId, weekStart, weekEnd }),
     }),
 
+  // Gerar relatórios em lote para todos os usuários ativos em um intervalo de períodos
+  bulkGenerate: (periodType: string, from: string, to: string) =>
+    fetchAPI<{ result: { periodCount: number; reportCount: number; periods: Array<{ label: string; start: string; end: string; reports: number }> } }>("/api/weekly-reports/bulk", {
+      method: "POST",
+      body: JSON.stringify({ periodType, from, to }),
+    }),
+
   // Criar um novo relatório semanal
   create: (report: any) =>
     fetchAPI<{ weeklyReport: any }>("/api/weekly-reports", {

@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server"
 import { requireApiActor } from "@/lib/auth/api-guard"
 import { getBackendComposition } from "@/backend/composition/root"
-
+import { domainErrorResponse } from "@/lib/api/domain-error-response"
+// OND8-B4 (R4): DomainErrors mapeados por domainErrorResponse; o heuristic legado por
+// mensagem (toHttpStatus) segue como fallback para erros nao-tipados. Body evolui para
+// {error,code,details} nos DomainError (status preservado: 403/400 como no legado).
 const { labOperations: labOperationsModule } = getBackendComposition();
 
 function toHttpStatus(error: unknown) {
@@ -47,6 +50,8 @@ export async function POST(request: Request) {
     
     return NextResponse.json({ schedule: schedule.toJSON() }, { status: 201 });
   } catch (error: any) {
+    const mapped = domainErrorResponse(error);
+    if (mapped) return mapped;
     console.error('Erro ao criar horário do laboratório:', error);
     const message = error instanceof Error ? error.message : 'Erro ao criar horário do laboratório';
     return NextResponse.json({

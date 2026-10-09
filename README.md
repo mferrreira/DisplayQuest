@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  Plataforma web para gestao de laboratorio, projetos, tarefas, relatorios, carga horaria e gamificacao.
+  Plataforma web para gestão de laboratório, projetos, tarefas, relatórios, carga horária e gamificação.
 </p>
 
 <p align="center">
@@ -18,69 +18,69 @@
 </p>
 
 <p align="center">
-  <a href="#visao-geral">Visao Geral</a> •
+  <a href="#visao-geral">Visão Geral</a> •
   <a href="#stack">Stack</a> •
   <a href="#estrutura-do-repositorio">Estrutura</a> •
   <a href="#setup-rapido-local">Setup</a> •
-  <a href="#documentacao">Documentacao</a>
+  <a href="#documentacao">Documentação</a>
 </p>
 
-## Visao Geral
+## Visão Geral
 
-O `DisplayQuest` centraliza a rotina do laboratorio em uma unica aplicacao. O sistema combina acompanhamento de projetos, operacao diaria, registro de horas e mecanicas de gamificacao para reduzir dispersao entre ferramentas e facilitar a continuidade do trabalho por novos membros.
+O `DisplayQuest` centraliza a rotina do laboratório em uma única aplicação. O sistema combina acompanhamento de projetos, operação diária, registro de horas e mecânicas de gamificação para reduzir dispersão entre ferramentas e facilitar a continuidade do trabalho por novos membros.
 
 Principais frentes cobertas pelo sistema:
 
-- gestao de usuarios e aprovacao de contas
-- projetos, membros e papeis de atuacao
-- tarefas com quadro Kanban e fluxo de revisao
-- sessoes de trabalho, logs diarios e relatorios
-- operacao do laboratorio: responsabilidades, horarios, eventos e issues
-- gamificacao com pontos, badges, leaderboard, loja e resgates
-- notificacoes e acompanhamento de atividade
+- gestão de usuários e aprovação de contas
+- projetos, membros e papéis de atuação
+- tarefas com quadro Kanban e fluxo de revisão
+- sessões de trabalho, logs diários e relatórios
+- operação do laboratório: responsabilidades, horários, eventos e issues
+- gamificação com pontos, badges, leaderboard, loja e resgates
+- notificações e acompanhamento de atividade
 
 ## Destaques do Sistema
 
-- `Dashboard operacional`: quadro principal de tarefas e acompanhamento diario
-- `Laboratorio`: horarios, agenda, responsabilidades, issues e avisos internos
-- `Projetos`: membros, acompanhamento e organizacao por escopo
-- `Relatorios`: consolidacao semanal de producao individual e por projeto
-- `Gamificacao`: pontos, badges, ranking e recompensas
+- `Dashboard operacional`: quadro principal de tarefas e acompanhamento diário
+- `Laboratório`: horários, agenda, responsabilidades, issues e avisos internos
+- `Projetos`: membros, acompanhamento e organização por escopo
+- `Relatórios`: consolidação semanal de produção individual e por projeto
+- `Gamificação`: pontos, badges, ranking e recompensas
 
 ## Stack
 
 - `Frontend`: Next.js App Router, React 19, TypeScript, Tailwind CSS, shadcn/ui
-- `Backend`: Route Handlers no App Router + modulos em `backend/modules/*`
-- `Persistencia`: Prisma ORM + PostgreSQL
-- `Autenticacao`: next-auth
+- `Backend`: Route Handlers no App Router + módulos em `backend/modules/*`
+- `Persistência`: Prisma ORM + PostgreSQL
+- `Autenticação`: next-auth
 - `Infra local`: Docker e docker compose
 
-## Estrutura do Repositorio
+## Estrutura do Repositório
 
 ```text
-app/                 # Paginas, layouts e API routes do App Router
-backend/             # Modulos, gateways, contratos, repositorios e composition root
-components/          # Componentes de UI e features reutilizaveis
+app/                 # Páginas, layouts e API routes do App Router
+backend/             # Módulos, gateways, contratos, repositórios e composition root
+components/          # Componentes de UI e features reutilizáveis
 contexts/            # Contextos de estado e acesso aos dados no frontend
-hooks/               # Hooks de comportamento e integracao na interface
-lib/                 # Auth, prisma, utilitarios e funcoes compartilhadas
+hooks/               # Hooks de comportamento e integração na interface
+lib/                 # Auth, prisma, utilitários e funções compartilhadas
 prisma/              # Schema, migrations e seeds
-public/              # Arquivos estaticos, incluindo a identidade visual
-docs/                # Documentacao tecnica, funcional e de manutencao
+public/              # Arquivos estáticos, incluindo a identidade visual
+docs/                # Documentação técnica, guia do usuário e material de manutenção
 ```
 
-## Arquitetura em Alto Nivel
+## Arquitetura em Alto Nível
 
-O projeto segue uma organizacao modular no backend, com composicao central em `backend/composition/root.ts`.
+O projeto segue uma organização modular no backend, com composição central em `backend/composition/root.ts`.
 
 - `app/api/*` atua como camada HTTP
-- `getBackendComposition()` resolve os modulos e dependencias
-- `backend/modules/*` concentra regras de negocio por dominio
-- `repositories` e `models` encapsulam persistencia e entidades
+- `getBackendComposition()` resolve os módulos e dependências
+- `backend/modules/*` concentra regras de negócio por domínio
+- `repositories` e `models` encapsulam persistência e entidades
 
-Isso evita espalhar regra de negocio nas rotas e facilita a evolucao por dominio.
+Isso evita espalhar regra de negócio nas rotas e facilita a evolução por domínio.
 
-## Modulos do Backend
+## Módulos do Backend
 
 - `identity-access`
 - `user-management`
@@ -94,7 +94,7 @@ Isso evita espalhar regra de negocio nas rotas e facilita a evolucao por dominio
 - `notifications`
 - `lab-operations`
 
-## Rotas Principais da Aplicacao
+## Rotas Principais da Aplicação
 
 - `/login` e `/register`
 - `/dashboard`
@@ -108,11 +108,11 @@ Isso evita espalhar regra de negocio nas rotas e facilita a evolucao por dominio
 
 ## API
 
-As rotas de dominio da aplicacao ficam em `app/api/*` e, em regra, usam `getBackendComposition()` para resolver modulos do backend.
+As rotas de domínio da aplicação ficam em `app/api/*` e, em regra, usam `getBackendComposition()` para resolver módulos do backend.
 
-Obs.: rotas de autenticacao, registro e algumas rotas utilitarias ainda podem acessar `Prisma` ou utilitarios de `lib/*` diretamente.
+Obs.: rotas de autenticação, registro e algumas rotas utilitárias ainda podem acessar `Prisma` ou utilitários de `lib/*` diretamente.
 
-Dominios principais expostos:
+Domínios principais expostos:
 
 - `users`, `projects`, `tasks`
 - `work-sessions`, `daily_logs`
@@ -123,14 +123,14 @@ Dominios principais expostos:
 
 ## Comportamento Atual das Tasks
 
-- `public`: visivel no escopo de projeto ou laboratorio, com progresso individual por usuario
-- `delegated`: visivel no projeto, com manipulacao restrita aos atribuídos
-- `private`: visivel no projeto, com restricao semelhante a `delegated`
-- `isGlobal=true`: representa task publica de laboratorio no modelo atual
+- `public`: visível no escopo de projeto ou laboratório, com progresso individual por usuário
+- `delegated`: visível no projeto, com manipulação restrita aos atribuídos
+- `private`: visível no projeto, com restrição semelhante a `delegated`
+- `isGlobal=true`: representa task pública de laboratório no modelo atual
 
-## Setup Rapido (Local)
+## Setup Rápido (Local)
 
-### 1. Instalar dependencias
+### 1. Instalar dependências
 
 ```bash
 npm install
@@ -155,77 +155,148 @@ npm run db:migrate:dev
 npm run db:seed
 ```
 
-Observacao: o seed e manual e voltado para desenvolvimento. Ele nao roda automaticamente no startup.
+Observação: o seed é manual e voltado para desenvolvimento. Ele não roda automaticamente no startup.
 
-### 4. Subir a aplicacao
+### 4. Subir a aplicação
 
 ```bash
 npm run dev
 ```
 
-## Scripts Uteis
+## Scripts Úteis
 
 - `npm run dev`
 - `npm run build`
 - `npm run start`
 - `npm run lint`
+- `npm run arch:check` (dependency-cruiser, regras RG-01..RG-06)
 - `npm run db:generate`
 - `npm run db:migrate:dev`
 - `npm run db:migrate:deploy`
 - `npm run db:migrate:status`
 - `npm run db:reset:local`
 - `npm run db:safe-deploy`
+- `npm run db:test:up` e `npm run db:test:setup` (banco de teste isolado em `127.0.0.1:5433`)
+- `npm run check:env` (valida `NEXTAUTH_SECRET` e senha do banco)
+- `npm run docs:build` e `npm run docs:check`
 
 ## Docker
 
+Use o **plugin v2** (`docker compose`, com espaço). O `docker-compose` v1 (com hífen) está
+obsoleto e não é mais suportado pelo Docker.
+
 ```bash
-docker-compose up -d
-docker-compose ps
-docker-compose logs -f
+docker compose up --build -d   # build + sobe app e postgres
+docker compose ps
+docker compose logs -f
 ```
 
-## Documentacao
+Nunca rode `docker compose down`: os volumes `postgres_data`, `uploads_data` e
+`report_files_data` são eliminados junto, e junto vai o banco. O `up -d` já é idempotente.
 
-O repositorio hoje esta documentado em tres camadas:
+O `docker-compose.override.yml` entra **implicitamente** (por convenção de nome do Compose) e
+publica o Postgres apenas no loopback `127.0.0.1:5432`, para `psql` local e para
+`tests/integration/entities-roundtrip.test.ts`. A base usa só `expose`, que não publica porta
+no host. Isso vale também em produção, e é seguro porque nunca amarra em `0.0.0.0`.
 
-### 1. Guias rapidos de manutencao
+Banco de teste isolado (nunca toca no banco de produção local):
 
-- `README.md`: visao geral do projeto, setup local e mapa do repositorio
-- `app/README.md`: estrutura da interface, contextos, telas e manutencao do frontend
-- `backend/README.md`: arquitetura backend, composition root, modulos e diretrizes de extensao
+```bash
+npm run db:test:up       # sobe dq-dev-test-db em 127.0.0.1:5433
+npm run db:test:setup    # migrate deploy + db:seed + tests/fixtures/g4-normalize.sql
+```
 
-### 2. Documentacao tecnica e funcional base
+## Documentação
 
-- `docs/01-visao-geral-sistema.md`: panorama geral do sistema
-- `docs/02-manual-do-usuario.md`: uso das funcionalidades principais
-- `docs/03-regras-de-negocio.md`: regras operacionais centrais
-- `docs/04-arquitetura-tecnica.md`: visao arquitetural e organizacao tecnica
-- `docs/05-operacao-deploy.md`: orientacoes de operacao e deploy
-- `docs/06-guia-de-manutencao-handover.md`: continuidade e manutencao do projeto
-- `docs/07-modelo-de-dados.md`: entidades e relacoes principais
+Dois documentos, cada um um arquivo único e autocontido — abra direto no navegador, sem servidor.
 
-### 3. Documentacao APOO
+**`docs/displayquest.html`** — documento técnico e de análise. Cobre visão geral e escopo, atores
+e permissões, requisitos, catálogo e expansão de casos de uso, regras de negócio, máquinas de
+estado, modelo conceitual, arquitetura, modelo de dados, padrões, rastreabilidade, operação e
+manutenção. Os 33 diagramas UML (casos de uso, máquinas de estado, classes, arquitetura,
+sequência, entidade-relacionamento e rastreabilidade de requisitos) estão embutidos no próprio
+arquivo.
 
-O pacote em `docs/APOO/` organiza a documentacao formal no formato de Analise e Projeto Orientado a Objetos, incluindo:
+**`docs/guia-do-usuario.html`** — guia de uso, escrito para quem opera o sistema e não para quem
+o mantém. É o modo *como fazer*: cada seção parte de um objetivo ("criar uma conta", "encerrar
+uma sessão") e termina no resultado que o sistema produz, nomeando os controles pelo rótulo que
+a interface mostra. Cobre entrada e cadastro, navegação, registro de trabalho, quadro de tarefas,
+projetos, relatórios, laboratório, loja e ranking, perfil e notificações, administração, referência
+de telas, mensagens de erro e perguntas frequentes. As 34 capturas de tela estão embutidas no
+arquivo.
 
-- sumario executivo
-- visao geral e escopo
-- atores e glossario
-- requisitos funcionais e nao funcionais
-- catalogo e expansao de casos de uso
-- regras de negocio
-- maquinas de estado
-- modelo conceitual
-- projeto arquitetural
-- padroes de projeto e rastreabilidade
+> O guia não duplica o documento técnico: arquitetura, modelo de dados, derivação das regras e API
+> ficam no primeiro documento. O guia resolve "como faço" e remete para "por que é assim".
 
-Arquivo de apoio do processo de escrita:
+### Como os documentos são gerados
 
-- `docs/08-plano-acao-para-documentacao.md`
+Ambos são **gerados**, não editados à mão:
 
-## Notas de Manutencao
+```bash
+npm run docs:build              # renderiza diagramas e monta os dois documentos (requer Docker)
+npm run docs:build -- --no-render   # reaproveita os SVGs já gerados
+npm run docs:build -- --only=usuario # monta só o guia do usuário
+npm run docs:check              # integridade de caracteres das fontes
+```
 
-- rotas em `app/api/*` nao devem instanciar `createXModule()` diretamente
-- use `getBackendComposition()` para resolver dependencias do backend
-- dependencias entre dominios devem ser centralizadas no composition root
-- alteracoes estruturais relevantes devem refletir na documentacao em `docs/`
+Fontes:
+
+- `docs/src/*.md` — texto do documento técnico, um arquivo por capítulo, em ordem alfabética
+- `docs/src-usuario/*.md` — texto do guia do usuário, na mesma convenção
+- `docs/diagrams/*.puml` — diagramas, em notação UML
+- `docs/screens/*.png` — capturas de tela usadas pelo guia
+- `docs/theme/document.css` — folha de estilo, comum aos dois documentos
+
+O bloco ` ```figure <id> titulo="…" ` embute o SVG de `docs/diagrams/<id>.puml`. O bloco
+` ```foto <id> titulo="…" ` embute o PNG de `docs/screens/<id>.png`. Ambos aceitam corpo
+markdown, que sai como legenda abaixo da figura.
+
+### Capturar as telas do guia
+
+```bash
+node scripts/capture-user-guide.mjs                    # todas as telas
+node scripts/capture-user-guide.mjs --only=quadro-tarefas,loja-participante
+```
+
+O script percorre as telas numa instância em execução, **verifica** que a tela certa foi alcançada
+(URL final e textos esperados) e extrai do DOM os títulos, botões, abas, colunas e links realmente
+exibidos. O extrato vai para `docs/.build/screens/manifest.json` e é a fonte usada para escrever o
+guia: o texto do guia nomeia controles a partir do que a interface mostra, não de suposição sobre
+o código.
+
+- Credenciais em `docs/.capture.env` (gitignored). As capturas vão para `docs/screens/`, que é
+  versionado.
+- **Algumas capturas gravam.** Abrir diálogo e aba não altera nada; clicar em ação que persiste
+  (como *Gerar em Lote*) grava no banco alcançado. Confira a lista antes de rodar contra dados
+  reais.
+- As capturas mostram dados reais da instância fotografada, inclusive nomes de pessoas.
+
+### Gates do build de documentação
+
+O build falha, e não emite aviso silencioso, se:
+
+- um `.puml` não renderizar;
+- um bloco cercado (` ```figure `, ` ```foto `, `:::callout`) ficar sem fechamento;
+- uma figura ou captura for referenciada duas vezes;
+- dois capítulos tiverem o mesmo título;
+- um ` ```figure ` ou ` ```foto ` apontar para mídia que não existe.
+
+Depois de mexer em `docs/src`, `docs/src-usuario` ou `docs/diagrams`, rode `npm run docs:build` e
+confira se nenhum aviso `AVISO:` apareceu.
+
+### Guias de manutenção por camada
+
+- `README.md`: visão geral do projeto, setup local e mapa do repositório
+- `app/README.md`: estrutura da interface, contextos, telas e manutenção do frontend
+- `backend/README.md`: arquitetura backend, composition root, módulos e diretrizes de extensão
+
+## Notas de Manutenção
+
+- rotas em `app/api/*` não devem instanciar `createXModule()` diretamente
+- use `getBackendComposition()` para resolver dependências do backend
+- dependências entre domínios devem ser centralizadas no composition root
+- alterações de comportamento devem vir com o teste da regra correspondente
+- alterações estruturais devem passar por `npm run arch:check`
+- alterações de comportamento ou de estrutura devem refletir em `docs/src` e `docs/diagrams`,
+  seguidas de `npm run docs:build`; se a mudança é visível para quem usa o sistema, deve refletir
+  também em `docs/src-usuario` e nas capturas

@@ -1,3 +1,5 @@
+import type { ActorRef } from "@/backend/domain"
+
 export type GamificationSourceType = "WORK_SESSION_COMPLETED" | "TASK_COMPLETED" | "MANUAL_ADJUSTMENT"
 
 export interface AwardFromWorkSessionCommand {
@@ -10,7 +12,8 @@ export interface AwardFromWorkSessionCommand {
 export interface AwardFromTaskCompletionCommand {
   userId: number
   taskId: number
-  taskPoints?: number
+  /** GAP-04 (fecha em OND6-B2): null era aceito em runtime (default 10) sem estar no tipo. */
+  taskPoints?: number | null
 }
 
 export interface UserProgression {
@@ -63,4 +66,9 @@ export interface AwardBadgeCommand {
   badgeId: number
   userId: number
   awardedBy?: number
+  /**
+   * D4/B6-2c (DEC-54/DEC-115): quem concede. O gate de MANAGE_USERS mora no use case — a rota
+   * só constrói o ator a partir da sessão.
+   */
+  actor: ActorRef
 }

@@ -27,6 +27,7 @@ import { BacklogDialog } from "@/components/features/backlog-dialog"
 import type { Project, Task } from "@/contexts/types"
 import { useAuth } from "@/contexts/auth-context"
 import { useUser } from "@/contexts/user-context"
+import { POINTS_PER_TASK } from "@/features/tasks"
 import { ProjectMembersManager } from "@/components/forms/project-members-manager"
 import { ProjectMembersManagement } from "@/components/features/project-members-management"
 import { ProjectHoursStats } from "@/components/features/project-hours-stats"
@@ -284,7 +285,7 @@ export function ProjectDetailDialog({
                     {projectTasks.map((task) => (
                       <div
                         key={task.id}
-                        className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors"
+                        className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors dark:hover:bg-gray-800/60"
                       >
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
@@ -305,7 +306,7 @@ export function ProjectDetailDialog({
                           )}
                           <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
                             <span>Responsável: {getUserNameById(task.assignedTo)}</span>
-                            <span>Pontos: {task.points}</span>
+                            <span>Pontos: {POINTS_PER_TASK}</span>
                           </div>
                         </div>
                         <Button

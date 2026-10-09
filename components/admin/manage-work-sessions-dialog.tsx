@@ -26,7 +26,6 @@ function elapsedLabel(session: any, getElapsedSeconds: (s: any) => number) {
 }
 
 export function ManageWorkSessionsDialog({ open, onOpenChange, users, sessions, onRefresh }: Props) {
-  const { fetchSessions } = useWorkSessions()
   const { toast } = useToast()
   const [busyId, setBusyId] = useState<number | null>(null)
   const [filter, setFilter] = useState<"active" | "paused" | "all">("all")
@@ -55,10 +54,8 @@ export function ManageWorkSessionsDialog({ open, onOpenChange, users, sessions, 
         if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.error || "Falha ao atualizar")
       }
       toast({ title: "Sucesso", description: `Sessão ${action === "delete" ? "excluída" : "atualizada"} com sucesso.` })
-      // Refresh: fetchSessions without userId fetches via MANAGE scope; fallback to onRefresh prop
-      try {
-        await fetch(`/api/work-sessions${filter !== "all" ? `?status=${filter}` : ""}`)
-      } catch {}
+      // A lista do painel é de quem chama: sem este retorno, o estado novo só aparecia
+      // no refresh seguinte (medido em 2026-10-09).
       onRefresh()
     } catch (e: any) {
       toast({ title: "Erro", description: e?.message || "Falha na operação", variant: "destructive" })

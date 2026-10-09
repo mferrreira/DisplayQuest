@@ -1,0 +1,135 @@
+@startuml
+!include _base.puml
+
+title Modelo de dados — núcleo de identidade, projetos e tarefas
+
+hide empty description
+hide circle
+
+entity "users" as U {
+  * id : Int <<PK>>
+  --
+  name : String
+  email : String <<único>>
+  password : String?
+  status : String <<"pending" | "active">>
+  roles : UserRole[]
+  points : Int
+  completedTasks : Int
+  weekHours : Float
+  currentWeekHours : Float
+  avatar : String?
+  bio : String?
+  profileVisibility : ProfileVisibility
+  createdAt : DateTime
+}
+
+entity "projects" as P {
+  * id : Int <<PK>>
+  --
+  name : String
+  description : String?
+  createdAt : String
+  status : String
+  links : Json?
+  createdBy : Int <<FK>>
+  leaderId : Int? <<FK>>
+}
+
+entity "project_members" as PM {
+  * id : Int <<PK>>
+  --
+  projectId : Int <<FK>>
+  userId : Int <<FK>>
+  roles : UserRole[]
+  joinedAt : DateTime
+}
+
+entity "tasks" as T {
+  * id : Int <<PK>>
+  --
+  title : String
+  description : String?
+  status : String
+  priority : String
+  assignedTo : Int? <<FK>>
+  projectId : Int? <<FK>>
+  dueDate : String?
+  points : Int
+  completed : Boolean
+  completedAt : DateTime?
+  taskVisibility : String <<"delegated">>
+  isGlobal : Boolean
+  groupTaskId : Int?
+  createdBy : Int? <<FK>>
+}
+
+entity "task_assignees" as TA {
+  * id : Int <<PK>>
+  --
+  taskId : Int <<FK>>
+  userId : Int <<FK>>
+  assignedBy : Int? <<FK>>
+  assignedAt : DateTime
+}
+
+entity "task_user_progress" as TUP {
+  * id : Int <<PK>>
+  --
+  taskId : Int <<FK>>
+  userId : Int <<FK>>
+  status : String <<"to-do">>
+  pickedAt : DateTime?
+  completedAt : DateTime?
+  awardedPoints : Int
+}
+
+U ||--o{ PM : participa
+P ||--o{ PM : agrega
+U ||--o{ P : cria
+U |o--o{ P : lidera
+
+U |o--o{ T : recebe
+U |o--o{ T : cria
+P |o--o{ T : contém
+
+T ||--o{ TA : responsáveis
+U ||--o{ TA : acumula
+T ||--o{ TUP : progresso individual
+U ||--o{ TUP : acompanha
+
+note top of U
+  O usuário é o eixo do modelo: quase
+  toda tabela se liga a ele. `status`
+  é texto livre com dois valores em
+  uso — `pending` na criação e
+  `active` após a aprovação.
+end note
+
+note bottom of P
+  `createdAt` é texto, não data: uma
+  herança do modelo original que o
+  restante do esquema não corrigiu.
+  O único ponto de cardinalidade
+  plena é o líder.
+end note
+
+note bottom of T
+  A tarefa carrega três noções
+  distintas de responsabilidade:
+  `assignedTo` (um responsável),
+  a lista em `task_assignees` (vários)
+  e `createdBy`. A progressão é por
+  pessoa e por tarefa, o que permite
+  que várias pessoas trabalhem na
+  mesma tarefa sem disputarem o
+  mesmo registro.
+end note
+
+note bottom of TA
+  A associação é única por
+  (tarefa, pessoa). Ao remover a
+  tarefa, as atribuições caem junto.
+end note
+
+@enduml

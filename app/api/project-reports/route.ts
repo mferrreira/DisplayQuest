@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { routeErrorResponse } from "@/lib/api/route-error-response"
 import { requireApiActor } from "@/lib/auth/api-guard"
 import { getBackendComposition } from "@/backend/composition/root"
 import { isReportPeriodType } from "@/lib/constants/report-periods"
@@ -7,16 +8,12 @@ import {
   storeReportFile,
   validateReportFile,
 } from "@/lib/storage/report-uploads"
+import { domainErrorResponse } from "@/lib/api/domain-error-response"
 
+// OND7-B4 (R4): DomainErrors mapeados por domainErrorResponse — mesmos status do
+// toHttpStatus por mensagem anterior ("Acesso negado" 403 / "não encontrado" 404 /
+// "inválid"|"Dados inválidos" 400), agora tipados (contract OND7-B3).
 const { reporting: reportingModule } = getBackendComposition()
-
-function toHttpStatus(error: unknown) {
-  const message = error instanceof Error ? error.message : "Erro interno do servidor"
-  if (message.includes("Acesso negado")) return 403
-  if (message.includes("não encontrado")) return 404
-  if (message.includes("inválid") || message.includes("Dados inválidos")) return 400
-  return 500
-}
 
 export async function GET(request: Request) {
   try {
@@ -55,9 +52,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ projectReports: reports })
   } catch (error: unknown) {
-    console.error("Erro ao listar relatórios de projeto:", error)
-    const message = error instanceof Error ? error.message : "Erro ao listar relatórios de projeto"
-    return NextResponse.json({ error: message }, { status: toHttpStatus(error) })
+    return routeErrorResponse(error, { fallback: "Erro ao listar relatórios de projeto", exposeMessage: true })
   }
 }
 
@@ -134,8 +129,6 @@ export async function POST(request: Request) {
       { status: created ? 201 : 200 },
     )
   } catch (error: unknown) {
-    console.error("Erro ao criar relatório de projeto:", error)
-    const message = error instanceof Error ? error.message : "Erro ao criar relatório de projeto"
-    return NextResponse.json({ error: message }, { status: toHttpStatus(error) })
+    return routeErrorResponse(error, { fallback: "Erro ao criar relatório de projeto", exposeMessage: true })
   }
 }

@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server"
+import { routeErrorResponse } from "@/lib/api/route-error-response"
 import { getBackendComposition } from "@/backend/composition/root"
-import { ensurePermission, requireApiActor } from "@/lib/auth/api-guard"
-import { hasPermission } from "@/lib/auth/rbac"
+import { userActor } from "@/backend/domain"
+import { requireApiActor } from "@/lib/auth/api-guard"
 
 const { taskManagement: taskManagementModule } = getBackendComposition()
 
@@ -10,8 +11,9 @@ export async function GET(request: Request) {
     const auth = await requireApiActor()
     if (auth.error) return auth.error
 
-    const userId = auth.actor.id
-    const userRoles = auth.actor.roles
+    // B6-7 (D4): a checagem de projeto (MANAGE_USERS / membership / lista vazia) desceu
+    // para o ListTasksForActorUseCase. A rota guarda so a validacao de entrada.
+    const actor = userActor(auth.actor.id, auth.actor.roles)
     const { searchParams } = new URL(request.url)
     const projectIdParam = searchParams.get('projectId')
     let tasks
@@ -22,30 +24,15 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: "projectId inválido" }, { status: 400 })
       }
 
-      const canAccessAllProjects = hasPermission(userRoles, "MANAGE_USERS")
-      if (!canAccessAllProjects) {
-        const allowedProjectIds = new Set(await taskManagementModule.listActorProjectIds(userId))
-        if (!allowedProjectIds.has(projectId)) {
-          return NextResponse.json({ tasks: [] })
-        }
-      }
-      tasks = await taskManagementModule.listTasksForActor({
-        actorId: userId,
-        actorRoles: userRoles,
-        projectId,
-      })
+      tasks = await taskManagementModule.listTasksForActor({ actor, projectId })
     
     } else {
-      tasks = await taskManagementModule.listTasksForActor({
-        actorId: userId,
-        actorRoles: userRoles,
-      })
+      tasks = await taskManagementModule.listTasksForActor({ actor })
     }
     
     return NextResponse.json({ tasks: tasks.map(task => task.toJSON()) })
   } catch (error) {
-    console.error("Erro ao buscar tarefas:", error)
-    return NextResponse.json({ error: "Erro ao buscar tarefas" }, { status: 500 })
+    return routeErrorResponse(error, { fallback: "Erro ao buscar tarefas" })
   }
 }
 
@@ -54,8 +41,12 @@ export async function POST(request: Request) {
     const auth = await requireApiActor()
     if (auth.error) return auth.error
 
-    const permissionError = ensurePermission(auth.actor, "MANAGE_TASKS", "Sem permissão para criar tarefa")
-    if (permissionError) return permissionError
+    // B6-7 (D4): o gate MANAGE_TASKS desceu para o CreateTaskUseCase; o que a rota ainda
+    // faz e AUTORIZAR ANTES de ler o corpo (molde B6-2b) — na ordem medida os 400 de
+    // entrada vem depois do 403 ("Nenhuma task informada para backlog" de nao-autorizado
+    // e 403, nao 400). A mensagem congelada: "Sem permissão para criar tarefa".
+    const actor = userActor(auth.actor.id, auth.actor.roles)
+    taskManagementModule.assertCanManageTasks({ actor })
 
     const body = await request.json()
 
@@ -74,13 +65,14 @@ export async function POST(request: Request) {
           assigneeIds: Array.isArray(task.assigneeIds) ? task.assigneeIds : undefined,
           projectId: task.projectId ?? null,
           dueDate: task.dueDate ?? null,
-          points: task.points ?? 0,
+          // plan-v3 OND1-D (DEC-30): o importador de backlog não define pontuação. A coluna
+          // `points` continua existindo no schema como histórico e recebe POINTS_PER_TASK.
           completed: task.completed ?? false,
           taskVisibility: task.taskVisibility ?? "delegated",
           isGlobal: task.isGlobal ?? false,
           creationMode: task.creationMode ?? "individual",
         })),
-        auth.actor.id,
+        actor,
       )
 
       return NextResponse.json({
@@ -98,13 +90,17 @@ export async function POST(request: Request) {
       assigneeIds,
       projectId,
       dueDate,
-      points,
       completed,
       taskVisibility,
       isGlobal,
-      creationMode
+      creationMode,
+      subtasks
     } = body
 
+    // plan-v3 OND1-D (AC-P3-03): `points` não é lido do corpo. createTaskRecord aplica
+    // POINTS_PER_TASK quando o caller não informa — a superfície deixou de definir valor.
+    // plan-v4 · V4-4 (D-D): `subtasks` é lido do corpo — a mãe nasce com a lista, no mesmo
+    // formulário. O backlog (branch acima) não aceita subtask de propósito.
     const task = await taskManagementModule.createTask({
       title,
       description,
@@ -114,16 +110,15 @@ export async function POST(request: Request) {
       assigneeIds,
       projectId,
       dueDate,
-      points,
       completed,
       taskVisibility,
       isGlobal,
       creationMode,
-    }, auth.actor.id);
+      subtasks,
+    }, actor);
 
     return NextResponse.json({ task: task.toJSON() }, { status: 201 })
   } catch (error: any) {
-    console.error("Erro ao criar tarefa:", error)
-    return NextResponse.json({ error: error.message || "Erro ao criar tarefa" }, { status: 500 })
+    return routeErrorResponse(error, { fallback: "Erro ao criar tarefa", exposeMessage: true })
   }
 }

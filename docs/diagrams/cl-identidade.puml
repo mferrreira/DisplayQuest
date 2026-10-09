@@ -1,0 +1,114 @@
+@startuml
+!include _base.puml
+
+title Modelo de domínio — identidade e acesso
+
+skinparam classAttributeIconSize 0
+left to right direction
+
+class "<<entidade>>\nUsuário" as User {
+  - id : Int
+  - nome : String
+  - email : String <<único>>
+  - senha : String?
+  - situacao : SituacaoConta
+  - papeis : Papeis[]
+  - pontos : Int = 0
+  - tarefasConcluidas : Int = 0
+  - horasSemana : Float = 0
+  - horasSemanaAtual : Float = 0
+  - avatar : String?
+  - bio : String?
+  - visibilidade : Visibilidade
+  + podeAutenticar() : Boolean
+  + temPapel(p : Papel) : Boolean
+  + temAlgumPapel(p : Papel[]) : Boolean
+}
+
+enum "SituacaoConta" as SituacaoConta {
+  pendente
+  ativa
+  recusada
+  suspensa
+}
+
+enum "Papel" as Papel {
+  COORDENADOR
+  GERENTE
+  LABORATORISTA
+  PESQUISADOR
+  GERENTE_PROJETO
+  COLABORADOR
+  VOLUNTARIO
+}
+
+enum "Visibilidade" as Visibilidade {
+  publico
+  somente_membros
+  privado
+}
+
+class "Participação" as Membro {
+  - projetoId : Int
+  - usuarioId : Int
+  - papeis : Papel[]
+  - entrouEm : DateTime
+}
+
+class "<<entidade>>\nDistintivo" as Badge {
+  - id : Int
+  - nome : String
+  - descricao : String
+  - categoria : Categoria
+  - criterios : Json?
+  - ativo : Boolean = true
+  + criteriosAtendidos(est) : Boolean
+}
+
+class "Concessão" as UserBadge {
+  - usuarioId : Int
+  - distintivoId : Int
+  - obtidoEm : DateTime
+  - concedidoPor : Int?
+}
+
+class "GradeHoraria" as Grade {
+  - usuarioId : Int
+  - diaDaSemana : Int 0..6
+  - inicio : String "HH:MM"
+  - fim : String "HH:MM"
+}
+
+class "Notificacao" as Notificacao {
+  - usuarioId : Int
+  - tipo : String
+  - titulo : String
+  - mensagem : String
+  - lida : Boolean = false
+  - lidaEm : DateTime?
+}
+
+class "Auditoria" as Historico {
+  - entidade : String
+  - entidadeId : Int
+  - acao : String
+  - executadoPor : Int
+  - executadoEm : DateTime
+  - valoresAnteriores : Json?
+  - valoresNovos : Json?
+  - metadados : Json?
+}
+
+User "1" o-- "0..*" Membro : participa como
+User "1" o-- "0..*" Grade : possui
+User "1" o-- "0..*" Notificacao : recebe
+User "1" o-- "0..*" UserBadge : recebe
+User "1" o-- "0..*" Historico : executa
+
+User "0..1" --o UserBadge : concede
+Badge "1" *-- "0..*" UserBadge : agrupa
+
+Membro ..> Papel : classifica
+User ..> Papel : classifica
+
+@enduml

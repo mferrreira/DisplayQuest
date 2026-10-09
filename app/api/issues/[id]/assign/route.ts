@@ -1,8 +1,14 @@
 import { NextResponse } from "next/server";
+import { routeErrorResponse } from "@/lib/api/route-error-response"
+import { userActor } from "@/backend/domain";
 import { requireApiActor } from "@/lib/auth/api-guard";
-import { hasPermission } from "@/lib/auth/rbac";
 import { getBackendComposition } from "@/backend/composition/root"
-
+// OND8-B4 (R4): DomainErrors mapeados. EVOLUTION: "Usuario nao encontrado" (assignee
+// invalido) antes caia no 500 com error.message; agora NotFoundError -> 404.
+// B6-6 (D4): o gate (MANAGE_USERS OU reporter — o assignee NAO reatribui, medido) e o 400 de
+// assigneeId ausente desceram para o AssignIssueUseCase na ordem medida (lookup 404 -> gate 403
+// -> 400 assigneeId -> 404 assignee inexistente). Evolucao medida: o 400/403/404 passaram ao
+// corpo mapeado {error, code, details} (superset, DEC-53) mantendo as mensagens.
 const { labOperations: labOperationsModule } = getBackendComposition();
 
 // POST: Atribuir issue a um usuário
@@ -11,29 +17,19 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     const auth = await requireApiActor();
     if (auth.error) return auth.error;
 
+    const actor = userActor(auth.actor.id, auth.actor.roles);
     const params = await context.params;
-    const issueId = parseInt(params.id);
-    const currentIssue = await labOperationsModule.getIssue(issueId);
-    if (!currentIssue) {
-      return NextResponse.json({ error: "Issue não encontrado" }, { status: 404 });
-    }
-    const canAssign =
-      hasPermission(auth.actor.roles, "MANAGE_USERS") || currentIssue.reporterId === auth.actor.id;
-    if (!canAssign) {
-      return NextResponse.json({ error: "Sem permissão para atribuir issue" }, { status: 403 });
-    }
-
     const body = await request.json();
     const { assigneeId } = body;
 
-    if (!assigneeId) {
-      return NextResponse.json({ error: "assigneeId é obrigatório" }, { status: 400 });
-    }
-
-    const issue = await labOperationsModule.assignIssue(issueId, assigneeId);
+    const issue = await labOperationsModule.assignIssue({
+      actor,
+      issueId: parseInt(params.id),
+      // o valor cru vai ao use case: a checagem `!assigneeId` (falsy -> 400) e a mesma medida
+      assigneeId: assigneeId as number | undefined,
+    });
     return NextResponse.json({ issue });
   } catch (error: any) {
-    console.error("Erro ao atribuir issue:", error);
-    return NextResponse.json({ error: error.message || "Erro ao atribuir issue" }, { status: 500 });
+    return routeErrorResponse(error, { fallback: "Erro ao atribuir issue", exposeMessage: true })
   }
 }

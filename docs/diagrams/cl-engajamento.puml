@@ -1,0 +1,114 @@
+@startuml
+!include _base.puml
+
+title Modelo de domínio — loja, recompensas e evolução
+
+skinparam classAttributeIconSize 0
+left to right direction
+
+class "<<entidade>>\nRecompensa" as Recompensa {
+  - id : Int
+  - nome : String
+  - descricao : String?
+  - preco : Int ≥ 0
+  - disponivel : Boolean = true
+}
+
+class "<<entidade>>\nCompra" as Compra {
+  - id : Int
+  - usuarioId : Int
+  - recompensaId : Int
+  - nomeCongelado : String
+  - precoCongelado : Int
+  - dataCompra : Date
+  - situacao : SituacaoCompra
+  + ehAprovavel() : boolean
+  + ehEntregavel() : boolean
+  + deveReembolsar() : boolean
+}
+
+enum "SituaçãoCompra" as SituacaoCompra {
+  pendente
+  aprovada
+  rejeitada
+  concluida
+  cancelada
+}
+
+class "<<entidade>>\nDistintivo" as Badge {
+  - id : Int
+  - nome : String
+  - descricao : String
+  - categoria : Categoria
+  - criterios : Json?
+  - ativo : Boolean = true
+  - criadoPor : Int
+  + criteriosAtendidos(estatisticas) : Boolean
+}
+
+enum "Categoria" as Categoria {
+  conquista
+  marco
+  especial
+  social
+}
+
+class "Concessão\nde distintivo" as Concessao {
+  - usuarioId : Int
+  - distintivoId : Int
+  - obtidoEm : DateTime
+  - concedidoPor : Int?
+}
+
+class "Progressão" as Progressao {
+  - xp : Int
+  - nivel : Int
+  - elo : Int
+  + nivelParaXp(xp) : Int
+  + eloParaXp(xp) : Int
+}
+
+class "Premiação" as Premiacao {
+  - origem : Origem
+  - idOrigem : Int
+  + pontosPorSessao(duracao) : Int
+  + pontosPorTarefa(tarefa, conclusao) : Int
+  + descricao() : String
+}
+
+enum "Origem" as Origem {
+  sessao_concluida
+  tarefa_concluida
+  ajuste_manual
+}
+
+class "Usuário" as Usuario
+class "Auditoria" as Historico
+
+Usuario "1" --> "0..*" Compra : faz
+Recompensa "1" --> "0..*" Compra : origina
+Usuario "1" *-- "0..*" Concessao : recebe
+Badge "1" *-- "0..*" Concessao : agrupa
+Usuario "1" --> "0..1" Progressao : acumula
+Premiacao "1" --> "0..*" Historico : registra
+
+note right of Compra
+  Nome e preço são copiados para
+  a compra no momento do
+  resgate. Alterar a recompensa
+  depois não muda o que foi
+  cobrado de quem comprou.
+end note
+
+note bottom of Premiacao
+  A premiação é idempotente: a
+  chave de idempotência
+  (origem + identificador) fica
+  gravada na trilha de
+  auditoria, de modo que
+  repetir a conclusão da mesma
+  tarefa não credita pontos
+  duas vezes.
+end note
+
+@enduml

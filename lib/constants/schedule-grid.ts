@@ -4,6 +4,14 @@ export const GRID_END = "17:00"
 
 export const WEEK_DAYS = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta"]
 
+/**
+ * Cinco dias de propósito, decidido pelo dono em 2026-10-09: a grade semanal é Segunda a
+ * Sexta. O card "Horários do Laboratório" ao lado aceita os 7 dias, então um horário de
+ * sábado ou domingo pode existir na base. Duas consequências medidas dessa assimetria, e
+ * nenhuma é bug: a tabela desktop ignora esses dias (só o `WEEK_DAYS.map` existe nela) e a
+ * visão compacta mobile os mostra com o rótulo "Dia", porque `WEEK_DAYS[5]` é undefined.
+ */
+
 export interface TimeSlot {
   start: string
   end: string

@@ -1,16 +1,12 @@
 import { NextResponse } from "next/server"
+import { routeErrorResponse } from "@/lib/api/route-error-response"
 import { requireApiActor } from "@/lib/auth/api-guard"
 import { getBackendComposition } from "@/backend/composition/root"
+import { domainErrorResponse } from "@/lib/api/domain-error-response"
 
+// OND7-B4 (R4): DomainErrors mapeados por domainErrorResponse — mesmos status do
+// toHttpStatus por mensagem anterior (403/404/400), agora tipados (contract OND7-B3).
 const { reporting: reportingModule } = getBackendComposition()
-
-function toHttpStatus(error: unknown) {
-  const message = error instanceof Error ? error.message : "Erro interno do servidor"
-  if (message.includes("Acesso negado")) return 403
-  if (message.includes("não encontrado")) return 404
-  if (message.includes("inválid") || message.includes("Dados inválidos")) return 400
-  return 500
-}
 
 function parseId(raw: string): number | null {
   const id = Number(raw)
@@ -31,9 +27,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
 
     return NextResponse.json({ projectReport: report })
   } catch (error: unknown) {
-    console.error("Erro ao buscar relatório de projeto:", error)
-    const message = error instanceof Error ? error.message : "Erro ao buscar relatório de projeto"
-    return NextResponse.json({ error: message }, { status: toHttpStatus(error) })
+    return routeErrorResponse(error, { fallback: "Erro ao buscar relatório de projeto", exposeMessage: true })
   }
 }
 
@@ -63,9 +57,7 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
 
     return NextResponse.json({ projectReport })
   } catch (error: unknown) {
-    console.error("Erro ao atualizar relatório de projeto:", error)
-    const message = error instanceof Error ? error.message : "Erro ao atualizar relatório de projeto"
-    return NextResponse.json({ error: message }, { status: toHttpStatus(error) })
+    return routeErrorResponse(error, { fallback: "Erro ao atualizar relatório de projeto", exposeMessage: true })
   }
 }
 
@@ -86,8 +78,6 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
 
     return NextResponse.json({ success: true })
   } catch (error: unknown) {
-    console.error("Erro ao excluir relatório de projeto:", error)
-    const message = error instanceof Error ? error.message : "Erro ao excluir relatório de projeto"
-    return NextResponse.json({ error: message }, { status: toHttpStatus(error) })
+    return routeErrorResponse(error, { fallback: "Erro ao excluir relatório de projeto", exposeMessage: true })
   }
 }

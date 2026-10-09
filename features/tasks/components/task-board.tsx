@@ -22,13 +22,17 @@ import {
   useTasks,
   useTaskMutations,
   resolveMove,
+  moveBlockedMessage,
+  completionAwardMessage,
   isArchivedTask,
   isTaskOverdue,
   isTaskDueToday,
   BOARD_COLUMNS,
 } from "../index"
+import { useColumnOrders } from "../hooks/use-column-orders"
+import { sortTasksByColumnOrder, type ColumnOrder } from "../utils/column-order"
 import { isAssignedToUser } from "../utils/is-assigned-to-user"
-import type { Task } from "@/entities/task"
+import type { Task, TaskStatus } from "@/entities/task"
 import { BoardColumn } from "./board-column"
 import { BoardToolbar } from "./board-toolbar"
 import { ArchiveSection } from "./archive-section"
@@ -78,6 +82,11 @@ export function TaskBoard() {
 
   const sessionUserId = (session?.user as { id?: number } | undefined)?.id
 
+  // plan-v3 OND3-C: a ordem escolhida é guardada por pessoa e por navegador (DEC-33). O id vem
+  // do `useSession`, que resolve depois do primeiro render — até lá a preferência é o padrão e a
+  // leitura acontece (ver `useColumnOrders`).
+  const { orders: columnOrders, setOrder: setColumnOrder } = useColumnOrders(sessionUserId)
+
   const filteredTasks = useMemo(() => {
     let list = tasks ?? []
     if (projetoParam) list = list.filter((t) => t.projectId === projetoParam)
@@ -94,6 +103,9 @@ export function TaskBoard() {
   }, [tasks, projetoParam, pessoaParam, atrasadasParam, hojeParam, buscaParam])
 
   const archivedTasks = useMemo(() => filteredTasks.filter((t) => isArchivedTask(t)), [filteredTasks])
+  // plan-v3 OND3-C: cada coluna tem a sua ordenação, então a lista NÃO é ordenada aqui — o
+  // quadro inteiro não tem uma ordem só. O que sobra é a lista visível, repartida por status
+  // abaixo e ordenada dentro de cada coluna.
   const boardTasks = useMemo(() => {
     const archivedIds = new Set(archivedTasks.map((t) => t.id))
     return filteredTasks.filter((t) => !archivedIds.has(t.id))
@@ -114,8 +126,10 @@ export function TaskBoard() {
       const decision = resolveMove({ task, target, isLeader })
 
       if (decision.kind === "blocked") {
+        // O dono decidiu (V4-5): a trava desabilita o menu e o Aprovar, mas o arrasto continua
+        // possível — e aí a recusa chega com a MESMA frase do servidor, não um genérico.
         toast.error("Ação não permitida", {
-          description: "Apenas líderes de projeto podem mover tarefas concluídas.",
+          description: moveBlockedMessage(decision, target),
         })
         return
       }
@@ -128,10 +142,22 @@ export function TaskBoard() {
       }
       if (decision.kind === "complete") {
         const isDirectDone = task.isGlobal || task.taskVisibility === "public"
-        toast[isDirectDone ? "success" : "info"](
-          isDirectDone ? "🎉 Tarefa Concluída!" : "📋 Tarefa Enviada para Revisão",
-        )
-        complete.mutate({ id: task.id, userId: (session?.user as { id?: number } | undefined)?.id })
+        const actorId = (session?.user as { id?: number } | undefined)?.id
+        // Mesmo aviso do cartão (GAP-P3-05): depois da resposta, com o número creditado. Os dois
+        // caminhos anunciam a mesma conclusão e não podem divergir na frase nem na hora.
+        void complete
+          .mutateAsync({ id: task.id, userId: actorId })
+          .then((result) => {
+            toast[isDirectDone ? "success" : "info"](
+              isDirectDone ? "🎉 Tarefa Concluída!" : "📋 Tarefa Enviada para Revisão",
+              { description: completionAwardMessage(result, actorId) },
+            )
+          })
+          .catch((error: unknown) => {
+            toast.error("Não foi possível concluir a tarefa", {
+              description: error instanceof Error ? error.message : "Falha ao concluir a tarefa.",
+            })
+          })
         return
       }
       updateStatus.mutate({ id: task.id, status: decision.status })
@@ -154,6 +180,20 @@ export function TaskBoard() {
     setViewTask(task)
     setDetailOpen(true)
   }, [])
+
+  // Item 1 do ajuste pós-encerramento (2026-10-07): `viewTask` é um snapshot do instante do
+  // clique e as mutações de subtask escrevem só no cache de consultas — sem re-derivar aqui, o
+  // diálogo envelhece atrás do cartão (marcar "parecia" funcionar porque o cartão atualizava;
+  // desmarcar não). A cópia viva vem do cache; o snapshot só entra se a tarefa sumir dele.
+  const liveViewTask = useMemo(() => {
+    if (!viewTask) return null
+    return (tasks ?? []).find((t) => t.id === viewTask.id) ?? viewTask
+  }, [viewTask, tasks])
+
+  const handleColumnOrderChange = useCallback(
+    (status: TaskStatus, order: ColumnOrder) => setColumnOrder(status, order),
+    [setColumnOrder],
+  )
 
   if (isPending) {
     return (
@@ -258,9 +298,14 @@ export function TaskBoard() {
                 <BoardColumn
                   key={column.id}
                   status={column.id}
-                  tasks={boardTasks.filter((task) => task.status === column.id)}
+                  tasks={sortTasksByColumnOrder(
+                    boardTasks.filter((task) => task.status === column.id),
+                    columnOrders[column.id],
+                  )}
                   canAddTask={canCreateTasks}
                   isCompact={compactaParam === "compacta"}
+                  order={columnOrders[column.id]}
+                  onOrderChange={(order) => handleColumnOrderChange(column.id, order)}
                   onAddTask={openCreate}
                   onEdit={openEdit}
                   onOpenDetail={openDetail}
@@ -280,7 +325,7 @@ export function TaskBoard() {
         defaultProjectId={projetoParam ?? undefined}
       />
       <TaskDetailDialog
-        task={viewTask}
+        task={liveViewTask}
         open={detailOpen}
         onOpenChange={setDetailOpen}
         onEdit={openEdit}

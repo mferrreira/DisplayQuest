@@ -1,28 +1,18 @@
 import { NextResponse } from "next/server"
-import type { UserRole } from "@prisma/client"
+import { routeErrorResponse } from "@/lib/api/route-error-response"
 import { requireApiActor } from "@/lib/auth/api-guard"
-import { normalizeRoles } from "@/lib/auth/rbac"
+import { normalizeRoles } from "@/backend/domain"
 import { getBackendComposition } from "@/backend/composition/root"
+import { domainErrorResponse } from "@/lib/api/domain-error-response"
 
 const { projectMembership: projectMembershipModule } = getBackendComposition()
 type MemberAction = "add" | "remove" | "set_roles" | "set_leader"
 
-function toHttpStatus(error: unknown) {
-  const message = error instanceof Error ? error.message : "Erro interno do servidor"
-  if (message.includes("Não autorizado")) return 401
-  if (message.includes("Acesso negado") || message.includes("Apenas")) return 403
-  if (message.includes("não encontrado")) return 404
-  if (
-    message.includes("obrigatórios") ||
-    message.includes("já é membro") ||
-    message.includes("Nenhum papel válido") ||
-    message.includes("já é líder de outro projeto") ||
-    message.includes("último gerente")
-  ) {
-    return 400
-  }
-  return 500
-}
+// OND5-B3 (R4): typed DomainErrors mapped by domainErrorResponse; the route no longer
+// imports @prisma/client or lib/auth/rbac (rg06 allow-list entry removed — normalizeRoles
+// comes from backend/domain, which RG-06 allows). EVOLUTION: "já é membro", "já é líder de
+// outro projeto" and "último gerente" were 400 by heuristic; they are ConflictError -> 409
+// now (pinned by the contract suite OND5-B3).
 
 export async function GET(
   _request: Request,
@@ -46,9 +36,7 @@ export async function GET(
 
     return NextResponse.json({ members }, { status: 200 })
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Erro interno do servidor"
-    console.error("Erro na API de membros do projeto:", error)
-    return NextResponse.json({ error: message }, { status: toHttpStatus(error) })
+    return routeErrorResponse(error, { fallback: "Erro interno do servidor" })
   }
 }
 
@@ -89,7 +77,7 @@ async function handleMutation(
 
     if (action === "add") {
       const targetUserId = Number(body?.userId)
-      const roles = normalizeRoles(body?.roles) as UserRole[]
+      const roles = normalizeRoles(body?.roles)
       if (!Number.isInteger(targetUserId) || targetUserId <= 0 || !Array.isArray(body?.roles)) {
         return NextResponse.json({ error: "userId e roles são obrigatórios" }, { status: 400 })
       }
@@ -126,7 +114,7 @@ async function handleMutation(
 
     if (action === "set_roles") {
       const targetUserId = Number(body?.userId)
-      const roles = normalizeRoles(body?.roles) as UserRole[]
+      const roles = normalizeRoles(body?.roles)
       if (!Number.isInteger(targetUserId) || targetUserId <= 0 || !Array.isArray(body?.roles)) {
         return NextResponse.json({ error: "userId e roles são obrigatórios" }, { status: 400 })
       }
@@ -160,9 +148,7 @@ async function handleMutation(
 
     return NextResponse.json({ leader }, { status: 200 })
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Erro interno do servidor"
-    console.error("Erro na API de membros do projeto (mutação):", error)
-    return NextResponse.json({ error: message }, { status: toHttpStatus(error) })
+    return routeErrorResponse(error, { fallback: "Erro interno do servidor" })
   }
 }
 

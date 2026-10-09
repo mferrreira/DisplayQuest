@@ -1,0 +1,46 @@
+@startuml
+!include _base.puml
+
+title Máquina de estados — responsabilidade de laboratório
+
+hide empty description
+scale 1.15
+
+[*] --> Correndo : assumir plantão
+
+state "Emplantão" as Correndo
+state "Pausada" as Pausada
+state "Encerrada" as Encerrada <<final>>
+
+Correndo --> Pausada   : pausar
+Pausada   --> Correndo : retomar (acumula tempo pausado)
+Correndo --> Encerrada : encerrar
+Pausada   --> Encerrada : encerrar
+Encerrada --> [*]      : (permanece registrada)
+
+state "Sem plantão" as Livre <<final>>
+[*] --> Livre
+
+note right of Correndo
+  Só Coordenadores e Laboratoristas
+  assumem plantão, e apenas uma
+  responsabilidade pode estar
+  ativa no laboratório por vez.
+
+  Pausar uma responsabilidade
+  já encerrada ou já pausada é
+  recusado; retomar uma que não
+  está pausada também.
+end note
+
+note bottom of Pausada
+  O estado não é uma coluna na
+  base: é derivado de três campos
+  — instante de início, instante
+  de pausa e instante de término.
+  A pausa acumula o tempo parado
+  em um contador próprio, que é
+  descontado da duração exibida.
+end note
+
+@enduml

@@ -1,3 +1,5 @@
+import type { ActorRef } from "@/backend/domain"
+
 export interface LabIssueQuery {
   status?: string
   priority?: string
@@ -73,20 +75,19 @@ export interface ListResponsibilitiesQuery {
 }
 
 export interface StartResponsibilityCommand {
-  actorUserId: number
+  // B6-6 (D4): ator tipado; actorName segue sendo o nome da SESSAO (a rota entrega auth.actor.name).
+  actor: ActorRef
   actorName: string
   notes?: string
 }
 
 export interface ListUserSchedulesQuery {
-  actorUserId: number
-  actorRoles: string[]
+  actor: ActorRef
   targetUserId?: number
 }
 
 export interface CreateUserScheduleCommand {
-  actorUserId: number
-  actorRoles: string[]
+  actor: ActorRef
   targetUserId: number
   dayOfWeek: number
   startTime: string
@@ -94,8 +95,7 @@ export interface CreateUserScheduleCommand {
 }
 
 export interface UpdateUserScheduleCommand {
-  actorUserId: number
-  actorRoles: string[]
+  actor: ActorRef
   scheduleId: number
   dayOfWeek?: number
   startTime?: string
@@ -103,14 +103,12 @@ export interface UpdateUserScheduleCommand {
 }
 
 export interface DeleteUserScheduleCommand {
-  actorUserId: number
-  actorRoles: string[]
+  actor: ActorRef
   scheduleId: number
 }
 
 export interface ReplaceUserSchedulesCommand {
-  actorUserId: number
-  actorRoles: string[]
+  actor: ActorRef
   targetUserId: number
   slots: { dayOfWeek: number; startTime: string; endTime: string }[]
 }

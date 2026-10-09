@@ -1,0 +1,49 @@
+@startuml
+!include _base.puml
+
+title Máquina de estados — issue do laboratório
+
+hide empty description
+scale 1.1
+
+[*] --> Aberta : registrar
+
+state Aberta
+state "Em andamento" as Andamento
+state Resolvida
+state Fechada <<final>>
+
+Aberta    --> Andamento : atribuir a alguém
+Aberta    --> Andamento : iniciar resolução
+Andamento --> Resolvida : resolver
+Resolvida --> Fechada   : fechar
+Fechada   --> Aberta    : reabrir
+Resolvida --> Andamento : atribuir novamente
+Fechada   --> Andamento : atribuir
+Andamento --> Aberta    : retirar atribuição
+Fechada   --> Aberta    : retirar atribuição
+
+Aberta    : <<aberta>>\nresolvedAt vazio
+Resolvida : <<resolvida>>\nresolvedAt gravado
+Fechada   : <<encerrada>>
+
+note right of Andamento
+  Atribuir empurra a issue para
+  Em andamento a partir de
+  qualquer situação; retirar a
+  atribuição a devolve para
+  Aberta, também de qualquer
+  situação.
+end note
+
+note bottom of Resolvida
+  A prioridade é independente do
+  estado e não participa da
+  máquina: é um campo com quatro
+  valores válidos, sem sequência.
+  A busca textual sobre título,
+  descrição e categoria roda em
+  memória.
+end note
+
+@enduml

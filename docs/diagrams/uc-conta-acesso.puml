@@ -1,0 +1,69 @@
+@startuml
+!include _base.puml
+
+title Casos de uso — conta e acesso
+
+left to right direction
+
+actor Visitante
+actor Usuário
+actor Coordenador
+actor Gerente
+
+rectangle "DisplayQuest" <<fronteira>> {
+  usecase "Criar conta" as UC_CRIAR
+  usecase "Autenticar-se" as UC_LOGIN
+  usecase "Encerrar sessão" as UC_LOGOUT
+  usecase "Editar perfil" as UC_PERFIL
+  usecase "Trocar senha" as UC_SENHA
+  usecase "Carregar avatar" as UC_AVATAR
+  usecase "Remover avatar" as UC_REMAVATAR
+  usecase "Consultar perfis" as UC_VERPERFIS
+  usecase "Definir visibilidade\ndo perfil" as UC_VIS
+  usecase "Aprovar conta" as UC_APROVAR
+  usecase "Recusar conta" as UC_RECUSAR
+  usecase "Suspender ou\nreativar conta" as UC_SUSP
+  usecase "Gerenciar usuários" as UC_GUSU
+  usecase "Atribuir papéis" as UC_PAPEIS
+  usecase "Ajustar pontos" as UC_PONTOS
+  usecase "Consultar ranking" as UC_RANK
+}
+
+Visitante --> UC_CRIAR
+Visitante --> UC_LOGIN
+Usuário    --> UC_LOGOUT
+Usuário    --> UC_PERFIL
+Usuário    --> UC_SENHA
+Usuário    --> UC_AVATAR
+Usuário    --> UC_REMAVATAR
+Usuário    --> UC_VIS
+Usuário    --> UC_VERPERFIS
+Usuário    --> UC_RANK
+Coordenador --> UC_APROVAR
+Coordenador --> UC_RECUSAR
+Coordenador --> UC_SUSP
+Coordenador --> UC_GUSU
+Coordenador --> UC_PAPEIS
+Coordenador --> UC_PONTOS
+Gerente     --> UC_GUSU
+Gerente     --> UC_PAPEIS
+Gerente     --> UC_PONTOS
+
+UC_PERFIL ..> UC_AVATAR   : <<inclui>>
+UC_APROVAR ..> UC_LOGIN  : <<extensão>>
+
+note right of UC_APROVAR
+  Só Coord. ou Gerente decidem o
+  destino de uma conta pendente.
+  Suspender impede o acesso sem
+  apagar o histórico.
+end note
+
+note bottom of UC_AVATAR
+  A imagem é recortada em 300×300 e
+  convertida para WebP antes de
+  ser gravada. O cliente só pode
+  trocar o próprio avatar.
+end note
+
+@enduml

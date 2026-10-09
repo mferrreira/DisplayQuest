@@ -1,0 +1,101 @@
+@startuml
+!include _base.puml
+
+title Casos de uso — operação do laboratório
+
+left to right direction
+
+actor Voluntário
+actor Colaborador
+actor Pesquisador
+actor Laboratorista
+actor "Gerente de Projeto" as GP
+actor Gerente
+actor Coordenador
+actor Usuário
+
+rectangle "DisplayQuest" <<fronteira>> {
+  usecase "Assumir\nresponsabilidade" as UC_ASSUM
+  usecase "Pausar\nresponsabilidade" as UC_P
+  usecase "Retomar\nresponsabilidade" as UC_R
+  usecase "Encerrar\nresponsabilidade" as UC_E
+  usecase "Ver quem está\nde plantão" as UC_PLANT
+  usecase "Registrar evento" as UC_EVT
+  usecase "Editar evento" as UC_EDTEVT
+  usecase "Excluir evento" as UC_EXEVT
+  usecase "Consultar agenda\nde eventos" as UC_AGENDA
+  usecase "Publicar aviso" as UC_AVISO
+  usecase "Excluir aviso" as UC_EXAVISO
+  usecase "Abrir issue" as UC_ABRIR
+  usecase "Atribuir issue" as UC_ATRIB
+  usecase "Retirar atribuição" as UC_DESATR
+  usecase "Iniciar resolução" as UC_RES
+  usecase "Resolver issue" as UC_RESOLVER
+  usecase "Fechar issue" as UC_FECHAR
+  usecase "Reabrir issue" as UC_REABRIR
+  usecase "Consultar issues" as UC_FILTRO
+  usecase "Consultar grade\ndo laboratório" as UC_GRADE
+  usecase "Editar a própria\ngrade de horários" as UC_GH
+  usecase "Editar grade de\nhorários de terceiros" as UC_GHT
+}
+
+Coordenador   --> UC_ASSUM
+Laboratorista --> UC_ASSUM
+Coordenador   --> UC_P
+Laboratorista --> UC_P
+Coordenador   --> UC_R
+Laboratorista --> UC_R
+Coordenador   --> UC_E
+Laboratorista --> UC_E
+Voluntário    --> UC_PLANT
+Colaborador   --> UC_PLANT
+GP            --> UC_EVT
+GP            --> UC_EDTEVT
+GP            --> UC_AGENDA
+Coordenador   --> UC_AVISO
+Coordenador   --> UC_EXAVISO
+Laboratorista --> UC_AVISO
+Voluntário    --> UC_ABRIR
+Colaborador   --> UC_ABRIR
+Pesquisador   --> UC_ABRIR
+GP            --> UC_ABRIR
+GP            --> UC_FILTRO
+Coordenador   --> UC_ATRIB
+GP            --> UC_ATRIB
+Coordenador   --> UC_DESATR
+Coordenador   --> UC_RES
+GP            --> UC_RES
+Coordenador   --> UC_RESOLVER
+GP            --> UC_RESOLVER
+Coordenador   --> UC_FECHAR
+GP            --> UC_FECHAR
+GP            --> UC_REABRIR
+Coordenador   --> UC_REABRIR
+Voluntário    --> UC_GRADE
+Colaborador   --> UC_GRADE
+Usuário     --> UC_GH
+Coordenador   --> UC_GHT
+Gerente       --> UC_GHT
+
+UC_ATRIB    ..> UC_RES    : <<inclui>>
+UC_RESOLVER ..> UC_RES    : <<inclui>>
+UC_FECHAR   ..> UC_RESOLVER : <<inclui>>
+UC_GRADE    ..> UC_GH     : <<inclui>>
+
+note right of UC_ASSUM
+  Só Coord. e Laboratoristas
+  assumem plantão. Apenas uma
+  responsabilidade pode estar
+  ativa por vez no laboratório,
+  o que torna a escala visível
+  e inequívoca.
+end note
+
+note bottom of UC_ASSUM
+  Tarefas concluídas no plantão
+  e eventos registrados durante
+  ele alimentam a mesma trilha
+  de horas e pontos.
+end note
+
+@enduml

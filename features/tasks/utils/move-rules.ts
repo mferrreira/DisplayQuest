@@ -3,7 +3,8 @@
  * Mirrors backend authority (task-service.gateway.ts) for DISPLAY decisions only:
  * the server remains the enforcer; these functions decide optimistic UI + which call to fire.
  */
-import type { Task, TaskStatus } from "@/entities/task";
+import type { Task, TaskStatus, TaskSubtask } from "@/entities/task";
+import { calculateLatePenalty, openSubtasksCount, openSubtasksMessage, SUBTASK_BLOCKED_TARGETS, totalAwardForCompletion } from "@/backend/domain";
 
 export const TASK_STATUSES: TaskStatus[] = ["to-do", "in-progress", "in-review", "adjust", "done"];
 
@@ -18,19 +19,70 @@ export const BOARD_COLUMNS: Array<{ id: TaskStatus; title: string }> = [
 /** Legacy parity kanban-board.tsx:137 — "leader" = MANAGE_TASKS holders. */
 export type MoveDecision =
   | { kind: "blocked"; reason: "done-is-terminal-for-non-leaders" }
+  /**
+   * plan-v4 · V4-5 (DEC-57/DEC-80): o destino é que está barrado, não a pessoa. `openCount` vai
+   * junto porque a DEC-57 promete dizer **quantas** faltam, e a frase é a mesma do servidor.
+   */
+  | { kind: "blocked"; reason: "subtasks-open"; openCount: number }
   | { kind: "remap-to-review" }
   | { kind: "complete"; status: "done" }
   | { kind: "status-update"; status: TaskStatus };
 
 /**
+ * GAP-P3-05 (plan-v3 §8, fechado no V4-5c): a frase do prêmio depois de concluir.
+ *
+ * O cartão costumava calcular `projectedAward(task)` e anunciar esse número ANTES da mutação. O
+ * servidor credita o que ele calcula, e os dois divergem (tarefa vencida: projetado −20, creditado
+ * 10). A pessoa tem direito ao segundo, então a frase passa a ser derivada da RESPOSTA — e é uma
+ * função só, usada pelo menu do cartão e pelo soltar do arrasto, que anunciam a mesma conclusão.
+ *
+ * `null` não é zero: é "ninguém creditado agora" (a tarefa foi para revisão; o prêmio fica para a
+ * aprovação) — congelado desde a OND4-A / DEC-48.
+ */
+export function completionAwardMessage(
+  result: { awardedTo: number | null; awardedPoints: number | null },
+  actorId?: number,
+): string {
+  if (result.awardedPoints === null) return "Os pontos serão adicionados após aprovação.";
+  const who = result.awardedTo !== null && result.awardedTo === actorId ? "a você" : "ao responsável";
+  return `${result.awardedPoints} pts creditados ${who}.`;
+}
+
+/** Subtasks abertas de uma tarefa — zero quando a tarefa não tem lista nenhuma. */
+export function openSubtasksOf(task: { subtasks?: readonly { completed: boolean }[] }): number {
+  return openSubtasksCount(task.subtasks ?? []);
+}
+
+/**
+ * A frase que sai quando um movimento está barrado — uma cópia só, usada pelo menu do cartão
+ * (`task-card.tsx`) e pelo soltar do arrasto (`task-board.tsx`). Os dois chamadores existiam com
+ * a mensagem escrita à mão dentro de cada um; a trava de subtask entrou com mensagem própria e
+ * seria a regra em duas cópias divergindo (AGENTS.md, lição do `tests/e2e/shell.spec.ts`).
+ *
+ * O `target` entra porque a mesma trava tem dois verbos: "antes de enviar para revisão" e
+ * "antes de concluir a tarefa". É o domínio que escreve os dois (`openSubtasksMessage`).
+ */
+export function moveBlockedMessage(
+  decision: Extract<MoveDecision, { kind: "blocked" }>,
+  target: TaskStatus,
+): string {
+  if (decision.reason === "subtasks-open") {
+    return openSubtasksMessage(decision.openCount, target === "done" ? "complete" : "review");
+  }
+  return "Apenas líderes de projeto podem mover tarefas concluídas.";
+}
+
+/**
  * Resolve what a drag/menu move means BEFORE calling the API.
  * - Non-leaders cannot move tasks OUT of done (legacy :139–146).
+ * - Any task with an open subtask cannot REACH in-review/done (plan-v4 · DEC-57) — checked
+ *   before the remap, because the remap's landing status IS in-review.
  * - Non-leaders moving TO done on a delegated/private task → remap to in-review (:164).
  * - done on public/global (or by leader) → completeTask (server decides done vs review,
  *   but optimistic state shows done for public/global, in-review otherwise — gateway :401).
  */
 export function resolveMove(params: {
-  task: Pick<Task, "taskVisibility" | "isGlobal" | "status">;
+  task: Pick<Task, "taskVisibility" | "isGlobal" | "status"> & { subtasks?: Task["subtasks"] };
   target: TaskStatus;
   isLeader: boolean;
 }): MoveDecision {
@@ -38,6 +90,14 @@ export function resolveMove(params: {
 
   if (task.status === "done" && target !== "done" && !isLeader) {
     return { kind: "blocked", reason: "done-is-terminal-for-non-leaders" };
+  }
+
+  // DEC-80: a trava governa o DESTINO, então vale vindo de qualquer coluna — inclusive o atalho
+  // `A Fazer → Em Revisão` que o quadro oferece, e inclusive o `Concluído` que o servidor
+  // remapearia para revisão. A lista de destinos barrados é a do domínio: uma cópia só.
+  const openCount = openSubtasksOf(task);
+  if (openCount > 0 && SUBTASK_BLOCKED_TARGETS.includes(target)) {
+    return { kind: "blocked", reason: "subtasks-open", openCount };
   }
 
   if (target === "done") {
@@ -48,6 +108,32 @@ export function resolveMove(params: {
   }
 
   return { kind: "status-update", status: target };
+}
+
+/**
+ * plan-v3 OND3-B — destinos que o menu pode oferecer a esta pessoa, para esta tarefa.
+ *
+ * **Derivado de `resolveMove`, não escrito à mão.** Um destino só entra na lista se a regra
+ * não o bloqueia, então o menu não tem como divergir da decisão que o clique tomaria: não
+ * existe "quase a mesma lista" mantida em dois lugares. `resolveMove` segue sendo quem
+ * decide; aqui só se filtra o que ela reprova.
+ *
+ * Medido antes de escrever: o menu listava `BOARD_COLUMNS` menos a coluna atual, sem
+ * consultar a regra — para quem não é líder, as quatro destinos de uma tarefa **Concluído**
+ * apareciam e todos voltavam com o mesmo toast de "Ação não permitida" (o caminho de arrastar
+ * está desabilitado para `done` desde sempre, ou seja, o menu era o único caminho possível).
+ *
+ * "Concluído" continua sendo oferecido a não-líder em tarefa delegada: o servidor **aceita** e
+ * devolve a tarefa para revisão (`complete-task.use-case.ts:148` — `in-review` para
+ * delegada, `done` para pública/global). O que o menu esconde é o destino que seria barrado.
+ */
+export function allowedTargets(
+  task: Pick<Task, "taskVisibility" | "isGlobal" | "status"> & { subtasks?: Task["subtasks"] },
+  isLeader: boolean,
+): TaskStatus[] {
+  return TASK_STATUSES.filter(
+    (target) => target !== task.status && resolveMove({ task, target, isLeader }).kind !== "blocked",
+  );
 }
 
 /** Optimistic status the board should show for a move (before/without server confirm). */
@@ -84,6 +170,35 @@ export function isArchivedTask(
 
 import { isOverdueDateOnly, isDueTodayDateOnly } from "@/lib/date-only"
 
+/** Urgency rank — `urgent` first, `low` last. Used by sortTasksByUrgencyAndDueDate. */
+export const PRIORITY_RANK: Record<Task["priority"], number> = {
+  urgent: 0,
+  high: 1,
+  medium: 2,
+  low: 3,
+};
+
+/**
+ * Sort board tasks by urgency (priority) then by due date (earliest first).
+ * Tasks without a dueDate sink to the bottom of their urgency group;
+ * ties fall back to newest-first (repository `orderBy id desc` parity).
+ */
+export function sortTasksByUrgencyAndDueDate<T extends Pick<Task, "priority" | "dueDate" | "id">>(tasks: T[]): T[] {
+  return [...tasks].sort((a, b) => {
+    const byUrgency = PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority];
+    if (byUrgency !== 0) return byUrgency;
+    const aDue = a.dueDate;
+    const bDue = b.dueDate;
+    if (aDue != null && bDue != null) {
+      if (aDue !== bDue) return aDue < bDue ? -1 : 1;
+      return b.id - a.id; // same date — newest first
+    }
+    if (aDue != null) return -1;
+    if (bDue != null) return 1;
+    return b.id - a.id; // no due dates — newest first
+  });
+}
+
 export function isTaskOverdue(task: Task, _now?: Date): boolean {
   if (!task.dueDate || task.status === "done") return false;
   return isOverdueDateOnly(task.dueDate);
@@ -97,35 +212,52 @@ export function isTaskDueToday(task: Task, _now?: Date): boolean {
   return isDueTodayDateOnly(task.dueDate);
 }
 
-/** Gateway :593–607 — display-side mirror of the server's penalty math. */
-export function latePenalty(task: Pick<Task, "dueDate" | "points">, completion: Date = new Date()): number {
-  if (!task.dueDate) return 0;
-  // For penalty calculation, we need time precision (hours matter)
-  // If date-only string, parse as noon to avoid timezone shift
-  const due = task.dueDate.includes("T") 
-    ? new Date(task.dueDate) 
-    : new Date(`${task.dueDate}T12:00:00`);
-  if (Number.isNaN(due.getTime())) return 0;
-  const timeDiff = completion.getTime() - due.getTime();
-  const daysLate = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
-  if (daysLate <= 0) return 0;
-  return daysLate * task.points;
+/**
+ * plan-v3 OND1-C — o espelho de exibição **deixou de ter matemática própria**.
+ *
+ * Antes, esta função replicava a penalidade do servidor ancorando `dueDate` date-only no
+ * **meio-dia local**, enquanto o backend ancorava na meia-noite UTC. As duas contas davam
+ * números diferentes para a mesma tarefa e o mesmo instante: no dia do prazo, às 02h e 08h de
+ * Brasília o cartão mostrava 10 pontos e o servidor creditava 0 (divergência R5, pinada em
+ * `tests/unit/modules/task-management/domain.points-characterization.test.ts`).
+ *
+ * Agora há uma aritmética só: `backend/domain/task/points-rules.ts`. Importar o domínio puro
+ * daqui é permitido pelo gate (RG-05 só veda Prisma e `lib/database/prisma`) e já é padrão da
+ * casa (`lib/api/domain-error-response.ts`, `lib/auth/features.ts`).
+ */
+export function latePenalty(task: Pick<Task, "dueDate">, completion: Date = new Date()): number {
+  return calculateLatePenalty(task, completion);
 }
 
-/** Points the actor would receive if completed now (can be ≤ 0). */
-export function projectedAward(task: Pick<Task, "dueDate" | "points">, now: Date = new Date()): number {
-  return task.points - latePenalty(task, now);
+/**
+ * Pontos que a pessoa receberia se concluí agora (pode ser ≤ 0 — DEC-39).
+ *
+ * plan-v4 · V4-4 (DEC-78): passa a somar as subtasks. `subtasks` é opcional na assinatura porque
+ * o espelho é chamado também com objetos mínimos (`{ dueDate }`) nos testes de caraterização do
+ * plan-v3 — sem a chave, o número é exatamente o de antes.
+ *
+ * Por que isto tem que ser aqui e não no servidor: o cartão e o diálogo de detalhe ANUNCIAM o
+ * número antes da mutação (`task-card.tsx:256`, `task-detail-dialog.tsx:93`). Se a soma morasse
+ * só no servidor, uma tarefa com três subtasks continuaria sendo anunciada como 10 pontos.
+ */
+export function projectedAward(
+  task: Pick<Task, "dueDate"> & { subtasks?: readonly TaskSubtask[] },
+  now: Date = new Date(),
+): number {
+  return totalAwardForCompletion(task, task.subtasks ?? [], now);
 }
 
 // ---- backlog parser (legacy backlog-dialog parity) ----
 /**
  * One task per line. Optional prefixes: `!alta`/`!media`/`!baixa`/`!urgente` set priority,
- * `@pontos` (integer) sets points. Everything else is the title.
+ * `#dd/mm` sets the due date. Everything else is the title.
+ *
+ * plan-v3 DEC-41: `@pontos` é aceito e ignorado (o número define menos valor que antes — toda
+ * tarefa vale `POINTS_PER_TASK`), então ele não aparece mais no tipo de saída.
  */
 export interface ParsedBacklogLine {
   title: string;
   priority: Task["priority"];
-  points: number;
   dueDate: string | null; // ISO date string (YYYY-MM-DD) or null
 }
 
@@ -152,7 +284,6 @@ export function parseBacklogLines(raw: string): ParsedBacklogLine[] {
     .filter(Boolean)
     .map((line) => {
       let priority: Task["priority"] = "medium";
-      let points = 0;
       let dueDate: string | null = null;
       let title = line;
 
@@ -167,7 +298,9 @@ export function parseBacklogLines(raw: string): ParsedBacklogLine[] {
 
       const pointsMatch = title.match(/\s@(\d+)\b/);
       if (pointsMatch) {
-        points = Number(pointsMatch[1]);
+        // plan-v3 DEC-41: a sintaxe `@N` continua aceita — backlog que as pessoas já têm
+        // escrito não quebra — mas o número não define ponto nenhum: toda tarefa vale
+        // POINTS_PER_TASK. O token é removido do título como antes.
         title = title.replace(pointsMatch[0], "");
       }
       const priorityMatch = title.match(/\s!(alta|media|média|baixa|urgente)\b/i);
@@ -176,7 +309,7 @@ export function parseBacklogLines(raw: string): ParsedBacklogLine[] {
         priority = p === "alta" ? "high" : p === "baixa" ? "low" : p === "urgente" ? "urgent" : "medium";
         title = title.replace(priorityMatch[0], "");
       }
-      return { title: title.trim(), priority, points, dueDate };
+      return { title: title.trim(), priority, dueDate };
     })
     .filter((t) => t.title.length > 0);
 }

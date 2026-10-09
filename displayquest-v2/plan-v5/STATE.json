@@ -1,0 +1,185 @@
+{
+  "plan": "plan-v5",
+  "title": "domínio de projetos maduro: cronograma, pontos, relatórios técnicos, atestados, blobs em MinIO",
+  "version": "5.1.0",
+  "updatedAt": "2026-10-07T10:04:00-03:00",
+  "status": "ready",
+  "activeWave": null,
+  "activeBatch": null,
+  "awaitingInstruction": false,
+  "lineage": {
+    "previousPlan": "plan-v4 (subtasks, animação, inativação — done em 2026-10-07, ondas V4-1..V4-5d + V4-6b + POS-1, DEC-78..98)",
+    "concurrentPlan": null,
+    "note": "a numeracao de decisoes e GLOBAL: DEC-01..29 clean-arch, DEC-30..49 plan-v3, DEC-50..54 B6/D4, DEC-55..60 plan-v4, DEC-61..77 plan-v5 (2026-10-06), DEC-78..98 plan-v4 (houve colisao nos DEC-61..64 — comentarios renumerados, ver AGENTS.md), DEC-99..104 plan-v5 (2026-10-07), DEC-105..114 plan-v6 (2026-10-07). Proxima decisao: DEC-115. Antes de abrir DEC nova, grep os STATE.json (clean-arch, plan-v3, plan-v4, plan-v5, plan-v6)."
+  },
+  "baseline": {
+    "measuredAt": "2026-10-07",
+    "measuredOn": "dev + trabalho não commitado do POS-1 (antes de qualquer commit do plan-v5)",
+    "unitAndFeatures": "87 arquivos / 1107 testes",
+    "fullSuite": "97 arquivos / 1192 testes (referencia AGENTS.md 2026-10-07)",
+    "e2e": "quadro: 2 passando + 1 falha conhecida (cartão a mais na coluna, dado legítimo) + 5 did not run (spec serial); shell: 5 passando",
+    "archCheck": "787 modulos / 3077 dependencias, zero violacao, allow-list vazia",
+    "previousBaseline": "2026-10-06 (antes do plan-v4 fechar): 78/981, full 88/1065, arch 770/2933",
+    "timing": "G3 ~22s (medido em 2026-10-07)"
+  },
+  "gates": {
+    "G0": "npm run arch:check — exit 0, allow-list VAZIA (baseline 787/3077)",
+    "G1": "npm run lint — exit 0 (warnings aceitos, nenhum erro; em worktree: npx eslint --no-eslintrc --config .eslintrc.json <arquivos>)",
+    "G2": "npx tsc --noEmit — 0 erros",
+    "G3": "npx vitest run tests/unit features — zero failure (baseline 87/1107)",
+    "G4": "DATABASE_URL=...5433 npx vitest run — suíte completa, só contra dq-dev-test-db (db:test:up + db:test:setup; g4-normalize.sql obrigatório). Migrations: migrate diff offline + migrate deploy, NUNCA migrate dev contra 5432",
+    "G5": "npm run docs:build + docs:check — obrigatório em V5-2, V5-3, V5-5, V5-6, V5-8, V5-9, V5-10, V5-11",
+    "G6": "recapturar telas do guia quando a captura deixa de representar a tela (V5-2 muda o detail do projeto; V5-3 muda perfil e quadro)"
+  },
+  "waves": [
+    {
+      "id": "V5-1",
+      "title": "infra de blobs: serviço MinIO + seam BlobStore",
+      "status": "pending",
+      "decisions": ["DEC-101"],
+      "scope": "Serviço minio no docker-compose (volume nomeado; API 9000 e console 9001 em loopback no override), envs MINIO_* + bucket default, dependência @aws-sdk/client-s3, seam lib/storage/blob-store.ts (put/get/remove) + port para módulos, allowlist de imagens/pdf/vídeo (sem tela de vídeo). Nenhum consumidor de produção ainda — batch de infra, zero mudança de comportamento.",
+      "why": "a tendência é mais arquivos/imagens/vídeos (dono, 2026-10-07); hoje só existem dois roots em disco (public/uploads/avatars, data/uploads/reports) e nenhum serviço s3 no compose. MinIO evita gravar blob em pasta do backend."
+    },
+    {
+      "id": "V5-2",
+      "title": "dados do projeto + entregáveis + anexos + logo/banner no bucket",
+      "status": "pending",
+      "decisions": ["DEC-61", "DEC-63", "DEC-101", "DEC-102"],
+      "scope": "Migration nullable em projects (startDate, endDate, editalNumber, processNumber, points @default(0), logoKey?, bannerKey?); novos project_deliverables (name, quantity) e project_attachments (blob no bucket); upload de logo/banner com validação de imagem (mime, ≤5 MB, magic bytes); header do detail com banner + logo (estilo Facebook/LinkedIn); rota de leitura de imagem com regra de acesso do projeto (default). Campos na UI de criação/edição.",
+      "why": "estender o model existente é o caminho escolhido (DEC-61); o dono pediu imagem/logo + banner na página do projeto (DEC-102)."
+    },
+    {
+      "id": "V5-3",
+      "title": "banner de usuário + pódio do quadro de liderança",
+      "status": "pending",
+      "decisions": ["DEC-101", "DEC-102"],
+      "scope": "users.bannerKey? (bucket); upload no perfil (espelho do avatar, que já existe em users.avatar); perfil mostra avatar + banner; pódio top #1 do quadro ganha o tratamento com as imagens (avatar h-24 + borda dourada já existem; entra banner/fundo) — e o quadro continua ordenado por pontos.",
+      "why": "dono: 'o usuário vai ter isso também, mostrando na página de perfil e no quadro de liderança dos membros do lab' (DEC-102)."
+    },
+    {
+      "id": "V5-4",
+      "title": "equipe estendida em project_members",
+      "status": "pending",
+      "decisions": ["DEC-69"],
+      "scope": "Colunas novas em project_members: lattes, cargaHorariaSemanal (Float), categoria (COORDENADOR/MEMBRO/BOLSISTA), situacao (ATIVO/INATIVO), dataEntrada, matricula. Use cases de membro passam a aceitá-las; UI de gestão exibe/edita; roles UserRole[] continuam (ACL não muda).",
+      "why": "Member do desenho casa ~1:1 com project_members único por par; model novo duplicaria a relação."
+    },
+    {
+      "id": "V5-5",
+      "title": "cronograma (metas + atividades) + wizard de criação com passo opcional",
+      "status": "pending",
+      "decisions": ["DEC-61", "DEC-100", "DEC-103"],
+      "scope": "project_goals (meta Int, descricao) e project_activities (ordem, descricao, responsavelId, periodoInicio, periodoFim, recompensa derivada 100×meses, status OPEN/COMPLETION_REQUESTED/DONE com requestedBy/requestedAt, approvedBy/approvedAt, overdueNotifiedAt; provas no bucket). Regras puras de período/ordem; CRUD + aba no detail; criação de projeto vira passo a passo (dados → equipe opcional → cronograma opcional → cria, tudo numa transação — DEC-100).",
+      "why": "cronograma é modelagem 100% nova (grep = 0) e o dono pediu para modelá-lo ao criar o projeto, sem obrigação."
+    },
+    {
+      "id": "V5-6",
+      "title": "task × atividade: FK, seleção automática e trava das tasks prontas",
+      "status": "pending",
+      "decisions": ["DEC-99"],
+      "scope": "tasks.activityId? (FK opcional); no form de criação, a atividade cujo período cobre hoje vem pré-selecionada e o seletor lista só futuras + vigente (do mesmo projeto); filtro de atividade no quadro; TRAVA: solicitar conclusão de atividade com task pendente → 400 (análogo à trava da mãe, DEC-82).",
+      "why": "as tasks são as subtasks da atividade (hierarquia pedida pelo dono em 2026-10-07); vale a mesma lógica da mãe."
+    },
+    {
+      "id": "V5-7",
+      "title": "economia de projeto: solicitação/aprovação de atividade com escala de centenas",
+      "status": "pending",
+      "decisions": ["DEC-63", "DEC-74", "DEC-76", "DEC-77", "DEC-103", "DEC-104"],
+      "scope": "request-activity-completion (líder/membro gestor + provas) e approve-activity-completion (só GLOBAL_PROJECT_MANAGERS; auto-aprova só COORDENADOR — DEC-77). Prêmio = recompensa(100×meses) × (1,5 se ≥2 dias adiantada) − 10% da recompensa POR DIA de atraso, PISO 0 (DEC-103/74). Distribuição aos membros ativos proporcional às tasks concluídas por membro no projeto; denominador 0 → igual (DEC-104). projects.points também soma o valor de tarefa concluída do projeto; idempotência GAMIFICATION:ACTIVITY_COMPLETED:<id>; histórico na transação; port de awards injetado no composition root.",
+      "why": "dono: economia de projeto é inflada (centenas vs dezenas) e atraso deve ser muito mais pesado no domínio de projetos — substitui as fórmulas da DEC-67/68."
+    },
+    {
+      "id": "V5-8",
+      "title": "atraso de atividade: notificação urgente (prioridade + varredura diária)",
+      "status": "pending",
+      "decisions": ["DEC-64"],
+      "scope": "Coluna priority em notifications + destaque no painel; job diário no cron-service varre atividades vencidas cuja APROVAÇÃO ainda não aconteceu (status ≠ DONE) e publica UMA notificação por atividade (guarda overdueNotifiedAt) para líder + coordenadores/gerentes ativos (padrão findReportManagers).",
+      "why": "notifications não tem canal de urgência (schema:408-420); urgência é destaque, não canal novo (sem e-mail na v1)."
+    },
+    {
+      "id": "V5-9",
+      "title": "relatórios técnicos (3 tipos) + rascunho por IA a partir dos logs",
+      "status": "pending",
+      "decisions": ["DEC-65", "DEC-70", "DEC-101"],
+      "scope": "Novo technical_reports (projectId + type PARCIAL/TECNICO_FINAL/FINAL único por par, content, file no bucket, authorId), editável, permissão gestão/líder; project_reports intacto. Port ReportDraftPort + adapter OpenAI-compatible via fetch puro (AI_BASE_URL/AI_API_KEY/AI_MODEL, default http://localhost:8080/v1 — modelo local do lab, 192.168.25.105:8080 na rede); fonte = work_sessions do projeto no período; rota POST .../draft gera, o editor salva só com confirmação do usuário.",
+      "why": "o dono pediu IA de verdade; genérico por env deixa a porta aberta pro multilab trocar provider sem código."
+    },
+    {
+      "id": "V5-10",
+      "title": "atestados de frequência: AcroForm gerado+validado + lembrete dia 19",
+      "status": "pending",
+      "decisions": ["DEC-66", "DEC-71", "DEC-72", "DEC-75", "DEC-101"],
+      "scope": "Módulo attestation: certificates (projectId, userId, mesReferencia, dataEnvio, arquivo no bucket) SEM coluna de status (DEC-75 — a situação é a do projeto); sistema GERA o AcroForm com campos de Projeto/Usuário (pdf-lib, dependência nova) e VALIDA os campos obrigatórios antes de aceitar o preenchido; dados de frequência de weekly_reports/work_sessions; job '0 9 19 * *' no cronService notifica coordenadores/gerentes + líderes ativos.",
+      "why": "certificate do desenho É o atestado de frequência (dono, DEC-66); validação de campos pelo sistema (DEC-71)."
+    },
+    {
+      "id": "V5-11",
+      "title": "tela de andamento: data_final − hoje + pontos do projeto",
+      "status": "pending",
+      "decisions": ["DEC-63"],
+      "scope": "Gráfico de andamento do projeto calculado por data_final − dia_de_hoje; exibição de projects.points (agora real, não mais a soma de points dos membros).",
+      "why": "fórmula pedida explicitamente pelo dono; precisa de endDate (V5-2) e de points (V5-7)."
+    }
+  ],
+  "decisionRegistry": [
+    "DEC-61 (dono 2026-10-06, D-A): o novo domínio de projeto ESTENDE os models existentes (projects, project_members) via migration, em vez de criar models paralelos (ex.: project_v2). Alternativa 'models novos paralelos' foi considerada e rejeitada: espelharia 11 rotas, ACL, UI e dados reais. Consequência: colunas novas entram nullable, sem backfill obrigatório; campos antigos (name/description/status/links) não mudam de significado.",
+    "DEC-62 (dono 2026-10-06, D-B): escopo TOTAL no plan-v5, mas em ONDAS independentes e revertíveis — uma sequência única de batches (opção 'tudo de uma vez, sem fasear') e o recorte 'só o núcleo agora' foram rejeitados. Cada onda V5-N é parada em fronteira limpa.",
+    "DEC-63 (dono 2026-10-06, D-C): 'os projetos devem somar pontos de projeto' vira campo PRÓPRIO projects.points (@default(0)), incrementado pelas premiações (atividade aprovada + tarefa do projeto concluída). As opções 'derivado dos membros' (soma users.points — mistura pontos de loja, é o que a tela faz hoje em project-rules.ts:294,312) e 'os dois rotulados' foram rejeitadas. O agregado antigo deixa de ser a exibição principal quando V5-11 entrar.",
+    "DEC-64 (dono 2026-10-06, D-D): atraso de atividade gera notificação in-app COM PRIORIDADE (coluna priority + destaque no painel), reusando o módulo notifications e o transporte de polling 60s. E-mail foi rejeitado (infra SMTP = escopo bem maior); notificação sem destaque também rejeitado (o dono pediu 'urgentemente').",
+    "DEC-65 (dono 2026-10-06, D-E): rascunho de relatório por IA usa o modelo PRÓPRIO do laboratório, OpenAI-compatible, rodando em localhost:8080 (ou 192.168.25.105:8080 na rede local), acessado por config genérica AI_BASE_URL/AI_API_KEY/AI_MODEL (padrão http://localhost:8080/v1). O dono frisou: para o multilab futuro temos que pensar em suporte a outros modelos — daí a escolha do adapter genérico por env (alternativa 'OpenAI fixa' rejeitada por isso). Nenhum SDK: fetch puro num adapter da infrastructure, port ReportDraftPort na application.",
+    "DEC-66 (dono 2026-10-06, D-F): Certificate = atestado de FREQUÊNCIA mensal, baseado nos reports já implementados (weekly_reports/work_sessions), mas com AcroForm. Reports do desenho = relatórios técnicos (artigos por fase do cronograma), model separado. Não são o mesmo model nem substituem project_reports.",
+    "DEC-67 (dono 2026-10-06, D-G): a premiação de atividade REUSA points-rules (10 base, 1,5×, −10/dia sem piso). SUPERADA em 2026-10-07 pela DEC-103: a economia de projeto tem escala própria (100×meses, −10%/dia, piso 0). O campo recompensa do desenho permanece, agora derivado do período.",
+    "DEC-68 (dono 2026-10-06, D-H): cada membro ATIVO recebia o valor INTEGRAL da premiação. SUPERADA em 2026-10-07 pela DEC-104: distribuição proporcional às tasks concluídas por membro no projeto.",
+    "DEC-69 (dono 2026-10-06, D-I): Member novo estende project_members (lattes, cargaHorariaSemanal, categoria, situacao, dataEntrada, matricula), mantendo roles UserRole[] e a unicidade (projectId, userId). Model novo separado rejeitado: duplicaria a relação usuário×projeto.",
+    "DEC-70 (dono 2026-10-06, D-J): relatório técnico liga ao PROJETO + TIPO (parcial / técnico-final / final), um registro editável por par, sem FK para atividade. As opções 'relatório por atividade' e 'os dois níveis' foram rejeitadas.",
+    "DEC-71 (dono 2026-10-06, D-K): AcroForm na v1 é GERADO e VALIDADO pelo sistema (pdf-lib; campos de Projeto e Usuário escritos pelo sistema, validação antes de aceitar o upload). 'Só validar template enviado' e 'só upload sem validação' foram rejeitados. Dependência nova pdf-lib entra no package.json neste lote.",
+    "DEC-72 (dono 2026-10-06, D-L): o lembrete mensal de frequência (dia 19) notifica COORDENADORES/GERENTES + LÍDERES de projeto ativos. Job '0 9 19 * *' (America/Sao_Paulo) no cron-service, mesmo padrão do nightlySweep.",
+    "DEC-73 (dono 2026-10-06, D-M): plan-v5 nasce 'ready' e executa DEPOIS do plan-v4 fechar. CUMPRIDA em 2026-10-07: plan-v4 done (DEC-78..98); o bloqueio saiu de blockers.",
+    "DEC-74 (dono 2026-10-06, ASK-V5-01): projects.points tem PISO EM 0 no atraso — Math.max(0, ...) na escrita do saldo do projeto. Diferença deliberada em relação aos users.points, que continuam sem piso (DEC-39): o dono respondeu 'pro escopo do projeto, piso em 0'. A fórmula de premiação muda (DEC-103); o piso permanece.",
+    "DEC-75 (dono 2026-10-06, ASK-V5-02): certificates NÃO ganha coluna de status — o enum ATIVO/INATIVO do desenho não é implementado. O dono: 'o estado atual do projeto (…o domínio atual já tem esses estados…) o status atual já cobre (ativo/inativo/arquivado)'. A situação do atestado é a do projeto (projects.status).",
+    "DEC-76 (dono 2026-10-06, ASK-V5-03): conclusão de atividade é fluxo de DUAS FASES. Quem é LÍDER/GERENTE de projeto (leaderId ou membership PROJECT_MANAGER_MEMBERSHIP_ROLES) solicita a completude e envia arquivos como prova (OPEN → COMPLETION_REQUESTED); quem é GERENTE/COORDENADOR global (GLOBAL_PROJECT_MANAGERS) APROVA (→ DONE) — e só na aprovação os pontos caem. Prova = arquivos de atividade no bucket.",
+    "DEC-77 (dono 2026-10-06, ASK-V5-04): o solicitante PODE aprovar a própria solicitação SÓ SE FOR COORDENADOR; GERENTE não auto-aprova o que ele mesmo solicitou. Resposta exata do dono: 'só se for coordenador (gerente não)'. GERENTE_PROJETO sozinho não aprove nada (não está em GLOBAL_PROJECT_MANAGERS).",
+    "DEC-99 (dono 2026-10-07, D-R): hierarquia do cronograma — as TASKS são as 'subtasks' da ATIVIDADE (Atividade → Tasks → task_subtasks). Vale a lógica da mãe (DEC-82): solicitar conclusão de atividade com task pendente → 400. Escolhida a opção 'Trava: tasks todas prontas'; as alternativas 'sem trava, só progresso' e 'atividade derivada das tasks (sem botão próprio)' foram rejeitadas.",
+    "DEC-100 (dono 2026-10-07, D-S): a criação de projeto vira passo a passo (wizard) com o CRONOGRAMA COMO PASSO OPCIONAL — dados → equipe (opcional) → cronograma (metas + atividades, opcional) → cria. 'Obrigatório já na criação' e 'só depois, como está' foram rejeitados: o dono quer modelar o cronograma ao criar, sem forçar. Pular o passo mantém a criação simples de hoje.",
+    "DEC-101 (dono 2026-10-07, D-T): bucket S3-compatible (MinIO) em container no compose, e TODOS os blobs NOVOS do plan-v5 vão para ele desde o V5-1, atrás de seam/port — o dono já usou MinIO antes. Os dois roots legados (avatares em public/uploads, anexos em data/uploads/reports) NÃO migram nesta leva — a migração é fila separada. Vídeo: só infra preparada (mimes de vídeo no allowlist), nenhuma tela de vídeo no plan-v5 ('só infra preparada' escolhido). Rejeitado: 'tudo de uma vez com migração dos arquivos existentes' e 'só as imagens novas'.",
+    "DEC-102 (dono 2026-10-07, D-U): imagens de PROJETO (logo + banner, página/detalhe estilo Facebook/LinkedIn) e de USUÁRIO (mantém o avatar que já existe e ganha BANNER novo). O banner aparece no perfil do usuário e no pódio do quadro de liderança — o #1 do quadro ganha o tratamento com as imagens. Rejeitado: 'só avatar, sem banner'. Decisão de leitura: default é servir as imagens de projeto com a regra de acesso do projeto (confirmar no batch V5-2).",
+    "DEC-103 (dono 2026-10-07, D-V): economia de projeto tem escala PRÓPRIA e substitui a DEC-67. Base da atividade = 100 × meses de duração do período (ex.: 'Revisão bibliográfica leva 3 meses → vale 300'). Atraso = FRAÇÃO da recompensa por dia (−10%/dia) — 'a coordenação quer que os atrasos sejam muito mais pesados no domínio dos projetos do que dos usuários' (usuário: −10/dia fixo). Piso 0 no projeto (DEC-74). Antecedência: ×1,5 com ≥2 dias civis (mesma régua da DEC-97). Tasks continuam premiando INDIVÍDUOS (awardedPoints); a atividade aprovada premia os MEMBROS ATIVOS do projeto. Princípios originais da rodada: 'economia das tarefas é mais inflacionada (dezenas → centenas)' e 'essa centena é distribuída aos usuários relativamente' — a relatividade virou a DEC-104.",
+    "DEC-104 (dono 2026-10-07, D-W): o prêmio da atividade é DISTRIBUÍDO aos membros ativos PROPORCIONALMENTE às tasks que cada um concluiu no projeto (parte_i = award × tasksConcluídas_i ÷ tasksConcluídas_doProjeto). Membro sem task leva 0; denominador 0 → divisão igual entre membros ativos. Substitui a divisão integral da DEC-68 ('atividade premia todos os membros ativos do projeto' + 'distribuída relativamente', palavra do dono)."
+  ],
+  "batchLog": [],
+  "openQuestions": [
+    "ASK-V5-05 (aberto, bloqueia V5-7): arredondamento da duração em meses da atividade — ceil (fração de mês conta, 45 dias → 2 meses → 200), floor (mês cheio só) ou proporcional aos dias? Proposta v1: ceil."
+  ],
+  "blockers": [],
+  "removedItems": [],
+  "answeredInstructions": [
+    {
+      "id": "ASK-V5-01",
+      "question": "Os pontos do projeto podem ficar negativos no atraso (consistente com DEC-39, sem piso) ou o projeto tem piso em 0?",
+      "answer": "Piso em 0 para o escopo do projeto (DEC-74); usuários seguem sem piso.",
+      "answeredAt": "2026-10-06",
+      "decision": "DEC-74"
+    },
+    {
+      "id": "ASK-V5-02",
+      "question": "O que ATIVO/INATIVO significa num atestado — vigente/cancelado, mês fechado/corrente?",
+      "answer": "Não implementar: o status atual do projeto (ativo/inativo/arquivado) já cobre; certificates não ganha coluna de status (DEC-75).",
+      "answeredAt": "2026-10-06",
+      "decision": "DEC-75"
+    },
+    {
+      "id": "ASK-V5-03",
+      "question": "Quem conclui a atividade — GERENTE_PROJETO conta como gerente/coordenador?",
+      "answer": "Fluxo de duas fases: líder/gerente de projeto solicita com provas; gerente/coordenador aprova; pontos só na aprovação (DEC-76).",
+      "answeredAt": "2026-10-06",
+      "decision": "DEC-76"
+    },
+    {
+      "id": "ASK-V5-04",
+      "question": "O solicitante pode aprovar a própria solicitação de conclusão de atividade?",
+      "answer": "Só se for COORDENADOR — GERENTE não aprova o que ele mesmo solicitou (DEC-77).",
+      "answeredAt": "2026-10-06",
+      "decision": "DEC-77"
+    }
+  ]
+}

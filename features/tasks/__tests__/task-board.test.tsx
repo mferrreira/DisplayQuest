@@ -3,15 +3,17 @@
  * Proves board behavior beyond pure functions: column distribution, state grid, move-menu rules.
  * Auth is stubbed at the next-auth boundary (session = coordenador: leader, sees all tasks).
  */
-import { describe, expect, it, beforeEach, vi } from "vitest";
+import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { http, HttpResponse } from "msw";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SessionProvider } from "next-auth/react";
 import { NuqsTestingAdapter } from "nuqs/adapters/testing";
 import { TaskBoard } from "../components/task-board";
 import { resetTaskStore, getTaskStore, seedTasks } from "@/tests/mocks/handlers";
 import { server } from "@/tests/mocks/server";
+import { currentPointsDelta, resetPointsDeltaStore } from "@/lib/points-delta";
 
 // next-auth/react useSession is mocked (SessionProvider alone would need a real session flow)
 const mockUser = { id: 2, name: "Coordenador", email: "coordenador@lab.com", roles: ["COORDENADOR"] };
@@ -44,9 +46,46 @@ function todayIso(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 }
 
+/**
+ * Medido nesta base (2026-10-02): no jsdom do Vitest, `window === globalThis` e
+ * **`window.localStorage` é `undefined`** — o `populateGlobal` não copia a Web Storage do jsdom.
+ * A ordenação da coluna é guardada em `localStorage`, então o teste instala um em memória: sem
+ * ele, os casos de preferência estariam medindo só o caminho de SSR (sem storage), que é o
+ * mesmo do servidor.
+ */
+let storageData: Map<string, string>;
+
+function installMemoryStorage() {
+  storageData = new Map<string, string>();
+  const storage = {
+    getItem: (key: string) => (storageData.has(key) ? (storageData.get(key) as string) : null),
+    setItem: (key: string, value: string) => storageData.set(key, value),
+    removeItem: (key: string) => storageData.delete(key),
+    clear: () => storageData.clear(),
+    key: () => null,
+    get length() {
+      return storageData.size;
+    },
+  };
+  Object.defineProperty(window, "localStorage", { configurable: true, value: storage });
+}
+
+/** Ordem dos cartões de uma coluna, lida pelo rótulo do botão de ações de cada cartão. */
+function titlesInColumn(columnTitle: string): string[] {
+  return within(screen.getByLabelText(`Coluna ${columnTitle}`))
+    .getAllByRole("button", { name: /^Ações para / })
+    .map((button) => (button.getAttribute("aria-label") as string).replace(/^Ações para /, ""));
+}
+
 describe("TaskBoard", () => {
   beforeEach(() => {
     resetTaskStore();
+    installMemoryStorage();
+  });
+
+  afterEach(() => {
+    // `delete` devolve o ambiente ao estado medido (sem localStorage).
+    delete (window as unknown as Record<string, unknown>).localStorage;
   });
 
   it("renders fixture tasks distributed across columns", async () => {
@@ -115,18 +154,233 @@ describe("TaskBoard", () => {
     expect(screen.queryByText("Tarefa futura")).not.toBeInTheDocument();
   });
 
-  it("move menu blocks non-leader from moving a done task (legacy rule parity)", async () => {
-    // make the current user a plain researcher (non-leader)
+  it("plan-v3 OND3-B: o menu de tarefa concluída não oferece destino a não-líder", async () => {
+    // Antes: as quatro colunas apareciam e todas voltavam com "Ação não permitida" — o
+    // arrasto de `done` é desabilitado, então o menu era o único caminho possível.
     mockUser.roles = ["PESQUISADOR"];
     resetTaskStore();
     renderBoard();
     await waitFor(() => expect(screen.getByText("Tarefa concluída recente")).toBeVisible());
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "Ações para Tarefa concluída recente" }));
-    await user.click(screen.getByRole("menuitem", { name: /Em Andamento/i }));
-    // blocked: task stays in Concluído column, no API call changes it
-    expect(await screen.findByText("Tarefa concluída recente")).toBeVisible();
-    expect(getTaskStore().find((t) => t.title === "Tarefa concluída recente")?.status).toBe("done");
+
+    for (const column of ["A Fazer", "Em Andamento", "Em Revisão", "Ajustes"]) {
+      expect(screen.queryByRole("menuitem", { name: column })).not.toBeInTheDocument();
+    }
+    const aviso = screen.getByRole("menuitem", { name: /só volta de coluna para líderes/i });
+    expect(aviso).toHaveAttribute("data-disabled");
+    // o resto do menu continua: ver detalhes e editar não dependem de coluna
+    expect(screen.getByRole("menuitem", { name: /ver detalhes/i })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: /editar/i })).toBeInTheDocument();
     mockUser.roles = ["COORDENADOR"];
+  });
+
+  it("plan-v3 OND3-B: o menu compacto tem a mesma regra (a duplicação do menu já custou uma regra pela metade)", async () => {
+    mockUser.roles = ["PESQUISADOR"];
+    resetTaskStore();
+    renderBoard("?visao=compacta");
+    await waitFor(() => expect(screen.getByText("Tarefa concluída recente")).toBeVisible());
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Ações para Tarefa concluída recente" }));
+
+    expect(screen.getByRole("menuitem", { name: /só volta de coluna para líderes/i })).toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: "Ajustes" })).not.toBeInTheDocument();
+    mockUser.roles = ["COORDENADOR"];
+  });
+
+  it("plan-v3 OND3-B: o líder continua vendo todos os destinos da tarefa concluída", async () => {
+    resetTaskStore();
+    renderBoard();
+    await waitFor(() => expect(screen.getByText("Tarefa concluída recente")).toBeVisible());
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Ações para Tarefa concluída recente" }));
+
+    for (const column of ["A Fazer", "Em Andamento", "Em Revisão", "Ajustes"]) {
+      expect(await screen.findByRole("menuitem", { name: column })).toBeEnabled();
+    }
+    expect(screen.queryByRole("menuitem", { name: /só volta de coluna/i })).not.toBeInTheDocument();
+  });
+
+  // ---------------------------------------------------------------------------------------
+  // plan-v3 OND3-C — ordenação por coluna
+  //
+  // As duas colunas do fixture são montadas para que **urgência** e **prazo** discordem nas duas:
+  // em "A Fazer" o urgente vence a data, em "Em Andamento" a data vence a urgência. Assim o caso
+  // distingue trocar a ordem de trocar a lista inteira.
+  // ---------------------------------------------------------------------------------------
+  function seedOrderFixture() {
+    seedTasks([
+      { id: 11, title: "A Fazer sem prazo", status: "to-do", dueDate: null, priority: "low" },
+      { id: 12, title: "A Fazer urgente", status: "to-do", dueDate: "2026-12-31", priority: "urgent" },
+      { id: 13, title: "A Fazer vencendo", status: "to-do", dueDate: "2026-10-05", priority: "low" },
+      { id: 14, title: "Andamento urgente", status: "in-progress", dueDate: "2026-12-01", priority: "urgent" },
+      { id: 15, title: "Andamento cedo", status: "in-progress", dueDate: "2026-10-01", priority: "low" },
+    ]);
+  }
+
+  it("plan-v3 OND3-C: escolher a ordem reordena só a coluna escolhida", async () => {
+    seedOrderFixture();
+    renderBoard();
+    const user = userEvent.setup();
+    await waitFor(() => expect(screen.getByText("A Fazer vencendo")).toBeVisible());
+
+    // o padrão é urgência: o urgente vem antes, mesmo vencendo em dezembro
+    expect(titlesInColumn("A Fazer")).toEqual(["A Fazer urgente", "A Fazer vencendo", "A Fazer sem prazo"]);
+
+    await user.click(screen.getByRole("button", { name: "Ordenar tarefas de A Fazer" }));
+    // o menu diz o que está valendo — não é um controle cego
+    expect(screen.getByRole("menuitemradio", { name: "Urgência" })).toHaveAttribute("aria-checked", "true");
+    await user.click(screen.getByRole("menuitemradio", { name: "Prazo" }));
+
+    expect(titlesInColumn("A Fazer")).toEqual(["A Fazer vencendo", "A Fazer urgente", "A Fazer sem prazo"]);
+    // a outra coluna continua em urgência: a preferência é por coluna
+    expect(titlesInColumn("Em Andamento")).toEqual(["Andamento urgente", "Andamento cedo"]);
+  });
+
+  it("plan-v3 OND3-C: a ordem escolhida sobrevive ao recarregar, guardada por pessoa", async () => {
+    seedOrderFixture();
+    const user = userEvent.setup();
+    const first = renderBoard();
+    await waitFor(() => expect(screen.getByText("A Fazer vencendo")).toBeVisible());
+    await user.click(screen.getByRole("button", { name: "Ordenar tarefas de A Fazer" }));
+    await user.click(screen.getByRole("menuitemradio", { name: "Alfabética" }));
+    expect(titlesInColumn("A Fazer")).toEqual([
+      "A Fazer sem prazo",
+      "A Fazer urgente",
+      "A Fazer vencendo",
+    ]);
+    first.unmount();
+
+    // `mockUser.id` é 2: a preferência é da pessoa, não do navegador inteiro
+    expect(storageData.get("dq:column-order:2:to-do")).toBe('"alfabetica"');
+
+    renderBoard();
+    await waitFor(() => expect(screen.getByText("A Fazer vencendo")).toBeVisible());
+    expect(titlesInColumn("A Fazer")).toEqual([
+      "A Fazer sem prazo",
+      "A Fazer urgente",
+      "A Fazer vencendo",
+    ]);
+    // e o menu reabre marcando o que foi guardado
+    await user.click(screen.getByRole("button", { name: "Ordenar tarefas de A Fazer" }));
+    expect(screen.getByRole("menuitemradio", { name: "Alfabética" })).toHaveAttribute("aria-checked", "true");
+  });
+
+  it("plan-v3 OND3-C: storage de outra versão não derruba o quadro — volta ao padrão", async () => {
+    // JSON válido que não é ordem ("prazo " com espaço) e JSON quebrado: os dois caem no padrão
+    storageData.set("dq:column-order:2:to-do", '"prazo "');
+    storageData.set("dq:column-order:2:in-progress", "{isto nao e json");
+    seedOrderFixture();
+    renderBoard();
+    const user = userEvent.setup();
+    await waitFor(() => expect(screen.getByText("A Fazer vencendo")).toBeVisible());
+
+    expect(titlesInColumn("A Fazer")).toEqual(["A Fazer urgente", "A Fazer vencendo", "A Fazer sem prazo"]);
+    await user.click(screen.getByRole("button", { name: "Ordenar tarefas de A Fazer" }));
+    expect(screen.getByRole("menuitemradio", { name: "Urgência" })).toHaveAttribute("aria-checked", "true");
+    for (const option of ["Prazo", "Mais recentes", "Pontos", "Alfabética"]) {
+      expect(screen.getByRole("menuitemradio", { name: option })).toHaveAttribute("aria-checked", "false");
+    }
+  });
+
+  // ---------------------------------------------------------------------------------------
+  // plan-v3 OND4-B — o prêmio creditado (OND4-A) vira sinal do contador
+  //
+  // A regra que estes casos provam é a da Onda 4: a aprovação credita o RESPONSÁVEL pela
+  // tarefa, quase nunca quem aprovou. Sem a comparação `awardedTo === pessoa logada`, o chip
+  // mostraria no contador de quem aprovou o prêmio de outra pessoa. O chip em si é testado em
+  // `tests/unit/components/points-delta.test.tsx`; aqui o que se prova é quem anuncia.
+  // ---------------------------------------------------------------------------------------
+  describe("OND4-B: quem ganhou o prêmio", () => {
+    beforeEach(() => resetPointsDeltaStore());
+    afterEach(() => resetPointsDeltaStore());
+
+    async function approveTheOnlyCard() {
+      const user = userEvent.setup();
+      await waitFor(() => expect(screen.getByRole("button", { name: "Aprovar tarefa" })).toBeEnabled());
+      await user.click(screen.getByRole("button", { name: "Aprovar tarefa" }));
+    }
+
+    it("aprovar uma tarefa que é minha anuncia o valor creditado, uma vez só", async () => {
+      seedTasks([
+        { id: 301, title: "Revisada comigo", status: "in-review", assignedTo: 2, taskVisibility: "delegated" },
+      ]);
+      renderBoard();
+      await waitFor(() => expect(screen.getByText("Revisada comigo")).toBeVisible());
+
+      await approveTheOnlyCard();
+
+      await waitFor(() => expect(currentPointsDelta()?.value).toBe(10));
+      expect(currentPointsDelta()?.id).toBe(1);
+    });
+
+    it("aprovar tarefa de outra pessoa NÃO move o meu contador", async () => {
+      // O caso comum da aprovação: o prêmio vai para o responsável (id 7), que não é quem aprovou.
+      seedTasks([
+        { id: 302, title: "Revisada de outra pessoa", status: "in-review", assignedTo: 7, taskVisibility: "delegated" },
+      ]);
+      renderBoard();
+      await waitFor(() => expect(screen.getByText("Revisada de outra pessoa")).toBeVisible());
+
+      await approveTheOnlyCard();
+
+      await waitFor(() => expect(getTaskStore()[0].status).toBe("done"));
+      expect(currentPointsDelta()).toBeNull();
+    });
+
+    it("prêmio 0 (o award já existia) não vira chip +0", async () => {
+      server.use(
+        http.post("*/api/tasks/:id/approve", async ({ params }) => {
+          // O override continua mexendo no store como a rota real: o que muda aqui é só o
+          // prêmio (0 = o award já existia, DEC-48), não o comportamento da chamada.
+          const store = getTaskStore();
+          const idx = store.findIndex((t) => t.id === Number(params.id));
+          const updated = { ...store[idx], status: "done" as const, completed: true };
+          store[idx] = updated;
+          return HttpResponse.json({ task: updated, awardedTo: 2, awardedPoints: 0 });
+        }),
+      );
+      seedTasks([
+        { id: 303, title: "Revisada sem prêmio novo", status: "in-review", assignedTo: 2, taskVisibility: "delegated" },
+      ]);
+      renderBoard();
+      await waitFor(() => expect(screen.getByText("Revisada sem prêmio novo")).toBeVisible());
+
+      await approveTheOnlyCard();
+
+      await waitFor(() => expect(getTaskStore()[0].status).toBe("done"));
+      expect(currentPointsDelta()).toBeNull();
+    });
+
+    it("concluir uma tarefa pública credita quem concluiu e anuncia uma vez só", async () => {
+      seedTasks([
+        { id: 304, title: "Quest pública do laboratório", status: "to-do", taskVisibility: "public" },
+      ]);
+      renderBoard();
+      const user = userEvent.setup();
+      await waitFor(() => expect(screen.getByText("Quest pública do laboratório")).toBeVisible());
+
+      await user.click(screen.getByRole("button", { name: "Ações para Quest pública do laboratório" }));
+      await user.click(screen.getByRole("menuitem", { name: "Concluído" }));
+
+      await waitFor(() => expect(currentPointsDelta()?.value).toBe(10));
+      expect(currentPointsDelta()?.id).toBe(1);
+    });
+
+    it("tarefa delegada vai para revisão sem creditar ninguém: nada é anunciado", async () => {
+      // O caminho `in-review` da conclusão: o prêmio fica para a aprovação (OND4-A, `null`).
+      seedTasks([
+        { id: 305, title: "Delegada que vai para revisão", status: "to-do", assignedTo: 2 },
+      ]);
+      renderBoard();
+      const user = userEvent.setup();
+      await waitFor(() => expect(screen.getByText("Delegada que vai para revisão")).toBeVisible());
+
+      await user.click(screen.getByRole("button", { name: "Ações para Delegada que vai para revisão" }));
+      await user.click(screen.getByRole("menuitem", { name: "Concluído" }));
+
+      await waitFor(() => expect(getTaskStore()[0].status).toBe("in-review"));
+      expect(currentPointsDelta()).toBeNull();
+    });
   });
 });

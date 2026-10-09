@@ -1,46 +1,19 @@
-import type { UserRole } from "@prisma/client";
-
-export type Role = UserRole;
-
-export const ROLE_VALUES: Role[] = [
-  "COORDENADOR",
-  "GERENTE",
-  "LABORATORISTA",
-  "PESQUISADOR",
-  "GERENTE_PROJETO",
-  "COLABORADOR",
-  "VOLUNTARIO",
-];
-
-export const PERMISSIONS = {
-  MANAGE_USERS: ["COORDENADOR", "GERENTE"],
-  MANAGE_NOTIFICATIONS: ["COORDENADOR", "GERENTE"],
-  MANAGE_REWARDS: ["COORDENADOR", "GERENTE", "LABORATORISTA"],
-  MANAGE_PURCHASES: ["COORDENADOR", "GERENTE", "LABORATORISTA"],
-  MANAGE_WORK_SESSIONS: ["COORDENADOR", "GERENTE", "LABORATORISTA"],
-  MANAGE_PROJECTS: ["COORDENADOR", "GERENTE", "GERENTE_PROJETO"],
-  MANAGE_PROJECT_MEMBERS: ["COORDENADOR", "GERENTE", "GERENTE_PROJETO"],
-  MANAGE_TASKS: ["COORDENADOR", "GERENTE", "GERENTE_PROJETO", "COLABORADOR", "PESQUISADOR"],
-} as const satisfies Record<string, Role[]>;
-
-export type Permission = keyof typeof PERMISSIONS;
-
-export function isRole(value: string): value is Role {
-  return ROLE_VALUES.includes(value as Role);
-}
-
-export function normalizeRoles(values: unknown): Role[] {
-  if (!Array.isArray(values)) return [];
-  return values.filter((value): value is Role => typeof value === "string" && isRole(value));
-}
-
-export function hasRole(userRoles: unknown, required: Role | Role[]): boolean {
-  const roles = normalizeRoles(userRoles);
-  const requiredRoles = Array.isArray(required) ? required : [required];
-  return requiredRoles.some((role) => roles.includes(role));
-}
-
-export function hasPermission(userRoles: unknown, permission: Permission): boolean {
-  const allowedRoles = PERMISSIONS[permission];
-  return hasRole(userRoles, allowedRoles as Role[]);
-}
+/**
+ * lib/auth/rbac.ts — thin re-export of the pure RBAC now living in `backend/domain/identity`
+ * (SPEC §4.3, AC-00-09). Before batch 0.3 this file took `UserRole` from the ORM client, which
+ * is exactly the leak PLAN §2.5 lists.
+ *
+ * THE PUBLIC CONTRACT IS DELIBERATELY UNCHANGED: every caller keeps importing the same names
+ * from the same path. Only the origin of the types moved (AGENT.md §5 — "so a origem do tipo").
+ * `Role` is structurally the same union of the seven role strings the schema defines.
+ */
+export {
+  PERMISSIONS,
+  ROLE_VALUES,
+  hasPermission,
+  hasRole,
+  isRole,
+  normalizeRoles,
+  type Permission,
+  type Role,
+} from "@/backend/domain/identity";

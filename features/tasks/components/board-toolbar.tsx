@@ -5,10 +5,10 @@
  *  - overdue banner contrast (text-destructive on plain background — D-15.3)
  *  - action row wraps at 320px (legacy overflow fix, CP-1 observation)
  *  - filters are nuqs-backed (URL is source of truth)
- *  - search is an expanding icon (magnifier → input, GitHub-style)
+ *  - search is expanded by default on desktop (≥ `sm`); the magnifier toggle is mobile-only
  *  - "Atribuídas a mim" subsumed by the people select (current user = "(você)")
  */
-import { useRef, useState } from "react"
+import { useRef, useState, useSyncExternalStore } from "react"
 import { CalendarClock, LayoutGrid, Plus, Rows3, Search, TriangleAlert, Users, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -26,6 +26,40 @@ import {
 } from "@/components/ui/select"
 import { cn } from "@/lib/utils/utils"
 import type { TaskFilters } from "@/lib/api/endpoints/tasks"
+
+/**
+ * Breakpoint `sm` do Tailwind (640px) — o mesmo que a classe `sm:` usada no JSX abaixo.
+ * As duas coisas precisam concordar: se o CSS disser "desktop" e o JS disser "mobile",
+ * o campo aparece aberto mas com `tabIndex={-1}` (teclado não alcança) e recolhe no blur.
+ */
+const DESKTOP_QUERY = "(min-width: 640px)"
+
+/** `null` quando não há `matchMedia` (navegador antigo, e o jsdom do Vitest, que não tem). */
+function desktopMedia(): MediaQueryList | null {
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") return null
+  return window.matchMedia(DESKTOP_QUERY)
+}
+
+function subscribeToDesktop(onChange: () => void) {
+  const mql = desktopMedia()
+  if (!mql) return () => {}
+  mql.addEventListener("change", onChange)
+  return () => mql.removeEventListener("change", onChange)
+}
+
+/**
+ * `false` no servidor e na hidratação — o que mantém o markup do servidor e o do primeiro
+ * render do cliente iguais. Não há flash: o *layout* desktop é garantido por CSS
+ * (`sm:w-[200px]` no contêiner, `sm:hidden` na lupa), então o que este hook decide é só
+ * comportamento invisível (`tabIndex` e o collapse de blur).
+ */
+function useIsDesktop(): boolean {
+  return useSyncExternalStore(
+    subscribeToDesktop,
+    () => desktopMedia()?.matches ?? false,
+    () => false,
+  )
+}
 
 export interface BoardToolbarProps {
   filters: TaskFilters
@@ -59,6 +93,10 @@ export function BoardToolbar({
 }: BoardToolbarProps) {
   const [searchOpen, setSearchOpen] = useState(Boolean(filters.search))
   const searchRef = useRef<HTMLInputElement>(null)
+  // No desktop não há toggle: o campo nasce aberto e nunca recolhe.
+  const isDesktop = useIsDesktop()
+  const searchExpanded = isDesktop || searchOpen
+  const searchTerm = filters.search ?? ""
 
   const currentUser = currentUserId ? users.find((u) => u.id === currentUserId) : undefined
   const otherUsers = users.filter((u) => u.id !== currentUserId)
@@ -76,10 +114,11 @@ export function BoardToolbar({
           )}
         </div>
 
+        {/* h-10 em toda a barra: os SelectTrigger são `h-10` e o `Button` default também
+            (o `size="sm"` é `h-9` e destoava 4px deles na mesma fileira). */}
         <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="outline"
-            size="sm"
             onClick={onToggleCompact}
             aria-pressed={isCompact}
           >
@@ -94,7 +133,7 @@ export function BoardToolbar({
             )}
           </Button>
           {canCreateTasks && (
-            <Button size="sm" onClick={onCreateTask} disabled={isUpdating}>
+            <Button onClick={onCreateTask} disabled={isUpdating}>
               <Plus className="mr-1 h-4 w-4" aria-hidden="true" />
               Nova Tarefa
             </Button>
@@ -153,7 +192,6 @@ export function BoardToolbar({
           <DropdownMenuTrigger asChild>
             <Button
               variant={filters.overdue || filters.dueToday ? "secondary" : "outline"}
-              size="sm"
               aria-pressed={Boolean(filters.overdue || filters.dueToday)}
             >
               <CalendarClock className="mr-1 h-4 w-4" aria-hidden="true" />
@@ -189,24 +227,26 @@ export function BoardToolbar({
         {(filters.projectId || filters.overdue || filters.dueToday || filters.search || filters.assigneeId) && (
           <Button
             variant="ghost"
-            size="sm"
             onClick={() => onFiltersChange({})}
           >
             Limpar filtros
           </Button>
         )}
 
-        {/* Buscador expansível — no canto direito (ml-auto), não entre os selects. */}
+        {/* Buscador — no canto direito (ml-auto), não entre os selects.
+            Desktop (≥ `sm`): nasce aberto e não tem toggle; o `sm:w-[200px]` segura a
+            largura mesmo com `searchOpen === false`, e a lupa some (`sm:hidden`).
+            Mobile: a lupa abre o campo e o blur o recolhe se estiver vazio. */}
         <div
           className={cn(
-            "ml-auto flex items-center overflow-hidden rounded-md border bg-background px-1.5 transition-[width] duration-300 ease-in-out",
-            searchOpen ? "w-[200px]" : "w-9",
+            "ml-auto flex h-10 items-center overflow-hidden rounded-md border bg-background px-2 transition-[width] duration-300 ease-in-out",
+            searchExpanded ? "w-[200px]" : "w-9 sm:w-[200px]",
           )}
         >
           <button
             type="button"
             aria-label="Buscar tarefas"
-            className="shrink-0 rounded p-1 text-muted-foreground transition-colors hover:text-foreground"
+            className="shrink-0 rounded p-1 text-muted-foreground transition-colors hover:text-foreground sm:hidden"
             onClick={() => {
               setSearchOpen(true)
               requestAnimationFrame(() => searchRef.current?.focus())
@@ -214,29 +254,34 @@ export function BoardToolbar({
           >
             <Search className="h-4 w-4" aria-hidden="true" />
           </button>
+          {/* No desktop a lupa é só o ícone do campo — decorativa, sem toggle. */}
+          <Search className="hidden h-4 w-4 shrink-0 text-muted-foreground sm:block" aria-hidden="true" />
           <input
             ref={searchRef}
-            className="w-full min-w-0 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+            className="h-full w-full min-w-0 bg-transparent px-1.5 text-sm outline-none placeholder:text-muted-foreground"
             placeholder="Buscar tarefas..."
             aria-label="Buscar tarefas por título"
-            tabIndex={searchOpen ? 0 : -1}
-            value={filters.search ?? ""}
+            tabIndex={searchExpanded ? 0 : -1}
+            value={searchTerm}
             onChange={(e) => onFiltersChange({ ...filters, search: e.target.value || undefined })}
             onBlur={() => {
-              if (!(filters.search ?? "")) setSearchOpen(false)
+              if (!isDesktop && !searchTerm) setSearchOpen(false)
             }}
           />
-          <button
-            type="button"
-            aria-label="Limpar busca"
-            className="shrink-0 rounded p-0.5 text-muted-foreground transition-colors hover:text-foreground"
-            onClick={() => {
-              onFiltersChange({ ...filters, search: undefined })
-              searchRef.current?.focus()
-            }}
-          >
-            <X className="h-3.5 w-3.5" aria-hidden="true" />
-          </button>
+          {/* Sem texto não há o que limpar: o X ficaria visível o tempo todo no desktop. */}
+          {searchTerm && (
+            <button
+              type="button"
+              aria-label="Limpar busca"
+              className="shrink-0 rounded p-0.5 text-muted-foreground transition-colors hover:text-foreground"
+              onClick={() => {
+                onFiltersChange({ ...filters, search: undefined })
+                searchRef.current?.focus()
+              }}
+            >
+              <X className="h-3.5 w-3.5" aria-hidden="true" />
+            </button>
+          )}
         </div>
       </div>
     </div>

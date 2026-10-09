@@ -1,19 +1,24 @@
 import { NextResponse } from "next/server"
-import { ensurePermission, requireApiActor } from "@/lib/auth/api-guard"
+import { routeErrorResponse } from "@/lib/api/route-error-response"
+import { requireApiActor } from "@/lib/auth/api-guard"
+import { domainErrorResponse } from "@/lib/api/domain-error-response"
+import { PENDING_MODERATION_DENIED_MESSAGE, userActor } from "@/backend/domain"
 import { getBackendComposition } from "@/backend/composition/root"
 const { userManagement: userManagementModule } = getBackendComposition()
+// B6-4 (D4): MANAGE_USERS com a mensagem propria "Acesso negado." (ponto final congelado) mora
+// nos use cases do fluxo. O POST chama o assert ANTES do parse (ordem medida: gate antes da
+// validacao "ID do usuario e acao sao obrigatorios"); o GET nao tem validacao antes do gate,
+// entao o gate do proprio ListPendingUsersUseCase basta.
 export async function GET() {
   try {
     const auth = await requireApiActor()
     if (auth.error) return auth.error
-    const deny = ensurePermission(auth.actor, "MANAGE_USERS", "Acesso negado.")
-    if (deny) return deny
-
-    const pendingUsers = await userManagementModule.listPendingUsers()
+    const pendingUsers = await userManagementModule.listPendingUsers(
+      userActor(auth.actor.id, auth.actor.roles),
+    )
     return NextResponse.json({ pendingUsers }, { status: 200 })
   } catch (error) {
-    console.error("Erro ao buscar usuários pendentes:", error)
-    return NextResponse.json({ error: "Erro ao buscar usuários pendentes" }, { status: 500 })
+    return routeErrorResponse(error, { fallback: "Erro ao buscar usuários pendentes" })
   }
 }
 
@@ -21,8 +26,8 @@ export async function POST(request: Request) {
   try {
     const auth = await requireApiActor()
     if (auth.error) return auth.error
-    const deny = ensurePermission(auth.actor, "MANAGE_USERS", "Acesso negado.")
-    if (deny) return deny
+    const actor = userActor(auth.actor.id, auth.actor.roles)
+    userManagementModule.assertCanManageUsers({ actor, deniedMessage: PENDING_MODERATION_DENIED_MESSAGE })
 
     const body = await request.json()
     const userId = Number(body?.userId)
@@ -32,7 +37,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "ID do usuário e ação são obrigatórios" }, { status: 400 })
     }
 
-    const user = await userManagementModule.moderatePendingUser(userId, action)
+    const user = await userManagementModule.moderatePendingUser(actor, userId, action)
 
     return NextResponse.json(
       {
@@ -45,6 +50,8 @@ export async function POST(request: Request) {
       { status: 200 },
     )
   } catch (error: any) {
+    const mapped = domainErrorResponse(error)
+    if (mapped) return mapped
     if (error.code === "P2025") {
       return NextResponse.json({ error: "Usuário não encontrado" }, { status: 404 })
     }

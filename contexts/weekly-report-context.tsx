@@ -12,6 +12,7 @@ interface WeeklyReportContextType {
   error: string | null
   fetchWeeklyReports: (userId?: number, weekStart?: string, weekEnd?: string) => Promise<void>
   generateWeeklyReport: (userId: number, weekStart: string, weekEnd: string) => Promise<WeeklyReport>
+  bulkGenerateWeeklyReports: (periodType: string, from: string, to: string) => Promise<{ periodCount: number; reportCount: number }>
   createWeeklyReport: (report: WeeklyReportFormData) => Promise<WeeklyReport>
   updateWeeklyReport: (id: number, data: Partial<WeeklyReport>) => Promise<WeeklyReport>
   deleteWeeklyReport: (id: number) => Promise<void>
@@ -57,6 +58,26 @@ export function WeeklyReportProvider({ children }: { children: ReactNode }) {
       throw new Error("Erro ao gerar relatório semanal: resposta inválida")
     } catch (err) {
       setError("Erro ao gerar relatório semanal")
+      console.error(err)
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const bulkGenerateWeeklyReports = async (periodType: string, from: string, to: string) => {
+    try {
+      setLoading(true)
+      setError(null)
+      const response = await WeeklyReportsAPI.bulkGenerate(periodType, from, to)
+      const result = response?.result
+      if (result) {
+        await fetchWeeklyReports()
+        return { periodCount: result.periodCount, reportCount: result.reportCount }
+      }
+      throw new Error("Erro ao gerar relatórios em lote: resposta inválida")
+    } catch (err) {
+      setError("Erro ao gerar relatórios em lote")
       console.error(err)
       throw err
     } finally {
@@ -150,6 +171,7 @@ export function WeeklyReportProvider({ children }: { children: ReactNode }) {
         error,
         fetchWeeklyReports,
         generateWeeklyReport,
+        bulkGenerateWeeklyReports,
         createWeeklyReport,
         updateWeeklyReport,
         deleteWeeklyReport,

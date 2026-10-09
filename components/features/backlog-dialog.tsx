@@ -33,7 +33,7 @@ export function BacklogDialog({ open, onOpenChange, projectId }: BacklogDialogPr
   const [backlogAssigneeIds, setBacklogAssigneeIds] = useState<string[]>([])
   const [backlogPriority, setBacklogPriority] = useState<"low" | "medium" | "high">("medium")
   const [backlogDueDate, setBacklogDueDate] = useState("")
-  const [backlogPoints, setBacklogPoints] = useState(50)
+  // plan-v3 OND1-D (DEC-30): o campo "Pontos por task" saiu — o importador não define valor.
   const [backlogTaskVisibility, setBacklogTaskVisibility] = useState<"public" | "delegated" | "private">("delegated")
   const [backlogIsGlobal, setBacklogIsGlobal] = useState(false)
 
@@ -48,7 +48,6 @@ export function BacklogDialog({ open, onOpenChange, projectId }: BacklogDialogPr
     setBacklogAssigneeIds(currentUser?.roles?.includes("GERENTE_PROJETO") ? [String(currentUser.id)] : [])
     setBacklogPriority("medium")
     setBacklogDueDate("")
-    setBacklogPoints(50)
     setBacklogTaskVisibility("delegated")
     setBacklogIsGlobal(false)
     setError(null)
@@ -111,7 +110,6 @@ export function BacklogDialog({ open, onOpenChange, projectId }: BacklogDialogPr
           assigneeIds: backlogIsGlobal ? [] : normalizedAssigneeIds,
           projectId: backlogIsGlobal ? null : Number(backlogProjectId),
           dueDate: backlogDueDate || null,
-          points: backlogPoints,
           completed: false,
           taskVisibility: backlogIsGlobal ? "public" : backlogTaskVisibility,
           isGlobal: backlogIsGlobal,
@@ -131,7 +129,6 @@ export function BacklogDialog({ open, onOpenChange, projectId }: BacklogDialogPr
     backlogAssigneeIds,
     backlogDueDate,
     backlogIsGlobal,
-    backlogPoints,
     backlogPriority,
     backlogProjectId,
     backlogTaskVisibility,
@@ -242,16 +239,6 @@ export function BacklogDialog({ open, onOpenChange, projectId }: BacklogDialogPr
             <div className="grid gap-2">
               <Label>Data de vencimento</Label>
               <Input type="date" value={backlogDueDate} onChange={(e) => setBacklogDueDate(e.target.value)} />
-            </div>
-
-            <div className="grid gap-2">
-              <Label>Pontos por task</Label>
-              <Input
-                type="number"
-                min={0}
-                value={backlogPoints}
-                onChange={(e) => setBacklogPoints(Number(e.target.value) || 0)}
-              />
             </div>
           </div>
 

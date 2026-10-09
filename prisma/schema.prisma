@@ -99,6 +99,7 @@ model tasks {
   assignees      task_assignees[] @relation("TaskAssignees")
   workSessions   work_session_tasks[] @relation("TaskWorkSessions")
   taskProgress   task_user_progress[] @relation("TaskUserProgress")
+  subtasks       task_subtasks[]      @relation("TaskSubtasks")
 }
 
 model task_assignees {
@@ -132,6 +133,22 @@ model task_user_progress {
   @@index([taskId])
   @@index([userId])
   @@index([taskId, status])
+}
+
+/// plan-v4 · V4-4 — subtask da tarefa mãe (DEC-78). Sem responsável próprio e sem prazo próprio
+/// (herda os dois da mãe — D-D), por isso não há FK para users aqui. Cascade igual às outras
+/// tabelas-filhas de tasks (`task_assignees`, `task_user_progress`): apagar a mãe apaga as subtasks.
+model task_subtasks {
+  id          Int       @id @default(autoincrement())
+  taskId      Int
+  title       String
+  completed   Boolean   @default(false)
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  task        tasks     @relation("TaskSubtasks", fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@index([taskId, completed])
 }
 
 model rewards {

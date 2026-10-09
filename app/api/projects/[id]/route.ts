@@ -1,15 +1,14 @@
 import { NextResponse } from "next/server"
+import { routeErrorResponse } from "@/lib/api/route-error-response"
 import { requireApiActor } from "@/lib/auth/api-guard"
 import { getBackendComposition } from "@/backend/composition/root"
+import { domainErrorResponse } from "@/lib/api/domain-error-response"
 
 const { projectManagement: projectManagementModule } = getBackendComposition()
-function toHttpStatus(error: unknown) {
-  const message = error instanceof Error ? error.message : "Erro interno do servidor"
-  if (message.includes("não encontrado")) return 404
-  if (message.includes("Acesso negado") || message.includes("permissão")) return 403
-  if (message.includes("Dados inválidos") || message.includes("inválido")) return 400
-  return 500
-}
+
+// OND5-B3 (R4): typed DomainErrors mapped by domainErrorResponse. EVOLUTION: the old
+// heuristic mapped "Projeto não pode ser excluído no status atual" to 500; the DeleteProject
+// use case now throws ConflictError -> 409 (pinned by the contract suite OND5-B3).
 
 export async function GET(_request: Request, context: { params: Promise<{ id: string }> }) {
   try {
@@ -30,9 +29,7 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
 
     return NextResponse.json({ project }, { status: 200 })
   } catch (error: unknown) {
-    console.error("Erro ao buscar projeto:", error)
-    const message = error instanceof Error ? error.message : "Erro ao buscar projeto"
-    return NextResponse.json({ error: message }, { status: toHttpStatus(error) })
+    return routeErrorResponse(error, { fallback: "Erro ao buscar projeto" })
   }
 }
 
@@ -56,9 +53,7 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
 
     return NextResponse.json({ project }, { status: 200 })
   } catch (error: unknown) {
-    console.error("Erro ao atualizar projeto:", error)
-    const message = error instanceof Error ? error.message : "Erro ao atualizar projeto"
-    return NextResponse.json({ error: message }, { status: toHttpStatus(error) })
+    return routeErrorResponse(error, { fallback: "Erro ao atualizar projeto" })
   }
 }
 
@@ -80,8 +75,6 @@ export async function DELETE(_request: Request, context: { params: Promise<{ id:
 
     return NextResponse.json({ success: true }, { status: 200 })
   } catch (error: unknown) {
-    console.error("Erro ao excluir projeto:", error)
-    const message = error instanceof Error ? error.message : "Erro ao excluir projeto"
-    return NextResponse.json({ error: message }, { status: toHttpStatus(error) })
+    return routeErrorResponse(error, { fallback: "Erro ao excluir projeto" })
   }
 }

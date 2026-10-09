@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
+import { routeErrorResponse } from "@/lib/api/route-error-response"
 import { requireApiActor } from "@/lib/auth/api-guard";
 import { getBackendComposition } from "@/backend/composition/root"
-
+// OND8-B4 (R4): DomainErrors mapeados. EVOLUTION (documentada): POST create com validacao
+// ("Titulo do issue e obrigatorio" etc.) antes caia no 500 com error.message; agora
+// ValidationError -> 400 {error,code,details} (mensagens pinadas no contract 8.3).
 const { labOperations: labOperationsModule } = getBackendComposition();
 
 // GET: Obter todos os issues
@@ -29,8 +32,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ issues });
   } catch (error) {
-    console.error("Erro ao buscar issues:", error);
-    return NextResponse.json({ error: "Erro ao buscar issues" }, { status: 500 });
+    return routeErrorResponse(error, { fallback: "Erro ao buscar issues" })
   }
 }
 
@@ -48,7 +50,6 @@ export async function POST(request: Request) {
     });
     return NextResponse.json({ issue }, { status: 201 });
   } catch (error: any) {
-    console.error("Erro ao criar issue:", error);
-    return NextResponse.json({ error: error.message || "Erro ao criar issue" }, { status: 500 });
+    return routeErrorResponse(error, { fallback: "Erro ao criar issue", exposeMessage: true })
   }
 }

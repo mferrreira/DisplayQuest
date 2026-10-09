@@ -4,16 +4,21 @@
  * Notifications hooks (E1/T1.4b) — the ONLY sanctioned data path for notifications.
  * Server state via TanStack Query over the typed endpoints (real wire shapes, see endpoint file).
  *
- * Polling: refetchInterval 60s + refetchOnWindowFocus per EXECUTION-PLAN defaults (no websockets
- * this phase). Mutations patch the list cache optimistically; unreadCount invalidates.
+ * Polling: the list keeps 60s, but the unread counter runs at NOTIFICATION_POLL_MS (5s)
+ * because the notification SOUND fires on the counter going up, and a sound that arrives
+ * up to a minute late is useless (owner's request, 2026-10-09). The counter endpoint is a
+ * cheap indexed count, so the faster cadence is affordable.
+ * Mutations patch the list cache optimistically; unreadCount invalidates.
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useSession } from "next-auth/react"
 import { notificationsApi } from "@/lib/api/endpoints/notifications"
 import { queryKeys } from "@/lib/query/keys"
 import type { Notification } from "@/entities/notification"
+import { NOTIFICATION_POLL_MS } from "@/components/ui/use-notification-sound"
 
-const REFETCH_INTERVAL_MS = 60_000
+/** Cadência da lista completa. */
+export const NOTIFICATION_LIST_POLL_MS = 60_000
 
 export function useNotifications() {
   const queryClient = useQueryClient()
@@ -25,7 +30,7 @@ export function useNotifications() {
     queryKey: queryKeys.notifications.list({}),
     queryFn: () => notificationsApi.list({}),
     enabled: authenticated,
-    refetchInterval: REFETCH_INTERVAL_MS,
+    refetchInterval: NOTIFICATION_LIST_POLL_MS,
     staleTime: 30_000,
   })
 
@@ -33,8 +38,8 @@ export function useNotifications() {
     queryKey: queryKeys.notifications.unreadCount(),
     queryFn: () => notificationsApi.unreadCount(),
     enabled: authenticated,
-    refetchInterval: REFETCH_INTERVAL_MS,
-    staleTime: 30_000,
+    refetchInterval: NOTIFICATION_POLL_MS,
+    staleTime: 0,
   })
 
   const invalidate = () => {

@@ -1,4 +1,4 @@
-import type { WorkSession } from "@/backend/models/WorkSession"
+import type { WorkSession } from "@/backend/domain"
 
 export interface WorkSessionCompletedEvent {
   session: WorkSession

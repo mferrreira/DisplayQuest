@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Loader2 } from "lucide-react"
+import { groupByPerson } from "@/lib/reports/grouping"
 
 interface AggregateData {
   report: {
@@ -16,7 +17,7 @@ interface AggregateData {
     title: string | null
     content: string
   }
-  logs: Array<{ id: number; userName: string | null; date: string; note: string | null }>
+  logs: Array<{ id: number; userName: string | null; date: string; startTime: string | null; endTime: string | null; note: string | null }>
   sessions: Array<{
     id: number
     userName: string
@@ -93,43 +94,56 @@ export default function ProjectReportPrintPage({ params }: { params: Promise<{ i
 
       <section className="mb-8">
         <h2 className="font-semibold mb-2">Sessões ({data.totals.sessionCount}) · Total: {data.totals.totalHours.toFixed(1)}h</h2>
-        <table className="w-full text-sm border-collapse">
-          <thead>
-            <tr className="border-b">
-              <th className="text-left py-1">Usuário</th>
-              <th className="text-left py-1">Início</th>
-              <th className="text-left py-1">Fim</th>
-              <th className="text-right py-1">Horas</th>
-              <th className="text-left py-1">Atividade</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.sessions.map((session) => (
-              <tr key={session.id} className="border-b align-top">
-                <td className="py-1 pr-2">{session.userName}</td>
-                <td className="py-1 pr-2">{fmt(session.startTime)}</td>
-                <td className="py-1 pr-2">{fmt(session.endTime)}</td>
-                <td className="py-1 pr-2 text-right">{session.durationHours != null ? session.durationHours.toFixed(2) : "-"}</td>
-                <td className="py-1">{session.activity ?? "-"}</td>
-              </tr>
-            ))}
-            {data.sessions.length === 0 && (
-              <tr><td colSpan={5} className="py-2 text-muted-foreground">Nenhuma sessão na janela.</td></tr>
-            )}
-          </tbody>
-        </table>
+        {data.sessions.length === 0 && (
+          <p className="text-sm text-muted-foreground">Nenhuma sessão na janela.</p>
+        )}
+        {groupByPerson(data.sessions, "grouped").map((section) => (
+          <div key={section.key} className="mb-4">
+            <h3 className="text-sm font-medium mb-1">{section.label}</h3>
+            <table className="w-full text-sm border-collapse">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left py-1">Início</th>
+                  <th className="text-left py-1">Fim</th>
+                  <th className="text-right py-1">Horas</th>
+                  <th className="text-left py-1">Local</th>
+                  <th className="text-left py-1">Atividade</th>
+                </tr>
+              </thead>
+              <tbody>
+                {section.items.map((session) => (
+                  <tr key={session.id} className="border-b align-top">
+                    <td className="py-1 pr-2">{fmt(session.startTime)}</td>
+                    <td className="py-1 pr-2">{fmt(session.endTime)}</td>
+                    <td className="py-1 pr-2 text-right">{session.durationHours != null ? session.durationHours.toFixed(2) : "-"}</td>
+                    <td className="py-1 pr-2">{session.location ?? "-"}</td>
+                    <td className="py-1">{session.activity ?? "-"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ))}
       </section>
 
       <section>
         <h2 className="font-semibold mb-2">Logs diários ({data.totals.logCount})</h2>
-        <ul className="text-sm space-y-1">
-          {data.logs.map((log) => (
-            <li key={log.id}>
-              <strong>{log.userName ?? "?"}</strong> · {fmt(log.date)} — {log.note ?? "-"}
-            </li>
-          ))}
-          {data.logs.length === 0 && <li className="text-muted-foreground">Nenhum log na janela.</li>}
-        </ul>
+        {data.logs.length === 0 && <p className="text-sm text-muted-foreground">Nenhum log na janela.</p>}
+        {groupByPerson(data.logs, "grouped").map((section) => (
+          <div key={section.key} className="mb-3">
+            <h3 className="text-sm font-medium mb-1">{section.label}</h3>
+            <ul className="text-sm space-y-1">
+              {section.items.map((log) => (
+                <li key={log.id}>
+                  {log.startTime && log.endTime
+                    ? `${fmt(log.startTime)} → ${fmt(log.endTime)}`
+                    : fmt(log.startTime ?? log.date)}{" "}
+                  — {log.note ?? "-"}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
       </section>
     </div>
   )

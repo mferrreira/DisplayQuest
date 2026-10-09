@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server"
+import { routeErrorResponse } from "@/lib/api/route-error-response"
 import { getBackendComposition } from "@/backend/composition/root"
 import { requireApiActor } from "@/lib/auth/api-guard"
-
+// OND8-B4 (R4): DomainErrors mapeados. EVOLUTION (documentada): createLabNotice
+// ("Aviso e obrigatorio" / usuario inativo/inexistente) antes caia no 500 com error.message;
+// agora ValidationError -> 400, NotFoundError -> 404, ForbiddenError -> 403.
 const { labOperations: labOperationsModule } = getBackendComposition()
 
 export async function GET() {
@@ -15,8 +18,7 @@ export async function GET() {
       notices: notices.map((notice) => notice.toJSON()),
     })
   } catch (error: any) {
-    console.error("Erro ao listar avisos:", error)
-    return NextResponse.json({ error: error.message || "Erro ao listar avisos" }, { status: 500 })
+    return routeErrorResponse(error, { fallback: "Erro ao listar avisos", exposeMessage: true })
   }
 }
 
@@ -34,7 +36,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ notice: notice.toJSON() }, { status: 201 })
   } catch (error: any) {
-    console.error("Erro ao criar aviso:", error)
-    return NextResponse.json({ error: error.message || "Erro ao criar aviso" }, { status: 500 })
+    return routeErrorResponse(error, { fallback: "Erro ao criar aviso", exposeMessage: true })
   }
 }

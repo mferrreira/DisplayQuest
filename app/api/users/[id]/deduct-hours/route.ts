@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireApiActor } from "@/lib/auth/api-guard"
+import { domainErrorResponse } from "@/lib/api/domain-error-response"
 import { getBackendComposition } from "@/backend/composition/root"
 const { userManagement: userManagementModule } = getBackendComposition()
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     const auth = await requireApiActor()
     if (auth.error) return auth.error
 
+    const params = await context.params
     const userId = Number(params.id)
     if (!Number.isInteger(userId) || userId <= 0) {
       return NextResponse.json({ error: "ID do usuário inválido" }, { status: 400 })
@@ -36,6 +38,8 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
     return NextResponse.json(result, { status: 200 })
   } catch (error: any) {
+    const mapped = domainErrorResponse(error)
+    if (mapped) return mapped
     const message = typeof error?.message === "string" ? error.message : ""
     if (message.includes("Acesso negado") || message.includes("não pertence")) {
       return NextResponse.json({ error: message }, { status: 403 })

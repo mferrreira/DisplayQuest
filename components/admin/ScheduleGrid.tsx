@@ -4,24 +4,21 @@ import React, { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { UserPicker } from "@/components/ui/user-picker"
+import { UserMultiSelect } from "@/components/ui/user-multi-select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
-import { badgeVariants } from "@/components/ui/badge"
-import { cn } from "@/lib/utils/utils"
 import { 
-  Check,
   Clock, 
   Plus, 
   Trash2, 
   AlertCircle,
   Calendar,
-  Users,
-  X
+  Users
 } from "lucide-react"
 import { useToast } from "@/contexts/use-toast"
 import { hasPermission } from "@/lib/auth/rbac"
 import { TIME_SLOTS, WEEK_DAYS, snapRange } from "@/lib/constants/schedule-grid"
-import { groupSchedulesByUser, filterSchedulesByMemberIds } from "@/lib/schedule-grid-view"
+import { filterSchedulesByMemberIds, groupSchedulesByUser } from "@/lib/schedule-grid-view"
 
 function getUserColor(userId: number) {
   const colors = [
@@ -228,23 +225,13 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
     }
   }
 
-  const toggleUser = (userId: number) => {
-    setSelectedUserIds((prev) => {
-      const next = new Set(prev)
-      if (next.has(userId)) {
-        next.delete(userId)
-      } else {
-        next.add(userId)
-      }
-      return next
-    })
-  }
-
-  const clearSelection = () => setSelectedUserIds(new Set())
-
   const selectedUser = users.find(u => u.id === parseInt(selectedUserId))
-  const visibleSlots = TIME_SLOTS
   const visibleSchedules: any[] = filterSchedulesByMemberIds(schedules, selectedUserIds)
+  // A tabela tem altura limite com rolagem própria e cabeçalho fixo. Medido em 2026-10-09: a
+  // grade rendia 19 linhas e 1561 px, e 1944 px numa janela mais estreita, e a página
+  // inteira crescia junto. A rolagem é a resposta: quem lê a linha do horário continua
+  // vendo quem está naquela hora, e o painel não estica mais.
+  const visibleSlots = TIME_SLOTS
   const mobileGroups = groupSchedulesByUser(visibleSchedules, users)
   const totalScheduledMinutes = blocks.reduce((sum, b) => {
     const [sh, sm] = b.startTime.split(":").map(Number)
@@ -292,49 +279,16 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
           )}
         </div>
 
-        <div className="mb-4 rounded-lg border bg-muted/20 p-3">
-          <div className="mb-2 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 text-sm font-medium">
-              <Users className="h-4 w-4" />
-              Membros visiveis na grade
-            </div>
-            {selectedUserIds.size > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 px-2 text-xs"
-                onClick={clearSelection}
-                title="Voltar a mostrar todos os horários"
-              >
-                <X className="mr-1 h-3 w-3" />
-                Limpar seleção
-              </Button>
-            )}
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {activeUsers.map((user) => {
-              const hasAnySchedule = schedules.some((schedule) => schedule.userId === user.id)
-              const isSelected = selectedUserIds.has(user.id)
-              return (
-                <button
-                  key={user.id}
-                  type="button"
-                  onClick={() => toggleUser(user.id)}
-                  aria-pressed={isSelected}
-                  className={cn(
-                    badgeVariants({ variant: isSelected ? "success" : "outline" }),
-                    "cursor-pointer gap-1 transition-colors",
-                    !isSelected && "hover:bg-accent hover:text-accent-foreground",
-                  )}
-                  title={isSelected ? `Ocultar ${user.name}` : `Mostrar apenas ${user.name}`}
-                >
-                  {isSelected && <Check className="h-3 w-3" />}
-                  <span>{user.name}</span>
-                  {!hasAnySchedule ? <span className="text-[10px]">(sem horario)</span> : null}
-                </button>
-              )
-            })}
-          </div>
+        <div className="mb-4 flex items-center gap-2">
+          <Users className="h-4 w-4 text-muted-foreground" />
+          <UserMultiSelect
+            users={activeUsers}
+            selected={selectedUserIds}
+            onChange={setSelectedUserIds}
+            tagFor={(user) =>
+              schedules.some((schedule) => schedule.userId === user.id) ? undefined : "sem horário"
+            }
+          />
         </div>
 
         {/* Dialog para definir horários */}
@@ -352,25 +306,14 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
             <div className="space-y-4">
               <div>
                 <label className="text-sm font-medium">Selecionar Usuário</label>
-                <Select 
-                  value={selectedUserId} 
+                <UserPicker
+                  users={users.filter(u => u.status === 'active')}
+                  value={selectedUserId}
                   onValueChange={setSelectedUserId}
+                  placeholder="Escolha um usuário"
+                  searchPlaceholder="Buscar por nome ou e-mail"
                   disabled={!canManageAllSchedules}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Escolha um usuário" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {users
-                      .filter(u => u.status === 'active')
-                      .map((user) => (
-                        <SelectItem key={user.id} value={user.id.toString()}>
-                          {user.name} ({user.email})
-                        </SelectItem>
-                      ))
-                    }
-                  </SelectContent>
-                </Select>
+                />
               </div>
 
               {selectedUserId && (
@@ -516,8 +459,9 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
 
               {/* Tabela desktop */}
               <div className="hidden md:block">
+              <div className="max-h-[70vh] overflow-y-auto rounded-md border">
             <table className="w-full border text-xs" style={{ tableLayout: "fixed" }}>
-              <thead>
+              <thead className="sticky top-0 z-10">
                 <tr>
                   <th className="w-[44px] px-1 py-1.5 border-b bg-blue-50 dark:bg-info/10 text-left font-medium text-[11px]">Horário</th>
                   {WEEK_DAYS.map((day) => (
@@ -529,8 +473,8 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
               </thead>
               <tbody>
                 {visibleSlots.map((slot) => (
-                  <tr key={slot.start + slot.end}>
-                    <td className="w-[44px] px-1 py-1.5 border-r text-right align-middle whitespace-nowrap border-b-2 font-medium text-[11px]">
+                  <tr key={slot.start + slot.end} className="h-12">
+                    <td className="w-[44px] px-1 py-2 border-r text-right align-middle whitespace-nowrap border-b-2 font-medium text-[11px]">
                       {slot.start}<br />{slot.end}
                     </td>
                     {WEEK_DAYS.map((_, dayIdx) => {
@@ -538,9 +482,9 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
                         if (s.dayOfWeek !== dayIdx) return false
                         return s.startTime < slot.end && s.endTime > slot.start
                       })
-                      
+
                       return (
-                        <td key={dayIdx} className="px-1.5 py-1.5 border align-top">
+                        <td key={dayIdx} className="px-1.5 py-2 border align-top">
                           {slotSchedules.length === 0 ? (
                             <span className="text-muted-foreground text-center block">-</span>
                           ) : (
@@ -550,7 +494,7 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
                                 return (
                                   <div
                                     key={s.id}
-                                    className={`group rounded border px-2 py-1 text-xs font-medium ${getUserColor(s.userId)} flex items-center justify-between gap-1`}
+                                    className={`group rounded border px-2 py-1.5 text-xs font-medium ${getUserColor(s.userId)} flex items-center justify-between gap-1`}
                                   >
                                     <span className="truncate">{user?.name || "Usuário"}</span>
                                     <span className="ml-1 text-[10px] text-muted-foreground">
@@ -577,6 +521,7 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
                 ))}
               </tbody>
             </table>
+              </div>
               </div>
             </>
           )}

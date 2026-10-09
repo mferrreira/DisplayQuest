@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server"
 import { requireApiActor } from "@/lib/auth/api-guard"
 import { getBackendComposition } from "@/backend/composition/root"
-
+import { domainErrorResponse } from "@/lib/api/domain-error-response"
+// OND8-B4 (R4): DomainErrors mapeados; heuristic legado (toHttpStatus) como fallback.
+// Status preservados do legado: 403 permissao, 404 nao encontrado, 400 validacao.
 const { labOperations: labOperationsModule } = getBackendComposition();
 
 function toHttpStatus(error: unknown) {
@@ -41,6 +43,8 @@ export async function PUT(
     
     return NextResponse.json({ schedule: schedule.toJSON() });
   } catch (error: any) {
+    const mapped = domainErrorResponse(error);
+    if (mapped) return mapped;
     console.error('Erro ao atualizar horário do laboratório:', error);
     return NextResponse.json({
       error: error.message || 'Erro ao atualizar horário do laboratório'
@@ -70,6 +74,8 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
+    const mapped = domainErrorResponse(error);
+    if (mapped) return mapped;
     console.error('Erro ao excluir horário do laboratório:', error);
     return NextResponse.json({
       error: error.message || 'Erro ao excluir horário do laboratório'

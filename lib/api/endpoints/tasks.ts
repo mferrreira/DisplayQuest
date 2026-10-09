@@ -4,12 +4,46 @@
  */
 import { z } from "zod";
 import { apiFetch, qs, type QueryParams } from "@/lib/api/client";
-import { wireTaskSchema, taskUserProgressSchema, type Task } from "@/entities/task";
+import { taskSubtaskSchema, wireTaskSchema, taskUserProgressSchema, type Task, type TaskSubtask } from "@/entities/task";
 
 const taskListResponse = z.object({ tasks: z.array(wireTaskSchema) });
 const taskResponse = z.object({ task: wireTaskSchema });
+
+/**
+ * plan-v4 · V4-4 — a resposta de uma operação de subtask carrega a MÃE junto. As duas
+ * consequências de mexer numa subtask são da mãe: a base do prêmio (10 + 5·n) muda, e a última
+ * subtask concluída move a mãe para "Em Revisão". Sem a mãe na resposta, o cliente teria que
+ * recarregar o quadro para ver o que acabou de acontecer.
+ */
+const subtaskMutationResponse = z.object({ subtask: taskSubtaskSchema, task: wireTaskSchema });
+
+/**
+ * plan-v3 OND4-A (AC-P3-08) — a resposta de concluir/aprovar carrega o prêmio creditado.
+ *
+ * `awardedTo` e `awardedPoints` são o par, e o cliente só deve animar o próprio contador quando
+ * `awardedTo` é a pessoa logada: a aprovação credita o **responsável** pela tarefa, quase nunca
+ * quem aprovou. `null` nos dois = ninguém creditado (tarefa delegada foi para revisão; o award
+ * não rodou). `awardedPoints: 0` com `awardedTo` presente = o award já existia e nada mudou —
+ * caso diferente de `null`, e a interface trata os dois como "sem delta".
+ */
+const awardedTaskResponse = z.object({
+  task: wireTaskSchema,
+  awardedTo: z.number().int().nullable(),
+  awardedPoints: z.number().int().nullable(),
+});
 const progressResponse = z.object({ progress: z.array(taskUserProgressSchema) });
 const deleteResponse = z.object({ success: z.boolean() });
+
+export interface AwardedTaskResponse {
+  task: Task;
+  awardedTo: number | null;
+  awardedPoints: number | null;
+}
+
+export interface SubtaskMutationResponse {
+  subtask: TaskSubtask;
+  task: Task;
+}
 
 /** Client-side filter params (nuqs-backed in E2); the server filters by session actor. */
 /** Client-side filter params (nuqs-backed in E2); the server filters by session actor.
@@ -61,17 +95,22 @@ export const tasksApi = {
     });
   },
 
-  complete(id: number, userId?: number) {
+  complete(id: number, userId?: number): Promise<AwardedTaskResponse> {
     return apiFetch({
       path: `/api/tasks/${id}`,
       method: "PATCH",
       body: { action: "complete", ...(userId ? { userId } : {}) },
-      schema: taskResponse,
+      schema: awardedTaskResponse,
     });
   },
 
-  approve(id: number) {
-    return apiFetch({ path: `/api/tasks/${id}/approve`, method: "POST", body: {}, schema: taskResponse });
+  approve(id: number): Promise<AwardedTaskResponse> {
+    return apiFetch({
+      path: `/api/tasks/${id}/approve`,
+      method: "POST",
+      body: {},
+      schema: awardedTaskResponse,
+    });
   },
 
   reject(id: number, reason?: string) {
@@ -85,6 +124,38 @@ export const tasksApi = {
 
   remove(id: number) {
     return apiFetch({ path: `/api/tasks/${id}`, method: "DELETE", schema: deleteResponse });
+  },
+
+  /** plan-v4 · V4-4 — criar subtask de uma mãe que já existe. */
+  createSubtask(id: number, title: string): Promise<SubtaskMutationResponse> {
+    return apiFetch({
+      path: `/api/tasks/${id}/subtasks`,
+      method: "POST",
+      body: { title },
+      schema: subtaskMutationResponse,
+    });
+  },
+
+  /** Renomear e/ou concluir. Concluir a última move a mãe para "Em Revisão". */
+  updateSubtask(
+    id: number,
+    subtaskId: number,
+    data: { title?: string; completed?: boolean },
+  ): Promise<SubtaskMutationResponse> {
+    return apiFetch({
+      path: `/api/tasks/${id}/subtasks/${subtaskId}`,
+      method: "PATCH",
+      body: data,
+      schema: subtaskMutationResponse,
+    });
+  },
+
+  removeSubtask(id: number, subtaskId: number): Promise<SubtaskMutationResponse> {
+    return apiFetch({
+      path: `/api/tasks/${id}/subtasks/${subtaskId}`,
+      method: "DELETE",
+      schema: subtaskMutationResponse,
+    });
   },
 
   globalProgress(userId: number) {

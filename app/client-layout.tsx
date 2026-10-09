@@ -12,6 +12,7 @@ import { AppHeader } from "@/components/layout/app-header"
 import { FloatingSessionTimer } from "@/components/ui/floating-session-timer"
 import { QueryProvider } from "@/shared/providers/query-provider"
 import { Toaster } from "@/components/ui/sonner"
+import { NotificationSound } from "@/components/ui/notification-sound"
 import { usePathname } from "next/navigation"
 import type { Session } from "next-auth"
 
@@ -38,6 +39,9 @@ function DashboardProviders({ children }: { children: React.ReactNode }) {
 function LayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const isDashboardRoute = pathname.startsWith("/dashboard")
+  // Print/PDF route: hide the floating session timer so its fixed button
+  // doesn't render mid-content in the exported PDF (scoped to this route only).
+  const isPrintRoute = /^\/dashboard\/.*\/print$/.test(pathname)
 
   if (!isDashboardRoute) {
     return <>{children}</>
@@ -45,8 +49,12 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
 
   return (
     <DashboardProviders>
+      {/* Som de notificação: precisa estar montado uma vez só, fora do painel, porque o
+          painel é montado duas vezes no cabeçalho (versão de mesa e versão compacta) e o
+          som tocaria em dobro. */}
+      <NotificationSound />
       <AppHeader />
-      <FloatingSessionTimer />
+      {!isPrintRoute && <FloatingSessionTimer />}
       {children}
     </DashboardProviders>
   )

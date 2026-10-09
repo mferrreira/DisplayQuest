@@ -3,7 +3,7 @@ import { NuqsTestingAdapter } from "nuqs/adapters/testing";
 import { SessionProvider } from "next-auth/react";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TaskBoard } from "../components/task-board";
 import {
   resetTaskStore,
@@ -48,6 +48,34 @@ function renderBoard() {
 }
 
 const isoYesterday = () => new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+/**
+ * Medido nesta base: o jsdom do Vitest **não tem `window.matchMedia`** (e `tests/setup.ts`
+ * não instala), então quem decide desktop-vs-mobile no `BoardToolbar` é este stub — e sem
+ * ele todo teste cairia no caminho "sem matchMedia", que é o mobile.
+ *
+ * O `delete` no `afterEach` devolve o ambiente ao estado medido (regra da casa, igual em
+ * `tests/unit/components/points-catch-up.test.tsx`).
+ */
+function stubDesktopViewport(isDesktop: boolean) {
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    value: (query: string) => ({
+      matches: isDesktop && query.includes("min-width"),
+      media: query,
+      onchange: null,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      addListener: () => {},
+      removeListener: () => {},
+      dispatchEvent: () => false,
+    }),
+  });
+}
+
+function uninstallMatchMedia() {
+  delete (window as unknown as Record<string, unknown>).matchMedia;
+}
 
 /** Opens the people select and clicks the given option (waits for the users fetch). */
 async function selectPerson(name: string) {
@@ -167,25 +195,44 @@ describe("TaskBoard — filtro por pessoa (select de pessoas)", () => {
   });
 });
 
-describe("TaskBoard — search (ícone de lupa expansível)", () => {
+describe("TaskBoard — busca no mobile (toggle da lupa continua)", () => {
   beforeEach(() => {
     resetTaskStore();
     resetUserStore();
+    stubDesktopViewport(false);
     seedTasks([
       { title: "Minha tarefa delegada", status: "to-do", assigneeIds: [2], taskVisibility: "delegated" },
       { title: "Minha tarefa atrasada", status: "to-do", assigneeIds: [2], taskVisibility: "delegated" },
     ]);
   });
 
+  afterEach(uninstallMatchMedia);
+
   it("expands from the magnifier and filters by title", async () => {
     renderBoard();
     await waitFor(() => expect(screen.getByText("Minha tarefa delegada")).toBeVisible());
     const user = userEvent.setup();
+    // Fechado, o campo existe mas fica fora da ordem de tabulação — como era antes.
+    expect(screen.getByRole("textbox", { name: "Buscar tarefas por título" })).toHaveAttribute(
+      "tabindex",
+      "-1",
+    );
     await user.click(screen.getByRole("button", { name: "Buscar tarefas" }));
     const input = screen.getByRole("textbox", { name: "Buscar tarefas por título" });
     await user.type(input, "atrasad");
     expect(screen.getByText("Minha tarefa atrasada")).toBeVisible();
     expect(screen.queryByText("Minha tarefa delegada")).not.toBeInTheDocument();
+  });
+
+  it("collapses back to the magnifier when blur happens with an empty search", async () => {
+    renderBoard();
+    await waitFor(() => expect(screen.getByText("Minha tarefa delegada")).toBeVisible());
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Buscar tarefas" }));
+    const input = screen.getByRole("textbox", { name: "Buscar tarefas por título" });
+    await user.click(input);
+    await user.tab();
+    expect(input).toHaveAttribute("tabindex", "-1");
   });
 
   it("clears the search via the X button", async () => {
@@ -197,5 +244,43 @@ describe("TaskBoard — search (ícone de lupa expansível)", () => {
     await user.click(screen.getByRole("button", { name: "Limpar busca" }));
     expect(screen.getByText("Minha tarefa delegada")).toBeVisible();
     expect(screen.getByText("Minha tarefa atrasada")).toBeVisible();
+  });
+});
+
+describe("TaskBoard — busca no desktop (campo já aberto, sem toggle)", () => {
+  beforeEach(() => {
+    resetTaskStore();
+    resetUserStore();
+    stubDesktopViewport(true);
+    seedTasks([
+      { title: "Minha tarefa delegada", status: "to-do", assigneeIds: [2], taskVisibility: "delegated" },
+      { title: "Minha tarefa atrasada", status: "to-do", assigneeIds: [2], taskVisibility: "delegated" },
+    ]);
+  });
+
+  afterEach(uninstallMatchMedia);
+
+  it("filters by title without opening the magnifier first", async () => {
+    renderBoard();
+    await waitFor(() => expect(screen.getByText("Minha tarefa delegada")).toBeVisible());
+    const input = screen.getByRole("textbox", { name: "Buscar tarefas por título" });
+    // O campo nasce aberto e **focável**: é o que o teclado precisa, já que a lupa some
+    // em `sm:`. Sem este `tabindex`, o desktop ficaria sem busca por teclado nenhum.
+    expect(input).toHaveAttribute("tabindex", "0");
+    await userEvent.setup().type(input, "atrasad");
+    expect(screen.getByText("Minha tarefa atrasada")).toBeVisible();
+    expect(screen.queryByText("Minha tarefa delegada")).not.toBeInTheDocument();
+  });
+
+  it("does not collapse on blur with an empty search", async () => {
+    renderBoard();
+    await waitFor(() => expect(screen.getByText("Minha tarefa delegada")).toBeVisible());
+    const user = userEvent.setup();
+    const input = screen.getByRole("textbox", { name: "Buscar tarefas por título" });
+    await user.click(input);
+    await user.tab();
+    expect(input).toHaveAttribute("tabindex", "0");
+    // Campo vazio e aberto não tem o que limpar, então o X não aparece.
+    expect(screen.queryByRole("button", { name: "Limpar busca" })).not.toBeInTheDocument();
   });
 });

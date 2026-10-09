@@ -1,0 +1,138 @@
+@startuml
+!include _base.puml
+
+title Sequência — conclusão de uma sessão e a award de pontos
+
+hide empty description
+autonumber
+
+actor "Usuário" as U
+participant "Rota\nwork-sessions" as R
+participant "CompleteWorkSessionUseCase" as UC
+participant "portas de execução" as REPO
+database "sessões e registros diários" as DB
+participant "WorkExecutionEventsPublisher" as EV
+participant "AwardFromWorkSession" as AW
+participant "GetUserProgression" as PR
+participant "EvaluateUserBadges" as BD
+database "pontos, histórico,\nprogressão e emblemas" as GDB
+
+U -> R : conclui a sessão
+R -> UC : execute({ sessionId, actorUserId, actorRoles, endTime, completedTaskIds })
+
+UC -> REPO : findById(sessionId)
+alt sessão ausente
+  UC --> R : NotFoundError
+  R --> U : 404
+else sessão alheia sem MANAGE_WORK_SESSIONS
+  UC --> R : ForbiddenError
+  R --> U : 403
+end
+
+opt o cliente declara um projeto
+  alt não tem MANAGE_WORK_SESSIONS e não é membro
+    UC --> R : ForbiddenError
+    R --> U : 403 Não é membro do projeto
+  end
+end
+
+opt o cliente manda tarefas concluídas
+  alt a sessão ainda não está finalizada
+    UC --> R : ValidationError
+    R --> U : 400 Só é possível vincular tasks\nem sessões finalizadas
+  end
+  UC -> REPO : normaliza e confere cada tarefa
+  REPO --> UC : concluída, atribuída ao ator\ne do mesmo projeto
+  note right
+    Uma tarefa que não satisfaz os três
+    critérios rejeita a operação inteira,
+    com 400.
+  end note
+end
+
+UC -> DB : status = completed, endTime,\nduração recomputada se estava ativa
+DB --> UC : sessão concluída
+
+opt havia tarefas a vincular
+  UC -> DB : substitui o conjunto vinculado
+end
+
+UC -> DB : grava ou atualiza o registro diário da sessão
+note right
+  Uma sessão concluída sempre produz
+  exatamente um registro diário,
+  localizado pela sessão.
+end note
+
+UC -> EV : onWorkSessionCompleted
+
+alt sessão sem identificador
+  EV --> UC : nada a fazer
+else sessão identificada
+  EV -> AW : awardFromWorkSession\n{ userId, workSessionId, duration, completedTaskIds }
+  AW -> GDB : hasAward(usuário, descrição canônica)
+  GDB --> AW : já concedido?
+
+  alt já concedido antes
+    AW -> PR : lê a progressão vigente
+    PR --> AW : nível e progresso atuais
+    AW --> EV : points 0 · alreadyAwarded
+    note right
+      A progressão devolvida é a vigente,
+      nunca zerada: repetir o evento
+      não pode apagar o progresso.
+    end note
+  else primeira concessão
+    AW -> AW : points = f(duração, tarefas concluídas)
+    AW -> GDB : awardAndRecord(pontos, XP, descrição)
+    GDB --> AW : creditado
+    AW -> PR : lê a progressão
+    PR --> AW : novo nível
+    AW -> BD : avalia os emblemas
+    BD -> GDB : concede o que passou a caber
+    AW --> EV : points, xp, progressão
+  end
+
+  opt havia tarefas concluídas
+    loop para cada tarefa, em sequência
+      EV -> AW : awardFromTaskCompletion\n{ userId, taskId }
+      AW --> EV : award da tarefa
+    end
+  end
+end
+
+EV --> UC : concluído
+UC --> R : sessão concluída
+R --> U : 200
+
+note over UC, DB
+  Concluir é idempotente: a duração só
+  é recalculada quando a sessão ainda
+  estava ativa. Reabrir o encerramento
+  não volta a contar o mesmo trecho.
+end note
+
+note over UC, EV
+  A publicação do evento é absorvida
+  em caso de falha. O trabalho
+  registrado e o registro diário já
+  foram confirmados e permanecem.
+end note
+
+note over EV
+  O publicador conhece apenas a porta
+  local de awards; quem traduz a
+  chamada em regra de negócio é o
+  módulo de gamificação. O
+  acoplamento entre os dois é feito
+  no ponto de composição.
+end note
+
+note over AW, GDB
+  A idempotência é pela descrição
+  canônica do award, não por
+  consulta de estado: o mesmo evento
+  repetido não credita duas vezes.
+end note
+
+@enduml

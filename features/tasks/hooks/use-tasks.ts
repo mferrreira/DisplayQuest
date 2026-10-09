@@ -7,7 +7,8 @@
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useSession } from "next-auth/react"
-import { tasksApi } from "@/lib/api/endpoints/tasks"
+import { tasksApi, type AwardedTaskResponse, type SubtaskMutationResponse } from "@/lib/api/endpoints/tasks"
+import { announcePointsDelta } from "@/lib/points-delta"
 import { queryKeys } from "@/lib/query/keys"
 import type { TaskFilters } from "@/lib/api/endpoints/tasks"
 import type { Task } from "@/entities/task"
@@ -46,16 +47,21 @@ function useRollback(): () => RollbackContext {
   const queryClient = useQueryClient()
   const invalidateAll = useInvalidateTaskGraph()
 
+  // Ajuste pós-encerramento item 1 (2026-10-07): as listas de tarefa têm mais de uma variante
+  // (filtros diferentes = chaves diferentes). Escrever/snapshotar SÓ `list({})` deixava o quadro
+  // com projeto selecionado sem atualizar. `lists()` é o prefixo comum de todas elas.
   return () => {
-    const snapshot = queryClient.getQueryData<Task[]>(queryKeys.tasks.list({}))
+    const snapshot = queryClient.getQueriesData<Task[]>({ queryKey: queryKeys.tasks.lists() })
     return {
       applyOptimistic: (updater) => {
-        queryClient.setQueryData<Task[]>(queryKeys.tasks.list({}), (prev) =>
+        queryClient.setQueriesData<Task[]>({ queryKey: queryKeys.tasks.lists() }, (prev) =>
           prev ? updater(prev) : prev,
         )
       },
       rollback: () => {
-        if (snapshot) queryClient.setQueryData(queryKeys.tasks.list({}), snapshot)
+        for (const [key, data] of snapshot) {
+          if (data) queryClient.setQueryData(key, data)
+        }
       },
       invalidate: invalidateAll,
     }
@@ -68,7 +74,7 @@ export function useTaskMutations() {
   // reads from the next-auth session (T1.4: no all-users fetch); its session callback re-reads
   // points from the DB on every fetch (lib/auth/config.ts session callback), so refreshing the
   // session after awarding mutations keeps the badge live without a page reload.
-  const { update: refreshSession } = useSession()
+  const { update: refreshSession, data: session } = useSession()
   const refreshPoints = () => {
     // optional call: test stubs may omit update(); failures are best-effort by design
     const result = typeof refreshSession === "function" ? refreshSession() : undefined
@@ -77,6 +83,18 @@ export function useTaskMutations() {
         /* unauthenticated/no-op contexts must not break the mutation */
       })
     }
+  }
+
+  // plan-v3 OND4-B: o contador do cabeçalho já recebia o total novo, mas pulava do antigo para o
+  // novo sem dizer quanto nem para que lado. O sinal do chip (OND4-A, DEC-48) é do servidor.
+  // Só o prêmio da PRÓPRIA pessoa move o contador dela: a aprovação credita o responsável pela
+  // tarefa, quase nunca quem aprovou, e sem esta comparação o chip mostraria o prêmio de outra
+  // pessoa. `null` (ninguém creditado) e `0` (o award já existia) não são delta.
+  const sessionUserId = (session?.user as { id?: number } | undefined)?.id
+  const announceMyAward = (result: AwardedTaskResponse) => {
+    if (sessionUserId == null) return
+    if (result.awardedTo !== sessionUserId) return
+    announcePointsDelta(result.awardedPoints)
   }
 
   const updateStatus = useMutation({
@@ -123,6 +141,7 @@ export function useTaskMutations() {
       return { ctx }
     },
     onError: (_err, _vars, context) => context?.ctx.rollback(),
+    onSuccess: (result) => announceMyAward(result),
     onSettled: (_d, _e, _v, context) => {
       context?.ctx.invalidate("full")
       refreshPoints()
@@ -148,6 +167,7 @@ export function useTaskMutations() {
 
   const approve = useMutation({
     mutationFn: (id: number) => tasksApi.approve(id),
+    onSuccess: (result) => announceMyAward(result),
     onSettled: () => {
       makeRollback().invalidate("full")
       // delegated tasks award points to the assignee HERE (gateway :458–481)
@@ -172,5 +192,101 @@ export function useTaskMutations() {
     onSettled: (_d, _e, _v, context) => context?.ctx.invalidate(),
   })
 
-  return { updateStatus, complete, create, createBacklog, update, approve, reject, remove }
+  /**
+   * plan-v4 · V4-5 — as três operações de subtask do cliente.
+   *
+   * O que é diferente das mutações de tarefa: a resposta carrega a MÃE (DEC-79), e é ela que o
+   * cliente aplica. Mexer numa subtask muda três coisas na mãe — a lista, a base do prêmio
+   * (10 + 5·n) e, às vezes, o STATUS (DEC-81: a última subtask concluída move a mãe para
+   * "Em Revisão"). Otimista só na lista; o status vem do servidor, porque é o servidor que decide
+   * se houve auto-move. Sem isso o cartão mostraria a mãe na coluna errada até o próximo refresh.
+   */
+  const queryClient = useQueryClient()
+  // Item 1: escrever em TODAS as variantes de lista (prefixo `lists()`), senão o diálogo/quadro
+  // filtrado fica com o snapshot antigo enquanto `list({})` já foi atualizado.
+  const applyMother = (result: SubtaskMutationResponse) => {
+    queryClient.setQueriesData<Task[]>({ queryKey: queryKeys.tasks.lists() }, (prev) =>
+      prev ? prev.map((t) => (t.id === result.task.id ? { ...t, ...result.task } : t)) : prev,
+    )
+  }
+  const patchSubtaskInCache = (
+    taskId: number,
+    subtaskId: number,
+    patch: { title?: string; completed?: boolean },
+  ) => {
+    queryClient.setQueriesData<Task[]>({ queryKey: queryKeys.tasks.lists() }, (prev) =>
+      prev
+        ? prev.map((t) =>
+            t.id === taskId
+              ? {
+                  ...t,
+                  subtasks: (t.subtasks ?? []).map((s) =>
+                    s.id === subtaskId ? { ...s, ...patch } : s,
+                  ),
+                }
+              : t,
+          )
+        : prev,
+    )
+  }
+
+  const createSubtask = useMutation({
+    mutationFn: ({ id, title }: { id: number; title: string }) => tasksApi.createSubtask(id, title),
+    onSuccess: applyMother,
+    onSettled: () => makeRollback().invalidate(),
+  })
+
+  const updateSubtask = useMutation({
+    mutationFn: ({
+      id,
+      subtaskId,
+      data,
+    }: {
+      id: number
+      subtaskId: number
+      data: { title?: string; completed?: boolean }
+    }) => tasksApi.updateSubtask(id, subtaskId, data),
+    onMutate: ({ id, subtaskId, data }) => {
+      const ctx = makeRollback()
+      patchSubtaskInCache(id, subtaskId, data)
+      return { ctx }
+    },
+    onSuccess: applyMother,
+    onError: (_err, _vars, context) => context?.ctx.rollback(),
+    // a última subtask concluída publica TASK_REVIEW_REQUEST (DEC-81)
+    onSettled: (_d, _e, _v, context) => context?.ctx.invalidate("notifications"),
+  })
+
+  const removeSubtask = useMutation({
+    mutationFn: ({ id, subtaskId }: { id: number; subtaskId: number }) =>
+      tasksApi.removeSubtask(id, subtaskId),
+    onMutate: ({ id, subtaskId }) => {
+      const ctx = makeRollback()
+      queryClient.setQueriesData<Task[]>({ queryKey: queryKeys.tasks.lists() }, (prev) =>
+        prev
+          ? prev.map((t) =>
+              t.id === id ? { ...t, subtasks: (t.subtasks ?? []).filter((s) => s.id !== subtaskId) } : t,
+            )
+          : prev,
+      )
+      return { ctx }
+    },
+    onSuccess: applyMother,
+    onError: (_err, _vars, context) => context?.ctx.rollback(),
+    onSettled: (_d, _e, _v, context) => context?.ctx.invalidate(),
+  })
+
+  return {
+    updateStatus,
+    complete,
+    create,
+    createBacklog,
+    update,
+    approve,
+    reject,
+    remove,
+    createSubtask,
+    updateSubtask,
+    removeSubtask,
+  }
 }

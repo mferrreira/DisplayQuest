@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
+import { routeErrorResponse } from "@/lib/api/route-error-response"
 import { ImageProcessor } from "@/lib/utils/image-processor"
 import { requireApiActor } from "@/lib/auth/api-guard"
+import { userActor } from "@/backend/domain"
 import { getBackendComposition } from "@/backend/composition/root"
 const { userManagement: userManagementModule } = getBackendComposition()
 export async function POST(request: NextRequest) {
@@ -26,7 +28,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: validation.error }, { status: 400 })
     }
 
-    const currentUser = await userManagementModule.findUserById(userId)
+    // B6-4 (D4): a trava self-only desta rota (fora do D4) fica onde esta; o use case agora
+    // exige o ator e o gate self-or-manage passa porque quem chega aqui e sempre o proprio.
+    const actor = userActor(auth.actor.id, auth.actor.roles)
+    const currentUser = await userManagementModule.findUserById(actor, userId)
 
     if ((currentUser as any)?.avatar) {
       await ImageProcessor.deleteImage((currentUser as any).avatar)
@@ -39,7 +44,7 @@ export async function POST(request: NextRequest) {
       format: "webp",
     })
 
-    await userManagementModule.updateUserProfile(userId, { avatar: avatarUrl })
+    await userManagementModule.updateUserProfile(actor, userId, { avatar: avatarUrl })
 
     return NextResponse.json({
       success: true,
@@ -47,7 +52,6 @@ export async function POST(request: NextRequest) {
       message: "Avatar atualizado com sucesso",
     })
   } catch (error) {
-    console.error("Erro ao fazer upload do avatar:", error)
-    return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 })
+    return routeErrorResponse(error, { fallback: "Erro interno do servidor" })
   }
 }

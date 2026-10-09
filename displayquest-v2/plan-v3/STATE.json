@@ -1,0 +1,495 @@
+{
+  "plan": "plan-v3",
+  "title": "qualidade operacional: sessões, quadro e pontos",
+  "version": "3.0.0",
+  "updatedAt": "2026-10-03",
+  "status": "done",
+  "activeWave": null,
+  "activeBatch": null,
+  "awaitingInstruction": [],
+  "answeredInstructions": [
+    {
+      "id": "ASK-P3-03",
+      "askedAt": "2026-10-03",
+      "answeredAt": "2026-10-03",
+      "question": "O plan-v3 nao tem mais batch executavel: ondas 0-4 fechadas, 5.A bloqueado por BLK-01. Como fechar?",
+      "measured": "5.A continua pendente de HTTPS (BLK-01): em `http://<ip>:3000` o Chrome e o Firefox recusam o pedido de permissao de notificacao. Onda 2 ja entrega o aviso que funciona em HTTP (sinal visual sempre visivel + som opcional, ligado por gesto), que foi o motivo de DEC-42 ter adiado a Onda 5. O que a Onda 5 acrescenta e so a notificacao de sistema quando a aba esta em segundo plano.",
+      "options": [
+        "fornecer HTTPS (certificado num dominio, autoassinado com confianca nas maquinas, ou proxy reverso com TLS) e executar o 5.A — e o unico caminho que entrega F1b",
+        "fechar o plan-v3 como esta: 5.A continua adiado por decisao, e o plano so reabre se o dono quiser a notificacao de sistema",
+        "remover o 5.A do plano (e o BLK-01 junto), registrando que o alerta da Onda 2 e o sinal aceito para HTTP"
+      ],
+      "answer": "terceira opcao: remover o 5.A do plano (e o BLK-01 junto), registrando que o alerta da Onda 2 e o sinal aceito para HTTP",
+      "decision": "DEC-49",
+      "blocks": []
+    }
+  ],
+  "target": "corrigir a economia de pontos, acabar com o silêncio das pausas automáticas e tornar o quadro utilizável quando enche",
+  "lineage": {
+    "predecessor": "clean-arch (repo-cleanup, ondas 0-9 + lotes B0-B11)",
+    "convention": "mesma do clean-arch: PLAN.md + STATE.json, 1 batch = 1 commit revertível",
+    "rollbackTag": "pre-plan-v3",
+    "branch": "plan/v3-operacional — mergeada na dev por fast-forward em 2026-10-05 (commit fdfc5d2) e removida depois; os commits vivem na dev. Rollback do plano inteiro pela tag pre-plan-v3 (8d78812), que continua valendo."
+  },
+  "baseline": {
+    "measuredAt": "2026-10-02",
+    "baseCommit": "db6df77",
+    "branch": "plan/v3-operacional",
+    "testFiles": 67,
+    "tests": 675,
+    "failures": 0,
+    "archModules": 731,
+    "archDependencies": 2748,
+    "allowListEntries": 0,
+    "afterOnda1": {
+      "at": "2026-10-02",
+      "commit": "9fc6987",
+      "testFilesUnitAndFeatures": 58,
+      "testsUnitAndFeatures": 681,
+      "integrationFiles": 10,
+      "integrationTests": 83,
+      "archModules": 732,
+      "archDependencies": 2762
+    },
+    "after2B": {
+      "at": "2026-10-02",
+      "commit": "ce57be1",
+      "testFilesUnitAndFeatures": 60,
+      "testsUnitAndFeatures": 712,
+      "testFilesAll": 70,
+      "testsAll": 795,
+      "archModules": 736,
+      "archDependencies": 2772
+    },
+    "after2C": {
+      "at": "2026-10-03",
+      "commit": "624c543",
+      "testFilesUnitAndFeatures": 62,
+      "testsUnitAndFeatures": 744,
+      "testFilesAll": 72,
+      "testsAll": 827,
+      "archModules": 741,
+      "archDependencies": 2784
+    },
+    "after3C": {
+      "at": "2026-10-03",
+      "commit": "bef0acf",
+      "testFilesUnitAndFeatures": 63,
+      "testsUnitAndFeatures": 766,
+      "testFilesAll": 73,
+      "testsAll": 849,
+      "archModules": 744,
+      "archDependencies": 2802,
+      "e2eBoardSpec": "7/7 contra a :3001"
+    },
+    "after4A": {
+      "at": "2026-10-03",
+      "commit": "2c98b1d",
+      "testFilesUnitAndFeatures": 64,
+      "testsUnitAndFeatures": 779,
+      "testFilesAll": 74,
+      "testsAll": 862,
+      "archModules": 745,
+      "archDependencies": 2805
+    },
+    "after4B": {
+      "at": "2026-10-03",
+      "commit": "dbd067e",
+      "testFilesUnitAndFeatures": 65,
+      "testsUnitAndFeatures": 798,
+      "testFilesAll": 75,
+      "testsAll": 881,
+      "archModules": 748,
+      "archDependencies": 2816,
+      "e2eBoardSpec": "7/7 contra a :3001, com o chip e a geometria dele medidos"
+    }
+  },
+  "gates": {
+    "G0": "npm run arch:check (exit 0, allow-list vazia)",
+    "G1": "npx eslint --no-eslintrc --config .eslintrc.json <arquivos> (exit 0)",
+    "G2": "npx tsc --noEmit (0 erros)",
+    "G3": "npx vitest run tests/unit features (sem banco)",
+    "G4": "npx vitest run completo contra dq-dev-test-db :5433 (nunca :5432)",
+    "G5": "npm run docs:build + npm run docs:check (batches que mudam comportamento visível)",
+    "G6": "recaptura --only=<telas> + rebuild, quando a captura do guia deixa de representar a tela"
+  },
+  "waves": [
+    {
+      "id": "0",
+      "name": "setup",
+      "batches": [
+        "S0.1"
+      ],
+      "status": "done",
+      "dependsOn": []
+    },
+    {
+      "id": "1",
+      "name": "economia de pontos (X1)",
+      "batches": [
+        "1.A",
+        "1.B",
+        "1.C",
+        "1.D"
+      ],
+      "status": "done",
+      "dependsOn": [
+        "0"
+      ]
+    },
+    {
+      "id": "2",
+      "name": "sessão: nota e alerta (F2, F1a)",
+      "batches": [
+        "2.A",
+        "2.B",
+        "2.C"
+      ],
+      "status": "done",
+      "dependsOn": [
+        "0"
+      ]
+    },
+    {
+      "id": "3",
+      "name": "quadro: altura, mover, ordenação (X2, X3, F3)",
+      "batches": [
+        "3.A",
+        "3.B",
+        "3.C"
+      ],
+      "status": "done",
+      "dependsOn": [
+        "0"
+      ]
+    },
+    {
+      "id": "4",
+      "name": "animação de pontos (F4)",
+      "batches": [
+        "4.A",
+        "4.B"
+      ],
+      "status": "done",
+      "dependsOn": [
+        "1"
+      ]
+    }
+  ],
+  "batches": [
+    {
+      "id": "S0.1",
+      "wave": "0",
+      "title": "branch plan/v3-operacional, tag pre-plan-v3, STATE v3.0.0, ponteiros em README/AGENTS",
+      "status": "done",
+      "gates": "nenhum (nada de código muda)",
+      "evidence": "branch plan/v3-operacional criada em db6df77; tag pre-plan-v3 apontando para o mesmo commit; worktree principal (sem worktree nova, por decisao do dono)"
+    },
+    {
+      "id": "1.A",
+      "wave": "1",
+      "title": "golden de caracterização do comportamento atual de pontos (inclui o caso do dia do prazo -> 0)",
+      "status": "done",
+      "gates": "G0 G1 G2 G3",
+      "evidence": "tests/unit/modules/task-management/domain.points-characterization.test.ts (9 testes). Reproduz o -37140 medido na interface e pinou a divergencia backend x frontend (10 no cartao vs 0 no servidor as 02h/08h de Brasilia)."
+    },
+    {
+      "id": "1.B",
+      "wave": "1",
+      "title": "backend/domain/task/points-rules.ts: dias de calendário SP, POINTS_PER_TASK=10, 1.5x adiantada, premiação pode ficar negativa (DEC-39); task-rules re-exporta",
+      "status": "done",
+      "gates": "G0 G1 G2 G3 G4",
+      "evidence": "backend/domain/time/civil-day.ts + backend/domain/task/points-rules.ts; task-rules re-exporta. 139 testes nos 10 arquivos de task-management/_foundations; integration 10/83 verdes contra dq-dev-test-db:5433, incluido o caso novo AC-P3-01 (prazo hoje -> awardedPoints 10 no Prisma real). G0 731 modulos/2748 deps sem violacao."
+    },
+    {
+      "id": "1.C",
+      "wave": "1",
+      "title": "move-rules.ts deixa de duplicar a penalidade e consulta o domínio (elimina a divergência)",
+      "status": "done",
+      "gates": "G0 G1 G2 G3",
+      "evidence": "move-rules.ts delega a points-rules (latePenalty/projectedAward sem matematica propria). task-card passou a comparar com POINTS_PER_TASK e distingue bonus/penalidade. Caracterizacao atualizada: os 4 instantes que divergiam em 1.B agora coincidem nos dois lados (AC-P3-02). G0 731/2753 sem violacao e sem entrada nova na allow-list."
+    },
+    {
+      "id": "1.D",
+      "wave": "1",
+      "title": "10 pontos fixos na superfície: remove campo dos 2 formulários, @pontos do backlog aceito e ignorado (DEC-41), rota grava 10, tasks.points histórico intocado (DEC-40)",
+      "status": "done",
+      "gates": "G0 G1 G2 G3 G4 G5 G6",
+      "evidence": "commit 9fc6987. Campo de pontos fora do TaskDialog (grade 3->2 colunas), do TaskForm legado (PRIORITY_POINTS 25/50/100/150 e NumberField mortos) e do BacklogDialog legado ('Pontos por task'); `points` saiu de TaskFormData e de ParsedBacklogLine. Rotas: POST /api/tasks (simples e bulk), PUT /api/tasks/[id] (points saiu de allowedFields) e o log do PATCH complete param de imprimir numero que a rota nao conhece. createTaskRecord aplica POINTS_PER_TASK (CreateTaskCommand.points ficou opcional). Telas: detalhe mostra base 10 + projecao (se concluir agora), selo do cartao mostra a base (morreu isHighPoints), archive e detalhe de projeto pararam de exibir o historico. AC-P3-03 coberto por tests/unit/api/tasks-approve-route.test.ts (6 testes com as rotas reais). G0 732 modulos/2762 deps sem violacao e allow-list vazia; G1 limpo; G2 0 erros; G3 58 arquivos/681 testes; G4 10 arquivos/83 testes contra dq-dev-test-db:5433; G5 docs:build + docs:check (guia, FAQ, loja e RB-18 + RB-66..RB-70 corrigidos); G6 recaptura de quadro-tarefas, quadro-tarefas-participante, dialogo-nova-tarefa, dialogo-detalhe-tarefa e dialogo-detalhe-projeto contra a instancia recem-rebuildada — o extrato do DOM confirma 'Pontos' fora dos fieldLabels do diálogo de nova tarefa."
+    },
+    {
+      "id": "2.A",
+      "wave": "2",
+      "title": "lib/client-storage.ts: seam único de estado client-side (namespace, JSON tolerante, SSR-safe)",
+      "status": "done",
+      "gates": "G0 G1 G2 G3",
+      "evidence": "commit 28392d6. Medido antes de escrever: zero uso de localStorage na base e um uso de sessionStorage (session-welcome-balloon.tsx), que ficou de fora de proposito — trocar por local mudaria a semantica do aviso. lib/client-storage.ts: namespace dq:, clientStorageKey (ignora parte vazia), readJson/writeJson com fallback explicito, leitura e escrita que nunca lancam (cota estourada, aba anonima, storage bloqueado), kind local|session, e nenhum acesso a window no import. tests/unit/lib/client-storage.test.ts (16 testes, environment node = SSR de verdade). G0 734 modulos/2764 deps sem violacao e allow-list vazia; G1 limpo; G2 0 erros; G3 59 arquivos/697 testes."
+    },
+    {
+      "id": "2.B",
+      "wave": "2",
+      "title": "caixa de notas da sessão: salva por sessão, despeja no log, limpa só em sucesso",
+      "status": "done",
+      "gates": "G0 G1 G2 G3 G5",
+      "evidence": "commit ce57be1. components/ui/session-notes-draft.tsx (rascunho dq:session-notes:<id>, debounce 400 ms, gravacao do que ficou pendente no unmount, texto vazio remove a chave, clearNote pelo ultimo id visto). No cronometro: openStopDialog unico para 'Parar' e para o 'Encerrar sessao' da pausa automatica (despeja o rascunho na caixa de log, que segue editavel); handleStop so limpa depois de endSession resolver, e na falha devolve o texto ao rascunho e mostra 'Não foi possível encerrar a sessão...' (antes: sem try/catch, rejection silenciosa). Medido no mesmo levantamento: o backend NAO exige log (`note: command.note || null`) — a obrigatoriedade e so da interface (ver awaitingInstruction/2). AC-P3-05 coberto: tests/unit/components/session-notes-draft.test.tsx (11) + 4 casos novos em floating-session-timer.test.tsx (despejo, falha mantem, sucesso limpa, pausa automatica). Gotcha novo medido: no jsdom do Vitest desta base window === globalThis e window.localStorage e undefined (o populateGlobal nao copia a Web Storage do jsdom) — os testes instalam um storage em memoria. G5: guia (secao 'Anotacoes da sessao', passo de encerramento, tabela de telas, mensagens), diretriz da costura de estado em 12-padroes-e-diretrizes e divida conhecida em 15. G6 avaliado e nao exigido: a captura controle-de-sessao foi feita com 'Sem sessao', entao a caixa nova nao aparece nela. G0 736/2772 sem violacao; G1 limpo; G2 0 erros; G3 60 arquivos/712 testes; G4 suite completa 70 arquivos/795 testes contra dq-dev-test-db:5433."
+    },
+    {
+      "id": "2.C",
+      "wave": "2",
+      "title": "alerta de pausa: visual sempre + som WebAudio opcional; sem window.alert",
+      "status": "done",
+      "gates": "G0 G1 G2 G3 G4 G5",
+      "evidence": "commit 624c543. Medido antes de escrever: o botao collapsed era o mesmo icone de relogio em qualquer estado (sessao pausada as 12:00 parecia sessao ativa as 11:00) e o aviso de pausa automatica vivia dentro de um Dialog modal, invisivel com a aba em segundo plano; e a instancia e HTTP num IP de rede, logo notificacao nativa e impossivel (DEC-42) e o sinal tinha de ser visual + opcional. Sinal visual sempre ligado (F1a de DEC-35): SessionTimerVisualState none|active|paused|auto-paused, icone e cor por estado no botao collapsed, ponto pulsante depois da pausa automatica enquanto ninguem retomou/encerrou/abriu o painel, e `sessionTimerButtonLabel` — o nome acessivel passou a dizer o estado (o que tambem tira a falta de ponto de ancoragem para leitor de tela). Som opcional e desligado por padrao (DEC-36): lib/notifications/alert-sound.ts com duas senoides e envelope, contexto em cache, contexto suspenso retomado (autoplay) e nunca lancando; preferencia `dq:som-pausa` pelo seam do 2.A, lida depois da montagem; o interruptor toca a previa ao ser ligado (o clique e o gesto que a politica de autoplay exige). Desvios do plano: arquivo a mais (alert-sound.ts — o plano so previa browser-notifications.ts) e som tambem na pausa manual (o plano so citava a automatica). lib/notifications/browser-notifications.ts (costura F1b) criada e testada mas NAO ligada — sem secure context o navegador recusa (5.A/BLK-01). AC-P3-04 coberto: tests/unit/lib/alert-sound.test.ts (8) + browser-notifications.test.ts (15, ambos environment node com window duble) + 9 casos novos em floating-session-timer.test.tsx (18 no arquivo). Efeito colateral medido: features/laboratorio/__tests__/floating-timer-tabs.test.tsx buscava o botao pelo rotulo exato, que deixou de valer com 4 rotulos — passou a buscar por fragmento. G5: guia (secao 'Como voce fica sabendo da pausa', passo 1 de 'Iniciar uma sessao', painel, tabela de telas, FAQ), 12-padroes-e-diretrizes (2 linhas de diretriz) e 15 (divida da costura F1b nao ligada). G6 avaliado e nao exigido: a captura controle-de-sessao foi feita com 'Sem sessao' e o interruptor so existe com sessao aberta. G0 741 modulos/2784 deps sem violacao e allow-list vazia; G1 limpo; G2 0 erros; G3 62 arquivos/744 testes; G4 suite completa 72 arquivos/827 testes contra dq-dev-test-db:5433."
+    },
+    {
+      "id": "3.A",
+      "wave": "3",
+      "title": "board-column.tsx: altura máxima + overflow-y por coluna, cabeçalho fixo",
+      "status": "done",
+      "gates": "G0 G1 G2 G3 G4 G5 G6",
+      "evidence": "commit fbbde99. Medido antes de escrever, na instancia e no dev: a coluna mais cheia media 5.586 px de scrollHeight numa janela de 900 px e o documento 5.949 px (628 px de largura por coluna) — seis telas de rolagem para ver o quadro, e as colunas vazias esticavam até a altura da mais cheia. Altura máxima derivada da janela: max-h-[calc(100dvh-17rem)], com a reserva de 17rem MEDIDA (cabeçalho 65 + padding do main 24 + h1 32 + margem do h1 24 + barra do quadro 84 + respiro 24 = 257 px a 1440 px); dvh e não vh, pela barra de endereço do telefone. Scroll por coluna (overflow-y-auto overscroll-contain) e cabeçalho fixo por construção: irmão do Droppable, shrink-0, com min-h-0 no flexbox para poder encolher abaixo do conteúdo. Medido depois: coluna com 578 px de clientHeight contra 5.586 de scrollHeight, documento 965 px, scrollTop 5008 com o cabeçalho parado e window.scrollY === 0. Defeitos pré-existentes corrigidos no caminho: tests/e2e/helpers.ts usava getByLabel('Senha') sem exact e o botão 'Mostrar senha' impedia a suíte e2e de entrar; e o teste de busca não abria a lupa antes de preencher. Prova: tests/e2e/task-board.spec.ts com fixture próprio de 8 tarefas (o único lugar honesto para geometria — jsdom não calcula layout). G0 741 módulos/2784 deps sem violação e allow-list vazia; G1 limpo; G2 0 erros; G3 62 arquivos/744 testes; G4 72 arquivos/827 testes; G5 guia (cap. 3 e a seção de altura) + 12-padroes-e-diretrizes (diretriz de altura por coluna e o novo nível de verificação 'Navegador'); e2e 6/6; G6 recaptura de quadro-tarefas e quadro-tarefas-participante contra a instância reconstruída."
+    },
+    {
+      "id": "3.B",
+      "wave": "3",
+      "title": "allowedTargets(task, isLeader): menu deixa de oferecer destino que o servidor recusaria; regra de permissão inalterada",
+      "status": "done",
+      "gates": "G0 G1 G2 G3 G4 G5",
+      "evidence": "commit e6830e3. Medido antes: o menu do cartão listava BOARD_COLUMNS menos a coluna atual sem consultar a regra — para quem não é líder, as quatro colunas de um cartão Concluído apareciam e todas voltavam com o mesmo toast de 'Ação não permitida'. Arrastar done está desabilitado para todo mundo (isDragDisabled), então o menu era o único caminho possível: os quatro destinos eram promessa que o servidor não cumpria. Solução: allowedTargets(task, isLeader) DERIVADO de resolveMove (não escrito à mão ao lado dele) e, sem destinos, o menu mostra um item desabilitado dizendo o porquê. Medido também que a conta do servidor é outra: MANAGE_TASKS inclui COLABORADOR e PESQUISADOR (que não são 'líder' na interface), LABORATORISTA não tem MANAGE_TASKS e passa pelo ramo de status-only, que nem olha completed; e concluir tarefa DELEGADA não é recusado — cai em in-review (complete-task.use-case.ts:148). Por isso 'Concluído' continua sendo oferecido a não-líder em tarefa delegada: retirar ali esconderia o caminho de entregar para aprovação. Achado que valia mais que a mudança: o cartão tinha DUAS cópias byte a byte do menu (aparência normal e compacta); a primeira recebeu a regra e a segunda não, e nenhum teste percebia. As duas foram extraídas para TaskCardMenu, com o que varia entre elas reduzido ao tamanho do gatilho. Testes: move-rules.test.ts +6 casos por propriedade (matriz de 4 formas de tarefa x 5 status x 2 papéis, com offered + blocked = total - 1); em task-board.test.tsx o teste antigo de paridade foi REESCRITO — provava o toast de bloqueio, que é exatamente o comportamento que este batch remove — e no lugar ficaram três casos (não-líder normal e compacto, líder com os quatro destinos). Nota honesta: o caso não-líder foi provado em jsdom, não no navegador, porque na base o participante não vê cartão Concluído nenhum (0 medido). G0 741/2784; G1 limpo; G2 0 erros; G3 62 arquivos/752 testes; G4 72 arquivos/835 testes; G5 guia (cap. 3 e a tabela de telas) + 12-padroes (duas diretrizes: menu derivado da regra e uma tela por comportamento); e2e do quadro 6/6, que cobre o caminho do líder pelo menu. G6 não exigido: o menu é um balão transitório, não há captura dele no guia e as duas telas do quadro não mudam."
+    },
+    {
+      "id": "3.C",
+      "wave": "3",
+      "title": "column-order.ts: ordenação por coluna, customizável, persistida em localStorage",
+      "status": "done",
+      "gates": "G0 G1 G2 G3 G4 G5 G6",
+      "evidence": "commit bef0acf. Medido antes de escolher as opções (GET /api/tasks como coordenador, 27 tarefas): a tarefa volta com 17 campos e NENHUM createdAt — não existe 'criado em' para ordenar, então 'Mais recentes' ordena por id decrescente, que é o orderBy id desc do repositório e o desempate que o quadro já usava; e points é heterogêneo na mesma lista (10, 15, 20, 25, 40, 60), resto de antes das 10 pts fixas, com DEC-40 congelando a coluna como histórico — então 'Pontos' ordena pelo valor GRAVADO e não pela premiação atual (10 + bônus/penalidade de prazo), que muda todo dia e não é o número que o rótulo nomeia (DEC-47). O guia diz isso numa caixa 'limite', em vez de deixar 'Pontos' parecer que promete prêmio. features/tasks/utils/column-order.ts é puro (sem React, sem window): as cinco opções e a chave; 'urgência' DELEGA a sortTasksByUrgencyAndDueDate para o padrão não poder divergir por acidente de uma cópia, e o primeiro caso de teste compara os dois comparadores. Toda ordenação desempata no id decrescente — sem isso dois cartões iguais trocam de lugar entre renders. features/tasks/hooks/use-column-orders.ts guarda a ordem das cinco colunas lendo o navegador DEPOIS da montagem (como o interruptor de som do 2.C) para servidor e cliente desenharem a mesma tela, com o id vindo do useSession. Chave dq:column-order:<pessoa>:<coluna> — por pessoa e por coluna (DEC-33), o navegador entrando por conta do localStorage. Correção de plano: o texto do 3.C citava DEC-34, que é a decisão do movimento para fora de Concluído; a da ordenação é a DEC-33. Storage tratado como entrada não confiável: JSON quebrado E JSON válido que não é ordem (uma string com espaço no fim, escrita por outra versão) voltam ao padrão, com caso de teste para os dois. Defeito achado no navegador, que o jsdom não veria: o rótulo acessível do botão era 'Ordenar coluna A Fazer', que CONTÉM o rótulo da coluna ('Coluna A Fazer'); toda busca por rótulo que case por substring — getByLabel é assim por padrão — achava dois elementos e a suíte e2e do quadro parou no primeiro teste. Rótulo corrigido para 'Ordenar tarefas de A Fazer' e três diretrizes novas no cap. 12 saíram dai. Testes: 11 casos do módulo puro (o de urgência contra o comparador antigo, um por ordenação, e 'toda ordenação é total e estável' sobre as cinco); 3 casos no quadro (a ordem muda SÓ na coluna escolhida, a preferência sobrevive ao remontar com a chave gravada conferida, storage de outra versão não derruba nada); e um caso e2e que é o único lugar honesto para a parte que importa — recarregar a página e ver a ordem voltar, conferindo a chave dq:column-order:2:to-do com o valor prazo no navegador. G0 744 módulos/2802 deps sem violação e allow-list vazia; G1 limpo; G2 0 erros; G3 63 arquivos/766 testes; G4 73 arquivos/849 testes; G5 guia (cap. 3 com a nova seção 'A ordem dos cartões', cap. 10 na tabela de controles) + 12-padroes (três diretrizes) + nova captura quadro-ordenar-coluna no script; e2e do quadro 7/7; G6 três telas recapturadas contra a instância reconstruída (duas pelo botão novo no cabeçalho, uma nova para o menu aberto, que até agora o guia descrevia sem foto)."
+    },
+    {
+      "id": "4.A",
+      "wave": "4",
+      "title": "contrato: aprovação devolve awardedPoints autoritativo (withActorProgress + schema de resposta)",
+      "status": "done",
+      "gates": "G0 G1 G2 G3 G4",
+      "evidence": "commit 2c98b1d. Medido antes de desenhar (2026-10-03): o premio autoritativo EXISTIA e era jogado fora. `awardFromTaskCompletion` (gamification) devolve `GamificationAwardResult { pointsAwarded, alreadyAwarded, newProgression }`, e o adaptador de task-management descartava — a porta `TaskProgressEvents.onTaskCompleted` era `Promise<void>`. Os dois casos de uso devolviam so a `Task` e as rotas respondiam `{ task }`; a rota de conclusao tinha um comentario registrando isso como limitacao aceita ('a rota nao sabe o numero'). Correcao do plano: o 4.A previa `withActorProgress` carregando `awardedPoints`; medido, esse read model e congelado, e o overlay de progresso por pessoa da LISTA — o valor que ele carregaria seria o PEDIDO, nao o creditado, que difere de verdade por tres peculiaridades (award ja registrado credita 0 em vez de 10; `taskAwardPoints` faz Math.floor sem clamp; award que estoura e engolido, porque falha de award nunca quebra a conclusao). A costura certa era o retorno do award, nao o read model. Segunda medicao que mudou o desenho: a aprovacao credita `task.assignedTo`, o responsavel pela tarefa — nunca quem aprovou, salvo quem tem MANAGE_USERS (autoaprovacao e proibida sem isso). O e2e do quadro entrega a tarefa ao proprio aprovador exatamente por isso: e a unica forma de o contador DELE mudar e o teste enxergar. Sem `awardedTo` no contrato, a animacao da 4.B mostraria no contador de quem aprovou o premio de outra pessoa. O que mudou: `onTaskCompleted` devolve `Promise<number | null>` (o efetivo; null = ninguem creditado — sem publisher, ou o award falhou); `publishTaskCompletionAward` repassa o numero; os dois casos de uso devolvem `TaskCompletionResult { task, awardedTo, awardedPoints }`; as duas rotas e o schema do cliente (`awardedTaskResponse`) repassam o par; e o modulo troca `Promise<any>` pelo contrato real nas duas assinaturas, o que impede a proxima rota de voltar a ler `task.points` e mentir (era exatamente o que a rota de conclusao fazia). Tres casos que a 4.B distingue e que um `|| 0` apagaria: `0` com `awardedTo` = o award ja existia e nada mudou; `null` nos dois = ninguem creditado (delegada foi para revisao, ou o creditador nao rodou); negativo = penalidade de atraso sem piso (DEC-39). Testes: 7 casos novos em tests/unit/modules/task-management/task-completion-award.test.ts provando que o CREDITADO atravessa a porta (pedido 15, creditado 0), que negativo passa intacto, que userId/taskId zerados nao chamam o award, e que award que estoura vira null com o erro registrado; 6 casos no arquivo de rota da OND1-D (os 3 da aprovacao mais `PATCH complete`, que e o caminho que a 4.B vai usar); e o roundtrip G4 passa a ler `.task` e a fixar `awardedPoints: null` — ele monta o modulo sem publisher de proposito, e isso virou contrato. G0 745 modulos/2805 deps sem violacao e allow-list vazia; G1 limpo; G2 0 erros; G3 64 arquivos/779 testes; G4 74 arquivos/862 testes. Fora de escopo medido e anotado: a premiacao por sessao de trabalho (work-execution-events.publisher.ts:35) tambem mexe no contador do cabecalho e nao tem resposta HTTP para viajar — ela aparece quando o jogador ve o total novo, sem sinal. Nao entra na 4.B (que e da tarefa), e fica registrada para quando alguem mexer no gamification."
+    },
+    {
+      "id": "4.B",
+      "wave": "4",
+      "title": "points-delta.tsx: +X verde / -X vermelho incrementando em 1s; respeita prefers-reduced-motion",
+      "status": "done",
+      "gates": "G0 G1 G2 G3 G5 e2e",
+      "evidence": "commit dbd067e. Medido antes de desenhar: o contador do cabecalho JA recebia o total novo (refresh da sessao em use-tasks.ts, e a callback de sessao relê users.points do banco) e o que faltava era o sinal. Desenho: `lib/points-delta.ts` novo, sem import nenhum, com o sinal `{id, value, at}` e a aritmetica pura da contagem (estado de modulo, nao contexto, porque quem anuncia e a mutacao do quadro e quem consome e o cabecalho: dois galhos da arvore sem ancestral comum hoje, e o cabecalho tambem vive em telas que nao montam o quadro); `components/ui/points-delta.tsx` com o chip `+15` verde / `−20` vermelho ancorado na pilula de pontos, `role=status` para leitor de tela, 20 passos de 50 ms (1 s) e sumico depois de 0,9 s; e a regra de quem ganhou na mutacao (`awardedTo === pessoa logada`), porque a aprovacao credita o responsavel e quase nunca quem aprovou. `null` e `0` tambem nao anunciam (DEC-48): um chip `+0` mentiria sobre uma entrega que nao rendeu nada. Tres medicoes que mudaram o desenho: (1) `requestAnimationFrame` nao e comandado pelos timers falsos do teste e nao dispara em aba de segundo plano, onde o chip ficaria preso no meio da contagem — `setInterval` em passos e verificavel sem relogio e completa mesmo em aba oculta; (2) geometria e do navegador, nao do jsdom: a primeira versao era `-top-5` e o topo da pilula fica a ~15px do topo da pagina (`h-16`), entao o chip saia pela borda — medido no e2e (chip y=54..74, badge y=22..42) e virou `top-full`, com assercao de geometria no spec para nao voltar; e `zoom-in-95` saiu porque as variantes com transform sobrescrevem o `-translate-x-1/2` e desalinhariam o chip durante a animacao; (3) um caso que so apareceu ao escrever: o chip desmonta junto com o cabecalho (logout) e o `setTimeout` que limparia o sinal e cancelado junto, entao o premio de uma sessao reapareceria para quem logasse depois — limpar no `cleanup` foi descartado porque o modo estrito do React monta, desmonta e remonta todo efeito, e em desenvolvimento o chip nunca apareceria; o sinal passou a carregar `at` e um sinal passado do prazo nao desenha. Testes: 14 casos em `tests/unit/components/points-delta.test.tsx` (a contagem e contavel sem esperar um segundo: passo 10 de 15 e `+8`; o `-0` do `Math.round(-0.5)` nunca aparece na contagem negativa; o sinal repete por id e envelhece por tempo; `prefers-reduced-motion` entrega o valor final sem um tick) e 5 casos no quadro provando a regra de quem ganhou (aprovar tarefa de outra pessoa nao mexe no meu contador; premio 0 nao vira `+0`; concluir publica credita quem concluiu; a delegada vai para revisao e nao credita ninguem; e o sinal e por id, entao dois premios iguais sao dois sinais). Os handlers MSW estavam desatualizados pelo 4.A — devolviam so `{ task }` e ja quebrariam o schema do cliente; corrigidos, e com o caminho `done` creditando o ATOR e nao o responsavel, como o caso de uso faz. G0 748 modulos/2816 deps sem violacao e allow-list vazia; G1 limpo (1 warning pre-existente do `<img>`); G2 0; G3 65 arquivos/798 testes; G4 75 arquivos/881 testes; e2e 7/7 na :3001 sem residuo E2E no banco; G5 build dos dois documentos e `docs:check` limpos. G6 NAO se aplica, e por uma razao concreta: o chip dura 1,9 s e nenhuma captura estatica o mostraria; a prova de que ele aparece e o e2e, que e onde o evento acontece. AC-P3-09 e AC-P3-10 atendidos pelo chip — com a ressalva registrada em GAP-P3-05: o toast da conclusao direta ainda mostra o numero projetado antes de o servidor responder."
+    }
+  ],
+  "removedItems": [
+    {
+      "id": "5.A",
+      "kind": "batch",
+      "wave": "5",
+      "plannedAt": "2026-10-02",
+      "plannedAs": "liga browser-notifications.ts ao fluxo de pausa: botão de ativação por gesto, dedupe por tag, degradação para o alerta da onda 2",
+      "removedAt": "2026-10-03",
+      "byDecision": "DEC-49",
+      "askedIn": "ASK-P3-03",
+      "reason": "Dependia de HTTPS e nao de codigo (BLK-01): em `http://<ip>:3000` o navegador recusa o pedido de permissao. O dono optou por tirar o batch do plano em vez de esperar a infra, aceitando o alerta da Onda 2 (F1a) como sinal de pausa.",
+      "acceptanceCriteriaLost": "nenhum — AC-P3-01..10 nao mencionam notificacao nativa (AC-P3-04 e o alerta in-app, que a Onda 2 entregou)",
+      "traceKeptIn": [
+        "PLAN.md §3 (F1a/F1b em DEC-35), §5 (tombstone da Onda 5), §7 (DEC-49)",
+        "STATE.json decisionRegistry (DEC-35, DEC-42, DEC-49)",
+        "docs/src/15-manutencao-e-continuidade.md (divergencia consciente da costura nao ligada)"
+      ],
+      "consequence": "lib/notifications/browser-notifications.ts (134 linhas) e tests/unit/lib/browser-notifications.test.ts (231 linhas) ficam sem chamador: medido em 2026-10-03, `grep -rn browser-notifications` acha so o proprio teste. Decisao sobre esse codigo orfao registrada em notes e em PLAN.md §8."
+    },
+    {
+      "id": "BLK-01",
+      "kind": "blocker",
+      "openedAt": "2026-10-02",
+      "removedAt": "2026-10-03",
+      "byDecision": "DEC-49",
+      "reason": "O bloqueio existia para travar a Onda 5. Sem Onda 5, nao ha o que bloquear: `blockers` fica vazio. A restricao R1 continua valendo como medida de ambiente (a instancia e HTTP em IP de rede) e segue registrada em PLAN.md §2.",
+      "traceKeptIn": [
+        "PLAN.md §2 (R1)",
+        "STATE.json gapRegistry GAP-P3-02"
+      ]
+    }
+  ],
+  "decisionRegistry": [
+    "DEC-30: 10 pontos fixos por tarefa; campo removido dos formulários; coluna tasks.points mantida como histórico, valor ignorado no cálculo.",
+    "DEC-31: atraso em dias de calendário (America/Sao_Paulo), não fração de 24h; entregar no dia do prazo não é atraso.",
+    "DEC-32: entrega adiantada = 1,5x (15 pontos); sem prazo = 10.",
+    "DEC-33: ordenação por coluna persistida em localStorage, por pessoa e navegador (não em banco, não em URL).",
+    "DEC-34: mover para fora de Concluído mantém a regra de permissão atual; a UI deixa de oferecer destino bloqueado. Arrastar done continua desabilitado para todos.",
+    "DEC-35: notificação dividida em F1a (alerta in-app + som, funciona em HTTP hoje) e F1b (nativa, exige HTTPS). Nenhuma onda depende de F1b.",
+    "DEC-36: som via WebAudio, sem asset binário no repositório.",
+    "DEC-37: quirk 'penalidade pode exceder os pontos' MANTIDO; o que muda é a contagem de dias (calendário, não fração de 24h). Comportamento anterior caracterizado em teste na Onda 1.A porque a aritmética de dias muda.",
+    "DEC-38: subtasks fora do escopo de plan-v3.",
+    "DEC-39: premiação PODE ficar negativa — a penalidade por dia de atraso não tem piso. Consequência aceita pelo dono: tarefa muito atrasada produz valor grande negativo e o total de pontos da pessoa pode cair; a UI precisa exibir isso sem disfarce.",
+    "DEC-40: nenhum UPDATE no tasks.points existente. O cálculo passa a usar a constante de 10 pontos e o valor gravado deixa de importar; o histórico do que foi creditado continua em task_user_progress.awardedPoints.",
+    "DEC-41: o token @pontos do importador de backlog continua aceito e é ignorado — não quebra backlog que as pessoas já têm escrito.",
+    "DEC-42: Onda 5 (notificação nativa) adiada. Ondas 1-4 executam sem TLS. A Onda 2 entrega alerta in-app + som, que funciona em HTTP.",
+    "DEC-43: restrição R15 — RG-01 proibe backend/domain/ de importar lib/ (LAYER.lib em FORBIDDEN_FOR_CORE). A regra de pontos usa data civil propria do dominio (padrao spParts/SP_OFFSET_MS de ReportPeriod.ts), nao lib/date-only.ts. O plano original estava errado e foi corrigido antes de executar 1.B.",
+    "DEC-44: o gate `task.points > 0` em approve-task foi removido. Com POINTS_PER_TASK fixo e DEC-40 (historico intocado), tarefas legadas gravadas com 0 pontos nunca receberiam nada — o gate contradizia a decisao. complete-task ja creditava sem gate.",
+    "DEC-46: o log da sessao CONTINUA obrigatorio — a pergunta ASK-P3-02 foi respondida pelo dono em 2026-10-02 e a regra nao muda. O 2.B apenas evita redigitar o texto. O guia continua descrevendo a obrigatoriedade sem atribui-la ao backend (que aceita `note || null`).",
+    "DEC-47: 'Mais recentes' ordena por id decrescente (a tarefa não volta com createdAt, medido no GET /api/tasks) e 'Pontos' ordena pelo valor GRAVADO em tasks.points, não pela premiação atual. Motivo: a coluna é histórico (DEC-40) e é heterogênea na base (10 a 60 medidos), enquanto a premiação depende do prazo e muda todo dia.",
+    "DEC-48: `awardedPoints` na resposta de concluir/aprovar e o valor EFETIVAMENTE creditado (0 quando o award ja existia, negativo quando a penalidade de atraso vence os 10 pontos — sem piso, DEC-39), e `awardedTo` diz para quem. `null` nos dois significa 'ninguem creditado agora' e e distinto de 0. Motivo: o numero que a animacao da Onda 4.B mostra tem que ser o do servidor — recalcular no cliente reabriria a segunda aritmetica (R7) e erraria justamente nos casos que importam, porque o pedido e o creditado divergem por tres peculiaridades congeladas (idempotencia do award, Math.floor sem clamp, e award falho que nao pode quebrar a conclusao). E `awardedTo` porque a aprovacao credita o responsavel pela tarefa, nao quem aprovou: sem isso o contador de quem aprovou animaria com o premio de outra pessoa. Correcao do plano junto: o 4.A previa carregar `awardedPoints` no read model da tarefa (`withActorProgress`), que e congelado e carregaria o pedido.",
+    "DEC-49: a Onda 5 (5.A, notificacao nativa) foi REMOVIDA do plano, junto com o BLK-01. Decisao do dono em 2026-10-03, respondendo ASK-P3-03. O sinal de pausa aceito em HTTP e o da Onda 2 (F1a): sempre visivel no cronômetro e, opcional, som ligado por gesto. A notificacao de sistema sai do escopo e volta só se o dono a pedir com HTTPS no ar — nada no plano dependia dela, porque nenhum criterio de aceite (AC-P3-01..10) era nativo. Consequências registradas: `waves` e `batches` nao tem mais a Onda 5, `blockers` fica vazio, e o que saiu foi registrado também em `removedItems`, com o rastro (apagar o historico nao e reverter). E o seam `lib/notifications/browser-notifications.ts` (134 linhas, 15 testes) fica ORFAO: zero chamadores em código de aplicação, medido por grep. Manter ou apagar esse código órfão é decisão do dono, registrada em `notes` e em `PLAN.md` §8."
+  ],
+  "gapRegistry": [
+    {
+      "id": "GAP-P3-01",
+      "open": false,
+      "resolved": "2026-10-02",
+      "resolution": "PREMIAO PODE FICAR NEGATIVA (DEC-39). Consequencia aceita: tarefa muito atrasada produz valor grande negativo e o total da pessoa pode cair.",
+      "blocks": [
+        "1.B"
+      ]
+    },
+    {
+      "id": "GAP-P3-02",
+      "open": false,
+      "resolved": "2026-10-02",
+      "resolution": "ADIADO (DEC-42) e depois REMOVIDO DO PLANO (DEC-49). As ondas 1-4 executaram sem TLS; em 2026-10-03 o dono optou por tirar a Onda 5 do plano em vez de esperar a infra. O sinal de pausa aceito em HTTP e o da Onda 2 (visual sempre + som opcional). Nenhum criterio de aceite dependia de F1b.",
+      "blocks": []
+    },
+    {
+      "id": "GAP-P3-03",
+      "open": false,
+      "resolved": "2026-10-02",
+      "resolution": "MANTER COMO ESTA (DEC-40): nenhum UPDATE em tasks.points; o calculo passa a usar a constante e o valor gravado deixa de importar.",
+      "blocks": [
+        "1.D"
+      ]
+    },
+    {
+      "id": "GAP-P3-04",
+      "open": false,
+      "resolved": "2026-10-02",
+      "resolution": "ACEITAR E IGNORAR O VALOR (DEC-41): sintaxe @N continua aceita para nao quebrar backlog existente; o numero nao define ponto.",
+      "blocks": [
+        "1.D"
+      ]
+    },
+    {
+      "id": "GAP-P3-05",
+      "open": true,
+      "summary": "O toast da conclusao direta ainda anuncia o numero de pontos PROJECTADO (client-side), antes de o servidor responder — features/tasks/components/task-card.tsx:256 (`projectedAward(task)`).",
+      "measured": "Medido em 2026-10-03: o toast sai no clique, no caminho `decision.kind === 'complete'` com `isDirectDone` (tarefa publica ou global), e o numero vem de `projectedAward(task)`, do `features/tasks/utils/move-rules.ts`. A aritmetica e a mesma do servidor por construcao e a paridade esta fixada por teste (features/tasks/__tests__/move-rules.test.ts:196-197, AC-P3-02), entao os dois numeros concordam com os mesmos dados; a divergencia real exigiria a fronteira do dia civil entre a pintura do cartao e o clique. Dois casos que o servidor trata e o toast nao: `awardedPoints: 0` (o award ja existia, DEC-48) e `null` (o credito falhou) chegariam como `+10` no toast. O caminho da aprovacao NAO tem o problema: o toast de la ('Tarefa aprovada com sucesso') nao traz numero.",
+      "whyNotFixedHere": "Fora do escopo do 4.B, que e o chip. Corrigir exige mover o toast de dentro do handler de clique para depois da resposta da mutacao (o numero so existe depois dela) — muda o instante do aviso, que hoje e imediato por desenho, e mexe em OND1-C.",
+      "blocks": []
+    }
+  ],
+  "blockers": [],
+  "acceptanceCriteria": [
+    "AC-P3-01: tarefa com prazo hoje, aprovada hoje, credita 10 pontos (não zero).",
+    "AC-P3-02: backend e frontend produzem o mesmo número de pontos para a mesma tarefa e instante.",
+    "AC-P3-03: nenhuma tela de criação de tarefa aceita pontos vindos do cliente.",
+    "AC-P3-04: pausa automática produz alerta visível sem depender de permissão de navegador, e som opcional.",
+    "AC-P3-05: a nota escrita durante a sessão sobrevive a recarregar a página e só é descartada quando o encerramento tem sucesso.",
+    "AC-P3-06: cada coluna do quadro tem altura limitada e scroll próprio; a página não cresce infinitamente.",
+    "AC-P3-07: o menu do cartão não oferece destino que o servidor recusaria.",
+    "AC-P3-08: ordenação de coluna escolhida persiste por pessoa e navegador e o padrão atual é preservado.",
+    "AC-P3-09: o delta de pontos exibido vem da resposta do servidor, não de recálculo no cliente.",
+    "AC-P3-10: com prefers-reduced-motion, o valor final aparece sem animação."
+  ],
+  "evidence": {},
+  "rollbacks": [
+    {
+      "tag": "pre-plan-v3",
+      "commit": "8d78812",
+      "scope": "todo plan-v3"
+    }
+  ],
+  "notes": [
+    "Onda 2 e Onda 3 são independentes da Onda 1 e entre si; podem ser invertidas por urgência de uso.",
+    "Único encadeamento duro: 1 -> 4 (a animação depende do delta autoritativo).",
+    "Altura/scroll de coluna não tem teste unitário honesto em jsdom: a prova é o spec Playwright.",
+    "Nenhuma onda toca display-quest-db :5432. Capturas de tela sim: docs/.capture.env aponta para a instância real.",
+    "Correcao de plano: 1.B nao pode usar lib/date-only.ts (RG-01). Novo backend/domain/time/civil-day.ts, puro e sem import, compartilhado por backend e frontend — fonte unica que elimina a divergencia R5.",
+    "Correcao de plano (3.C): o texto do batch citava DEC-34 para a persistencia da ordenacao; DEC-34 e a decisao do movimento para fora de Concluido. A da ordenacao e a DEC-33.",
+    "Rotulo acessivel nao deve conter o rotulo do elemento que ele governa: 'Ordenar coluna A Fazer' continha 'Coluna A Fazer' e o getByLabel do Playwright (que casa por substring) achava dois elementos. Virou diretriz no cap. 12 e o rotulo do botao passou a ser 'Ordenar tarefas de A Fazer'.",
+    "Correcao de plano (4.A): o texto previa `withActorProgress` carregando `awardedPoints`; medido, esse read model e congelado e o valor que ele carregaria seria o pedido, nao o creditado. A costura e o retorno do award (porta `onTaskCompleted`), e o contrato ganhou tambem `awardedTo` porque a aprovacao credita o responsavel pela tarefa, nao quem aprovou. Ver DEC-48.",
+    "Medido no 4.B: o chip `+0` nao pode existir. `announcePointsDelta` ignora `null` e `0`, e a contagem nunca passa por zero (passo minimo visivel de 1 na direcao do delta) — um chip que pisca zero mente sobre um premio que existe.",
+    "Medido no 4.B: geometria de interface se prova no navegador, nao no jsdom. A primeira versao do chip (`-top-5`) saia pela borda do cabecalho e so o `boundingBox()` do e2e pegou.",
+    "Medido no 4.B: o timeout que limpa um sinal nao sobrevive ao desmontar do componente que o montou. Por isso o sinal carrega `at` e um sinal velho simplesmente nao desenha — limpar no `cleanup` quebraria o chip em desenvolvimento, porque o modo estrito do React remonta todo efeito.",
+    "Encerramento (2026-10-03, DEC-49): o plan-v3 fecha com 13 batches executados — S0.1, 1.A-1.D, 2.A-2.C, 3.A-3.C, 4.A-4.B — e a Onda 5 removida. Os 10 criterios de aceite (AC-P3-01..10) continuam cobertos pelos batches entregues: nenhum deles era sobre notificacao nativa. `status: done`, `activeWave`/`activeBatch` nulos, `awaitingInstruction` vazia, `blockers` vazio.",
+    "Medido no encerramento: GAP-P3-05 (o toast da conclusao direta ainda anuncia o numero projetado) continua ABERTO e nao bloqueia nenhum criterio de aceite — AC-P3-09 e sobre o delta exibido no contador, que vem da resposta do servidor (chip da 4.B). Corrigi-lo move o aviso para depois da mutacao e mexe em OND1-C; fica como item aberto, nao como pendencia do plano.",
+    "Medido no encerramento: lib/notifications/browser-notifications.ts (134 linhas) e tests/unit/lib/browser-notifications.test.ts (231 linhas) estao ORFAOS — `grep -rn browser-notifications` devolve so o proprio teste, nenhum chamador em codigo de aplicacao. Existiram para a F1b, que saiu do plano (DEC-49). Duas saidas honestas: manter (costura pronta, registrada como divergencia consciente em docs/src/15) ou apagar seam e teste juntos (batch pequeno, so codigo). Decisao do dono, pendente — enquanto nao vier, fica como esta.",
+    "Correcao de plano (§6 do PLAN.md): a linha de baseline dizia '64 arquivos / 721 testes, 725 modulos / 2737 dependencias' — numeros vindos da baseline do clean-arch (a que ainda estava no AGENTS.md). A baseline do plan-v3, medida no S0.1 e registrada em `baseline`, e 67 arquivos / 675 testes e 731 modulos / 2748 dependencias. A linha foi corrigida para a do plan-v3 e as duas medidas ficam registradas, para ninguem comparar apples com oranges.",
+    "Medido no encerramento: DEC-45 nao existe no registro (grep em todo o repo e em todo o historico: zero ocorrencias). A numeracao nao foi reaproveitada — DEC-46 (ASK-P3-02), DEC-47, DEC-48 e DEC-49 seguem em ordem. A lacuna e impolida; nao renumerar nada para fechar o buraco, porque o registro e o que sustenta a rastreabilidade."
+  ],
+  "timeline": [
+    {
+      "at": "2026-10-02",
+      "event": "plano escrito a partir da lista do dono; restrições R1-R14 medidas no código; DEC-30..38 registradas; 4 gaps abertos"
+    },
+    {
+      "at": "2026-10-02",
+      "event": "dono respondeu os 4 gaps: DEC-39 (premiação pode ficar negativa), DEC-40 (histórico de pontos intocado), DEC-41 (@pontos aceito e ignorado), DEC-42 (Onda 5 adiada). Gaps fechados, status ready, nenhum batch travado exceto 5.A por BLK-01."
+    },
+    {
+      "at": "2026-10-02",
+      "event": "S0.1: branch plan/v3-operacional + tag pre-plan-v3 em db6df77. Dono escolheu executar neste checkout e comecar pela Onda 1. Antes de 1.B, mediu-se R15 (RG-01 veda domain->lib) e o plano foi corrigido (DEC-43)."
+    },
+    {
+      "at": "2026-10-02",
+      "event": "1.A e 1.B executados. A regra de atraso passou a dia civil America/Sao_Paulo (UTC-3 fixo) via backend/domain/time/civil-day.ts; premiação 10 / 15 adiantada / 10 no dia / 10−dias×10 atrasada, sem piso. Entregar no dia do prazo deixou de render zero."
+    },
+    {
+      "at": "2026-10-02",
+      "event": "1.C: a aritmetica de atraso passou a existir em um lugar so. Import features -> backend/domain aceito pelo gate sem alterar a allow-list."
+    },
+    {
+      "at": "2026-10-02",
+      "event": "1.D: nenhuma tela aceita mais pontuação do cliente. O campo saiu dos tres formularios, @pontos do backlog virou token ignorado, as tres bordas HTTP (criar simples, criar em lote, editar) pararam de ler `points` e a aprovacao nunca le o corpo. Medido: o extrato do DOM da tela Nova Tarefa recapturada nao tem mais 'Pontos' entre os rotulos. Onda 1 fechada (G0-G6 verdes no commit 9fc6987)."
+    },
+    {
+      "at": "2026-10-02",
+      "event": "Medido para a Onda 2, antes de planejar o batch: o log da sessao e obrigatorio — sem texto, o botão 'Encerrar sessão' fica desabilitado e nao ha como encerrar. A nota da sessao (2.B) precisa tratar isso alem de salvar rascunho."
+    },
+    {
+      "at": "2026-10-02",
+      "event": "2.A: criado lib/client-storage.ts. Medido antes: zero localStorage na base e um sessionStorage (o aviso de sessao iniciada, que fica de fora de proposito). Namespace dq:, leitura que nunca lanca, devolve padrao sem window. 16 testes em environment node."
+    },
+    {
+      "at": "2026-10-02",
+      "event": "2.B: a anotacao da sessao passa a existir enquanto ela acontece. Rascunho por sessao com debounce, despejado na caixa de log ao abrir 'Finalizar Work Session' (que continua editavel), apagado so depois de endSession resolver; na falha o texto volta ao rascunho e o erro aparece na tela (antes era rejection silenciosa). Medido de paso: o backend aceita log vazio (`note || null`), logo a obrigatoriedade do log e regra so da interface — pergunta em aberto para o dono."
+    },
+    {
+      "at": "2026-10-02",
+      "event": "Dono respondeu ASK-P3-02: o log da sessao continua obrigatorio (DEC-46), a regra nao muda, e mandou executar o 2.C. Nenhum batch travado alem de 5.A (BLK-01)."
+    },
+    {
+      "at": "2026-10-03",
+      "event": "2.C: a pausa automatica passou a ter sinal fora do dialogo. O botao collapsed do cronometro diz o estado da sessao no icone, na cor e no nome acessivel, e pulsa depois da pausa automatica enquanto ninguem retomou, encerrou ou abriu o painel; o som (WebAudio, sem asset) e opcional, desligado por padrao e destravado pelo proprio interruptor. A costura de notificacao nativa ficou criada e testada, mas sem quem a invoque — fora de contexto seguro o navegador recusa a permissao. Onda 2 fechada; G0-G5 verdes no commit 624c543."
+    },
+    {
+      "at": "2026-10-03",
+      "event": "3.A: a coluna parou de ser a pagina. Medido antes: uma coluna com 17 cartoes media 5.586 px numa janela de 900 px, e o documento 5.949 px. Altura maxima derivada da janela com a reserva de 17rem medida (257 px de cromo a 1440 px), scroll por coluna e cabecalho fora da area de rolagem por construcao. No caminho, dois defeitos pre-existentes da suite e2e (o login nao achava o campo Senha por causa do botao Mostrar senha, e o teste de busca nao abria a lupa). G0-G6 verdes no commit fbbde99."
+    },
+    {
+      "at": "2026-10-03",
+      "event": "3.B: o menu do cartao parou de oferecer destino que o servidor recusa. allowedTargets e derivado de resolveMove; sem destino, o item desabilitado diz o porque. Arrastar Concluido continua desabilitado, entao o menu e o caminho. Achado: o cartao tinha duas copias do menu e a regra tinha entrado so numa delas — extraidas para TaskCardMenu. G0-G5 verdes no commit e6830e3."
+    },
+    {
+      "at": "2026-10-03",
+      "event": "3.C: cada coluna escolhe a propria ordem (urgencia, prazo, mais recentes, pontos, alfabetica), guardada por pessoa e por navegador em dq:column-order:<pessoa>:<coluna>. Medido antes: a tarefa nao volta com createdAt e points e heterogeneo na base — as duas opcoes foram desenhadas a partir disso (DEC-47), e o padrao 'urgencia' delega ao comparador antigo em vez de copia-lo. O navegador pegou um defeito que o jsdom nao veria: o rotulo do botao continha o rotulo da coluna e o getByLabel achava os dois. Onda 3 fechada; G0-G6 verdes no commit bef0acf."
+    },
+    {
+      "at": "2026-10-03",
+      "event": "4.A: conclusao e aprovacao devolvem o premio creditado (awardedTo + awardedPoints). Medido antes: o numero existia e era descartado na fronteira — a porta do award era Promise<void>. O plano apontava o read model da tarefa; o medido mostrou que ali so entraria o valor pedido, e que a aprovacao credita o responsavel, nao quem aprovou. G0-G4 verdes no commit 2c98b1d (DEC-48)."
+    },
+    {
+      "at": "2026-10-03",
+      "event": "4.B: chip do premio creditado no contador do cabecalho (contagem de 1 s, respeita prefers-reduced-motion, so quando o credito e da propria pessoa). Tres medicoes mudaram o desenho: rAF nao serve (teste nem aba oculta), a geometria acima da pilula saia da tela, e o sinal sobrevive ao logout sem `at`. G0-G5 verdes + e2e 7/7 (commit dbd067e). Onda 4 fechada; GAP-P3-05 aberto (o toast da conclusao direta ainda recalcula o numero no cliente) e 5.A continua bloqueada por BLK-01, agora como unico item restante do plano."
+    },
+    {
+      "at": "2026-10-03",
+      "event": "Dono respondeu ASK-P3-03 na terceira opcao: tirar da Onda 5 o batch de notificacao nativa em vez de esperar HTTPS, junto com o BLK-01 (DEC-49). O sinal de pausa aceito em HTTP e o da Onda 2 (visual sempre visivel + som opcional). Medido antes de fechar: nenhum dos 10 criterios de aceite era sobre notificacao nativa (AC-P3-04 e o alerta in-app da Onda 2), entao a remocao nao abre nenhuma lacuna de entrega; e o grep mostrou que `lib/notifications/browser-notifications.ts` (134 linhas) e o teste (231) ficaram ORFAOS, sem nenhum chamador em codigo de aplicacao. Os cabecalos de comentario dos dois arquivos diziam 'ligado na 5.A, hoje bloqueada por BLK-01' e foram corrigidos — comentario que aponta para batch inexistente e documento mentiroso. Correcao de plano junto: a linha de baseline do §6 trazia numeros da baseline do clean-arch (64 arquivos/721 testes, 725 modulos/2737 deps) e foi trocada pela do plan-v3 (67/675 e 731/2748 no S0.1; 75/881 e 748/2816 no encerramento). Estado final: status done, activeWave/activeBatch nulos, 13 batches todos done, waves 0-4 done, blockers vazio, GAP-P3-05 segue aberto sem bloquear AC, seam orfao em aberto. Gates: G0 748 modulos/2816 deps sem violacao e allow-list vazia; G1 limpo nos dois arquivos tocados; G2 0 erros; G3 65 arquivos/798 testes; G4 75 arquivos/881 testes contra dq-dev-test-db:5433; G5 docs:check limpo e docs:build do documento tecnico (15 secoes, 33 figuras, 1014 KB). Encerramento no commit 6bbf86d (medido e commitado em 2026-10-03)."
+    },
+    {
+      "at": "2026-10-05",
+      "event": "Encerramento operacional: a branch plan/v3-operacional foi mergeada na dev por fast-forward (a dev era ancestral, sem conflito, sem commit de merge) no commit fdfc5d2 e removida em seguida — o dono pediu tudo na dev, sem branch sobrando, e uma branch nova para o B6 do clean-arch. Esse mesmo commit corrige um bug da propria suite e2e, achado ao rodar a verificacao final: tests/e2e/shell.spec.ts mantinha login()/CREDENTIALS proprios, copia do helper, e ficou com getByLabel(\"Senha\") sem exact (o botao \"Mostrar senha\" tambem e um rotulo acessivel desse texto). Antes 9 passed / 3 failed; depois 12 passed, com E2E% = 0 no banco. A correcao remove a copia em vez de consertar a segunda: mesma classe de falha que a 3.B achou nos dois menus do cartao."
+    }
+  ]
+}

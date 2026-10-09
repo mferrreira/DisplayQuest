@@ -1,0 +1,54 @@
+@startuml
+!include _base.puml
+
+title Máquina de estados — sessão de trabalho
+
+hide empty description
+scale 1.15
+
+[*] --> Ativa : iniciar
+
+state Ativa {
+  [*] --> EmExecucao
+  state EmExecucao : <<trecho em curso>>
+  state EmExecucao : limite de 9 h por trecho
+}
+
+state "Pausada" as Pausada
+state "Concluída" as Concluida <<final>>
+
+Ativa    --> Pausada   : pausar · ou passar\nde um horário marcado
+Pausada  --> Ativa     : retomar (novo trecho)
+Ativa    --> Concluida : finalizar
+Pausada  --> Concluida : finalizar
+Ativa    --> [*]       : varredura noturna 23:59
+Pausada  --> [*]       : (permanece registrada)
+
+Ativa    : <<tempo correndo>>
+Ativa    : duração cresce
+Pausada  : <<tempo congelado>>
+Pausada  : trecho acumulado no histórico
+Concluida : <<tempo encerrado>>
+Concluida : duração final consolidada
+
+note right of Ativa
+  Horários de pausa automática:
+  09:30, 12:00, 15:00 e 17:00
+  (America/Sao_Paulo).
+
+  Ao cruzar um desses horários, a
+  sessão passa a Pausada com o
+  carimbo do instante da pausa,
+  não o horário da leitura — e o
+  trecho é limitado a 9 horas.
+end note
+
+note bottom of Pausada
+  A normalização é preguiçosa:
+  acontece na leitura, não em
+  um disparador. A correção é
+  persistida na primeira
+  consulta.
+end note
+
+@enduml

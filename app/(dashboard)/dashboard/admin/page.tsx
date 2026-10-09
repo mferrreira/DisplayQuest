@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { useUser } from "@/contexts/user-context"
@@ -18,24 +18,30 @@ export default function AdminDashboardPage() {
   const { tasks } = useTask()
   const [sessions, setSessions] = useState<WorkSession[]>([])
 
-  useEffect(() => {
-    const fetchSessions = async () => {
-      if (!user) {
-        setSessions([])
-        return
-      }
-
-      try {
-        const response = await WorkSessionsAPI.getAll()
-        setSessions(Array.isArray(response) ? response : [])
-      } catch (error) {
-        console.error("Erro ao carregar sessões de trabalho:", error)
-        setSessions([])
-      }
+  const refreshSessions = useCallback(async () => {
+    if (!user) {
+      setSessions([])
+      return
     }
 
-    fetchSessions()
+    try {
+      const response = await WorkSessionsAPI.getAll()
+      setSessions(Array.isArray(response) ? response : [])
+    } catch (error) {
+      console.error("Erro ao carregar sessões de trabalho:", error)
+      setSessions([])
+    }
   }, [user])
+
+  // As sessões mudam sem ações desta tela: alguém pausa no cronômetro flutuante, o
+  // cron fecha a sessão de madrugada. Medido em 2026-10-09: o painel só via o estado
+  // novo depois de um refresh inteiro, porque a busca rodava uma vez no mount. Agora
+  // ela repete a cada 30 s, o mesmo ciclo do cronômetro flutuante.
+  useEffect(() => {
+    void refreshSessions()
+    const interval = setInterval(() => void refreshSessions(), 30000)
+    return () => clearInterval(interval)
+  }, [refreshSessions])
 
   useEffect(() => {
     if (!loading && !user) {
@@ -103,6 +109,7 @@ export default function AdminDashboardPage() {
           tasks={tasks}
           sessions={sessions}
           stats={stats}
+          onSessionsChanged={refreshSessions}
         />
       </main>
     </div>

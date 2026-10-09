@@ -1,4 +1,13 @@
+import type { ActorRef } from "@/backend/domain"
+import type { ReportPeriod } from "@/backend/domain/reporting"
+
+/**
+ * B6-3 (D4): as entradas das rotas de relatórios semanais passaram a levar o `ActorRef` —
+ * a autoridade (regra composta MANAGE_USERS||LABORATORISTA, self-or-view, MANAGE_USERS puro
+ * no histórico de horas e no bulk) morava nas rotas com `hasPermission`/`ensure*`.
+ */
 export interface WeeklyReportListQuery {
+  actor: ActorRef
   userId?: number
   weekStart?: string
   weekEnd?: string
@@ -16,27 +25,53 @@ export interface ProjectHoursHistoryQuery {
 }
 
 export interface UserProjectHoursQuery {
+  /** B6-4 (D4): self || MANAGE_USERS (mensagem default) — a rota gateava com ensureSelfOrPermission. */
+  actor: ActorRef
   userId: number
   weekStart?: string
   weekEnd?: string
 }
 
 export interface WeeklyHoursHistoryQuery {
+  actor: ActorRef
   weekStart?: string
   userId?: number
 }
 
 export interface UpsertWeeklyReportCommand {
+  actor: ActorRef
   userId: number
   weekStart: string
   weekEnd: string
   summary?: string | null
 }
 
+export interface BulkGenerateWeeklyReportsCommand {
+  actor: ActorRef
+  periodType: ReportPeriod
+  from: string
+  to: string
+}
+
+export interface BulkWeeklyReportPeriodResult {
+  label: string
+  start: string
+  end: string
+  reports: number
+}
+
+export interface BulkGenerateWeeklyReportsResult {
+  periodCount: number
+  reportCount: number
+  periods: BulkWeeklyReportPeriodResult[]
+}
+
 export interface WeeklyReportSessionLog {
   id: number
   userId: number
   projectId: number | null
+  startTime: string
+  endTime: string | null
   date: string
   note: string | null
   createdAt: string
@@ -188,6 +223,8 @@ export interface ProjectReportAggregateResult {
     userId: number
     userName: string | null
     date: string
+    startTime: string | null
+    endTime: string | null
     note: string | null
     projectName: string | null
   }>

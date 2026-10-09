@@ -1,4 +1,13 @@
-import { daily_logs } from '@prisma/client';
+// OND9-B1 (DEC-06): model PURO — forma da linha `daily_logs` declarada localmente.
+interface DailyLogRow {
+    id: number;
+    userId: number;
+    projectId: number | null;
+    date: Date;
+    note: string | null;
+    createdAt: Date;
+    workSessionId: number | null;
+}
 
 export interface IDailyLog {
     id?: number;
@@ -29,7 +38,7 @@ export class DailyLog {
         this.createdAt = createdAt;
     }
 
-    static fromPrisma(data: daily_logs): DailyLog {
+    static fromPrisma(data: DailyLogRow): DailyLog {
         return new DailyLog(
             data.userId,
             new Date(data.date),

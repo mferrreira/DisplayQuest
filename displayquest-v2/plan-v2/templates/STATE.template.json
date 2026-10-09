@@ -1,0 +1,54 @@
+{
+  "featureId": "{NN}",
+  "name": "{nome}",
+  "status": "draft",
+  "version": "0.1.0",
+
+  "dependencies": {
+    "list": [],
+    "allDone": false
+  },
+
+  "artifacts": {
+    "PLAN": "PLAN.md",
+    "SPEC": "SPEC.md",
+    "AGENT": "AGENT.md",
+    "STATE": "STATE.json"
+  },
+
+  "currentMilestone": null,
+  "currentBatch": null,
+
+  "acceptanceCriteria": [
+    {
+      "id": "AC-{NN}-01",
+      "summary": "{resumo}",
+      "testRef": "{caminho/descrição do teste ou evidência}",
+      "status": "pending"
+    }
+  ],
+
+  "gates": {
+    "lint": "pending",
+    "types": "pending",
+    "unit": "pending",
+    "integration": "pending",
+    "migration": "pending"
+  },
+
+  "evidence": [],
+
+  "rollbacks": [],
+  "blockers": [],
+
+  "checks": [],
+
+  "timeline": [
+    {
+      "at": "2026-09-19T12:00:00-03:00",
+      "event": "created",
+      "from": null,
+      "to": "draft"
+    }
+  ]
+}

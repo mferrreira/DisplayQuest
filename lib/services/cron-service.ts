@@ -1,7 +1,26 @@
 import * as cron from 'node-cron'
-import { prisma } from '@/lib/database/prisma'
-import { startOfWeek, endOfWeek, format } from 'date-fns'
 import { getBackendComposition } from '@/backend/composition/root'
+import { SCHEDULED_PAUSE_TIMES } from '@/backend/domain/work'
+import { SYSTEM_REASONS, systemActor } from '@/backend/domain/identity'
+
+/**
+ * repo-cleanup B3 (D2): as expressões cron de pausa são DERIVADAS de
+ * SCHEDULED_PAUSE_TIMES (backend/domain/work/schedule.ts) agrupando por minuto —
+ * antes havia cópia manual ('30 9,15 * * *' / '0 12,17 * * *') que divergia do domínio
+ * em silêncio: '30 9,15' disparava 15:30, horário que NÃO está em SCHEDULED_PAUSE_TIMES.
+ * Para ["09:30","12:00","15:00","17:00"] produz "30 9 * * *" + "0 12,15,17 * * *"
+ * (pinned por tests/unit/services/cron-schedule.test.ts).
+ */
+function pauseCronExpressions(times: readonly string[]): string[] {
+  const byMinute = new Map<number, number[]>()
+  for (const t of times) {
+    const [h, m] = t.split(':').map(Number)
+    const hours = byMinute.get(m) ?? []
+    hours.push(h)
+    byMinute.set(m, hours)
+  }
+  return [...byMinute.entries()].map(([m, hs]) => `${m} ${hs.sort((a, b) => a - b).join(',')} * * *`)
+}
 
 export class CronService {
   private weeklyResetJob: cron.ScheduledTask | null = null
@@ -23,16 +42,12 @@ export class CronService {
       timezone: 'America/Sao_Paulo' // Fuso horário do Brasil
     })
 
-    // Pause automático das work sessions em horários fixos:
-    // 09:30 e 15:00 (minuto 30) / 12:00 e 17:00 (minuto 0)
-    this.scheduledPauseJobs = [
-      cron.schedule('30 9,15 * * *', async () => {
+    // Pause automático das work sessions: horários vindos de SCHEDULED_PAUSE_TIMES (D2)
+    this.scheduledPauseJobs = pauseCronExpressions(SCHEDULED_PAUSE_TIMES).map((expression) =>
+      cron.schedule(expression, async () => {
         await this.executeScheduledPause()
-      }, { timezone: 'America/Sao_Paulo' }),
-      cron.schedule('0 12,17 * * *', async () => {
-        await this.executeScheduledPause()
-      }, { timezone: 'America/Sao_Paulo' }),
-    ]
+      }, { timezone: 'America/Sao_Paulo' })
+    )
 
     this.nightlySweepJob = cron.schedule('59 23 * * *', async () => {
       await this.executeNightlySweep()
@@ -51,15 +66,17 @@ export class CronService {
   async executeScheduledPause() {
     try {
       const { workExecution, labOperations } = getBackendComposition()
-      // Persist work_sessions auto-pause (list normalizes active→paused)
-      await workExecution.listWorkSessions({ status: 'active' })
-      const sessions = await workExecution.listWorkSessions({ status: 'active' })
+      // Persist work_sessions auto-pause (list normalizes active→paused).
+      // B6-5 (D4): rotina sem pessoa — systemActor(SCHEDULED_PAUSE), o bypass declarado
+      // (DEC-54). A label e de auditoria: este job e a pausa agendada, nao o sweep 23:59.
+      await workExecution.listWorkSessions({ actor: systemActor(SYSTEM_REASONS.SCHEDULED_PAUSE), status: 'active' })
+      const sessions = await workExecution.listWorkSessions({ actor: systemActor(SYSTEM_REASONS.SCHEDULED_PAUSE), status: 'active' })
       const affectedUserIds = [
         ...new Set((sessions ?? []).map((s: any) => s.userId as number).filter((uid: number) => Number.isInteger(uid) && uid > 0)),
       ]
       for (const userId of affectedUserIds) {
         try {
-          await labOperations.pauseResponsibilityForUser(userId)
+          await labOperations.pauseResponsibilityForUser({ actor: systemActor(SYSTEM_REASONS.SCHEDULED_PAUSE), userId })
         } catch (err) {
           console.error(`⚠️ Não foi possível pausar responsabilidade do usuário ${userId}:`, err)
         }
@@ -73,90 +90,31 @@ export class CronService {
   async executeNightlySweep() {
     try {
       const { workExecution } = getBackendComposition()
-      await workExecution.listWorkSessions({ status: 'active' })
+      // B6-5 (D4): varredura anti-farm sem pessoa — systemActor(NIGHTLY_SWEEP) (DEC-54).
+      await workExecution.listWorkSessions({ actor: systemActor(SYSTEM_REASONS.NIGHTLY_SWEEP), status: 'active' })
     } catch (error) {
       console.error('❌ Erro no sweep noturno de sessões:', error)
     }
   }
 
   /**
-   * Executa o reset semanal de horas
+   * Executa o reset semanal de horas.
+   *
+   * repo-cleanup B3 (D1): a lógica migrou do Prisma cru (findMany users/sessions,
+   * history.create, users.update por usuário) para o ResetWeeklyHoursHistoryUseCase do
+   * módulo reporting via composition root — mesma semântica (window startOfWeek/
+   * endOfWeek { weekStartsOn: 1 }, history só com totalHours > 0, currentWeekHours
+   * zerado para todo ativo, sem dedup — pinada por tests/unit/services/
+   * cron-weekly-reset.golden.test.ts e pelo contract/roundtrip do reporting (QUIRK-7C).
    */
   private async executeWeeklyReset() {
     try {
-      
-      // Buscar todos os usuários ativos
-      const users = await prisma.users.findMany({
-        where: {
-          status: 'active'
-        },
-        select: {
-          id: true,
-          name: true,
-          weekHours: true
-        }
-      })
-
-      const now = new Date()
-      const currentWeekStart = startOfWeek(now, { weekStartsOn: 1 })
-      const currentWeekEnd = endOfWeek(now, { weekStartsOn: 1 })
-
-      const results = []
-      let totalHoursSaved = 0
-
-      for (const user of users) {
-        // Calcular horas trabalhadas a partir das sessões
-        const sessions = await prisma.work_sessions.findMany({
-          where: {
-            userId: user.id,
-            status: 'completed',
-            startTime: {
-              gte: currentWeekStart,
-              lte: currentWeekEnd
-            }
-          },
-          select: {
-            duration: true
-          }
-        })
-        const totalSeconds = sessions.reduce((sum, s) => sum + (s.duration || 0), 0)
-        const totalHours = totalSeconds / 3600
-
-        if (totalHours > 0) {
-          
-          // Salvar no histórico
-          await prisma.weekly_hours_history.create({
-            data: {
-              userId: user.id,
-              userName: user.name,
-              weekStart: currentWeekStart,
-              weekEnd: currentWeekEnd,
-              totalHours: totalHours
-            }
-          })
-
-          const savedHours = totalHours
-          totalHoursSaved += savedHours
-          results.push({
-            userId: user.id,
-            userName: user.name,
-            savedHours: savedHours.toFixed(1),
-            weekStart: format(currentWeekStart, 'dd/MM/yyyy'),
-            weekEnd: format(currentWeekEnd, 'dd/MM/yyyy')
-          })
-
-        } else {
-          
-        }
-        
-        // Resetar as horas atuais da semana para 0
-        await prisma.users.update({
-          where: { id: user.id },
-          data: { currentWeekHours: 0 }
-        })
-        
-      }
-
+      const { reporting } = getBackendComposition()
+      // B6-3 (D4, DEC-54): o reset passou a exigir ator. O cron e rotina de sistema sem
+      // pessoa atras — systemActor("WEEKLY_RESET"), o bypass declarado. Sem isso, o gate de
+      // MANAGE_USERS que desceu para o use case derrubava o reset noturno em producao, e
+      // nenhum teste de rota exercitaria a quebra.
+      await reporting.resetWeeklyHoursHistory(systemActor(SYSTEM_REASONS.WEEKLY_RESET))
     } catch (error) {
       console.error('❌ Erro ao executar reset automático:', error)
     }

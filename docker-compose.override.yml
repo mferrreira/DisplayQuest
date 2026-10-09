@@ -1,6 +1,13 @@
-# Dev only — bind postgres to loopback for local `localhost:5432` (tests, psql).
-# Em prod, suba com `docker compose up` SEM este override (base não expõe porta).
-# Debug remoto: `ssh -L 5432:localhost:5432 <host>` em vez de 0.0.0.0.
+# Publica o Postgres no LOOPBACK do host (127.0.0.1:5432) para `psql` local e para o
+# `tests/integration/entities-roundtrip.test.ts`. A base (docker-compose.yml) usa apenas
+# `expose`, que nao publica porta no host — so intra-rede `app -> postgres:5432`.
+#
+# IMPORTANTE — este override e versionado e entra SEMPRE, tambem em producao: o Docker
+# Compose carrega `docker-compose.override.yml` implicitamente por convencao de nome,
+# sem comando que o nomeie. (O comentario anterior deste arquivo dizia para subir em
+# prod "SEM este override" — isso era falso e induzia a erro.) Ele e seguro em prod
+# porque amarra apenas em 127.0.0.1, nunca em 0.0.0.0. Para debug remoto, prefira
+# `ssh -L 5432:localhost:5432 <host>` a abrir a porta no host.
 services:
   postgres:
     ports:

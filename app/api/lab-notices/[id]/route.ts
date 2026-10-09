@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server"
+import { routeErrorResponse } from "@/lib/api/route-error-response"
 import { getBackendComposition } from "@/backend/composition/root"
 import { requireApiActor } from "@/lib/auth/api-guard"
-
+// OND8-B4 (R4): DomainErrors mapeados. EVOLUTION: "Aviso nao encontrado" e bloqueios de
+// acesso (mensagens 8L9 verbatim) antes caíam no 500; agora 404/403.
 const { labOperations: labOperationsModule } = getBackendComposition()
 
 export async function DELETE(
@@ -27,7 +29,6 @@ export async function DELETE(
 
     return NextResponse.json({ success: true })
   } catch (error: any) {
-    console.error("Erro ao remover aviso:", error)
-    return NextResponse.json({ error: error.message || "Erro ao remover aviso" }, { status: 500 })
+    return routeErrorResponse(error, { fallback: "Erro ao remover aviso", exposeMessage: true })
   }
 }

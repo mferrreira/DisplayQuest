@@ -1,8 +1,24 @@
 import { NextResponse } from "next/server"
+import { routeErrorResponse } from "@/lib/api/route-error-response"
 import { getBackendComposition } from "@/backend/composition/root"
-import { ensurePermission, requireApiActor } from "@/lib/auth/api-guard"
-import { hasPermission } from "@/lib/auth/rbac"
+import { userActor } from "@/backend/domain"
+import { requireApiActor } from "@/lib/auth/api-guard"
 
+// B6-7 (D4): as decisoes das 4 metodos desta rota desceram para os use cases, na ordem
+// medida em cada um:
+//  - GET: o escopo (MANAGE_USERS ve tudo; dono ve a sua; terceiro so ve projeto do qual e
+//    membro; senao 403 'Acesso negado') mora no GetTaskByIdUseCase. O 404 continua LEGADO
+//    verbatim (o use case devolve null, a rota monta o corpo antigo — mesma regra do
+//    daily_log no B6-5); o 403 passou ao corpo mapeado (superset, DEC-53).
+//  - PUT: o gate de CAMPO (quem nao tem MANAGE_TASKS so edita corpo exclusivamente
+//    {status, assignedTo} — 'Sem permissão para editar tarefa') e o filtro allowedFields
+//    moram no UpdateTaskUseCase, decididos sobre o corpo CRU antes do lookup.
+//  - DELETE: 'Sem permissão para excluir tarefa' (MANAGE_TASKS) mora no DeleteTaskUseCase,
+//    antes do lookup — o quirk "gateway sem checagem" estava so no gateway; a rota sempre
+//    cobrou esta autoridade (DEC-123).
+//  - PATCH complete: o gate cross-actor ('Sem permissão para concluir tarefa para outro
+//    usuário') mora no CompleteTaskUseCase. Os 400 de despacho (acao invalida, userId
+//    invalido) ficam na rota e continuam ANTES do gate, como medido.
 const { taskManagement: taskManagementModule } = getBackendComposition()
 
 export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
@@ -10,28 +26,17 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     const auth = await requireApiActor()
     if (auth.error) return auth.error
 
+    const actor = userActor(auth.actor.id, auth.actor.roles)
     const params = await context.params
     const id = parseInt(params.id)
-    const task = await taskManagementModule.getTaskById(id)
+    const task = await taskManagementModule.getTaskById({ actor, taskId: id })
     if (!task) {
       return NextResponse.json({ error: "Tarefa não encontrada" }, { status: 404 })
     }
 
-    const actor = auth.actor
-    if (!hasPermission(actor.roles, "MANAGE_USERS")) {
-      const isOwner = task.assignedTo === actor.id || task.assigneeIds?.includes(actor.id)
-      if (!isOwner) {
-        const allowedProjectIds = new Set(await taskManagementModule.listActorProjectIds(actor.id))
-        if (task.projectId && !allowedProjectIds.has(task.projectId)) {
-          return NextResponse.json({ error: "Acesso negado" }, { status: 403 })
-        }
-      }
-    }
-
     return NextResponse.json({ task: task.toJSON() })
   } catch (error) {
-    console.error("Erro ao buscar tarefa:", error)
-    return NextResponse.json({ error: "Erro ao buscar tarefa" }, { status: 500 })
+    return routeErrorResponse(error, { fallback: "Erro ao buscar tarefa" })
   }
 }
 
@@ -40,58 +45,21 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
     const auth = await requireApiActor()
     if (auth.error) return auth.error
 
+    const actor = userActor(auth.actor.id, auth.actor.roles)
     const params = await context.params
     const id = parseInt(params.id)
     const body = await request.json()
-    const canManageTasks = hasPermission(auth.actor.roles, "MANAGE_TASKS")
 
-    if (!canManageTasks) {
-      const nonEmptyKeys = Object.keys(body ?? {})
-      const onlyPublicProgressFields =
-        nonEmptyKeys.length > 0 &&
-        nonEmptyKeys.every((key) => key === "status" || key === "assignedTo")
-
-      if (!onlyPublicProgressFields) {
-        const permissionError = ensurePermission(auth.actor, "MANAGE_TASKS", "Sem permissão para editar tarefa")
-        if (permissionError) return permissionError
-      }
-    }
-
-    const allowedFields = [
-      "title", 
-      "description", 
-      "status", 
-      "priority", 
-      "assignedTo", 
-      "assigneeIds",
-      "projectId", 
-      "dueDate", 
-      "points", 
-      "completed", 
-      "taskVisibility", 
-      "isGlobal"
-    ];
-    const data: any = {}
-    for (const key of allowedFields) {
-      if (body[key] !== undefined) data[key] = body[key]
-    }
-
+    // o corpo CRU vai ao use case: o gate de campo decide sobre ele e o filtro
+    // allowedFields (que era desta rota) passou para dentro junto com o gate
     const task = await taskManagementModule.updateTask({
+      actor,
       taskId: id,
-      actorId: auth.actor.id,
-      data,
+      data: body ?? {},
     })
     return NextResponse.json({ task: task.toJSON() })
   } catch (error: any) {
-    if (error.message?.includes('not found')) {
-      return NextResponse.json({ error: "Tarefa não encontrada" }, { status: 404 })
-    }
-    const message = typeof error?.message === "string" ? error.message : ""
-    if (message.includes("não pertence") || message.includes("não pode") || message.includes("Acesso negado")) {
-      return NextResponse.json({ error: message }, { status: 403 })
-    }
-    console.error("Erro ao atualizar tarefa:", error)
-    return NextResponse.json({ error: error.message || "Erro ao atualizar tarefa" }, { status: 500 })
+    return routeErrorResponse(error, { fallback: "Erro ao atualizar tarefa", exposeMessage: true })
   }
 }
 
@@ -100,22 +68,16 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
     const auth = await requireApiActor()
     if (auth.error) return auth.error
 
-    const permissionError = ensurePermission(auth.actor, "MANAGE_TASKS", "Sem permissão para excluir tarefa")
-    if (permissionError) return permissionError
-
+    const actor = userActor(auth.actor.id, auth.actor.roles)
     const params = await context.params
     const id = parseInt(params.id)
     await taskManagementModule.deleteTask({
+      actor,
       taskId: id,
-      actorId: auth.actor.id,
     })
     return NextResponse.json({ success: true })
   } catch (error: any) {
-    if (error.message?.includes('not found')) {
-      return NextResponse.json({ error: "Tarefa não encontrada" }, { status: 404 })
-    }
-    console.error("Erro ao excluir tarefa:", error)
-    return NextResponse.json({ error: error.message || "Erro ao excluir tarefa" }, { status: 500 })
+    return routeErrorResponse(error, { fallback: "Erro ao excluir tarefa", exposeMessage: true })
   }
 }
 
@@ -133,28 +95,28 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       return NextResponse.json({ error: "Ação inválida. Use 'complete' para marcar tarefa como concluída." }, { status: 400 })
     }
 
-    const actorId = auth.actor.id
-    const userToAward = userId ? parseInt(userId) : actorId;
-    if (Number.isNaN(userToAward) || userToAward <= 0) {
+    const userToAward = userId ? parseInt(userId) : undefined;
+    if (userToAward !== undefined && (Number.isNaN(userToAward) || userToAward <= 0)) {
       return NextResponse.json({ error: "userId inválido" }, { status: 400 })
     }
-    if (userToAward !== actorId && !hasPermission(auth.actor.roles, "MANAGE_TASKS")) {
-      return NextResponse.json({ error: "Sem permissão para concluir tarefa para outro usuário" }, { status: 403 })
-    }
-    
-    const task = await taskManagementModule.completeTask({
+
+    // B6-7: o gate cross-actor (creditar a OUTRO exige MANAGE_TASKS) e o default
+    // "premiado = o proprio ator" moram no CompleteTaskUseCase, na ordem medida (depois
+    // dos 400 de despacho desta rota, antes do lookup).
+    const { task, awardedTo, awardedPoints } = await taskManagementModule.completeTask({
+      actor: userActor(auth.actor.id, auth.actor.roles),
       taskId: id,
       userId: userToAward,
     })
-    
-    console.log(`✅ Task ${id} completed by user ${userToAward}. Awarded ${task.points} points.`)
-    
-    return NextResponse.json({ task: task.toJSON() })
+
+    // O valor creditado é decidido pelo domínio (points-rules) e confirmado pelo publisher de
+    // gamificação, que devolve o **efetivo** (OND4-A) — inclusive 0 quando o award já existia.
+    // Antes desta Onda a rota não sabia o número, e o próprio código registrava isso como
+    // limitação aceita; logar `task.points` mentia e continua mentindo (plan-v3 OND1-D).
+    console.log(`✅ Task ${id} completed by user ${userToAward ?? auth.actor.id}.`)
+
+    return NextResponse.json({ task: task.toJSON(), awardedTo, awardedPoints })
   } catch (error: any) {
-    if (error.message?.includes('not found')) {
-      return NextResponse.json({ error: "Tarefa não encontrada" }, { status: 404 })
-    }
-    console.error("Erro ao completar tarefa:", error)
-    return NextResponse.json({ error: error.message || "Erro ao completar tarefa" }, { status: 500 })
+    return routeErrorResponse(error, { fallback: "Erro ao completar tarefa", exposeMessage: true })
   }
 }

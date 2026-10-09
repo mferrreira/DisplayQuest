@@ -1,0 +1,81 @@
+@startuml
+!include _base.puml
+
+title Casos de uso — projetos e participação
+
+left to right direction
+
+actor Voluntário
+actor Colaborador
+actor Pesquisador
+actor "Gerente de Projeto" as GP
+actor Coordenador
+
+rectangle "DisplayQuest" <<fronteira>> {
+  usecase "Listar projetos" as UC_LIS
+  usecase "Consultar projeto" as UC_CON
+  usecase "Criar projeto" as UC_CRIAR
+  usecase "Editar projeto" as UC_EDIT
+  usecase "Excluir projeto" as UC_EXCL
+  usecase "Consultar membros" as UC_MEM
+  usecase "Adicionar membro" as UC_ADDM
+  usecase "Remover membro" as UC_REMM
+  usecase "Definir papéis\nno projeto" as UC_ROLES
+  usecase "Definir líder" as UC_LIDER
+  usecase "Consultar horas\ndo projeto" as UC_HORAS
+  usecase "Consultar\nestatísticas" as UC_STATS
+  usecase "Gerenciar\nvoluntários" as UC_VOL
+  usecase "Consultar logs\ndos projetos que lidera" as UC_LOGS
+}
+
+Voluntário --> UC_LIS
+Voluntário --> UC_CON
+Voluntário --> UC_MEM
+Voluntário --> UC_HORAS
+Colaborador --> UC_LIS
+Colaborador --> UC_CON
+Colaborador --> UC_MEM
+Colaborador --> UC_HORAS
+Pesquisador --> UC_LIS
+Pesquisador --> UC_CON
+GP --> UC_LIS
+GP --> UC_CON
+GP --> UC_CRIAR
+GP --> UC_EDIT
+GP --> UC_EXCL
+GP --> UC_MEM
+GP --> UC_ADDM
+GP --> UC_REMM
+GP --> UC_ROLES
+GP --> UC_LIDER
+GP --> UC_HORAS
+GP --> UC_STATS
+GP --> UC_VOL
+GP --> UC_LOGS
+Coordenador --> UC_CRIAR
+Coordenador --> UC_EDIT
+Coordenador --> UC_EXCL
+Coordenador --> UC_STATS
+
+UC_HORAS ..> UC_MEM : <<inclui>>
+UC_STATS ..> UC_HORAS : <<inclui>>
+UC_VOL ..> UC_MEM  : <<inclui>>
+
+note right of UC_LIDER
+  Uma pessoa lidera no máximo
+  um projeto. A troca de líder
+  é recusada com 409 se ela já
+  lidera outro projeto, e também
+  se removê-la deixaria o projeto
+  sem gerente.
+end note
+
+note bottom of UC_EXCL
+  Projetos concluídos não podem
+  ser excluídos — apenas
+  arquivados ou movidos para
+  espera. Arquivar é o caminho
+  normal de encerramento.
+end note
+
+@enduml

@@ -5,9 +5,217 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
 
 ## Verificação
 
-- **Gate de entrega:** `npm run lint` (nada de erro) && `npx tsc --noEmit` (0) && `npx vitest run` (esperado **256/257** — o único failure é o conhecido `floating-session-timer`, ver gotcha abaixo).
+- **Gate de entrega:** `npm run arch:check` (exit 0, allow-list **vazia**) && `npm run lint` (nada de erro) && `npx tsc --noEmit` (0) && `npx vitest run` (zero failure). A contagem é **por branch**: no `dev` o baseline era **64 arquivos / 721 testes** quando o B8 removeu os 651 testes de paridade; no `plan/v3-operacional`, medido no encerramento do plan-v3 (2026-10-03), são **65 arquivos / 798 testes** em `tests/unit` + `features` e **75 / 881** na suíte completa. Na `dev` de hoje (medido em 2026-10-07, depois do plan-v4 V4-1/V4-2/V4-3/V4-6, do V4-4 de subtasks, dos testes do painel V4-4b/V4-4c, do V4-5a/V4-5b/V4-5c de subtask na UI, do V4-6b de vocabulário de status e do lote pós-encerramento POS-1 — DEC-97/98) são **87 arquivos / 1107 testes** e **97 / 1192** na suíte completa; a suíte e2e do quadro está em **2 passando + 1 falha conhecida + 5 "did not run"** (medido 2026-10-06
+no V4-5c; eram 7 quando a coluna `Em Revisão` tinha um cartão a menos) — o 3º teste quebra por cartão a
+mais na coluna (dado legítimo da instância, não código: hoje são as tarefas 50 e 304), e como o spec é
+serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 5 passando. Compare sempre com o `STATE.json` do plano em que você está. Na branch do fechamento do repo-cleanup (`refactor/b6-restante`, medido 2026-10-08 depois do B6-2c..B6-7) o baseline é **95 arquivos / 1280 testes** em `tests/unit` + `features` e **105 / 1367** na suíte completa (G0 810 módulos / 3295 dependências).
+- **G4/integração:** roundtrips Prisma real rodam **só** contra o banco de teste isolado `dq-dev-test-db` em `127.0.0.1:5433` (`$env:DATABASE_URL="postgresql://dq_dev:dq_dev_local_only@127.0.0.1:5433/dq_dev_test"; npx vitest run`) — nunca contra o `display-quest-db` (5432, produção local).
+- **Setup do G4 (corrigido 2026-10-02):** `npm run db:test:up` e `npm run db:test:setup` **existem**
+  no `package.json` e fazem a sequência completa (`docker compose -f docker-compose.test.yml up -d`,
+  `prisma migrate deploy` na 5433, `db:seed` e `tests/fixtures/g4-normalize.sql`). Uma nota anterior
+  aqui afirmava que não existiam — está superada. O passo do `g4-normalize.sql` continua
+  indispensável: sem ele, `entities-roundtrip` falha porque o seed escreve status pré-contrato e o
+  schema estrito os rejeita por design (D-18). `db:test:guard` **não** existe e não foi inventado.
+- **Node local ≠ Node de deploy:** a imagem é `node:20-alpine`; o `engines` não é declarado e
+  não há `.nvmrc`. Gate verde local não implica gate verde no deploy quando o Node difere —
+  foi assim que o shim `path` (removido) quebrava em Node 22+ e passaria em Node 20.
 - **Secrets:** `npm run check:env` valida `NEXTAUTH_SECRET` (≥32, sem placeholder) e
   senha do banco (denylist). O runner lê `process.env`, não `.env` — exporte as variáveis.
+
+## Arquitetura clean-arch (refatoração 2026-09/10, ondas 0–9)
+
+- **Árvore:** `backend/domain/` (core puro: erros tipados + regras como funções puras,
+  `now` sempre parâmetro), `backend/models/` (record builders puros, **zero**
+  `@prisma/client`), `backend/modules/<m>/{application/{contracts,ports,use-cases},infrastructure/{repositories,adapters}}`, `backend/composition/root.ts` (único ponto de wiring cruzado; expõe `checkDatabaseHealth`). Ver `backend/README.md`.
+- **Gate G0:** `npm run arch:check` (dependency-cruiser, RG-01..RG-06) com **allow-list
+  vazia** desde OND9-B1 — import proibido novo quebra o gate. Não re-adicionar entradas
+  sem decisão registrada em `displayquest-v2/clean-arch/STATE.json`.
+- **Rotas:** finas, via `getBackendComposition()`; erros de domínio mapeados por
+  `lib/api/domain-error-response.ts` (`domainErrorResponse`: Validation→400, NotFound→404,
+  Conflict→409, Forbidden→403); não-DomainError (enum Prisma, FK P2003) segue no 500 legado.
+- **Quirks são contrato:** os quirks congelados seguem pinados pelos testes da wiring nova
+  (roundtrips G4, `use-cases.*`, `*-rules`, goldens novos). A suíte de paridade
+  antigo-vs-novo e os gateways legados em `infrastructure/*.gateway.ts` foram **removidos
+  no OND9-B1 (repo-cleanup B8, 2026-10-01, DEC-26/DEC-29)** — o comportamento antigo está
+  preservado no git (tag `pre-cleanup` = `12d9d6c`).
+- **Composição:** factories aceitam `repository?`/`ports?` (seam primário); publishers
+  entre módulos entram por porta local injetada no composition root (DEC-21).
+- **Estado/decisões:** `displayquest-v2/clean-arch/{PLAN.md,STATE.json}` — STATE.json v2.0.0
+  agora monitora o **repo-cleanup** (lotes B0–B11, iniciado 2026-10-01). O histórico da
+  refatoração clean-arch (ondas 0–9, 41 batches, AC-00-01..15, DEC-01..DEC-25) está no git
+  (tag `pre-cleanup` = `12d9d6c`); o registro DEC-01..28 e os GAPs foram carregados no
+  STATE.json v2 (`decisionRegistry`/`gapRegistry`) — comentários de código que citam
+  `DEC-NN` continuam resolvíveis.
+- **D4 não são 16 rotas — são 41 (medido 2026-10-05, DEC-50) — FECHADO em 2026-10-08 (B6-0..B6-7,
+  DEC-115..DEC-123):** as 41 rotas migraram; o gate decide nos use cases lendo o `ActorRef`, e a
+  rota autentica, valida entrada, monta o ator e mapeia com `domainErrorResponse`. Restam na rota
+  apenas as autorizações **antes do parse** (`AssertCan*UseCase`: notifications B6-2b, schedules/bulk
+  B6-6, POST tasks B6-7) — preservam o par medido 403-antes-dos-400 de corpo — e os 400/404 legados
+  montados pela rota onde o contrato antigo era verbatim (ex.: 404 do GET issue/daily_log/tarefa).
+  Approve/Reject/subtasks de tarefa e lab-event/notice/schedule continuam com id cru de propósito:
+  a autoridade já morava nos use cases. O número antigo ("16") e a nota "nenhum use case checa
+  ator" estão superados.
+- **O cron é chamador sem ator de 3 use cases (medido 2026-10-05) — TODOS aplicados:**
+  `lib/services/cron-service.ts` chama `workExecution.listWorkSessions` (×2 com
+  `systemActor(SCHEDULED_PAUSE)` + ×1 com `NIGHTLY_SWEEP`, B6-5), `labOperations.pauseResponsibilityForUser`
+  (`systemActor(SCHEDULED_PAUSE)`, B6-6) e `reporting.resetWeeklyHoursHistory` (`WEEKLY_RESET`, B6-3).
+  A lição permanece: mover checagem para dentro de um use case chamado por rotina **sem** desenhar
+  o ator-de-sistema quebra a rotina, e o sintoma não aparece em teste de rota nenhum (DEC-54).
+  `work-execution` continua o módulo de wiring mais caro: a factory existe, mas instancia o use case
+  *inline por chamada* (`new ListWorkSessionsUseCase(...).execute(query)` nos bindings do módulo) —
+  o B6-5 migrou assim, como medido.
+- **`POST /api/purchases` só barra compra PARA TERCEIRO (medido 2026-10-05):** a regra da rota
+  é `!canManagePurchases && targetUserId !== actor.id`, então um VOLUNTARIO comprando para si
+  recebe 201 e só quem compra para outro recebe 403. Eu acreditava o contrário e o teste de
+  caraterização refutou — em autorização, escreva o teste antes de mover o gate.
+- **Estado/decisões (plan-v3):** `displayquest-v2/plan-v3/{PLAN.md,STATE.json}` — STATE.json
+  v3.0.0 monitora o plano operacional **plan-v3** (ondas 0–4, 13 batches, AC-P3-01..10,
+  DEC-30..DEC-49, GAP-P3-01..04 fechados, GAP-P3-05 aberto, `blockers` vazio). A numeração de
+  decisões **continua** a do clean-arch: DEC-01..29 são do clean-arch, DEC-30 em diante são do
+  plan-v3. Não reinicie a numeração em outro plano.
+
+## plan-v3 — qualidade operacional (sessões, quadro, pontos)
+
+- **Estado atual:** `done` — **encerrado em 2026-10-03**. Ondas 0–4 fechadas (S0.1, 1.A–1.D,
+  2.A–2.C, 3.A–3.C, 4.A–4.B; último commit de código `dbd067e`), G0–G4 verdes e e2e do quadro
+  7/7. A **Onda 5 foi removida do plano** (DEC-49, respondendo `ASK-P3-03`): o sinal de pausa
+  aceito em HTTP é o da Onda 2 (visual sempre visível + som opcional). `awaitingInstruction`
+  está vazia; as perguntas respondidas ficam em `answeredInstructions` e o que saiu do plano em
+  `removedItems`.
+- **Duas coisas seguem abertas de propósito:** `GAP-P3-05` — o toast da conclusão direta ainda
+  anuncia o número *projetado* (`features/tasks/components/task-card.tsx:256`) em vez do
+  creditado pela resposta; corrigir move o aviso para depois da mutação. E o seam
+  `lib/notifications/browser-notifications.ts` (134 linhas + teste), que ficou **órfão** com a
+  F1b fora do escopo: `grep` mostra zero chamadores. Manter ou apagar é decisão do dono
+  (registrada em `PLAN.md` §8).
+- **Decisões que mudam o desenho:** premiação **pode ficar negativa** (DEC-39, sem piso — o
+  `-37140 pts` medido numa captura é a regra funcionando, não bug isolado); nenhum `UPDATE` em
+  `tasks.points` histórico (DEC-40); `@pontos` do backlog aceito e ignorado (DEC-41); a ordenação
+  por coluna ordena por `id` e pelo valor **gravado** em `points`, porque a tarefa não volta com
+  `createdAt` e a coluna é histórica (DEC-47).
+- **Restrições duras medidas** (detalhe em `PLAN.md` §2): a instância é **HTTP em IP de rede**,
+  e Chrome/Firefox **recusam pedido de permissão de notificação fora de secure context** —
+  notificação nativa não é possível lá hoje. A aritmética de atraso existe em dois lugares com
+  duas matemáticas diferentes (`backend/domain/task/task-rules.ts` vs
+  `features/tasks/utils/move-rules.ts`). O quirk "penalidade pode exceder os pontos" está
+  congelado por teste explícito. O delta de pontos **não chega ao cliente**.
+- **Gates do plano:** G0–G4 idênticos aos do clean-arch, mais **G5** (`docs:build` +
+  `docs:check` em batch que muda comportamento visível) e **G6** (recapturar as telas do guia
+  quando a captura deixa de representar a tela).
+
+## plan-v4 — subtasks, animação de pontos, inativação de usuário (2026-10-05..10-06)
+
+- **Estado/decisões:** `displayquest-v2/plan-v4/{PLAN.md,STATE.json}` — V4-1, V4-2, V4-3, V4-4,
+  **V4-4b**, **V4-4c**, **V4-5a** (subtask no cartão), **V4-5b** (CRUD no diálogo de detalhe),
+  **V4-5c** (formulário de nova tarefa + GAP-P3-05 fechado), **V4-6b** (vocabulário de status
+  padronizado em `suspended`, fecha ASK-V4-28) e **V4-5d** (G5/G6 do guia, executado 2026-10-07)
+  **done**; o plano está **encerrado**. O V4-5d foi a recaptura restrita, sem gravar —
+  `capture-user-guide.mjs --only=quadro-tarefas,quadro-tarefas-participante,dialogo-nova-tarefa,
+  dialogo-detalhe-tarefa` (exatamente 4 PNGs mudaram; os dois diálogos de `INTERACTIONS` só abrem e
+  fotografam; o único que grava é `relatorios-gerar-lote`, fora do `--only`), depois a prosa de
+  `docs/src-usuario` pelo manifesto (campo Subtasks na criação, aviso âmbar e checkbox no cartão,
+  seção Subtasks + janela no detalhe, trava de entrega + auto-move) e `docs:build` (15 seções técnicas
+  / 12 de usuário, 35 figuras) + `docs:check` em verde.
+  `awaitingInstruction` está vazia. Em `openQuestions`: **nada** — o **`ASK-V4-33`** foi respondido
+  em 2026-10-07 (**DEC-96**): **tirar o filtro** da tela de voluntários (o controle morto saiu, a tela
+  fala o vocabulário real e a dívida do guarda ficou vazia).
+- **Ajuste pós-encerramento de 2026-10-07 (lote `POS-1`, DEC-97/DEC-98):** cinco mudanças pedidas pelo
+  dono depois do `done` — (1) desmarcar subtask atualiza o estado sem refresh manual (cache de listas
+  escrito por id em todas as variantes de `queryKeys.tasks.lists()`), (2) **nova regra de pontuação**
+  (DEC-97), (3) **marcação exige mãe em Andamento** com toast (DEC-98), (4) lista de subtasks em
+  **leitura** + contagem na aba **Tarefas** do painel admin (sem checkbox), (5) o par "subtask"
+  duplicado sumiu dos dois diálogos (rótulo/título no topo, placeholder com exemplo
+  `Ex.: Revisar a introdução`, botão **Adicionar subtask** virou só-ícone `Plus` com `aria-label`).
+- **Numeração de decisão é global e JÁ tem buraco (medido 2026-10-06, atualizado 2026-10-08):** DEC-01..29 clean-arch,
+  DEC-30..49 plan-v3, DEC-50..54 B6/D4, DEC-55..60 plan-v4, **DEC-61..77 plan-v5** (reservadas pelo
+  dono em `displayquest-v2/plan-v5/`, criado 2026-10-06 e ainda **não commitado**), DEC-78..95 plan-v4
+  (V4-4, ASK-V4-06, V4-4b, V4-4c, V4-5a, V4-5b, V4-5c e V4-6b), **DEC-96..98 plan-v4 (2026-10-07,
+  pós-encerramento: ASK-V4-33 — tira o filtro morto da tela de voluntários — e o lote POS-1 de pontuação
+  + trava de marcação)**, DEC-99..104 plan-v5, DEC-105..114 plan-v6, **DEC-115..123 clean-arch/B6-restante
+  (2026-10-08: B6-2c..B6-7 + acordos da retomada)**. O V4-4 ia usar DEC-61..64 e colidiu; os 28
+  comentários de código foram renumerados. **Antes de abrir decisão nova, `grep` os CINCO `STATE.json`
+  (clean-arch, plan-v3, plan-v4, plan-v5, plan-v6) — a nota antiga que dizia "três" está velha.
+  Próxima livre: DEC-124.**
+- **Subtask (V4-4, DEC-78..83 → regra atual = DEC-97/98):** tabela `task_subtasks` (sem FK para
+  `users` — subtask não tem
+  responsável próprio), base gravada em `tasks.points` = `10 + 5·n` (DEC-97) e **cada subtask CONCLUÍDA
+  vale +5 fixos dentro dessa base** — a leitura antiga da DEC-78 (subtask pontuada pela regra da mãe no
+  instante da própria conclusão; exemplo mãe −40 + (+15, 0, −30) = −55) **morreu na DEC-97**. O prêmio da
+  mãe é `(10 + 5·n_concluídas)` atravessando o calendário: **×1,5 se a entrega for ≥2 dias civis
+  antecipada** (régua nova, vale para toda tarefa, com ou sem subtask — substitui o "1 dia adiantado" da
+  DEC-32), no prazo/sem prazo o base cheio, atraso −10/dia sem piso (DEC-39); fracionário arredondado com
+  `Math.round` (25 × 1,5 → 38, congelado em teste). A **trava** (não entrar em `in-review`/`done` com
+  subtask aberta, vindo de QUALQUER coluna, nos três caminhos `PUT status` / `PATCH complete` / `POST
+  approve`) é 400; a **janela** (criar/renomear/apagar a lista de uma mãe em `in-review`/`done`) é 409.
+  A **trava de marcação (DEC-98)**: `completed: true` exige mãe em `in-progress` — 409 com a MESMA frase
+  que o toast do cliente (`subtaskMarkMessage`, título "Ação não permitida"); a janela de `done` corre
+  **antes**, então `done` responde com a frase da janela; **desmarcar** não é marcar e fica livre fora de
+  `done`. Concluir subtask não obedece à janela. A última subtask concluída **move a mãe** de
+  `in-progress` para `in-review` com a mesma notificação de um movimento humano.
+- **Excluir usuário não é o caminho (DEC-55):** o que funciona de ponta a ponta é o **bloqueio de
+  qualquer status `!== "active"`** — login (`lib/auth/config.ts:30`), API (`lib/auth/server-auth.ts:36`),
+  regras de laboratório, bulk weekly reports, cron weekly reset. **Correção medida em 2026-10-06:**
+  uma nota anterior aqui dizia que "`inactive` já funciona de ponta a ponta" — meio errado. O status
+  `inactive` **não existe como estado escrevível**: o enum é `pending|active|rejected|suspended`
+  (`entities/user.ts:31`), a rota de status escreve `active`/`rejected`/`suspended`
+  (`update-user-status.use-case.ts:15-18`), e a única ocorrência de `"inactive"` no backend é um
+  contador que sempre dá zero (`prisma-user.repository.ts:231`). O caminho real de inativação é
+  **"Suspender" → `suspended`** — e em 2026-10-06 o dono decidiu (**DEC-95**, fecha ASK-V4-28):
+  padronizar em `suspended`, sem adicionar `inactive` ao enum. A opção "Inativo" do filtro do
+  painel, o campo `UserStatistics.inactive` e o contador fantasma **saíram**; os fixtures de teste
+  que descreviam `status:"inactive"` (estado que a produção não escreve) passaram a citar
+  `suspended`. O `tsc` não pega isso (`inactive` é string), então o guarda é estrutural:
+  `tests/unit/modules/user-management/user-status-vocabulary.test.ts` (enum, caminhos de decisão,
+  dívida registrada, opção do painel). A dívida era o **`ASK-V4-33`** — a tela de voluntários
+  (`volunteers-management.tsx:55`) tinha vocabulário próprio e filtro morto — e o dono respondeu em
+  2026-10-07 (**DEC-96**): **tirar o filtro**. O Select de status, o estado `statusFilter` e os
+  vocabulários `inactive`/`on_leave` saíram; a tela fala `pending|active|rejected|suspended` e
+  `KNOWN_DIVERGENCES` ficou vazio. Nenhuma tela
+  `.tsx` chamava `deleteUser`. O `DELETE /api/users/[id]` agora **recusa com 409** quando há
+  dependência; sem dependência continua excluindo (é o caso "cadastro de teste").
+- **16 das 23 FKs para `users` são `RESTRICT`** (default do Prisma, sem `onDelete`); só 7
+  cascadeiam (`project_members`, `task_assignees`, `task_user_progress`, `work_sessions`,
+  `weekly_hours_history`, `user_badges.userId`, `notifications`). Se você mexer no schema e
+  adicionar uma FK para `users` **sem** `onDelete`, o guarda
+  `tests/unit/modules/user-management/user-delete-schema-drift.test.ts` falha e nomeia a coluna —
+  ele compara o schema com o corpo de `countBlockingDependencies`, porque o `tsc` não protege
+  contra tabela esquecida.
+- **Gotcha do guarda:** a forma abreviada `{ userId }` do Prisma não é reconhecível como coluna por
+  leitura de texto — o repositório escreve `userId: userId` por extenso de propósito. E ao parsear
+  o schema, o nome do modelo precisa sair **sem** a chave (`tasks {` → `tasks`).
+- **`translate` × `transform` no Tailwind v4 (medido no CSS compilado da instância, 2026-10-05):**
+  `-translate-x-1/2` escreve a propriedade **`translate`**; o `animate-in`/`slide-in-from-*` do
+  `tw-animate-css` anima **`transform`** (`@keyframes enter`). São propriedades diferentes e
+  **compõem**. O comentário que estava em `components/ui/points-delta.tsx` — "as variantes com
+  transform sobrescrevem o `-translate-x-1/2`" — era verdade no Tailwind v3 com
+  `tailwindcss-animate` e **não vale mais nesta base**: o movimento em Y do chip entrou no mesmo
+  elemento. Valor do percurso: `POINTS_DELTA_SHIFT_PX` em `lib/points-delta.ts`.
+- **Utilitário de animação com comprimento:** `slide-in-from-bottom-*` aceita comprimento
+  arbitrário (`--value(--translate-*,[percentage],[length])`), mas o ramo de escala só aceita
+  **inteiro** — `slide-in-from-bottom-2.5` não funciona; `slide-in-from-bottom-[10px]` funciona.
+- **O chip do prêmio tem prazo de 1,9 s.** Em teste de navegador, as asserções do chip vêm **antes**
+  das asserções de coluna (orçamento de 15 s), senão o chip já expirou e o locator não acha nada.
+  E a contagem do total se prova com um `MutationObserver` instalado **antes** da ação — poll do
+  Playwright chega depois do segundo em que a animação acontece.
+- **`set` de pontos aceita negativo (DEC-60, 2026-10-05):** `PATCH /api/users/[id]/points` com
+  `action: "set"` aceita valor negativo, porque a premiação produz totais negativos (DEC-39;
+  medido: Coordenador −20, Gerente −31030) e a administração não conseguia escrever um de volta.
+  `add` (chão em 0 via `Math.max`) e `remove` (exige suficiência) **continuam** não-negativos. A
+  rota valida a **ação antes do número** — necessário para saber se o negativo é permitido, e
+  inverte a precedência de dois 400. O input do `ModernAdminPanel` tem `min` condicionado à ação.
+- **Quirk aberto (ASK-V4-06):** `{action:"set", points: null}` zera os pontos em vez de recusar —
+  JSON não tem `Infinity`, `JSON.stringify(Infinity)` é `null`, e `Number(null)` é `0`.
+- **`components/admin/ModernAdminPanel.tsx` não tem teste nenhum** (~1000 linhas). Mudança nele é
+  coberta só por `tsc`.
+- **jsdom não liga StrictMode, o `next dev` liga.** Um efeito que decide se anima a partir de um
+  ref que ele mesmo escreve passou verde em 35 testes de jsdom e travou no navegador: no modo
+  estrito a primeira passada consumia a diferença e a segunda não animava nada. Renderize em
+  `<StrictMode>` quando o comportamento depende de efeito (referência:
+  `tests/unit/components/points-catch-up.test.tsx`).
+- **Baseline de pontos por pessoa:** `dq:points-seen:<userId>` (`lib/points-seen.ts`, via
+  `lib/client-storage.ts`). O contador do cabeçalho parte do último total que aquele usuário viu
+  naquele navegador. `clientStorageKey` descarta `null`/`undefined` dos segmentos — sem guarda, a
+  chave viraria `dq:points-seen`, uma só para todos os usuários.
 
 ## Perfil do sistema (2026-09-05)
 
@@ -33,14 +241,53 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
   de forma confiável (a rota ainda via o `readFile` real). Padrão da casa: rotas leem via
   um seam em `lib/` (ex.: `readReportFileBytes` em `lib/storage/report-uploads.ts`) e o
    teste mocka a lib, não o builtin.
-- **`floating-session-timer` falha de propósito (256/257):** `tests/unit/components/floating-session-timer.test.tsx`
-  (local, gitignored) asserciona o dialog "Sessão pausada automaticamente", mas o path de auto-pause do
-  componente passou a chamar `ResponsibilitiesAPI.pause()` (endpoint real `PATCH /api/responsibilities/0`)
-  sem que o teste mockasse `@/contexts/api-client` — sob `vi.useFakeTimers()` o fetch real nunca settle,
-  o dialog nunca abre e a asserção falha. As asserções do agendamento (o importante) passam.
-  Defeito de teste, não de produção. Decisão do dono (2026-09-03): **deixar falhando**, tratar 256/257
-  como verde. Fix eventual: `vi.mock("@/contexts/api-client")` com `ResponsibilitiesAPI.pause`/`resume`
-  resolvidos.
+- **Nem todo use case do D4 tem uma pessoa atrás dele (medido 2026-10-05, B6-2b / DEC-54):**
+  4 dos use cases que recebem gate são chamados **por uma rota e por rotinas derivadas ao mesmo
+  tempo** — `publishEvent` (rota + `NotificationsLabPublisher` ×2 + `NotificationsReportPublisher`
+  + os 3 use cases de `task-management`) e `listWorkSessions` / `pauseResponsibilityForUser` /
+  `resetWeeklyHoursHistory` (rota + `lib/services/cron-service.ts`). Colocar o gate dentro do use
+  case quebrava a notificação de issue do laboratório, a de relatório enviado e os 3 eventos de
+  revisão de tarefa, e **o sintoma não aparece em teste de rota nenhum** — só em produção. Resolvido
+  com `ActorRef` (`backend/domain/identity/actor-ref.ts`): `userActor(roles)` na rota,
+  `systemActor(reason)` nas rotinas, e `requireActorPermission` decide. Medi isso pela 4ª vez e a
+  família do `task-management` eu tinha classificado antes como "no-op, fora do raio": o *default*
+  do port é no-op, mas o composition root injeta o **módulo real**
+  (`backend/composition/root.ts:39`) — leia o *wiring*, não só a assinatura do port. O `reason` do
+  `systemActor` é rótulo de auditoria, não regra: `tests/unit/domain/identity/system-actor.test.ts`
+  fixa isso e faz **grep** de `systemActor(` em `app/api/**` para falhar o build se uma rota
+  declarar ator de sistema.
+- **Gate que não pode descer sozinho porque a rota valida com mensagens próprias (medido
+  2026-10-05, B6-2b):** `POST /api/notifications` tem 400s de rota cujas mensagens são
+  **diferentes** das congeladas no use case (`"Título e mensagem são obrigatórios"` na rota vs
+  `"Título é obrigatório"` no use case). As validações não podem descer junto com o gate, e sem uma
+  checagem **antes do parse** o 403 passaria a vir depois delas — quem não tem permissão com corpo
+  inválido levaria 400. Daí `AssertCanPublishNotificationEventUseCase`: a rota autoriza antes de ler
+  o corpo, e `publishEvent` recheca no próprio `actor` para proteger os demais chamadores. O par
+  403-antes-de-400 foi **medido antes** de mexer e não estava fixado em teste nenhum.
+- **Gate de autorização + teste de rota: o duplo de MÓDULO não decide nada (medido 2026-10-05,
+  B6-2a).** Quando o `ensurePermission` da rota desce para o use case, um
+  `vi.mock("@/backend/composition/root")` que devolve `{ store: { createReward: fake } }` faz o
+  403 **sumir do teste** — não falhar, sumir, porque a rota não decide mais e o duplo também não.
+  O que fazer: montar o **módulo real** sobre portas falsas
+  (`createStoreModule({ ports: { rewards, purchases } })`) dentro do factory do mock, que é
+  lazy. Dois avisos medidos no mesmo lote: (a) `createStoreModule`/`createGamificationModule`
+  constroem **todos** os use cases do módulo, então todas as portas precisam existir — use um
+  duplo que lança `"porta X não deveria ser usada"` para as não exercitadas, para o erro ser
+  alto em vez de silencioso; (b) `requireApiActor` normaliza com `normalizeRoles`, então
+  `login("COORDENADOR")` (string) vira `[]` e **nega todo mundo** — sempre `login(["COORDENADOR"])`.
+  E o reverso do mesmo risco: um duplo pode fixar o **comportamento do substituto** em vez do
+  do sistema. O B6-0 afirmava `POST /api/rewards {name:"R"}` → 201; a produção devolvia 400
+  (`normalizeRewardCreate`) antes e depois. Antes de confiar num status fixado por duplo, confira
+  o que o caminho real faz com aquele payload.
+- **`floating-session-timer` — gotcha CONFIRMADO nesta base (2026-10-01):** o arquivo
+  `tests/unit/components/floating-session-timer.test.tsx` existe e está na baseline (5 testes,
+  verdes). O auto-pause chama `ResponsibilitiesAPI.pause()` **depois** de `pauseSession()`;
+  sem mock, essa chamada vai pro MSW, fica **pendente**, e a linha seguinte
+  (`setShowAutoPauseDialog(true)`) nunca executa dentro do `act()` — o sintoma é `pauseSession`
+  tendo sido chamado corretamente e mesmo assim o dialog "Sessão pausada automaticamente"
+  ausente. Fix (validado): `vi.mock("@/contexts/api-client")` expondo `ResponsibilitiesAPI`
+  com `pause`/`resume`/`getActive` resolvidos. Uma versão anterior deste arquivo afirmava que
+  o teste "não existe nesta base" — está errado, não siga.
 - **LSP engana:** `Cannot find module` para `.js`/libs recém-criadas é falso-positivo do
   LSP; `tsc --noEmit` e `vitest` passam (`allowJs: true`, `moduleResolution: bundler`).
 - **Uploads (A11):** relatórios em `data/uploads/reports` (privado, servido só por
@@ -59,13 +306,227 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
   `aria-expanded` fica `false`) e o teste só falha ao buscar os `role="option"`. Shims vivem em
   `tests/setup.ts` (guardados por `typeof Element !== "undefined"` — as suítes com
   `// @vitest-environment node` pulam). Não remover (2026-09-03).
-- **Roundtrip de integração precisa de banco no ar:** `tests/integration/entities-roundtrip.test.ts`
-  (environment `node`) roda Prisma real contra `localhost:5432`. Com o container parado, a suíte
-  falha com "Can't reach database server". Sobe com `docker compose up -d postgres` (nome do
-  serviço = `postgres`, container = `display-quest-db`) — `db` **não** é o nome do serviço.
+- **jsdom desta base não tem `window.localStorage` (medido 2026-10-02):** no ambiente jsdom do
+  Vitest, `window === globalThis` e `typeof window.localStorage === "undefined"` — o
+  `populateGlobal` **não** copia a Web Storage do jsdom (que existe e funciona em
+  `globalThis.jsdom.window.localStorage`). Teste de componente que dependa de `localStorage`
+  precisa instalar o seu: `Object.defineProperty(window, "localStorage", { configurable: true,
+  value: <Map em memória> })` no `beforeEach` e `delete window.localStorage` no `afterEach`
+  (o `delete` é o que devolve o ambiente ao estado medido). Referência:
+  `tests/unit/components/session-notes-draft.test.tsx` e `floating-session-timer.test.tsx`.
+  Consequência boa: o seam `lib/client-storage.ts` cai no caminho "sem storage" durante o teste,
+  que é exatamente o comportamento de SSR.
+- **O botão collapsed do cronômetro tem 4 rótulos (medido 2026-10-03, 2.C):** o `aria-label` passou
+  a anunciar o estado (`sessionTimerButtonLabel` em `components/ui/session-alert.tsx`), então
+  `getByLabelText("Abrir timer de sessão")` só acha o caso "sem sessão". Foi o que quebrou
+  `features/laboratorio/__tests__/floating-timer-tabs.test.tsx` (2 dos 5 casos abrem o painel
+  com sessão aberta) — ele agora busca por fragmento `/abrir timer de sessão/i`.
+- **`Dialog` modal esconde o resto da página (medido 2026-10-03):** com o diálogo de pausa
+  automática aberto, o botão collapsed cai em `aria-hidden` e `getByRole`/`getByLabelText` não o
+  encontram. Nesse estado use `getByTestId("floating-session-timer-collapsed")` e `toHaveAttribute`.
+- **`getByLabel` casa por substring (medido 2026-10-03, 3.C):** um `aria-label` de controle não
+  pode **conter** o `aria-label` do elemento que ele governa. O botão de ordenação da coluna foi
+  escrito como `Ordenar coluna A Fazer` e passou a casar com o `aria-label="Coluna A Fazer"` da
+  própria coluna: `page.getByLabel("Coluna A Fazer")` do Playwright devolvia dois elementos e a
+  suíte e2e do quadro parou no primeiro teste (`getByLabelText` do Testing Library segue o mesmo
+  caminho por padrão). O rótulo virou `Ordenar tarefas de A Fazer`. Quando um controle novo
+  governa um elemento que já tem rótulo, **confira que os dois textos não se sobrepõem** — ou
+  passe `{ exact: true }`.
+- **A suíte e2e estava quebrada antes do 3.A (medido 2026-10-03, corrigido no mesmo batch):** duas
+  coisas faziam `tests/e2e/task-board.spec.ts` nem entrar no quadro — `tests/e2e/helpers.ts`
+  usava `getByLabel("Senha")` e o botão "Mostrar senha" também é um `label` acessível desse texto
+  (agora `getByLabel("Senha", { exact: true })`), e o teste de busca preenchia o input sem abrir a
+  lupa — naquela versão `?busca=` só existia depois de clicar em "Buscar tarefas". Se a suíte e2e
+  falhar no primeiro teste com *strict mode violation*, suspeite de rótulo duplicado antes de olhar
+  o DOM.
+- **O buscador do quadro é desktop-first desde 2026-10-05 (`features/tasks/components/board-toolbar.tsx`):**
+  a lupa-toggle existe **só abaixo de `sm` (640px)**; no desktop o campo nasce aberto (`h-10`, igual
+  aos `SelectTrigger`), a lupa some e o blur nunca recolhe. O que importa ao mexer: **a visibilidade é
+  CSS puro** (`sm:w-[200px]` no contêiner, `sm:hidden` na lupa) e o JS via `useIsDesktop()`
+  (`useSyncExternalStore` sobre `matchMedia`, `getServerSnapshot` = `false`) decide **só**
+  `tabIndex` e o collapse de blur. Renderizar duas subárvores por breakpoint em vez disso duplica o
+  `aria-label` "Buscar tarefas por título" no DOM, e no jsdom (sem CSS carregado) as duas ficam
+  "visíveis" — o `getByRole("textbox")` acha dois e o teste cai. E a divergência CSS↔JS é o modo de
+  falha caro: se o `matchMedia` disser "mobile" e o CSS disser "desktop", o campo aparece aberto com
+  `tabIndex={-1}` e **não é alcançável pelo teclado**. `board-people-filter.test.tsx` fixa os dois
+  lados — mas note que o **jsdom desta base não tem `window.matchMedia`**, então sem o stub todo
+  teste cai no caminho mobile (é o `stubDesktopViewport` do arquivo que escolhe).
+- **A mesma correção existia em duas cópias, e só uma recebeu (medido 2026-10-05):** o
+  `tests/e2e/shell.spec.ts` tinha `login()`/`CREDENTIALS` **próprios**, cópia do helper, e ficou
+  com `getByLabel("Senha")` sem `exact` — os 3 testes do shell caíam no primeiro `fill` enquanto
+  o quadro passava 7/7. Corrigido removendo a cópia e importando `login` de `./helpers`.
+  **Regra da casa:** corrigido um helper, `grep` o nome dele no diretório antes de commitar —
+  divergência entre cópia e original é o mesmo modo de falha que a 3.B achou nos dois menus do
+  cartão.
+- **Rodar um spec e2e exige o dev server no ar:** `playwright.config.ts` fixa
+  `baseURL: http://localhost:3001` (o compose do repo serve em 3000, e a suíte de integração
+  precisa do banco). O spec do quadro cria e apaga as próprias tarefas — depois de rodar, confira
+  `select count(*) from tasks where title like 'E2E%'` na base (tem que dar 0).
+- **O spec do quadro é `mode: "serial"` e depende do estado do teste anterior (medido 2026-10-05):**
+  o teste 3 ("leader approves") só acha o fixture porque o **teste 2** o moveu para `Em Revisão` —
+  rodar `-g "leader approves"` sozinho falha na linha 181 (`element(s) not found`) e isso **não é
+  regressão**, é o filtro quebrando a dependência. E como é serial, uma falha no 3 faz os outros 5
+  aparecerem como "did not run": leia a contagem antes de concluir que cinco testes quebraram.
+- **O e2e do quadro quebra por uso manual da instância, não por código (medido 2026-10-05):** o
+  teste 3 morre com *strict mode violation* — `Coluna Em Revisão` resolve **2** botões "Aprovar
+  tarefa" porque há **mais de um cartão** na coluna. Em 2026-10-05 era a tarefa **id 290 "fasdfas"**
+  (`status='in-review'`, `assignedTo=1`), que o dono tinha criado **testando o fluxo de revisão à
+  mão** — não é lixo, é uso legítimo da instância. Medido com `git stash` do batch: **o baseline
+  falha 3/3 com o mesmo erro**, então nunca é regressão. **Isto é recorrente, não um episodio:**
+  sempre que o dono mover uma tarefa para `Em Revisão` testando, o 3º teste quebra de novo e, como
+  o spec é serial, os outros 5 nem rodam. O conserto durável é escopar o locator no cartão do
+  fixture (como os outros testes do arquivo já fazem, e como o próprio docstring do arquivo promete
+  com "Self-contained"); o dono **recusou** em 2026-10-05, então o gate fica vermelho por decisão
+  conhecida. Quando o e2e falhar no 3º teste do quadro, **confirme com `git stash` antes de caçar
+  regressão** — e o mesmo vale para qualquer coluna: o teste usa a base de verdade, então um cartão
+  a mais em `A Fazer`/`Em Revisão`/`Ajustes`/`Concluído` vira strict mode violation da mesma forma.
+- **WebAudio em jsdom = degradar em silêncio:** o jsdom não implementa `AudioContext`, então o seam
+  `lib/notifications/alert-sound.ts` cai no caminho "sem suporte" (interruptor desabilitado, som
+  inaudível). Para provar a parte cliente ele é testado em `// @vitest-environment node` com
+  `vi.stubGlobal("window", { AudioContext: FakeAudioContext })` + `vi.resetModules()` por caso —
+  o mesmo truque do `alert-sound` guardando o contexto em cache.
+- **Roundtrip de integração precisa de banco no ar:** os roundtrips G4 do clean-arch
+  (`tests/integration/*-roundtrip.test.ts`, environment `node`) rodam Prisma real contra
+  o banco de teste **isolado** `dq-dev-test-db` em `127.0.0.1:5433` (exportar
+  `DATABASE_URL` apontando para a 5433). Com o container parado, a suíte falha com
+  "Can't reach database server"; re-arme com `docker start dq-dev-test-db` (NUNCA tocar
+  no `display-quest-db`/`display-quest`). O roundtrip antigo `tests/integration/entities-roundtrip.test.ts`
+  usa `localhost:5432` via `docker compose up -d postgres` (nome do serviço = `postgres`,
+  container = `display-quest-db`) — `db` **não** é o nome do serviço. **Medido em 2026-10-06
+  (V4-6b):** ele cria o `PrismaClient()` sem URL própria, então **sem `DATABASE_URL` exportado ele
+  cai na 5432** (a instância real) e o caso D-8 falha com *"no purchase row with a current-domain
+  status"* — lá `purchases` só tem `delivered`/`processing` (legado). A suíte completa **só fecha
+  verde com `export DATABASE_URL=...5433`**; a falha em 5432 é ambiente, não regressão.
+- **Os roundtrips G4 colidiam entre si (medido 2026-10-05, corrigido no mesmo dia):** os
+  `tests/integration/**` compartilham o **mesmo** banco e o Vitest roda arquivos em paralelo por
+  padrão. `bulkGenerateWeeklyReports` resolve a lista de usuários ativos **uma vez** e itera
+  período por período, enquanto `users-roundtrip` cria, aprova e **apaga** um usuário no mesmo
+  intervalo. Dois modos, ambos medidos: o bulk encontra um usuário já apagado (`NotFoundError
+  "Usuário não encontrado"`) e o relatório criado para o usuário do outro arquivo trava o
+  `users.delete` pela FK `weekly_reports_userId_fkey`. Taxa medida: **~1 falha em 6** corridas de
+  `tests/integration`. Correção: `vitest.config.mts` agora tem `test.projects` com a integração em
+  projeto próprio e `fileParallelism: false`; unit/features continuam em paralelo. Custo medido:
+  completa 35s → 47s, G3 30s → 35s; verde em 6/6 na integração e 7/7 na completa. Rodar um
+  arquivo isolado não muda (2s).
+  **Projeto de workspace NÃO herda do config raiz** — cada item abaixo foi omitido uma vez e
+  quebrou de um jeito diferente: sem `resolve.alias` os roundtrips dão `Cannot find package
+  '@/lib/database/prisma'`; sem `exclude` o `tests/e2e/**` entra como suíte falha (170 arquivos /
+  1826 testes em vez de 83/1017); sem `plugins: [react()]` o `.tsx` falha no parse; sem
+  `setupFiles` os shims de jsdom somem e 84 testes falham; sem `environment` o default do projeto
+  é `node`. Serializar tudo (`fileParallelism: false` global) também conserta, mas custa 115s na
+  completa e 102s no G3 — pagar 72s por concorrência que não colide.
+- **Migration de schema sem pôr a instância em risco (medido 2026-10-06, V4-4):** `prisma migrate dev`
+  pode pedir **RESET** quando detecta deriva — e a 5432 é o banco com os dados reais do dono. A sequência
+  usada: salvar o `schema.prisma` de antes, `prisma migrate diff --from-schema-datamodel <antes>
+  --to-schema-datamodel <novo> --script` (delta offline), gravar como
+  `prisma/migrations/<timestamp>_nome/migration.sql`, `prisma migrate deploy` (5432 **e** 5433),
+  `prisma generate`.
+- **`prisma generate` NÃO alcança processo em execução (medido 2026-10-06):** o `next dev -p 3001` que
+  estava de pe desde antes da migration tinha o client antigo em memória — `prisma.task_subtasks` era
+  `undefined`, e a primeira chamada da trava devolveria **500 no navegador** com o gate de tipos verde.
+  Depois de gerar client, reiniciar o dev server antes de rodar e2e.
+- **zod com `.default([])` torna a chave OBRIGATÓRIA no tipo de saída (medido 2026-10-06):** `entities/task.ts`
+  aceita `subtasks` ausente no *wire*, mas `Task` (saída de `z.infer`) passa a **exigir** a chave — todo
+  literal de `Task` (ex.: `tests/mocks/fixtures/tasks.ts`) precisa dela. Tolerância de parse não é
+  tolerância de tipo.
+- **Assinatura de regra de pontuação: `completed` é obrigatório de propósito (medido 2026-10-06).**
+  `AwardableSubtask` com `completed?` opcional fez a primeira versão contar subtask **aberta** no prêmio e
+  passar verde em todos os testes, porque os objetos de teste não diziam nada. Verificado por mutação
+  (remover o filtro não derrubava teste nenhum) e corrigido: campo obrigatório + caso explícito
+  "subtask aberta não entra na conta".
+- **`tests/unit/domain/identity/system-callers.test.ts` monta use cases de task à mão** com fakes `as never`:
+  um port novo (`subtasks`) não é pego pelo `tsc` e aparece como crash em tempo de execução. Precisa de
+  `subtasksPort()` (`countOpenByTaskId → 0`).
+- **A causa aparente da falha conhecida do 3º teste do quadro mudou (2026-10-06):** em 2026-10-05 era a
+  tarefa 290 "fasdfas"; agora é a **50 "fazer reuniao com mamedes"**, que o dono moveu para `in-review`.
+  É o mesmo modo de falha previsto acima (um cartão a mais na coluna → *strict mode violation*), e o
+  `git stash` confirma que o baseline falha idêntico.
+- **Rejeição não tratada em `onClick` quebra o GATE, não só o console (medido 2026-10-06, V4-4b):**
+  um `async` handler que lança sem `catch` devolve promise rejeitada que o React não trata. O Vitest
+  desta casa reporta `Unhandled Rejection` e sai com **exit 1** mesmo com todos os testes passando —
+  `Test Files 1 passed / Tests 9 passed / Errors 1 error`. Referência do conserto:
+  `components/admin/ModernAdminPanel.tsx` (`userSettingsError` + `<p role="alert">`, DEC-85).
+- **`ModernAdminPanel` não renderiza sozinho (medido 2026-10-06):** monta `ManageWorkSessionsDialog`
+  e `UserApproval` sempre, e os dois chamam contexto no primeiro render. Precisa da stack real do app
+  (`UserProvider > ProjectProvider > WorkSessionsProvider`, `app/client-layout.tsx:26-34`) e de mock de
+  `useAuth` — sem ele `canManageUsers` é `false` e a aba de usuários renderiza vazia, e o teste passaria
+  provando o oposto do que pretende.
+- **jsdom não implementa `window.confirm`** (lança "Not implemented"). Botões que confirmam antes de
+  chamar a API ("Suspender", "Rejeitar") precisam de `vi.stubGlobal("confirm", vi.fn(() => true))`.
+- **Texto montado em vários nós não é encontrável pela frase inteira:** `Atual: {n} pontos` + a dica da
+  ação viram três nós, e `getByText("Atual: 120 pontos")` falha com "text is broken up by multiple
+  elements". Caminho: regex no nó do parágrafo (`getByText(/Atual: 120/)`).
+- **`userEvent` sem `userEvent.setup()` é lento sob carga — flake medido (2026-10-06, V4-6b):**
+  chamar `userEvent.type/click` direto usa `delay: 0`, e **cada tecla vira um `setTimeout(0)`**. O
+  caso "a mãe nasce com a lista e com a base 10 + 5·n" (`task-dialog-subtasks.test.tsx`) estourou
+  **5041 ms** numa corrida completa da suíte, verde isolado e no rerun. Correção: `userEvent.setup({
+  delay: null })` criado no `beforeEach` e usado como `user.type/user.click` — padrão já usado em
+  `task-board.test.tsx`. Suspeitar disso quando um teste de digitação falha **só** sob carga paralela.
+- **Dois vocabulários de status de usuário convivem nesta base (medido 2026-10-06; o do caminho de
+  decisão saiu no V4-6b/DEC-95):** o do modelo é
+  `pending | active | rejected | suspended` (`entities/user.ts:31`), e é isso que a rota escreve
+  (`update-user-status.use-case.ts:15-18`). `inactive` aparecia em regras, testes, filtros da UI e num
+  contador de estatística (`prisma-user.repository.ts:231`, sempre 0), mas **nenhum caminho escreve
+  esse status** — as regras só chegam nele porque testam `!== "active"`. DEC-95 tirou `inactive` do
+  filtro do painel, do campo de estatística e dos fixtures; o guarda
+  `tests/unit/modules/user-management/user-status-vocabulary.test.ts` segura o caminho estrito.
+  `components/features/volunteers-management.tsx:55` tinha um terceiro vocabulário
+  (`active | inactive | on_leave`) e um filtro que nunca casava — **fechado em 2026-10-07**
+  (**DEC-96**): o dono mandou **tirar o filtro**, a tela passou a falar o vocabulário real e o guarda
+  ficou com dívida vazia. Na instância real: 10 usuários,
+  todos `active`.
+- **`SelectTrigger` do Radix com só `<SelectValue placeholder=…>` não tem nome acessível (medido
+  2026-10-06):** `getByRole("combobox", { name: "Status" })` não acha. Precisa de `aria-label` no
+  trigger. Mesma classe do botão-ícone do painel (DEC-86).
+- **`vi.fn(() => true)` tem `mock.calls` tipado como tupla vazia:** acessar `mock.calls[0][0]` dá
+  TS2352 + TS2493. Forma correta: `vi.fn<(message?: string) => boolean>(() => true)`.
+- **Filtro da lista de usuários do painel NÃO se aplica ao `ScheduleGrid`** (medido 2026-10-06): ele
+  recebe a mesma lista e renderiza inteira. Provar "o filtro escondeu o usuário" exige escopo num
+  controle que só existe na lista filtrada (o teste usa `Configurar <nome>`).
+- **Sonner só chega ao DOM se `<Toaster/>` estiver montado — e montar exige `matchMedia` (medido
+  2026-10-06, V4-5a):** nenhum teste antigo do quadro monta o Toaster, então nenhum prova texto de
+  toast. Montado no jsdom, ele explode com `window.matchMedia is not a function`. O stub precisa ser
+  **local ao teste**: um shim global em `tests/setup.ts` faria `useIsDesktop()` do quadro responder em
+  todos os testes, que hoje caem no caminho "mobile" justamente porque não há `matchMedia`.
+- **Mock que reimplementa a regra pode ficar verde com a produção mentindo (DEC-90, 2026-10-06):**
+  `tests/mocks/handlers.ts` agora aplica trava, janela e auto-move com as funções do domínio
+  (`openSubtasksCount`, `openSubtasksMessage`, `subtaskWindowMessage`, `SUBTASK_BLOCKED_TARGETS`,
+  `SUBTASK_EDITABLE_STATUSES`). Por isso `subtaskWindowMessage` foi movida de
+  `internal/task-view.ts` para o domínio: importar interno de módulo para o mock dizer a mesma frase
+  seria a regra em duas cópias.
+- **Mudar a regra pura já desabilita o menu (medido 2026-10-06, V4-5a):** `allowedTargets` é
+  derivado de `resolveMove`. Quando a trava de subtask entrou em `resolveMove`, o menu "Ações para …"
+  parou de oferecer Em Revisão/Concluído sem o cartão mudar uma linha — 4 testes vermelhos na função
+  pura bastaram. E a ordem importa: o `remap-to-review` (não-líder → "Concluído" vira Em Revisão)
+  precisa vir **depois** da trava, senão a UI oferece o movimento e a trava vira toast em vez de
+  botão desabilitado.
+- **Porta de autoridade da UI: medir a do servidor antes de escrever o gate (DEC-92, 2026-10-06):**
+  em `task-detail-dialog.tsx`, `canManageTasks` **já era** exatamente a lista de `MANAGE_TASKS`
+  (`backend/domain/identity/permissions.ts:22`), e o servidor aceita `MANAGE_TASKS`/`MANAGE_USERS` **ou**
+  responsável **ou** criador/líder/membro do projeto (`internal/task-view.ts:208-216`). A UI oferece as
+  duas portas que tem; as duas de projeto exigem consulta que o diálogo não faz, e o 403 do servidor
+  chega na tela.
+- **Caractere não latino também aparece no CÓDIGO, não só nos docs (medido 2026-10-06):** um
+  comentário de `task-detail-dialog.tsx` tinha `aвариado` (cirílico). `docs:check` não cobre código.
+  Caminho: `grep -rn "[а-яА-Я]" backend features components lib app tests entities contexts`. Uma
+  ocorrência na base inteira, corrigida no V4-5b.
+- **O aviso da conclusão chega depois da resposta (DEC-93, 2026-10-06):** o cartão calculava
+  `projectedAward(task)` e anunciava esse número **antes** da mutação. Hoje anuncia o `awardedPoints`
+  da resposta, depois dela — e os dois divergem (medido: pública vencida há 3 dias projeta −20, a
+  resposta credita 10). Consequência para teste: o cartão já se moveu (otimista) quando a frase aparece,
+  então o toast se prova com `findByText`, não `getByText`. A frase é `completionAwardMessage`, uma cópia
+  só para o menu do cartão e o soltar do arrasto.
+- **Mock que ignora uma chave do corpo esconde defeito do cliente (medido 2026-10-06, V4-5c):** o POST
+  `/api/tasks` do mock não tratava `subtasks`, então o teste do formulário passaria verde provando que o
+  input existia. Agora ele espelha a rota real: `normalizeNewSubtasks` (400 se inválido), linhas com id
+  e base `10 + 5·n`.
+- **"Quest Global" do formulário é um `Switch` do Radix (`role="switch"`), não uma checkbox** (medido ao
+  escrever o teste do V4-5c). O teste que buscava `getByRole("checkbox", { name: "Quest Global" })` falhava
+  por isso, não pela regra.
 - **Nunca imprimir/commitar o valor real do `NEXTAUTH_SECRET`** do `.env` local.
-- `tests/` está em `.gitignore` (linha 163) — os testes de mitigação ficam fora do commit
-  a menos que se adicione `!tests/unit`.
+- `tests/` é versionado por negações no `.gitignore` (`tests/*` + `!tests/unit`,
+  `!tests/integration/**` etc.; screenshots de e2e continuam ignorados) — os testes
+  fazem parte do commit desde `7155b92`.
 - **Lint em git worktree falha (config-cascade):** o app é desenvolvido em worktrees em
   `.worktrees/`. Como worktree é dir aninhado, o ESLint conflita config-cascade
   (`.eslintrc.json` local vs `../../.eslintrc.json` do repo pai, exit ≠ 0 só em worktree).
@@ -74,3 +535,102 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
 - **Enviar env para vitest em worktree:** o runner lê `process.env`, não `.env`, e o `.env`
   tem aspas nos valores. Exportar com `set -a; source .env; set +a; npx vitest run` (o
   `grep/cut` sem aspas também funciona).
+
+## Documentação (docs/)
+
+- **Dois documentos, ambos gerados** (nenhum editado à mão): `docs/displayquest.html` (técnico:
+  `docs/src/*.md` + `docs/diagrams/*.puml`, 15 capítulos / 33 figuras UML, ~1 MB) e
+  `docs/guia-do-usuario.html` (guia de uso: `docs/src-usuario/*.md` + `docs/screens/*.png`,
+  12 capítulos / 34 capturas, ~8 MB). Compartilham `docs/theme/document.css`. `npm run docs:build`
+  renderiza os SVGs (PlantUML em Docker — requer Docker no ar) e monta os dois; `--only=tecnico`
+  ou `--only=usuario` monta um só; `--no-render` reaproveita os SVGs. `npm run docs:check` valida
+  os caracteres das fontes (agora também `docs/src-usuario`). Abra por `file://`, sem servidor.
+- **O guia é o modo "como fazer":** cada seção parte de um objetivo e nomeia controles pelo rótulo
+  que a interface mostra. Arquitetura, modelo de dados, derivação de regra e API ficam no documento
+  técnico — não duplique no guia.
+- **Capturas:** `node scripts/capture-user-guide.mjs` percorre a instância em execução, verifica que
+  a tela certa foi alcançada (URL + textos esperados) e extrai do DOM títulos/botões/abas/colunas/
+  links em `docs/.build/screens/manifest.json`. **Esse extrato é a fonte do texto do guia** — o guia
+  descreve a interface medida, não o código lido. PNGs vão para `docs/screens/` (**versionado**);
+  credenciais em `docs/.capture.env` (gitignored). **Algumas capturas gravam de verdade** (ex.:
+  *Gerar em Lote* criou 9 relatórios semanais na instância real): confira a lista `INTERACTIONS`
+  antes de rodar contra dados reais.
+- **Bloco de captura:** ```foto <id> titulo="…"``` embute `docs/screens/<id>.png` como data URI.
+  Uma captura referenciada duas vezes derruba o build, igual ao `figure`.
+- **O build é um gate duro:** falha se um `.puml` não renderizar, se um bloco cercado ficar sem
+  fechamento (bug real já ocorrido: sem o ``` final, o capítulo inteiro era absorvido como
+  legenda da figura e nada denunciava), se um diagrama for referenciado duas vezes, ou se dois
+  capítulos tiverem o mesmo título. Depois de mexer em `docs/src` ou `docs/diagrams`, rode o
+  build — e confira se nenhum aviso `AVISO:` apareceu.
+- **O que é versionado:** `docs/displayquest.html`, `docs/guia-do-usuario.html` e `docs/screens/`
+  (as capturas são fonte do guia). `docs/.build/` (SVGs re-renderizados e o extrato do DOM) está no
+  `.gitignore`, junto de `docs/.capture.env`.
+- **Diagramas: uma referência por arquivo.** `docs/diagrams/<id>.puml` é consumido por um único
+  bloco ```figure <id> titulo="…"```; referenciar duas vezes derruba o build. Para citar uma
+  figura já usada, escreva no texto ("a figura da implantação, no capítulo 10") — não repita o
+  bloco. O bloco aceita um corpo markdown livre, que sai como legenda abaixo da figura.
+- **Callouts:** `::: nota|atencao|limite|legado titulo="…"` … `:::` (fechamento obrigatório).
+- **Os `.md` antigos (`docs/01..08`, `docs/APOO/`) foram removidos** em 2026-10-02, arquivados
+  pelo git; o conteúdo foi reescrito em `docs/src`. Não os recrie.
+- **Ruído de caracteres:** o gerador de texto às vezes insere caracteres não latinos
+  ("树叶", "拒绝了", "分明") na prosa. `npm run docs:check` pega os não latinos; os puramente
+  ASCII (ex.: "Family", "Consulting", "efeitocolateral", "etimau") só aparecem na releitura —
+  sempre releia o que escreveu.
+- **Quirks do PlantUML desta versão:** (a) `usecase` dentro de `package`/`rectangle` não aceita
+  aresta vinda de `class` — use `class … <<casoDeUso>>` no diagrama de requisitos;
+  (b) linha começando `|palavra|` (activity bar) dentro de `if` aninhado quebra o parser;
+  (c) o token `Next` no início/fim de rótulo de activity quebra o parser.
+
+## Defeitos de interface medidos na instância (2026-10-02)
+
+Coletados pelo extrato do DOM da captura do guia (`docs/.build/screens/manifest.json`) e por
+leitura do texto visível. São observações medidas na instância real, **não** diagnosticados:
+
+- **`<title>` genérico em todas as telas:** "Sistema de Gerenciamento de Tarefas" (medido nas 11
+  rotas, inclusive `/login`). A aba do navegador nunca diz DisplayQuest.
+- **Strings sem acento, entregues assim na interface:** "Quadro de Lideranca", "Classificacao
+  completa", colunas "Posicao" / "Usuario" / "Tarefas concluidas" (ranking); "Abrir controle de
+  sessao" (perfil); "Meus Premios" (menu do cabeçalho); "admin (sem horario)" e afins (grade do
+  laboratório).
+- **Vazamento de enum no detalhe da tarefa:** o diálogo mostra "PRIORIDADE High" e "STATUS to-do"
+  em vez de "Alta" e "A Fazer".
+- **Prazo renderizado quebrado no detalhe da tarefa:** "PRAZO 21T12:00:00.000Z/01/2025".
+- **Penalidade de atraso explode o valor:** "PONTOS 60 pts(agora: -37140 pts com penalidade)" numa
+  tarefa vencida de 2025. O cálculo de `calculateLatePenalty` não tem piso.
+- **`/login` e `/register` não têm nenhum heading** (0 `h1`/`h2`/`h3` no DOM): o título é
+  `CardTitle`, que renderiza `div`. Sem ponto de ancoragem para leitor de tela.
+- **Navegação do cabeçalho é inconsistente entre papéis:** grupo com vários destinos visíveis vira
+  acordeão fechado (o coordenador vê só os rótulos, nenhum destino); grupo com um único destino
+  visível é achatado em link direto (o pesquisador vê "Laboratório" como link). O mesmo cabeçalho
+  se apresenta de duas formas.
+- **Cartões de teste manual na instância real:** o dono testa os fluxos pela mão, e o que sobra fica
+  visível no quadro e **versionado nas capturas do guia** — tarefas "rewqr" (×3), "asfsa" (×2),
+  "asdasfasd", "321321", "sfdasadf", "fdsafdsa", "sfddsfa", "afsdasd", "fasdfas" (id 290) e o projeto
+  "asdfasdf". **Não é lixo a limpar** (confirmado pelo dono em 2026-10-05): é uso legítimo da
+  instância, e por isso **persiste**. O que pesa de verdade: a tarefa 290 está com
+  `status='in-review'` e é o que **derruba o 3º teste do spec e2e do quadro** por *strict mode
+  violation* (dois botões "Aprovar tarefa" em `Em Revisão`). Conferido com `git stash`: o baseline
+  falha igual, então não é regressão — e o dono decidiu **não** escopar o locator nem mexer no dado
+  (ver a nota de e2e em "Gotchas reais"). Se isso incomodar nas capturas, a saída é recapturar, não
+  apagar dado.
+
+## Sons de alerta (lib/notifications/alert-sound.ts) — troca de sintetizado para arquivo
+
+- **O som é arquivo MP3 em `public/sons/`, não oscilador.** Medido em 2026-10-09: o dono
+  recusou três volumes de um bip sintetizado (0.16, 0.35, 0.75) e depois recusou um "plim"
+  de oscilador que subia de 1046 Hz a 1568 Hz. A lição: nesta casa, gosto de som se discute
+  com arquivo gravado, não com `GainNode`. Os dois arquivos vêm do Mixkit (Mixkit License,
+  uso livre sem atribuição) e a origem de cada um está em `public/sons/LICENSE.md`.
+- **`isAlertSoundSupported()` hoje mede `typeof Audio`, não `AudioContext`.** Isso muda o
+  comportamento no jsdom: `Audio` existe lá e `AudioContext` não. Consequência medida: o
+  botão de informação do som passa a renderizar em teste, e o rótulo "Como funciona o som
+  ao pausar" casa com `/pausar/i` — o teste
+  `features/laboratorio/__tests__/floating-timer-tabs.test.tsx` precisou de
+  `{ name: "Pausar", exact: true }` (a lição do substring valendo de novo).
+- **Som ligado por padrão, os dois**, por decisão do dono no mesmo dia. As chaves
+  `dq:som-pausa` e `dq:som-quest` guardam a preferência; os interruptores vêm depois.
+- **O contador de notificações não era instantâneo** (eu medi achando que era): as queries
+  de `features/notifications/hooks/use-notifications.ts` repetiam a cada 60 s e o
+  `refetchOnWindowFocus` global está desligado. Para o som de notificação ter sentido, a
+  contagem passou a repetir a cada 5 s (`NOTIFICATION_POLL_MS`); a lista completa segue em
+  60 s. O som nasce da SUBIDA da contagem, nunca da primeira leitura.

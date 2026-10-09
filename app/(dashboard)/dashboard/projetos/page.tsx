@@ -273,6 +273,7 @@ export default function ProjetosPage() {
                 projects={projects} 
                 tasks={tasks} 
                 user={user} 
+                onProjectSelect={handleProjectClick}
               />
             </TabsContent>
             }

@@ -9,11 +9,19 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Clock, Pause, PlayCircle, StopCircle, ChevronDown } from "lucide-react"
+import { Pause, PlayCircle, StopCircle, ChevronDown } from "lucide-react"
 import { useProject } from "@/contexts/project-context"
 import { getNextScheduledPause, getMissedScheduledPause, toSafeDate } from "@/lib/work-sessions/schedule"
 import { SessionAutoPauseCountdown } from "@/components/ui/session-auto-pause-countdown"
 import { SessionWelcomeBalloon } from "@/components/ui/session-welcome-balloon"
+import { SessionNotesDraft, useSessionNotes } from "@/components/ui/session-notes-draft"
+import {
+  SessionAlertSoundToggle,
+  SessionTimerIndicator,
+  sessionTimerButtonLabel,
+  useSessionAlertSound,
+  type SessionTimerVisualState,
+} from "@/components/ui/session-alert"
 import { ResponsibilityMiniPanel } from "@/components/ui/responsibility-mini-panel"
 import { ResponsibilitiesAPI } from "@/contexts/api-client"
 
@@ -46,11 +54,31 @@ export function FloatingSessionTimer() {
   const [showAutoPauseDialog, setShowAutoPauseDialog] = useState(false)
   const [logNote, setLogNote] = useState("")
   const [submitting, setSubmitting] = useState(false)
+  const [stopError, setStopError] = useState<string | null>(null)
   const [startProjectId, setStartProjectId] = useState("")
   const [startActivity, setStartActivity] = useState("")
   const [startLocation, setStartLocation] = useState("")
   const [startError, setStartError] = useState<string | null>(null)
   const autoPausedSessionIdsRef = useRef<Set<number>>(new Set())
+  // OND2-C: o pulso do botão fechado vive enquanto ninguém retomou nem encerrou. Some
+  // sozinho ao abrir o painel (`expanded`), porque aí a pessoa já viu o aviso.
+  const [autoPausedNotice, setAutoPausedNotice] = useState(false)
+
+  const {
+    enabled: soundEnabled,
+    setEnabled: setSoundEnabled,
+    playPauseSound,
+    supported: soundSupported,
+    loaded: soundLoaded,
+  } = useSessionAlertSound()
+
+  // OND2-B: rascunho de anotações preso a ESTA sessão (chave inclui o id). Vive aqui porque
+  // quem precisa do texto no momento de encerrar é o próprio cronômetro — o despejo no log.
+  const {
+    note: sessionNote,
+    setNote: setSessionNote,
+    clearNote: clearSessionNote,
+  } = useSessionNotes(currentSession?.id ?? null)
 
   useEffect(() => {
     if (!user?.id) return
@@ -109,6 +137,11 @@ export function FloatingSessionTimer() {
             // Responsibility pause is secondary; session pause succeeded.
           }
           setShowAutoPauseDialog(true)
+          // OND2-C: o alerta é disparado aqui, e não quando a pessoa abre o painel — o
+          // diálogo modal não é visto com a aba em segundo plano, que é o caso comum de
+          // quem deixa a sessão correndo.
+          setAutoPausedNotice(true)
+          playPauseSound()
         } catch {
           // Allow a later poll to retry if the pause request failed.
           autoPausedSessionIdsRef.current.delete(sessionId)
@@ -126,7 +159,18 @@ export function FloatingSessionTimer() {
     const delay = Math.max(0, nextPause.getTime() - now.getTime())
     const timeout = setTimeout(doAutoPause, delay)
     return () => clearTimeout(timeout)
-  }, [currentSession?.id, currentSession?.status, currentSession?.startTime, user?.id, pauseSession, fetchSessions])
+    // `playPauseSound` entra na lista porque a preferência do som é lida dentro de
+    // `doAutoPause`: sem isto, o closure seria o da montagem, com o som ainda desligado.
+    // O efeito só rearma o timer com o próximo horário — o que o toggle não muda.
+  }, [
+    currentSession?.id,
+    currentSession?.status,
+    currentSession?.startTime,
+    user?.id,
+    pauseSession,
+    fetchSessions,
+    playPauseSound,
+  ])
 
   useEffect(() => {
     if (!expanded) return
@@ -159,6 +203,9 @@ export function FloatingSessionTimer() {
     if (!activeSession || !user?.id) return
     await pauseSession(activeSession.id)
     await fetchSessions(user.id)
+    // OND2-C: pausa manual também avisa. Quem parou por decisão própria já está olhando a
+    // tela, mas quem parou e depois foi para outra aba não está.
+    playPauseSound()
   }
 
   const handleResume = async () => {
@@ -166,19 +213,43 @@ export function FloatingSessionTimer() {
     await resumeSession(currentSession.id)
     await fetchSessions(user.id)
     setShowAutoPauseDialog(false)
+    setAutoPausedNotice(false)
   }
 
-  const handleStop = async (withLog: boolean) => {
+  /**
+   * OND2-B: abrir "Finalizar Work Session" despeja o rascunho na caixa de log, que segue
+   * editável — o rascunho evita redigitar, não decide o texto final. Os dois caminhos de
+   * entrada (botão Parar e o "Encerrar sessão" da pausa automática) passam por aqui.
+   */
+  const openStopDialog = () => {
+    setLogNote(sessionNote)
+    setStopError(null)
+    setShowStopDialog(true)
+  }
+
+  const handleStop = async () => {
     if (!currentSession || !user?.id) return
+    const note = logNote.trim()
+    if (!note) return
     setSubmitting(true)
+    setStopError(null)
     try {
       await endSession(currentSession.id, currentSession.activity || undefined, {
-        dailyLogNote: withLog && logNote.trim() ? logNote.trim() : undefined,
+        dailyLogNote: note,
       })
+      // Só agora o rascunho sai: encerrar com sucesso é o que libera a chave da sessão.
+      clearSessionNote()
       setShowStopDialog(false)
       setShowAutoPauseDialog(false)
+      setAutoPausedNotice(false)
       setLogNote("")
       await fetchSessions(user.id)
+    } catch {
+      // Falhou: a sessão continua aberta, então nada pode ser descartado. O texto editado
+      // no diálogo volta para o rascunho (é ele o que sobrevive a recarga) e o erro fica
+      // visível — antes disso a falha era um rejection silencioso no console.
+      setSessionNote(note)
+      setStopError("Não foi possível encerrar a sessão. Sua anotação foi mantida — tente de novo.")
     } finally {
       setSubmitting(false)
     }
@@ -210,6 +281,17 @@ export function FloatingSessionTimer() {
     }
   }
 
+  // OND2-C: o que o botão fechado mostra. "auto-paused" (pulso) vale enquanto ninguém
+  // retomou, encerrou ou abriu o painel — abrir o painel já é ter visto o aviso.
+  const collapsedState: SessionTimerVisualState =
+    !currentSession
+      ? "none"
+      : currentSession.status === "paused"
+        ? autoPausedNotice && !expanded
+          ? "auto-paused"
+          : "paused"
+        : "active"
+
   return (
     <>
       <div
@@ -228,9 +310,10 @@ export function FloatingSessionTimer() {
             variant="ghost"
             className="w-full h-full rounded-lg flex items-center justify-center"
             onClick={() => setExpanded(true)}
-            aria-label="Abrir timer de sessão"
+            aria-label={sessionTimerButtonLabel(collapsedState)}
+            data-testid="floating-session-timer-collapsed"
           >
-            <Clock className="h-5 w-5" />
+            <SessionTimerIndicator state={collapsedState} />
           </Button>
         ) : (
           <Tabs defaultValue="sessao" className="space-y-3">
@@ -259,6 +342,25 @@ export function FloatingSessionTimer() {
               sessionStatus={currentSession?.status ?? null}
               startTime={currentSession?.startTime ?? null}
             />
+
+            {currentSession && (
+              <SessionNotesDraft
+                sessionId={currentSession.id}
+                note={sessionNote}
+                onNoteChange={setSessionNote}
+              />
+            )}
+
+            {/* OND2-C: o aviso sonoro é por sessão aberta — sem sessão não há pausa para
+                avisar, e o interruptor ficaria num painel que não faz sentido. */}
+            {currentSession && (
+              <SessionAlertSoundToggle
+                enabled={soundEnabled}
+                onChange={setSoundEnabled}
+                supported={soundSupported}
+                loaded={soundLoaded}
+              />
+            )}
 
             {!currentSession && user && (
               <div className="space-y-2">
@@ -316,7 +418,7 @@ export function FloatingSessionTimer() {
               ) : null}
 
               {currentSession && (
-                <Button size="sm" variant="destructive" onClick={() => setShowStopDialog(true)} disabled={loading}>
+                <Button size="sm" variant="destructive" onClick={openStopDialog} disabled={loading}>
                   <StopCircle className="h-4 w-4 mr-1" />
                   Parar
                 </Button>
@@ -345,7 +447,7 @@ export function FloatingSessionTimer() {
           <DialogHeader>
             <DialogTitle>Finalizar Work Session</DialogTitle>
             <DialogDescription>
-              Adicione um log da sessão (opcional) antes de encerrar.
+              Escreva um log da sessão antes de encerrar — ele é obrigatório.
             </DialogDescription>
           </DialogHeader>
 
@@ -355,13 +457,20 @@ export function FloatingSessionTimer() {
             onChange={(event) => setLogNote(event.target.value)}
             rows={5}
           />
+          {!logNote.trim() && (
+            <p className="text-xs text-muted-foreground">
+              O log é obrigatório para encerrar a sessão.
+            </p>
+          )}
+          {stopError && (
+            <p role="alert" className="text-xs text-destructive">
+              {stopError}
+            </p>
+          )}
 
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => handleStop(false)} disabled={submitting}>
-              Encerrar sem log
-            </Button>
-            <Button onClick={() => handleStop(true)} disabled={submitting}>
-              Encerrar com log
+            <Button onClick={() => handleStop()} disabled={submitting || !logNote.trim()}>
+              Encerrar sessão
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -381,7 +490,7 @@ export function FloatingSessionTimer() {
               variant="outline"
               onClick={() => {
                 setShowAutoPauseDialog(false)
-                setShowStopDialog(true)
+                openStopDialog()
               }}
             >
               Encerrar sessão

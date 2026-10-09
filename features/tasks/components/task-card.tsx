@@ -26,6 +26,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Textarea } from "@/components/ui/textarea"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import {
   DropdownMenu,
@@ -42,7 +43,6 @@ import {
   User,
   Flag,
   Users,
-  Star,
   Crown,
   Zap,
   Check,
@@ -50,14 +50,27 @@ import {
   GripVertical,
   ArrowRight,
   Eye,
+  Lock,
   AlertTriangle,
   CalendarClock,
 } from "lucide-react"
-import type { Task, TaskStatus } from "@/entities/task"
+import type { Task, TaskStatus, TaskSubtask } from "@/entities/task"
 import { useAuth } from "@/contexts/auth-context"
 import { useProjects } from "@/features/projects"
 import { useUsers } from "@/features/users"
-import { useTaskMutations, resolveMove, projectedAward, BOARD_COLUMNS } from ".."
+import {
+  useTaskMutations,
+  resolveMove,
+  allowedTargets,
+  moveBlockedMessage,
+  completionAwardMessage,
+  openSubtasksMessage,
+  canMarkSubtasksOf,
+  subtaskMarkMessage,
+  POINTS_PER_TASK,
+  SUBTASK_POINTS,
+  BOARD_COLUMNS,
+} from ".."
 import { toast } from "sonner"
 import { formatDateOnly } from "@/lib/date-only"
 
@@ -122,17 +135,104 @@ export interface TaskCardProps {
   onOpenDetail: (task: Task) => void
 }
 
+/**
+ * Menu de ações do cartão — **um só**, para as duas aparências (normal e compacta).
+ *
+ * Antes havia duas cópias byte a byte desse menu dentro do cartão, uma por aparência, e
+ * só uma delas recebia mudança: foi assim que a lista de destinos do 3.B entrou pela metade
+ * (a compacta continuava oferecendo o que a regra bloqueia, sem nenhum teste para avisar).
+ * Extrair deixa a decisão em um lugar só; o que continua variando entre as aparências é o
+ * tamanho do gatilho.
+ */
+function TaskCardMenu({
+  task,
+  isLeader,
+  isCompact = false,
+  onMove,
+  onOpenDetail,
+  onEdit,
+}: {
+  task: Task
+  isLeader: boolean
+  isCompact?: boolean
+  onMove: (target: TaskStatus) => void
+  onOpenDetail: (task: Task) => void
+  onEdit: (task: Task) => void
+}) {
+  /**
+   * plan-v3 OND3-B: o menu lista o que a regra permite (`allowedTargets`, derivado de
+   * `resolveMove`), e não "as colunas menos a atual". Sem destinos — tarefa Concluído vista
+   * por quem não é líder — a opção some e fica um item desabilitado dizendo por quê, em vez
+   * de quatro destinos que voltariam com o mesmo toast de "Ação não permitida".
+   */
+  const moveTargets = allowedTargets(task, isLeader)
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          className={
+            isCompact ? "h-5 w-5 shrink-0 p-0 opacity-40 hover:opacity-100" : "h-6 w-6 shrink-0 p-0"
+          }
+          aria-label={`Ações para ${task.title}`}
+        >
+          <MoreHorizontal className={isCompact ? "h-3 w-3" : "h-4 w-4"} aria-hidden="true" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+        <DropdownMenuLabel>Mover para</DropdownMenuLabel>
+        {moveTargets.length === 0 ? (
+          <DropdownMenuItem disabled>
+            <Lock className="mr-2 h-4 w-4" aria-hidden="true" />
+            Tarefa concluída só volta de coluna para líderes de projeto
+          </DropdownMenuItem>
+        ) : (
+          BOARD_COLUMNS.filter((c) => moveTargets.includes(c.id)).map((column) => (
+            <DropdownMenuItem key={column.id} onSelect={() => onMove(column.id)}>
+              <ArrowRight className="mr-2 h-4 w-4" aria-hidden="true" />
+              {column.title}
+            </DropdownMenuItem>
+          ))
+        )}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={() => onOpenDetail(task)}>
+          <Eye className="mr-2 h-4 w-4" aria-hidden="true" />
+          Ver detalhes
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => onEdit(task)}>
+          <Pencil className="mr-2 h-4 w-4" aria-hidden="true" />
+          Editar
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
 export function TaskCard({ task, index, isOverdue, isDueToday, isCompact, onEdit, onOpenDetail }: TaskCardProps) {
   const { user } = useAuth()
   const { data: projects = [] } = useProjects()
   const { data: users = [] } = useUsers()
-  const { approve, reject, updateStatus, complete } = useTaskMutations()
+  const { approve, reject, updateStatus, complete, updateSubtask } = useTaskMutations()
   const [rejectOpen, setRejectOpen] = useState(false)
   const [rejectReason, setRejectReason] = useState("")
 
   const isPublicTask = task.taskVisibility === "public"
   const isGlobalTask = task.isGlobal
-  const isHighPoints = task.points >= 50
+  // plan-v3 OND1-D (DEC-30): o selo mostra a base da regla, nunca `task.points` — a
+  // coluna virou histórico (DEC-40) e o valor creditado depende do prazo (ver task-card.tsx
+  // toast e task-detail-dialog.tsx). O antigo `isHighPoints` (>= 50) morreu aqui.
+  // plan-v4 · V4-4 (DEC-56) → DEC-97 (2026-10-07): a base é 10 + 5 por subtask CONCLUÍDA — o
+  // prêmio conta o que já foi feito no instante da conclusão da mãe. Sem subtask concluída o
+  // selo volta a dizer 10, que é o valor de sempre.
+  const subtaskCount = task.subtasks?.length ?? 0
+  const completedSubtaskCount = (task.subtasks ?? []).filter((s) => s.completed).length
+  const basePoints = POINTS_PER_TASK + completedSubtaskCount * SUBTASK_POINTS
+  const pointsBadgeTitle =
+    subtaskCount > 0
+      ? `Tarefa vale ${basePoints} pontos: ${POINTS_PER_TASK} da tarefa + ${SUBTASK_POINTS} por subtask concluída (${completedSubtaskCount} de ${subtaskCount}) — bônus de 50% se concluída pelo menos 2 dias adiantada, penalidade de ${POINTS_PER_TASK} por dia de atraso`
+      : `Tarefa vale ${POINTS_PER_TASK} pontos — bônus de 50% se concluída pelo menos 2 dias adiantada, penalidade de ${POINTS_PER_TASK} por dia de atraso`
 
   const userRoles = user?.roles ?? []
   const isLeader =
@@ -140,26 +240,44 @@ export function TaskCard({ task, index, isOverdue, isDueToday, isCompact, onEdit
     userRoles.includes("GERENTE") ||
     userRoles.includes("GERENTE_PROJETO") ||
     userRoles.includes("LABORATORISTA")
+  const assigneeIds = (task.assigneeIds?.length ? task.assigneeIds : task.assignedTo ? [task.assignedTo] : []).filter(
+    (id): id is number => typeof id === "number",
+  )
+  const isSelfAssignee = Boolean(user?.id && (task.assignedTo === user.id || assigneeIds.includes(user.id)))
   const canApproveReject =
     task.status === "in-review" &&
     (userRoles.includes("COORDENADOR") ||
       userRoles.includes("GERENTE") ||
       (userRoles.includes("GERENTE_PROJETO") &&
         task.projectId != null &&
-        projects.find((p) => p.id === task.projectId)?.leaderId === user?.id))
-
-  const assigneeIds = (task.assigneeIds?.length ? task.assigneeIds : task.assignedTo ? [task.assignedTo] : []).filter(
-    (id): id is number => typeof id === "number",
-  )
+        projects.find((p) => p.id === task.projectId)?.leaderId === user?.id &&
+        !isSelfAssignee))
 
   const projectName = task.projectId ? projects.find((p) => p.id === task.projectId)?.name : undefined
 
-  /** T2.5 keyboard alternative: menu lists allowed targets, same rules as drag. */
+  /**
+   * plan-v4 · V4-5 (DEC-80, DEC-81) — o cartão não é a lista de subtasks: é o **aviso de trava**.
+   * A lista completa, com criar/renomear/apagar, vive no diálogo de detalhe. O que o cartão mostra
+   * é o que destrava: as subtasks ainda ABERTAS, cada uma com uma checkbox.
+   *
+   * `task.status === "done"` não mostra aviso: nada termina com subtask aberta (a trava já
+   * garantiu isso na entrada), então aviso em tarefa concluída seria ruído.
+   */
+  const openSubtasks = (task.subtasks ?? []).filter((s) => !s.completed)
+  const completedSubtasks = (task.subtasks ?? []).filter((s) => s.completed)
+  const showsSubtaskLock = openSubtasks.length > 0 && task.status !== "done"
+  // Frase num nó só: "Atual: {n} pontos" + dica virou três nós e quebrou `getByText` da frase
+  // inteira (AGENTS.md, V4-4b). Aqui a contagem é montada antes, como string.
+  const openSubtasksLabel =
+    openSubtasks.length === 1 ? "1 subtask aberta" : `${openSubtasks.length} subtasks abertas`
+  const subtaskProgressLabel = `${completedSubtasks.length}/${task.subtasks?.length ?? 0} concluídas`
+
+  /** T2.5 keyboard alternative: menu lists allowed targets, same rules as drag (OND3-B). */
   const handleMove = (target: TaskStatus) => {
     const decision = resolveMove({ task, target, isLeader })
     if (decision.kind === "blocked") {
       toast.error("Ação não permitida", {
-        description: "Apenas líderes de projeto podem mover tarefas concluídas.",
+        description: moveBlockedMessage(decision, target),
       })
       return
     }
@@ -172,17 +290,23 @@ export function TaskCard({ task, index, isOverdue, isDueToday, isCompact, onEdit
     }
     if (decision.kind === "complete") {
       const isDirectDone = task.isGlobal || task.taskVisibility === "public"
-      toast[isDirectDone ? "success" : "info"](
-        isDirectDone ? "🎉 Tarefa Concluída!" : "📋 Tarefa Enviada para Revisão",
-        {
-          description: isDirectDone
-            ? projectedAward(task) !== task.points
-              ? `${projectedAward(task)} pts (penalidade por atraso aplicada).`
-              : `${task.points} pontos foram adicionados ao perfil do responsável.`
-            : "A tarefa foi enviada para revisão. Os pontos serão adicionados após aprovação.",
-        },
-      )
-      complete.mutate({ id: task.id, userId: user?.id })
+      // GAP-P3-05 (plan-v3 §8, fechado aqui): o aviso chega DEPOIS da resposta, porque é a
+      // resposta que sabe quantos pontos foram creditados. Antes o cartão calculava
+      // `projectedAward(task)` e anunciava esse número antes de a mutação acontecer — e numa
+      // tarefa vencida os dois divergem (medido neste lote: projetado −20, creditado 10).
+      void complete
+        .mutateAsync({ id: task.id, userId: user?.id })
+        .then((result) => {
+          toast[isDirectDone ? "success" : "info"](
+            isDirectDone ? "🎉 Tarefa Concluída!" : "📋 Tarefa Enviada para Revisão",
+            { description: completionAwardMessage(result, user?.id) },
+          )
+        })
+        .catch((error: unknown) => {
+          toast.error("Não foi possível concluir a tarefa", {
+            description: error instanceof Error ? error.message : "Falha ao concluir a tarefa.",
+          })
+        })
       return
     }
     updateStatus.mutate({ id: task.id, status: decision.status })
@@ -195,6 +319,39 @@ export function TaskCard({ task, index, isOverdue, isDueToday, isCompact, onEdit
     } catch (error) {
       toast.error("Erro ao aprovar tarefa", {
         description: error instanceof Error ? error.message : "Falha ao aprovar tarefa.",
+      })
+    }
+  }
+
+  /**
+   * plan-v4 · V4-5 — concluir subtask direto no cartão (decisão do dono: um clique, sem abrir
+   * diálogo). O que faz a mais que um checkbox comum é o auto-move: se esta era a última aberta,
+   * a mãe vai sozinha para "Em Revisão" (DEC-81), e a interface DIZ isso — sem a frase, a tarefa
+   * muda de coluna diante da pessoa sem explicação.
+   *
+   * DEC-98 (2026-10-07): marcar exige a mãe em Andamento. A checkbox continua clicável para que
+   * a RECUSA chegue como toast com a frase do domínio — a mesma que a rota devolve.
+   */
+  const handleCompleteSubtask = async (subtask: TaskSubtask) => {
+    if (!canMarkSubtasksOf(task.status)) {
+      toast.error("Ação não permitida", { description: subtaskMarkMessage() })
+      return
+    }
+    try {
+      const result = await updateSubtask.mutateAsync({
+        id: task.id,
+        subtaskId: subtask.id,
+        data: { completed: true },
+      })
+      const autoMoved = task.status === "in-progress" && result.task.status === "in-review"
+      if (autoMoved) {
+        toast.info("📋 Última subtask concluída — tarefa enviada para revisão", {
+          description: "A tarefa foi enviada para revisão. Os pontos serão adicionados após aprovação.",
+        })
+      }
+    } catch (error) {
+      toast.error("Não foi possível concluir a subtask", {
+        description: error instanceof Error ? error.message : "Falha ao concluir a subtask.",
       })
     }
   }
@@ -278,73 +435,41 @@ export function TaskCard({ task, index, isOverdue, isDueToday, isCompact, onEdit
 
                   {isCompact ? (
                     <div className="flex shrink-0 items-center gap-1.5">
-                      {task.points > 0 && (
-                        <Badge className="bg-gradient-to-r from-blue-500 to-indigo-500 text-[10px] font-bold text-white dark:from-blue-500/20 dark:to-indigo-500/20 dark:text-blue-300">
-                          {task.points} pts
+                      {showsSubtaskLock && (
+                        // No compacto o cartão não tem espaço para a checklist: só o número, com a
+                        // frase do domínio no `title` (a mesma que o servidor devolve).
+                        <Badge
+                          variant="outline"
+                          className="border-amber-400 text-[10px] font-bold text-amber-700 dark:border-amber-500/50 dark:text-amber-300"
+                          title={openSubtasksMessage(openSubtasks.length, "review")}
+                        >
+                          <AlertTriangle className="mr-1 h-3 w-3" aria-hidden="true" />
+                          {openSubtasks.length}
                         </Badge>
                       )}
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-5 w-5 shrink-0 p-0 opacity-40 hover:opacity-100"
-                            aria-label={`Ações para ${task.title}`}
-                          >
-                            <MoreHorizontal className="h-3 w-3" aria-hidden="true" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                          <DropdownMenuLabel>Mover para</DropdownMenuLabel>
-                          {BOARD_COLUMNS.filter((c) => c.id !== task.status).map((column) => (
-                            <DropdownMenuItem key={column.id} onSelect={() => handleMove(column.id)}>
-                              <ArrowRight className="mr-2 h-4 w-4" aria-hidden="true" />
-                              {column.title}
-                            </DropdownMenuItem>
-                          ))}
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onSelect={() => onOpenDetail(task)}>
-                            <Eye className="mr-2 h-4 w-4" aria-hidden="true" />
-                            Ver detalhes
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onSelect={() => onEdit(task)}>
-                            <Pencil className="mr-2 h-4 w-4" aria-hidden="true" />
-                            Editar
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <Badge
+                        className="bg-gradient-to-r from-blue-500 to-indigo-500 text-[10px] font-bold text-white dark:from-blue-500/20 dark:to-indigo-500/20 dark:text-blue-300"
+                        title={pointsBadgeTitle}
+                      >
+                        {basePoints} pts
+                      </Badge>
+                      <TaskCardMenu
+                        task={task}
+                        isLeader={isLeader}
+                        isCompact
+                        onMove={handleMove}
+                        onOpenDetail={onOpenDetail}
+                        onEdit={onEdit}
+                      />
                     </div>
                   ) : (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 w-6 shrink-0 p-0"
-                          aria-label={`Ações para ${task.title}`}
-                        >
-                          <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                        <DropdownMenuLabel>Mover para</DropdownMenuLabel>
-                        {BOARD_COLUMNS.filter((c) => c.id !== task.status).map((column) => (
-                          <DropdownMenuItem key={column.id} onSelect={() => handleMove(column.id)}>
-                            <ArrowRight className="mr-2 h-4 w-4" aria-hidden="true" />
-                            {column.title}
-                          </DropdownMenuItem>
-                        ))}
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onSelect={() => onOpenDetail(task)}>
-                          <Eye className="mr-2 h-4 w-4" aria-hidden="true" />
-                          Ver detalhes
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => onEdit(task)}>
-                          <Pencil className="mr-2 h-4 w-4" aria-hidden="true" />
-                          Editar
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <TaskCardMenu
+                      task={task}
+                      isLeader={isLeader}
+                      onMove={handleMove}
+                      onOpenDetail={onOpenDetail}
+                      onEdit={onEdit}
+                    />
                   )}
                 </div>
 
@@ -388,13 +513,48 @@ export function TaskCard({ task, index, isOverdue, isDueToday, isCompact, onEdit
                           QUEST GLOBAL
                         </Badge>
                       )}
-                      {task.points > 0 && (
-                        <Badge className="bg-gradient-to-r from-blue-500 to-indigo-500 text-xs font-bold text-white dark:from-blue-500/20 dark:to-indigo-500/20 dark:text-blue-300">
-                          {isHighPoints && <Star className="mr-1 h-3 w-3" aria-hidden="true" />}
-                          {task.points} pts
-                        </Badge>
-                      )}
+                      <Badge
+                        className="bg-gradient-to-r from-blue-500 to-indigo-500 text-xs font-bold text-white dark:from-blue-500/20 dark:to-indigo-500/20 dark:text-blue-300"
+                        title={pointsBadgeTitle}
+                      >
+                        {basePoints} pts
+                      </Badge>
                     </div>
+
+                    {showsSubtaskLock && (
+                      // plan-v4 · V4-5 (DEC-80) — o aviso de trava com a checkbox que destrava.
+                      // O cartão NÃO é a lista de subtasks: a lista completa, com criar/renomear/
+                      // apagar, vive no diálogo de detalhe. Aqui entra só o que falta, porque é o
+                      // que falta que trava. Tom âmbar: nada está errado, falta uma etapa.
+                      <div className="mb-3 rounded-md border border-amber-300/80 bg-amber-50/80 px-2 py-1.5 dark:border-amber-500/40 dark:bg-amber-500/10">
+                        <div className="flex items-center gap-1 text-[11px] font-semibold text-amber-900 dark:text-amber-300">
+                          <AlertTriangle className="h-3 w-3 shrink-0" aria-hidden="true" />
+                          <span>{openSubtasksLabel}</span>
+                          <span className="font-normal text-amber-800/70 dark:text-amber-300/70">
+                            · {subtaskProgressLabel}
+                          </span>
+                        </div>
+                        <ul className="mt-1.5 space-y-1">
+                          {openSubtasks.map((subtask) => (
+                            <li key={subtask.id} className="flex items-center gap-2">
+                              <Checkbox
+                                id={`subtask-${subtask.id}`}
+                                aria-label={`Concluir subtask ${subtask.title}`}
+                                checked={false}
+                                disabled={updateSubtask.isPending}
+                                onCheckedChange={() => void handleCompleteSubtask(subtask)}
+                              />
+                              <label
+                                htmlFor={`subtask-${subtask.id}`}
+                                className="line-clamp-1 text-xs text-slate-700 dark:text-slate-200"
+                              >
+                                {subtask.title}
+                              </label>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
 
                     {assigneeIds.length > 0 && (
                       <div className="mb-3 ml-4 rounded-md border border-slate-200/70 bg-white/60 px-2 py-1.5 dark:border-slate-700/70 dark:bg-slate-900/30">
@@ -424,6 +584,10 @@ export function TaskCard({ task, index, isOverdue, isDueToday, isCompact, onEdit
                                 size="icon"
                                 className="h-7 w-7 bg-green-500 text-white hover:bg-green-600 dark:bg-success dark:text-success-foreground dark:hover:bg-success/90"
                                 aria-label="Aprovar tarefa"
+                                // DEC-80: "nada termina com subtask aberta" vale também na
+                                // aprovação, e a UI desabilita em vez de deixar levar o 400.
+                                // A trava é sobre o destino, não sobre quem aprova.
+                                disabled={openSubtasks.length > 0}
                                 onClick={(e) => {
                                   e.stopPropagation()
                                   void handleApprove()
@@ -432,7 +596,11 @@ export function TaskCard({ task, index, isOverdue, isDueToday, isCompact, onEdit
                                 <Check className="h-3.5 w-3.5" />
                               </Button>
                             </TooltipTrigger>
-                            <TooltipContent>Aprovar</TooltipContent>
+                            <TooltipContent>
+                              {openSubtasks.length > 0
+                                ? openSubtasksMessage(openSubtasks.length, "approve")
+                                : "Aprovar"}
+                            </TooltipContent>
                           </Tooltip>
                           <Tooltip>
                             <TooltipTrigger asChild>

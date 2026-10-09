@@ -1,14 +1,17 @@
 import { NextResponse } from "next/server";
+import { routeErrorResponse } from "@/lib/api/route-error-response"
+import { userActor } from "@/backend/domain";
 import { requireApiActor } from "@/lib/auth/api-guard";
-import { hasPermission } from "@/lib/auth/rbac";
 import { getBackendComposition } from "@/backend/composition/root"
-
+// OND8-B4 (R4): DomainErrors mapeados. Erros de enum do Prisma (QUIRK-8L4) seguem para o 500
+// legado — nao sao DomainError.
+// B6-6 (D4): o pre-check `getIssue` + `canManageIssue` da rota SAIU — os use cases update/delete
+// ja decidem a MESMA regra (lookup 404 -> gate 403: MANAGE_USERS OU reporter OU assignee) com as
+// mensagens congeladas ("Sem permissão para atualizar/excluir issue"). Evolucoes medidas: o 404
+// de issue ausente passou de corpo manual para NotFoundError mapeado {error, code, details}
+// (superset, DEC-53); o 403 ganhou code/details mantendo a mensagem. GET segue leitura aberta
+// (QUIRK medido: qualquer autenticado le) e o 404 do GET continua legado verbatim.
 const { labOperations: labOperationsModule } = getBackendComposition();
-
-function canManageIssue(actor: { id: number; roles: unknown }, issue: { reporterId: number; assigneeId?: number | null }) {
-  if (hasPermission(actor.roles, "MANAGE_USERS")) return true;
-  return issue.reporterId === actor.id || issue.assigneeId === actor.id;
-}
 
 // GET: Obter um issue específico
 export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
@@ -26,8 +29,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
 
     return NextResponse.json({ issue });
   } catch (error) {
-    console.error("Erro ao buscar issue:", error);
-    return NextResponse.json({ error: "Erro ao buscar issue" }, { status: 500 });
+    return routeErrorResponse(error, { fallback: "Erro ao buscar issue" })
   }
 }
 
@@ -37,22 +39,18 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
     const auth = await requireApiActor();
     if (auth.error) return auth.error;
 
+    const actor = userActor(auth.actor.id, auth.actor.roles);
     const params = await context.params;
-    const id = parseInt(params.id);
-    const currentIssue = await labOperationsModule.getIssue(id);
-    if (!currentIssue) {
-      return NextResponse.json({ error: "Issue não encontrado" }, { status: 404 });
-    }
-    if (!canManageIssue(auth.actor, currentIssue)) {
-      return NextResponse.json({ error: "Sem permissão para atualizar issue" }, { status: 403 });
-    }
     const body = await request.json();
 
-    const issue = await labOperationsModule.updateIssue(id, body);
+    const issue = await labOperationsModule.updateIssue({
+      actor,
+      issueId: parseInt(params.id),
+      data: body,
+    });
     return NextResponse.json({ issue });
   } catch (error: any) {
-    console.error("Erro ao atualizar issue:", error);
-    return NextResponse.json({ error: error.message || "Erro ao atualizar issue" }, { status: 500 });
+    return routeErrorResponse(error, { fallback: "Erro ao atualizar issue", exposeMessage: true })
   }
 }
 
@@ -62,20 +60,15 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
     const auth = await requireApiActor();
     if (auth.error) return auth.error;
 
+    const actor = userActor(auth.actor.id, auth.actor.roles);
     const params = await context.params;
-    const id = parseInt(params.id);
-    const currentIssue = await labOperationsModule.getIssue(id);
-    if (!currentIssue) {
-      return NextResponse.json({ error: "Issue não encontrado" }, { status: 404 });
-    }
-    if (!canManageIssue(auth.actor, currentIssue)) {
-      return NextResponse.json({ error: "Sem permissão para excluir issue" }, { status: 403 });
-    }
 
-    await labOperationsModule.deleteIssue(id);
+    await labOperationsModule.deleteIssue({
+      actor,
+      issueId: parseInt(params.id),
+    });
     return NextResponse.json({ success: true });
   } catch (error: any) {
-    console.error("Erro ao excluir issue:", error);
-    return NextResponse.json({ error: error.message || "Erro ao excluir issue" }, { status: 500 });
+    return routeErrorResponse(error, { fallback: "Erro ao excluir issue", exposeMessage: true })
   }
 }

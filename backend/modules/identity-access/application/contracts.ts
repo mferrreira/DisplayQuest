@@ -1,4 +1,4 @@
-import type { Permission, Role } from "@/lib/auth/rbac"
+import type { Permission, Role } from "@/backend/domain"
 
 export interface IdentityActor {
   id: number

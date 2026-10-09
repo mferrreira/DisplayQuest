@@ -1,0 +1,178 @@
+{
+  "featureId": "02",
+  "name": "logging-audit",
+  "status": "draft",
+  "version": "0.1.0",
+
+  "dependencies": {
+    "list": [],
+    "allDone": true
+  },
+
+  "artifacts": {
+    "PLAN": "PLAN.md",
+    "SPEC": "SPEC.md",
+    "AGENT": "AGENT.md",
+    "STATE": "STATE.json"
+  },
+
+  "currentMilestone": null,
+  "currentBatch": null,
+
+  "acceptanceCriteria": [
+    {
+      "id": "AC-02-01",
+      "summary": "AuditLogWriter.record persiste evento completo (performedAt, actorId, actorLabel, old/new) via unico escritor",
+      "testRef": "tests/unit/backend/audit/record-audit-event.test.ts + tests/integration/audit-writer-roundtrip.test.ts",
+      "status": "pending"
+    },
+    {
+      "id": "AC-02-02",
+      "summary": "EntityType/action fora do catalogo rejeitado com erro tipado, nada persistido",
+      "testRef": "tests/unit/backend/audit/record-audit-event.test.ts",
+      "status": "pending"
+    },
+    {
+      "id": "AC-02-03",
+      "summary": "Aprovacao de task grava TASK/APPROVE com actor correto e changedTo",
+      "testRef": "tests/integration/audit-writer-roundtrip.test.ts",
+      "status": "pending"
+    },
+    {
+      "id": "AC-02-04",
+      "summary": "Rejeicao de task grava TASK/REJECT com actor e descricao",
+      "testRef": "tests/integration/audit-writer-roundtrip.test.ts",
+      "status": "pending"
+    },
+    {
+      "id": "AC-02-05",
+      "summary": "CRUD de projeto e membership/roles gravam PROJECT/PROJECT_MEMBERSHIP (ADD/REMOVE/GRANT/REVOKE_ROLE)",
+      "testRef": "tests/integration/audit-writer-roundtrip.test.ts",
+      "status": "pending"
+    },
+    {
+      "id": "AC-02-06",
+      "summary": "Compras (CREATE/APPROVE/REJECT/COMPLETE/CANCEL) e rewards (CRUD/GRANT) gravam eventos",
+      "testRef": "tests/integration/audit-writer-roundtrip.test.ts",
+      "status": "pending"
+    },
+    {
+      "id": "AC-02-07",
+      "summary": "Work session COMPLETE/FINALIZE gravam evento e prisma.history.create do work-execution e removido",
+      "testRef": "tests/integration/audit-writer-roundtrip.test.ts + rg anti-scatter",
+      "status": "pending"
+    },
+    {
+      "id": "AC-02-08",
+      "summary": "Issues (CREATE/UPDATE/RESOLVE) gravam eventos",
+      "testRef": "tests/integration/audit-writer-roundtrip.test.ts",
+      "status": "pending"
+    },
+    {
+      "id": "AC-02-09",
+      "summary": "Trigger bloqueia UPDATE/DELETE em audit_logs",
+      "testRef": "tests/integration/audit-immutability.test.ts",
+      "status": "pending"
+    },
+    {
+      "id": "AC-02-10",
+      "summary": "GET /api/audit filtra (entityType/action/actorId/from/to) paginado desc; invalidos 400",
+      "testRef": "tests/unit/backend/audit/list-audit-events.test.ts + audit-api-rbac.test.ts",
+      "status": "pending"
+    },
+    {
+      "id": "AC-02-11",
+      "summary": "GET /api/audit/entity/TASK/42 retorna historico cronologico asc",
+      "testRef": "tests/unit/backend/audit/get-entity-history.test.ts",
+      "status": "pending"
+    },
+    {
+      "id": "AC-02-12",
+      "summary": "RBAC: 401 sem auth, 403 Voluntario/Colaborador, 200 Coordenador/Gerente",
+      "testRef": "tests/unit/backend/audit/audit-api-rbac.test.ts",
+      "status": "pending"
+    },
+    {
+      "id": "AC-02-13",
+      "summary": "Mudanca de cargo grava USER/ROLE_CHANGE (ou GRANT/REVOKE_ROLE) com changedFrom/changedTo de roles",
+      "testRef": "tests/integration/audit-writer-roundtrip.test.ts",
+      "status": "pending"
+    }
+  ],
+
+  "gates": {
+    "lint": "pending",
+    "types": "pending",
+    "unit": "pending",
+    "integration": "pending",
+    "migration": "pending"
+  },
+
+  "evidence": [],
+
+  "rollbacks": [],
+  "blockers": [],
+
+  "checks": [],
+
+  "decisions": [
+    {
+      "id": "D-02-01",
+      "context": "Ja existe model 'history' (schema.prisma:248) usado como trilha generica, mas sobrecarregado e mutavel (LabNoticeRepository deleta linhas; gamification e work-execution gravam via prisma.history.create direto)",
+      "decision": "Criar NOVA tabela audit_logs + modulo central 'audit' (writer unico). 'history' permanece intacto como armazenamento legado de lab notices/premios; NAO ha migracao de dados entre as tabelas.",
+      "rationale": "history permite DELETE e grava eventos de leitura (read_by_project_leader); append-only nao e garantivel nele. Sao propositos distintos: history=poliglota legado, audit_logs=trilha de auditoria funcional imutavel (RNF-17). Nova tabela sem heranca de usos indevidos.",
+      "status": "accepted"
+    },
+    {
+      "id": "D-02-02",
+      "context": "Quais acoes sao auditaveis: RNF-17 (tarefas, sessoes, compras, issues) + regra 10 (transicoes e operacoes)",
+      "decision": "Catalogo TS fechado por entityType/action: TASK(CREATE/UPDATE/COMPLETE/APPROVE/REJECT/DELETE), PROJECT(CREATE/UPDATE/DELETE), PROJECT_MEMBERSHIP(ADD_MEMBER/REMOVE_MEMBER/GRANT_ROLE/REVOKE_ROLE), USER(ROLE_CHANGE/ACCOUNT_MODERATION), PURCHASE(CREATE/APPROVE/REJECT/COMPLETE/CANCEL), REWARD(CREATE/UPDATE/DELETE/GRANT), WORK_SESSION(START/COMPLETE/UPDATE/DELETE/FINALIZE), ISSUE(CREATE/UPDATE/ASSIGN/RESOLVE/REOPEN). Leitura/logins/lab notices fora.",
+      "rationale": "Cobre os dominios citados em RNF-17 e a regra 10 sobre transicoes sensiveis, sem virar log de leitura (evita o erro atual de registrar read em history). Campos String + catalogo TS permitem novas acoes sem migracao.",
+      "status": "accepted"
+    },
+    {
+      "id": "D-02-03",
+      "context": "Retencao de logs de auditoria",
+      "decision": "Retencao indefinida nesta versao: sem TTL, sem rotina/purga automatica, sem endpoint de limpeza. Indices incluem performedAt para viabilizar purga futura; escala de laboratorio (dezenas de milhares de linhas/ano) torna a retencao indefinida barata.",
+      "rationale": "Remover trilha de auditoria so com politica explicita; custo comprovadamente baixo na escala do produto. Purga/TTL fica documentado como fora de escopo (SPEC secao 10).",
+      "status": "accepted"
+    },
+    {
+      "id": "D-02-04",
+      "context": "Sincrona ou assincrona (fila) a escrita de auditoria",
+      "decision": "Sincrona no mesmo request, apos o write de dominio concluir, na mesma instancia do writer criada no composition root (1 INSERT por evento; custo-alvo < +10ms).",
+      "rationale": "Consistencia com o padrao atual (notificationsModule como gateway dependency), sem infra de fila que nao existe no monolitio, durabilidade alinhada ao resultado do request e volume baixo. O port AuditLogWriter isola o contrato; trocar para fila/async futuramente toca so o modulo audit, nao os publishers.",
+      "status": "accepted"
+    },
+    {
+      "id": "D-02-05",
+      "context": "Autorizacao da consulta de auditoria",
+      "decision": "Endpoints de consulta protegidos por ensureAnyRole(['COORDENADOR','GERENTE']) (roles existentes), sem criar permission VIEW_AUDIT_LOGS.",
+      "rationale": "Nao acoplar esta feature ao 01-roles-permissions (que ainda pode criar a permission dedicada). Roles de gestao existentes no rbac.ts ja delimitam a consulta.",
+      "status": "accepted"
+    },
+    {
+      "id": "D-02-06",
+      "context": "Identificacao do ator na trilha quando o usuario e excluido",
+      "decision": "actorId Int? FK users onDelete SetNull + actorLabel String nao-nulo (snapshot do executor no momento do evento). Escritor automatico/cron usa actorId null + actorLabel 'system:cron'.",
+      "rationale": "A trilha sobrevive a exclusao do usuario (SetNull nao orfana nem apaga) e permanece legivel pelo snapshot; atores de sistema tem representacao sem depender de registro de usuario.",
+      "status": "accepted"
+    },
+    {
+      "id": "D-02-07",
+      "context": "Onde publicar: use-case ou gateway de dominio",
+      "decision": "Publicacao dentro dos gateways de dominio (infrastructure), via port AuditLogWriter injetado por gatewayDependencies no composition root, apos o write de dominio (pos-transacao). Mesmo padrao das notificacoes.",
+      "rationale": "Padrao existente no repo (gateways ja consomem notificationsModule); evita mudar assinatura de todos os use-cases; a semantica de 'o que aconteceu' fica ao lado do write de dominio que causou o evento.",
+      "status": "accepted"
+    }
+  ],
+
+  "timeline": [
+    {
+      "at": "2026-09-19T10:50:00-03:00",
+      "event": "created",
+      "from": null,
+      "to": "draft"
+    }
+  ]
+}

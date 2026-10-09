@@ -14,6 +14,11 @@ export interface ArchiveSectionProps {
   projects: Array<{ id: number; name: string }>
 }
 
+/**
+ * Tarefas concluídas. plan-v3 OND1-D (DEC-30/DEC-40): o `• {task.points} pts` saiu daqui —
+ * o valor gravado virou histórico e o que foi creditado dependeu do prazo. O número
+ * autoritativo chega na Onda 4, com `awardedPoints` na resposta da aprovação.
+ */
 export function ArchiveSection({ tasks, projects }: ArchiveSectionProps) {
   const [open, setOpen] = useState(false)
   if (tasks.length === 0) return null
@@ -57,8 +62,7 @@ export function ArchiveSection({ tasks, projects }: ArchiveSectionProps) {
                     {projectName} • Concluída em:{" "}
                     {task.completedAt
                       ? new Date(task.completedAt).toLocaleDateString("pt-BR")
-                      : "N/A"}{" "}
-                    • {task.points} pts
+                      : "N/A"}
                   </div>
                 </div>
               )
