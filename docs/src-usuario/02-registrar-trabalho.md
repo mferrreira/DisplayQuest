@@ -80,7 +80,7 @@ O diálogo **Sessão pausada automaticamente** aparece na tela — mas só se vo
 
 - **Fechado, o botão mostra o estado**: relógio com a sessão ativa, ícone de pausa em âmbar com a sessão pausada.
 - **Depois de uma pausa automática**, o botão ganha um ponto pulsante. Ele some quando você abre o painel, retoma a sessão ou a encerra — ou seja, quando o aviso foi visto ou resolvido.
-- **Com o som ligado**, a pausa também toca dois bipes curtos. O som é **desligado por padrão** e vive no interruptor **Som ao pausar**, dentro da aba **Sessão** do cronômetro.
+- **Com o som ligado**, a pausa também toca um "plim" agudo e alongado, no volume máximo. O som é **desligado por padrão** e vive no interruptor **Som ao pausar**, dentro da aba **Sessão** do cronômetro.
 
 ::: nota titulo="O som depende do navegador"
 O navegador só libera áudio depois de um clique seu. Por isso o interruptor toca uma prévia ao ser ligado: se você não ouviu nada, o navegador está bloqueando áudio nesta página — nesse caso, deixe desligado e use o sinal visual. A preferência fica guardada **neste navegador**.

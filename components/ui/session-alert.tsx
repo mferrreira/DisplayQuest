@@ -95,7 +95,7 @@ export function SessionAlertSoundToggle({
           </Label>
           {loaded && supported && (
             <InfoHint
-              text="Dois bipes curtos quando a sessão for pausada. Ao ligar, o navegador libera o áudio neste toque."
+              text="Um toque agudo e alongado quando a sessão for pausada. Ao ligar, o navegador libera o áudio neste toque."
               label="Como funciona o som ao pausar"
             />
           )}

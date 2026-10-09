@@ -13,7 +13,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 type Recorded = {
-  frequency: number | { value: number };
+  frequency: {
+    value: number;
+    setValueAtTime: (value: number, at: number) => void;
+    linearRampToValueAtTime: (value: number, at: number) => void;
+  };
   type: string;
   startedAt: number | null;
   stoppedAt: number | null;
@@ -24,6 +28,7 @@ function fakeAudioContext(options: { state?: AudioContextState; throwOnCreate?: 
     contexts: 0,
     oscillators: [] as Recorded[],
     envelopes: [] as number[][],
+    frequencyPoints: [] as number[][],
     connectsToDestination: 0,
     resumed: 0,
   };
@@ -45,11 +50,23 @@ function fakeAudioContext(options: { state?: AudioContextState; throwOnCreate?: 
 
   class FakeOscillator {
     type = "sine";
-    frequency = { value: 0 };
+    points: number[] = [];
+    frequency: Recorded["frequency"] = {
+      value: 0,
+      setValueAtTime: (value: number) => {
+        this.frequency.value = value;
+        this.points.push(value);
+      },
+      linearRampToValueAtTime: (value: number) => {
+        this.frequency.value = value;
+        this.points.push(value);
+      },
+    };
     startedAt: number | null = null;
     stoppedAt: number | null = null;
     constructor() {
       calls.oscillators.push(this as unknown as Recorded);
+      calls.frequencyPoints.push(this.points);
     }
     connect(target: unknown) {
       return target;
@@ -129,7 +146,10 @@ describe("fora do cliente e sem WebAudio", () => {
 });
 
 describe("com WebAudio", () => {
-  it("toca dois tons descendentes, o segundo depois do primeiro", async () => {
+  it("a pausa é um plim de uma nota que sobe e alonga", async () => {
+    // Desenho pedido pelo dono em 2026-10-09: "mais chamativo, mais agudo e mais alongado,
+    // sem virar alarme", no formato do plim do iPhone — uma nota só, alta, aguda e sustentada.
+    // A subida de 1046 Hz (C6) a 1568 Hz (G6) no ataque é o caráter do toque.
     const { FakeAudioContext, calls } = fakeAudioContext();
     vi.stubGlobal("window", { AudioContext: FakeAudioContext });
     const { playAlertSound, isAlertSoundSupported } = await loadModule();
@@ -138,10 +158,13 @@ describe("com WebAudio", () => {
     expect(playAlertSound("pause")).toBe(true);
 
     expect(calls.oscillators).toHaveLength(2);
-    expect(calls.oscillators.map((o) => (o.frequency as { value: number }).value)).toEqual([660, 440]);
+    expect(calls.frequencyPoints[0]).toEqual([1046, 1568]); // fundamental com deslize
+    expect(calls.frequencyPoints[1]).toEqual([2093]); // harmônico fino, sem deslize
     expect(calls.oscillators[0].startedAt).toBe(10);
-    expect(calls.oscillators[1].startedAt).toBeCloseTo(10.2, 5);
-    // Todo tom para depois de começar — senão o oscilador fica ligado para sempre.
+    expect(calls.oscillators[1].startedAt).toBe(10);
+    // Alongado: o fundamental dura 550 ms, o harmônico 350 ms.
+    expect((calls.oscillators[0].stoppedAt as number) - 10).toBeCloseTo(0.57, 5);
+    expect((calls.oscillators[1].stoppedAt as number) - 10).toBeCloseTo(0.37, 5);
     for (const osc of calls.oscillators) {
       expect(osc.stoppedAt).not.toBeNull();
       expect(osc.stoppedAt as number).toBeGreaterThan(osc.startedAt as number);
@@ -165,18 +188,42 @@ describe("com WebAudio", () => {
     expect(calls.connectsToDestination).toBe(2);
   });
 
-  it("o pico de volume é o que o dono pediu em 2026-10-09 (0.75, era 0.16)", async () => {
-    // O dono mediu o bip como baixo, pediu 0.35 e depois 0.75 no mesmo dia. O valor fica
-    // pinado para uma mudança futura não voltar a um dos anteriores em silêncio.
+  it("o som toca no talo (volume 1), por decisão do dono em 2026-10-09", async () => {
+    // O dono mediu 0.16, 0.35 e 0.75 como "continuou baixo" e pediu volume máximo, com cada
+    // pessoa ajustando o do próprio computador. O valor fica pinado.
     const { FakeAudioContext, calls } = fakeAudioContext();
     vi.stubGlobal("window", { AudioContext: FakeAudioContext });
     const { playAlertSound } = await loadModule();
 
-    playAlertSound();
+    playAlertSound("pause");
 
-    for (const envelope of calls.envelopes) {
-      expect(envelope[1]).toBeCloseTo(0.75, 5);
-    }
+    expect(calls.envelopes[0][1]).toBeCloseTo(1, 5); // fundamental no talo
+    expect(calls.envelopes[1][1]).toBeCloseTo(0.18, 5); // harmônico entra mais baixo
+  });
+
+  it("o som do quest é o toque antigo: dois bipes curtos e descendentes", async () => {
+    // Pedido do dono: o som que era da pausa passa a ser o de notificação do quest. Fica
+    // pinado para não se perder na troca.
+    const { FakeAudioContext, calls } = fakeAudioContext();
+    vi.stubGlobal("window", { AudioContext: FakeAudioContext });
+    const { playAlertSound } = await loadModule();
+
+    expect(playAlertSound("quest")).toBe(true);
+
+    expect(calls.frequencyPoints).toEqual([[660], [440]]);
+    expect(calls.oscillators[0].startedAt).toBe(10);
+    expect(calls.oscillators[1].startedAt).toBeCloseTo(10.2, 5);
+    expect((calls.oscillators[0].stoppedAt as number) - 10).toBeCloseTo(0.18, 5);
+    expect((calls.oscillators[1].stoppedAt as number) - 10).toBeCloseTo(0.52, 5);
+  });
+
+  it("som desconhecido cai no toque da pausa em vez de silenciar", async () => {
+    const { FakeAudioContext, calls } = fakeAudioContext();
+    vi.stubGlobal("window", { AudioContext: FakeAudioContext });
+    const { playAlertSound } = await loadModule();
+
+    expect(playAlertSound("inexistente" as never)).toBe(true);
+    expect(calls.frequencyPoints[0]).toEqual([1046, 1568]);
   });
 
   it("contexto suspenso (política de autoplay) é retomado antes de tocar", async () => {
