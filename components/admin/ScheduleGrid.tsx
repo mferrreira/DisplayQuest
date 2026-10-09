@@ -18,12 +18,7 @@ import {
 import { useToast } from "@/contexts/use-toast"
 import { hasPermission } from "@/lib/auth/rbac"
 import { TIME_SLOTS, WEEK_DAYS, snapRange } from "@/lib/constants/schedule-grid"
-import {
-  buildScheduleColumns,
-  filterSchedulesByMemberIds,
-  getVisibleTimeSlots,
-  groupSchedulesByUser,
-} from "@/lib/schedule-grid-view"
+import { filterSchedulesByMemberIds, groupSchedulesByUser } from "@/lib/schedule-grid-view"
 
 function getUserColor(userId: number) {
   const colors = [
@@ -232,12 +227,11 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
 
   const selectedUser = users.find(u => u.id === parseInt(selectedUserId))
   const visibleSchedules: any[] = filterSchedulesByMemberIds(schedules, selectedUserIds)
-  // A janela visível agora segue os horários cadastrados (a marca vazia da madrugada
-  // e da noite saiu), e a tabela é limitada em altura com rolagem própria: medido em
-  // 2026-10-09, a grade renderizava 19 linhas e 1561 px, e crescia para 1944 px numa
-  // janela mais estreita, porque cada bloco era repetido em todos os slots que cruzava.
-  const visibleSlots = getVisibleTimeSlots(visibleSchedules, TIME_SLOTS)
-  const columns = buildScheduleColumns(visibleSchedules, visibleSlots, WEEK_DAYS.length)
+  // A tabela tem altura limite com rolagem própria e cabeçalho fixo. Medido em 2026-10-09: a
+  // grade rendia 19 linhas e 1561 px, e 1944 px numa janela mais estreita, e a página
+  // inteira crescia junto. A rolagem é a resposta: quem lê a linha do horário continua
+  // vendo quem está naquela hora, e o painel não estica mais.
+  const visibleSlots = TIME_SLOTS
   const mobileGroups = groupSchedulesByUser(visibleSchedules, users)
   const totalScheduledMinutes = blocks.reduce((sum, b) => {
     const [sh, sm] = b.startTime.split(":").map(Number)
@@ -478,53 +472,48 @@ export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleG
                 </tr>
               </thead>
               <tbody>
-                {visibleSlots.map((slot, slotIdx) => (
-                  <tr key={slot.start + slot.end}>
-                    <td className="w-[44px] px-1 py-1.5 border-r text-right align-middle whitespace-nowrap border-b-2 font-medium text-[11px]">
+                {visibleSlots.map((slot) => (
+                  <tr key={slot.start + slot.end} className="h-12">
+                    <td className="w-[44px] px-1 py-2 border-r text-right align-middle whitespace-nowrap border-b-2 font-medium text-[11px]">
                       {slot.start}<br />{slot.end}
                     </td>
                     {WEEK_DAYS.map((_, dayIdx) => {
-                      const cell = columns[dayIdx]?.[slotIdx]
-                      if (!cell || cell.kind === "covered") return null
-                      if (cell.kind === "empty") {
-                        return (
-                          <td key={dayIdx} className="px-1.5 py-1.5 border align-top">
-                            <span className="text-muted-foreground text-center block">-</span>
-                          </td>
-                        )
-                      }
+                      const slotSchedules = visibleSchedules.filter((s) => {
+                        if (s.dayOfWeek !== dayIdx) return false
+                        return s.startTime < slot.end && s.endTime > slot.start
+                      })
+
                       return (
-                        <td
-                          key={dayIdx}
-                          rowSpan={cell.rowSpan}
-                          className="px-1.5 py-1.5 border align-top"
-                        >
-                          <div className="flex flex-col gap-1">
-                            {cell.blocks.map(({ schedule }) => {
-                              const user = users.find((u) => u.id === schedule.userId)
-                              const scheduleId = schedule.id
-                              return (
-                                <div
-                                  key={schedule.id}
-                                  className={`group rounded border px-2 py-1 text-xs font-medium ${getUserColor(schedule.userId)} flex items-center justify-between gap-1`}
-                                >
-                                  <span className="truncate">{user?.name || "Usuário"}</span>
-                                  <span className="ml-1 text-[10px] text-muted-foreground">
-                                    ({schedule.startTime} - {schedule.endTime})
-                                  </span>
-                                  {!readOnly && canManageAllSchedules && scheduleId !== undefined && (
-                                    <button
-                                      onClick={() => handleDelete(scheduleId, `${user?.name || "Usuário"} ${schedule.startTime}-${schedule.endTime}`)}
-                                      className="opacity-0 group-hover:opacity-100 text-red-500 dark:text-red-400 hover:text-red-700 transition-opacity"
-                                      title="Remover"
-                                    >
-                                      <Trash2 className="w-3 h-3" />
-                                    </button>
-                                  )}
-                                </div>
-                              )
-                            })}
-                          </div>
+                        <td key={dayIdx} className="px-1.5 py-2 border align-top">
+                          {slotSchedules.length === 0 ? (
+                            <span className="text-muted-foreground text-center block">-</span>
+                          ) : (
+                            <div className="flex flex-col gap-1">
+                              {slotSchedules.map((s) => {
+                                const user = users.find((u) => u.id === s.userId)
+                                return (
+                                  <div
+                                    key={s.id}
+                                    className={`group rounded border px-2 py-1.5 text-xs font-medium ${getUserColor(s.userId)} flex items-center justify-between gap-1`}
+                                  >
+                                    <span className="truncate">{user?.name || "Usuário"}</span>
+                                    <span className="ml-1 text-[10px] text-muted-foreground">
+                                      ({s.startTime} - {s.endTime})
+                                    </span>
+                                    {!readOnly && canManageAllSchedules && (
+                                      <button
+                                        onClick={() => handleDelete(s.id, `${user?.name || "Usuário"} ${s.startTime}-${s.endTime}`)}
+                                        className="opacity-0 group-hover:opacity-100 text-red-500 dark:text-red-400 hover:text-red-700 transition-opacity"
+                                        title="Remover"
+                                      >
+                                        <Trash2 className="w-3 h-3" />
+                                      </button>
+                                    )}
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          )}
                         </td>
                       )
                     })}
