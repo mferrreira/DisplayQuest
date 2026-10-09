@@ -165,6 +165,20 @@ describe("com WebAudio", () => {
     expect(calls.connectsToDestination).toBe(2);
   });
 
+  it("o pico de volume é o que o dono pediu em 2026-10-09 (0.35, era 0.16)", async () => {
+    // O dono mediu o bip como baixo demais e pediu mais volume. O valor fica pinado para
+    // uma mudança futura não voltar ao anterior em silêncio.
+    const { FakeAudioContext, calls } = fakeAudioContext();
+    vi.stubGlobal("window", { AudioContext: FakeAudioContext });
+    const { playAlertSound } = await loadModule();
+
+    playAlertSound();
+
+    for (const envelope of calls.envelopes) {
+      expect(envelope[1]).toBeCloseTo(0.35, 5);
+    }
+  });
+
   it("contexto suspenso (política de autoplay) é retomado antes de tocar", async () => {
     const { FakeAudioContext, calls } = fakeAudioContext({ state: "suspended" });
     vi.stubGlobal("window", { AudioContext: FakeAudioContext });

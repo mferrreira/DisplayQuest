@@ -25,6 +25,7 @@ import { PauseCircle, Clock } from "lucide-react"
 
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
+import { InfoHint } from "@/components/ui/info-hint"
 import { clientStorageKey, readJson, writeJson } from "@/lib/client-storage"
 import { isAlertSoundSupported, playAlertSound } from "@/lib/notifications/alert-sound"
 
@@ -88,9 +89,17 @@ export function SessionAlertSoundToggle({
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between gap-2">
-        <Label htmlFor="session-alert-sound" className="text-xs font-medium text-muted-foreground">
-          Som ao pausar
-        </Label>
+        <div className="flex items-center gap-1">
+          <Label htmlFor="session-alert-sound" className="text-xs font-medium text-muted-foreground">
+            Som ao pausar
+          </Label>
+          {loaded && supported && (
+            <InfoHint
+              text="Dois bipes curtos quando a sessão for pausada. Ao ligar, o navegador libera o áudio neste toque."
+              label="Como funciona o som ao pausar"
+            />
+          )}
+        </div>
         <Switch
           id="session-alert-sound"
           data-testid="session-alert-sound"
@@ -100,13 +109,12 @@ export function SessionAlertSoundToggle({
           aria-label="Som ao pausar"
         />
       </div>
-      <p className="text-[11px] text-muted-foreground">
-        {!loaded
-          ? "Lendo a preferência deste navegador…"
-          : supported
-            ? "Dois bipes curtos quando a sessão for pausada. Ao ligar, o navegador libera o áudio neste toque."
-            : "Este navegador não permite tocar som."}
-      </p>
+      {!loaded ? (
+        <p className="text-[11px] text-muted-foreground">Lendo a preferência deste navegador…</p>
+      ) : !supported ? (
+        // Estado, não enfeite: este texto fica visível porque explica o interruptor desabilitado.
+        <p className="text-[11px] text-muted-foreground">Este navegador não permite tocar som.</p>
+      ) : null}
     </div>
   )
 }

@@ -59,9 +59,11 @@ interface ModernAdminPanelProps {
   tasks: any[]
   sessions: any[]
   stats: any
+  /** Chamado depois de uma ação em sessão, para a lista do painel reflita a mudança. */
+  onSessionsChanged?: () => void
 }
 
-export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: ModernAdminPanelProps) {
+export function ModernAdminPanel({ users, projects, tasks, sessions, stats, onSessionsChanged }: ModernAdminPanelProps) {
   const { user } = useAuth()
   const { tasks: liveTasks, approveTask, rejectTask, fetchTasks } = useTask()
   const router = useRouter()
@@ -104,6 +106,12 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
 
   const canManageSchedule = hasAccess(user?.roles || [], 'MANAGE_SCHEDULE')
   const canManageBadges = hasAccess(user?.roles || [], 'MANAGE_BADGES')
+
+  // Sessões abertas de todos os usuários. A lista do cartão rola em vez de cortar
+  // (antes eram só as 8 primeiras), e a página recarrega esta lista a cada 30 s.
+  const openSessions = sessions.filter(
+    (session: any) => session.status === 'active' || session.status === 'paused',
+  )
 
   const handleRefresh = async () => {
     setRefreshing(true)
@@ -347,7 +355,7 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
                       Sessões Ativas e Pausadas
                     </CardTitle>
                     <CardDescription>
-                      Usuários com sessão ativa ou pausada — gerencie via diálogo
+                      {openSessions.length} {openSessions.length === 1 ? 'sessão' : 'sessões'} ativa ou pausada — gerencie via diálogo
                     </CardDescription>
                   </div>
                   <Button size="sm" variant="outline" onClick={() => setManageSessionsOpen(true)}>
@@ -356,21 +364,29 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  {sessions
-                    .filter(session => session.status === 'active' || session.status === 'paused')
-                    .slice(0, 8)
-                    .map((session) => {
+                {openSessions.length === 0 ? (
+                  <div className="text-center py-4">
+                    <Users className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">
+                      Nenhuma sessão ativa ou pausada no momento
+                    </p>
+                  </div>
+                ) : (
+                  // Rola dentro do cartão em vez de cortar em 8 (medido em 2026-10-09: a
+                  // lista parava em 8 linhas e o painel não tinha rolagem, então a 9ª sessão
+                  // simplesmente não aparecia). O cartão tem altura limite, o painel não cresce.
+                  <div className="max-h-[22rem] space-y-3 overflow-y-auto pr-1">
+                    {openSessions.map((session) => {
                       const user = users.find(u => u.id === session.userId)
                       if (!user) return null
-                      
+
                       const startTime = new Date(session.startTime)
                       const formatDate = startTime.toLocaleDateString('pt-BR')
-                      const formatTime = startTime.toLocaleTimeString('pt-BR', { 
-                        hour: '2-digit', 
-                        minute: '2-digit' 
+                      const formatTime = startTime.toLocaleTimeString('pt-BR', {
+                        hour: '2-digit',
+                        minute: '2-digit'
                       })
-                      
+
                       return (
                         <div key={session.id} className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
@@ -386,26 +402,19 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
                               </p>
                             </div>
                           </div>
-                            <div className="text-right">
-                             <Badge variant="outline" className={session.status === 'paused' ? 'bg-amber-50 dark:bg-warning/10 text-amber-700 dark:text-warning border-amber-200 dark:border-warning/25' : 'bg-green-50 dark:bg-success/10 text-green-700 dark:text-green-300 border-green-200 dark:border-success/25'}>
-                               {session.status === 'paused' ? 'Pausada' : (user.roles?.[0] || 'Usuário')}
-                             </Badge>
-                             <p className="text-xs text-muted-foreground mt-1">
-                               {session.status === 'paused' ? 'Pausada' : 'Trabalhando'}
-                             </p>
-                           </div>
+                          <div className="text-right">
+                            <Badge variant="outline" className={session.status === 'paused' ? 'bg-amber-50 dark:bg-warning/10 text-amber-700 dark:text-warning border-amber-200 dark:border-warning/25' : 'bg-green-50 dark:bg-success/10 text-green-700 dark:text-green-300 border-green-200 dark:border-success/25'}>
+                              {session.status === 'paused' ? 'Pausada' : (user.roles?.[0] || 'Usuário')}
+                            </Badge>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {session.status === 'paused' ? 'Pausada' : 'Trabalhando'}
+                            </p>
+                          </div>
                         </div>
                       )
                     })}
-                  {(sessions.filter(session => session.status === 'active' || session.status === 'paused').length === 0) && (
-                    <div className="text-center py-4">
-                      <Users className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                      <p className="text-sm text-muted-foreground">
-                        Nenhuma sessão ativa ou pausada no momento
-                      </p>
-                    </div>
-                  )}
-                </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -1158,7 +1167,7 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
         onOpenChange={setManageSessionsOpen}
         users={users}
         sessions={sessions}
-        onRefresh={handleRefresh}
+        onRefresh={onSessionsChanged ?? (() => {})}
       />
     </div>
   )

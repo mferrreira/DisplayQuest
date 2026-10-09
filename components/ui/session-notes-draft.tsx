@@ -26,6 +26,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from "react"
 import { Textarea } from "@/components/ui/textarea"
+import { InfoHint } from "@/components/ui/info-hint"
 import { clientStorageKey, readText, removeItem, writeText } from "@/lib/client-storage"
 
 /** Espera antes de gravar. Curto o bastante para não perder trabalho, longo o bastante para não travar a digitação. */
@@ -120,9 +121,15 @@ export function SessionNotesDraft({ sessionId, note, onNoteChange }: SessionNote
 
   return (
     <div className="space-y-1">
-      <label htmlFor="session-notes-draft" className="text-xs font-medium text-muted-foreground">
-        Anotações da sessão
-      </label>
+      <div className="flex items-center gap-1">
+        <label htmlFor="session-notes-draft" className="text-xs font-medium text-muted-foreground">
+          Anotações da sessão
+        </label>
+        <InfoHint
+          text="Salvo neste navegador enquanto a sessão estiver aberta. Ao parar, o texto vem para a caixa de log, onde dá para editar antes de encerrar."
+          label="Como funcionam as anotações da sessão"
+        />
+      </div>
       <Textarea
         id="session-notes-draft"
         data-testid="session-notes-draft"
@@ -130,12 +137,7 @@ export function SessionNotesDraft({ sessionId, note, onNoteChange }: SessionNote
         value={note}
         onChange={(event) => onNoteChange(event.target.value)}
         placeholder="O que você está fazendo nesta sessão…"
-        aria-describedby="session-notes-draft-hint"
       />
-      <p id="session-notes-draft-hint" className="text-[11px] text-muted-foreground">
-        Salvo neste navegador enquanto a sessão estiver aberta. Ao parar, o texto vem para a
-        caixa de log, onde dá para editar antes de encerrar.
-      </p>
     </div>
   )
 }

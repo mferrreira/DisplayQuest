@@ -27,8 +27,12 @@ interface Tone {
   duration: number
 }
 
-/** Volume de pico. Baixo de propósito: isto toca sozinho, em laboratório aberto. */
-const PEAK_GAIN = 0.16
+/**
+ * Volume de pico. Era 0.16 e o dono mediu como baixo demais em 2026-10-09: o bip passava
+ * despercebido no laboratório. Subiu para 0.35, audível com o volume do sistema moderado.
+ * Só toca com a preferência ligada (ela começa desligada), então não toca sem pedido.
+ */
+const PEAK_GAIN = 0.35
 
 export type AlertSound = "pause"
 

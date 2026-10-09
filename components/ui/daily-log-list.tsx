@@ -18,6 +18,14 @@ interface DailyLogListProps {
 export function DailyLogList({ logs, currentUser, onEdit, onDelete, isSubmitting, showAuthor = false }: DailyLogListProps & { showAuthor?: boolean }) {
   const [expandedLogs, setExpandedLogs] = useState<Set<number>>(new Set())
 
+  // Mais recente primeiro. A API devolve os logs em ordem crescente e o perfil mostrava o
+  // registro mais antigo no topo, então o registro de hoje ficava no fim da página (pedido
+  // do dono em 2026-10-09).
+  const orderedLogs = [...logs].sort((a, b) => {
+    const byDate = new Date(b.date).getTime() - new Date(a.date).getTime()
+    return byDate !== 0 ? byDate : b.id - a.id
+  })
+
   const toggleExpanded = (logId: number) => {
     const newExpanded = new Set(expandedLogs)
     if (newExpanded.has(logId)) {
@@ -55,7 +63,7 @@ export function DailyLogList({ logs, currentUser, onEdit, onDelete, isSubmitting
 
   return (
     <div className="space-y-4">
-      {logs.map((log) => (
+      {orderedLogs.map((log) => (
         <Card key={log.id} className="hover:shadow-md transition-shadow">
           <CardContent className="p-4">
             <div className="flex items-start justify-between">

@@ -82,6 +82,18 @@ describe("caixa de anotações", () => {
     expect(screen.getByText("Anotações da sessão")).toBeInTheDocument();
   });
 
+  it("a explicação longa mora no botão de informação, não numa linha do painel", () => {
+    // Pedido do dono em 2026-10-09: o painel flutuante tinha texto demais. O parágrafo virou
+    // `title` do botão, então aparece no hover sem ocupar linha.
+    render(<Harness sessionId={7} />);
+
+    expect(screen.queryByText(/Salvo neste navegador/)).not.toBeInTheDocument();
+    expect(
+      screen.getByTitle(/Salvo neste navegador enquanto a sessão estiver aberta/),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /como funcionam as anotações/i })).toBeInTheDocument();
+  });
+
   it("despeja o rascunho no log preservando o texto inteiro", () => {
     const onEnd = vi.fn();
     render(<Harness sessionId={7} onEnd={onEnd} />);
