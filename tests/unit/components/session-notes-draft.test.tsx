@@ -136,6 +136,38 @@ describe("gravação com debounce", () => {
     unmount();
     expect(stored(7)).toBe("última frase, escrita há pouco");
   });
+
+  it("a sessão sumindo da lista grava o pendente em vez de descartar (pausa das 17h)", () => {
+    // Medido em 2026-10-09: o texto SOBREVIVE à pausa e ao encerramento feito pelo servidor
+    // (caixa e storage conferidos no navegador), mas o ramo `sessionId === null` jogava fora
+    // o que estava no debounce. A sessão pode sumir da lista por um refresh em voo ou pela
+    // varredura noturna do servidor, e a digitação não pode ir embora com ela.
+    const { rerender } = render(<Harness sessionId={7} />);
+    type("texto digitado antes da pausa");
+    expect(stored(7)).toBeNull();
+
+    rerender(<Harness sessionId={null} />);
+
+    expect(stored(7)).toBe("texto digitado antes da pausa");
+  });
+
+  it("recarregar ou esconder a página grava o pendente", () => {
+    render(<Harness sessionId={7} />);
+    type("frase que ia ser perdida no F5");
+
+    window.dispatchEvent(new Event("pagehide"));
+    expect(stored(7)).toBe("frase que ia ser perdida no F5");
+  });
+
+  it("esconder a aba (celular) também grava o pendente", () => {
+    render(<Harness sessionId={7} />);
+    type("frase que ia ser perdida ao trocar de aba");
+
+    Object.defineProperty(document, "visibilityState", { value: "hidden", configurable: true });
+    document.dispatchEvent(new Event("visibilitychange"));
+
+    expect(stored(7)).toBe("frase que ia ser perdida ao trocar de aba");
+  });
 });
 
 describe("anotação por sessão", () => {

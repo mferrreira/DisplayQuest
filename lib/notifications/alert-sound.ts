@@ -28,11 +28,11 @@ interface Tone {
 }
 
 /**
- * Volume de pico. Era 0.16 e o dono mediu como baixo demais em 2026-10-09: o bip passava
- * despercebido no laboratório. Subiu para 0.35, audível com o volume do sistema moderado.
- * Só toca com a preferência ligada (ela começa desligada), então não toca sem pedido.
+ * Volume de pico. Era 0.16, o dono pediu 0.35 no mesmo dia e 0.75 em seguida (2026-10-09):
+ * o bip passava despercebido no laboratório. Só toca com a preferência ligada, e ela começa
+ * desligada, então não toca sem a pessoa pedir.
  */
-const PEAK_GAIN = 0.35
+const PEAK_GAIN = 0.75
 
 export type AlertSound = "pause"
 

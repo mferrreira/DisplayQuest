@@ -165,9 +165,9 @@ describe("com WebAudio", () => {
     expect(calls.connectsToDestination).toBe(2);
   });
 
-  it("o pico de volume é o que o dono pediu em 2026-10-09 (0.35, era 0.16)", async () => {
-    // O dono mediu o bip como baixo demais e pediu mais volume. O valor fica pinado para
-    // uma mudança futura não voltar ao anterior em silêncio.
+  it("o pico de volume é o que o dono pediu em 2026-10-09 (0.75, era 0.16)", async () => {
+    // O dono mediu o bip como baixo, pediu 0.35 e depois 0.75 no mesmo dia. O valor fica
+    // pinado para uma mudança futura não voltar a um dos anteriores em silêncio.
     const { FakeAudioContext, calls } = fakeAudioContext();
     vi.stubGlobal("window", { AudioContext: FakeAudioContext });
     const { playAlertSound } = await loadModule();
@@ -175,7 +175,7 @@ describe("com WebAudio", () => {
     playAlertSound();
 
     for (const envelope of calls.envelopes) {
-      expect(envelope[1]).toBeCloseTo(0.35, 5);
+      expect(envelope[1]).toBeCloseTo(0.75, 5);
     }
   });
 

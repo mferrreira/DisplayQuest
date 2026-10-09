@@ -61,9 +61,26 @@ export function useSessionNotes(sessionId: number | null): UseSessionNotes {
   // sumido do contexto quando o encerramento for confirmado (corrida com o poll de 30s).
   const lastSessionIdRef = useRef<number | null>(null)
 
+  /**
+   * Grava o que estava esperando o debounce. Chamada em três lugares que não podem custar
+   * digitação: unmount, sessão sumindo da lista e página sendo recarregada ou escondida.
+   *
+   * Regra do dono (2026-10-09): o texto só sai do `localStorage` quando o SERVIDOR confirma
+   * o encerramento da sessão. Nada aqui apaga chave: o único que apaga é `clearNote`.
+   */
+  const flushPending = useCallback(() => {
+    const pending = pendingRef.current
+    if (!pending) return
+    pendingRef.current = null
+    writeText(sessionNotesKey(pending.sessionId), pending.note)
+  }, [])
+
   useEffect(() => {
     if (sessionId === null) {
-      pendingRef.current = null
+      // Medido em 2026-10-09: este branch jogava fora o pendente do debounce (até 400 ms de
+      // digitação). A sessão pode sumir da lista por um refresh em voo ou pela varredura do
+      // servidor, e a digitação não pode ir embora com ela.
+      flushPending()
       setNote("")
       setLoadedFor(null)
       return
@@ -71,7 +88,7 @@ export function useSessionNotes(sessionId: number | null): UseSessionNotes {
     lastSessionIdRef.current = sessionId
     setNote(readText(sessionNotesKey(sessionId)) ?? "")
     setLoadedFor(sessionId)
-  }, [sessionId])
+  }, [sessionId, flushPending])
 
   // Grava com debounce; texto vazio remove a chave em vez de gravar string vazia.
   useEffect(() => {
@@ -85,15 +102,26 @@ export function useSessionNotes(sessionId: number | null): UseSessionNotes {
     return () => clearTimeout(timer)
   }, [note, sessionId, loadedFor])
 
+  // Recarregar a página ou sair da aba não pode custar o que ainda estava no debounce.
+  // `pagehide` cobre fechar e recarregar; `visibilitychange` cobre o celular, que muitas
+  // vezes congela a aba sem disparar `pagehide`.
+  useEffect(() => {
+    const flush = () => flushPending()
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") flush()
+    }
+    window.addEventListener("pagehide", flush)
+    document.addEventListener("visibilitychange", onVisibility)
+    return () => {
+      window.removeEventListener("pagehide", flush)
+      document.removeEventListener("visibilitychange", onVisibility)
+    }
+  }, [flushPending])
+
   // Fechar o painel ou navegar não pode custar o que ainda estava no debounce.
   useEffect(() => {
-    return () => {
-      const pending = pendingRef.current
-      if (!pending) return
-      pendingRef.current = null
-      writeText(sessionNotesKey(pending.sessionId), pending.note)
-    }
-  }, [])
+    return () => flushPending()
+  }, [flushPending])
 
   const clearNote = useCallback(() => {
     pendingRef.current = null

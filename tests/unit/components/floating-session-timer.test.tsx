@@ -348,9 +348,60 @@ describe("FloatingSessionTimer alerta de pausa (OND2-C)", () => {
     });
   }
 
+  it("a pausa automática das 17h não apaga o rascunho (pedido do dono, 2026-10-09)", async () => {
+    // Medido no navegador antes de escrever: o texto sobrevive à pausa e ao encerramento
+    // feito pelo servidor. Este teste é o que impede uma regressão de apagar a chave no
+    // caminho da pausa — a regra do dono é que o texto só sai do storage quando o SERVIDOR
+    // confirma o encerramento.
+    const { session, ...utils } = await renderBeforeAutoPause(31);
+    await act(async () => {
+      screen.getByLabelText(/abrir timer de sessão/i).click();
+    });
+    await typeDraft("anotação que estava aberta quando deu 17h");
+    await act(async () => {
+      vi.advanceTimersByTime(SESSION_NOTES_DEBOUNCE_MS + 50);
+    });
+    expect(draftText(session.id)).toBe("anotação que estava aberta quando deu 17h");
+
+    await crossAutoPause(session.id, utils);
+
+    expect(draftText(session.id)).toBe("anotação que estava aberta quando deu 17h");
+    expect(screen.getByTestId("session-notes-draft")).toHaveValue(
+      "anotação que estava aberta quando deu 17h",
+    );
+    expect(screen.getByText("Sessão pausada automaticamente")).toBeInTheDocument();
+  });
+
+  it("a pausa manual também não apaga o rascunho", async () => {
+    // Mesma regra pelo outro caminho: o botão "Pausar" do painel. Medido no navegador em
+    // 2026-10-09 (caixa e storage conferidos depois do clique).
+    vi.setSystemTime(new Date("2026-08-25T13:45:00Z"));
+    const session = makeSession({ id: 32, status: "active", startTime: new Date("2026-08-25T13:40:00Z") });
+    workSessionsMock.currentSession = session;
+    workSessionsMock.activeSession = session;
+
+    await act(async () => {
+      render(<FloatingSessionTimer />);
+    });
+    await act(async () => {
+      screen.getByLabelText(/abrir timer de sessão/i).click();
+    });
+    await typeDraft("anotação da pausa manual");
+    await act(async () => {
+      vi.advanceTimersByTime(SESSION_NOTES_DEBOUNCE_MS + 50);
+    });
+    expect(draftText(session.id)).toBe("anotação da pausa manual");
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /^Pausar$/ }));
+    });
+
+    expect(draftText(session.id)).toBe("anotação da pausa manual");
+    expect(screen.getByTestId("session-notes-draft")).toHaveValue("anotação da pausa manual");
+  });
+
   it("pausa automática toca o som quando a preferência está ligada", async () => {
-    preferSoundOn();
-    const { session, rerender } = await renderBeforeAutoPause(31);
+    preferSoundOn();    const { session, rerender } = await renderBeforeAutoPause(31);
 
     await crossAutoPause(31, { rerender });
 
