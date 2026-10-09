@@ -97,7 +97,12 @@ describe("FloatingSessionTimer tabgroup", () => {
     workSessionsMock.activeSession = session;
     render(<FloatingSessionTimer />);
     await user.click(openTimer());
-    await user.click(screen.getByRole("button", { name: /pausar/i }));
+    // `exact`: o painel tem o botão "Pausar" e o botão de informação do som, cujo nome
+    // acessível é "Como funciona o som ao pausar" — sem `exact` os dois casam e o teste
+    // quebra por strict mode violation. (O botão de informação só apareceu quando o som
+    // passou a ser arquivo: antes, `isAlertSoundSupported` media `AudioContext`, que o
+    // jsdom não implementa, e o botão não era renderizado nenhum.)
+    await user.click(screen.getByRole("button", { name: "Pausar", exact: true }));
     await waitFor(() => expect(workSessionsMock.pauseSession).toHaveBeenCalledWith(7));
     expect(ResponsibilitiesAPI.pause).not.toHaveBeenCalled();
   });

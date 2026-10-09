@@ -11,14 +11,14 @@
  * O sinal visual é sempre, sem configuração: estado no botão fechado (ícone, cor e nome
  * acessível) e pulso quando a pausa foi automática e ainda ninguém retomou.
  *
- * O som é **opcional e desligado por padrão**. Desligado por padrão por duas razões: o
- * bip toca sozinho, sem a pessoa pedir, e a política de autoplay só libera áudio depois de
- * um gesto — ligar o interruptor é esse gesto, e por isso o interruptor toca uma prévia na
- * hora: se a pessoa não ouviu nada ao ligar, o navegador está bloqueando e ela desliga.
+ * O som é **opcional e ligado por padrão**, por decisão do dono em 2026-10-09. Ele toca
+ * sozinho, sem a pessoa pedir, e a política de autoplay só libera áudio depois de um gesto
+ * — por isso o interruptor toca uma prévia ao ser ligado: se a pessoa não ouviu nada, o
+ * navegador está bloqueando e ela desliga.
  *
- * A preferência é persistida pelo seam `lib/client-storage.ts`, chave `dq:som-pausa`. A
- * leitura acontece depois da montagem, como em `session-welcome-balloon.tsx`, para não
- * divergir entre servidor e cliente na hidratação.
+ * A preferência é persistida pelo seam `lib/client-storage.ts`, chave `dq:som-pausa`, e o
+ * valor padrão é `true`. A leitura acontece depois da montagem, como em
+ * `session-welcome-balloon.tsx`, para não divergir entre servidor e cliente na hidratação.
  */
 import { useCallback, useEffect, useState } from "react"
 import { PauseCircle, Clock } from "lucide-react"
@@ -52,7 +52,8 @@ export function useSessionAlertSound(): UseSessionAlertSound {
 
   useEffect(() => {
     setSupported(isAlertSoundSupported())
-    setEnabledState(readJson<boolean>(PAUSE_SOUND_KEY, false) === true)
+    // Ligado por padrão (dono, 2026-10-09). Quem nunca mexeu na chave ouve o som.
+    setEnabledState(readJson<boolean>(PAUSE_SOUND_KEY, true) === true)
     setLoaded(true)
   }, [])
 
@@ -95,7 +96,7 @@ export function SessionAlertSoundToggle({
           </Label>
           {loaded && supported && (
             <InfoHint
-              text="Um toque agudo e alongado quando a sessão for pausada. Ao ligar, o navegador libera o áudio neste toque."
+              text="Um toque curto quando a sessão for pausada. Já vem ligado; desligue aqui se preferir silêncio."
               label="Como funciona o som ao pausar"
             />
           )}

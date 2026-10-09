@@ -409,7 +409,10 @@ describe("FloatingSessionTimer alerta de pausa (OND2-C)", () => {
     expect(alertSoundMock.playAlertSound).toHaveBeenCalledWith("pause");
   });
 
-  it("com o som desligado (padrão), a pausa automática é só visual", async () => {
+  it("com o som desligado de propósito, a pausa automática é só visual", async () => {
+    // O padrão agora é LIGADO (dono, 2026-10-09), então o silêncio é o que precisa ser
+    // pedido: a chave gravada como false.
+    storageData.set(PAUSE_SOUND_KEY, JSON.stringify(false));
     const { rerender } = await renderBeforeAutoPause(32);
 
     await crossAutoPause(32, { rerender });
@@ -503,9 +506,37 @@ describe("FloatingSessionTimer alerta de pausa (OND2-C)", () => {
     expect(screen.queryByTestId("session-timer-auto-pause-dot")).not.toBeInTheDocument();
   });
 
-  it("o interruptor liga o som, guarda a preferência e toca a prévia", async () => {
+  it("o interruptor desliga o som, guarda a preferência e não toca prévia", async () => {
+    // O padrão passou a ser LIGADO (dono, 2026-10-09), então o gesto que sobra é desligar —
+    // e desligar não toca nada.
     vi.setSystemTime(new Date("2026-08-25T13:00:00Z"));
     const session = makeSession({ id: 37, status: "active", startTime: new Date("2026-08-25T13:00:00Z") });
+    workSessionsMock.currentSession = session;
+    workSessionsMock.activeSession = session;
+
+    await act(async () => {
+      render(<FloatingSessionTimer />);
+    });
+    await act(async () => {
+      screen.getByLabelText(/abrir timer de sessão/i).click();
+    });
+
+    const toggle = screen.getByTestId("session-alert-sound");
+    expect(toggle).toHaveAttribute("data-state", "checked");
+
+    await act(async () => {
+      fireEvent.click(toggle);
+    });
+
+    expect(toggle).toHaveAttribute("data-state", "unchecked");
+    expect(storageData.get(PAUSE_SOUND_KEY)).toBe("false");
+    expect(alertSoundMock.playAlertSound).not.toHaveBeenCalled();
+  });
+
+  it("ligar de novo toca a prévia, que é o que destrava o áudio do navegador", async () => {
+    storageData.set(PAUSE_SOUND_KEY, JSON.stringify(false));
+    vi.setSystemTime(new Date("2026-08-25T13:00:00Z"));
+    const session = makeSession({ id: 38, status: "active", startTime: new Date("2026-08-25T13:00:00Z") });
     workSessionsMock.currentSession = session;
     workSessionsMock.activeSession = session;
 
@@ -525,8 +556,6 @@ describe("FloatingSessionTimer alerta de pausa (OND2-C)", () => {
 
     expect(toggle).toHaveAttribute("data-state", "checked");
     expect(storageData.get(PAUSE_SOUND_KEY)).toBe("true");
-    // A prévia é o que destrava o áudio pela política de autoplay: sem ela, "ligado" seria
-    // uma promessa que o navegador pode não cumprir.
     expect(alertSoundMock.playAlertSound).toHaveBeenCalledWith("pause");
   });
 

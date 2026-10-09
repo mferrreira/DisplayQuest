@@ -613,3 +613,24 @@ leitura do texto visível. São observações medidas na instância real, **não
   falha igual, então não é regressão — e o dono decidiu **não** escopar o locator nem mexer no dado
   (ver a nota de e2e em "Gotchas reais"). Se isso incomodar nas capturas, a saída é recapturar, não
   apagar dado.
+
+## Sons de alerta (lib/notifications/alert-sound.ts) — troca de sintetizado para arquivo
+
+- **O som é arquivo MP3 em `public/sons/`, não oscilador.** Medido em 2026-10-09: o dono
+  recusou três volumes de um bip sintetizado (0.16, 0.35, 0.75) e depois recusou um "plim"
+  de oscilador que subia de 1046 Hz a 1568 Hz. A lição: nesta casa, gosto de som se discute
+  com arquivo gravado, não com `GainNode`. Os dois arquivos vêm do Mixkit (Mixkit License,
+  uso livre sem atribuição) e a origem de cada um está em `public/sons/LICENSE.md`.
+- **`isAlertSoundSupported()` hoje mede `typeof Audio`, não `AudioContext`.** Isso muda o
+  comportamento no jsdom: `Audio` existe lá e `AudioContext` não. Consequência medida: o
+  botão de informação do som passa a renderizar em teste, e o rótulo "Como funciona o som
+  ao pausar" casa com `/pausar/i` — o teste
+  `features/laboratorio/__tests__/floating-timer-tabs.test.tsx` precisou de
+  `{ name: "Pausar", exact: true }` (a lição do substring valendo de novo).
+- **Som ligado por padrão, os dois**, por decisão do dono no mesmo dia. As chaves
+  `dq:som-pausa` e `dq:som-quest` guardam a preferência; os interruptores vêm depois.
+- **O contador de notificações não era instantâneo** (eu medi achando que era): as queries
+  de `features/notifications/hooks/use-notifications.ts` repetiam a cada 60 s e o
+  `refetchOnWindowFocus` global está desligado. Para o som de notificação ter sentido, a
+  contagem passou a repetir a cada 5 s (`NOTIFICATION_POLL_MS`); a lista completa segue em
+  60 s. O som nasce da SUBIDA da contagem, nunca da primeira leitura.

@@ -12,6 +12,7 @@ import { AppHeader } from "@/components/layout/app-header"
 import { FloatingSessionTimer } from "@/components/ui/floating-session-timer"
 import { QueryProvider } from "@/shared/providers/query-provider"
 import { Toaster } from "@/components/ui/sonner"
+import { NotificationSound } from "@/components/ui/notification-sound"
 import { usePathname } from "next/navigation"
 import type { Session } from "next-auth"
 
@@ -48,6 +49,10 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
 
   return (
     <DashboardProviders>
+      {/* Som de notificação: precisa estar montado uma vez só, fora do painel, porque o
+          painel é montado duas vezes no cabeçalho (versão de mesa e versão compacta) e o
+          som tocaria em dobro. */}
+      <NotificationSound />
       <AppHeader />
       {!isPrintRoute && <FloatingSessionTimer />}
       {children}

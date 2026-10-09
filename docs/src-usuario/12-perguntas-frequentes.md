@@ -18,7 +18,7 @@ Porque cruzou um dos horários programados — 09:30, 12:00, 15:00 ou 17:00, no 
 
 ## Não vi o aviso de pausa automática. A sessão parou mesmo assim?
 
-Parou. O aviso é um lembrete, não a garantia: a pausa é registrada pelo sistema no horário do corte, mesmo que a janela esteja fechada ou em outra aba. Para saber por fora do diálogo, olhe o botão do cronômetro — fechado, ele mostra um ponto pulsante depois de uma pausa automática. Se quiser um sinal sonoro, ligue **Som ao pausar** na aba **Sessão** do cronômetro; o som é opcional e começa desligado.
+Parou. O aviso é um lembrete, não a garantia: a pausa é registrada pelo sistema no horário do corte, mesmo que a janela esteja fechada ou em outra aba. Para saber por fora do diálogo, olhe o botão do cronômetro — fechado, ele mostra um ponto pulsante depois de uma pausa automática. Se quiser um sinal sonoro, ele já toca por padrão; para silenciar, desligue **Som ao pausar** na aba **Sessão** do cronômetro.
 
 ## Não vejo Relatórios Semanais nem Painel Administrativo. É bug?
 
