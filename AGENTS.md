@@ -126,16 +126,18 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   **leitura** + contagem na aba **Tarefas** do painel admin (sem checkbox), (5) o par "subtask"
   duplicado sumiu dos dois diálogos (rótulo/título no topo, placeholder com exemplo
   `Ex.: Revisar a introdução`, botão **Adicionar subtask** virou só-ícone `Plus` com `aria-label`).
-- **Numeração de decisão é global e JÁ tem buraco (medido 2026-10-06, atualizado 2026-10-08):** DEC-01..29 clean-arch,
-  DEC-30..49 plan-v3, DEC-50..54 B6/D4, DEC-55..60 plan-v4, **DEC-61..77 plan-v5** (reservadas pelo
-  dono em `displayquest-v2/plan-v5/`, criado 2026-10-06 e ainda **não commitado**), DEC-78..95 plan-v4
+- **Numeração de decisão é global e JÁ tem buraco (medido 2026-10-06, atualizado 2026-10-13):** DEC-01..29 clean-arch,
+  DEC-30..49 plan-v3, DEC-50..54 B6/D4, DEC-55..60 plan-v4, **DEC-61..77 plan-v5** (commitado em
+  `4c6fab7`, criado 2026-10-06), DEC-78..95 plan-v4
   (V4-4, ASK-V4-06, V4-4b, V4-4c, V4-5a, V4-5b, V4-5c e V4-6b), **DEC-96..98 plan-v4 (2026-10-07,
   pós-encerramento: ASK-V4-33 — tira o filtro morto da tela de voluntários — e o lote POS-1 de pontuação
-  + trava de marcação)**, DEC-99..104 plan-v5, DEC-105..114 plan-v6, **DEC-115..123 clean-arch/B6-restante
-  (2026-10-08: B6-2c..B6-7 + acordos da retomada)**. O V4-4 ia usar DEC-61..64 e colidiu; os 28
-  comentários de código foram renumerados. **Antes de abrir decisão nova, `grep` os CINCO `STATE.json`
-  (clean-arch, plan-v3, plan-v4, plan-v5, plan-v6) — a nota antiga que dizia "três" está velha.
-  Próxima livre: DEC-124.**
+  + trava de marcação)**, DEC-99..104 plan-v5, DEC-105..114 plan-v6, **DEC-115..125 clean-arch/B6-restante
+  + B9/B10 (encerrado 2026-10-08)**, **DEC-126/127 plan-v5 (2026-10-09: meses marcados na grade do
+  cronograma e visualização livre de projetos)** e **DEC-128..130 plan-v5/documentos oficiais (2026-10-13:
+  templates viram asset, DOCX preenchido pelo template, AcroForm oficial preenchido)**. O V4-4 ia usar
+  DEC-61..64 e colidiu; os 28 comentários de código foram renumerados. **Antes de abrir decisão nova, `grep`
+  os CINCO `STATE.json` (clean-arch, plan-v3, plan-v4, plan-v5, plan-v6) — a nota antiga que dizia "três"
+  está velha. Próxima livre: DEC-131.**
 - **Subtask (V4-4, DEC-78..83 → regra atual = DEC-97/98):** tabela `task_subtasks` (sem FK para
   `users` — subtask não tem
   responsável próprio), base gravada em `tasks.points` = `10 + 5·n` (DEC-97) e **cada subtask CONCLUÍDA

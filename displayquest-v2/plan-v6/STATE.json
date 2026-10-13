@@ -2,7 +2,7 @@
   "plan": "plan-v6",
   "title": "refatoração visual UI/UX: linguagem DisplayQuest em todas as telas",
   "version": "1.0.0",
-  "updatedAt": "2026-10-07T12:00:00-03:00",
+  "updatedAt": "2026-10-13T11:05:00-03:00",
   "status": "ready",
   "activeWave": null,
   "activeBatch": null,
@@ -10,23 +10,23 @@
   "lineage": {
     "previousPlan": "plan-v5 (domínio de projetos maduro — ready, activeWave: null; não iniciado)",
     "concurrentPlan": "plan-v5 (ready, não iniciado) — ORDEM RESOLVIDA na DEC-113: nas colisões o plan-v5 executa ANTES (V6-4 × V5-4 wizard, V6-5 × V5-2 banner/logo, V6-7 × V5-3 banner de perfil/pódio). V6-0..V6-3 não tocam o plan-v5.",
-    "note": "a numeracao de decisoes e GLOBAL: DEC-01..29 clean-arch, DEC-30..49 plan-v3, DEC-50..54 B6/D4, DEC-55..60 plan-v4, DEC-61..77 plan-v5, DEC-78..98 plan-v4, DEC-99..104 plan-v5. Este plano usa DEC-105..114. Proxima decisao: DEC-115. Antes de abrir DEC nova, grep os STATE.json (clean-arch, plan-v3, plan-v4, plan-v5, plan-v6)."
+    "note": "a numeracao de decisoes e GLOBAL: DEC-01..29 clean-arch, DEC-30..49 plan-v3, DEC-50..54 B6/D4, DEC-55..60 plan-v4, DEC-61..77 plan-v5, DEC-78..98 plan-v4, DEC-99..104 plan-v5. Este plano usa DEC-105..114; o clean-arch (B6-restante + B9/B10) usou DEC-115..125 (2026-10-08) e o plan-v5 usou DEC-126/127 (2026-10-09) e DEC-128..130 (2026-10-13). Proxima decisao: DEC-131. Antes de abrir DEC nova, grep os CINCO STATE.json (clean-arch, plan-v3, plan-v4, plan-v5, plan-v6)."
   },
   "baseline": {
-    "measuredAt": "2026-10-07",
-    "measuredOn": "dev com o lote POS-1 do plan-v4 fechado (DEC-97/98); nenhum commit do plan-v6 existe ainda",
-    "unitAndFeatures": "87 arquivos / 1107 testes",
-    "fullSuite": "97 arquivos / 1192 testes (referencia AGENTS.md 2026-10-07)",
+    "measuredAt": "2026-10-13",
+    "measuredOn": "dev, HEAD 76efcc2 (sons em MP3, 2026-10-09); nenhum commit do plan-v6 existe ainda",
+    "unitAndFeatures": "101 arquivos / 1323 testes",
+    "fullSuite": "111 arquivos / 1410 testes (10 arquivos de integracao / 87 testes), com dq-dev-test-db no ar e DATABASE_URL na 5433",
     "e2e": "quadro: 2 passando + 1 falha conhecida (cartão a mais na coluna, dado legítimo da instância — confirmar com git stash) + 5 did not run (spec serial); shell: 5 passando. Requer dev server em :3001",
-    "archCheck": "787 modulos / 3077 dependencias, zero violacao, allow-list vazia",
-    "expectedAtEnd": "tests/unit + features >= 95 arquivos / >= 1180 testes (87/1107 + os 8 arquivos novos da SPEC §8.1)",
-    "timing": "G3 ~22s (medido em 2026-10-07)"
+    "archCheck": "822 modulos / 3370 dependencias, zero violacao, allow-list vazia",
+    "expectedAtEnd": "tests/unit + features >= 109 arquivos / >= 1396 testes (101/1323 + os 8 arquivos novos da SPEC §8.1)",
+    "timing": "G3 ~22s (medido em 2026-10-07); suíte completa ~69s (medido 2026-10-13)"
   },
   "gates": {
-    "G0": "npm run arch:check — exit 0, allow-list VAZIA (baseline 787/3077)",
+    "G0": "npm run arch:check — exit 0, allow-list VAZIA (baseline 2026-10-13: 822/3370)",
     "G1": "npm run lint — exit 0 (warnings aceitos, nenhum erro; em worktree: npx eslint --no-eslintrc --config .eslintrc.json <arquivos>)",
     "G2": "npx tsc --noEmit — 0 erros",
-    "G3": "npx vitest run — zero failure (baseline 87/1107)",
+    "G3": "npx vitest run — zero failure (baseline 2026-10-13: 101/1323)",
     "G4": "NAO SE APLICA — plano sem backend. Se algum diff tocar prisma/, backend/ ou app/api/, e erro de escopo (RF-V6.10 R1/R3)",
     "G5": "npm run docs:build + docs:check — obrigatório nas ondas V6-3, V6-4, V6-5, V6-6, V6-7, V6-8, V6-9, V6-10 e no fechamento V6-11",
     "G6": "recapturar docs/screens/ quando a captura deixa de representar a tela (todas as telas mudam de visual nesta rodada)",
