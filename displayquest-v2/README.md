@@ -58,8 +58,9 @@ plan-v6 (refatoração visual) ──> camada de apresentação só — ordem fr
   versionado (`templates/`, guarda de deriva — DEC-128), o V5-2b abriu os dados do projeto
   (período, edital, processo, saldo — datas como data civil, DEC-132), o V5-2c pôs entregáveis e
   anexos do projeto no bucket — primeiro consumidor de produção do seam (DEC-133/134) — e o V5-2d
-  deu capa e logo ao projeto, com o header do detalhe e a recaptura do guia (DEC-135); o V5-2 foi
-  dividido pelo dono em V5-2b/2c/2d.
+  deu capa e logo ao projeto, com o header do detalhe e a recaptura do guia (DEC-135), e o V5-2a
+  abriu a leitura — qualquer autenticado vê todos os projetos e as partes deles, escrita intacta
+  (DEC-136); o V5-2 foi dividido pelo dono em V5-2b/2c/2d/2a.
 - `plan-v6/` nasce da leitura da interface real contra as referências da skill
   `displayquest-ui` (`.opencode/skills/displayquest-ui/`): é **spec-driven** (a pasta
   tem `SPEC.md` como fonte de verdade do comportamento + `PLAN.md` da ordem +

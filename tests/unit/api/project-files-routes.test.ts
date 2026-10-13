@@ -99,8 +99,6 @@ function notUsed(name: string) {
 vi.mock("@/backend/composition/root", () => {
   const projects: ProjectRepositoryPort = {
     findAll: notUsed("projects.findAll"),
-    findByUserId: notUsed("projects.findByUserId"),
-    findByCreatorId: notUsed("projects.findByCreatorId"),
     findByLeaderId: notUsed("projects.findByLeaderId"),
     async findById(id) {
       return mocks.projects.get(id) ?? null;
@@ -133,12 +131,6 @@ vi.mock("@/backend/composition/root", () => {
     async findActor(userId) {
       const roles = ACTOR_ROLES[userId];
       return roles ? { id: userId, roles } : null;
-    },
-    async membershipExists(projectId, userId) {
-      return MEMBERSHIPS[`${projectId}:${userId}`] !== undefined;
-    },
-    async findProjectRelation(projectId) {
-      return projectId === 10 ? { leaderId: 2, createdBy: 1 } : null;
     },
   };
 
@@ -355,13 +347,19 @@ describe("entregáveis — ordem 401 → 404 → 403 → 400", () => {
     expect(await read(response)).toEqual({ error: "Projeto inválido" });
   });
 
-  it("quem não tem acesso ao projeto: 403", async () => {
-    login(["VOLUNTARIO"], 4);
-    const response = await LIST_DELIVERABLES(
+  it("V5-2a (DEC-127): quem não tem relação nenhuma com o projeto LÊ a lista, e continua sem criar", async () => {
+    login(["VOLUNTARIO"], 4); // sem membership, não é líder nem criador
+    const list = await LIST_DELIVERABLES(
       jsonRequest("GET", "/api/projects/10/deliverables"),
       context({ id: "10" }),
     );
-    expect(response.status).toBe(403);
+    expect(list.status).toBe(200);
+
+    const created = await CREATE_DELIVERABLE(
+      jsonRequest("POST", "/api/projects/10/deliverables", { name: "Slides", quantity: 2 }),
+      context({ id: "10" }),
+    );
+    expect(created.status).toBe(403);
   });
 
   it("quem só acessa (COLABORADOR) lê a lista, mas não cria", async () => {
@@ -548,13 +546,14 @@ describe("anexos — o 403 vem antes de qualquer byte no bucket", () => {
     expect(response.headers.get("content-disposition")).toContain("UTF-8''um-pdf.pdf");
   });
 
-  it("servir o arquivo de quem não tem acesso: 403 e nenhum byte lido", async () => {
+  it("servir o arquivo é leitura do projeto: quem não participa lê o byte (V5-2a, DEC-127)", async () => {
     login(["VOLUNTARIO"], 4);
     const response = await GET_ATTACHMENT_FILE(
       jsonRequest("GET", "/api/projects/10/attachments/201/file"),
       context({ id: "10", attachmentId: "201" }),
     );
-    expect(response.status).toBe(403);
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toBe("application/pdf");
   });
 
   it("anexo inexistente: 404", async () => {
@@ -733,13 +732,15 @@ describe("imagem do projeto — logo e banner no bucket", () => {
     expect(uploaded.project.logoKey).toBeTruthy();
   });
 
-  it("ler o arquivo sem acesso ao projeto: 403", async () => {
+  it("ler a imagem do projeto é leitura: quem não participa lê o byte (V5-2a, DEC-127)", async () => {
     login(["COORDENADOR"], 1);
     await UPLOAD_IMAGE(imageRequest(new File([PNG_BYTES], "logo.png", { type: "image/png" }), "logo"), imageContext("logo"));
 
     login(["VOLUNTARIO"], 4);
     const response = await GET_IMAGE_FILE(jsonRequest("GET", "/api/projects/10/images/logo/file"), imageContext("logo"));
-    expect(response.status).toBe(403);
+    expect(response.status).toBe(200);
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    expect(Array.from(bytes)).toEqual(Array.from(PNG_BYTES));
   });
 
   it("slot sem imagem: 404, não um objeto vazio", async () => {

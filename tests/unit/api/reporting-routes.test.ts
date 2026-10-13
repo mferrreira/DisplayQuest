@@ -41,7 +41,6 @@ import { WEEKLY_HOURS_DENIED_MESSAGE } from "@/backend/modules/reporting/applica
 const mocks = vi.hoisted(() => {
   const state = {
     throwKind: null as null | "forbidden" | "notfound" | "notfound-user" | "validation" | "plain" | "p2025",
-    projectAccess: true,
     fileBytes: null as Uint8Array | null,
     absPath: null as string | null,
     calls: [] as Array<{ method: string; arg: unknown }>,
@@ -205,9 +204,6 @@ const mocks = vi.hoisted(() => {
 vi.mock("@/backend/composition/root", () => ({
   getBackendComposition: () => ({
     reporting: mocks.fakeModule,
-    projectManagement: {
-      canActorAccessProject: async () => mocks.state.projectAccess,
-    },
   }),
 }));
 
@@ -268,7 +264,6 @@ async function bodyOf(response: Response) {
 
 beforeEach(() => {
   mocks.state.throwKind = null;
-  mocks.state.projectAccess = true;
   mocks.state.fileBytes = null;
   mocks.state.absPath = null;
   mocks.state.calls = [];
@@ -681,13 +676,11 @@ describe("rotas de leitura (hours/stats/history)", () => {
     expect(await bodyOf(response)).toEqual({ stats: { totalProjects: 3 } });
   });
 
-  it("GET /api/projects/[id]/hours: acesso negado na rota => 403 'Acesso negado ao projeto' (congelado); valido => { hours }", async () => {
-    mocks.state.projectAccess = false;
-    const denied = await projectHours(makeRequest("/api/projects/10/hours"), params({ id: "10" }));
-    expect(denied.status).toBe(403);
-    expect(await bodyOf(denied)).toEqual({ error: "Acesso negado ao projeto" });
-
-    mocks.state.projectAccess = true;
+  it("GET /api/projects/[id]/hours: V5-2a (DEC-127) — leitura do autenticado, sem gate de rota; valido => { hours }", async () => {
+    // Congelado antes: a rota consultava `canActorAccessProject` e respondia 403
+    // "Acesso negado ao projeto". O gate saiu da rota (DEC-127), e o teste que o media media hoje
+    // o que a produção faz: quem tem papel de voluntário lê as horas do projeto.
+    mocks.auth.actor.roles = ["VOLUNTARIO"];
     const ok = await projectHours(makeRequest("/api/projects/10/hours"), params({ id: "10" }));
     expect(ok.status).toBe(200);
     expect(await bodyOf(ok)).toEqual({ hours: [{ userId: 1, hours: 2 }] });

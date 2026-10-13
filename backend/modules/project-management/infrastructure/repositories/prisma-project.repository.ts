@@ -76,22 +76,6 @@ export function createPrismaProjectRepository(): ProjectRepositoryPort {
       const rows = await prisma.projects.findMany({ include: includeOptions, orderBy: { createdAt: "desc" } })
       return rows.map((row) => toRecord(row as unknown as ProjectRow))
     },
-    async findByUserId(userId) {
-      const rows = await prisma.projects.findMany({
-        where: { members: { some: { userId } } },
-        include: includeOptions,
-        orderBy: { createdAt: "desc" },
-      })
-      return rows.map((row) => toRecord(row as unknown as ProjectRow))
-    },
-    async findByCreatorId(creatorId) {
-      const rows = await prisma.projects.findMany({
-        where: { createdBy: creatorId },
-        include: includeOptions,
-        orderBy: { createdAt: "desc" },
-      })
-      return rows.map((row) => toRecord(row as unknown as ProjectRow))
-    },
     async findByLeaderId(leaderId) {
       const rows = await prisma.projects.findMany({
         where: { leaderId },

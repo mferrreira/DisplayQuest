@@ -48,10 +48,9 @@ export interface NewProjectInput {
 }
 
 export interface ProjectRepositoryPort {
-  /** createdAt DESC (frozen from ProjectRepository.findAll). */
+  /** createdAt DESC (frozen from ProjectRepository.findAll). V5-2a (DEC-127): é A leitura da
+   *  lista para qualquer autenticado — `findByUserId`/`findByCreatorId` da regra antiga saíram. */
   findAll(): Promise<ProjectRecord[]>
-  findByUserId(userId: number): Promise<ProjectRecord[]>
-  findByCreatorId(creatorId: number): Promise<ProjectRecord[]>
   /** createdAt DESC — also the leader-conflict read (frozen). */
   findByLeaderId(leaderId: number): Promise<ProjectRecord[]>
   findById(id: number): Promise<ProjectRecord | null>

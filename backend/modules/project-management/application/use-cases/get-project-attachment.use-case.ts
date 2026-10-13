@@ -1,20 +1,18 @@
-import { ForbiddenError, NotFoundError } from "@/backend/domain"
+import { ForbiddenError, NotFoundError, canActorAccessProjectDecision } from "@/backend/domain"
 import type { GetProjectAttachmentQuery } from "@/backend/modules/project-management/application/contracts"
-import type { ProjectActorsPort } from "@/backend/modules/project-management/application/ports/project-actors.port"
 import type { ProjectAttachmentsPort } from "@/backend/modules/project-management/application/ports/project-attachments.repository"
 import type { ProjectRepositoryPort } from "@/backend/modules/project-management/application/ports/project.repository"
-import { resolveCanActorAccessProject } from "@/backend/modules/project-management/application/use-cases/internal/project-access"
 
 /**
  * GetProjectAttachmentUseCase — V5-2c. Existe para a rota que serve o arquivo: a leitura de
  * um anexo decide acesso igual à leitura do projeto (DEC-101 pede "rota de leitura de imagem
  * com a regra de acesso do projeto"), e o id é conferido **dentro do projeto** — um anexo de
- * outro projeto responde 404, não "achei e servi".
+ * outro projeto responde 404, não "achei e servi". V5-2a (DEC-127): a regra de acesso do
+ * projeto é "qualquer autenticado lê".
  */
 export interface GetProjectAttachmentDependencies {
   projects: ProjectRepositoryPort
   attachments: ProjectAttachmentsPort
-  actors: ProjectActorsPort
 }
 
 export class GetProjectAttachmentUseCase {
@@ -26,13 +24,7 @@ export class GetProjectAttachmentUseCase {
       throw new NotFoundError("Projeto não encontrado")
     }
 
-    const canAccess = await resolveCanActorAccessProject(
-      { actors: this.dependencies.actors },
-      query.projectId,
-      query.actorId,
-      query.actorRoles,
-    )
-    if (!canAccess) {
+    if (!canActorAccessProjectDecision(query.actorId)) {
       throw new ForbiddenError("Usuário não tem acesso a este projeto")
     }
 

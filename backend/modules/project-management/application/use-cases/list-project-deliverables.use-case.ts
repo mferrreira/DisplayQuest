@@ -1,21 +1,20 @@
-import { ForbiddenError, NotFoundError } from "@/backend/domain"
+import { ForbiddenError, NotFoundError, canActorAccessProjectDecision } from "@/backend/domain"
 import type { ListProjectDeliverablesQuery } from "@/backend/modules/project-management/application/contracts"
-import type { ProjectActorsPort } from "@/backend/modules/project-management/application/ports/project-actors.port"
 import type { ProjectDeliverablesPort } from "@/backend/modules/project-management/application/ports/project-deliverables.repository"
 import type { ProjectRepositoryPort } from "@/backend/modules/project-management/application/ports/project.repository"
-import { resolveCanActorAccessProject } from "@/backend/modules/project-management/application/use-cases/internal/project-access"
 
 /**
  * ListProjectDeliverablesUseCase — V5-2c. Ordem congelada com a dos demais use cases do
- * módulo: projeto inexistente -> 404; sem acesso -> 403; só então a leitura.
+ * módulo: projeto inexistente -> 404; sem ator -> 403; só então a leitura.
  *
- * A autorização é a MESMA decisão da leitura do projeto (`resolveCanActorAccessProject`):
- * entregável é parte do projeto, não um recurso com regra própria.
+ * A autorização é a MESMA decisão da leitura do projeto (`canActorAccessProjectDecision`):
+ * entregável é parte do projeto, não um recurso com regra própria. No V5-2a (DEC-127) essa
+ * decisão passou a ser "qualquer autenticado lê", e o `actors` saiu das dependências porque a
+ * leitura deixou de consultar membership e líder/criador.
  */
 export interface ListProjectDeliverablesDependencies {
   projects: ProjectRepositoryPort
   deliverables: ProjectDeliverablesPort
-  actors: ProjectActorsPort
 }
 
 export class ListProjectDeliverablesUseCase {
@@ -27,13 +26,7 @@ export class ListProjectDeliverablesUseCase {
       throw new NotFoundError("Projeto não encontrado")
     }
 
-    const canAccess = await resolveCanActorAccessProject(
-      { actors: this.dependencies.actors },
-      query.projectId,
-      query.actorId,
-      query.actorRoles,
-    )
-    if (!canAccess) {
+    if (!canActorAccessProjectDecision(query.actorId)) {
       throw new ForbiddenError("Usuário não tem acesso a este projeto")
     }
 

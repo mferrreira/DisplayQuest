@@ -1,17 +1,14 @@
-import { ForbiddenError, NotFoundError } from "@/backend/domain"
+import { ForbiddenError, NotFoundError, canActorAccessProjectDecision } from "@/backend/domain"
 import type { GetProjectImageQuery } from "@/backend/modules/project-management/application/contracts"
-import type { ProjectActorsPort } from "@/backend/modules/project-management/application/ports/project-actors.port"
 import type { ProjectRepositoryPort } from "@/backend/modules/project-management/application/ports/project.repository"
-import { resolveCanActorAccessProject } from "@/backend/modules/project-management/application/use-cases/internal/project-access"
 
 /**
  * GetProjectImageUseCase — V5-2d (DEC-101/102). Existe para a rota que serve o binário: a leitura
  * de uma imagem do projeto decide acesso igual à leitura do projeto, e slot sem imagem responde
- * 404 em vez de servir um objeto vazio.
+ * 404 em vez de servir um objeto vazio. V5-2a (DEC-127): a leitura do projeto é do autenticado.
  */
 export interface GetProjectImageDependencies {
   projects: ProjectRepositoryPort
-  actors: ProjectActorsPort
 }
 
 export class GetProjectImageUseCase {
@@ -23,13 +20,7 @@ export class GetProjectImageUseCase {
       throw new NotFoundError("Projeto não encontrado")
     }
 
-    const canAccess = await resolveCanActorAccessProject(
-      { actors: this.dependencies.actors },
-      query.projectId,
-      query.actorId,
-      query.actorRoles,
-    )
-    if (!canAccess) {
+    if (!canActorAccessProjectDecision(query.actorId)) {
       throw new ForbiddenError("Usuário não tem acesso a este projeto")
     }
 

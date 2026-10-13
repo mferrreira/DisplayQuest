@@ -1,14 +1,18 @@
-import { dedupeProjectsById, hasPermission } from "@/backend/domain"
+import { ForbiddenError, canActorAccessProjectDecision } from "@/backend/domain"
 import type { ListProjectsForActorQuery } from "@/backend/modules/project-management/application/contracts"
 import type { ProjectRepositoryPort } from "@/backend/modules/project-management/application/ports/project.repository"
 
 /**
- * ListProjectsForActorUseCase — OND5-B2 (R2).
+ * ListProjectsForActorUseCase — OND5-B2 (R2), com a política reescrita no V5-2a (DEC-127).
  *
- * POLÍTICA: "laboratório aberto". Quem tem MANAGE_TASKS (COORDENADOR, GERENTE,
- * GERENTE_PROJETO, COLABORADOR, PESQUISADOR) precisa criar/editar tarefas de
- * qualquer projeto, então enxerga TODOS os projetos. NÃO MUDAR sem revisão —
- * comportamento travado por teste de contrato (A9, spec .spec/tasks.md Tarefa 3).
+ * A regra antiga ("laboratório aberto" por MANAGE_TASKS, e para o resto a união
+ * membro ∪ criado ∪ liderado, dedup por id) morreu: ela deixava a lista e o detalhe com ACLs
+ * diferentes, e o resultado medido era o COLABORADOR recebendo o projeto na lista e levando
+ * "Acesso negado ao projeto" ao abrir. Hoje a lista é a mesma decisão do detalhe:
+ * **qualquer autenticado vê todos os projetos** (`canActorAccessProjectDecision`).
+ *
+ * Escrita e gestão não mudam: continuam em `resolveCanActorManageProject` /
+ * `canActorManageProjectDecision`.
  */
 export interface ListProjectsForActorDependencies {
   projects: ProjectRepositoryPort
@@ -18,14 +22,10 @@ export class ListProjectsForActorUseCase {
   constructor(private readonly dependencies: ListProjectsForActorDependencies) {}
 
   async execute(query: ListProjectsForActorQuery) {
-    if (hasPermission(query.actorRoles, "MANAGE_TASKS")) {
-      return await this.dependencies.projects.findAll()
+    if (!canActorAccessProjectDecision(query.actorId)) {
+      throw new ForbiddenError("Acesso negado ao projeto")
     }
 
-    const userProjects = await this.dependencies.projects.findByUserId(query.actorId)
-    const createdProjects = await this.dependencies.projects.findByCreatorId(query.actorId)
-    const ledProjects = await this.dependencies.projects.findByLeaderId(query.actorId)
-
-    return dedupeProjectsById([...userProjects, ...createdProjects, ...ledProjects])
+    return await this.dependencies.projects.findAll()
   }
 }

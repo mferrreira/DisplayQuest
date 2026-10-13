@@ -1,18 +1,21 @@
-import { ForbiddenError, NotFoundError, hasPermission } from "@/backend/domain"
+import { ForbiddenError, NotFoundError, canActorAccessProjectDecision } from "@/backend/domain"
 import type { GetProjectForActorQuery } from "@/backend/modules/project-management/application/contracts"
-import type { ProjectActorsPort } from "@/backend/modules/project-management/application/ports/project-actors.port"
 import type { ProjectRepositoryPort } from "@/backend/modules/project-management/application/ports/project.repository"
-import { canActorAccessProjectDecision } from "@/backend/domain"
 
 /**
- * GetProjectForActorUseCase — OND5-B2 (R2). Frozen from the legacy use case + gateway
- * (:41-63): not-found -> "Projeto não encontrado"; MANAGE_PROJECTS role bypass; otherwise
- * the access decision -> "Acesso negado ao projeto". Errors are typed now (AC-00-07);
- * the messages are the legacy ones verbatim.
+ * GetProjectForActorUseCase — OND5-B2 (R2), com a política de leitura reescrita no V5-2a
+ * (DEC-127): **qualquer autenticado lê o detalhe do projeto.**
+ *
+ * Os dois erros continuam congelados verbatim ("Projeto não encontrado" 404, "Acesso negado ao
+ * projeto" 403). O que mudou é quando o 403 acontece: hoje ele só dispara quando não há ator
+ * (id inválido), porque leitura deixou de depender de papel e de membership. A regra mora em
+ * `domain/project/canActorAccessProjectDecision`, a mesma que a lista, os entregáveis, os anexos,
+ * a imagem, as horas e os membros consultam.
+ *
+ * O `actors` saiu das dependências: a leitura não consulta mais membership nem líder/criador.
  */
 export interface GetProjectForActorDependencies {
   projects: ProjectRepositoryPort
-  actors: ProjectActorsPort
 }
 
 export class GetProjectForActorUseCase {
@@ -24,14 +27,7 @@ export class GetProjectForActorUseCase {
       throw new NotFoundError("Projeto não encontrado")
     }
 
-    if (hasPermission(query.actorRoles, "MANAGE_PROJECTS")) {
-      return project
-    }
-
-    const membershipExists = await this.dependencies.actors.membershipExists(query.projectId, query.actorId)
-    const relation = await this.dependencies.actors.findProjectRelation(query.projectId)
-    const canAccess = canActorAccessProjectDecision(query.actorRoles, query.actorId, membershipExists, relation)
-    if (!canAccess) {
+    if (!canActorAccessProjectDecision(query.actorId)) {
       throw new ForbiddenError("Acesso negado ao projeto")
     }
 

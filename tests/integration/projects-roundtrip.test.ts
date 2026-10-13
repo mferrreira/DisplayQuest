@@ -5,8 +5,8 @@
  *
  * Exercises the NEW wiring end-to-end with real Prisma (no mocks):
  *   createProject (creator/leader/volunteer memberships + createdAt stamp) ->
- *   listProjectsForActor (laboratório aberto + union dedup) -> getProjectForActor /
- *   canActorAccessProject -> membership module: listProjectMembers (joinedAt DESC +
+ *   listProjectsForActor (V5-2a: qualquer autenticado vê todos) -> getProjectForActor ->
+ *   membership module: listProjectMembers (joinedAt DESC +
  *   completed-session hours), addProjectMember (+ duplicate conflict), upsertProjectMemberRoles,
  *   assignProjectLeader (GERENTE_PROJETO merge + single-leader conflict), removeProjectMember
  *   (+ last-manager guard) -> updateProject (quirks + repository-level validation message) ->
@@ -198,28 +198,37 @@ describe("G4 roundtrip — project-management + project-membership (isolated tes
     expect(cleared.processNumber).toBe("IFNMG-2026/0042");
   });
 
-  it("listProjectsForActor: COLABORADOR (MANAGE_TASKS) sees ALL; Ana sees her project", async () => {
+  it("listProjectsForActor (V5-2a, DEC-127): a lista não depende do ator — VOLUNTARIO vê o mesmo que COLABORADOR", async () => {
     const forBeto = await projectModule.listProjectsForActor({ actorId: betoId, actorRoles: ["COLABORADOR"] });
     expect(forBeto.map((p) => p.id)).toContain(projectId);
 
     const forAna = await projectModule.listProjectsForActor({ actorId: anaId, actorRoles: ["VOLUNTARIO"] });
-    expect(forAna.map((p) => p.id)).toEqual([projectId]); // member UNION created UNION led, deduped
+    // A regra antiga era membro ∪ criado ∪ liderado para quem não tinha MANAGE_TASKS. Hoje os dois
+    // atores recebem a MESMA lista, e a comparação é entre as duas chamadas no mesmo instante.
+    expect(forAna.map((p) => p.id)).toEqual(forBeto.map((p) => p.id));
+    expect(forAna.map((p) => p.id)).toContain(projectId);
 
-    const detail = forAna[0];
+    const detail = forAna.find((p) => p.id === projectId)!;
     expect(detail.memberCount).toBe(4); // adapter joins _count.members
     expect(detail.members?.map((m) => m.userId).sort()).toEqual([anaId, betoId, coordId, leaderId].sort());
   });
 
-  it("getProjectForActor + canActorAccessProject: member/leader yes, outsider denied", async () => {
+  it("getProjectForActor (V5-2a, DEC-127): quem não tem relação nenhuma com o projeto lê o detalhe", async () => {
     const viaLeader = await projectModule.getProjectForActor({ projectId, actorId: leaderId, actorRoles: [] });
-    expect(viaLeader.id).toBe(projectId); // leaderId relation grants access
+    expect(viaLeader.id).toBe(projectId);
+
+    // Congelado antes: outsider levava ForbiddenError "Acesso negado ao projeto". A DEC-127 abriu a
+    // leitura; o 404 de projeto inexistente continua.
+    const viaOutsider = await projectModule.getProjectForActor({
+      projectId,
+      actorId: outsiderId,
+      actorRoles: ["VOLUNTARIO"],
+    });
+    expect(viaOutsider.id).toBe(projectId);
 
     await expect(
-      projectModule.getProjectForActor({ projectId, actorId: outsiderId, actorRoles: ["VOLUNTARIO"] }),
-    ).rejects.toThrow("Acesso negado ao projeto");
-
-    expect(await projectModule.canActorAccessProject(projectId, anaId, ["VOLUNTARIO"])).toBe(true);
-    expect(await projectModule.canActorAccessProject(projectId, outsiderId, ["VOLUNTARIO"])).toBe(false);
+      projectModule.getProjectForActor({ projectId: 999999, actorId: outsiderId, actorRoles: ["VOLUNTARIO"] }),
+    ).rejects.toThrow("Projeto não encontrado");
   });
 
   it("listProjectMembers: joinedAt DESC + completed-session hours rounded to 2 decimals", async () => {
@@ -251,9 +260,15 @@ describe("G4 roundtrip — project-management + project-membership (isolated tes
     expect(ana.currentWeekHours).toBe(1.53); // created now -> inside the Monday-based week
     expect(ana.userName).toBe(`G5 Ana ${stamp}`);
 
-    await expect(
-      membershipModule.listProjectMembers({ projectId, actorUserId: outsiderId, actorRoles: ["VOLUNTARIO"] }),
-    ).rejects.toThrow("Acesso negado ao projeto");
+    // V5-2a (DEC-127): o gate de visão era "global OU membership" e o outsider — que ainda NÃO é
+    // membro neste ponto do arquivo — levava 403 no painel de Membros do detalhe que acabou de
+    // abrir. Hoje membros são leitura do projeto: ele recebe os mesmos quatro.
+    const asOutsider = await membershipModule.listProjectMembers({
+      projectId,
+      actorUserId: outsiderId,
+      actorRoles: ["VOLUNTARIO"],
+    });
+    expect(asOutsider.map((m) => m.userId).sort()).toEqual([anaId, betoId, coordId, leaderId].sort());
   });
 
   it("addProjectMember: coord adds the outsider; duplicate rejected; plain member cannot manage", async () => {
@@ -405,12 +420,19 @@ describe("G4 roundtrip — project-management + project-membership (isolated tes
 
     expect(result.stats.totalVolunteers).toBe(result.volunteers.length);
 
-    await expect(
-      projectModule.getProjectVolunteers({ projectId, actorId: outsiderId, actorRoles: ["VOLUNTARIO"] }),
-    ).rejects.toThrow("Acesso negado ao projeto");
+    // V5-2a (DEC-127): o gate era MANAGE_PROJECTS OU canActorManageProject — o outsider, mesmo
+    // depois de virar VOLUNTARIO do projeto, levava 403 no card de horas do detalhe. Hoje o card é
+    // leitura do projeto, e ele recebe a MESMA agregação que a gestão recebe.
+    const asOutsider = await projectModule.getProjectVolunteers({
+      projectId,
+      actorId: outsiderId,
+      actorRoles: ["VOLUNTARIO"],
+    });
+    expect(asOutsider.volunteers.map((v) => v.id)).toEqual(result.volunteers.map((v) => v.id));
+    expect(asOutsider.stats).toEqual(result.stats);
   });
 
-  it("entregáveis e anexos (V5-2c): CRUD do entregável e metadado do anexo, com os três gates", async () => {
+  it("entregáveis e anexos (V5-2c): CRUD com os gates de escrita, leitura aberta pela DEC-127", async () => {
     const created = await projectModule.createProjectDeliverable({
       projectId,
       actorId: coordId,
@@ -438,7 +460,7 @@ describe("G4 roundtrip — project-management + project-membership (isolated tes
     expect(updated.name).toBe("Relatório parcial");
     expect(updated.quantity).toBe(5);
 
-    // leitura: membro sem papel de gestão vê; quem não é do projeto não vê
+    // leitura: qualquer autenticado vê (DEC-127). A escrita continua na ACL de gestão.
     const list = await projectModule.listProjectDeliverables({
       projectId,
       actorId: outsiderId,
@@ -446,13 +468,14 @@ describe("G4 roundtrip — project-management + project-membership (isolated tes
     });
     expect(list.map((d) => d.id)).toEqual([created.id, defaulted.id]);
 
-    await expect(
-      projectModule.listProjectDeliverables({
-        projectId,
-        actorId: betoId, // removido da membership no batch acima
-        actorRoles: ["COLABORADOR"],
-      }),
-    ).rejects.toThrow("Usuário não tem acesso a este projeto");
+    // leitura (V5-2a, DEC-127): entregável é parte do projeto e a leitura é do autenticado — quem
+    // nem é do projeto mais (beto teve a membership removida no batch acima) lê a mesma lista.
+    const asRemovedMember = await projectModule.listProjectDeliverables({
+      projectId,
+      actorId: betoId,
+      actorRoles: ["COLABORADOR"],
+    });
+    expect(asRemovedMember.map((d) => d.id)).toEqual(list.map((d) => d.id));
 
     await expect(
       projectModule.createProjectDeliverable({ projectId, actorId: outsiderId, name: "X" }),

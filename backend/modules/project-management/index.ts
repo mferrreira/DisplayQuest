@@ -1,7 +1,6 @@
 import { ListProjectsForActorUseCase } from "@/backend/modules/project-management/application/use-cases/list-projects-for-actor.use-case"
 import { GetProjectByIdUseCase } from "@/backend/modules/project-management/application/use-cases/get-project-by-id.use-case"
 import { GetProjectForActorUseCase } from "@/backend/modules/project-management/application/use-cases/get-project-for-actor.use-case"
-import { CanActorAccessProjectUseCase } from "@/backend/modules/project-management/application/use-cases/can-actor-access-project.use-case"
 import { CanActorManageProjectUseCase } from "@/backend/modules/project-management/application/use-cases/can-actor-manage-project.use-case"
 import { CreateProjectUseCase } from "@/backend/modules/project-management/application/use-cases/create-project.use-case"
 import { AssertCanCreateProjectUseCase } from "@/backend/modules/project-management/application/use-cases/assert-can-create-project.use-case"
@@ -42,6 +41,12 @@ import { createPrismaProjectRepository } from "@/backend/modules/project-managem
  * V5-2c acrescenta entregáveis e anexos. O módulo continua sem saber o que é bucket: os
  * use cases de anexo mexem só no metadado, e quem move byte é a rota pelo seam
  * `lib/storage/blob-store.ts` (DEC-101) — mesma separação medida em `project-reports`.
+ *
+ * V5-2a (DEC-127) muda a LEITURA: lista, detalhe, entregáveis, anexos, imagem, horas e membros
+ * aceitam qualquer autenticado, decididos por `domain/project/canActorAccessProjectDecision` sem
+ * consultar membership. Gestão continua na ACL congelada (`resolveCanActorManageProject`). Por
+ * isso o `canActorAccessProject` saiu da superfície do módulo: não há mais gate de leitura para a
+ * rota consultar, e `ProjectActorsPort` ficou só com o `findActor` que a gestão precisa.
  */
 
 type UseCaseExecute<T> = T extends { execute: (...args: infer A) => infer R } ? (...args: A) => R : never
@@ -50,7 +55,6 @@ export class ProjectManagementModule {
   readonly listProjectsForActor: UseCaseExecute<ListProjectsForActorUseCase>
   readonly getProjectById: UseCaseExecute<GetProjectByIdUseCase>
   readonly getProjectForActor: UseCaseExecute<GetProjectForActorUseCase>
-  readonly canActorAccessProject: UseCaseExecute<CanActorAccessProjectUseCase>
   readonly canActorManageProject: UseCaseExecute<CanActorManageProjectUseCase>
   readonly createProject: UseCaseExecute<CreateProjectUseCase>
   readonly assertCanCreateProject: UseCaseExecute<AssertCanCreateProjectUseCase>
@@ -73,7 +77,6 @@ export class ProjectManagementModule {
     private readonly listProjectsForActorUseCase: ListProjectsForActorUseCase,
     private readonly getProjectByIdUseCase: GetProjectByIdUseCase,
     private readonly getProjectForActorUseCase: GetProjectForActorUseCase,
-    private readonly canActorAccessProjectUseCase: CanActorAccessProjectUseCase,
     private readonly canActorManageProjectUseCase: CanActorManageProjectUseCase,
     private readonly createProjectUseCase: CreateProjectUseCase,
     private readonly assertCanCreateProjectUseCase: AssertCanCreateProjectUseCase,
@@ -95,7 +98,6 @@ export class ProjectManagementModule {
     this.listProjectsForActor = this.listProjectsForActorUseCase.execute.bind(this.listProjectsForActorUseCase)
     this.getProjectById = this.getProjectByIdUseCase.execute.bind(this.getProjectByIdUseCase)
     this.getProjectForActor = this.getProjectForActorUseCase.execute.bind(this.getProjectForActorUseCase)
-    this.canActorAccessProject = this.canActorAccessProjectUseCase.execute.bind(this.canActorAccessProjectUseCase)
     this.canActorManageProject = this.canActorManageProjectUseCase.execute.bind(this.canActorManageProjectUseCase)
     this.createProject = this.createProjectUseCase.execute.bind(this.createProjectUseCase)
     this.assertCanCreateProject = this.assertCanCreateProjectUseCase.execute.bind(this.assertCanCreateProjectUseCase)
@@ -142,18 +144,16 @@ export function createProjectManagementModule(options: ProjectManagementModuleFa
   return new ProjectManagementModule(
     new ListProjectsForActorUseCase({ projects: ports.projects }),
     new GetProjectByIdUseCase({ projects: ports.projects }),
-    new GetProjectForActorUseCase({ projects: ports.projects, actors: ports.actors }),
-    new CanActorAccessProjectUseCase({ actors: ports.actors }),
+    new GetProjectForActorUseCase({ projects: ports.projects }),
     new CanActorManageProjectUseCase({ memberships: ports.memberships, actors: ports.actors }),
     new CreateProjectUseCase({ projects: ports.projects, memberships: ports.memberships }),
     new AssertCanCreateProjectUseCase(),
     new UpdateProjectUseCase({ projects: ports.projects, memberships: ports.memberships, actors: ports.actors }),
     new DeleteProjectUseCase({ projects: ports.projects, memberships: ports.memberships, actors: ports.actors }),
-    new GetProjectVolunteersUseCase({ memberships: ports.memberships, actors: ports.actors, hours: ports.hours }),
+    new GetProjectVolunteersUseCase({ memberships: ports.memberships, hours: ports.hours }),
     new ListProjectDeliverablesUseCase({
       projects: ports.projects,
       deliverables: ports.deliverables,
-      actors: ports.actors,
     }),
     new CreateProjectDeliverableUseCase({
       projects: ports.projects,
@@ -176,12 +176,10 @@ export function createProjectManagementModule(options: ProjectManagementModuleFa
     new ListProjectAttachmentsUseCase({
       projects: ports.projects,
       attachments: ports.attachments,
-      actors: ports.actors,
     }),
     new GetProjectAttachmentUseCase({
       projects: ports.projects,
       attachments: ports.attachments,
-      actors: ports.actors,
     }),
     new AddProjectAttachmentUseCase({
       projects: ports.projects,
@@ -207,7 +205,6 @@ export function createProjectManagementModule(options: ProjectManagementModuleFa
     }),
     new GetProjectImageUseCase({
       projects: ports.projects,
-      actors: ports.actors,
     }),
   )
 }

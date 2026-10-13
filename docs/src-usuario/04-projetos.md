@@ -8,7 +8,7 @@ Cada cartão traz o nome, a data de criação, o status e os links do projeto.
 
 ## Ver um projeto
 
-Na lista, abra o olho no cartão do projeto. O sistema abre o detalhe, que mostra, nesta ordem:
+A **Lista de Projetos** mostra todos os projetos do sistema, inclusive os que você não participa. Na lista, abra o olho no cartão do projeto. O sistema abre o detalhe, que mostra, nesta ordem:
 
 - a **capa** e o **logo** do projeto, quando houver. Sem capa, o espaço do topo diz *"Sem capa"*;
 - o nome, o **Status** (**Ativo**, **Concluído**, **Arquivado**), a data de criação e os botões **Editar** e **Excluir**;
@@ -73,7 +73,11 @@ Entregável é o que o projeto se compromete a entregar, com quantidade.
 Imagem aceita até 5 MB, PDF até 20 MB e vídeo até 100 MB. O sistema confere o conteúdo do arquivo, não apenas o nome: um arquivo que não é o que declara ser é recusado, e a lista continua como estava.
 
 ::: limite titulo="Quem cria e edita projeto"
-Criar, editar e gerenciar membros exige **Coordenador**, **Gerente** ou **Gerente de Projeto**. Pesquisador e Colaborador enxergam a lista dos projetos em que entram, mas não criam nem alteram projetos.
+Criar, editar e gerenciar membros exige **Coordenador**, **Gerente** ou **Gerente de Projeto**. **Pesquisador**, **Colaborador** e **Voluntário** não criam nem alteram projeto.
+:::
+
+::: nota titulo="Quem enxerga os projetos"
+A **Lista de Projetos** e o detalhe são de qualquer pessoa autenticada: você vê todos os projetos do sistema, inclusive os que não participa, e neles lê entregáveis, anexos, capa, logo, horas e a lista de quem participa. O que continua fechado é a escrita.
 :::
 
 ::: nota titulo="Quem escreve entregáveis, anexos, capa e logo"

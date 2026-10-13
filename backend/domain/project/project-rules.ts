@@ -44,34 +44,36 @@ export function isProjectVolunteerRole(roles: string[] | undefined | null): bool
 }
 
 // ---------------------------------------------------------------------------
-// ACL decisions (frozen from prisma-project-membership.gateway.ts:297-335)
+// ACL decisions — leitura: V5-2a (DEC-127); gestão: congelada de
+// prisma-project-membership.gateway.ts:297-335 e project-management.gateway.ts:159-169
 // ---------------------------------------------------------------------------
 
 export function hasGlobalProjectPermission(actorRoles: Role[]): boolean {
   return actorRoles.some((role) => GLOBAL_PROJECT_MANAGERS.includes(role));
 }
 
-/** listProjectMembers view gate: global OR any membership. */
-export function canViewProjectMembers(actorRoles: Role[], membershipExists: boolean): boolean {
-  return hasGlobalProjectPermission(actorRoles) || membershipExists;
+/**
+ * canActorAccessProjectDecision — V5-2a (DEC-127): **leitura de projeto é do autenticado.**
+ *
+ * A regra antiga (MANAGE_USERS/MANAGE_PROJECTS → membership → líder/criador) morreu. Ela
+ * produzia a média estranha medida na DEC-127: COLABORADOR e PESQUISADOR recebiam o projeto na
+ * lista e levavam "Acesso negado ao projeto" ao abrir o detalhe, porque lista e detalhe decidiam
+ * por ACLs diferentes; VOLUNTARIO e LABORATORISTA viam só o que o próprio membership dizia.
+ * Hoje lista, detalhe, entregáveis, anexos, imagem, horas e membros decidem pela mesma frase:
+ * **existe ator, existe leitura** — papel e membership não entram na conta.
+ *
+ * A função continua existindo, consumida por todos os use cases de leitura do módulo, porque é o
+ * único lugar onde uma leitura restrita futura (projeto privado) voltaria a nascer. Gestão não
+ * passa por aqui: `canActorManageProjectDecision`.
+ */
+export function canActorAccessProjectDecision(actorId: number): boolean {
+  return Number.isInteger(actorId) && actorId > 0;
 }
 
 /** Membership manage gate: global OR membership with GERENTE_PROJETO. */
 export function canManageProjectMembers(actorRoles: Role[], membershipRoles: string[] | null): boolean {
   if (hasGlobalProjectPermission(actorRoles)) return true;
   return Boolean(membershipRoles?.includes("GERENTE_PROJETO"));
-}
-
-/** canActorAccessProject (project-management.gateway.ts:45-63). */
-export function canActorAccessProjectDecision(
-  actorRoles: unknown,
-  actorId: number,
-  membershipExists: boolean,
-  project: { leaderId: number | null; createdBy: number } | null,
-): boolean {
-  if (hasPermission(actorRoles, "MANAGE_USERS") || hasPermission(actorRoles, "MANAGE_PROJECTS")) return true;
-  if (membershipExists) return true;
-  return Boolean(project && (project.leaderId === actorId || project.createdBy === actorId));
 }
 
 /**
@@ -381,13 +383,3 @@ export function summarizeVolunteerStats(volunteers: VolunteerEntryOutput[]): {
   };
 }
 
-/** Keep first occurrence per id (listProjectsForActor dedup, use-case :22-24). */
-export function dedupeProjectsById<T extends { id?: number | null }>(projects: T[]): T[] {
-  const seen = new Set<number>();
-  return projects.filter((project) => {
-    if (project.id == null) return true;
-    if (seen.has(project.id)) return false;
-    seen.add(project.id);
-    return true;
-  });
-}

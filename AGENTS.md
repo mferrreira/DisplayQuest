@@ -234,11 +234,14 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   exibição viram peça única dos dois seams; `project_attachments.uploadedBy` é a 17ª FK bloqueante)**
   e **DEC-135 plan-v5 (2026-10-13, execução do V5-2d: imagem do projeto é lista fechada de slots `logo`/
   `banner`, a coluna guarda a CHAVE do bucket, só mime de imagem passa pela allowlist da seam, e o binário
-  sai por rota autenticada com a chave como quebra de cache)**.
+  sai por rota autenticada com a chave como quebra de cache)**
+  e **DEC-136 plan-v5 (2026-10-13, execução do V5-2a: leitura de projeto e das partes dele é do
+  autenticado — `canActorAccessProjectDecision` de um parâmetro só; Membros e `/volunteers` abertos a
+  pedido do dono; gate de leitura removido das 3 rotas de horas; portas encolheram)**.
   O V4-4 ia usar
   DEC-61..64 e colidiu; os 28 comentários de código foram renumerados. **Antes de abrir decisão nova, `grep`
   os CINCO `STATE.json` (clean-arch, plan-v3, plan-v4, plan-v5, plan-v6) — a nota antiga que dizia "três"
-  está velha. Próxima livre: DEC-136.**
+  está velha. Próxima livre: DEC-137.**
 - **Subtask (V4-4, DEC-78..83 → regra atual = DEC-97/98):** tabela `task_subtasks` (sem FK para
   `users` — subtask não tem
   responsável próprio), base gravada em `tasks.points` = `10 + 5·n` (DEC-97) e **cada subtask CONCLUÍDA
@@ -324,6 +327,7 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
 ## Perfil do sistema (2026-09-05)
 
 - **Papéis e permissões:** `ADMIN`/`COORDENADOR`/`LABORATORISTA` com `MANAGE_WORK_SESSIONS` gerenciam sessões alheias; `MANAGE_USERS` gerencia grade de horários. Voluntário e demais têm leitura liberada onde faz sentido.
+- **Projeto: leitura aberta, escrita fechada (V5-2a, DEC-127/136):** qualquer autenticado vê todos os projetos — lista, detalhe, entregáveis, anexos, capa/logo, horas agregadas, **Membros** e horas por pessoa (`/volunteers`). A decisão é `canActorAccessProjectDecision(actorId)` no domínio, de um parâmetro só, e não consulta membership. Gestão continua na ACL congelada (`canActorManageProjectDecision`: existindo membership, só os papéis dele decidem — membership `[VOLUNTARIO]` com `COORDENADOR` global **não** gerencia). Não reintroduza gate de leitura na rota: ele não pode responder "não" e o teste de rota voltaria a congelar o substituto, não o sistema.
 - **Kanban:** tema escuro com colunas em cores sólidas por estado (sem degradê), contraste verificado — perfil visual do board é escuro/sólido.
 - **Notificações:** painel em popover; fecha ao clicar fora e com `Escape`, acessível por teclado.
 - **Grade de horários:** leitura aberta (qualquer autenticado vê todos os horários); escrita/bulk restrita a `MANAGE_USERS`.
