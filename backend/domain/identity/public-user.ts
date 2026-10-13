@@ -19,6 +19,8 @@ export interface PublicUser {
   profileVisibility: ProfileVisibility;
   bio: string | null;
   avatar: string | null;
+  /** V5-3 (DEC-137): chave da imagem de capa no bucket. Sempre presente no payload. */
+  bannerKey: string | null;
   roles: UserRole[];
   createdAt?: Date;
 }
@@ -35,6 +37,8 @@ export function toPublicUser(user: {
   profileVisibility: ProfileVisibility;
   bio: string | null;
   avatar: string | null;
+  /** Opcional na ENTRADA: chamadores antigos (e fixtures) não conhecem a coluna ainda. */
+  bannerKey?: string | null;
   roles: UserRole[];
   createdAt?: Date;
 }): PublicUser {
@@ -50,6 +54,7 @@ export function toPublicUser(user: {
     profileVisibility: user.profileVisibility,
     bio: user.bio,
     avatar: user.avatar,
+    bannerKey: user.bannerKey ?? null,
     roles: user.roles,
     createdAt: user.createdAt,
   };

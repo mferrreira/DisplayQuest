@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { useProject } from "@/contexts/project-context"
 import { useUser } from "@/contexts/user-context"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { userImageUrl } from "@/lib/api/user-images"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -137,6 +138,18 @@ export default function LeaderboardPage() {
             return (
               <Link key={podiumUser.id} href={`/dashboard/profile?userId=${podiumUser.id}`} className="block">
                 <Card className={`h-full overflow-hidden transition-transform duration-200 hover:-translate-y-1 ${emphasis}`}>
+                  {/* V5-3 (DEC-137): o 1º lugar ganha a capa da pessoa como fundo do cartão. Só o
+                      primeiro, porque é assim que a tela já desenha a hierarquia (escala e cor). */}
+                  {position === 1 && podiumUser.bannerKey ? (
+                    <>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={userImageUrl(podiumUser.id, "banner", podiumUser.bannerKey)}
+                        alt={`Capa de ${podiumUser.name}`}
+                        className="h-24 w-full object-cover"
+                      />
+                    </>
+                  ) : null}
                   <CardHeader className="pb-4">
                     <div className="flex items-start justify-between">
                       <Badge variant="secondary" className="rounded-full px-3 py-1 text-xs font-semibold">

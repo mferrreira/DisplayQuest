@@ -67,6 +67,16 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   imagem velha. Só imagem passa: `isImageBlobContentType` lê a allowlist da seam — PDF e vídeo são
   blobs válidos de anexo e não são capa. Trocar imagem apaga o objeto velho, e o use case devolve
   `previousKey` para a rota poder fazer isso.
+- **Imagem do perfil (V5-3, DEC-137):** mesmo desenho, aplicado a `users`. `users.bannerKey` guarda a
+  **chave** (`users/<id>/images/banner`, slot só `banner` — lista fechada em `USER_IMAGE_SLOTS`), e o
+  binário sai por `GET /api/users/[id]/images/[slot]/file`, autenticada. Escrita é a autoridade do
+  perfil (`self` OU `MANAGE_USERS`, `PROFILE_DENIED_MESSAGE` = "Não autorizado"), com o gate **antes**
+  do corpo do multipart (`AssertCanUpdateUserImageUseCase`); leitura é do autenticado, e a chave chega
+  na **mesma lista** que o avatar (`listUsersForActor`) porque é o pódio do ranking que a renderiza.
+  O avatar **continua no caminho legado de disco** (`public/uploads/avatars`, WebP 300×300, rota sem
+  autenticação) — migrá-lo para o bucket é decisão que ainda não existe. A chave também entra na
+  **sessão** (`lib/auth/config.ts`, select do session callback): o cartão "Meu Perfil" vem de
+  `useAuth()`, e coluna ausente ali não quebra teste nenhum — quebra a tela.
 
 ## Templates oficiais dos documentos (V5-1a, 2026-10-13)
 
@@ -237,11 +247,15 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   sai por rota autenticada com a chave como quebra de cache)**
   e **DEC-136 plan-v5 (2026-10-13, execução do V5-2a: leitura de projeto e das partes dele é do
   autenticado — `canActorAccessProjectDecision` de um parâmetro só; Membros e `/volunteers` abertos a
-  pedido do dono; gate de leitura removido das 3 rotas de horas; portas encolheram)**.
+  pedido do dono; gate de leitura removido das 3 rotas de horas; portas encolheram)**
+  e **DEC-137 plan-v5 (2026-10-13, execução do V5-3: capa de perfil no bucket com o desenho do DEC-135 —
+  `USER_IMAGE_SLOTS` de um valor, `users.bannerKey` guarda a CHAVE, escrita com a autoridade do perfil e
+  o gate antes do corpo, leitura aberta ao autenticado, chave na lista de usuários e na sessão, e o
+  avatar continua no caminho legado de disco)**.
   O V4-4 ia usar
   DEC-61..64 e colidiu; os 28 comentários de código foram renumerados. **Antes de abrir decisão nova, `grep`
   os CINCO `STATE.json` (clean-arch, plan-v3, plan-v4, plan-v5, plan-v6) — a nota antiga que dizia "três"
-  está velha. Próxima livre: DEC-137.**
+  está velha. Próxima livre: DEC-138.**
 - **Subtask (V4-4, DEC-78..83 → regra atual = DEC-97/98):** tabela `task_subtasks` (sem FK para
   `users` — subtask não tem
   responsável próprio), base gravada em `tasks.points` = `10 + 5·n` (DEC-97) e **cada subtask CONCLUÍDA

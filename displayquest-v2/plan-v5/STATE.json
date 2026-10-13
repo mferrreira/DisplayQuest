@@ -1,27 +1,27 @@
 {
   "plan": "plan-v5",
   "title": "domínio de projetos maduro: cronograma, pontos, relatórios técnicos, atestados, blobs em bucket S3-compatible (SeaweedFS desde o V5-1, DEC-131)",
-  "version": "5.8.0",
-  "updatedAt": "2026-10-13T19:05:00-03:00",
+  "version": "5.9.0",
+  "updatedAt": "2026-10-13",
   "status": "in_progress",
-  "activeWave": "V5-3",
-  "activeBatch": "V5-3",
+  "activeWave": "V5-4",
+  "activeBatch": "V5-4",
   "awaitingInstruction": false,
   "lineage": {
     "previousPlan": "plan-v4 (subtasks, animação, inativação — done em 2026-10-07, ondas V4-1..V4-5d + V4-6b + POS-1, DEC-78..98)",
     "concurrentPlan": null,
-    "note": "a numeracao de decisoes e GLOBAL: DEC-01..29 clean-arch, DEC-30..49 plan-v3, DEC-50..54 B6/D4, DEC-55..60 plan-v4, DEC-61..77 plan-v5 (2026-10-06), DEC-78..98 plan-v4 (houve colisao nos DEC-61..64 — comentarios renumerados, ver AGENTS.md), DEC-99..104 plan-v5 (2026-10-07), DEC-105..114 plan-v6 (2026-10-07), DEC-115..125 clean-arch/B6-restante+B9+B10 (encerrado 2026-10-08), DEC-126/127 plan-v5 (2026-10-09), DEC-128..130 plan-v5/documentos oficiais (2026-10-13), DEC-131 plan-v5/execucao do V5-1 (2026-10-13, servidor do bucket: SeaweedFS no lugar do MinIO), DEC-132 plan-v5/execucao do V5-2b (2026-10-13, datas do projeto como data civil String + periodo invertido recusado), DEC-133/134 plan-v5/execucao do V5-2c (2026-10-13, rota move byte e modulo guarda registro + 403 antes do corpo; tabela de assinatura e nome de exibicao em um lugar so + 17a FK bloqueante), DEC-135 plan-v5/execucao do V5-2d (2026-10-13, logo/banner: slot de lista fechada, so imagem, chave no banco e binario por rota autenticada), DEC-136 plan-v5/execucao do V5-2a (2026-10-13, leitura de projeto e das partes dele aberta ao autenticado; gate de leitura removido das rotas; portas encolheram). PROXIMA LIVRE: DEC-137. Antes de abrir DEC nova, grep os CINCO STATE.json (clean-arch, plan-v3, plan-v4, plan-v5, plan-v6)."
+    "note": "a numeracao de decisoes e GLOBAL: DEC-01..29 clean-arch, DEC-30..49 plan-v3, DEC-50..54 B6/D4, DEC-55..60 plan-v4, DEC-61..77 plan-v5 (2026-10-06), DEC-78..98 plan-v4 (houve colisao nos DEC-61..64 — comentarios renumerados, ver AGENTS.md), DEC-99..104 plan-v5 (2026-10-07), DEC-105..114 plan-v6 (2026-10-07), DEC-115..125 clean-arch/B6-restante+B9+B10 (encerrado 2026-10-08), DEC-126/127 plan-v5 (2026-10-09), DEC-128..130 plan-v5/documentos oficiais (2026-10-13), DEC-131 plan-v5/execucao do V5-1 (2026-10-13, servidor do bucket: SeaweedFS no lugar do MinIO), DEC-132 plan-v5/execucao do V5-2b (2026-10-13, datas do projeto como data civil String + periodo invertido recusado), DEC-133/134 plan-v5/execucao do V5-2c (2026-10-13, rota move byte e modulo guarda registro + 403 antes do corpo; tabela de assinatura e nome de exibicao em um lugar so + 17a FK bloqueante), DEC-135 plan-v5/execucao do V5-2d (2026-10-13, logo/banner: slot de lista fechada, so imagem, chave no banco e binario por rota autenticada), DEC-136 plan-v5/execucao do V5-2a (2026-10-13, leitura de projeto e das partes dele aberta ao autenticado; gate de leitura removido das rotas; portas encolheram), DEC-137 plan-v5/execucao do V5-3 (2026-10-13, capa de perfil no bucket com o desenho do DEC-135, gate do perfil na escrita e leitura aberta, chave na sessao e no podio). PROXIMA LIVRE: DEC-138. Antes de abrir DEC nova, grep os CINCO STATE.json (clean-arch, plan-v3, plan-v4, plan-v5, plan-v6)."
   },
   "baseline": {
     "measuredAt": "2026-10-13",
-    "measuredOn": "dev, HEAD do V5-2c (016e4f7) + V5-2d — antes do V5-2d os numeros eram os de previousBaseline",
-    "unitAndFeatures": "108 arquivos / 1455 testes (era 108/1432; o V5-2d somou 23 testes nos mesmos 3 arquivos: 14 de rota de imagem, 3 de regra de slot, 6 de cabeçalho de mídia)",
-    "fullSuite": "118 arquivos / 1545 testes (era 118/1521), com dq-dev-test-db no ar e DATABASE_URL na 5433",
-    "e2e": "quadro: 2 passando + 1 falha conhecida (cartao a mais na coluna, dado legitimo) + 5 did not run (spec serial); shell: 5 passando",
-    "archCheck": "867 modulos / 3585 dependencias, zero violacao, allow-list vazia (era 862/3548)",
-    "previousBaseline": "2026-10-08 (refactor/b6-restante): 95/1280 e 105/1367 | 2026-10-09: 101/1323, arch 822/3370 | V5-2b: 105/1380, full 115/1468, arch 835/3395 | V5-2c: 108/1432, full 118/1521, arch 862/3548",
-    "timing": "completa em 69 s (unit+features em paralelo, integracao serial); gotcha medido: com o container dq-dev-test-db parado a completa da 10 arquivos / 15 testes falhos — ambiente, nao regressao (docker start dq-dev-test-db)",
-    "knownPreExisting": "G2 (npx tsc --noEmit) NAO fecha em 0 nesta branch por 1 erro PRE-EXISTENTE: features/laboratorio/__tests__/floating-timer-tabs.test.tsx:105 usa `exact` em getByRole, que nao existe em ByRoleOptions do @testing-library/dom@10.4.1. Medido em 2026-10-13 e conferido com git stash: identico no HEAD limpo (fora do V5-1, que nao tocou features/). O comportamento em runtime permanece o pretendido pelo comentario do teste."
+    "measuredOn": "dev, HEAD do V5-3 (antes do commit)",
+    "unitAndFeatures": "113 arquivos / 1517 testes (era 109/1474; o V5-3 somou 4 arquivos e 43 testes: 20 de rota, 11 de use case, 8 de cabeçalho de mídia, 4 de regra de slot)",
+    "fullSuite": "123 arquivos / 1608 testes (era 119/1564), com dq-dev-test-db no ar e DATABASE_URL na 5433",
+    "e2e": "quadro: 2 passando + 1 falha conhecida (cartao a mais na coluna, dado legitimo) + 5 did not run (spec serial); shell: 5 passando. Nenhum spec toca perfil ou ranking, e o V5-3 não mexe no quadro.",
+    "archCheck": "879 modulos / 3635 dependencias, zero violacao, allow-list vazia (era 867/3578)",
+    "previousBaseline": "2026-10-08 (refactor/b6-restante): 95/1280 e 105/1367 | 2026-10-09: 101/1323, arch 822/3370 | V5-2b: 105/1380, full 115/1468, arch 835/3395 | V5-2c: 108/1432, full 118/1521, arch 862/3548 | V5-2d: 108/1455, full 118/1545, arch 867/3585 | V5-2a: 109/1474, full 119/1564, arch 867/3578",
+    "timing": "completa em 73 s (unit+features em paralelo, integracao serial); gotcha medido: com o container dq-dev-test-db parado a completa da 10 arquivos / 15 testes falhos — ambiente, nao regressao (docker start dq-dev-test-db)",
+    "knownPreExisting": "G2 (npx tsc --noEmit) NAO fecha em 0 nesta branch por 1 erro PRE-EXISTENTE: features/laboratorio/__tests__/floating-timer-tabs.test.tsx:105 usa `exact` em getByRole, que nao existe em ByRoleOptions do @testing-library/dom@10.4.1. Medido em 2026-10-13 e conferido com git stash: identico no HEAD limpo. O comportamento em runtime permanece o pretendido pelo comentario do teste."
   },
   "gates": {
     "G0": "npm run arch:check — exit 0, allow-list VAZIA (baseline 2026-10-13 depois do V5-2a: 867/3578)",
@@ -37,7 +37,10 @@
       "id": "V5-1",
       "title": "infra de blobs: serviço de objetos S3-compatible (SeaweedFS) + seam BlobStore",
       "status": "done",
-      "decisions": ["DEC-101", "DEC-131"],
+      "decisions": [
+        "DEC-101",
+        "DEC-131"
+      ],
       "scope": "Serviço `seaweedfs` no docker-compose em modo `mini`, pinado por DIGEST (só existem tags latest/dev) e com a identidade S3 escrita em /tmp/s3.json a partir de S3_ACCESS_KEY/S3_SECRET_KEY (nada de credencial no repo — sem identidade o S3 responderia como anônimo); S3_BUCKET cria o bucket; `-master.telemetry=false`; volume nomeado object_store_data; 8333 intra-rede e 8333/8888 em loopback no override; healthcheck em /cluster/status do master. Envs S3_* (não MINIO_*), @aws-sdk/client-s3, seam lib/storage/blob-store.ts (put/get/head/remove, allowlist, config por env, cliente injetável) + BlobStorePort + adapter s3-blob-store.ts. Nenhum consumidor de produção ainda — batch de infra, zero mudança de comportamento do app.",
       "why": "a tendência é mais arquivos/imagens/vídeos (dono, 2026-10-07); hoje só existem dois roots em disco (public/uploads/avatars, data/uploads/reports) e nenhum serviço s3 no compose. O bucket evita gravar blob em pasta do backend. O servidor nomeado na DEC-101 (MinIO) caiu na execução — EOL, imagens fora dos registries — e virou SeaweedFS (DEC-131); o escopo da DEC-101 não mudou.",
       "completedAt": "2026-10-13"
@@ -46,7 +49,9 @@
       "id": "V5-1a",
       "title": "templates oficiais viram asset versionado + guardas de deriva",
       "status": "done",
-      "decisions": ["DEC-128"],
+      "decisions": [
+        "DEC-128"
+      ],
       "scope": "Copia os dois arquivos medidos de docs/Projeto/ (gitignored) para templates/ no repo: relatorio-tecnico.docx (oficial, byte-intacto), atestado-frequencia.pdf (AcroForm com 42 campos nomeados, nao 39 — contagem corrigida na execucao) e a copia marcada relatorio-tecnico.tagged.docx derivada por scripts/tag-report-template.mjs (sublinhados literais viram comandos docx-templates dentro do MESMO run, sem tocar w:rPr/styles/sectPr). COPY templates/ no Dockerfile (leitura; nenhum caminho de escrita novo). Guardas: sha256 dos dois oficiais, lista dos 42 nomes do AcroForm, inventário de comandos via listCommands() e a copia marcada tem que ser exatamente a derivacao do script. docx-templates/@cantoo/pdf-lib/jszip entram aqui (as guardas precisam delas). Zero mudança de comportamento.",
       "why": "docs/Projeto/ está no .gitignore (linha 185) e é caixa de entrada do dono; o app precisa do arquivo versionado e dentro da imagem. As guardas seguem o padrão da casa (user-status-vocabulary, user-delete-schema-drift): template trocado sem re-derivar derruba o build nomeando o campo.",
       "completedAt": "2026-10-13"
@@ -55,7 +60,13 @@
       "id": "V5-2",
       "title": "dados do projeto + entregáveis + anexos + logo/banner no bucket",
       "status": "dividido (dono 2026-10-13): executado como V5-2b, V5-2c e V5-2d",
-      "decisions": ["DEC-61", "DEC-63", "DEC-101", "DEC-102", "DEC-132"],
+      "decisions": [
+        "DEC-61",
+        "DEC-63",
+        "DEC-101",
+        "DEC-102",
+        "DEC-132"
+      ],
       "scope": "Escopo inalterado, executado em três commits revertíveis por pedido do dono: V5-2b (migration de campos de dados + UI de criação/edição), V5-2c (project_deliverables + project_attachments no bucket, magic bytes), V5-2d (logoKey/bannerKey + upload/leitura + header do detail estilo Facebook/LinkedIn + G5/G6 da família).",
       "why": "estender o model existente é o caminho escolhido (DEC-61); o dono pediu imagem/logo + banner na página do projeto (DEC-102). A divisão foi pedida na abertura do batch: o lote inteiro (7 colunas + 2 tabelas + bucket + imagens + docs) era grande demais para um commit revisível."
     },
@@ -63,7 +74,12 @@
       "id": "V5-2b",
       "title": "dados do projeto: período, edital, processo e saldo (schema + UI)",
       "status": "done",
-      "decisions": ["DEC-61", "DEC-63", "DEC-74", "DEC-132"],
+      "decisions": [
+        "DEC-61",
+        "DEC-63",
+        "DEC-74",
+        "DEC-132"
+      ],
       "scope": "Migration nullable em projects (startDate, endDate, editalNumber, processNumber, points @default(0)) — sem backfill. Domain: normalizeProjectDateField/normalizeProjectTextField, validateProjectInput com período inválido/invertido, applyProjectUpdate escrevendo os campos e IGNORANDO points. Port/adapter/use case de criação e atualização. Rotas POST/PUT. UI: campos no diálogo criar/editar + card 'Dados do projeto' no detail.",
       "why": "o dono escolheu estender projects (DEC-61) e campo próprio de pontos (DEC-63); a escolha de tipo das datas (data civil String, como createdAt/dueDate) é a DEC-132, medida contra o erro de fuso que o plan-v3 fechou."
     },
@@ -71,7 +87,13 @@
       "id": "V5-2c",
       "title": "entregáveis + anexos do projeto no bucket (primeiro consumidor do bucket)",
       "status": "done",
-      "decisions": ["DEC-61", "DEC-101", "DEC-131", "DEC-133", "DEC-134"],
+      "decisions": [
+        "DEC-61",
+        "DEC-101",
+        "DEC-131",
+        "DEC-133",
+        "DEC-134"
+      ],
       "scope": "project_deliverables (name, quantity) e project_attachments (blobKey no bucket, metadado no banco) + 8 use cases e 5 rotas + magic bytes na seam do bucket + env S3_* entrando no serviço app + dois painéis no diálogo de detalhe. Nenhum writeFile novo em disco (regra 12 do plano). O port BlobStorePort NAO foi injetado no módulo — ver DEC-133.",
       "why": "DEC-101: todo blob novo do plano entra no bucket, atrás de port/seam; o V5-1 deixou o serviço e o seam prontos e este é o primeiro consumidor."
     },
@@ -79,7 +101,12 @@
       "id": "V5-2d",
       "title": "logo + banner do projeto (upload, leitura, header do detail) + G5/G6 da família V5-2",
       "status": "done",
-      "decisions": ["DEC-102", "DEC-101", "DEC-133", "DEC-135"],
+      "decisions": [
+        "DEC-102",
+        "DEC-101",
+        "DEC-133",
+        "DEC-135"
+      ],
       "scope": "projects.logoKey?/bannerKey? no bucket; upload com validação de imagem (mime, ≤5 MB, magic bytes); rota de leitura com a regra de acesso do projeto; header do detail com banner + logo (estilo Facebook/LinkedIn). Fecha G5 (docs:build + docs:check) e G6 (recapturar projetos, dialogo-novo-projeto e dialogo-detalhe-projeto) para os três sub-batches da família.",
       "why": "DEC-102: o projeto ganha logo e banner na página/detalhe. A recaptura é uma só no fim da família para não fotografar a mesma tela três vezes."
     },
@@ -87,7 +114,10 @@
       "id": "V5-2a",
       "title": "todos os usuários veem todos os projetos (lista + detalhe)",
       "status": "done",
-      "decisions": ["DEC-127", "DEC-136"],
+      "decisions": [
+        "DEC-127",
+        "DEC-136"
+      ],
       "scope": "GET /api/projects e GET /api/projects/[id] passam a aceitar qualquer usuário autenticado (hoje a lista filtra por MANAGE_TASKS e o detalhe por MANAGE_PROJECTS — ACLs diferentes; COLABORADOR/PESQUISADOR lista tudo e leva 'Acesso negado ao projeto' no detalhe; VOLUNTARIO/LABORATORISTA só veem membro/criado/liderado). Leitura dos filhos (anexos, horas, cronograma) herda; escrita/gestão intacta (MANAGE_PROJECTS / GLOBAL_PROJECT_MANAGERS). Ajusta tests/integration/projects-roundtrip.test.ts:153-154 e :161-171 e escreve os testes unitários ausentes (ListProjectsForActorUseCase, canActorAccessProjectDecision).",
       "why": "backlog do dono 2026-10-09: 'liberar visualização de todos os projetos para todos os usuários'; também fecha a assimetria medida lista×detalhe e a lacuna de teste unitário.",
       "executed": "2026-10-13. O escopo medido era maior que o escrito: além de lista e detalhe, a leitura aberta alcança entregáveis, anexos, imagem, horas (3 rotas), Membros e o card de horas por pessoa. O dono respondeu o ASK do batch (DEC-136): abrir Membros e também `/volunteers`. Os três gates de leitura congelados no roundtrip e o 403 congelado em reporting-routes mudaram junto."
@@ -95,16 +125,23 @@
     {
       "id": "V5-3",
       "title": "banner de usuário + pódio do quadro de liderança",
-      "status": "pending",
-      "decisions": ["DEC-101", "DEC-102"],
+      "status": "done",
+      "decisions": [
+        "DEC-101",
+        "DEC-102",
+        "DEC-137"
+      ],
       "scope": "users.bannerKey? (bucket); upload no perfil (espelho do avatar, que já existe em users.avatar); perfil mostra avatar + banner; pódio top #1 do quadro ganha o tratamento com as imagens (avatar h-24 + borda dourada já existem; entra banner/fundo) — e o quadro continua ordenado por pontos.",
-      "why": "dono: 'o usuário vai ter isso também, mostrando na página de perfil e no quadro de liderança dos membros do lab' (DEC-102)."
+      "why": "dono: 'o usuário vai ter isso também, mostrando na página de perfil e no quadro de liderança dos membros do lab' (DEC-102).",
+      "doneAt": "2026-10-13"
     },
     {
       "id": "V5-4",
       "title": "equipe estendida em project_members",
       "status": "pending",
-      "decisions": ["DEC-69"],
+      "decisions": [
+        "DEC-69"
+      ],
       "scope": "Colunas novas em project_members: lattes, cargaHorariaSemanal (Float), categoria (COORDENADOR/MEMBRO/BOLSISTA), situacao (ATIVO/INATIVO), dataEntrada, matricula. Use cases de membro passam a aceitá-las; UI de gestão exibe/edita; roles UserRole[] continuam (ACL não muda).",
       "why": "Member do desenho casa ~1:1 com project_members único por par; model novo duplicaria a relação."
     },
@@ -112,7 +149,12 @@
       "id": "V5-5",
       "title": "cronograma (metas + atividades) + wizard de criação com passo opcional",
       "status": "pending",
-      "decisions": ["DEC-61", "DEC-100", "DEC-103", "DEC-126"],
+      "decisions": [
+        "DEC-61",
+        "DEC-100",
+        "DEC-103",
+        "DEC-126"
+      ],
       "scope": "project_goals (meta Int, descricao) e project_activities (ordem, descricao, responsavelId, meses marcados na grade, periodoInicio/periodoFim derivados do primeiro/último mês marcado, recompensa = 100 × meses marcados, status OPEN/COMPLETION_REQUESTED/DONE com requestedBy/requestedAt, approvedBy/approvedAt, overdueNotifiedAt; provas no bucket). Regras puras de período/ordem; grade meses × atividades + aba no detail; criação de projeto vira passo a passo (dados → equipe opcional → cronograma opcional → cria, tudo numa transação — DEC-100).",
       "why": "cronograma é modelagem 100% nova (grep = 0) e o dono pediu para modelá-lo ao criar o projeto, sem obrigação."
     },
@@ -120,7 +162,9 @@
       "id": "V5-6",
       "title": "task × atividade: FK, seleção automática e trava das tasks prontas",
       "status": "pending",
-      "decisions": ["DEC-99"],
+      "decisions": [
+        "DEC-99"
+      ],
       "scope": "tasks.activityId? (FK opcional); no form de criação, a atividade cujo período cobre hoje vem pré-selecionada e o seletor lista só futuras + vigente (do mesmo projeto); filtro de atividade no quadro; TRAVA: solicitar conclusão de atividade com task pendente → 400 (análogo à trava da mãe, DEC-82).",
       "why": "as tasks são as subtasks da atividade (hierarquia pedida pelo dono em 2026-10-07); vale a mesma lógica da mãe."
     },
@@ -128,7 +172,15 @@
       "id": "V5-7",
       "title": "economia de projeto: solicitação/aprovação de atividade com escala de centenas",
       "status": "pending",
-      "decisions": ["DEC-63", "DEC-74", "DEC-76", "DEC-77", "DEC-103", "DEC-104", "DEC-126"],
+      "decisions": [
+        "DEC-63",
+        "DEC-74",
+        "DEC-76",
+        "DEC-77",
+        "DEC-103",
+        "DEC-104",
+        "DEC-126"
+      ],
       "scope": "request-activity-completion (líder/membro gestor + provas) e approve-activity-completion (só GLOBAL_PROJECT_MANAGERS; auto-aprova só COORDENADOR — DEC-77). Prêmio = recompensa(100×meses) × (1,5 se ≥2 dias adiantada) − 10% da recompensa POR DIA de atraso, PISO 0 (DEC-103/74). Distribuição aos membros ativos proporcional às tasks concluídas por membro no projeto; denominador 0 → igual (DEC-104). projects.points também soma o valor de tarefa concluída do projeto; idempotência GAMIFICATION:ACTIVITY_COMPLETED:<id>; histórico na transação; port de awards injetado no composition root.",
       "why": "dono: economia de projeto é inflada (centenas vs dezenas) e atraso deve ser muito mais pesado no domínio de projetos — substitui as fórmulas da DEC-67/68."
     },
@@ -136,7 +188,9 @@
       "id": "V5-8",
       "title": "atraso de atividade: notificação urgente (prioridade + varredura diária)",
       "status": "pending",
-      "decisions": ["DEC-64"],
+      "decisions": [
+        "DEC-64"
+      ],
       "scope": "Coluna priority em notifications + destaque no painel; job diário no cron-service varre atividades vencidas cuja APROVAÇÃO ainda não aconteceu (status ≠ DONE) e publica UMA notificação por atividade (guarda overdueNotifiedAt) para líder + coordenadores/gerentes ativos (padrão findReportManagers).",
       "why": "notifications não tem canal de urgência (schema:408-420); urgência é destaque, não canal novo (sem e-mail na v1)."
     },
@@ -144,7 +198,12 @@
       "id": "V5-9",
       "title": "relatórios técnicos (3 tipos) + rascunho por IA + DOCX pelo template oficial",
       "status": "pending",
-      "decisions": ["DEC-65", "DEC-70", "DEC-101", "DEC-129"],
+      "decisions": [
+        "DEC-65",
+        "DEC-70",
+        "DEC-101",
+        "DEC-129"
+      ],
       "scope": "Novo technical_reports (projectId + type PARCIAL/TECNICO_FINAL/FINAL único por par, content, file no bucket, authorId), editável, permissão gestão/líder; project_reports intacto. Port ReportDraftPort + adapter OpenAI-compatible via fetch puro (AI_BASE_URL/AI_API_KEY/AI_MODEL, default http://localhost:8080/v1 — modelo local do lab, 192.168.25.105:8080 na rede); fonte do rascunho = TRÊS: work_sessions (logs) + tasks do projeto (status, conclusão, pontos) + atividades do cronograma (meses marcados, provas); rota POST .../draft gera, o editor salva só com confirmação do usuário. Entrega em DOCX pelo template OFICIAL com docx-templates (DEC-129): o texto entra como texto puro nas 3 tabelas vazias (Descrição/Resultados/Comentários) via templates/relatorio-tecnico.tagged.docx (derivado por script, nunca editado à mão), o tipo marca a linha '( ) Relatório Final ( ) Relatório Parcial', o adaptador docx-report.adapter.ts vive em infrastructure/adapters/ atrás de porta e NAO escreve estilo/fonte/tamanho/margem (w:rPr/styles.xml/sectPr intactos). Uma regra pura (backend/domain/reporting/report-fields-rules.ts) monta {tag: valor}; o escopo do registro por projeto x tipo PODE virar por participante conforme o ASK-V5-06.",
       "why": "o dono pediu IA de verdade (genérico por env abre a porta pro multilab) e entregou o template oficial do relatório técnico (2026-10-13) — o caminho mais seguro é preencher o oficial, não gerar documento (DEC-129)."
     },
@@ -152,7 +211,13 @@
       "id": "V5-10",
       "title": "atestados de frequência: preenche o AcroForm oficial + lembrete dia 19",
       "status": "pending",
-      "decisions": ["DEC-66", "DEC-72", "DEC-75", "DEC-101", "DEC-130"],
+      "decisions": [
+        "DEC-66",
+        "DEC-72",
+        "DEC-75",
+        "DEC-101",
+        "DEC-130"
+      ],
       "scope": "Módulo attestation: certificates (projectId, userId, mesReferencia, dataEnvio, arquivo no bucket) SEM coluna de status (DEC-75 — a situação é a do projeto); sistema PREENCHE o AcroForm OFICIAL (DEC-130, revoga a parte 'gerar' da DEC-71) pelos 39 campos nomeados medidos (data, edital, titulo, coorientador, nome, CPF, matricula, nivel_*, carga_*, is_bolsista/se_bolsista, is_pibic*/is_pibiti*/is_btp, is_*grau, is_ifnmg/is_cnpq/is_fapemig/is_outra/is_voluntario, agencia_outra, atividades_1/atividade_2, status_*, justificativa, dia/mes/ano) com @cantoo/pdf-lib (fork mantido do pdf-lib, que está sem release desde 2021): nome/CPF/matricula/titulo/edital/coorientador do projeto e do membro, checkboxes de modalidade/fomento, carga (carga_8/carga_20/carga_adaptada/horas_adaptada) de weekly_reports/work_sessions, atividades_1/atividade_2 + status_* do cronograma (V5-5), dia/mes/ano do mês de referência; updateFieldAppearances (fonte Times) + flatten() no arquivo entregue (bucket). Regra pura attestation-fields-rules.ts monta {campoAcroForm: valor} (nunca pdf-lib no domain); adapter acroform-attestation.adapter.ts lê templates/atestado-frequencia.pdf. Job '0 9 19 * *' no cronService notifica coordenadores/gerentes + líderes ativos. Depende dos campos de pessoa do ASK-V5-07.",
       "why": "certificate do desenho É o atestado de frequência (dono, DEC-66); o formulário oficial já existe com 39 campos nomeados — o sistema preenche e valida (DEC-130)."
     },
@@ -160,7 +225,9 @@
       "id": "V5-11",
       "title": "tela de andamento: data_final − hoje + pontos do projeto",
       "status": "pending",
-      "decisions": ["DEC-63"],
+      "decisions": [
+        "DEC-63"
+      ],
       "scope": "Gráfico de andamento do projeto calculado por data_final − dia_de_hoje; exibição de projects.points (agora real, não mais a soma de points dos membros).",
       "why": "fórmula pedida explicitamente pelo dono; precisa de endDate (V5-2) e de points (V5-7)."
     }
@@ -199,7 +266,8 @@
     "DEC-133 (2026-10-13, execução do V5-2c): no caminho de arquivo do projeto, **a rota move byte e o módulo guarda registro + autorização**. O blob entra e sai do bucket pelo seam `lib/storage/blob-store.ts`, chamado pela rota; `project_attachments` guarda só o metadado (`blobKey`, nome, tipo, tamanho, quem subiu), e os use cases de anexo nunca tocam bucket. Consequência deliberada: o `BlobStorePort` que o V5-1 deixou pronto (DEC-101 previa injetá-lo na criação do módulo) **não foi injetado** — os use cases ficam independentes de bucket no ar, e o roundtrip G4 roda sem serviço de objetos. É o desenho já medido em `project-reports` (rota escreve o arquivo pelo seam, módulo escreve o registro). Segunda metade da decisão, medida antes de escrever: a autorização de upload acontece **antes do corpo ser lido** (`AssertCanManageProjectUseCase`, padrão `AssertCan*` do B6-2b/DEC-54 com o custo invertido — ali o 403 tinha de vir antes dos 400 de corpo; aqui o corpo é um arquivo, e sem o gate antes do parse quem não gerencia o projeto empurraria bytes ao bucket e só depois receberia o 403, deixando objeto órfão e teto de tamanho gasto). Os use cases de escrita rechecam a gestão por conta própria (DEC-54: o gate protege também chamadores que não são rota). Se o registro falhar depois do `put`, a rota remove o objeto (compensação); se o objeto falhar ao ser removido depois de um DELETE bem-sucedido, o 200 é mantido — registro apagado é o estado do mundo e objeto órfão não é alcançado por tela nenhuma. Reversível: injetar o port no módulo depois exige montar bucket nos roundtrips G4.",
     "DEC-134 (2026-10-13, execução do V5-2c): assinatura de conteúdo e nome de exibição passam a **peça única** — `lib/storage/magic-bytes.ts` (`magicMatches`, `readFileHead`, `MAGIC_HEAD_BYTES`) e `lib/storage/display-name.ts` (`sanitizeDisplayName`) — consumidas pelos dois seams de arquivo da casa (`report-uploads.ts`, no disco, e `blob-store.ts`, no bucket). `report-uploads.ts` re-exporta `sanitizeDisplayName` para os chamadores existentes não mudarem. Mudança de comportamento deliberada na tabela: o `default` deixa de devolver `true` para qualquer mime — mime sem assinatura passa a ser **lista nomeada** (`text/plain`, `text/csv`) e mime fora da tabela devolve `false`. Para o seam de relatório nada muda (os dois já estavam na allowlist e caíam no mesmo `true`); para o seam de bucket, que tem allowlist própria e mais estreita, 'desconhecido' deixa de ser aprovado por ausência de regra. Congelado em teste. Terceira metade: `project_attachments.uploadedBy` é FK **RESTRICT** para `users` (sem `onDelete`), a 17ª bloqueante — anexo é dado do projeto, não de quem o subiu, mesma escolha de `project_reports.authorId`; a guarda `user-delete-schema-drift.test.ts` passou de 16 para 17 nomes e `countBlockingDependencies` ganhou a contagem escrita por extenso (`uploadedBy: userId`), porque a forma abreviada `{ userId }` não é reconhecível como coluna pelo guarda.",
     "DEC-135 (2026-10-13, execução do V5-2d): imagem de projeto (logo e banner) é **slot de lista fechada**, não caminho livre. `PROJECT_IMAGE_SLOTS = [logo, banner]`, uma coluna `String?` por slot em `projects` (`logoKey`, `bannerKey`), e a chave do objeto nasce de `projectImagePrefix(projectId, slot)` → `projects/<id>/images/<slot>`. MOTIVO: o slot entra na CHAVE do bucket; aceitar string cru deixaria `projects/7/images/<qualquer-coisa>` e a chave deixaria de dizer o que é. Uma coluna por slot torna 'uma logo por projeto' estrutural, não regra a validar. Segunda metade: **imagem aceita menos que anexo**. PDF e vídeo são blobs válidos do bucket, mas não são capa nem logo, e quem decide é a seam (`isImageBlobContentType`, que lê a allowlist dela), não a rota nem o domínio — duplicar a allowlist é a regra em duas cópias (DEC-90/134). Terceira metade: o banco guarda a CHAVE e o binário sai por rota autenticada (`GET /api/projects/[id]/images/[slot]/file`), com `Cache-Control: private, max-age=86400` e a chave como parâmetro de cache no endereço que a tela monta. Como a chave carrega um UUID, o conteúdo daquele endereço nunca muda: trocar a imagem muda o endereço, e sem a chave no URL o navegador serviria a imagem velha. Quarta metade: trocar imagem **apaga o objeto velho**, e a ordem é registro primeiro, objeto depois — o use case devolve `previousKey` porque o módulo não conhece bucket (DEC-133) e a rota precisa da chave para remover. Registro falhando depois do `put` remove o objeto NOVO, deixando o projeto com a imagem que o banco diz. Reversível: um slot dinâmico (mais de duas imagens) exige tabela nova e não é o que a DEC-102 pediu.",
-    "DEC-136 (2026-10-13, execução do V5-2a): leitura de projeto é **do autenticado**, e a decisão passa a ser UMA função de UM parâmetro — `canActorAccessProjectDecision(actorId)` — consumida por lista, detalhe, entregáveis, anexos, imagem, horas, Membros e `/volunteers`. MOTIVO: a regra antiga dava ao COLABORADOR a lista do projeto e o 403 ao abrir o detalhe; eram duas ACLs para uma decisão. Segunda metade, respondendo o ASK do batch: o dono abriu também **Membros** (o gate 'global OU membership' saiu) e o card de horas por pessoa (`GET /api/projects/[id]/volunteers`, antes MANAGE_PROJECTS OU gestão) — quem não participa vê quem participa e as horas de cada pessoa. Terceira metade: **gate de leitura que não pode responder 'não' saiu da rota**. `CanActorAccessProjectUseCase` saiu da superfície do módulo e o 403 das três rotas de horas junto, porque manter o gate deixaria o teste de rota congelando o substituto (`mocks.state.projectAccess`), não o sistema — a lição medida do B6-0. Quarta metade: as portas encolheram com a regra — `ProjectActorsPort` perdeu `membershipExists`/`findProjectRelation`, `ProjectRepositoryPort` perdeu `findByUserId`/`findByCreatorId`, e `dedupeProjectsById`/`canViewProjectMembers` saíram do domínio. Gestão intacta: `canActorManageProjectDecision` continua com o quirk do membership mandando quando existe (medido: membership [VOLUNTARIO] com COORDENADOR global NÃO gerencia), e os 403 de escrita continuam congelados. Reversível: uma leitura restrita futura (projeto privado) volta a nascer na mesma função."
+    "DEC-136 (2026-10-13, execução do V5-2a): leitura de projeto é **do autenticado**, e a decisão passa a ser UMA função de UM parâmetro — `canActorAccessProjectDecision(actorId)` — consumida por lista, detalhe, entregáveis, anexos, imagem, horas, Membros e `/volunteers`. MOTIVO: a regra antiga dava ao COLABORADOR a lista do projeto e o 403 ao abrir o detalhe; eram duas ACLs para uma decisão. Segunda metade, respondendo o ASK do batch: o dono abriu também **Membros** (o gate 'global OU membership' saiu) e o card de horas por pessoa (`GET /api/projects/[id]/volunteers`, antes MANAGE_PROJECTS OU gestão) — quem não participa vê quem participa e as horas de cada pessoa. Terceira metade: **gate de leitura que não pode responder 'não' saiu da rota**. `CanActorAccessProjectUseCase` saiu da superfície do módulo e o 403 das três rotas de horas junto, porque manter o gate deixaria o teste de rota congelando o substituto (`mocks.state.projectAccess`), não o sistema — a lição medida do B6-0. Quarta metade: as portas encolheram com a regra — `ProjectActorsPort` perdeu `membershipExists`/`findProjectRelation`, `ProjectRepositoryPort` perdeu `findByUserId`/`findByCreatorId`, e `dedupeProjectsById`/`canViewProjectMembers` saíram do domínio. Gestão intacta: `canActorManageProjectDecision` continua com o quirk do membership mandando quando existe (medido: membership [VOLUNTARIO] com COORDENADOR global NÃO gerencia), e os 403 de escrita continuam congelados. Reversível: uma leitura restrita futura (projeto privado) volta a nascer na mesma função.",
+    "DEC-137 (2026-10-13, execução do V5-3): imagem de perfil é o MESMO desenho medido no V5-2d (DEC-135), aplicado a `users`. Primeira metade: `USER_IMAGE_SLOTS = [banner]` — lista fechada de UM valor — coluna `users.bannerKey String?` guardando a **CHAVE** do bucket (`users/<id>/images/banner/<uuid>.<ext>`), e binário por `GET /api/users/[id]/images/[slot]/file`, rota autenticada com `Cache-Control: private, max-age=86400` e a chave como quebra de cache no endereço que a tela monta (`?v=<chave>`), porque o endereço por slot é sempre o mesmo. O avatar **continua no caminho legado de disco** (`ImageProcessor` → `public/uploads/avatars/<userId>/avatar_<ts>.webp`, servido por `/api/uploads/avatars/[userId]/[filename]`, rota sem autenticação): migrar avatar para o bucket é decisão própria e não é esta — o plano pedia capa de perfil. Segunda metade: **nenhuma autoridade nova**. A escrita é `self OU MANAGE_USERS` com a mensagem congelada do perfil (`PROFILE_DENIED_MESSAGE`, \"Não autorizado\"), a mesma medida em `UpdateUserProfileUseCase` (B6-4); as rotas de avatar continuam com a trava self-only delas. O gate roda ANTES do corpo do multipart ser lido (`AssertCanUpdateUserImageUseCase`), pelo custo medido na DEC-133, e `updateUserImage` recheca no próprio ator. Terceira metade: **leitura é a do autenticado** — a política da DEC-127/136 aplicada à pessoa. `GetUserImageUseCase` não tem gate de leitura de propósito (gate que não pode responder \"não\" só faz o teste de rota congelar o substituto), e a chave chega na MESMA lista que o avatar (`listUsersForActor`), porque é o pódio do ranking que a renderiza: uma rota por pessoa faria 1+N requisições. Quarta metade: a chave também entra na **sessão** (`lib/auth/config.ts`: select do session callback, token do jwt e o fallback), porque o cartão \"Meu Perfil\" é montado a partir de `useAuth()`, não da lista de usuários — sem a coluna no select a faixa mostraria \"Sem capa\" para quem tem capa (modo de falha medido no smoke da instância). Quinta metade: o pódio não cria imagem nova — o cartão do 1º lugar usa a capa da pessoa como fundo quando ela existe; os outros dois cartões continuam como são, porque é assim que a tela já desenha a hierarquia."
   ],
   "batchLog": [
     {
@@ -356,6 +424,32 @@
         "o quirk do membership que eu acreditava saber estava em OUTRA função: `canManageProjectMembers` (escrita de membro) recusa membership [COORDENADOR]; `canActorManageProjectDecision` ACEITA, porque `PROJECT_MANAGER_MEMBERSHIP_ROLES` inclui COORDENADOR/GERENTE/GERENTE_PROJETO. O teste que escrevi contra a minha crença ficou vermelho — a produção é que estava certa.",
         "fake tipado na porta é guarda: `const actors: ProjectActorsPort = { …, membershipExists }` dá TS2353 depois que a porta perde o método. Encolher porta obriga o fake a encolher, e o erro de tipo é o sinal de que ninguém usava.",
         "a visibilidade de tela já existia: `/dashboard/projetos` é gated por `VIEW_PROJECT_DASHBOARD`, que já incluia VOLUNTARIO. `DASHBOARD_PROJETOS` (sem VOLUNTARIO) não é consumida por nenhuma tela — só existe na matriz. O que faltava ao backlog era o servidor, não o menu."
+      ]
+    },
+    {
+      "id": "V5-3",
+      "at": "2026-10-13",
+      "title": "capa de perfil no bucket + pódio do quadro de liderança (DEC-137)",
+      "actions": [
+        "regra medida ANTES de mexer: `users` tinha `avatar`/`bio`/`profileVisibility` e NENHUMA coluna de capa. O avatar é caminho legado: `ImageProcessor` → `public/uploads/avatars/<userId>/avatar_<ts>.webp`, servido por `/api/uploads/avatars/[userId]/[filename]` (rota SEM autenticação) e escrito por rotas com trava self-only (`app/api/users/avatar/route.ts:22`). O pódio é `app/(dashboard)/dashboard/leaderboard/page.tsx`: 3 cartões, o 1º com `h-24 w-24` e borda amarela, ordenado por `points` no cliente. Medidos também os rótulos que já existem no perfil (\"Selecionar Nova Foto\", \"Remover Foto Atual\", \"Editar Perfil\", \"Cancelar Edição\") — o controle novo não podia conter nem ser contido por eles (`getByLabel` casa por substring).",
+        "schema: `users.bannerKey String?` por `prisma migrate diff --from-schema-datamodel/--to-schema-datamodel --script` (offline), gravado como migration e aplicado com `migrate deploy` na 5432 E na 5433, depois `prisma generate`. Nunca `migrate dev`: a 5432 tem os dados reais do dono e a deriva pede RESET.",
+        "dominio: `USER_IMAGE_SLOTS`/`isUserImageSlot`/`userImagePrefix`/`USER_IMAGE_SLOT_MESSAGE` em `backend/domain/identity/user-image-rules.ts` — espelho de `PROJECT_IMAGE_SLOTS`/`projectImagePrefix` (DEC-135). `avatar` NÃO entra na lista: aceitá-lo hoje abriria `users/7/images/logo` sem decisão.",
+        "modulo: `UpdateUserImageUseCase` (gate do perfil, devolve `previousKey`), `GetUserImageUseCase` (sem gate de leitura) e `AssertCanUpdateUserImageUseCase` (403 antes do corpo). Entraram por interface nova, `UserImageCapability`: `UserManagementGateway` é a forma do gateway legado e não ganhou método. O módulo constrói use case inline por chamada (como `work-execution`), e o construtor passou a receber o assert — 1 chamador, medido.",
+        "rotas: `PUT`/`DELETE /api/users/[id]/images/[slot]` e `GET .../file`. Ordem medida: 401 → 400 de entrada (id, slot) → 403 → 404 → 400 de arquivo. Mime de imagem pela seam (`isImageBlobContentType`), assinatura por `readFileHead`, 503 sem bucket, troca remove o objeto velho depois de o registro apontar para o novo, registro falhando remove o objeto NOVO.",
+        "byte na tela: `lib/api/user-images.ts` (`userImageUrl` com `?v=<chave>`, upload multipart, delete) e `components/features/user-media-header.tsx`, montado no cartão \"Meu Perfil\" (faixa acima do avatar), no `UserProfileView` (leitura só — perfil de outra pessoa) e como fundo do cartão do 1º lugar do pódio.",
+        "a chave chega ao cliente por três caminhos, e o do perfil não era óbvio: `toPublicUser` (transporte), `listUsersForActor` (o pódio lê a lista, não uma rota por pessoa) e a SESSÃO (`lib/auth/config.ts`). O cartão \"Meu Perfil\" vem de `useAuth()` e o `select` do session callback é lista explícita: sem `bannerKey: true` a faixa mostrava \"Sem capa\" para quem tinha capa.",
+        "testes novos: 4 arquivos / 43 testes — 4 de regra de slot, 20 de rota (módulo REAL sobre porta falsa), 11 de use case, 8 de cabeçalho de mídia — mais 1 teste novo no roundtrip G4 e 1 assertion nova na lista do roundtrip. O guarda `identity-rules.test.ts`, que congela a forma exata de `toPublicUser`, falhou e nomeou o campo novo: é ele funcionando.",
+        "guia (G5/G6): recapturados `perfil`, `perfil-participante`, `perfil-edicao`, `perfil-configuracoes` e `ranking-participante`; `docs/src-usuario/08-perfil-e-notificacoes.md` ganhou a seção \"A capa do perfil\", `07-loja-e-ranking.md` o par do pódio e `10-referencia-de-telas.md` a linha do Perfil. Corrigido no mesmo passo: o guia dizia que editar o perfil de outra pessoa respondia \"Usuário não tem permissão para editar este perfil\" — essa string não existe no código; a negação medida do perfil é \"Não autorizado\".",
+        "smoke na instância real (peça de execução, não do repositório): login → `PUT` multipart → chave `users/21/images/banner/<uuid>.png` → `GET` do binário (200, `image/png`, `private, max-age=86400`, assinatura conferida) → slot `logo` responde 400 com a mensagem do domínio → `DELETE` → 404. A sessão passou a carregar a chave, a lista também, e a instância voltou a `bannerKey: null`."
+      ],
+      "gates": "G0 879/3635 zero violacao, allow-list vazia (era 867/3578) | G1 exit 0, nenhuma warning nova | G2 1 erro PRE-EXISTENTE (floating-timer-tabs.test.tsx:105) | G3 113/1517 verde (era 109/1474; +4 arquivos, +43 testes) | G4 completa 123/1608 verde contra dq-dev-test-db (5433) (era 119/1564) | G5 docs:build 15 secoes/33 figuras tecnico + 12/35 guia, sem AVISO; docs:check limpo | G6 5 capturas recapturadas (perfil, perfil-participante, perfil-edicao, perfil-configuracoes, ranking-participante)",
+      "gotchas": [
+        "fake de repositório copia na leitura: `findById` devolvendo o objeto VIVO do Map deixa a falha do `update` parecer sucesso, porque o use case muta o record antes de gravar. O caso 'registro falhando remove o objeto NOVO' ficou vermelho por causa do fake, não da produção.",
+        "a chave precisa chegar por três caminhos e nenhum teste avisa qual falta: `toPublicUser`, a lista de usuários e a SESSÃO. Coluna ausente no `select` do session callback não quebra teste nenhum — quebra a tela. Medido no smoke, não no gate.",
+        "gate de escrita antes do corpo não é opcional em upload: sem o assert, o 403 viria depois do `store.put` e quem não pode escrever empurraria byte ao bucket (DEC-133). O assert não lê o usuário — por isso o teste fixa `reads` vazio.",
+        "em gate `self OU MANAGE_USERS` o 404 só existe para quem passa: escrevi 'usuário ausente' com um ator que não é o dono e recebi 403 antes do lookup (a ordem medida do delete, B6-4). O ator do caso tem de ser o dono do id que não existe.",
+        "porta parcial com `as never` perde o contexto de tipo: os parâmetros dos métodos ficam `implicit any` (TS7006) e o import da porta deixa de ser usado. Tipar à mão.",
+        "o guia pode estar mentindo há meses: a mensagem de negação do perfil citada em `08-perfil-e-notificacoes.md` não existe no código (`grep` devolve zero). Ao editar uma seção, `grep` a string que ela cita."
       ]
     }
   ],

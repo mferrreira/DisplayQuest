@@ -54,6 +54,7 @@ export class CreateUserUseCase {
       profileVisibility: "public",
       bio: null,
       avatar: null,
+      bannerKey: null,
     })
 
     return toPublicUser(created)

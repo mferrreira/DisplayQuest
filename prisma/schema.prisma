@@ -20,6 +20,7 @@ model users {
   currentWeekHours     Float                  @default(0)
   roles                UserRole[]
   avatar               String?
+  bannerKey            String?
   bio                  String?
   profileVisibility    ProfileVisibility      @default(public)
   createdBadges        badges[]               @relation("UserCreatedBadges")

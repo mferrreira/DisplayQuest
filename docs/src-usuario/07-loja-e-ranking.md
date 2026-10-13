@@ -56,6 +56,8 @@ O **Ranking** ordena as pessoas pelo que produziram. A tela traz o **Quadro de L
 A classificação é visível para qualquer pessoa autenticada.
 ```
 
+No **Quadro de Lideranca** os três primeiros têm cartão maior e avatar maior, e o 1º lugar leva mais destaque ainda: quando a pessoa tem **capa** no perfil, a capa aparece como fundo do cartão dela. É a mesma imagem descrita no capítulo 8; o ranking não cria nada, ele mostra o que o perfil tem.
+
 O que alimenta cada coluna:
 
 | Coluna | De onde vem |

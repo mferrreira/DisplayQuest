@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { userImageUrl } from "@/lib/api/user-images"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { 
@@ -74,7 +75,19 @@ export function UserProfileView({ user, onBack, canEdit = false, onEdit, project
       </div>
 
       {/* Main Profile Card */}
-      <Card>
+      <Card className="overflow-hidden">
+        {/* V5-3 (DEC-137): a capa da pessoa, quando existe. Leitura só — este cartão é o perfil de
+            outra pessoa, e a escrita é do dono do perfil. */}
+        {user.bannerKey ? (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={userImageUrl(user.id, "banner", user.bannerKey)}
+              alt={`Capa de ${user.name}`}
+              className="h-28 w-full object-cover sm:h-36"
+            />
+          </>
+        ) : null}
         <CardHeader>
           <div className="flex items-start justify-between">
             <div className="flex items-center space-x-4">

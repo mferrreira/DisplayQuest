@@ -40,6 +40,9 @@ export class ListUsersForActorUseCase {
         points: row.points,
         completedTasks: row.completedTasks,
         avatar: row.avatar,
+        // V5-3 (DEC-137): a capa chega na mesma lista que o avatar, porque é o pódio do ranking que
+        // a renderiza — sem isto a tela teria que chamar uma rota por pessoa.
+        bannerKey: row.bannerKey,
       }
       if (visibility.canViewFullUsers || visibility.canManageProjectMembers) {
         out.email = row.email

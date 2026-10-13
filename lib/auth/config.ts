@@ -51,6 +51,9 @@ export const authOptions: AuthOptions = {
         token.name = (user as any).name
         token.email = (user as any).email
         token.avatar = (user as any).avatar
+        // V5-3 (DEC-137): a chave da capa do perfil viaja com a sessão, como o avatar — é ela que o
+        // cartão "Meu Perfil" usa para mostrar a capa e quebrar o cache do navegador.
+        token.bannerKey = (user as any).bannerKey
         token.bio = (user as any).bio
         token.profileVisibility = (user as any).profileVisibility
         token.points = (user as any).points
@@ -65,6 +68,7 @@ export const authOptions: AuthOptions = {
         token.name = session.user.name
         token.email = session.user.email
         token.avatar = session.user.avatar
+        token.bannerKey = session.user.bannerKey
         token.bio = session.user.bio
         token.profileVisibility = session.user.profileVisibility
         token.points = session.user.points
@@ -96,6 +100,7 @@ export const authOptions: AuthOptions = {
             name: true,
             email: true,
             avatar: true,
+            bannerKey: true,
             bio: true,
             profileVisibility: true,
             points: true,
@@ -121,6 +126,7 @@ export const authOptions: AuthOptions = {
           name: token.name,
           email: token.email,
           avatar: token.avatar,
+          bannerKey: token.bannerKey,
           bio: token.bio,
           profileVisibility: token.profileVisibility,
           points: token.points,

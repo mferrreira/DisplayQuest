@@ -1,4 +1,4 @@
-import type { ActorRef, UserRole } from "@/backend/domain"
+import type { ActorRef, UserImageSlot, UserRole } from "@/backend/domain"
 
 /**
  * B6-4 (D4): o escopo da lista passou a ser decidido a partir do `ActorRef` — o `actorRoles`
@@ -64,4 +64,21 @@ export interface RegisterUserCommand {
   name: string
   email: string
   password: string
+}
+
+/**
+ * V5-3 (DEC-137) — imagem de perfil no bucket. `blobKey: null` é o tirar a capa. O `slot` é de
+ * lista fechada (`USER_IMAGE_SLOTS`), porque o slot entra na chave do objeto.
+ */
+export interface UpdateUserImageCommand {
+  actor: ActorRef
+  userId: number
+  slot: UserImageSlot
+  blobKey: string | null
+}
+
+export interface GetUserImageCommand {
+  actor: ActorRef
+  userId: number
+  slot: UserImageSlot
 }

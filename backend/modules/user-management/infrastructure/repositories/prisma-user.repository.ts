@@ -29,6 +29,7 @@ type UserRow = {
   profileVisibility: ProfileVisibility
   bio: string | null
   avatar: string | null
+  bannerKey: string | null
   roles: UserRole[]
   createdAt: Date
 }
@@ -47,6 +48,7 @@ function toRecord(row: UserRow): UserRecord {
     profileVisibility: row.profileVisibility,
     bio: row.bio,
     avatar: row.avatar,
+    bannerKey: row.bannerKey,
     roles: row.roles,
     createdAt: row.createdAt,
   }
@@ -83,6 +85,7 @@ export class PrismaUserRepository implements UserRepositoryPort {
         profileVisibility: record.profileVisibility,
         bio: record.bio,
         avatar: record.avatar,
+        bannerKey: record.bannerKey,
         roles: record.roles,
       },
     })
@@ -150,6 +153,7 @@ export class PrismaUserRepository implements UserRepositoryPort {
         points: true,
         completedTasks: true,
         avatar: true,
+        bannerKey: true,
         bio: true,
       },
       orderBy: { name: "asc" },

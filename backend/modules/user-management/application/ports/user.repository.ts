@@ -25,6 +25,8 @@ export interface UserRecord {
   profileVisibility: ProfileVisibility;
   bio: string | null;
   avatar: string | null;
+  /** V5-3 (DEC-137): chave do objeto no bucket (`users/<id>/images/banner`). Nunca um caminho de disco. */
+  bannerKey: string | null;
   roles: UserRole[];
   createdAt?: Date;
 }
@@ -41,6 +43,7 @@ export interface UserSummaryRow {
   completedTasks: number;
   avatar: string | null;
   bio: string | null;
+  bannerKey: string | null;
 }
 
 export type NewUserRecord = Omit<UserRecord, "id" | "createdAt">;

@@ -90,6 +90,39 @@ describe("G4 roundtrip — user-management (isolated test DB)", () => {
     const basicMine = basic.find((row) => row.id === userId);
     expect(basicMine).toBeDefined();
     expect(basicMine).not.toHaveProperty("email");
+    // V5-3 (DEC-137): a capa chega na MESMA lista que o avatar, porque é o pódio do ranking que a
+    // renderiza — sem isto a tela teria que chamar uma rota por pessoa.
+    expect(basicMine).toHaveProperty("bannerKey", null);
+  });
+
+  it("capa do perfil: a coluna guarda a CHAVE do bucket, e o roundtrip roda sem bucket no ar", async () => {
+    // DEC-133/137: o módulo guarda registro + autorização; quem move byte é a rota pelo seam. É por
+    // isso que este roundtrip de Prisma real não precisa de SeaweedFS no ar.
+    const owner = userActor(userId, ["VOLUNTARIO"]);
+    const key = `users/${userId}/images/banner/g4-roundtrip.png`;
+
+    const written = await userModule.updateUserImage({ actor: owner, userId, slot: "banner", blobKey: key });
+    expect(written.previousKey).toBeNull();
+    expect(written.user.bannerKey).toBe(key);
+    expect(written.user).not.toHaveProperty("password");
+
+    const row = await prisma.users.findUnique({ where: { id: userId } });
+    expect(row?.bannerKey).toBe(key);
+
+    // Leitura é do autenticado: outra pessoa lê a chave (DEC-127/136).
+    const read = await userModule.getUserImage({ actor: userActor(1, ["VOLUNTARIO"]), userId, slot: "banner" });
+    expect(read).toEqual({ slot: "banner", blobKey: key });
+
+    // Trocar/tirar devolve a chave ANTERIOR — é ela que a rota remove do bucket.
+    const cleared = await userModule.updateUserImage({ actor: managerActor, userId, slot: "banner", blobKey: null });
+    expect(cleared.previousKey).toBe(key);
+    expect(cleared.user.bannerKey).toBeNull();
+    expect((await prisma.users.findUnique({ where: { id: userId } }))?.bannerKey).toBeNull();
+
+    // Slot sem capa responde com o 404 do domínio, não um objeto vazio.
+    await expect(userModule.getUserImage({ actor: owner, userId, slot: "banner" })).rejects.toThrow(
+      "Imagem não encontrada",
+    );
   });
 
   it("points/roles/hours/status mutations persist and project the public shape", async () => {

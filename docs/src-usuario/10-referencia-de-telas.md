@@ -14,7 +14,7 @@ Esta é a lista completa das telas do sistema, com o endereço de cada uma e que
 | Loja | `/dashboard/loja` | recompensas disponíveis, minhas compras | todas as funções |
 | Gerenciar Recompensas | `/dashboard/loja/gerenciar` | catálogo, solicitações pendentes, histórico | Coordenador, Gerente, Laboratorista |
 | Ranking | `/dashboard/leaderboard` | classificação por projetos, tarefas e pontos | todas as funções |
-| Perfil | `/dashboard/profile` | Meu Perfil, Atividade, Logs Diários, Configurações | todas as funções |
+| Perfil | `/dashboard/profile` | capa e avatar do **Meu Perfil**, Atividade, Logs Diários, Configurações | todas as funções |
 
 ## Controles que não são telas
 

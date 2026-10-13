@@ -43,6 +43,8 @@ export const userSchema = z.object({
   currentWeekHours: z.number().optional(), // not always sent by list endpoints
   roles: z.array(userRoleSchema),
   avatar: z.string().nullable().optional(),
+  /** V5-3 (DEC-137): chave da capa do perfil no bucket. O binário sai por rota autenticada. */
+  bannerKey: z.string().nullable().optional(),
   bio: z.string().nullable().optional(),
   profileVisibility: profileVisibilitySchema.default("public"),
 });

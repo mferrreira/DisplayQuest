@@ -113,10 +113,18 @@ describe("toPublicUser — password never leaves the record", () => {
         "profileVisibility",
         "bio",
         "avatar",
+        // V5-3 (DEC-137): a chave da capa do perfil entra no transporte. O record de cima NAO tem a
+        // coluna — a entrada e opcional justamente para chamadores e fixtures que ainda nao a
+        // conhecem, e a saida e sempre presente.
+        "bannerKey",
         "roles",
         "createdAt",
       ].sort(),
     );
+    expect(publicUser.bannerKey).toBeNull();
+
+    const withBanner = toPublicUser({ ...record, bannerKey: "users/1/images/banner/abc.png" } as never);
+    expect(withBanner.bannerKey).toBe("users/1/images/banner/abc.png");
   });
 });
 

@@ -3,7 +3,7 @@
 O **Perfil** é a sua conta vista por dentro: quem você é no laboratório, o que produziu e como os seus dados aparecem para as outras pessoas.
 
 ```foto perfil-participante titulo="O perfil de uma pessoa"
-O cartão **Meu Perfil** traz avatar, nome e as cifras de trabalho; abaixo dele ficam as três abas.
+O cartão **Meu Perfil** abre com a faixa da capa e traz avatar, nome e as cifras de trabalho; abaixo dele ficam as três abas.
 ```
 
 ## As três abas
@@ -34,7 +34,19 @@ A **Visibilidade do Perfil** tem três valores:
 | **Apenas Membros** | quem participa dos mesmos projetos |
 | **Privado** | só você e a administração |
 
-Editar o próprio perfil é sempre permitido. Editar o perfil de outra pessoa — inclusive remover avatar ou biografia — exige permissão de administração, e o sistema recusa com *"Usuário não tem permissão para editar este perfil"*.
+Editar o próprio perfil é sempre permitido. Editar o perfil de outra pessoa exige permissão de administração, e sem ela o sistema recusa com *"Não autorizado"*. O avatar tem regra mais apertada: a rota que remove avatar é só da própria pessoa — nem quem gerencia contas remove o avatar de outra.
+
+## A capa do perfil
+
+Acima do avatar, o cartão **Meu Perfil** tem uma faixa horizontal: é a **capa** da pessoa. Sem capa, a faixa diz *"Sem capa"*.
+
+1. Clique em **Enviar capa** e escolha a imagem. Ela ocupa a faixa do topo do cartão.
+2. Para trocar, envie outra imagem: a nova ocupa o lugar da antiga.
+3. **Tirar capa** aparece quando a faixa tem imagem, e o sistema pede confirmação.
+
+São imagens, só isso: PDF e vídeo não entram aqui. O arquivo vai para o bucket de objetos do sistema, e a tela o lê por um endereço que entrega a imagem apenas a quem está autenticado.
+
+A capa é sua, e quem a escreve é você — ou quem tem permissão de gerenciar contas. Quem a **vê** é qualquer pessoa autenticada: ela aparece no seu perfil, no perfil aberto por outra pessoa e no cartão de quem está em 1º lugar no ranking.
 
 ## Os logs diários
 

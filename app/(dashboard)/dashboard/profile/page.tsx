@@ -10,6 +10,7 @@ import { DailyLogList } from "@/components/ui/daily-log-list"
 import { UserApproval } from "@/components/features/user-approval"
 import { UserSearch } from "@/components/ui/user-search"
 import { UserProfileView } from "@/components/ui/user-profile-view"
+import { UserMediaHeader } from "@/components/features/user-media-header"
 import { ProfilePictureUpload } from "@/components/forms/profile-picture-upload"
 import { UserProfileForm } from "@/components/forms/user-profile-form"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -136,6 +137,13 @@ function ProfilePageContent() {
                 </div>
               </CardHeader>
               <CardContent>
+                <UserMediaHeader
+                  userId={user.id}
+                  userName={user.name}
+                  bannerKey={user.bannerKey}
+                  canEdit
+                  onBannerChange={(bannerKey) => setUser({ ...user, bannerKey })}
+                />
                 <div className="flex items-center space-x-4">
                   <Avatar className="h-16 w-16">
                     <AvatarImage 

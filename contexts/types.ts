@@ -14,6 +14,8 @@ export interface User {
   currentWeekHours: number;
   bio?: string | null;
   avatar?: string | null;
+  /** V5-3 (DEC-137): chave da capa do perfil no bucket (`users/<id>/images/banner`). */
+  bannerKey?: string | null;
   profileVisibility: "public" | "private" | "members_only";
   badges?: UserBadge[];
   createdAt: Date;

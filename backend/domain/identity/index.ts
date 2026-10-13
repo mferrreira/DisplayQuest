@@ -39,3 +39,10 @@ export { resolveUserListVisibility, type UserListVisibility } from "./user-visib
 export { SELF_EDITABLE_USER_FIELDS, filterSelfEditableUserFields } from "./user-edit-fields";
 export { CREATE_USER_DENIED_MESSAGE, PENDING_MODERATION_DENIED_MESSAGE, PROFILE_DENIED_MESSAGE } from "./user-denied-messages";
 export { toPublicUser, type PublicUser } from "./public-user";
+export {
+  USER_IMAGE_SLOTS,
+  USER_IMAGE_SLOT_MESSAGE,
+  isUserImageSlot,
+  userImagePrefix,
+  type UserImageSlot,
+} from "./user-image-rules";

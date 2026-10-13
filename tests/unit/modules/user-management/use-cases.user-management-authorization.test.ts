@@ -54,12 +54,12 @@ function makeFixture() {
     {
       id: 1, name: "Ana", email: "ana@x.com", points: 0, completedTasks: 0,
       password: "hashed", status: "active", weekHours: 10, currentWeekHours: 0,
-      profileVisibility: "public", bio: null, avatar: null, roles: ["VOLUNTARIO"],
+      profileVisibility: "public", bio: null, avatar: null, bannerKey: null, roles: ["VOLUNTARIO"],
     },
     {
       id: 4, name: "Bruno", email: "bruno@x.com", points: 0, completedTasks: 0,
       password: "hashed", status: "pending", weekHours: 0, currentWeekHours: 0,
-      profileVisibility: "public", bio: null, avatar: null, roles: [],
+      profileVisibility: "public", bio: null, avatar: null, bannerKey: null, roles: [],
     },
   ];
   const writes: string[] = [];
