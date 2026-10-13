@@ -33,6 +33,8 @@ import { ProjectMembersManagement } from "@/components/features/project-members-
 import { ProjectHoursStats } from "@/components/features/project-hours-stats"
 import { ProjectLeaderLogs } from "@/components/features/project-leader-logs"
 import { ProjectReportsPanel } from "@/components/features/project-reports-panel"
+import { ProjectDeliverablesPanel } from "@/components/features/project-deliverables-panel"
+import { ProjectAttachmentsPanel } from "@/components/features/project-attachments-panel"
 import { hasAccess } from "@/lib/utils/utils"
 
 interface ProjectDetailDialogProps {
@@ -149,6 +151,20 @@ export function ProjectDetailDialog({
     Boolean(project.processNumber) ||
     projectPoints > 0
 
+  // V5-2c: quem vê os controles de escrita de entregáveis/anexos. A AUTORIDADE é o servidor
+  // (gate de gestão do projeto nos use cases, DEC-92) — isto só decide o que aparece na tela.
+  // Mesma lista de papéis que `project-members-manager.tsx:30` já usa. Quem gerencia pelo papel
+  // da membership sem ter o papel global vê a lista em leitura e, se tentar escrever, recebe o
+  // 403 do servidor como erro — o diálogo não consulta membership, e adivinhar seria a regra em
+  // duas cópias.
+  const canManageProjectFiles = Boolean(
+    user &&
+      (project.leaderId === user.id ||
+        hasAccess(user.roles, "MANAGE_USERS") ||
+        hasAccess(user.roles, "MANAGE_PROJECTS") ||
+        user.roles.some((role: string) => ["COORDENADOR", "GERENTE", "GERENTE_PROJETO"].includes(role))),
+  )
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -253,6 +269,12 @@ export function ProjectDetailDialog({
                 </CardContent>
               </Card>
             )}
+
+            {/* V5-2c (DEC-61/63/101): entregáveis e anexos. Leitura aberta a quem tem acesso ao
+                projeto (o gate é do use case); a escrita aparece só para quem o diálogo reconhece
+                como gestão, e o servidor decide de verdade. */}
+            <ProjectDeliverablesPanel projectId={project.id} canManage={canManageProjectFiles} />
+            <ProjectAttachmentsPanel projectId={project.id} canManage={canManageProjectFiles} />
 
             {/* Project Statistics */}
             <div className="grid gap-4 md:grid-cols-4">

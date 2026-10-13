@@ -1,4 +1,4 @@
-import { canActorAccessProjectDecision, hasPermission } from "@/backend/domain"
+import { resolveCanActorAccessProject } from "@/backend/modules/project-management/application/use-cases/internal/project-access"
 import type { ProjectActorsPort } from "@/backend/modules/project-management/application/ports/project-actors.port"
 
 /**
@@ -6,6 +6,10 @@ import type { ProjectActorsPort } from "@/backend/modules/project-management/app
  * domain/canActorAccessProjectDecision (MANAGE_USERS/MANAGE_PROJECTS bypass -> membership
  * -> leader/creator). Global roles short-circuit BEFORE any read (frozen: the legacy
  * gateway touched no table for managers).
+ *
+ * V5-2c: o corpo passou a delegar ao `resolveCanActorAccessProject`, a mesma peça que a
+ * leitura de entregáveis e anexos usa. Comportamento inalterado — o que mudou é que deixou de
+ * existir uma segunda cópia da regra para os use cases novos.
  */
 export interface CanActorAccessProjectDependencies {
   actors: ProjectActorsPort
@@ -15,13 +19,11 @@ export class CanActorAccessProjectUseCase {
   constructor(private readonly dependencies: CanActorAccessProjectDependencies) {}
 
   async execute(projectId: number, actorId: number, actorRoles: unknown) {
-    if (hasPermission(actorRoles, "MANAGE_USERS") || hasPermission(actorRoles, "MANAGE_PROJECTS")) {
-      return true
-    }
-
-    const membershipExists = await this.dependencies.actors.membershipExists(projectId, actorId)
-    const relation = await this.dependencies.actors.findProjectRelation(projectId)
-
-    return canActorAccessProjectDecision(actorRoles, actorId, membershipExists, relation)
+    return await resolveCanActorAccessProject(
+      { actors: this.dependencies.actors },
+      projectId,
+      actorId,
+      actorRoles,
+    )
   }
 }

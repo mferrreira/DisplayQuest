@@ -40,16 +40,25 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   S3 responderia como anônimo. `-master.telemetry=false`. O SeaweedFS exige
   **path-style** (`S3_FORCE_PATH_STYLE=true`).
 - **Env por lado:** do host (scripts/testes) `S3_ENDPOINT=http://localhost:8333`; do
-  container do `app`, `http://seaweedfs:8333` — as envs entram no `app` quando o primeiro
-  consumidor existir (V5-2).
+  container do `app`, `http://seaweedfs:8333` — as envs **entram** no `app` desde o V5-2c, que é o
+  primeiro consumidor de produção (`app/api/projects/[id]/attachments/**`).
 - **Seam:** `lib/storage/blob-store.ts` (allowlist de 8 mimes, tetos 5 MB imagem / 20 MB pdf
   / 100 MB vídeo — vídeo é teto provisório, nenhuma tela no plan-v5), port
   `backend/modules/project-management/application/ports/blob-store.port.ts` e adapter
   `infrastructure/adapters/s3-blob-store.ts`. O cliente S3 é **injetável**: a suíte de unit
-  roda sem bucket no ar. Magic bytes entram no V5-2.
+  roda sem bucket no ar. Magic bytes entraram no V5-2c, na peça única `lib/storage/magic-bytes.ts`
+  que os dois seams consomem (DEC-134).
+- **Quem move byte (V5-2c, DEC-133):** a **rota** escreve e lê o objeto pelo seam; o módulo guarda
+  só o metadado (`blobKey`, nome, tipo, tamanho, quem subiu) e a autorização. O `BlobStorePort`
+  **não** está injetado no módulo — os use cases e o roundtrip G4 rodam sem bucket no ar, e a rota
+  responde 503 quando `blobStoreFromEnv()` devolve `null` (ambiente sem `S3_*`). É o desenho já
+  medido em `project-reports`. Consequência de segurança medida: o gate de gestão roda **antes** do
+  corpo ser lido (`AssertCanManageProjectUseCase`) — sem isso, quem não gerencia empurraria bytes
+  ao bucket e só depois receberia o 403.
 - **Gate:** `docker compose up -d` (qualquer serviço) agora exige `S3_ACCESS_KEY` e
-  `S3_SECRET_KEY` no `.env` — `${VAR:?}` falha com mensagem explícita. Nada de produção
-  consome o bucket ainda.
+  `S3_SECRET_KEY` no `.env` — `${VAR:?}` falha com mensagem explícita. Desde o V5-2c o serviço
+  `app` consome o bucket (anexos de projeto); os roots legados de upload continuam servindo
+  avatares e relatórios.
 
 ## Templates oficiais dos documentos (V5-1a, 2026-10-13)
 
@@ -210,12 +219,15 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   cronograma e visualização livre de projetos)**, **DEC-128..130 plan-v5/documentos oficiais (2026-10-13:
   templates viram asset, DOCX preenchido pelo template, AcroForm oficial preenchido)** , **DEC-131 plan-v5
   (2026-10-13, execução do V5-1: o bucket é SeaweedFS, não MinIO — EOL e imagens fora dos registries — e as
-  envs são `S3_*`)** e **DEC-132 plan-v5 (2026-10-13, execução do V5-2b: datas do projeto são data civil
-  `String` como `createdAt`/`dueDate`, período invertido recusado, e `points` não é escrevível pela rota)**.
+  envs são `S3_*`)** , **DEC-132 plan-v5 (2026-10-13, execução do V5-2b: datas do projeto são data civil
+  `String` como `createdAt`/`dueDate`, período invertido recusado, e `points` não é escrevível pela rota)**
+  e **DEC-133/134 plan-v5 (2026-10-13, execução do V5-2c: no caminho de arquivo do projeto a rota move byte
+  e o módulo guarda registro + autorização, com o 403 antes do corpo lido; tabela de magic bytes e nome de
+  exibição viram peça única dos dois seams; `project_attachments.uploadedBy` é a 17ª FK bloqueante)**.
   O V4-4 ia usar
   DEC-61..64 e colidiu; os 28 comentários de código foram renumerados. **Antes de abrir decisão nova, `grep`
   os CINCO `STATE.json` (clean-arch, plan-v3, plan-v4, plan-v5, plan-v6) — a nota antiga que dizia "três"
-  está velha. Próxima livre: DEC-133.**
+  está velha. Próxima livre: DEC-135.**
 - **Subtask (V4-4, DEC-78..83 → regra atual = DEC-97/98):** tabela `task_subtasks` (sem FK para
   `users` — subtask não tem
   responsável próprio), base gravada em `tasks.points` = `10 + 5·n` (DEC-97) e **cada subtask CONCLUÍDA
@@ -253,10 +265,11 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   `KNOWN_DIVERGENCES` ficou vazio. Nenhuma tela
   `.tsx` chamava `deleteUser`. O `DELETE /api/users/[id]` agora **recusa com 409** quando há
   dependência; sem dependência continua excluindo (é o caso "cadastro de teste").
-- **16 das 23 FKs para `users` são `RESTRICT`** (default do Prisma, sem `onDelete`); só 7
+- **17 das 24 FKs para `users` são `RESTRICT`** (default do Prisma, sem `onDelete`); só 7
   cascadeiam (`project_members`, `task_assignees`, `task_user_progress`, `work_sessions`,
-  `weekly_hours_history`, `user_badges.userId`, `notifications`). Se você mexer no schema e
-  adicionar uma FK para `users` **sem** `onDelete`, o guarda
+  `weekly_hours_history`, `user_badges.userId`, `notifications`). A 17ª entrou no V5-2c
+  (`project_attachments.uploadedBy`, DEC-134 — anexo é dado do projeto, não de quem o subiu). Se você
+  mexer no schema e adicionar uma FK para `users` **sem** `onDelete`, o guarda
   `tests/unit/modules/user-management/user-delete-schema-drift.test.ts` falha e nomeia a coluna —
   ele compara o schema com o corpo de `countBlockingDependencies`, porque o `tsc` não protege
   contra tabela esquecida.
@@ -621,6 +634,24 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   `tasks.dueDate`, `projects.startDate`/`endDate`) se formatam por substring, e a aritmética é
   a de `backend/domain/time/civil-day.ts`. Gravar o instantâneo que o `<input type="date">`
   produz reabre exatamente o erro que o plan-v3 fechou.
+- **MSW não serve upload neste ambiente (medido no V5-2c):** o `fetch` que o Vitest injeta no jsdom
+  é o do undici, e ele **não serializa** um `File` do jsdom dentro de um `FormData` —
+  `multipartFormDataParser` falha com `assert(typeof value === "string" && webidl.is.USVString(value)
+  || webidl.is.File(value))` antes de qualquer handler chegar. O teste de painel de anexo usa um
+  `fetch` gravador (`vi.stubGlobal("fetch", …)`) que inspeciona o `FormData` direto — prova campo
+  `file`, nome e tipo do arquivo. O multipart de verdade fica congelado no teste de rota
+  (`tests/unit/api/project-files-routes.test.ts`), que exercita a rota com `NextRequest.formData()`.
+- **Rotas Next 15 recebem `{ params: Promise<…> }` (medido no V5-2c):** chamar o handler com um só
+  argumento no teste dá `Cannot read properties of undefined (reading 'params')`, e o
+  `routeErrorResponse` transforma isso em **500** — os 21 casos do arquivo ficaram vermelhos com
+  "expected 500", que não diz nada do problema. Monte `{ params: Promise.resolve({...}) }` num helper
+  **genérico** (`<T extends Record<string,string>>`), senão o `tsc` recusa o `Record<string,string>`
+  no lugar de `{ id: string }`.
+- **Bytes de controle entram num arquivo novo pelo caminho da escrita, não pelo código (medido no
+  V5-2c):** `\u0000-\u001f` escrito dentro de uma string JSON vira caractere **real** no arquivo
+  gravado, e o `grep` passa a tratar o `.ts` como binário ("Binary file matches"). Conferir por
+  contagem de bytes `< 32` no arquivo; `JSON.stringify` da linha não serve de prova, porque re-escapa
+  o que está cru.
 
 ## Documentação (docs/)
 

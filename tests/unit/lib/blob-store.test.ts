@@ -18,6 +18,9 @@ import {
   validateBlobUpload,
   type BlobS3Client,
 } from "@/lib/storage/blob-store"
+// A tabela de assinatura é peça própria (V5-2c): o seam de relatório e o de bucket consomem
+// a mesma, então o teste também a consome direto da fonte, não através do seam.
+import { magicMatches } from "@/lib/storage/magic-bytes"
 
 interface CommandView {
   name: string
@@ -96,6 +99,41 @@ describe("validateBlobUpload — allowlist + teto por grupo", () => {
     )
     expect(validateBlobUpload({ contentType: "image/png", size: 0 }).error).toContain("vazio")
     expect(validateBlobUpload({ contentType: "image/png", size: Number.NaN }).ok).toBe(false)
+  })
+})
+
+describe("validateBlobUpload — assinatura de conteúdo (V5-2c)", () => {
+  const head = (...bytes: number[]) => new Uint8Array(bytes)
+  const PNG = head(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a)
+  const PDF = head(..."%PDF-1.7".split("").map((c) => c.charCodeAt(0)))
+  const MP4 = head(0x00, 0x00, 0x00, 0x20, ..."ftypisom".split("").map((c) => c.charCodeAt(0)))
+
+  it("cabeça que casa com o tipo declarado passa", () => {
+    expect(validateBlobUpload({ contentType: "image/png", size: 10, head: PNG }).ok).toBe(true)
+    expect(validateBlobUpload({ contentType: "application/pdf", size: 10, head: PDF }).ok).toBe(true)
+    expect(validateBlobUpload({ contentType: "video/mp4", size: 10, head: MP4 }).ok).toBe(true)
+  })
+
+  it("cabeça que não casa é recusada nomeando o tipo declarado", () => {
+    // Um .png renomeado para .pdf: o tipo declarado é pdf, a assinatura é de png.
+    const result = validateBlobUpload({ contentType: "application/pdf", size: 10, head: PNG })
+    expect(result.ok).toBe(false)
+    expect(result.error).toContain("Conteúdo não corresponde ao tipo declarado")
+    expect(result.error).toContain("application/pdf")
+  })
+
+  it("sem cabeça a checagem não acontece (allowlist + tamanho só) — é assim que a suíte roda sem arquivo", () => {
+    expect(validateBlobUpload({ contentType: "application/pdf", size: 10 }).ok).toBe(true)
+  })
+
+  it("a tabela é a MESMA do anexo de relatório, e mime sem assinatura é lista nomeada", () => {
+    // `text/plain` não tem assinatura: passa por decisão explícita, não por default aberto.
+    expect(magicMatches("text/plain", head(0x00, 0x01, 0x02))).toBe(true)
+    // Mime fora da tabela deixa de passar "porque não há regra" (mudança medida do default).
+    expect(magicMatches("application/octet-stream", PNG)).toBe(false)
+    // O que o seam de relatório já aprovava continua aprovado: mesma tabela, um lugar só.
+    expect(magicMatches("image/webp", head(..."RIFF".split("").map((c) => c.charCodeAt(0)), 0, 0, 0, 0, ..."WEBP".split("").map((c) => c.charCodeAt(0))))).toBe(true)
+    expect(magicMatches("video/webm", head(0x1a, 0x45, 0xdf, 0xa3))).toBe(true)
   })
 })
 

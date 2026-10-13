@@ -8,3 +8,4 @@ export type {
   ProjectMembership,
 } from "./Project";
 export * from "./project-rules";
+export * from "./project-files-rules";

@@ -1,4 +1,4 @@
-import { canActorManageProjectDecision } from "@/backend/domain"
+import { canActorAccessProjectDecision, canActorManageProjectDecision, hasPermission } from "@/backend/domain"
 import type { ProjectActorsPort } from "@/backend/modules/project-management/application/ports/project-actors.port"
 import type { ProjectManagementMembershipPort } from "@/backend/modules/project-management/application/ports/project-membership.repository"
 
@@ -20,4 +20,27 @@ export async function resolveCanActorManageProject(
 
   const actor = await dependencies.actors.findActor(actorId)
   return canActorManageProjectDecision(null, actor ? actor.roles : null)
+}
+
+/**
+ * resolveCanActorAccessProject — V5-2c. É a decisão do `CanActorAccessProjectUseCase` exposta
+ * como peça interna, para que a leitura de entregáveis e anexos decida exatamente como a
+ * leitura do projeto: MANAGE_USERS/MANAGE_PROJECTS resolvem antes de qualquer tabela, depois
+ * membership, depois líder/criador. Reescrever a regra dentro de cada use case de leitura é o
+ * modo de falha da autorização divergir entre o projeto e as partes dele.
+ */
+export async function resolveCanActorAccessProject(
+  dependencies: { actors: ProjectActorsPort },
+  projectId: number,
+  actorId: number,
+  actorRoles: unknown,
+): Promise<boolean> {
+  if (hasPermission(actorRoles, "MANAGE_USERS") || hasPermission(actorRoles, "MANAGE_PROJECTS")) {
+    return true
+  }
+
+  const membershipExists = await dependencies.actors.membershipExists(projectId, actorId)
+  const relation = await dependencies.actors.findProjectRelation(projectId)
+
+  return canActorAccessProjectDecision(actorRoles, actorId, membershipExists, relation)
 }

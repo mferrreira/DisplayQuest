@@ -410,6 +410,135 @@ describe("G4 roundtrip — project-management + project-membership (isolated tes
     ).rejects.toThrow("Acesso negado ao projeto");
   });
 
+  it("entregáveis e anexos (V5-2c): CRUD do entregável e metadado do anexo, com os três gates", async () => {
+    const created = await projectModule.createProjectDeliverable({
+      projectId,
+      actorId: coordId,
+      name: "  Relatório parcial  ",
+      quantity: "2", // o formulário manda string; o domínio aparar e converte
+    });
+    expect(created.name).toBe("Relatório parcial");
+    expect(created.quantity).toBe(2);
+    const deliverableRow = await prisma.project_deliverables.findUnique({ where: { id: created.id } });
+    expect(deliverableRow?.projectId).toBe(projectId);
+
+    const defaulted = await projectModule.createProjectDeliverable({
+      projectId,
+      actorId: coordId,
+      name: "Slides",
+    });
+    expect(defaulted.quantity).toBe(1); // "não informei" é 1, não 0 e não erro
+
+    const updated = await projectModule.updateProjectDeliverable({
+      projectId,
+      deliverableId: created.id,
+      actorId: coordId,
+      quantity: 5, // corpo parcial: o nome não mencionado fica
+    });
+    expect(updated.name).toBe("Relatório parcial");
+    expect(updated.quantity).toBe(5);
+
+    // leitura: membro sem papel de gestão vê; quem não é do projeto não vê
+    const list = await projectModule.listProjectDeliverables({
+      projectId,
+      actorId: outsiderId,
+      actorRoles: ["VOLUNTARIO"],
+    });
+    expect(list.map((d) => d.id)).toEqual([created.id, defaulted.id]);
+
+    await expect(
+      projectModule.listProjectDeliverables({
+        projectId,
+        actorId: betoId, // removido da membership no batch acima
+        actorRoles: ["COLABORADOR"],
+      }),
+    ).rejects.toThrow("Usuário não tem acesso a este projeto");
+
+    await expect(
+      projectModule.createProjectDeliverable({ projectId, actorId: outsiderId, name: "X" }),
+    ).rejects.toThrow("Usuário não tem permissão para gerenciar este projeto");
+
+    await expect(
+      projectModule.createProjectDeliverable({
+        projectId,
+        actorId: coordId,
+        name: "X",
+        quantity: "muitas",
+      }),
+    ).rejects.toThrow("Dados inválidos: Quantidade do entregável deve ser um inteiro maior que zero");
+
+    await expect(
+      projectModule.updateProjectDeliverable({
+        projectId,
+        deliverableId: created.id,
+        actorId: coordId,
+        quantity: 0,
+      }),
+    ).rejects.toThrow("Quantidade do entregável deve ser um inteiro maior que zero");
+
+    await projectModule.deleteProjectDeliverable({
+      projectId,
+      deliverableId: defaulted.id,
+      actorId: coordId,
+    });
+    expect(await prisma.project_deliverables.findUnique({ where: { id: defaulted.id } })).toBeNull();
+
+    // Anexo: o módulo escreve só o metadado. A chave é a do bucket, e este roundtrip roda
+    // sem bucket nenhum no ar — é exatamente a separação que o batch decidiu (DEC-101).
+    const blobKey = `projects/${projectId}/attachments/roundtrip.pdf`;
+    const attachment = await projectModule.addProjectAttachment({
+      projectId,
+      actorId: coordId,
+      blobKey,
+      name: "roundtrip.pdf",
+      contentType: "application/pdf",
+      size: 1234,
+    });
+    expect(attachment.uploadedBy).toBe(coordId);
+    expect(attachment.blobKey).toBe(blobKey);
+    const attachmentRow = await prisma.project_attachments.findUnique({ where: { id: attachment.id } });
+    expect(attachmentRow?.blobKey).toBe(blobKey);
+    expect(attachmentRow?.size).toBe(1234);
+
+    const attachments = await projectModule.listProjectAttachments({
+      projectId,
+      actorId: leaderId, // líder sem membership: acessa, não gerencia
+      actorRoles: [],
+    });
+    expect(attachments.map((a) => a.id)).toEqual([attachment.id]);
+
+    await expect(
+      projectModule.addProjectAttachment({
+        projectId,
+        actorId: outsiderId,
+        blobKey: "qualquer/coisa",
+        name: "x.pdf",
+        contentType: "application/pdf",
+        size: 1,
+      }),
+    ).rejects.toThrow("Usuário não tem permissão para gerenciar este projeto");
+
+    await expect(
+      projectModule.addProjectAttachment({
+        projectId,
+        actorId: coordId,
+        blobKey: "qualquer/coisa",
+        name: "   ",
+        contentType: "application/pdf",
+        size: 10,
+      }),
+    ).rejects.toThrow("Dados inválidos: Nome do anexo é obrigatório");
+
+    // remove devolve o registro: é a rota que apaga o objeto, e precisa da chave para isso
+    const removedAttachment = await projectModule.removeProjectAttachment({
+      projectId,
+      attachmentId: attachment.id,
+      actorId: coordId,
+    });
+    expect(removedAttachment.blobKey).toBe(blobKey);
+    expect(await prisma.project_attachments.findUnique({ where: { id: attachment.id } })).toBeNull();
+  });
+
   it("deleteProject: completed status is protected; active can go", async () => {
     await projectModule.updateProject({ projectId, actorId: coordId, data: { status: "completed" as never } });
 

@@ -1,6 +1,13 @@
 import { randomUUID } from "crypto"
 import fs from "node:fs"
 import path from "node:path"
+import { magicMatches, readFileHead } from "./magic-bytes"
+
+// V5-2c: a assinatura de conteúdo e o nome de exibição saíram daqui para `magic-bytes.ts` e
+// `display-name.ts`, porque os anexos de projeto (bucket) precisam das MESMAS regras. A
+// re-exportação mantém os chamadores existentes (`app/api/project-reports/**`) iguais.
+export { sanitizeDisplayName } from "./display-name"
+import { sanitizeDisplayName } from "./display-name"
 
 export const MAX_REPORT_FILE_BYTES = 20 * 1024 * 1024 // 20 MB (D5)
 // A11: raiz privada — fora de public/. Relatórios só são servidos pela rota
@@ -51,40 +58,6 @@ export interface ReportFileValidation {
   error?: string
 }
 
-function magicMatches(mime: string, head: Uint8Array): boolean {
-  const starts = (...bytes: number[]) => bytes.every((b, i) => head[i] === b)
-  const ascii = (offset: number, text: string) =>
-    text.split("").every((ch, i) => head[offset + i] === ch.charCodeAt(0))
-
-  switch (mime) {
-    case "image/png":
-      return starts(0x89, 0x50, 0x4e, 0x47)
-    case "image/jpeg":
-      return starts(0xff, 0xd8, 0xff)
-    case "image/gif":
-      return ascii(0, "GIF8")
-    case "image/webp":
-      return ascii(0, "RIFF") && ascii(8, "WEBP")
-    case "application/pdf":
-      return ascii(0, "%PDF")
-    case "video/mp4":
-    case "video/quicktime":
-      return ascii(4, "ftyp")
-    case "video/webm":
-      return starts(0x1a, 0x45, 0xdf, 0xa3)
-    case "application/msword":
-    case "application/vnd.ms-excel":
-    case "application/vnd.ms-powerpoint":
-      return starts(0xd0, 0xcf, 0x11, 0xe0) // OLE2
-    case "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
-    case "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
-    case "application/vnd.openxmlformats-officedocument.presentationml.presentation":
-      return starts(0x50, 0x4b, 0x03, 0x04) // ZIP
-    default:
-      return true // text/plain & text/csv have no signature
-  }
-}
-
 export async function validateReportFile(file: File): Promise<ReportFileValidation> {
   if (!ALLOWED_MIME.has(file.type)) {
     return { ok: false, error: `Tipo de arquivo não permitido: ${file.type || "desconhecido"}` }
@@ -96,17 +69,12 @@ export async function validateReportFile(file: File): Promise<ReportFileValidati
     return { ok: false, error: `Arquivo vazio (${file.name})` }
   }
 
-  const headBuffer = await file.slice(0, 16).arrayBuffer()
-  if (!magicMatches(file.type, new Uint8Array(headBuffer))) {
+  if (!magicMatches(file.type, await readFileHead(file))) {
     return { ok: false, error: `Conteúdo não corresponde ao tipo declarado (${file.name})` }
   }
   return { ok: true }
 }
 
-export function sanitizeDisplayName(name: string): string {
-  const base = path.basename(name || "arquivo").replace(/[\u0000-\u001f<>:"/\\|?*]/g, "_")
-  return base.slice(0, 255) || "arquivo"
-}
 
 export interface StoredReportFile {
   storedPath: string

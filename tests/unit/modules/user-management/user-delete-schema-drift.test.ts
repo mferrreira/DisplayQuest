@@ -88,9 +88,12 @@ describe("guarda de deriva — as FKs que bloqueiam excluir usuário (DEC-55)", 
   const inSchema = blockingRelationsInSchema();
   const counted = countedRelationsInRepository();
 
-  it("o schema tem as 16 FKs RESTRICT para users que a medição de 2026-10-05 contou", () => {
+  it("o schema tem as 17 FKs RESTRICT para users que a medição contou", () => {
     // Fixa o tamanho da lista: se o número mudar, alguém mexeu no schema e o repositório precisa
     // acompanhar — é exatamente o aviso que este teste existe para dar.
+    // 16 desde 2026-10-05; a 17ª entrou no V5-2c (`project_attachments.uploadedBy`, DEC-61/101):
+    // o anexo é dado do projeto, então apagar quem o subiu continua bloqueado, como o autor de
+    // relatório.
     expect([...inSchema].sort()).toEqual(
       [
         "badges.createdBy",
@@ -100,6 +103,7 @@ describe("guarda de deriva — as FKs que bloqueiam excluir usuário (DEC-55)", 
         "issues.reporterId",
         "lab_events.userId",
         "lab_responsibilities.userId",
+        "project_attachments.uploadedBy",
         "project_reports.authorId",
         "projects.createdBy",
         "projects.leaderId",

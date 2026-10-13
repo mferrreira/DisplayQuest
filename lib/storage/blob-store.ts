@@ -6,6 +6,7 @@ import {
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3"
+import { magicMatches } from "./magic-bytes"
 
 /**
  * V5-1 (DEC-101) — seam de blobs em bucket S3-compatible.
@@ -78,6 +79,12 @@ export function blobExtensionFor(contentType: string): string {
 export interface BlobUploadCandidate {
   contentType: string
   size: number
+  /**
+   * Cabeça do arquivo (até `MAGIC_HEAD_BYTES`). Quando presente, a assinatura é conferida;
+   * quando ausente, a validação é só de allowlist + tamanho — é o que a suíte de unit faz
+   * sem arquivo no ar.
+   */
+  head?: Uint8Array
 }
 
 export interface BlobValidation {
@@ -85,7 +92,10 @@ export interface BlobValidation {
   error?: string
 }
 
-/** Allowlist + teto por tipo. Puro — magic bytes entram junto do upload do V5-2. */
+/**
+ * Allowlist + teto por tipo + assinatura de conteúdo (V5-2c). A tabela de magic bytes é a
+ * mesma do anexo de relatório (`lib/storage/magic-bytes.ts`): dois seams, uma regra.
+ */
 export function validateBlobUpload(input: BlobUploadCandidate): BlobValidation {
   const type = normalizeContentType(input.contentType)
   const rule = BLOB_MIME_RULES[type]
@@ -98,6 +108,9 @@ export function validateBlobUpload(input: BlobUploadCandidate): BlobValidation {
   if (input.size > rule.maxBytes) {
     const mb = Math.round(rule.maxBytes / (1024 * 1024))
     return { ok: false, error: `Arquivo excede o limite de ${mb} MB para ${rule.kind}` }
+  }
+  if (input.head && !magicMatches(type, input.head)) {
+    return { ok: false, error: `Conteúdo não corresponde ao tipo declarado (${type})` }
   }
   return { ok: true }
 }
@@ -266,4 +279,42 @@ export function createS3BlobStore(config: BlobStoreConfig, client?: BlobS3Client
       await s3.send(new DeleteObjectCommand({ Bucket: config.bucket, Key: key }))
     },
   }
+}
+
+/**
+ * Instância do bucket a partir do ambiente, criada na primeira chamada e reaproveitada
+ * enquanto a configuração for a mesma (V5-2c).
+ *
+ * Devolve `null` quando o ambiente não configura o bucket — é o que impede o app inteiro de
+ * quebrar na importação: `getBackendComposition()` roda no topo de toda rota, e um `throw`
+ * aqui derrubava tudo que não usa bucket. Quem consome decide o que fazer com o `null` (a
+ * rota de anexo responde 503).
+ *
+ * A comparação é por valor de configuração, não por identidade: um teste que troca o ambiente
+ * recebe um cliente novo, e a produção não cria um `S3Client` por requisição.
+ */
+let cachedConfig: BlobStoreConfig | null = null
+let cachedStore: BlobStore | null = null
+
+function sameConfig(a: BlobStoreConfig, b: BlobStoreConfig): boolean {
+  return (
+    a.endpoint === b.endpoint &&
+    a.region === b.region &&
+    a.accessKeyId === b.accessKeyId &&
+    a.secretAccessKey === b.secretAccessKey &&
+    a.bucket === b.bucket &&
+    a.forcePathStyle === b.forcePathStyle
+  )
+}
+
+export function blobStoreFromEnv(
+  env: Record<string, string | undefined> = process.env,
+): BlobStore | null {
+  const config = blobStoreConfigFromEnv(env)
+  if (!config) return null
+  if (cachedStore && cachedConfig && sameConfig(cachedConfig, config)) return cachedStore
+
+  cachedConfig = config
+  cachedStore = createS3BlobStore(config)
+  return cachedStore
 }

@@ -51,13 +51,14 @@ plan-v6 (refatoração visual) ──> camada de apresentação só — ordem fr
 - `plan-v4/` nasce do plan-v3 (o dono pediu subtasks e animação de pontos junto);
   `plan-v5/` nasce do desenho completo de domínio de projeto do dono (edital, cronograma,
   pontos de projeto, relatórios técnicos com IA, atestados com AcroForm) — tudo estendendo
-  o que já existe, em ondas revertíveis, com DEC-61..77, DEC-99..104 e DEC-126..132 contínuas
+  o que já existe, em ondas revertíveis, com DEC-61..77, DEC-99..104 e DEC-126..134 contínuas
   da numeração global (DEC-78..98 são do plan-v4 e DEC-105..125 de plan-v6 e
   clean-arch — houve colisão, comentários renumerados). O V5-1 fechou o bucket
   (SeaweedFS no lugar do MinIO, DEC-131), o V5-1a fechou os templates oficiais como asset
-  versionado (`templates/`, guarda de deriva — DEC-128) e o V5-2b abriu os dados do projeto
-  (período, edital, processo, saldo — datas como data civil, DEC-132); o V5-2 foi dividido
-  pelo dono em V5-2b/2c/2d.
+  versionado (`templates/`, guarda de deriva — DEC-128), o V5-2b abriu os dados do projeto
+  (período, edital, processo, saldo — datas como data civil, DEC-132) e o V5-2c pôs entregáveis e
+  anexos do projeto no bucket — primeiro consumidor de produção do seam (DEC-133/134); o V5-2 foi
+  dividido pelo dono em V5-2b/2c/2d.
 - `plan-v6/` nasce da leitura da interface real contra as referências da skill
   `displayquest-ui` (`.opencode/skills/displayquest-ui/`): é **spec-driven** (a pasta
   tem `SPEC.md` como fonte de verdade do comportamento + `PLAN.md` da ordem +

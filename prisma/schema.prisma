@@ -45,6 +45,9 @@ model users {
   work_sessions        work_sessions[]        @relation("UserWorkSessions")
   notifications        notifications[]        @relation("UserNotifications")
   projectReports       project_reports[]      @relation("ProjectReportAuthor")
+  // V5-2c: quem subiu um anexo do projeto. RESTRICT (sem onDelete) — ver o comentário no
+  // model `project_attachments`; a guarda user-delete-schema-drift.test.ts confere os dois lados.
+  projectAttachments   project_attachments[]  @relation("ProjectAttachmentUploader")
 }
 
 model projects {
@@ -71,6 +74,39 @@ model projects {
   tasks       tasks[]           @relation("ProjectTasks")
   work_sessions work_sessions[] @relation("WorkSessionProject")
   project_reports project_reports[] @relation("ProjectReports")
+  deliverables project_deliverables[] @relation("ProjectDeliverables")
+  attachments  project_attachments[]   @relation("ProjectAttachments")
+}
+
+// V5-2c (DEC-61/63): entregável é (nome, quantidade) — a lista do que o projeto entrega.
+// Sem FK para users: entregável não tem responsável próprio (mesma escolha de task_subtasks).
+model project_deliverables {
+  id        Int      @id @default(autoincrement())
+  projectId Int
+  name      String
+  quantity  Int      @default(1)
+  createdAt DateTime @default(now())
+  project   projects @relation("ProjectDeliverables", fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+}
+
+// V5-2c (DEC-101): o binário mora no bucket (`blobKey` é a chave), nunca em disco do backend.
+// `uploadedBy` é RESTRICT de propósito, como `project_reports.authorId`: o anexo é dado do
+// projeto, não de quem subiu — excluir o usuário não pode apagar o que o projeto entregou.
+model project_attachments {
+  id          Int      @id @default(autoincrement())
+  projectId   Int
+  blobKey     String   @unique
+  name        String
+  contentType String
+  size        Int
+  uploadedBy  Int
+  uploadedAt  DateTime @default(now())
+  project     projects @relation("ProjectAttachments", fields: [projectId], references: [id], onDelete: Cascade)
+  uploader    users    @relation("ProjectAttachmentUploader", fields: [uploadedBy], references: [id])
+
+  @@index([projectId])
 }
 
 model project_members {

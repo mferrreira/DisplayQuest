@@ -68,11 +68,21 @@ services:
       - NEXTAUTH_URL=http://localhost:3000
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:?Defina NEXTAUTH_SECRET no ambiente/.env}
       - NODE_ENV=production
+      # V5-2c (DEC-101/131): primeiro consumidor de produção do bucket. Dentro da rede do
+      # compose o endereço é o nome do serviço, não localhost — a partir do host/scripts é
+      # http://localhost:8333 (ver docker-compose.override.yml). O SeaweedFS exige path-style.
+      - S3_ENDPOINT=http://seaweedfs:8333
+      - S3_BUCKET=${S3_BUCKET:-displayquest}
+      - S3_ACCESS_KEY=${S3_ACCESS_KEY:?Defina S3_ACCESS_KEY no ambiente/.env}
+      - S3_SECRET_KEY=${S3_SECRET_KEY:?Defina S3_SECRET_KEY no ambiente/.env}
+      - S3_FORCE_PATH_STYLE=${S3_FORCE_PATH_STYLE:-true}
     volumes:
       - uploads_data:/app/public/uploads
       - report_files_data:/app/data/uploads
     depends_on:
       postgres:
+        condition: service_healthy
+      seaweedfs:
         condition: service_healthy
     networks:
       - display-quest-network

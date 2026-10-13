@@ -119,6 +119,9 @@ export class PrismaUserRepository implements UserRepositoryPort {
       prisma.daily_logs.count({ where: { userId: userId } }),
       prisma.weekly_reports.count({ where: { userId: userId } }),
       prisma.project_reports.count({ where: { authorId: userId } }),
+      // V5-2c: anexo de projeto é dado do projeto, não do usuário — coluna escrita por extenso
+      // de propósito, a guarda user-delete-schema-drift.test.ts não reconhece `{ userId }`.
+      prisma.project_attachments.count({ where: { uploadedBy: userId } }),
       prisma.user_schedules.count({ where: { userId: userId } }),
       prisma.history.count({ where: { performedBy: userId } }),
       prisma.lab_events.count({ where: { userId: userId } }),
