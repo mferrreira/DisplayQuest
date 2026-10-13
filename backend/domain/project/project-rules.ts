@@ -23,6 +23,7 @@
  */
 import { hasPermission } from "../identity";
 import type { Role } from "../identity";
+import { civilDayOfDate } from "../time/civil-day";
 
 // ---------------------------------------------------------------------------
 // Role constants (frozen from the gateways)
@@ -119,12 +120,50 @@ export interface ProjectRecordLike {
   leaderId?: number | null;
   status: string;
   links?: unknown;
+  // V5-2b (DEC-61/63): datas civis `YYYY-MM-DD` e texto de cadastro; `points` é lido aqui e
+  // escrito por use case de economia, nunca pela rota de atualização.
+  startDate?: string | null;
+  endDate?: string | null;
+  editalNumber?: string | null;
+  processNumber?: string | null;
+  points?: number;
+}
+
+/** Teto dos campos de texto novos, o mesmo do nome do projeto. */
+export const PROJECT_TEXT_FIELD_MAX_LENGTH = 100;
+
+/**
+ * Normaliza o valor de uma data de projeto para **data civil** `YYYY-MM-DD`.
+ *
+ * O formulário envia `YYYY-MM-DD` (o mesmo `<input type="date">` do quadro). Um instantâneo
+ * ISO entra pelo caminho do dia civil de America/Sao_Paulo, porque é assim que o resto do
+ * plano lê calendário (`civil-day.ts`, DEC-31): `2026-10-14T02:00:00.000Z` ainda é 13/10 em
+ * São Paulo, e gravar o texto cru faria o V5-11 mostrar o dia errado.
+ *
+ * Valor sem leitura válida é devolvido cru, não `null`: `null` significa "sem data", que é um
+ * estado legítimo e diferente. A validação recusa o cru nomeando o campo.
+ */
+export function normalizeProjectDateField(value: unknown): string | null {
+  if (value === null || value === undefined) return null;
+  const text = String(value).trim();
+  if (text === "") return null;
+  return civilDayOfDate(text) ?? text;
+}
+
+/** Texto de cadastro: aparado, e vazio vira `null` (como a descrição). */
+export function normalizeProjectTextField(value: unknown): string | null {
+  if (value === null || value === undefined) return null;
+  const text = String(value).trim();
+  return text === "" ? null : text;
 }
 
 /**
  * updateProject field assignment (gateway :119-134): undefined fields untouched; name
  * String()-coerced; falsy description -> null; status/links assigned as-is; leaderId set
  * (conflict checked separately by the use case BEFORE this runs).
+ *
+ * V5-2b acrescenta os campos de dados, normalizados. `points` fica fora de propósito: a
+ * regra 6 do plano não aceita `UPDATE` direto de UI (DEC-63/74).
  */
 export function applyProjectUpdate<T extends ProjectRecordLike>(project: T, data: Record<string, unknown>): T {
   const next = { ...project };
@@ -133,16 +172,15 @@ export function applyProjectUpdate<T extends ProjectRecordLike>(project: T, data
   if (data.status !== undefined) next.status = data.status as string;
   if (data.links !== undefined) next.links = data.links;
   if (data.leaderId !== undefined) next.leaderId = data.leaderId as number | null;
+  if (data.startDate !== undefined) next.startDate = normalizeProjectDateField(data.startDate);
+  if (data.endDate !== undefined) next.endDate = normalizeProjectDateField(data.endDate);
+  if (data.editalNumber !== undefined) next.editalNumber = normalizeProjectTextField(data.editalNumber);
+  if (data.processNumber !== undefined) next.processNumber = normalizeProjectTextField(data.processNumber);
   return next;
 }
 
 /** Verbatim copy of ProjectRepository.validateProject (repositories/ProjectRepository.ts:298-320). */
-export function validateProjectInput(project: {
-  name?: string;
-  description?: string | null;
-  createdBy?: number;
-  status?: string;
-}): string[] {
+export function validateProjectInput(project: Partial<ProjectRecordLike>): string[] {
   const errors: string[] = [];
 
   if (!project.name || project.name.trim().length === 0) {
@@ -161,6 +199,36 @@ export function validateProjectInput(project: {
 
   if (!["active", "completed", "archived", "on_hold"].includes(String(project.status))) {
     errors.push("Status do projeto inválido");
+  }
+
+  // V5-2b: período e cadastro. Lidos pelo mesmo `civilDayOfDate` da premiação, para "data
+  // inválida" significar a mesma coisa nos dois lados do plano.
+  const startDate = project.startDate ?? null;
+  const endDate = project.endDate ?? null;
+  const startDay = startDate === null ? null : civilDayOfDate(startDate);
+  const endDay = endDate === null ? null : civilDayOfDate(endDate);
+
+  if (startDate !== null && startDay === null) {
+    errors.push("Data de início do projeto inválida");
+  }
+  if (endDate !== null && endDay === null) {
+    errors.push("Data de término do projeto inválida");
+  }
+  // Comparar `YYYY-MM-DD` na ordem do texto é comparar o calendário: só vale depois de
+  // confirmar que os dois lados são dias civis reais (os inválidos já foram recusados acima).
+  if (startDay !== null && endDay !== null && endDay < startDay) {
+    errors.push("Data de término do projeto não pode ser anterior à data de início");
+  }
+
+  if (project.editalNumber && project.editalNumber.length > PROJECT_TEXT_FIELD_MAX_LENGTH) {
+    errors.push(
+      `Número de edital do projeto não pode ter mais de ${PROJECT_TEXT_FIELD_MAX_LENGTH} caracteres`,
+    );
+  }
+  if (project.processNumber && project.processNumber.length > PROJECT_TEXT_FIELD_MAX_LENGTH) {
+    errors.push(
+      `Número de processo do projeto não pode ter mais de ${PROJECT_TEXT_FIELD_MAX_LENGTH} caracteres`,
+    );
   }
 
   return errors;

@@ -136,6 +136,11 @@ describe("G4 roundtrip — project-management + project-membership (isolated tes
     expect(row?.createdBy).toBe(coordId);
     expect(row?.leaderId).toBe(leaderId);
     expect(row?.createdAt).toMatch(/^\d{4}-\d{2}-\d{2}T/); // projects.createdAt is a String column (frozen schema)
+    // V5-2b: migration nullable, sem backfill — projeto criado sem os campos novos nasce
+    // sem período e com o saldo do default da coluna.
+    expect(row?.startDate).toBeNull();
+    expect(row?.endDate).toBeNull();
+    expect(row?.points).toBe(0);
 
     const memberships = await prisma.project_members.findMany({ where: { projectId } });
     const byUser = new Map(memberships.map((m) => [m.userId, m.roles]));
@@ -144,6 +149,53 @@ describe("G4 roundtrip — project-management + project-membership (isolated tes
     expect(byUser.get(leaderId)).toEqual(["GERENTE_PROJETO"]); // leader !== actor
     expect(byUser.get(anaId)).toEqual(["VOLUNTARIO"]); // deduped, once
     expect(byUser.get(betoId)).toEqual(["VOLUNTARIO"]);
+  });
+
+  it("campos de dados do projeto (V5-2b): data civil normalizada, edital/processo, e `points` fora do update", async () => {
+    const updated = await projectModule.updateProject({
+      projectId,
+      actorId: coordId,
+      data: {
+        startDate: "2026-02-01",
+        endDate: "2026-10-14T02:00:00.000Z", // ainda 13/10 em America/Sao_Paulo
+        editalNumber: "EDITAL 12/2026",
+        processNumber: "IFNMG-2026/0042",
+        points: 99999, // ignorado de propósito: regra 6 do plano (DEC-63/74)
+      },
+    });
+    expect(updated.startDate).toBe("2026-02-01");
+    expect(updated.endDate).toBe("2026-10-13");
+    expect(updated.editalNumber).toBe("EDITAL 12/2026");
+    expect(updated.processNumber).toBe("IFNMG-2026/0042");
+    expect(updated.points).toBe(0);
+
+    const row = await prisma.projects.findUnique({ where: { id: projectId } });
+    expect(row?.startDate).toBe("2026-02-01");
+    expect(row?.endDate).toBe("2026-10-13"); // gravado como dia civil, não como o ISO que entrou
+    expect(row?.points).toBe(0);
+
+    await expect(
+      projectModule.updateProject({ projectId, actorId: coordId, data: { startDate: "2026-02-29" } }),
+    ).rejects.toThrow("Dados inválidos: Data de início do projeto inválida");
+
+    await expect(
+      projectModule.updateProject({
+        projectId,
+        actorId: coordId,
+        data: { startDate: "2026-12-20", endDate: "2026-02-01" },
+      }),
+    ).rejects.toThrow("Data de término do projeto não pode ser anterior à data de início");
+
+    // Limpar um campo não toca nos demais (o record do update vem do findById).
+    const cleared = await projectModule.updateProject({
+      projectId,
+      actorId: coordId,
+      data: { startDate: "", editalNumber: "" },
+    });
+    expect(cleared.startDate).toBeNull();
+    expect(cleared.editalNumber).toBeNull();
+    expect(cleared.endDate).toBe("2026-10-13");
+    expect(cleared.processNumber).toBe("IFNMG-2026/0042");
   });
 
   it("listProjectsForActor: COLABORADOR (MANAGE_TASKS) sees ALL; Ana sees her project", async () => {

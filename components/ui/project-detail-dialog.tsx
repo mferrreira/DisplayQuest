@@ -129,6 +129,26 @@ export function ProjectDetailDialog({
     return users.find((u) => u.id === Number(userId))?.name || `Usuário #${userId}`
   }
 
+  // Data civil `YYYY-MM-DD` → `DD/MM/AAAA`. Montado por substring de propósito:
+  // `new Date("2026-10-13")` é meia-noite UTC e viraria 12/10 no fuso do laboratório
+  // (o mesmo erro que o plan-v3 fechou em `backend/domain/time/civil-day.ts`).
+  const formatCivilDay = (value?: string | null) => {
+    if (!value) return null
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return value
+    const [year, month, day] = value.split("-")
+    return `${day}/${month}/${year}`
+  }
+
+  const projectStartDate = formatCivilDay(project.startDate)
+  const projectEndDate = formatCivilDay(project.endDate)
+  const projectPoints = project.points ?? 0
+  const hasProjectData =
+    projectStartDate !== null ||
+    projectEndDate !== null ||
+    Boolean(project.editalNumber) ||
+    Boolean(project.processNumber) ||
+    projectPoints > 0
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -183,6 +203,53 @@ export function ProjectDetailDialog({
                 </CardHeader>
                 <CardContent>
                   <p className="text-muted-foreground">{project.description}</p>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* V5-2b: dados do projeto (período, edital, processo, saldo). Só aparece quando
+                a instância tem algum deles preenchido — projeto antigo não vira muro de zeros. */}
+            {hasProjectData && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Calendar className="h-5 w-5" />
+                    Dados do projeto
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <dl className="grid gap-3 sm:grid-cols-2">
+                    {projectStartDate && (
+                      <div>
+                        <dt className="text-sm text-muted-foreground">Início</dt>
+                        <dd className="font-medium">{projectStartDate}</dd>
+                      </div>
+                    )}
+                    {projectEndDate && (
+                      <div>
+                        <dt className="text-sm text-muted-foreground">Término</dt>
+                        <dd className="font-medium">{projectEndDate}</dd>
+                      </div>
+                    )}
+                    {project.editalNumber && (
+                      <div>
+                        <dt className="text-sm text-muted-foreground">Número do edital</dt>
+                        <dd className="font-medium">{project.editalNumber}</dd>
+                      </div>
+                    )}
+                    {project.processNumber && (
+                      <div>
+                        <dt className="text-sm text-muted-foreground">Número do processo</dt>
+                        <dd className="font-medium">{project.processNumber}</dd>
+                      </div>
+                    )}
+                    {projectPoints > 0 && (
+                      <div>
+                        <dt className="text-sm text-muted-foreground">Pontos do projeto</dt>
+                        <dd className="font-medium">{projectPoints} pts</dd>
+                      </div>
+                    )}
+                  </dl>
                 </CardContent>
               </Card>
             )}

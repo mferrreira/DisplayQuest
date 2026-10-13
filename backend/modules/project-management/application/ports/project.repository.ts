@@ -17,6 +17,12 @@ export interface ProjectRecord {
   links?: unknown;
   memberCount?: number;
   members?: ProjectMemberSummary[];
+  /** V5-2b (DEC-61/63): datas civis `YYYY-MM-DD`, texto de cadastro e saldo do projeto. */
+  startDate?: string | null;
+  endDate?: string | null;
+  editalNumber?: string | null;
+  processNumber?: string | null;
+  points?: number;
 }
 
 /** Input for the create write (createdAt already stamped by the use case). */
@@ -28,6 +34,11 @@ export interface NewProjectInput {
   leaderId: number | null;
   status: string;
   links: unknown;
+  /** V5-2b. `points` não entra: o saldo nasce do default da coluna (DEC-63/74, regra 6). */
+  startDate: string | null;
+  endDate: string | null;
+  editalNumber: string | null;
+  processNumber: string | null;
 }
 
 export interface ProjectRepositoryPort {

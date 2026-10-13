@@ -41,6 +41,18 @@ export interface IProject {
   links?: ProjectLink[] | null;
   memberCount?: number;
   members?: ProjectMemberSummary[];
+  /**
+   * V5-2b (DEC-61/63). `startDate`/`endDate` são **data civil** `YYYY-MM-DD`, não ISO com
+   * hora: `projects.createdAt` e `tasks.dueDate` já são `String` no schema e a aritmética do
+   * plano é de dias civis em America/Sao_Paulo (`backend/domain/time/civil-day.ts`). Guardar
+   * o instante cru reabre o erro que o plan-v3 fechou (meia-noite UTC virando o dia anterior).
+   * `points` é lido pela UI e escrito só por use case de economia (DEC-63/74, regra 6).
+   */
+  startDate?: string | null;
+  endDate?: string | null;
+  editalNumber?: string | null;
+  processNumber?: string | null;
+  points?: number;
 }
 
 export interface Project extends IProject {

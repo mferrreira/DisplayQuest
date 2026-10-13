@@ -40,6 +40,10 @@ export function ProjectDialog({ open, onOpenChange, project = null }: ProjectDia
     leaderId: null,
     volunteerIds: [],
     links: [],
+    startDate: "",
+    endDate: "",
+    editalNumber: "",
+    processNumber: "",
   })
 
   // Reset form when dialog opens/closes or project changes
@@ -52,6 +56,10 @@ export function ProjectDialog({ open, onOpenChange, project = null }: ProjectDia
         leaderId: project.leaderId ?? null,
         volunteerIds: [],
         links: project.links || [],
+        startDate: project.startDate || "",
+        endDate: project.endDate || "",
+        editalNumber: project.editalNumber || "",
+        processNumber: project.processNumber || "",
       })
       void (async () => {
         try {
@@ -72,6 +80,10 @@ export function ProjectDialog({ open, onOpenChange, project = null }: ProjectDia
         leaderId: null,
         volunteerIds: [],
         links: [],
+        startDate: "",
+        endDate: "",
+        editalNumber: "",
+        processNumber: "",
       })
     }
     setError(null)
@@ -233,6 +245,52 @@ export function ProjectDialog({ open, onOpenChange, project = null }: ProjectDia
                 onChange={handleChange}
                 rows={3}
                 placeholder="Digite a descrição do projeto"
+              />
+            </div>
+
+            {/* V5-2b: período e cadastro do projeto (DEC-61). Data civil, dia a dia. */}
+            <div className="grid gap-2 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <Label htmlFor="startDate">Início do projeto</Label>
+                <Input
+                  id="startDate"
+                  name="startDate"
+                  type="date"
+                  value={formData.startDate || ""}
+                  onChange={handleChange}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="endDate">Término do projeto</Label>
+                <Input
+                  id="endDate"
+                  name="endDate"
+                  type="date"
+                  value={formData.endDate || ""}
+                  onChange={handleChange}
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="editalNumber">Número do edital</Label>
+              <Input
+                id="editalNumber"
+                name="editalNumber"
+                value={formData.editalNumber || ""}
+                onChange={handleChange}
+                placeholder="Ex.: EDITAL 12/2026"
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="processNumber">Número do processo</Label>
+              <Input
+                id="processNumber"
+                name="processNumber"
+                value={formData.processNumber || ""}
+                onChange={handleChange}
+                placeholder="Ex.: IFNMG-2026/0042"
               />
             </div>
 

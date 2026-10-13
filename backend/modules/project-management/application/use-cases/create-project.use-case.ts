@@ -1,4 +1,4 @@
-import { ValidationError, mergeRoles, normalizeVolunteerIds, projectValidationMessage, requireActorPermission, validateProjectInput } from "@/backend/domain"
+import { ValidationError, mergeRoles, normalizeProjectDateField, normalizeProjectTextField, normalizeVolunteerIds, projectValidationMessage, requireActorPermission, validateProjectInput } from "@/backend/domain"
 import type { Role } from "@/backend/domain"
 import type { CreateProjectCommand } from "@/backend/modules/project-management/application/contracts"
 import type { ProjectManagementMembershipPort } from "@/backend/modules/project-management/application/ports/project-membership.repository"
@@ -36,6 +36,12 @@ export class CreateProjectUseCase {
       leaderId: command.data.leaderId ?? null,
       status: command.data.status as string,
       links: command.data.links ?? null,
+      // V5-2b: período e cadastro entram normalizados (data civil), e `points` não entra —
+      // o saldo nasce do default da coluna (DEC-63/74, regra 6 do plano).
+      startDate: normalizeProjectDateField(command.data.startDate),
+      endDate: normalizeProjectDateField(command.data.endDate),
+      editalNumber: normalizeProjectTextField(command.data.editalNumber),
+      processNumber: normalizeProjectTextField(command.data.processNumber),
     }
 
     const errors = validateProjectInput(record)

@@ -15,6 +15,14 @@ export const projectSchema = z.object({
   leaderId: z.number().int().nullable().optional(),
   status: z.string(), // active | completed | archived (plain String column)
   links: z.unknown().nullable().optional(), // Json? — shape owned by backend
+  // V5-2b (DEC-61/63): datas civis `YYYY-MM-DD` (String no schema, como createdAt/dueDate) e
+  // o saldo do projeto. Todos opcionais: o parse não pode quebrar contra uma resposta de uma
+  // instância ainda sem a migration aplicada.
+  startDate: z.string().nullable().optional(),
+  endDate: z.string().nullable().optional(),
+  editalNumber: z.string().nullable().optional(),
+  processNumber: z.string().nullable().optional(),
+  points: z.number().int().optional(),
 });
 export type Project = z.infer<typeof projectSchema>;
 

@@ -41,6 +41,12 @@ export interface Project {
   status: "active" | "completed" | "archived"
   links?: { label: string; url: string }[]
   members?: ProjectMember[]
+  /** V5-2b: datas civis `YYYY-MM-DD` e saldo do projeto (DEC-61/63). */
+  startDate?: string | null
+  endDate?: string | null
+  editalNumber?: string | null
+  processNumber?: string | null
+  points?: number
 }
 
 export interface ProjectMember {
@@ -63,6 +69,11 @@ export interface ProjectFormData {
   leaderId?: number | null
   volunteerIds?: number[]
   links?: { label: string; url: string }[]
+  /** V5-2b: `YYYY-MM-DD` do `<input type="date">`; vazio significa "sem data". */
+  startDate?: string
+  endDate?: string
+  editalNumber?: string
+  processNumber?: string
 }
 
 // Badge types

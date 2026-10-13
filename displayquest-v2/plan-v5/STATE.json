@@ -1,34 +1,34 @@
 {
   "plan": "plan-v5",
   "title": "domínio de projetos maduro: cronograma, pontos, relatórios técnicos, atestados, blobs em bucket S3-compatible (SeaweedFS desde o V5-1, DEC-131)",
-  "version": "5.4.0",
-  "updatedAt": "2026-10-13T12:05:00-03:00",
+  "version": "5.5.0",
+  "updatedAt": "2026-10-13T14:20:00-03:00",
   "status": "in_progress",
-  "activeWave": null,
-  "activeBatch": null,
+  "activeWave": "V5-2",
+  "activeBatch": "V5-2c",
   "awaitingInstruction": false,
   "lineage": {
     "previousPlan": "plan-v4 (subtasks, animação, inativação — done em 2026-10-07, ondas V4-1..V4-5d + V4-6b + POS-1, DEC-78..98)",
     "concurrentPlan": null,
-    "note": "a numeracao de decisoes e GLOBAL: DEC-01..29 clean-arch, DEC-30..49 plan-v3, DEC-50..54 B6/D4, DEC-55..60 plan-v4, DEC-61..77 plan-v5 (2026-10-06), DEC-78..98 plan-v4 (houve colisao nos DEC-61..64 — comentarios renumerados, ver AGENTS.md), DEC-99..104 plan-v5 (2026-10-07), DEC-105..114 plan-v6 (2026-10-07), DEC-115..125 clean-arch/B6-restante+B9+B10 (encerrado 2026-10-08), DEC-126/127 plan-v5 (2026-10-09), DEC-128..130 plan-v5/documentos oficiais (2026-10-13), DEC-131 plan-v5/execucao do V5-1 (2026-10-13, servidor do bucket: SeaweedFS no lugar do MinIO). PROXIMA LIVRE: DEC-132. Antes de abrir DEC nova, grep os CINCO STATE.json (clean-arch, plan-v3, plan-v4, plan-v5, plan-v6)."
+    "note": "a numeracao de decisoes e GLOBAL: DEC-01..29 clean-arch, DEC-30..49 plan-v3, DEC-50..54 B6/D4, DEC-55..60 plan-v4, DEC-61..77 plan-v5 (2026-10-06), DEC-78..98 plan-v4 (houve colisao nos DEC-61..64 — comentarios renumerados, ver AGENTS.md), DEC-99..104 plan-v5 (2026-10-07), DEC-105..114 plan-v6 (2026-10-07), DEC-115..125 clean-arch/B6-restante+B9+B10 (encerrado 2026-10-08), DEC-126/127 plan-v5 (2026-10-09), DEC-128..130 plan-v5/documentos oficiais (2026-10-13), DEC-131 plan-v5/execucao do V5-1 (2026-10-13, servidor do bucket: SeaweedFS no lugar do MinIO), DEC-132 plan-v5/execucao do V5-2b (2026-10-13, datas do projeto como data civil String + periodo invertido recusado). PROXIMA LIVRE: DEC-133. Antes de abrir DEC nova, grep os CINCO STATE.json (clean-arch, plan-v3, plan-v4, plan-v5, plan-v6)."
   },
   "baseline": {
     "measuredAt": "2026-10-13",
-    "measuredOn": "dev, HEAD do V5-1 (dc0af26) + V5-1a — antes do V5-1a os numeros eram os de previousBaseline",
-    "unitAndFeatures": "104 arquivos / 1365 testes (era 103/1352; o V5-1a somou 1 arquivo e 13 testes de guarda de deriva)",
-    "fullSuite": "114 arquivos / 1452 testes (era 113/1439), com dq-dev-test-db no ar e DATABASE_URL na 5433",
+    "measuredOn": "dev, HEAD do V5-1a (15475ba) + V5-2b — antes do V5-2b os numeros eram os de previousBaseline",
+    "unitAndFeatures": "105 arquivos / 1380 testes (era 104/1365; o V5-2b somou 1 arquivo e 15 testes de regra de dominio de projeto)",
+    "fullSuite": "115 arquivos / 1468 testes (era 114/1452), com dq-dev-test-db no ar e DATABASE_URL na 5433",
     "e2e": "quadro: 2 passando + 1 falha conhecida (cartao a mais na coluna, dado legitimo) + 5 did not run (spec serial); shell: 5 passando",
-    "archCheck": "834 modulos / 3392 dependencias, zero violacao, allow-list vazia (era 828/3379)",
+    "archCheck": "835 modulos / 3395 dependencias, zero violacao, allow-list vazia (era 834/3392)",
     "previousBaseline": "2026-10-07: 87/1107, full 97/1192, arch 787/3077 | 2026-10-08 (refactor/b6-restante): 95/1280 e 105/1367 | 2026-10-09: 101/1323, arch 822/3370",
     "timing": "completa em 69 s (unit+features em paralelo, integracao serial); gotcha medido: com o container dq-dev-test-db parado a completa da 10 arquivos / 15 testes falhos — ambiente, nao regressao (docker start dq-dev-test-db)",
     "knownPreExisting": "G2 (npx tsc --noEmit) NAO fecha em 0 nesta branch por 1 erro PRE-EXISTENTE: features/laboratorio/__tests__/floating-timer-tabs.test.tsx:105 usa `exact` em getByRole, que nao existe em ByRoleOptions do @testing-library/dom@10.4.1. Medido em 2026-10-13 e conferido com git stash: identico no HEAD limpo (fora do V5-1, que nao tocou features/). O comportamento em runtime permanece o pretendido pelo comentario do teste."
   },
   "gates": {
-    "G0": "npm run arch:check — exit 0, allow-list VAZIA (baseline 2026-10-13 depois do V5-1a: 834/3392)",
+    "G0": "npm run arch:check — exit 0, allow-list VAZIA (baseline 2026-10-13 depois do V5-2b: 835/3395)",
     "G1": "npm run lint — exit 0 (warnings aceitos, nenhum erro; em worktree: npx eslint --no-eslintrc --config .eslintrc.json <arquivos>)",
     "G2": "npx tsc --noEmit — 0 erros. CONDIÇÃO MEDIDA em 2026-10-13: o dev ja vinha com 1 erro pre-existente em features/laboratorio/__tests__/floating-timer-tabs.test.tsx:105 (`exact` em ByRoleOptions), identico no HEAD limpo — ver baseline.knownPreExisting",
-    "G3": "npx vitest run tests/unit features — zero failure (baseline 2026-10-13 depois do V5-1a: 104/1365)",
-    "G4": "DATABASE_URL=...5433 npx vitest run — suíte completa, só contra dq-dev-test-db (db:test:up + db:test:setup; g4-normalize.sql obrigatório). Baseline 2026-10-13 depois do V5-1a: 114/1452 verde. Runner da casa: scripts/verify.sh (G0..G4 em sequência, com assert-test-db recusando 5432). Migrations: migrate diff offline + migrate deploy, NUNCA migrate dev contra 5432",
+    "G3": "npx vitest run tests/unit features — zero failure (baseline 2026-10-13 depois do V5-2b: 105/1380)",
+    "G4": "DATABASE_URL=...5433 npx vitest run — suíte completa, só contra dq-dev-test-db (db:test:up + db:test:setup; g4-normalize.sql obrigatório). Baseline 2026-10-13 depois do V5-2b: 115/1468 verde. Runner da casa: scripts/verify.sh (G0..G4 em sequência, com assert-test-db recusando 5432). Migrations: migrate diff offline + migrate deploy, NUNCA migrate dev contra 5432",
     "G5": "npm run docs:build + docs:check — obrigatório em V5-2, V5-3, V5-5, V5-6, V5-8, V5-9, V5-10, V5-11",
     "G6": "recapturar telas do guia quando a captura deixa de representar a tela (V5-2 muda o detail do projeto; V5-3 muda perfil e quadro)"
   },
@@ -54,10 +54,34 @@
     {
       "id": "V5-2",
       "title": "dados do projeto + entregáveis + anexos + logo/banner no bucket",
+      "status": "dividido (dono 2026-10-13): executado como V5-2b, V5-2c e V5-2d",
+      "decisions": ["DEC-61", "DEC-63", "DEC-101", "DEC-102", "DEC-132"],
+      "scope": "Escopo inalterado, executado em três commits revertíveis por pedido do dono: V5-2b (migration de campos de dados + UI de criação/edição), V5-2c (project_deliverables + project_attachments no bucket, magic bytes), V5-2d (logoKey/bannerKey + upload/leitura + header do detail estilo Facebook/LinkedIn + G5/G6 da família).",
+      "why": "estender o model existente é o caminho escolhido (DEC-61); o dono pediu imagem/logo + banner na página do projeto (DEC-102). A divisão foi pedida na abertura do batch: o lote inteiro (7 colunas + 2 tabelas + bucket + imagens + docs) era grande demais para um commit revisível."
+    },
+    {
+      "id": "V5-2b",
+      "title": "dados do projeto: período, edital, processo e saldo (schema + UI)",
+      "status": "done",
+      "decisions": ["DEC-61", "DEC-63", "DEC-74", "DEC-132"],
+      "scope": "Migration nullable em projects (startDate, endDate, editalNumber, processNumber, points @default(0)) — sem backfill. Domain: normalizeProjectDateField/normalizeProjectTextField, validateProjectInput com período inválido/invertido, applyProjectUpdate escrevendo os campos e IGNORANDO points. Port/adapter/use case de criação e atualização. Rotas POST/PUT. UI: campos no diálogo criar/editar + card 'Dados do projeto' no detail.",
+      "why": "o dono escolheu estender projects (DEC-61) e campo próprio de pontos (DEC-63); a escolha de tipo das datas (data civil String, como createdAt/dueDate) é a DEC-132, medida contra o erro de fuso que o plan-v3 fechou."
+    },
+    {
+      "id": "V5-2c",
+      "title": "entregáveis + anexos do projeto no bucket (primeiro consumidor do bucket)",
       "status": "pending",
-      "decisions": ["DEC-61", "DEC-63", "DEC-101", "DEC-102"],
-      "scope": "Migration nullable em projects (startDate, endDate, editalNumber, processNumber, points @default(0), logoKey?, bannerKey?); novos project_deliverables (name, quantity) e project_attachments (blob no bucket); upload de logo/banner com validação de imagem (mime, ≤5 MB, magic bytes); header do detail com banner + logo (estilo Facebook/LinkedIn); rota de leitura de imagem com regra de acesso do projeto (default). Campos na UI de criação/edição.",
-      "why": "estender o model existente é o caminho escolhido (DEC-61); o dono pediu imagem/logo + banner na página do projeto (DEC-102)."
+      "decisions": ["DEC-61", "DEC-101", "DEC-131"],
+      "scope": "project_deliverables (name, quantity) e project_attachments (blob no bucket) + use cases e rotas + magic bytes na seam do bucket + wiring do port BlobStorePort no módulo (composition root) + env S3_* entrando no serviço app. Nenhum writeFile novo em disco (regra 12 do plano).",
+      "why": "DEC-101: todo blob novo do plano entra no bucket, atrás de port/seam; o V5-1 deixou o serviço e o seam prontos e este é o primeiro consumidor."
+    },
+    {
+      "id": "V5-2d",
+      "title": "logo + banner do projeto (upload, leitura, header do detail) + G5/G6 da família V5-2",
+      "status": "pending",
+      "decisions": ["DEC-102", "DEC-101"],
+      "scope": "projects.logoKey?/bannerKey? no bucket; upload com validação de imagem (mime, ≤5 MB, magic bytes); rota de leitura com a regra de acesso do projeto; header do detail com banner + logo (estilo Facebook/LinkedIn). Fecha G5 (docs:build + docs:check) e G6 (recapturar projetos, dialogo-novo-projeto e dialogo-detalhe-projeto) para os três sub-batches da família.",
+      "why": "DEC-102: o projeto ganha logo e banner na página/detalhe. A recaptura é uma só no fim da família para não fotografar a mesma tela três vezes."
     },
     {
       "id": "V5-2a",
@@ -169,7 +193,8 @@
     "DEC-128 (dono 2026-10-13, D-Z): os dois templates oficiais que o app precisa usar viram ASSET VERSIONADO em templates/ no repo. Motivo medido: docs/Projeto/ está no .gitignore (linha 185) e é a caixa de entrada do dono; a imagem Docker precisa do arquivo dentro de si. Entram: templates/relatorio-tecnico.docx (oficial, byte-intacto), templates/relatorio-tecnico.tagged.docx (cópia derivada por scripts/tag-report-template.mjs — os sublinhados literais viram comandos docx-templates {{campo}} dentro do MESMO run, sem tocar w:rPr/styles.xml/sectPr, e a cópia nunca é editada à mão) e templates/atestado-frequencia.pdf (AcroForm oficial com 42 campos nomeados — a DEC-130 dizia 39, corrigido na execucao do V5-1a). COPY templates/ no Dockerfile, leitura só — nenhum caminho de escrita novo em disco (evita o EACCES do gotcha A11). Guardas de deriva (mesmo padrão de user-status-vocabulary/user-delete-schema-drift): sha256 dos dois oficiais, lista dos 42 nomes do AcroForm e inventário de comandos via listCommands() da cópia marcada. Sem isso, trocar o arquivo em docs/Projeto/ sem re-derivar passaria silencioso. EXECUTADO no V5-1a (2026-10-13): sha256 DOCX 70a81240…1f75 e PDF ecba8539…1757; 13 comandos; a cópia marcada é derivada de forma determinística (jszip preserva a data das entradas — dois runs dão o mesmo sha256) e o guarda compara a cópia com a derivação do script, não só com uma lista fixa. Dados de exemplo do oficial ('Guilherme de Araújo Carneiro' / 'Bel em Sistemas de Informação') viraram {{estudante_nome}}/{{estudante_curso}}: nome real não pode sair em documento entregue, mesmo com o ASK-V5-06 (quantos relatórios por projeto) em aberto.",
     "DEC-129 (dono 2026-10-13, D-AA): o relatório técnico entrega um DOCX PREENCHIDO a partir do template OFICIAL, nunca um documento gerado do zero. Biblioteca escolhida: docx-templates 4.15.0 (MIT, 2025-12-03, dependências só jszip+sax), que escreve texto DENTRO dos runs que já carregam Times New Roman 12 — o sistema NAO escreve estilo, fonte, tamanho nem margem (w:rPr, styles.xml e sectPr ficam intactos). O arquivo oficial permanece byte-intacto; a versão que recebe dados é a cópia marcada derivada por script (DEC-128). O texto do rascunho de IA entra como texto puro (processLineBreaks) nas 3 tabelas vazias (Descrição das Atividades, Principais Resultados, Comentários Adicionais); o tipo (parcial/técnico-final/final) marca a linha '( ) Relatório Final ( ) Relatório Parcial', que no oficial é texto literal, não campo de formulário. docxtemplater 3.71.0 foi considerada e preterida porque imagem/tabela/html são módulos pagos. O adaptador vive em infrastructure/adapters/ atrás de porta; docx-templates nunca é importado por backend/domain/ (RG-01..RG-06 do G0). CONTRATO MEDIDO no V5-1a (2026-10-13): os comandos `{{campo}}` SÓ são reconhecidos com `cmdDelimiter: ['{{','}}']` — o default da biblioteca é `+++` (listCommands devolve vazio) e o par `['{','}']` QUEBRA a chave dupla (vira dois comandos vazios). O par ancorado está em `CMD_DELIMITER` (scripts/tag-report-template.mjs) e o preenchimento do V5-9 TEM que passar o mesmo. Detalhe de tipo: `listCommands`/`createReport` declaram `template: ArrayBuffer`, não Buffer (o tsc recusa Buffer; copie com `new Uint8Array(buf).buffer`).",
     "DEC-130 (dono 2026-10-13, D-AB): o atestado de frequência PREENCHE o AcroForm OFICIAL pelos 42 nomes de campo medidos (a redação original dizia 39 — CORREÇÃO MEDIDA no V5-1a, 2026-10-13, com @cantoo/pdf-lib: 16 /FT /Tx + 26 /FT /Btn = 42; a enumeração do PLAN.md sempre teve 42 nomes e só a contagem estava errada), em vez de gerar o formulário — revoga a parte 'gerar o AcroForm' da DEC-71. Biblioteca: @cantoo/pdf-lib 2.11.1 (fork mantido, MIT, 2026-09-15, mesma API: getForm/getTextField/getCheckBox/updateFieldAppearances/flatten), porque pdf-lib 1.17.1 está sem release desde 2021-11-06. Fontes de aparência Times (/DA /Times no oficial); flatten() no arquivo entregue (bucket) para o valor não depender de NeedAppearances true. A regra pura (backend/domain/attestation/attestation-fields-rules.ts) monta {campoAcroForm: valor} a partir de projeto+membro+horas+atividades, com status/campos obrigatórios na assinatura (lição do AwardableSubtask/DEC-90); o adapter acroform-attestation.adapter.ts lê templates/atestado-frequencia.pdf e só escreve os 39 nomes. Campos de pessoa ausentes no schema (CPF, matrícula, curso, modalidade, fomento, nível) são o ASK-V5-07.",
-    "DEC-131 (dono 2026-10-13, D-AC/D-AD — execução do V5-1): o servidor S3-compatible é o SeaweedFS (chrislusf/seaweedfs), NÃO o MinIO que a DEC-101 tinha nomeado, e as variáveis são S3_* e não MINIO_*. MOTIVO MEDIDO (2026-10-13): o MinIO está EOL — repositório arquivado em 2026-04-25 (EOL anunciado para fev/2026) — e as imagens OFICIAIS saíram do Docker Hub, do quay.io e do ghcr.io; `docker manifest inspect` falha nos três. Alternativas ainda puxáveis foram medidas (pgsty/minio, dxflrs/garage, bitnamilegacy/minio, cgr.dev/chainguard/minio) mas o dono escolheu o SeaweedFS. O que REVOGA: só o NOME do servidor e o prefixo das envs — o ESCOPO da DEC-101 continua inteiro (bucket desde o V5-1 para todos os blobs NOVOS, atrás de port/seam, allowlist de imagens/pdf/vídeo, os dois roots legados NÃO migram nesta leva, vídeo só infra). Detalhes de implementação: modo `mini` (master+volume+filer+S3 num processo, o modo do entrypoint da imagem); pinado por DIGEST sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d (índice multi-arquitetura; as tags publicadas são latest/dev, sem semver); a identidade S3 é escrita em /tmp/s3.json no entrypoint a partir de S3_ACCESS_KEY/S3_SECRET_KEY (NENHUMA credencial no repositório; sem identidade o S3 responderia como anônimo) com actions Admin/Read/Write; S3_BUCKET cria o bucket; -master.telemetry=false corta o reporte anônimo; S3_FORCE_PATH_STYLE=true porque o SeaweedFS não faz virtual-host style; S3_ACCESS_KEY/S3_SECRET_KEY são obrigatórios no compose (${VAR:?}) e S3_SECRET_KEY entra no npm run check:env com denylist (minioadmin/any/changeme/CHANGE_ME/secret — 'any' é a identidade anônima padrão do SeaweedFS e 'minioadmin' o default publicado do MinIO). Provado contra o servidor real (container com o comando EXATO do compose): put/get/head/remove do seam, chave ausente → null, credencial errada → SignatureDoesNotMatch. As envs de nome MINIO_* que apareciam no plano foram todas trocadas."
+    "DEC-131 (dono 2026-10-13, D-AC/D-AD — execução do V5-1): o servidor S3-compatible é o SeaweedFS (chrislusf/seaweedfs), NÃO o MinIO que a DEC-101 tinha nomeado, e as variáveis são S3_* e não MINIO_*. MOTIVO MEDIDO (2026-10-13): o MinIO está EOL — repositório arquivado em 2026-04-25 (EOL anunciado para fev/2026) — e as imagens OFICIAIS saíram do Docker Hub, do quay.io e do ghcr.io; `docker manifest inspect` falha nos três. Alternativas ainda puxáveis foram medidas (pgsty/minio, dxflrs/garage, bitnamilegacy/minio, cgr.dev/chainguard/minio) mas o dono escolheu o SeaweedFS. O que REVOGA: só o NOME do servidor e o prefixo das envs — o ESCOPO da DEC-101 continua inteiro (bucket desde o V5-1 para todos os blobs NOVOS, atrás de port/seam, allowlist de imagens/pdf/vídeo, os dois roots legados NÃO migram nesta leva, vídeo só infra). Detalhes de implementação: modo `mini` (master+volume+filer+S3 num processo, o modo do entrypoint da imagem); pinado por DIGEST sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d (índice multi-arquitetura; as tags publicadas são latest/dev, sem semver); a identidade S3 é escrita em /tmp/s3.json no entrypoint a partir de S3_ACCESS_KEY/S3_SECRET_KEY (NENHUMA credencial no repositório; sem identidade o S3 responderia como anônimo) com actions Admin/Read/Write; S3_BUCKET cria o bucket; -master.telemetry=false corta o reporte anônimo; S3_FORCE_PATH_STYLE=true porque o SeaweedFS não faz virtual-host style; S3_ACCESS_KEY/S3_SECRET_KEY são obrigatórios no compose (${VAR:?}) e S3_SECRET_KEY entra no npm run check:env com denylist (minioadmin/any/changeme/CHANGE_ME/secret — 'any' é a identidade anônima padrão do SeaweedFS e 'minioadmin' o default publicado do MinIO). Provado contra o servidor real (container com o comando EXATO do compose): put/get/head/remove do seam, chave ausente → null, credencial errada → SignatureDoesNotMatch. As envs de nome MINIO_* que apareciam no plano foram todas trocadas.",
+    "DEC-132 (2026-10-13, execução do V5-2b): as datas do projeto (`projects.startDate`/`endDate`) são **data civil** `YYYY-MM-DD` em coluna `String`, não `DateTime`, e período invertido (término antes do início) é recusado. MOTIVO MEDIDO: `projects.createdAt` e `tasks.dueDate` já são `String` no schema, e a aritmética de calendário da casa é a de `backend/domain/time/civil-day.ts` (DEC-31), que assume America/Sao_Paulo UTC-3 fixo desde 2019. Gravar o instantâneo que o `<input type=\"date\">` produz reabre exatamente o erro que o plan-v3 fechou: `2026-10-14T02:00:00.000Z` ainda é 13/10 no laboratório, e o V5-11 (`data_final − dia_de_hoje`) mostraria o dia errado. Consequências: `normalizeProjectDateField` normaliza na entrada (ISO vira dia civil; texto sem leitura fica cru para a validação nomear o campo em vez de virar null, que significaria 'sem data'), `validateProjectInput` recusa dia inexistente e período invertido, e a comparação de período roda sobre o `YYYY-MM-DD` normalizado. Reversível, mas trocar para `DateTime` exige reescrever a normalização e a leitura do V5-11/V5-5. Registrada junto: `points` NÃO é escrevível pela rota de atualização (regra 6 do plano, DEC-63/74) — `applyProjectUpdate` ignora a chave, congelado em teste de domínio e no roundtrip G4."
   ],
   "batchLog": [
     {
@@ -221,6 +246,31 @@
         "o dir temporario do harness nao resolve bare deps (ERR_MODULE_NOT_FOUND do jszip): sonda/medicao que importa codigo do repo tem que viver DENTRO do repo e ser apagada na mesma linha de comando.",
         "cp -p mantem o mtime do oficial na copia; o sha256 e o que importa para o guarda (mtime nao entra em teste).",
         "DETERMINISMO MEDIDO ERRADO NA PRIMEIRA TENTATIVA: eu comparei dois `npm run templates:tag` seguidos, deu o mesmo sha256 e declarei deterministico. Nao era — o timestamp DOS no zip tem resolucao de 2 s e os dois runs cairam no mesmo tick. Com 3 s de gap o arquivo mudou. A causa: o .docx oficial nao tem entrada de diretorio para `word/`, o jszip sintetiza uma no load com `date: new Date()`, e essa entrada e a unica que varia. Conserto: normalizar a data de TODAS as entradas para a data da entrada original do documento. Guarda: o teste compara a data de cada entrada do zip gerado com a referencia (nao compara dois runs), entao nao depende de timing e nao pode dar falso positivo de novo."
+      ]
+    },
+    {
+      "id": "V5-2b",
+      "at": "2026-10-13",
+      "title": "dados do projeto: período, edital, processo e saldo (DEC-61/63/74/132)",
+      "actions": [
+        "medido antes de escrever: `projects` so tinha name/description/createdAt(String)/createdBy/leaderId/status/links; `tasks.dueDate` e `String?` e a aritmetica de dias civis ja existe em `backend/domain/time/civil-day.ts` (DEC-31). Foi isso que decidiu o tipo das datas novas (DEC-132), e nao `DateTime`.",
+        "regras congeladas ANTES do codigo: `tests/unit/domain/project/project-data-fields.test.ts` (15 testes) — normalizacao de data civil (`YYYY-MM-DD` passa cru, instantaneo ISO vira o dia de Sao Paulo, `2026-02-29` fica cru para a validacao nomear o campo em vez de virar null), recusa de dia inexistente e de periodo invertido, e `applyProjectUpdate` IGNORANDO `points`.",
+        "migration `20261013170158_add_project_data_fields`: diff offline (`--from-schema-datamodel` do HEAD) + `migrate deploy` na 5432 e na 5433, nunca `migrate dev`. Tudo nullable ou com default — nenhuma linha existente tocada, nenhum backfill.",
+        "dominio: `normalizeProjectDateField`/`normalizeProjectTextField` + `PROJECT_TEXT_FIELD_MAX_LENGTH` (100) em `project-rules.ts`; `validateProjectInput` passa a aceitar `Partial<ProjectRecordLike>` (antes era um tipo aberto de 4 campos).",
+        "port/adapter: `ProjectRecord` e `NewProjectInput` ganham os campos; `points` NAO entra em `NewProjectInput` — o saldo nasce do default da coluna. O `update` escreve `?? null` porque o record vem do `findById` + `applyProjectUpdate`, entao nao apaga o que o corpo nao mencionou.",
+        "rotas: POST /api/projects passa a passar startDate/endDate/editalNumber/processNumber; PUT ja passava o corpo inteiro e os campos fluem pelo `applyProjectUpdate`, com `points` ignorado pelo dominio (regra 6 do plano).",
+        "UI: dialog criar/editar ganha Início/Término (`input type=date`) + Número do edital + Número do processo; o detail ganha o card 'Dados do projeto', montado por substring (DD/MM/AAAA) e NAO por `new Date`, e so aparece quando algum campo tem valor (projeto antigo nao vira muro de zeros).",
+        "roundtrip G4 estendido: projeto criado sem os campos nasce `startDate null` e `points 0`; o update grava `2026-10-14T02:00:00.000Z` como `2026-10-13`; `points: 99999` no corpo é ignorado; data inválida e período invertido respondem com a mensagem congelada `Dados inválidos: ...`.",
+        "G5/G6 da familia V5-2 adiados para o fechamento do V5-2d (decidido junto com a divisao do batch): recapturar `projetos`, `dialogo-novo-projeto` e `dialogo-detalhe-projeto` uma vez, com as tres mudancas visiveis dentro.",
+        "instancia real: o dono autorizou subir a instancia. `display-quest-db`, `display-quest` e `display-quest-objects` no ar; o crash loop do app era so o banco parado e acabou quando o postgres subiu."
+      ],
+      "gates": "G0 835/3395 zero violacao, allow-list vazia (era 834/3392) | G1 exit 0 sem erro | G2 1 erro PRE-EXISTENTE (floating-timer-tabs.test.tsx:105 — identico ao baseline; o V5-2b nao acrescentou erro) | G3 105/1380 verde (era 104/1365; +1 arquivo/+15 testes) | G4 completa 115/1468 verde contra dq-dev-test-db (5433)",
+      "gotchas": [
+        "data civil renderizada por `new Date` mente: `new Date('2026-10-13')` é meia-noite UTC e `toLocaleDateString('pt-BR')` no fuso do laboratorio devolve 12/10. Render de `YYYY-MM-DD` é por substring (ou `civilDayOfInstant` para instantaneos). O card do detail faz isso de proposito e o comentario no arquivo diz por que.",
+        "`validateProjectInput` tinha assinatura aberta (`{name?,description?,createdBy?,status?}`); quem passa o record inteiro comeca a esbarrar no excess-property-check do tsc ao misturar literal com spread. Passar a aceitar `Partial<ProjectRecordLike>` resolve sem afrouxar o tipo.",
+        "`prisma generate` NAO alcança processo em execução (gotcha antigo, vale de novo): o container `display-quest` tinha em memoria o client SEM as colunas novas. Antes de fotografar a UI para o G6, rebuildar/reiniciar o app.",
+        "o mock MSW de projects so tem GET — create/update nao sao exercitados no jsdom. Se um teste de UI do formulario entrar, o mock tem que espelhar a rota (licao DEC-90), senao passa verde provando só que o input existe.",
+        "a migration foi aplicada na 5432 (instancia real do dono) porque é aditiva e o entrypoint do app ja roda `migrate deploy` ao subir. Migration que nao é aditiva continua proibida na 5432."
       ]
     }
   ],

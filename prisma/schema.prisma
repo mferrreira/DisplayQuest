@@ -56,6 +56,14 @@ model projects {
   leaderId    Int?
   status      String
   links       Json?
+  // V5-2b (DEC-61/63). Datas civis `YYYY-MM-DD` — mesma decisão de `createdAt`/`dueDate`,
+  // que já são String: a aritmética do plano é de dias civis (backend/domain/time/civil-day).
+  // `points` é o saldo do projeto (DEC-63), escrito só por use case de economia (DEC-74, piso 0).
+  startDate     String?
+  endDate       String?
+  editalNumber  String?
+  processNumber String?
+  points        Int      @default(0)
   daily_logs  daily_logs[]      @relation("ProjectDailyLogs")
   members     project_members[] @relation("ProjectMemberships")
   creator     users             @relation("UserProjects", fields: [createdBy], references: [id])

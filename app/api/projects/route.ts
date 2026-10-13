@@ -65,6 +65,12 @@ export async function POST(request: Request) {
         status: body.status || "active",
         leaderId,
         links: body.links || [],
+        // V5-2b: período e cadastro. Ausente vira null na normalização do use case.
+        // `points` não é aceito aqui: o saldo do projeto é escrito por use case de economia.
+        startDate: body.startDate,
+        endDate: body.endDate,
+        editalNumber: body.editalNumber,
+        processNumber: body.processNumber,
       },
       volunteerIds,
     })

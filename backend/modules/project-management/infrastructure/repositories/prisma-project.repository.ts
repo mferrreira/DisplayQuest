@@ -29,6 +29,11 @@ type ProjectRow = {
   leaderId: number | null
   status: string
   links: unknown
+  startDate: string | null
+  endDate: string | null
+  editalNumber: string | null
+  processNumber: string | null
+  points: number
   members?: Array<{ userId: number; roles?: string[]; user?: { id: number; name: string; email: string; roles: string[] } | null }>
   _count?: { members?: number }
 }
@@ -43,6 +48,11 @@ function toRecord(row: ProjectRow): ProjectRecord {
     leaderId: row.leaderId ?? null,
     status: row.status,
     links: row.links ? row.links : null,
+    startDate: row.startDate ?? null,
+    endDate: row.endDate ?? null,
+    editalNumber: row.editalNumber ?? null,
+    processNumber: row.processNumber ?? null,
+    points: row.points ?? 0,
     memberCount: row._count?.members ?? row.members?.length ?? undefined,
     members: Array.isArray(row.members)
       ? row.members.map(
@@ -100,6 +110,10 @@ export function createPrismaProjectRepository(): ProjectRepositoryPort {
           leaderId: input.leaderId,
           status: input.status as never,
           links: input.links as never,
+          startDate: input.startDate ?? null,
+          endDate: input.endDate ?? null,
+          editalNumber: input.editalNumber ?? null,
+          processNumber: input.processNumber ?? null,
         },
         include: includeOptions,
       })
@@ -117,6 +131,12 @@ export function createPrismaProjectRepository(): ProjectRepositoryPort {
           leaderId: record.leaderId ?? null,
           status: record.status as never,
           links: record.links as never,
+          // O record vem do findById + applyProjectUpdate, então traz os valores atuais:
+          // escrever `?? null` aqui não apaga o que o corpo da requisição não mencionou.
+          startDate: record.startDate ?? null,
+          endDate: record.endDate ?? null,
+          editalNumber: record.editalNumber ?? null,
+          processNumber: record.processNumber ?? null,
         },
         include: includeOptions,
       })

@@ -208,12 +208,14 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   + trava de marcação)**, DEC-99..104 plan-v5, DEC-105..114 plan-v6, **DEC-115..125 clean-arch/B6-restante
   + B9/B10 (encerrado 2026-10-08)**, **DEC-126/127 plan-v5 (2026-10-09: meses marcados na grade do
   cronograma e visualização livre de projetos)**, **DEC-128..130 plan-v5/documentos oficiais (2026-10-13:
-  templates viram asset, DOCX preenchido pelo template, AcroForm oficial preenchido)** e **DEC-131 plan-v5
+  templates viram asset, DOCX preenchido pelo template, AcroForm oficial preenchido)** , **DEC-131 plan-v5
   (2026-10-13, execução do V5-1: o bucket é SeaweedFS, não MinIO — EOL e imagens fora dos registries — e as
-  envs são `S3_*`)**. O V4-4 ia usar
+  envs são `S3_*`)** e **DEC-132 plan-v5 (2026-10-13, execução do V5-2b: datas do projeto são data civil
+  `String` como `createdAt`/`dueDate`, período invertido recusado, e `points` não é escrevível pela rota)**.
+  O V4-4 ia usar
   DEC-61..64 e colidiu; os 28 comentários de código foram renumerados. **Antes de abrir decisão nova, `grep`
   os CINCO `STATE.json` (clean-arch, plan-v3, plan-v4, plan-v5, plan-v6) — a nota antiga que dizia "três"
-  está velha. Próxima livre: DEC-132.**
+  está velha. Próxima livre: DEC-133.**
 - **Subtask (V4-4, DEC-78..83 → regra atual = DEC-97/98):** tabela `task_subtasks` (sem FK para
   `users` — subtask não tem
   responsável próprio), base gravada em `tasks.points` = `10 + 5·n` (DEC-97) e **cada subtask CONCLUÍDA
@@ -613,6 +615,12 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
 - **Enviar env para vitest em worktree:** o runner lê `process.env`, não `.env`, e o `.env`
   tem aspas nos valores. Exportar com `set -a; source .env; set +a; npx vitest run` (o
   `grep/cut` sem aspas também funciona).
+- **Data civil `YYYY-MM-DD` não se renderiza com `new Date` (medido no V5-2b, DEC-132):**
+  `new Date("2026-10-13")` é meia-noite UTC e `toLocaleDateString("pt-BR")` devolve **12/10**
+  no fuso do laboratório. Campos de data do schema que são data civil (`projects.createdAt`,
+  `tasks.dueDate`, `projects.startDate`/`endDate`) se formatam por substring, e a aritmética é
+  a de `backend/domain/time/civil-day.ts`. Gravar o instantâneo que o `<input type="date">`
+  produz reabre exatamente o erro que o plan-v3 fechou.
 
 ## Documentação (docs/)
 
