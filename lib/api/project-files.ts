@@ -5,9 +5,11 @@
  * `{ error }` da rota. Não passa por `lib/api/client.ts` porque os painéis de projeto já
  * vivem neste formato, e o upload é multipart.
  *
- * O `blobKey` existe na resposta da rota e NÃO entra nestes tipos: chave de bucket é detalhe
- * de servidor. O cliente alcança o arquivo pela rota `/file`, que aplica a regra de acesso do
- * projeto.
+ * O `blobKey` de anexo existe na resposta da rota e NÃO entra nestes tipos: chave de bucket de
+ * anexo é detalhe de servidor, e o cliente alcança o arquivo pela rota `/file`, que aplica a
+ * regra de acesso do projeto. Nas imagens é o contrário: `logoKey`/`bannerKey` vêm no payload do
+ * projeto e a tela precisa delas, porque são o que diz se o slot tem imagem e o que quebra o
+ * cache do navegador quando a imagem muda.
  */
 
 export interface ProjectDeliverable {
@@ -135,6 +137,70 @@ export async function deleteProjectAttachment(projectId: number, attachmentId: n
 /** URL do binário, servida pela rota que aplica a regra de acesso do projeto. */
 export function projectAttachmentFileUrl(projectId: number, attachmentId: number): string {
   return `/api/projects/${projectId}/attachments/${attachmentId}/file`
+}
+
+// ---- imagem do projeto (logo/banner) — V5-2d ----
+
+export type ProjectImageSlot = "logo" | "banner"
+
+/**
+ * Estado dos dois slots depois de uma escrita. As chaves vêm do payload do projeto (a mesma
+ * coluna que `GET /api/projects/[id]` devolve) e a tela usa as duas para montar o endereço do
+ * binário e quebrar o cache quando a imagem muda.
+ */
+export interface ProjectImageState {
+  logoKey: string | null
+  bannerKey: string | null
+}
+
+function readImageState(payload: unknown): ProjectImageState {
+  const project = (payload as { project?: { logoKey?: string | null; bannerKey?: string | null } })?.project
+  return { logoKey: project?.logoKey ?? null, bannerKey: project?.bannerKey ?? null }
+}
+
+/**
+ * URL do binário da imagem, servida pela rota que aplica a regra de acesso do projeto. Funciona
+ * num `<img>`: a sessão chega pelo cookie.
+ *
+ * `cacheKey` é a chave do objeto no bucket. A rota de leitura tem `Cache-Control: private` com
+ * dia de validade, e o endereço por slot é sempre o mesmo, então sem o parâmetro o navegador
+ * serviria a imagem velha depois de trocar a imagem. A chave carrega um UUID: muda junto com o
+ * objeto.
+ */
+export function projectImageUrl(
+  projectId: number,
+  slot: ProjectImageSlot,
+  cacheKey?: string | null,
+): string {
+  const path = `/api/projects/${projectId}/images/${slot}/file`
+  return cacheKey ? `${path}?v=${encodeURIComponent(cacheKey)}` : path
+}
+
+export async function uploadProjectImage(
+  projectId: number,
+  slot: ProjectImageSlot,
+  file: File,
+): Promise<ProjectImageState> {
+  const form = new FormData()
+  form.set("file", file)
+  const payload = await request<unknown>(
+    `/api/projects/${projectId}/images/${slot}`,
+    { method: "PUT", body: form },
+    "Erro ao enviar imagem",
+  )
+  return readImageState(payload)
+}
+
+export async function deleteProjectImage(
+  projectId: number,
+  slot: ProjectImageSlot,
+): Promise<ProjectImageState> {
+  const payload = await request<unknown>(
+    `/api/projects/${projectId}/images/${slot}`,
+    { method: "DELETE" },
+    "Erro ao remover imagem",
+  )
+  return readImageState(payload)
 }
 
 /** Tamanho legível na lista: 1,5 MB em vez de 1572864. Decimal com vírgula: a tela é pt-BR. */

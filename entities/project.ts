@@ -23,6 +23,10 @@ export const projectSchema = z.object({
   editalNumber: z.string().nullable().optional(),
   processNumber: z.string().nullable().optional(),
   points: z.number().int().optional(),
+  // V5-2d (DEC-102): chave do objeto no bucket (logo/banner). Opcional: o parse não pode quebrar
+  // contra uma instância ainda sem a migration aplicada.
+  logoKey: z.string().nullable().optional(),
+  bannerKey: z.string().nullable().optional(),
 });
 export type Project = z.infer<typeof projectSchema>;
 

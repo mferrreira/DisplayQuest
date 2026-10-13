@@ -539,6 +539,72 @@ describe("G4 roundtrip — project-management + project-membership (isolated tes
     expect(await prisma.project_attachments.findUnique({ where: { id: attachment.id } })).toBeNull();
   });
 
+  it("imagem do projeto (V5-2d): chave no banco sem bucket no ar, gate de gestão e chave anterior", async () => {
+    const logoKey = `projects/${projectId}/images/logo/primeiro.png`;
+    const first = await projectModule.updateProjectImage({
+      projectId,
+      actorId: coordId,
+      slot: "logo",
+      blobKey: logoKey,
+    });
+    expect(first.previousKey).toBeNull();
+    expect(first.project.logoKey).toBe(logoKey);
+    // O banco guarda a CHAVE. Nenhum byte de bucket existe neste roundtrip: o módulo não conhece
+    // bucket (DEC-133), e é por isso que o G4 roda sem serviço de objetos no ar.
+    expect((await prisma.projects.findUnique({ where: { id: projectId } }))?.logoKey).toBe(logoKey);
+
+    // Trocar: a chave anterior volta no resultado, porque quem apaga o objeto velho é a rota.
+    const nextKey = `projects/${projectId}/images/logo/segundo.png`;
+    const second = await projectModule.updateProjectImage({
+      projectId,
+      actorId: coordId,
+      slot: "logo",
+      blobKey: nextKey,
+    });
+    expect(second.previousKey).toBe(logoKey);
+    expect(second.project.logoKey).toBe(nextKey);
+
+    // `updateProject` não pode apagar a imagem de raspão: o record vem do findById e a adapter
+    // escreve o que já estava.
+    await projectModule.updateProject({ projectId, actorId: coordId, data: { name: "Projeto renomeado" } });
+    expect((await prisma.projects.findUnique({ where: { id: projectId } }))?.logoKey).toBe(nextKey);
+
+    await expect(
+      projectModule.updateProjectImage({
+        projectId,
+        actorId: outsiderId, // membro sem papel de gestão
+        slot: "banner",
+        blobKey: "qualquer/coisa",
+      }),
+    ).rejects.toThrow("Usuário não tem permissão para gerenciar este projeto");
+
+    // Leitura: membro vê a chave; slot vazio responde 404 em vez de servir objeto vazio.
+    const image = await projectModule.getProjectImage({
+      projectId,
+      actorId: outsiderId,
+      actorRoles: ["VOLUNTARIO"],
+      slot: "logo",
+    });
+    expect(image.blobKey).toBe(nextKey);
+    await expect(
+      projectModule.getProjectImage({
+        projectId,
+        actorId: outsiderId,
+        actorRoles: ["VOLUNTARIO"],
+        slot: "banner",
+      }),
+    ).rejects.toThrow("Imagem não encontrada");
+
+    const cleared = await projectModule.updateProjectImage({
+      projectId,
+      actorId: coordId,
+      slot: "logo",
+      blobKey: null, // "tira a imagem": o registro é limpo aqui, o objeto é decisão da rota
+    });
+    expect(cleared.previousKey).toBe(nextKey);
+    expect((await prisma.projects.findUnique({ where: { id: projectId } }))?.logoKey).toBeNull();
+  });
+
   it("deleteProject: completed status is protected; active can go", async () => {
     await projectModule.updateProject({ projectId, actorId: coordId, data: { status: "completed" as never } });
 

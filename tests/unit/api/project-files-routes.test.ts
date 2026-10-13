@@ -1,6 +1,6 @@
 // @vitest-environment node
 /**
- * V5-2c (DEC-61/63/101) — rotas de entregáveis e anexos do projeto.
+ * V5-2c/V5-2d (DEC-61/63/101/102/133/134) — rotas de entregáveis, anexos e imagem do projeto.
  *
  * O módulo é REAL sobre portas falsas (lição do B6-2a: um duplo que devolve o módulo inteiro
  * faz o 403 sumir do teste em vez de falhar). Só duas coisas são dobradas: a sessão e a
@@ -8,13 +8,15 @@
  * os de produção, porque é exatamente neles que o teste quer bater.
  *
  * O que este arquivo congela:
- *   1. A ordem 401 → 404 → 403 → 400, e em anexo o 403 vem ANTES de qualquer byte escrito no
+ *   1. A ordem 401 → 404 → 403 → 400, e em upload o 403 vem ANTES de qualquer byte escrito no
  *      bucket. Sem isso, quem não gerencia o projeto empurra arquivo e só depois é recusado.
  *   2. Que tipo/tamanho/assinatura são decididos pelo seam, não pela rota: um PNG disfarçado
  *      de PDF sai em 400 e nenhum objeto é criado.
  *   3. Que o bucket não é escrito quando a autorização recusa, e que o objeto é removido quando
  *      o registro falha depois do put (compensação).
  *   4. Que id de entregável/anexo de OUTRO projeto responde 404, não "achei e editei".
+ *   5. V5-2d: imagem é só imagem (PDF é blob válido do bucket e não é capa), o slot é uma lista
+ *      fechada, trocar imagem apaga o objeto velho, e o projeto guarda a chave, nunca um caminho.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
@@ -42,12 +44,15 @@ import type { BlobStore } from "@/lib/storage/blob-store";
 
 const mocks = vi.hoisted(() => ({
   session: null as null | { id: number; email: string; name: string; roles: string[]; status: string },
+  projects: new Map<number, ProjectRecord>(),
   deliverables: [] as ProjectDeliverableRecord[],
   attachments: [] as ProjectAttachmentRecord[],
   objects: new Map<string, { body: Uint8Array; contentType: string }>(),
   puts: [] as Array<{ key: string; contentType: string; bytes: number }>,
   removes: [] as string[],
   failAttachmentCreate: false,
+  failProjectUpdate: false,
+  bucketConfigured: true,
   nextId: 100,
 }));
 
@@ -80,6 +85,8 @@ function projectRow(id = 10): ProjectRecord {
     status: "active",
     links: null,
     points: 0,
+    logoKey: null,
+    bannerKey: null,
   };
 }
 
@@ -96,10 +103,20 @@ vi.mock("@/backend/composition/root", () => {
     findByCreatorId: notUsed("projects.findByCreatorId"),
     findByLeaderId: notUsed("projects.findByLeaderId"),
     async findById(id) {
-      return id === 10 ? projectRow(10) : null;
+      return mocks.projects.get(id) ?? null;
     },
     create: notUsed("projects.create"),
-    update: notUsed("projects.update"),
+    // V5-2d: o slot de imagem escreve por aqui. O duplo guarda o que foi escrito, porque os
+    // testes de imagem precisam ver a chave anterior e a nova no mesmo projeto.
+    async update(record) {
+      if (mocks.failProjectUpdate) {
+        throw new Error("falha simulada do banco ao gravar a imagem");
+      }
+      const current = mocks.projects.get(record.id ?? -1) ?? projectRow(record.id ?? -1);
+      const next = { ...current, ...record };
+      mocks.projects.set(next.id ?? -1, next);
+      return next;
+    },
     delete: notUsed("projects.delete"),
   };
 
@@ -228,7 +245,7 @@ vi.mock("@/lib/storage/blob-store", async (importOriginal) => {
       mocks.objects.delete(key);
     },
   };
-  return { ...actual, blobStoreFromEnv: () => store };
+  return { ...actual, blobStoreFromEnv: () => (mocks.bucketConfigured ? store : null) };
 });
 
 import { DELETE as DELETE_ATTACHMENT, GET as GET_ATTACHMENT } from "@/app/api/projects/[id]/attachments/[attachmentId]/route";
@@ -236,6 +253,8 @@ import { GET as GET_ATTACHMENT_FILE } from "@/app/api/projects/[id]/attachments/
 import { GET as LIST_ATTACHMENTS, POST as UPLOAD_ATTACHMENT } from "@/app/api/projects/[id]/attachments/route";
 import { DELETE as DELETE_DELIVERABLE, PUT as PUT_DELIVERABLE } from "@/app/api/projects/[id]/deliverables/[deliverableId]/route";
 import { GET as LIST_DELIVERABLES, POST as CREATE_DELIVERABLE } from "@/app/api/projects/[id]/deliverables/route";
+import { DELETE as DELETE_IMAGE, PUT as UPLOAD_IMAGE } from "@/app/api/projects/[id]/images/[slot]/route";
+import { GET as GET_IMAGE_FILE } from "@/app/api/projects/[id]/images/[slot]/file/route";
 
 const PNG_BYTES = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 const PDF_BYTES = new Uint8Array([..."%PDF-1.7\n".split("").map((c) => c.charCodeAt(0))]);
@@ -271,6 +290,10 @@ const read = async (response: Response) => await response.json();
 
 beforeEach(() => {
   mocks.session = null;
+  mocks.projects = new Map<number, ProjectRecord>([
+    [10, projectRow(10)],
+    [20, projectRow(20)],
+  ]);
   mocks.deliverables = [
     { id: 101, projectId: 10, name: "Relatório parcial", quantity: 1, createdAt: "2026-10-01T12:00:00.000Z" },
     { id: 102, projectId: 20, name: "Entregável de outro projeto", quantity: 3, createdAt: "2026-10-01T12:00:00.000Z" },
@@ -292,6 +315,8 @@ beforeEach(() => {
   mocks.puts = [];
   mocks.removes = [];
   mocks.failAttachmentCreate = false;
+  mocks.failProjectUpdate = false;
+  mocks.bucketConfigured = true;
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
@@ -562,5 +587,190 @@ describe("anexos — o 403 vem antes de qualquer byte no bucket", () => {
     expect(response.status).toBe(403);
     expect(mocks.removes).toEqual([]);
     expect(mocks.attachments).toHaveLength(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// V5-2d (DEC-102) — imagem do projeto (logo/banner)
+// ---------------------------------------------------------------------------
+
+function imageRequest(file: File, slot: string, method = "PUT") {
+  const form = new FormData();
+  form.set("file", file);
+  return new NextRequest(new URL(`/api/projects/10/images/${slot}`, "http://localhost:3000"), {
+    method,
+    body: form,
+  });
+}
+
+function imageContext(slot: string) {
+  return context({ id: "10", slot });
+}
+
+describe("imagem do projeto — logo e banner no bucket", () => {
+  it("sem sessão: 401 antes de tudo", async () => {
+    const response = await UPLOAD_IMAGE(imageRequest(new File([PNG_BYTES], "logo.png", { type: "image/png" }), "logo"), imageContext("logo"));
+    expect(response.status).toBe(401);
+    expect(mocks.puts).toEqual([]);
+  });
+
+  it("slot que não é logo nem banner: 400 com a mensagem do domínio, e nenhum byte no bucket", async () => {
+    login(["COORDENADOR"], 1);
+    const response = await UPLOAD_IMAGE(
+      imageRequest(new File([PNG_BYTES], "logo.png", { type: "image/png" }), "capa"),
+      imageContext("capa"),
+    );
+    expect(response.status).toBe(400);
+    expect(await read(response)).toEqual({ error: "Slot de imagem deve ser logo ou banner" });
+    expect(mocks.puts).toEqual([]);
+  });
+
+  it("quem não gerencia: 403 antes do corpo ser lido, e nenhum byte no bucket", async () => {
+    login(["VOLUNTARIO"], 5); // COLABORADOR: acessa, não gerencia
+    const response = await UPLOAD_IMAGE(
+      imageRequest(new File([PNG_BYTES], "logo.png", { type: "image/png" }), "logo"),
+      imageContext("logo"),
+    );
+    expect(response.status).toBe(403);
+    expect(mocks.puts).toEqual([]);
+    expect(mocks.projects.get(10)?.logoKey).toBeNull();
+  });
+
+  it("subir logo escreve o objeto sob o prefixo do slot e grava a chave no projeto", async () => {
+    login(["COORDENADOR"], 1);
+    const response = await UPLOAD_IMAGE(
+      imageRequest(new File([PNG_BYTES], "logo.png", { type: "image/png" }), "logo"),
+      imageContext("logo"),
+    );
+    expect(response.status).toBe(200);
+    const body = await read(response);
+    expect(body.project.logoKey).toMatch(/^projects\/10\/images\/logo\/[0-9a-f-]+\.png$/);
+    expect(mocks.puts).toHaveLength(1);
+    expect(mocks.puts[0].key.startsWith("projects/10/images/logo/")).toBe(true);
+    expect(mocks.projects.get(10)?.logoKey).toBe(body.project.logoKey);
+  });
+
+  it("trocar a imagem remove o objeto velho depois de o registro apontar para o novo", async () => {
+    login(["COORDENADOR"], 1);
+    const first = await read(
+      await UPLOAD_IMAGE(imageRequest(new File([PNG_BYTES], "a.png", { type: "image/png" }), "banner"), imageContext("banner")),
+    );
+    const second = await read(
+      await UPLOAD_IMAGE(
+        imageRequest(new File([PNG_BYTES], "b.png", { type: "image/png" }), "banner"),
+        imageContext("banner"),
+      ),
+    );
+    expect(second.project.bannerKey).not.toBe(first.project.bannerKey);
+    expect(mocks.removes).toEqual([first.project.bannerKey]);
+    expect(mocks.objects.has(second.project.bannerKey)).toBe(true);
+  });
+
+  it("registro falhando depois do put: o objeto novo é removido, o projeto fica como estava", async () => {
+    login(["COORDENADOR"], 1);
+    mocks.failProjectUpdate = true;
+    const response = await UPLOAD_IMAGE(
+      imageRequest(new File([PNG_BYTES], "logo.png", { type: "image/png" }), "logo"),
+      imageContext("logo"),
+    );
+    expect(response.status).toBe(500);
+    expect(mocks.puts).toHaveLength(1);
+    expect(mocks.removes).toEqual([mocks.puts[0].key]);
+    expect(mocks.objects.size).toBe(1); // só o anexo do cenário, nenhum objeto órfão
+    expect(mocks.projects.get(10)?.logoKey).toBeNull();
+  });
+
+  it("PDF não é imagem de projeto: 400 e nenhum objeto, mesmo sendo blob válido do bucket", async () => {
+    login(["COORDENADOR"], 1);
+    const response = await UPLOAD_IMAGE(
+      imageRequest(new File([PDF_BYTES], "doc.pdf", { type: "application/pdf" }), "logo"),
+      imageContext("logo"),
+    );
+    expect(response.status).toBe(400);
+    expect(await read(response)).toEqual({
+      error: "Tipo de arquivo não permitido para imagem de projeto: application/pdf",
+    });
+    expect(mocks.puts).toEqual([]);
+  });
+
+  it("PNG declarado como JPEG: 400 do seam, nenhum objeto", async () => {
+    login(["COORDENADOR"], 1);
+    const response = await UPLOAD_IMAGE(
+      imageRequest(new File([PNG_BYTES], "disfarçado.jpg", { type: "image/jpeg" }), "banner"),
+      imageContext("banner"),
+    );
+    expect(response.status).toBe(400);
+    expect(await read(response)).toEqual({
+      error: "Conteúdo não corresponde ao tipo declarado (image/jpeg)",
+    });
+    expect(mocks.puts).toEqual([]);
+  });
+
+  it("ambiente sem bucket: 503 nomeando as envs, e o registro não é tocado", async () => {
+    login(["COORDENADOR"], 1);
+    mocks.bucketConfigured = false;
+    const response = await UPLOAD_IMAGE(
+      imageRequest(new File([PNG_BYTES], "logo.png", { type: "image/png" }), "logo"),
+      imageContext("logo"),
+    );
+    expect(response.status).toBe(503);
+    expect(await read(response)).toEqual({
+      error: "Bucket de arquivos não configurado — defina S3_ENDPOINT e S3_BUCKET",
+    });
+    expect(mocks.projects.get(10)?.logoKey).toBeNull();
+  });
+
+  it("ler o arquivo devolve o byte com o tipo do objeto", async () => {
+    login(["COORDENADOR"], 1);
+    const uploaded = await read(
+      await UPLOAD_IMAGE(imageRequest(new File([PNG_BYTES], "logo.png", { type: "image/png" }), "logo"), imageContext("logo")),
+    );
+    const response = await GET_IMAGE_FILE(jsonRequest("GET", "/api/projects/10/images/logo/file"), imageContext("logo"));
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toBe("image/png");
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    expect(Array.from(bytes)).toEqual(Array.from(PNG_BYTES));
+    expect(uploaded.project.logoKey).toBeTruthy();
+  });
+
+  it("ler o arquivo sem acesso ao projeto: 403", async () => {
+    login(["COORDENADOR"], 1);
+    await UPLOAD_IMAGE(imageRequest(new File([PNG_BYTES], "logo.png", { type: "image/png" }), "logo"), imageContext("logo"));
+
+    login(["VOLUNTARIO"], 4);
+    const response = await GET_IMAGE_FILE(jsonRequest("GET", "/api/projects/10/images/logo/file"), imageContext("logo"));
+    expect(response.status).toBe(403);
+  });
+
+  it("slot sem imagem: 404, não um objeto vazio", async () => {
+    login(["COORDENADOR"], 1);
+    const response = await GET_IMAGE_FILE(jsonRequest("GET", "/api/projects/10/images/banner/file"), imageContext("banner"));
+    expect(response.status).toBe(404);
+    expect(await read(response)).toMatchObject({ error: "Imagem não encontrada" });
+  });
+
+  it("remover limpa a coluna e apaga o objeto", async () => {
+    login(["COORDENADOR"], 1);
+    const uploaded = await read(
+      await UPLOAD_IMAGE(imageRequest(new File([PNG_BYTES], "logo.png", { type: "image/png" }), "logo"), imageContext("logo")),
+    );
+    const response = await DELETE_IMAGE(jsonRequest("DELETE", "/api/projects/10/images/logo"), imageContext("logo"));
+    expect(response.status).toBe(200);
+    const body = await read(response);
+    expect(body.project.logoKey).toBeNull();
+    expect(mocks.removes).toEqual([uploaded.project.logoKey]);
+    expect(mocks.projects.get(10)?.logoKey).toBeNull();
+  });
+
+  it("remover sem gestão: 403, coluna e objeto intactos", async () => {
+    login(["COORDENADOR"], 1);
+    const uploaded = await read(
+      await UPLOAD_IMAGE(imageRequest(new File([PNG_BYTES], "logo.png", { type: "image/png" }), "logo"), imageContext("logo")),
+    );
+    login(["VOLUNTARIO"], 5);
+    const response = await DELETE_IMAGE(jsonRequest("DELETE", "/api/projects/10/images/logo"), imageContext("logo"));
+    expect(response.status).toBe(403);
+    expect(mocks.removes).toEqual([]);
+    expect(mocks.projects.get(10)?.logoKey).toBe(uploaded.project.logoKey);
   });
 });

@@ -23,6 +23,12 @@ export interface ProjectRecord {
   editalNumber?: string | null;
   processNumber?: string | null;
   points?: number;
+  /**
+   * V5-2d (DEC-102): chave do objeto no bucket. A coluna guarda a CHAVE, nunca um caminho de
+   * disco, e o binário é lido pelo seam (`lib/storage/blob-store.ts`) na rota de leitura.
+   */
+  logoKey?: string | null;
+  bannerKey?: string | null;
 }
 
 /** Input for the create write (createdAt already stamped by the use case). */

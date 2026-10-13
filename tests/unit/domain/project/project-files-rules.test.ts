@@ -17,8 +17,11 @@ import { describe, expect, it } from "vitest";
 import {
   DELIVERABLE_MAX_QUANTITY,
   DELIVERABLE_NAME_MAX_LENGTH,
+  PROJECT_IMAGE_SLOTS,
+  isProjectImageSlot,
   normalizeDeliverableInput,
   projectAttachmentPrefix,
+  projectImagePrefix,
   validateDeliverableInput,
   validateProjectAttachmentMetadata,
 } from "@/backend/domain";
@@ -110,5 +113,29 @@ describe("anexo do projeto — prefixo da chave e metadado (V5-2c)", () => {
     expect(
       validateProjectAttachmentMetadata({ name: "x".repeat(256), size: 10 }),
     ).toContain("Nome do anexo não pode ter mais de 255 caracteres");
+  });
+});
+
+describe("imagem do projeto — slot e prefixo (V5-2d)", () => {
+  it("slot é lista fechada: logo e banner, nada além", () => {
+    expect(PROJECT_IMAGE_SLOTS).toEqual(["logo", "banner"]);
+    expect(isProjectImageSlot("logo")).toBe(true);
+    expect(isProjectImageSlot("banner")).toBe(true);
+    // "capa" é a palavra que um chamador criativo escreveria. O slot entra na chave do bucket,
+    // então aceita-lo cru deixaria a chave de dizer o que é.
+    expect(isProjectImageSlot("capa")).toBe(false);
+    expect(isProjectImageSlot("LOGO")).toBe(false);
+    expect(isProjectImageSlot(undefined)).toBe(false);
+  });
+
+  it("prefixo carrega o projeto e o slot", () => {
+    expect(projectImagePrefix(7, "logo")).toBe("projects/7/images/logo");
+    expect(projectImagePrefix(7, "banner")).toBe("projects/7/images/banner");
+  });
+
+  it("id inválido não produz prefixo", () => {
+    for (const bad of [0, -1, Number.NaN, 1.5, "12" as unknown as number]) {
+      expect(() => projectImagePrefix(bad, "logo")).toThrow(/projeto inválido/);
+    }
   });
 });

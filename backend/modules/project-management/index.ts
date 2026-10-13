@@ -17,6 +17,8 @@ import { GetProjectAttachmentUseCase } from "@/backend/modules/project-managemen
 import { AddProjectAttachmentUseCase } from "@/backend/modules/project-management/application/use-cases/add-project-attachment.use-case"
 import { RemoveProjectAttachmentUseCase } from "@/backend/modules/project-management/application/use-cases/remove-project-attachment.use-case"
 import { AssertCanManageProjectUseCase } from "@/backend/modules/project-management/application/use-cases/assert-can-manage-project.use-case"
+import { UpdateProjectImageUseCase } from "@/backend/modules/project-management/application/use-cases/update-project-image.use-case"
+import { GetProjectImageUseCase } from "@/backend/modules/project-management/application/use-cases/get-project-image.use-case"
 import type { ProjectActorsPort } from "@/backend/modules/project-management/application/ports/project-actors.port"
 import type { ProjectAttachmentsPort } from "@/backend/modules/project-management/application/ports/project-attachments.repository"
 import type { ProjectDeliverablesPort } from "@/backend/modules/project-management/application/ports/project-deliverables.repository"
@@ -64,6 +66,8 @@ export class ProjectManagementModule {
   readonly addProjectAttachment: UseCaseExecute<AddProjectAttachmentUseCase>
   readonly removeProjectAttachment: UseCaseExecute<RemoveProjectAttachmentUseCase>
   readonly assertCanManageProject: UseCaseExecute<AssertCanManageProjectUseCase>
+  readonly updateProjectImage: UseCaseExecute<UpdateProjectImageUseCase>
+  readonly getProjectImage: UseCaseExecute<GetProjectImageUseCase>
 
   constructor(
     private readonly listProjectsForActorUseCase: ListProjectsForActorUseCase,
@@ -85,6 +89,8 @@ export class ProjectManagementModule {
     private readonly addProjectAttachmentUseCase: AddProjectAttachmentUseCase,
     private readonly removeProjectAttachmentUseCase: RemoveProjectAttachmentUseCase,
     private readonly assertCanManageProjectUseCase: AssertCanManageProjectUseCase,
+    private readonly updateProjectImageUseCase: UpdateProjectImageUseCase,
+    private readonly getProjectImageUseCase: GetProjectImageUseCase,
   ) {
     this.listProjectsForActor = this.listProjectsForActorUseCase.execute.bind(this.listProjectsForActorUseCase)
     this.getProjectById = this.getProjectByIdUseCase.execute.bind(this.getProjectByIdUseCase)
@@ -105,6 +111,8 @@ export class ProjectManagementModule {
     this.addProjectAttachment = this.addProjectAttachmentUseCase.execute.bind(this.addProjectAttachmentUseCase)
     this.removeProjectAttachment = this.removeProjectAttachmentUseCase.execute.bind(this.removeProjectAttachmentUseCase)
     this.assertCanManageProject = this.assertCanManageProjectUseCase.execute.bind(this.assertCanManageProjectUseCase)
+    this.updateProjectImage = this.updateProjectImageUseCase.execute.bind(this.updateProjectImageUseCase)
+    this.getProjectImage = this.getProjectImageUseCase.execute.bind(this.getProjectImageUseCase)
   }
 }
 
@@ -190,6 +198,15 @@ export function createProjectManagementModule(options: ProjectManagementModuleFa
     new AssertCanManageProjectUseCase({
       projects: ports.projects,
       memberships: ports.memberships,
+      actors: ports.actors,
+    }),
+    new UpdateProjectImageUseCase({
+      projects: ports.projects,
+      memberships: ports.memberships,
+      actors: ports.actors,
+    }),
+    new GetProjectImageUseCase({
+      projects: ports.projects,
       actors: ports.actors,
     }),
   )

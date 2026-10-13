@@ -112,3 +112,34 @@ export function validateProjectAttachmentMetadata(metadata: ProjectAttachmentMet
 
   return errors;
 }
+
+// ---------------------------------------------------------------------------
+// Imagem do projeto (projects.logoKey / bannerKey): slot e prefixo — V5-2d (DEC-102)
+// ---------------------------------------------------------------------------
+
+/**
+ * Os dois slots de imagem que o projeto tem. Uma lista fechada porque o slot entra na CHAVE do
+ * bucket: aceita-lo cru significaria `projects/7/images/<qualquer-coisa>` e a chave deixaria de
+ * dizer o que é.
+ */
+export const PROJECT_IMAGE_SLOTS = ["logo", "banner"] as const;
+export type ProjectImageSlot = (typeof PROJECT_IMAGE_SLOTS)[number];
+
+export const PROJECT_IMAGE_SLOT_MESSAGE = "Slot de imagem deve ser logo ou banner";
+
+export function isProjectImageSlot(value: unknown): value is ProjectImageSlot {
+  return typeof value === "string" && (PROJECT_IMAGE_SLOTS as readonly string[]).includes(value);
+}
+
+/**
+ * Prefixo de chave da imagem: `projects/<id>/images/<slot>`.
+ *
+ * O id é conferido aqui pelo mesmo motivo do anexo: o `sanitizeBlobPrefix` do seam só protege
+ * contra traversal, e `projects/0/images/logo` é um caminho perfeitamente bem formado.
+ */
+export function projectImagePrefix(projectId: number, slot: ProjectImageSlot): string {
+  if (!Number.isInteger(projectId) || projectId <= 0) {
+    throw new Error(`projeto inválido para montar prefixo de imagem: ${projectId}`);
+  }
+  return `projects/${projectId}/images/${slot}`;
+}

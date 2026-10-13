@@ -67,6 +67,10 @@ model projects {
   editalNumber  String?
   processNumber String?
   points        Int      @default(0)
+  // V5-2d (DEC-102): chave do objeto no bucket, nunca um caminho de disco (regra 12 do plano).
+  // Uma coluna por slot: "uma logo por projeto" é estrutural, não regra a validar.
+  logoKey       String?
+  bannerKey     String?
   daily_logs  daily_logs[]      @relation("ProjectDailyLogs")
   members     project_members[] @relation("ProjectMemberships")
   creator     users             @relation("UserProjects", fields: [createdBy], references: [id])

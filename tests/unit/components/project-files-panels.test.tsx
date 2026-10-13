@@ -1,12 +1,13 @@
 /**
- * V5-2c — testes de UI dos painéis de entregáveis e anexos do diálogo de projeto.
+ * V5-2c/V5-2d — testes de UI dos painéis de entregáveis e anexos e do cabeçalho de mídia do
+ * projeto.
  *
- * Por que existe: os painéis são a única parte do batch que o `tsc` não cobre, e a lição do
+ * Por que existe: as três telas são a única parte do batch que o `tsc` não cobre, e a lição do
  * V4-5c está registrada — um mock que ignora uma chave do corpo deixa o teste verde provando só
  * que o input existe. Então o substituto de rede aqui CONSUME as funções do domínio
- * (`normalizeDeliverableInput`/`validateDeliverableInput`) e do seam (`validateBlobUpload` +
- * `readFileHead`), em vez de reimplementar a regra (DEC-90). O que se prova é o percurso:
- * painel → cliente → corpo que sai da rota → resposta → tela.
+ * (`normalizeDeliverableInput`/`validateDeliverableInput`) e do seam (`validateBlobUpload`,
+ * `isImageBlobContentType` + `readFileHead`), em vez de reimplementar a regra (DEC-90). O que se
+ * prova é o percurso: painel → cliente → corpo que sai da rota → resposta → tela.
  *
  * Por que a rede é um `fetch` gravador e não MSW (medido ao escrever): o `fetch` que o Vitest
  * injeta no jsdom é o do undici, e ele **não serializa** um `File` do jsdom dentro de um
@@ -22,8 +23,11 @@
  *     montar o Toaster exige `matchMedia`, que o jsdom desta base não tem. O stub é LOCAL a este
  *     arquivo — um shim global em tests/setup.ts mudaria o caminho "mobile" de todos os testes do
  *     quadro (medido no V4-5a).
- *   - `confirm` não existe no jsdom; os dois painéis confirmam antes de apagar.
+ *   - `confirm` não existe no jsdom; os painéis confirmam antes de apagar, o cabeçalho confirma
+ *     antes de tirar a capa.
  *   - `userEvent` cru é lento sob carga paralela (medido no V4-6b): `setup({ delay: null })`.
+ *   - `user.upload` respeita o `accept` do input e descarta o arquivo fora da lista sem disparar
+ *     change (medido no V5-2d): o campo de imagem não deixa PDF chegar à rota.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
@@ -32,12 +36,14 @@ import { Toaster } from "sonner";
 
 import { ProjectAttachmentsPanel } from "@/components/features/project-attachments-panel";
 import { ProjectDeliverablesPanel } from "@/components/features/project-deliverables-panel";
+import { ProjectMediaHeader } from "@/components/features/project-media-header";
 import {
+  PROJECT_IMAGE_SLOT_MESSAGE,
   deliverableValidationMessage,
   normalizeDeliverableInput,
   validateDeliverableInput,
 } from "@/backend/domain";
-import { validateBlobUpload } from "@/lib/storage/blob-store";
+import { isImageBlobContentType, validateBlobUpload } from "@/lib/storage/blob-store";
 import { readFileHead } from "@/lib/storage/magic-bytes";
 
 interface DeliverableRow {
@@ -61,8 +67,10 @@ interface AttachmentRow {
 const mocks = {
   deliverables: [] as DeliverableRow[],
   attachments: [] as AttachmentRow[],
+  project: { logoKey: null as string | null, bannerKey: null as string | null },
   requests: [] as Array<{ method: string; path: string; json?: Record<string, unknown> }>,
   uploads: [] as Array<{ field: string | null; name: string; type: string; size: number }>,
+  removes: [] as string[],
   refuseDeliverableWrite: false,
   nextId: 500,
 };
@@ -86,6 +94,8 @@ function resetStore() {
   ];
   mocks.requests = [];
   mocks.uploads = [];
+  mocks.removes = [];
+  mocks.project = { logoKey: null, bannerKey: null };
   mocks.refuseDeliverableWrite = false;
   mocks.nextId = 500;
 }
@@ -189,6 +199,52 @@ async function recordingFetch(input: unknown, init: RequestInit = {}) {
     return jsonResponse({ attachment: row }, 201);
   }
 
+  if (resource === "images") {
+    // `logo`/`banner` são a lista fechada do domínio; o substituto recusa o resto com a MESMA
+    // mensagem, em vez de inventar uma própria (DEC-90).
+    const slot = segments[5] === "logo" || segments[5] === "banner" ? segments[5] : null;
+    if (!slot) {
+      return jsonResponse({ error: PROJECT_IMAGE_SLOT_MESSAGE }, 400);
+    }
+    const field = slot === "logo" ? "logoKey" : "bannerKey";
+
+    if (method === "DELETE") {
+      const previous = mocks.project[field];
+      mocks.project[field] = null;
+      if (previous) mocks.removes.push(previous);
+      return jsonResponse({ project: { ...mocks.project } });
+    }
+
+    const form = init.body as FormData;
+    const file = form.get("file");
+    mocks.uploads.push({
+      field: form.has("file") ? "file" : null,
+      name: file instanceof File ? file.name : "",
+      type: file instanceof File ? file.type : "",
+      size: file instanceof File ? file.size : 0,
+    });
+    if (!(file instanceof File)) {
+      return jsonResponse({ error: "Arquivo é obrigatório" }, 400);
+    }
+    // Mesmas duas checagens da rota: só imagem, e assinatura conferida pelo seam.
+    if (!isImageBlobContentType(file.type)) {
+      return jsonResponse(
+        { error: `Tipo de arquivo não permitido para imagem de projeto: ${file.type || "desconhecido"}` },
+        400,
+      );
+    }
+    const validation = validateBlobUpload({
+      contentType: file.type,
+      size: file.size,
+      head: await readFileHead(file),
+    });
+    if (!validation.ok) {
+      return jsonResponse({ error: validation.error }, 400);
+    }
+    mocks.project[field] = `projects/7/images/${slot}/novo-${++mocks.nextId}.png`;
+    return jsonResponse({ project: { ...mocks.project } }, 200);
+  }
+
   throw new Error(`rota não prevista pelo gravador: ${method} ${path}`);
 }
 
@@ -244,7 +300,7 @@ describe("painel de entregáveis", () => {
   it("quem não gerencia vê a lista sem nenhum controle de escrita", async () => {
     renderPanels(false);
     expect(await screen.findByText("Relatório parcial")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Adicionar" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Adicionar entregável" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Editar Relatório parcial" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Excluir Relatório parcial" })).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Nome do entregável")).not.toBeInTheDocument();
@@ -258,7 +314,7 @@ describe("painel de entregáveis", () => {
     await user.type(screen.getByLabelText("Nome do entregável"), "Slides da defesa");
     await user.clear(screen.getByLabelText("Unidades"));
     await user.type(screen.getByLabelText("Unidades"), "3");
-    await user.click(screen.getByRole("button", { name: "Adicionar" }));
+    await user.click(screen.getByRole("button", { name: "Adicionar entregável" }));
 
     await waitFor(() => expect(mocks.requests).toHaveLength(1));
     expect(mocks.requests[0]).toMatchObject({
@@ -277,7 +333,7 @@ describe("painel de entregáveis", () => {
 
     await user.type(screen.getByLabelText("Nome do entregável"), "Artigo");
     await user.clear(screen.getByLabelText("Unidades"));
-    await user.click(screen.getByRole("button", { name: "Adicionar" }));
+    await user.click(screen.getByRole("button", { name: "Adicionar entregável" }));
 
     await waitFor(() => expect(mocks.requests).toHaveLength(1));
     // `quantity: undefined` não sobrevive ao JSON: a chave sai do corpo, que é o contrato.
@@ -292,7 +348,7 @@ describe("painel de entregáveis", () => {
     await screen.findByText("Relatório parcial");
 
     await user.type(screen.getByLabelText("Nome do entregável"), "Slides");
-    await user.click(screen.getByRole("button", { name: "Adicionar" }));
+    await user.click(screen.getByRole("button", { name: "Adicionar entregável" }));
 
     expect(
       await screen.findByText("Usuário não tem permissão para gerenciar este projeto"),
@@ -308,7 +364,7 @@ describe("painel de entregáveis", () => {
     await user.click(screen.getByRole("button", { name: "Editar Relatório parcial" }));
     await user.clear(screen.getByLabelText("Nova quantidade"));
     await user.type(screen.getByLabelText("Nova quantidade"), "9");
-    await user.click(screen.getByRole("button", { name: "Salvar" }));
+    await user.click(screen.getByRole("button", { name: "Salvar entregável" }));
 
     expect(await screen.findByText("9 un.")).toBeInTheDocument();
     expect(mocks.requests[0]).toMatchObject({
@@ -342,8 +398,8 @@ describe("painel de anexos", () => {
   it("quem não gerencia não vê o campo de arquivo nem o botão de enviar", async () => {
     renderPanels(false);
     expect(await screen.findByRole("link", { name: /Ata da reunião/ })).toBeInTheDocument();
-    expect(screen.queryByLabelText("Arquivo")).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Enviar" })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Arquivo do anexo")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Enviar anexo" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Excluir Ata da reunião.pdf" })).not.toBeInTheDocument();
   });
 
@@ -353,10 +409,10 @@ describe("painel de anexos", () => {
     await screen.findByRole("link", { name: /Ata da reunião/ });
 
     await user.upload(
-      screen.getByLabelText("Arquivo"),
+      screen.getByLabelText("Arquivo do anexo"),
       new File([PNG_BYTES], "foto do evento.png", { type: "image/png" }),
     );
-    await user.click(screen.getByRole("button", { name: "Enviar" }));
+    await user.click(screen.getByRole("button", { name: "Enviar anexo" }));
 
     await waitFor(() => expect(mocks.uploads).toHaveLength(1));
     expect(mocks.uploads[0]).toEqual({
@@ -375,10 +431,10 @@ describe("painel de anexos", () => {
 
     // PNG com o tipo declarado de PDF: a assinatura é conferida pelo seam, como na rota.
     await user.upload(
-      screen.getByLabelText("Arquivo"),
+      screen.getByLabelText("Arquivo do anexo"),
       new File([PNG_BYTES], "disfarçado.pdf", { type: "application/pdf" }),
     );
-    await user.click(screen.getByRole("button", { name: "Enviar" }));
+    await user.click(screen.getByRole("button", { name: "Enviar anexo" }));
 
     expect(await screen.findByText(/Conteúdo não corresponde ao tipo declarado/)).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /disfarçado/ })).not.toBeInTheDocument();
@@ -393,5 +449,106 @@ describe("painel de anexos", () => {
 
     await waitFor(() => expect(mocks.attachments).toEqual([]));
     expect(await screen.findByText("Nenhum anexo enviado.")).toBeInTheDocument();
+  });
+});
+
+describe("cabeçalho de mídia do projeto", () => {
+  function renderHeader(
+    canManage: boolean,
+    keys: { logoKey?: string | null; bannerKey?: string | null } = {},
+  ) {
+    return render(
+      <>
+        <ProjectMediaHeader
+          projectId={7}
+          projectName="Alpha"
+          logoKey={keys.logoKey ?? null}
+          bannerKey={keys.bannerKey ?? null}
+          canManage={canManage}
+        />
+        <Toaster />
+      </>,
+    );
+  }
+
+  it("sem capa, a tela diz isso em palavras", () => {
+    renderHeader(true);
+    expect(screen.getByText("Sem capa")).toBeInTheDocument();
+    expect(screen.queryByRole("img", { name: "Capa do projeto Alpha" })).not.toBeInTheDocument();
+  });
+
+  it("quem não gerencia vê a capa sem nenhum controle", async () => {
+    mocks.project.bannerKey = "projects/7/images/banner/velha.png";
+    renderHeader(false, { bannerKey: mocks.project.bannerKey });
+
+    const image = await screen.findByRole("img", { name: "Capa do projeto Alpha" });
+    expect(image).toHaveAttribute("src", expect.stringContaining("/api/projects/7/images/banner/file"));
+    // A chave entra no endereço: sem isto o navegador serviria a capa velha depois de trocar.
+    expect(image).toHaveAttribute("src", expect.stringContaining("velha.png"));
+    expect(screen.queryByRole("button", { name: "Enviar capa" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Tirar capa" })).not.toBeInTheDocument();
+  });
+
+  it("subir a capa escreve no slot banner e o binário passa a ser mostrado", async () => {
+    const user = userEvent.setup({ delay: null });
+    renderHeader(true);
+
+    await user.upload(
+      screen.getByLabelText("Imagem de capa"),
+      new File([PNG_BYTES], "capa do laboratório.png", { type: "image/png" }),
+    );
+
+    await waitFor(() => expect(mocks.uploads).toHaveLength(1));
+    expect(mocks.uploads[0]).toMatchObject({ field: "file", name: "capa do laboratório.png", type: "image/png" });
+    expect(mocks.project.bannerKey).toMatch(/^projects\/7\/images\/banner\//);
+    expect(mocks.project.logoKey).toBeNull();
+
+    const image = await screen.findByRole("img", { name: "Capa do projeto Alpha" });
+    expect(image).toHaveAttribute("src", expect.stringContaining("/api/projects/7/images/banner/file"));
+  });
+
+  it("o campo de imagem não aceita PDF: nenhuma requisição sai, e o slot não muda", async () => {
+    const user = userEvent.setup({ delay: null });
+    renderHeader(true);
+
+    // Medido ao escrever: `user.upload` respeita o `accept` do input e descarta o arquivo sem
+    // disparar change. Então este caso prova a lista de aceitação do CAMPO. A recusa do servidor
+    // para um cliente que ignora o `accept` está congelada no teste de rota
+    // (`project-files-routes.test.ts`: "PDF não é imagem de projeto").
+    await user.upload(
+      screen.getByLabelText("Imagem de capa"),
+      new File([new TextEncoder().encode("%PDF-1.7\n")], "relatorio.pdf", { type: "application/pdf" }),
+    );
+
+    expect(mocks.uploads).toEqual([]);
+    expect(mocks.project.bannerKey).toBeNull();
+    expect(screen.queryByRole("img", { name: "Capa do projeto Alpha" })).not.toBeInTheDocument();
+  });
+
+  it("PNG declarado como JPEG é recusado pela assinatura", async () => {
+    const user = userEvent.setup({ delay: null });
+    renderHeader(true);
+
+    await user.upload(
+      screen.getByLabelText("Imagem do logo"),
+      new File([PNG_BYTES], "disfarçado.jpg", { type: "image/jpeg" }),
+    );
+
+    expect(await screen.findByText(/Conteúdo não corresponde ao tipo declarado/)).toBeInTheDocument();
+    expect(mocks.project.logoKey).toBeNull();
+  });
+
+  it("remover a capa limpa o slot, apaga o objeto e o botão de remover some", async () => {
+    const user = userEvent.setup({ delay: null });
+    mocks.project.bannerKey = "projects/7/images/banner/velha.png";
+    renderHeader(true, { bannerKey: mocks.project.bannerKey });
+
+    await screen.findByRole("img", { name: "Capa do projeto Alpha" });
+    await user.click(screen.getByRole("button", { name: "Tirar capa" }));
+
+    await waitFor(() => expect(mocks.project.bannerKey).toBeNull());
+    expect(mocks.removes).toEqual(["projects/7/images/banner/velha.png"]);
+    expect(await screen.findByText("Sem capa")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Tirar capa" })).not.toBeInTheDocument();
   });
 });

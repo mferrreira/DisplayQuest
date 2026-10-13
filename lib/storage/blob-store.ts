@@ -72,6 +72,16 @@ export function isAllowedBlobContentType(contentType: string): boolean {
   return blobRuleFor(contentType) !== null
 }
 
+/**
+ * O mime é de imagem, segundo a allowlist desta seam (V5-2d, DEC-102). Existe porque logo/banner
+ * aceitam menos que um anexo: pdf e vídeo são blobs válidos do bucket, mas não são imagem de
+ * projeto. A checagem fica aqui — a allowlist mora nesta seam, e duplicá-la no domínio ou na rota
+ * é a regra em duas cópias (DEC-90/134).
+ */
+export function isImageBlobContentType(contentType: string): boolean {
+  return blobRuleFor(contentType)?.kind === "image"
+}
+
 export function blobExtensionFor(contentType: string): string {
   return blobRuleFor(contentType)?.extension ?? "bin"
 }

@@ -35,6 +35,7 @@ import { ProjectLeaderLogs } from "@/components/features/project-leader-logs"
 import { ProjectReportsPanel } from "@/components/features/project-reports-panel"
 import { ProjectDeliverablesPanel } from "@/components/features/project-deliverables-panel"
 import { ProjectAttachmentsPanel } from "@/components/features/project-attachments-panel"
+import { ProjectMediaHeader } from "@/components/features/project-media-header"
 import { hasAccess } from "@/lib/utils/utils"
 
 interface ProjectDetailDialogProps {
@@ -169,6 +170,15 @@ export function ProjectDetailDialog({
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-4xl h-[90vh]" style={{ overflowY: 'auto' }}>
+          {/* V5-2d (DEC-102): capa e logo abrem o diálogo, como num perfil de rede social. O
+              título continua sendo o `DialogTitle` (âncora de leitura), a imagem vem antes dele. */}
+          <ProjectMediaHeader
+            projectId={project.id}
+            projectName={project.name}
+            logoKey={project.logoKey}
+            bannerKey={project.bannerKey}
+            canManage={canManageProjectFiles}
+          />
           <DialogHeader>
             <div className="flex justify-between items-start">
               <div className="flex-1">

@@ -47,6 +47,9 @@ export interface Project {
   editalNumber?: string | null
   processNumber?: string | null
   points?: number
+  /** V5-2d (DEC-102): chave do objeto no bucket. A tela não recebe binário, recebe a chave. */
+  logoKey?: string | null
+  bannerKey?: string | null
 }
 
 export interface ProjectMember {

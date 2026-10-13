@@ -159,7 +159,10 @@ export function ProjectDeliverablesPanel({ projectId, canManage }: ProjectDelive
             </div>
             <Button onClick={handleCreate} disabled={busy || newName.trim() === ""}>
               {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-              Adicionar
+              {/* O nome do controle nomeia o que ele adiciona: o diálogo de detalhe também monta o
+                  painel de membros, que tem um "Adicionar" próprio, e `getByRole` casa por
+                  substring (lição da 3.C). */}
+              Adicionar entregável
             </Button>
           </div>
         )}
@@ -200,7 +203,7 @@ export function ProjectDeliverablesPanel({ projectId, canManage }: ProjectDelive
                     />
                     <Button size="sm" onClick={() => handleSaveEdit(deliverable.id)} disabled={busy}>
                       <Check className="h-4 w-4" />
-                      Salvar
+                      Salvar entregável
                     </Button>
                     <Button
                       size="sm"

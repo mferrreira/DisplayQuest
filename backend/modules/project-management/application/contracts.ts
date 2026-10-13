@@ -1,4 +1,4 @@
-import type { ActorRef, IProject, Role } from "@/backend/domain"
+import type { ActorRef, IProject, ProjectImageSlot, Role } from "@/backend/domain"
 
 export interface ListProjectsForActorQuery {
   actorId: number
@@ -98,4 +98,23 @@ export interface GetProjectAttachmentQuery {
   attachmentId: number
   actorId: number
   actorRoles: Role[]
+}
+
+// ---------------------------------------------------------------------------
+// V5-2d (DEC-102) — imagem do projeto (logo/banner) no bucket
+// ---------------------------------------------------------------------------
+
+/** `blobKey: null` é "tira a imagem". Quem move byte é a rota (DEC-133). */
+export interface UpdateProjectImageCommand {
+  projectId: number
+  actorId: number
+  slot: ProjectImageSlot
+  blobKey: string | null
+}
+
+export interface GetProjectImageQuery {
+  projectId: number
+  actorId: number
+  actorRoles: Role[]
+  slot: ProjectImageSlot
 }

@@ -59,6 +59,14 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   `S3_SECRET_KEY` no `.env` — `${VAR:?}` falha com mensagem explícita. Desde o V5-2c o serviço
   `app` consome o bucket (anexos de projeto); os roots legados de upload continuam servindo
   avatares e relatórios.
+- **Imagem do projeto (V5-2d, DEC-135):** `projects.logoKey`/`bannerKey` guardam a **chave**
+  (`projects/<id>/images/<slot>`, slot só `logo` ou `banner` — lista fechada em
+  `PROJECT_IMAGE_SLOTS`). O binário sai por `GET /api/projects/[id]/images/[slot]/file`, rota
+  autenticada com `Cache-Control: private, max-age=86400`; a tela monta o URL com a chave como
+  parâmetro (`?v=<chave>`), porque o endereço por slot é sempre o mesmo e o navegador serviria a
+  imagem velha. Só imagem passa: `isImageBlobContentType` lê a allowlist da seam — PDF e vídeo são
+  blobs válidos de anexo e não são capa. Trocar imagem apaga o objeto velho, e o use case devolve
+  `previousKey` para a rota poder fazer isso.
 
 ## Templates oficiais dos documentos (V5-1a, 2026-10-13)
 
@@ -223,11 +231,14 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   `String` como `createdAt`/`dueDate`, período invertido recusado, e `points` não é escrevível pela rota)**
   e **DEC-133/134 plan-v5 (2026-10-13, execução do V5-2c: no caminho de arquivo do projeto a rota move byte
   e o módulo guarda registro + autorização, com o 403 antes do corpo lido; tabela de magic bytes e nome de
-  exibição viram peça única dos dois seams; `project_attachments.uploadedBy` é a 17ª FK bloqueante)**.
+  exibição viram peça única dos dois seams; `project_attachments.uploadedBy` é a 17ª FK bloqueante)**
+  e **DEC-135 plan-v5 (2026-10-13, execução do V5-2d: imagem do projeto é lista fechada de slots `logo`/
+  `banner`, a coluna guarda a CHAVE do bucket, só mime de imagem passa pela allowlist da seam, e o binário
+  sai por rota autenticada com a chave como quebra de cache)**.
   O V4-4 ia usar
   DEC-61..64 e colidiu; os 28 comentários de código foram renumerados. **Antes de abrir decisão nova, `grep`
   os CINCO `STATE.json` (clean-arch, plan-v3, plan-v4, plan-v5, plan-v6) — a nota antiga que dizia "três"
-  está velha. Próxima livre: DEC-135.**
+  está velha. Próxima livre: DEC-136.**
 - **Subtask (V4-4, DEC-78..83 → regra atual = DEC-97/98):** tabela `task_subtasks` (sem FK para
   `users` — subtask não tem
   responsável próprio), base gravada em `tasks.points` = `10 + 5·n` (DEC-97) e **cada subtask CONCLUÍDA
@@ -518,6 +529,11 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   estava de pe desde antes da migration tinha o client antigo em memória — `prisma.task_subtasks` era
   `undefined`, e a primeira chamada da trava devolveria **500 no navegador** com o gate de tipos verde.
   Depois de gerar client, reiniciar o dev server antes de rodar e2e.
+- **Reconstruir o `app` para o G6 leva mais de 25 minutos (medido no V5-2d):** o `docker compose
+  build app` roda `npm i` nos dois stages e depois `next build`. Um timeout de shell padrão mata o
+  build no meio e a imagem continua a antiga (`docker images` mostra a data velha). Rodar em
+  background com `--progress=plain > log`, e conferir a data da imagem antes de recapturar. O
+  container em pé tem o Prisma client e as rotas da imagem, não do working tree.
 - **zod com `.default([])` torna a chave OBRIGATÓRIA no tipo de saída (medido 2026-10-06):** `entities/task.ts`
   aceita `subtasks` ausente no *wire*, mas `Task` (saída de `z.infer`) passa a **exigir** a chave — todo
   literal de `Task` (ex.: `tests/mocks/fixtures/tasks.ts`) precisa dela. Tolerância de parse não é
@@ -641,6 +657,12 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   `fetch` gravador (`vi.stubGlobal("fetch", …)`) que inspeciona o `FormData` direto — prova campo
   `file`, nome e tipo do arquivo. O multipart de verdade fica congelado no teste de rota
   (`tests/unit/api/project-files-routes.test.ts`), que exercita a rota com `NextRequest.formData()`.
+- **`user.upload` respeita o `accept` do input e descarta em silêncio (medido no V5-2d):** um PDF
+  enviado a um input com `accept="image/png,image/jpeg,..."` não lança erro e **não dispara
+  `change`** — nenhum handler roda, nenhuma requisição sai. Então teste de UI não prova recusa de
+  mime pelo servidor: prova a lista de aceitação do campo. A recusa do servidor fica no teste de
+  rota. O caso que a tela prova é o que o `accept` deixa passar e o seam recusa (PNG declarado
+  como JPEG).
 - **Rotas Next 15 recebem `{ params: Promise<…> }` (medido no V5-2c):** chamar o handler com um só
   argumento no teste dá `Cannot read properties of undefined (reading 'params')`, e o
   `routeErrorResponse` transforma isso em **500** — os 21 casos do arquivo ficaram vermelhos com

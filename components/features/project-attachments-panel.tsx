@@ -113,7 +113,7 @@ export function ProjectAttachmentsPanel({ projectId, canManage }: ProjectAttachm
           <div className="flex flex-wrap items-end gap-2">
             <div className="grid gap-2 flex-1 min-w-[220px]">
               <label htmlFor="attachment-file" className="text-sm font-medium">
-                Arquivo
+                Arquivo do anexo
               </label>
               <Input
                 id="attachment-file"
@@ -125,7 +125,7 @@ export function ProjectAttachmentsPanel({ projectId, canManage }: ProjectAttachm
             </div>
             <Button onClick={handleUpload} disabled={busy}>
               {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
-              Enviar
+              Enviar anexo
             </Button>
           </div>
         )}
