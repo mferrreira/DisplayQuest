@@ -54,7 +54,8 @@ plan-v6 (refatoração visual) ──> camada de apresentação só — ordem fr
   o que já existe, em 13 ondas revertíveis, com DEC-61..77, DEC-99..104 e DEC-126..131
   contínuas da numeração global (DEC-78..98 são do plan-v4 e DEC-105..125 de plan-v6 e
   clean-arch — houve colisão, comentários renumerados). O V5-1 fechou o bucket
-  (SeaweedFS no lugar do MinIO, DEC-131).
+  (SeaweedFS no lugar do MinIO, DEC-131) e o V5-1a fechou os templates oficiais como asset
+  versionado (`templates/`, guarda de deriva — DEC-128).
 - `plan-v6/` nasce da leitura da interface real contra as referências da skill
   `displayquest-ui` (`.opencode/skills/displayquest-ui/`): é **spec-driven** (a pasta
   tem `SPEC.md` como fonte de verdade do comportamento + `PLAN.md` da ordem +

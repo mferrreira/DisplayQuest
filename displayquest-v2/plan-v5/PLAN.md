@@ -147,7 +147,7 @@ de 3/2 cm**; sem espaçamento 1,5 fixo. Campos a preencher são **sublinhados li
 dentro do próprio run**.
 
 **`[template] - ANEXO IV - Atestado de Frequência Bolsista ou Voluntário.pdf`**
-(142 KB): **AcroForm real, 39 campos nomeados** (`/AcroForm 210 0 R`, `NeedAppearances
+(142 KB): **AcroForm real, 42 campos nomeados** (`/AcroForm 210 0 R`, `NeedAppearances
 true`, `/DA /Times`): `data`, `edital`, `titulo`, `coorientador`, `nome`, `CPF`,
 `matricula`, `nivel_medio`, `nivel_graduacao`, `nivel_pos-graduacao`, `carga_8`,
 `carga_20`, `carga_adaptada`, `horas_adaptada`, `is_bolsista`, `se_bolsista`,
@@ -159,6 +159,35 @@ true`, `/DA /Times`): `data`, `edital`, `titulo`, `coorientador`, `nome`, `CPF`,
 (checkboxes, todos `/AS /Off`). Não tem XFA. **Consequência:** a DEC-71 ("o sistema
 GERA o AcroForm") está superada pela realidade — o formulário oficial já existe com
 campos nomeados; o sistema **preenche**.
+
+> **Correção medida em 2026-10-13 (V5-1a):** a DEC-130 e este parágrafo diziam "39 campos".
+> A contagem estava errada — a enumeração acima sempre teve 42 nomes. Medido com
+> `@cantoo/pdf-lib`: **16 `/FT /Tx` + 26 `/FT /Btn` = 42**. A lista congelada, na ordem do
+> arquivo, vive em `tests/unit/scripts/report-templates-drift.test.ts`.
+
+**Medido no V5-1a (2026-10-13), ao virar asset:**
+
+- **sha256** — DOCX `70a81240a7de5a661f280b89f2270b3bfb3f1c67048c92882b19e10ce3841f75`,
+  PDF `ecba85390adbeaf6559652febea281d7c18ea535c0a94dbfff77d615f9b41757`. São os dois
+  valores congelados no guarda de deriva.
+- **21 ocorrências** de `___+` em `word/document.xml` (o único part que muda). **Todos os
+  brancos moram num único run** de Times New Roman 12, então reescrever o texto do run
+  dentro do próprio `<w:t>` preserva `w:rPr` sem tocar em estilo nenhum.
+- **`listCommands` só enxerga `{{campo}}` com `cmdDelimiter: ['{{','}}']`.** Medido: o
+  default é `+++` (acha zero comandos) e `['{','}']` **quebra** a chave dupla em dois
+  comandos vazios. O par ancorado vive em `CMD_DELIMITER`, em
+  `scripts/tag-report-template.mjs`, e o preenchimento do V5-9 tem que passar o mesmo.
+- **13 comandos** na ordem do documento: `periodo_inicio`, `periodo_fim`, `titulo`,
+  `proppi`, `coordenador`, `projeto_inicio`, `projeto_termino`, `orientador`,
+  `estudante_nome`, `estudante_curso`, `modalidade`, `instituicao_fomento`,
+  `data_relatorio`.
+- **Os dados de exemplo não sobrevivem à cópia marcada:** "Guilherme de Araújo Carneiro" e
+  "Bel em Sistemas de Informação" viram `{{estudante_nome}}`/`{{estudante_curso}}`. Quantos
+  relatórios por projeto é o **ASK-V5-06**, mas um nome real não pode sair em documento
+  entregue.
+- **Fora do V5-1a, de propósito:** a linha de tipo (`( ) Relatório Final (  ) Relatório
+  Parcial`) e as 3 tabelas vazias continuam sem marcação — são trabalho do V5-9, e quando
+  ele acrescentar comandos a lista congelada no guarda cresce junto.
 
 **Biblioteca, medido no registry em 2026-10-13:** `pdf-lib` 1.17.1 é MIT mas **último
 release em 2021-11-06** (5 anos sem publicação); o fork mantido `@cantoo/pdf-lib`
@@ -230,8 +259,8 @@ pode reverter cada uma.
 | # | Pergunta | Escolhida | DEC |
 |---|---|---|---|
 | D-Z | Onde vivem os templates oficiais | `docs/Projeto/` é gitignored e é a **caixa de entrada do dono**; os arquivos que o app usa viram **asset versionado** em `templates/` no repo, lidos do sistema de arquivos da imagem (rota de leitura, sem escrita nova em disco) | **DEC-128** |
-| D-AA | Como escrever no DOCX sem quebrar a formatação | **Preencher o template oficial**, nunca gerar documento: `docx-templates` escreve texto **dentro dos runs que já carregam** Times New Roman 12; o arquivo oficial fica byte-intacto e uma **cópia marcada** (`{{campo}}`) é derivada por script, nunca editada à mão | **DEC-129** |
-| D-AB | Como escrever no PDF de atestado | **Preencher o AcroForm oficial** pelos 39 nomes medidos, com `@cantoo/pdf-lib` (fork mantido; `pdf-lib` sem release desde 2021), fonte de aparência Times e `flatten()` no arquivo entregue. **Revoga a parte "gerar o AcroForm" da DEC-71** | **DEC-130** |
+| D-AA | Como escrever no DOCX sem quebrar a formatação | **Preencher o template oficial**, nunca gerar documento: `docx-templates` escreve texto **dentro dos runs que já carregam** Times New Roman 12; o arquivo oficial fica byte-intacto e uma **cópia marcada** (`{{campo}}`) é derivada por script, nunca editada à mão. O preenchimento **tem que passar `cmdDelimiter: ['{{','}}']`** — o default da biblioteca é `+++` e `['{','}']` quebra a chave dupla (medido no V5-1a) | **DEC-129** |
+| D-AB | Como escrever no PDF de atestado | **Preencher o AcroForm oficial** pelos 42 nomes medidos, com `@cantoo/pdf-lib` (fork mantido; `pdf-lib` sem release desde 2021), fonte de aparência Times e `flatten()` no arquivo entregue. **Revoga a parte "gerar o AcroForm" da DEC-71** | **DEC-130** |
 
 ### 2.5 Rodada de execução do V5-1 (D-AC..D-AD → DEC-131), servidor do bucket
 
@@ -275,7 +304,7 @@ imagens/pdf/vídeo, sem migrar os dois roots legados) **continua valendo inteiro
 | Batch | O que faz | Risco | Status |
 |---|---|---|---|
 | **V5-1** | **Bucket + seam de blob** (DEC-101/DEC-131): serviço `seaweedfs` no compose em modo `mini`, pinado por digest, com a identidade S3 escrita a partir de `S3_ACCESS_KEY`/`S3_SECRET_KEY`/`S3_BUCKET` (nada de credencial no repo), porta 8333 intra-rede (+ 8333/8888 em loopback no override), volume `object_store_data`, healthcheck no master; envs `S3_*`; dependência `@aws-sdk/client-s3`; seam `lib/storage/blob-store.ts` + port `BlobStorePort` + adapter `s3-blob-store.ts` (allowlist de imagens/pdf/**vídeo**), sem consumidor de produção ainda | baixo — infra nova, zero mudança de comportamento | **done** (2026-10-13) |
-| **V5-1a** | **Templates oficiais viram asset** (DEC-128): copia os dois arquivos de `docs/Projeto/` para `templates/` (versionado), `COPY` no Dockerfile (leitura só, sem caminho de escrita novo), script `scripts/tag-report-template.mjs` que deriva `templates/relatorio-tecnico.tagged.docx` trocando os sublinhados literais por comandos `docx-templates` **dentro do mesmo run**, e **guardas de deriva**: sha256 do oficial + inventário dos 39 nomes do AcroForm + `listCommands()` da cópia marcada. Zero mudança de comportamento | baixo — asset + testes de guarda | pendente |
+| **V5-1a** | **Templates oficiais viram asset** (DEC-128): copia os dois arquivos de `docs/Projeto/` para `templates/` (versionado), `COPY` no Dockerfile (leitura só, sem caminho de escrita novo), script `scripts/tag-report-template.mjs` que deriva `templates/relatorio-tecnico.tagged.docx` trocando os sublinhados literais por comandos `docx-templates` **dentro do mesmo run**, e **guardas de deriva**: sha256 dos dois oficiais + inventário dos 42 nomes do AcroForm + `listCommands()` da cópia marcada + a cópia tem que ser exatamente o que o script deriva. `docx-templates` 4.15.0 e `@cantoo/pdf-lib` 2.11.1 entram **aqui** (as guardas precisam delas), e não no V5-9/V5-10 como o §5 previa. Zero mudança de comportamento | baixo — asset + testes de guarda | **done** (2026-10-13) |
 | **V5-2** | **Dados do projeto + imagens**: migration (`startDate`, `endDate`, `editalNumber`, `processNumber`, `points`, `logoKey?`, `bannerKey?`) + `project_deliverables` + anexos **no bucket** + **logo/banner do projeto** com upload (validação de imagem) + header do detail com banner/logo (estilo FB/LinkedIn) | médio — tela visível (G5/G6) | pendente |
 | **V5-2a** | **Visão de todos os projetos**: lista (`GET /api/projects`) e detalhe (`GET /api/projects/[id]`) passam a aceitar qualquer autenticado (DEC-127); escrita/gestão intacta; filhos (anexos, horas, cronograma) seguem a mesma leitura; ajusta os 2 trechos do roundtrip que congelam a regra antiga e escreve os testes unitários que faltam (`ListProjectsForActorUseCase`, `canActorAccessProjectDecision`) | baixo — 1 ACL + testes; roteiro para o V6-5 | pendente |
 | **V5-3** | **Banner de usuário + pódio**: `users.bannerKey?`, upload no perfil, perfil mostra avatar+banner, **top #1 do quadro** ganha o tratamento com as imagens (avatar `h-24` já existe; entra o banner/fundo) | médio — tela visível (G5/G6) | pendente |
@@ -285,7 +314,7 @@ imagens/pdf/vídeo, sem migrar os dois roots legados) **continua valendo inteiro
 | **V5-7** | **Economia de projeto**: `request-activity-completion` (líder/membro gestor + provas) e `approve-activity-completion` (só `GLOBAL_PROJECT_MANAGERS`; auto-aprova só COORDENADOR — DEC-77); prêmio = `100×meses × (1,5 se ≥2d adiantada) − 10%/dia de atraso`, **piso 0** (DEC-103/74); distribuição **proporcional às tasks concluídas de cada membro** (DEC-104); tarefa concluída de projeto também incrementa `projects.points`; idempotência + histórico | **alto** — economia | pendente |
 | **V5-8** | **Atraso urgente**: coluna `priority` em `notifications` + destaque na UI; varredura diária no cron: atividade vencida e não aprovada → **1** notificação prioritária (`overdueNotifiedAt`) para líder + coordenadores/gerentes | médio | pendente |
 | **V5-9** | **Relatórios técnicos + IA**: `technical_reports` (projeto × tipo, texto + arquivo no bucket), permissão gestão/líder, `ReportDraftPort` + adapter OpenAI-compatible por env (`AI_BASE_URL/AI_API_KEY/AI_MODEL`, default `http://localhost:8080/v1`), rascunho a partir de **três fontes**: logs de sessão (`work_sessions`), tasks do projeto (status, conclusão, pontos) e atividades do cronograma (meses marcados, provas). Entrega em **DOCX pelo template oficial** (DEC-129): o texto da IA entra **como texto puro** nas 3 tabelas vazias do template (Descrição / Resultados / Comentários), o tipo (parcial/final) marca a linha `( ) Relatório Final ( ) Relatório Parcial`, e o adaptador docx vive em `infrastructure/adapters/` atrás de porta. Escopo do registro por projeto × tipo **pode virar por participante** conforme a resposta do `ASK-V5-06` | médio | pendente |
-| **V5-10** | **Atestados**: módulo `attestation` — `certificates` (sem status, DEC-75), **preenche o AcroForm oficial** pelos 39 campos medidos com `@cantoo/pdf-lib` (DEC-130): `nome`/`CPF`/`matricula`/`titulo`/`edital`/`coorientador` do projeto e do membro, checkboxes de modalidade/fomento (`is_pibic`, `is_voluntario`, `is_cnpq`…), carga (`carga_8`/`carga_20`/`carga_adaptada`/`horas_adaptada`) vinda de `weekly_reports`/`work_sessions`, `atividades_1`/`atividade_2` + `status_*` vindos do cronograma (V5-5), `dia`/`mes`/`ano` do mês de referência; `updateFieldAppearances(Times)` + `flatten()` no arquivo entregue (bucket). Lembrete dia 19 (`0 9 19 * *`) para coordenadores/gerentes + líderes. Depende dos campos de pessoa do `ASK-V5-07` | médio-alto — dependência nova + PDF (G5/G6) | pendente |
+| **V5-10** | **Atestados**: módulo `attestation` — `certificates` (sem status, DEC-75), **preenche o AcroForm oficial** pelos 42 campos medidos com `@cantoo/pdf-lib` (DEC-130): `nome`/`CPF`/`matricula`/`titulo`/`edital`/`coorientador` do projeto e do membro, checkboxes de modalidade/fomento (`is_pibic`, `is_voluntario`, `is_cnpq`…), carga (`carga_8`/`carga_20`/`carga_adaptada`/`horas_adaptada`) vinda de `weekly_reports`/`work_sessions`, `atividades_1`/`atividade_2` + `status_*` vindos do cronograma (V5-5), `dia`/`mes`/`ano` do mês de referência; `updateFieldAppearances(Times)` + `flatten()` no arquivo entregue (bucket). Lembrete dia 19 (`0 9 19 * *`) para coordenadores/gerentes + líderes. Depende dos campos de pessoa do `ASK-V5-07` | médio-alto — dependência nova + PDF (G5/G6) | pendente |
 | **V5-11** | **Tela de andamento**: gráfico `data_final − dia_de_hoje` + exibição de `projects.points` (agora real) | baixo | pendente |
 
 Ordem: **V5-1 primeiro** (tudo que gravar blob depende dele) e **V5-1a em seguida** (os
@@ -310,7 +339,8 @@ A espera pelo plan-v4 caiu: ele fechou em 2026-10-07.
 docker-compose.yml                        +serviço seaweedfs (volume object_store_data, 8333 intra-rede;
                                           127.0.0.1:8333/8888 no override; credenciais por env — DEC-131)
 package.json                              +@aws-sdk/client-s3 (e presigner se precisar de URL)
-                                          +docx-templates (DOCX) e @cantoo/pdf-lib (AcroForm) no V5-9/V5-10
+                                          +docx-templates e @cantoo/pdf-lib (entraram no V5-1a, para as
+                                          guardas de deriva; são usadas no V5-9/V5-10)
 templates/                                (novo, V5-1a) relatorio-tecnico.docx (oficial, byte-intacto),
                                           relatorio-tecnico.tagged.docx (derivado por script),
                                           atestado-frequencia.pdf (AcroForm oficial)
@@ -337,7 +367,11 @@ backend/modules/attestation/             (novo) certificates + AcroForm + lembre
   infrastructure/adapters/               acroform-attestation.adapter.ts (lê templates/, preenche, achata, sobe ao bucket)
 backend/modules/reporting/               + technical-reports + ReportDraftPort + adapter openai-compatible
   infrastructure/adapters/               docx-report.adapter.ts (docx-templates sobre templates/*.tagged.docx)
-tests/unit/**                            guardas de deriva: sha256 do oficial, 39 nomes do AcroForm, inventário de tags
+tests/unit/scripts/report-templates-drift.test.ts
+                                          (novo, V5-1a) guarda de deriva: sha256 dos oficiais,
+                                          42 nomes do AcroForm, inventário de comandos e a
+                                          cópia marcada idêntica à derivação do script
+tests/unit/**                            (demais) guardas por batch
 backend/composition/root.ts              wiring dos ports novos (DEC-21)
 lib/services/cron-service.ts             + job de atraso (diário) + lembrete dia 19
 app/api/projects/route.ts                criação via wizard (cronograma opcional, DEC-100)
@@ -356,11 +390,11 @@ components/ui/notifications-panel.tsx    destaque de prioridade
 
 | Gate | Comando — critério |
 |---|---|
-| **G0** | `npm run arch:check` — exit 0, **allow-list vazia**. Baseline 2026-10-13 (depois do V5-1): 828/3379 |
+| **G0** | `npm run arch:check` — exit 0, **allow-list vazia**. Baseline 2026-10-13 (depois do V5-1a): 834/3392 |
 | **G1** | `npm run lint` — 0 erros (em worktree: `npx eslint --no-eslintrc --config .eslintrc.json <arquivos>`) |
 | **G2** | `npx tsc --noEmit` — 0 erros. **Condição pré-existente medida em 2026-10-13:** o `dev` já vinha com **1 erro** em `features/laboratorio/__tests__/floating-timer-tabs.test.tsx:105` (`exact` não existe em `ByRoleOptions` do `@testing-library/dom@10.4.1`) — idêntico no `HEAD` limpo (conferido com `git stash`), fora do V5-1 |
-| **G3** | `npx vitest run tests/unit features` — zero failure. **Baseline 2026-10-13 (depois do V5-1): 103/1352** (era 101/1323) |
-| **G4** | migration + roundtrip só contra `dq-dev-test-db` em `127.0.0.1:5433` (`npm run db:test:up` + `db:test:setup`; `g4-normalize.sql` obrigatório) — suíte completa (baseline 2026-10-13: **113/1439**). **Migrations novas seguem o protocolo do V4-4:** `migrate diff` offline + `migrate deploy`, **nunca** `migrate dev` contra a 5432 (risco de RESET nos dados reais) |
+| **G3** | `npx vitest run tests/unit features` — zero failure. **Baseline 2026-10-13 (depois do V5-1a): 104/1365** (era 103/1352 no V5-1, 101/1323 antes) |
+| **G4** | migration + roundtrip só contra `dq-dev-test-db` em `127.0.0.1:5433` (`npm run db:test:up` + `db:test:setup`; `g4-normalize.sql` obrigatório) — suíte completa (baseline 2026-10-13, depois do V5-1a: **114/1452**). **Migrations novas seguem o protocolo do V4-4:** `migrate diff` offline + `migrate deploy`, **nunca** `migrate dev` contra a 5432 (risco de RESET nos dados reais) |
 | **G5** | `npm run docs:build` + `docs:check` — obrigatório em V5-2, V5-3, V5-5, V5-6, V5-8, V5-9, V5-10, V5-11 |
 | **G6** | recapturar telas do guia quando a captura deixa de representar a tela (V5-2 muda o detail do projeto; V5-3 muda perfil e quadro) |
 
@@ -415,12 +449,12 @@ no ambiente/.env — DEC-131), mas **nada de produção o consome ainda**.
 14. **O template oficial é a autoridade da formatação** (DEC-129/130): o sistema **nunca**
     escreve estilo, fonte, tamanho ou margem. No DOCX, o texto entra **dentro do run que já
     carrega** Times New Roman 12 (o adaptador não toca `w:rPr`, `styles.xml` nem `sectPr`);
-    no PDF, só os **39 campos nomeados** do AcroForm recebem valor, com aparência Times e
+    no PDF, só os **42 campos nomeados** do AcroForm recebem valor, com aparência Times e
     `flatten()` na entrega. Congelar em teste: o documento gerado tem o mesmo sha256 de
     `word/styles.xml`/`word/theme/theme1.xml` do template, e nenhum campo fora da lista é
     escrito.
 15. **Deriva de template derruba o build** (DEC-128): teste guarda compara o sha256 do
-    oficial, a lista dos 39 nomes do AcroForm e o inventário de comandos da cópia marcada
+    oficial, a lista dos 42 nomes do AcroForm e o inventário de comandos da cópia marcada
     (`listCommands`). Se o dono trocar o arquivo em `docs/Projeto/` sem re-derivar, o teste
     falha **nomeando** o campo que sumiu ou apareceu — mesmo padrão de
     `user-status-vocabulary.test.ts` e `user-delete-schema-drift.test.ts`.

@@ -51,6 +51,51 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   `S3_SECRET_KEY` no `.env` — `${VAR:?}` falha com mensagem explícita. Nada de produção
   consome o bucket ainda.
 
+## Templates oficiais dos documentos (V5-1a, 2026-10-13)
+
+- **`templates/` é asset de LEITURA**, versionado: `relatorio-tecnico.docx` (oficial,
+  byte-intacto), `relatorio-tecnico.tagged.docx` (cópia derivada, a que recebe dados no V5-9)
+  e `atestado-frequencia.pdf` (AcroForm oficial). O Dockerfile copia a pasta **antes** do
+  `chown` de `public/uploads`/`data/uploads`, então ela **não** é gravável — nenhum caminho
+  de escrita novo no container. Os originais do dono vivem em `docs/Projeto/` (gitignored).
+- **sha256 congelados:** DOCX `70a81240a7de5a661f280b89f2270b3bfb3f1c67048c92882b19e10ce3841f75`,
+  PDF `ecba85390adbeaf6559652febea281d7c18ea535c0a94dbfff77d615f9b41757`.
+- **A cópia marcada NUNCA é editada à mão.** `npm run templates:tag` a re-deriva do oficial
+  (`scripts/tag-report-template.mjs`) e o guarda
+  `tests/unit/scripts/report-templates-drift.test.ts` falha se a cópia divergir do que o
+  script produz. Os `REPLACEMENTS` têm `expected` por regra: oficial trocado quebra a
+  derivação **nomeando o campo**, em vez de marcar menos campos em silêncio.
+- **Determinismo do zip (gotcha medido):** o `.docx` oficial **não tem** entrada de diretório
+  para `word/` — o `jszip` sintetiza uma no load com `date: new Date()`, e essa é a única
+  entrada que varia. Sem normalizar, cada run escreve um arquivo diferente. Cuidado com a
+  medição: o timestamp DOS tem resolução de **2 s**, então dois runs seguidos parecem
+  determinísticos e não são — o gap de medição tem que ser >2 s. O script normaliza a data de
+  todas as entradas, e o guarda compara a data de **cada entrada** com a referência (não
+  compara dois runs, então não depende de timing).
+- **ARMADILHA CARA — o delimitador do `docx-templates`:** os comandos `{{campo}}` só são
+  reconhecidos com **`cmdDelimiter: ['{{','}}']`**. O default da biblioteca é `+++` (medido:
+  `listCommands` devolve `[]`) e o par `['{','}']` **quebra** a chave dupla (vira dois
+  comandos vazios). O par ancorado está em `CMD_DELIMITER`, em
+  `scripts/tag-report-template.mjs` — quem chamar `createReport` no V5-9 tem que passar o
+  mesmo. Detalhe de tipo: `listCommands`/`createReport` declaram `template: ArrayBuffer`; o
+  `tsc` recusa `Buffer` (TS2345), então copie com `new Uint8Array(buf).buffer`.
+- **Os brancos do DOCX são sublinhados literais dentro de um único run** de Times New Roman
+  12: a troca reescreve o texto dentro do próprio `<w:t>`, sem tocar `w:rPr`, `styles.xml`,
+  `sectPr` nem tema. 13 comandos: `periodo_inicio`, `periodo_fim`, `titulo`, `proppi`,
+  `coordenador`, `projeto_inicio`, `projeto_termino`, `orientador`, `estudante_nome`,
+  `estudante_curso`, `modalidade`, `instituicao_fomento`, `data_relatorio`. Nomes **sem
+  hífen** de propósito (hífen é subtração na expressão da biblioteca); hífen só existe nos
+  nomes de campo do PDF (`is_pibic-jr`), onde são literais.
+- **O PDF tem 42 campos, não 39** (`16 /FT /Tx` + `26 /FT /Btn`). A DEC-130 e o PLAN diziam
+  39; a contagem foi corrigida no V5-1a com `@cantoo/pdf-lib`, e a lista na ordem do arquivo
+  está congelada no guarda. `@cantoo/pdf-lib` e `docx-templates` entram **no V5-1a** (as
+  guardas precisam delas), não no V5-9/V5-10 como o §5 previa.
+- **Dados de exemplo não sobrevivem à cópia marcada:** "Guilherme de Araújo Carneiro" e "Bel
+  em Sistemas de Informação" viraram comandos. Quantos relatórios por projeto é o
+  `ASK-V5-06` (aberto), mas nome real não sai em documento entregue. A linha de tipo e as 3
+  tabelas vazias ficam **sem** marcação de propósito — são V5-9, e somar comando lá obriga a
+  atualizar a lista congelada.
+
 ## Arquitetura clean-arch (refatoração 2026-09/10, ondas 0–9)
 
 - **Árvore:** `backend/domain/` (core puro: erros tipados + regras como funções puras,
