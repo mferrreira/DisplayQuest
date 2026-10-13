@@ -7,7 +7,8 @@
 > e atestados de frequência mensais com AcroForm. **Refinamento em 2026-10-07**, depois do
 > encerramento do plan-v4 (subtasks prontas): hierarquia Atividade → Tasks → subtasks,
 > cronograma dentro do wizard de criação, logo/banner de projeto e banner de usuário, e
-> **MinIO** (S3-compatible) como destino de todos os blobs novos.
+> **bucket S3-compatible** como destino de todos os blobs novos (a medição escolheu MinIO;
+> a execução do V5-1 trocou por **SeaweedFS** — DEC-131).
 >
 > Formo herdado do plan-v3/plan-v4: **medição primeiro, decisões registradas (DEC-99+,
 > continuidade da numeração global), um commit revertível por batch, gates G0–G6.**
@@ -84,11 +85,13 @@ sweep noturno 23:59.
 - Servidas por `/api/uploads/avatars/...` e `/api/report-files/[...path]` (regra de acesso
   do relatório); Dockerfile só torna graváveis `/app/public/uploads` e `/app/data/uploads`
   (gotcha A11).
-- `docker-compose.yml` tem **só `postgres` e `app`**; grep por `minio|@aws-sdk|s3` → 0;
-  `sharp` é a única dependência de mídia; nenhum limite de corpo configurado no Next.
+- `docker-compose.yml` tinha **só `postgres` e `app`**; grep por `minio|@aws-sdk|s3` → 0 na
+  medição (o V5-1 mudou isso: passa a achar os três); `sharp` era a única dependência de
+  mídia; nenhum limite de corpo configurado no Next.
 
-**Conclusão:** nenhum serviço de objeto existe; MinIO entra como serviço novo + seam
-própria, sem tocar nos dois roots legados na primeira leva (DEC-101).
+**Conclusão:** nenhum serviço de objeto existia; o bucket entra como serviço novo + seam
+própria, sem tocar nos dois roots legados na primeira leva (DEC-101). O **V5-1** executou
+isso, e o nome do servidor mudou no caminho: MinIO → **SeaweedFS** (DEC-131).
 
 ### 1.9 Telas de imagem — avatar existe; banner e logo, não
 
@@ -104,7 +107,7 @@ própria, sem tocar nos dois roots legados na primeira leva (DEC-101).
 - **Numeração:** DEC-61..77 = este plano (2026-10-06); DEC-78..98 = plan-v4;
   DEC-99..104 = este plano (2026-10-07); DEC-105..114 = plan-v6; DEC-115..125 =
   clean-arch (B6-restante + B9/B10). **Próxima livre na época: DEC-126** (hoje, depois de
-  DEC-126..130, a livre é a DEC-131).
+  DEC-126..131, a livre é a DEC-132).
 - **Baseline medido em 2026-10-09 (dev):** G0 `arch:check` **822 módulos / 3370
   dependências, zero violação, allow-list vazia**; G3 **101 arquivos / 1323 testes
   verdes**. Referências: 87/1107 (2026-10-07) e 95/1280 + 105/1367 na branch
@@ -204,7 +207,7 @@ módulos pagos.
 |---|---|---|---|
 | D-R | Atividade com task pendente pode ser concluída? | **Trava**: só solicitar conclusão com **todas** as tasks da atividade prontas (análogo à trava da mãe, DEC-82). Tasks = subtasks da atividade | **DEC-99** |
 | D-S | Cronograma na criação do projeto | **Passo opcional no wizard** (dados → equipe opcional → cronograma opcional → cria); pula e monta depois no detail | **DEC-100** |
-| D-T | Escopo MinIO | **Bucket desde o começo** (V5-1) para **todos** os blobs novos do plano, atrás de port/seam; migração dos existentes (avatares, anexos) fica para depois. Vídeo: **só infra preparada** (mimes no allowlist), nenhuma tela de vídeo no plan-v5 | **DEC-101** |
+| D-T | Escopo do bucket | **Bucket desde o começo** (V5-1) para **todos** os blobs novos do plano, atrás de port/seam; migração dos existentes (avatares, anexos) fica para depois. Vídeo: **só infra preparada** (mimes no allowlist), nenhuma tela de vídeo no plan-v5. (O *servidor* nomeado aqui — MinIO — foi substituído por SeaweedFS na execução: **DEC-131**; o escopo desta linha não mudou) | **DEC-101** |
 | D-U | Imagens | Projeto ganha **logo + banner** (página/detalhe estilo Facebook/LinkedIn); usuário mantém o **avatar** (existe) e ganha **banner novo**; o **top #1 do quadro** ganha o tratamento com as imagens, e o perfil mostra as duas | **DEC-102** |
 | D-V | Escala e peso da economia de projeto | Base da atividade = **100 × meses de duração** (ex.: 3 meses → 300); atraso = **fração da recompensa por dia (−10%/dia)** — muito mais pesado que os −10/dia do usuário; piso 0 (DEC-74); antecedência ×1,5 com ≥2 dias (régua DEC-97). Tasks continuam premiando **indivíduos**; a atividade premia **os membros ativos do projeto** | **DEC-103** |
 | D-W | Distribuição aos membros | **Proporcional às tasks que cada membro concluiu no projeto** (pool = membros ativos; sem tasks → 0). Substitui a divisão integral da DEC-68 | **DEC-104** |
@@ -230,6 +233,17 @@ pode reverter cada uma.
 | D-AA | Como escrever no DOCX sem quebrar a formatação | **Preencher o template oficial**, nunca gerar documento: `docx-templates` escreve texto **dentro dos runs que já carregam** Times New Roman 12; o arquivo oficial fica byte-intacto e uma **cópia marcada** (`{{campo}}`) é derivada por script, nunca editada à mão | **DEC-129** |
 | D-AB | Como escrever no PDF de atestado | **Preencher o AcroForm oficial** pelos 39 nomes medidos, com `@cantoo/pdf-lib` (fork mantido; `pdf-lib` sem release desde 2021), fonte de aparência Times e `flatten()` no arquivo entregue. **Revoga a parte "gerar o AcroForm" da DEC-71** | **DEC-130** |
 
+### 2.5 Rodada de execução do V5-1 (D-AC..D-AD → DEC-131), servidor do bucket
+
+A execução do V5-1 mediu o que o plano tinha assumido e derrubou o **nome do servidor** que
+a DEC-101 escolheu — o escopo dela (bucket desde o começo, atrás de port/seam, allowlist de
+imagens/pdf/vídeo, sem migrar os dois roots legados) **continua valendo inteiro**:
+
+| # | Pergunta | Decisão | DEC |
+|---|---|---|---|
+| D-AC | Qual servidor S3-compatible? | **SeaweedFS** (`chrislusf/seaweedfs`), em modo `mini` (master + volume + filer + S3 num processo, o modo que o próprio entrypoint da imagem usa), pinado por **digest** porque só existem as tags `latest`/`dev` (nenhum semver). O MinIO está **EOL** — repo arquivado em 2026-04-25 (EOL fev/2026) e as imagens oficiais saíram do Docker Hub, do `quay.io` e do `ghcr.io`: `docker manifest inspect` falha nos três, medido em 2026-10-13 | **DEC-131** |
+| D-AD | Nomes das variáveis de ambiente | **`S3_*`** (`S3_ENDPOINT`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_BUCKET`, `S3_REGION`, `S3_FORCE_PATH_STYLE`), não `MINIO_*` — o seam é do **protocolo**, não do servidor, e o servidor já mudou uma vez. `S3_ACCESS_KEY`/`S3_SECRET_KEY` são obrigatórios no compose (`${VAR:?}`) e entram no `npm run check:env` | **DEC-131** |
+
 ## 3. Mapeamento do domínio pedido → onde vive
 
 | Pedido no domínio | Hoje | Depois do plan-v5 |
@@ -241,7 +255,7 @@ pode reverter cada uma.
 | `Projeto.relatorios Report[ ]` | `project_reports` (outro conceito) | novo `technical_reports` (projeto × tipo) |
 | `Projeto.atestados Certificate[ ]` | — | novo `certificates` (sem status próprio, DEC-75) |
 | `Projeto.cronograma` | — | `project_goals` + `project_activities`; **também no wizard de criação** (DEC-100) |
-| `Projeto.anexos Blob[ ]` | — | `project_attachments` → **bucket MinIO** (DEC-101) |
+| `Projeto.anexos Blob[ ]` | — | `project_attachments` → **bucket** (DEC-101; servidor = SeaweedFS, DEC-131) |
 | `Projeto.entregáveis Deliverable[ ]` | — | `project_deliverables (name, quantity)` |
 | logo/banner do projeto | não existe | `projects.logoKey?/bannerKey?` no bucket; header do detail + lista (DEC-102) |
 | `Projeto.equipe Member[ ]` | `project_members` | estendido: `lattes`, `cargaHorariaSemanal`, `categoria`, `situacao`, `dataEntrada`, `matricula` |
@@ -251,7 +265,7 @@ pode reverter cada uma.
 | `Activity.recompensa` | — | **100 × meses marcados na grade** (colunas = meses, linhas = atividades; DEC-126); período derivado dos limites dos meses marcados |
 | `Activity.prova Blob[ ]` | — | bucket (`projects/<id>/activities/<id>/`) |
 | `Member.usuario` | `project_members.userId` | fica |
-| qualquer blob novo | disco do container | **MinIO** (DEC-101) — nenhum `writeFile` novo fora do bucket |
+| qualquer blob novo | disco do container | **bucket** (DEC-101/DEC-131) — nenhum `writeFile` novo fora do bucket |
 
 `Report` (3 tipos) vira **3 registros por projeto**, um por tipo (DEC-70), cada um com
 `content` + `file`.
@@ -260,7 +274,7 @@ pode reverter cada uma.
 
 | Batch | O que faz | Risco | Status |
 |---|---|---|---|
-| **V5-1** | **MinIO + seam de blob**: serviço `minio` no compose (volume, API 9000 / console 9001 em loopback), envs (`MINIO_ENDPOINT/ACCESS_KEY/SECRET_KEY/BUCKET`), dependência `@aws-sdk/client-s3`, seam `lib/storage/blob-store.ts` + port para os módulos (allowlist de imagens/pdf/**vídeo**), sem consumidor de produção ainda | baixo — infra nova, zero mudança de comportamento | pendente |
+| **V5-1** | **Bucket + seam de blob** (DEC-101/DEC-131): serviço `seaweedfs` no compose em modo `mini`, pinado por digest, com a identidade S3 escrita a partir de `S3_ACCESS_KEY`/`S3_SECRET_KEY`/`S3_BUCKET` (nada de credencial no repo), porta 8333 intra-rede (+ 8333/8888 em loopback no override), volume `object_store_data`, healthcheck no master; envs `S3_*`; dependência `@aws-sdk/client-s3`; seam `lib/storage/blob-store.ts` + port `BlobStorePort` + adapter `s3-blob-store.ts` (allowlist de imagens/pdf/**vídeo**), sem consumidor de produção ainda | baixo — infra nova, zero mudança de comportamento | **done** (2026-10-13) |
 | **V5-1a** | **Templates oficiais viram asset** (DEC-128): copia os dois arquivos de `docs/Projeto/` para `templates/` (versionado), `COPY` no Dockerfile (leitura só, sem caminho de escrita novo), script `scripts/tag-report-template.mjs` que deriva `templates/relatorio-tecnico.tagged.docx` trocando os sublinhados literais por comandos `docx-templates` **dentro do mesmo run**, e **guardas de deriva**: sha256 do oficial + inventário dos 39 nomes do AcroForm + `listCommands()` da cópia marcada. Zero mudança de comportamento | baixo — asset + testes de guarda | pendente |
 | **V5-2** | **Dados do projeto + imagens**: migration (`startDate`, `endDate`, `editalNumber`, `processNumber`, `points`, `logoKey?`, `bannerKey?`) + `project_deliverables` + anexos **no bucket** + **logo/banner do projeto** com upload (validação de imagem) + header do detail com banner/logo (estilo FB/LinkedIn) | médio — tela visível (G5/G6) | pendente |
 | **V5-2a** | **Visão de todos os projetos**: lista (`GET /api/projects`) e detalhe (`GET /api/projects/[id]`) passam a aceitar qualquer autenticado (DEC-127); escrita/gestão intacta; filhos (anexos, horas, cronograma) seguem a mesma leitura; ajusta os 2 trechos do roundtrip que congelam a regra antiga e escreve os testes unitários que faltam (`ListProjectsForActorUseCase`, `canActorAccessProjectDecision`) | baixo — 1 ACL + testes; roteiro para o V6-5 | pendente |
@@ -293,7 +307,8 @@ A espera pelo plan-v4 caiu: ele fechou em 2026-10-07.
 > schedules/bulk (B6-6) e POST tasks (B6-7).
 
 ```
-docker-compose.yml                        +serviço minio (volume, 127.0.0.1:9000/9001 no override)
+docker-compose.yml                        +serviço seaweedfs (volume object_store_data, 8333 intra-rede;
+                                          127.0.0.1:8333/8888 no override; credenciais por env — DEC-131)
 package.json                              +@aws-sdk/client-s3 (e presigner se precisar de URL)
                                           +docx-templates (DOCX) e @cantoo/pdf-lib (AcroForm) no V5-9/V5-10
 templates/                                (novo, V5-1a) relatorio-tecnico.docx (oficial, byte-intacto),
@@ -303,7 +318,8 @@ Dockerfile                                COPY templates/ (leitura; nenhum camin
 scripts/tag-report-template.mjs           (novo, V5-1a) deriva a cópia marcada a partir do oficial
 prisma/schema.prisma                      +cols em projects/users/project_members/tasks/notifications
 prisma/migrations/                        migrations por batch (nullable; sem backfill)
-lib/storage/blob-store.ts                 (novo) seam de blob: put/get/remove/allowlist (imgs/pdf/vídeo)
+lib/storage/blob-store.ts                 (novo, V5-1) seam de blob: put/get/remove/allowlist (imgs/pdf/vídeo),
+                                          config por env S3_* e cliente S3 injetável
 backend/domain/project/
   project-rules.ts                        + regras de período/ordem/atraso (puras)
   activity-rules.ts                       (novo) recompensa = 100×meses marcados, fração −10%/dia, distribuição proporcional
@@ -313,7 +329,8 @@ backend/domain/reporting/
   report-fields-rules.ts                  (novo) projeto+tipo+rascunho → registro {tag: valor}, puro
 backend/modules/project-management/
   application/use-cases/                 + request/approve-activity-completion, entregáveis/anexos, wizard, cronograma
-  application/ports/                     + project-activities.port, blob-store.port (quadrar com seam lib/)
+  application/ports/                     + project-activities.port, blob-store.port (feito no V5-1)
+  infrastructure/adapters/                (feito no V5-1) s3-blob-store.ts: adapter sobre a seam lib/, cliente S3 injetável
   infrastructure/repositories/           prisma-* correspondentes
 backend/modules/attestation/             (novo) certificates + AcroForm + lembrete dia 19
   application/ports/                     attestation-document.port (domain → adapter, nunca pdf-lib no domain)
@@ -339,19 +356,21 @@ components/ui/notifications-panel.tsx    destaque de prioridade
 
 | Gate | Comando — critério |
 |---|---|
-| **G0** | `npm run arch:check` — exit 0, **allow-list vazia**. Baseline 2026-10-09: 822/3370 |
+| **G0** | `npm run arch:check` — exit 0, **allow-list vazia**. Baseline 2026-10-13 (depois do V5-1): 828/3379 |
 | **G1** | `npm run lint` — 0 erros (em worktree: `npx eslint --no-eslintrc --config .eslintrc.json <arquivos>`) |
-| **G2** | `npx tsc --noEmit` — 0 erros |
-| **G3** | `npx vitest run tests/unit features` — zero failure. **Baseline 101/1323** (2026-10-09) |
-| **G4** | migration + roundtrip só contra `dq-dev-test-db` em `127.0.0.1:5433` (`npm run db:test:up` + `db:test:setup`; `g4-normalize.sql` obrigatório) — suíte completa. **Migrations novas seguem o protocolo do V4-4:** `migrate diff` offline + `migrate deploy`, **nunca** `migrate dev` contra a 5432 (risco de RESET nos dados reais) |
+| **G2** | `npx tsc --noEmit` — 0 erros. **Condição pré-existente medida em 2026-10-13:** o `dev` já vinha com **1 erro** em `features/laboratorio/__tests__/floating-timer-tabs.test.tsx:105` (`exact` não existe em `ByRoleOptions` do `@testing-library/dom@10.4.1`) — idêntico no `HEAD` limpo (conferido com `git stash`), fora do V5-1 |
+| **G3** | `npx vitest run tests/unit features` — zero failure. **Baseline 2026-10-13 (depois do V5-1): 103/1352** (era 101/1323) |
+| **G4** | migration + roundtrip só contra `dq-dev-test-db` em `127.0.0.1:5433` (`npm run db:test:up` + `db:test:setup`; `g4-normalize.sql` obrigatório) — suíte completa (baseline 2026-10-13: **113/1439**). **Migrations novas seguem o protocolo do V4-4:** `migrate diff` offline + `migrate deploy`, **nunca** `migrate dev` contra a 5432 (risco de RESET nos dados reais) |
 | **G5** | `npm run docs:build` + `docs:check` — obrigatório em V5-2, V5-3, V5-5, V5-6, V5-8, V5-9, V5-10, V5-11 |
 | **G6** | recapturar telas do guia quando a captura deixa de representar a tela (V5-2 muda o detail do projeto; V5-3 muda perfil e quadro) |
 
 Regra de fechamento: **batch não entra em `done` com gate vermelho ou lacuna aberta de
 que ele mesmo dependa.** O runner da casa é `scripts/verify.sh` (G0..G4 em sequência, com
 o guard `assert-test-db` recusando 5432 antes de rodar teste) — use-o em vez de chamar os
-gates soltos. MinIO precisa estar no ar para V5-2+ (`docker compose up minio`);
-sem ele o batch falha em dev — provisionar junto do serviço.
+gates soltos. O bucket precisa estar no ar para V5-2+ (`docker compose up -d seaweedfs`);
+sem ele o batch falha em dev — provisionar junto do serviço. O V5-1 já deixou o serviço
+pronto (`docker compose up -d seaweedfs` exige `S3_ACCESS_KEY`/`S3_SECRET_KEY`/`S3_BUCKET`
+no ambiente/.env — DEC-131), mas **nada de produção o consome ainda**.
 
 ## 7. Regras a congelar em teste **antes** do código
 
@@ -387,7 +406,7 @@ sem ele o batch falha em dev — provisionar junto do serviço.
     decidir no batch; default = mesma regra do projeto).
 12. **Nenhum blob novo fora do bucket** (DEC-101): qualquer `writeFile` de arquivo novo
     é bug — e qualquer caminho de escrita novo em disco precisa `mkdir`+`chown` no
-    Dockerfile (gotcha A11), o que justifica o MinIO.
+    Dockerfile (gotcha A11), o que justifica o bucket (DEC-101/DEC-131).
 13. **Leitura de projeto é livre (DEC-127)**: qualquer autenticado **lista e abre** qualquer
     projeto; os filhos (anexos, horas, cronograma, provas) herdam a leitura. Escrita e
     gestão seguem a ACL atual (`MANAGE_PROJECTS` / `GLOBAL_PROJECT_MANAGERS`). Congelar em
@@ -457,12 +476,13 @@ Fora deste plano (na fila, não esquecer):
 
 `STATE.json` nesta pasta é a fonte de verdade: `status` (`ready` → `in_progress` →
 `done`), `waves[]` (V5-1, V5-1a, V5-2, V5-2a, V5-3..V5-11 com `status`/`decisions`/`scope`),
-`decisionRegistry` (DEC-61..77 + DEC-99..104 + DEC-126..130; **DEC-78..98 são do plan-v4**),
+`decisionRegistry` (DEC-61..77 + DEC-99..104 + DEC-126..131; **DEC-78..98 são do plan-v4**),
 `batchLog[]` (só batch executado entra, com gates aferidos e gotchas), `openQuestions`
 (ASK-V5-06, ASK-V5-07), `answeredInstructions` (ASK-V5-01..05), `blockers` (vazio —
 plan-v4 fechou). A numeração de decisões **continua** a global: plan-v6 consumiu
 DEC-105..114, o clean-arch (B6-restante + B9/B10) consumiu DEC-115..125 em 2026-10-08, e
-este plano consumiu DEC-126/127 (2026-10-09) e DEC-128..130 (2026-10-13, documentos
-oficiais), então **a próxima livre é a DEC-131**; antes de abrir decisão nova, `grep` os
+este plano consumiu DEC-126/127 (2026-10-09), DEC-128..130 (2026-10-13, documentos
+oficiais) e DEC-131 (2026-10-13, servidor do bucket na execução do V5-1), então **a próxima
+livre é a DEC-132**; antes de abrir decisão nova, `grep` os
 cinco `STATE.json` (clean-arch, plan-v3, plan-v4, plan-v5, plan-v6; lição da colisão
 DEC-61..64 do V4-4).

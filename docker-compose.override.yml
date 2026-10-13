@@ -12,3 +12,11 @@ services:
   postgres:
     ports:
       - "127.0.0.1:5432:5432"
+
+  # V5-1 (DEC-101): o bucket não precisa estar no ar para a suíte passar (o seam é testado
+  # com cliente injetado), mas estas portas deixam testar o SDK do host e inspecionar o
+  # conteúdo no navegador. Loopback puro — mesma postura da 5432 acima.
+  seaweedfs:
+    ports:
+      - "127.0.0.1:8333:8333" # API S3
+      - "127.0.0.1:8888:8888" # Filer UI

@@ -51,9 +51,10 @@ plan-v6 (refatoração visual) ──> camada de apresentação só — ordem fr
 - `plan-v4/` nasce do plan-v3 (o dono pediu subtasks e animação de pontos junto);
   `plan-v5/` nasce do desenho completo de domínio de projeto do dono (edital, cronograma,
   pontos de projeto, relatórios técnicos com IA, atestados com AcroForm) — tudo estendendo
-  o que já existe, em 12 ondas revertíveis, com DEC-61..77, DEC-99..104 e DEC-126..127
+  o que já existe, em 13 ondas revertíveis, com DEC-61..77, DEC-99..104 e DEC-126..131
   contínuas da numeração global (DEC-78..98 são do plan-v4 e DEC-105..125 de plan-v6 e
-  clean-arch — houve colisão, comentários renumerados).
+  clean-arch — houve colisão, comentários renumerados). O V5-1 fechou o bucket
+  (SeaweedFS no lugar do MinIO, DEC-131).
 - `plan-v6/` nasce da leitura da interface real contra as referências da skill
   `displayquest-ui` (`.opencode/skills/displayquest-ui/`): é **spec-driven** (a pasta
   tem `SPEC.md` como fonte de verdade do comportamento + `PLAN.md` da ordem +

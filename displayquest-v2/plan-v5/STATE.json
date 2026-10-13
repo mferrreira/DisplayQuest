@@ -1,44 +1,46 @@
 {
   "plan": "plan-v5",
-  "title": "domínio de projetos maduro: cronograma, pontos, relatórios técnicos, atestados, blobs em MinIO",
-  "version": "5.2.0",
-  "updatedAt": "2026-10-13T11:05:00-03:00",
-  "status": "ready",
+  "title": "domínio de projetos maduro: cronograma, pontos, relatórios técnicos, atestados, blobs em bucket S3-compatible (SeaweedFS desde o V5-1, DEC-131)",
+  "version": "5.3.0",
+  "updatedAt": "2026-10-13T11:23:13-03:00",
+  "status": "in_progress",
   "activeWave": null,
   "activeBatch": null,
   "awaitingInstruction": false,
   "lineage": {
     "previousPlan": "plan-v4 (subtasks, animação, inativação — done em 2026-10-07, ondas V4-1..V4-5d + V4-6b + POS-1, DEC-78..98)",
     "concurrentPlan": null,
-    "note": "a numeracao de decisoes e GLOBAL: DEC-01..29 clean-arch, DEC-30..49 plan-v3, DEC-50..54 B6/D4, DEC-55..60 plan-v4, DEC-61..77 plan-v5 (2026-10-06), DEC-78..98 plan-v4 (houve colisao nos DEC-61..64 — comentarios renumerados, ver AGENTS.md), DEC-99..104 plan-v5 (2026-10-07), DEC-105..114 plan-v6 (2026-10-07), DEC-115..125 clean-arch/B6-restante+B9+B10 (encerrado 2026-10-08), DEC-126/127 plan-v5 (2026-10-09), DEC-128..130 plan-v5/documentos oficiais (2026-10-13). PROXIMA LIVRE: DEC-131. Antes de abrir DEC nova, grep os CINCO STATE.json (clean-arch, plan-v3, plan-v4, plan-v5, plan-v6)."
+    "note": "a numeracao de decisoes e GLOBAL: DEC-01..29 clean-arch, DEC-30..49 plan-v3, DEC-50..54 B6/D4, DEC-55..60 plan-v4, DEC-61..77 plan-v5 (2026-10-06), DEC-78..98 plan-v4 (houve colisao nos DEC-61..64 — comentarios renumerados, ver AGENTS.md), DEC-99..104 plan-v5 (2026-10-07), DEC-105..114 plan-v6 (2026-10-07), DEC-115..125 clean-arch/B6-restante+B9+B10 (encerrado 2026-10-08), DEC-126/127 plan-v5 (2026-10-09), DEC-128..130 plan-v5/documentos oficiais (2026-10-13), DEC-131 plan-v5/execucao do V5-1 (2026-10-13, servidor do bucket: SeaweedFS no lugar do MinIO). PROXIMA LIVRE: DEC-132. Antes de abrir DEC nova, grep os CINCO STATE.json (clean-arch, plan-v3, plan-v4, plan-v5, plan-v6)."
   },
   "baseline": {
     "measuredAt": "2026-10-13",
-    "measuredOn": "dev, HEAD 76efcc2 (sons em MP3, 2026-10-09) — antes de qualquer commit do plan-v5",
-    "unitAndFeatures": "101 arquivos / 1323 testes",
-    "fullSuite": "111 arquivos / 1410 testes (10 arquivos de integracao / 87 testes), com dq-dev-test-db no ar e DATABASE_URL na 5433",
+    "measuredOn": "dev, HEAD 76efcc2 (sons em MP3, 2026-10-09) + V5-1 — antes do V5-1 os numeros eram os de previousBaseline",
+    "unitAndFeatures": "103 arquivos / 1352 testes (era 101/1323; o V5-1 somou 2 arquivos e 29 testes)",
+    "fullSuite": "113 arquivos / 1439 testes (era 111/1410), com dq-dev-test-db no ar e DATABASE_URL na 5433",
     "e2e": "quadro: 2 passando + 1 falha conhecida (cartao a mais na coluna, dado legitimo) + 5 did not run (spec serial); shell: 5 passando",
-    "archCheck": "822 modulos / 3370 dependencias, zero violacao, allow-list vazia",
+    "archCheck": "828 modulos / 3379 dependencias, zero violacao, allow-list vazia (era 822/3370)",
     "previousBaseline": "2026-10-07: 87/1107, full 97/1192, arch 787/3077 | 2026-10-08 (refactor/b6-restante): 95/1280 e 105/1367 | 2026-10-09: 101/1323, arch 822/3370",
-    "timing": "completa em 69 s (unit+features em paralelo, integracao serial); gotcha medido: com o container dq-dev-test-db parado a completa da 10 arquivos / 15 testes falhos — ambiente, nao regressao (docker start dq-dev-test-db)"
+    "timing": "completa em 69 s (unit+features em paralelo, integracao serial); gotcha medido: com o container dq-dev-test-db parado a completa da 10 arquivos / 15 testes falhos — ambiente, nao regressao (docker start dq-dev-test-db)",
+    "knownPreExisting": "G2 (npx tsc --noEmit) NAO fecha em 0 nesta branch por 1 erro PRE-EXISTENTE: features/laboratorio/__tests__/floating-timer-tabs.test.tsx:105 usa `exact` em getByRole, que nao existe em ByRoleOptions do @testing-library/dom@10.4.1. Medido em 2026-10-13 e conferido com git stash: identico no HEAD limpo (fora do V5-1, que nao tocou features/). O comportamento em runtime permanece o pretendido pelo comentario do teste."
   },
   "gates": {
-    "G0": "npm run arch:check — exit 0, allow-list VAZIA (baseline 2026-10-09: 822/3370)",
+    "G0": "npm run arch:check — exit 0, allow-list VAZIA (baseline 2026-10-13 depois do V5-1: 828/3379)",
     "G1": "npm run lint — exit 0 (warnings aceitos, nenhum erro; em worktree: npx eslint --no-eslintrc --config .eslintrc.json <arquivos>)",
-    "G2": "npx tsc --noEmit — 0 erros",
-    "G3": "npx vitest run tests/unit features — zero failure (baseline 2026-10-09: 101/1323)",
-    "G4": "DATABASE_URL=...5433 npx vitest run — suíte completa, só contra dq-dev-test-db (db:test:up + db:test:setup; g4-normalize.sql obrigatório). Runner da casa: scripts/verify.sh (G0..G4 em sequência, com assert-test-db recusando 5432). Migrations: migrate diff offline + migrate deploy, NUNCA migrate dev contra 5432",
+    "G2": "npx tsc --noEmit — 0 erros. CONDIÇÃO MEDIDA em 2026-10-13: o dev ja vinha com 1 erro pre-existente em features/laboratorio/__tests__/floating-timer-tabs.test.tsx:105 (`exact` em ByRoleOptions), identico no HEAD limpo — ver baseline.knownPreExisting",
+    "G3": "npx vitest run tests/unit features — zero failure (baseline 2026-10-13 depois do V5-1: 103/1352)",
+    "G4": "DATABASE_URL=...5433 npx vitest run — suíte completa, só contra dq-dev-test-db (db:test:up + db:test:setup; g4-normalize.sql obrigatório). Baseline 2026-10-13: 113/1439 verde. Runner da casa: scripts/verify.sh (G0..G4 em sequência, com assert-test-db recusando 5432). Migrations: migrate diff offline + migrate deploy, NUNCA migrate dev contra 5432",
     "G5": "npm run docs:build + docs:check — obrigatório em V5-2, V5-3, V5-5, V5-6, V5-8, V5-9, V5-10, V5-11",
     "G6": "recapturar telas do guia quando a captura deixa de representar a tela (V5-2 muda o detail do projeto; V5-3 muda perfil e quadro)"
   },
   "waves": [
     {
       "id": "V5-1",
-      "title": "infra de blobs: serviço MinIO + seam BlobStore",
-      "status": "pending",
-      "decisions": ["DEC-101"],
-      "scope": "Serviço minio no docker-compose (volume nomeado; API 9000 e console 9001 em loopback no override), envs MINIO_* + bucket default, dependência @aws-sdk/client-s3, seam lib/storage/blob-store.ts (put/get/remove) + port para módulos, allowlist de imagens/pdf/vídeo (sem tela de vídeo). Nenhum consumidor de produção ainda — batch de infra, zero mudança de comportamento.",
-      "why": "a tendência é mais arquivos/imagens/vídeos (dono, 2026-10-07); hoje só existem dois roots em disco (public/uploads/avatars, data/uploads/reports) e nenhum serviço s3 no compose. MinIO evita gravar blob em pasta do backend."
+      "title": "infra de blobs: serviço de objetos S3-compatible (SeaweedFS) + seam BlobStore",
+      "status": "done",
+      "decisions": ["DEC-101", "DEC-131"],
+      "scope": "Serviço `seaweedfs` no docker-compose em modo `mini`, pinado por DIGEST (só existem tags latest/dev) e com a identidade S3 escrita em /tmp/s3.json a partir de S3_ACCESS_KEY/S3_SECRET_KEY (nada de credencial no repo — sem identidade o S3 responderia como anônimo); S3_BUCKET cria o bucket; `-master.telemetry=false`; volume nomeado object_store_data; 8333 intra-rede e 8333/8888 em loopback no override; healthcheck em /cluster/status do master. Envs S3_* (não MINIO_*), @aws-sdk/client-s3, seam lib/storage/blob-store.ts (put/get/head/remove, allowlist, config por env, cliente injetável) + BlobStorePort + adapter s3-blob-store.ts. Nenhum consumidor de produção ainda — batch de infra, zero mudança de comportamento do app.",
+      "why": "a tendência é mais arquivos/imagens/vídeos (dono, 2026-10-07); hoje só existem dois roots em disco (public/uploads/avatars, data/uploads/reports) e nenhum serviço s3 no compose. O bucket evita gravar blob em pasta do backend. O servidor nomeado na DEC-101 (MinIO) caiu na execução — EOL, imagens fora dos registries — e virou SeaweedFS (DEC-131); o escopo da DEC-101 não mudou.",
+      "completedAt": "2026-10-13"
     },
     {
       "id": "V5-1a",
@@ -165,9 +167,35 @@
     "DEC-127 (dono 2026-10-09, backlog): TODO usuário autenticado passa a ver TODOS os projetos, na lista e no detalhe — item do backlog 'liberar visualização de todos os projetos para todos os usuários'. Medido antes: a lista filtra por MANAGE_TASKS (list-projects-for-actor.use-case.ts:20-30 — COLABORADOR/PESQUISADOR já veem todos; VOLUNTARIO/LABORATORISTA só membro/criado/liderado) e o detalhe por MANAGE_PROJECTS (get-project-for-actor.use-case.ts:21-38), então as duas ACLs são diferentes e a média é estranha (COLABORADOR recebe o projeto na lista e leva 'Acesso negado ao projeto' ao abrir). A V5-2a unifica em 'qualquer autenticado lê'; leitura dos filhos (anexos, horas, cronograma) herda; escrita/gestão continua na ACL atual. Testes congelados que mudam: tests/integration/projects-roundtrip.test.ts:153-154 (VOLUNTARIO vendo só o dela) e :161-171 (outsider tomando Acesso negado). Lacuna medida: não existe teste unitário de ListProjectsForActorUseCase nem de canActorAccessProjectDecision — a onda escreve os dois.",
     "DEC-128 (dono 2026-10-13, D-Z): os dois templates oficiais que o app precisa usar viram ASSET VERSIONADO em templates/ no repo. Motivo medido: docs/Projeto/ está no .gitignore (linha 185) e é a caixa de entrada do dono; a imagem Docker precisa do arquivo dentro de si. Entram: templates/relatorio-tecnico.docx (oficial, byte-intacto), templates/relatorio-tecnico.tagged.docx (cópia derivada por scripts/tag-report-template.mjs — os sublinhados literais viram comandos docx-templates {{campo}} dentro do MESMO run, sem tocar w:rPr/styles.xml/sectPr, e a cópia nunca é editada à mão) e templates/atestado-frequencia.pdf (AcroForm oficial com 39 campos nomeados). COPY templates/ no Dockerfile, leitura só — nenhum caminho de escrita novo em disco (evita o EACCES do gotcha A11). Guardas de deriva (mesmo padrão de user-status-vocabulary/user-delete-schema-drift): sha256 do oficial, lista dos 39 nomes do AcroForm e inventário de comandos via listCommands() da cópia marcada. Sem isso, trocar o arquivo em docs/Projeto/ sem re-derivar passaria silencioso.",
     "DEC-129 (dono 2026-10-13, D-AA): o relatório técnico entrega um DOCX PREENCHIDO a partir do template OFICIAL, nunca um documento gerado do zero. Biblioteca escolhida: docx-templates 4.15.0 (MIT, 2025-12-03, dependências só jszip+sax), que escreve texto DENTRO dos runs que já carregam Times New Roman 12 — o sistema NAO escreve estilo, fonte, tamanho nem margem (w:rPr, styles.xml e sectPr ficam intactos). O arquivo oficial permanece byte-intacto; a versão que recebe dados é a cópia marcada derivada por script (DEC-128). O texto do rascunho de IA entra como texto puro (processLineBreaks) nas 3 tabelas vazias (Descrição das Atividades, Principais Resultados, Comentários Adicionais); o tipo (parcial/técnico-final/final) marca a linha '( ) Relatório Final ( ) Relatório Parcial', que no oficial é texto literal, não campo de formulário. docxtemplater 3.71.0 foi considerada e preterida porque imagem/tabela/html são módulos pagos. O adaptador vive em infrastructure/adapters/ atrás de porta; docx-templates nunca é importado por backend/domain/ (RG-01..RG-06 do G0).",
-    "DEC-130 (dono 2026-10-13, D-AB): o atestado de frequência PREENCHE o AcroForm OFICIAL pelos 39 nomes de campo medidos, em vez de gerar o formulário — revoga a parte 'gerar o AcroForm' da DEC-71. Biblioteca: @cantoo/pdf-lib 2.11.1 (fork mantido, MIT, 2026-09-15, mesma API: getForm/getTextField/getCheckBox/updateFieldAppearances/flatten), porque pdf-lib 1.17.1 está sem release desde 2021-11-06. Fontes de aparência Times (/DA /Times no oficial); flatten() no arquivo entregue (bucket) para o valor não depender de NeedAppearances true. A regra pura (backend/domain/attestation/attestation-fields-rules.ts) monta {campoAcroForm: valor} a partir de projeto+membro+horas+atividades, com status/campos obrigatórios na assinatura (lição do AwardableSubtask/DEC-90); o adapter acroform-attestation.adapter.ts lê templates/atestado-frequencia.pdf e só escreve os 39 nomes. Campos de pessoa ausentes no schema (CPF, matrícula, curso, modalidade, fomento, nível) são o ASK-V5-07."
+    "DEC-130 (dono 2026-10-13, D-AB): o atestado de frequência PREENCHE o AcroForm OFICIAL pelos 39 nomes de campo medidos, em vez de gerar o formulário — revoga a parte 'gerar o AcroForm' da DEC-71. Biblioteca: @cantoo/pdf-lib 2.11.1 (fork mantido, MIT, 2026-09-15, mesma API: getForm/getTextField/getCheckBox/updateFieldAppearances/flatten), porque pdf-lib 1.17.1 está sem release desde 2021-11-06. Fontes de aparência Times (/DA /Times no oficial); flatten() no arquivo entregue (bucket) para o valor não depender de NeedAppearances true. A regra pura (backend/domain/attestation/attestation-fields-rules.ts) monta {campoAcroForm: valor} a partir de projeto+membro+horas+atividades, com status/campos obrigatórios na assinatura (lição do AwardableSubtask/DEC-90); o adapter acroform-attestation.adapter.ts lê templates/atestado-frequencia.pdf e só escreve os 39 nomes. Campos de pessoa ausentes no schema (CPF, matrícula, curso, modalidade, fomento, nível) são o ASK-V5-07.",
+    "DEC-131 (dono 2026-10-13, D-AC/D-AD — execução do V5-1): o servidor S3-compatible é o SeaweedFS (chrislusf/seaweedfs), NÃO o MinIO que a DEC-101 tinha nomeado, e as variáveis são S3_* e não MINIO_*. MOTIVO MEDIDO (2026-10-13): o MinIO está EOL — repositório arquivado em 2026-04-25 (EOL anunciado para fev/2026) — e as imagens OFICIAIS saíram do Docker Hub, do quay.io e do ghcr.io; `docker manifest inspect` falha nos três. Alternativas ainda puxáveis foram medidas (pgsty/minio, dxflrs/garage, bitnamilegacy/minio, cgr.dev/chainguard/minio) mas o dono escolheu o SeaweedFS. O que REVOGA: só o NOME do servidor e o prefixo das envs — o ESCOPO da DEC-101 continua inteiro (bucket desde o V5-1 para todos os blobs NOVOS, atrás de port/seam, allowlist de imagens/pdf/vídeo, os dois roots legados NÃO migram nesta leva, vídeo só infra). Detalhes de implementação: modo `mini` (master+volume+filer+S3 num processo, o modo do entrypoint da imagem); pinado por DIGEST sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d (índice multi-arquitetura; as tags publicadas são latest/dev, sem semver); a identidade S3 é escrita em /tmp/s3.json no entrypoint a partir de S3_ACCESS_KEY/S3_SECRET_KEY (NENHUMA credencial no repositório; sem identidade o S3 responderia como anônimo) com actions Admin/Read/Write; S3_BUCKET cria o bucket; -master.telemetry=false corta o reporte anônimo; S3_FORCE_PATH_STYLE=true porque o SeaweedFS não faz virtual-host style; S3_ACCESS_KEY/S3_SECRET_KEY são obrigatórios no compose (${VAR:?}) e S3_SECRET_KEY entra no npm run check:env com denylist (minioadmin/any/changeme/CHANGE_ME/secret — 'any' é a identidade anônima padrão do SeaweedFS e 'minioadmin' o default publicado do MinIO). Provado contra o servidor real (container com o comando EXATO do compose): put/get/head/remove do seam, chave ausente → null, credencial errada → SignatureDoesNotMatch. As envs de nome MINIO_* que apareciam no plano foram todas trocadas."
   ],
-  "batchLog": [],
+  "batchLog": [
+    {
+      "id": "V5-1",
+      "at": "2026-10-13",
+      "title": "bucket S3-compatible no compose (SeaweedFS, digest pinado) + seam BlobStore e adapter — infra nova, nenhum consumidor (DEC-101/DEC-131)",
+      "actions": [
+        "medido ANTES de escrever compose: o MinIO nomeado pela DEC-101 está EOL (repo arquivado 2026-04-25) e as imagens oficiais sumiram do Docker Hub/quay.io/ghcr.io — `docker manifest inspect` falha nos três. Alternativas ainda puxáveis medidas (pgsty/minio, dxflrs/garage, bitnamilegacy/minio, cgr.dev/chainguard/minio) e o dono escolheu o SeaweedFS (DEC-131).",
+        "medido no servidor real antes de fixar o compose: SeaweedFS é Alpine 3.24 com /bin/sh, wget e curl; `weed` em /usr/bin/weed; entrypoint /entrypoint.sh com cmd default `mini -dir=/data`; roda como root; `-bucket=` cria o bucket; API na 8333, master na 9333 (GET /cluster/status → 200 JSON — é o healthcheck), 403 anônimo na 8333; sem identidade no s3.json o acesso PRECISA ser recusado (conferido: segredo errado → SignatureDoesNotMatch).",
+        "seam escrito primeiro com cliente injetável (BlobS3Client): lib/storage/blob-store.ts (allowlist de 8 mimes — png/jpeg/webp/gif/pdf/mp4/webm/quicktime —, limites 5 MB imagem / 20 MB pdf / 100 MB vídeo, key builder por projeto, config por env S3_*, createS3BlobStore), port BlobStorePort e adapter S3BlobStoreAdapter em project-management/infrastructure/adapters/. 23 testes unitários em 2 arquivos, todos com cliente falso (nenhum teste precisa do servidor no ar).",
+        "serviço `seaweedfs` no docker-compose.yml: imagem por DIGEST, container_name display-quest-objects, entrypoint /bin/sh -c escrevendo /tmp/s3.json a partir de $${S3_ACCESS_KEY}/$${S3_SECRET_KEY} e `exec weed mini ... -bucket=$${S3_BUCKET} -master.telemetry=false`, expose 8333, volume object_store_data, healthcheck wget em http://127.0.0.1:9333/cluster/status, restart unless-stopped. Portas 127.0.0.1:8333 e 127.0.0.1:8888 no override (loopback, mesma postura da 5432).",
+        "env: S3_* em .env.example (host usa http://localhost:8333; o app, do V5-2 em diante, http://seaweedfs:8333); S3_ACCESS_KEY/S3_SECRET_KEY obrigatórios no compose via ${VAR:?} e S3_SECRET_KEY validado por npm run check:env (denylist minioadmin/any/changeme/CHANGE_ME/secret) — o teste saudável de scripts/check-env-secrets-lib.js foi estendido.",
+        "PROVA DE PONTA A PONTA contra o comando EXATO do compose (container subido por `docker compose up -d seaweedfs`): s3.json dentro do container com as credenciais do ambiente, healthcheck healthy, porta 127.0.0.1:8333 publicada, e o seam real fazendo put/get/head/remove + chave ausente → null + segredo errado → SignatureDoesNotMatch. Teste-sonda temporário (deletado depois, não versionado) apontando para 127.0.0.1:8333.",
+        "MINIO_* varridos do PLAN.md e do STATE.json (grep) e substituídos por S3_*/SeaweedFS; a DEC-101 ganhou a nota de que só o NOME do servidor mudou."
+      ],
+      "gates": "G0 828/3379 zero violacao, allow-list vazia | G1 exit 0 sem erro | G2 1 erro PRE-EXISTENTE (floating-timer-tabs.test.tsx:105, identico no HEAD limpo — conferido com git stash; fora do V5-1) | G3 103/1352 verde | G4 completa 113/1439 verde contra dq-dev-test-db (5433)",
+      "gotchas": [
+        "compose escapa `$$` para o container: o valor que chega é `${S3_ACCESS_KEY}` com UM cifrao (conferido com `docker inspect .Config.Cmd`, não só com `docker compose config`, que re-escapa para `$$` na saida).",
+        "`docker compose config` mostrou o comando com `$$` e parecia errado — não é: a saida do config é YAML re-consumivel. A prova é o Cmd do container em execucao e o /tmp/s3.json escrito com o valor certo.",
+        "heredoc dentro de command em YAML: o bloco escalar `- |` entrega UMA string ao `/bin/sh -c`; o `EOF` final precisa ficar na coluna 0 depois do strip do YAML (funcionou sem ajuste).",
+        "SeaweedFS só publica tags latest/dev (nenhum semver): pinar por digest do indice multi-arquitetura (mesmo digest cobre amd64 no deploy e arm64 no Mac local); tag mutavel seria drift silencioso.",
+        "S3_SECRET_KEY passou a ser obrigatorio no compose — qualquer `docker compose up` (inclusive o do dono) agora falha ate S3_ACCESS_KEY/S3_SECRET_KEY existirem no .env, com mensagem explicita do ${VAR:?}. E o efeito colateral do check:env: scripts/db-safe-deploy.sh roda check:env antes do deploy e para com mensagem clara (melhor que estourar no compose no meio do deploy).",
+        "o app service NAO ganhou S3_* no V5-1 de proposito: nenhum consumidor de producao existe ainda; as envs entram no app quando o primeiro consumidor (V5-2) existir.",
+        "S3_ENDPOINT difere por lado: host/testes → http://localhost:8333 (loopback do override); container do app → http://seaweedfs:8333 (intra-rede). O mesmo vale para o path-style, que o SeaweedFS exige (S3_FORCE_PATH_STYLE=true)."
+      ]
+    }
+  ],
   "openQuestions": [
     {
       "id": "ASK-V5-06",

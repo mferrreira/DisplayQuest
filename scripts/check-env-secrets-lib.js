@@ -6,17 +6,23 @@
 
 const SECRET_PLACEHOLDERS = ["your-secret-key-here", "<openssl rand -base64 32>"]
 const DB_PASSWORD_DENYLIST = ["display-quest123", "postgres", "password", "123456"]
+// V5-1 (DEC-101): o serviço de objetos do compose exige credencial (`${S3_SECRET_KEY:?}`).
+// "any" é a identidade anônima padrão do SeaweedFS e "minioadmin" o default publicado do
+// MinIO — nenhum dos dois pode virar a credencial do bucket.
+const S3_SECRET_DENYLIST = ["minioadmin", "any", "changeme", "CHANGE_ME", "secret"]
 const MIN_SECRET_LENGTH = 32
 
 /**
  * Valida segredos de infra que não devem estar versionados no código.
  * Regras:
  *   - NEXTAUTH_SECRET: obrigatório, sem placeholder, com >= 32 chars;
- *   - POSTGRES_PASSWORD: obrigatório e fora da denylist de defaults publicados.
+ *   - POSTGRES_PASSWORD: obrigatório e fora da denylist de defaults publicados;
+ *   - S3_SECRET_KEY: obrigatório (o bucket do compose não sobe sem credencial) e fora
+ *     da denylist de defaults conhecidos.
  * Em desenvolvimento (NODE_ENV=development) as violações viram warnings (a guarda
  * de produção roda com NODE_ENV ausente/diferente → erro).
  *
- * @param {{ NEXTAUTH_SECRET?: string, POSTGRES_PASSWORD?: string, NODE_ENV?: string }} [env]
+ * @param {{ NEXTAUTH_SECRET?: string, POSTGRES_PASSWORD?: string, S3_SECRET_KEY?: string, NODE_ENV?: string }} [env]
  * @returns {{ ok: boolean, errors: string[], warnings: string[] }}
  */
 function checkEnvSecrets(env = {}) {
@@ -53,6 +59,17 @@ function checkEnvSecrets(env = {}) {
     )
   }
 
+  const s3Secret = (env.S3_SECRET_KEY ?? "").trim()
+  if (s3Secret === "") {
+    report(
+      "S3_SECRET_KEY ausente/vazio — o serviço de objetos do compose recusa subir sem credencial; defina uma no .env",
+    )
+  } else if (S3_SECRET_DENYLIST.includes(s3Secret)) {
+    report(
+      `S3_SECRET_KEY na denylist de defaults conhecidos ("${s3Secret}") — troque por um segredo novo`,
+    )
+  }
+
   return { ok: errors.length === 0, errors, warnings }
 }
 
@@ -60,5 +77,6 @@ module.exports = {
   checkEnvSecrets,
   SECRET_PLACEHOLDERS,
   DB_PASSWORD_DENYLIST,
+  S3_SECRET_DENYLIST,
   MIN_SECRET_LENGTH,
 }

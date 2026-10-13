@@ -10,7 +10,7 @@
   "lineage": {
     "previousPlan": "plan-v5 (domínio de projetos maduro — ready, activeWave: null; não iniciado)",
     "concurrentPlan": "plan-v5 (ready, não iniciado) — ORDEM RESOLVIDA na DEC-113: nas colisões o plan-v5 executa ANTES (V6-4 × V5-4 wizard, V6-5 × V5-2 banner/logo, V6-7 × V5-3 banner de perfil/pódio). V6-0..V6-3 não tocam o plan-v5.",
-    "note": "a numeracao de decisoes e GLOBAL: DEC-01..29 clean-arch, DEC-30..49 plan-v3, DEC-50..54 B6/D4, DEC-55..60 plan-v4, DEC-61..77 plan-v5, DEC-78..98 plan-v4, DEC-99..104 plan-v5. Este plano usa DEC-105..114; o clean-arch (B6-restante + B9/B10) usou DEC-115..125 (2026-10-08) e o plan-v5 usou DEC-126/127 (2026-10-09) e DEC-128..130 (2026-10-13). Proxima decisao: DEC-131. Antes de abrir DEC nova, grep os CINCO STATE.json (clean-arch, plan-v3, plan-v4, plan-v5, plan-v6)."
+    "note": "a numeracao de decisoes e GLOBAL: DEC-01..29 clean-arch, DEC-30..49 plan-v3, DEC-50..54 B6/D4, DEC-55..60 plan-v4, DEC-61..77 plan-v5, DEC-78..98 plan-v4, DEC-99..104 plan-v5. Este plano usa DEC-105..114; o clean-arch (B6-restante + B9/B10) usou DEC-115..125 (2026-10-08), o plan-v5 usou DEC-126/127 (2026-10-09), DEC-128..130 (2026-10-13) e DEC-131 (2026-10-13, execucao do V5-1: bucket SeaweedFS no lugar do MinIO, envs S3_*). Proxima decisao: DEC-132. Antes de abrir DEC nova, grep os CINCO STATE.json (clean-arch, plan-v3, plan-v4, plan-v5, plan-v6)."
   },
   "baseline": {
     "measuredAt": "2026-10-13",

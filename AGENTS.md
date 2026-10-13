@@ -19,8 +19,37 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
 - **Node local ≠ Node de deploy:** a imagem é `node:20-alpine`; o `engines` não é declarado e
   não há `.nvmrc`. Gate verde local não implica gate verde no deploy quando o Node difere —
   foi assim que o shim `path` (removido) quebrava em Node 22+ e passaria em Node 20.
-- **Secrets:** `npm run check:env` valida `NEXTAUTH_SECRET` (≥32, sem placeholder) e
-  senha do banco (denylist). O runner lê `process.env`, não `.env` — exporte as variáveis.
+- **Secrets:** `npm run check:env` valida `NEXTAUTH_SECRET` (≥32, sem placeholder), a
+  senha do banco (denylist) e, desde o V5-1, `S3_SECRET_KEY` (obrigatória — o serviço do
+  bucket recusa subir sem ela — e fora da denylist `minioadmin`/`any`/`changeme`). O runner
+  lê `process.env`, não `.env` — exporte as variáveis.
+
+## Bucket de objetos (V5-1, 2026-10-13)
+
+- **Servidor: SeaweedFS, não MinIO** (DEC-131). A DEC-101 tinha nomeado MinIO; na execução
+  ele estava **EOL** (repo arquivado em 2026-04-25) e as imagens oficiais saíram do Docker
+  Hub, do `quay.io` e do `ghcr.io` (`docker manifest inspect` falha nos três). O dono
+  escolheu o SeaweedFS. O **escopo** da DEC-101 segue inteiro; só o nome do servidor e o
+  prefixo das envs mudaram (`S3_*`, não `MINIO_*`).
+- **Serviço:** `seaweedfs` em modo `mini` (master + volume + filer + S3 num processo), imagem
+  pinada por **digest** (só existem tags `latest`/`dev`, nenhuma semver),
+  `container_name: display-quest-objects`, volume `object_store_data`, healthcheck em
+  `http://127.0.0.1:9333/cluster/status`, 8333 intra-rede + `127.0.0.1:8333`/`8888` no
+  override. A identidade S3 é escrita em `/tmp/s3.json` no entrypoint a partir de
+  `S3_ACCESS_KEY`/`S3_SECRET_KEY` — **nenhuma credencial no repositório** e sem identidade o
+  S3 responderia como anônimo. `-master.telemetry=false`. O SeaweedFS exige
+  **path-style** (`S3_FORCE_PATH_STYLE=true`).
+- **Env por lado:** do host (scripts/testes) `S3_ENDPOINT=http://localhost:8333`; do
+  container do `app`, `http://seaweedfs:8333` — as envs entram no `app` quando o primeiro
+  consumidor existir (V5-2).
+- **Seam:** `lib/storage/blob-store.ts` (allowlist de 8 mimes, tetos 5 MB imagem / 20 MB pdf
+  / 100 MB vídeo — vídeo é teto provisório, nenhuma tela no plan-v5), port
+  `backend/modules/project-management/application/ports/blob-store.port.ts` e adapter
+  `infrastructure/adapters/s3-blob-store.ts`. O cliente S3 é **injetável**: a suíte de unit
+  roda sem bucket no ar. Magic bytes entram no V5-2.
+- **Gate:** `docker compose up -d` (qualquer serviço) agora exige `S3_ACCESS_KEY` e
+  `S3_SECRET_KEY` no `.env` — `${VAR:?}` falha com mensagem explícita. Nada de produção
+  consome o bucket ainda.
 
 ## Arquitetura clean-arch (refatoração 2026-09/10, ondas 0–9)
 
@@ -133,11 +162,13 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   pós-encerramento: ASK-V4-33 — tira o filtro morto da tela de voluntários — e o lote POS-1 de pontuação
   + trava de marcação)**, DEC-99..104 plan-v5, DEC-105..114 plan-v6, **DEC-115..125 clean-arch/B6-restante
   + B9/B10 (encerrado 2026-10-08)**, **DEC-126/127 plan-v5 (2026-10-09: meses marcados na grade do
-  cronograma e visualização livre de projetos)** e **DEC-128..130 plan-v5/documentos oficiais (2026-10-13:
-  templates viram asset, DOCX preenchido pelo template, AcroForm oficial preenchido)**. O V4-4 ia usar
+  cronograma e visualização livre de projetos)**, **DEC-128..130 plan-v5/documentos oficiais (2026-10-13:
+  templates viram asset, DOCX preenchido pelo template, AcroForm oficial preenchido)** e **DEC-131 plan-v5
+  (2026-10-13, execução do V5-1: o bucket é SeaweedFS, não MinIO — EOL e imagens fora dos registries — e as
+  envs são `S3_*`)**. O V4-4 ia usar
   DEC-61..64 e colidiu; os 28 comentários de código foram renumerados. **Antes de abrir decisão nova, `grep`
   os CINCO `STATE.json` (clean-arch, plan-v3, plan-v4, plan-v5, plan-v6) — a nota antiga que dizia "três"
-  está velha. Próxima livre: DEC-131.**
+  está velha. Próxima livre: DEC-132.**
 - **Subtask (V4-4, DEC-78..83 → regra atual = DEC-97/98):** tabela `task_subtasks` (sem FK para
   `users` — subtask não tem
   responsável próprio), base gravada em `tasks.points` = `10 + 5·n` (DEC-97) e **cada subtask CONCLUÍDA
@@ -226,7 +257,7 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
 - **Notificações:** painel em popover; fecha ao clicar fora e com `Escape`, acessível por teclado.
 - **Grade de horários:** leitura aberta (qualquer autenticado vê todos os horários); escrita/bulk restrita a `MANAGE_USERS`.
 - **Sessões de trabalho:** gestor (`MANAGE_WORK_SESSIONS`) vê ativas+pausadas de todos e pode pausar/retomar/finalizar/excluir; usuário comum opera só as próprias. Anti-farm: teto de 9h por trecho ativo e varredura noturna 23:59 (America/Sao_Paulo) fecha o que ficou aberto overnight/weekend.
-- **Infra e persistência:** Postgres exposto só intra-rede no compose base; `docker-compose.override.yml` (versionado) adiciona `127.0.0.1:5432` loopback para `psql`/vitest. Volumes de `uploads`/`reports`/`postgres_data` persistem entre `--build`/`--force-recreate`.
+- **Infra e persistência:** Postgres exposto só intra-rede no compose base; `docker-compose.override.yml` (versionado) adiciona `127.0.0.1:5432` loopback para `psql`/vitest. Volumes de `uploads`/`reports`/`postgres_data`/`object_store_data` persistem entre `--build`/`--force-recreate`.
 
 ## Gotchas reais (verificados empiricamente)
 

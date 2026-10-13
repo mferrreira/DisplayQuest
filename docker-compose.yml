@@ -19,6 +19,45 @@ services:
       timeout: 5s
       retries: 5
 
+  # V5-1 (DEC-101/DEC-131): bucket S3-compatible dos blobs NOVOS do plan-v5.
+  # Modo `mini` = master + volume + filer + S3 num só processo (é o modo que o próprio
+  # entrypoint da imagem usa). Pinado por DIGEST de propósito: as tags publicadas são só
+  # `latest`/`dev` e nenhuma tem semver; o digest abaixo foi medido em 2026-10-13 e cobre a
+  # imagem multi-arquitetura (amd64 no deploy, arm64 no Mac local).
+  seaweedfs:
+    image: chrislusf/seaweedfs@sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d
+    container_name: display-quest-objects
+    # O entrypoint da imagem é trocado para escrever o `s3.json` a partir do ambiente: NENHUMA
+    # credencial mora no repositório. Sem identidade configurada o S3 responderia como anônimo
+    # (`any`/`any`) — o teste com credencial errada devolveu SignatureDoesNotMatch, então a
+    # identidade vale. `-bucket` cria o bucket na subida; `-master.telemetry=false` corta o
+    # reporte anônimo de estatística.
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e
+        cat > /tmp/s3.json <<EOF
+        {"identities":[{"name":"app","credentials":[{"accessKey":"$${S3_ACCESS_KEY}","secretKey":"$${S3_SECRET_KEY}"}],"actions":["Admin","Read","Write"]}]}
+        EOF
+        exec weed mini -dir=/data -s3.config=/tmp/s3.json -bucket=$${S3_BUCKET} -master.telemetry=false
+    environment:
+      - S3_ACCESS_KEY=${S3_ACCESS_KEY:?Defina S3_ACCESS_KEY no ambiente/.env}
+      - S3_SECRET_KEY=${S3_SECRET_KEY:?Defina S3_SECRET_KEY no ambiente/.env}
+      - S3_BUCKET=${S3_BUCKET:-displayquest}
+    expose:
+      - "8333"
+    volumes:
+      - object_store_data:/data
+    networks:
+      - display-quest-network
+    healthcheck:
+      # O master responde 200 {"IsLeader":true,...} em /cluster/status (medido).
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:9333/cluster/status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
   app:
     build: .
     container_name: display-quest
@@ -50,6 +89,7 @@ services:
 
 volumes:
   postgres_data:
+  object_store_data:
   uploads_data:
   report_files_data:
 

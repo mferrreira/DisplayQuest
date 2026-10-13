@@ -2,11 +2,13 @@ import { describe, it, expect } from "vitest"
 import { checkEnvSecrets } from "../../../scripts/check-env-secrets-lib"
 
 // A5: secrets de infra não podem morar no código. Função pura (scripts/
-// check-env-secrets-lib.js) valida NEXTAUTH_SECRET e senha do banco sem I/O.
+// check-env-secrets-lib.js) valida NEXTAUTH_SECRET, senha do banco e a credencial
+// do bucket (V5-1/DEC-101) sem I/O.
 
 const saudavel = {
   NEXTAUTH_SECRET: "x".repeat(40),
   POSTGRES_PASSWORD: "s3nh4-D1f3rente!2026",
+  S3_SECRET_KEY: "b0ls4-de-blobs-2026",
 }
 
 const placeholdersSecret = ["your-secret-key-here", "<openssl rand -base64 32>"]
@@ -50,8 +52,31 @@ describe("check-env-secrets-lib — senha do banco (denylist)", () => {
   })
 })
 
+describe("check-env-secrets-lib — credencial do bucket (V5-1)", () => {
+  const denylistBucket = ["minioadmin", "any", "changeme", "secret"]
+
+  it.each(denylistBucket)("falha quando S3_SECRET_KEY é %j fora de dev", (chave) => {
+    const result = checkEnvSecrets({ ...saudavel, S3_SECRET_KEY: chave })
+    expect(result.ok).toBe(false)
+    expect(result.errors.some((e: string) => e.includes("S3_SECRET_KEY"))).toBe(true)
+  })
+
+  it("falha quando S3_SECRET_KEY está ausente (o compose exige)", () => {
+    const { S3_SECRET_KEY: _omitida, ...semBucket } = saudavel
+    const result = checkEnvSecrets(semBucket)
+    expect(result.ok).toBe(false)
+    expect(result.errors.some((e: string) => e.includes("S3_SECRET_KEY"))).toBe(true)
+  })
+
+  it("aceita segredo fora da denylist", () => {
+    const result = checkEnvSecrets({ ...saudavel, S3_SECRET_KEY: "b0ls4-de-blobs-2026" })
+    expect(result.ok).toBe(true)
+    expect(result.errors).toEqual([])
+  })
+})
+
 describe("check-env-secrets-lib — env saudável", () => {
-  it("aprova secret 32+ chars e senha fora da denylist", () => {
+  it("aprova secret 32+ chars, senha fora da denylist e credencial do bucket", () => {
     const result = checkEnvSecrets(saudavel)
     expect(result.ok).toBe(true)
     expect(result.errors).toEqual([])
