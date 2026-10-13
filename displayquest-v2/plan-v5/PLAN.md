@@ -101,12 +101,78 @@ própria, sem tocar nos dois roots legados na primeira leva (DEC-101).
 
 - plan-v4 **encerrado em 2026-10-07** (V4-1..V4-5d, V4-6b, POS-1; DEC-78..98) → o
   bloqueio "executa depois do plan-v4" (DEC-73) está **cumprido**.
-- **Numeração:** DEC-61..77 = este plano (2026-10-06); DEC-78..98 = plan-v4 (houve
-  colisão, comentários renumerados — AGENTS.md); **as decisões novas começam em DEC-99**.
-- **Baseline medido em 2026-10-07:** G0 `arch:check` **787 módulos / 3077 dependências,
-  zero violação, allow-list vazia**; G3 **87 arquivos / 1107 testes verdes** (22,4s);
-  suíte completa **97 / 1192**; e2e do quadro **2 passando + 1 falha conhecida + 5 "did
-  not run"** (cartão a mais na coluna, dado legítimo da instância) e shell **5 passando**.
+- **Numeração:** DEC-61..77 = este plano (2026-10-06); DEC-78..98 = plan-v4;
+  DEC-99..104 = este plano (2026-10-07); DEC-105..114 = plan-v6; DEC-115..125 =
+  clean-arch (B6-restante + B9/B10). **Próxima livre na época: DEC-126** (hoje, depois de
+  DEC-126..130, a livre é a DEC-131).
+- **Baseline medido em 2026-10-09 (dev):** G0 `arch:check` **822 módulos / 3370
+  dependências, zero violação, allow-list vazia**; G3 **101 arquivos / 1323 testes
+  verdes**. Referências: 87/1107 (2026-10-07) e 95/1280 + 105/1367 na branch
+  `refactor/b6-restante` (2026-10-08). e2e do quadro segue **2 passando + 1 falha
+  conhecida + 5 "did not run"**; shell **5 passando**.
+- **O repo-cleanup encerrou em 2026-10-08** (B0..B10, DEC-115..125): as 41 rotas do D4
+  migraram para decisão no use case com `ActorRef`. A caveat "se plan-v5/v6 iniciar
+  antes do B6 terminar, re-medir as listas dos lotes afetados" **expirou** com o B6;
+  as ondas novas tocam rotas já migradas (`projects`, `tasks`, `notifications`) e
+  seguem o padrão pós-B6 descrito em §5.
+- **Baseline re-medido em 2026-10-13 (dev, HEAD `76efcc2`):** G0 **822 módulos / 3370
+  dependências, zero violação, allow-list vazia**; G3 **101 arquivos / 1323 testes**;
+  suíte completa com o banco de teste no ar **111 arquivos / 1410 testes** (10 arquivos
+  de integração / 87 testes). Sem `dq-dev-test-db` no ar a completa dá
+  "10 failed / 15 failed" — é ambiente, não regressão (o container estava parado).
+
+### 1.11 Templates oficiais medidos (2026-10-13, `docs/Projeto/`)
+
+O dono colocou os dois documentos oficiais em `docs/Projeto/` (diretório **gitignored**,
+linha 185 do `.gitignore`; `IDEIA.md` ali está depreciado). Medidos byte a byte:
+
+**`[template] - Relatório Técnico.docx`** (24 KB, OOXML): cabeçalho institucional
+(Ministério/SETEC/IFNMG + logo em `word/media/image1.png`), título "Relatório de
+Atividades de Iniciação Científica", a linha **`( ) Relatório Final (  ) Relatório
+Parcial`** como texto literal (não é campo de formulário), e **7 tabelas**: período
+("De ____/____/______ a ____/____/______"), projeto (Título, **Nº de cadastro na
+PROPPI**, Coordenador, Campus "Januária", Duração Início/Término), orientador (Nome,
+Campus), **estudante** (Nome / Curso / Modalidade de I.C. / Instituição de Fomento —
+uma linha só, hoje preenchida com o exemplo "Guilherme de Araújo Carneiro / Bel em
+Sistemas de Informação"), e **3 tabelas vazias** que são as áreas de texto:
+Descrição das Atividades (etapa/cronograma), Principais Resultados Alcançados,
+Comentários Adicionais. Rodapé: Data + "assinado eletronicamente pelo Orientador".
+Formatação medida: **todos os runs de corpo são Times New Roman 12** (`w:sz w:val="24"`,
+120 ocorrências), `docDefaults` é Calibri 11 mas os runs sobrescrevem; margens
+2 cm (top/bottom 1134 twips) e 1,9 cm (left/right 1080) — **não são as margens ABNT
+de 3/2 cm**; sem espaçamento 1,5 fixo. Campos a preencher são **sublinhados literais
+dentro do próprio run**.
+
+**`[template] - ANEXO IV - Atestado de Frequência Bolsista ou Voluntário.pdf`**
+(142 KB): **AcroForm real, 39 campos nomeados** (`/AcroForm 210 0 R`, `NeedAppearances
+true`, `/DA /Times`): `data`, `edital`, `titulo`, `coorientador`, `nome`, `CPF`,
+`matricula`, `nivel_medio`, `nivel_graduacao`, `nivel_pos-graduacao`, `carga_8`,
+`carga_20`, `carga_adaptada`, `horas_adaptada`, `is_bolsista`, `se_bolsista`,
+`is_pibic`, `is_pibic-jr`, `is_pibic-af`, `is_pibiti`, `is_pibiti-jr`, `is_btp`,
+`is_mestrado`, `is_doutorado`, `is_pos-doc`, `is_ifnmg`, `is_cnpq`, `is_fapemig`,
+`is_outra`, `is_voluntario`, `agencia_outra`, `atividades_1`, `atividade_2`,
+`status_nao-iniciado`, `status_atrasado`, `status_como-previsto`, `status_adiantado`,
+`status_concluido`, `justificativa`, `dia`, `mes`, `ano`. Tipos `/FT /Tx` e `/FT /Btn`
+(checkboxes, todos `/AS /Off`). Não tem XFA. **Consequência:** a DEC-71 ("o sistema
+GERA o AcroForm") está superada pela realidade — o formulário oficial já existe com
+campos nomeados; o sistema **preenche**.
+
+**Biblioteca, medido no registry em 2026-10-13:** `pdf-lib` 1.17.1 é MIT mas **último
+release em 2021-11-06** (5 anos sem publicação); o fork mantido `@cantoo/pdf-lib`
+2.11.1 (MIT, 2026-09-15) tem a mesma API (`getForm`, `getTextField`, `getCheckBox`,
+`updateFieldAppearances`, `flatten`). Para DOCX: `docx-templates` 4.15.0 (MIT,
+2025-12-03, dependências só `jszip` + `sax`) preenche um template existente com
+`INS`/`FOR`/`IF`, aceita `FOR` sobre **linha de tabela**, `processLineBreaks` para
+texto multilinha, e expõe `listCommands()` — que serve de guarda para o inventário de
+campos. `docxtemplater` 3.71.0 (2026-09-21) é alternativa, mas imagem/tabela/html são
+módulos pagos.
+
+**O que os dois documentos exigem e o schema não tem hoje** (medido em
+`prisma/schema.prisma`): `CPF`, `matrícula`, `curso`, **modalidade de IC**
+(BIC/BIC-Jr/BITI/ICV), **instituição de fomento** (CNPQ/FAPEMIG/outra), nível
+(médio/graduação/pós), **nº PROPPI**. `users` tem nome, email, points, avatar, bio;
+`project_members` tem só `projectId`, `userId`, `joinedAt`, `roles`. O V5-4 já previa
+`matrícula` e carga horária em `project_members`; o resto é aberto (ASK-V5-07).
 
 ## 2. Decisões do dono
 
@@ -145,6 +211,25 @@ própria, sem tocar nos dois roots legados na primeira leva (DEC-101).
 
 Registro longo (com alternativas e consequências) está no `STATE.json` → `decisionRegistry`.
 
+### 2.3 Rodada de 2026-10-09 (D-X → DEC-126)
+
+| # | Pergunta | Escolhida | DEC |
+|---|---|---|---|
+| D-X | Como converter a duração em meses | **Não se converte**: o cronograma é uma tabela (colunas = meses, linhas = atividades), o usuário **marca os meses** que a atividade ocupa, sem meia-mês. Recompensa = 100 × meses marcados | **DEC-126** |
+| D-Y | Quem pode ver projetos | **Todo usuário autenticado vê todos**, na lista e no detalhe (backlog 2026-10-09); escrita/gestão segue a ACL atual | **DEC-127** |
+
+### 2.4 Rodada de 2026-10-13 (D-Z..D-AB → DEC-128..130), documentos oficiais
+
+O dono entregou os templates e delegou a análise ("analisa como você vai lidar com a
+escrita... adapte os planos"). As três escolhas abaixo saem da medição de §1.11; o dono
+pode reverter cada uma.
+
+| # | Pergunta | Escolhida | DEC |
+|---|---|---|---|
+| D-Z | Onde vivem os templates oficiais | `docs/Projeto/` é gitignored e é a **caixa de entrada do dono**; os arquivos que o app usa viram **asset versionado** em `templates/` no repo, lidos do sistema de arquivos da imagem (rota de leitura, sem escrita nova em disco) | **DEC-128** |
+| D-AA | Como escrever no DOCX sem quebrar a formatação | **Preencher o template oficial**, nunca gerar documento: `docx-templates` escreve texto **dentro dos runs que já carregam** Times New Roman 12; o arquivo oficial fica byte-intacto e uma **cópia marcada** (`{{campo}}`) é derivada por script, nunca editada à mão | **DEC-129** |
+| D-AB | Como escrever no PDF de atestado | **Preencher o AcroForm oficial** pelos 39 nomes medidos, com `@cantoo/pdf-lib` (fork mantido; `pdf-lib` sem release desde 2021), fonte de aparência Times e `flatten()` no arquivo entregue. **Revoga a parte "gerar o AcroForm" da DEC-71** | **DEC-130** |
+
 ## 3. Mapeamento do domínio pedido → onde vive
 
 | Pedido no domínio | Hoje | Depois do plan-v5 |
@@ -163,7 +248,7 @@ Registro longo (com alternativas e consequências) está no `STATE.json` → `de
 | banner do usuário | só avatar (`users.avatar`) | `users.bannerKey?` no bucket; perfil + pódio #1 (DEC-102) |
 | `Certificate.template Blob` | — | AcroForm gerado (pdf-lib) → bucket |
 | `Activity.task Task[ ]` | **não existe** | `tasks.activityId?` + trava DEC-99 (todas prontas p/ solicitar) |
-| `Activity.recompensa` | — | **derivada: 100 × meses do período** (DEC-103), guardada para leitura |
+| `Activity.recompensa` | — | **100 × meses marcados na grade** (colunas = meses, linhas = atividades; DEC-126); período derivado dos limites dos meses marcados |
 | `Activity.prova Blob[ ]` | — | bucket (`projects/<id>/activities/<id>/`) |
 | `Member.usuario` | `project_members.userId` | fica |
 | qualquer blob novo | disco do container | **MinIO** (DEC-101) — nenhum `writeFile` novo fora do bucket |
@@ -176,40 +261,66 @@ Registro longo (com alternativas e consequências) está no `STATE.json` → `de
 | Batch | O que faz | Risco | Status |
 |---|---|---|---|
 | **V5-1** | **MinIO + seam de blob**: serviço `minio` no compose (volume, API 9000 / console 9001 em loopback), envs (`MINIO_ENDPOINT/ACCESS_KEY/SECRET_KEY/BUCKET`), dependência `@aws-sdk/client-s3`, seam `lib/storage/blob-store.ts` + port para os módulos (allowlist de imagens/pdf/**vídeo**), sem consumidor de produção ainda | baixo — infra nova, zero mudança de comportamento | pendente |
+| **V5-1a** | **Templates oficiais viram asset** (DEC-128): copia os dois arquivos de `docs/Projeto/` para `templates/` (versionado), `COPY` no Dockerfile (leitura só, sem caminho de escrita novo), script `scripts/tag-report-template.mjs` que deriva `templates/relatorio-tecnico.tagged.docx` trocando os sublinhados literais por comandos `docx-templates` **dentro do mesmo run**, e **guardas de deriva**: sha256 do oficial + inventário dos 39 nomes do AcroForm + `listCommands()` da cópia marcada. Zero mudança de comportamento | baixo — asset + testes de guarda | pendente |
 | **V5-2** | **Dados do projeto + imagens**: migration (`startDate`, `endDate`, `editalNumber`, `processNumber`, `points`, `logoKey?`, `bannerKey?`) + `project_deliverables` + anexos **no bucket** + **logo/banner do projeto** com upload (validação de imagem) + header do detail com banner/logo (estilo FB/LinkedIn) | médio — tela visível (G5/G6) | pendente |
+| **V5-2a** | **Visão de todos os projetos**: lista (`GET /api/projects`) e detalhe (`GET /api/projects/[id]`) passam a aceitar qualquer autenticado (DEC-127); escrita/gestão intacta; filhos (anexos, horas, cronograma) seguem a mesma leitura; ajusta os 2 trechos do roundtrip que congelam a regra antiga e escreve os testes unitários que faltam (`ListProjectsForActorUseCase`, `canActorAccessProjectDecision`) | baixo — 1 ACL + testes; roteiro para o V6-5 | pendente |
 | **V5-3** | **Banner de usuário + pódio**: `users.bannerKey?`, upload no perfil, perfil mostra avatar+banner, **top #1 do quadro** ganha o tratamento com as imagens (avatar `h-24` já existe; entra o banner/fundo) | médio — tela visível (G5/G6) | pendente |
 | **V5-4** | **Equipe estendida**: colunas novas em `project_members` (lattes, carga horária, categoria, situação, data de entrada, matrícula), use cases e UI de gestão | baixo | pendente |
-| **V5-5** | **Cronograma**: `project_goals` + `project_activities` (ordem, descrição, responsável, período, **recompensa derivada 100×meses**, status `OPEN → COMPLETION_REQUESTED → DONE`, provas no bucket), regras puras de período/ordem, CRUD + aba no detail, **wizard de criação com passo opcional de cronograma (DEC-100)** | médio — modelagem nova + tela (G5/G6) | pendente |
+| **V5-5** | **Cronograma**: `project_goals` + `project_activities` (ordem, descrição, responsável, **meses marcados na grade** → recompensa 100×meses e período do primeiro ao último mês marcado, status `OPEN → COMPLETION_REQUESTED → DONE`, provas no bucket), regras puras de período/ordem, **grade meses × atividades** + aba no detail, **wizard de criação com passo opcional de cronograma (DEC-100)** | médio — modelagem nova + tela (G5/G6) | pendente |
 | **V5-6** | **Task × atividade**: `tasks.activityId?`, no form a atividade do período atual vem **pré-selecionada** e só dá para escolher futuras, filtro no quadro, e a **trava DEC-99** (solicitar conclusão só com todas as tasks prontas) | médio — mexe no form do quadro (G5/G6) | pendente |
 | **V5-7** | **Economia de projeto**: `request-activity-completion` (líder/membro gestor + provas) e `approve-activity-completion` (só `GLOBAL_PROJECT_MANAGERS`; auto-aprova só COORDENADOR — DEC-77); prêmio = `100×meses × (1,5 se ≥2d adiantada) − 10%/dia de atraso`, **piso 0** (DEC-103/74); distribuição **proporcional às tasks concluídas de cada membro** (DEC-104); tarefa concluída de projeto também incrementa `projects.points`; idempotência + histórico | **alto** — economia | pendente |
 | **V5-8** | **Atraso urgente**: coluna `priority` em `notifications` + destaque na UI; varredura diária no cron: atividade vencida e não aprovada → **1** notificação prioritária (`overdueNotifiedAt`) para líder + coordenadores/gerentes | médio | pendente |
-| **V5-9** | **Relatórios técnicos + IA**: `technical_reports` (projeto × tipo, texto + arquivo no bucket), permissão gestão/líder, `ReportDraftPort` + adapter OpenAI-compatible por env (`AI_BASE_URL/AI_API_KEY/AI_MODEL`, default `http://localhost:8080/v1`), rascunho a partir de `work_sessions` do período | médio | pendente |
-| **V5-10** | **Atestados**: módulo `attestation` — `certificates` (sem status, DEC-75), AcroForm gerado+validado com `pdf-lib` (arquivo no bucket), frequência de `weekly_reports`/`work_sessions`, lembrete dia 19 (`0 9 19 * *`) para coordenadores/gerentes + líderes | médio-alto — dependência nova + PDF (G5/G6) | pendente |
+| **V5-9** | **Relatórios técnicos + IA**: `technical_reports` (projeto × tipo, texto + arquivo no bucket), permissão gestão/líder, `ReportDraftPort` + adapter OpenAI-compatible por env (`AI_BASE_URL/AI_API_KEY/AI_MODEL`, default `http://localhost:8080/v1`), rascunho a partir de **três fontes**: logs de sessão (`work_sessions`), tasks do projeto (status, conclusão, pontos) e atividades do cronograma (meses marcados, provas). Entrega em **DOCX pelo template oficial** (DEC-129): o texto da IA entra **como texto puro** nas 3 tabelas vazias do template (Descrição / Resultados / Comentários), o tipo (parcial/final) marca a linha `( ) Relatório Final ( ) Relatório Parcial`, e o adaptador docx vive em `infrastructure/adapters/` atrás de porta. Escopo do registro por projeto × tipo **pode virar por participante** conforme a resposta do `ASK-V5-06` | médio | pendente |
+| **V5-10** | **Atestados**: módulo `attestation` — `certificates` (sem status, DEC-75), **preenche o AcroForm oficial** pelos 39 campos medidos com `@cantoo/pdf-lib` (DEC-130): `nome`/`CPF`/`matricula`/`titulo`/`edital`/`coorientador` do projeto e do membro, checkboxes de modalidade/fomento (`is_pibic`, `is_voluntario`, `is_cnpq`…), carga (`carga_8`/`carga_20`/`carga_adaptada`/`horas_adaptada`) vinda de `weekly_reports`/`work_sessions`, `atividades_1`/`atividade_2` + `status_*` vindos do cronograma (V5-5), `dia`/`mes`/`ano` do mês de referência; `updateFieldAppearances(Times)` + `flatten()` no arquivo entregue (bucket). Lembrete dia 19 (`0 9 19 * *`) para coordenadores/gerentes + líderes. Depende dos campos de pessoa do `ASK-V5-07` | médio-alto — dependência nova + PDF (G5/G6) | pendente |
 | **V5-11** | **Tela de andamento**: gráfico `data_final − dia_de_hoje` + exibição de `projects.points` (agora real) | baixo | pendente |
 
-Ordem: **V5-1 primeiro** (tudo que gravar blob depende dele). V5-2, V5-3 e V5-4 são
-independentes entre si. V5-5 → V5-6 → V5-7 → V5-8 encadeiam. V5-9 e V5-10 correm quando
-quiser depois de V5-1. V5-11 espera V5-2 (`endDate`) e V5-7 (`points`). A espera pelo
-plan-v4 caiu: ele fechou em 2026-10-07.
+Ordem: **V5-1 primeiro** (tudo que gravar blob depende dele) e **V5-1a em seguida** (os
+documentos do V5-9/V5-10 leem o asset versionado e as guardas de deriva). V5-2, V5-2a,
+V5-3 e V5-4 são independentes entre si (a V5-2a só precisa rodar antes do V6-5 do
+plan-v6). V5-5 → V5-6 → V5-7 → V5-8 encadeiam. V5-9 e V5-10 correm quando quiser depois
+de V5-1a; o V5-10 também espera V5-5 (atividades e status entram no PDF) e responde ao
+`ASK-V5-07` antes de escrever migration. V5-11 espera V5-2 (`endDate`) e V5-7 (`points`).
+A espera pelo plan-v4 caiu: ele fechou em 2026-10-07.
 
 ## 5. Estrutura de arquivos prevista
+
+> **Padrão pós-B6 (clean-arch encerrado em 2026-10-08):** toda rota nova segue o que as
+> 41 rotas do D4 seguiram — a **decisão fica no use case** (que recebe `ActorRef`;
+> `requireActorPermission`/`systemActor(reason)` de
+> `backend/domain/identity/actor-ref.ts`), a rota autentica, valida entrada e mapeia com
+> `domainErrorResponse`/`routeErrorResponse`. Onde o 403 precisa vir **antes** dos 400 de
+> corpo, entra um `AssertCan*UseCase` na rota, como fizeram notifications (B6-2b),
+> schedules/bulk (B6-6) e POST tasks (B6-7).
 
 ```
 docker-compose.yml                        +serviço minio (volume, 127.0.0.1:9000/9001 no override)
 package.json                              +@aws-sdk/client-s3 (e presigner se precisar de URL)
+                                          +docx-templates (DOCX) e @cantoo/pdf-lib (AcroForm) no V5-9/V5-10
+templates/                                (novo, V5-1a) relatorio-tecnico.docx (oficial, byte-intacto),
+                                          relatorio-tecnico.tagged.docx (derivado por script),
+                                          atestado-frequencia.pdf (AcroForm oficial)
+Dockerfile                                COPY templates/ (leitura; nenhum caminho de escrita novo)
+scripts/tag-report-template.mjs           (novo, V5-1a) deriva a cópia marcada a partir do oficial
 prisma/schema.prisma                      +cols em projects/users/project_members/tasks/notifications
 prisma/migrations/                        migrations por batch (nullable; sem backfill)
 lib/storage/blob-store.ts                 (novo) seam de blob: put/get/remove/allowlist (imgs/pdf/vídeo)
 backend/domain/project/
   project-rules.ts                        + regras de período/ordem/atraso (puras)
-  activity-rules.ts                       (novo) recompensa = 100×meses, fração −10%/dia, distribuição proporcional
+  activity-rules.ts                       (novo) recompensa = 100×meses marcados, fração −10%/dia, distribuição proporcional
 backend/domain/attestation/               (novo) regras de atestado/mês/validação de campos
+  attestation-fields-rules.ts             (novo) projeto+membro+horas+atividades → registro {campoAcroForm: valor}, puro
+backend/domain/reporting/
+  report-fields-rules.ts                  (novo) projeto+tipo+rascunho → registro {tag: valor}, puro
 backend/modules/project-management/
   application/use-cases/                 + request/approve-activity-completion, entregáveis/anexos, wizard, cronograma
   application/ports/                     + project-activities.port, blob-store.port (quadrar com seam lib/)
   infrastructure/repositories/           prisma-* correspondentes
 backend/modules/attestation/             (novo) certificates + AcroForm + lembrete dia 19
+  application/ports/                     attestation-document.port (domain → adapter, nunca pdf-lib no domain)
+  infrastructure/adapters/               acroform-attestation.adapter.ts (lê templates/, preenche, achata, sobe ao bucket)
 backend/modules/reporting/               + technical-reports + ReportDraftPort + adapter openai-compatible
+  infrastructure/adapters/               docx-report.adapter.ts (docx-templates sobre templates/*.tagged.docx)
+tests/unit/**                            guardas de deriva: sha256 do oficial, 39 nomes do AcroForm, inventário de tags
 backend/composition/root.ts              wiring dos ports novos (DEC-21)
 lib/services/cron-service.ts             + job de atraso (diário) + lembrete dia 19
 app/api/projects/route.ts                criação via wizard (cronograma opcional, DEC-100)
@@ -228,22 +339,26 @@ components/ui/notifications-panel.tsx    destaque de prioridade
 
 | Gate | Comando — critério |
 |---|---|
-| **G0** | `npm run arch:check` — exit 0, **allow-list vazia**. Baseline 2026-10-07: 787/3077 |
+| **G0** | `npm run arch:check` — exit 0, **allow-list vazia**. Baseline 2026-10-09: 822/3370 |
 | **G1** | `npm run lint` — 0 erros (em worktree: `npx eslint --no-eslintrc --config .eslintrc.json <arquivos>`) |
 | **G2** | `npx tsc --noEmit` — 0 erros |
-| **G3** | `npx vitest run tests/unit features` — zero failure. **Baseline 87/1107** |
+| **G3** | `npx vitest run tests/unit features` — zero failure. **Baseline 101/1323** (2026-10-09) |
 | **G4** | migration + roundtrip só contra `dq-dev-test-db` em `127.0.0.1:5433` (`npm run db:test:up` + `db:test:setup`; `g4-normalize.sql` obrigatório) — suíte completa. **Migrations novas seguem o protocolo do V4-4:** `migrate diff` offline + `migrate deploy`, **nunca** `migrate dev` contra a 5432 (risco de RESET nos dados reais) |
 | **G5** | `npm run docs:build` + `docs:check` — obrigatório em V5-2, V5-3, V5-5, V5-6, V5-8, V5-9, V5-10, V5-11 |
 | **G6** | recapturar telas do guia quando a captura deixa de representar a tela (V5-2 muda o detail do projeto; V5-3 muda perfil e quadro) |
 
 Regra de fechamento: **batch não entra em `done` com gate vermelho ou lacuna aberta de
-que ele mesmo dependa.** MinIO precisa estar no ar para V5-2+ (`docker compose up minio`);
+que ele mesmo dependa.** O runner da casa é `scripts/verify.sh` (G0..G4 em sequência, com
+o guard `assert-test-db` recusando 5432 antes de rodar teste) — use-o em vez de chamar os
+gates soltos. MinIO precisa estar no ar para V5-2+ (`docker compose up minio`);
 sem ele o batch falha em dev — provisionar junto do serviço.
 
 ## 7. Regras a congelar em teste **antes** do código
 
-1. **Recompensa da atividade = 100 × meses civis do período** (`100 × ceil(duração em
-   meses)` — ver ASK-V5-05 sobre arredondamento), função pura em `activity-rules.ts`.
+1. **Recompensa da atividade = 100 × meses marcados na tabela do cronograma** (DEC-103 +
+   DEC-126): as colunas são os meses e as linhas são as atividades; a atividade de 3 meses
+   tem 3 "X" na linha (ex.: meses 4, 5 e 6). Não existe meia-mês nem arredondamento —
+   ceil, floor e proporcional morreram com o DEC-126. Função pura em `activity-rules.ts`.
 2. **Prêmio na aprovação**: `award = recompensa × (1,5 se ≥2 dias adiantada) − 0,10 ×
    recompensa × diasAtraso`, **piso em 0** (DEC-103 + DEC-74). Antecedência usa a mesma
    régua de ≥2 dias da DEC-97; atraso é fração diária, **não** os −10 fixos do usuário.
@@ -273,21 +388,63 @@ sem ele o batch falha em dev — provisionar junto do serviço.
 12. **Nenhum blob novo fora do bucket** (DEC-101): qualquer `writeFile` de arquivo novo
     é bug — e qualquer caminho de escrita novo em disco precisa `mkdir`+`chown` no
     Dockerfile (gotcha A11), o que justifica o MinIO.
+13. **Leitura de projeto é livre (DEC-127)**: qualquer autenticado **lista e abre** qualquer
+    projeto; os filhos (anexos, horas, cronograma, provas) herdam a leitura. Escrita e
+    gestão seguem a ACL atual (`MANAGE_PROJECTS` / `GLOBAL_PROJECT_MANAGERS`). Congelar em
+    teste: VOLUNTARIO outsider vê projeto dos outros, e o par medido hoje
+    (COLABORADOR lista-tudo / detalhe nega) deixa de existir.
+14. **O template oficial é a autoridade da formatação** (DEC-129/130): o sistema **nunca**
+    escreve estilo, fonte, tamanho ou margem. No DOCX, o texto entra **dentro do run que já
+    carrega** Times New Roman 12 (o adaptador não toca `w:rPr`, `styles.xml` nem `sectPr`);
+    no PDF, só os **39 campos nomeados** do AcroForm recebem valor, com aparência Times e
+    `flatten()` na entrega. Congelar em teste: o documento gerado tem o mesmo sha256 de
+    `word/styles.xml`/`word/theme/theme1.xml` do template, e nenhum campo fora da lista é
+    escrito.
+15. **Deriva de template derruba o build** (DEC-128): teste guarda compara o sha256 do
+    oficial, a lista dos 39 nomes do AcroForm e o inventário de comandos da cópia marcada
+    (`listCommands`). Se o dono trocar o arquivo em `docs/Projeto/` sem re-derivar, o teste
+    falha **nomeando** o campo que sumiu ou apareceu — mesmo padrão de
+    `user-status-vocabulary.test.ts` e `user-delete-schema-drift.test.ts`.
+16. **Regra pura antes do adaptador** (lição da DEC-90 e do `AwardableSubtask`): o mapeamento
+    projeto+membro+horas+atividades → `{nomeDoCampo: valor}` é função pura em
+    `backend/domain/` com `completed`/status **obrigatórios** na assinatura, e o adaptador
+    pdf-lib/docx-templates só executa o registro. `pdf-lib`/`docx-templates` **não** podem
+    ser importados por `backend/domain/` (RG-01..RG-06 do G0).
 
 ## 8. Perguntas ao dono
 
-Respondidas — D-A..D-W (2026-10-06 e 2026-10-07), registro no `STATE.json`
-(`answeredInstructions` para os ASK, `decisionRegistry` para as DEC). As duas que
-**substituíram decisões antigas**: DEC-103 pisa na DEC-67 (reusar `points-rules`) e
-DEC-104 pisa na DEC-68 (divisão integral) — a economia de projeto tem escala própria.
+Respondidas — D-A..D-AB (2026-10-06, 2026-10-07, 2026-10-09 e 2026-10-13), registro no
+`STATE.json` (`answeredInstructions` para os ASK, `decisionRegistry` para as DEC). As três
+que **substituíram decisões antigas**: DEC-103 pisa na DEC-67 (reusar `points-rules`),
+DEC-104 pisa na DEC-68 (divisão integral) e DEC-130 pisa na parte "gerar o AcroForm" da
+DEC-71 (o formulário oficial já existe com campos nomeados).
 
-Em aberto:
+Em aberto — duas perguntas que a medição dos templates abriu em 2026-10-13:
 
-- **ASK-V5-05** (antes de V5-7): arredondamento da duração em meses da atividade —
-  **ceil** (fração de mês já conta; 45 dias → 2 meses → 200), floor (mês cheio só) ou
-  proporcional aos dias? Proposta v1: **ceil**, coerente com "quem começa paga o mês".
+- **`ASK-V5-06` — o relatório técnico é por projeto ou por participante?** O DOCX oficial é
+  **por estudante de IC**: uma linha Nome/Curso/Modalidade/Instituição de Fomento, e o
+  cabeçalho "Identificação do Estudante de IC (Bolsista ou Voluntário)". A DEC-70 fixou
+  `technical_reports` por **projeto × tipo**. Se a entrega for um DOCX por membro, o model
+  ganha `userId` (ou uma tabela de filhos) e a geração vira lote. Opções: (a) um registro
+  por projeto × tipo, e o DOCX é gerado N vezes (um por membro) a partir do mesmo texto;
+  (b) um registro por projeto × tipo × membro, cada um com seu texto editável; (c) manter
+  por projeto e gerar um único DOCX com a tabela de estudantes expandida por linha
+  (`FOR` do docx-templates sobre linha de tabela).
+- **`ASK-V5-07` — onde vivem os dados de pessoa que os formulários pedem?** CPF, matrícula,
+  curso, modalidade de IC (BIC/BIC-Jr/BITI/ICV), instituição de fomento (CNPQ/FAPEMIG/outra)
+  e nível (médio/graduação/pós) não existem no schema. Opções: (a) tudo em `users` (dado da
+  pessoa, serve a todos os projetos; exige tela de edição no perfil e trata LGPD — CPF é
+  dado pessoal sensível o suficiente para justificar leitura restrita); (b) em
+  `project_members` (dado do vínculo: a modalidade pode mudar de projeto para projeto);
+  (c) misto — CPF/curso/nível em `users`, modalidade/fomento/carga em `project_members`
+  (é o que a medição sugere: o V5-4 já previa matrícula e carga no vínculo). Quem preenche
+  (o próprio usuário ou a gestão) e o nº PROPPI (projeto) também entram aqui.
 
 Fora deste plano (na fila, não esquecer):
+
+- **Assinatura eletrônica do orientador** no DOCX ("este documento deverá ser assinado
+  eletronicamente pelo Orientador") e o carimbo/data do atestado: fora do escopo da v1; a
+  entrega é o documento preenchido, sem assinatura digital.
 
 - **Migração dos blobs existentes** (avatares em `public/uploads/`, anexos em
   `data/uploads/reports/`) para o bucket — leva própria depois do plan-v5 (DEC-101).
@@ -299,10 +456,13 @@ Fora deste plano (na fila, não esquecer):
 ## 9. Como o estado é monitorado
 
 `STATE.json` nesta pasta é a fonte de verdade: `status` (`ready` → `in_progress` →
-`done`), `waves[]` (V5-1..V5-11 com `status`/`decisions`/`scope`), `decisionRegistry`
-(DEC-61..77 + DEC-99..104; **DEC-78..98 são do plan-v4**), `batchLog[]` (só batch
-executado entra, com gates aferidos e gotchas), `openQuestions` (ASK-V5-05),
-`answeredInstructions` (ASK-V5-01..04), `blockers` (vazio — plan-v4 fechou). A numeração
-de decisões **continua** a global: a próxima é a **DEC-115** — o plan-v6 consumiu
-DEC-105..114 em 2026-10-07 —; antes de abrir decisão nova, `grep` os `STATE.json`
-(clean-arch, plan-v3, plan-v4, plan-v5, plan-v6; lição da colisão DEC-61..64 do V4-4).
+`done`), `waves[]` (V5-1, V5-1a, V5-2, V5-2a, V5-3..V5-11 com `status`/`decisions`/`scope`),
+`decisionRegistry` (DEC-61..77 + DEC-99..104 + DEC-126..130; **DEC-78..98 são do plan-v4**),
+`batchLog[]` (só batch executado entra, com gates aferidos e gotchas), `openQuestions`
+(ASK-V5-06, ASK-V5-07), `answeredInstructions` (ASK-V5-01..05), `blockers` (vazio —
+plan-v4 fechou). A numeração de decisões **continua** a global: plan-v6 consumiu
+DEC-105..114, o clean-arch (B6-restante + B9/B10) consumiu DEC-115..125 em 2026-10-08, e
+este plano consumiu DEC-126/127 (2026-10-09) e DEC-128..130 (2026-10-13, documentos
+oficiais), então **a próxima livre é a DEC-131**; antes de abrir decisão nova, `grep` os
+cinco `STATE.json` (clean-arch, plan-v3, plan-v4, plan-v5, plan-v6; lição da colisão
+DEC-61..64 do V4-4).
