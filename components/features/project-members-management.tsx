@@ -560,7 +560,7 @@ export function ProjectMembersManagement({ project, onUpdate }: ProjectMembersMa
                                 setMemberRoleDrafts((prev) => ({ ...prev, [member.userId]: value }))
                               }
                             >
-                              <SelectTrigger className="w-48" aria-label="Papel do membro">
+                              <SelectTrigger className="w-48" aria-label={`Papel do membro de ${memberName}`}>
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
@@ -612,6 +612,7 @@ export function ProjectMembersManagement({ project, onUpdate }: ProjectMembersMa
                       */}
                       {canManageMembers ? (
                         <div className="border-t p-3 space-y-3">
+                          <p className="text-sm font-medium">Dados do vínculo</p>
                           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
                             <div className="grid gap-1">
                               <Label htmlFor={`lattes-${member.id}`}>Currículo Lattes</Label>

@@ -12,6 +12,21 @@ Toda recusa do sistema tem um motivo, e o motivo está na mensagem. Esta lista r
 | **Sua conta ainda não foi aprovada. Entre em contato com um administrador ou laboratorista.** | a conta foi criada mas ainda está pendente | peça a aprovação; é na aprovação que a função é atribuída |
 | **Nome do usuário é obrigatório** | o cadastro não aceita nome vazio | preencha o nome completo |
 
+## Perfil e vínculo com projeto
+
+| O sistema diz | Por quê | O que fazer |
+| --- | --- | --- |
+| **CPF inválido** | faltam dígitos, ou os dois verificadores não batem, ou o CPF é todo repetido | confira o número com os dois últimos dígitos |
+| **Matrícula deve ter no máximo 40 caracteres** (mesma forma para **Curso** e **Nome da instituição**) | o campo passou da linha que o formulário oficial tem | resuma: o documento entregue tem a linha do tamanho |
+| **Não autorizado** | você tentou editar o perfil de outra pessoa sem permissão de gerenciar contas | peça a quem gerencia contas |
+| **Categoria de membro inválida** | a categoria enviada não é **BOLSISTA** nem **VOLUNTARIO** | escolha **Bolsista** ou **Voluntário**, ou deixe **Sem categoria** |
+| **Situação de membro inválida** | a situação enviada não é **ATIVO** nem **INATIVO** | escolha uma das duas |
+| **Carga horária do membro deve ser um número maior que 0 e no máximo 168 horas semanais** | a carga contratada saiu da semana | use um número entre 0 e 168; para tirar a carga, deixe o campo vazio |
+| **Currículo Lattes do membro deve ter no máximo 120 caracteres** | o campo passou do teto | use o número da plataforma, não o endereço inteiro |
+| **Data de entrada do membro é inválida (use AAAA-MM-DD)** | a data veio fora do formato do calendário | use o campo de data da tela, que entrega `2026-10-14` |
+| **Apenas coordenadores, gerentes ou gerente do projeto podem atualizar dados do membro** | quem tentou não tem a gestão daquele projeto | peça ao líder do projeto ou à coordenação |
+| **Membro não encontrado no projeto** | o vínculo não pertence àquele projeto | recarregue a lista: a pessoa pode já ter saído |
+
 ## Tarefas
 
 | O sistema diz | Por quê | O que fazer |

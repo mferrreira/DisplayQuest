@@ -7,7 +7,7 @@ Esta é a lista completa das telas do sistema, com o endereço de cada uma e que
 | Entrada | `/login` | e-mail, senha, link de cadastro | qualquer pessoa, autenticada ou não |
 | Cadastro | `/register` | nome completo, e-mail, senha | qualquer pessoa |
 | Quadro de Tarefas | `/dashboard` | quadro Kanban, filtros, criação de tarefa | todas as funções |
-| Projetos | `/dashboard/projetos` | lista de projetos, detalhe, aba Voluntários | Coordenador, Gerente, Gerente de Projeto, Pesquisador, Colaborador |
+| Projetos | `/dashboard/projetos` | lista de projetos, detalhe, aba Voluntários | todas as funções; a aba **Voluntários** só para Coordenador, Gerente e Gerente de Projeto |
 | Laboratório | `/dashboard/laboratorio` | agenda, responsabilidade, grade de horários, reclamações | todas as funções |
 | Relatórios Semanais | `/dashboard/weekly-reports` | relatório por usuário e relatório de projeto | Coordenador, Gerente, Laboratorista |
 | Painel Administrativo | `/dashboard/admin` | oito abas de gestão | Coordenador, Gerente |
@@ -38,6 +38,7 @@ Esta é a lista completa das telas do sistema, com o endereço de cada uma e que
 | Sessão de trabalho | Sem sessão, Ativa, Pausada |
 | Compra de recompensa | pendente, aprovada, rejeitada, completada |
 | Reclamação | Aberto, Em Andamento, Resolvido, Fechado |
-| Conta | pendente, ativa |
-| Vínculo com projeto | Ativo, Inativo, Afastado |
-| Visibilidade do perfil | Público, Apenas Membros, Privado |
+| Conta | pendente, ativa, rejeitada, suspensa |
+| Vínculo com projeto | Ativo, Inativo |
+| Categoria do vínculo | Bolsista, Voluntário, sem categoria |
+| Visibilidade do perfil | Público, Apenas Membros, Privado — a escolha existe, a regra que a obedece ainda não (capítulo 8) |

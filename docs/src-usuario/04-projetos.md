@@ -13,7 +13,7 @@ A **Lista de Projetos** mostra todos os projetos do sistema, inclusive os que vo
 - a **capa** e o **logo** do projeto, quando houver. Sem capa, o espaço do topo diz *"Sem capa"*;
 - o nome, o **Status** (**Ativo**, **Concluído**, **Arquivado**), a data de criação e os botões **Editar** e **Excluir**;
 - a **Descrição**, quando o projeto tem descrição;
-- **Dados do projeto**: **Início**, **Término**, **Número do edital**, **Número do processo** e **Pontos do projeto**. Esse card só aparece quando algum desses campos foi preenchido;
+- **Dados do projeto**: **Início**, **Término**, **Número do edital**, **Número do processo**, **Número PROPPI** e **Pontos do projeto**. Esse card só aparece quando algum desses campos foi preenchido;
 - **Entregáveis**, cada um com o nome e a quantidade em unidades (**2 un.**);
 - **Anexos**, cada um com o nome, o tamanho e o arquivo;
 - **Total de Tarefas**, **Concluídas**, **Em Progresso** e **Pendentes**, e o **Progresso Geral** com a taxa de conclusão;
@@ -31,11 +31,12 @@ A **Lista de Projetos** mostra todos os projetos do sistema, inclusive os que vo
 2. Preencha **Nome do Projeto** e **Descrição**.
 3. Informe **Início do projeto** e **Término do projeto**. São datas do calendário, e o término não pode vir antes do início.
 4. Informe **Número do edital** e **Número do processo**, se o projeto veio de um.
-5. Escolha o **Status**: **Ativo**, **Concluído** ou **Arquivado**.
-6. Em **Líder do Projeto**, escolha a pessoa responsável. Sem escolha, o projeto fica com **Sem líder definido**.
-7. Em **Voluntários iniciais**, marque quem já entra no projeto.
-8. Use **+ Adicionar Link** para cada referência externa que o projeto precisa guardar.
-9. Clique em **Criar**.
+5. Informe o **Número PROPPI**, se o projeto é do PROPPI. É o número que sai nos dois formulários oficiais.
+6. Escolha o **Status**: **Ativo**, **Concluído** ou **Arquivado**.
+7. Em **Líder do Projeto**, escolha a pessoa responsável. Sem escolha, o projeto fica com **Sem líder definido**.
+8. Em **Voluntários iniciais**, marque quem já entra no projeto.
+9. Use **+ Adicionar Link** para cada referência externa que o projeto precisa guardar.
+10. Clique em **Criar**.
 
 ```foto dialogo-novo-projeto titulo="O diálogo Novo Projeto"
 Nome com até 100 caracteres e descrição com até 500.
@@ -86,9 +87,25 @@ Esses controles aparecem para a liderança e a gerência do projeto. Quem não g
 
 ## A aba Voluntários
 
-A aba **Voluntários** é a gestão de quem participa de cada projeto: **Equipe de Voluntários** com **Horas Trabalhadas** e **Pontos Conquistados** de cada pessoa, e o vínculo em três estados — **Ativo**, **Inativo** e **Afastado**.
+A aba **Voluntários** é a gestão de quem participa de cada projeto. Comece escolhendo o projeto em **Selecionar Projeto**: sem projeto escolhido, a aba não mostra equipe nenhuma. Com o projeto escolhido aparecem **Ações de Gerenciamento** — **Total de Voluntários**, **Horas Trabalhadas**, **Tasks Completadas** e **Pontos Conquistados** — e a **Equipe de Voluntários**, com **Adicionar voluntário** e **Remover voluntário** em cada pessoa.
 
-É aqui que um voluntário entra e sai de um projeto, e é por isso que ele aparece no quadro de tarefas e nas horas do projeto.
+Os dados do vínculo estão no diálogo **Gestão Completa**, aberto pelo botão de mesmo nome:
+
+1. Abra **Gestão Completa**.
+2. Em **Liderança do Projeto**, escolha a pessoa e clique em **Salvar líder**.
+3. Na linha de cada pessoa, escolha o papel em **Papel do membro** e clique em **Salvar papel**. **Horas** abre as horas da pessoa no projeto; **Remover** tira a pessoa do projeto, com confirmação.
+4. Abaixo da linha está o bloco **Dados do vínculo**, com os campos daquele vínculo: **Currículo Lattes**, **Carga contratada (h/semana)**, **Categoria do vínculo** (**Sem categoria**, **Bolsista** ou **Voluntário**), **Situação do vínculo** (**Ativo** ou **Inativo**) e **Data de entrada**.
+5. Clique em **Salvar vínculo**. Só o que você mexeu é gravado: o que ficou como estava não é apagado, e mexer sem mudar nada não grava nada.
+
+```foto painel-membros titulo="O bloco Dados do vínculo, no diálogo Gestão Completa"
+A tela avisa: *"A carga contratada é a que sai no atestado; a meta semanal da pessoa é editada no perfil dela."* São dois números diferentes, e os dois continuam existindo ao mesmo tempo.
+```
+
+Quem não gerencia o projeto não vê os campos de escrita: vê uma linha resumo abaixo da pessoa, com o que existe — carga contratada, categoria, situação, a data em que entrou e o Lattes. Vínculo sem dado nenhum não ganha linha vazia.
+
+::: nota titulo="Inativo não é sair do projeto"
+**Situação do vínculo** é estado de registro: **Ativo** ou **Inativo**. Quem sai do projeto é removido, e o vínculo deixa de existir — as horas que a pessoa já registrou continuam nas sessões de trabalho dela. Vínculo novo entra como **Ativo**.
+:::
 
 ## O projeto aparece no resto do sistema
 

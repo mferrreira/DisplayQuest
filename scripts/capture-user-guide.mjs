@@ -78,6 +78,10 @@ const SCREENS = [
   { id: "painel-administrativo", role: "coord", route: "/dashboard/admin", expect: { url: /\/dashboard\/admin/, anyOf: ["Administrativo", "Usuário"] } },
   { id: "loja-gerenciar", role: "coord", route: "/dashboard/loja/gerenciar", expect: { url: /\/dashboard\/loja\/gerenciar/, anyOf: ["Loja", "Recompensa", "Compra"] } },
   { id: "perfil", role: "coord", route: "/dashboard/profile", expect: { url: /\/dashboard\/profile/, anyOf: ["Perfil"] } },
+  // V5-4a (DEC-138): o cartão de perfil de OUTRA pessoa é onde os dados de pessoa aparecem em
+  // leitura — o cartão "Meu Perfil" da própria página não os mostra. O endereço é o que o link de
+  // uma pessoa no Ranking produz; o id é a conta de captura do guia (docs/.capture.env).
+  { id: "perfil-de-outra-pessoa", role: "coord", route: "/dashboard/profile?userId=21", expect: { url: /\/dashboard\/profile/, anyOf: ["Dados para os documentos"] } },
 
   // --- participante: superficie reduzida, usada para mostrar a variação de papel ---
   { id: "quadro-tarefas-participante", role: "part", route: "/dashboard", expect: { url: /\/dashboard$/, anyOf: ["Quadro", "Tarefa"] } },
@@ -109,7 +113,10 @@ const INTERACTIONS = [
   { id: "loja-solicitacoes", role: "coord", route: "/dashboard/loja/gerenciar", aba: "Solicitações Pendentes" },
   { id: "admin-usuarios", role: "coord", route: "/dashboard/admin", aba: "Usuários" },
   { id: "admin-horas", role: "coord", route: "/dashboard/admin", aba: "Horas" },
-  { id: "perfil-edicao", role: "part", route: "/dashboard/profile", abre: "Editar Perfil", verifica: "Cancelar Edição" },
+  // O formulário de edição mora na aba Configurações. Abrir "Editar Perfil" sem abrir a aba deixa
+  // o cartão em modo de edição com o formulário FORA da foto — é o que esta captura fazia até aqui
+  // (o extrato media zero `label` na tela). Agora a aba abre antes do botão.
+  { id: "perfil-edicao", role: "part", route: "/dashboard/profile", aba: "Configurações", abre: "Editar Perfil", verifica: "Cancelar Edição", rolarAte: "text=Dados para os documentos oficiais" },
   { id: "perfil-configuracoes", role: "part", route: "/dashboard/profile", aba: "Configurações" },
   { id: "loja-minhas-compras", role: "part", route: "/dashboard/loja", aba: "Minhas Compras" },
   { id: "controle-de-sessao", role: "part", route: "/dashboard/profile", abre: "Abrir controle de sessao" },
@@ -117,6 +124,9 @@ const INTERACTIONS = [
   // alvo: controle sem rótulo legível, localizado pela estrutura da tela
   { id: "dialogo-detalhe-tarefa", role: "coord", route: "/dashboard", alvo: "button.flex-1.text-left", dialogo: "PONTOS" },
   { id: "dialogo-detalhe-projeto", role: "coord", route: "/dashboard/projetos", alvo: "button:has(svg.lucide-eye)", dialogo: "Progresso Geral" },
+  // V5-4b (DEC-149): o painel de Membros é onde os dados do vínculo se editam. Ele mora dentro
+  // do diálogo "Gestão Completa", aberto pela aba Voluntários da tela Projetos.
+  { id: "painel-membros", role: "coord", route: "/dashboard/projetos", aba: "Voluntários", selecionar: { gatilho: "Selecione um projeto" }, abre: "Gestão Completa", dialogo: "Dados do vínculo", rolarAte: "text=Dados do vínculo" },
   { id: "painel-notificacoes", role: "coord", route: "/dashboard", abre: "Notificações", dialogo: "Notifica" },
   // plan-v3 OND3-C: o menu de ordenação da coluna é o rótulo que o guia usa — sem a captura, a
   // seção "A ordem dos cartões" descreveria cinco opções que nenhuma foto do guia mostra.
@@ -170,7 +180,12 @@ const failures = [];
 async function openSession(kind) {
   const context = await browser.newContext({ viewport: VIEWPORT, deviceScaleFactor: 2 });
   // next-themes: fixa o tema claro, que é o padrão da aplicação.
-  await context.addInitScript(() => localStorage.setItem("theme", "light"));
+  await context.addInitScript(() => {
+    localStorage.setItem("theme", "light");
+    // O balão "Bem-vindo(a)!" cobre o canto esquerdo de várias telas e tapa rótulos de campo na
+    // foto. Ele se dispensa por sessão de navegador; a captura dispensa antes de abrir a página.
+    sessionStorage.setItem("session-welcome-balloon-dismissed", "1");
+  });
 
   if (kind === null) return { context, page: await context.newPage() };
 
@@ -246,6 +261,32 @@ for (const it of interactions) {
       await page.getByRole("tab", { name: it.aba, exact: true }).first().click();
       await page.waitForTimeout(800);
       record.aba = it.aba;
+
+      // Verificação também para captura de aba. Sem isso, uma aba que mudou de conteúdo é
+      // fotografada em silêncio — foi assim que o guia continuou descrevendo um filtro de status
+      // que o DEC-96 já tinha tirado da tela. Quando a captura também abre algo, a verificação é
+      // do que existe DEPOIS do clique, e fica no ramo de baixo.
+      if (it.verifica && !it.abre && !it.alvo) {
+        const tabText = (await page.locator("body").innerText()).replace(/\s+/g, " ");
+        if (!tabText.includes(it.verifica)) {
+          throw new Error(`a aba "${it.aba}" não contém "${it.verifica}": "${tabText.slice(0, 140)}"`);
+        }
+      }
+    }
+
+    // Escolher uma opção de Select antes de agir: o painel de Membros só aparece depois de
+    // selecionar o projeto, e o `SelectTrigger` com só `<SelectValue placeholder=…>` não tem nome
+    // acessível (medido no V5-4a) — o placeholder é o que a tela mostra, então é por ele que o
+    // passo procura. Sem `valor`, escolhe a primeira opção.
+    if (it.selecionar) {
+      await page.getByText(it.selecionar.gatilho, { exact: true }).first().click();
+      await page.waitForTimeout(600);
+      if (it.selecionar.valor) {
+        await page.getByRole("option", { name: it.selecionar.valor, exact: true }).first().click();
+      } else {
+        await page.getByRole("option").first().click();
+      }
+      await page.waitForTimeout(900);
     }
 
     if (it.abre || it.alvo) {
@@ -271,6 +312,14 @@ for (const it of interactions) {
     }
 
     record.url = page.url();
+    // Algumas telas têm o bloco que importa longe do topo (o formulário do perfil começa pelo
+    // recorte de foto; o diálogo de gestão começa pelas estatísticas de hora). `rolarAte` leva o
+    // bloco ao campo de visão antes da foto — sem ele a captura fotografa a tela errada da tela certa.
+    if (it.rolarAte) {
+      await page.locator(it.rolarAte).first().scrollIntoViewIfNeeded();
+      await page.waitForTimeout(500);
+      record.roladoPara = it.rolarAte;
+    }
     record.dom = await page.evaluate(EXTRACT);
     await page.screenshot({ path: join(OUT_DIR, `${it.id}.png`) });
 
