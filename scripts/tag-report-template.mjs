@@ -106,9 +106,12 @@ export const REPLACEMENTS = [
   // ("( ) Relatório Final (  ) Relatório Parcial" — a primeira caixa tem UM espaço, a
   // segunda DOIS). As tabelas não têm branco sublinhado: a célula é um parágrafo vazio
   // com run vazio, e o anchor é o `w:spacing` próprio de cada célula (medido: cada um
-  // ocorre UMA vez no documento inteiro). O run vazio do oficial não carrega fonte — o
-  // texto preenchido herda o que o oficial herda quando o dono digita nele (docDefaults
-  // Calibri 11); o script NÃO adiciona rPr, porque o sistema nunca escreve estilo (DEC-129).
+  // ocorre UMA vez no documento inteiro). O run vazio do oficial não carrega fonte — sem
+  // marca o texto sairia em Calibri 11 (docDefaults) num documento cujo corpo inteiro é
+  // Times New Roman 12 (medido: 30 runs Times no corpo, Calibri só no timbre). DEC-174:
+  // os três comandos de tabela entram com o MESMO rPr dos runs de corpo do oficial
+  // (Times New Roman, sz 24) — o sistema não inventa estilo, aplica o estilo que o
+  // próprio documento usa para texto de corpo.
   {
     campo: "linha de tipo (Final / Parcial)",
     pattern: /\( \) Relatório Final \(  \) Relatório Parcial/,
@@ -119,7 +122,7 @@ export const REPLACEMENTS = [
     campo: "tabela Descrição das Atividades",
     pattern: /<w:spacing w:after="80" w:lineRule="auto"\/><w:jc w:val="left"\/><w:rPr\/><\/w:pPr><w:r w:rsidDel="00000000" w:rsidR="00000000" w:rsidRPr="00000000"><w:rPr><w:rtl w:val="0"\/><\/w:rPr><\/w:r>/,
     tokens: [
-      '<w:spacing w:after="80" w:lineRule="auto"/><w:jc w:val="left"/><w:rPr/></w:pPr><w:r w:rsidDel="00000000" w:rsidR="00000000" w:rsidRPr="00000000"><w:rPr><w:rtl w:val="0"/></w:rPr><w:t xml:space="preserve">{{tabela_descricao}}</w:t></w:r>',
+      '<w:spacing w:after="80" w:lineRule="auto"/><w:jc w:val="left"/><w:rPr/></w:pPr><w:r w:rsidDel="00000000" w:rsidR="00000000" w:rsidRPr="00000000"><w:rPr><w:rFonts w:ascii="Times New Roman" w:cs="Times New Roman" w:eastAsia="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/><w:szCs w:val="24"/><w:rtl w:val="0"/></w:rPr><w:t xml:space="preserve">{{tabela_descricao}}</w:t></w:r>',
     ],
     expected: 1,
   },
@@ -127,7 +130,7 @@ export const REPLACEMENTS = [
     campo: "tabela Principais Resultados",
     pattern: /<w:spacing w:after="120" w:before="0" w:lineRule="auto"\/><w:jc w:val="both"\/><w:rPr\/><\/w:pPr><w:r w:rsidDel="00000000" w:rsidR="00000000" w:rsidRPr="00000000"><w:rPr><w:rtl w:val="0"\/><\/w:rPr><\/w:r>/,
     tokens: [
-      '<w:spacing w:after="120" w:before="0" w:lineRule="auto"/><w:jc w:val="both"/><w:rPr/></w:pPr><w:r w:rsidDel="00000000" w:rsidR="00000000" w:rsidRPr="00000000"><w:rPr><w:rtl w:val="0"/></w:rPr><w:t xml:space="preserve">{{tabela_resultados}}</w:t></w:r>',
+      '<w:spacing w:after="120" w:before="0" w:lineRule="auto"/><w:jc w:val="both"/><w:rPr/></w:pPr><w:r w:rsidDel="00000000" w:rsidR="00000000" w:rsidRPr="00000000"><w:rPr><w:rFonts w:ascii="Times New Roman" w:cs="Times New Roman" w:eastAsia="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/><w:szCs w:val="24"/><w:rtl w:val="0"/></w:rPr><w:t xml:space="preserve">{{tabela_resultados}}</w:t></w:r>',
     ],
     expected: 1,
   },
@@ -135,7 +138,7 @@ export const REPLACEMENTS = [
     campo: "tabela Comentários Adicionais",
     pattern: /<w:spacing w:after="240" w:before="0" w:lineRule="auto"\/><w:jc w:val="left"\/><w:rPr\/><\/w:pPr><w:r w:rsidDel="00000000" w:rsidR="00000000" w:rsidRPr="00000000"><w:rPr><w:rtl w:val="0"\/><\/w:rPr><\/w:r>/,
     tokens: [
-      '<w:spacing w:after="240" w:before="0" w:lineRule="auto"/><w:jc w:val="left"/><w:rPr/></w:pPr><w:r w:rsidDel="00000000" w:rsidR="00000000" w:rsidRPr="00000000"><w:rPr><w:rtl w:val="0"/></w:rPr><w:t xml:space="preserve">{{tabela_comentarios}}</w:t></w:r>',
+      '<w:spacing w:after="240" w:before="0" w:lineRule="auto"/><w:jc w:val="left"/><w:rPr/></w:pPr><w:r w:rsidDel="00000000" w:rsidR="00000000" w:rsidRPr="00000000"><w:rPr><w:rFonts w:ascii="Times New Roman" w:cs="Times New Roman" w:eastAsia="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/><w:szCs w:val="24"/><w:rtl w:val="0"/></w:rPr><w:t xml:space="preserve">{{tabela_comentarios}}</w:t></w:r>',
     ],
     expected: 1,
   },

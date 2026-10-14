@@ -175,7 +175,7 @@ describe("geração do DOCX do relatório técnico (V5-9b, DEC-129/139)", () => 
     expect(first.periodo_inicio).toBe("01/03/2026");
     expect(first.periodo_fim).toBe("14/10/2026"); // hoje corta o período (fim contratual é 31/12)
     expect(first.data_relatorio).toBe("14/10/2026");
-    expect(first.linha_tipo).toBe("( ) Relatório Final ( x ) Relatório Parcial");
+    expect(first.linha_tipo).toBe("( ) Relatório Final ( X ) Relatório Parcial");
     expect(first.estudante_nome).toBe("Bento Lima");
     expect(first.modalidade).toBe("PIBIC");
     expect(first.instituicao_fomento).toBe("CNPq");

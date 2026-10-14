@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
-import { PDFCheckBox, PDFDocument, PDFTextField, StandardFonts } from "@cantoo/pdf-lib";
+import { PDFCheckBox, PDFDict, PDFDocument, PDFName, PDFFont, PDFTextField, StandardFonts } from "@cantoo/pdf-lib";
 
 import type { AttestationPdfPort } from "../../application/ports/attestation-pdf.port";
 
@@ -14,6 +14,14 @@ import type { AttestationPdfPort } from "../../application/ports/attestation-pdf
  * entregue (`flatten`) — o PDF que sai do sistema não é um formulário editável. Nenhum
  * estilo, nenhum campo novo, nenhum texto estático tocado.
  *
+ * V5-15 (DEC-174): valor que não cabe na caixa do oficial era CORTADO — a aparência tem a
+ * caixa como BBox e o texto que passa de lá não aparece no arquivo entregue. Medido no
+ * asset: cada campo de texto traz um tamanho no `/DA` do próprio campo (`ano` 10pt corta
+ * "2026"; `CPF` é 0 = auto). O adaptador agora mede a largura do valor na fonte da
+ * aparência e, quando não cabe: caixa alta (≥ 2 linhas) quebra em linhas (`enableMultiline`
+ * — a caixa do oficial foi desenhada para várias linhas à mão), caixa de linha única
+ * encolhe o corpo até caber (piso 6pt). Campo com `/DA` 0 (auto) não é tocado.
+ *
  * O caminho do asset sai de `process.cwd()`, não do módulo: o bundle `standalone` do Next
  * não preserva a posição original dos arquivos, e os três ambientes medidos têm o cwd na
  * raiz — vitest (raiz do repo), `next dev` (raiz do repo) e o container (`WORKDIR /app`,
@@ -21,6 +29,17 @@ import type { AttestationPdfPort } from "../../application/ports/attestation-pdf
  * explícito para o teste apontar para o asset versionado sem depender de cwd.
  */
 export const ATTESTADO_TEMPLATE_PATH = path.join(process.cwd(), "templates", "atestado-frequencia.pdf");
+
+/** Piso de corpo do auto-ajuste: abaixo disso o valor é ilegível e o corte é preferível. */
+const MIN_FONT_SIZE = 6;
+/** Folga interna da caixa (medido: a aparência do oficial desloca o texto ~2pt de cada lado). */
+const FIELD_PADDING_PT = 4;
+
+function templateFontSize(field: PDFTextField): number {
+  const da = (field as unknown as { acroField: { dict: PDFDict } }).acroField.dict.get(PDFName.of("DA"));
+  const match = String(da ?? "").match(/(\d+(?:\.\d+)?)\s+Tf/);
+  return match ? Number(match[1]) : 0;
+}
 
 export class AcroFormAttestationAdapter implements AttestationPdfPort {
   constructor(private readonly templatePath: string = ATTESTADO_TEMPLATE_PATH) {}
@@ -37,12 +56,43 @@ export class AcroFormAttestationAdapter implements AttestationPdfPort {
       if (field instanceof PDFCheckBox) {
         if (value === true) field.check();
       } else if (field instanceof PDFTextField) {
-        field.setText(String(value));
+        const text = String(value);
+        field.setText(text);
+        if (text.length > 0) this.fitText(field, text, times);
       }
     }
 
     form.updateFieldAppearances(times);
     form.flatten();
     return doc.save();
+  }
+
+  /**
+   * DEC-174: o valor entra na caixa do oficial sem corte. Tamanho inicial é o do próprio
+   * campo (`/DA`); `/DA` 0 é o "auto" do oficial e fica como veio. Não cabendo: caixa com
+   * altura para ≥ 2 linhas quebra, caixa de linha única encolhe até o piso.
+   */
+  private fitText(
+    field: PDFTextField,
+    text: string,
+    times: PDFFont,
+  ): void {
+    const size = templateFontSize(field);
+    if (size === 0) return;
+
+    const widget = field.acroField.getWidgets()[0];
+    if (!widget) return;
+    const rect = widget.getRectangle();
+    const availableWidth = rect.width - FIELD_PADDING_PT;
+    if (times.widthOfTextAtSize(text, size) <= availableWidth) return;
+
+    const lineHeight = size * 1.2;
+    if (rect.height >= 2 * lineHeight) {
+      field.enableMultiline();
+      return;
+    }
+
+    const fitted = Math.max(MIN_FONT_SIZE, Math.floor((availableWidth / times.widthOfTextAtSize(text, size)) * size));
+    if (fitted < size) field.setFontSize(fitted);
   }
 }

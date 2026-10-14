@@ -79,6 +79,28 @@ function flatWidgetCorpus(doc: PDFDocument): string {
   return parts.join("");
 }
 
+/**
+ * DEC-174: a aparência achatada de UM campo — corpo (`Tf`) e quantos `Tj` (1 = linha única,
+ * ≥ 2 = quebrou). O probe é o hex do valor, porque o nome do `FlatWidget` não diz o campo.
+ */
+function flatAppearanceWith(
+  doc: PDFDocument,
+  hex: string,
+): { fontSize: number; textRuns: number } | undefined {
+  for (const page of doc.getPages()) {
+    const xobjects = xobjectsOf(doc, page);
+    if (!xobjects) continue;
+    for (const [nameRef, ref] of xobjects.entries()) {
+      if (!String(nameRef).includes("FlatWidget")) continue;
+      const text = streamText(doc, ref);
+      if (!text.includes(hex)) continue;
+      const size = text.match(/\/[A-Za-z-]+ (\d+(?:\.\d+)?) Tf/)?.[1];
+      return { fontSize: Number(size ?? 0), textRuns: (text.match(/Tj/g) ?? []).length };
+    }
+  }
+  return undefined;
+}
+
 describe("AcroFormAttestationAdapter (V5-10a, DEC-130)", () => {
   it("entrega o oficial ACHATADO: sem AcroForm, 2 páginas, os 42 campos mesclados", async () => {
     const doc = await loadRendered({});
@@ -112,6 +134,34 @@ describe("AcroFormAttestationAdapter (V5-10a, DEC-130)", () => {
     const corpus = flatWidgetCorpus(await loadRendered({ nome: "Bento Lima" }));
     expect(corpus).not.toContain(appearanceHex("setembro"));
     expect(corpus).not.toContain(appearanceHex("123.456.789-01"));
+  });
+
+  it("DEC-174: valor que não cabe na caixa encolhe (ano 10pt corta '2026' — a aparência sai em 7pt)", async () => {
+    const doc = await loadRendered({ ano: "2026" });
+    const appearance = flatAppearanceWith(doc, appearanceHex("2026"));
+    expect(appearance).toBeDefined();
+    // O /DA do oficial é 10pt; a caixa é 19pt e '2026' mede 20pt — o auto-ajuste desceu a 7pt.
+    expect(appearance!.fontSize).toBe(7);
+    expect(appearance!.textRuns).toBe(1);
+  });
+
+  it("DEC-174: valor longo em caixa de 2+ linhas QUEBRA em vez de cortar (titulo 481pt na caixa de 408pt)", async () => {
+    const longTitle =
+      "Desenvolvimento de um sistema de recomendacao de tarefas para projetos de pesquisa com aprendizado por reforco e avaliacao continua de qualidade";
+    const doc = await loadRendered({ titulo: longTitle });
+    const appearance = flatAppearanceWith(doc, appearanceHex("Desenvolvimento de um sistema"));
+    expect(appearance).toBeDefined();
+    // Mantém o corpo do oficial (8pt) e divide em linhas — a caixa de 22pt comporta 2 linhas.
+    expect(appearance!.fontSize).toBe(8);
+    expect(appearance!.textRuns).toBeGreaterThanOrEqual(2);
+  });
+
+  it("DEC-174: valor que cabe NÃO é tocado — o tamanho do oficial permanece (data 12pt)", async () => {
+    const doc = await loadRendered({ data: "Janeiro" });
+    const appearance = flatAppearanceWith(doc, appearanceHex("Janeiro"));
+    expect(appearance).toBeDefined();
+    expect(appearance!.fontSize).toBe(12);
+    expect(appearance!.textRuns).toBe(1);
   });
 
   it("o asset oficial na disk não é tocado — o sha256 é o mesmo antes e depois", async () => {

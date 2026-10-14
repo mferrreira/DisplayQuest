@@ -105,7 +105,7 @@ describe("DocxTechnicalReportAdapter — o oficial preenchido (V5-9b, DEC-129)",
     const zip = await JSZip.loadAsync(rendered);
     const text = extractText(await zip.file(DOC_PATH)!.async("string"));
 
-    expect(text).toContain("( ) Relatório Final ( x ) Relatório Parcial");
+    expect(text).toContain("( ) Relatório Final ( X ) Relatório Parcial");
     expect(text).toContain("IA no campo");
     expect(text).toContain("PROPPI-2026-017");
     expect(text).toContain("Profa. Ana Souza");
@@ -128,10 +128,19 @@ describe("DocxTechnicalReportAdapter — o oficial preenchido (V5-9b, DEC-129)",
     const xml = await zip.file(DOC_PATH)!.async("string");
 
     // processLineBreaks: "Etapa 1 concluída.\nSegunda linha..." vira <w:br/> dentro do
-    // mesmo run — o run continua sem rPr de fonte (herda o que o oficial herda).
+    // mesmo run. DEC-174: o run do corpo de tabela carrega o rPr de corpo do oficial
+    // (Times New Roman, sz 24) — sem ele o texto sairia em Calibri 11 (docDefaults) num
+    // documento cujo corpo inteiro é Times New Roman 12.
     expect(xml).toContain("Etapa 1 concluída.");
     expect(xml).toContain("<w:br/>");
     expect(xml).toContain("Segunda linha da descrição.");
+    const at = xml.indexOf("Etapa 1 concluída.");
+    const runStart = xml.lastIndexOf("<w:r ", at);
+    const runEnd = xml.indexOf("</w:r>", at);
+    const bodyRun = xml.slice(runStart, runEnd);
+    expect(runStart).toBeGreaterThan(-1);
+    expect(bodyRun).toContain('w:ascii="Times New Roman"');
+    expect(bodyRun).toContain('<w:sz w:val="24"');
   });
 
   it("valor com caractere XML é escapado — nome de pessoa não injeta run", async () => {

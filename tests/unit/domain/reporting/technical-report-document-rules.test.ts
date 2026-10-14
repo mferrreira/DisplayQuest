@@ -145,16 +145,16 @@ describe("relatório técnico — regras do documento (V5-9b, DEC-129/168)", () 
   describe("linha de checkbox — o literal medido do oficial (DEC-167)", () => {
     it("parcial marca a segunda caixa, com os espaços do oficial preservados", () => {
       expect(technicalReportCheckboxLine("parcial")).toBe(
-        "( ) Relatório Final ( x ) Relatório Parcial",
+        "( ) Relatório Final ( X ) Relatório Parcial",
       );
     });
 
     it("tecnico-final e final marcam a primeira caixa", () => {
       expect(technicalReportCheckboxLine("tecnico-final")).toBe(
-        "( x ) Relatório Final (  ) Relatório Parcial",
+        "( X ) Relatório Final (  ) Relatório Parcial",
       );
       expect(technicalReportCheckboxLine("final")).toBe(
-        "( x ) Relatório Final (  ) Relatório Parcial",
+        "( X ) Relatório Final (  ) Relatório Parcial",
       );
     });
   });
@@ -266,7 +266,7 @@ describe("relatório técnico — regras do documento (V5-9b, DEC-129/168)", () 
       expect(commands.estudante_curso).toBe("Sistemas de Informação");
       expect(commands.modalidade).toBe("PIBIC Jr");
       expect(commands.instituicao_fomento).toBe("CNPq");
-      expect(commands.linha_tipo).toBe("( ) Relatório Final ( x ) Relatório Parcial");
+      expect(commands.linha_tipo).toBe("( ) Relatório Final ( X ) Relatório Parcial");
       expect(commands.tabela_descricao).toBe("Etapa 1.");
       expect(commands.tabela_resultados).toBe("Artigo.");
       expect(commands.tabela_comentarios).toBe("Nada.");

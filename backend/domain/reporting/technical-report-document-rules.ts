@@ -131,12 +131,14 @@ export function splitReportBody(text: string): ReportBody {
 /**
  * A linha de checkbox literal medida no oficial: "( ) Relatório Final (  ) Relatório
  * Parcial" — a primeira caixa tem UM espaço, a segunda DOIS. O sistema só troca o
- * interior da caixa marcada; os espaços do oficial permanecem (DEC-129).
+ * interior da caixa marcada; os espaços do oficial permanecem (DEC-129). A marca é **X**
+ * maiúsculo (DEC-174): é a grafia do estado ligado no próprio AcroForm do oficial (`/X`)
+ * e a da brochura ("Marque com X os meses") — o `x` minúsculo era um terceiro jeito.
  */
 export function technicalReportCheckboxLine(type: TechnicalReportType): string {
   return technicalReportCheckbox(type) === "parcial"
-    ? "( ) Relatório Final ( x ) Relatório Parcial"
-    : "( x ) Relatório Final (  ) Relatório Parcial";
+    ? "( ) Relatório Final ( X ) Relatório Parcial"
+    : "( X ) Relatório Final (  ) Relatório Parcial";
 }
 
 export interface TechnicalReportDocumentProject {
