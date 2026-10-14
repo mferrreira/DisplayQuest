@@ -89,6 +89,22 @@ export function projectAttachmentPrefix(projectId: number): string {
   return `projects/${projectId}/attachments`;
 }
 
+/**
+ * Prefixo de chave da PROVA de atividade no bucket (V5-7a, DEC-157/162):
+ * `projects/<projeto>/activities/<atividade>/files`. Mesma validação do anexo: o id entra aqui
+ * porque o `sanitizeBlobPrefix` do seam só barra traversal, e a prova pertence à linha do
+ * cronograma, não ao projeto solto.
+ */
+export function projectActivityFilePrefix(projectId: number, activityId: number): string {
+  if (!Number.isInteger(projectId) || projectId <= 0) {
+    throw new Error(`projeto inválido para montar prefixo de prova: ${projectId}`);
+  }
+  if (!Number.isInteger(activityId) || activityId <= 0) {
+    throw new Error(`atividade inválida para montar prefixo de prova: ${activityId}`);
+  }
+  return `projects/${projectId}/activities/${activityId}/files`;
+}
+
 export interface ProjectAttachmentMetadata {
   name?: unknown;
   size?: unknown;

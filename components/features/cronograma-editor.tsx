@@ -70,6 +70,9 @@ export interface CronogramaActivityRow {
   firstMonth: string
   lastMonth: string
   status?: string
+  /** V5-7a (DEC-76): quem pediu e quando — o diálogo de conclusão mostra o histórico. */
+  requestedBy?: number | null
+  requestedAt?: string | null
 }
 
 export interface CronogramaMemberOption {
@@ -102,6 +105,13 @@ export interface CronogramaEditorProps {
   ) => void
   onToggleMonth: (activity: CronogramaActivityRow, monthKey: string) => void
   onDeleteActivity: (activity: CronogramaActivityRow) => void
+  /**
+   * V5-7a (DEC-76/162): quem pode PEDIR a conclusão — líder OU membership de gestor. É porta
+   * diferente de `canManage` de propósito (o global sem membership gerencia a grade e não pede;
+   * DEC-77 o coloca do lado que aprova), e quem decide é o servidor: a tela só mostra o botão.
+   */
+  canRequestCompletion?: boolean
+  onOpenCompletion?: (activity: CronogramaActivityRow) => void
 }
 
 export function CronogramaEditor({
@@ -118,6 +128,8 @@ export function CronogramaEditor({
   onActivityChange,
   onToggleMonth,
   onDeleteActivity,
+  canRequestCompletion = false,
+  onOpenCompletion,
 }: CronogramaEditorProps) {
   const currentMonth = today.slice(0, 7)
 
@@ -309,17 +321,30 @@ export function CronogramaEditor({
                       </TableCell>
 
                       <TableCell>
-                        {canManage ? (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            aria-label={`Apagar atividade ${activity.order}`}
-                            onClick={() => onDeleteActivity(activity)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        ) : null}
+                        <div className="flex items-center gap-1">
+                          {canRequestCompletion && activity.id !== null && onOpenCompletion ? (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              aria-label={`Conclusão da atividade ${activity.order}`}
+                              onClick={() => onOpenCompletion(activity)}
+                            >
+                              Conclusão
+                            </Button>
+                          ) : null}
+                          {canManage ? (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              aria-label={`Apagar atividade ${activity.order}`}
+                              onClick={() => onDeleteActivity(activity)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          ) : null}
+                        </div>
                       </TableCell>
                     </TableRow>
                   )

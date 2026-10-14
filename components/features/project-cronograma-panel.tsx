@@ -8,6 +8,10 @@
  * — o que chega de período, meses e recompensa vem do domínio, e o clique na grade é a mesma
  * `toggleActivityMonthRange` que a rota usa (DEC-90).
  *
+ * Desde o V5-7a (DEC-76/162) a linha também se abre em diálogo: "Conclusão" leva ao
+ * `ActivityCompletionDialog`, onde se anexam provas e se solicita a conclusão. O botão obedece
+ * ao gate da DEC-76, calculado pela mesma função do domínio que o servidor executa.
+ *
  * Linha nova nasce local (id `null`) e só é escrita quando a descrição é confirmada: criar linha
  * vazia seria poluir o cronograma com uma etapa sem nome, e o domínio recusa descrição vazia por
  * decisão (a brochura não tem "Etapa" sem "Descrição da Atividade").
@@ -21,13 +25,16 @@ import { useCallback, useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Loader2 } from "lucide-react"
 import { useToast } from "@/contexts/use-toast"
+import { useAuth } from "@/contexts/auth-context"
 import {
   ACTIVITY_MIN_MONTH_MESSAGE,
+  canActorRequestActivityCompletionDecision,
   monthColumnLabel,
   nextCronogramaOrder,
   toggleActivityMonthRange,
 } from "@/backend/domain"
 import { listProjectMembers } from "@/lib/api/project-members"
+import { ActivityCompletionDialog } from "@/components/features/activity-completion-dialog"
 import {
   createProjectActivity,
   createProjectGoal,
@@ -49,6 +56,12 @@ import {
 interface ProjectCronogramaPanelProps {
   projectId: number
   canManage: boolean
+  /**
+   * V5-7a (DEC-76/162): o gate de PEDIR conclusão é o par da DEC-76 (líder OU membership de
+   * gestor), não a ACL de gestão da grade. A tela calcula a decisão com a MESMA função do
+   * domínio que o servidor usa (DEC-92); o 403 que chegar mesmo assim é erro, não botão.
+   */
+  leaderId?: number | null
 }
 
 interface PersistedGoal {
@@ -81,6 +94,8 @@ function activityRowFrom(activity: ProjectActivity): CronogramaActivityRow {
     firstMonth: activity.firstMonth,
     lastMonth: activity.lastMonth,
     status: activity.status,
+    requestedBy: activity.requestedBy,
+    requestedAt: activity.requestedAt,
   }
 }
 
@@ -88,14 +103,18 @@ function targetFromText(text: string): number | null {
   return text.trim() === "" ? null : Number(text)
 }
 
-export function ProjectCronogramaPanel({ projectId, canManage }: ProjectCronogramaPanelProps) {
+export function ProjectCronogramaPanel({ projectId, canManage, leaderId }: ProjectCronogramaPanelProps) {
   const { toast } = useToast()
+  const { user } = useAuth()
   const [loading, setLoading] = useState(true)
   const [months, setMonths] = useState<string[]>([])
   const [today, setToday] = useState("")
   const [goals, setGoals] = useState<CronogramaGoalRow[]>([])
   const [activities, setActivities] = useState<CronogramaActivityRow[]>([])
   const [members, setMembers] = useState<CronogramaMemberOption[]>([])
+  /** Papéis da membership por usuário — a conta do gate de pedir (DEC-76), lida da mesma lista. */
+  const [memberRolesById, setMemberRolesById] = useState(new Map<number, string[]>())
+  const [completionActivity, setCompletionActivity] = useState<CronogramaActivityRow | null>(null)
   const [persistedGoals, setPersistedGoals] = useState(new Map<number, PersistedGoal>())
   const [persistedActivities, setPersistedActivities] = useState(new Map<number, PersistedActivity>())
 
@@ -116,6 +135,7 @@ export function ProjectCronogramaPanel({ projectId, canManage }: ProjectCronogra
           name: member.userName ?? `#${member.userId}`,
         })),
       )
+      setMemberRolesById(new Map(memberRows.map((member) => [member.userId, member.roles ?? []])))
       setPersistedGoals(
         new Map(view.goals.map((goal) => [goal.id, { description: goal.description, target: goal.target }])),
       )
@@ -146,6 +166,21 @@ export function ProjectCronogramaPanel({ projectId, canManage }: ProjectCronogra
   useEffect(() => {
     load()
   }, [load])
+
+  // O gate de PEDIR (DEC-76) é calculado pela MESMA função do domínio que o servidor executa
+  // (DEC-92): líder OU membership de gestor. Papel global sem membership não entra — quem
+  // aprova é o global (DEC-77), não quem pede.
+  const canRequestCompletion = canActorRequestActivityCompletionDecision(
+    user?.id ?? -1,
+    leaderId ?? null,
+    user ? memberRolesById.get(user.id) ?? null : null,
+  )
+
+  function handleRequested(updated: ProjectActivity) {
+    setActivities((current) =>
+      current.map((row) => (row.id === updated.id ? activityRowFrom(updated) : row)),
+    )
+  }
 
   // Nenhum handler async sem catch: rejeição solta em `onClick` derruba o gate do Vitest com
   // "Unhandled Rejection" mesmo com todos os testes passando (medido no V4-4b, DEC-85).
@@ -431,7 +466,22 @@ export function ProjectCronogramaPanel({ projectId, canManage }: ProjectCronogra
           onActivityChange={handleActivityChange}
           onToggleMonth={handleToggleMonth}
           onDeleteActivity={handleDeleteActivity}
+          canRequestCompletion={canRequestCompletion}
+          onOpenCompletion={(row) => row.id !== null && setCompletionActivity(row)}
         />
+
+        {completionActivity && completionActivity.id !== null ? (
+          <ActivityCompletionDialog
+            projectId={projectId}
+            activity={completionActivity}
+            members={members}
+            canRequest={canRequestCompletion}
+            onOpenChange={(open) => {
+              if (!open) setCompletionActivity(null)
+            }}
+            onRequested={handleRequested}
+          />
+        ) : null}
       </CardContent>
     </Card>
   )

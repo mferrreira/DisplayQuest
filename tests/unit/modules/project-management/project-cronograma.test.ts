@@ -217,6 +217,14 @@ class Fakes {
         self.activities.set(id, next);
         return { ...next };
       },
+      async requestActivity(id, fields) {
+        self.activityWrites.push({ id, fields: { status: fields.status, requestedBy: fields.requestedBy } });
+        const current = self.activities.get(id);
+        if (!current) throw new Error("atividade ausente no duplo");
+        const next = { ...current, status: fields.status, requestedBy: fields.requestedBy, requestedAt: fields.requestedAt.toISOString() };
+        self.activities.set(id, next);
+        return { ...next };
+      },
       async deleteActivity(id) {
         self.deletes.push(`activity:${id}`);
         self.activities.delete(id);

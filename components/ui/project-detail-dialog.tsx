@@ -296,7 +296,11 @@ export function ProjectDetailDialog({
             {/* V5-5 (DEC-100/126/151): o cronograma — metas e a grade meses × atividades. A leitura
                 é a do autenticado; a escrita aparece para quem o diálogo reconhece como gestão e o
                 servidor decide de verdade. */}
-            <ProjectCronogramaPanel projectId={project.id} canManage={canManageProjectFiles} />
+            <ProjectCronogramaPanel
+              projectId={project.id}
+              canManage={canManageProjectFiles}
+              leaderId={project.leaderId}
+            />
 
             {/* Project Statistics */}
             <div className="grid gap-4 md:grid-cols-4">

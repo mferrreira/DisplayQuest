@@ -169,3 +169,70 @@ export async function deleteProjectActivity(projectId: number, activityId: numbe
     "Erro ao apagar atividade",
   )
 }
+
+// ---- provas da atividade + solicitar conclusão (V5-7a, DEC-76/157/162) ----
+
+export interface ActivityProof {
+  id: number
+  activityId: number
+  name: string
+  contentType: string
+  size: number
+  uploadedBy: number
+  uploadedAt: string
+}
+
+export async function listActivityProofs(
+  projectId: number,
+  activityId: number,
+): Promise<ActivityProof[]> {
+  const payload = await request<{ files?: ActivityProof[] }>(
+    `/api/projects/${projectId}/activities/${activityId}/files`,
+    { method: "GET" },
+    "Erro ao buscar provas",
+  )
+  return Array.isArray(payload.files) ? payload.files : []
+}
+
+/**
+ * Upload do arquivo: `FormData` cru, sem `Content-Type` montado à mão — o boundary é do fetch.
+ * O binário não passa por aqui: a rota escreve no bucket pelo seam (DEC-133).
+ */
+export async function uploadActivityProof(
+  projectId: number,
+  activityId: number,
+  file: File,
+): Promise<ActivityProof> {
+  const form = new FormData()
+  form.set("file", file)
+  const payload = await request<{ file: ActivityProof }>(
+    `/api/projects/${projectId}/activities/${activityId}/files`,
+    { method: "POST", body: form },
+    "Erro ao enviar prova",
+  )
+  return payload.file
+}
+
+export async function deleteActivityProof(
+  projectId: number,
+  activityId: number,
+  fileId: number,
+): Promise<void> {
+  await request(
+    `/api/projects/${projectId}/activities/${activityId}/files/${fileId}`,
+    { method: "DELETE" },
+    "Erro ao apagar prova",
+  )
+}
+
+export async function requestActivityCompletion(
+  projectId: number,
+  activityId: number,
+): Promise<ProjectActivity> {
+  const payload = await request<{ activity: ProjectActivity }>(
+    `/api/projects/${projectId}/activities/${activityId}/request-completion`,
+    { method: "POST" },
+    "Erro ao solicitar conclusão",
+  )
+  return payload.activity
+}

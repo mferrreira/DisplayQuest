@@ -28,6 +28,7 @@ import type {
   NewProjectGoalInput,
   ProjectActivityRecord,
   ProjectActivityUpdateFields,
+  ActivityRequestFields,
   ProjectCronogramaPort,
   ProjectGoalRecord,
   ProjectGoalUpdateFields,
@@ -206,6 +207,13 @@ vi.mock("@/backend/composition/root", () => {
       const current = mocks.activities.get(id);
       if (!current) throw new Error("atividade ausente no duplo");
       const next = { ...current, ...fields };
+      mocks.activities.set(id, next);
+      return { ...next };
+    },
+    async requestActivity(id: number, fields: ActivityRequestFields) {
+      const current = mocks.activities.get(id);
+      if (!current) throw new Error("atividade ausente no duplo");
+      const next = { ...current, status: fields.status, requestedBy: fields.requestedBy, requestedAt: fields.requestedAt.toISOString() };
       mocks.activities.set(id, next);
       return { ...next };
     },

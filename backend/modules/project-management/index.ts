@@ -25,9 +25,17 @@ import { DeleteProjectGoalUseCase } from "@/backend/modules/project-management/a
 import { CreateProjectActivityUseCase } from "@/backend/modules/project-management/application/use-cases/create-project-activity.use-case"
 import { UpdateProjectActivityUseCase } from "@/backend/modules/project-management/application/use-cases/update-project-activity.use-case"
 import { DeleteProjectActivityUseCase } from "@/backend/modules/project-management/application/use-cases/delete-project-activity.use-case"
+import { ListActivityFilesUseCase } from "@/backend/modules/project-management/application/use-cases/list-activity-files.use-case"
+import { GetActivityFileUseCase } from "@/backend/modules/project-management/application/use-cases/get-activity-file.use-case"
+import { AddActivityFileUseCase } from "@/backend/modules/project-management/application/use-cases/add-activity-file.use-case"
+import { RemoveActivityFileUseCase } from "@/backend/modules/project-management/application/use-cases/remove-activity-file.use-case"
+import { AssertCanRequestActivityCompletionUseCase } from "@/backend/modules/project-management/application/use-cases/assert-can-request-activity-completion.use-case"
+import { RequestActivityCompletionUseCase } from "@/backend/modules/project-management/application/use-cases/request-activity-completion.use-case"
 import type { ProjectActorsPort } from "@/backend/modules/project-management/application/ports/project-actors.port"
 import type { ProjectAttachmentsPort } from "@/backend/modules/project-management/application/ports/project-attachments.repository"
 import type { ProjectCronogramaPort } from "@/backend/modules/project-management/application/ports/project-cronograma.repository"
+import type { ProjectActivityFilesPort } from "@/backend/modules/project-management/application/ports/project-activity-files.repository"
+import type { ActivityTasksPort } from "@/backend/modules/project-management/application/ports/activity-tasks.port"
 import type { ProjectDeliverablesPort } from "@/backend/modules/project-management/application/ports/project-deliverables.repository"
 import type { ProjectHoursPort } from "@/backend/modules/project-management/application/ports/project-hours.port"
 import type { ProjectManagementMembershipPort } from "@/backend/modules/project-management/application/ports/project-membership.repository"
@@ -36,6 +44,8 @@ import { createPrismaProjectActorsPort } from "@/backend/modules/project-managem
 import { createPrismaProjectAttachmentsRepository } from "@/backend/modules/project-management/infrastructure/repositories/prisma-project-attachments.repository"
 import { createPrismaProjectDeliverablesRepository } from "@/backend/modules/project-management/infrastructure/repositories/prisma-project-deliverables.repository"
 import { createPrismaProjectCronogramaRepository } from "@/backend/modules/project-management/infrastructure/repositories/prisma-project-cronograma.repository"
+import { createPrismaProjectActivityFilesRepository } from "@/backend/modules/project-management/infrastructure/repositories/prisma-project-activity-files.repository"
+import { createPrismaActivityTasksPort } from "@/backend/modules/project-management/infrastructure/repositories/prisma-activity-tasks.port"
 import { createPrismaProjectHoursPort } from "@/backend/modules/project-management/infrastructure/repositories/prisma-project-hours.port"
 import { createPrismaProjectManagementMembershipRepository } from "@/backend/modules/project-management/infrastructure/repositories/prisma-project-membership.repository"
 import { createPrismaProjectRepository } from "@/backend/modules/project-management/infrastructure/repositories/prisma-project.repository"
@@ -88,6 +98,12 @@ export class ProjectManagementModule {
   readonly createProjectActivity: UseCaseExecute<CreateProjectActivityUseCase>
   readonly updateProjectActivity: UseCaseExecute<UpdateProjectActivityUseCase>
   readonly deleteProjectActivity: UseCaseExecute<DeleteProjectActivityUseCase>
+  readonly listActivityFiles: UseCaseExecute<ListActivityFilesUseCase>
+  readonly getActivityFile: UseCaseExecute<GetActivityFileUseCase>
+  readonly addActivityFile: UseCaseExecute<AddActivityFileUseCase>
+  readonly removeActivityFile: UseCaseExecute<RemoveActivityFileUseCase>
+  readonly assertCanRequestActivityCompletion: UseCaseExecute<AssertCanRequestActivityCompletionUseCase>
+  readonly requestActivityCompletion: UseCaseExecute<RequestActivityCompletionUseCase>
 
   constructor(
     private readonly listProjectsForActorUseCase: ListProjectsForActorUseCase,
@@ -117,6 +133,12 @@ export class ProjectManagementModule {
     private readonly createProjectActivityUseCase: CreateProjectActivityUseCase,
     private readonly updateProjectActivityUseCase: UpdateProjectActivityUseCase,
     private readonly deleteProjectActivityUseCase: DeleteProjectActivityUseCase,
+    private readonly listActivityFilesUseCase: ListActivityFilesUseCase,
+    private readonly getActivityFileUseCase: GetActivityFileUseCase,
+    private readonly addActivityFileUseCase: AddActivityFileUseCase,
+    private readonly removeActivityFileUseCase: RemoveActivityFileUseCase,
+    private readonly assertCanRequestActivityCompletionUseCase: AssertCanRequestActivityCompletionUseCase,
+    private readonly requestActivityCompletionUseCase: RequestActivityCompletionUseCase,
   ) {
     this.listProjectsForActor = this.listProjectsForActorUseCase.execute.bind(this.listProjectsForActorUseCase)
     this.getProjectById = this.getProjectByIdUseCase.execute.bind(this.getProjectByIdUseCase)
@@ -145,6 +167,14 @@ export class ProjectManagementModule {
     this.createProjectActivity = this.createProjectActivityUseCase.execute.bind(this.createProjectActivityUseCase)
     this.updateProjectActivity = this.updateProjectActivityUseCase.execute.bind(this.updateProjectActivityUseCase)
     this.deleteProjectActivity = this.deleteProjectActivityUseCase.execute.bind(this.deleteProjectActivityUseCase)
+    this.listActivityFiles = this.listActivityFilesUseCase.execute.bind(this.listActivityFilesUseCase)
+    this.getActivityFile = this.getActivityFileUseCase.execute.bind(this.getActivityFileUseCase)
+    this.addActivityFile = this.addActivityFileUseCase.execute.bind(this.addActivityFileUseCase)
+    this.removeActivityFile = this.removeActivityFileUseCase.execute.bind(this.removeActivityFileUseCase)
+    this.assertCanRequestActivityCompletion = this.assertCanRequestActivityCompletionUseCase.execute.bind(
+      this.assertCanRequestActivityCompletionUseCase,
+    )
+    this.requestActivityCompletion = this.requestActivityCompletionUseCase.execute.bind(this.requestActivityCompletionUseCase)
   }
 }
 
@@ -156,6 +186,8 @@ export interface ProjectManagementModulePorts {
   deliverables: ProjectDeliverablesPort
   attachments: ProjectAttachmentsPort
   cronograma: ProjectCronogramaPort
+  activityFiles: ProjectActivityFilesPort
+  tasks: ActivityTasksPort
 }
 
 export interface ProjectManagementModuleFactoryOptions {
@@ -171,6 +203,8 @@ export function createProjectManagementModule(options: ProjectManagementModuleFa
     deliverables: options.ports?.deliverables ?? createPrismaProjectDeliverablesRepository(),
     attachments: options.ports?.attachments ?? createPrismaProjectAttachmentsRepository(),
     cronograma: options.ports?.cronograma ?? createPrismaProjectCronogramaRepository(),
+    activityFiles: options.ports?.activityFiles ?? createPrismaProjectActivityFilesRepository(),
+    tasks: options.ports?.tasks ?? createPrismaActivityTasksPort(),
   }
 
   return new ProjectManagementModule(
@@ -277,6 +311,40 @@ export function createProjectManagementModule(options: ProjectManagementModuleFa
       cronograma: ports.cronograma,
       memberships: ports.memberships,
       actors: ports.actors,
+    }),
+    new ListActivityFilesUseCase({
+      projects: ports.projects,
+      cronograma: ports.cronograma,
+      files: ports.activityFiles,
+    }),
+    new GetActivityFileUseCase({
+      projects: ports.projects,
+      cronograma: ports.cronograma,
+      files: ports.activityFiles,
+    }),
+    new AddActivityFileUseCase({
+      projects: ports.projects,
+      cronograma: ports.cronograma,
+      files: ports.activityFiles,
+      memberships: ports.memberships,
+    }),
+    new RemoveActivityFileUseCase({
+      projects: ports.projects,
+      cronograma: ports.cronograma,
+      files: ports.activityFiles,
+      memberships: ports.memberships,
+    }),
+    new AssertCanRequestActivityCompletionUseCase({
+      projects: ports.projects,
+      cronograma: ports.cronograma,
+      memberships: ports.memberships,
+    }),
+    new RequestActivityCompletionUseCase({
+      projects: ports.projects,
+      cronograma: ports.cronograma,
+      files: ports.activityFiles,
+      tasks: ports.tasks,
+      memberships: ports.memberships,
     }),
   )
 }

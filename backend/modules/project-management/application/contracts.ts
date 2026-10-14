@@ -103,6 +103,55 @@ export interface GetProjectAttachmentQuery {
 }
 
 // ---------------------------------------------------------------------------
+// V5-7a (DEC-76/157/162) — provas da atividade + solicitar conclusão
+// ---------------------------------------------------------------------------
+
+export interface ListActivityFilesQuery {
+  projectId: number
+  activityId: number
+  actorId: number
+}
+
+export interface GetActivityFileQuery {
+  projectId: number
+  activityId: number
+  fileId: number
+  actorId: number
+}
+
+/** `blobKey` vem da rota, como no anexo (DEC-133): ela escreveu o objeto pelo seam. */
+export interface AddActivityFileCommand {
+  projectId: number
+  activityId: number
+  actorId: number
+  blobKey: string
+  name: unknown
+  contentType: string
+  size: number
+}
+
+export interface RemoveActivityFileCommand {
+  projectId: number
+  activityId: number
+  fileId: number
+  actorId: number
+}
+
+export interface AssertCanRequestActivityCompletionCommand {
+  projectId: number
+  activityId: number
+  actorId: number
+}
+
+/** `now` entra por parâmetro — regra de tempo nunca lê relógio sozinha (casa: `now` sempre par). */
+export interface RequestActivityCompletionCommand {
+  projectId: number
+  activityId: number
+  actorId: number
+  now: Date
+}
+
+// ---------------------------------------------------------------------------
 // V5-2d (DEC-102) — imagem do projeto (logo/banner) no bucket
 // ---------------------------------------------------------------------------
 

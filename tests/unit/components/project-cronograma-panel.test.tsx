@@ -16,6 +16,11 @@
  *     `matchMedia`, que o jsdom desta base não tem. O stub é LOCAL a este arquivo.
  *   - `confirm` não existe no jsdom; o painel confirma antes de apagar.
  *   - `userEvent` cru é lento sob carga paralela: `setup({ delay: null })`.
+ *
+ * V5-7a (DEC-76/162): o painel passou a ler `useAuth` (o gate de pedir é calculado pela mesma
+ * função do domínio que o servidor executa, DEC-92), então o contexto é dobrado aqui. O
+ * substituto do fluxo de conclusão aplica as recusas com as FUNÇÕES do domínio (DEC-90): a tela
+ * mostra a frase que o servidor mostraria, não uma cópia que concorda por acaso.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
@@ -25,7 +30,10 @@ import { Toaster } from "sonner";
 import { ProjectCronogramaPanel } from "@/components/features/project-cronograma-panel";
 import {
   ACTIVITY_MIN_MONTH_MESSAGE,
+  ACTIVITY_NO_PROOF_MESSAGE,
+  activityOpenTasksMessage,
   activityPeriod,
+  activityRequestConflictMessage,
   activityReward,
   cronogramaMonthColumns,
   isActivityCurrent,
@@ -40,6 +48,15 @@ const PROJECT = 7;
 const TODAY = "2026-10-15";
 const START_DATE = "2026-03-01";
 const END_DATE = "2026-08-31";
+
+/** `useAuth` dobrado: o painel decide o botão do fluxo com a sessão (DEC-92). */
+const authMocks = vi.hoisted(() => ({
+  user: null as null | { id: number; name: string; email: string; roles: string[] },
+}));
+
+vi.mock("@/contexts/auth-context", () => ({
+  useAuth: () => ({ user: authMocks.user }),
+}));
 
 interface GoalRow {
   id: number;
@@ -59,6 +76,18 @@ interface ActivityRow {
   firstMonth: string;
   lastMonth: string;
   status: string;
+  requestedBy: number | null;
+  requestedAt: string | null;
+}
+
+interface ProofRow {
+  id: number;
+  activityId: number;
+  name: string;
+  contentType: string;
+  size: number;
+  uploadedBy: number;
+  uploadedAt: string;
 }
 
 interface RecordedRequest {
@@ -71,6 +100,10 @@ const mocks = {
   goals: [] as GoalRow[],
   activities: [] as ActivityRow[],
   memberIds: [] as number[],
+  memberRoles: {} as Record<number, string[]>,
+  proofs: [] as ProofRow[],
+  /** Tarefas ABERTAS por atividade — a conta da trava DEC-99 no substituto. */
+  openTasks: {} as Record<number, number>,
   requests: [] as RecordedRequest[],
   refuseWrite: false,
   nextId: 700,
@@ -97,6 +130,8 @@ function resetStore() {
       firstMonth: "2026-03",
       lastMonth: "2026-05",
       status: "OPEN",
+      requestedBy: null,
+      requestedAt: null,
     },
     {
       id: 402,
@@ -107,12 +142,28 @@ function resetStore() {
       firstMonth: "2026-07",
       lastMonth: "2026-07",
       status: "OPEN",
+      requestedBy: null,
+      requestedAt: null,
     },
   ];
   mocks.memberIds = [4];
+  mocks.memberRoles = { 4: ["VOLUNTARIO"] };
+  mocks.proofs = [
+    {
+      id: 501,
+      activityId: 401,
+      name: "parcial.pdf",
+      contentType: "application/pdf",
+      size: 2048,
+      uploadedBy: 4,
+      uploadedAt: "2026-10-01T12:00:00.000Z",
+    },
+  ];
+  mocks.openTasks = {};
   mocks.requests = [];
   mocks.refuseWrite = false;
   mocks.nextId = 700;
+  authMocks.user = { id: 4, name: "Ana Bolsista", email: "ana@lab.com", roles: ["VOLUNTARIO"] };
 }
 
 function jsonResponse(payload: unknown, status = 200) {
@@ -138,8 +189,6 @@ function monthColumns() {
 function activityPayload(activity: ActivityRow) {
   return {
     ...activity,
-    requestedBy: null,
-    requestedAt: null,
     approvedBy: null,
     approvedAt: null,
     months: monthKeysBetween(activity.firstMonth, activity.lastMonth),
@@ -189,7 +238,7 @@ async function recordingFetch(input: unknown, init: RequestInit = {}) {
         userId,
         userName: userId === 4 ? "Ana Bolsista" : `#${userId}`,
         userEmail: null,
-        roles: ["VOLUNTARIO"],
+        roles: mocks.memberRoles[userId] ?? ["VOLUNTARIO"],
         joinedAt: "2026-03-01T00:00:00.000Z",
       })),
     });
@@ -227,6 +276,36 @@ async function recordingFetch(input: unknown, init: RequestInit = {}) {
     }
   }
 
+  // V5-7a: as sub-rotas da linha do cronograma vêm ANTES do ramo genérico de atividades.
+  const sub = segments[6];
+
+  if (resource === "activities" && sub === "files" && method === "GET") {
+    return jsonResponse({
+      files: mocks.proofs.filter((proof) => proof.activityId === resourceId),
+    });
+  }
+
+  if (resource === "activities" && sub === "request-completion" && method === "POST") {
+    const activity = mocks.activities.find((row) => row.id === resourceId);
+    if (!activity) return jsonResponse({ error: "Atividade não encontrada" }, 404);
+    // O substituto aplica as recusas com as FUNÇÕES do domínio (DEC-90), na MESMA ordem da
+    // produção: status (409), trava DEC-99 (400), prova ausente DEC-162 (400).
+    if (activity.status !== "OPEN") {
+      return jsonResponse({ error: activityRequestConflictMessage(activity.status as never) }, 409);
+    }
+    const openTasks = mocks.openTasks[resourceId] ?? 0;
+    if (openTasks > 0) {
+      return jsonResponse({ error: activityOpenTasksMessage(openTasks) }, 400);
+    }
+    if (mocks.proofs.filter((proof) => proof.activityId === resourceId).length === 0) {
+      return jsonResponse({ error: ACTIVITY_NO_PROOF_MESSAGE }, 400);
+    }
+    activity.status = "COMPLETION_REQUESTED";
+    activity.requestedBy = authMocks.user?.id ?? null;
+    activity.requestedAt = "2026-10-15T12:00:00.000Z";
+    return jsonResponse({ activity: activityPayload(activity) });
+  }
+
   if (resource === "activities") {
     if (method === "POST") {
       if (mocks.refuseWrite) return writeRefused();
@@ -242,6 +321,8 @@ async function recordingFetch(input: unknown, init: RequestInit = {}) {
         firstMonth,
         lastMonth,
         status: "OPEN",
+        requestedBy: null,
+        requestedAt: null,
       };
       mocks.activities.push(activity);
       return jsonResponse({ activity: activityPayload(activity) }, 201);
@@ -270,10 +351,10 @@ async function recordingFetch(input: unknown, init: RequestInit = {}) {
   throw new Error(`rota não prevista pelo gravador: ${method} ${path}`);
 }
 
-function renderPanel(canManage = true) {
+function renderPanel(canManage = true, leaderId: number | null = null) {
   return render(
     <>
-      <ProjectCronogramaPanel projectId={PROJECT} canManage={canManage} />
+      <ProjectCronogramaPanel projectId={PROJECT} canManage={canManage} leaderId={leaderId} />
       {/* Sem isto nenhum toast chega ao DOM (medido no V4-5a). */}
       <Toaster />
     </>,
@@ -477,5 +558,95 @@ describe("painel de cronograma", () => {
       "aria-pressed",
       "false",
     );
+  });
+
+  describe("fluxo de conclusão da linha (V5-7a, DEC-76/162)", () => {
+    it("o líder vê o botão Conclusão; quem não é líder nem gestor de membership não vê", async () => {
+      const asLeader = renderPanel(true, 4);
+      await screen.findByDisplayValue("Revisão da literatura");
+
+      expect(screen.getByRole("button", { name: "Conclusão da atividade 1" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Conclusão da atividade 2" })).toBeInTheDocument();
+
+      // Mesmo canManage, gate diferente: o par da DEC-76 (líder OU membership de gestor).
+      asLeader.unmount();
+      renderPanel(true, 99);
+      await screen.findByDisplayValue("Revisão da literatura");
+      expect(
+        screen.queryByRole("button", { name: "Conclusão da atividade 1" }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("membership de gestor vê o botão, mesmo sem ser o líder", async () => {
+      mocks.memberRoles = { 4: ["GERENTE_PROJETO"] };
+      renderPanel(true, 99);
+      await screen.findByDisplayValue("Revisão da literatura");
+
+      expect(screen.getByRole("button", { name: "Conclusão da atividade 1" })).toBeInTheDocument();
+    });
+
+    it("o botão abre o diálogo com as provas da linha e o campo de anexar", async () => {
+      const user = userEvent.setup({ delay: null });
+      renderPanel(true, 4);
+      await screen.findByDisplayValue("Revisão da literatura");
+
+      await user.click(screen.getByRole("button", { name: "Conclusão da atividade 1" }));
+
+      expect(await screen.findByText("parcial.pdf")).toBeInTheDocument();
+      // A aceitação do campo é a allowlist do seam traduzida (medido no V5-2d: o `accept`
+      // descarta em silêncio; a recusa do mime pelo servidor é provada no teste de rota).
+      expect(screen.getByLabelText("Arquivo de prova")).toHaveAttribute(
+        "accept",
+        expect.stringContaining("application/pdf"),
+      );
+      expect(requestsFor("GET", "/activities/401/files")).toHaveLength(1);
+    });
+
+    it("solicitar conclusão escreve POST, fecha o diálogo e a linha vira 'Conclusão solicitada'", async () => {
+      const user = userEvent.setup({ delay: null });
+      renderPanel(true, 4);
+      await screen.findByDisplayValue("Revisão da literatura");
+
+      await user.click(screen.getByRole("button", { name: "Conclusão da atividade 1" }));
+      await screen.findByText("parcial.pdf");
+      await user.click(screen.getByRole("button", { name: "Solicitar conclusão" }));
+
+      await waitFor(() =>
+        expect(requestsFor("POST", "/activities/401/request-completion")).toHaveLength(1),
+      );
+      expect(await screen.findByText("A aprovação é do coordenador ou gerente do sistema.")).toBeInTheDocument();
+      // O diálogo fechou; a grade é o lugar do estado novo.
+      expect(screen.queryByRole("button", { name: "Solicitar conclusão" })).not.toBeInTheDocument();
+      expect(screen.getByText("Conclusão solicitada")).toBeInTheDocument();
+    });
+
+    it("prova ausente: o 400 do servidor chega com a frase do domínio (DEC-162)", async () => {
+      const user = userEvent.setup({ delay: null });
+      mocks.proofs = [];
+      renderPanel(true, 4);
+      await screen.findByDisplayValue("Revisão da literatura");
+
+      await user.click(screen.getByRole("button", { name: "Conclusão da atividade 2" }));
+      await screen.findByText("Nenhuma prova anexada.");
+      await user.click(screen.getByRole("button", { name: "Solicitar conclusão" }));
+
+      // A frase exata do domínio, sem o ponto da dica fixa — a tela repete o servidor (DEC-90).
+      expect(await screen.findByText(ACTIVITY_NO_PROOF_MESSAGE)).toBeInTheDocument();
+    });
+
+    it("trava DEC-99: o 400 dizendo quantas tarefas faltam chega na tela", async () => {
+      const user = userEvent.setup({ delay: null });
+      mocks.openTasks = { 401: 2 };
+      renderPanel(true, 4);
+      await screen.findByDisplayValue("Revisão da literatura");
+
+      await user.click(screen.getByRole("button", { name: "Conclusão da atividade 1" }));
+      await screen.findByText("parcial.pdf");
+      await user.click(screen.getByRole("button", { name: "Solicitar conclusão" }));
+
+      expect(await screen.findByText(activityOpenTasksMessage(2))).toBeInTheDocument();
+      // A linha não mudou: a recusa não grava nada.
+      expect(screen.queryByText("Conclusão solicitada")).not.toBeInTheDocument();
+    });
   });
 });

@@ -62,6 +62,7 @@ model users {
   // V5-2c: quem subiu um anexo do projeto. RESTRICT (sem onDelete) — ver o comentário no
   // model `project_attachments`; a guarda user-delete-schema-drift.test.ts confere os dois lados.
   projectAttachments   project_attachments[]  @relation("ProjectAttachmentUploader")
+  uploadedActivityFiles project_activity_files[] @relation("ActivityFileUploader")
   // V5-5: as três relações do cronograma com pessoa são `SetNull` (ver o comentário no model
   // `project_activities`): excluir uma pessoa não apaga cronograma nem bloqueia a exclusão.
   activityResponsibilities   project_activities[] @relation("ActivityResponsible")
@@ -185,8 +186,30 @@ model project_activities {
   // V5-6 (DEC-99): as tasks da etapa. A leitura do cronograma não inclui tasks (o painel não
   // lista tarefa por linha); quem conta é o fluxo de solicitar conclusão (V5-7).
   tasks       tasks[]  @relation("ActivityTasks")
+  // V5-7a (DEC-157/162): as provas anexadas para solicitar a conclusão da etapa.
+  files       project_activity_files[] @relation("ActivityEvidence")
 
   @@index([projectId])
+}
+
+// V5-7a (DEC-76/133/157/162): a prova da atividade. Desenho do anexo de projeto (DEC-133): a
+// rota move byte pelo seam, o módulo guarda metadado + autorização. `uploadedBy` é FK
+// bloqueante (default Restrict): prova é dado do projeto, não de quem subiu — mesma razão
+// medida da 17ª FK (DEC-134). Apagar a linha do cronograma apaga as provas (Cascade): a prova
+// existe para aquela etapa; sem etapa, não há o que provar.
+model project_activity_files {
+  id          Int      @id @default(autoincrement())
+  activityId  Int
+  blobKey     String   @unique
+  name        String
+  contentType String
+  size        Int
+  uploadedBy  Int
+  uploadedAt  DateTime @default(now())
+  activity    project_activities @relation("ActivityEvidence", fields: [activityId], references: [id], onDelete: Cascade)
+  uploader    users              @relation("ActivityFileUploader", fields: [uploadedBy], references: [id])
+
+  @@index([activityId])
 }
 
 model project_members {

@@ -68,6 +68,17 @@ export interface ProjectActivityUpdateFields {
   lastMonth?: string
 }
 
+/**
+ * Escrita da fase de solicitar (V5-7a, DEC-76): status + quem pediu + quando. O corpo parcial
+ * do PATCH do formulário não alcança estas colunas de propósito (DEC-156) — só este método,
+ * chamado pelo use case que passou por gate, trava e prova.
+ */
+export interface ActivityRequestFields {
+  status: string
+  requestedBy: number
+  requestedAt: Date
+}
+
 export interface ProjectCronogramaPort {
   listGoals(projectId: number): Promise<ProjectGoalRecord[]>
   findGoalById(id: number): Promise<ProjectGoalRecord | null>
@@ -79,5 +90,6 @@ export interface ProjectCronogramaPort {
   findActivityById(id: number): Promise<ProjectActivityRecord | null>
   createActivity(input: NewProjectActivityInput): Promise<ProjectActivityRecord>
   updateActivity(id: number, fields: ProjectActivityUpdateFields): Promise<ProjectActivityRecord>
+  requestActivity(id: number, fields: ActivityRequestFields): Promise<ProjectActivityRecord>
   deleteActivity(id: number): Promise<void>
 }

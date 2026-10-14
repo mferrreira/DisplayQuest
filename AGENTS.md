@@ -319,10 +319,12 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   `KNOWN_DIVERGENCES` ficou vazio. Nenhuma tela
   `.tsx` chamava `deleteUser`. O `DELETE /api/users/[id]` agora **recusa com 409** quando há
   dependência; sem dependência continua excluindo (é o caso "cadastro de teste").
-- **17 das 24 FKs para `users` são `RESTRICT`** (default do Prisma, sem `onDelete`); só 7
+- **18 das 25 FKs para `users` são `RESTRICT`** (default do Prisma, sem `onDelete`); só 7
   cascadeiam (`project_members`, `task_assignees`, `task_user_progress`, `work_sessions`,
   `weekly_hours_history`, `user_badges.userId`, `notifications`). A 17ª entrou no V5-2c
-  (`project_attachments.uploadedBy`, DEC-134 — anexo é dado do projeto, não de quem o subiu). Se você
+  (`project_attachments.uploadedBy`, DEC-134 — anexo é dado do projeto, não de quem o subiu) e a
+  18ª no V5-7a (`project_activity_files.uploadedBy`, DEC-162 — prova de atividade é dado do
+  projeto). Se você
   mexer no schema e adicionar uma FK para `users` **sem** `onDelete`, o guarda
   `tests/unit/modules/user-management/user-delete-schema-drift.test.ts` falha e nomeia a coluna —
   ele compara o schema com o corpo de `countBlockingDependencies`, porque o `tsc` não protege
