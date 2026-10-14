@@ -36,6 +36,7 @@ import { ProjectDeliverablesPanel } from "@/components/features/project-delivera
 import { ProjectAttachmentsPanel } from "@/components/features/project-attachments-panel"
 import { ProjectCronogramaPanel } from "@/components/features/project-cronograma-panel"
 import { ProjectTechnicalReportsPanel } from "@/components/features/project-technical-reports-panel"
+import { ProjectCertificatesPanel } from "@/components/features/project-certificates-panel"
 import { ProjectMediaHeader } from "@/components/features/project-media-header"
 import { hasAccess } from "@/lib/utils/utils"
 
@@ -308,6 +309,14 @@ export function ProjectDetailDialog({
                 como gestão/líder e o servidor decide de verdade (o quirk da membership não
                 é visível daqui — o 403 chega como erro na tela). */}
             <ProjectTechnicalReportsPanel
+              projectId={project.id}
+              canManage={canManageProjectFiles}
+            />
+
+            {/* V5-10b (DEC-75/170/171): atestados de frequência — um PDF oficial por membro
+                ativo e mês. A leitura da lista é a do autenticado (só metadado); gerar é da
+                própria pessoa ou da gestão, e o servidor decide de verdade. */}
+            <ProjectCertificatesPanel
               projectId={project.id}
               canManage={canManageProjectFiles}
             />

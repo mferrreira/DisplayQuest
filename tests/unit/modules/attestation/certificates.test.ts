@@ -12,6 +12,8 @@
 import { describe, expect, it } from "vitest";
 
 import { ForbiddenError, NotFoundError, ValidationError } from "@/backend/domain";
+import { CERTIFICATE_REMINDER_TITLE, SYSTEM_REASONS, systemActor } from "@/backend/domain";
+import { NotifyCertificateReminderUseCase } from "@/backend/modules/attestation/application/use-cases/notify-certificate-reminder.use-case";
 import {
   GenerateCertificateUseCase,
   CERTIFICATE_DENIED_MESSAGE,
@@ -275,5 +277,96 @@ describe("listagem e download (V5-10a)", () => {
     await expect(
       useCase.execute({ projectId: 3, certificateId: 999, actorId: 9, actorRoles: [] }),
     ).rejects.toThrow(NotFoundError);
+  });
+});
+
+describe("lembrete mensal de atestados (V5-10b, DEC-72)", () => {
+  function reminderPorts(overrides: {
+    projects?: Array<{ projectId: number; projectName: string; leaderId: number | null }>;
+    managers?: number[];
+    failPublish?: boolean;
+  }) {
+    const published: Array<{ projectId: number; userIds: number[]; title: string; message: string }> = [];
+    const scan = {
+      async listProjectsForReminder() {
+        return overrides.projects ?? [{ projectId: 3, projectName: "IA no campo", leaderId: 7 }];
+      },
+      async listGlobalManagerUserIds() {
+        return overrides.managers ?? [1, 2];
+      },
+    };
+    const notifier = {
+      async publishReminder(notification: { projectId: number; userIds: number[]; title: string; message: string }) {
+        if (overrides.failPublish) throw new Error("notificações fora do ar");
+        published.push(notification);
+      },
+    };
+    return { scan, notifier, published };
+  }
+
+  function run(ports: ReturnType<typeof reminderPorts>, now = new Date("2026-10-19T12:00:00-03:00")) {
+    return new NotifyCertificateReminderUseCase(ports).execute({
+      actor: systemActor(SYSTEM_REASONS.CERTIFICATE_REMINDER),
+      now,
+    });
+  }
+
+  it("notifica líder + gestores globais, com o mês ANTERIOR nomeado na mensagem (DEC-72/171)", async () => {
+    const ports = reminderPorts({});
+    const result = await run(ports);
+
+    expect(result).toEqual({ projectsNotified: 1, recipientsNotified: 3 });
+    expect(ports.published[0].userIds).toEqual([7, 1, 2]);
+    expect(ports.published[0].title).toBe(CERTIFICATE_REMINDER_TITLE);
+    expect(ports.published[0].message).toBe(
+      'O atestado de frequência de setembro já pode ser gerado para o projeto "IA no campo".',
+    );
+  });
+
+  it("dedupe: líder que também é gestor global recebe UMA vez", async () => {
+    const ports = reminderPorts({ managers: [7, 1] });
+    const result = await run(ports);
+    expect(result.recipientsNotified).toBe(2);
+    expect(ports.published[0].userIds).toEqual([7, 1]);
+  });
+
+  it("projeto sem destinatário (líder nulo e sem gestor) não é notificado", async () => {
+    const ports = reminderPorts({ projects: [{ projectId: 3, projectName: "Sem líder", leaderId: null }], managers: [] });
+    const result = await run(ports);
+    expect(result).toEqual({ projectsNotified: 0, recipientsNotified: 0 });
+    expect(ports.published).toHaveLength(0);
+  });
+
+  it("falha de publicação não quebra o lote dos demais projetos", async () => {
+    const published: Array<{ projectId: number; userIds: number[]; title: string; message: string }> = [];
+    const scan = {
+      async listProjectsForReminder() {
+        return [
+          { projectId: 3, projectName: "Primeiro", leaderId: 7 },
+          { projectId: 4, projectName: "Segundo", leaderId: 8 },
+        ];
+      },
+      async listGlobalManagerUserIds() {
+        return [1, 2];
+      },
+    };
+    const notifier = {
+      async publishReminder(notification: { projectId: number; userIds: number[]; title: string; message: string }) {
+        if (notification.projectId === 3) throw new Error("notificações fora do ar");
+        published.push(notification);
+      },
+    };
+    const result = await new NotifyCertificateReminderUseCase({ scan, notifier }).execute({
+      actor: systemActor(SYSTEM_REASONS.CERTIFICATE_REMINDER),
+      now: new Date("2026-10-19T12:00:00-03:00"),
+    });
+    expect(result.projectsNotified).toBe(1);
+    expect(published[0].projectId).toBe(4);
+  });
+
+  it("virada de mês no fuso de São Paulo: 2026-10-19T02:00-03:00 ainda nomeia setembro", async () => {
+    const ports = reminderPorts({});
+    await run(ports, new Date("2026-10-19T02:00:00-03:00"));
+    expect(ports.published[0].message).toContain("setembro");
   });
 });

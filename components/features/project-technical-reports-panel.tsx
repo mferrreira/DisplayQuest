@@ -28,8 +28,9 @@ import {
  * próprio (lição DEC-96), só os rótulos de exibição.
  *
  * V5-9b: "Gerar DOCX" dispara a geração lote (um documento oficial por membro ATIVO,
- * DEC-139) e a tela mostra o download de cada arquivo gerado nesta sessão. O botão só
- * habilita com texto salvo — a mesma exigência do servidor (404), provada na rota.
+ * DEC-139) e a tela mostra o download de cada arquivo gerado nesta sessão. DEC-173: o
+ * botão não exige texto salvo — sem texto o documento sai pré-preenchido com as tabelas
+ * em branco.
  *
  * V5-9c: "Rascunhar com IA" pede o texto às três fontes do plano e o aplica no editor
  * SEM salvar (salvar é decisão humana). O rascunho não atropela edição em andamento:

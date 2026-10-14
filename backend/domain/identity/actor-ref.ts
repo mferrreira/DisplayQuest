@@ -47,6 +47,8 @@ export const SYSTEM_REASONS = {
   WEEKLY_RESET: "WEEKLY_RESET",
   /** `cron-service.ts` — daily overdue-activity scan (V5-8, DEC-64). */
   OVERDUE_SCAN: "OVERDUE_SCAN",
+  /** `cron-service.ts` — monthly attendance-certificate reminder, day 19 (V5-10b, DEC-72). */
+  CERTIFICATE_REMINDER: "CERTIFICATE_REMINDER",
   /** An internal publisher describing an event that already happened (lab issue, report). */
   SYSTEM_EVENT: "SYSTEM_EVENT",
 } as const;

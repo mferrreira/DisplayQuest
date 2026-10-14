@@ -250,3 +250,27 @@ export function buildAttestationFields(input: AttestationFieldInput): Record<str
 
   return fields;
 }
+
+/**
+ * Lembrete mensal de frequência (V5-10b, DEC-72). O job do cron dispara só no dia 19; a
+ * audiência é COORDENADORES/GERENTES ATIVOS + LÍDERES de projeto (DEC-55: suspenso não
+ * recebe). O mês nomeado na mensagem é o ANTERIOR ao da geração (DEC-171) — o mês que o
+ * atestado pode atestar como integral.
+ */
+export const CERTIFICATE_REMINDER_NOTIFICATION_TYPE = "CERTIFICATE_REMINDER";
+export const CERTIFICATE_REMINDER_TITLE = "Atestados de frequência";
+
+export function certificateReminderMessage(projectName: string, referenceMonth: AttestationMonth): string {
+  return `O atestado de frequência de ${monthNameLong(referenceMonth)} já pode ser gerado para o projeto "${projectName}".`;
+}
+
+/** Líder primeiro, depois os gestores globais; dedupe — mesmo desenho do atraso (DEC-64). */
+export function certificateReminderRecipients(
+  leaderId: number | null,
+  globalManagerIds: number[],
+): number[] {
+  const ids = [leaderId, ...globalManagerIds].filter(
+    (id): id is number => typeof id === "number" && Number.isInteger(id) && id > 0,
+  );
+  return [...new Set(ids)];
+}

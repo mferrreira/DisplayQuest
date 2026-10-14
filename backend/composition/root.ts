@@ -11,6 +11,7 @@ import { createNotificationsActivityOverdueNotifier } from "@/backend/modules/pr
 import { createPrismaProjectRepository } from "@/backend/modules/project-management/infrastructure/repositories/prisma-project.repository"
 import { createReportingModule } from "@/backend/modules/reporting"
 import { createAttestationModule } from "@/backend/modules/attestation"
+import { createNotificationsCertificateReminderNotifier } from "@/backend/modules/attestation/infrastructure/adapters/notifications-certificate-reminder"
 import { createStoreModule } from "@/backend/modules/store"
 import { createTaskManagementModule } from "@/backend/modules/task-management"
 import { createTaskProgressEvents } from "@/backend/modules/task-management/infrastructure/gamification-task-progress.events"
@@ -92,9 +93,14 @@ export function createBackendComposition(): BackendComposition {
     events: createWorkExecutionEventsPublisher({ awards: gamification }),
   })
 
-  // V5-10a (DEC-75/130/170): atestados de frequência — módulo próprio, sem publisher entre
-  // módulos nesta fase (o lembrete do dia 19 é o V5-10b e entrará por porta local aqui).
-  const attestation = createAttestationModule()
+  // V5-10a/10b (DEC-75/130/170/72): atestados de frequência — módulo próprio. O lembrete do
+  // dia 19 entra por porta local (DEC-21), como o atraso: quem publica é o módulo de
+  // notificações; o cron declara o ator de sistema (DEC-54).
+  const attestation = createAttestationModule({
+    ports: {
+      reminderNotifier: createNotificationsCertificateReminderNotifier(notifications),
+    },
+  })
 
   return {
     identityAccess,

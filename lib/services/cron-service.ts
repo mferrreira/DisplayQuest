@@ -60,11 +60,19 @@ export class CronService {
       await this.executeOverdueScan()
     }, { timezone: 'America/Sao_Paulo' })
 
+    // V5-10b (DEC-72): lembrete mensal de atestados — dia 19 às 09:00. O mês atestável é
+    // o anterior (DEC-171), e o aviso chega um dia depois da virada do mês, com a semana
+    // de trabalho começando. Audiência: líderes de projeto + coordenadores/gerentes ativos.
+    this.certificateReminderJob = cron.schedule('0 9 19 * *', async () => {
+      await this.executeCertificateReminder()
+    }, { timezone: 'America/Sao_Paulo' })
+
     this.isInitialized = true
   }
 
   private nightlySweepJob: cron.ScheduledTask | null = null
   private overdueScanJob: cron.ScheduledTask | null = null
+  private certificateReminderJob: cron.ScheduledTask | null = null
 
   /**
    * Pausa todas as sessões ativas que cruzaram um horário de pausa agendado.
@@ -154,6 +162,29 @@ export class CronService {
   }
 
   /**
+   * V5-10b (DEC-72): lembrete de atestados no dia 19. Rotina sem pessoa —
+   * systemActor(CERTIFICATE_REMINDER), o bypass declarado (DEC-54); não existe rota para
+   * ele de propósito.
+   */
+  async executeCertificateReminder() {
+    try {
+      const { attestation } = getBackendComposition()
+      const result = await attestation.notifyCertificateReminder({
+        actor: systemActor(SYSTEM_REASONS.CERTIFICATE_REMINDER),
+        now: new Date(),
+      })
+      if (result.projectsNotified > 0) {
+        console.log(
+          `📄 Lembrete de atestados: ${result.projectsNotified} projeto(s) notificado(s), ` +
+            `${result.recipientsNotified} destinatário(s).`,
+        )
+      }
+    } catch (error) {
+      console.error('❌ Erro ao executar lembrete de atestados:', error)
+    }
+  }
+
+  /**
    * Para o serviço de cron
    */
   stop() {
@@ -170,6 +201,10 @@ export class CronService {
     if (this.overdueScanJob) {
       this.overdueScanJob.stop()
       this.overdueScanJob = null
+    }
+    if (this.certificateReminderJob) {
+      this.certificateReminderJob.stop()
+      this.certificateReminderJob = null
     }
     this.scheduledPauseJobs = []
     this.isInitialized = false

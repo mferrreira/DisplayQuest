@@ -22,6 +22,8 @@ import {
   buildAttestationFields,
   certificateBlobKey,
   certificateFileName,
+  certificateReminderMessage,
+  certificateReminderRecipients,
   monthNameLong,
   normalizeAttestationMonth,
   previousMonth,
@@ -223,5 +225,20 @@ describe("chave e nome do arquivo (V5-10a, DEC-170)", () => {
 
   it("o nome de exibição é slug ASCII com mês e projeto", () => {
     expect(certificateFileName("IA no campo", "2026-10")).toBe("atestado-2026-10-ia-no-campo.pdf");
+  });
+});
+
+describe("lembrete de frequência (V5-10b, DEC-72)", () => {
+  it("a mensagem nomeia o mês de referência por extenso e o projeto", () => {
+    expect(certificateReminderMessage("IA no campo", "2026-09")).toBe(
+      'O atestado de frequência de setembro já pode ser gerado para o projeto "IA no campo".',
+    );
+  });
+
+  it("audiência: líder primeiro, gestores globais depois, dedupe, líder nulo sai", () => {
+    expect(certificateReminderRecipients(7, [1, 2])).toEqual([7, 1, 2]);
+    expect(certificateReminderRecipients(7, [7, 1])).toEqual([7, 1]);
+    expect(certificateReminderRecipients(null, [1, 2])).toEqual([1, 2]);
+    expect(certificateReminderRecipients(null, [])).toEqual([]);
   });
 });
