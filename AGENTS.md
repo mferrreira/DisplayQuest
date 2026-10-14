@@ -434,6 +434,31 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   o próprio dia do prazo ainda é dentro. O use case lê `users` por adaptador próprio do módulo
   de projeto (RG-04, como `ProjectHoursPort`).
 
+## Relatórios técnicos (V5-9, 2026-10-14)
+
+- **Um texto editável por projeto × tipo** (`technical_reports`, única por `projectId+type`;
+  vocabulário `parcial|tecnico-final|final` — a linha de checkbox binária do DOCX, DEC-167).
+  Gate de escrita: líder OU gestão do projeto (`canActorManageTechnicalReportDecision`, frase
+  congelada "Usuário não tem permissão para editar o relatório técnico deste projeto"); leitura
+  é a do autenticado (regra 13). Ordem de recusa medida nos três use cases (upsert/geração/
+  rascunho): 404 projeto → 403 gate → 400 tipo.
+- **DOCX pelo template oficial** (DEC-128/129/168): a cópia marcada tem 17 comandos
+  (`npm run templates:tag`; guarda congela inventário e ordem); o corpo único é distribuído nas
+  3 tabelas pelas **linhas de cabeçalho** — `REPORT_SECTIONS` no domínio é a fonte única do
+  cortador, do prompt da IA e do adaptador; casamento por linha inteira normalizada, nunca
+  substring; seção sem corpo fica vazia. Geração: um documento por membro **ATIVO** do vínculo
+  (DEC-139/167), período cortado na geração (DEC-132), chave derivada
+  `projects/<id>/technical-reports/<reportId>/<userId>.docx` — a rota move byte ao bucket
+  (DEC-133) e o download é leitura aberta (id forjado não acha objeto: 404).
+- **Rascunho de IA** (DEC-152/169): prompt construído no domínio (`buildTechnicalReportDraftPrompt`,
+  regra de honestidade congelada: só o que tem âncora nas fontes; fonte vazia declarada
+  "sem registros"); adaptador OpenAI-compatible por env (`AI_BASE_URL` default
+  `http://localhost:8080/v1`, `AI_API_KEY` opcional, `AI_MODEL` default `local`; env VAZA do
+  compose conta como ausente — `??` não pega `""`). Falha de IA **não é DomainError**: a rota
+  traduz para **502**, não 500 legado. O rascunho não salva e não atropela edição em andamento.
+- **Rota Next**: os três filhos de `technical-reports/` usam o MESMO slug `[segment]`
+  (gotcha do build, ver "Gotchas reais"); cada handler valida o próprio vocabulário.
+
 ## Gotchas reais (verificados empiricamente)
 
 - **npm NÃO injeta `NODE_ENV`** em run-scripts. `NODE_ENV=${NODE_ENV:-development}` em
@@ -827,7 +852,7 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
 - **Dois documentos, ambos gerados** (nenhum editado à mão): `docs/displayquest.html` (técnico:
   `docs/src/*.md` + `docs/diagrams/*.puml`, 15 capítulos / 33 figuras UML, ~1 MB) e
   `docs/guia-do-usuario.html` (guia de uso: `docs/src-usuario/*.md` + `docs/screens/*.png`,
-  12 capítulos / 34 capturas, ~8 MB). Compartilham `docs/theme/document.css`. `npm run docs:build`
+  12 capítulos / 44 capturas, ~8 MB). Compartilham `docs/theme/document.css`. `npm run docs:build`
   renderiza os SVGs (PlantUML em Docker — requer Docker no ar) e monta os dois; `--only=tecnico`
   ou `--only=usuario` monta um só; `--no-render` reaproveita os SVGs. `npm run docs:check` valida
   os caracteres das fontes (agora também `docs/src-usuario`). Abra por `file://`, sem servidor.

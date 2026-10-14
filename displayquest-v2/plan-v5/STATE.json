@@ -1,11 +1,11 @@
 {
   "plan": "plan-v5",
   "title": "domínio de projetos maduro: cronograma, pontos, relatórios técnicos, atestados, blobs em bucket S3-compatible (SeaweedFS desde o V5-1, DEC-131)",
-  "version": "5.20.3",
+  "version": "5.20.4",
   "updatedAt": "2026-10-14",
   "status": "in_progress",
   "activeWave": "V5-9",
-  "activeBatch": "V5-9-close (G5/G6)",
+  "activeBatch": "V5-10",
   "awaitingInstruction": false,
   "lineage": {
     "previousPlan": "plan-v4 (subtasks, animação, inativação — done em 2026-10-07, ondas V4-1..V4-5d + V4-6b + POS-1, DEC-78..98)",
@@ -853,6 +853,16 @@
         "Compose: `AI_BASE_URL`/`AI_API_KEY`/`AI_MODEL` passam para o container do app (opcional, sem `:?`) — dentro do container o default localhost e o proprio container, entao quem opera aponta a env para onde a IA mora (DEC-152).",
         "Provas novas: 6 de prompt puro + 6 de use case + 7 de adaptador (fetch dobrado, pedido OpenAI-compatible, env vazia) + 5 de rota (modulo real sobre portas falsas, IA nao chamada quando o 403, 502 com a frase do adaptador) + 4 de painel (aplicacao no editor sem PUT, guarda da edicao, 502 na tela, sem gestao sem botao) + 1 de roundtrip G4 na 5433 (fontes REAIS — sessao dentro do periodo entra no prompt, sessao de 2025 fica fora; tarefa e atividade reais chegam ao prompt; IA falsa).",
         "Gate medido: suite completa 163 arquivos / 2158 testes verdes na 5433 (baseline V5-9b: 160/2129); arch:check 990 modulos / 4249 dependencias, allow-list vazia; tsc com o unico erro pre-existente; eslint limpo; `npm run build` verde com as 4 rotas technical-reports na lista; grep de cirilico limpo nos arquivos tocados."
+      ]
+    },
+    {
+      "id": "V5-9-close",
+      "at": "2026-10-14",
+      "title": "Fechamento do V5-9 com G5/G6 (DEC-167): captura do painel de relatorios tecnicos + prosa do guia + docs verde",
+      "actions": [
+        "G6: captura nova `painel-relatorios-tecnicos` no script (dialogo de detalhe do projeto, rolarAte o card). Seed de vida curta via SQL — os tres textos de exemplo com as linhas de secao do oficial nos projetos 'Pesquisa em IA' (ids 5/6/7), APAGADOS depois da captura; os textos do dono no projeto 6 (ids 1/2) nao foram tocados. Nenhuma captura salva, rascunha ou gera — o painel e fotografado em leitura. Guarda cumprida: o PNG foi LIDO (card no campo de visao, os tres botoes na linha do tipo, editor preenchido).",
+        "Prosa do guia (fonte: extrato do DOM + foto, nao codigo lido): 04-projetos ganha a secao 'Relatorios tecnicos do projeto' (procedimento Salvar/Gerar DOCX, as linhas de secao que distribuem o texto nas 3 tabelas, 'Rascunhar com IA' com a trava da edicao, 3 callouts: um documento por membro ativo, exige texto salvo, quem edita) e o item na lista do detalhe; 11-mensagens ganha a secao com as 4 mensagens congeladas (guarda da edicao, 404 texto ausente, 409 sem ATIVO, 'IA indisponivel') e a linha de permissao na tabela de recusas; 10-referencia atualiza a linha da tela Projetos e o estado 'Relatorio tecnico | Parcial, Tecnico-final, Final'.",
+        "G5 medido: `docs:build` — tecnico 15 secoes / 33 figuras, usuario 12 secoes / 44 figuras (43 -> 44 capturas), sem AVISO; `docs:check` — nenhum caractere suspeito. Imagem do app reconstruida antes da captura (build exit 0; rota draft responde 401 no container — gotcha do client/rotas da imagem conferido)."
       ]
     }
   ],

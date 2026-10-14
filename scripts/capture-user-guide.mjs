@@ -145,6 +145,11 @@ const INTERACTIONS = [
   // V5-4b (DEC-149): o painel de Membros é onde os dados do vínculo se editam. Ele mora dentro
   // do diálogo "Gestão Completa", aberto pela aba Voluntários da tela Projetos.
   { id: "painel-membros", role: "coord", route: "/dashboard/projetos", aba: "Voluntários", selecionar: { gatilho: "Selecione um projeto" }, abre: "Gestão Completa", dialogo: "Dados do vínculo", rolarAte: "text=Dados do vínculo" },
+  // V5-9 (DEC-70/139/167/169): o painel de relatórios técnicos mora no diálogo de detalhe do
+  // projeto, abaixo do cronograma. O texto semeado via SQL (os três "Pesquisa em IA") mostra o
+  // editor preenchido com as três linhas de seção do oficial (DEC-168) e é apagado depois da
+  // captura. Nenhuma captura salva, rascunha ou gera — o painel é fotografado em leitura.
+  { id: "painel-relatorios-tecnicos", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: "button:has(svg.lucide-eye)" }, dialogo: "Relatórios técnicos", rolarAte: "text=Relatórios técnicos" },
   { id: "painel-notificacoes", role: "coord", route: "/dashboard", abre: "/^notifica/i", dialogo: "Notifica" },
   // plan-v3 OND3-C: o menu de ordenação da coluna é o rótulo que o guia usa — sem a captura, a
   // seção "A ordem dos cartões" descreveria cinco opções que nenhuma foto do guia mostra.

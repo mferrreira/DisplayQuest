@@ -17,6 +17,7 @@ A **Lista de Projetos** mostra todos os projetos do sistema, inclusive os que vo
 - **Entregáveis**, cada um com o nome e a quantidade em unidades (**2 un.**);
 - **Anexos**, cada um com o nome, o tamanho e o arquivo;
 - **Cronograma**, com as **Metas do projeto** e a grade de meses (a seção *Cronograma do projeto* abaixo);
+- **Relatórios técnicos**, um texto editável por tipo (a seção *Relatórios técnicos do projeto* abaixo);
 - **Total de Tarefas**, **Concluídas**, **Em Progresso** e **Pendentes**, e o **Progresso Geral** com a taxa de conclusão;
 - **Tarefas do Projeto**, com **Importar Backlog** e **Nova Tarefa**;
 - **Criado por**, **Data de criação** e **Última atualização**;
@@ -152,6 +153,35 @@ A **Lista de Projetos** e o detalhe são de qualquer pessoa autenticada: você v
 
 ::: nota titulo="Quem escreve entregáveis, anexos, capa, logo e cronograma"
 Esses controles aparecem para a liderança e a gerência do projeto. Quem não gerencia vê as listas, os arquivos e a grade, sem os botões de escrita. Se o controle aparecer e a pessoa não tiver a gestão do projeto, o sistema responde *"Usuário não tem permissão para gerenciar este projeto"* e nada muda.
+:::
+
+## Relatórios técnicos do projeto
+
+O relatório técnico é o documento que a iniciação científica exige do projeto: **Parcial**, **Técnico-final** e **Final**. No detalhe do projeto, o card **Relatórios técnicos** tem um texto editável por tipo, e o documento oficial é gerado a partir desse texto.
+
+1. Abra o detalhe do projeto e desça até **Relatórios técnicos**.
+2. Em **Relatório Parcial**, escreva o texto do relatório no campo abaixo — **Texto do relatório Parcial**. O mesmo vale para **Relatório Técnico-final** e **Relatório Final**.
+3. Clique em **Salvar**. O card diz quando aquele texto foi guardado: *"Atualizado em 14/10/2026"*. Tipo sem texto salvo mostra *"Nenhum texto salvo."*.
+4. Clique em **Gerar DOCX**. O download de cada documento gerado aparece abaixo, pelo nome da pessoa.
+
+O documento oficial é a folha oficial preenchida: a linha do tipo, o período, os dados do projeto, os dados do membro e o seu texto distribuído nas três tabelas da folha — *Descrição das Atividades Desenvolvidas pelo Estudante*, *Principais Resultados Alcançados* e *Comentários Adicionais*. A distribuição segue as linhas de seção do seu texto: uma linha só com **Descrição das Atividades**, uma linha só com **Principais Resultados**, uma linha só com **Comentários Adicionais**. O que vem antes da primeira linha vai na Descrição. Seção sem texto fica vazia no documento — o sistema não fabrica frase.
+
+```foto painel-relatorios-tecnicos titulo="O card Relatórios técnicos, no detalhe de um projeto"
+O Relatório Parcial tem as linhas de seção no texto, e a linha do tipo traz os três botões: **Rascunhar com IA**, **Gerar DOCX**, **Salvar**.
+```
+
+**Rascunhar com IA.** O **Rascunhar com IA** escreve o primeiro texto para você. O sistema lê as sessões de trabalho do período, as tarefas do projeto e o cronograma, e o texto aparece no editor. Nada é salvo: confira o texto e clique em **Salvar** quando estiver pronto. O rascunho escreve só o que tem apoio nos registros, e seção sem evidência fica vazia. Se você já estava escrevendo um texto não salvo, o rascunho não passa por cima dele: a tela avisa *"O texto em edição não foi sobrescrito — salve ou limpe antes de rascunhar."* e o seu texto continua.
+
+::: nota titulo="Um documento por membro ativo"
+**Gerar DOCX** gera um documento oficial por pessoa da lista de membros com **Situação do vínculo** **Ativo** — o relatório é o relatório do estudante, e cada estudante tem o seu documento. O período escrito no documento é o período do projeto, cortado no dia da geração.
+:::
+
+::: limite titulo="Gerar DOCX exige texto salvo"
+Sem texto salvo, **Gerar DOCX** fica desabilitado, e a dica diz *"Salve o texto antes de gerar o documento"*. Se o projeto não tem membro ativo, o sistema responde *"O projeto não tem membros ativos — o relatório é gerado um documento por membro"*.
+:::
+
+::: nota titulo="Quem edita os relatórios técnicos"
+Os três botões aparecem para o líder e a gestão do projeto. As demais pessoas leem os textos, sem os controles de escrita. Se o controle aparecer e a pessoa não tiver a gestão, o sistema responde *"Usuário não tem permissão para editar o relatório técnico deste projeto"* e nada muda.
 :::
 
 ## A aba Voluntários
