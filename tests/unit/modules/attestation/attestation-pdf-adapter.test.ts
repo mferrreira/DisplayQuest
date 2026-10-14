@@ -136,12 +136,14 @@ describe("AcroFormAttestationAdapter (V5-10a, DEC-130)", () => {
     expect(corpus).not.toContain(appearanceHex("123.456.789-01"));
   });
 
-  it("DEC-174: valor que não cabe na caixa encolhe (ano 10pt corta '2026' — a aparência sai em 7pt)", async () => {
+  it("DEC-174/179: valor que não cabe na caixa encolhe (ano 10pt: '2026' mede 20pt na caixa de 18,6pt — sai em 8pt)", async () => {
     const doc = await loadRendered({ ano: "2026" });
     const appearance = flatAppearanceWith(doc, appearanceHex("2026"));
     expect(appearance).toBeDefined();
-    // O /DA do oficial é 10pt; a caixa é 19pt e '2026' mede 20pt — o auto-ajuste desceu a 7pt.
-    expect(appearance!.fontSize).toBe(7);
+    // DEC-179 mediu a folga interna real das caixas da assinatura (~1pt, não os 4pt da tabela):
+    // caixa 18,59pt − folga 1 → disponível 17,59pt → '2026' desce de 10pt para 8pt (16pt),
+    // não mais para 7pt.
+    expect(appearance!.fontSize).toBe(8);
     expect(appearance!.textRuns).toBe(1);
   });
 
@@ -162,6 +164,40 @@ describe("AcroFormAttestationAdapter (V5-10a, DEC-130)", () => {
     expect(appearance).toBeDefined();
     expect(appearance!.fontSize).toBe(12);
     expect(appearance!.textRuns).toBe(1);
+  });
+
+  it("DEC-179: CPF sai em 8pt — o /DA 0 do oficial fazia o pdf-lib preencher a caixa de 30pt com 23pt", async () => {
+    const doc = await loadRendered({ CPF: "123.456.789-01" });
+    const appearance = flatAppearanceWith(doc, appearanceHex("123.456.789-01"));
+    expect(appearance).toBeDefined();
+    // 8pt é o corpo da tabela do oficial (13 dos 17 campos de texto medidos em 8pt).
+    expect(appearance!.fontSize).toBe(8);
+    expect(appearance!.textRuns).toBe(1);
+  });
+
+  it("DEC-179: a linha da assinatura alinha — '14' sai em 10pt (folga medida da caixa de 11pt)", async () => {
+    const doc = await loadRendered({ dia: "14" });
+    const appearance = flatAppearanceWith(doc, appearanceHex("14"));
+    expect(appearance).toBeDefined();
+    expect(appearance!.fontSize).toBe(10);
+    expect(appearance!.textRuns).toBe(1);
+  });
+
+  it("DEC-179: mes mantém 10pt com a folga medida da assinatura ('outubro' cabe na caixa de 50pt)", async () => {
+    const doc = await loadRendered({ mes: "outubro" });
+    const appearance = flatAppearanceWith(doc, appearanceHex("outubro"));
+    expect(appearance).toBeDefined();
+    expect(appearance!.fontSize).toBe(10);
+  });
+
+  it("DEC-179: a tabela mantém a folga de 4pt congelada no DEC-174 (titulo longo quebra, não encolhe)", async () => {
+    const longTitle =
+      "Desenvolvimento de um sistema de recomendacao de tarefas para projetos de pesquisa com aprendizado por reforco e avaliacao continua de qualidade";
+    const doc = await loadRendered({ titulo: longTitle });
+    const appearance = flatAppearanceWith(doc, appearanceHex("Desenvolvimento de um sistema"));
+    expect(appearance).toBeDefined();
+    expect(appearance!.fontSize).toBe(8);
+    expect(appearance!.textRuns).toBeGreaterThanOrEqual(2);
   });
 
   it("o asset oficial na disk não é tocado — o sha256 é o mesmo antes e depois", async () => {
