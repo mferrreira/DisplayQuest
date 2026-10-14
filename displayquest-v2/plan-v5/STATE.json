@@ -1,9 +1,9 @@
 {
   "plan": "plan-v5",
   "title": "domínio de projetos maduro: cronograma, pontos, relatórios técnicos, atestados, blobs em bucket S3-compatible (SeaweedFS desde o V5-1, DEC-131)",
-  "version": "5.28.0",
+  "version": "5.29.0",
   "updatedAt": "2026-10-14",
-  "status": "in_progress",
+  "status": "done",
   "activeWave": "V5-9",
   "activeBatch": "V5-10",
   "awaitingInstruction": false,
@@ -965,6 +965,18 @@
         "Testes de rota alinhados a DEC-90: os duplos que reimplementavam `requireActorSelfOrPermission` (gate que nao existe mais no sistema) passaram a aplicar a regra real sobre alvos de fixture (publico/privado). Casos novos congelam a abertura (terceiro le publico: 200 SEM CPF) e o gate preservado (privado: 403 'Acesso negado' / 'Não autorizado'; pending: 403). O teste 'quem gerencia projeto, nao contas' mudou de contrato de proposito: GERENTE_PROJETO le o publico (sem CPF) e e barrado no privado.",
         "Guia: o callout de limite ('a visibilidade ainda nao esconde nada') saiu; a prosa descreve a regra real e suas bordas (o ranking mostra nome e pontos — regra do pódio; Membros de um projeto mostra o vinculo daquele projeto), e a referencia de telas para de dizer que a regra nao existe.",
         "Gate medido: suite completa 172 arquivos / 2260 testes verdes na 5433; arch:check 1026 modulos / 4383 dependencias com allow-list vazia; tsc so o erro pre-existente; eslint limpo. Na instância real os 10 usuários são `public` — o filtro não muda nada hoje; a regra passa a valer quando alguém escolher outro valor."
+      ]
+    },
+    {
+      "id": "V5-close",
+      "at": "2026-10-14",
+      "title": "Fechamento do plan-v5 (G5/G6): prosa das telas novas, captura com dado de vida curta e rebuild da imagem",
+      "actions": [
+        "G6: `docker compose build app` (26 min, background) e recriação do container — a imagem nova carrega V5-9d e V5-12. Rascunho de IA conferido na instância reiniciada: período e duração corretos (1.72h, não 6189.595s rotulados de horas).",
+        "Captura: 45 telas no extrato (+1: `painel-atestados`, leitura pura). Quatro capturas caíram porque o dado de vida curta dos batches anteriores tinha sido apagado (atividades do cronograma, prova, texto do relatório, membership do Guia) — o seed foi refeito por SQL nos três projetos 'Pesquisa em IA' da instância e apagado no fim (contagem de saída 0 em tasks, project_activity_files, project_activities, technical_reports e project_members).",
+        "Achado do seed: o botão da linha é nomeado por ORDEM ('Conclusão da atividade 1' = linha de order 1), não pela descrição — o primeiro seed trocou as duas capturas de conclusão. O filtro do quadro exige atividade no projeto (render `filters.projectId && activities.length > 0`) e o cartão filtrado exigiu semear tarefa ligada à etapa.",
+        "Prosa do guia (G5): grade do cronograma reescrita para o contrato da DEC-172 (linha nasce sem marca; o mês clicado é o início; rascunho desmarcável; gravada nunca sem mês; wizard nomeia a linha incompleta); seção nova 'Atestados de frequência' com o lembrete do dia 19; barra de Andamento descrita no detalhe do projeto; visibilidade de perfil deixa de ser 'promessa sem regra' (capítulos 8 e 10); legenda da aprovação recapturada com a data medida (14/10/2026).",
+        "Gate medido: `docs:build` verde (15 seções / 33 figuras técnico; 12 seções / 45 figuras usuário) sem AVISO; `docs:check` limpo; suíte completa 172 arquivos / 2260 testes verdes na 5433 (medida no fechamento do V5-12, nenhum código de aplicação mudou desde então); arch:check 1026/4383 allow-list vazia; tsc so o erro pre-existente."
       ]
     }
   ],

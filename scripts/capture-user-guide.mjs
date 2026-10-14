@@ -150,6 +150,10 @@ const INTERACTIONS = [
   // editor preenchido com as três linhas de seção do oficial (DEC-168) e é apagado depois da
   // captura. Nenhuma captura salva, rascunha ou gera — o painel é fotografado em leitura.
   { id: "painel-relatorios-tecnicos", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: "button:has(svg.lucide-eye)" }, dialogo: "Relatórios técnicos", rolarAte: "text=Relatórios técnicos" },
+  // V5-10b (DEC-175): o painel de atestados mora no diálogo de detalhe, ao lado do de
+  // relatórios técnicos. A captura é leitura pura: o painel lista os membros ativos do mês de
+  // referência, e nenhum clique daqui gera PDF.
+  { id: "painel-atestados", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: "button:has(svg.lucide-eye)" }, dialogo: "Atestados de frequência", rolarAte: "text=Atestados de frequência" },
   { id: "painel-notificacoes", role: "coord", route: "/dashboard", abre: "/^notifica/i", dialogo: "Notifica" },
   // plan-v3 OND3-C: o menu de ordenação da coluna é o rótulo que o guia usa — sem a captura, a
   // seção "A ordem dos cartões" descreveria cinco opções que nenhuma foto do guia mostra.

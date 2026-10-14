@@ -8,7 +8,7 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
 - **Gate de entrega:** `npm run arch:check` (exit 0, allow-list **vazia**) && `npm run lint` (nada de erro) && `npx tsc --noEmit` (0) && `npx vitest run` (zero failure). A contagem é **por branch**: no `dev` o baseline era **64 arquivos / 721 testes** quando o B8 removeu os 651 testes de paridade; no `plan/v3-operacional`, medido no encerramento do plan-v3 (2026-10-03), são **65 arquivos / 798 testes** em `tests/unit` + `features` e **75 / 881** na suíte completa. Na `dev` de hoje (medido em 2026-10-07, depois do plan-v4 V4-1/V4-2/V4-3/V4-6, do V4-4 de subtasks, dos testes do painel V4-4b/V4-4c, do V4-5a/V4-5b/V4-5c de subtask na UI, do V4-6b de vocabulário de status e do lote pós-encerramento POS-1 — DEC-97/98) são **87 arquivos / 1107 testes** e **97 / 1192** na suíte completa; a suíte e2e do quadro está em **2 passando + 1 falha conhecida + 5 "did not run"** (medido 2026-10-06
 no V4-5c; eram 7 quando a coluna `Em Revisão` tinha um cartão a menos) — o 3º teste quebra por cartão a
 mais na coluna (dado legítimo da instância, não código: hoje são as tarefas 50 e 304), e como o spec é
-serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 5 passando. Compare sempre com o `STATE.json` do plano em que você está. Na `dev` de hoje, medido no fechamento do V5-4 do plan-v5 (2026-10-13, G5/G6 do V5-4a+V5-4b), são **121 arquivos / 1647 testes** em `tests/unit` + `features` e **131 / 1740** na suíte completa (G0 890 módulos / 3697 dependências); o `tsc` desta branch **não** fecha em 0 — 1 erro pré-existente em `features/laboratorio/__tests__/floating-timer-tabs.test.tsx:105`, conferido com `git stash`. Na branch do fechamento do repo-cleanup (`refactor/b6-restante`, medido 2026-10-08 depois do B6-2c..B6-7) o baseline é **95 arquivos / 1280 testes** em `tests/unit` + `features` e **105 / 1367** na suíte completa (G0 810 módulos / 3295 dependências).
+serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 5 passando. Compare sempre com o `STATE.json` do plano em que você está. Na `dev` de hoje, medido no fechamento do plan-v5 (2026-10-14, batch `V5-close`), são **140 arquivos / 1986 testes** em `tests/unit` + `features` e **172 / 2260** na suíte completa (G0 1026 módulos / 4383 dependências); o `tsc` desta branch **não** fecha em 0 — 1 erro pré-existente em `features/laboratorio/__tests__/floating-timer-tabs.test.tsx:105`, conferido com `git stash`. Na branch do fechamento do repo-cleanup (`refactor/b6-restante`, medido 2026-10-08 depois do B6-2c..B6-7) o baseline é **95 arquivos / 1280 testes** em `tests/unit` + `features` e **105 / 1367** na suíte completa (G0 810 módulos / 3295 dependências).
 - **G4/integração:** roundtrips Prisma real rodam **só** contra o banco de teste isolado `dq-dev-test-db` em `127.0.0.1:5433` (`$env:DATABASE_URL="postgresql://dq_dev:dq_dev_local_only@127.0.0.1:5433/dq_dev_test"; npx vitest run`) — nunca contra o `display-quest-db` (5432, produção local).
 - **Setup do G4 (corrigido 2026-10-02):** `npm run db:test:up` e `npm run db:test:setup` **existem**
   no `package.json` e fazem a sequência completa (`docker compose -f docker-compose.test.yml up -d`,
@@ -23,6 +23,24 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   senha do banco (denylist) e, desde o V5-1, `S3_SECRET_KEY` (obrigatória — o serviço do
   bucket recusa subir sem ela — e fora da denylist `minioadmin`/`any`/`changeme`). O runner
   lê `process.env`, não `.env` — exporte as variáveis.
+
+## plan-v5 — documentos oficiais, economia do projeto e perfil (2026-10-13..14)
+
+- **Estado:** `done` — **encerrado em 2026-10-14** (batch `V5-close`, G5/G6: rebuild da imagem, 45 capturas
+  do guia, prosa das telas novas, `docs:build`/`docs:check` verdes). Estado/decisões:
+  `displayquest-v2/plan-v5/{PLAN.md,STATE.json}` — STATE.json v5.29.0, 35 batches (V5-1..V5-15 com
+  sub-batches, mais `V5-9d` de conserto e os fechamentos G5/G6). As decisões do plano são DEC-61..77,
+  99..104 e 126..178 (DEC-78..98 do meio são do plan-v4 — houve colisão, ver adiante).
+- **O que o plano entregou:** bucket SeaweedFS + anexos/imagens por rota (V5-1..V5-3), dados de pessoa e de
+  vínculo (V5-4a/b), cronograma com grade dinâmica e conclusão em duas fases (V5-5..V5-7), atraso urgente
+  (V5-8), relatório técnico pelo template oficial + rascunho de IA (V5-9), atestados AcroForm + painel +
+  lembrete do dia 19 (V5-10a/b), andamento temporal (V5-11) e visibilidade de perfil como regra de leitura
+  (V5-12, DEC-143/178).
+- **Gotcha do fechamento (medido 2026-10-14):** as capturas do guia dependem de **dado de vida curta**
+  semeado por SQL (atividades "Coleta de dados"/"Revisão da literatura", prova, texto do relatório,
+  membership do Guia, tarefa da etapa) e apagado no fim — o botão da linha do cronograma é nomeado por
+  **ordem** (`Conclusão da atividade 1` = linha de `order` 1), não pela descrição; o filtro de atividade do
+  quadro só renderiza com projeto selecionado **e** atividades no projeto.
 
 ## Bucket de objetos (V5-1, 2026-10-13)
 
@@ -277,11 +295,16 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   e **DEC-150/151/152 plan-v5 (2026-10-13, rodada final antes do dono sair: D-4 é apagar o arquivo morto
   `components/forms/project-members-manager.tsx` (150); as colunas de mês da grade do cronograma são o
   período do projeto, com janela de 12 meses quando ele não tem datas (151); a IA do rascunho tem deploy em
-  `localhost:8080/v1` e dev pela tailscale `100.112.10.76:8080/v1`, medido respondendo (152))**.
+  `localhost:8080/v1` e dev pela tailscale `100.112.10.76:8080/v1`, medido respondendo (152))**,
+  **DEC-153..176 plan-v5 (2026-10-14, execução dos V5-5..V5-11: cronograma, tarefa×atividade, conclusão de
+  atividade, atraso urgente, atestados, andamento)**, **DEC-177 plan-v5/V5-9d (2026-10-14, conserto do
+  rascunho de IA: período por `civilDayOfDate` — createdAt legado ISO; porta `durationHours`)**,
+  **DEC-178 plan-v5/V5-12 (2026-10-14, visibilidade de perfil vira regra `canActorViewProfile` consumida
+  pela leitura de perfil, lista de usuários e busca de pessoas)**).
   O V4-4 ia usar
   DEC-61..64 e colidiu; os 28 comentários de código foram renumerados. **Antes de abrir decisão nova, `grep`
   os CINCO `STATE.json` (clean-arch, plan-v3, plan-v4, plan-v5, plan-v6) — a nota antiga que dizia "três"
-  está velha. Próxima livre: DEC-153.**
+  está velha. Próxima livre: DEC-179.**
 - **Subtask (V4-4, DEC-78..83 → regra atual = DEC-97/98):** tabela `task_subtasks` (sem FK para
   `users` — subtask não tem
   responsável próprio), base gravada em `tasks.points` = `10 + 5·n` (DEC-97) e **cada subtask CONCLUÍDA

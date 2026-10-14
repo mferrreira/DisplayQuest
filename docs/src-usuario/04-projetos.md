@@ -13,11 +13,12 @@ A **Lista de Projetos** mostra todos os projetos do sistema, inclusive os que vo
 - a **capa** e o **logo** do projeto, quando houver. Sem capa, o espaço do topo diz *"Sem capa"*;
 - o nome, o **Status** (**Ativo**, **Concluído**, **Arquivado**), a data de criação e os botões **Editar** e **Excluir**;
 - a **Descrição**, quando o projeto tem descrição;
-- **Dados do projeto**: **Início**, **Término**, **Número do edital**, **Número do processo**, **Número PROPPI** e **Pontos do projeto**. Esse card só aparece quando algum desses campos foi preenchido;
+- **Dados do projeto**: **Início**, **Término**, **Número do edital**, **Número do processo**, **Número PROPPI**, **Pontos do projeto** e a barra de **Andamento** do período. Esse card só aparece quando algum desses campos foi preenchido;
 - **Entregáveis**, cada um com o nome e a quantidade em unidades (**2 un.**);
 - **Anexos**, cada um com o nome, o tamanho e o arquivo;
 - **Cronograma**, com as **Metas do projeto** e a grade de meses (a seção *Cronograma do projeto* abaixo);
 - **Relatórios técnicos**, um texto editável por tipo (a seção *Relatórios técnicos do projeto* abaixo);
+- **Atestados de frequência**, um PDF oficial por membro ativo e mês (a seção *Atestados de frequência* abaixo);
 - **Total de Tarefas**, **Concluídas**, **Em Progresso** e **Pendentes**, e o **Progresso Geral** com a taxa de conclusão;
 - **Tarefas do Projeto**, com **Importar Backlog** e **Nova Tarefa**;
 - **Criado por**, **Data de criação** e **Última atualização**;
@@ -26,6 +27,8 @@ A **Lista de Projetos** mostra todos os projetos do sistema, inclusive os que vo
 ```foto dialogo-detalhe-projeto titulo="O detalhe de um projeto"
 É pelo detalhe que se vê o andamento real do projeto: quantas tarefas faltam, quantas estão em curso e quantas terminaram.
 ```
+
+A barra de **Andamento**, no card **Dados do projeto**, é o relógio do calendário: o percentual do período já decorrido, e a linha nomeia os dias — *"Faltam 45 dias para o término — 120 de 165 dias decorridos"*. Antes do **Início**, a barra está zerada e a linha diz *"Começa em N dias — término em M dias"*; depois do **Término**, *"Encerrado há N dias"*. O dia exato do término ainda conta como dentro do período. Projeto sem **Término** não mostra barra: sem fim não há relógio a desenhar.
 
 ## Criar um projeto
 
@@ -93,9 +96,9 @@ O cronograma é o calendário do projeto. São duas listas no mesmo card: as **M
 
 **A grade.** Cada linha é uma etapa, e a duração da etapa é a contagem dos meses marcados:
 
-1. Clique em **Adicionar atividade**. A linha nasce com um mês marcado, o primeiro da grade.
-2. Escreva a descrição da etapa e saia do campo: é aí que a linha entra no projeto.
-3. Clique nos meses que a etapa ocupa. A linha é sempre contínua, sem buraco no meio. Clicar depois do último estende a etapa. Clicar antes do primeiro estende para trás. Clicar num mês do meio faz daquele mês o último. Clicar no último desmarca.
+1. Clique em **Adicionar atividade**. A linha nasce **sem mês marcado** — ela é um rascunho, e o mês dela será o mês que você clicar.
+2. Escreva a descrição da etapa e saia do campo. A linha entra no projeto quando a descrição **e** pelo menos um mês existem, na ordem em que você os fizer: com a descrição já escrita, clicar num mês salva a linha; com o mês já marcado, sair do campo de descrição salva a linha.
+3. Clique no mês em que a etapa começa: clicar em mar/2026 faz a etapa começar em mar/2026, não no primeiro mês da grade. Depois estenda: a linha é sempre contínua, sem buraco no meio. Clicar depois do último estende a etapa. Clicar antes do primeiro estende para trás. Clicar num mês do meio faz daquele mês o último. Clicar no último desmarca.
 4. Em **Responsável**, escolha quem faz a etapa, ou deixe **Sem responsável**. Na lista só aparece quem participa do projeto.
 5. A **Recompensa** acompanha a marcação: 100 pontos por mês marcado. A linha diz quantos meses tem, do lado da descrição: *"out/2026 → nov/2026 · 2 meses"*.
 6. Para apagar a linha, use a lixeira; o sistema pede confirmação. Apagar uma etapa não apaga tarefa nenhuma do projeto.
@@ -107,7 +110,7 @@ O card anuncia a grade que ele mostra: *"out/2026 a set/2027 — 12 meses na gra
 ```
 
 ```foto dialogo-novo-projeto-cronograma titulo="O passo 3 do Novo Projeto, com uma linha recém-criada"
-A linha nova já nasce com o primeiro mês da grade marcado, porque etapa sem mês não existe.
+A linha nova nasce sem mês marcado: o mês dela será o mês que você clicar na grade.
 ```
 
 ### A conclusão de uma etapa
@@ -124,7 +127,7 @@ A seção *Provas* está vazia, e a dica diz o que falta: *"Anexe pelo menos uma
 ```
 
 ```foto dialogo-conclusao-atividade-aprovacao titulo="O diálogo de uma etapa pedida, com a prova anexada e o botão de aprovar"
-A linha diz *"Conclusão solicitada"* e *"Solicitada em 10/10/2026 por Guia · Participante"*. A prova *parcial.pdf* (200,0 KB) aparece na lista, com botão de download. A dica diz o que a aprovação faz: *"Aprovar conclui a atividade e distribui o prêmio entre os membros ativos do projeto."*
+A linha diz *"Conclusão solicitada"* e *"Solicitada em 14/10/2026 por Guia · Participante"*. A prova *parcial.pdf* (200,0 KB) aparece na lista, com botão de download. A dica diz o que a aprovação faz: *"Aprovar conclui a atividade e distribui o prêmio entre os membros ativos do projeto."*
 ```
 
 ::: nota titulo="O que a aprovação faz com os pontos"
@@ -135,8 +138,8 @@ Aprovada a etapa, o prêmio dela — 100 pontos por mês marcado — entra nos p
 Solicitar a conclusão e anexar prova é do líder do projeto e de **Gerente de Projeto**. Aprovar é de **Coordenador** e **Gerente** — e **Gerente** não aprova o que ele mesmo solicitou. O botão **Conclusão** aparece na linha para quem pode fazer qualquer uma das duas coisas.
 :::
 
-::: limite titulo="Toda linha precisa de pelo menos um mês"
-Desmarcar a única marca de uma linha é recusado: o sistema responde *"A atividade precisa de pelo menos um mês marcado"* e a linha fica como estava.
+::: limite titulo="Toda linha gravada precisa de pelo menos um mês"
+Desmarcar a única marca de uma linha **gravada** é recusado: o sistema responde *"A atividade precisa de pelo menos um mês marcado"* e a linha fica como estava. A linha ainda não gravada — o rascunho — pode desmarcar tudo e recomeçar noutro mês. No **Novo Projeto**, uma etapa com descrição mas sem mês bloqueia o **Criar**, e a recusa nomeia a linha: *"Atividade 2: a atividade precisa de pelo menos um mês marcado"*.
 :::
 
 ::: nota titulo="O cronograma do projeto não é o quadro de tarefas"
@@ -182,6 +185,28 @@ Sem texto salvo, **Gerar DOCX** gera o documento **pré-preenchido**: cabeçalho
 
 ::: nota titulo="Quem edita os relatórios técnicos"
 Os três botões aparecem para o líder e a gestão do projeto. As demais pessoas leem os textos, sem os controles de escrita. Se o controle aparecer e a pessoa não tiver a gestão, o sistema responde *"Usuário não tem permissão para editar o relatório técnico deste projeto"* e nada muda.
+:::
+
+## Atestados de frequência
+
+O atestado de frequência é o documento oficial que certifica a frequência de um membro no projeto em um mês. O card **Atestados de frequência** fica no detalhe do projeto, ao lado dos relatórios técnicos.
+
+1. Abra o detalhe do projeto e desça até **Atestados de frequência**.
+2. Escolha o **Mês de referência**. O mês proposto é o anterior ao mês atual — o documento atesta o mês inteiro, e o mês em curso ainda não terminou.
+3. Na linha de cada membro **Ativo**, clique em **Gerar atestado**. O botão vira **Regenerar**, e o link **Baixar** passa a aparecer na linha.
+
+Um atestado por membro e por mês: regenerar sobrescreve o mesmo PDF, que baixa com o nome *atestado-AAAA-MM-nome-do-projeto.pdf*. O atestado é do vínculo **Ativo** — quem saiu do projeto não aparece na linha, e projeto sem membros ativos diz *"O projeto não tem membros ativos — o atestado é do vínculo ativo."* Quem gera é a própria pessoa ou a gestão do projeto: o botão aparece nos dois casos, e o servidor decide quem gera de verdade.
+
+```foto painel-atestados titulo="O card Atestados de frequência, no detalhe de um projeto"
+O **Mês de referência** vem com o mês anterior ao atual, e cada membro ativo da lista tem o botão **Gerar atestado**.
+```
+
+::: nota titulo="O que sai na folha oficial"
+O PDF é a folha oficial preenchida: título do projeto, número do edital (ou o número PROPPI, quando o edital não existe), nome, CPF, matrícula, nível, modalidade e agência de fomento da pessoa, e os dados do vínculo — **carga horária** (**8h**, **20h** ou **adaptada**, com o número escrito) e categoria (**Bolsista** ou **Voluntário**). A carga que sai no atestado é a **carga contratada do vínculo**, não as horas registradas em sessões (capítulo 8). A descrição sucinta das atividades traz as duas primeiras etapas do cronograma que cruzam o mês de referência.
+:::
+
+::: nota titulo="O sino lembra"
+Todo dia 19, o sistema avisa o líder do projeto e os **Coordenador** e **Gerente** que o atestado do mês anterior já pode ser gerado — um aviso por projeto, sem o selo **Urgente**.
 :::
 
 ## A aba Voluntários

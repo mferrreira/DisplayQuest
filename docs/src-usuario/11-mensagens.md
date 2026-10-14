@@ -31,7 +31,7 @@ Toda recusa do sistema tem um motivo, e o motivo está na mensagem. Esta lista r
 
 | O sistema diz | Por quê | O que fazer |
 | --- | --- | --- |
-| **A atividade precisa de pelo menos um mês marcado** | você desmarcou o único mês de uma linha | marque o mês que a etapa ocupa; a linha não existe sem mês |
+| **A atividade precisa de pelo menos um mês marcado** | você desmarcou o único mês de uma linha **gravada**, ou nomeou uma etapa sem mês no **Novo Projeto** | marque o mês que a etapa ocupa; a linha gravada não existe sem mês (o rascunho ainda não gravado pode ficar sem marca) |
 | **Responsável da atividade precisa participar do projeto** | a pessoa escolhida não está na equipe daquele projeto | adicione a pessoa na aba **Voluntários** antes de escolher |
 | **Descrição da atividade não pode ter mais de 500 caracteres** | a descrição da etapa passou do teto | resuma a etapa, ou divida em duas linhas |
 | **Descrição da meta não pode ter mais de 500 caracteres** | a descrição da meta passou do teto | resuma a meta |
@@ -115,6 +115,7 @@ Duas recusas existem para o cronograma, mas a grade não deixa você chegar nela
 | **Usuário não tem permissão para iniciar responsabilidades** | assumir plantão é restrito | peça ao coordenador ou laboratorista |
 | **Usuário não tem permissão para editar este perfil** | edição de perfil alheio é restrita | peça à administração |
 | **Usuário não tem permissão para editar o relatório técnico deste projeto** | editar relatório técnico é do líder e da gestão daquele projeto | peça ao líder do projeto ou à coordenação |
+| **Usuário não tem permissão para gerar atestado de frequência neste projeto** | gerar atestado é da própria pessoa ou da gestão daquele projeto | peça ao líder do projeto ou à coordenação |
 | **Recurso não encontrado** / **Usuário não encontrado** | o que você tentou alterar já não existe | atualize a tela |
 | **Conflito de estado** | outra pessoa mudou a mesma coisa antes de você | recarregue e repita a operação sobre o estado novo |
 

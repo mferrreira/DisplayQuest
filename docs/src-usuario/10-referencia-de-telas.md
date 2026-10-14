@@ -7,7 +7,7 @@ Esta é a lista completa das telas do sistema, com o endereço de cada uma e que
 | Entrada | `/login` | e-mail, senha, link de cadastro | qualquer pessoa, autenticada ou não |
 | Cadastro | `/register` | nome completo, e-mail, senha | qualquer pessoa |
 | Quadro de Tarefas | `/dashboard` | quadro Kanban, filtros, criação de tarefa | todas as funções |
-| Projetos | `/dashboard/projetos` | lista de projetos, detalhe com cronograma e relatórios técnicos, aba Voluntários | todas as funções; a aba **Voluntários** só para Coordenador, Gerente e Gerente de Projeto |
+| Projetos | `/dashboard/projetos` | lista de projetos, detalhe com cronograma, relatórios técnicos e atestados, aba Voluntários | todas as funções; a aba **Voluntários** só para Coordenador, Gerente e Gerente de Projeto |
 | Laboratório | `/dashboard/laboratorio` | agenda, responsabilidade, grade de horários, reclamações | todas as funções |
 | Relatórios Semanais | `/dashboard/weekly-reports` | relatório por usuário e relatório de projeto | Coordenador, Gerente, Laboratorista |
 | Painel Administrativo | `/dashboard/admin` | oito abas de gestão | Coordenador, Gerente |
@@ -40,6 +40,7 @@ Esta é a lista completa das telas do sistema, com o endereço de cada uma e que
 | Reclamação | Aberto, Em Andamento, Resolvido, Fechado |
 | Conta | pendente, ativa, rejeitada, suspensa |
 | Vínculo com projeto | Ativo, Inativo |
+| Etapa do cronograma | Aberta, Conclusão solicitada, Concluída |
 | Categoria do vínculo | Bolsista, Voluntário, sem categoria |
 | Relatório técnico | Parcial, Técnico-final, Final |
 | Visibilidade do perfil | Público, Apenas Membros, Privado — a regra que obedece a escolha existe e decide a leitura de perfil (capítulo 8) |
