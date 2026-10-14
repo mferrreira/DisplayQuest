@@ -83,9 +83,11 @@ O botão **Abrir controle de sessao** abre o mesmo cronômetro descrito no capí
 
 O sino no cabeçalho guarda os avisos do sistema: tarefa aprovada, tarefa rejeitada, compra aprovada, conta aprovada, reclamação atribuída. Quando há avisos não lidos, o sino mostra a contagem.
 
-```foto painel-notificacoes titulo="O painel de notificações aberto"
-Com a caixa vazia, o painel diz apenas "Nenhuma notificação".
+```foto painel-notificacoes titulo="O painel de notificações aberto, com um aviso prioritário"
+A notificação *"Atividade atrasada"* chega com o selo vermelho **Urgente**, ícone de alerta e borda vermelha.
 ```
+
+O cronograma também avisa pelo sino. Quando uma etapa do projeto passa do seu último mês sem ser concluída, o sistema avisa o líder do projeto e os **Coordenador** e **Gerente** — um aviso por etapa, não um por dia. Esses avisos chegam com o selo **Urgente**, e o selo continua depois de lidos.
 
 O painel é um popover: fecha ao clicar fora dele e fecha com **Escape**. Também é alcançável pelo teclado a partir do sino.
 

@@ -17,6 +17,8 @@ export interface PublishNotificationEventCommand {
   data?: unknown
   audience: NotificationAudience
   triggeredByUserId?: number
+  /** V5-8 (DEC-64): urgente — o atraso de atividade é a primeira consumidora. */
+  priority?: boolean
   /**
    * Who is publishing (D4, B6-2b, DEC-54). Required, not optional: `PublishNotificationEventUseCase`
    * has three callers with different authorisation — the route (`userActor`, checked against

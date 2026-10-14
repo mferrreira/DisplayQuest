@@ -145,7 +145,7 @@ const INTERACTIONS = [
   // V5-4b (DEC-149): o painel de Membros é onde os dados do vínculo se editam. Ele mora dentro
   // do diálogo "Gestão Completa", aberto pela aba Voluntários da tela Projetos.
   { id: "painel-membros", role: "coord", route: "/dashboard/projetos", aba: "Voluntários", selecionar: { gatilho: "Selecione um projeto" }, abre: "Gestão Completa", dialogo: "Dados do vínculo", rolarAte: "text=Dados do vínculo" },
-  { id: "painel-notificacoes", role: "coord", route: "/dashboard", abre: "Notificações", dialogo: "Notifica" },
+  { id: "painel-notificacoes", role: "coord", route: "/dashboard", abre: "/^notifica/i", dialogo: "Notifica" },
   // plan-v3 OND3-C: o menu de ordenação da coluna é o rótulo que o guia usa — sem a captura, a
   // seção "A ordem dos cartões" descreveria cinco opções que nenhuma foto do guia mostra.
   { id: "quadro-ordenar-coluna", role: "coord", route: "/dashboard", abre: "Ordenar tarefas de A Fazer", verifica: "Ordenar por" },
@@ -335,8 +335,14 @@ for (const it of interactions) {
     }
 
     if (it.abre || it.alvo || it.cartao) {
-      if (it.abre) await page.getByRole("button", { name: it.abre, exact: true }).first().click();
-      else if (it.cartao) {
+      if (it.abre) {
+        // Primitiva (V5-8): "/texto/flags" no `abre` vira expressão regular. O rótulo do sino
+        // muda com a contagem de não-lidas ("Notificações (1 não lidas)"), e o exact só
+        // batia com o painel vazio — que era o estado da captura antiga.
+        const rx = /^\/(.+)\/([a-z]*)$/.exec(it.abre);
+        const name = rx ? new RegExp(rx[1], rx[2]) : it.abre;
+        await page.getByRole("button", { name }).first().click();
+      } else if (it.cartao) {
         // Cartão nomeado: a lista de projetos ordena por data de criação desc, e três projetos da
         // instância têm a MESMA data — "o primeiro cartão" não é determinístico. A captura que
         // precisa de conteúdo no diálogo diz qual projeto abre.

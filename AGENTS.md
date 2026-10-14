@@ -379,7 +379,7 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
 - **Sessões de trabalho:** gestor (`MANAGE_WORK_SESSIONS`) vê ativas+pausadas de todos e pode pausar/retomar/finalizar/excluir; usuário comum opera só as próprias. Anti-farm: teto de 9h por trecho ativo e varredura noturna 23:59 (America/Sao_Paulo) fecha o que ficou aberto overnight/weekend.
 - **Infra e persistência:** Postgres exposto só intra-rede no compose base; `docker-compose.override.yml` (versionado) adiciona `127.0.0.1:5432` loopback para `psql`/vitest. Volumes de `uploads`/`reports`/`postgres_data`/`object_store_data` persistem entre `--build`/`--force-recreate`.
 
-## Conclusão de atividade e economia do projeto (V5-7, 2026-10-14)
+## Conclusão de atividade, economia do projeto e atraso (V5-7/V5-8, 2026-10-14)
 
 - **Fluxo de duas fases (DEC-76/77/161):** a linha do cronograma (`project_activities`) vai OPEN →
   COMPLETION_REQUESTED (pedida pelo líder OU pela membership de gestor, com pelo menos uma prova
@@ -423,6 +423,16 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   `canOpenCompletion` no painel, calculada com as funções do domínio, DEC-92); o diálogo mostra
   "Aprovar conclusão" quando COMPLETION_REQUESTED e o ator pode — quem pediu não vê o botão se for
   GERENTE. A resposta carrega `activity/award/shares/projectsPoints` e a tela não recalcula (R7).
+- **Atraso urgente (V5-8, DEC-64/166):** cron diário `'0 8 * * *'` (America/Sao_Paulo) chama
+  `projectManagement.notifyOverdueActivities` com `systemActor(OVERDUE_SCAN)` — **não existe rota**
+  para o scan de propósito (varredura não é ação de pessoa). A urgência é a coluna
+  `notifications.priority` (o painel destaca pela FLAG, não pelo `type`), e a guarda do "uma
+  notificação por atividade" é `overdueNotifiedAt`: a marca sai **só depois** da publicação
+  bem-sucedida (falha de notificação deixa a linha para o scan seguinte; candidato sem
+  destinatário também não é marcado). Audiência: líder + COORDENADOR/GERENTE **ATIVOS**
+  (suspenso não recebe, DEC-55), deduplicada. Vencida é `hoje > activityPeriod().periodoFim` —
+  o próprio dia do prazo ainda é dentro. O use case lê `users` por adaptador próprio do módulo
+  de projeto (RG-04, como `ProjectHoursPort`).
 
 ## Gotchas reais (verificados empiricamente)
 

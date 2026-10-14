@@ -205,7 +205,8 @@ describe("POST /api/notifications — o gate de MANAGE_NOTIFICATIONS", () => {
     login(MANAGER_ROLES[1]);
     await POST(request({ title: "Aviso", message: "Corpo", userId: 5, data: { k: 1 } }));
     expect(mocks.rows).toEqual([
-      { userId: 5, type: "SYSTEM_ANNOUNCEMENT", title: "Aviso", message: "Corpo", data: '{"k":1}' },
+      // V5-8 (DEC-64): a linha ganhou a coluna `priority`; a rota legada publica `false`.
+      { userId: 5, type: "SYSTEM_ANNOUNCEMENT", title: "Aviso", message: "Corpo", data: '{"k":1}', priority: false },
     ]);
   });
 });

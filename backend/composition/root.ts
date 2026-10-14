@@ -7,6 +7,7 @@ import { NotificationsReportPublisher } from "@/backend/modules/reporting/infras
 import { createProjectMembershipModule } from "@/backend/modules/project-membership"
 import { createProjectManagementModule } from "@/backend/modules/project-management"
 import { createGamificationActivityCompletionAward } from "@/backend/modules/project-management/infrastructure/adapters/gamification-activity-completion-award"
+import { createNotificationsActivityOverdueNotifier } from "@/backend/modules/project-management/infrastructure/adapters/notifications-activity-overdue"
 import { createPrismaProjectRepository } from "@/backend/modules/project-management/infrastructure/repositories/prisma-project.repository"
 import { createReportingModule } from "@/backend/modules/reporting"
 import { createStoreModule } from "@/backend/modules/store"
@@ -59,6 +60,9 @@ export function createBackendComposition(): BackendComposition {
     ports: {
       projects: projectsRepository,
       activityAwards: createGamificationActivityCompletionAward(gamification),
+      // V5-8 (DEC-21/64): a notificação de atraso sai por PORTA LOCAL
+      // (`ActivityOverdueNotifierPort`); quem publica é o módulo de notificações.
+      overdueNotifier: createNotificationsActivityOverdueNotifier(notifications),
     },
   })
 

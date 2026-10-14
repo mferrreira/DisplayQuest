@@ -19,6 +19,8 @@ export interface CreateNotificationRow {
   message: string;
   /** Already-encoded envelope (String column). `null` = no payload. */
   data: string | null;
+  /** V5-8 (DEC-64): urgente. Ausente = `false` (toda notificação legada é não-prioritária). */
+  priority?: boolean;
 }
 
 export interface NotificationRepository extends ActiveUserDirectory {

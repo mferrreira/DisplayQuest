@@ -32,6 +32,7 @@ import { RemoveActivityFileUseCase } from "@/backend/modules/project-management/
 import { AssertCanRequestActivityCompletionUseCase } from "@/backend/modules/project-management/application/use-cases/assert-can-request-activity-completion.use-case"
 import { RequestActivityCompletionUseCase } from "@/backend/modules/project-management/application/use-cases/request-activity-completion.use-case"
 import { ApproveActivityCompletionUseCase } from "@/backend/modules/project-management/application/use-cases/approve-activity-completion.use-case"
+import { NotifyOverdueActivitiesUseCase } from "@/backend/modules/project-management/application/use-cases/notify-overdue-activities.use-case"
 import type { ProjectActorsPort } from "@/backend/modules/project-management/application/ports/project-actors.port"
 import type { ProjectAttachmentsPort } from "@/backend/modules/project-management/application/ports/project-attachments.repository"
 import type { ProjectCronogramaPort } from "@/backend/modules/project-management/application/ports/project-cronograma.repository"
@@ -51,6 +52,10 @@ import { createPrismaProjectActivityFilesRepository } from "@/backend/modules/pr
 import { createPrismaActivityTasksPort } from "@/backend/modules/project-management/infrastructure/repositories/prisma-activity-tasks.port"
 import { createPrismaActivityEconomyTasksPort } from "@/backend/modules/project-management/infrastructure/repositories/prisma-activity-economy-tasks.port"
 import { createNoOpActivityCompletionAward } from "@/backend/modules/project-management/infrastructure/adapters/gamification-activity-completion-award"
+import { createPrismaActivityOverdueScanPort } from "@/backend/modules/project-management/infrastructure/repositories/prisma-activity-overdue-scan.port"
+import { createNoOpActivityOverdueNotifier } from "@/backend/modules/project-management/infrastructure/adapters/notifications-activity-overdue"
+import type { ActivityOverdueScanPort } from "@/backend/modules/project-management/application/ports/activity-overdue-scan.port"
+import type { ActivityOverdueNotifierPort } from "@/backend/modules/project-management/application/ports/activity-overdue-notifier.port"
 import { createPrismaProjectHoursPort } from "@/backend/modules/project-management/infrastructure/repositories/prisma-project-hours.port"
 import { createPrismaProjectManagementMembershipRepository } from "@/backend/modules/project-management/infrastructure/repositories/prisma-project-membership.repository"
 import { createPrismaProjectRepository } from "@/backend/modules/project-management/infrastructure/repositories/prisma-project.repository"
@@ -111,6 +116,8 @@ export class ProjectManagementModule {
   readonly requestActivityCompletion: UseCaseExecute<RequestActivityCompletionUseCase>
   /** V5-7b (DEC-76/77): a fase 2 — aprovar, creditar a distribuição, subir `projects.points`. */
   readonly approveActivityCompletion: UseCaseExecute<ApproveActivityCompletionUseCase>
+  /** V5-8 (DEC-64): varredura de atraso — chamada só pela rotina do cron, sem rota. */
+  readonly notifyOverdueActivities: UseCaseExecute<NotifyOverdueActivitiesUseCase>
 
   constructor(
     private readonly listProjectsForActorUseCase: ListProjectsForActorUseCase,
@@ -147,6 +154,7 @@ export class ProjectManagementModule {
     private readonly assertCanRequestActivityCompletionUseCase: AssertCanRequestActivityCompletionUseCase,
     private readonly requestActivityCompletionUseCase: RequestActivityCompletionUseCase,
     private readonly approveActivityCompletionUseCase: ApproveActivityCompletionUseCase,
+    private readonly notifyOverdueActivitiesUseCase: NotifyOverdueActivitiesUseCase,
   ) {
     this.listProjectsForActor = this.listProjectsForActorUseCase.execute.bind(this.listProjectsForActorUseCase)
     this.getProjectById = this.getProjectByIdUseCase.execute.bind(this.getProjectByIdUseCase)
@@ -184,6 +192,7 @@ export class ProjectManagementModule {
     )
     this.requestActivityCompletion = this.requestActivityCompletionUseCase.execute.bind(this.requestActivityCompletionUseCase)
     this.approveActivityCompletion = this.approveActivityCompletionUseCase.execute.bind(this.approveActivityCompletionUseCase)
+    this.notifyOverdueActivities = this.notifyOverdueActivitiesUseCase.execute.bind(this.notifyOverdueActivitiesUseCase)
   }
 }
 
@@ -201,6 +210,10 @@ export interface ProjectManagementModulePorts {
   economyTasks: ActivityEconomyTasksPort
   /** V5-7b (DEC-21): quem credita o prêmio. O composition root injeta gamification. */
   activityAwards: ActivityCompletionAwardPort
+  /** V5-8 (DEC-64): candidatos + marca da varredura de atraso. */
+  overdueScan: ActivityOverdueScanPort
+  /** V5-8 (DEC-21): quem publica a notificação prioritária. O composition root injeta notifications. */
+  overdueNotifier: ActivityOverdueNotifierPort
 }
 
 export interface ProjectManagementModuleFactoryOptions {
@@ -220,6 +233,8 @@ export function createProjectManagementModule(options: ProjectManagementModuleFa
     tasks: options.ports?.tasks ?? createPrismaActivityTasksPort(),
     economyTasks: options.ports?.economyTasks ?? createPrismaActivityEconomyTasksPort(),
     activityAwards: options.ports?.activityAwards ?? createNoOpActivityCompletionAward(),
+    overdueScan: options.ports?.overdueScan ?? createPrismaActivityOverdueScanPort(),
+    overdueNotifier: options.ports?.overdueNotifier ?? createNoOpActivityOverdueNotifier(),
   }
 
   return new ProjectManagementModule(
@@ -367,6 +382,10 @@ export function createProjectManagementModule(options: ProjectManagementModuleFa
       memberships: ports.memberships,
       economyTasks: ports.economyTasks,
       awards: ports.activityAwards,
+    }),
+    new NotifyOverdueActivitiesUseCase({
+      scan: ports.overdueScan,
+      notifier: ports.overdueNotifier,
     }),
   )
 }

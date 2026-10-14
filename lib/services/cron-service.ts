@@ -53,10 +53,18 @@ export class CronService {
       await this.executeNightlySweep()
     }, { timezone: 'America/Sao_Paulo' })
 
+    // V5-8 (DEC-64): varredura diária de atraso — 08:00, para o gestor encontrar o aviso
+    // com o dia de trabalho começando. Uma notificação por atividade (guarda
+    // `overdueNotifiedAt`), líder + coordenadores/gerentes, com destaque no painel.
+    this.overdueScanJob = cron.schedule('0 8 * * *', async () => {
+      await this.executeOverdueScan()
+    }, { timezone: 'America/Sao_Paulo' })
+
     this.isInitialized = true
   }
 
   private nightlySweepJob: cron.ScheduledTask | null = null
+  private overdueScanJob: cron.ScheduledTask | null = null
 
   /**
    * Pausa todas as sessões ativas que cruzaram um horário de pausa agendado.
@@ -121,6 +129,31 @@ export class CronService {
   }
 
   /**
+   * Varredura diária de atraso (V5-8, DEC-64): atividade vencida e não aprovada vira
+   * UMA notificação prioritária (guarda `overdueNotifiedAt`), para o líder do projeto e
+   * os coordenadores/gerentes globais. Rotina sem pessoa — systemActor(OVERDUE_SCAN),
+   * o bypass declarado (DEC-54): a publicação desce para o `publishEvent`, que checa o
+   * ator, e o único chamador deste use case é este job — não existe rota.
+   */
+  async executeOverdueScan() {
+    try {
+      const { projectManagement } = getBackendComposition()
+      const result = await projectManagement.notifyOverdueActivities({
+        actor: systemActor(SYSTEM_REASONS.OVERDUE_SCAN),
+        now: new Date(),
+      })
+      if (result.notifiedActivities > 0) {
+        console.log(
+          `🔔 Varredura de atraso: ${result.notifiedActivities} atividade(s) notificada(s), ` +
+            `${result.recipientsNotified} destinatário(s).`,
+        )
+      }
+    } catch (error) {
+      console.error('❌ Erro ao executar varredura de atraso:', error)
+    }
+  }
+
+  /**
    * Para o serviço de cron
    */
   stop() {
@@ -133,6 +166,10 @@ export class CronService {
     if (this.nightlySweepJob) {
       this.nightlySweepJob.stop()
       this.nightlySweepJob = null
+    }
+    if (this.overdueScanJob) {
+      this.overdueScanJob.stop()
+      this.overdueScanJob = null
     }
     this.scheduledPauseJobs = []
     this.isInitialized = false

@@ -594,6 +594,9 @@ model notifications {
   message   String
   data      String?   // JSON data
   read      Boolean   @default(false)
+  // V5-8 (DEC-64): atraso de atividade é notificação URGENTE — o painel destaca por esta
+  // coluna, não pelo `type`. Toda notificação existente nasce `false` (default).
+  priority  Boolean   @default(false)
   createdAt DateTime  @default(now())
   readAt    DateTime?
   

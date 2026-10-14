@@ -72,6 +72,9 @@ export class PublishNotificationEventUseCase {
         title: command.title,
         message: command.message,
         data: payloadData,
+        // V5-8 (DEC-64): a flag chega à linha; ausente é `false` — as chamadas legadas
+        // (rota, publicadores de lab/relatório) não mudam de comportamento.
+        priority: command.priority ?? false,
       })),
     )
 

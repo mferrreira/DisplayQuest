@@ -28,6 +28,8 @@ const mocks = vi.hoisted(() => {
         message: "m",
         data: null,
         read: false,
+        // V5-8 (DEC-64): o adaptador real sempre devolve a flag — o fake espelha (DEC-90).
+        priority: false,
         createdAt: "2026-01-01T00:00:00.000Z",
         readAt: null,
       },
@@ -94,6 +96,8 @@ describe("GET /api/notifications", () => {
     expect(body.success).toBe(true);
     expect(body.notifications).toHaveLength(1);
     expect(body.notifications[0].id).toBe(1);
+    // V5-8 (DEC-64): a rota repassa o objeto do domínio cru — `priority` está na lista.
+    expect(body.notifications[0].priority).toBe(false);
   });
 
   it("?count=true returns only the unread count", async () => {

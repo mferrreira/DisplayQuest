@@ -45,6 +45,8 @@ export const SYSTEM_REASONS = {
   SCHEDULED_PAUSE: "SCHEDULED_PAUSE",
   /** `cron-service.ts` — resets last week's hours history. */
   WEEKLY_RESET: "WEEKLY_RESET",
+  /** `cron-service.ts` — daily overdue-activity scan (V5-8, DEC-64). */
+  OVERDUE_SCAN: "OVERDUE_SCAN",
   /** An internal publisher describing an event that already happened (lab issue, report). */
   SYSTEM_EVENT: "SYSTEM_EVENT",
 } as const;
