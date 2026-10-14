@@ -94,3 +94,19 @@ export function technicalReportFileUrl(
 ): string {
   return `/api/projects/${projectId}/technical-reports/${reportId}/file?userId=${userId}`
 }
+
+/**
+ * Rascunho de IA (V5-9c, DEC-139/152): o servidor monta o prompt com as três fontes e
+ * devolve o texto para o editor. Nada é salvo — salvar é decisão humana (PUT).
+ */
+export async function draftTechnicalReport(projectId: number, type: string): Promise<string> {
+  const payload = await request<{ draft?: string }>(
+    `/api/projects/${projectId}/technical-reports/${type}/draft`,
+    { method: "POST" },
+    "Erro ao gerar rascunho",
+  )
+  if (typeof payload.draft !== "string") {
+    throw new Error("Erro ao gerar rascunho")
+  }
+  return payload.draft
+}

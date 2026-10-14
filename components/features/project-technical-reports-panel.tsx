@@ -9,6 +9,7 @@ import { Download, Loader2 } from "lucide-react"
 import { useToast } from "@/contexts/use-toast"
 import { TECHNICAL_REPORT_TYPES, type TechnicalReportType } from "@/backend/domain"
 import {
+  draftTechnicalReport,
   generateTechnicalReports,
   listTechnicalReports,
   saveTechnicalReport,
@@ -29,6 +30,10 @@ import {
  * V5-9b: "Gerar DOCX" dispara a geração lote (um documento oficial por membro ATIVO,
  * DEC-139) e a tela mostra o download de cada arquivo gerado nesta sessão. O botão só
  * habilita com texto salvo — a mesma exigência do servidor (404), provada na rota.
+ *
+ * V5-9c: "Rascunhar com IA" pede o texto às três fontes do plano e o aplica no editor
+ * SEM salvar (salvar é decisão humana). O rascunho não atropela edição em andamento:
+ * texto digitado e não salvo é trabalho do humano e é preservado com aviso.
  */
 
 const TYPE_LABELS: Record<TechnicalReportType, string> = {
@@ -52,6 +57,7 @@ export function ProjectTechnicalReportsPanel({
   const [loading, setLoading] = useState(true)
   const [savingType, setSavingType] = useState<string | null>(null)
   const [generatingType, setGeneratingType] = useState<string | null>(null)
+  const [draftingType, setDraftingType] = useState<string | null>(null)
   // Arquivos gerados nesta sessão (a chave do bucket é estável e regenerar sobrescreve;
   // não há listagem de bucket na seam, então a tela anuncia o que acabou de gerar).
   const [generated, setGenerated] = useState<Record<string, GeneratedTechnicalReportFile[]>>({})
@@ -130,6 +136,38 @@ export function ProjectTechnicalReportsPanel({
     }
   }
 
+  async function handleDraft(type: TechnicalReportType) {
+    setDraftingType(type)
+    try {
+      const draft = await draftTechnicalReport(projectId, type)
+      const current = drafts[type] ?? ""
+      const savedContent = reports.get(type)?.content ?? ""
+      if (current !== "" && current !== savedContent) {
+        // O rascunho não atropela edição em andamento: o texto digitado e não salvo é
+        // trabalho do humano, e sobrescrevê-lo em silêncio perderia conteúdo.
+        toast({
+          title: "Rascunho não aplicado",
+          description: "O texto em edição não foi sobrescrito — salve ou limpe antes de rascunhar.",
+        })
+      } else {
+        setDrafts((currentDrafts) => ({ ...currentDrafts, [type]: draft }))
+        toast({
+          title: "Rascunho criado",
+          description: "Revise o texto — nada foi salvo até você clicar em Salvar.",
+        })
+      }
+    } catch (error) {
+      // Rejeição tratada (DEC-85).
+      toast({
+        title: "Erro",
+        description: error instanceof Error ? error.message : "Falha ao gerar rascunho",
+        variant: "destructive",
+      })
+    } finally {
+      setDraftingType(null)
+    }
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -152,6 +190,17 @@ export function ProjectTechnicalReportsPanel({
                 <Label className="text-sm font-medium">Relatório {label}</Label>
                 {canManage && (
                   <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={draftingType !== null}
+                      aria-label={`Rascunhar relatório ${label} com IA`}
+                      onClick={() => handleDraft(type)}
+                    >
+                      {draftingType === type && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Rascunhar com IA
+                    </Button>
                     <Button
                       type="button"
                       size="sm"

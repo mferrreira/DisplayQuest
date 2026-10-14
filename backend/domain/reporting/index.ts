@@ -72,3 +72,10 @@ export {
   type ReportBody,
   type TechnicalReportDocumentInput,
 } from "./technical-report-document-rules";
+export {
+  buildTechnicalReportDraftPrompt,
+  type ReportDraftPromptInput,
+  type ReportDraftSessionRow,
+  type ReportDraftTaskRow,
+  type ReportDraftActivityRow,
+} from "./report-draft-rules";

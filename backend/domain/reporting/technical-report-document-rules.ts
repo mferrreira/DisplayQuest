@@ -31,6 +31,8 @@ export interface ReportSection {
   officialLabel: string;
   /** Forma curta que o rascunho de IA é instruído a escrever e o humano digita. */
   matchKey: string;
+  /** Grafia de exibição da chave (usada no prompt da IA); o casamento é por `matchKey`. */
+  draftLabel: string;
 }
 
 export const REPORT_SECTIONS: readonly ReportSection[] = [
@@ -38,16 +40,19 @@ export const REPORT_SECTIONS: readonly ReportSection[] = [
     id: "descricao",
     officialLabel: "Descrição das Atividades Desenvolvidas pelo Estudante ( etapa/cronograma)",
     matchKey: "descrição das atividades",
+    draftLabel: "Descrição das Atividades",
   },
   {
     id: "resultados",
     officialLabel: "Principais Resultados Alcançados ( publicações, patentes, participações, outros):",
     matchKey: "principais resultados",
+    draftLabel: "Principais Resultados",
   },
   {
     id: "comentarios",
     officialLabel: "Comentários Adicionais ( dificuldades/ observações/sugestões/ outros):",
     matchKey: "comentários adicionais",
+    draftLabel: "Comentários Adicionais",
   },
 ];
 

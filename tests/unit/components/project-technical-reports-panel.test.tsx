@@ -35,6 +35,7 @@ const mocks = vi.hoisted(() => ({
   requests: [] as { method: string; path: string; body?: unknown }[],
   denyNextPut: false,
   denyNextGenerate: false,
+  aiFails: false,
 }));
 
 const NO_MEMBERS_MESSAGE = "O projeto não tem membros ativos — o relatório é gerado um documento por membro";
@@ -72,6 +73,15 @@ function recordingFetch(input: RequestInfo | URL, init?: RequestInit) {
         }),
         { status: 201 },
       ),
+    );
+  }
+
+  if (method === "POST" && path.includes("/draft")) {
+    if (mocks.aiFails) {
+      return Promise.resolve(new Response(JSON.stringify({ error: "IA indisponível: HTTP 503" }), { status: 502 }));
+    }
+    return Promise.resolve(
+      new Response(JSON.stringify({ draft: "Descrição das Atividades\nRascunho gerado pela IA." }), { status: 200 }),
     );
   }
 
@@ -119,6 +129,7 @@ beforeEach(() => {
   mocks.requests = [];
   mocks.denyNextPut = false;
   mocks.denyNextGenerate = false;
+  mocks.aiFails = false;
   vi.stubGlobal("fetch", vi.fn(recordingFetch));
   // Stub LOCAL: shim global em tests/setup.ts mudaria o caminho "mobile" de outros testes.
   vi.stubGlobal(
@@ -232,5 +243,57 @@ describe("painel de relatórios técnicos (V5-9, DEC-70/139)", () => {
 
     expect(await screen.findByDisplayValue("Texto parcial salvo")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /gerar documentos/i })).not.toBeInTheDocument();
+  });
+
+  it("V5-9c: 'Rascunhar com IA' chama a rota e aplica o texto no editor sem salvar", async () => {
+    const user = userEvent.setup({ delay: null });
+    renderPanel(true);
+
+    await user.click(await screen.findByRole("button", { name: "Rascunhar relatório Parcial com IA" }));
+
+    await waitFor(() => {
+      const post = mocks.requests.find((r) => r.method === "POST" && r.path.includes("/draft"));
+      expect(post?.path).toBe(`/api/projects/${PROJECT}/technical-reports/parcial/draft`);
+    });
+    // O texto da IA entra na textarea (o conteúdo atual era o salvo, então é aplicável)...
+    // `toHaveValue` lê o valor cru: o normalizador do findByDisplayValue colapsa o \n.
+    const textarea = await screen.findByLabelText("Texto do relatório Parcial");
+    await waitFor(() => expect(textarea).toHaveValue("Descrição das Atividades\nRascunho gerado pela IA."));
+    // ...e o aviso diz que nada foi salvo — salvar é decisão humana.
+    expect(await screen.findByText("Revise o texto — nada foi salvo até você clicar em Salvar.")).toBeInTheDocument();
+    // Nenhuma PUT saiu.
+    expect(mocks.requests.some((r) => r.method === "PUT")).toBe(false);
+  });
+
+  it("V5-9c: edição em andamento não é atropelada — o rascunho não é aplicado e o texto fica", async () => {
+    const user = userEvent.setup({ delay: null });
+    renderPanel(true);
+
+    const textarea = await screen.findByLabelText("Texto do relatório Técnico-final");
+    await user.type(textarea, "Meu texto em edição");
+
+    await user.click(screen.getByRole("button", { name: "Rascunhar relatório Técnico-final com IA" }));
+
+    expect(await screen.findByText("O texto em edição não foi sobrescrito — salve ou limpe antes de rascunhar.")).toBeInTheDocument();
+    expect(textarea).toHaveValue("Meu texto em edição");
+  });
+
+  it("V5-9c: a falha 502 da IA chega na tela com a frase do servidor", async () => {
+    const user = userEvent.setup({ delay: null });
+    mocks.aiFails = true;
+    renderPanel(true);
+
+    await user.click(await screen.findByRole("button", { name: "Rascunhar relatório Parcial com IA" }));
+
+    expect(await screen.findByText("IA indisponível: HTTP 503")).toBeInTheDocument();
+    // O texto salvo continua no editor.
+    expect(screen.getByDisplayValue("Texto parcial salvo")).toBeInTheDocument();
+  });
+
+  it("V5-9c: sem gestão não há botão de rascunhar", async () => {
+    renderPanel(false);
+
+    expect(await screen.findByDisplayValue("Texto parcial salvo")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /rascunhar/i })).not.toBeInTheDocument();
   });
 });

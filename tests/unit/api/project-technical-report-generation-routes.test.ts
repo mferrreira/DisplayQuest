@@ -18,6 +18,8 @@ import { NextRequest } from "next/server";
 import { createReportingModule } from "@/backend/modules/reporting";
 import type { TechnicalReportAccessPort } from "@/backend/modules/reporting/application/ports/technical-report-access.port";
 import type { TechnicalReportDocumentPort } from "@/backend/modules/reporting/application/ports/technical-report-document.port";
+import type { ReportDraftPort } from "@/backend/modules/reporting/application/ports/report-draft.port";
+import type { TechnicalReportSourcesPort } from "@/backend/modules/reporting/application/ports/technical-report-sources.port";
 import type {
   TechnicalReportGenerationPort,
   TechnicalReportMemberRow,
@@ -47,6 +49,8 @@ const mocks = vi.hoisted(() => ({
   noBucket: false,
   puts: [] as Array<{ key: string; contentType: string; bytes: number }>,
   blobs: new Map<string, Uint8Array>(),
+  draftPrompts: [] as string[],
+  aiFails: false,
 }));
 
 vi.mock("@/lib/database/prisma", () => ({
@@ -159,12 +163,37 @@ vi.mock("@/backend/composition/root", () => {
     },
   };
 
+  // V5-9c: as três fontes e a IA são portas falsas — o teste de rota não toca rede.
+  const sources: TechnicalReportSourcesPort = {
+    async listSessionLogs() {
+      return [{ date: "2026-05-10", userName: "Bento Lima", activity: "Revisão bibliográfica", duration: 3.5, location: null }];
+    },
+    async listProjectTasks() {
+      return [{ title: "Montar o dataset", status: "done", completedAt: "2026-06-02", points: 15 }];
+    },
+    async listCronogramaActivities() {
+      return [{ description: "Levantamento bibliográfico", firstMonth: "2026-03", lastMonth: "2026-05", status: "DONE", evidenceCount: 2 }];
+    },
+  };
+
+  const draftPort: ReportDraftPort = {
+    async generateDraft(prompt) {
+      mocks.draftPrompts.push(prompt);
+      if (mocks.aiFails) {
+        throw new Error("IA indisponível: HTTP 503");
+      }
+      return "Descrição das Atividades\nRascunho da IA.";
+    },
+  };
+
   const reporting = createReportingModule({
     ports: {
       technicalReports,
       technicalReportAccess: access,
       technicalReportGeneration: generation,
       technicalReportDocument: docx,
+      technicalReportSources: sources,
+      reportDraft: draftPort,
     },
   });
   return {
@@ -187,6 +216,7 @@ vi.mock("@/lib/auth/server-auth", () => ({
 
 import { POST } from "@/app/api/projects/[id]/technical-reports/[segment]/generate/route";
 import { GET } from "@/app/api/projects/[id]/technical-reports/[segment]/file/route";
+import { POST as POST_DRAFT } from "@/app/api/projects/[id]/technical-reports/[segment]/draft/route";
 
 function login(roles: string[], id = 8) {
   mocks.session = { id, email: "user@lab.com", name: "Usuário", roles, status: "active" };
@@ -227,6 +257,8 @@ beforeEach(() => {
   mocks.projectExists = true;
   mocks.leaderId = 7;
   mocks.membershipRoles = null;
+  mocks.draftPrompts.length = 0;
+  mocks.aiFails = false;
   login(["PESQUISADOR"], 7); // default: o líder do projeto
   seedReport();
 });
@@ -359,5 +391,64 @@ describe("GET /api/projects/[id]/technical-reports/[reportId]/file (V5-9b)", () 
     mocks.session = null;
     const response = await GET(fileRequest("9"), { params: Promise.resolve({ id: "3", segment: "1" }) });
     expect(response.status).toBe(401);
+  });
+});
+
+describe("POST /api/projects/[id]/technical-reports/[segment]/draft (V5-9c)", () => {
+  function draftRequest(type = "parcial") {
+    return new NextRequest(`http://localhost:3000/api/projects/3/technical-reports/${type}/draft`, {
+      method: "POST",
+    });
+  }
+
+  function draftContext(type = "parcial") {
+    return { params: Promise.resolve({ id: "3", segment: type }) };
+  }
+
+  it("líder rascunha: 200 com o texto da IA e o prompt chegou montado com as fontes", async () => {
+    const response = await POST_DRAFT(draftRequest(), draftContext());
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ draft: "Descrição das Atividades\nRascunho da IA." });
+
+    expect(mocks.draftPrompts).toHaveLength(1);
+    expect(mocks.draftPrompts[0]).toContain("Revisão bibliográfica");
+    expect(mocks.draftPrompts[0]).toContain("Montar o dataset");
+    expect(mocks.draftPrompts[0]).toContain("Levantamento bibliográfico");
+  });
+
+  it("outsider leva 403 com a MESMA frase e a IA não é chamada", async () => {
+    login(["PESQUISADOR"], 8);
+    mocks.membershipRoles = ["VOLUNTARIO"];
+
+    const response = await POST_DRAFT(draftRequest(), draftContext());
+    expect(response.status).toBe(403);
+    expect((await response.json()).error).toBe(
+      "Usuário não tem permissão para editar o relatório técnico deste projeto",
+    );
+    expect(mocks.draftPrompts).toHaveLength(0);
+  });
+
+  it("projeto ausente é 404; tipo inválido é 400 com a frase única", async () => {
+    mocks.projectExists = false;
+    expect((await POST_DRAFT(draftRequest(), draftContext())).status).toBe(404);
+
+    mocks.projectExists = true;
+    const bad = await POST_DRAFT(draftRequest("mensal"), draftContext("mensal"));
+    expect(bad.status).toBe(400);
+    expect((await bad.json()).error).toBe(
+      'Tipo de relatório técnico inválido: use "parcial", "tecnico-final" ou "final"',
+    );
+  });
+
+  it("falha da IA é 502 com a frase do adaptador — não 500 legado", async () => {
+    mocks.aiFails = true;
+    const response = await POST_DRAFT(draftRequest(), draftContext());
+    expect(response.status).toBe(502);
+    expect((await response.json()).error).toBe("IA indisponível: HTTP 503");
+  });
+
+  it("desautenticado é 401", async () => {
+    mocks.session = null;
+    expect((await POST_DRAFT(draftRequest(), draftContext())).status).toBe(401);
   });
 });

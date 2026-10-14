@@ -222,6 +222,96 @@ describe("G4 roundtrip — relatório técnico (isolated test DB)", () => {
     }
   });
 
+  it("rascunho real: as três fontes chegam ao prompt e sessão fora do período fica fora (V5-9c)", async () => {
+    // Fontes REAIS (Prisma), IA falsa (porta injetável — DEC-152: teste nunca toca a IA).
+    const prompts: string[] = [];
+    const reportingComIAFalsa = createReportingModule({
+      ports: {
+        reportDraft: {
+          async generateDraft(prompt) {
+            prompts.push(prompt);
+            return "Descrição das Atividades\nRascunho do roundtrip.";
+          },
+        },
+      },
+    });
+
+    const bolsista = await prisma.users.findFirst({
+      where: { email: { contains: `g4-tecrep-bolsista-${stamp}` } },
+      select: { id: true, name: true },
+    });
+    expect(bolsista).not.toBeNull();
+
+    await prisma.work_sessions.create({
+      data: {
+        userId: bolsista!.id,
+        userName: bolsista!.name,
+        projectId,
+        startTime: new Date("2026-05-10T12:00:00.000Z"), // dentro do período (jan/2026–hoje)
+        activity: "Revisão bibliográfica real",
+        duration: 3.5,
+        status: "completed",
+      },
+    });
+    await prisma.work_sessions.create({
+      data: {
+        userId: bolsista!.id,
+        userName: bolsista!.name,
+        projectId,
+        startTime: new Date("2025-12-01T12:00:00.000Z"), // antes do projeto — fora
+        activity: "Sessão fora do período",
+        duration: 2,
+        status: "completed",
+      },
+    });
+    await prisma.tasks.create({
+      data: {
+        title: `G4 TecRep tarefa draft ${stamp}`,
+        status: "done",
+        priority: "medium",
+        projectId,
+        completed: true,
+        completedAt: new Date("2026-06-02T12:00:00.000Z"),
+        points: 15,
+      },
+    });
+    await prisma.project_activities.create({
+      data: {
+        projectId,
+        order: 99,
+        description: `G4 TecRep etapa draft ${stamp}`,
+        firstMonth: "2026-02",
+        lastMonth: "2026-04",
+      },
+    });
+
+    try {
+      const { draft } = await reportingComIAFalsa.draftTechnicalReport({
+        projectId,
+        actorId: leaderId,
+        actorRoles: ["PESQUISADOR"],
+        type: "parcial",
+        now: new Date("2026-10-14T21:00:00-03:00"),
+      });
+      expect(draft).toBe("Descrição das Atividades\nRascunho do roundtrip.");
+
+      expect(prompts).toHaveLength(1);
+      const prompt = prompts[0];
+      // As três fontes, com dados reais do banco.
+      expect(prompt).toContain("Revisão bibliográfica real");
+      expect(prompt).toContain(`G4 TecRep tarefa draft ${stamp}`);
+      expect(prompt).toContain(`G4 TecRep etapa draft ${stamp}`);
+      expect(prompt).toContain("2026-02");
+      // A janela é o período do relatório (DEC-167): sessão de 2025 não entra.
+      expect(prompt).not.toContain("Sessão fora do período");
+    } finally {
+      // `work_sessions` e `tasks` NÃO cascadeiam com o projeto (Restrict) — o delete do
+      // projeto no afterAll falharia se estas linhas ficassem.
+      await prisma.work_sessions.deleteMany({ where: { projectId } });
+      await prisma.tasks.deleteMany({ where: { projectId } });
+    }
+  });
+
   it("apagar o projeto apaga os relatórios (cascade)", async () => {
     await prisma.projects.delete({ where: { id: projectId } });
     const rows = await prisma.technical_reports.findMany({ where: { projectId } });
