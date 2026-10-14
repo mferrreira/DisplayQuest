@@ -133,7 +133,9 @@ describe("wizard de criação de projeto", () => {
 
     await user.click(screen.getByRole("button", { name: "Adicionar atividade" }));
     await user.type(screen.getByLabelText("Descrição da atividade 1"), "Revisão da literatura");
-    // Estende mar → mai: a linha é contínua e a recompensa acompanha (DEC-126d/103).
+    // DEC-172: a linha nasce sem marca. Marcar mar e depois estender até mai: a linha é
+    // contínua e a recompensa acompanha (DEC-126d/103).
+    await user.click(screen.getByRole("button", { name: "mar/2026 — atividade 1" }));
     await user.click(screen.getByRole("button", { name: "mai/2026 — atividade 1" }));
     expect(screen.getByText("300 pts")).toBeInTheDocument();
 
@@ -146,6 +148,49 @@ describe("wizard de criação de projeto", () => {
         { description: "Revisão da literatura", firstMonth: "2026-03", lastMonth: "2026-05" },
       ],
     });
+  });
+
+  it("a atividade começa no mês clicado, não no primeiro mês da janela (DEC-172)", async () => {
+    const user = userEvent.setup({ delay: null });
+    renderDialog();
+
+    fireEvent.change(screen.getByLabelText("Início do projeto"), { target: { value: "2026-03-01" } });
+    fireEvent.change(screen.getByLabelText("Término do projeto"), { target: { value: "2026-08-31" } });
+    await goToCronogramaStep(user);
+
+    await user.click(screen.getByRole("button", { name: "Adicionar atividade" }));
+    await user.type(screen.getByLabelText("Descrição da atividade 1"), "Coleta em maio");
+    await user.click(screen.getByRole("button", { name: "mai/2026 — atividade 1" }));
+
+    // Só mai marcado — nada de mar→mai automático.
+    expect(screen.getByRole("button", { name: "mar/2026 — atividade 1" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+    expect(screen.getByText("100 pts")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Criar" }));
+    await waitFor(() => expect(captured.payload).not.toBeNull());
+    expect(captured.payload!.cronograma!.activities).toEqual([
+      { description: "Coleta em maio", firstMonth: "2026-05", lastMonth: "2026-05" },
+    ]);
+  });
+
+  it("linha com nome mas sem mês bloqueia a criação e nomeia a linha (DEC-172)", async () => {
+    const user = userEvent.setup({ delay: null });
+    renderDialog();
+
+    fireEvent.change(screen.getByLabelText("Início do projeto"), { target: { value: "2026-03-01" } });
+    fireEvent.change(screen.getByLabelText("Término do projeto"), { target: { value: "2026-08-31" } });
+    await goToCronogramaStep(user);
+
+    await user.click(screen.getByRole("button", { name: "Adicionar atividade" }));
+    await user.type(screen.getByLabelText("Descrição da atividade 1"), "Esqueci os meses");
+
+    await user.click(screen.getByRole("button", { name: "Criar" }));
+
+    expect(await screen.findByText(/Atividade 1: a atividade precisa de pelo menos um mês marcado/)).toBeInTheDocument();
+    expect(captured.payload).toBeNull();
   });
 
   it("pular o passo deixa a criação sem a chave no corpo (regra 9)", async () => {
@@ -171,7 +216,7 @@ describe("wizard de criação de projeto", () => {
     expect(captured.payload!.cronograma).toBeUndefined();
   });
 
-  it("desmarcar a única marca é recusado com a frase do domínio", async () => {
+  it("rascunho pode desmarcar a única marca e voltar ao estado sem mês (DEC-172)", async () => {
     const user = userEvent.setup({ delay: null });
     renderDialog();
     await goToCronogramaStep(user);
@@ -181,8 +226,21 @@ describe("wizard de criação de projeto", () => {
     await user.click(
       screen.getByRole("button", { name: `${monthColumnLabel(firstMonth)} — atividade 1` }),
     );
+    expect(screen.getByRole("button", { name: `${monthColumnLabel(firstMonth)} — atividade 1` })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
 
-    expect(screen.getByText(ACTIVITY_MIN_MONTH_MESSAGE)).toBeInTheDocument();
+    // Clicar no único mês marcado desmarca: a linha-rascunho volta a "sem mês", sem recusa.
+    await user.click(
+      screen.getByRole("button", { name: `${monthColumnLabel(firstMonth)} — atividade 1` }),
+    );
+    expect(screen.getByRole("button", { name: `${monthColumnLabel(firstMonth)} — atividade 1` })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+    expect(screen.getByText("Sem mês marcado — clique num mês para começar")).toBeInTheDocument();
+    expect(screen.queryByText(ACTIVITY_MIN_MONTH_MESSAGE)).not.toBeInTheDocument();
   });
 
   it("o responsável sugerido é quem vai participar do projeto", async () => {

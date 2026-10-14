@@ -67,8 +67,14 @@ export interface CronogramaActivityRow {
   order: number
   description: string
   responsibleId: number | null
-  firstMonth: string
-  lastMonth: string
+  /**
+   * V5-13 (DEC-172): `null` é a linha-rascunho SEM mês marcado — a linha nova nasce assim,
+   * porque a atividade pode começar em qualquer mês da janela (o dono mediu o defeito: a linha
+   * nascia marcada no primeiro mês e clicar no mês 5 estendia de 1 até 5). Persistida, a linha
+   * nunca é nula: o servidor exige pelo menos uma marca (`ACTIVITY_MIN_MONTH_MESSAGE`).
+   */
+  firstMonth: string | null
+  lastMonth: string | null
   status?: string
   /** V5-7a (DEC-76): quem pediu e quando — o diálogo de conclusão mostra o histórico. */
   requestedBy?: number | null
@@ -234,9 +240,18 @@ export function CronogramaEditor({
               </TableHeader>
               <TableBody>
                 {activities.map((activity) => {
-                  const marked = new Set(monthKeysBetween(activity.firstMonth, activity.lastMonth))
-                  const reward = activityReward(activity.firstMonth, activity.lastMonth)
-                  const markedMonths = countActivityMonths(activity.firstMonth, activity.lastMonth)
+                  const marked =
+                    activity.firstMonth !== null && activity.lastMonth !== null
+                      ? new Set(monthKeysBetween(activity.firstMonth, activity.lastMonth))
+                      : new Set<string>()
+                  const reward =
+                    activity.firstMonth !== null && activity.lastMonth !== null
+                      ? activityReward(activity.firstMonth, activity.lastMonth)
+                      : null
+                  const markedMonths =
+                    activity.firstMonth !== null && activity.lastMonth !== null
+                      ? countActivityMonths(activity.firstMonth, activity.lastMonth)
+                      : 0
                   const statusLabel = activity.status
                     ? ACTIVITY_STATUS_LABELS[activity.status as keyof typeof ACTIVITY_STATUS_LABELS] ??
                       activity.status
@@ -256,9 +271,15 @@ export function CronogramaEditor({
                           onBlur={() => onActivityChange(activity, {}, "commit")}
                         />
                         <p className="mt-1 text-xs text-muted-foreground">
-                          {monthColumnLabel(activity.firstMonth)} → {monthColumnLabel(activity.lastMonth)}
-                          {" · "}
-                          {markedMonths} {markedMonths === 1 ? "mês" : "meses"}
+                          {activity.firstMonth !== null && activity.lastMonth !== null ? (
+                            <>
+                              {monthColumnLabel(activity.firstMonth)} → {monthColumnLabel(activity.lastMonth)}
+                              {" · "}
+                              {markedMonths} {markedMonths === 1 ? "mês" : "meses"}
+                            </>
+                          ) : (
+                            "Sem mês marcado — clique num mês para começar"
+                          )}
                         </p>
                       </TableCell>
 
@@ -316,7 +337,7 @@ export function CronogramaEditor({
                       </TableCell>
 
                       <TableCell className="text-center">
-                        <Badge variant="secondary">{reward} pts</Badge>
+                        <Badge variant="secondary">{reward === null ? "—" : `${reward} pts`}</Badge>
                         {statusLabel ? (
                           <p className="mt-1 text-xs text-muted-foreground">{statusLabel}</p>
                         ) : null}

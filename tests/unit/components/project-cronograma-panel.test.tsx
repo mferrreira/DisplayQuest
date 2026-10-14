@@ -541,30 +541,78 @@ describe("painel de cronograma", () => {
     );
   });
 
-  it("linha nova só é escrita quando a descrição é confirmada, sem ordem no corpo", async () => {
+  it("linha nova nasce SEM marca e só é escrita quando descrição e mês existem (DEC-172)", async () => {
     const user = userEvent.setup({ delay: null });
     renderPanel();
     await screen.findByDisplayValue("Revisão da literatura");
 
     await user.click(screen.getByRole("button", { name: "Adicionar atividade" }));
-    // Sem descrição não há POST: linha vazia poluiria o cronograma e o domínio recusa.
+    // Sem descrição e sem mês não há POST: linha vazia poluiria o cronograma e o domínio recusa.
     expect(requestsFor("POST", "/activities")).toHaveLength(0);
 
-    // A semente tem 3 linhas (401/402/403) — a linha nova nasce na ordem 4.
+    // A semente tem 3 linhas (401/402/403) — a linha nova nasce na ordem 4, sem marca.
     const input = screen.getByLabelText("Descrição da atividade 4");
     await user.type(input, "Análise dos resultados");
     await user.tab();
+    // Descrição sozinha ainda não salva: a linha-rascunho espera o mês (DEC-172).
+    expect(requestsFor("POST", "/activities")).toHaveLength(0);
+    expect(screen.getByText("Sem mês marcado — clique num mês para começar")).toBeInTheDocument();
+
+    // Marcar é o que completa a linha: o POST sai com o mês clicado.
+    await user.click(screen.getByRole("button", { name: "set/2026 — atividade 4" }));
 
     await waitFor(() => expect(requestsFor("POST", "/activities")).toHaveLength(1));
     const body = requestsFor("POST", "/activities")[0].json!;
     expect(body).toMatchObject({
       description: "Análise dos resultados",
-      firstMonth: "2026-03",
-      lastMonth: "2026-03",
+      firstMonth: "2026-09",
+      lastMonth: "2026-09",
       responsibleId: null,
     });
     // DEC-156d: a ordem é atribuída pelo servidor; a tela não manda número de linha.
     expect(body.order).toBeUndefined();
+  });
+
+  it("a atividade começa no mês clicado — clicar set/2026 marca SÓ setembro (DEC-172)", async () => {
+    const user = userEvent.setup({ delay: null });
+    renderPanel();
+    await screen.findByDisplayValue("Revisão da literatura");
+
+    await user.click(screen.getByRole("button", { name: "Adicionar atividade" }));
+    await user.click(screen.getByRole("button", { name: "set/2026 — atividade 4" }));
+
+    // Nada de "do primeiro mês até setembro": só a coluna clicada fica marcada.
+    expect(screen.getByRole("button", { name: "mar/2026 — atividade 4" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+    expect(screen.getByRole("button", { name: "set/2026 — atividade 4" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByText("set/2026 → set/2026 · 1 mês")).toBeInTheDocument();
+  });
+
+  it("rascunho pode trocar o mês de início: desmarcar a única marca devolve a linha a sem-mês", async () => {
+    const user = userEvent.setup({ delay: null });
+    renderPanel();
+    await screen.findByDisplayValue("Revisão da literatura");
+
+    await user.click(screen.getByRole("button", { name: "Adicionar atividade" }));
+    await user.click(screen.getByRole("button", { name: "mar/2026 — atividade 4" }));
+    expect(screen.getByRole("button", { name: "mar/2026 — atividade 4" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+
+    // Clicar no único mês marcado desmarca — e o POST ainda não saiu (descrição vazia).
+    await user.click(screen.getByRole("button", { name: "mar/2026 — atividade 4" }));
+    expect(screen.getByRole("button", { name: "mar/2026 — atividade 4" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+    expect(requestsFor("POST", "/activities")).toHaveLength(0);
+    expect(screen.getByText("Sem mês marcado — clique num mês para começar")).toBeInTheDocument();
   });
 
   it("escolher o responsável escreve só o campo que mudou", async () => {

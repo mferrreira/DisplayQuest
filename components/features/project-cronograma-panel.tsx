@@ -208,9 +208,10 @@ export function ProjectCronogramaPanel({ projectId, canManage, leaderId }: Proje
   }
 
   function handleAddActivity() {
-    // A linha nova nasce no primeiro mês da janela: sem marca não há linha, e o domínio não tem
-    // estado "sem mês".
-    const month = months[0] ?? today.slice(0, 7)
+    // V5-13 (DEC-172): a linha nova nasce SEM marca. Antes ela nascia marcada no primeiro mês
+    // da janela, e clicar no mês 5 estendia de 1 até 5 — a atividade não conseguia começar num
+    // mês posterior. Sem marca a linha é rascunho: só vira linha do projeto quando descrição e
+    // pelo menos um mês existem (o servidor exige os dois).
     setActivities((current) => [
       ...current,
       {
@@ -218,8 +219,8 @@ export function ProjectCronogramaPanel({ projectId, canManage, leaderId }: Proje
         order: nextCronogramaOrder(current.map((activity) => activity.order)),
         description: "",
         responsibleId: null,
-        firstMonth: month,
-        lastMonth: month,
+        firstMonth: null,
+        lastMonth: null,
       },
     ])
   }
@@ -266,7 +267,9 @@ export function ProjectCronogramaPanel({ projectId, canManage, leaderId }: Proje
     const description = activity.description.trim()
 
     if (activity.id === null) {
-      if (description === "") return
+      // Linha-rascunho (V5-13, DEC-172): só é escrita quando descrição E mês existem. O POST
+      // sem marca seria o 400 do servidor (`ACTIVITY_MIN_MONTH_MESSAGE`) — a tela não empurra.
+      if (description === "" || activity.firstMonth === null || activity.lastMonth === null) return
       try {
         const created = await createProjectActivity(projectId, {
           description,
@@ -355,18 +358,32 @@ export function ProjectCronogramaPanel({ projectId, canManage, leaderId }: Proje
 
   async function handleToggleMonth(activity: CronogramaActivityRow, monthKey: string) {
     const next = toggleActivityMonthRange(
-      { firstMonth: activity.firstMonth, lastMonth: activity.lastMonth },
+      activity.firstMonth !== null && activity.lastMonth !== null
+        ? { firstMonth: activity.firstMonth, lastMonth: activity.lastMonth }
+        : null,
       monthKey,
     )
 
     if (next === null) {
-      // A linha não tem estado "sem mês": apagar a última marca é recusado, não silencioso.
+      if (activity.id === null) {
+        // Rascunho pode voltar a estar sem marca (DEC-172): o usuário trocou o mês de início e
+        // apagou a marca errada. Persistida, a linha nunca fica sem mês — a recusa é a frase
+        // congelada do domínio e a linha não muda.
+        setActivities((current) =>
+          current.map((row) => (row === activity ? { ...row, firstMonth: null, lastMonth: null } : row)),
+        )
+        return
+      }
       toast({ title: "Ação não permitida", description: ACTIVITY_MIN_MONTH_MESSAGE })
       return
     }
 
     if (activity.id === null) {
-      setActivities((current) => current.map((row) => (row === activity ? { ...row, ...next } : row)))
+      const draft = { ...activity, ...next }
+      setActivities((current) => current.map((row) => (row === activity ? draft : row)))
+      // Marcar é o que completa a linha-rascunho: se a descrição já existe, o POST sai daqui —
+      // o usuário não precisa voltar ao campo de descrição para salvar.
+      if (draft.description.trim() !== "") void commitActivity(draft)
       return
     }
 

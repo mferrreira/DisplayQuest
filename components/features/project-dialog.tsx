@@ -296,8 +296,8 @@ export function ProjectDialog({ open, onOpenChange, project = null }: ProjectDia
   }
 
   function handleAddCronogramaActivity() {
-    // Sem mês marcado não existe linha: a atividade nova nasce no primeiro mês da janela.
-    const month = cronogramaMonths[0] ?? today.slice(0, 7)
+    // V5-13 (DEC-172): a linha nova nasce SEM marca — a atividade pode começar em qualquer mês.
+    // A linha só entra no corpo da criação quando tem descrição e pelo menos um mês marcado.
     setCronogramaActivities((current) => [
       ...current,
       {
@@ -305,8 +305,8 @@ export function ProjectDialog({ open, onOpenChange, project = null }: ProjectDia
         order: nextCronogramaOrder(current.map((activity) => activity.order)),
         description: "",
         responsibleId: null,
-        firstMonth: month,
-        lastMonth: month,
+        firstMonth: null,
+        lastMonth: null,
       },
     ])
   }
@@ -347,13 +347,18 @@ export function ProjectDialog({ open, onOpenChange, project = null }: ProjectDia
 
   function handleCronogramaToggleMonth(activity: CronogramaActivityRow, monthKey: string) {
     const next = toggleActivityMonthRange(
-      { firstMonth: activity.firstMonth, lastMonth: activity.lastMonth },
+      activity.firstMonth !== null && activity.lastMonth !== null
+        ? { firstMonth: activity.firstMonth, lastMonth: activity.lastMonth }
+        : null,
       monthKey,
     )
+    // No wizard toda linha é rascunho: desmarcar a única marca devolve a linha ao estado
+    // "sem mês" (DEC-172), e a validação da entrega é o `cronogramaSeed`.
     if (next === null) {
-      // A linha não tem estado "sem mês". Desmarcar a única marca é recusado com a frase do
-      // domínio, não ignorado em silêncio.
-      setError(ACTIVITY_MIN_MONTH_MESSAGE)
+      setError(null)
+      setCronogramaActivities((current) =>
+        current.map((row) => (row === activity ? { ...row, firstMonth: null, lastMonth: null } : row)),
+      )
       return
     }
     setError(null)
@@ -377,12 +382,20 @@ export function ProjectDialog({ open, onOpenChange, project = null }: ProjectDia
         description: goal.description.trim(),
         ...(goal.target.trim() === "" ? {} : { target: Number(goal.target) }),
       }))
+    // V5-13 (DEC-172): linha com nome mas sem mês é entrega incompleta — a recusa nomeia a
+    // linha com a frase congelada do domínio, em vez de mandar meses nulos para o 400 do servidor.
+    const incomplete = cronogramaActivities.find(
+      (activity) => activity.description.trim() !== "" && activity.firstMonth === null,
+    )
+    if (incomplete) {
+      throw new Error(`Atividade ${incomplete.order}: ${ACTIVITY_MIN_MONTH_MESSAGE.toLowerCase()}`)
+    }
     const activities = cronogramaActivities
       .filter((activity) => activity.description.trim() !== "")
       .map((activity) => ({
         description: activity.description.trim(),
-        firstMonth: activity.firstMonth,
-        lastMonth: activity.lastMonth,
+        firstMonth: activity.firstMonth!,
+        lastMonth: activity.lastMonth!,
         ...(activity.responsibleId === null ? {} : { responsibleId: activity.responsibleId }),
       }))
     return goals.length > 0 || activities.length > 0 ? { goals, activities } : undefined
