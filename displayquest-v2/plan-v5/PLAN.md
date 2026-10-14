@@ -182,9 +182,10 @@ campos nomeados; o sistema **preenche**.
   `estudante_nome`, `estudante_curso`, `modalidade`, `instituicao_fomento`,
   `data_relatorio`.
 - **Os dados de exemplo não sobrevivem à cópia marcada:** "Guilherme de Araújo Carneiro" e
-  "Bel em Sistemas de Informação" viram `{{estudante_nome}}`/`{{estudante_curso}}`. Quantos
-  relatórios por projeto é o **ASK-V5-06**, mas um nome real não pode sair em documento
-  entregue.
+  "Bel em Sistemas de Informação" viram `{{estudante_nome}}`/`{{estudante_curso}}`. Um nome
+  real não pode sair em documento entregue. O "quantos relatórios por projeto" foi respondido
+  em 2026-10-13 (**DEC-139**): um registro por projeto × tipo, e o DOCX é gerado uma vez por
+  membro a partir do mesmo texto.
 - **Fora do V5-1a, de propósito:** a linha de tipo (`( ) Relatório Final (  ) Relatório
   Parcial`) e as 3 tabelas vazias continuam sem marcação — são trabalho do V5-9, e quando
   ele acrescentar comandos a lista congelada no guarda cresce junto.
@@ -203,8 +204,10 @@ módulos pagos.
 `prisma/schema.prisma`): `CPF`, `matrícula`, `curso`, **modalidade de IC**
 (BIC/BIC-Jr/BITI/ICV), **instituição de fomento** (CNPQ/FAPEMIG/outra), nível
 (médio/graduação/pós), **nº PROPPI**. `users` tem nome, email, points, avatar, bio;
-`project_members` tem só `projectId`, `userId`, `joinedAt`, `roles`. O V5-4 já previa
-`matrícula` e carga horária em `project_members`; o resto é aberto (ASK-V5-07).
+`project_members` tem só `projectId`, `userId`, `joinedAt`, `roles`. Respondido em
+2026-10-13 (**DEC-138**, **DEC-140**): os seis campos de pessoa vão em `users`, o nº PROPPI
+vai em `projects.proppiNumber`, e a carga horária é coluna do vínculo
+(`project_members.cargaHoraria`) — não deriva de `users.weekHours`.
 
 ## 2. Decisões do dono
 
@@ -273,6 +276,26 @@ imagens/pdf/vídeo, sem migrar os dois roots legados) **continua valendo inteiro
 | D-AC | Qual servidor S3-compatible? | **SeaweedFS** (`chrislusf/seaweedfs`), em modo `mini` (master + volume + filer + S3 num processo, o modo que o próprio entrypoint da imagem usa), pinado por **digest** porque só existem as tags `latest`/`dev` (nenhum semver). O MinIO está **EOL** — repo arquivado em 2026-04-25 (EOL fev/2026) e as imagens oficiais saíram do Docker Hub, do `quay.io` e do `ghcr.io`: `docker manifest inspect` falha nos três, medido em 2026-10-13 | **DEC-131** |
 | D-AD | Nomes das variáveis de ambiente | **`S3_*`** (`S3_ENDPOINT`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_BUCKET`, `S3_REGION`, `S3_FORCE_PATH_STYLE`), não `MINIO_*` — o seam é do **protocolo**, não do servidor, e o servidor já mudou uma vez. `S3_ACCESS_KEY`/`S3_SECRET_KEY` são obrigatórios no compose (`${VAR:?}`) e entram no `npm run check:env` | **DEC-131** |
 
+### 2.6 Rodada de alinhamento de 2026-10-13 (D-AE..D-AN → DEC-138..146), antes do V5-4
+
+O dono pediu para alinhar **todas** as perguntas abertas antes de o plano continuar. As duas
+do plan-v5 (`ASK-V5-06`, `ASK-V5-07`) e quatro decisões que estavam abertas em outros registros
+(GAP-05 e GAP-06 do clean-arch, o seam órfão do plan-v3, a largada do plan-v6), mais dois
+achados que eu medi e não tinham ASK escrito.
+
+| # | Pergunta | Escolhida | DEC |
+|---|---|---|---|
+| D-AE | Onde vivem CPF, matrícula, curso, modalidade de IC, instituição de fomento e nível? | **Tudo em `users`** — dado da pessoa, não do vínculo. Custo aceito e registrado: modalidade e fomento deixam de poder mudar de projeto para projeto | **DEC-138** |
+| D-AF | Quem escreve esses campos, e quem lê o CPF? | Escrevem a **própria pessoa e a gestão** (o gate do perfil, `self` OU `MANAGE_USERS`). **CPF** é o único com leitura restrita (próprio + gestão); curso, modalidade, fomento e nível seguem a leitura aberta do perfil | **DEC-138** |
+| D-AG | O relatório técnico é por projeto ou por participante? | **Por projeto × tipo** (a DEC-70 fica), e o DOCX é **gerado N vezes**, um por membro, a partir do mesmo texto | **DEC-139** |
+| D-AH | Carga horária: coluna nova no vínculo ou `users.weekHours`? | **Coluna nova** (`project_members.cargaHoraria`), e é ela que entra no atestado. `users.weekHours` continua a meta semanal da pessoa. Nº PROPPI é `projects.proppiNumber` | **DEC-140** |
+| D-AI | GAP-05: os status pré-contrato em `tasks.status` (14 de 18 tasks na 5432)? | **Migration de cleanup**, sem constraint na coluna | **DEC-141** |
+| D-AJ | GAP-06: `backend/models/` — adotar nos demais módulos ou encolher? | **Encolher** para o que é usado: 13 arquivos medidos, 6 com importador (todos do lab-operations), 7 sem importador nenhum saem | **DEC-142** |
+| D-AK | "Visibilidade do Perfil" é gravada e documentada, mas nenhuma decisão a lê. O que fazer? | **Implementar a regra** de leitura — batch novo **V5-12** | **DEC-143** |
+| D-AL | O seam órfão `lib/notifications/browser-notifications.ts` (plan-v3 §8) fica ou sai? | **Sai**, junto com o teste dele | **DEC-144** |
+| D-AM | Quando começa o plan-v6 (`awaitingInstruction` aberto)? | **Depois de o plan-v5 fechar**, inclusive as ondas livres V6-0..V6-3 | **DEC-145** |
+| D-AN | `next@15.2.4` tem CVE conhecida (CVE-2025-66478). Atualizar? | **Registrar e decidir depois**, com janela para rodar os gates completos; fora do roteiro do plano | **DEC-146** |
+
 ## 3. Mapeamento do domínio pedido → onde vive
 
 | Pedido no domínio | Hoje | Depois do plan-v5 |
@@ -287,7 +310,9 @@ imagens/pdf/vídeo, sem migrar os dois roots legados) **continua valendo inteiro
 | `Projeto.anexos Blob[ ]` | — | `project_attachments` → **bucket** (DEC-101; servidor = SeaweedFS, DEC-131) |
 | `Projeto.entregáveis Deliverable[ ]` | — | `project_deliverables (name, quantity)` |
 | logo/banner do projeto | não existe | `projects.logoKey?/bannerKey?` no bucket; header do detail + lista (DEC-102) |
-| `Projeto.equipe Member[ ]` | `project_members` | estendido: `lattes`, `cargaHorariaSemanal`, `categoria`, `situacao`, `dataEntrada`, `matricula` |
+| `Projeto.equipe Member[ ]` | `project_members` | estendido: `lattes`, `cargaHoraria`, `categoria`, `situacao`, `dataEntrada` (matrícula **não**: vai em `users`, DEC-138) |
+| dados de pessoa (CPF, matrícula, curso, modalidade, fomento, nível) | não existem | `users.cpf?`, `users.registrationNumber?`, `users.course?`, `users.scholarshipType?`, `users.fundingAgency?`, `users.level?` (DEC-138; nomes definitivos saem na execução do V5-4). CPF com leitura restrita |
+| `Projeto.nº PROPPI` | — | `projects.proppiNumber?` (DEC-140) |
 | banner do usuário | só avatar (`users.avatar`) | `users.bannerKey?` no bucket; perfil + pódio #1 (DEC-102) |
 | `Certificate.template Blob` | — | AcroForm gerado (pdf-lib) → bucket |
 | `Activity.task Task[ ]` | **não existe** | `tasks.activityId?` + trava DEC-99 (todas prontas p/ solicitar) |
@@ -311,22 +336,39 @@ imagens/pdf/vídeo, sem migrar os dois roots legados) **continua valendo inteiro
 | **V5-2d** | **Logo + banner do projeto**: `logoKey?`/`bannerKey?` guardando a **chave** do bucket, upload validado (slot de lista fechada, **só imagem** — mime decidido pela seam, ≤5 MB, magic bytes), rota de leitura autenticada com a regra de acesso do projeto, header do detail estilo Facebook/LinkedIn. Fecha **G5/G6 da família** (recaptura única de `projetos`, `dialogo-novo-projeto`, `dialogo-detalhe-projeto`) | médio — tela visível (G5/G6) | **done** (2026-10-13) |
 | **V5-2a** | **Visão de todos os projetos**: lista (`GET /api/projects`) e detalhe (`GET /api/projects/[id]`) passam a aceitar qualquer autenticado (DEC-127); escrita/gestão intacta; filhos (anexos, horas, cronograma) seguem a mesma leitura; ajusta os 2 trechos do roundtrip que congelam a regra antiga e escreve os testes unitários que faltam (`ListProjectsForActorUseCase`, `canActorAccessProjectDecision`) | baixo — 1 ACL + testes; roteiro para o V6-5 | **done** (2026-10-13; DEC-136: o escopo medido era maior — Membros e `/volunteers` abertos a pedido do dono, gate de leitura removido das 3 rotas de horas, e 6 assertions congeladas trocadas, não 2) |
 | **V5-3** | **Banner de usuário + pódio**: `users.bannerKey?`, upload no perfil, perfil mostra avatar+banner, **top #1 do quadro** ganha o tratamento com as imagens (avatar `h-24` já existe; entra o banner/fundo) | médio — tela visível (G5/G6) | **done** (2026-10-13, DEC-137) |
-| **V5-4** | **Equipe estendida**: colunas novas em `project_members` (lattes, carga horária, categoria, situação, data de entrada, matrícula), use cases e UI de gestão | baixo | pendente |
+| **V5-4** | **Equipe estendida**: colunas novas em `project_members` (`lattes`, `cargaHoraria`, `categoria`, `situacao`, `dataEntrada`) + colunas novas em `users` (`cpf`, matrícula, `course`, modalidade, fomento, nível — DEC-138) + `projects.proppiNumber` (DEC-140) + use cases e UI de gestão. Escrita pelo gate do perfil (próprio OU `MANAGE_USERS`); **CPF com leitura restrita** a próprio e gestão, os demais seguem a leitura aberta. Roteiro corrigido em 2026-10-13: matrícula saiu do vínculo e entrou em `users` | baixo-médio — migration aditiva + tela visível (G5/G6) | pendente |
 | **V5-5** | **Cronograma**: `project_goals` + `project_activities` (ordem, descrição, responsável, **meses marcados na grade** → recompensa 100×meses e período do primeiro ao último mês marcado, status `OPEN → COMPLETION_REQUESTED → DONE`, provas no bucket), regras puras de período/ordem, **grade meses × atividades** + aba no detail, **wizard de criação com passo opcional de cronograma (DEC-100)** | médio — modelagem nova + tela (G5/G6) | pendente |
 | **V5-6** | **Task × atividade**: `tasks.activityId?`, no form a atividade do período atual vem **pré-selecionada** e só dá para escolher futuras, filtro no quadro, e a **trava DEC-99** (solicitar conclusão só com todas as tasks prontas) | médio — mexe no form do quadro (G5/G6) | pendente |
 | **V5-7** | **Economia de projeto**: `request-activity-completion` (líder/membro gestor + provas) e `approve-activity-completion` (só `GLOBAL_PROJECT_MANAGERS`; auto-aprova só COORDENADOR — DEC-77); prêmio = `100×meses × (1,5 se ≥2d adiantada) − 10%/dia de atraso`, **piso 0** (DEC-103/74); distribuição **proporcional às tasks concluídas de cada membro** (DEC-104); tarefa concluída de projeto também incrementa `projects.points`; idempotência + histórico | **alto** — economia | pendente |
 | **V5-8** | **Atraso urgente**: coluna `priority` em `notifications` + destaque na UI; varredura diária no cron: atividade vencida e não aprovada → **1** notificação prioritária (`overdueNotifiedAt`) para líder + coordenadores/gerentes | médio | pendente |
-| **V5-9** | **Relatórios técnicos + IA**: `technical_reports` (projeto × tipo, texto + arquivo no bucket), permissão gestão/líder, `ReportDraftPort` + adapter OpenAI-compatible por env (`AI_BASE_URL/AI_API_KEY/AI_MODEL`, default `http://localhost:8080/v1`), rascunho a partir de **três fontes**: logs de sessão (`work_sessions`), tasks do projeto (status, conclusão, pontos) e atividades do cronograma (meses marcados, provas). Entrega em **DOCX pelo template oficial** (DEC-129): o texto da IA entra **como texto puro** nas 3 tabelas vazias do template (Descrição / Resultados / Comentários), o tipo (parcial/final) marca a linha `( ) Relatório Final ( ) Relatório Parcial`, e o adaptador docx vive em `infrastructure/adapters/` atrás de porta. Escopo do registro por projeto × tipo **pode virar por participante** conforme a resposta do `ASK-V5-06` | médio | pendente |
-| **V5-10** | **Atestados**: módulo `attestation` — `certificates` (sem status, DEC-75), **preenche o AcroForm oficial** pelos 42 campos medidos com `@cantoo/pdf-lib` (DEC-130): `nome`/`CPF`/`matricula`/`titulo`/`edital`/`coorientador` do projeto e do membro, checkboxes de modalidade/fomento (`is_pibic`, `is_voluntario`, `is_cnpq`…), carga (`carga_8`/`carga_20`/`carga_adaptada`/`horas_adaptada`) vinda de `weekly_reports`/`work_sessions`, `atividades_1`/`atividade_2` + `status_*` vindos do cronograma (V5-5), `dia`/`mes`/`ano` do mês de referência; `updateFieldAppearances(Times)` + `flatten()` no arquivo entregue (bucket). Lembrete dia 19 (`0 9 19 * *`) para coordenadores/gerentes + líderes. Depende dos campos de pessoa do `ASK-V5-07` | médio-alto — dependência nova + PDF (G5/G6) | pendente |
+| **V5-9** | **Relatórios técnicos + IA**: `technical_reports` (projeto × tipo, texto + arquivo no bucket), permissão gestão/líder, `ReportDraftPort` + adapter OpenAI-compatible por env (`AI_BASE_URL/AI_API_KEY/AI_MODEL`, default `http://localhost:8080/v1`), rascunho a partir de **três fontes**: logs de sessão (`work_sessions`), tasks do projeto (status, conclusão, pontos) e atividades do cronograma (meses marcados, provas). Entrega em **DOCX pelo template oficial** (DEC-129): o texto da IA entra **como texto puro** nas 3 tabelas vazias do template (Descrição / Resultados / Comentários), o tipo (parcial/final) marca a linha `( ) Relatório Final ( ) Relatório Parcial`, e o adaptador docx vive em `infrastructure/adapters/` atrás de porta. Escopo **resolvido em 2026-10-13 (DEC-139)**: o registro fica por projeto × tipo como a DEC-70 fixou (sem `userId`, sem tabela de filhos) e a geração é **lote — um DOCX por membro**, preenchendo o bloco "Identificação do Estudante de IC" pessoa por pessoa a partir dos campos de `users` (DEC-138) | médio | pendente |
+| **V5-10** | **Atestados**: módulo `attestation` — `certificates` (sem status, DEC-75), **preenche o AcroForm oficial** pelos 42 campos medidos com `@cantoo/pdf-lib` (DEC-130): `nome`/`CPF`/`matricula`/`titulo`/`edital`/`coorientador` do projeto e do membro, checkboxes de modalidade/fomento (`is_pibic`, `is_voluntario`, `is_cnpq`…), carga (`carga_8`/`carga_20`/`carga_adaptada`/`horas_adaptada`) vinda de **`project_members.cargaHoraria`** (DEC-140 — não de `weekly_reports`/`work_sessions`, que são horas registradas, não a carga contratada), `atividades_1`/`atividade_2` + `status_*` vindos do cronograma (V5-5), `dia`/`mes`/`ano` do mês de referência; `updateFieldAppearances(Times)` + `flatten()` no arquivo entregue (bucket). Lembrete dia 19 (`0 9 19 * *`) para coordenadores/gerentes + líderes. Os campos de pessoa **já têm lugar** desde a DEC-138 (`users`), e o nº PROPPI é `projects.proppiNumber` (DEC-140) | médio-alto — dependência nova + PDF (G5/G6) | pendente |
 | **V5-11** | **Tela de andamento**: gráfico `data_final − dia_de_hoje` + exibição de `projects.points` (agora real) | baixo | pendente |
+| **V5-12** | **Visibilidade de perfil: a regra que o campo promete** (DEC-143): decisão pura no domínio de identidade consumida pela leitura de perfil — `public` é hoje, `members_only` casa por projeto em comum, `private` é próprio + gestão. Regra, rotas e testes; o guia deixa de descrever três valores que o servidor ignora. Achado medido em 2026-10-13: `users.profileVisibility` é gravado, editável na aba Configurações e documentado no guia, e **nenhuma decisão no backend o lê** | baixo-médio — regra nova de leitura (G5/G6 se a tela mudar) | pendente |
 
 Ordem: **V5-1 primeiro** (tudo que gravar blob depende dele) e **V5-1a em seguida** (os
 documentos do V5-9/V5-10 leem o asset versionado e as guardas de deriva). V5-2, V5-2a,
 V5-3 e V5-4 são independentes entre si (a V5-2a só precisa rodar antes do V6-5 do
 plan-v6). V5-5 → V5-6 → V5-7 → V5-8 encadeiam. V5-9 e V5-10 correm quando quiser depois
-de V5-1a; o V5-10 também espera V5-5 (atividades e status entram no PDF) e responde ao
-`ASK-V5-07` antes de escrever migration. V5-11 espera V5-2 (`endDate`) e V5-7 (`points`).
-A espera pelo plan-v4 caiu: ele fechou em 2026-10-07.
+de V5-1a; o V5-10 também espera V5-5 (atividades e status entram no PDF) e o `ASK-V5-07`
+foi respondido em 2026-10-13 (DEC-138), então a migration do V5-4 já tem forma. V5-11
+espera V5-2 (`endDate`) e V5-7 (`points`). V5-12 não depende de nada do plano e não é
+dependido por ninguém: é o batch de respiro entre dois médios. A espera pelo plan-v4 caiu:
+ele fechou em 2026-10-07.
+
+### 4.1 Dívida aprovada na rodada de 2026-10-13 (fora do roteiro do domínio)
+
+Três itens que o dono aprovou e que não são trabalho do domínio do projeto. Cada um é batch
+próprio e revertível, e roda entre as linhas do roteiro, sem esperar batch do domínio:
+
+| Item | O que faz | DEC |
+|---|---|---|
+| **D-1** | **Cleanup dos status pré-contrato** em `tasks.status`: migration que reescreve `pending`/`in_progress`/`completed` para `to-do`/`in-progress`/`done` (14 de 18 tasks na 5432, medido 2026-10-01), aplicada na 5432 e na 5433. Sem constraint na coluna. Depois dela o `console.warn` do `wireTaskSchema` perde o motivo | **DEC-141** |
+| **D-2** | **`backend/models/` encolhe**: saem os 7 builders sem importador (Badge, DailyLog, Project, ProjectMembership, Purchase, Reward, Task); ficam os 6 consumidos pelos repositórios do lab-operations. Ajusta o guarda que hoje proíbe o core de importar a camada | **DEC-142** |
+| **D-3** | **Seam órfão fora**: `lib/notifications/browser-notifications.ts` (134 linhas) + o teste dele (231 linhas). Zero chamadores medidos | **DEC-144** |
+
+Fora de batch, registrado sem ação: **`next@15.2.4`** tem CVE conhecida (CVE-2025-66478) e o
+upgrade é decisão de dependência com janela própria para rodar os gates (**DEC-146**).
 
 ## 5. Estrutura de arquivos prevista
 
@@ -481,26 +523,18 @@ que **substituíram decisões antigas**: DEC-103 pisa na DEC-67 (reusar `points-
 DEC-104 pisa na DEC-68 (divisão integral) e DEC-130 pisa na parte "gerar o AcroForm" da
 DEC-71 (o formulário oficial já existe com campos nomeados).
 
-Em aberto — duas perguntas que a medição dos templates abriu em 2026-10-13:
+Em aberto — **nenhuma**. As duas perguntas que a medição dos templates abriu em 2026-10-13
+foram respondidas na mesma rodada (D-AE..D-AN, §2.6):
 
-- **`ASK-V5-06` — o relatório técnico é por projeto ou por participante?** O DOCX oficial é
-  **por estudante de IC**: uma linha Nome/Curso/Modalidade/Instituição de Fomento, e o
-  cabeçalho "Identificação do Estudante de IC (Bolsista ou Voluntário)". A DEC-70 fixou
-  `technical_reports` por **projeto × tipo**. Se a entrega for um DOCX por membro, o model
-  ganha `userId` (ou uma tabela de filhos) e a geração vira lote. Opções: (a) um registro
-  por projeto × tipo, e o DOCX é gerado N vezes (um por membro) a partir do mesmo texto;
-  (b) um registro por projeto × tipo × membro, cada um com seu texto editável; (c) manter
-  por projeto e gerar um único DOCX com a tabela de estudantes expandida por linha
-  (`FOR` do docx-templates sobre linha de tabela).
-- **`ASK-V5-07` — onde vivem os dados de pessoa que os formulários pedem?** CPF, matrícula,
-  curso, modalidade de IC (BIC/BIC-Jr/BITI/ICV), instituição de fomento (CNPQ/FAPEMIG/outra)
-  e nível (médio/graduação/pós) não existem no schema. Opções: (a) tudo em `users` (dado da
-  pessoa, serve a todos os projetos; exige tela de edição no perfil e trata LGPD — CPF é
-  dado pessoal sensível o suficiente para justificar leitura restrita); (b) em
-  `project_members` (dado do vínculo: a modalidade pode mudar de projeto para projeto);
-  (c) misto — CPF/curso/nível em `users`, modalidade/fomento/carga em `project_members`
-  (é o que a medição sugere: o V5-4 já previa matrícula e carga no vínculo). Quem preenche
-  (o próprio usuário ou a gestão) e o nº PROPPI (projeto) também entram aqui.
+- **`ASK-V5-06`** (relatório por projeto ou por participante) → **(a)**, **DEC-139**: um
+  registro por projeto × tipo, DOCX gerado uma vez por membro a partir do mesmo texto. As
+  opções (b) e (c) ficaram para trás: (b) multiplicaria texto e permissão por pessoa, (c)
+  fugiria do formulário oficial, que é por estudante.
+- **`ASK-V5-07`** (dados de pessoa) → **(a) tudo em `users`**, **DEC-138**, com o complemento
+  da **DEC-140** (carga no vínculo, PROPPI no projeto). Escrevem a própria pessoa e a gestão;
+  CPF tem leitura restrita. O custo aceito está registrado na DEC-138: modalidade e fomento
+  deixam de ser dados do vínculo, então uma pessoa que participa de dois editais com
+  modalidades diferentes tem uma modalidade só.
 
 Fora deste plano (na fila, não esquecer):
 
@@ -518,14 +552,14 @@ Fora deste plano (na fila, não esquecer):
 ## 9. Como o estado é monitorado
 
 `STATE.json` nesta pasta é a fonte de verdade: `status` (`ready` → `in_progress` →
-`done`), `waves[]` (V5-1, V5-1a, V5-2, V5-2a, V5-3..V5-11 com `status`/`decisions`/`scope`),
-`decisionRegistry` (DEC-61..77 + DEC-99..104 + DEC-126..131; **DEC-78..98 são do plan-v4**),
-`batchLog[]` (só batch executado entra, com gates aferidos e gotchas), `openQuestions`
-(ASK-V5-06, ASK-V5-07), `answeredInstructions` (ASK-V5-01..05), `blockers` (vazio —
-plan-v4 fechou). A numeração de decisões **continua** a global: plan-v6 consumiu
-DEC-105..114, o clean-arch (B6-restante + B9/B10) consumiu DEC-115..125 em 2026-10-08, e
-este plano consumiu DEC-126/127 (2026-10-09), DEC-128..130 (2026-10-13, documentos
-oficiais) e DEC-131 (2026-10-13, servidor do bucket na execução do V5-1), então **a próxima
-livre é a DEC-132**; antes de abrir decisão nova, `grep` os
+`done`), `waves[]` (V5-1, V5-1a, V5-2, V5-2a, V5-3..V5-12 com `status`/`decisions`/`scope`),
+`decisionRegistry`, `batchLog[]` (só batch executado entra, com gates aferidos e gotchas),
+`openQuestions` (**vazio desde 2026-10-13**), `answeredInstructions` (ASK-V5-01..07),
+`blockers` (vazio — plan-v4 fechou). A numeração de decisões **continua** a global: plan-v6
+consumiu DEC-105..114, o clean-arch (B6-restante + B9/B10) consumiu DEC-115..125 em
+2026-10-08, e este plano consumiu DEC-126/127 (2026-10-09), DEC-128..130 (documentos
+oficiais), DEC-131..137 (execução de V5-1, V5-2b/c/d, V5-2a e V5-3, em 2026-10-13) e
+DEC-138..146 (a rodada de alinhamento do dono, §2.6, também de 2026-10-13) — **a próxima
+livre é a DEC-147**; antes de abrir decisão nova, `grep` os
 cinco `STATE.json` (clean-arch, plan-v3, plan-v4, plan-v5, plan-v6; lição da colisão
 DEC-61..64 do V4-4).

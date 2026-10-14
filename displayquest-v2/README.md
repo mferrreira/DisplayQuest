@@ -14,8 +14,8 @@ displayquest-v2/
 ├── clean-arch/    BASE: refatoração do backend para Clean Architecture (pré-requisito das features 01..06)
 ├── plan-v3/       OPERAÇÃO: correções e features pedidas por quem usa o sistema hoje (sessões, quadro, pontos) — done
 ├── plan-v4/       OPERAÇÃO: subtasks, animação de pontos, inativação (2026-10-05) — done (2026-10-07, DEC-78..98)
-├── plan-v5/       OPERAÇÃO: domínio de projetos maduro — cronograma, pontos, relatórios técnicos, atestados (2026-10-06) — ready (DEC-61..77 e DEC-99..104)
-└── plan-v6/       OPERAÇÃO: refatoração visual UI/UX — linguagem DisplayQuest em todas as telas (2026-10-07) — spec-driven, ready (DEC-105..114)
+├── plan-v5/       OPERAÇÃO: domínio de projetos maduro — cronograma, pontos, relatórios técnicos, atestados (2026-10-06) — in_progress (V5-1, V5-1a, V5-2b/2c/2d/2a, V5-3 done; DEC-61..77, 99..104, 126..146)
+└── plan-v6/       OPERAÇÃO: refatoração visual UI/UX — linguagem DisplayQuest em todas as telas (2026-10-07) — spec-driven, ready, nenhuma onda começada (DEC-105..114; começa depois de o plan-v5 fechar, DEC-145)
 ```
 
 ## Fluxo de dependências (unidirecional)
@@ -34,7 +34,10 @@ plan-v4 ──> fecha (V4-4/V4-5 subtasks) ──> plan-v5 (domínio de projetos
 plan-v6 (refatoração visual) ──> camada de apresentação só — ordem frente ao plan-v5 resolvida
                                  (DEC-113): nas colisões (V6-4×V5-4, V6-5×V5-2, V6-7×V5-3) o
                                  plan-v5 executa ANTES; V6-0..V6-3 são livres. Home sem coluna
-                                 secundária, largura toda (DEC-114)
+                                 secundária, largura toda (DEC-114). Decidido em 2026-10-13
+                                 (DEC-145): o dono não quer duas frentes abertas — o plan-v6
+                                 começa depois de o plan-v5 fechar, e as ondas livres esperam
+                                 junto
 ```
 
 - `spec-v2/` registra a visão do dono (gamificação profunda, projeto mais complexo,
@@ -51,7 +54,7 @@ plan-v6 (refatoração visual) ──> camada de apresentação só — ordem fr
 - `plan-v4/` nasce do plan-v3 (o dono pediu subtasks e animação de pontos junto);
   `plan-v5/` nasce do desenho completo de domínio de projeto do dono (edital, cronograma,
   pontos de projeto, relatórios técnicos com IA, atestados com AcroForm) — tudo estendendo
-  o que já existe, em ondas revertíveis, com DEC-61..77, DEC-99..104 e DEC-126..134 contínuas
+  o que já existe, em ondas revertíveis, com DEC-61..77, DEC-99..104 e DEC-126..146 contínuas
   da numeração global (DEC-78..98 são do plan-v4 e DEC-105..125 de plan-v6 e
   clean-arch — houve colisão, comentários renumerados). O V5-1 fechou o bucket
   (SeaweedFS no lugar do MinIO, DEC-131), o V5-1a fechou os templates oficiais como asset
@@ -62,7 +65,13 @@ plan-v6 (refatoração visual) ──> camada de apresentação só — ordem fr
   abriu a leitura — qualquer autenticado vê todos os projetos e as partes deles, escrita intacta
   (DEC-136); o V5-2 foi dividido pelo dono em V5-2b/2c/2d/2a. O V5-3 levou o mesmo desenho de
   imagem ao perfil — `users.bannerKey` no bucket, capa no cartão "Meu Perfil" e no cartão do 1º
-  lugar do pódio (DEC-137).
+  lugar do pódio (DEC-137). Antes do V5-4, o dono respondeu em 2026-10-13 as perguntas que
+  faltavam e as que estavam abertas em outros registros: dados de pessoa em `users` com CPF de
+  leitura restrita (DEC-138), relatório técnico por projeto com DOCX por membro (DEC-139), carga
+  no vínculo e PROPPI no projeto (DEC-140), cleanup dos status pré-contrato por migration
+  (DEC-141), `backend/models/` encolhido (DEC-142), visibilidade de perfil virando batch V5-12
+  (DEC-143), seam órfão fora (DEC-144), plan-v6 depois do plan-v5 (DEC-145) e a CVE do `next`
+  registrada sem batch (DEC-146).
 - `plan-v6/` nasce da leitura da interface real contra as referências da skill
   `displayquest-ui` (`.opencode/skills/displayquest-ui/`): é **spec-driven** (a pasta
   tem `SPEC.md` como fonte de verdade do comportamento + `PLAN.md` da ordem +

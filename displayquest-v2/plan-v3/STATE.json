@@ -2,7 +2,7 @@
   "plan": "plan-v3",
   "title": "qualidade operacional: sessões, quadro e pontos",
   "version": "3.0.0",
-  "updatedAt": "2026-10-03",
+  "updatedAt": "2026-10-13",
   "status": "done",
   "activeWave": null,
   "activeBatch": null,
@@ -22,6 +22,14 @@
       "answer": "terceira opcao: remover o 5.A do plano (e o BLK-01 junto), registrando que o alerta da Onda 2 e o sinal aceito para HTTP",
       "decision": "DEC-49",
       "blocks": []
+    },
+    {
+      "id": "SEAM-ORFAO (PLAN.md §8)",
+      "askedAt": "2026-10-03",
+      "answeredAt": "2026-10-13",
+      "question": "O seam `lib/notifications/browser-notifications.ts` e o teste dele ficam ou saem?",
+      "answer": "Saem (DEC-144, dono 2026-10-13). grep mede zero chamadores em codigo de aplicacao, e a notificacao nativa esta bloqueada na instancia (HTTP em IP de rede). O sinal que funciona em HTTP — visual sempre visivel mais som opcional — esta na Onda 2 e nao depende do seam.",
+      "decision": "DEC-144"
     }
   ],
   "target": "corrigir a economia de pontos, acabar com o silêncio das pausas automáticas e tornar o quadro utilizável quando enche",

@@ -183,12 +183,14 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   aceito em HTTP é o da Onda 2 (visual sempre visível + som opcional). `awaitingInstruction`
   está vazia; as perguntas respondidas ficam em `answeredInstructions` e o que saiu do plano em
   `removedItems`.
-- **Duas coisas seguem abertas de propósito:** `GAP-P3-05` — o toast da conclusão direta ainda
-  anuncia o número *projetado* (`features/tasks/components/task-card.tsx:256`) em vez do
-  creditado pela resposta; corrigir move o aviso para depois da mutação. E o seam
-  `lib/notifications/browser-notifications.ts` (134 linhas + teste), que ficou **órfão** com a
-  F1b fora do escopo: `grep` mostra zero chamadores. Manter ou apagar é decisão do dono
-  (registrada em `PLAN.md` §8).
+- **Duas coisas estavam abertas de propósito, e as duas têm decisão hoje:** `GAP-P3-05` — o
+  toast da conclusão direta anunciava o número *projetado* em vez do creditado pela resposta;
+  **fechado no V4-5c do plan-v4** (DEC-93: o aviso saiu depois da mutação e lê o
+  `awardedPoints` da resposta). E o seam `lib/notifications/browser-notifications.ts`
+  (134 linhas + teste), **órfão** com a F1b fora do escopo: `grep` mede zero chamadores.
+  O dono decidiu **apagar** em 2026-10-13 (**DEC-144**); a execução está no item **D-3** do
+  plan-v5 (§4.1), e a notificação nativa continua bloqueada nesta instância — HTTP em IP de
+  rede, e o navegador recusa o pedido de permissão fora de secure context.
 - **Decisões que mudam o desenho:** premiação **pode ficar negativa** (DEC-39, sem piso — o
   `-37140 pts` medido numa captura é a regra funcionando, não bug isolado); nenhum `UPDATE` em
   `tasks.points` histórico (DEC-40); `@pontos` do backlog aceito e ignorado (DEC-41); a ordenação
@@ -251,11 +253,18 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   e **DEC-137 plan-v5 (2026-10-13, execução do V5-3: capa de perfil no bucket com o desenho do DEC-135 —
   `USER_IMAGE_SLOTS` de um valor, `users.bannerKey` guarda a CHAVE, escrita com a autoridade do perfil e
   o gate antes do corpo, leitura aberta ao autenticado, chave na lista de usuários e na sessão, e o
-  avatar continua no caminho legado de disco)**.
+  avatar continua no caminho legado de disco)**
+  e **DEC-138..146 plan-v5 (2026-10-13, rodada de alinhamento pedida pelo dono antes do V5-4: dados de
+  pessoa vão todos em `users`, com CPF de leitura restrita (138); relatório técnico por projeto × tipo com
+  DOCX gerado uma vez por membro (139); carga horária é coluna do vínculo e PROPPI é `projects.proppiNumber`
+  (140); cleanup dos status pré-contrato por migration, sem constraint (141); `backend/models/` encolhe para
+  os 6 builders que têm importador (142); visibilidade de perfil vira regra de leitura, batch V5-12 (143); o
+  seam `browser-notifications.ts` sai (144); plan-v6 só depois de o plan-v5 fechar (145); CVE do
+  `next@15.2.4` registrada sem batch (146))**.
   O V4-4 ia usar
   DEC-61..64 e colidiu; os 28 comentários de código foram renumerados. **Antes de abrir decisão nova, `grep`
   os CINCO `STATE.json` (clean-arch, plan-v3, plan-v4, plan-v5, plan-v6) — a nota antiga que dizia "três"
-  está velha. Próxima livre: DEC-138.**
+  está velha. Próxima livre: DEC-147.**
 - **Subtask (V4-4, DEC-78..83 → regra atual = DEC-97/98):** tabela `task_subtasks` (sem FK para
   `users` — subtask não tem
   responsável próprio), base gravada em `tasks.points` = `10 + 5·n` (DEC-97) e **cada subtask CONCLUÍDA
@@ -342,6 +351,7 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
 
 - **Papéis e permissões:** `ADMIN`/`COORDENADOR`/`LABORATORISTA` com `MANAGE_WORK_SESSIONS` gerenciam sessões alheias; `MANAGE_USERS` gerencia grade de horários. Voluntário e demais têm leitura liberada onde faz sentido.
 - **Projeto: leitura aberta, escrita fechada (V5-2a, DEC-127/136):** qualquer autenticado vê todos os projetos — lista, detalhe, entregáveis, anexos, capa/logo, horas agregadas, **Membros** e horas por pessoa (`/volunteers`). A decisão é `canActorAccessProjectDecision(actorId)` no domínio, de um parâmetro só, e não consulta membership. Gestão continua na ACL congelada (`canActorManageProjectDecision`: existindo membership, só os papéis dele decidem — membership `[VOLUNTARIO]` com `COORDENADOR` global **não** gerencia). Não reintroduza gate de leitura na rota: ele não pode responder "não" e o teste de rota voltaria a congelar o substituto, não o sistema.
+- **Perfil: visibilidade prometida, regra ainda não escrita (medido 2026-10-13):** `users.profileVisibility` (`public`/`members_only`/`private`) é gravado na criação, editável na aba Configurações e documentado no guia com três valores, mas **nenhuma decisão no backend o lê** — hoje todo perfil é público de fato, e a leitura de usuário é a do autenticado. Implementar a regra é o batch **V5-12** (**DEC-143**). Enquanto ele não roda, não escreva código que finja aplicar a visibilidade, e não descreva os três valores como comportamento.
 - **Kanban:** tema escuro com colunas em cores sólidas por estado (sem degradê), contraste verificado — perfil visual do board é escuro/sólido.
 - **Notificações:** painel em popover; fecha ao clicar fora e com `Escape`, acessível por teclado.
 - **Grade de horários:** leitura aberta (qualquer autenticado vê todos os horários); escrita/bulk restrita a `MANAGE_USERS`.
