@@ -49,6 +49,8 @@ export class ListProjectCronogramaUseCase {
 
     return {
       projectId: query.projectId,
+      /** Eco do relógio que entrou: a tela marca a coluna do mês corrente sem calcular fuso. */
+      today: query.today,
       months,
       goals,
       activities: activities.map((activity) => {

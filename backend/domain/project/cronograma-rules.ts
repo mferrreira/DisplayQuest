@@ -36,6 +36,35 @@ export const ACTIVITY_STATUS_LABELS: Record<ActivityStatus, string> = {
   DONE: "Concluída",
 };
 
+/**
+ * Rótulo de coluna da grade: `2026-03` é `mar/2026`. Existe no domínio porque é o rótulo do
+ * token, não uma formatação de tela — e formatar mês com `new Date(...).toLocaleDateString` é o
+ * erro que a DEC-132 fechou (`new Date("2026-03")` é 1º de março UTC e vira fevereiro no fuso).
+ */
+export const MONTH_ABBREVIATIONS = [
+  "jan",
+  "fev",
+  "mar",
+  "abr",
+  "mai",
+  "jun",
+  "jul",
+  "ago",
+  "set",
+  "out",
+  "nov",
+  "dez",
+] as const;
+
+export function monthColumnLabel(monthKey: string): string {
+  const month = Number(monthKey.slice(5, 7));
+  const year = monthKey.slice(0, 4);
+  if (!Number.isInteger(month) || month < 1 || month > 12) {
+    throw new ValidationError(ACTIVITY_MONTH_MESSAGE);
+  }
+  return `${MONTH_ABBREVIATIONS[month - 1]}/${year}`;
+}
+
 /** A coluna nasce aberta; fechar é o que o fluxo do V5-7 faz. */
 export const DEFAULT_ACTIVITY_STATUS: ActivityStatus = "OPEN";
 
@@ -67,6 +96,8 @@ export const ACTIVITY_GOAL_MESSAGE = "Descrição da meta não pode ter mais de 
 export const ACTIVITY_GOAL_TARGET_MESSAGE = "Meta numérica deve ser um inteiro entre 1 e 9999";
 export const ACTIVITY_STATUS_MESSAGE = "Status da atividade é inválido";
 export const ACTIVITY_RESPONSIBLE_MESSAGE = "Responsável da atividade precisa participar do projeto";
+/** A linha da grade não tem estado "sem mês": `firstMonth`/`lastMonth` são obrigatórios. */
+export const ACTIVITY_MIN_MONTH_MESSAGE = "A atividade precisa de pelo menos um mês marcado";
 
 const MONTH_KEY_PATTERN = /^\d{4}-\d{2}$/;
 

@@ -34,6 +34,7 @@ import { ProjectLeaderLogs } from "@/components/features/project-leader-logs"
 import { ProjectReportsPanel } from "@/components/features/project-reports-panel"
 import { ProjectDeliverablesPanel } from "@/components/features/project-deliverables-panel"
 import { ProjectAttachmentsPanel } from "@/components/features/project-attachments-panel"
+import { ProjectCronogramaPanel } from "@/components/features/project-cronograma-panel"
 import { ProjectMediaHeader } from "@/components/features/project-media-header"
 import { hasAccess } from "@/lib/utils/utils"
 
@@ -291,6 +292,11 @@ export function ProjectDetailDialog({
                 como gestão, e o servidor decide de verdade. */}
             <ProjectDeliverablesPanel projectId={project.id} canManage={canManageProjectFiles} />
             <ProjectAttachmentsPanel projectId={project.id} canManage={canManageProjectFiles} />
+
+            {/* V5-5 (DEC-100/126/151): o cronograma — metas e a grade meses × atividades. A leitura
+                é a do autenticado; a escrita aparece para quem o diálogo reconhece como gestão e o
+                servidor decide de verdade. */}
+            <ProjectCronogramaPanel projectId={project.id} canManage={canManageProjectFiles} />
 
             {/* Project Statistics */}
             <div className="grid gap-4 md:grid-cols-4">

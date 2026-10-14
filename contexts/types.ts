@@ -101,6 +101,20 @@ export interface ProjectFormData {
   processNumber?: string
   /** V5-4a (DEC-140). */
   proppiNumber?: string
+  /**
+   * V5-5 (DEC-100): o passo opcional do wizard de criação. Ausente ou com as duas listas vazias
+   * é "pular o passo", e o servidor cria o projeto exatamente como antes. A ordem não entra: o
+   * servidor atribui (DEC-156d), e a tela manda a lista na ordem em que aparece.
+   */
+  cronograma?: {
+    goals: Array<{ description: string; target?: number | null }>
+    activities: Array<{
+      description: string
+      firstMonth: string
+      lastMonth: string
+      responsibleId?: number | null
+    }>
+  }
 }
 
 // Badge types

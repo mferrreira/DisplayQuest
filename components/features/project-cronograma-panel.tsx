@@ -1,0 +1,438 @@
+"use client"
+
+/**
+ * ProjectCronogramaPanel — o cronograma do projeto no diálogo de detalhe (V5-5, DEC-100/126/151).
+ *
+ * Lê o `GET /cronograma` (colunas, metas e atividades já derivadas) e escreve pelo caminho
+ * estreito: cada ação manda só o que mudou, no corpo daquele recurso. A tela não monta a regra
+ * — o que chega de período, meses e recompensa vem do domínio, e o clique na grade é a mesma
+ * `toggleActivityMonthRange` que a rota usa (DEC-90).
+ *
+ * Linha nova nasce local (id `null`) e só é escrita quando a descrição é confirmada: criar linha
+ * vazia seria poluir o cronograma com uma etapa sem nome, e o domínio recusa descrição vazia por
+ * decisão (a brochura não tem "Etapa" sem "Descrição da Atividade").
+ *
+ * Quem pode escrever é decidido pelo servidor (gate de gestão, DEC-92): `canManage` controla
+ * apenas quais controles aparecem. Um 403 que chega mesmo assim é tratado como erro, não como
+ * botão desabilitado.
+ */
+
+import { useCallback, useEffect, useState } from "react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Loader2 } from "lucide-react"
+import { useToast } from "@/contexts/use-toast"
+import {
+  ACTIVITY_MIN_MONTH_MESSAGE,
+  monthColumnLabel,
+  nextCronogramaOrder,
+  toggleActivityMonthRange,
+} from "@/backend/domain"
+import { listProjectMembers } from "@/lib/api/project-members"
+import {
+  createProjectActivity,
+  createProjectGoal,
+  deleteProjectActivity,
+  deleteProjectGoal,
+  getCronograma,
+  updateProjectActivity,
+  updateProjectGoal,
+  type ProjectActivity,
+  type ProjectGoal,
+} from "@/lib/api/project-cronograma"
+import {
+  CronogramaEditor,
+  type CronogramaActivityRow,
+  type CronogramaGoalRow,
+  type CronogramaMemberOption,
+} from "@/components/features/cronograma-editor"
+
+interface ProjectCronogramaPanelProps {
+  projectId: number
+  canManage: boolean
+}
+
+interface PersistedGoal {
+  description: string
+  target: number | null
+}
+
+interface PersistedActivity {
+  description: string
+  responsibleId: number | null
+  firstMonth: string
+  lastMonth: string
+}
+
+function goalRowFrom(goal: ProjectGoal): CronogramaGoalRow {
+  return {
+    id: goal.id,
+    order: goal.order,
+    description: goal.description,
+    target: goal.target === null ? "" : String(goal.target),
+  }
+}
+
+function activityRowFrom(activity: ProjectActivity): CronogramaActivityRow {
+  return {
+    id: activity.id,
+    order: activity.order,
+    description: activity.description,
+    responsibleId: activity.responsibleId,
+    firstMonth: activity.firstMonth,
+    lastMonth: activity.lastMonth,
+    status: activity.status,
+  }
+}
+
+function targetFromText(text: string): number | null {
+  return text.trim() === "" ? null : Number(text)
+}
+
+export function ProjectCronogramaPanel({ projectId, canManage }: ProjectCronogramaPanelProps) {
+  const { toast } = useToast()
+  const [loading, setLoading] = useState(true)
+  const [months, setMonths] = useState<string[]>([])
+  const [today, setToday] = useState("")
+  const [goals, setGoals] = useState<CronogramaGoalRow[]>([])
+  const [activities, setActivities] = useState<CronogramaActivityRow[]>([])
+  const [members, setMembers] = useState<CronogramaMemberOption[]>([])
+  const [persistedGoals, setPersistedGoals] = useState(new Map<number, PersistedGoal>())
+  const [persistedActivities, setPersistedActivities] = useState(new Map<number, PersistedActivity>())
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const [view, memberRows] = await Promise.all([
+        getCronograma(projectId),
+        listProjectMembers(projectId).catch(() => []),
+      ])
+      setMonths(view.months)
+      setToday(view.today)
+      setGoals(view.goals.map(goalRowFrom))
+      setActivities(view.activities.map(activityRowFrom))
+      setMembers(
+        memberRows.map((member) => ({
+          id: member.userId,
+          name: member.userName ?? `#${member.userId}`,
+        })),
+      )
+      setPersistedGoals(
+        new Map(view.goals.map((goal) => [goal.id, { description: goal.description, target: goal.target }])),
+      )
+      setPersistedActivities(
+        new Map(
+          view.activities.map((activity) => [
+            activity.id,
+            {
+              description: activity.description,
+              responsibleId: activity.responsibleId,
+              firstMonth: activity.firstMonth,
+              lastMonth: activity.lastMonth,
+            },
+          ]),
+        ),
+      )
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: error instanceof Error ? error.message : "Falha ao carregar o cronograma",
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
+  }, [projectId, toast])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  // Nenhum handler async sem catch: rejeição solta em `onClick` derruba o gate do Vitest com
+  // "Unhandled Rejection" mesmo com todos os testes passando (medido no V4-4b, DEC-85).
+  function reportError(error: unknown, fallback: string) {
+    toast({
+      title: "Erro",
+      description: error instanceof Error ? error.message : fallback,
+      variant: "destructive",
+    })
+  }
+
+  function handleAddGoal() {
+    setGoals((current) => [
+      ...current,
+      { id: null, order: nextCronogramaOrder(current.map((goal) => goal.order)), description: "", target: "" },
+    ])
+  }
+
+  function handleAddActivity() {
+    // A linha nova nasce no primeiro mês da janela: sem marca não há linha, e o domínio não tem
+    // estado "sem mês".
+    const month = months[0] ?? today.slice(0, 7)
+    setActivities((current) => [
+      ...current,
+      {
+        id: null,
+        order: nextCronogramaOrder(current.map((activity) => activity.order)),
+        description: "",
+        responsibleId: null,
+        firstMonth: month,
+        lastMonth: month,
+      },
+    ])
+  }
+
+  async function commitGoal(goal: CronogramaGoalRow) {
+    const description = goal.description.trim()
+    const target = targetFromText(goal.target)
+
+    if (goal.id === null) {
+      if (description === "") return
+      try {
+        const created = await createProjectGoal(projectId, {
+          description,
+          target: target === null ? undefined : target,
+        })
+        setPersistedGoals((current) =>
+          new Map(current).set(created.id, { description: created.description, target: created.target }),
+        )
+        setGoals((current) => current.map((row) => (row === goal ? goalRowFrom(created) : row)))
+      } catch (error) {
+        reportError(error, "Falha ao criar meta")
+      }
+      return
+    }
+
+    const before = persistedGoals.get(goal.id)
+    const patch: { description?: string; target?: number | null } = {}
+    if (before && before.description !== description) patch.description = description
+    if (before && before.target !== target) patch.target = target
+    if (Object.keys(patch).length === 0) return
+
+    try {
+      const updated = await updateProjectGoal(projectId, goal.id, patch)
+      setPersistedGoals((current) =>
+        new Map(current).set(updated.id, { description: updated.description, target: updated.target }),
+      )
+      setGoals((current) => current.map((row) => (row.id === updated.id ? goalRowFrom(updated) : row)))
+    } catch (error) {
+      reportError(error, "Falha ao atualizar meta")
+    }
+  }
+
+  async function commitActivity(activity: CronogramaActivityRow) {
+    const description = activity.description.trim()
+
+    if (activity.id === null) {
+      if (description === "") return
+      try {
+        const created = await createProjectActivity(projectId, {
+          description,
+          firstMonth: activity.firstMonth,
+          lastMonth: activity.lastMonth,
+          responsibleId: activity.responsibleId,
+        })
+        setPersistedActivities((current) =>
+          new Map(current).set(created.id, {
+            description: created.description,
+            responsibleId: created.responsibleId,
+            firstMonth: created.firstMonth,
+            lastMonth: created.lastMonth,
+          }),
+        )
+        setActivities((current) => current.map((row) => (row === activity ? activityRowFrom(created) : row)))
+      } catch (error) {
+        reportError(error, "Falha ao criar atividade")
+      }
+      return
+    }
+
+    const before = persistedActivities.get(activity.id)
+    const patch: { description?: string; responsibleId?: number | null } = {}
+    if (before && before.description !== description) patch.description = description
+    if (before && before.responsibleId !== activity.responsibleId) patch.responsibleId = activity.responsibleId
+    if (Object.keys(patch).length === 0) return
+
+    try {
+      const updated = await updateProjectActivity(projectId, activity.id, patch)
+      setPersistedActivities((current) =>
+        new Map(current).set(updated.id, {
+          description: updated.description,
+          responsibleId: updated.responsibleId,
+          firstMonth: updated.firstMonth,
+          lastMonth: updated.lastMonth,
+        }),
+      )
+      setActivities((current) =>
+        current.map((row) => (row.id === updated.id ? activityRowFrom(updated) : row)),
+      )
+    } catch (error) {
+      reportError(error, "Falha ao atualizar atividade")
+    }
+  }
+
+  function handleGoalChange(
+    goal: CronogramaGoalRow,
+    patch: { description?: string; target?: string },
+    phase: "typing" | "commit",
+  ) {
+    if (phase === "typing") {
+      setGoals((current) =>
+        current.map((row) =>
+          row === goal
+            ? {
+                ...row,
+                ...(patch.description !== undefined ? { description: patch.description } : {}),
+                ...(patch.target !== undefined ? { target: patch.target } : {}),
+              }
+            : row,
+        ),
+      )
+      return
+    }
+    void commitGoal(goal)
+  }
+
+  function handleActivityChange(
+    activity: CronogramaActivityRow,
+    patch: { description?: string; responsibleId?: number | null },
+    phase: "typing" | "commit",
+  ) {
+    const next = {
+      ...activity,
+      ...(patch.description !== undefined ? { description: patch.description } : {}),
+      ...(patch.responsibleId !== undefined ? { responsibleId: patch.responsibleId } : {}),
+    }
+
+    if (phase === "typing") {
+      setActivities((current) => current.map((row) => (row === activity ? next : row)))
+      return
+    }
+    void commitActivity(next)
+  }
+
+  async function handleToggleMonth(activity: CronogramaActivityRow, monthKey: string) {
+    const next = toggleActivityMonthRange(
+      { firstMonth: activity.firstMonth, lastMonth: activity.lastMonth },
+      monthKey,
+    )
+
+    if (next === null) {
+      // A linha não tem estado "sem mês": apagar a última marca é recusado, não silencioso.
+      toast({ title: "Ação não permitida", description: ACTIVITY_MIN_MONTH_MESSAGE })
+      return
+    }
+
+    if (activity.id === null) {
+      setActivities((current) => current.map((row) => (row === activity ? { ...row, ...next } : row)))
+      return
+    }
+
+    const before = persistedActivities.get(activity.id)
+    if (before && before.firstMonth === next.firstMonth && before.lastMonth === next.lastMonth) return
+
+    try {
+      const updated = await updateProjectActivity(projectId, activity.id, next)
+      setPersistedActivities((current) =>
+        new Map(current).set(updated.id, {
+          description: updated.description,
+          responsibleId: updated.responsibleId,
+          firstMonth: updated.firstMonth,
+          lastMonth: updated.lastMonth,
+        }),
+      )
+      setActivities((current) =>
+        current.map((row) => (row.id === updated.id ? activityRowFrom(updated) : row)),
+      )
+    } catch (error) {
+      reportError(error, "Falha ao marcar o mês")
+    }
+  }
+
+  async function handleDeleteGoal(goal: CronogramaGoalRow) {
+    if (goal.id === null) {
+      setGoals((current) => current.filter((row) => row !== goal))
+      return
+    }
+    if (!window.confirm("Apagar esta meta do projeto?")) return
+
+    try {
+      await deleteProjectGoal(projectId, goal.id)
+      setPersistedGoals((current) => {
+        const next = new Map(current)
+        next.delete(goal.id!)
+        return next
+      })
+      setGoals((current) => current.filter((row) => row.id !== goal.id))
+    } catch (error) {
+      reportError(error, "Falha ao apagar meta")
+    }
+  }
+
+  async function handleDeleteActivity(activity: CronogramaActivityRow) {
+    if (activity.id === null) {
+      setActivities((current) => current.filter((row) => row !== activity))
+      return
+    }
+    if (!window.confirm("Apagar esta atividade do cronograma? As tarefas do projeto continuam.")) return
+
+    try {
+      await deleteProjectActivity(projectId, activity.id)
+      setPersistedActivities((current) => {
+        const next = new Map(current)
+        next.delete(activity.id!)
+        return next
+      })
+      setActivities((current) => current.filter((row) => row.id !== activity.id))
+    } catch (error) {
+      reportError(error, "Falha ao apagar atividade")
+    }
+  }
+
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Cronograma
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">Carregando metas e atividades…</p>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Cronograma</CardTitle>
+        <CardDescription>
+          {months.length > 0
+            ? `${monthColumnLabel(months[0])} a ${monthColumnLabel(months[months.length - 1])} — ${months.length} ${
+                months.length === 1 ? "mês" : "meses"
+              } na grade`
+            : "Sem meses na grade"}
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <CronogramaEditor
+          months={months}
+          goals={goals}
+          activities={activities}
+          memberOptions={members}
+          today={today}
+          canManage={canManage}
+          onAddGoal={handleAddGoal}
+          onGoalChange={handleGoalChange}
+          onDeleteGoal={handleDeleteGoal}
+          onAddActivity={handleAddActivity}
+          onActivityChange={handleActivityChange}
+          onToggleMonth={handleToggleMonth}
+          onDeleteActivity={handleDeleteActivity}
+        />
+      </CardContent>
+    </Card>
+  )
+}
