@@ -8,7 +8,7 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
 - **Gate de entrega:** `npm run arch:check` (exit 0, allow-list **vazia**) && `npm run lint` (nada de erro) && `npx tsc --noEmit` (0) && `npx vitest run` (zero failure). A contagem é **por branch**: no `dev` o baseline era **64 arquivos / 721 testes** quando o B8 removeu os 651 testes de paridade; no `plan/v3-operacional`, medido no encerramento do plan-v3 (2026-10-03), são **65 arquivos / 798 testes** em `tests/unit` + `features` e **75 / 881** na suíte completa. Na `dev` de hoje (medido em 2026-10-07, depois do plan-v4 V4-1/V4-2/V4-3/V4-6, do V4-4 de subtasks, dos testes do painel V4-4b/V4-4c, do V4-5a/V4-5b/V4-5c de subtask na UI, do V4-6b de vocabulário de status e do lote pós-encerramento POS-1 — DEC-97/98) são **87 arquivos / 1107 testes** e **97 / 1192** na suíte completa; a suíte e2e do quadro está em **2 passando + 1 falha conhecida + 5 "did not run"** (medido 2026-10-06
 no V4-5c; eram 7 quando a coluna `Em Revisão` tinha um cartão a menos) — o 3º teste quebra por cartão a
 mais na coluna (dado legítimo da instância, não código: hoje são as tarefas 50 e 304), e como o spec é
-serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 5 passando. Compare sempre com o `STATE.json` do plano em que você está. Na `dev` de hoje, medido no encerramento do V5-4a do plan-v5 (2026-10-13), são **117 arquivos / 1580 testes** em `tests/unit` + `features` e **127 / 1672** na suíte completa (G0 884 módulos / 3666 dependências); o `tsc` desta branch **não** fecha em 0 — 1 erro pré-existente em `features/laboratorio/__tests__/floating-timer-tabs.test.tsx:105`, conferido com `git stash`. Na branch do fechamento do repo-cleanup (`refactor/b6-restante`, medido 2026-10-08 depois do B6-2c..B6-7) o baseline é **95 arquivos / 1280 testes** em `tests/unit` + `features` e **105 / 1367** na suíte completa (G0 810 módulos / 3295 dependências).
+serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 5 passando. Compare sempre com o `STATE.json` do plano em que você está. Na `dev` de hoje, medido no encerramento do V5-4b do plan-v5 (2026-10-13), são **121 arquivos / 1647 testes** em `tests/unit` + `features` e **131 / 1740** na suíte completa (G0 890 módulos / 3697 dependências); o `tsc` desta branch **não** fecha em 0 — 1 erro pré-existente em `features/laboratorio/__tests__/floating-timer-tabs.test.tsx:105`, conferido com `git stash`. Na branch do fechamento do repo-cleanup (`refactor/b6-restante`, medido 2026-10-08 depois do B6-2c..B6-7) o baseline é **95 arquivos / 1280 testes** em `tests/unit` + `features` e **105 / 1367** na suíte completa (G0 810 módulos / 3295 dependências).
 - **G4/integração:** roundtrips Prisma real rodam **só** contra o banco de teste isolado `dq-dev-test-db` em `127.0.0.1:5433` (`$env:DATABASE_URL="postgresql://dq_dev:dq_dev_local_only@127.0.0.1:5433/dq_dev_test"; npx vitest run`) — nunca contra o `display-quest-db` (5432, produção local).
 - **Setup do G4 (corrigido 2026-10-02):** `npm run db:test:up` e `npm run db:test:setup` **existem**
   no `package.json` e fazem a sequência completa (`docker compose -f docker-compose.test.yml up -d`,
@@ -268,11 +268,16 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   a leitura aberta)**
   e **DEC-148 plan-v5 (2026-10-13: o V5-4 foi dividido em V5-4a — `users` + `projects.proppiNumber` + telas
   de perfil/painel/projeto — e V5-4b — `project_members` + tela de membros — pelo tamanho medido, com G5/G6
-  rodando uma vez no fechamento do V5-4)**.
+  rodando uma vez no fechamento do V5-4)**
+  e **DEC-149 plan-v5 (2026-10-13, execução do V5-4b: `project_members` ganha `lattes`, `cargaHoraria`,
+  `categoria`, `situacao`, `dataEntrada`; `categoria` é `BOLSISTA`/`VOLUNTARIO` vinda dos checkboxes medidos
+  do AcroForm e NÃO é segundo vocabulário de papel, `situacao` é `ATIVO`/`INATIVO` com default `ATIVO` e
+  remover continua apagando, `dataEntrada` exige forma estrita porque `new Date("01/02/2026")` é 2 de
+  janeiro, e quem escreve o vínculo é a ACL do projeto, não `MANAGE_USERS`)**.
   O V4-4 ia usar
   DEC-61..64 e colidiu; os 28 comentários de código foram renumerados. **Antes de abrir decisão nova, `grep`
   os CINCO `STATE.json` (clean-arch, plan-v3, plan-v4, plan-v5, plan-v6) — a nota antiga que dizia "três"
-  está velha. Próxima livre: DEC-149.**
+  está velha. Próxima livre: DEC-150.**
 - **Subtask (V4-4, DEC-78..83 → regra atual = DEC-97/98):** tabela `task_subtasks` (sem FK para
   `users` — subtask não tem
   responsável próprio), base gravada em `tasks.points` = `10 + 5·n` (DEC-97) e **cada subtask CONCLUÍDA
@@ -360,6 +365,7 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
 - **Papéis e permissões:** `ADMIN`/`COORDENADOR`/`LABORATORISTA` com `MANAGE_WORK_SESSIONS` gerenciam sessões alheias; `MANAGE_USERS` gerencia grade de horários. Voluntário e demais têm leitura liberada onde faz sentido.
 - **Projeto: leitura aberta, escrita fechada (V5-2a, DEC-127/136):** qualquer autenticado vê todos os projetos — lista, detalhe, entregáveis, anexos, capa/logo, horas agregadas, **Membros** e horas por pessoa (`/volunteers`). A decisão é `canActorAccessProjectDecision(actorId)` no domínio, de um parâmetro só, e não consulta membership. Gestão continua na ACL congelada (`canActorManageProjectDecision`: existindo membership, só os papéis dele decidem — membership `[VOLUNTARIO]` com `COORDENADOR` global **não** gerencia). Não reintroduza gate de leitura na rota: ele não pode responder "não" e o teste de rota voltaria a congelar o substituto, não o sistema.
 - **Dados de pessoa (V5-4a, DEC-138/147):** `users.cpf`/`registrationNumber`/`course`/`scholarshipType`/`fundingAgency`/`fundingAgencyOther`/`level` e `projects.proppiNumber`. As três listas fechadas (`USER_LEVELS`, `SCHOLARSHIP_TYPES`, `FUNDING_AGENCIES`) vêm dos campos do AcroForm medido (DEC-130), com os rótulos ao lado dos tokens em `backend/domain/identity/person-data-rules.ts` — o componente não tem vocabulário próprio (lição da DEC-96), e `normalizePersonEnum` dobra acentos para tela e banco falarem a mesma tabela. Escrita: self OU `MANAGE_USERS`, nos dois caminhos (`UpdateUserUseCase` do painel e `UpdateUserProfileUseCase` do perfil), pela MESMA função `applyPersonDataFields`; `SELF_EDITABLE_USER_FIELDS` passou de seis para treze. Leitura: os seis campos abertos seguem a leitura aberta do perfil (DEC-136) e chegam na lista de usuários; **o CPF é a única exceção** — sai por `toPublicUserWithCpf`, nunca por `toPublicUser`, e na lista só sob `canViewFullUsers`. O CPF **não está na sessão** (cookie): a tela busca em `GET /api/users/[id]/profile`, que decide o direito a cada chamada, e mostra mascarado; gravado como 11 dígitos com os dois verificadores validados.
+- **Dados do vínculo (V5-4b, DEC-69/140/149):** `project_members` ganhou `lattes`, `cargaHoraria` (Float), `categoria`, `situacao`, `dataEntrada`. `categoria` é `BOLSISTA | VOLUNTARIO` (nula quando não declarada) e vem dos dois checkboxes medidos do AcroForm (`is_bolsista`, `is_voluntario`) — **não** é um segundo vocabulário de papel: `roles UserRole[]` continua sendo a ACL do vínculo e só `set_roles` escreve papel. `situacao` é `ATIVO | INATIVO`, nunca nula, e **não é o caminho de sair do projeto**: sair apaga a linha (`RemoveProjectMemberUseCase`) e as horas ficam em `work_sessions`. `cargaHoraria` é a carga contratada (alimenta `carga_8`/`carga_20`/`carga_adaptada` do atestado), teto 168 h, e **não é `users.weekHours`**, a meta semanal da pessoa (DEC-140) — os dois coexistem. `dataEntrada` é data civil com forma exigida; `joinedAt` continua o instantâneo. Escrita: `PATCH /api/projects/[id]/members` com `action: "set_profile"`, gate `canManageProjectMembers` (ACL do projeto, não `MANAGE_USERS`), chave `membershipId`, corpo parcial (chave ausente não apaga). Regra pura em `backend/domain/project/member-data-rules.ts`.
 - **Perfil: visibilidade prometida, regra ainda não escrita (medido 2026-10-13):** `users.profileVisibility` (`public`/`members_only`/`private`) é gravado na criação, editável na aba Configurações e documentado no guia com três valores, mas **nenhuma decisão no backend o lê** — hoje todo perfil é público de fato, e a leitura de usuário é a do autenticado. Implementar a regra é o batch **V5-12** (**DEC-143**). Enquanto ele não roda, não escreva código que finja aplicar a visibilidade, e não descreva os três valores como comportamento.
 - **Kanban:** tema escuro com colunas em cores sólidas por estado (sem degradê), contraste verificado — perfil visual do board é escuro/sólido.
 - **Notificações:** painel em popover; fecha ao clicar fora e com `Escape`, acessível por teclado.
@@ -697,6 +703,18 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   `tasks.dueDate`, `projects.startDate`/`endDate`) se formatam por substring, e a aritmética é
   a de `backend/domain/time/civil-day.ts`. Gravar o instantâneo que o `<input type="date">`
   produz reabre exatamente o erro que o plan-v3 fechou.
+- **`civilDayOfDate` aceita o que `new Date()` aceita — e `new Date("01/02/2026")` é 2 de janeiro
+  (medido no V5-4b):** texto com barra cai no parser do `Date`, que lê mês/dia/ano. Sem exigir a
+  forma, `01/02/2026` virava `2026-01-02` gravado em silêncio. `normalizeMemberEntryDate`
+  (`backend/domain/project/member-data-rules.ts`) exige `YYYY-MM-DD` ou instantâneo ISO e recusa o
+  resto nomeando o campo. O caminho do projeto (`normalizeProjectDateField`, V5-2b) **mantém** o
+  comportamento congelado: nenhuma tela produz essa grafia hoje, e endurecer lá exige mexer em
+  `validateProjectInput` e nos testes congelados do V5-2b.
+- **A garantia "nada é gravado a meias" é do chamador, não da função de normalização (medido no
+  V5-4b):** `applyMemberProfileFields` e `applyPersonDataFields` mutam campo a campo, então um corpo
+  com a metade errada deixa a outra metade mutada NO OBJETO. O que evita a escrita a meias é o use
+  case: ele mergeia sobre cópia do record e só chama `update` depois da função retornar. Ao escrever
+  o teste, prove a garantia no use case — provar na função pura é provar o que ela não promete.
 - **MSW não serve upload neste ambiente (medido no V5-2c):** o `fetch` que o Vitest injeta no jsdom
   é o do undici, e ele **não serializa** um `File` do jsdom dentro de um `FormData` —
   `multipartFormDataParser` falha com `assert(typeof value === "string" && webidl.is.USVString(value)

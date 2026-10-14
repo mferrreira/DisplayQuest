@@ -310,7 +310,7 @@ achados que eu medi e não tinham ASK escrito.
 | `Projeto.anexos Blob[ ]` | — | `project_attachments` → **bucket** (DEC-101; servidor = SeaweedFS, DEC-131) |
 | `Projeto.entregáveis Deliverable[ ]` | — | `project_deliverables (name, quantity)` |
 | logo/banner do projeto | não existe | `projects.logoKey?/bannerKey?` no bucket; header do detail + lista (DEC-102) |
-| `Projeto.equipe Member[ ]` | `project_members` | estendido: `lattes`, `cargaHoraria`, `categoria`, `situacao`, `dataEntrada` (matrícula **não**: vai em `users`, DEC-138) |
+| `Projeto.equipe Member[ ]` | `project_members` | estendido no V5-4b: `lattes`, `cargaHoraria`, `categoria` (`BOLSISTA`/`VOLUNTARIO`, DEC-149), `situacao` (`ATIVO`/`INATIVO`, default `ATIVO`), `dataEntrada` (data civil) — matrícula **não**: vai em `users`, DEC-138 |
 | dados de pessoa (CPF, matrícula, curso, modalidade, fomento, nível) | não existem | `users.cpf?`, `users.registrationNumber?`, `users.course?`, `users.scholarshipType?`, `users.fundingAgency?`, `users.fundingAgencyOther?`, `users.level?` (DEC-138; nomes gravados no V5-4a, com as listas fechadas derivadas do AcroForm — DEC-147). CPF com leitura restrita |
 | `Projeto.nº PROPPI` | — | `projects.proppiNumber?` (DEC-140) |
 | banner do usuário | só avatar (`users.avatar`) | `users.bannerKey?` no bucket; perfil + pódio #1 (DEC-102) |
@@ -337,7 +337,7 @@ achados que eu medi e não tinham ASK escrito.
 | **V5-2a** | **Visão de todos os projetos**: lista (`GET /api/projects`) e detalhe (`GET /api/projects/[id]`) passam a aceitar qualquer autenticado (DEC-127); escrita/gestão intacta; filhos (anexos, horas, cronograma) seguem a mesma leitura; ajusta os 2 trechos do roundtrip que congelam a regra antiga e escreve os testes unitários que faltam (`ListProjectsForActorUseCase`, `canActorAccessProjectDecision`) | baixo — 1 ACL + testes; roteiro para o V6-5 | **done** (2026-10-13; DEC-136: o escopo medido era maior — Membros e `/volunteers` abertos a pedido do dono, gate de leitura removido das 3 rotas de horas, e 6 assertions congeladas trocadas, não 2) |
 | **V5-3** | **Banner de usuário + pódio**: `users.bannerKey?`, upload no perfil, perfil mostra avatar+banner, **top #1 do quadro** ganha o tratamento com as imagens (avatar `h-24` já existe; entra o banner/fundo) | médio — tela visível (G5/G6) | **done** (2026-10-13, DEC-137) |
 | **V5-4a** | **Dados de pessoa** (metade do V5-4, aberta pela DEC-148): colunas novas em `users` (`cpf`, `registrationNumber`, `course`, `scholarshipType`, `fundingAgency`, `fundingAgencyOther`, `level` — DEC-138) + `projects.proppiNumber` (DEC-140). Escrita pelo gate do perfil (próprio OU `MANAGE_USERS`); **CPF com leitura restrita** a próprio e gestão, os demais seguem a leitura aberta. Telas: seção no formulário de perfil, bloco de leitura no cartão de perfil, campos no diálogo do painel, campo e linha no projeto | baixo — migration aditiva + três telas | **done** (2026-10-13, DEC-147; G5/G6 adiados para o fechamento do V5-4, DEC-148) |
-| **V5-4b** | **Equipe estendida**: colunas novas em `project_members` (`lattes`, `cargaHoraria`, `categoria`, `situacao`, `dataEntrada`) + use case de perfil de membro + tela de membros. Roteiro corrigido em 2026-10-13: matrícula saiu do vínculo e entrou em `users` (executado no V5-4a) | baixo-médio — migration aditiva + tela visível (G5/G6) | pendente |
+| **V5-4b** | **Equipe estendida**: colunas novas em `project_members` (`lattes`, `cargaHoraria`, `categoria` = `BOLSISTA`/`VOLUNTARIO` (DEC-149), `situacao` = `ATIVO`/`INATIVO` com default `ATIVO`, `dataEntrada` data civil) + use case `UpdateProjectMemberProfile` + `PATCH action=set_profile` + bloco de dados do vínculo na tela de membros. Roteiro corrigido em 2026-10-13: matrícula saiu do vínculo e entrou em `users` (executado no V5-4a) | baixo-médio — migration aditiva + tela visível (G5/G6) | código feito (2026-10-13, DEC-149, G0–G4 verdes); falta o fechamento do V5-4 (G5/G6) |
 | **V5-5** | **Cronograma**: `project_goals` + `project_activities` (ordem, descrição, responsável, **meses marcados na grade** → recompensa 100×meses e período do primeiro ao último mês marcado, status `OPEN → COMPLETION_REQUESTED → DONE`, provas no bucket), regras puras de período/ordem, **grade meses × atividades** + aba no detail, **wizard de criação com passo opcional de cronograma (DEC-100)** | médio — modelagem nova + tela (G5/G6) | pendente |
 | **V5-6** | **Task × atividade**: `tasks.activityId?`, no form a atividade do período atual vem **pré-selecionada** e só dá para escolher futuras, filtro no quadro, e a **trava DEC-99** (solicitar conclusão só com todas as tasks prontas) | médio — mexe no form do quadro (G5/G6) | pendente |
 | **V5-7** | **Economia de projeto**: `request-activity-completion` (líder/membro gestor + provas) e `approve-activity-completion` (só `GLOBAL_PROJECT_MANAGERS`; auto-aprova só COORDENADOR — DEC-77); prêmio = `100×meses × (1,5 se ≥2d adiantada) − 10%/dia de atraso`, **piso 0** (DEC-103/74); distribuição **proporcional às tasks concluídas de cada membro** (DEC-104); tarefa concluída de projeto também incrementa `projects.points`; idempotência + histórico | **alto** — economia | pendente |
@@ -560,8 +560,9 @@ Fora deste plano (na fila, não esquecer):
 consumiu DEC-105..114, o clean-arch (B6-restante + B9/B10) consumiu DEC-115..125 em
 2026-10-08, e este plano consumiu DEC-126/127 (2026-10-09), DEC-128..130 (documentos
 oficiais), DEC-131..137 (execução de V5-1, V5-2b/c/d, V5-2a e V5-3, em 2026-10-13),
-DEC-138..146 (a rodada de alinhamento do dono, §2.6, também de 2026-10-13) e DEC-147/148
-(execução do V5-4a e a divisão do V5-4 em V5-4a/V5-4b, 2026-10-13) — **a próxima
-livre é a DEC-149**; antes de abrir decisão nova, `grep` os
+DEC-138..146 (a rodada de alinhamento do dono, §2.6, também de 2026-10-13), DEC-147/148
+(execução do V5-4a e a divisão do V5-4 em V5-4a/V5-4b, 2026-10-13) e DEC-149 (as colunas do
+vínculo em `project_members`, 2026-10-13) — **a próxima
+livre é a DEC-150**; antes de abrir decisão nova, `grep` os
 cinco `STATE.json` (clean-arch, plan-v3, plan-v4, plan-v5, plan-v6; lição da colisão
 DEC-61..64 do V4-4).

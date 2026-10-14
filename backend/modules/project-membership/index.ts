@@ -3,12 +3,14 @@ import type {
   AssignProjectLeaderCommand,
   ListProjectMembersQuery,
   RemoveProjectMemberCommand,
+  UpdateProjectMemberProfileCommand,
   UpsertProjectMemberRolesCommand,
 } from "@/backend/modules/project-membership/application/contracts"
 import { AddProjectMemberUseCase } from "@/backend/modules/project-membership/application/use-cases/add-project-member.use-case"
 import { AssignProjectLeaderUseCase } from "@/backend/modules/project-membership/application/use-cases/assign-project-leader.use-case"
 import { ListProjectMembersUseCase } from "@/backend/modules/project-membership/application/use-cases/list-project-members.use-case"
 import { RemoveProjectMemberUseCase } from "@/backend/modules/project-membership/application/use-cases/remove-project-member.use-case"
+import { UpdateProjectMemberProfileUseCase } from "@/backend/modules/project-membership/application/use-cases/update-project-member-profile.use-case"
 import { UpsertProjectMemberRolesUseCase } from "@/backend/modules/project-membership/application/use-cases/upsert-project-member-roles.use-case"
 import type { ProjectAccessPort } from "@/backend/modules/project-membership/application/ports/project-access.port"
 import type { ProjectHoursPort } from "@/backend/modules/project-membership/application/ports/project-hours.port"
@@ -31,6 +33,7 @@ export class ProjectMembershipModule {
     private readonly removeProjectMemberUseCase: RemoveProjectMemberUseCase,
     private readonly upsertProjectMemberRolesUseCase: UpsertProjectMemberRolesUseCase,
     private readonly assignProjectLeaderUseCase: AssignProjectLeaderUseCase,
+    private readonly updateProjectMemberProfileUseCase: UpdateProjectMemberProfileUseCase,
   ) {}
 
   async listProjectMembers(query: ListProjectMembersQuery) {
@@ -51,6 +54,11 @@ export class ProjectMembershipModule {
 
   async assignProjectLeader(command: AssignProjectLeaderCommand) {
     return await this.assignProjectLeaderUseCase.execute(command)
+  }
+
+  /** V5-4b (DEC-149): os dados do vínculo — Lattes, carga contratada, categoria, situação, entrada. */
+  async updateProjectMemberProfile(command: UpdateProjectMemberProfileCommand) {
+    return await this.updateProjectMemberProfileUseCase.execute(command)
   }
 }
 
@@ -77,5 +85,6 @@ export function createProjectMembershipModule(options: ProjectMembershipModuleFa
     new RemoveProjectMemberUseCase({ memberships: ports.memberships }),
     new UpsertProjectMemberRolesUseCase({ memberships: ports.memberships, access: ports.access }),
     new AssignProjectLeaderUseCase({ memberships: ports.memberships, access: ports.access }),
+    new UpdateProjectMemberProfileUseCase({ memberships: ports.memberships }),
   )
 }

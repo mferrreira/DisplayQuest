@@ -1,4 +1,16 @@
-export interface ProjectMember {
+/**
+ * Os cinco campos do vínculo chegam na lista (V5-4b, DEC-149): é ela que os mostra, e pedir um
+ * por pessoa seria uma requisição por linha do quadro.
+ */
+export interface MemberProfileData {
+  lattes: string | null
+  cargaHoraria: number | null
+  categoria: string | null
+  situacao: string
+  dataEntrada: string | null
+}
+
+export interface ProjectMember extends MemberProfileData {
   id: number
   userId: number
   userName: string | null
@@ -9,7 +21,7 @@ export interface ProjectMember {
   currentWeekHours?: number
 }
 
-export interface ProjectMemberCreateOrUpdate {
+export interface ProjectMemberCreateOrUpdate extends MemberProfileData {
   id: number
   userId: number
   userName: string | null
@@ -88,6 +100,34 @@ export async function setProjectMemberRoles(projectId: number, userId: number, r
   const payload = await readJson(response)
   if (!response.ok) {
     throw new Error(buildErrorMessage(payload, "Erro ao atualizar papéis"))
+  }
+
+  return payload?.membership as ProjectMemberCreateOrUpdate
+}
+
+/**
+ * V5-4b (DEC-149): escreve os dados do vínculo. Só as chaves presentes no corpo são enviadas —
+ * chave ausente não apaga dado, e a tela manda o diff.
+ */
+export type MemberProfilePatch = Partial<MemberProfileData>
+
+export async function setProjectMemberProfile(
+  projectId: number,
+  membershipId: number,
+  patch: MemberProfilePatch,
+) {
+  const response = await fetch(`/api/projects/${projectId}/members`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      action: "set_profile",
+      membershipId,
+      ...patch,
+    }),
+  })
+  const payload = await readJson(response)
+  if (!response.ok) {
+    throw new Error(buildErrorMessage(payload, "Erro ao atualizar dados do membro"))
   }
 
   return payload?.membership as ProjectMemberCreateOrUpdate

@@ -4,7 +4,9 @@ import {
   listProjectMembers,
   removeProjectMember,
   setProjectLeader,
+  setProjectMemberProfile,
   setProjectMemberRoles,
+  type MemberProfilePatch,
   type ProjectMember,
 } from "@/lib/api/project-members"
 
@@ -88,6 +90,15 @@ export function useProjectMembers(projectId: number, options: UseProjectMembersO
     return result
   }, [projectId, reload])
 
+  const updateMemberProfile = useCallback(
+    async (membershipId: number, patch: MemberProfilePatch) => {
+      const result = await setProjectMemberProfile(projectId, membershipId, patch)
+      await reload()
+      return result
+    },
+    [projectId, reload],
+  )
+
   const updateLeader = useCallback(async (userId: number | null) => {
     const result = await setProjectLeader(projectId, userId)
     await reload()
@@ -104,6 +115,7 @@ export function useProjectMembers(projectId: number, options: UseProjectMembersO
     addMember,
     removeMember,
     updateMemberRoles,
+    updateMemberProfile,
     updateLeader,
   }
 }

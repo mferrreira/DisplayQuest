@@ -73,6 +73,13 @@ const MEMBERS = [
     userId: 4,
     roles: ["VOLUNTARIO"],
     joinedAt: new Date("2026-09-22T12:00:00.000Z"),
+    // V5-4b (DEC-149): os campos do vínculo entram no record lido pelo adapter. O cast `as never`
+    // esconde o tipo, então um campo novo aqui apareceria como `undefined` na view, não como erro.
+    lattes: null,
+    cargaHoraria: null,
+    categoria: null,
+    situacao: "ATIVO",
+    dataEntrada: "2026-09-22",
     user: { id: 4, name: "Ana", email: "ana@test.local", avatar: null, points: 10, completedTasks: 1 },
   },
   {
@@ -81,6 +88,11 @@ const MEMBERS = [
     userId: 9,
     roles: ["GERENTE_PROJETO"],
     joinedAt: new Date("2026-09-21T12:00:00.000Z"),
+    lattes: null,
+    cargaHoraria: null,
+    categoria: null,
+    situacao: "ATIVO",
+    dataEntrada: "2026-09-21",
     user: { id: 9, name: "Beto", email: "beto@test.local", avatar: null, points: 20, completedTasks: 2 },
   },
 ];

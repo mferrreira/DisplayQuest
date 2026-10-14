@@ -6,7 +6,7 @@ import { getBackendComposition } from "@/backend/composition/root"
 import { domainErrorResponse } from "@/lib/api/domain-error-response"
 
 const { projectMembership: projectMembershipModule } = getBackendComposition()
-type MemberAction = "add" | "remove" | "set_roles" | "set_leader"
+type MemberAction = "add" | "remove" | "set_roles" | "set_leader" | "set_profile"
 
 // OND5-B3 (R4): typed DomainErrors mapped by domainErrorResponse; the route no longer
 // imports @prisma/client or lib/auth/rbac (rg06 allow-list entry removed — normalizeRoles
@@ -130,6 +130,25 @@ async function handleMutation(
       return NextResponse.json({ membership }, { status: 200 })
     }
 
+    if (action === "set_profile") {
+      // V5-4b (DEC-149): a chave é o vínculo. A validação dos campos é do domínio
+      // (`applyMemberProfileFields`), e a autorização também — a rota só recusa id que não é id.
+      const membershipId = Number(body?.membershipId)
+      if (!Number.isInteger(membershipId) || membershipId <= 0) {
+        return NextResponse.json({ error: "membershipId é obrigatório" }, { status: 400 })
+      }
+
+      const membership = await projectMembershipModule.updateProjectMemberProfile({
+        projectId,
+        actorUserId: auth.actor.id,
+        actorRoles: auth.actor.roles,
+        membershipId,
+        data: body ?? {},
+      })
+
+      return NextResponse.json({ membership }, { status: 200 })
+    }
+
     const targetUserId =
       body?.userId === null || body?.userId === undefined || body?.userId === ""
         ? null
@@ -154,7 +173,7 @@ async function handleMutation(
 
 function resolveAction(body: any, strictAction: boolean): MemberAction | null {
   const action = typeof body?.action === "string" ? (body.action as MemberAction) : null
-  if (action && ["add", "remove", "set_roles", "set_leader"].includes(action)) {
+  if (action && ["add", "remove", "set_roles", "set_leader", "set_profile"].includes(action)) {
     return action
   }
 

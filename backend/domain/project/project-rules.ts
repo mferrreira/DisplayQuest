@@ -23,6 +23,7 @@
  */
 import { hasPermission } from "../identity";
 import type { Role } from "../identity";
+import type { MemberProfileFields } from "./member-data-rules";
 import { civilDayOfDate } from "../time/civil-day";
 
 // ---------------------------------------------------------------------------
@@ -287,7 +288,7 @@ export function roundHours(seconds: number): number {
 // Views (frozen output shapes)
 // ---------------------------------------------------------------------------
 
-export interface MembershipRow {
+export interface MembershipRow extends MemberProfileFields {
   id: number;
   userId: number;
   userName: string | null;
@@ -296,7 +297,7 @@ export interface MembershipRow {
   joinedAt: Date;
 }
 
-export interface ProjectMemberViewOutput {
+export interface ProjectMemberViewOutput extends MemberProfileFields {
   id: number;
   userId: number;
   userName: string | null;
@@ -321,6 +322,13 @@ export function toMemberView(
     joinedAt: member.joinedAt.toISOString(),
     totalHours: roundHours(totalSeconds),
     currentWeekHours: roundHours(weekSeconds),
+    // V5-4b (DEC-149): a lista de membros é a tela que mostra o vínculo, então os campos vão com
+    // ela — pedir um por pessoa seria uma requisição por linha do quadro.
+    lattes: member.lattes,
+    cargaHoraria: member.cargaHoraria,
+    categoria: member.categoria,
+    situacao: member.situacao,
+    dataEntrada: member.dataEntrada,
   };
 }
 

@@ -21,7 +21,7 @@
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { prisma } from "@/lib/database/prisma";
-import { userActor } from "@/backend/domain";
+import { civilDayOfInstant, userActor } from "@/backend/domain";
 import { createProjectManagementModule } from "@/backend/modules/project-management";
 import { createProjectMembershipModule } from "@/backend/modules/project-membership";
 
@@ -360,6 +360,96 @@ describe("G4 roundtrip — project-management + project-membership (isolated tes
       roles: ["PESQUISADOR"],
     });
     expect(upserted.roles).toEqual(["PESQUISADOR"]);
+  });
+
+  it("updateProjectMemberProfile: os dados do vínculo sobrevivem ao roundtrip Prisma real (V5-4b, DEC-149)", async () => {
+    const anaMembership = await prisma.project_members.findUnique({
+      where: { projectId_userId: { projectId, userId: anaId } },
+    });
+
+    const written = await membershipModule.updateProjectMemberProfile({
+      projectId,
+      actorUserId: coordId,
+      actorRoles: ["COORDENADOR"],
+      membershipId: anaMembership!.id,
+      data: {
+        lattes: "  lattes.cnpq.br/1234567890123456  ",
+        cargaHoraria: "20",
+        categoria: "Bolsista",
+        situacao: "Inativo",
+        dataEntrada: "2026-10-14T02:00:00.000Z", // ainda 13/10 no laboratório (DEC-132)
+      },
+    });
+
+    expect(written.lattes).toBe("lattes.cnpq.br/1234567890123456");
+    expect(written.cargaHoraria).toBe(20);
+    expect(written.categoria).toBe("BOLSISTA");
+    expect(written.situacao).toBe("INATIVO");
+    expect(written.dataEntrada).toBe("2026-10-13");
+
+    // O que está na tabela, não só na view.
+    const row = await prisma.project_members.findUnique({ where: { id: anaMembership!.id } });
+    expect(row?.lattes).toBe("lattes.cnpq.br/1234567890123456");
+    expect(row?.cargaHoraria).toBe(20);
+    expect(row?.categoria).toBe("BOLSISTA");
+    expect(row?.situacao).toBe("INATIVO");
+    expect(row?.dataEntrada).toBe("2026-10-13");
+
+    // A lista é a tela que mostra o vínculo: os campos vêm nela, sem pedido por pessoa.
+    const members = await membershipModule.listProjectMembers({
+      projectId,
+      actorUserId: betoId,
+      actorRoles: ["VOLUNTARIO"], // sem gestão: leitura aberta (DEC-127)
+    });
+    const ana = members.find((m) => m.userId === anaId)!;
+    expect(ana.cargaHoraria).toBe(20);
+    expect(ana.categoria).toBe("BOLSISTA");
+    expect(ana.situacao).toBe("INATIVO");
+
+    // Chave ausente não apaga (DEC-138): só a carga muda, o resto continua.
+    const partial = await membershipModule.updateProjectMemberProfile({
+      projectId,
+      actorUserId: coordId,
+      actorRoles: ["COORDENADOR"],
+      membershipId: anaMembership!.id,
+      data: { cargaHoraria: 8 },
+    });
+    expect(partial.cargaHoraria).toBe(8);
+    expect(partial.categoria).toBe("BOLSISTA");
+    expect(partial.situacao).toBe("INATIVO");
+    expect(partial.dataEntrada).toBe("2026-10-13");
+
+    // Corpo inválido não grava metade.
+    await expect(
+      membershipModule.updateProjectMemberProfile({
+        projectId,
+        actorUserId: coordId,
+        actorRoles: ["COORDENADOR"],
+        membershipId: anaMembership!.id,
+        data: { cargaHoraria: 40, categoria: "MEMBRO" },
+      }),
+    ).rejects.toThrow("Categoria de membro inválida");
+    expect((await prisma.project_members.findUnique({ where: { id: anaMembership!.id } }))?.cargaHoraria).toBe(8);
+
+    // Quem é do projeto mas não gerencia não escreve o vínculo.
+    const betoMembership = await prisma.project_members.findUnique({
+      where: { projectId_userId: { projectId, userId: betoId } },
+    });
+    await expect(
+      membershipModule.updateProjectMemberProfile({
+        projectId,
+        actorUserId: betoId,
+        actorRoles: ["VOLUNTARIO"],
+        membershipId: betoMembership!.id,
+        data: { cargaHoraria: 20 },
+      }),
+    ).rejects.toThrow("Apenas coordenadores, gerentes ou gerente do projeto podem atualizar dados do membro");
+
+    // Vínculo criado no `addProjectMember` já entra com data de entrada: o dia civil do dia em
+    // que a linha nasceu (o adapter espelha o `@default(now())` do `joinedAt`).
+    const outsiderMembership = await prisma.project_members.findFirst({ where: { projectId, userId: outsiderId } });
+    expect(outsiderMembership?.dataEntrada).toBe(civilDayOfInstant(new Date()));
+    expect(outsiderMembership?.situacao).toBe("ATIVO");
   });
 
   it("removeProjectMember: regular member goes; last GERENTE_PROJETO is guarded", async () => {

@@ -131,13 +131,23 @@ model project_attachments {
 }
 
 model project_members {
-  id        Int        @id @default(autoincrement())
-  projectId Int
-  userId    Int
-  joinedAt  DateTime   @default(now())
-  roles     UserRole[]
-  project   projects   @relation("ProjectMemberships", fields: [projectId], references: [id], onDelete: Cascade)
-  user      users      @relation("UserProjectMemberships", fields: [userId], references: [id], onDelete: Cascade)
+  id           Int      @id @default(autoincrement())
+  projectId    Int
+  userId       Int
+  joinedAt     DateTime @default(now())
+  roles        UserRole[]
+  // V5-4b (DEC-69/140/149): dados do vínculo. `cargaHoraria` é a carga contratada, que alimenta
+  // o atestado (carga_8 / carga_20 / carga_adaptada) — não é `users.weekHours`, a meta semanal da
+  // pessoa (DEC-140). `categoria` sai dos dois checkboxes medidos do AcroForm (`is_bolsista`,
+  // `is_voluntario`) e é nula quando não declarada. `situacao` nunca é nula. `dataEntrada` é data
+  // civil `YYYY-MM-DD` (DEC-132), e `joinedAt` continua o instantâneo em que a linha nasceu.
+  lattes       String?
+  cargaHoraria Float?
+  categoria    String?
+  situacao     String   @default("ATIVO")
+  dataEntrada  String?
+  project      projects @relation("ProjectMemberships", fields: [projectId], references: [id], onDelete: Cascade)
+  user         users    @relation("UserProjectMemberships", fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([projectId, userId])
 }
