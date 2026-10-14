@@ -56,6 +56,8 @@ export interface UserSummaryRow {
   avatar: string | null;
   bio: string | null;
   bannerKey: string | null;
+  /** V5-12 (DEC-143/177): a linha traz o valor do perfil para a regra decidir linha a linha. */
+  profileVisibility: ProfileVisibility;
   /** V5-4a (DEC-138): a linha traz os dados de pessoa; a política de visibilidade decide qual tier os entrega. */
   cpf: string | null;
   registrationNumber: string | null;

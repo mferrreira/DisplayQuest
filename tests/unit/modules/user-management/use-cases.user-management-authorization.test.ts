@@ -160,10 +160,17 @@ describe("ListUsersForActorUseCase — visibilidade lida do ActorRef (B6-4)", ()
   });
 });
 
-describe("FindUserByIdUseCase — self || MANAGE_USERS com mensagem por rota (B6-4)", () => {
-  it("VOLUNTARIO lendo OUTRO é barrado com o default 'Acesso negado' (rota users/[id])", async () => {
+describe("FindUserByIdUseCase — visibilidade de perfil + mensagem por rota (V5-12, DEC-143)", () => {
+  it("perfil PUBLICO ativo é do autenticado — o aberto que o guia promete (antes era 403)", async () => {
+    await expect(new FindUserByIdUseCase(fakes.repository).execute(stranger, 1)).resolves
+      .toMatchObject({ id: 1 });
+  });
+
+  it("quem não é gestão e não tem vínculo é barrado com o default 'Acesso negado' (rota users/[id]) — aqui: alvo não-ATIVO (pending)", async () => {
+    // O gate `private` (próprio + gestão) é exatamente o gate antigo; o alvo pending exerce o
+    // mesmo ramo: visibilidade descreve quem está dentro do sistema (DEC-55 na leitura).
     await expect(
-      new FindUserByIdUseCase(fakes.repository).execute(stranger, 1),
+      new FindUserByIdUseCase(fakes.repository).execute(stranger, 4),
     ).rejects.toThrow("Acesso negado");
   });
 
@@ -176,7 +183,7 @@ describe("FindUserByIdUseCase — self || MANAGE_USERS com mensagem por rota (B6
 
   it("a rota profile passa a MENSAGEM PRÓPRIA 'Não autorizado' para a MESMA regra", async () => {
     await expect(
-      new FindUserByIdUseCase(fakes.repository).execute(stranger, 1, PROFILE_DENIED_MESSAGE),
+      new FindUserByIdUseCase(fakes.repository).execute(stranger, 4, PROFILE_DENIED_MESSAGE),
     ).rejects.toThrow(PROFILE_DENIED_MESSAGE);
   });
 });

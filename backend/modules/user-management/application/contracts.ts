@@ -47,6 +47,8 @@ export interface ListLeaderboardQuery {
 
 export interface ListUserProfilesQuery {
   type: "public" | "members"
+  /** V5-12 (DEC-143/177): a busca de pessoas obedece à visibilidade de perfil — o ator entra na query. */
+  actor: ActorRef
 }
 
 export interface CreateUserCommand {

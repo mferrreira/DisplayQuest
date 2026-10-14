@@ -27,11 +27,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import {
   ConflictError,
+  ACCESS_DENIED_MESSAGE,
   CREATE_USER_DENIED_MESSAGE,
   ForbiddenError,
   NotFoundError,
   PENDING_MODERATION_DENIED_MESSAGE,
   PROFILE_DENIED_MESSAGE,
+  canActorViewProfile,
   resolveUserListVisibility,
   requireActorPermission,
   requireActorSelfOrPermission,
@@ -40,6 +42,16 @@ import {
 } from "@/backend/domain";
 
 const mocks = vi.hoisted(() => {
+  // V5-12 (DEC-143): a leitura de um usuário obedece à visibilidade do ALVO. O duplo dá os
+  // dados do alvo (público/privado); a decisão é a regra real do domínio (DEC-90) — o duplo
+  // não reimplementa o gate antigo, que não existe mais no sistema.
+  const readTargets: Record<
+    number,
+    { id: number; profileVisibility: "public" | "private"; status: string }
+  > = {
+    1: { id: 1, profileVisibility: "public", status: "active" },
+    2: { id: 2, profileVisibility: "private", status: "active" },
+  };
   const fakeModule = {
     // B6-4 (D4): os métodos migrados DELEGAM nas funções do domínio que os use cases chamam
     // (padrão DEC-90). O duplo fornece os dados; a decisão é a matriz real via papéis do ator.
@@ -67,7 +79,11 @@ const mocks = vi.hoisted(() => {
       createdAt: new Date("2026-01-01T00:00:00.000Z"),
     }),
     findUserById: async (actor: ActorRef, id: number, deniedMessage?: string) => {
-      requireActorSelfOrPermission(actor, id, "MANAGE_USERS", deniedMessage);
+      const target = readTargets[id];
+      if (!target) return null;
+      if (!canActorViewProfile(actor, target, false)) {
+        throw new ForbiddenError(deniedMessage ?? ACCESS_DENIED_MESSAGE);
+      }
       return { id, name: "Ana", email: "ana@x.com" };
     },
     updateUser: async (actor: ActorRef, id: number) => {
@@ -106,7 +122,7 @@ const mocks = vi.hoisted(() => {
   const auth = {
     actor: { id: 42, roles: ["COORDENADOR"] },
   };
-  return { fakeModule, auth };
+  return { fakeModule, readTargets, auth };
 });
 
 vi.mock("@/backend/composition/root", () => ({
@@ -169,7 +185,11 @@ beforeEach(() => {
     createdAt: new Date("2026-01-01T00:00:00.000Z"),
   });
   mocks.fakeModule.findUserById = async (actor: ActorRef, id: number, deniedMessage?: string) => {
-    requireActorSelfOrPermission(actor, id, "MANAGE_USERS", deniedMessage);
+    const target = mocks.readTargets[id];
+    if (!target) return null;
+    if (!canActorViewProfile(actor, target, false)) {
+      throw new ForbiddenError(deniedMessage ?? ACCESS_DENIED_MESSAGE);
+    }
     return { id, name: "Ana", email: "ana@x.com" };
   };
   mocks.fakeModule.updateUser = async (actor: ActorRef, id: number) => {
@@ -289,15 +309,23 @@ describe("/api/users/[id] GET/PUT/DELETE", () => {
     expect(await missing.json()).toEqual({ error: "Usuário não encontrado" });
   });
 
-  it("GET de outro sem MANAGE_USERS => 403 'Acesso negado' (self-or-manage no use case)", async () => {
+  it("GET de outro: PUBLICO é do autenticado; PRIVADO é próprio + gestão (V5-12, DEC-143)", async () => {
     login(["VOLUNTARIO"], 42);
-    const denied = await userGet(makeRequest("/api/users/1"), idContext("1"));
+    // O aberto que o guia promete: perfil público lê-se sem gestão (antes era 403).
+    expect((await userGet(makeRequest("/api/users/1"), idContext("1"))).status).toBe(200);
+
+    // O gate antigo sobrevive como o ramo `private`, com a mensagem congelada da rota.
+    const denied = await userGet(makeRequest("/api/users/2"), idContext("2"));
     expect(denied.status).toBe(403);
     expect(await denied.json()).toMatchObject({ error: "Acesso negado", code: "FORBIDDEN" });
 
-    // o dono (self) passa sem qualquer gestao
-    login(["VOLUNTARIO"], 1);
-    expect((await userGet(makeRequest("/api/users/1"), idContext("1"))).status).toBe(200);
+    // o dono (self) passa do próprio privado sem qualquer gestão
+    login(["VOLUNTARIO"], 2);
+    expect((await userGet(makeRequest("/api/users/2"), idContext("2"))).status).toBe(200);
+
+    // a gestão lê o privado — é a "administração" da tabela do guia
+    login(["COORDENADOR"]);
+    expect((await userGet(makeRequest("/api/users/2"), idContext("2"))).status).toBe(200);
   });
 
   it("PUT ValidationError (avatar) -> 400; NotFoundError -> 404", async () => {

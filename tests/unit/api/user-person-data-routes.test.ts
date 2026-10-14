@@ -84,6 +84,7 @@ vi.mock("@/backend/composition/root", () => {
         avatar: row.avatar,
         bio: row.bio,
         bannerKey: row.bannerKey,
+        profileVisibility: row.profileVisibility,
         cpf: row.cpf,
         registrationNumber: row.registrationNumber,
         course: row.course,
@@ -225,6 +226,33 @@ describe("leitura: onde o CPF aparece e onde não aparece", () => {
 
     expect(response.status).toBe(200);
     expect((await response.json()).user.cpf).toBe("52998224725");
+  });
+
+  it("GET /api/users/[id]/profile (terceiro, perfil PÚBLICO): 200 SEM CPF (V5-12, DEC-143/138)", async () => {
+    mocks.session = stranger;
+
+    const response = await profileGet(
+      new NextRequest("http://localhost:3001/api/users/1/profile"),
+      params({ id: "1" })
+    );
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.user.course).toBe("Sistemas de Informação");
+    expect(body.user).not.toHaveProperty("cpf");
+  });
+
+  it("GET /api/users/[id]/profile (terceiro, perfil PRIVADO): 403 'Não autorizado'", async () => {
+    mocks.session = stranger;
+    mocks.users.set(3, userRow(3, { profileVisibility: "private" }));
+
+    const response = await profileGet(
+      new NextRequest("http://localhost:3001/api/users/3/profile"),
+      params({ id: "3" })
+    );
+
+    expect(response.status).toBe(403);
+    expect((await response.json()).error).toBe("Não autorizado");
   });
 
   it("GET /api/users (voluntário): campos abertos sim, CPF não", async () => {

@@ -179,6 +179,7 @@ export class PrismaUserRepository implements UserRepositoryPort {
         avatar: true,
         bannerKey: true,
         bio: true,
+        profileVisibility: true,
         cpf: true,
         registrationNumber: true,
         course: true,

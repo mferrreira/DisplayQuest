@@ -41,8 +41,14 @@ O formulário tem um bloco chamado **Dados para os documentos oficiais**. São o
 
 O CPF é o único desses campos que não é aberto: só você e quem gerencia contas o leem, e ele não aparece no perfil aberto por outra pessoa. Os demais são leitura aberta.
 
-::: limite titulo="A visibilidade do perfil ainda não esconde nada"
-Os três valores de **Visibilidade do Perfil** são gravados e aparecem descritos aqui porque a escolha existe na tela. O que ainda não existe é a regra que obedece a essa escolha: hoje, quem tem acesso à lista de pessoas enxerga o perfil de qualquer pessoa. Não conte com **Apenas Membros** ou **Privado** como garantia.
+::: nota titulo="A visibilidade é regra do servidor (desde outubro/2026)"
+Os três valores de **Visibilidade do Perfil** passaram a ser obedecidos pelo servidor. O que cada um esconde, e o que não esconde:
+
+- **Público** — qualquer pessoa autenticada abre o perfil.
+- **Apenas Membros** — você, a administração e quem participa de pelo menos um projeto em comum com a pessoa.
+- **Privado** — só você e a administração.
+
+A regra governa a **leitura de perfil**: o cartão da pessoa (biografia, capa, dados pessoais) e a **lista de pessoas** — quem está escondido pela visibilidade não aparece na lista para quem não pode vê-lo; a administração sempre vê todos, porque é na lista que ela gerencia as contas. O que a regra **não** alcança: o **ranking** mostra nome e pontos de quem tem histórico (é a regra do pódio, capítulo 5), e a tela de **Membros** de um projeto mostra o vínculo de quem participa daquele projeto. Perfil de pessoa pendente, rejeitada ou suspensa não é leitura aberta em nenhuma visibilidade: a escolha descreve quem está dentro do sistema.
 :::
 
 A **Visibilidade do Perfil** tem três valores:

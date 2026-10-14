@@ -42,4 +42,4 @@ Esta é a lista completa das telas do sistema, com o endereço de cada uma e que
 | Vínculo com projeto | Ativo, Inativo |
 | Categoria do vínculo | Bolsista, Voluntário, sem categoria |
 | Relatório técnico | Parcial, Técnico-final, Final |
-| Visibilidade do perfil | Público, Apenas Membros, Privado — a escolha existe, a regra que a obedece ainda não (capítulo 8) |
+| Visibilidade do perfil | Público, Apenas Membros, Privado — a regra que obedece a escolha existe e decide a leitura de perfil (capítulo 8) |

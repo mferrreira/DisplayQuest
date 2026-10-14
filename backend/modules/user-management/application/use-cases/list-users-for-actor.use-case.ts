@@ -1,6 +1,7 @@
-import { ForbiddenError, resolveUserListVisibility } from "@/backend/domain"
+import { ForbiddenError, canActorViewProfile, resolveUserListVisibility } from "@/backend/domain"
 import type { ListUsersForActorQuery } from "@/backend/modules/user-management/application/contracts"
 import type { UserRepositoryPort } from "@/backend/modules/user-management/application/ports/user.repository"
+import type { ProfileVisibilityPort } from "@/backend/modules/user-management/application/ports/profile-visibility.port"
 
 /**
  * ListUsersForActorUseCase — field-level visibility rule (OND2-B2, R2).
@@ -13,9 +14,17 @@ import type { UserRepositoryPort } from "@/backend/modules/user-management/appli
  * no B6-2d). A política e a mensagem de negação não mudaram. System actor não tem papéis: cai
  * na negação congelada (medido: nenhuma rotina chama este use case; o bypass do DEC-54 não se
  * aplica a uma regra de VISIBILIDADE de lista, que é sobre papéis).
+ *
+ * V5-12 (DEC-143/177): além dos CAMPOS por papel, a LINHA obedece ao `profileVisibility` da
+ * pessoa — `canActorViewProfile` decide linha a linha (gestão vê todas; `private` some para
+ * quem não é gestão; `members_only` casa pelo vínculo em comum medido pela porta). A política
+ * de campos de cima não mudou; a de linhas é nova.
  */
 export class ListUsersForActorUseCase {
-  constructor(private readonly repository: UserRepositoryPort) {}
+  constructor(
+    private readonly repository: UserRepositoryPort,
+    private readonly profileVisibility?: ProfileVisibilityPort,
+  ) {}
 
   async execute(query: ListUsersForActorQuery) {
     const visibility = resolveUserListVisibility(
@@ -30,7 +39,21 @@ export class ListUsersForActorUseCase {
 
     const rows = await this.repository.findActiveUsers()
 
-    return rows.map((row) => {
+    const sharedIds =
+      query.actor.kind === "user" && this.profileVisibility
+        ? new Set(await this.profileVisibility.findSharedProjectUserIds(query.actor.id))
+        : new Set<number>()
+
+    return rows
+      .filter(
+        (row) =>
+          canActorViewProfile(
+            query.actor,
+            { id: row.id, profileVisibility: row.profileVisibility, status: row.status },
+            sharedIds.has(row.id),
+          ),
+      )
+      .map((row) => {
       const out: Record<string, unknown> = {
         id: row.id,
         name: row.name,

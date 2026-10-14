@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { userActor } from "@/backend/domain"
 import { routeErrorResponse } from "@/lib/api/route-error-response"
 import { requireApiActor } from "@/lib/auth/api-guard"
 import { getBackendComposition } from "@/backend/composition/root"
@@ -11,7 +12,10 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const type = searchParams.get("type") === "members" ? "members" : "public"
 
-    const users = await userManagementModule.listProfiles({ type })
+    const users = await userManagementModule.listProfiles({
+      type,
+      actor: userActor(auth.actor.id, auth.actor.roles),
+    })
     return NextResponse.json({ users, type })
   } catch (error) {
     return routeErrorResponse(error, { fallback: "Erro ao buscar perfis dos usuários" })

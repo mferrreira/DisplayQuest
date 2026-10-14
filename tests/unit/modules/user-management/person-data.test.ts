@@ -70,6 +70,7 @@ function summaryRow(id: number, overrides: Partial<UserSummaryRow> = {}): UserSu
     avatar: null,
     bio: null,
     bannerKey: null,
+    profileVisibility: "public",
     ...emptyPersonData(),
     ...overrides,
   };
@@ -103,6 +104,7 @@ function makeFixture(rows: UserRecord[] = [userRow(1)]) {
         avatar: row.avatar,
         bio: row.bio,
         bannerKey: row.bannerKey,
+        profileVisibility: row.profileVisibility,
         cpf: row.cpf,
         registrationNumber: row.registrationNumber,
         course: row.course,
@@ -261,30 +263,48 @@ describe("UpdateUserProfileUseCase (PATCH do perfil) — a mesma regra", () => {
   });
 });
 
-describe("leitura de um usuário — o gate já deu o direito ao CPF", () => {
+describe("leitura de um usuário — CPF por camada, perfil pela visibilidade (V5-12)", () => {
   let fx: ReturnType<typeof makeFixture>;
 
   beforeEach(() => {
     fx = makeFixture([
       userRow(1, { cpf: "52998224725", course: "Sistemas de Informação" }),
+      userRow(2, { profileVisibility: "private" }),
     ]);
   });
 
   it("a própria pessoa lê o próprio CPF", async () => {
     const result = await new FindUserByIdUseCase(fx.repository).execute(owner, 1);
-    expect(result?.cpf).toBe("52998224725");
-    expect(result?.course).toBe("Sistemas de Informação");
+    if (!result || !("cpf" in result)) throw new Error("self deve sair pela projeção com CPF");
+    expect(result.cpf).toBe("52998224725");
+    expect(result.course).toBe("Sistemas de Informação");
   });
 
   it("a gestão lê o CPF de terceiro", async () => {
     const result = await new FindUserByIdUseCase(fx.repository).execute(manager, 1);
-    expect(result?.cpf).toBe("52998224725");
+    if (!result || !("cpf" in result)) throw new Error("gestão deve sair pela projeção com CPF");
+    expect(result.cpf).toBe("52998224725");
   });
 
-  it("quem gerencia projeto, não contas, não chega aqui: é negado antes da projeção", async () => {
-    await expect(
-      new FindUserByIdUseCase(fx.repository).execute(projectManager, 1)
-    ).rejects.toThrow(ForbiddenError);
+  it("perfil PÚBLICO é do autenticado — e sai SEM CPF (DEC-143/138)", async () => {
+    const result = await new FindUserByIdUseCase(fx.repository).execute(stranger, 1);
+    expect(result).not.toBeNull();
+    expect(result).not.toHaveProperty("cpf");
+    expect(result?.course).toBe("Sistemas de Informação");
+
+    // Quem gerencia projeto, não contas, também enxerga o público — sem CPF.
+    const viaProjectManager = await new FindUserByIdUseCase(fx.repository).execute(projectManager, 1);
+    expect(viaProjectManager).not.toHaveProperty("cpf");
+  });
+
+  it("perfil PRIVADO é próprio + gestão — o gate antigo, agora nomeado", async () => {
+    await expect(new FindUserByIdUseCase(fx.repository).execute(stranger, 2)).rejects.toThrow(
+      ForbiddenError,
+    );
+    await expect(new FindUserByIdUseCase(fx.repository).execute(projectManager, 2)).rejects.toThrow(
+      ForbiddenError,
+    );
+    expect((await new FindUserByIdUseCase(fx.repository).execute(manager, 2))?.id).toBe(2);
   });
 });
 

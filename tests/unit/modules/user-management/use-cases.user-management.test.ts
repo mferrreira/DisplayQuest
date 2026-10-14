@@ -452,8 +452,8 @@ describe("Moderate / Roles / Status / reads", () => {
     const leaderboard = (await new ListLeaderboardUseCase(repository).execute({ type: "points" })) as unknown[];
     expect(leaderboard).toHaveLength(3); // active only, limit 10
 
-    await new ListProfilesUseCase(repository).execute({ type: "public" });
-    await new ListProfilesUseCase(repository).execute({ type: "members" });
+    await new ListProfilesUseCase(repository).execute({ type: "public", actor: managerActor });
+    await new ListProfilesUseCase(repository).execute({ type: "members", actor: managerActor });
     expect(repository.visibilityCalls).toEqual(["public", "public"]);
   });
 });

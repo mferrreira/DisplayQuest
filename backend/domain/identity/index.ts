@@ -36,6 +36,7 @@ export {
 } from "./actor-ref";
 export { normalizeAvatar } from "./avatar";
 export { resolveUserListVisibility, type UserListVisibility } from "./user-visibility";
+export { canActorViewProfile, type ProfileVisibilityTarget } from "./profile-visibility-rules";
 export { SELF_EDITABLE_USER_FIELDS, filterSelfEditableUserFields } from "./user-edit-fields";
 export { CREATE_USER_DENIED_MESSAGE, PENDING_MODERATION_DENIED_MESSAGE, PROFILE_DENIED_MESSAGE } from "./user-denied-messages";
 export { toPublicUser, toPublicUserWithCpf, type PublicUser, type PublicUserWithCpf } from "./public-user";
