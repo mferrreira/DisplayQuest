@@ -1,7 +1,7 @@
 {
   "plan": "plan-v5",
   "title": "domínio de projetos maduro: cronograma, pontos, relatórios técnicos, atestados, blobs em bucket S3-compatible (SeaweedFS desde o V5-1, DEC-131)",
-  "version": "5.17.2",
+  "version": "5.17.3",
   "updatedAt": "2026-10-14",
   "status": "in_progress",
   "activeWave": "V5-6",
@@ -731,6 +731,16 @@
         "backend/README.md: a linha da DEC-24 ('nao sera eliminada') foi substituida pela medida da DEC-142."
       ],
       "gates": "tsc: 1 erro pre-existente. arch:check: 913 modulos / 3878 dependencias (eram 920/3881 — os 7 arquivos sairam do grafo), allow-list vazia. Suite completa (5433): 141 arquivos / 1891 testes."
+    },
+    {
+      "id": "D-3",
+      "at": "2026-10-14",
+      "title": "o seam de notificacao nativa sai (DEC-144)",
+      "actions": [
+        "Re-medido antes de apagar: `lib/notifications/browser-notifications.ts` (134 linhas) e seu teste (`tests/unit/lib/browser-notifications.test.ts`, 15 casos) eram o unico par — grep no repo inteiro nao acha nenhum chamador da API do seam.",
+        "A decisao e do dono (DEC-144, 2026-10-13): a F1b ficou fora do escopo do plano e a notificacao nativa continua impossivel na instancia — HTTP em IP de rede, e o navegador recusa pedido de permissao fora de secure context. Manter peca orfa e o que a propria DEC-144 cita como motivo (o precedente do seam sem consumidor)."
+      ],
+      "gates": "tsc: 1 erro pre-existente. arch:check: 911 modulos / 3876 dependencias (eram 913/3878), allow-list vazia. Suite completa (5433): 140 arquivos / 1876 testes (eram 141/1891 — o par saiu junto)."
     }
   ],
   "openQuestions": [],
@@ -814,7 +824,7 @@
       "id": "D-3",
       "decision": "DEC-144",
       "title": "seam orfao browser-notifications fora",
-      "status": "approved",
+      "status": "done",
       "scope": "lib/notifications/browser-notifications.ts (134 linhas) + tests/unit/lib/browser-notifications.test.ts (231 linhas). Zero chamadores medidos. Fecha a divida registrada no plan-v3 (PLAN.md S8).",
       "closes": "plan-v3 PLAN.md S8 (seam orfao)"
     },
