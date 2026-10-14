@@ -37,6 +37,7 @@ import { ProjectAttachmentsPanel } from "@/components/features/project-attachmen
 import { ProjectCronogramaPanel } from "@/components/features/project-cronograma-panel"
 import { ProjectTechnicalReportsPanel } from "@/components/features/project-technical-reports-panel"
 import { ProjectCertificatesPanel } from "@/components/features/project-certificates-panel"
+import { ProjectTimeProgress } from "@/components/features/project-time-progress"
 import { ProjectMediaHeader } from "@/components/features/project-media-header"
 import { hasAccess } from "@/lib/utils/utils"
 
@@ -284,6 +285,14 @@ export function ProjectDetailDialog({
                         <dd className="font-medium">{projectPoints} pts</dd>
                       </div>
                     )}
+                    {/* V5-11 (DEC-63/132): o relógio do período — `data_final − dia_de_hoje`.
+                        A aritmética é a regra pura do domínio; sem data de término não há
+                        andamento a desenhar. */}
+                    <ProjectTimeProgress
+                      startDate={project.startDate}
+                      endDate={project.endDate}
+                      className="sm:col-span-2"
+                    />
                   </dl>
                 </CardContent>
               </Card>
