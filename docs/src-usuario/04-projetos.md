@@ -109,6 +109,31 @@ O card anuncia a grade que ele mostra: *"out/2026 a set/2027 — 12 meses na gra
 A linha nova já nasce com o primeiro mês da grade marcado, porque etapa sem mês não existe.
 ```
 
+### A conclusão de uma etapa
+
+Cada etapa tem duas conclusões: quem conduz o projeto **solicita** a conclusão, com prova anexada, e a gestão do sistema **aprova**. O status diz em que fase a linha está: **Aberta**, **Conclusão solicitada** ou **Concluída**.
+
+1. Na linha, clique em **Conclusão**. Abre o diálogo *Conclusão da atividade*, com o status da etapa.
+2. Em **Provas**, anexe o arquivo que comprova a etapa: escolha o arquivo e clique em **Anexar prova**. A lista mostra nome, tamanho e data da prova, e cada uma pode ser baixada ou apagada.
+3. Clique em **Solicitar conclusão**. Sem prova, o sistema recusa — *"Anexe pelo menos uma prova antes de solicitar a conclusão."* — e a linha continua **Aberta**. Com prova, a linha vira **Conclusão solicitada**, e o diálogo diz quem pediu e quando: *"Solicitada em 10/10/2026 por Guia · Participante"*.
+4. A aprovação é de **Coordenador** ou **Gerente**. A pessoa abre a mesma linha, lê as provas anexadas e clica em **Aprovar conclusão**. O sistema confirma com o número distribuído — *"Atividade concluída"* seguido de *"N pontos distribuídos entre os membros do projeto."* — e a linha vira **Concluída**.
+
+```foto dialogo-conclusao-atividade-pedido titulo="O diálogo de conclusão de uma etapa aberta, com o botão de solicitar"
+A seção *Provas* está vazia, e a dica diz o que falta: *"Anexe pelo menos uma prova antes de solicitar a conclusão."*
+```
+
+```foto dialogo-conclusao-atividade-aprovacao titulo="O diálogo de uma etapa pedida, com a prova anexada e o botão de aprovar"
+A linha diz *"Conclusão solicitada"* e *"Solicitada em 10/10/2026 por Guia · Participante"*. A prova *parcial.pdf* (200,0 KB) aparece na lista, com botão de download. A dica diz o que a aprovação faz: *"Aprovar conclui a atividade e distribui o prêmio entre os membros ativos do projeto."*
+```
+
+::: nota titulo="O que a aprovação faz com os pontos"
+Aprovada a etapa, o prêmio dela — 100 pontos por mês marcado — entra nos pontos do projeto e é distribuído entre os membros **Ativo** da lista de membros, proporcional às tarefas que cada um concluiu no projeto. Quem conclui a etapa antes do prazo do último mês marcado recebe um prêmio maior; quem aprova depois do prazo recebe um prêmio menor. Um membro **Inativo** não recebe parte.
+:::
+
+::: limite titulo="Quem pede e quem aprova"
+Solicitar a conclusão e anexar prova é do líder do projeto e de **Gerente de Projeto**. Aprovar é de **Coordenador** e **Gerente** — e **Gerente** não aprova o que ele mesmo solicitou. O botão **Conclusão** aparece na linha para quem pode fazer qualquer uma das duas coisas.
+:::
+
 ::: limite titulo="Toda linha precisa de pelo menos um mês"
 Desmarcar a única marca de uma linha é recusado: o sistema responde *"A atividade precisa de pelo menos um mês marcado"* e a linha fica como estava.
 :::

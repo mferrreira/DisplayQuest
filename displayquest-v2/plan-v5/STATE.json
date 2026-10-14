@@ -1,11 +1,11 @@
 {
   "plan": "plan-v5",
   "title": "domínio de projetos maduro: cronograma, pontos, relatórios técnicos, atestados, blobs em bucket S3-compatible (SeaweedFS desde o V5-1, DEC-131)",
-  "version": "5.19.0",
+  "version": "5.19.1",
   "updatedAt": "2026-10-14",
   "status": "in_progress",
-  "activeWave": "V5-6",
-  "activeBatch": "V5-7 closing (G5/G6)",
+  "activeWave": "V5-7",
+  "activeBatch": "V5-8",
   "awaitingInstruction": false,
   "lineage": {
     "previousPlan": "plan-v4 (subtasks, animação, inativação — done em 2026-10-07, ondas V4-1..V4-5d + V4-6b + POS-1, DEC-78..98)",
@@ -776,6 +776,19 @@
         "Rota POST approve-completion (sem corpo; actorRoles globais; resposta carrega activity/award/shares/projectsPoints — a tela nao recalcula, R7). UI: botao da linha obedece ao par 'pedir OU aprovar' (predicate canOpenCompletion no painel com as funcoes do dominio, DEC-92); dialog ganha 'Aprovar conclusao' quando COMPLETION_REQUESTED e o ator pode (GERENTE que pediu nao ve o botao).",
         "Provas: 22 de regra pura (economia com now fixo), 10 de use case de aprovacao (ordens de recusa e de escrita, idempotencia, piso, sem membros), 4 de gamification, 5 de task-events, 8 de rota, 5 de roundtrip G4 na 5433 (history por membro, users.points creditado de verdade, projects.points == premio, INATIVO fora da conta, GERENTE self 403, replay 409), 3 novos no painel (20 no arquivo). As tres rotas legadas de cronograma/anexos ganharam os metodos novos nos fakes como portas nao exercitadas.",
         "Gate medido no fechamento do sub-batch: suite completa 147 arquivos / 2004 testes verdes na 5433 (baseline V5-7a: 144/1947); arch:check 943 modulos / 4059 dependencias, allow-list vazia; tsc com o unico erro pre-existente; eslint limpo nos arquivos tocados."
+      ]
+    },
+    {
+      "id": "V5-7-close",
+      "at": "2026-10-14",
+      "title": "Fechamento do V5-7 com G5/G6 (DEC-161: G5/G6 uma vez no fechamento)",
+      "actions": [
+        "G6: imagem do app reconstruida (docker compose build app, ~26 min medidos de novo — a pratica da casa, nota dos 25 min do V5-2d confirmada) porque a captura roda contra a INSTANCIA em 3000, e a imagem de 02:32 (fechamento do V5-6) nao tinha o botao 'Conclusao' do V5-7a. Medido no debug: cartao renderizava as linhas e os rotulos de status (que existem desde o V5-5a) mas zero botao de conclusao.",
+        "Pipeline de captura ganhou duas primitivas novas: duas capturas do dialogo de conclusao (pedido pelo membro gestor com 'Anexar prova' + 'Solicitar conclusao'; aprovacao pelo COORDENADOR com prova parcial.pdf + 'Aprovar conclusao') e a correcao do dialogo ANINHADO — o de conclusao abre dentro do de detalhe do projeto, cada Radix Dialog e um portal proprio no body, e ler so o primeiro [role=dialog] lia o de fora e nao via o controle aberto (a verificacao agora percorre todos via allInnerTexts).",
+        "Dado de vida curta semeado por SQL e apagado depois (mesmo desenho do V5-5b/V5-6): membership GERENTE_PROJETO do guia.participante nos tres projetos 'Pesquisa em IA' + 2 atividades por projeto (OPEN e COMPLETION_REQUESTED) + 1 prova. Contagem de saida: 0 atividades, 0 provas, 0 membros do 21. Gotcha medido: a primeira transacao falhou no 'updatedAt' (Prisma @updatedAt e client-side; SQL cru precisa escrever now()) e o ROLLBACK levou junto os inserts de membros que pareciam prontos — ao semear em transacao, conferir cada tabela depois, nao so o INSERT que falhou.",
+        "Os tres PNGs foram LIDOS (guarda da casa, nao so o log): pedido mostra 'Aberta' + Provas vazias + a dica de prova; aprovacao mostra 'Conclusao solicitada · Solicitada em 10/10/2026 por Guia · Participante' + parcial.pdf 200,0 KB + a dica do premio; o card re-capturado bate com a legenda existente ('out/2026 a set/2027 — 12 meses na grade').",
+        "Prosa nova no guia (docs/src-usuario/04-projetos.md): subsecao 'A conclusao de uma etapa' em 4 passos nomeando os controles pelos rotulos medidos, duas figuras novas, nota do premio (100/mes, membros ATIVO, proporcional a tarefas concluidas, mais antes do prazo / menos depois) e limite 'Quem pede e quem aprova' (GERENTE nao aprova o que pediu). Documento tecnico nao mudou — pratica dos lotes V5-5/V5-6: o guia e o que acompanha a UI.",
+        "G5 medido: docs:build verde sem AVISO (tecnico 15 secoes / 33 figuras inalterado; usuario 12 secoes / 43 figuras, eram 41) e docs:check 'nenhum caractere suspeito'."
       ]
     }
   ],

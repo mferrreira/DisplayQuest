@@ -137,6 +137,11 @@ const INTERACTIONS = [
   // porque a lista ordena por data de criação e três projetos da instância têm a mesma data —
   // "o primeiro cartão" não seria a mesma tela em duas execuções.
   { id: "dialogo-detalhe-projeto-cronograma", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: "button:has(svg.lucide-eye)" }, dialogo: "Cronograma", rolarAte: "text=Adicionar atividade" },
+  // V5-7 (DEC-76/162/165): o diálogo de conclusão da linha, os dois lados. Os dados semeados por
+  // SQL (membership de gestor + linhas + prova) são apagados depois da captura — mesmo dado de
+  // vida curta do V5-5b/V5-6. Abrir o diálogo só lê; nenhuma captura solicita nem aprova.
+  { id: "dialogo-conclusao-atividade-pedido", role: "part", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: "button:has(svg.lucide-eye)" }, clicar: ["Conclusão da atividade 1"], dialogo: "Solicitar conclusão", rolarAte: "text=Solicitar conclusão" },
+  { id: "dialogo-conclusao-atividade-aprovacao", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: "button:has(svg.lucide-eye)" }, clicar: ["Conclusão da atividade 2"], dialogo: "Aprovar conclusão", rolarAte: "text=Aprovar conclusão" },
   // V5-4b (DEC-149): o painel de Membros é onde os dados do vínculo se editam. Ele mora dentro
   // do diálogo "Gestão Completa", aberto pela aba Voluntários da tela Projetos.
   { id: "painel-membros", role: "coord", route: "/dashboard/projetos", aba: "Voluntários", selecionar: { gatilho: "Selecione um projeto" }, abre: "Gestão Completa", dialogo: "Dados do vínculo", rolarAte: "text=Dados do vínculo" },
@@ -357,11 +362,16 @@ for (const it of interactions) {
       if (it.dialogo) {
         await page.waitForSelector('[role="dialog"]', { timeout: 12_000 });
         await page.waitForTimeout(700);
-        const dialogText = (await page.locator('[role="dialog"]').first().innerText()).replace(/\s+/g, " ");
+        // Diálogo aninhado (V5-7): o de conclusão abre DENTRO do de detalhe do projeto, e cada
+        // Radix Dialog é um portal próprio no body. Ler só o primeiro leria o diálogo de fora e
+        // não veria o controle aberto. A verificação percorre todos, de fora para dentro.
+        const dialogText = (await page.locator('[role="dialog"]').allInnerTexts())
+          .join(" ")
+          .replace(/\s+/g, " ");
         if (!dialogText.includes(it.dialogo)) {
           throw new Error(`o diálogo aberto não contém "${it.dialogo}": "${dialogText.slice(0, 120)}"`);
         }
-        record.dialog = dialogText.slice(0, 400);
+        record.dialog = dialogText.slice(-400);
       } else {
         const bodyText = (await page.locator("body").innerText()).replace(/\s+/g, " ");
         if (it.verifica && !bodyText.includes(it.verifica)) {
