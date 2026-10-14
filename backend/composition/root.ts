@@ -10,6 +10,7 @@ import { createGamificationActivityCompletionAward } from "@/backend/modules/pro
 import { createNotificationsActivityOverdueNotifier } from "@/backend/modules/project-management/infrastructure/adapters/notifications-activity-overdue"
 import { createPrismaProjectRepository } from "@/backend/modules/project-management/infrastructure/repositories/prisma-project.repository"
 import { createReportingModule } from "@/backend/modules/reporting"
+import { createAttestationModule } from "@/backend/modules/attestation"
 import { createStoreModule } from "@/backend/modules/store"
 import { createTaskManagementModule } from "@/backend/modules/task-management"
 import { createTaskProgressEvents } from "@/backend/modules/task-management/infrastructure/gamification-task-progress.events"
@@ -30,6 +31,7 @@ export interface BackendComposition {
   store: ReturnType<typeof createStoreModule>
   reporting: ReturnType<typeof createReportingModule>
   workExecution: ReturnType<typeof createWorkExecutionModule>
+  attestation: ReturnType<typeof createAttestationModule>
 }
 
 export function createBackendComposition(): BackendComposition {
@@ -90,6 +92,10 @@ export function createBackendComposition(): BackendComposition {
     events: createWorkExecutionEventsPublisher({ awards: gamification }),
   })
 
+  // V5-10a (DEC-75/130/170): atestados de frequência — módulo próprio, sem publisher entre
+  // módulos nesta fase (o lembrete do dia 19 é o V5-10b e entrará por porta local aqui).
+  const attestation = createAttestationModule()
+
   return {
     identityAccess,
     notifications,
@@ -102,6 +108,7 @@ export function createBackendComposition(): BackendComposition {
     store,
     reporting,
     workExecution,
+    attestation,
   }
 }
 

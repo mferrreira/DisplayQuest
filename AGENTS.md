@@ -319,9 +319,12 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   `KNOWN_DIVERGENCES` ficou vazio. Nenhuma tela
   `.tsx` chamava `deleteUser`. O `DELETE /api/users/[id]` agora **recusa com 409** quando há
   dependência; sem dependência continua excluindo (é o caso "cadastro de teste").
-- **18 das 25 FKs para `users` são `RESTRICT`** (default do Prisma, sem `onDelete`); só 7
+- **18 das 27 FKs para `users` são `RESTRICT`** (default do Prisma, sem `onDelete`); 8
   cascadeiam (`project_members`, `task_assignees`, `task_user_progress`, `work_sessions`,
-  `weekly_hours_history`, `user_badges.userId`, `notifications`). A 17ª entrou no V5-2c
+  `weekly_hours_history`, `user_badges.userId`, `notifications`, `certificates.userId` — a 8ª
+  entrou no V5-10a, DEC-170: atestado é documento gerado e regenerável, não bloqueia conta) e 4
+  são `SetNull` (três do cronograma, DEC-155, e `certificates.generatedBy`, DEC-170). A 17ª bloqueante
+  entrou no V5-2c
   (`project_attachments.uploadedBy`, DEC-134 — anexo é dado do projeto, não de quem o subiu) e a
   18ª no V5-7a (`project_activity_files.uploadedBy`, DEC-162 — prova de atividade é dado do
   projeto). Se você

@@ -38,7 +38,8 @@ const REPOSITORY_PATH = path.join(
  * `SetNull` entrou no V5-5 (DEC-155) nas três relações do cronograma com pessoa: a atividade é
  * dado do projeto, e uma linha de cronograma não pode virar motivo de 409 na exclusão de um
  * usuário nem desaparecer junto com ele. Contar SetNull como bloqueio faria o repositório procurar
- * dependência que não bloqueia nada.
+ * dependência que não bloqueia nada. No V5-10a (DEC-170) entrou a quarta: `certificates.generatedBy`
+ * — quem emitiu o atestado não é dono da conta dele.
  */
 function blockingRelationsInSchema(): Set<string> {
   const schema = readFileSync(SCHEMA_PATH, "utf8");
@@ -148,6 +149,9 @@ describe("guarda de deriva — as FKs que bloqueiam excluir usuário (DEC-55)", 
       "work_sessions",
       "weekly_hours_history",
       "notifications",
+      // V5-10a (DEC-170): o atestado é documento regenerável — apagar a pessoa apaga o
+      // atestado dela, e a conta não fica bloqueada por ele.
+      "certificates",
     ]);
     for (const model of cascading) {
       for (const rel of counted) {
@@ -183,6 +187,7 @@ describe("guarda de deriva — as FKs que bloqueiam excluir usuário (DEC-55)", 
 
     expect([...nullifying].sort()).toEqual(
       [
+        "certificates.generatedBy",
         "project_activities.approvedBy",
         "project_activities.requestedBy",
         "project_activities.responsibleId",

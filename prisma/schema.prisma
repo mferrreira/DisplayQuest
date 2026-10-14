@@ -68,6 +68,11 @@ model users {
   activityResponsibilities   project_activities[] @relation("ActivityResponsible")
   activityCompletionRequests project_activities[] @relation("ActivityCompletionRequester")
   activityCompletionApprovals project_activities[] @relation("ActivityCompletionApprover")
+  // V5-10 (DEC-170): atestado é documento GERADO sobre o vínculo — `userId` Cascade (não
+  // bloqueia excluir conta; o PDF é regenerável a partir dos dados) e `generatedBy` SetNull
+  // (auditoria). Nenhum dos dois entra na guarda de FKs bloqueantes.
+  certificatesAsMember  certificates[] @relation("CertificateMember")
+  certificatesGenerated certificates[] @relation("CertificateGenerator")
 }
 
 model projects {
@@ -102,6 +107,7 @@ model projects {
   work_sessions work_sessions[] @relation("WorkSessionProject")
   project_reports project_reports[] @relation("ProjectReports")
   technical_reports technical_reports[] @relation("ProjectTechnicalReports")
+  certificates      certificates[]      @relation("ProjectCertificates")
   deliverables project_deliverables[] @relation("ProjectDeliverables")
   attachments  project_attachments[]   @relation("ProjectAttachments")
   goals        project_goals[]         @relation("ProjectGoals")
@@ -408,6 +414,31 @@ model technical_reports {
 
   @@unique([projectId, type])
   @@map("technical_reports")
+}
+
+// V5-10 (DEC-75/170/171): atestado de frequência — um por projeto × membro × mês de
+// referência. Sem status próprio (DEC-75: o status do projeto cobre). A linha é o registro;
+// o PDF mora no bucket com chave DERIVADA (`projects/<id>/certificates/<userId>/<month>.pdf`)
+// — regenerar sobrescreve o objeto, como a capa do projeto (DEC-135) e o DOCX (DEC-167).
+// `userId` Cascade e `generatedBy` SetNull: atestado é documento gerado, não dado-fonte;
+// nenhum dos dois bloqueia excluir conta (ver o comentário no model `users`).
+model certificates {
+  id          Int      @id @default(autoincrement())
+  projectId   Int
+  userId      Int
+  month       String
+  blobKey     String
+  fileName    String
+  generatedBy Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project   projects @relation("ProjectCertificates", fields: [projectId], references: [id], onDelete: Cascade)
+  member    users    @relation("CertificateMember", fields: [userId], references: [id], onDelete: Cascade)
+  generator users?   @relation("CertificateGenerator", fields: [generatedBy], references: [id], onDelete: SetNull)
+
+  @@unique([projectId, userId, month])
+  @@map("certificates")
 }
 
 model report_attachments {
