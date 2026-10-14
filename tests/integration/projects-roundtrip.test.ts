@@ -721,6 +721,178 @@ describe("G4 roundtrip — project-management + project-membership (isolated tes
     expect((await prisma.projects.findUnique({ where: { id: projectId } }))?.logoKey).toBeNull();
   });
 
+  it("cronograma (V5-5): metas e atividades no Prisma real, derivados na leitura, e o SetNull do responsável", async () => {
+    const goal = await projectModule.createProjectGoal({
+      projectId,
+      actorId: coordId,
+      description: "  Revisar a literatura  ",
+      target: "2",
+    });
+    const goalRow = await prisma.project_goals.findUnique({ where: { id: goal.id } });
+    expect(goalRow).toMatchObject({ projectId, order: 1, target: 2, description: "Revisar a literatura" });
+
+    // O responsável precisa ser do projeto: Ana é membro desde o primeiro teste deste arquivo.
+    const activity = await projectModule.createProjectActivity({
+      projectId,
+      actorId: coordId,
+      description: "Codificação",
+      firstMonth: "2026-04",
+      lastMonth: "2026-06",
+      responsibleId: anaId,
+    });
+    const activityRow = await prisma.project_activities.findUnique({ where: { id: activity.id } });
+    expect(activityRow).toMatchObject({
+      projectId,
+      order: 1,
+      firstMonth: "2026-04",
+      lastMonth: "2026-06",
+      status: "OPEN",
+      responsibleId: anaId,
+    });
+
+    // O que o banco guarda é o intervalo marcado; período, meses e recompensa são derivados.
+    const view = await projectModule.listProjectCronograma({ projectId, today: "2026-05-20" });
+    expect(view.goals.map((row) => row.id)).toEqual([goal.id]);
+    const viewed = view.activities.find((row) => row.id === activity.id);
+    expect(viewed?.months).toEqual(["2026-04", "2026-05", "2026-06"]);
+    expect(viewed?.periodoInicio).toBe("2026-04-01");
+    expect(viewed?.periodoFim).toBe("2026-06-30");
+    expect(viewed?.reward).toBe(300);
+    expect(viewed?.current).toBe(true);
+    // Nenhuma coluna derivada existe no banco: se alguém adicionar, este assert fica vermelho.
+    expect(Object.keys(activityRow ?? {})).not.toContain("reward");
+
+    // Leitura aberta (DEC-127): quem não gerencia vê o cronograma inteiro.
+    const asVolunteer = await projectModule.listProjectCronograma({ projectId, today: "2026-05-20" });
+    expect(asVolunteer.activities.map((row) => row.id)).toContain(activity.id);
+
+    await expect(
+      projectModule.createProjectGoal({ projectId, actorId: outsiderId, description: "Meta de fora" }),
+    ).rejects.toThrow("Usuário não tem permissão para gerenciar este projeto");
+
+    await expect(
+      projectModule.createProjectActivity({
+        projectId,
+        actorId: coordId,
+        description: "X",
+        firstMonth: "2026-08",
+        lastMonth: "2026-03",
+      }),
+    ).rejects.toThrow("O cronograma da atividade não pode terminar antes de começar");
+
+    // Corpo parcial no banco real: estender o fim não toca no começo.
+    const extended = await projectModule.updateProjectActivity({
+      projectId,
+      activityId: activity.id,
+      actorId: coordId,
+      lastMonth: "2026-07",
+    });
+    expect(extended.firstMonth).toBe("2026-04");
+    expect(extended.lastMonth).toBe("2026-07");
+    expect((await prisma.project_goals.findUnique({ where: { id: goal.id } }))?.target).toBe(2);
+
+    await projectModule.updateProjectGoal({ projectId, goalId: goal.id, actorId: coordId, target: null });
+    expect((await prisma.project_goals.findUnique({ where: { id: goal.id } }))?.target).toBeNull();
+
+    // DEC-155: a FK do responsável é `SetNull`. Excluir a pessoa não apaga a linha do cronograma
+    // nem transforma responsável em motivo de bloqueio na exclusão de usuário (DEC-55).
+    const responsible = await prisma.users.create({
+      data: {
+        name: `G5 Responsável ${stamp}`,
+        email: `g5-projects-resp-${stamp}@test.local`,
+        password: "g4-dummy-hash",
+        status: "active",
+        roles: ["VOLUNTARIO"],
+      },
+      select: { id: true },
+    });
+    await membershipModule.addProjectMember({
+      projectId,
+      actorUserId: coordId,
+      actorRoles: ["COORDENADOR"],
+      targetUserId: responsible.id,
+      roles: ["VOLUNTARIO"],
+    });
+    const owned = await projectModule.createProjectActivity({
+      projectId,
+      actorId: coordId,
+      description: "Implantação",
+      firstMonth: "2026-09",
+      lastMonth: "2026-10",
+      responsibleId: responsible.id,
+    });
+
+    await prisma.users.delete({ where: { id: responsible.id } });
+
+    const afterDelete = await prisma.project_activities.findUnique({ where: { id: owned.id } });
+    expect(afterDelete).not.toBeNull();
+    expect(afterDelete?.responsibleId).toBeNull();
+    expect(afterDelete?.description).toBe("Implantação");
+
+    await projectModule.deleteProjectActivity({ projectId, activityId: owned.id, actorId: coordId });
+    expect(await prisma.project_activities.findUnique({ where: { id: owned.id } })).toBeNull();
+  });
+
+  it("wizard do projeto (V5-5, DEC-100): nasce com cronograma numa escrita só, e linha inválida não deixa projeto", async () => {
+    const before = await prisma.projects.count();
+
+    const created = await projectModule.createProject({
+      actor: userActor(coordId, ["COORDENADOR"]),
+      actorId: coordId,
+      data: {
+        name: `G5 Projeto com cronograma ${stamp}`,
+        description: "",
+        status: "active" as never,
+        leaderId: null,
+        links: [],
+        startDate: "2026-03-01",
+        endDate: "2026-08-31",
+      },
+      cronograma: {
+        goals: [{ description: "Revisar a literatura" }, { description: "Publicar artigo", target: "2" }],
+        activities: [{ description: "Codificação", firstMonth: "2026-03", lastMonth: "2026-08" }],
+      },
+    });
+
+    const createdProjectId = created.id!;
+    const goals = await prisma.project_goals.findMany({ where: { projectId: createdProjectId } });
+    const activities = await prisma.project_activities.findMany({ where: { projectId: createdProjectId } });
+    expect(goals.map((row) => row.order)).toEqual([1, 2]);
+    expect(goals.map((row) => row.description)).toEqual(["Revisar a literatura", "Publicar artigo"]);
+    expect(activities).toHaveLength(1);
+    expect(activities[0]).toMatchObject({ order: 1, firstMonth: "2026-03", lastMonth: "2026-08" });
+
+    await projectModule.deleteProject({ projectId: createdProjectId, actorId: coordId });
+    expect(await prisma.project_goals.findMany({ where: { projectId: createdProjectId } })).toHaveLength(0);
+    expect(await prisma.project_activities.findMany({ where: { projectId: createdProjectId } })).toHaveLength(0);
+
+    await expect(
+      projectModule.createProject({
+        actor: userActor(coordId, ["COORDENADOR"]),
+        actorId: coordId,
+        data: {
+          name: `G5 Projeto quebrado ${stamp}`,
+          description: "",
+          status: "active" as never,
+          leaderId: null,
+          links: [],
+        },
+        cronograma: {
+          goals: [{ description: "Revisar a literatura" }],
+          activities: [{ description: "Codificação", firstMonth: "2026-08", lastMonth: "2026-03" }],
+        },
+      }),
+    ).rejects.toThrow("O cronograma da atividade não pode terminar antes de começar");
+
+    // Regra 9 do plano, medida como "nada foi escrito": o use case normaliza o passo ANTES de
+    // qualquer escrita, e quando o passo existe a escrita é uma só (pai + filhos no mesmo
+    // `create` do Prisma, que é transação). Não existe "metas sim, projeto não".
+    expect(await prisma.projects.count()).toBe(before);
+    expect(
+      await prisma.projects.findMany({ where: { name: `G5 Projeto quebrado ${stamp}` } }),
+    ).toHaveLength(0);
+  });
+
   it("deleteProject: completed status is protected; active can go", async () => {
     await projectModule.updateProject({ projectId, actorId: coordId, data: { status: "completed" as never } });
 

@@ -62,6 +62,11 @@ model users {
   // V5-2c: quem subiu um anexo do projeto. RESTRICT (sem onDelete) — ver o comentário no
   // model `project_attachments`; a guarda user-delete-schema-drift.test.ts confere os dois lados.
   projectAttachments   project_attachments[]  @relation("ProjectAttachmentUploader")
+  // V5-5: as três relações do cronograma com pessoa são `SetNull` (ver o comentário no model
+  // `project_activities`): excluir uma pessoa não apaga cronograma nem bloqueia a exclusão.
+  activityResponsibilities   project_activities[] @relation("ActivityResponsible")
+  activityCompletionRequests project_activities[] @relation("ActivityCompletionRequester")
+  activityCompletionApprovals project_activities[] @relation("ActivityCompletionApprover")
 }
 
 model projects {
@@ -97,6 +102,8 @@ model projects {
   project_reports project_reports[] @relation("ProjectReports")
   deliverables project_deliverables[] @relation("ProjectDeliverables")
   attachments  project_attachments[]   @relation("ProjectAttachments")
+  goals        project_goals[]         @relation("ProjectGoals")
+  activities   project_activities[]    @relation("ProjectActivities")
 }
 
 // V5-2c (DEC-61/63): entregável é (nome, quantidade) — a lista do que o projeto entrega.
@@ -126,6 +133,55 @@ model project_attachments {
   uploadedAt  DateTime @default(now())
   project     projects @relation("ProjectAttachments", fields: [projectId], references: [id], onDelete: Cascade)
   uploader    users    @relation("ProjectAttachmentUploader", fields: [uploadedBy], references: [id])
+
+  @@index([projectId])
+}
+
+// V5-5 (DEC-61/103/126/151/156): as metas do projeto — os OBJETIVOS ESPECÍFICOS da brochura
+// (seção 5) e os ENTREGÁVEIS quantitativos (seção 10) existem nela, e os dois têm forma
+// diferente: texto puro, ou número + texto. `target` é nulo quando a meta é só texto.
+model project_goals {
+  id          Int      @id @default(autoincrement())
+  projectId   Int
+  order       Int
+  target      Int?
+  description String
+  createdAt   DateTime @default(now())
+  project     projects @relation("ProjectGoals", fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+}
+
+// V5-5: a linha do cronograma. Na brochura é "Etapa N | Descrição da Atividade | Total em
+// Meses"; no sistema (DEC-126) é uma linha da grade meses × atividades, e o total é a contagem
+// das marcas. `firstMonth`/`lastMonth` chegam porque a linha é contígua por decisão — o conjunto
+// de meses é derivado deles, nunca guardado. O período (primeiro dia do primeiro mês ao último
+// dia do último) é derivado na regra, não armazenado.
+model project_activities {
+  id                Int       @id @default(autoincrement())
+  projectId         Int
+  order             Int
+  description       String
+  // `SetNull`, não o default `Restrict`: a atividade é dado do projeto, e excluir uma pessoa não
+  // pode apagar o cronograma nem transformar um responsável em motivo de 409 na exclusão de
+  // usuário (DEC-55). A linha sobrevive sem responsável.
+  responsibleId     Int?
+  firstMonth        String
+  lastMonth         String
+  // DEC-76: duas fases. O formulário não escreve status — só o fluxo de solicitar/aprovar (V5-7).
+  status            String    @default("OPEN")
+  requestedBy       Int?
+  requestedAt       DateTime?
+  approvedBy        Int?
+  approvedAt        DateTime?
+  // DEC-64: uma notificação de atraso por atividade, não uma por dia.
+  overdueNotifiedAt DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  project     projects @relation("ProjectActivities", fields: [projectId], references: [id], onDelete: Cascade)
+  responsible users?   @relation("ActivityResponsible", fields: [responsibleId], references: [id], onDelete: SetNull)
+  requestedByUser users? @relation("ActivityCompletionRequester", fields: [requestedBy], references: [id], onDelete: SetNull)
+  approvedByUser  users? @relation("ActivityCompletionApprover", fields: [approvedBy], references: [id], onDelete: SetNull)
 
   @@index([projectId])
 }

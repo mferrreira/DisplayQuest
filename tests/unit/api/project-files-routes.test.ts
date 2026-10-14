@@ -104,6 +104,7 @@ vi.mock("@/backend/composition/root", () => {
       return mocks.projects.get(id) ?? null;
     },
     create: notUsed("projects.create"),
+    createWithCronograma: notUsed("projects.createWithCronograma"),
     // V5-2d: o slot de imagem escreve por aqui. O duplo guarda o que foi escrito, porque os
     // testes de imagem precisam ver a chave anterior e a nova no mesmo projeto.
     async update(record) {

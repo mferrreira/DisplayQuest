@@ -18,8 +18,16 @@ import { RemoveProjectAttachmentUseCase } from "@/backend/modules/project-manage
 import { AssertCanManageProjectUseCase } from "@/backend/modules/project-management/application/use-cases/assert-can-manage-project.use-case"
 import { UpdateProjectImageUseCase } from "@/backend/modules/project-management/application/use-cases/update-project-image.use-case"
 import { GetProjectImageUseCase } from "@/backend/modules/project-management/application/use-cases/get-project-image.use-case"
+import { ListProjectCronogramaUseCase } from "@/backend/modules/project-management/application/use-cases/list-project-cronograma.use-case"
+import { CreateProjectGoalUseCase } from "@/backend/modules/project-management/application/use-cases/create-project-goal.use-case"
+import { UpdateProjectGoalUseCase } from "@/backend/modules/project-management/application/use-cases/update-project-goal.use-case"
+import { DeleteProjectGoalUseCase } from "@/backend/modules/project-management/application/use-cases/delete-project-goal.use-case"
+import { CreateProjectActivityUseCase } from "@/backend/modules/project-management/application/use-cases/create-project-activity.use-case"
+import { UpdateProjectActivityUseCase } from "@/backend/modules/project-management/application/use-cases/update-project-activity.use-case"
+import { DeleteProjectActivityUseCase } from "@/backend/modules/project-management/application/use-cases/delete-project-activity.use-case"
 import type { ProjectActorsPort } from "@/backend/modules/project-management/application/ports/project-actors.port"
 import type { ProjectAttachmentsPort } from "@/backend/modules/project-management/application/ports/project-attachments.repository"
+import type { ProjectCronogramaPort } from "@/backend/modules/project-management/application/ports/project-cronograma.repository"
 import type { ProjectDeliverablesPort } from "@/backend/modules/project-management/application/ports/project-deliverables.repository"
 import type { ProjectHoursPort } from "@/backend/modules/project-management/application/ports/project-hours.port"
 import type { ProjectManagementMembershipPort } from "@/backend/modules/project-management/application/ports/project-membership.repository"
@@ -27,6 +35,7 @@ import type { ProjectRepositoryPort } from "@/backend/modules/project-management
 import { createPrismaProjectActorsPort } from "@/backend/modules/project-management/infrastructure/repositories/prisma-project-actors.port"
 import { createPrismaProjectAttachmentsRepository } from "@/backend/modules/project-management/infrastructure/repositories/prisma-project-attachments.repository"
 import { createPrismaProjectDeliverablesRepository } from "@/backend/modules/project-management/infrastructure/repositories/prisma-project-deliverables.repository"
+import { createPrismaProjectCronogramaRepository } from "@/backend/modules/project-management/infrastructure/repositories/prisma-project-cronograma.repository"
 import { createPrismaProjectHoursPort } from "@/backend/modules/project-management/infrastructure/repositories/prisma-project-hours.port"
 import { createPrismaProjectManagementMembershipRepository } from "@/backend/modules/project-management/infrastructure/repositories/prisma-project-membership.repository"
 import { createPrismaProjectRepository } from "@/backend/modules/project-management/infrastructure/repositories/prisma-project.repository"
@@ -72,6 +81,13 @@ export class ProjectManagementModule {
   readonly assertCanManageProject: UseCaseExecute<AssertCanManageProjectUseCase>
   readonly updateProjectImage: UseCaseExecute<UpdateProjectImageUseCase>
   readonly getProjectImage: UseCaseExecute<GetProjectImageUseCase>
+  readonly listProjectCronograma: UseCaseExecute<ListProjectCronogramaUseCase>
+  readonly createProjectGoal: UseCaseExecute<CreateProjectGoalUseCase>
+  readonly updateProjectGoal: UseCaseExecute<UpdateProjectGoalUseCase>
+  readonly deleteProjectGoal: UseCaseExecute<DeleteProjectGoalUseCase>
+  readonly createProjectActivity: UseCaseExecute<CreateProjectActivityUseCase>
+  readonly updateProjectActivity: UseCaseExecute<UpdateProjectActivityUseCase>
+  readonly deleteProjectActivity: UseCaseExecute<DeleteProjectActivityUseCase>
 
   constructor(
     private readonly listProjectsForActorUseCase: ListProjectsForActorUseCase,
@@ -94,6 +110,13 @@ export class ProjectManagementModule {
     private readonly assertCanManageProjectUseCase: AssertCanManageProjectUseCase,
     private readonly updateProjectImageUseCase: UpdateProjectImageUseCase,
     private readonly getProjectImageUseCase: GetProjectImageUseCase,
+    private readonly listProjectCronogramaUseCase: ListProjectCronogramaUseCase,
+    private readonly createProjectGoalUseCase: CreateProjectGoalUseCase,
+    private readonly updateProjectGoalUseCase: UpdateProjectGoalUseCase,
+    private readonly deleteProjectGoalUseCase: DeleteProjectGoalUseCase,
+    private readonly createProjectActivityUseCase: CreateProjectActivityUseCase,
+    private readonly updateProjectActivityUseCase: UpdateProjectActivityUseCase,
+    private readonly deleteProjectActivityUseCase: DeleteProjectActivityUseCase,
   ) {
     this.listProjectsForActor = this.listProjectsForActorUseCase.execute.bind(this.listProjectsForActorUseCase)
     this.getProjectById = this.getProjectByIdUseCase.execute.bind(this.getProjectByIdUseCase)
@@ -115,6 +138,13 @@ export class ProjectManagementModule {
     this.assertCanManageProject = this.assertCanManageProjectUseCase.execute.bind(this.assertCanManageProjectUseCase)
     this.updateProjectImage = this.updateProjectImageUseCase.execute.bind(this.updateProjectImageUseCase)
     this.getProjectImage = this.getProjectImageUseCase.execute.bind(this.getProjectImageUseCase)
+    this.listProjectCronograma = this.listProjectCronogramaUseCase.execute.bind(this.listProjectCronogramaUseCase)
+    this.createProjectGoal = this.createProjectGoalUseCase.execute.bind(this.createProjectGoalUseCase)
+    this.updateProjectGoal = this.updateProjectGoalUseCase.execute.bind(this.updateProjectGoalUseCase)
+    this.deleteProjectGoal = this.deleteProjectGoalUseCase.execute.bind(this.deleteProjectGoalUseCase)
+    this.createProjectActivity = this.createProjectActivityUseCase.execute.bind(this.createProjectActivityUseCase)
+    this.updateProjectActivity = this.updateProjectActivityUseCase.execute.bind(this.updateProjectActivityUseCase)
+    this.deleteProjectActivity = this.deleteProjectActivityUseCase.execute.bind(this.deleteProjectActivityUseCase)
   }
 }
 
@@ -125,6 +155,7 @@ export interface ProjectManagementModulePorts {
   hours: ProjectHoursPort
   deliverables: ProjectDeliverablesPort
   attachments: ProjectAttachmentsPort
+  cronograma: ProjectCronogramaPort
 }
 
 export interface ProjectManagementModuleFactoryOptions {
@@ -139,6 +170,7 @@ export function createProjectManagementModule(options: ProjectManagementModuleFa
     hours: options.ports?.hours ?? createPrismaProjectHoursPort(),
     deliverables: options.ports?.deliverables ?? createPrismaProjectDeliverablesRepository(),
     attachments: options.ports?.attachments ?? createPrismaProjectAttachmentsRepository(),
+    cronograma: options.ports?.cronograma ?? createPrismaProjectCronogramaRepository(),
   }
 
   return new ProjectManagementModule(
@@ -205,6 +237,46 @@ export function createProjectManagementModule(options: ProjectManagementModuleFa
     }),
     new GetProjectImageUseCase({
       projects: ports.projects,
+    }),
+    new ListProjectCronogramaUseCase({
+      projects: ports.projects,
+      cronograma: ports.cronograma,
+    }),
+    new CreateProjectGoalUseCase({
+      projects: ports.projects,
+      cronograma: ports.cronograma,
+      memberships: ports.memberships,
+      actors: ports.actors,
+    }),
+    new UpdateProjectGoalUseCase({
+      projects: ports.projects,
+      cronograma: ports.cronograma,
+      memberships: ports.memberships,
+      actors: ports.actors,
+    }),
+    new DeleteProjectGoalUseCase({
+      projects: ports.projects,
+      cronograma: ports.cronograma,
+      memberships: ports.memberships,
+      actors: ports.actors,
+    }),
+    new CreateProjectActivityUseCase({
+      projects: ports.projects,
+      cronograma: ports.cronograma,
+      memberships: ports.memberships,
+      actors: ports.actors,
+    }),
+    new UpdateProjectActivityUseCase({
+      projects: ports.projects,
+      cronograma: ports.cronograma,
+      memberships: ports.memberships,
+      actors: ports.actors,
+    }),
+    new DeleteProjectActivityUseCase({
+      projects: ports.projects,
+      cronograma: ports.cronograma,
+      memberships: ports.memberships,
+      actors: ports.actors,
     }),
   )
 }

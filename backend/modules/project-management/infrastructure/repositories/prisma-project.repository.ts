@@ -110,6 +110,43 @@ export function createPrismaProjectRepository(): ProjectRepositoryPort {
       })
       return toRecord(row as unknown as ProjectRow)
     },
+    async createWithCronograma(input, cronograma) {
+      // Filhos aninhados: o Prisma executa pai + filhos numa transação, que é exatamente a
+      // garantia da regra 9 do plano (rollback completo se qualquer linha do cronograma falhar).
+      const row = await prisma.projects.create({
+        data: {
+          name: input.name,
+          description: input.description,
+          createdAt: input.createdAt,
+          createdBy: input.createdBy,
+          leaderId: input.leaderId,
+          status: input.status as never,
+          links: input.links as never,
+          startDate: input.startDate ?? null,
+          endDate: input.endDate ?? null,
+          editalNumber: input.editalNumber ?? null,
+          processNumber: input.processNumber ?? null,
+          proppiNumber: input.proppiNumber ?? null,
+          goals: { create: cronograma.goals },
+          activities: { create: cronograma.activities },
+        },
+        include: {
+          ...includeOptions,
+          goals: { select: { id: true } },
+          activities: { select: { id: true } },
+        },
+      })
+
+      const created = row as unknown as ProjectRow & {
+        goals?: Array<{ id: number }>
+        activities?: Array<{ id: number }>
+      }
+      return {
+        project: toRecord(created),
+        goalIds: (created.goals ?? []).map((goal) => goal.id),
+        activityIds: (created.activities ?? []).map((activity) => activity.id),
+      }
+    },
     async update(record: ProjectRecord) {
       if (!record.id) {
         throw new Error("ID do projeto é obrigatório para atualização")

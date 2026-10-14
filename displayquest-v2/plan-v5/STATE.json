@@ -1,16 +1,16 @@
 {
   "plan": "plan-v5",
   "title": "domínio de projetos maduro: cronograma, pontos, relatórios técnicos, atestados, blobs em bucket S3-compatible (SeaweedFS desde o V5-1, DEC-131)",
-  "version": "5.14.0",
-  "updatedAt": "2026-10-13",
+  "version": "5.15.0",
+  "updatedAt": "2026-10-14",
   "status": "in_progress",
   "activeWave": "V5-5",
-  "activeBatch": "V5-5",
+  "activeBatch": "V5-5b",
   "awaitingInstruction": false,
   "lineage": {
     "previousPlan": "plan-v4 (subtasks, animação, inativação — done em 2026-10-07, ondas V4-1..V4-5d + V4-6b + POS-1, DEC-78..98)",
     "concurrentPlan": null,
-    "note": "a numeracao de decisoes e GLOBAL: DEC-01..29 clean-arch, DEC-30..49 plan-v3, DEC-50..54 B6/D4, DEC-55..60 plan-v4, DEC-61..77 plan-v5 (2026-10-06), DEC-78..98 plan-v4 (houve colisao nos DEC-61..64 — comentarios renumerados, ver AGENTS.md), DEC-99..104 plan-v5 (2026-10-07), DEC-105..114 plan-v6 (2026-10-07), DEC-115..125 clean-arch/B6-restante+B9+B10 (encerrado 2026-10-08), DEC-126/127 plan-v5 (2026-10-09), DEC-128..130 plan-v5/documentos oficiais (2026-10-13), DEC-131 plan-v5/execucao do V5-1 (2026-10-13, servidor do bucket: SeaweedFS no lugar do MinIO), DEC-132 plan-v5/execucao do V5-2b (2026-10-13, datas do projeto como data civil String + periodo invertido recusado), DEC-133/134 plan-v5/execucao do V5-2c (2026-10-13, rota move byte e modulo guarda registro + 403 antes do corpo; tabela de assinatura e nome de exibicao em um lugar so + 17a FK bloqueante), DEC-135 plan-v5/execucao do V5-2d (2026-10-13, logo/banner: slot de lista fechada, so imagem, chave no banco e binario por rota autenticada), DEC-136 plan-v5/execucao do V5-2a (2026-10-13, leitura de projeto e das partes dele aberta ao autenticado; gate de leitura removido das rotas; portas encolheram), DEC-137 plan-v5/execucao do V5-3 (2026-10-13, capa de perfil no bucket com o desenho do DEC-135, gate do perfil na escrita e leitura aberta, chave na sessao e no podio). DEC-138..146 sao do dono, respondidas em 2026-10-13 (ASK-V5-06/07, GAP-05, GAP-06, visibilidade de perfil, seam orfao do plan-v3, ordem do plan-v6, CVE do next). DEC-147 plan-v5/execucao do V5-4a (2026-10-13, vocabularios de pessoa derivados do AcroForm medido + CPF validado, mascarado na exibicao e fora da sessao + leitura de CPF self OU MANAGE_USERS), DEC-148 plan-v5 (2026-10-13, o V5-4 dividido em V5-4a/V5-4b pelo tamanho medido, com G5/G6 uma vez no fechamento) e DEC-149 plan-v5 (2026-10-13, vocabulario das colunas do vinculo: categoria BOLSISTA/VOLUNTARIO vinda dos checkboxes do AcroForm, situacao ATIVO/INATIVO com default ATIVO sem substituir remover, dataEntrada de forma estrita porque `new Date(\"01/02/2026\")` e 2 de janeiro), DEC-150 plan-v5 (2026-10-13, apagar o arquivo morto project-members-manager.tsx), DEC-151 plan-v5 (2026-10-13, colunas da grade do cronograma = periodo do projeto, com janela de 12 meses quando o projeto nao tem datas) e DEC-152 plan-v5 (2026-10-13, IA do rascunho: deploy em localhost:8080, dev pela tailscale 100.112.10.76:8080). PROXIMA LIVRE: DEC-154. Antes de abrir DEC nova, grep os CINCO STATE.json (clean-arch, plan-v3, plan-v4, plan-v5, plan-v6)."
+    "note": "a numeracao de decisoes e GLOBAL: DEC-01..29 clean-arch, DEC-30..49 plan-v3, DEC-50..54 B6/D4, DEC-55..60 plan-v4, DEC-61..77 plan-v5 (2026-10-06), DEC-78..98 plan-v4 (houve colisao nos DEC-61..64 — comentarios renumerados, ver AGENTS.md), DEC-99..104 plan-v5 (2026-10-07), DEC-105..114 plan-v6 (2026-10-07), DEC-115..125 clean-arch/B6-restante+B9+B10 (encerrado 2026-10-08), DEC-126/127 plan-v5 (2026-10-09), DEC-128..130 plan-v5/documentos oficiais (2026-10-13), DEC-131 plan-v5/execucao do V5-1 (2026-10-13, servidor do bucket: SeaweedFS no lugar do MinIO), DEC-132 plan-v5/execucao do V5-2b (2026-10-13, datas do projeto como data civil String + periodo invertido recusado), DEC-133/134 plan-v5/execucao do V5-2c (2026-10-13, rota move byte e modulo guarda registro + 403 antes do corpo; tabela de assinatura e nome de exibicao em um lugar so + 17a FK bloqueante), DEC-135 plan-v5/execucao do V5-2d (2026-10-13, logo/banner: slot de lista fechada, so imagem, chave no banco e binario por rota autenticada), DEC-136 plan-v5/execucao do V5-2a (2026-10-13, leitura de projeto e das partes dele aberta ao autenticado; gate de leitura removido das rotas; portas encolheram), DEC-137 plan-v5/execucao do V5-3 (2026-10-13, capa de perfil no bucket com o desenho do DEC-135, gate do perfil na escrita e leitura aberta, chave na sessao e no podio). DEC-138..146 sao do dono, respondidas em 2026-10-13 (ASK-V5-06/07, GAP-05, GAP-06, visibilidade de perfil, seam orfao do plan-v3, ordem do plan-v6, CVE do next). DEC-147 plan-v5/execucao do V5-4a (2026-10-13, vocabularios de pessoa derivados do AcroForm medido + CPF validado, mascarado na exibicao e fora da sessao + leitura de CPF self OU MANAGE_USERS), DEC-148 plan-v5 (2026-10-13, o V5-4 dividido em V5-4a/V5-4b pelo tamanho medido, com G5/G6 uma vez no fechamento) e DEC-149 plan-v5 (2026-10-13, vocabulario das colunas do vinculo: categoria BOLSISTA/VOLUNTARIO vinda dos checkboxes do AcroForm, situacao ATIVO/INATIVO com default ATIVO sem substituir remover, dataEntrada de forma estrita porque `new Date(\"01/02/2026\")` e 2 de janeiro), DEC-150 plan-v5 (2026-10-13, apagar o arquivo morto project-members-manager.tsx), DEC-151 plan-v5 (2026-10-13, colunas da grade do cronograma = periodo do projeto, com janela de 12 meses quando o projeto nao tem datas) e DEC-152 plan-v5 (2026-10-13, IA do rascunho: deploy em localhost:8080, dev pela tailscale 100.112.10.76:8080). DEC-153 plan-v5/execucao do D-1 (2026-10-13, a migration de status existe mas a tolerancia de entities/task.ts fica ate a migration rodar no deploy), DEC-154 plan-v5 (2026-10-14, o V5-5 dividido em V5-5a dominio e V5-5b tela), DEC-155 plan-v5 (2026-10-14, FK de pessoa no cronograma e SetNull e a guarda de deriva passa a tratar SetNull como nao-bloqueante) e DEC-156 plan-v5 (2026-10-14, modelagem do cronograma: mes \"AAAA-MM\", linha contigua, periodo e recompensa derivados, ordem atribuida pelo servidor, meta numerica opcional, responsavel membro do projeto, status fora do PATCH, teto de 60 colunas). PROXIMA LIVRE: DEC-157. Antes de abrir DEC nova, grep os CINCO STATE.json (clean-arch, plan-v3, plan-v4, plan-v5, plan-v6)."
   },
   "baseline": {
     "measuredAt": "2026-10-13",
@@ -166,15 +166,44 @@
     {
       "id": "V5-5",
       "title": "cronograma (metas + atividades) + wizard de criação com passo opcional",
-      "status": "pending",
+      "status": "dividido (DEC-154): executado como V5-5a e V5-5b",
       "decisions": [
         "DEC-61",
         "DEC-100",
         "DEC-103",
-        "DEC-126"
+        "DEC-126",
+        "DEC-154",
+        "DEC-155",
+        "DEC-156"
       ],
-      "scope": "project_goals (meta Int, descricao) e project_activities (ordem, descricao, responsavelId, meses marcados na grade, periodoInicio/periodoFim derivados do primeiro/último mês marcado, recompensa = 100 × meses marcados, status OPEN/COMPLETION_REQUESTED/DONE com requestedBy/requestedAt, approvedBy/approvedAt, overdueNotifiedAt; provas no bucket). Regras puras de período/ordem; grade meses × atividades + aba no detail; criação de projeto vira passo a passo (dados → equipe opcional → cronograma opcional → cria, tudo numa transação — DEC-100).",
       "why": "cronograma é modelagem 100% nova (grep = 0) e o dono pediu para modelá-lo ao criar o projeto, sem obrigação."
+    },
+    {
+      "id": "V5-5a",
+      "title": "cronograma no dominio: schema, regras puras, use cases, rotas e o wizard no servidor",
+      "status": "done",
+      "decisions": [
+        "DEC-103",
+        "DEC-126",
+        "DEC-127",
+        "DEC-151",
+        "DEC-154",
+        "DEC-155",
+        "DEC-156"
+      ],
+      "scope": "migration 20261014120000_add_project_cronograma (project_goals + project_activities, aplicadas na 5432 e na 5433); backend/domain/project/cronograma-rules.ts; port + adapter do cronograma; 7 use cases; 5 rotas novas; POST /api/projects aceita o passo opcional e escreve pai + filhos numa transacao."
+    },
+    {
+      "id": "V5-5b",
+      "title": "cronograma na tela: aba no detalhe do projeto, grade meses x atividades, wizard de criacao e provas no bucket",
+      "status": "pending",
+      "decisions": [
+        "DEC-100",
+        "DEC-102",
+        "DEC-126",
+        "DEC-151"
+      ],
+      "scope": "aba Cronograma no dialog de detalhe com a grade meses x atividades (DEC-151), criacao/edicao/apagar linha, wizard de criacao de projeto (dados -> equipe opcional -> cronograma opcional -> cria), tabela activity_evidence + upload/leitura pelo seam de blob (DEC-133: a rota move byte), handlers do MSW espelhando as rotas (DEC-90), G5/G6."
     },
     {
       "id": "V5-6",
@@ -311,7 +340,10 @@
     "DEC-150 (dono 2026-10-13, respondida antes do dono sair): a dívida D-4 é **apagar** `components/forms/project-members-manager.tsx` (132 linhas) e o import órfão em `components/ui/project-detail-dialog.tsx:31`. Medido: o arquivo é importado uma única vez e nunca renderizado; a tela viva de membros é `components/features/project-members-management.tsx`, usada em quatro lugares. Mesma decisão da DEC-144 (seam órfão apagado): código morto não fica 'registrado e aberto', sai pelo git.",
     "DEC-151 (dono 2026-10-13): na grade do cronograma (DEC-126), as COLUNAS de mês são o **período do projeto** — os meses entre `projects.startDate` e `projects.endDate`. Sem datas no projeto, a janela é de **12 meses a partir do mês atual**. Rejeitado: ano civil fixo, e 'a pessoa escolhe o intervalo das colunas' — o período do projeto já existe no formulário e é o que o atestado e o relatório usam.",
     "DEC-152 (dono 2026-10-13): o endpoint de IA do rascunho (V5-9) tem duas caras. Em **deploy** é o próprio `localhost:8080/v1` (o modelo roda na máquina do serviço). Em **dev**, o teste é pelo IP da tailscale: `http://100.112.10.76:8080/v1` — medido respondendo, com `GET /v1/models` devolvendo `qwen3.8-flash-next-iq3_xxs` (`n_ctx` 262144). O default de `AI_BASE_URL` continua `http://localhost:8080/v1`; o valor da tailscale é escolha de ambiente de desenvolvimento, não default do código. Medido também: `localhost:8080` e `192.168.25.105:8080` não respondem desta máquina.",
-    "DEC-153 (execução do D-1, 2026-10-13): a migration de cleanup existe e foi aplicada na 5432 e na 5433 (`20261014020000_normalize_legacy_task_status`), mas **a tolerância de `entities/task.ts` (wireTaskSchema) fica**. Motivo medido: a 5432 de hoje já não tem valor legado algum (36 tarefas, todas `done`), e a premissa de 2026-10-01 (14 de 18) expirou — o que a migration conserta de verdade é banco restaurado de backup e a instância de deploy, cujo conteúdo esta máquina não mede. Tirar o absorvedor antes de a migration rodar lá troca um `console.warn` por leitura de tarefa quebrada. Sai quando o deploy tiver a migration aplicada; a migration é idempotente, então o custo de a ter é zero."
+    "DEC-153 (execução do D-1, 2026-10-13): a migration de cleanup existe e foi aplicada na 5432 e na 5433 (`20261014020000_normalize_legacy_task_status`), mas **a tolerância de `entities/task.ts` (wireTaskSchema) fica**. Motivo medido: a 5432 de hoje já não tem valor legado algum (36 tarefas, todas `done`), e a premissa de 2026-10-01 (14 de 18) expirou — o que a migration conserta de verdade é banco restaurado de backup e a instância de deploy, cujo conteúdo esta máquina não mede. Tirar o absorvedor antes de a migration rodar lá troca um `console.warn` por leitura de tarefa quebrada. Sai quando o deploy tiver a migration aplicada; a migration é idempotente, então o custo de a ter é zero.",
+    "DEC-154 (execucao do V5-5, 2026-10-14): o V5-5 e dividido em V5-5a (dominio: schema, regras puras, use cases, rotas, wizard no servidor) e V5-5b (tela: aba Cronograma com a grade, wizard na interface, provas no bucket, G5/G6). Mesma familia do DEC-148: a divisao e pelo tamanho medido, nao por preferencia — o V5-5a fecha sem nenhuma mudanca visivel, e o G5/G6 roda uma vez no fechamento do V5-5b.",
+    "DEC-155 (execucao do V5-5, 2026-10-14): as tres relacoes do cronograma com pessoa (responsibleId, requestedBy, approvedBy) sao FK com `onDelete: SetNull`, nao o default Restrict. Motivo: a atividade e dado do projeto — excluir uma pessoa nao pode apagar o cronograma nem transformar 'foi responsavel de uma etapa' em motivo de 409 na exclusao de usuario (DEC-55). Consequencia: a guarda user-delete-schema-drift.test.ts passa a tratar SetNull como nao-bloqueante (antes so Cascade era) e ganha um caso proprio que fixa os tres campos fora das duas listas. A lista de 17 FKs bloqueantes nao mudou.",
+    "DEC-156 (execucao do V5-5, 2026-10-14): modelagem do cronograma. (a) mes civil e a string \"AAAA-MM\" — mesma natureza de startDate/dueDate (DEC-132); (b) a linha e um intervalo contiguo firstMonth..lastMonth e o conjunto de meses e derivado (DEC-126d: clicar estende a partir do primeiro marcado; nao existe desmarcar o meio, porque buraco nao existe na decisao); (c) periodoInicio/periodoFim e recompensa (100 x meses) sao derivados na leitura, nunca armazenados; (d) a ordem e atribuida pelo servidor (max+1, na ordem das linhas) e nao aceita da tela — e o que impede duas linhas 'Etapa 3'; (e) `project_goals.target` e Int opcional: a brochura traz as duas formas de objetivo (OBJETIVOS ESPECIFICOS so texto, ENTREGAVEIS quantitativos com numero), entao o numero existe mas nao e obrigatorio; (f) responsavel da atividade precisa participar do projeto; (g) status nao e escrevivel por PATCH — as duas fases do DEC-76 tem caminho proprio; (h) as colunas da grade sao o periodo do projeto alargado para cobrir toda marca existente, com teto de 60 colunas (periodo digitado errado nao pode gerar 1.200 colunas na tela)."
   ],
   "batchLog": [
     {
@@ -579,6 +611,27 @@
       "gotchas": [
         "divida com premissa medida no passado precisa ser REMEDIDA antes de executar: o D-1 estava aprovado com '14 de 18 linhas' de 2026-10-01, e hoje sao zero. Rodar a migration mesmo assim e certo (ela e o que conserta outro banco); executar achando que ela conserta a instancia da frente seria mentir no batchLog.",
         "o contador do arch:check e a prova de que apagar codigo morto apagou algo: 890/3697 virou 890/3689. Se o numero nao mudasse, o arquivo ainda estaria sendo importado em algum lugar."
+      ]
+    },
+    {
+      "id": "V5-5a",
+      "at": "2026-10-14",
+      "title": "cronograma no dominio: duas tabelas novas, a regra pura da grade, sete use cases, cinco rotas e o passo opcional na criacao",
+      "actions": [
+        "Medido antes de escrever: `grep -rn cronograma` em *.ts/*.tsx dava zero. A brochura oficial (docs/Projeto, secao 15) traz o cronograma nas duas formas que o DEC-126 escolheu — a tabela 'Etapas | Descricao da Atividade | Total em Meses' (Etapa 1..6 com 2, 2, 3, 8, 5, 10) e a grade 'Marque com X os meses' sobre 12 meses. O texto foi extraido com PDFKit (Swift), porque este modelo nao le PDF: a fonte oficial virou medida, nao suposicao.",
+        "migration 20261014120000_add_project_cronograma: `project_goals` (projectId, order, target Int?, description) e `project_activities` (order, description, responsibleId, firstMonth/lastMonth, status default OPEN, requestedBy/requestedAt/approvedBy/approvedAt, overdueNotifiedAt). Colunas novas, sem backfill (DEC-61); SQL derivado com `migrate diff` offline, aplicado com `migrate deploy` na 5432 e na 5433, depois `prisma generate`.",
+        "DEC-155: as tres FKs de pessoa do cronograma sao SetNull. Medido no roundtrip G4: criar atividade com responsavel, apagar a pessoa, e a linha continua la com responsibleId null. A guarda de deriva foi generalizada (Cascade OU SetNull resolvem sem bloquear) e ganhou o caso que fixa os tres campos fora das duas listas; as 17 bloqueantes continuam as mesmas.",
+        "regra pura nova `backend/domain/project/cronograma-rules.ts`: mes 'AAAA-MM' (aceita '2026-1' e recusa '13/2026' nomeando o campo), aritmetica de calendario (addMonths, ultimo dia do mes respeitando bissexto), contagem inclusiva, recompensa 100 x meses, periodo derivado (primeiro dia do primeiro mes ao ultimo dia do ultimo), o clique da grade (estende para frente e para tras, o mes clicado vira o ultimo, clicar o ultimo remove, a marca unica some), janela de colunas (periodo do projeto, 12 meses desde hoje sem datas, alargada para cobrir marca existente, teto de 60) e a semente do wizard.",
+        "7 use cases + port + adapter + 5 rotas: GET /api/projects/[id]/cronograma (leitura aberta; devolve colunas, metas e atividades com meses/periodo/recompensa/vigencia derivados), POST /goals, PATCH+DELETE /goals/[goalId], POST /activities, PATCH+DELETE /activities/[activityId]. Gate de gestao antes do corpo (o par 403-antes-do-400 do B6-2b). PATCH de atividade mescla meses com os gravados e nao aceita status.",
+        "DEC-156(d): a ordem e atribuida pelo servidor (max+1). A tela manda uma lista ordenada, nao um numero por linha — e o que impede duas linhas 'Etapa 3' no mesmo projeto.",
+        "wizard no servidor (DEC-100, regra 9): CreateProjectUseCase normaliza o passo ANTES de qualquer escrita e, quando existe, escreve projeto + metas + atividades num unico `create` com filhos aninhados (transacao do Prisma). Sem cronograma, o caminho e o `create` de antes. Medido no G4: linha invertida nao deixa projeto nascer (contagem de projects inalterada)."
+      ],
+      "gates": "G0 908 modulos / 3797 dependencias, allow-list vazia | eslint exit 0 nos arquivos tocados | G2 1 erro PRE-EXISTENTE (floating-timer-tabs:105) | G3 125 arquivos / 1732 testes | suite completa 135 arquivos / 1827 testes com DATABASE_URL na 5433.",
+      "gotchas": [
+        "o `vi.mock` do composition root roda antes do corpo do arquivo: chamar um helper do proprio arquivo dentro do factory (ex.: `const row = projectRow()`) cai em TDZ e o erro aparece como 'Cannot access X before initialization' no import da rota, nao como falha de teste. So definir funcoes dentro do factory resolve.",
+        "as portas do `createProjectManagementModule` sao tipadas: duplo com `Record<string, unknown>` nos parametros nao passa no tsc, e o metodo da porta de horas da gestao e `sumCompletedSeconds` (nao `sumCompletedSecondsByUser`, que e a do modulo de membros). Copiar o harness de outro arquivo de rota troca o nome e nao troca o tipo.",
+        "a contagem do arch:check e a prova de que a modelagem entrou: 890/3689 (depois do D-4) virou 908/3797 — 18 modulos e 108 dependencias novas.",
+        "a guarda de FK so reconhecia `onDelete: Cascade` e tratava SetNull como bloqueante. Generalizar foi preciso para nao contar dependencia que nao bloqueia nada; o caso novo nomeia os tres campos para a generalizacao nao virar porta aberta silenciosa."
       ]
     }
   ],

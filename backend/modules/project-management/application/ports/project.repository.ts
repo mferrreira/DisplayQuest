@@ -59,7 +59,46 @@ export interface ProjectRepositoryPort {
   findByLeaderId(leaderId: number): Promise<ProjectRecord[]>
   findById(id: number): Promise<ProjectRecord | null>
   create(input: NewProjectInput): Promise<ProjectRecord>
+  /**
+   * V5-5 (DEC-100, regra 9 do plano): o wizard cria projeto + metas + atividades numa escrita só.
+   * O adapter faz um `create` com filhos aninhados, que o Prisma executa em transação — se uma
+   * linha do cronograma falhar, o projeto não nasce. É o único caminho com transação aqui; o
+   * `create` simples continua idêntico ao de antes para quem pula o passo.
+   */
+  createWithCronograma(
+    input: NewProjectInput,
+    cronograma: NewProjectCronogramaSeed,
+  ): Promise<CreatedProjectWithCronograma>
   /** Full-record update; createdAt/createdBy are NOT written (frozen from the repository). */
   update(record: ProjectRecord): Promise<ProjectRecord>
   delete(id: number): Promise<void>
+}
+
+/**
+ * Semente do cronograma no momento da criação: ainda não há `projectId`, porque o projeto nasce
+ * junto. `order` já vem atribuído pelo use case (a ordem é decidida na regra, não pela tela).
+ */
+export interface NewProjectGoalSeed {
+  order: number
+  target: number | null
+  description: string
+}
+
+export interface NewProjectActivitySeed {
+  order: number
+  description: string
+  responsibleId: number | null
+  firstMonth: string
+  lastMonth: string
+}
+
+export interface NewProjectCronogramaSeed {
+  goals: NewProjectGoalSeed[]
+  activities: NewProjectActivitySeed[]
+}
+
+export interface CreatedProjectWithCronograma {
+  project: ProjectRecord
+  goalIds: number[]
+  activityIds: number[]
 }

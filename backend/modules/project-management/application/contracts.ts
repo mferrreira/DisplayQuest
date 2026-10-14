@@ -17,6 +17,8 @@ export interface CreateProjectCommand {
   /** B6-3 (D4): o ator para o gate de MANAGE_PROJECTS (mensagem própria da rota, preservada). */
   actor: ActorRef
   volunteerIds?: number[]
+  /** V5-5 (DEC-100): passo opcional do wizard. Presente e vazio é o mesmo que ausente. */
+  cronograma?: CreateProjectCronogramaInput
 }
 
 export interface UpdateProjectCommand {
@@ -118,3 +120,78 @@ export interface GetProjectImageQuery {
   actorRoles: Role[]
   slot: ProjectImageSlot
 }
+
+// ---------------------------------------------------------------------------
+// V5-5 (DEC-61/103/126/151) — cronograma: metas e atividades
+// ---------------------------------------------------------------------------
+
+/**
+ * `today` é parâmetro, nunca lido dentro do use case: a grade de meses e a atividade vigente
+ * são regra pura, e regra pura recebe o relógio pela mão (regra da casa, `backend/domain/`).
+ */
+export interface ListProjectCronogramaQuery {
+  projectId: number
+  today: string
+}
+
+export interface CreateProjectGoalCommand {
+  projectId: number
+  actorId: number
+  description: unknown
+  target?: unknown
+}
+
+export interface UpdateProjectGoalCommand {
+  projectId: number
+  goalId: number
+  actorId: number
+  description?: unknown
+  target?: unknown
+}
+
+export interface DeleteProjectGoalCommand {
+  projectId: number
+  goalId: number
+  actorId: number
+}
+
+export interface CreateProjectActivityCommand {
+  projectId: number
+  actorId: number
+  description: unknown
+  firstMonth: unknown
+  lastMonth: unknown
+  responsibleId?: unknown
+}
+
+export interface UpdateProjectActivityCommand {
+  projectId: number
+  activityId: number
+  actorId: number
+  description?: unknown
+  firstMonth?: unknown
+  lastMonth?: unknown
+  responsibleId?: unknown
+}
+
+export interface DeleteProjectActivityCommand {
+  projectId: number
+  activityId: number
+  actorId: number
+}
+
+/**
+ * O passo opcional do wizard (DEC-100). Os valores chegam crus como nos outros comandos: quem
+ * normaliza e recusa é o domínio. Ausente, ou lista vazia, é "pular o passo" — e a criação é
+ * exatamente a criação simples de antes (regra 9 do plano).
+ */
+export interface CreateProjectCronogramaInput {
+  goals?: Array<{ description: unknown; target?: unknown }>
+  activities?: Array<{
+    description: unknown
+    firstMonth: unknown
+    lastMonth: unknown
+    responsibleId?: unknown
+  }>
+}
+

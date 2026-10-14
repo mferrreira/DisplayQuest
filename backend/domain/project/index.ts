@@ -10,3 +10,4 @@ export type {
 export * from "./project-rules";
 export * from "./project-files-rules";
 export * from "./member-data-rules";
+export * from "./cronograma-rules";

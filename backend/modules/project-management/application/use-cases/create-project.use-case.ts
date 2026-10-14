@@ -1,4 +1,4 @@
-import { ValidationError, mergeRoles, normalizeProjectDateField, normalizeProjectTextField, normalizeVolunteerIds, projectValidationMessage, requireActorPermission, validateProjectInput } from "@/backend/domain"
+import { ValidationError, mergeRoles, normalizeCronogramaSeed, normalizeProjectDateField, normalizeProjectTextField, normalizeVolunteerIds, projectValidationMessage, requireActorPermission, validateProjectInput } from "@/backend/domain"
 import type { Role } from "@/backend/domain"
 import type { CreateProjectCommand } from "@/backend/modules/project-management/application/contracts"
 import type { ProjectManagementMembershipPort } from "@/backend/modules/project-management/application/ports/project-membership.repository"
@@ -51,7 +51,21 @@ export class CreateProjectUseCase {
       throw new ValidationError(projectValidationMessage(errors))
     }
 
-    const createdProject = await this.dependencies.projects.create(record)
+    // V5-5 (DEC-100, regra 9): o passo opcional do wizard é validado ANTES de qualquer escrita —
+    // uma linha de cronograma inválida não pode deixar projeto nascido sem cronograma. Quem
+    // participa ainda não existe no banco, então a autoridade do responsável é o conjunto que
+    // VAI participar: o ator, o líder e os voluntários do passo de equipe.
+    const volunteerIds = normalizeVolunteerIds(command.volunteerIds, command.actorId, command.data.leaderId)
+    const allowedResponsibleIds = [
+      command.actorId,
+      ...(command.data.leaderId ? [command.data.leaderId] : []),
+      ...volunteerIds,
+    ]
+    const cronograma = normalizeCronogramaSeed(command.cronograma, allowedResponsibleIds)
+
+    const createdProject = cronograma === null
+      ? await this.dependencies.projects.create(record)
+      : (await this.dependencies.projects.createWithCronograma(record, cronograma)).project
 
     await this.ensureMembership(createdProject.id!, command.actorId, ["GERENTE_PROJETO"])
 
@@ -59,7 +73,7 @@ export class CreateProjectUseCase {
       await this.ensureMembership(createdProject.id!, command.data.leaderId, ["GERENTE_PROJETO"])
     }
 
-    for (const volunteerId of normalizeVolunteerIds(command.volunteerIds, command.actorId, command.data.leaderId)) {
+    for (const volunteerId of volunteerIds) {
       try {
         await this.ensureMembership(createdProject.id!, volunteerId, ["VOLUNTARIO"])
       } catch (error) {
