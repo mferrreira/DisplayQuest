@@ -52,6 +52,10 @@ vi.mock("@/backend/composition/root", () => {
         .filter((row) => row.projectId === projectId)
         .map((row) => ({ ...row }));
     },
+    async findByProjectAndType(projectId, type) {
+      const row = mocks.rows.get(`${projectId}:${type}`);
+      return row ? { ...row } : null;
+    },
     async upsert(projectId, type, content) {
       const key = `${projectId}:${type}`;
       const existing = mocks.rows.get(key);

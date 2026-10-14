@@ -42,7 +42,7 @@ const CONFIG = {
 }
 
 describe("allowlist do bucket (DEC-101)", () => {
-  it("aceita imagem, PDF e vídeo — os três grupos do plano", () => {
+  it("aceita imagem, PDF e vídeo — os grupos históricos do plano", () => {
     expect(isAllowedBlobContentType("image/png")).toBe(true)
     expect(isAllowedBlobContentType("image/jpeg")).toBe(true)
     expect(isAllowedBlobContentType("application/pdf")).toBe(true)
@@ -50,14 +50,21 @@ describe("allowlist do bucket (DEC-101)", () => {
     expect(isAllowedBlobContentType("video/webm")).toBe(true)
   })
 
-  it("rejeita tipo fora dos grupos (documento de escritório ainda não entra)", () => {
+  it("rejeita tipo fora dos grupos — ZIP cru e Office legado não entram", () => {
     expect(isAllowedBlobContentType("application/zip")).toBe(false)
+    expect(isAllowedBlobContentType("application/msword")).toBe(false)
+    expect(isAllowedBlobContentType("")).toBe(false)
+  })
+
+  it("DOCX entra como grupo 'document' (V5-9b, DEC-167) — quem move este byte é o gerador", () => {
     expect(
       isAllowedBlobContentType(
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       ),
-    ).toBe(false)
-    expect(isAllowedBlobContentType("")).toBe(false)
+    ).toBe(true)
+    expect(
+      blobRuleFor("application/vnd.openxmlformats-officedocument.wordprocessingml.document")?.kind,
+    ).toBe("document")
   })
 
   it("normaliza parâmetros e caixa do Content-Type antes de decidir", () => {
@@ -68,8 +75,8 @@ describe("allowlist do bucket (DEC-101)", () => {
     expect(blobRuleFor("application/pdf")?.kind).toBe("pdf")
   })
 
-  it("publica a allowlist completa para o formulário (8 tipos)", () => {
-    expect(BLOB_ALLOWED_MIME).toHaveLength(8)
+  it("publica a allowlist completa do seam (9 tipos — DOCX entra no V5-9b, DEC-167)", () => {
+    expect(BLOB_ALLOWED_MIME).toHaveLength(9)
     expect(blobExtensionFor("image/jpeg")).toBe("jpg")
     expect(blobExtensionFor("desconhecido/tipo")).toBe("bin")
   })

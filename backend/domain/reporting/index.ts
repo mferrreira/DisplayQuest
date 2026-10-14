@@ -54,7 +54,21 @@ export {
 export {
   TECHNICAL_REPORT_TYPES,
   isTechnicalReportType,
+  invalidTechnicalReportTypeError,
   canActorManageTechnicalReportDecision,
   technicalReportCheckbox,
   type TechnicalReportType,
 } from "./technical-report-rules";
+export {
+  REPORT_SECTIONS,
+  splitReportBody,
+  technicalReportCheckboxLine,
+  technicalReportDocumentPeriod,
+  formatDocumentCivilDay,
+  technicalReportFileKey,
+  technicalReportFileName,
+  buildTechnicalReportCommands,
+  type ReportSection,
+  type ReportBody,
+  type TechnicalReportDocumentInput,
+} from "./technical-report-document-rules";

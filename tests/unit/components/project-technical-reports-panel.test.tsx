@@ -1,5 +1,5 @@
 /**
- * V5-9 (DEC-70/139/167) — testes de UI do painel de relatórios técnicos.
+ * V5-9/V5-9b (DEC-70/139/167/168) — testes de UI do painel de relatórios técnicos.
  *
  * O painel é a parte do batch que o `tsc` não cobre. A rede é um `fetch` gravador (mesma
  * razão medida no V5-2c) — o corpo gravado prova exatamente o que sai para a rota.
@@ -34,7 +34,10 @@ const mocks = vi.hoisted(() => ({
   rows: [] as ReportRow[],
   requests: [] as { method: string; path: string; body?: unknown }[],
   denyNextPut: false,
+  denyNextGenerate: false,
 }));
+
+const NO_MEMBERS_MESSAGE = "O projeto não tem membros ativos — o relatório é gerado um documento por membro";
 
 function recordingFetch(input: RequestInfo | URL, init?: RequestInit) {
   const path = String(input);
@@ -48,6 +51,27 @@ function recordingFetch(input: RequestInfo | URL, init?: RequestInit) {
   if (method === "GET") {
     return Promise.resolve(
       new Response(JSON.stringify({ reports: mocks.rows }), { status: 200 }),
+    );
+  }
+
+  if (method === "POST" && path.includes("/generate")) {
+    if (mocks.denyNextGenerate) {
+      return Promise.resolve(new Response(JSON.stringify({ error: NO_MEMBERS_MESSAGE }), { status: 409 }));
+    }
+    return Promise.resolve(
+      new Response(
+        JSON.stringify({
+          files: [
+            {
+              userId: 9,
+              memberName: "Bento Lima",
+              key: "projects/7/technical-reports/1/9.docx",
+              fileName: "relatorio-parcial-bento-lima.docx",
+            },
+          ],
+        }),
+        { status: 201 },
+      ),
     );
   }
 
@@ -94,6 +118,7 @@ beforeEach(() => {
   ];
   mocks.requests = [];
   mocks.denyNextPut = false;
+  mocks.denyNextGenerate = false;
   vi.stubGlobal("fetch", vi.fn(recordingFetch));
   // Stub LOCAL: shim global em tests/setup.ts mudaria o caminho "mobile" de outros testes.
   vi.stubGlobal(
@@ -161,5 +186,51 @@ describe("painel de relatórios técnicos (V5-9, DEC-70/139)", () => {
     await user.click(screen.getByRole("button", { name: "Salvar relatório Final" }));
 
     expect(await screen.findByText(DENIED_MESSAGE)).toBeInTheDocument();
+  });
+
+  it("V5-9b: 'Gerar DOCX' chama a rota de geração e o download por membro aparece", async () => {
+    const user = userEvent.setup({ delay: null });
+    renderPanel(true);
+
+    await user.click(await screen.findByRole("button", { name: "Gerar documentos do relatório Parcial" }));
+
+    await waitFor(() => {
+      const post = mocks.requests.find((r) => r.method === "POST");
+      expect(post?.path).toBe(`/api/projects/${PROJECT}/technical-reports/parcial/generate`);
+    });
+    expect(await screen.findByText("1 arquivo(s) — um por membro ativo do projeto.")).toBeInTheDocument();
+
+    const link = await screen.findByRole("link", { name: "Bento Lima" });
+    expect(link).toHaveAttribute(
+      "href",
+      `/api/projects/${PROJECT}/technical-reports/1/file?userId=9`,
+    );
+    expect(link).toHaveAttribute("download", "relatorio-parcial-bento-lima.docx");
+  });
+
+  it("V5-9b: sem texto salvo o botão de gerar está desabilitado — a mesma exigência do 404", async () => {
+    renderPanel(true);
+
+    // "Final" não tem linha salva no fixture.
+    expect(await screen.findByRole("button", { name: "Gerar documentos do relatório Final" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Gerar documentos do relatório Parcial" })).toBeEnabled();
+  });
+
+  it("V5-9b: o 409 do servidor chega na tela com a frase do use case", async () => {
+    const user = userEvent.setup({ delay: null });
+    mocks.denyNextGenerate = true;
+    renderPanel(true);
+
+    await user.click(await screen.findByRole("button", { name: "Gerar documentos do relatório Parcial" }));
+
+    expect(await screen.findByText(NO_MEMBERS_MESSAGE)).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Bento Lima" })).not.toBeInTheDocument();
+  });
+
+  it("V5-9b: sem gestão não há botão de gerar", async () => {
+    renderPanel(false);
+
+    expect(await screen.findByDisplayValue("Texto parcial salvo")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /gerar documentos/i })).not.toBeInTheDocument();
   });
 });

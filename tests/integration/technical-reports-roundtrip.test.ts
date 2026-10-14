@@ -11,7 +11,9 @@
  *      gestor edita, global sem membership edita, e o quirk da ACL — membership
  *      [VOLUNTARIO] com COORDENADOR global — não edita;
  *   3. tipo fora da lista é recusado antes de qualquer escrita;
- *   4. apagar o projeto apaga os relatórios (cascade da FK).
+ *   4. apagar o projeto apaga os relatórios (cascade da FK);
+ *   5. (V5-9b) a geração lote roda com o adaptador docx REAL sobre dados reais: um
+ *      arquivo por membro ATIVO, o INATIVO fica fora, e a chave derivada é a prometida.
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { UserRole } from "@prisma/client";
@@ -178,6 +180,46 @@ describe("G4 roundtrip — relatório técnico (isolated test DB)", () => {
     ).rejects.toThrow(ValidationError);
     const rows = await prisma.technical_reports.findMany({ where: { projectId, type: "mensal" } });
     expect(rows).toHaveLength(0);
+  });
+
+  it("geração lote real: um DOCX por membro ATIVO, INATIVO fica fora (DEC-167)", async () => {
+    const bolsistaId = await createUser("Bolsista", ["VOLUNTARIO"]);
+    const inativoId = await createUser("Inativo", ["VOLUNTARIO"]);
+    await prisma.users.update({
+      where: { id: bolsistaId },
+      data: { course: "Sistemas de Informação", scholarshipType: "PIBIC", fundingAgency: "CNPQ" },
+    });
+    await prisma.project_members.create({
+      data: { projectId, userId: bolsistaId, roles: ["VOLUNTARIO"], situacao: "ATIVO" },
+    });
+    await prisma.project_members.create({
+      data: { projectId, userId: inativoId, roles: ["VOLUNTARIO"], situacao: "INATIVO" },
+    });
+
+    // Adaptador docx REAL (asset versionado, sem bucket): o roundtrip exercita o wiring
+    // inteiro — tabela, leitura de projeto própria, membros ATIVO e render.
+    const { report, files } = await reporting.generateTechnicalReport({
+      projectId,
+      actorId: leaderId,
+      actorRoles: ["PESQUISADOR"],
+      type: "parcial",
+      now: new Date("2026-10-14T21:00:00-03:00"),
+    });
+
+    expect(report.content).toBe("Versão do gestor");
+
+    // gestor + voluntarioGlobal + bolsista são ATIVO; o INATIVO não recebe documento.
+    const userIds = files.map((file) => file.userId).sort((a, b) => a - b);
+    expect(userIds).toEqual([gestorId, voluntarioGlobalId, bolsistaId].sort((a, b) => a - b));
+    expect(userIds).not.toContain(inativoId);
+
+    const bolsista = files.find((file) => file.userId === bolsistaId)!;
+    expect(bolsista.key).toBe(`projects/${projectId}/technical-reports/${report.id}/${bolsistaId}.docx`);
+    expect(bolsista.fileName).toBe(`relatorio-parcial-g4-tecrep-bolsista-${stamp}.docx`);
+    // bytes do adaptador real: assinatura ZIP na cabeça de cada arquivo.
+    for (const file of files) {
+      expect([...file.bytes.slice(0, 4)]).toEqual([0x50, 0x4b, 0x03, 0x04]);
+    }
   });
 
   it("apagar o projeto apaga os relatórios (cascade)", async () => {

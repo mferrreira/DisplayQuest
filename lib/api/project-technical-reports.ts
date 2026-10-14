@@ -62,3 +62,35 @@ export async function saveTechnicalReport(
   }
   return payload.report
 }
+
+/** Arquivo gerado (V5-9b, DEC-139): um DOCX por membro ATIVO, chave derivada no bucket. */
+export interface GeneratedTechnicalReportFile {
+  userId: number
+  memberName: string
+  key: string
+  fileName: string
+}
+
+export async function generateTechnicalReports(
+  projectId: number,
+  type: string,
+): Promise<GeneratedTechnicalReportFile[]> {
+  const payload = await request<{ files?: GeneratedTechnicalReportFile[] }>(
+    `/api/projects/${projectId}/technical-reports/${type}/generate`,
+    { method: "POST" },
+    "Erro ao gerar relatórios técnicos",
+  )
+  return Array.isArray(payload.files) ? payload.files : []
+}
+
+/**
+ * URL de download do DOCX (rota autenticada, DEC-135/167). O nome mostrado vem do
+ * atributo `download` do link; o servidor entrega com nome genérico.
+ */
+export function technicalReportFileUrl(
+  projectId: number,
+  reportId: number,
+  userId: number,
+): string {
+  return `/api/projects/${projectId}/technical-reports/${reportId}/file?userId=${userId}`
+}

@@ -16,5 +16,6 @@ export interface TechnicalReportRecord {
 
 export interface TechnicalReportsRepository {
   listByProject(projectId: number): Promise<TechnicalReportRecord[]>;
+  findByProjectAndType(projectId: number, type: string): Promise<TechnicalReportRecord | null>;
   upsert(projectId: number, type: string, content: string): Promise<TechnicalReportRecord>;
 }

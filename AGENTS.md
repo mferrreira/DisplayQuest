@@ -795,6 +795,13 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   "expected 500", que não diz nada do problema. Monte `{ params: Promise.resolve({...}) }` num helper
   **genérico** (`<T extends Record<string,string>>`), senão o `tsc` recusa o `Record<string,string>`
   no lugar de `{ id: string }`.
+- **Next 15 recusa slug diferente na mesma posição de rota dinâmica (medido no V5-9b, 2026-10-14):**
+  `technical-reports/[type]/generate` e `technical-reports/[reportId]/file` quebraram o
+  `next build` com "You cannot use different slug names for the same dynamic path
+  ('reportId' !== 'type')" — `vitest`, `tsc` e `arch:check` passam verdes e **só o build** falha,
+  o que deixa o erro chegar no `docker compose up --build`. Conserto: um slug só (`[segment]`)
+  nos dois filhos, e cada handler valida o próprio vocabulário (tipo contra a lista fechada do
+  domínio; id numérico).
 - **Bytes de controle entram num arquivo novo pelo caminho da escrita, não pelo código (medido no
   V5-2c):** `\u0000-\u001f` escrito dentro de uma string JSON vira caractere **real** no arquivo
   gravado, e o `grep` passa a tratar o `.ts` como binário ("Binary file matches"). Conferir por

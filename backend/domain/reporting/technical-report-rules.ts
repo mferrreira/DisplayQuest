@@ -13,6 +13,7 @@
  * negrito. Não existe terceira caixa: `tecnico-final` e `final` marcam Final — o nome
  * carrega "final" (DEC-167).
  */
+import { ValidationError } from "../errors";
 import { canActorManageProjectDecision } from "../project/project-rules";
 
 /** Os três tipos do dono (DEC-70). `tecnico-final` é o nome do relatório técnico final. */
@@ -22,6 +23,18 @@ export type TechnicalReportType = (typeof TECHNICAL_REPORT_TYPES)[number];
 
 export function isTechnicalReportType(value: unknown): value is TechnicalReportType {
   return typeof value === "string" && (TECHNICAL_REPORT_TYPES as readonly string[]).includes(value);
+}
+
+/**
+ * A frase do tipo inválido mora no domínio: os dois use cases do relatório técnico
+ * (upsert e geração) recusam com a MESMA mensagem — construí-la em cada use case seria
+ * a regra em duas cópias (lição DEC-95/96).
+ */
+export function invalidTechnicalReportTypeError(): ValidationError {
+  const allowed = TECHNICAL_REPORT_TYPES.map((t) => `"${t}"`);
+  return new ValidationError(
+    `Tipo de relatório técnico inválido: use ${allowed.slice(0, -1).join(", ")} ou ${allowed[allowed.length - 1]}`,
+  );
 }
 
 /**

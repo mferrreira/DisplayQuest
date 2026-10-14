@@ -25,6 +25,22 @@ export class PrismaTechnicalReportsRepository implements TechnicalReportsReposit
     }))
   }
 
+  async findByProjectAndType(projectId: number, type: string): Promise<TechnicalReportRecord | null> {
+    const row = await prisma.technical_reports.findUnique({
+      where: { projectId_type: { projectId, type } },
+    })
+    return row
+      ? {
+          id: row.id,
+          projectId: row.projectId,
+          type: row.type,
+          content: row.content,
+          createdAt: row.createdAt.toISOString(),
+          updatedAt: row.updatedAt.toISOString(),
+        }
+      : null
+  }
+
   async upsert(projectId: number, type: string, content: string): Promise<TechnicalReportRecord> {
     const row = await prisma.technical_reports.upsert({
       where: { projectId_type: { projectId, type } },

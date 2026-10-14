@@ -34,6 +34,7 @@ import { GetWeeklyHoursStatsUseCase } from "@/backend/modules/reporting/applicat
 import { GetWeeklyReportByIdUseCase } from "@/backend/modules/reporting/application/use-cases/get-weekly-report-by-id.use-case"
 import { ListProjectReportsUseCase } from "@/backend/modules/reporting/application/use-cases/list-project-reports.use-case"
 import { ListTechnicalReportsUseCase } from "@/backend/modules/reporting/application/use-cases/list-technical-reports.use-case"
+import { GenerateTechnicalReportUseCase } from "@/backend/modules/reporting/application/use-cases/generate-technical-report.use-case"
 import { UpsertTechnicalReportContentUseCase } from "@/backend/modules/reporting/application/use-cases/upsert-technical-report-content.use-case"
 import { ListWeeklyHoursHistoryUseCase } from "@/backend/modules/reporting/application/use-cases/list-weekly-hours-history.use-case"
 import { ListWeeklyReportsUseCase } from "@/backend/modules/reporting/application/use-cases/list-weekly-reports.use-case"
@@ -46,6 +47,8 @@ import type { HoursReadRepository } from "@/backend/modules/reporting/applicatio
 import type { ProjectReportsRepository } from "@/backend/modules/reporting/application/ports/project-reports.repository"
 import type { TechnicalReportsRepository } from "@/backend/modules/reporting/application/ports/technical-reports.repository"
 import type { TechnicalReportAccessPort } from "@/backend/modules/reporting/application/ports/technical-report-access.port"
+import type { TechnicalReportGenerationPort } from "@/backend/modules/reporting/application/ports/technical-report-generation.port"
+import type { TechnicalReportDocumentPort } from "@/backend/modules/reporting/application/ports/technical-report-document.port"
 import type { ReportAttachmentsRepository } from "@/backend/modules/reporting/application/ports/report-attachments.repository"
 import type { ReportingDirectory } from "@/backend/modules/reporting/application/ports/reporting-directory.port"
 import type { ReportStoragePort } from "@/backend/modules/reporting/application/ports/report-storage.port"
@@ -56,6 +59,8 @@ import { PrismaHoursReadRepository } from "@/backend/modules/reporting/infrastru
 import { PrismaProjectReportsRepository } from "@/backend/modules/reporting/infrastructure/repositories/prisma-project-reports.repository"
 import { PrismaTechnicalReportsRepository } from "@/backend/modules/reporting/infrastructure/repositories/prisma-technical-reports.repository"
 import { PrismaTechnicalReportAccess } from "@/backend/modules/reporting/infrastructure/repositories/prisma-technical-report-access"
+import { PrismaTechnicalReportGeneration } from "@/backend/modules/reporting/infrastructure/repositories/prisma-technical-report-generation"
+import { DocxTechnicalReportAdapter } from "@/backend/modules/reporting/infrastructure/adapters/docx-technical-report.adapter"
 import { PrismaReportAttachmentsRepository } from "@/backend/modules/reporting/infrastructure/repositories/prisma-report-attachments.repository"
 import { PrismaReportingDirectory } from "@/backend/modules/reporting/infrastructure/repositories/prisma-reporting-directory"
 import { PrismaWeeklyHoursHistoryRepository } from "@/backend/modules/reporting/infrastructure/repositories/prisma-weekly-hours-history.repository"
@@ -101,6 +106,7 @@ export class ReportingModule {
     // V5-9 (DEC-70/139): relatório técnico por projeto × tipo.
     private readonly listTechnicalReportsUseCase: ListTechnicalReportsUseCase,
     private readonly upsertTechnicalReportContentUseCase: UpsertTechnicalReportContentUseCase,
+    private readonly generateTechnicalReportUseCase: GenerateTechnicalReportUseCase,
   ) {}
 
   // B6-3 (D4): os metodos de weekly-reports/historico de horas passaram a receber o ator —
@@ -225,6 +231,18 @@ export class ReportingModule {
   }) {
     return await this.upsertTechnicalReportContentUseCase.execute(command)
   }
+
+  // V5-9b (DEC-129/139/167/168): geração lote do DOCX oficial preenchido. O use case
+  // renderiza pela porta e devolve os bytes; quem escreve no bucket é a rota (DEC-133).
+  async generateTechnicalReport(command: {
+    projectId: number;
+    actorId: number;
+    actorRoles: string[];
+    type: string;
+    now: Date;
+  }) {
+    return await this.generateTechnicalReportUseCase.execute(command)
+  }
 }
 
 /** Thin ports of the module (DEC-17: the seam tests inject; production defaults to Prisma). */
@@ -240,6 +258,8 @@ export interface ReportingModulePorts {
   // V5-9 (DEC-70/139): relatório técnico (tabela própria + leitura de projeto própria, RG-04).
   technicalReports?: TechnicalReportsRepository
   technicalReportAccess?: TechnicalReportAccessPort
+  technicalReportGeneration?: TechnicalReportGenerationPort
+  technicalReportDocument?: TechnicalReportDocumentPort
 }
 
 /** Publisher used when the composition root does not wire one (tests/default): no-op with a
@@ -265,6 +285,8 @@ export function createReportingModule(options: ReportingModuleFactoryOptions = {
   const publisher = options.ports?.publisher ?? new UnwiredReportSubmittedPublisher()
   const technicalReports = options.ports?.technicalReports ?? new PrismaTechnicalReportsRepository()
   const technicalReportAccess = options.ports?.technicalReportAccess ?? new PrismaTechnicalReportAccess()
+  const technicalReportGeneration = options.ports?.technicalReportGeneration ?? new PrismaTechnicalReportGeneration()
+  const technicalReportDocument = options.ports?.technicalReportDocument ?? new DocxTechnicalReportAdapter()
 
   const getProjectReport = new GetProjectReportUseCase(projectReports, directory)
   const upsertWeeklyReport = new UpsertWeeklyReportUseCase(weeklyReports, hoursRead, directory)
@@ -300,5 +322,11 @@ export function createReportingModule(options: ReportingModuleFactoryOptions = {
     new SweepStaleReportUploadsUseCase(reportAttachments, storage),
     new ListTechnicalReportsUseCase({ technicalReports, access: technicalReportAccess }),
     new UpsertTechnicalReportContentUseCase({ technicalReports, access: technicalReportAccess }),
+    new GenerateTechnicalReportUseCase({
+      technicalReports,
+      access: technicalReportAccess,
+      generation: technicalReportGeneration,
+      docx: technicalReportDocument,
+    }),
   )
 }

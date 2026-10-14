@@ -15,8 +15,8 @@ import {
   NotFoundError,
   ValidationError,
   canActorManageTechnicalReportDecision,
+  invalidTechnicalReportTypeError,
   isTechnicalReportType,
-  TECHNICAL_REPORT_TYPES,
   type TechnicalReportType,
 } from "@/backend/domain";
 import type { TechnicalReportAccessPort } from "@/backend/modules/reporting/application/ports/technical-report-access.port";
@@ -68,10 +68,7 @@ export class UpsertTechnicalReportContentUseCase {
     }
 
     if (!isTechnicalReportType(command.type)) {
-      const allowed = TECHNICAL_REPORT_TYPES.map((t) => `"${t}"`);
-      throw new ValidationError(
-        `Tipo de relatório técnico inválido: use ${allowed.slice(0, -1).join(", ")} ou ${allowed[allowed.length - 1]}`,
-      );
+      throw invalidTechnicalReportTypeError();
     }
     const type: TechnicalReportType = command.type;
 

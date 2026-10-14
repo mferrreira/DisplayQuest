@@ -16,6 +16,8 @@ import {
   tagDocumentXml,
 } from "../../../scripts/tag-report-template.mjs"
 
+import { REPORT_SECTIONS } from "@/backend/domain"
+
 // V5-1a/DEC-128: os templates oficiais viram asset versionado em templates/ e a cópia
 // marcada é derivada por scripts/tag-report-template.mjs. Este arquivo é o guarda de deriva:
 // se o oficial trocar sem re-derivar (ou a cópia for editada à mão), ele falha e diz o que
@@ -88,9 +90,12 @@ const ACROFORM_FIELDS = [
   "ano",
 ]
 
-// 13 comandos, na ordem em que aparecem no documento. Este conjunto é o contrato que o V5-9
-// preenche; mexer nele exige atualizar o preenchimento junto.
+// 17 comandos, na ordem em que aparecem no documento (13 do V5-1a + linha_tipo + as 3
+// tabelas do V5-9b — DEC-167/168). Este conjunto é o contrato que o preenchimento escreve;
+// mexer nele exige atualizar o adaptador docx junto. A linha de tipo vem ANTES do período
+// e as tabelas vêm antes da "Data" final — medido no texto do oficial.
 const TAGGED_COMMANDS = [
+  "linha_tipo",
   "periodo_inicio",
   "periodo_fim",
   "titulo",
@@ -103,6 +108,9 @@ const TAGGED_COMMANDS = [
   "estudante_curso",
   "modalidade",
   "instituicao_fomento",
+  "tabela_descricao",
+  "tabela_resultados",
+  "tabela_comentarios",
   "data_relatorio",
 ]
 
@@ -157,6 +165,18 @@ describe("relatório técnico — cópia marcada (V5-1a/DEC-129)", () => {
     expect(text).not.toContain("Bel em Sistemas de Informação")
   })
 
+  it("os rótulos de seção do domínio são os rótulos medidos no oficial (DEC-168, fonte única)", async () => {
+    // O cortador do corpo (splitReportBody) e o prompt da IA consomem REPORT_SECTIONS.
+    // Se o oficial trocar de rótulo, o cortador passa a casar contra texto que não existe
+    // mais — o guarda falha aqui, nomeando a seção, antes de o documento sair errado.
+    const officialText = extractText(await readOfficialDocumentXml())
+    for (const section of REPORT_SECTIONS) {
+      expect(officialText).toContain(section.officialLabel)
+    }
+    // A linha de tipo literal também está ancorada na marcação (DEC-167).
+    expect(officialText).toContain("( ) Relatório Final (  ) Relatório Parcial")
+  })
+
   it("a derivação é determinística (nenhuma entrada do zip sai com a data do run)", async () => {
     // O .docx oficial não tem entrada de diretório para `word/`: o jszip sintetiza uma no
     // load com `new Date()`. Sem normalizar as datas, o arquivo muda a cada run (medido: dois
@@ -174,7 +194,7 @@ describe("relatório técnico — cópia marcada (V5-1a/DEC-129)", () => {
     expect(drifted).toEqual([])
   })
 
-  it("o listCommands() do docx-templates vê os 13 comandos, como INS", async () => {
+  it("o listCommands() do docx-templates vê os 17 comandos, como INS", async () => {
     // O default do docx-templates é `+++` e `['{','}']` NÃO aceita chave dupla: com o par
     // errado o inventário vem vazio ou quebrado. O par certo é o que CMD_DELIMITER exporta.
     const commands = await listCommands(asArrayBuffer(TAGGED_DOCX), CMD_DELIMITER)

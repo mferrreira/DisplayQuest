@@ -101,6 +101,44 @@ export const REPLACEMENTS = [
     tokens: ["{{projeto_termino}}"],
     expected: 1,
   },
+  // V5-9b (DEC-129/167/168): a linha de tipo e as 3 tabelas de corpo, que o V5-1a deixou
+  // sem marcação de propósito. A linha de tipo é um único run literal medido no oficial
+  // ("( ) Relatório Final (  ) Relatório Parcial" — a primeira caixa tem UM espaço, a
+  // segunda DOIS). As tabelas não têm branco sublinhado: a célula é um parágrafo vazio
+  // com run vazio, e o anchor é o `w:spacing` próprio de cada célula (medido: cada um
+  // ocorre UMA vez no documento inteiro). O run vazio do oficial não carrega fonte — o
+  // texto preenchido herda o que o oficial herda quando o dono digita nele (docDefaults
+  // Calibri 11); o script NÃO adiciona rPr, porque o sistema nunca escreve estilo (DEC-129).
+  {
+    campo: "linha de tipo (Final / Parcial)",
+    pattern: /\( \) Relatório Final \(  \) Relatório Parcial/,
+    tokens: ["{{linha_tipo}}"],
+    expected: 1,
+  },
+  {
+    campo: "tabela Descrição das Atividades",
+    pattern: /<w:spacing w:after="80" w:lineRule="auto"\/><w:jc w:val="left"\/><w:rPr\/><\/w:pPr><w:r w:rsidDel="00000000" w:rsidR="00000000" w:rsidRPr="00000000"><w:rPr><w:rtl w:val="0"\/><\/w:rPr><\/w:r>/,
+    tokens: [
+      '<w:spacing w:after="80" w:lineRule="auto"/><w:jc w:val="left"/><w:rPr/></w:pPr><w:r w:rsidDel="00000000" w:rsidR="00000000" w:rsidRPr="00000000"><w:rPr><w:rtl w:val="0"/></w:rPr><w:t xml:space="preserve">{{tabela_descricao}}</w:t></w:r>',
+    ],
+    expected: 1,
+  },
+  {
+    campo: "tabela Principais Resultados",
+    pattern: /<w:spacing w:after="120" w:before="0" w:lineRule="auto"\/><w:jc w:val="both"\/><w:rPr\/><\/w:pPr><w:r w:rsidDel="00000000" w:rsidR="00000000" w:rsidRPr="00000000"><w:rPr><w:rtl w:val="0"\/><\/w:rPr><\/w:r>/,
+    tokens: [
+      '<w:spacing w:after="120" w:before="0" w:lineRule="auto"/><w:jc w:val="both"/><w:rPr/></w:pPr><w:r w:rsidDel="00000000" w:rsidR="00000000" w:rsidRPr="00000000"><w:rPr><w:rtl w:val="0"/></w:rPr><w:t xml:space="preserve">{{tabela_resultados}}</w:t></w:r>',
+    ],
+    expected: 1,
+  },
+  {
+    campo: "tabela Comentários Adicionais",
+    pattern: /<w:spacing w:after="240" w:before="0" w:lineRule="auto"\/><w:jc w:val="left"\/><w:rPr\/><\/w:pPr><w:r w:rsidDel="00000000" w:rsidR="00000000" w:rsidRPr="00000000"><w:rPr><w:rtl w:val="0"\/><\/w:rPr><\/w:r>/,
+    tokens: [
+      '<w:spacing w:after="240" w:before="0" w:lineRule="auto"/><w:jc w:val="left"/><w:rPr/></w:pPr><w:r w:rsidDel="00000000" w:rsidR="00000000" w:rsidRPr="00000000"><w:rPr><w:rtl w:val="0"/></w:rPr><w:t xml:space="preserve">{{tabela_comentarios}}</w:t></w:r>',
+    ],
+    expected: 1,
+  },
 ]
 
 /** Texto visível do documento (tags fora), para conferir invariantes. */

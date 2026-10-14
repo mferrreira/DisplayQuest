@@ -24,7 +24,7 @@ import { magicMatches } from "./magic-bytes"
  * de unit rode sem bucket no ar.
  */
 
-export type BlobKind = "image" | "pdf" | "video"
+export type BlobKind = "image" | "pdf" | "video" | "document"
 
 export interface BlobMimeRule {
   readonly kind: BlobKind
@@ -38,14 +38,24 @@ export const MAX_BLOB_IMAGE_BYTES = 5 * 1024 * 1024
 export const MAX_BLOB_PDF_BYTES = 20 * 1024 * 1024
 /** Infra preparada; nenhuma tela de vídeo no plan-v5 (DEC-101). Teto provisório. */
 export const MAX_BLOB_VIDEO_BYTES = 100 * 1024 * 1024
+/** DOCX do relatório técnico (V5-9b, DEC-129): gerado pelo adaptador a partir do oficial —
+ *  o binário é pequeno por construção; o teto é o mesmo do PDF por coerência de grupo. */
+export const MAX_BLOB_DOCUMENT_BYTES = 20 * 1024 * 1024
+
+/** O mime do documento Office que o gerador escreve — uma grafia só (rota + adaptador). */
+export const BLOB_DOCX_CONTENT_TYPE =
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 
 function mimeRule(kind: BlobKind, maxBytes: number, extension: string): BlobMimeRule {
   return { kind, maxBytes, extension }
 }
 
 /**
- * Allowlist do bucket: **imagens, PDF e vídeo** (DEC-101). Novos grupos entram aqui —
- * o formulário de anexos (V5-2) decide se documentos de escritório passam a valer.
+ * Allowlist do bucket: **imagens, PDF, vídeo e documento Office** (DEC-101; documento entra
+ * no V5-9b para o DOCX gerado pelo adaptador do relatório técnico, DEC-129). A assinatura
+ * do DOCX é a de ZIP, já congelada na tabela única (`lib/storage/magic-bytes.ts`). O
+ * formulário de anexos tem `accept` próprio e **não** passou a aceitar documento de
+ * escritório: quem move este byte é o gerador, não o upload de pessoa.
  */
 export const BLOB_MIME_RULES: Readonly<Record<string, BlobMimeRule>> = {
   "image/png": mimeRule("image", MAX_BLOB_IMAGE_BYTES, "png"),
@@ -53,6 +63,11 @@ export const BLOB_MIME_RULES: Readonly<Record<string, BlobMimeRule>> = {
   "image/webp": mimeRule("image", MAX_BLOB_IMAGE_BYTES, "webp"),
   "image/gif": mimeRule("image", MAX_BLOB_IMAGE_BYTES, "gif"),
   "application/pdf": mimeRule("pdf", MAX_BLOB_PDF_BYTES, "pdf"),
+  [BLOB_DOCX_CONTENT_TYPE]: mimeRule(
+    "document",
+    MAX_BLOB_DOCUMENT_BYTES,
+    "docx",
+  ),
   "video/mp4": mimeRule("video", MAX_BLOB_VIDEO_BYTES, "mp4"),
   "video/webm": mimeRule("video", MAX_BLOB_VIDEO_BYTES, "webm"),
   "video/quicktime": mimeRule("video", MAX_BLOB_VIDEO_BYTES, "mov"),

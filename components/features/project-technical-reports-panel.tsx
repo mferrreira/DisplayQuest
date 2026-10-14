@@ -5,26 +5,30 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Loader2 } from "lucide-react"
+import { Download, Loader2 } from "lucide-react"
 import { useToast } from "@/contexts/use-toast"
 import { TECHNICAL_REPORT_TYPES, type TechnicalReportType } from "@/backend/domain"
 import {
+  generateTechnicalReports,
   listTechnicalReports,
   saveTechnicalReport,
+  technicalReportFileUrl,
+  type GeneratedTechnicalReportFile,
   type TechnicalReport,
 } from "@/lib/api/project-technical-reports"
 
 /**
- * V5-9 (DEC-70/139/167) — relatórios técnicos do projeto.
+ * V5-9 (DEC-70/139/167/168) — relatórios técnicos do projeto.
  *
  * Um texto editável por par (projeto × tipo, DEC-70). A leitura é a do autenticado; a
- * edição aparece só para quem o diálogo reconhece como gestão/líder (DEC-139) e o
- * servidor decide de verdade — o 403 volta na frase do use case. Os tokens de tipo vêm
- * do domínio (`TECHNICAL_REPORT_TYPES`): a tela não tem vocabulário próprio (lição
- * DEC-96), só os rótulos de exibição.
+ * edição e a geração aparecem só para quem o diálogo reconhece como gestão/líder
+ * (DEC-139) e o servidor decide de verdade — o 403 volta na frase do use case. Os
+ * tokens de tipo vêm do domínio (`TECHNICAL_REPORT_TYPES`): a tela não tem vocabulário
+ * próprio (lição DEC-96), só os rótulos de exibição.
  *
- * A geração do DOCX por membro é o passo seguinte do plano (V5-9b); este painel é o
- * texto que ela preenche.
+ * V5-9b: "Gerar DOCX" dispara a geração lote (um documento oficial por membro ATIVO,
+ * DEC-139) e a tela mostra o download de cada arquivo gerado nesta sessão. O botão só
+ * habilita com texto salvo — a mesma exigência do servidor (404), provada na rota.
  */
 
 const TYPE_LABELS: Record<TechnicalReportType, string> = {
@@ -47,6 +51,10 @@ export function ProjectTechnicalReportsPanel({
   const [drafts, setDrafts] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
   const [savingType, setSavingType] = useState<string | null>(null)
+  const [generatingType, setGeneratingType] = useState<string | null>(null)
+  // Arquivos gerados nesta sessão (a chave do bucket é estável e regenerar sobrescreve;
+  // não há listagem de bucket na seam, então a tela anuncia o que acabou de gerar).
+  const [generated, setGenerated] = useState<Record<string, GeneratedTechnicalReportFile[]>>({})
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -101,6 +109,27 @@ export function ProjectTechnicalReportsPanel({
     }
   }
 
+  async function handleGenerate(type: TechnicalReportType) {
+    setGeneratingType(type)
+    try {
+      const files = await generateTechnicalReports(projectId, type)
+      setGenerated((current) => ({ ...current, [type]: files }))
+      toast({
+        title: "Documentos gerados",
+        description: `${files.length} arquivo(s) — um por membro ativo do projeto.`,
+      })
+    } catch (error) {
+      // Rejeição tratada (DEC-85): handler async sem catch derruba o gate (V4-4b).
+      toast({
+        title: "Erro",
+        description: error instanceof Error ? error.message : "Falha ao gerar documentos",
+        variant: "destructive",
+      })
+    } finally {
+      setGeneratingType(null)
+    }
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -122,17 +151,31 @@ export function ProjectTechnicalReportsPanel({
               <div className="flex items-center justify-between gap-2">
                 <Label className="text-sm font-medium">Relatório {label}</Label>
                 {canManage && (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    disabled={savingType !== null}
-                    aria-label={`Salvar relatório ${label}`}
-                    onClick={() => handleSave(type)}
-                  >
-                    {savingType === type && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Salvar
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={savingType !== null || !saved}
+                      title={saved ? undefined : "Salve o texto antes de gerar o documento"}
+                      aria-label={`Gerar documentos do relatório ${label}`}
+                      onClick={() => handleGenerate(type)}
+                    >
+                      {generatingType === type && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Gerar DOCX
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={savingType !== null}
+                      aria-label={`Salvar relatório ${label}`}
+                      onClick={() => handleSave(type)}
+                    >
+                      {savingType === type && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Salvar
+                    </Button>
+                  </div>
                 )}
               </div>
               <Textarea
@@ -149,6 +192,22 @@ export function ProjectTechnicalReportsPanel({
                 <p className="text-xs text-muted-foreground">
                   Atualizado em {new Date(saved.updatedAt).toLocaleDateString("pt-BR")}
                 </p>
+              )}
+              {saved && generated[type] && generated[type].length > 0 && (
+                <ul className="space-y-1" aria-label={`Documentos gerados do relatório ${label}`}>
+                  {generated[type].map((file) => (
+                    <li key={file.key}>
+                      <a
+                        href={technicalReportFileUrl(projectId, saved.id, file.userId)}
+                        download={file.fileName}
+                        className="inline-flex items-center gap-2 text-sm text-primary underline-offset-4 hover:underline"
+                      >
+                        <Download className="h-4 w-4" aria-hidden="true" />
+                        {file.memberName}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
               )}
             </div>
           )

@@ -37,6 +37,11 @@ class FakeRepository implements TechnicalReportsRepository {
       .map((row) => ({ ...row })); // cópia: leitura devolve record vivo é o modo de falha medido no V5-3
   }
 
+  async findByProjectAndType(projectId: number, type: string): Promise<TechnicalReportRecord | null> {
+    const row = this.rows.get(this.key(projectId, type));
+    return row ? { ...row } : null;
+  }
+
   async upsert(projectId: number, type: string, content: string): Promise<TechnicalReportRecord> {
     const key = this.key(projectId, type);
     const existing = this.rows.get(key);
