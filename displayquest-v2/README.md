@@ -14,8 +14,8 @@ displayquest-v2/
 ├── clean-arch/    BASE: refatoração do backend para Clean Architecture (pré-requisito das features 01..06)
 ├── plan-v3/       OPERAÇÃO: correções e features pedidas por quem usa o sistema hoje (sessões, quadro, pontos) — done
 ├── plan-v4/       OPERAÇÃO: subtasks, animação de pontos, inativação (2026-10-05) — done (2026-10-07, DEC-78..98)
-├── plan-v5/       OPERAÇÃO: domínio de projetos maduro — cronograma, pontos, relatórios técnicos, atestados (2026-10-06) — in_progress (V5-1, V5-1a, V5-2b/2c/2d/2a, V5-3 done; DEC-61..77, 99..104, 126..146)
-└── plan-v6/       OPERAÇÃO: refatoração visual UI/UX — linguagem DisplayQuest em todas as telas (2026-10-07) — spec-driven, ready, nenhuma onda começada (DEC-105..114; começa depois de o plan-v5 fechar, DEC-145)
+├── plan-v5/       OPERAÇÃO: domínio de projetos maduro — cronograma, pontos, relatórios técnicos, atestados (2026-10-06) — done (2026-10-14, V5-1..V5-12 + V5-fix-1/V5-fix-2; DEC-61..77, 99..104, 126..180)
+└── plan-v6/       OPERAÇÃO: linguagem visual UI/UX + redistribuição das telas (2026-10-07, revisado 2026-10-14) — spec-driven, ready, nenhuma onda começada (DEC-105..114, 181..184)
 ```
 
 ## Fluxo de dependências (unidirecional)
@@ -31,13 +31,13 @@ plan-v3 (demanda de uso) ──> execução direta, sem depender dos três acima
 
 plan-v4 ──> fecha (V4-4/V4-5 subtasks) ──> plan-v5 (domínio de projetos; ordem por colisão em `tasks`, DEC-73)
 
-plan-v6 (refatoração visual) ──> camada de apresentação só — ordem frente ao plan-v5 resolvida
-                                 (DEC-113): nas colisões (V6-4×V5-4, V6-5×V5-2, V6-7×V5-3) o
-                                 plan-v5 executa ANTES; V6-0..V6-3 são livres. Home sem coluna
-                                 secundária, largura toda (DEC-114). Decidido em 2026-10-13
-                                 (DEC-145): o dono não quer duas frentes abertas — o plan-v6
-                                 começa depois de o plan-v5 fechar, e as ondas livres esperam
-                                 junto
+plan-v6 (linguagem visual + redistribuição das telas) ──> camada de apresentação só — a
+                                 ordem frente ao plan-v5 está resolvida: o plan-v5 fechou
+                                 em 2026-10-14, então as colisões que travavam V6-4
+                                 (×V5-4), V6-5 (×V5-2) e V6-7 (×V5-3) saíram do caminho.
+                                 O bloqueio antigo (DEC-145, uma frente por vez) caiu com
+                                 o fechamento do plan-v5. Home sem coluna secundária,
+                                 largura toda (DEC-114).
 ```
 
 - `spec-v2/` registra a visão do dono (gamificação profunda, projeto mais complexo,
@@ -71,14 +71,22 @@ plan-v6 (refatoração visual) ──> camada de apresentação só — ordem fr
   no vínculo e PROPPI no projeto (DEC-140), cleanup dos status pré-contrato por migration
   (DEC-141), `backend/models/` encolhido (DEC-142), visibilidade de perfil virando batch V5-12
   (DEC-143), seam órfão fora (DEC-144), plan-v6 depois do plan-v5 (DEC-145) e a CVE do `next`
-  registrada sem batch (DEC-146).
+  registrada sem batch (DEC-146). O plan-v5 rodou as ondas V5-4b a V5-12 entre 2026-10-13 e
+  14 (DEC-147..178), fechou em 2026-10-14 com o G5/G6 do guia (V5-close) e levou dois
+  consertos depois do encerramento: o atestado em 8pt (V5-fix-1, DEC-179) e o "Gerar DOCX"
+  salvando o texto em edição antes de gerar (V5-fix-2, DEC-180).
 - `plan-v6/` nasce da leitura da interface real contra as referências da skill
-  `displayquest-ui` (`.opencode/skills/displayquest-ui/`): é **spec-driven** (a pasta
-  tem `SPEC.md` como fonte de verdade do comportamento + `PLAN.md` da ordem +
-  `STATE.json`), só mexe em camada de apresentação, e cobre **todas as telas** em 12
-  ondas revertíveis (DEC-105..114 contínuas da numeração global). Ilustrações/texto
-  manuscrito ficaram fora (DEC-109); tema escuro passa a ser coberto na skill (DEC-110).
-  A ferramenta de execução é `/ui-refactor <tela>` com gate `/ui-review <tela>`.
+  `displayquest-ui` (`.opencode/skills/displayquest-ui/`) e foi **revisado em 2026-10-14**,
+  depois do plan-v5. Além da linguagem visual, o plano redistribui **o que aparece em cada
+  página**: relatórios unificados na página de Relatórios (DEC-181), aba Voluntários para o
+  Painel Administrativo (DEC-182), as 5 abas do detalhe do projeto (DEC-183) e a saída da
+  aba `settings` do admin (DEC-184). É **spec-driven** (`SPEC.md` = fonte de verdade do
+  comportamento, `PLAN.md` = ordem, `STATE.json` = andamento), só mexe em apresentação e
+  navegação — **sem** migrar para RSC —, e cobre **todas as telas** em 13 ondas revertíveis
+  (V6-0..V6-11, com V6-6a/V6-6b), contínuas da numeração global (DEC-105..114 e
+  DEC-181..184). Ilustrações/texto manuscrito ficaram fora (DEC-109); tema escuro passa a ser
+  coberto na skill (DEC-110). A ferramenta de execução é `/ui-refactor <tela>` com gate
+  `/ui-review <tela>`.
 
 ## Regras do container
 

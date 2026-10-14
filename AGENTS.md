@@ -252,7 +252,8 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   `4c6fab7`, criado 2026-10-06), DEC-78..95 plan-v4
   (V4-4, ASK-V4-06, V4-4b, V4-4c, V4-5a, V4-5b, V4-5c e V4-6b), **DEC-96..98 plan-v4 (2026-10-07,
   pós-encerramento: ASK-V4-33 — tira o filtro morto da tela de voluntários — e o lote POS-1 de pontuação
-  + trava de marcação)**, DEC-99..104 plan-v5, DEC-105..114 plan-v6, **DEC-115..125 clean-arch/B6-restante
+  + trava de marcação)**, DEC-99..104 plan-v5, DEC-105..114 plan-v6 (mais DEC-181..184, a revisão do
+  plano em 2026-10-14), **DEC-115..125 clean-arch/B6-restante
   + B9/B10 (encerrado 2026-10-08)**, **DEC-126/127 plan-v5 (2026-10-09: meses marcados na grade do
   cronograma e visualização livre de projetos)**, **DEC-128..130 plan-v5/documentos oficiais (2026-10-13:
   templates viram asset, DOCX preenchido pelo template, AcroForm oficial preenchido)** , **DEC-131 plan-v5
@@ -307,11 +308,16 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   caixas justas da assinatura, "2026" em 8pt e não 7pt)**,
   **DEC-180 plan-v5/V5-fix-2 (2026-10-14, "Gerar DOCX" salva o texto em edição antes de gerar
   quando ele difere do salvo — o servidor gera do conteúdo salvo e o rascunho de IA não salvava,
-  daí as tabelas em branco; pipeline DOCX medido íntegro com o conteúdo real do dono)**).
-  O V4-4 ia usar
+  daí as tabelas em branco; pipeline DOCX medido íntegro com o conteúdo real do dono)**,
+  **DEC-181..184 plan-v6 (2026-10-14, revisão do plano antes de executar qualquer onda: relatórios
+  unificados na página de Relatórios com 3 abas e assistente de 3 passos, sem a aba Templates e com o
+  atalho preservado no detalhe do projeto (181); a aba Voluntários sai de Projetos e entra no Painel
+  Administrativo (182); o detalhe do projeto vira rota `/dashboard/projetos/[id]` com as 5 abas da
+  referência e rail direito (183); a aba `settings` do painel admin sai e cada aba passa a dizer o
+  motivo quando falta permissão (184))**. O V4-4 ia usar
   DEC-61..64 e colidiu; os 28 comentários de código foram renumerados. **Antes de abrir decisão nova, `grep`
   os CINCO `STATE.json` (clean-arch, plan-v3, plan-v4, plan-v5, plan-v6) — a nota antiga que dizia "três"
-  está velha. Próxima livre: DEC-181.**
+  está velha. Próxima livre: DEC-185.**
 - **Subtask (V4-4, DEC-78..83 → regra atual = DEC-97/98):** tabela `task_subtasks` (sem FK para
   `users` — subtask não tem
   responsável próprio), base gravada em `tasks.points` = `10 + 5·n` (DEC-97) e **cada subtask CONCLUÍDA

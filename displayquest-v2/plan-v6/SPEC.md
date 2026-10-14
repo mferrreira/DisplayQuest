@@ -1,27 +1,41 @@
-# plan-v6 · SPEC — refatoracao visual UI/UX (linguagem DisplayQuest)
+# plan-v6 · SPEC — redistribuicao de paginas + refatoracao visual UI/UX
 
-> Contrato de **comportamento** da refatoracao `plan-v6`: o "o que" e o "why", sem o
-> "como". Esta e a **fonte de verdade** do que sera implementado — se o codigo divergir
-> daqui, o codigo esta errado. Qualquer mudanca de requisito abre nova revisao.
+> Contrato de **comportamento** do `plan-v6`: o "o que" e o "why", sem o "como". Esta e a
+> **fonte de verdade** do que sera implementado — se o codigo divergir daqui, o codigo
+> esta errado. Qualquer mudanca de requisito abre nova revisao.
 >
 > Secoes em PT-BR sem acentos (convencao do repo). IDs/enums em ingles.
 > O "como" (ordem, arquivos, gates por etapa) fica no `PLAN.md` desta pasta.
 >
-> **Nota de evidencia:** todas as referencias `arquivo:linha` abaixo foram **medidas no
-> repo em 2026-10-07** (auditoria depois da primeira redacao). Se uma linha mudar, o
-> numero daqui vira invalido — releia o arquivo, nao confie na citacao.
+> **Nota de evidencia:** as referencias `arquivo:linha` foram **medidas no repo em
+> 2026-10-07** (primeira redacao) e **revalidadas em 2026-10-14, pos-plan-v5**. A
+> revalidacao corrigiu numeros que o plan-v5 mudou — o dialogo do projeto saiu de 478 para
+> **621 linhas** (e de 9 para **14 paineis**), o `ModernAdminPanel` de 1165 para **1339**,
+> e a tabela de portas do dialogo mudou de **7 para 8** expressoes. Se uma linha mudar de
+> novo, o numero daqui vira invalido — releia o arquivo, nao confie na citacao.
 
 ## 1. Proposito
 
-Evoluir a interface **existente** do DisplayQuest para a linguagem visual das
-referencias da skill `displayquest-ui`, preservando implementacao, dados e comportamento
-sempre que possivel. Nao e reconstrucao da aplicacao: e alinhar hierarquia, cor, borda,
-tipografia, cards, badges, navegacao e composicao as referencias, e eliminar a
-recriacao desnecessaria de componentes que ja existem.
+Duas frentes na mesma rodada:
 
-Fronteira da funcionalidade: **somente camada de apresentacao** (`app/`, `components/`,
-`features/`, `app/globals.css`, docs de UI e a propria skill). Zero mudanca de schema,
-zero endpoint, zero regra de negocio, zero dependencia nova (RF-V6.10).
+1. **Redistribuicao das paginas** (dono, 2026-10-14; DEC-181..DEC-184): decidir e executar
+   o que aparece em **cada** rota — quais blocos, quais componentes (reusados antes de
+   novos), onde cada autorizacao e aplicada de fato (**servidor** vs cliente) e o que fica
+   **de fora**. O mapa medido por rota esta na §2.4 e os buracos de autorizacao na §2.9;
+   os requisitos, em **RF-V6.11..RF-V6.16**.
+2. **Linguagem visual** das referencias da skill `displayquest-ui` (DEC-105..DEC-114):
+   alinhar hierarquia, cor, borda, tipografia, cards, badges, navegacao e composicao, e
+   eliminar a recriacao desnecessaria de componentes que ja existem.
+
+A redistribuicao **nao inventa funcionalidade** (DEC-112 continua valendo): ela move para
+onde a coisa pertence o que ja existe, apaga o que e rota morta e fecha buracos em que a
+unica autorizacao hoje e **do cliente**. Nada de tela nova, nada de dado novo.
+
+Fronteira da funcionalidade: **apresentacao + navegacao** (`app/`, `components/`,
+`features/`, `app/globals.css`, `components/layout/nav-config.ts`, docs de UI e a propria
+skill). Zero mudanca de schema, zero endpoint, zero regra de negocio no dominio, zero
+dependencia nova (RF-V6.10). O plano **remove** uma rota de pagina, **acrescenta guardas de
+servidor** e **nao cria** nenhuma rota alem da ja decidida `/dashboard/projetos/[id]`.
 
 Escopo de telas: **todas**, nesta rodada (decisao do dono, DEC-108), com as tres telas
 centrais (Home, Projetos, Projeto) tendo onda propria.
@@ -42,18 +56,18 @@ Fatos **medidos** no repo em 2026-10-06/07 antes de planejar. Nenhum aqui e supo
 | Tokens `--sidebar-*` **ja existem** em light (`:46-53`) e dark (`:91-98`) e tem **ZERO uso** no codigo | `app/globals.css:46-53,91-98`; grep `bg-sidebar\|text-sidebar` = 0 |
 | Utilitarios `.card-hover` (`:216`) e `.btn-hover` (`:221`) existem e tem **ZERO uso** (CSS morto) | `app/globals.css:216-223`; grep = 0 |
 | `ModernButton.tsx` e um **segundo sistema de botao paralelo**, usado so pelo toggle de tema | unico consumidor: `components/layout/theme-toggle.tsx` |
-| `Tabs` e `Collapsible` importados sem uso no dialog do projeto | `project-detail-dialog.tsx:8` (import morto) |
+| `Tabs`/`TabsContent`/`TabsList`/`TabsTrigger` importados e **sem uso** no dialog do projeto | `project-detail-dialog.tsx:8` (import morto; `Collapsible` **nao** esta no arquivo — quem o usa e `archive-section.tsx:7`) |
 
 ### 2.2 Padroes recriados em vez de reaproveitados
 
 | Padrao repetido | Ocurrencias medidas |
 |---|---|
 | Cabecalho de pagina | **11 `<h1>` em 11 arquivos**, com **8 `className` distintos** (`text-2xl font-bold`, `text-2xl font-bold mb-6`, `mb-6 text-2xl font-bold`, `text-3xl font-bold tracking-tight`, `text-3xl font-bold text-foreground`, `text-3xl font-black tracking-tight md:text-4xl`, `text-3xl font-bold mb-4 text-center`, `text-2xl font-bold text-gray-900 dark:text-foreground`). Nenhum componente PageHeader |
-| Stat card (idioma `items-center justify-between space-y-0 pb-2` + `text-2xl font-bold`) | **6 arquivos**: `app/(dashboard)/dashboard/projetos/page.tsx` (`:162,175,188,201`), `components/ui/project-detail-dialog.tsx` (`:194,204,214,224`), `components/features/project-manager-dashboard.tsx`, `components/features/volunteers-management.tsx`, `components/features/project-hours-stats.tsx`, `components/admin/AdminStatsCards.tsx` |
+| Stat card (idioma `items-center justify-between space-y-0 pb-2` + `text-2xl font-bold`) | **6 arquivos**: `app/(dashboard)/dashboard/projetos/page.tsx` (`:162,175,188,201`), `components/ui/project-detail-dialog.tsx` (`:341,351,361,371`), `components/features/project-manager-dashboard.tsx`, `components/features/volunteers-management.tsx`, `components/features/project-hours-stats.tsx`, `components/admin/AdminStatsCards.tsx` |
 | Estado vazio (`text-center py-8` + icone + titulo + botao) | **~15 blocos**; 3 no escopo central |
-| Mapa status→cor | **4 fontes de verdade**: `statusColors`/`statusLabels` duplicados em `components/features/project-list.tsx:15` e `:21` vs `components/ui/project-detail-dialog.tsx:73` e `:79`; `taskStatusColors` em `project-detail-dialog.tsx:85`; `priorityBadgeClass` (`:100`)/`statusBadgeClass` (`:113`)/`PRIORITY_LABEL` (`:85`)/`STATUS_LABEL` (`:92`) em `features/tasks/components/task-card.tsx` |
-| Campo de busca | **2 implementacoes**: `Input pl-10` na pagina de Projetos vs `<input>` escrito a mao em `features/tasks/components/board-toolbar.tsx:259` |
-| Lista de links do projeto | **2 tratamentos**: `project-list.tsx:181-199` vs `project-detail-dialog.tsx:378-430` (form `:405-406`, render `:412-430`) |
+| Mapa status→cor | **4 fontes de verdade**: `statusColors`/`statusLabels` duplicados em `components/features/project-list.tsx:15` e `:21` vs `components/ui/project-detail-dialog.tsx:79` e `:85`; `taskStatusColors` em `project-detail-dialog.tsx:91`; `priorityBadgeClass` (`:100`)/`statusBadgeClass` (`:113`)/`PRIORITY_LABEL` (`:85`)/`STATUS_LABEL` (`:92`) em `features/tasks/components/task-card.tsx` |
+| Campo de busca | **2 implementacoes**: `Input pl-10` na pagina de Projetos (`projetos/page.tsx:223`) vs `<input>` escrito a mao em `features/tasks/components/board-toolbar.tsx:298` |
+| Lista de links do projeto | **2 tratamentos**: `project-list.tsx:181-199` vs `project-detail-dialog.tsx:519-578` (form `:537,544`, render `:555-573`) |
 
 ### 2.3 Divergencias de linguagem visual (referencia vs codigo)
 
@@ -63,13 +77,13 @@ Fatos **medidos** no repo em 2026-10-06/07 antes de planejar. Nenhum aqui e supo
 | D2 | `anti-patterns > Decorative gradients` | **39 ocurrencias de gradiente**: cabecalho de coluna, tons do cartao, badges, chip de pontos, gradiente do header | `board-column.tsx:57-61`, `task-card.tsx:103-124,376-384,451,505,511`, `app-header.tsx:148,150,192` |
 | D3 | Colunas Kanban com distincao **sutil** e cores contidas | Cabecalho **gradiente saturado** (`from-emerald-600 to-green-500`, `from-purple-600 to-violet-500`, ...) com emoji como status | `board-column.tsx:55-62` |
 | D4 | "Prefer a light border over a strong shadow" | `hover:shadow-md` (**5×**), `rotate-2 shadow-2xl` no arraste, `shadow-md` 12×, `shadow-lg` 10× | `project-list.tsx:123`, `task-card.tsx:393` |
-| D5 | `anti-patterns > Card explosion` | Detalhe do projeto = **9 Cards empilhados dentro de um Dialog**, 4 deles stat cards | `project-detail-dialog.tsx` (9 × `<Card>`) |
+| D5 | `anti-patterns > Card explosion` | Detalhe do projeto = **10 `<Card>` empilhados dentro de um Dialog**, 4 deles stat cards | `project-detail-dialog.tsx` (10 × `<Card>`) |
 | D6 | Icones de linha simples, peso consistente | Emoji como status de coluna (`🕐 ✏️ 👁️ ⚠️ ✅`) e no titulo da tarefa (`⚡ 🌍`) | `board-column.tsx:57-61`, `task-card.tsx:431-432` |
 | D7 | Hierarquia tipografica limpa | 11 `<h1>` com 8 classNames distintos; `font-black` no Ranking; `CardTitle` (padrao `text-2xl`) rebaixado a mao em quase todo uso | 2.2 / grep `<h1` |
 | D8 | Superficies claras; cor por significado | **928 classes de paleta cravadas** em `.tsx` (sem token) — top: `text-blue-300` 27, `text-gray-500` 24, `text-red-400` 22, `text-green-300` 21, `text-gray-600` 21, `bg-blue-50` 19, `text-red-600` 17, `bg-blue-100` 16. Cada uma com par `dark:` casado a mao | grep global |
 | D9 | Badges compactos e levemente coloridos | Badges `font-bold text-white` com degradê e `animate-pulse` (pts, prioridade, status, QUEST GLOBAL) | `task-card.tsx:497,501,505,511,451` |
 | D10 | **Uma** regiao de titulo por pagina | Projetos tem **dois titulos empilhados**: `h1` da pagina + `h2 "Projetos"` dentro da aba | `app/(dashboard)/dashboard/projetos/page.tsx:143`, `project-list.tsx:88` |
-| D11 | Busca e filtros formam uma toolbar coerente | Busca artesanal no quadro vs `Input` na Projetos; larguras `w-[220px]`, `w-[200px]`, `w-64`, `w-48` sem padrao | `board-toolbar.tsx:152,172,243,263` vs `projetos/page.tsx` |
+| D11 | Busca e filtros formam uma toolbar coerente | Busca artesanal no quadro vs `Input` na Projetos; larguras `w-[220px]`/`w-[200px]` (`board-toolbar.tsx`), `md:w-64`/`md:w-48` (`projetos/page.tsx`) e `w-64` (`task-board.tsx`) sem padrao | `board-toolbar.tsx:165,185,215,282` vs `projetos/page.tsx:223,228` + `task-board.tsx:230` |
 | D12 | Escala de raio **unica** | **7 valores** em uso: `rounded-md` 53, `rounded-full` 50, `rounded-lg` 49, `rounded` (solo) 21, `rounded-sm` 11, `rounded-xl` 10, `rounded-2xl` 4 | grep |
 | D13 | Home: regiao de cabecalho + resumo + quadro dominante + coluna secundaria | Home = `h1 "Painel de Tarefas"` + `TaskBoard`; **sem regiao de cabecalho, sem resumo, sem coluna secundaria** — e o alvo TB nao ganha coluna secundaria (DEC-114); ganha regiao de cabecalho + resumo | `app/(dashboard)/dashboard/page.tsx:14-16` (18 linhas) |
 | D14 | Projetos: **lista vertical** enriquecida + coluna de visao geral | **Grade de 2/3 colunas de cards** + 4 stat cards no topo | `project-list.tsx:121` (`grid gap-4 md:grid-cols-2 lg:grid-cols-3`) |
@@ -79,50 +93,168 @@ Fatos **medidos** no repo em 2026-10-06/07 antes de planejar. Nenhum aqui e supo
 > (`dark:bg-none dark:bg-slate-800` em `board-column.tsx:57-61`). Ou seja: no escuro
 > esta correto, e no claro e que esta errado.
 
-### 2.4 As tres telas do nucleo
+### 2.4 Mapa de paginas (medido por rota, pos-plan-v5)
 
-**Home (`/dashboard`)** — `app/(dashboard)/dashboard/page.tsx` (**18 linhas**): `h1`
-(`:14`) + `TaskBoard` (`features/tasks/components/task-board.tsx`, **340 linhas**) →
-`board-toolbar.tsx` (**289**), `board-column.tsx` (**177**), `task-card.tsx` (**679**),
-`archive-section.tsx` (**75**). E a tela **melhor testada** do repo: **10 arquivos** em
-`features/tasks/__tests__/` (7 `.tsx` de componente + 3 `.ts` de regra) +
-`tests/e2e/task-board.spec.ts`.
+**Como ler.** Esta e a linha de base **medida** de cada rota: o que aparece hoje, com que
+componentes, que dado exibe, quem e restringido, e **onde** cada autorizacao e decidida
+hoje. A coluna *Alvo* aponta o RF que muda a rota; rota sem alvo de redistribuicao so
+herda os primitivos (RF-V6.7). Regra de leitura que governa tudo (DEC-113): **o backend e
+a fonte de verdade e o front segue o back** — nenhum item deste mapa propoe dado ou regra
+que a API nao tenha.
 
-**Projetos (`/dashboard/projetos`)** — `page.tsx` (**316 linhas**): `h1` (`:143`) + 4
-stat cards (`:162,175,188,201`) + filtros + `Tabs` (Dashboard/Lista/Voluntarios) +
-2 dialogos. Usa o **contexto legado** `useProject` (`:46`), nao o `useProjects` TanStack
-do quadro — dois caminhos de dados para a mesma coisa. Contagens ja derivadas em
-`:66-68`. **Zero testes.**
+**As 13 rotas.**
 
-**Projeto** — **nao e rota**, e um `Dialog`
-`project-detail-dialog.tsx` (**478 linhas**) com:
-- scroll duplo: `DialogContent className="max-w-4xl h-[90vh]" style={{ overflowY:'auto' }}` em `:135` + interno `space-y-6 overflow-y-auto max-h-[70vh]` em `:174`;
-- **9 `<Card>`** empilhados, 4 deles stat cards (`:194,204,214,224`);
-- **7 ocorrencias de porta de permissao**, em **7 linhas** e **5 expressoes distintas**:
+| # | Rota | Arquivo (linhas) | O que aparece hoje | Gate de UI | Guarda de servidor | Alvo |
+|---|---|---|---|---|---|---|
+| 1 | `/dashboard` | `dashboard/page.tsx` (18) | `h1` + `TaskBoard` | nenhum | layout do grupo | RF-V6.4 |
+| 2 | `/dashboard/projetos` | `projetos/page.tsx` (316) | 4 stat cards + filtros + Tabs Dashboard/Lista/Voluntarios | `VIEW_PROJECT_DASHBOARD` (`:122`), `showDashboard` (`:98`), `showVolunteers` (`:99`) | layout do grupo | RF-V6.5, RF-V6.12 |
+| 3 | `/dashboard/projetos/[id]` | **nao existe** | hoje e o `project-detail-dialog` num Dialog | 8 expressoes (§2.4.3) | **nenhum** (nao ha rota) | RF-V6.6, RF-V6.13 |
+| 4 | `/dashboard/laboratorio` | `laboratorio/page.tsx` (103) | `h1` + Tabs Agenda/Responsabilidade/Reclamacoes | `VIEW_ALL_DATA` nas abas | layout do grupo | RF-V6.7 |
+| 5 | `/dashboard/weekly-reports` | `weekly-reports/page.tsx` (458) | `h1` + Tabs Usuarios (semanal)/Relatorios de Projeto | `VIEW_WEEKLY_REPORTS` (`:173`), `MANAGE_USERS` (`:215`) | layout do grupo | RF-V6.11 |
+| 6 | `/dashboard/profile` | `profile/page.tsx` (342) | midia + `h2` nome + Tabs Atividade/Registros/Configuracoes | nenhum (aba `admin` comentada) | layout do grupo | RF-V6.7 |
+| 7 | `/dashboard/leaderboard` | `leaderboard/page.tsx` (280) | `h1` `font-black` + podio + tabela | nenhum | layout do grupo | RF-V6.7 |
+| 8 | `/dashboard/loja` | `loja/page.tsx` (490) | Tabs Recompensas/Minhas Compras/Aprovacoes/Gerenciar | `MANAGE_REWARDS` (`:51`) | layout do grupo | RF-V6.7, RF-V6.15 |
+| 9 | `/dashboard/loja/gerenciar` | `loja/gerenciar/page.tsx` (422) | 3 abas Recompensas/Pendentes/Historico | `MANAGE_REWARDS` (`:54,:73`) | layout do grupo | **RF-V6.15 (removida)** |
+| 10 | `/dashboard/admin` | `admin/page.tsx` (117) | `ModernAdminPanel` com 8 abas | `COORDENADOR \|\| GERENTE` (`:52`) | **NENHUM** (§2.9-A) | RF-V6.14, RF-V6.12 |
+| 11 | `/login`, `/register` | `(auth)/{login,register}/page.tsx` (140, 162) | form, **zero headings** | nenhum | — | RF-V6.10 |
+| 12 | `/dashboard/project-reports/[id]/print` | `.../print/page.tsx` (150) | folha de impressao do relatorio | nenhum | layout do grupo | RF-V6.7 |
+| 13 | `/` | `app/page.tsx` (27) | redireciona, sem UI propria | — | — | — |
 
-| Linha | Expressao | O que condiciona |
-|---|---|---|
-| `:150` | `hasAccess(user.roles, "EDIT_PROJECT")` | botoes **Editar** e **Excluir** no cabecalho |
-| `:254` (envolve `:256` **Importar Backlog** e `:260` **Criar Tarefa**) | `hasAccess(user.roles, "CREATE_TASK")` | acoes no cabecalho de Tarefas do Projeto |
-| `:276` | `hasAccess(user.roles, "CREATE_TASK")` | **Criar Primeira Tarefa** no estado vazio |
-| `:389` | `hasAccess(user?.roles \|\| [], "EDIT_PROJECT")` | form de **edicao de Links** |
-| `:441` | `project.leaderId === user.id` | `ProjectLeaderLogs` (Logs do Projeto) |
-| `:446` | `leaderId === user.id \|\| hasAccess(user.roles, "MANAGE_USERS")` | `ProjectReportsPanel` (Relatorios) |
-| `:452` | `hasAccess(MANAGE_PROJECT_MEMBERS) \|\| roles inclui COORDENADOR \|\| roles inclui GERENTE` | `ProjectMembersManagement` (membros) |
+**O que decide `server` vs `client` (a regra, nao a lista).** As 13 paginas sao **client
+components**; os unicos pontos server hoje sao `app/layout.tsx` e
+`app/(dashboard)/layout.tsx:17-21` (guard de sessao). Decisao do dono (2026-10-14): **o
+cliente continua**, com as rotas de API como estao; nao ha migracao para RSC. O que o
+plano corrige e **onde** a decisao de autorizacao e tomada:
 
-Tambem tem `handleCreateTask` (`:101`), `handleAddLink` (`:116-122` com a mutacao
-`project.links = [...]` em `:122`). **Zero testes.**
+- **S1** — toda decisao que **pode negar** mora no servidor. O cliente **esconde** o que o
+  servidor nao daria; nunca e a ultima palavra (RF-V6.16).
+- **S2** — o dado restrito continua saindo so pela API: o cliente nao recebe o que nao pode
+  ver. Nao ha, neste plano, filtro de seguranca no cliente.
+- **S3** — a guarda de entrada de uma rota que hoje so o cliente faz (a unica e
+  `/dashboard/admin`) passa a um `layout.tsx` de segmento, server, decidindo pela chave de
+  `FEATURE_ACCESS`. A **frase** de negacao existente e preservada (RF-V6.16, R3).
+- **S4** — o que permanece no cliente e so o que nao pode dar acesso a nada: esconder
+  botao, desabilitar acao, mostrar estado vazio.
+
+#### 2.4.1 Home — `/dashboard`
+
+- **Aparece:** `h1 "Painel de Tarefas"` (`page.tsx:13`) + `<TaskBoard/>` (`:14`). Nada mais:
+  a pagina tem **18 linhas**.
+- **Componentes:** `features/tasks/components/task-board.tsx` (372) → `board-toolbar.tsx`
+  (328), `board-column.tsx` (177), `task-card.tsx` (679), `archive-section.tsx` (75). E a
+  tela **melhor testada** do repo: 11 arquivos em `features/tasks/__tests__/` + o e2e.
+- **Dados:** tarefas (todas, do `TaskProvider`), projetos (`useProjects`), `user.points`.
+  Nada de terceiro e sensivel; nome de responsavel aparece no cartao e no filtro de pessoas.
+- **Alvo:** regiao de cabecalho + blocos de resumo **acima** do quadro, 5 colunas mantidas,
+  largura horizontal cheia (DEC-114). Fonte dos numeros: so o que a pagina ja carrega.
+- **Fica de fora:** feed de `Atividade recente`, `Status do sistema`, fetch de ranking,
+  **coluna secundaria** — DEC-112/114.
+
+#### 2.4.2 Projetos — `/dashboard/projetos`
+
+- **Aparece:** `h1` (`:143`) + 4 stat cards (`:162,175,188,201`) + filtros + `Tabs`
+  Dashboard/Lista/Voluntarios (`:249`) + 2 dialogos. **Zero testes.**
+- **Quem ve o que (hoje, no corpo da pagina):** `showDashboard` = `roles.includes(
+  "GERENTE_PROJETO")` (`:98`) e `showVolunteers` = `GERENTE_PROJETO || hasGodMode`, com
+  `hasGodMode` = `COORDENADOR || GERENTE` (`:39-41`). Consequencia medida: **COORDENADOR e
+  GERENTE nao veem a aba Dashboard**; veem Lista + Voluntarios.
+- **Dados:** projetos pelo **contexto legado** `useProject` (`:46`) — nao o `useProjects`
+  TanStack do quadro: dois caminhos de dado para a mesma coisa. Contagens derivadas em
+  `:66-68`. Membros e horas por pessoa vem de `/volunteers`.
+- **Restrito:** a aba Voluntarios exibe **horas e pontos de terceiros**.
+- **Alvo:** grade de 2/3 colunas vira **lista vertical** enriquecida (RF-V6.5); a aba
+  **Voluntarios sai daqui** para o Painel Administrativo (RF-V6.12, DEC-182); os gatilhos
+  locais viram chaves nomeadas sem mudar o conjunto medido (RF-V6.16).
+- **Fica de fora:** tags, avatar de membro na lista (N+1).
+
+#### 2.4.3 Projeto — `/dashboard/projetos/[id]` (rota nova)
+
+- **Hoje nao e rota:** e o `project-detail-dialog.tsx` (**621 linhas**, **14 paineis**, com
+  scroll duplo em `:176` — `DialogContent` com `h-[90vh]` **mais** `overflowY: 'auto'` inline —
+  e `:224` — bloco interno `overflow-y-auto max-h-[70vh]`) aberto num `Dialog`. **Zero testes.**
+- **Os 14 paineis:** `ProjectMediaHeader` (capa/logo), cabecalho (nome + status + `Criado
+  em`), descricao, dados do projeto (+ `ProjectTimeProgress`), `ProjectDeliverablesPanel`,
+  `ProjectAttachmentsPanel`, `ProjectCronogramaPanel`, `ProjectTechnicalReportsPanel`,
+  `ProjectCertificatesPanel`, 4 stat cards de tarefa, progresso, `ProjectReportsPanel`,
+  `ProjectHoursStats`, `ProjectMembersManagement`, `ProjectLeaderLogs` — mais os dialogos
+  `TaskDialog` e `BacklogDialog`.
+- **As 8 expressoes de porta (revalidadas 2026-10-14; eram 7 contadas em 2026-10-07):** ver
+  §8.4, que congela o inventario bloco a bloco. A 8a (`canManageProjectFiles`, `:165-171`)
+  **ja existia** e nao era contada — ela sozinha governa 6 dos 20 blocos. Cada uma
+  **preserva o resultado identico**.
+- **Dados:** projeto, tarefas, membros, horas **de terceiros**, entregaveis, anexos,
+  relatorios tecnicos, atestados, cronograma, logs. E a segunda tela mais exposta do
+  sistema, depois do admin.
+- **Alvo:** vira **rota** com as **5 abas da referencia** (DEC-183, RF-V6.13): Visao geral,
+  Tarefas, Membros, Arquivos, Configuracoes, com rail direito (Informacoes, Membros,
+  Atividade). Nenhum bloco some — o checklist de §8.4 e o contrato.
+- **Fica de fora:** qualquer bloco de `Atividade recente` ou grafico.
+
+#### 2.4.4 Relatorios — `/dashboard/weekly-reports`
+
+- **Aparece:** `h1 "Relatorios Semanais"` (`:190`) + `Tabs` `Usuarios (semanal)` (`:203`) e
+  `Relatorios de Projeto` (`:204`) + `WeeklyReportDetail`, `ProjectReportsPanel`,
+  `PERIOD_LABELS`. Gate de pagina `VIEW_WEEKLY_REPORTS` (`:173`); o card de **geracao em
+  lote** e restrito a `MANAGE_USERS` (`:215`).
+- **Dados:** relatorios semanais por usuario; relatorios por projeto; nomes e papeis de
+  terceiros (`:319`), horas.
+- **Alvo (DEC-181):** destino unico com **3 abas** — por usuario (semanal), por projeto
+  (tecnico) e **atestados** — mais um **assistente de 3 passos** que reune os tres fluxos
+  de geracao que hoje vivem em 3 lugares. O `h1` passa a ser **Relatorios** e o rotulo do
+  nav acompanha.
+- **Fica de fora:** a aba **Templates** — o produto nao tem fonte de template para uma tela
+  propria (DEC-112); os templates oficiais sao asset de leitura do backend (DEC-128/130).
+- **Aberto (ASK-V6-03):** a **rota** continua `/dashboard/weekly-reports` com rotulo novo,
+  ou o diretorio vira `/dashboard/relatorios`? O caminho nao aparece para o usuario final e
+  renomear toca `nav-config`, a captura do guia e o e2e — por isso nao foi decidido aqui.
+
+#### 2.4.5 Admin — `/dashboard/admin`
+
+- **Aparece:** `ModernAdminPanel.tsx` — **1339 linhas**, **zero testes**, **8 abas**:
+  `overview`, `users`, `projects`, `hours`, `tasks`, `notifications`, `badges` e `settings`
+  (`:375-403`). A aba `settings` (`:994`) e **placeholder**.
+- **Autorizacao hoje (o buraco):** `isAdmin = roles.includes("COORDENADOR") ||
+  roles.includes("GERENTE")` (`:52`) — reimplementacao por extenso de `DASHBOARD_ADMIN`
+  (`permissions.ts:28`), **mesmo conjunto**, sem divergencia de valor. Sem permissao, a
+  pagina **renderiza** `h2 "Acesso Negado"` (`:75`) com **HTTP 200** — nao ha guarda de
+  servidor e a pagina nao redireciona (§2.9-A).
+- **Dados:** a tela mais sensivel do sistema — usuarios (inclusive e-mail), pontos de
+  terceiros, papeis, **compras de terceiros** (`purchase-approval`), horas de todos.
+- **Alvo:** guarda de servidor pelo segmento (RF-V6.16, S3) decidindo por `DASHBOARD_ADMIN`;
+  **corte da aba `settings`** (placeholder, DEC-184); cada aba com a **chave que a governa**
+  e aba sem permissao passa a **dizer o motivo** em vez de renderizar vazia; a aba
+  **Voluntarios** chega aqui (RF-V6.12).
+- **Fica de fora:** graficos/`recharts` (nao esta no `package.json`), inventario, gamificacao.
+
+#### 2.4.6 Loja — `/dashboard/loja` (+ a rota morta)
+
+- **Aparece:** `Tabs` Recompensas (`:239`), Minhas Compras (`:242`), **Aprovacoes**
+  (`:247`) e **Gerenciar** (`:255`), as duas ultimas sob `MANAGE_REWARDS` (`:51`). A aba
+  Gerenciar **ja faz** o CRUD de recompensa (`:347+`: adicionar/editar/excluir).
+- **Dados:** recompensas, compras proprias e, na fila, **compras de terceiros** + pontos.
+- **Divergencia medida:** `loja/page.tsx:51` usa `MANAGE_REWARDS` (COORDENADOR, GERENTE,
+  LABORATORISTA) para mostrar a aba, mas `contexts/reward-context.tsx:68` calcula o proprio
+  `canManageStore` como `LABORATORISTA || COORDENADOR` — **sem GERENTE**. Um GERENTE ve a
+  aba Aprovacoes e o contexto entrega a lista das **proprias** compras (§2.9-C).
+- **Rota morta:** `/dashboard/loja/gerenciar` (422 linhas, 3 abas, `MANAGE_REWARDS`) tem
+  **zero referencia de entrada** no repo — `grep -rn 'loja/gerenciar'` nos `.ts/.tsx` de
+  `app`, `components`, `features`, `lib` volta **vazio**, e o `nav-config` aponta para
+  `/dashboard/loja`. E duplicata da aba Gerenciar (RF-V6.15).
+- **Fica de fora:** historico de compras por terceiro fora da fila de aprovacao.
 
 ### 2.5 Limites de dados (nao da para mostrar, nao pode ser inventado)
 
 | Elemento da referencia | Existe? | Evidencia |
 |---|---|---|
 | Tags de projeto/tarefa | **NAO** | `entities/project.ts:9-18` nao tem tags; `Task` tambem nao |
-| Membros com avatares na LISTA | **NAO** (N+1) | `members` so via `GET /api/projects/[id]/members` (`lib/api/endpoints/projects.ts:46-53`); o `GET /api/projects` nao traz |
+| Membros com avatares na LISTA | **NAO** (N+1) | `members` so via `GET /api/projects/[id]/members` (`lib/api/endpoints/projects.ts:47-53`); o `GET /api/projects` nao traz |
 | Progresso do projeto | **SIM** (derivado de `tasks`, ja carregadas na pagina) | `project-manager-dashboard.tsx:70-75` ja calcula |
 | Contagens de status | **SIM** | `projetos/page.tsx:66-68` ja conta active/completed/archived |
 | `Atividade recente` / feed | **NAO** | nenhuma API de feed |
-| Inicio/Termino do projeto | **NAO** | so `createdAt` (`entities/project.ts:13`) |
+| Inicio/Termino do projeto | **SIM** (desde o plan-v5, DEC-132) | `entities/project.ts:21-22` (`startDate`/`endDate`, data civil `String`); o extrato antigo ("so `createdAt`") morreu |
+| Numero PROPPI do projeto | **SIM** (desde o plan-v5, DEC-140) | `entities/project.ts:26` (`proppiNumber`) |
+| Dados de pessoa (CPF, curso, bolsa, nivel) | **SIM**, com CPF **restrito** | `users.cpf` sai so por `GET /api/users/[id]/profile` e sob `canViewFullUsers` (DEC-147) |
+| Dados do vinculo (categoria, carga horaria, situacao, data de entrada) | **SIM** (desde o plan-v5, DEC-149) | `project_members`; alimenta `carga_8`/`carga_20` do atestado |
 | Grafico (donut) "Por status" | **sem dependencia** | `recharts` **nao** esta no `package.json`; nenhum componente de chart no repo |
 | Busca global transversal (Cmd/Ctrl+K) | **NAO** | a busca e so do quadro |
 | Destinos `Times`, `Inventario`, `Gamificacao` como rotas | **NAO** | nao existem em `nav-config.ts` |
@@ -156,7 +288,7 @@ distinctos, e o resultado e **re-autorado, nao invertido**.
 
 | Arquivo:linha | Lacuna |
 |---|---|
-| `SKILL.md:22-24` | lista so `home.png` (`:23`) e `projects.png` (`:24`); **faltam `project.png` e `home-darkmode.png`** |
+| `SKILL.md:22-24` | lista **2 das 5** imagens (`home.png` `:23`, `projects.png` `:24`); **faltam `project.png`, `home-darkmode.png` e `reports.png`** — as 5 estao em `references/visual-examples/`, e nao em `visual-examples/` na raiz da skill |
 | `SKILL.md` (inteiro) | nenhuma mencao a tema escuro |
 | `references/design-system.md:5` | "Use a light interface as the default visual direction" — le como "dark e opcional" |
 | `references/design-system.md:93` | "Decorative handwritten typography is restricted to small visual accents" |
@@ -181,7 +313,7 @@ distinctos, e o resultado e **re-autorado, nao invertido**.
 | `task-board.spec.ts:299` | `"Buscar tarefas por título"` |
 | `task-board.spec.ts:100,216` | `testid` `points-total`, `points-delta` |
 | `features/tasks/__tests__/board-people-filter.test.tsx:83,149` | `combobox "Filtrar tarefas por pessoa"` |
-| `features/tasks/__tests__/*` (10 arquivos) | mesmos fragmentos + toasts + estados vazios |
+| `features/tasks/__tests__/*` (11 arquivos) | mesmos fragmentos + toasts + estados vazios |
 | `tests/e2e/shell.spec.ts:31` | `page.locator("header")` visivel |
 | `task-card.tsx:179,408,427,492,542,586,611` | `aria-label` — `Ações para`, `Arrastar tarefa`, `Ver detalhes de`, `Progresso de`, `Concluir subtask`, `Aprovar tarefa`, `Rejeitar tarefa` |
 
@@ -194,14 +326,49 @@ jsdom sem `window.localStorage`/`window.matchMedia` (Toaster do Sonner exige stu
 rotulo do elemento que ele governa); `userEvent.setup({delay:null})` sob carga; jsdom sem
 `window.confirm`; rejeitada nao tratada fecha o gate com exit 1.
 
-### 2.8 Linha de base de teste (2026-10-07)
+### 2.8 Linha de base de teste (medido 2026-10-14, lote `V5-fix-1`)
 
-- **G0** `arch:check`: 787 modulos / 3077 dependencias, zero violacao, allow-list vazia
-- **G3** `tests/unit` + `features`: **87 arquivos / 1107 testes** verdes (~22s)
-- Suíte completa: **97 arquivos / 1192 testes**
+- **G0** `arch:check`: **1026 modulos / 4383 dependencias**, zero violacao, allow-list vazia
+- **G3** `tests/unit` + `features`: **157 arquivos / 2134 testes** verdes (140/1990 so em
+  `tests/unit`)
+- Suite completa: **172 arquivos / 2264 testes**
+- **`tsc --noEmit` NAO fecha em 0 nesta branch**: 1 erro **pre-existente** em
+  `features/laboratorio/__tests__/floating-timer-tabs.test.tsx:105`, conferido com
+  `git stash`. Consequencia para o gate: nenhuma onda pode exigir "tsc 0" antes de esse
+  erro sair — o criterio e **nao piorar**, e o V6-0 decide (consertar ou registrar).
 - e2e do quadro: **2 passando + 1 falha conhecida** (cartao a mais na coluna, dado
-  legitimo da instancia — confirmar com `git stash` antes de caçar regressao) **+ 5
+  legitimo da instancia — confirmar com `git stash` antes de cacar regressao) **+ 5
   "did not run"** (spec serial); e2e do shell: **5 passando**
+
+### 2.9 Buracos de autorizacao, de vocabulario e de apresentacao (medidos pos-plan-v5)
+
+A regra que orienta todos: **o backend e a fonte de verdade e o front segue o back**
+(DEC-113). Onde ha divergencia, o conserto e fazer o cliente **pedir o que o servidor ja
+permite** — nunca ampliar o servidor para caber no cliente.
+
+| # | Buraco | Medicao | Fecha em |
+|---|---|---|---|
+| A | `/dashboard/admin` **sem guarda de servidor** | `admin/page.tsx:52` decide no cliente com a mesma lista de `DASHBOARD_ADMIN` (`permissions.ts:28`); a negacao e um corpo `h2 "Acesso Negado"` (`:75`) servido com **HTTP 200**, e a pagina nao redireciona | RF-V6.16 (S3) |
+| B | `/dashboard/loja/gerenciar` e **rota morta** | 422 linhas, `MANAGE_REWARDS` (`:54,:73`); `grep -rn 'loja/gerenciar'` nos `.ts/.tsx` de `app components features lib` volta **vazio**, e o `nav-config.ts:73` aponta para `/dashboard/loja` | RF-V6.15 |
+| C | A fila de aprovacoes **nao chega ao GERENTE** | `loja/page.tsx:51` usa `MANAGE_REWARDS` (tem GERENTE) para mostrar a aba, mas `contexts/reward-context.tsx:68` calcula `canManageStore = LABORATORISTA \|\| COORDENADOR` — sem GERENTE — e entao chama `fetchPurchases(userId)`, escopando a si mesmo. O **backend ja permite**: `purchase-query-scope.ts:48-49` autoriza por `MANAGE_PURCHASES` (os mesmos 3 papeis) e `:83-85` devolve **todas** as compras quando o ator gerencia. O cliente sub-pede | RF-V6.16 (R5) |
+| D | `DASHBOARD_PROJETOS` e **chave morta** | `permissions.ts:30` — **1** ocorrencia no repo inteiro (a propria definicao) | RF-V6.16 (R4) |
+| E | `MANAGE_REWARDS` **duplicada** nas duas matrizes | `permissions.ts:17` (PERMISSIONS) e `:39` (FEATURE_ACCESS), mesmo valor | RF-V6.16 (R4) |
+| F | A **mesma lista** com **duas chaves** na pagina e no nav | `weekly-reports/page.tsx:173` (`VIEW_WEEKLY_REPORTS`) vs `nav-config.ts:57` (`DASHBOARD_WEEKLY_REPORTS`) — conjuntos identicos | RF-V6.16 (R4) |
+| G | `showDashboard`/`showVolunteers` **reimplementam papeis no corpo** da pagina; nao existe chave | `projetos/page.tsx:98-99` + `hasGodMode` (`:39-41` = `COORDENADOR \|\| GERENTE`) | RF-V6.16 (R2) + RF-V6.12 |
+| H | **13 de 13** paginas sao client; os unicos pontos server sao os `layout.tsx` — toda decisao de pagina e do cliente | `find app -name 'page.tsx'` = 13 vs `layout.tsx` = 5 (so 2 fazem guarda) | RF-V6.16 (S1) |
+| I | `metadata.title` e a **mesma string generica** em todas as telas | `app/layout.tsx`; **nenhuma** das 13 `page.tsx` pode exportar `metadata` (Next: server-only) | ASK-V6-06 |
+
+**O que NAO e mudanca de permissao.** Nenhum conjunto de papeis medido acima muda de valor
+neste plano: as chaves novas nascem com o **valor medido**, e o caso (C) se fecha pela
+lista que **o dono ja usa na tela** (`MANAGE_REWARDS`, que o servidor ja aplica como
+`MANAGE_PURCHASES`). O unico conjunto *novo* e `DASHBOARD_VOLUNTEERS` (`COORDENADOR`,
+`GERENTE`, `GERENTE_PROJETO`), que e exatamente o `showVolunteers` de
+`projetos/page.tsx:99` — nenhum papel ganha acesso a nada que nao tivesse.
+
+**Quirk preservado (nao e bug a corrigir aqui).** `showDashboard` (`:98`) e
+`GERENTE_PROJETO` **so**: COORDENADOR e GERENTE nao veem a aba Dashboard da pagina de
+Projetos, e continuam nao vendo — o que muda e so o gatilho, que passa a ser chave
+nomeada. Mudar quem ve isso e decisao de produto, nao de redistribuicao (ASK-V6-04).
 
 ## 3. Atores e papeis
 
@@ -209,7 +376,8 @@ rotulo do elemento que ele governa); `userEvent.setup({delay:null})` sob carga; 
 |---|---|---|
 | Dono do DisplayQuest | decide a linguagem visual | fornece as referencias, decide as DEC-105..112, aprova visualmente cada onda |
 | Usuario logado (todos os papeis) | usa as telas | navega, filtra, busca, arrasta cartoes, cria/edita/aprova — **o comportamento nao muda** |
-| Coordenador / Gerente | portas de gestao | ve exatamente os mesmos botoes de hoje nas mesmas telas |
+| Coordenador / Gerente | portas de gestao | ve exatamente os mesmos botoes de hoje nas mesmas telas — incluindo o conjunto de **Voluntarios** (`COORDENADOR`, `GERENTE`, `GERENTE_PROJETO`), que muda de lugar (RF-V6.12) e **nao** de tamanho |
+| Usuario sem a permissao de uma aba | ve o motivo, nao o vazio | RF-V6.14: aba sem chave **explica** por que; a guarda de entrada responde no **servidor** (RF-V6.16) |
 | Lider de projeto | gestao do proprio projeto | mesmas portas (`leaderId === user.id`) |
 | Agente `build` | executa `/ui-refactor <alvo>` | implementa a onda, roda os gates, reporta |
 | Agente `ui-reviewer` | executa `/ui-review <alvo>` | avalia read-only (`permission.edit: deny`), agrupa Must/Should/Optional |
@@ -333,7 +501,7 @@ rotulo do elemento que ele governa); `userEvent.setup({delay:null})` sob carga; 
 
 - **Descricao:** o `Dialog` de 90vh e substituido por uma rota de pagina; os dois pontos
   de entrada passam a navegar para ela; todo o conteudo e todas as portas de permissao
-  sao preservados, e o empilhamento de 9 cards vira secoes separadas por respiro.
+  sao preservados, e o empilhamento de 10 cards vira secoes separadas por respiro.
 - **Fronteira:** `app/(dashboard)/dashboard/projetos/[id]/page.tsx` (novo),
   `components/ui/project-detail-dialog.tsx` (vai embora)
 - **Entradas/Saidas:** `projectsApi.getById(id)` + `projectsApi.members(id)` (1 fetch,
@@ -343,13 +511,15 @@ rotulo do elemento que ele governa); `userEvent.setup({delay:null})` sob carga; 
   When ele clica em ver um projeto
   Then a rota abre com o mesmo conteudo de hoje
 - **Regras:**
-  - R1: as **7 ocorrencias de porta** (7 linhas, 5 expressoes — tabela da §2.4) continuam com resultado
+  - R1: as **8 expressoes de porta** (tabela da §8.4; eram 7 contadas em 2026-10-07 — a 8a,
+    `canManageProjectFiles`, ja existia e nao era contada) continuam com resultado
     identico. **Medir a porta do servidor antes** (DEC-92) antes de escrever o gate.
   - R2: **nenhum conteudo some** — todo bloco do dialog tem lugar na pagina (checklist
-    em §8.4).
+    em §8.4, reconstruido para os **14 paineis** medidos).
   - R3: `nav-config` ja tem `matchPrefix: true` para `/dashboard/projetos`
     (`nav-config.ts:45`) → "Projetos" segue ativo em `/dashboard/projetos/5`.
-  - R4: `client-layout.tsx:21-23` ja monta `DashboardProviders` para
+  - R4: `client-layout.tsx:19-34` (`DashboardProviders` — definicao `:19`, condicao
+    `:21-24`, `ProjectProvider` `:28`, `TaskProvider` `:31`) ja cobre
     `pathname.startsWith("/dashboard/projetos")` → **nao mexer no provider**.
   - R5: `Editar` continua abrindo o `ProjectDialog` existente (modal), nao rota nova.
   - R6: `nav-config` nao ganha destino novo; breadcrumb e ilustracao decorativa estao
@@ -368,10 +538,18 @@ rotulo do elemento que ele governa); `userEvent.setup({delay:null})` sob carga; 
   primitivos de RF-V6.2.
 - **Fronteira:** `app/(dashboard)/dashboard/*`, `app/(auth)/*`, `components/admin/*`
 - **Regras:**
-  - R1: `ModernAdminPanel.tsx` (**1165 linhas**, **zero testes**) tem caracterizacao
-    **antes** de qualquer mudanca; hoje so `tsc` o cobre.
+  - R1: `ModernAdminPanel.tsx` (**1339 linhas**, **zero testes**, **8 abas**) tem
+    caracterizacao **antes** de qualquer mudanca; hoje so `tsc` o cobre.
   - R2: nenhuma regra de negocio, guarda de permissao ou chamada de API muda.
   - R3: Login/Register ganham um `h1` (hoje tem **zero** `h1`/`h2`/`h3` no DOM).
+  - R4: os **rotulos de navegacao que a redistribuicao muda** estao liberados de R4 de
+    RF-V6.10: o rotulo de `/dashboard/weekly-reports` passa a **Relatorios**, o cabecalho
+    `Painel Administrativo` permanece (2 testes o travam) e a **aba Voluntarios sai** da
+    pagina de Projetos (RF-V6.12). Fora desses, nenhum texto visivel muda.
+  - R5: esta secao **nao** inclui `/dashboard/loja/gerenciar` (removida, RF-V6.15), nem
+    `/dashboard/admin` alem do que RF-V6.14 define (guarda de servidor, corte da aba
+    `settings`, motivo por aba), nem `/dashboard/projetos` (RF-V6.5) e `/dashboard`
+    (RF-V6.4), que tem RF propria.
 
 ### RF-V6.8 — Tema escuro e variante de primeira classe
 
@@ -394,15 +572,15 @@ rotulo do elemento que ele governa); `userEvent.setup({delay:null})` sob carga; 
 
 ### RF-V6.9 — Skill e ferramentas alinhadas
 
-- **Descricao:** a skill e os agentes/comandos passam a descrever as 4 referencias, o
+- **Descricao:** a skill e os agentes/comandos passam a descrever as 5 referencias, o
   tema escuro e a ausencia de ilustracao, e o comando de refactor passa a nomear o gate
   real do repo.
 - **Fronteira:** `.opencode/skills/displayquest-ui/SKILL.md`,
   `.opencode/skills/displayquest-ui/references/*.md`,
   `.opencode/agents/ui-reviewer.md`, `.opencode/commands/ui-refactor.md`
 - **Regras:**
-  - R1: `SKILL.md` lista `home.png`, `projects.png`, `project.png` e `home-darkmode.png`
-    (este ultimo como autoridade do dark).
+  - R1: `SKILL.md` lista as **5**: `home.png`, `projects.png`, `project.png`,
+    `reports.png` e `home-darkmode.png` (este ultimo como autoridade do dark).
   - R2: **nenhuma secao remanescente manda usar ilustracao ou texto manuscrito**
     (`visual-language.md:16-17,30,35,48,54`, `anti-patterns.md:54`,
     `layout-patterns.md:135`, `design-system.md:93`, `components.md:36`).
@@ -410,8 +588,9 @@ rotulo do elemento que ele governa); `userEvent.setup({delay:null})` sob carga; 
     de artwork decorativo.
   - R4: `ui-refactor.md:33` nomeia o gate concreto (`arch:check` + `lint` + `tsc --noEmit` +
     `vitest run`) em vez de "the relevant checks".
-  - R5: os arquivos de skill/agent/command **nao sao** codigo — mudancas neles nao
-    alteram gate tecnico, mas entram no mesmo commit da onda V6-0.
+  - R5: os arquivos de skill/agent/command **nao sao** codigo, e o `.gitignore:7` ignora
+    `.opencode/**` inteiro: as mudancas nao alteram gate tecnico e **nao geram commit**.
+    A prova da onda e o `git diff` local e o grep de AC-V6-23.
 
 ### RF-V6.10 — Invariantes de comportamento
 
@@ -423,8 +602,139 @@ rotulo do elemento que ele governa); `userEvent.setup({delay:null})` sob carga; 
     `features/*/utils/`.
   - R2: **zero** dependencia nova em `package.json`.
   - R3: **zero** rota nova alem de `/dashboard/projetos/[id]`; **zero** endpoint novo.
-  - R4: nenhum rotulo visivel, toast, `aria-label` ou `testid` muda de texto.
+  - R4: nenhum rotulo visivel, toast, `aria-label` ou `testid` muda de texto — **exceto**
+    os tres que a redistribuicao decidiu (RF-V6.7 R4): o rotulo do destino de Relatorios, a
+    remocao da aba Voluntarios de Projetos e a criacao da mesma aba no Painel
+    Administrativo. Fora desses, o texto congelado por teste permanece.
   - R5: comportamento de tema (default light, `enableSystem`) nao muda.
+
+### RF-V6.11 — Relatorios: destino unico, tres abas e um assistente (DEC-181)
+
+- **Descricao:** a pagina de relatorios passa a ser **um** destino com **tres abas** — por
+  usuario (semanal), por projeto (relatorio tecnico) e **atestados** — mais um
+  **assistente de 3 passos** que reune os tres fluxos de geracao que hoje vivem separados.
+- **Fronteira:** `app/(dashboard)/dashboard/weekly-reports/page.tsx`,
+  `components/layout/nav-config.ts` (rotulo), os paineis que hoje moram no dialog do
+  projeto (`project-technical-reports-panel`, `project-certificates-panel`),
+  `components/features/project-reports-panel.tsx`
+- **Cenario principal:**
+  Given um usuario com `VIEW_WEEKLY_REPORTS`
+  When ele abre Relatorios
+  Then ve as tres abas e o assistente, sem perder acesso a nenhum relatorio que ja existia
+- **Regras:**
+  - R1: o que a DEC-181 unifica e o **fluxo de geracao** (3 caminhos viram 1 assistente),
+    nao o inventario: **nenhum bloco some** do detalhe do projeto (RF-V6.13 R3) e os dois
+    pontos ficam ligados por **atalho**.
+  - R2: a aba **Templates fica fora** — o produto nao tem fonte de template para uma tela
+    propria (DEC-112); os templates oficiais sao asset de leitura do backend (DEC-128/130).
+  - R3: o `h1` e o rotulo do nav passam a **Relatorios**; a **rota** fica como esta
+    (ASK-V6-03).
+  - R4: os gates por aba **preservam o resultado medido**: a aba de usuario segue
+    `VIEW_WEEKLY_REPORTS`, a geracao em lote segue `MANAGE_USERS`, e as abas de projeto e
+    atestado seguem a autorizacao que o plan-v5 ja colocou nos use cases (lider OU gestao
+    do projeto / self OU gestao).
+  - R5: a geracao continua chamando as **mesmas** rotas de API; nenhum endpoint novo.
+  - R6: "relatorio tecnico" mantem o vocabulario do plan-v5
+    (`parcial|tecnico-final|final`) — nao ha segundo vocabulario (licao DEC-95/96).
+
+### RF-V6.12 — Voluntarios passa para o Painel Administrativo (DEC-182)
+
+- **Descricao:** a aba **Voluntarios** sai da pagina de Projetos e vira **aba do Painel
+  Administrativo**.
+- **Fronteira:** `app/(dashboard)/dashboard/projetos/page.tsx`,
+  `components/features/volunteers-management.tsx` (movido),
+  `components/admin/ModernAdminPanel.tsx`
+- **Regras:**
+  - R1: `volunteers-management.tsx` (**479 linhas**) e **movido**, nao reescrito: mesma
+    tabela, mesmas colunas, mesmos dados.
+  - R2: quem ve e o conjunto **medido** (`showVolunteers` = `COORDENADOR`, `GERENTE`,
+    `GERENTE_PROJETO`), agora na chave `DASHBOARD_VOLUNTEERS`. O administrativo fica
+    acessivel por `DASHBOARD_ADMIN ∪ DASHBOARD_VOLUNTEERS`, com gate **por aba**.
+  - R3: os rotulos seguem o vocabulario real (`pending|active|rejected|suspended`) — o
+    filtro morto **nao** volta (DEC-96).
+  - R4: a pagina de Projetos perde a aba, o estado e o calculo; a Lista passa a ser o
+    conteudo unico.
+  - R5: quem tinha `VIEW_PROJECT_DASHBOARD` sem nenhuma das duas chaves continua vendo a
+    Lista, como hoje.
+
+### RF-V6.13 — Detalhe do projeto em 5 abas (DEC-183)
+
+- **Descricao:** a rota do projeto organiza os **14 paineis** nas **5 abas da referencia**.
+- **Fronteira:** `app/(dashboard)/dashboard/projetos/[id]/page.tsx`,
+  `components/features/project-*.tsx`
+- **Regras:**
+  - R1: a distribuicao decidida — o que era **uma coluna de 621 linhas** vira 5 abas:
+
+    | Aba | Blocos |
+    |---|---|
+    | **Visao geral** | descricao · dados do projeto (periodo, edital, processo, PROPPI, pontos, `ProjectTimeProgress`) · informacoes do projeto |
+    | **Tarefas** | `ProjectCronogramaPanel` · 4 stat cards · progresso · lista de tarefas |
+    | **Membros** | `ProjectHoursStats` · `ProjectMembersManagement` |
+    | **Arquivos** | `ProjectDeliverablesPanel` · `ProjectAttachmentsPanel` · `ProjectTechnicalReportsPanel` · `ProjectCertificatesPanel` · `ProjectReportsPanel` |
+    | **Configuracoes** | links do projeto · `ProjectLeaderLogs` |
+
+  - R2: `Editar`/`Excluir` ficam no **cabecalho** da rota (nao numa aba), com o mesmo gate
+    `EDIT_PROJECT`.
+  - R3: **nenhum bloco some** — o checklist de §8.4 e o contrato, e cada bloco declara a
+    aba onde aparece.
+  - R4: o **rail direito** (Informacoes, Membros, Atividade) so mostra o que a pagina ja
+    carrega; `Atividade` **nao** inventa feed (nao existe API — §2.5).
+  - R5: a distribuicao e decisao registrada **para nao ser relitigada**; sem nova DEC, so
+    muda posicao dentro da mesma aba.
+
+### RF-V6.14 — Painel Administrativo: guarda, corte e motivo por aba (DEC-184)
+
+- **Descricao:** a tela mais sensivel ganha guarda de servidor, perde a aba placeholder e
+  passa a dizer o motivo quando uma aba nao esta disponivel.
+- **Fronteira:** `app/(dashboard)/dashboard/admin/` (novo `layout.tsx`),
+  `components/admin/ModernAdminPanel.tsx`
+- **Regras:**
+  - R1: a aba `settings` (`ModernAdminPanel.tsx:994`, placeholder) **sai**; nenhuma outra
+    aba some.
+  - R2: cada aba restante declara a **chave que a governa**, e aba sem permissao renderiza
+    **o motivo**, nao conteudo vazio.
+  - R3: a guarda de entrada e do **servidor** (RF-V6.16, S3) com `DASHBOARD_ADMIN`; a frase
+    de negacao preserva a atual — **2 testes** travam o heading `"Painel Administrativo"`
+    do caso autorizado.
+  - R4: `ModernAdminPanel.tsx` (**1339 linhas**, **zero testes**) recebe **caracterizacao
+    antes** de qualquer mudanca.
+
+### RF-V6.15 — A rota morta `/dashboard/loja/gerenciar` sai
+
+- **Descricao:** remove-se a rota sem nenhuma referencia de entrada (§2.9-B).
+- **Fronteira:** `app/(dashboard)/dashboard/loja/gerenciar/`
+- **Regras:**
+  - R1: **zero** inbound hoje — a remocao nao quebra navegacao (medido, §2.9-B).
+  - R2: o que ela oferecia ja existe na aba **Gerenciar** de `/dashboard/loja` (`:255+`),
+    inclusive o CRUD de recompensa; **nada e portado**.
+  - R3: o `layout.tsx` de `/dashboard/loja` continua servindo a rota viva.
+  - R4: as 3 abas da rota morta (Recompensas/Pendentes/Historico) **nao** viram abas da
+    loja: ela ja tem 4 e a fila de aprovacoes ja e uma delas.
+
+### RF-V6.16 — Autorizacao: uma decisao por vez, no lugar certo
+
+- **Descricao:** encerra as reimplementacoes locais de papel e garante que a decisao que
+  **pode negar** acontece no servidor.
+- **Cenario principal:**
+  Given uma rota do escopo
+  When um ator sem a permissao correspondente a acessa
+  Then a negacao vem do servidor (a pagina nao renderiza o conteudo protegido)
+- **Regras:**
+  - S1: a guarda de entrada mora no servidor (§2.4, S1); o cliente **esconde**, nao decide.
+  - S2: dado restrito continua saindo so pela API.
+  - S3: `/dashboard/admin` e o caso a corrigir; a frase de negacao existente e preservada
+    e os testes que a fixam continuam verdes.
+  - R1: **nenhum conjunto de papeis muda de valor** — chave nova nasce com o valor medido.
+  - R2: gatilho local vira chave nomeada: `DASHBOARD_VOLUNTEERS` =
+    `["COORDENADOR","GERENTE","GERENTE_PROJETO"]` (o `showVolunteers` medido) e o
+    `showDashboard` medido (`["GERENTE_PROJETO"]`).
+  - R3: a reimplementacao de `DASHBOARD_ADMIN` em `admin/page.tsx:52` passa a usar a chave.
+  - R4: chave duplicada ou morta e resolvida: `MANAGE_REWARDS` fica em **uma** matriz,
+    `DASHBOARD_PROJETOS` (0 consumidores) sai, e a pagina e o nav da mesma tela passam a
+    falar **a mesma chave**.
+  - R5: o cliente passa a pedir o que o servidor ja permite (caso C da §2.9): a fonte e a
+    **chave**, nao uma lista escrita a mao.
+  - R6: **caracterizacao antes** em toda tela sem cobertura (§2.7).
 
 ## 5. Requisitos nao funcionais
 
@@ -432,7 +742,8 @@ rotulo do elemento que ele governa); `userEvent.setup({delay:null})` sob carga; 
 |---|---|---|
 | Portabilidade visual | Tela coerente em 320/768/1024/1440 px | `/ui-review` + inspecao; `responsive behavior` do `ui-reviewer` |
 | A11y | Hierarquia de heading e rotulos acessiveis preservados | `getByRole("heading")`/`getByLabel` da suíte existente verdes |
-| Regressao | Nenhum teste existente quebra | `npx vitest run` zero failure, `>= 87/1107` |
+| Regressao | Nenhum teste existente quebra | `npx vitest run` zero failure, `>= 157/2134` (baseline §2.8) |
+| **Seguranca** | **Nenhuma rota do escopo decide acesso so no cliente**; dado restrito sai so pela API | guarda de servidor em `/dashboard/admin` (RF-V6.14/RF-V6.16) + teste de negacao por papel |
 | Arquitetura | Gate de dependencias segue verde | `npm run arch:check` exit 0, allow-list vazia |
 | Documentacao | Guia do usuario continua representando a tela | G5 `docs:build` + `docs:check`; G6 recapturacao |
 | Performace | Nenhum N+1 novo; nenhuma lista extra por item | revisao de `fetch` na onda V6-5 (unico fetch de membros, por rota) |
@@ -453,11 +764,16 @@ rotulo do elemento que ele governa); `userEvent.setup({delay:null})` sob carga; 
 
 **NENHUM.**
 
-### 7.3 Rotas de pagina novas
+### 7.3 Rotas de pagina novas/removidas
 
 | Rota | Arquivo | Auth | Observacao |
 |---|---|---|---|
 | `GET /dashboard/projetos/[id]` | `app/(dashboard)/dashboard/projetos/[id]/page.tsx` | guard de sessao do grupo (`app/(dashboard)/layout.tsx:19-21`) | substitui o `ProjectDetailDialog`; **unica rota nova do plano** |
+| ~~`GET /dashboard/loja/gerenciar`~~ | `app/(dashboard)/dashboard/loja/gerenciar/` | — | **removida** (RF-V6.15): 422 linhas, **zero** inbound medido (§2.9-B) |
+| `/dashboard/admin` | ganha `app/(dashboard)/dashboard/admin/layout.tsx` | `DASHBOARD_ADMIN` no **servidor** | fechar o buraco §2.9-A sem mover a pagina para RSC (RF-V6.14/RF-V6.16) |
+
+O `nav-config.ts` **nao ganha destino novo**: a redistribuicao move o rotulo de Relatorios e
+as abas de Voluntarios/Admin, e remove a rota morta — nenhum item de menu e criado.
 
 ## 8. Casos de teste / evidencia esperada
 
@@ -472,48 +788,88 @@ rotulo do elemento que ele governa); `userEvent.setup({delay:null})` sob carga; 
 | `tests/unit/ui/status-badges.test.tsx` | RF-V6.1/RF-V6.2 — um mapa so, sem gradiente, variantes dark |
 | `tests/unit/layout/app-sidebar.test.tsx` | RF-V6.3 — itens vem de `nav-config`, ativo destacado, sem destino novo |
 | `features/projects/__tests__/project-list.test.tsx` | RF-V6.5 — **caracterizacao antes** da grade→lista |
-| `features/projects/__tests__/project-detail-page.test.tsx` | RF-V6.6 — as 7 portas, por papel |
+| `features/projects/__tests__/project-detail-page.test.tsx` | RF-V6.6 — as **8** portas, por papel |
+| `tests/unit/domain/identity/permission-keys.test.ts` | RF-V6.16 R1/R4 — chaves mortas/duplicadas fora; valores medidos preservados (`DASHBOARD_VOLUNTEERS`) |
+| `tests/unit/app/admin-guard.test.tsx` | RF-V6.14/RF-V6.16 S3 — negacao vem do servidor; frase preservada |
+| `tests/unit/components/admin/admin-tabs.test.tsx` | RF-V6.14 R1/R2 — `settings` fora; aba sem permissao **diz o motivo** |
+| `tests/unit/components/admin/volunteers-tab.test.tsx` | RF-V6.12 — a aba existe no admin e nao em Projetos |
+| `tests/unit/store/purchase-scope-alignment.test.ts` | RF-V6.16 R5 — o cliente pede o que o servidor permite (caso C da §2.9) |
 
 ### 8.2 Gates
 
 ```
-npm run arch:check          # G0 — exit 0, allow-list vazia (baseline 787/3077)
+npm run arch:check          # G0 — exit 0, allow-list vazia (baseline 1026/4383)
 npm run lint                # G1 — nenhum erro
-npx tsc --noEmit            # G2 — 0 erros
-npx vitest run              # G3 — zero failure (baseline 87/1107 -> >= 87/1107)
+npx tsc --noEmit            # G2 — NAO PIORAR: 1 erro pre-existente hoje (§2.8); V6-0 decide
+npx vitest run              # G3 — zero failure (baseline 157/2134 -> nunca menor)
 npm run docs:build && npm run docs:check   # G5 — obrigatorio nas ondas visiveis
 # e2e (requer dev server em :3001):
 npx playwright test tests/e2e/shell.spec.ts        # 5 passando
 npx playwright test tests/e2e/task-board.spec.ts   # 2 passando + 1 falha conhecida + 5 did not run
 ```
 
+**G2 e a primeira coisa a resolver (V6-0).** O `tsc` **nao** fecha em 0 nesta branch por um
+erro pre-existente (`features/laboratorio/__tests__/floating-timer-tabs.test.tsx:105`,
+conferido com `git stash`). Nenhuma onda pode exigir "0 erros" antes de o V6-0 decidir entre
+**consertar** o teste ou **registrar** o erro como divida conhecida — o criterio da onda e
+**nao piorar**.
+
 ### 8.3 Contagem esperada ao final
 
-- `tests/unit` + `features`: **>= 95 arquivos / >= 1180 testes** (87/1107 + os 8
-  arquivos de §8.1)
-- suíte completa: **>= 105 / >= 1265**
+- `tests/unit` + `features`: **nunca menor que 157 arquivos / 2134 testes** (baseline §2.8);
+  os **13 arquivos** de §8.1 somam, e **nada e removido** — a rota morta de RF-V6.15 nao tem
+  teste.
+- suíte completa: **nunca menor que 172 / 2264**
 - e2e: mesma faixa de hoje (**nao piora**) — a falha conhecida do 3o teste e dado da
   instancia, nao codigo (confirmar com `git stash` se mudar)
 
-### 8.4 Checklist de conteudo do dialog (para AC-V6-19)
+### 8.4 Checklist de conteudo da rota do projeto (contrato do AC-V6-19)
 
-Todo item abaixo tem de existir na rota `/dashboard/projetos/[id]`:
+Os **14 paineis** de §2.4.3 desdobrados em blocos. Os `arquivo:linha` da versao anterior
+deste checklist **morreram**: foram medidos num arquivo de **478 linhas** e o arquivo hoje
+tem **621** — a reme-diacao do inventario por linha e passo da onda V6-6, nao deste spec
+(lição: numero de linha de arquivo que cresce nao e contrato).
 
-| # | Bloco | Origem no dialog | Porta |
+Toda linha abaixo tem de existir em `/dashboard/projetos/[id]`:
+
+| # | Bloco | Porta | Aba (RF-V6.13) |
 |---|---|---|---|
-| 1 | Nome + badge de status + "Criado em {data}" | `:139-146` | — |
-| 2 | Botoes **Editar** / **Excluir** | `:150-169` | `EDIT_PROJECT` |
-| 3 | Descricao do projeto (se houver) | `:177-185` | — |
-| 4 | 4 stat cards (Total / Concluidas / Em Progresso / Pendentes) | `:189-231` | — |
-| 5 | **Progresso Geral** (barra) | `:234-244` | — |
-| 6 | **Tarefas do Projeto** + **Importar Backlog** | `:248-264` | `CREATE_TASK` |
-| 7 | Lista de tarefas (ou estado vazio + **Criar Primeira Tarefa**) | `:266-306` | `CREATE_TASK` |
-| 8 | **Informacoes do Projeto** (Detalhes + Resumo) | `:327-369` | — |
-| 9 | **Links** + form **Adicionar Link** | `:378-430` | `EDIT_PROJECT` no form |
-| 10 | **Logs do Projeto** | `:440-444` | `leaderId === user.id` |
-| 11 | **Relatorios de Projeto** | `:445-449` | `leaderId` ou `MANAGE_USERS` |
-| 12 | **Membros do Projeto** (gestao) | `:451-461` | `MANAGE_PROJECT_MEMBERS`/`COORDENADOR`/`GERENTE` |
-| 13 | Dialogos internos: `BacklogDialog` (`:471`) e os de tarefa | `:471+` | herdados |
+| 1 | Capa/logo do projeto (`ProjectMediaHeader`) | `canManageProjectFiles` | Visao geral |
+| 2 | Nome + badge de status + "Criado em {data}" | — | Visao geral |
+| 3 | Botoes **Editar** / **Excluir** (cabecalho) | `EDIT_PROJECT` | cabecalho |
+| 4 | Descricao do projeto (se houver) | — | Visao geral |
+| 5 | Dados do projeto (periodo, edital, processo, PROPPI, pontos) + `ProjectTimeProgress` | — | Visao geral |
+| 6 | **Informacoes do Projeto** (Detalhes + Resumo) | — | Visao geral |
+| 7 | 4 stat cards (Total / Concluidas / Em Progresso / Pendentes) + **Progresso Geral** | — | Tarefas |
+| 8 | `ProjectCronogramaPanel` | `canManageProjectFiles` p/ escrita | Tarefas |
+| 9 | Lista de tarefas + **Importar Backlog** + **Criar Tarefa** | `CREATE_TASK` | Tarefas |
+| 10 | Estado vazio da lista + **Criar Primeira Tarefa** | `CREATE_TASK` | Tarefas |
+| 11 | `ProjectHoursStats` | — | Membros |
+| 12 | **Membros do Projeto** (gestao) | `MANAGE_PROJECT_MEMBERS` **ou** `COORDENADOR` **ou** `GERENTE` | Membros |
+| 13 | `ProjectDeliverablesPanel` | `canManageProjectFiles` p/ escrita | Arquivos |
+| 14 | `ProjectAttachmentsPanel` | `canManageProjectFiles` p/ escrita | Arquivos |
+| 15 | `ProjectTechnicalReportsPanel` | `canManageProjectFiles` p/ escrita | Arquivos |
+| 16 | `ProjectCertificatesPanel` | `canManageProjectFiles` p/ gerar (self ou gestao no servidor) | Arquivos |
+| 17 | `ProjectReportsPanel` (relatorios semanais do projeto) | `leaderId` **ou** `MANAGE_USERS` | Arquivos |
+| 18 | **Links** + form **Adicionar Link** | `EDIT_PROJECT` no form | Configuracoes |
+| 19 | `ProjectLeaderLogs` (Logs do Projeto) | `leaderId === user.id` | Configuracoes |
+| 20 | Dialogos internos: `TaskDialog`, `BacklogDialog` | herdados | — |
+
+**As 8 expressoes de porta** (contrato de AC-V6-18), sem repetir expressao:
+
+| # | Expressao (medida em `project-detail-dialog.tsx`) | Cobre |
+|---|---|---|
+| 1 | `hasAccess(user.roles, "EDIT_PROJECT")` — botoes (`:200`) | Editar/Excluir |
+| 2 | `hasAccess(user.roles, "CREATE_TASK")` — cabecalho de Tarefas (`:397`) | Importar Backlog/Criar Tarefa |
+| 3 | `hasAccess(user.roles, "CREATE_TASK")` — estado vazio (`:419`) | Criar Primeira Tarefa |
+| 4 | `hasAccess(user?.roles \|\| [], "EDIT_PROJECT")` — form de Links (`:532`) | Adicionar Link |
+| 5 | `project.leaderId === user.id` (`:584`) | `ProjectLeaderLogs` |
+| 6 | `leaderId === user.id \|\| hasAccess(user.roles, "MANAGE_USERS")` (`:589`) | `ProjectReportsPanel` |
+| 7 | `MANAGE_PROJECT_MEMBERS` **ou** `COORDENADOR` **ou** `GERENTE` (`:595`) | `ProjectMembersManagement` |
+| 8 | `canManageProjectFiles` (`:165-171`) = `leaderId` **ou** `MANAGE_USERS` **ou** `MANAGE_PROJECTS` **ou** um de `COORDENADOR`/`GERENTE`/`GERENTE_PROJETO` | **6 blocos**: midia, entregaveis, anexos, cronograma, relatorios tecnicos, atestados |
+
+Cada uma **preserva o resultado identico**, medido por papel. A expressao 8 e a mais larga e
+a que a versao anterior deste spec **nao contava** — ela sozinha governa 6 dos 20 blocos.
 
 ## 9. Acceptance criteria (definitivos e rastreaveis)
 
@@ -536,15 +892,24 @@ Todo item abaixo tem de existir na rota `/dashboard/projetos/[id]`:
 | AC-V6-15 | Given Projetos, When olho os filtros, Then ha chips de status com contacao de cada status, e as entradas estao numa lista vertical | `project-list.test.tsx` + `/ui-review projetos` | RF-V6.5 |
 | AC-V6-16 | Given que Projetos nao tem teste, When inicio a onda, Then os testes de caracterizacao estao **escritos e verdes antes** da primeira mudanca de layout | `git log` mostra o teste num commit anterior ao da UI; `project-list.test.tsx` verde | RF-V6.5 |
 | AC-V6-17 | Given `/dashboard/projetos/[id]` autenticado, When acesso, Then renderiza o conteudo; sem sessao, Then redirect para `/login` | `app/(dashboard)/layout.tsx:19-21` + teste de rota/componente | RF-V6.6 |
-| AC-V6-18 | Given as **7 ocorrencias de porta** da §2.4, When renderizo para cada papel, Then o resultado e **identico** ao de hoje | `project-detail-page.test.tsx` (casos por papel) | RF-V6.6 |
+| AC-V6-18 | Given as **8 expressoes de porta** da §2.4.3, When renderizo para cada papel, Then o resultado e **identico** ao de hoje | `project-detail-page.test.tsx` (casos por papel) | RF-V6.6 |
 | AC-V6-19 | Given o checklist da §8.4, When comparo com a pagina, Then **nenhuma secao falta** | §8.4 mapeado em teste de presenca | RF-V6.6 |
 | AC-V6-20 | Given cada tela restante, When olho, Then tem `PageHeader`, sem paleta cravada e sem degradê | grep por onda + `/ui-review <tela>` | RF-V6.7 |
 | AC-V6-21 | Given `ModernAdminPanel`, When inicio a onda, Then a caracterizacao existe e esta verde antes | `tests/unit/components/admin/*.test.tsx` verde antes do commit de UI | RF-V6.7 |
 | AC-V6-22 | Given tema escuro, When renderizo as telas do escopo, Then nenhuma usa `#000`/`#fff` puro e a hierarquia usa os tokens `.dark` | grep + revisao `/ui-review <tela> --dark` | RF-V6.8 |
-| AC-V6-23 | Given a skill, When grepo `illustrat\|hand-drawn\|handwritten` nos `.md`, Then **0 mandando usar**; `SKILL.md` cita as 4 imagens; `ui-reviewer.md` nao tem a prioridade 9 de ilustracao | grep em `.opencode/skills` + `.opencode/agents` | RF-V6.9 |
-| AC-V6-24 | Given a suíte inteira, When rodo `npx vitest run`, Then **zero failure** e **>= 87/1107** | gate G3 | RF-V6.10 |
+| AC-V6-23 | Given a skill, When grepo `illustrat\|hand-drawn\|handwritten` nos `.md`, Then **0 mandando usar**; `SKILL.md` cita as **5** imagens (hoje cita 2); `ui-reviewer.md` nao tem a prioridade 9 de ilustracao | grep em `.opencode/skills` + `.opencode/agents` | RF-V6.9 |
+| AC-V6-24 | Given a suíte inteira, When rodo `npx vitest run`, Then **zero failure** e **nunca menor que 157/2134** | gate G3 | RF-V6.10 |
 | AC-V6-25 | Given o plano terminado, When comparo `package.json`, Then **nenhuma dependencia nova** | `git diff package.json` vazio | RF-V6.10 |
 | AC-V6-26 | Given telas visiveis mudadas, When rodo G5, Then `docs:build` e `docs:check` verdes e as capturas de `docs/screens/` foram recapturadas (G6) | `npm run docs:build && npm run docs:check` + `git diff docs/screens` | §5 |
+| AC-V6-27 | Given os relatorios, When abro a pagina, Then ha **3 abas** (usuario / projeto / atestados) e o assistente de 3 passos; **nao** ha aba Templates | revisao + `/ui-review relatorios` | RF-V6.11 |
+| AC-V6-28 | Given um relatorio de projeto existente, When comparo antes/depois da redistribuicao, Then ele continua alcancavel pelos **dois** pontos (Relatorios e a aba Arquivos do projeto) | teste de navegacao + §8.4 linha 15 | RF-V6.11 |
+| AC-V6-29 | Given a pagina de Projetos, When conto as abas, Then **nao ha** aba Voluntarios; Given o Painel Administrativo, Then a aba Voluntarios **existe** | `volunteers-tab.test.tsx` + grep | RF-V6.12 |
+| AC-V6-30 | Given os papeis `COORDENADOR`, `GERENTE`, `GERENTE_PROJETO`, When abro o Painel, Then os tres veem a aba Voluntarios e **nenhum outro** papel ve; Given `COORDENADOR`/`GERENTE`, Then nao veem a aba Dashboard de Projetos (quirk preservado) | teste por papel | RF-V6.12/RF-V6.16 |
+| AC-V6-31 | Given a rota do projeto, When conto as abas, Then sao **5**; When comparo com a §8.4, Then **nenhum dos 20 blocos falta** e cada um esta na aba declarada | teste de presenca + `/ui-review projeto` | RF-V6.13 |
+| AC-V6-32 | Given `/dashboard/admin` sem a permissao, When acesso, Then a decisao e do **servidor** (nao renderiza o painel) e a frase de negacao e a mesma; Given a permissao, Then vejo as abas restantes e **nao** a `settings`, e aba sem chave **diz o motivo** | `admin-guard.test.tsx` + `admin-tabs.test.tsx` | RF-V6.14 |
+| AC-V6-33 | Given o repo, When grepo `loja/gerenciar`, Then **0** ocorrencias e a rota **nao existe** | grep + `ls` | RF-V6.15 |
+| AC-V6-34 | Given o repo, When grepo `DASHBOARD_PROJETOS` (chave morta) e `MANAGE_REWARDS` nas matrizes, Then **0** ocorrencia da primeira (removida) e **1** da segunda; When leio `DASHBOARD_VOLUNTEERS`, Then e `["COORDENADOR","GERENTE","GERENTE_PROJETO"]` | `permission-keys.test.ts` | RF-V6.16 |
+| AC-V6-35 | Given um `GERENTE`, When abre a fila de Aprovacoes da loja, Then recebe **todas** as compras que o servidor autoriza (nao mais so as proprias) | `purchase-scope-alignment.test.ts` | RF-V6.16 R5 |
 
 ## 10. Fora de escopo (desta versao)
 
@@ -555,7 +920,15 @@ Todo item abaixo tem de existir na rota `/dashboard/projetos/[id]`:
   ilustrada" do plano anterior foi **removida**.
 - **Dark mode novo**: nao se mexe nos valores do bloco `.dark` (ja casam com a
   referencia); so se documenta e se consome.
-- **Mudanca de regra/permissao**: nenhuma guarda, nenhum enum, nenhum `hasAccess`.
+- **Mudanca de regra/permissao**: nenhuma guarda, nenhum enum, nenhum `hasAccess` —
+  **com uma excecao medida**: RF-V6.16 fecha o buraco de autorizacao da §2.9 (guarda de
+  servidor no admin, chaves mortas/duplicadas, alinhamento do cliente ao servidor). Em
+  **nenhum** caso um conjunto de papeis muda de valor.
+- **Redistribuicao que NAO acontece**: nao se cria destino de navegacao novo, nao se move
+  o Quadro de Tarefas, nao se migra o data layer, e nao se resolve o quirk do
+  `showDashboard` (`[GERENTE_PROJETO]`) — ASK-V6-04.
+- **Renome da rota de Relatorios**: o diretorio continua `/dashboard/weekly-reports` —
+  so o rotulo muda (ASK-V6-03).
 - **Data layer**: trocar os contextos legados de Projetos pelo TanStack `useProjects`
   e refactor de comportamento — fila separada.
 - **Backend**: `prisma/`, `backend/`, `app/api/` intocados.
@@ -566,9 +939,18 @@ Todo item abaixo tem de existir na rota `/dashboard/projetos/[id]`:
 
 | Item | Tipo | Estado |
 |---|---|---|
-| `plan-v5` (`ready`, `activeWave: null`) | concorrencia | **ORDA RESOLVIDA (DEC-113, dono 2026-10-07):** o backend e a fonte de verdade e o front segue o back — nas colisoes o plan-v5 executa ANTES: `V6-4` x `V5-4` (wizard), `V6-5` x `V5-2` (banner/logo no detail), `V6-7` x `V5-3` (banner de perfil + podio). `V6-0`..`V6-3` nao tocam o plan-v5 |
+| plan-v5 | pre-condicao | **CUMPRIDA — encerrado em 2026-10-14** (`cd2d24f V5-close`, 35 batches, DEC-61..77/99..104/126..179). A DEC-145 (plan-v6 so depois do plan-v5 fechar) esta satisfeita, e a DEC-113 (o backend e a fonte de verdade; nas colisoes o plan-v5 executa antes) **deixou de ser colisao**: nao ha mais execucao concorrente |
 | plan-v4 `done` (2026-10-07) | pre-condicao | cumprido |
 | Dev server em `:3001` | infra p/ e2e | necessario so nas ondas com e2e |
-| Leitura das referencias por modelo com visao | processo | **DEC-105**: `strata` e `muse` leem; `big-pickle` e `nemotron` nao. Inventario gravado em §2.3/§2.6 |
+| Leitura das referencias por modelo com visao | processo | **DEC-105**: `strata` e `muse` leem; `big-pickle` e `nemotron` nao. Inventario gravado em §2.3/§2.6; o modelo local com visao confere (dono, 2026-10-14) |
 | Dado legitimo da instancia no quadro | ruido conhecido | 3o teste do e2e ja falha; confirmar com `git stash` |
 | Aprovacao visual do dono por onda | processo | gate de aceite de cada onda |
+
+## 12. Perguntas abertas (ASK)
+
+| ID | Pergunta | Situacao |
+|---|---|---|
+| ASK-V6-03 | A rota de Relatorios continua `/dashboard/weekly-reports` com rotulo novo, ou o diretorio vira `/dashboard/relatorios`? | **Aberta.** O caminho nao aparece para o usuario final; renomear toca `nav-config`, a captura do guia e o e2e. Default adotado no plano: **manter a rota** |
+| ASK-V6-04 | O quirk `showDashboard` = `[GERENTE_PROJETO]` (COORDENADOR/GERENTE nao veem a aba Dashboard de Projetos) e intencional? | **Aberta.** Preservado como medido; mudar quem ve e decisao de produto |
+| ASK-V6-05 | A acao `suspender` de usuario (`ModernAdminPanel`) mostra **nome de terceiros** (`purchase-approval`) — isso entra no escopo de privacidade? | **Aberta.** So registrada; nenhuma tela deste plano exibe CPF |
+| ASK-V6-06 | O titulo do navegador e a mesma string generica em todas as telas (medido). Cada rota deve declarar o proprio titulo? | **Aberta.** Todas as 13 paginas sao **client** e `metadata` do Next e server-only, entao a correcao exige um mecanismo novo (server layout por segmento ou efeito no cliente) — decidir antes de incluir como RF |
