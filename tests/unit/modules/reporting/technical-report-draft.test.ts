@@ -58,7 +58,7 @@ function sourcesPort(): TechnicalReportSourcesPort & {
     calls,
     async listSessionLogs(_projectId, from, to) {
       calls.push({ from, to, fromMonth: "", toMonth: "" });
-      return [{ date: "2026-05-10", userName: "Bento Lima", activity: "Revisão bibliográfica", duration: 3.5, location: null }];
+      return [{ date: "2026-05-10", userName: "Bento Lima", activity: "Revisão bibliográfica", durationHours: 3.5, location: null }];
     },
     async listProjectTasks() {
       return [{ title: "Montar o dataset", status: "done", completedAt: "2026-06-02", points: 15 }];

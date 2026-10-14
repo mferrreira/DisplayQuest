@@ -35,7 +35,10 @@ export class PrismaTechnicalReportSources implements TechnicalReportSourcesPort 
       date: civilDayOfInstant(session.startTime),
       userName: session.userName,
       activity: session.activity,
-      duration: session.duration,
+      // `duration` é `Float` em SEGUNDOS (timer flutuante); a porta fala HORAS com 2 casas
+      // — mesma aritmética de `roundHours` do domínio de projeto (DEC-132: dia/hora civil).
+      durationHours:
+        session.duration === null ? null : Math.round((session.duration / 3600) * 100) / 100,
       location: session.location,
     }))
   }

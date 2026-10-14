@@ -17,6 +17,7 @@ import {
   FUNDING_AGENCY_LABELS,
   SCHOLARSHIP_TYPE_LABELS,
 } from "../identity/person-data-rules";
+import { civilDayOfDate } from "../time/civil-day";
 import { technicalReportCheckbox } from "./technical-report-rules";
 import type { TechnicalReportType } from "./technical-report-rules";
 
@@ -157,13 +158,22 @@ export interface TechnicalReportDocumentPeriod {
  * início é `startDate` (fallback `createdAt`), fim é min(`endDate`, hoje). Relatório
  * parcial gerado no meio do projeto não declara período futuro, e relatório atrasado
  * não estende o período. Comparação lexicográfica de `YYYY-MM-DD` (DEC-132).
+ *
+ * As bordas passam por `civilDayOfDate` (a peça única que resolve `YYYY-MM-DD` e
+ * instantâneo ISO para o MESMO dia do calendário): o `createdAt` legado da instância é
+ * instantâneo ISO completo (escrito antes da DEC-132), e solto no período ele montava
+ * `new Date("2026-09-22T15:34:08.043ZT00:00:00.000Z")` no adaptador de sessões —
+ * Invalid Date, Prisma explodia e a rota do rascunho respondia 502 sem chamar a IA
+ * (achado medido 2026-10-14). Valor sem leitura conta como ausente: o período colapsa
+ * em hoje, nunca vira Invalid Date na mão do adaptador.
  */
 export function technicalReportDocumentPeriod(
   project: TechnicalReportDocumentProject,
   now: string,
 ): TechnicalReportDocumentPeriod {
-  const periodoInicio = project.startDate ?? project.createdAt;
-  const periodoFim = project.endDate !== null && project.endDate < now ? project.endDate : now;
+  const periodoInicio = civilDayOfDate(project.startDate ?? project.createdAt) ?? now;
+  const end = project.endDate === null ? null : civilDayOfDate(project.endDate);
+  const periodoFim = end !== null && end < now ? end : now;
   return { periodoInicio, periodoFim };
 }
 

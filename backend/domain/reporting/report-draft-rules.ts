@@ -22,7 +22,13 @@ export interface ReportDraftSessionRow {
   date: string;
   userName: string;
   activity: string | null;
-  duration: number | null;
+  /**
+   * Duração em HORAS. O nome carrega a unidade de propósito: `work_sessions.duration` é
+   * `Float` em SEGUNDOS (o timer flutuante escreve segundos), e o adaptador converte.
+   * Achado medido 2026-10-14: sem a conversão o prompt recebia "6189.595h" — a IA lia
+   * segundos rotulados de horas e o rascunho saía absurdo.
+   */
+  durationHours: number | null;
   location: string | null;
 }
 
@@ -67,7 +73,7 @@ function sessionLines(sessions: ReportDraftSessionRow[]): string {
     .map(
       (session) =>
         `- ${session.date} | ${session.userName} | ${session.activity ?? "sem descrição"} | ` +
-        `${session.duration ?? "?"}h${session.location ? ` | ${session.location}` : ""}`,
+        `${session.durationHours ?? "?"}h${session.location ? ` | ${session.location}` : ""}`,
     )
     .join("\n");
 }

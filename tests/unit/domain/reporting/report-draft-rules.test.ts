@@ -23,7 +23,7 @@ const input = {
   type: "parcial" as const,
   period: { periodoInicio: "2026-03-01", periodoFim: "2026-10-14" },
   sessions: [
-    { date: "2026-05-10", userName: "Bento Lima", activity: "Revisão bibliográfica", duration: 3.5, location: "Laboratório 2" },
+    { date: "2026-05-10", userName: "Bento Lima", activity: "Revisão bibliográfica", durationHours: 3.5, location: "Laboratório 2" },
   ],
   tasks: [
     { title: "Montar o dataset", status: "done", completedAt: "2026-06-02", points: 15 },

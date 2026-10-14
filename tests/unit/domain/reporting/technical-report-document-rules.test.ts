@@ -185,6 +185,36 @@ describe("relatório técnico — regras do documento (V5-9b, DEC-129/168)", () 
       ).toEqual({ periodoInicio: "2026-02-01", periodoFim: "2026-10-14" });
     });
 
+    it("createdAt LEGADO é instantâneo ISO completo — vira dia civil do laboratório (achado medido 2026-10-14)", () => {
+      // O projeto 1 da instância real tem createdAt "2026-09-22T15:34:08.043Z" (escrito pelo
+      // código antigo antes do DEC-132). Solto no período, o adaptador de sessões montava
+      // `new Date("2026-09-22T15:34:08.043ZT00:00:00.000Z")` → Invalid Date → Prisma explodia
+      // e a rota do rascunho respondia 502 "Servidor de IA indisponível" sem chamar a IA.
+      expect(
+        technicalReportDocumentPeriod(
+          { createdAt: "2026-09-22T15:34:08.043Z", startDate: null, endDate: null },
+          "2026-10-14",
+        ),
+      ).toEqual({ periodoInicio: "2026-09-22", periodoFim: "2026-10-14" });
+    });
+
+    it("endDate legada em instantâneo ISO também resolve para dia civil; ilegível conta como ausente", () => {
+      expect(
+        technicalReportDocumentPeriod(
+          { createdAt: "2026-02-01", startDate: null, endDate: "2026-09-30T23:59:59.999Z" },
+          "2026-10-14",
+        ),
+      ).toEqual({ periodoInicio: "2026-02-01", periodoFim: "2026-09-30" });
+
+      // Valor sem leitura não vira Invalid Date na mão do adaptador: o período colapsa em hoje.
+      expect(
+        technicalReportDocumentPeriod(
+          { createdAt: "não-é-data", startDate: null, endDate: "31/12/2026" },
+          "2026-10-14",
+        ),
+      ).toEqual({ periodoInicio: "2026-10-14", periodoFim: "2026-10-14" });
+    });
+
     it("formatDocumentCivilDay é substring, não new Date (DEC-132); valor inválido vazio vazio", () => {
       expect(formatDocumentCivilDay("2026-10-14")).toBe("14/10/2026");
       expect(formatDocumentCivilDay(null)).toBe("");
