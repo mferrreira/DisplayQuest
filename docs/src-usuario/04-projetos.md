@@ -16,6 +16,7 @@ A **Lista de Projetos** mostra todos os projetos do sistema, inclusive os que vo
 - **Dados do projeto**: **Início**, **Término**, **Número do edital**, **Número do processo**, **Número PROPPI** e **Pontos do projeto**. Esse card só aparece quando algum desses campos foi preenchido;
 - **Entregáveis**, cada um com o nome e a quantidade em unidades (**2 un.**);
 - **Anexos**, cada um com o nome, o tamanho e o arquivo;
+- **Cronograma**, com as **Metas do projeto** e a grade de meses (a seção *Cronograma do projeto* abaixo);
 - **Total de Tarefas**, **Concluídas**, **Em Progresso** e **Pendentes**, e o **Progresso Geral** com a taxa de conclusão;
 - **Tarefas do Projeto**, com **Importar Backlog** e **Nova Tarefa**;
 - **Criado por**, **Data de criação** e **Última atualização**;
@@ -27,22 +28,32 @@ A **Lista de Projetos** mostra todos os projetos do sistema, inclusive os que vo
 
 ## Criar um projeto
 
+A criação tem três passos, e o diálogo diz em qual você está: *"Passo 1 de 3: Dados do projeto"*. **Equipe** e **Cronograma** são opcionais, e o projeto nasce igual sem eles. **Avançar** leva ao passo seguinte, **Voltar** devolve um, e **Criar** aparece no último.
+
+**Passo 1: Dados do projeto**
+
 1. Na tela Projetos, clique em **Novo Projeto**.
-2. Preencha **Nome do Projeto** e **Descrição**.
+2. Preencha **Nome do Projeto** e **Descrição**. Sem nome, **Avançar** fica desabilitado.
 3. Informe **Início do projeto** e **Término do projeto**. São datas do calendário, e o término não pode vir antes do início.
 4. Informe **Número do edital** e **Número do processo**, se o projeto veio de um.
 5. Informe o **Número PROPPI**, se o projeto é do PROPPI. É o número que sai nos dois formulários oficiais.
 6. Escolha o **Status**: **Ativo**, **Concluído** ou **Arquivado**.
+
+**Passo 2: Equipe** (opcional)
+
 7. Em **Líder do Projeto**, escolha a pessoa responsável. Sem escolha, o projeto fica com **Sem líder definido**.
 8. Em **Voluntários iniciais**, marque quem já entra no projeto.
 9. Use **+ Adicionar Link** para cada referência externa que o projeto precisa guardar.
-10. Clique em **Criar**.
 
-```foto dialogo-novo-projeto titulo="O diálogo Novo Projeto"
-Nome com até 100 caracteres e descrição com até 500.
+**Passo 3: Cronograma** (opcional)
+
+10. Monte as metas e as etapas, como na seção *Cronograma do projeto* abaixo. Nada aqui é gravado antes de você clicar em **Criar**: o projeto e o cronograma entram juntos.
+
+```foto dialogo-novo-projeto titulo="O passo 1 do diálogo Novo Projeto"
+Nome com até 100 caracteres e descrição com até 500. O **Avançar** da foto está desabilitado porque o nome está vazio.
 ```
 
-Editar e excluir um projeto são ações do cartão, na lista. O **Pontos do projeto** não é campo do formulário: ele aparece no detalhe quando existe.
+Editar e excluir um projeto são ações do cartão, na lista. Editar é uma página só, sem passos: o cronograma da edição se mexe no detalhe, não no formulário. O **Pontos do projeto** não é campo do formulário: ele aparece no detalhe quando existe.
 
 ## Capa e logo do projeto
 
@@ -73,16 +84,49 @@ Entregável é o que o projeto se compromete a entregar, com quantidade.
 
 Imagem aceita até 5 MB, PDF até 20 MB e vídeo até 100 MB. O sistema confere o conteúdo do arquivo, não apenas o nome: um arquivo que não é o que declara ser é recusado, e a lista continua como estava.
 
+## Cronograma do projeto
+
+O cronograma é o calendário do projeto. São duas listas no mesmo card: as **Metas do projeto** e a grade de etapas por mês.
+
+**Metas.** Cada meta é uma linha com a descrição e, se você quiser, um número. O número existe porque a brochura tem objetivo que se conta (dois artigos, um dataset), mas meta sem número é meta normal. **Adicionar meta** cria a linha, e ela só entra no projeto quando você escreve a descrição e sai do campo.
+
+**A grade.** Cada linha é uma etapa, e a duração da etapa é a contagem dos meses marcados:
+
+1. Clique em **Adicionar atividade**. A linha nasce com um mês marcado, o primeiro da grade.
+2. Escreva a descrição da etapa e saia do campo: é aí que a linha entra no projeto.
+3. Clique nos meses que a etapa ocupa. A linha é sempre contínua, sem buraco no meio. Clicar depois do último estende a etapa. Clicar antes do primeiro estende para trás. Clicar num mês do meio faz daquele mês o último. Clicar no último desmarca.
+4. Em **Responsável**, escolha quem faz a etapa, ou deixe **Sem responsável**. Na lista só aparece quem participa do projeto.
+5. A **Recompensa** acompanha a marcação: 100 pontos por mês marcado. A linha diz quantos meses tem, do lado da descrição: *"out/2026 → nov/2026 · 2 meses"*.
+6. Para apagar a linha, use a lixeira; o sistema pede confirmação. Apagar uma etapa não apaga tarefa nenhuma do projeto.
+
+As colunas são o período do projeto. Um projeto de 1º de março a 31 de agosto tem a grade de mar/2026 a ago/2026. Projeto sem datas tem 12 meses a partir do mês atual. Se uma marca cair fora dessas colunas, a grade se alarga para alcançá-la, e com muitos meses a grade tem largura e se move para o lado.
+
+```foto dialogo-detalhe-projeto-cronograma titulo="O card Cronograma, no detalhe de um projeto"
+O card anuncia a grade que ele mostra: *"out/2026 a set/2027 — 12 meses na grade"*. A etapa *Revisão da literatura* está marcada em out/2026 e nov/2026, e a linha diz *"out/2026 → nov/2026 · 2 meses"*.
+```
+
+```foto dialogo-novo-projeto-cronograma titulo="O passo 3 do Novo Projeto, com uma linha recém-criada"
+A linha nova já nasce com o primeiro mês da grade marcado, porque etapa sem mês não existe.
+```
+
+::: limite titulo="Toda linha precisa de pelo menos um mês"
+Desmarcar a única marca de uma linha é recusado: o sistema responde *"A atividade precisa de pelo menos um mês marcado"* e a linha fica como estava.
+:::
+
+::: nota titulo="O cronograma do projeto não é o quadro de tarefas"
+A grade diz em quais meses a etapa do projeto acontece e quanto ela vale. Tarefa é outra coisa, e continua tendo seu próprio ciclo no quadro. Nenhuma linha do cronograma cria tarefa, e apagar uma linha não apaga tarefa.
+:::
+
 ::: limite titulo="Quem cria e edita projeto"
 Criar, editar e gerenciar membros exige **Coordenador**, **Gerente** ou **Gerente de Projeto**. **Pesquisador**, **Colaborador** e **Voluntário** não criam nem alteram projeto.
 :::
 
 ::: nota titulo="Quem enxerga os projetos"
-A **Lista de Projetos** e o detalhe são de qualquer pessoa autenticada: você vê todos os projetos do sistema, inclusive os que não participa, e neles lê entregáveis, anexos, capa, logo, horas e a lista de quem participa. O que continua fechado é a escrita.
+A **Lista de Projetos** e o detalhe são de qualquer pessoa autenticada: você vê todos os projetos do sistema, inclusive os que não participa, e neles lê entregáveis, anexos, capa, logo, horas, cronograma e a lista de quem participa. O que continua fechado é a escrita.
 :::
 
-::: nota titulo="Quem escreve entregáveis, anexos, capa e logo"
-Esses controles aparecem para a liderança e a gerência do projeto. Quem não gerencia vê as listas e os arquivos, sem os botões de escrita. Se o controle aparecer e a pessoa não tiver a gestão do projeto, o sistema responde *"Usuário não tem permissão para gerenciar este projeto"* e nada muda.
+::: nota titulo="Quem escreve entregáveis, anexos, capa, logo e cronograma"
+Esses controles aparecem para a liderança e a gerência do projeto. Quem não gerencia vê as listas, os arquivos e a grade, sem os botões de escrita. Se o controle aparecer e a pessoa não tiver a gestão do projeto, o sistema responde *"Usuário não tem permissão para gerenciar este projeto"* e nada muda.
 :::
 
 ## A aba Voluntários

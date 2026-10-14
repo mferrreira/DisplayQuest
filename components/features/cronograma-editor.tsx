@@ -42,8 +42,8 @@ import { Plus, Trash2 } from "lucide-react"
 import {
   ACTIVITY_REWARD_PER_MONTH,
   ACTIVITY_STATUS_LABELS,
-  activityPeriod,
   activityReward,
+  countActivityMonths,
   monthColumnLabel,
   monthKeysBetween,
 } from "@/backend/domain"
@@ -222,7 +222,7 @@ export function CronogramaEditor({
                 {activities.map((activity) => {
                   const marked = new Set(monthKeysBetween(activity.firstMonth, activity.lastMonth))
                   const reward = activityReward(activity.firstMonth, activity.lastMonth)
-                  const period = activityPeriod(activity.firstMonth, activity.lastMonth)
+                  const markedMonths = countActivityMonths(activity.firstMonth, activity.lastMonth)
                   const statusLabel = activity.status
                     ? ACTIVITY_STATUS_LABELS[activity.status as keyof typeof ACTIVITY_STATUS_LABELS] ??
                       activity.status
@@ -242,9 +242,9 @@ export function CronogramaEditor({
                           onBlur={() => onActivityChange(activity, {}, "commit")}
                         />
                         <p className="mt-1 text-xs text-muted-foreground">
-                          {monthColumnLabel(activity.firstMonth)} →{" "}
-                          {monthColumnLabel(activity.lastMonth)} · {period.periodoInicio} a{" "}
-                          {period.periodoFim}
+                          {monthColumnLabel(activity.firstMonth)} → {monthColumnLabel(activity.lastMonth)}
+                          {" · "}
+                          {markedMonths} {markedMonths === 1 ? "mês" : "meses"}
                         </p>
                       </TableCell>
 

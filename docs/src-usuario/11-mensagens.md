@@ -27,6 +27,18 @@ Toda recusa do sistema tem um motivo, e o motivo está na mensagem. Esta lista r
 | **Apenas coordenadores, gerentes ou gerente do projeto podem atualizar dados do membro** | quem tentou não tem a gestão daquele projeto | peça ao líder do projeto ou à coordenação |
 | **Membro não encontrado no projeto** | o vínculo não pertence àquele projeto | recarregue a lista: a pessoa pode já ter saído |
 
+## Cronograma do projeto
+
+| O sistema diz | Por quê | O que fazer |
+| --- | --- | --- |
+| **A atividade precisa de pelo menos um mês marcado** | você desmarcou o único mês de uma linha | marque o mês que a etapa ocupa; a linha não existe sem mês |
+| **Responsável da atividade precisa participar do projeto** | a pessoa escolhida não está na equipe daquele projeto | adicione a pessoa na aba **Voluntários** antes de escolher |
+| **Descrição da atividade não pode ter mais de 500 caracteres** | a descrição da etapa passou do teto | resuma a etapa, ou divida em duas linhas |
+| **Descrição da meta não pode ter mais de 500 caracteres** | a descrição da meta passou do teto | resuma a meta |
+| **Meta numérica deve ser um inteiro entre 1 e 9999** | o número da meta não é inteiro positivo dentro do teto | use um número inteiro; meta sem número deixa o campo vazio |
+
+Duas recusas existem para o cronograma, mas a grade não deixa você chegar nelas: *"O cronograma da atividade não pode terminar antes de começar"* e *"Mês do cronograma é inválido (use AAAA-MM)"*. A grade só produz intervalo contínuo e mês no formato do calendário, e o servidor recheca os dois de qualquer forma.
+
 ## Tarefas
 
 | O sistema diz | Por quê | O que fazer |

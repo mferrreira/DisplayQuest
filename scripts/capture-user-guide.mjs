@@ -99,6 +99,9 @@ const VIEWPORT = { width: 1440, height: 900 };
  * fotografa o resultado.
  *   abre     — texto do botão a clicar
  *   aba      — aba a selecionar antes de clicar
+ *   cartao   — abrir algo dentro de um cartão nomeado da tela (container + texto + alvo)
+ *   preencher — campo (ou lista de campos) a preencher antes de avançar um formulário em etapas
+ *   clicar   — botões a clicar em sequência, para percorrer os passos de um formulário
  *   dialogo  — exige que um diálogo abra, e que contenha este texto
  *              (o omitido fotografa o estado após o clique: nem todo painel
  *              da aplicação é um diálogo modal)
@@ -106,6 +109,10 @@ const VIEWPORT = { width: 1440, height: 900 };
 const INTERACTIONS = [
   { id: "dialogo-nova-tarefa", role: "coord", route: "/dashboard", abre: "Nova Tarefa", dialogo: "Tarefa" },
   { id: "dialogo-novo-projeto", role: "coord", route: "/dashboard/projetos", abre: "Novo Projeto", dialogo: "Projeto" },
+  // V5-5b (DEC-100): o passo opcional de cronograma do wizard de criação. O nome é preenchido
+  // porque o primeiro passo não avança sem nome, e "Adicionar atividade" só cria a linha local —
+  // nada é enviado, a captura não cria projeto. As datas encurtam a grade para caber na foto.
+  { id: "dialogo-novo-projeto-cronograma", role: "coord", route: "/dashboard/projetos", abre: "Novo Projeto", preencher: [{ alvo: "#name", valor: "Projeto do guia" }, { alvo: "#startDate", valor: "2026-10-01" }, { alvo: "#endDate", valor: "2027-01-31" }], clicar: ["Avançar", "Avançar", "Adicionar atividade"], dialogo: "Cronograma" },
   { id: "laboratorio-agenda", role: "coord", route: "/dashboard/laboratorio", aba: "Agenda", abre: "Adicionar evento", dialogo: "Evento" },
   { id: "laboratorio-responsabilidade", role: "coord", route: "/dashboard/laboratorio", aba: "Responsabilidade" },
   { id: "laboratorio-reclamacoes", role: "coord", route: "/dashboard/laboratorio", aba: "Reclamações" },
@@ -124,6 +131,10 @@ const INTERACTIONS = [
   // alvo: controle sem rótulo legível, localizado pela estrutura da tela
   { id: "dialogo-detalhe-tarefa", role: "coord", route: "/dashboard", alvo: "button.flex-1.text-left", dialogo: "PONTOS" },
   { id: "dialogo-detalhe-projeto", role: "coord", route: "/dashboard/projetos", alvo: "button:has(svg.lucide-eye)", dialogo: "Progresso Geral" },
+  // V5-5b (DEC-126/151): a grade meses × atividades do painel Cronograma. O cartão é nomeado
+  // porque a lista ordena por data de criação e três projetos da instância têm a mesma data —
+  // "o primeiro cartão" não seria a mesma tela em duas execuções.
+  { id: "dialogo-detalhe-projeto-cronograma", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: "button:has(svg.lucide-eye)" }, dialogo: "Cronograma", rolarAte: "text=Adicionar atividade" },
   // V5-4b (DEC-149): o painel de Membros é onde os dados do vínculo se editam. Ele mora dentro
   // do diálogo "Gestão Completa", aberto pela aba Voluntários da tela Projetos.
   { id: "painel-membros", role: "coord", route: "/dashboard/projetos", aba: "Voluntários", selecionar: { gatilho: "Selecione um projeto" }, abre: "Gestão Completa", dialogo: "Dados do vínculo", rolarAte: "text=Dados do vínculo" },
@@ -289,10 +300,28 @@ for (const it of interactions) {
       await page.waitForTimeout(900);
     }
 
-    if (it.abre || it.alvo) {
+    if (it.abre || it.alvo || it.cartao) {
       if (it.abre) await page.getByRole("button", { name: it.abre, exact: true }).first().click();
-      else await page.locator(it.alvo).first().click();
+      else if (it.cartao) {
+        // Cartão nomeado: a lista de projetos ordena por data de criação desc, e três projetos da
+        // instância têm a MESMA data — "o primeiro cartão" não é determinístico. A captura que
+        // precisa de conteúdo no diálogo diz qual projeto abre.
+        const card = page.locator(it.cartao.container).filter({ hasText: it.cartao.texto }).first();
+        await card.locator(it.cartao.alvo).first().click();
+      } else await page.locator(it.alvo).first().click();
       await page.waitForTimeout(900);
+
+      // Formulário em etapas (o wizard do projeto, DEC-100): `preencher` existe porque o primeiro
+      // passo não avança sem nome, e `clicar` percorre os passos. Nada é enviado: nenhuma captura
+      // nova escreve na instância.
+      for (const campo of [].concat(it.preencher ?? [])) {
+        await page.fill(campo.alvo, campo.valor);
+        await page.waitForTimeout(300);
+      }
+      for (const clique of it.clicar ?? []) {
+        await page.getByRole("button", { name: clique, exact: true }).first().click();
+        await page.waitForTimeout(500);
+      }
 
       if (it.dialogo) {
         await page.waitForSelector('[role="dialog"]', { timeout: 12_000 });
