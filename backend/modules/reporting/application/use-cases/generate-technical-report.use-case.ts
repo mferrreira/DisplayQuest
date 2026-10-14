@@ -2,10 +2,16 @@
  * GenerateTechnicalReportUseCase — geração lote do DOCX oficial preenchido
  * (V5-9b, DEC-129/139/167/168).
  *
- * Ordem das recusas medida pela casa (404 → 403 → 400 → 404 → 409): projeto ausente,
- * gate "gestão/líder" (a mesma frase do upsert), tipo fora da lista (a mesma frase do
- * upsert — `invalidTechnicalReportTypeError`), texto ausente (não se gera documento sem
- * corpo), e nenhum membro ATIVO (lote de zero arquivos não é sucesso — 409).
+ * Ordem das recusas medida pela casa (404 → 403 → 400 → 409): projeto ausente, gate
+ * "gestão/líder" (a mesma frase do upsert), tipo fora da lista (a mesma frase do upsert —
+ * `invalidTechnicalReportTypeError`), e nenhum membro ATIVO (lote de zero arquivos não é
+ * sucesso — 409).
+ *
+ * V5-14 (DEC-173, feedback do dono): gerar NÃO exige texto salvo. Sem registro, o slot
+ * editável nasce vazio (`upsert` de conteúdo `""`) e o documento sai PRÉ-PREENCHIDO —
+ * cabeçalho, período, pessoas e checkboxes certos, as três tabelas vazias para escrever
+ * à mão (DEC-168 já congela "seção sem corpo fica vazia"). O caminho da IA (rascunho) e o
+ * do documento em branco são as duas portas do mesmo texto editável (DEC-139).
  *
  * O use case monta os 17 comandos com as funções puras do domínio, renderiza pela porta
  * `TechnicalReportDocumentPort` e devolve os bytes à rota. Quem escreve no bucket é a
@@ -58,8 +64,6 @@ export interface GenerateTechnicalReportResult {
   files: GeneratedTechnicalReportFile[];
 }
 
-export const TECHNICAL_REPORT_NO_TEXT_MESSAGE =
-  "Salve o texto do relatório antes de gerar o documento";
 export const TECHNICAL_REPORT_NO_MEMBERS_MESSAGE =
   "O projeto não tem membros ativos — o relatório é gerado um documento por membro";
 
@@ -96,9 +100,12 @@ export class GenerateTechnicalReportUseCase {
     }
     const type: TechnicalReportType = command.type;
 
-    const report = await this.ports.technicalReports.findByProjectAndType(command.projectId, type);
+    // V5-14 (DEC-173): sem texto salvo não é recusa — o slot editável nasce vazio e o
+    // documento sai pré-preenchido com as tabelas em branco. O id do registro continua na
+    // chave derivada (DEC-167): regenerar sobrescreve o mesmo objeto.
+    let report = await this.ports.technicalReports.findByProjectAndType(command.projectId, type);
     if (!report) {
-      throw new NotFoundError(TECHNICAL_REPORT_NO_TEXT_MESSAGE);
+      report = await this.ports.technicalReports.upsert(command.projectId, type, "");
     }
 
     const context = await this.ports.generation.findProjectContext(command.projectId);

@@ -44,7 +44,6 @@ Duas recusas existem para o cronograma, mas a grade não deixa você chegar nela
 | O sistema diz | Por quê | O que fazer |
 | --- | --- | --- |
 | **O texto em edição não foi sobrescrito — salve ou limpe antes de rascunhar.** | você pediu rascunho de IA com texto não salvo no campo | salve o seu texto ou limpe o campo, e peça o rascunho de novo |
-| **Salve o texto do relatório antes de gerar o documento** | **Gerar DOCX** sem texto salvo — o botão vem desabilitado, e o servidor recheca mesmo assim | clique em **Salvar** primeiro |
 | **O projeto não tem membros ativos — o relatório é gerado um documento por membro** | a geração exige pelo menos um membro com **Situação do vínculo** **Ativo** | confira a aba **Voluntários** daquele projeto |
 | **IA indisponível** (com o endereço ou o status no resto da frase) | o servidor do rascunho não respondeu | o rascunho é opcional: escreva o texto você mesmo; nada foi alterado |
 

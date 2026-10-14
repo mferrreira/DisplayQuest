@@ -3,8 +3,10 @@
  * antes do código.
  *
  * O que fica preso aqui:
- *   1. Ordem medida da casa: 404 projeto → 403 gate → 400 tipo → 404 texto ausente →
- *      409 sem membros ATIVOS. Quem não pode recebe o 403 mesmo com corpo inválido.
+ *   1. Ordem medida da casa: 404 projeto → 403 gate → 400 tipo → 409 sem membros ATIVOS.
+ *      Quem não pode recebe o 403 mesmo com corpo inválido. Gerar NÃO exige texto salvo
+ *      (DEC-173): sem registro o slot editável nasce vazio e o documento sai pré-preenchido
+ *      com as três tabelas em branco.
  *   2. A geração é lote: um arquivo por membro ATIVO, chave derivada do par e do
  *      membro (regenerar sobrescreve), nome de exibição em slug.
  *   3. O use case renderiza pela PORTA (adaptador injetável — a suíte de unit roda sem
@@ -15,7 +17,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "@/backend/domain";
+import { ConflictError, ForbiddenError, ValidationError } from "@/backend/domain";
 import { GenerateTechnicalReportUseCase } from "@/backend/modules/reporting/application/use-cases/generate-technical-report.use-case";
 import type { TechnicalReportAccessPort } from "@/backend/modules/reporting/application/ports/technical-report-access.port";
 import type { TechnicalReportDocumentPort } from "@/backend/modules/reporting/application/ports/technical-report-document.port";
@@ -30,7 +32,6 @@ import type {
 } from "@/backend/modules/reporting/application/ports/technical-reports.repository";
 
 const DENIED_MESSAGE = "Usuário não tem permissão para editar o relatório técnico deste projeto";
-const NO_TEXT_MESSAGE = "Salve o texto do relatório antes de gerar o documento";
 const NO_MEMBERS_MESSAGE = "O projeto não tem membros ativos — o relatório é gerado um documento por membro";
 
 class FakeRepository implements TechnicalReportsRepository {
@@ -218,13 +219,27 @@ describe("geração do DOCX do relatório técnico (V5-9b, DEC-129/139)", () => 
     );
   });
 
-  it("sem texto salvo é 404 nomeando a exigência — e nada é renderizado", async () => {
+  it("sem texto salvo NÃO é recusa: o slot nasce vazio e o documento sai pré-preenchido com as tabelas em branco (DEC-173)", async () => {
     const docx = fakeDocxPort();
-    const repo = new FakeRepository(); // sem upsert: o par não existe
-    await expect(
-      generate({ repo, docx, type: "final" }),
-    ).rejects.toThrow(NO_TEXT_MESSAGE);
-    expect(docx.renders).toHaveLength(0);
+    const repo = new FakeRepository(); // o par (3, "final") não existe
+    const result = await generate({ repo, docx, type: "final" });
+
+    // O slot editável nasce vazio (DEC-139: um texto editável por projeto × tipo) e o id
+    // entra na chave derivada como sempre (DEC-167).
+    const saved = await repo.findByProjectAndType(3, "final");
+    expect(saved).not.toBeNull();
+    expect(saved!.content).toBe("");
+    expect(result.files[0].key).toBe(`projects/3/technical-reports/${saved!.id}/9.docx`);
+
+    // Cabeçalho, período e pessoas continuam preenchidos; só as três tabelas saem vazias
+    // (DEC-168: seção sem corpo fica vazia — o ramo já existia, o que mudou é a recusa).
+    expect(docx.renders).toHaveLength(2);
+    const first = docx.renders[0];
+    expect(first.tabela_descricao).toBe("");
+    expect(first.tabela_resultados).toBe("");
+    expect(first.tabela_comentarios).toBe("");
+    expect(first.estudante_nome).toBe("Bento Lima");
+    expect(first.titulo).toBe("IA no campo");
   });
 
   it("sem membro ATIVO é 409 — geração lote de zero arquivos não é sucesso", async () => {

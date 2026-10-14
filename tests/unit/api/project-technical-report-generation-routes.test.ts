@@ -319,13 +319,23 @@ describe("POST /api/projects/[id]/technical-reports/[type]/generate (V5-9b)", ()
     );
   });
 
-  it("sem texto salvo é 404 nomeando a exigência", async () => {
+  it("sem texto salvo NÃO é 404: o slot nasce vazio e o lote sai pré-preenchido (DEC-173)", async () => {
     mocks.rows.clear();
     const response = await POST(generateRequest(), generateContext());
-    expect(response.status).toBe(404);
-    expect((await response.json()).error).toBe(
-      "Salve o texto do relatório antes de gerar o documento",
-    );
+    expect(response.status).toBe(201);
+
+    const body = await response.json();
+    expect(body.files).toEqual([
+      {
+        userId: 9,
+        memberName: "Bento Lima",
+        key: "projects/3/technical-reports/1/9.docx",
+        fileName: "relatorio-parcial-bento-lima.docx",
+      },
+    ]);
+    // O registro criado tem conteúdo vazio — o editor o mostra em branco para escrever à mão.
+    expect(mocks.rows.get("3:parcial")!.content).toBe("");
+    expect(mocks.puts).toHaveLength(1);
   });
 
   it("sem membro ATIVO é 409 — lote de zero arquivos não é sucesso", async () => {

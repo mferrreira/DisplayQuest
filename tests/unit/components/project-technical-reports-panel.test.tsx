@@ -219,11 +219,11 @@ describe("painel de relatórios técnicos (V5-9, DEC-70/139)", () => {
     expect(link).toHaveAttribute("download", "relatorio-parcial-bento-lima.docx");
   });
 
-  it("V5-9b: sem texto salvo o botão de gerar está desabilitado — a mesma exigência do 404", async () => {
+  it("DEC-173: sem texto salvo o botão de gerar está HABILITADO — o documento sai pré-preenchido", async () => {
     renderPanel(true);
 
-    // "Final" não tem linha salva no fixture.
-    expect(await screen.findByRole("button", { name: "Gerar documentos do relatório Final" })).toBeDisabled();
+    // "Final" não tem linha salva no fixture — e isso não desabilita mais nada.
+    expect(await screen.findByRole("button", { name: "Gerar documentos do relatório Final" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Gerar documentos do relatório Parcial" })).toBeEnabled();
   });
 

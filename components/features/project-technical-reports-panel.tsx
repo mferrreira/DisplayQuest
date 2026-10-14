@@ -205,8 +205,8 @@ export function ProjectTechnicalReportsPanel({
                       type="button"
                       size="sm"
                       variant="outline"
-                      disabled={savingType !== null || !saved}
-                      title={saved ? undefined : "Salve o texto antes de gerar o documento"}
+                      disabled={savingType !== null}
+                      title="Sem texto salvo, o documento sai pré-preenchido com as tabelas em branco"
                       aria-label={`Gerar documentos do relatório ${label}`}
                       onClick={() => handleGenerate(type)}
                     >

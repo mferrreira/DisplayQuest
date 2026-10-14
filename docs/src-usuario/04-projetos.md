@@ -176,8 +176,8 @@ O Relatório Parcial tem as linhas de seção no texto, e a linha do tipo traz o
 **Gerar DOCX** gera um documento oficial por pessoa da lista de membros com **Situação do vínculo** **Ativo** — o relatório é o relatório do estudante, e cada estudante tem o seu documento. O período escrito no documento é o período do projeto, cortado no dia da geração.
 :::
 
-::: limite titulo="Gerar DOCX exige texto salvo"
-Sem texto salvo, **Gerar DOCX** fica desabilitado, e a dica diz *"Salve o texto antes de gerar o documento"*. Se o projeto não tem membro ativo, o sistema responde *"O projeto não tem membros ativos — o relatório é gerado um documento por membro"*.
+::: nota titulo="Gerar DOCX não exige texto salvo"
+Sem texto salvo, **Gerar DOCX** gera o documento **pré-preenchido**: cabeçalho, período, pessoas e caixas de tipo certos, e as três tabelas em branco para escrever à mão. Com texto salvo, as tabelas saem com o texto. Se o projeto não tem membro ativo, o sistema responde *"O projeto não tem membros ativos — o relatório é gerado um documento por membro"*.
 :::
 
 ::: nota titulo="Quem edita os relatórios técnicos"
