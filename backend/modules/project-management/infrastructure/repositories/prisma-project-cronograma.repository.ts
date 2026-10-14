@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/database/prisma"
 import type {
+  ActivityApprovalFields,
   ActivityRequestFields,
   NewProjectActivityInput,
   NewProjectGoalInput,
@@ -140,6 +141,11 @@ export function createPrismaProjectCronogramaRepository(): ProjectCronogramaPort
     },
 
     async requestActivity(id: number, fields: ActivityRequestFields) {
+      const row = await prisma.project_activities.update({ where: { id }, data: fields })
+      return toActivityRecord(row)
+    },
+
+    async approveActivity(id: number, fields: ActivityApprovalFields) {
       const row = await prisma.project_activities.update({ where: { id }, data: fields })
       return toActivityRecord(row)
     },

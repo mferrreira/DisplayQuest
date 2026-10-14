@@ -123,6 +123,7 @@ export class CompleteTaskUseCase {
         userId,
         command.taskId,
         pointsToAward,
+        task.projectId ?? null,
       )
 
       return {
@@ -203,6 +204,7 @@ export class CompleteTaskUseCase {
         userId,
         command.taskId,
         pointsToAward,
+        workingTask.projectId ?? null,
       )
     }
 

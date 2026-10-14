@@ -28,6 +28,7 @@ import { useToast } from "@/contexts/use-toast"
 import { useAuth } from "@/contexts/auth-context"
 import {
   ACTIVITY_MIN_MONTH_MESSAGE,
+  canActorApproveActivityCompletionDecision,
   canActorRequestActivityCompletionDecision,
   monthColumnLabel,
   nextCronogramaOrder,
@@ -175,6 +176,13 @@ export function ProjectCronogramaPanel({ projectId, canManage, leaderId }: Proje
     leaderId ?? null,
     user ? memberRolesById.get(user.id) ?? null : null,
   )
+
+  // O gate de ABRIR a linha é o par "pedir OU aprovar" (DEC-76/77): o global manager aprova
+  // e por isso também abre o diálogo; a auto-aprovação (GERENTE não aprova o que pediu) é da
+  // MESMA função do domínio, por linha.
+  const canApproveRow = (row: CronogramaActivityRow) =>
+    canActorApproveActivityCompletionDecision(user?.id ?? -1, user?.roles ?? [], row.requestedBy ?? null)
+  const canOpenCompletion = (row: CronogramaActivityRow) => canRequestCompletion || canApproveRow(row)
 
   function handleRequested(updated: ProjectActivity) {
     setActivities((current) =>
@@ -466,7 +474,7 @@ export function ProjectCronogramaPanel({ projectId, canManage, leaderId }: Proje
           onActivityChange={handleActivityChange}
           onToggleMonth={handleToggleMonth}
           onDeleteActivity={handleDeleteActivity}
-          canRequestCompletion={canRequestCompletion}
+          canOpenCompletion={canOpenCompletion}
           onOpenCompletion={(row) => row.id !== null && setCompletionActivity(row)}
         />
 
@@ -476,6 +484,7 @@ export function ProjectCronogramaPanel({ projectId, canManage, leaderId }: Proje
             activity={completionActivity}
             members={members}
             canRequest={canRequestCompletion}
+            canApprove={canApproveRow(completionActivity)}
             onOpenChange={(open) => {
               if (!open) setCompletionActivity(null)
             }}

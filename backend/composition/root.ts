@@ -6,6 +6,8 @@ import { createNotificationsModule } from "@/backend/modules/notifications"
 import { NotificationsReportPublisher } from "@/backend/modules/reporting/infrastructure/publishers/notifications-report-publisher"
 import { createProjectMembershipModule } from "@/backend/modules/project-membership"
 import { createProjectManagementModule } from "@/backend/modules/project-management"
+import { createGamificationActivityCompletionAward } from "@/backend/modules/project-management/infrastructure/adapters/gamification-activity-completion-award"
+import { createPrismaProjectRepository } from "@/backend/modules/project-management/infrastructure/repositories/prisma-project.repository"
 import { createReportingModule } from "@/backend/modules/reporting"
 import { createStoreModule } from "@/backend/modules/store"
 import { createTaskManagementModule } from "@/backend/modules/task-management"
@@ -35,12 +37,30 @@ export function createBackendComposition(): BackendComposition {
   const gamification = createGamificationModule()
   const userManagement = createUserManagementModule()
 
+  // V5-7b (DEC-21/63/74): o adaptador de `projects` é compartilhado — o módulo de projeto o
+  // usa, e o publicador de conclusão de tarefa o usa para incrementar `projects.points`. O
+  // piso 0 (DEC-74) é a escrita congelada dele e mora num lugar só; o módulo de tarefa só
+  // conhece a porta local `TaskProjectPointsPort`, satisfeita estruturalmente.
+  const projectsRepository = createPrismaProjectRepository()
+
   const taskManagement = createTaskManagementModule({
     notifications,
-    events: createTaskProgressEvents({ awards: gamification }),
+    events: createTaskProgressEvents({
+      awards: gamification,
+      projectPoints: {
+        incrementProjectPoints: (projectId, delta) => projectsRepository.incrementPoints(projectId, delta),
+      },
+    }),
   })
 
-  const projectManagement = createProjectManagementModule()
+  // V5-7b (DEC-21): o prêmio da atividade aprovada sai do módulo de projeto por PORTA LOCAL
+  // (`ActivityCompletionAwardPort`); quem credita é o gamification, injetado AQUI (RG-04).
+  const projectManagement = createProjectManagementModule({
+    ports: {
+      projects: projectsRepository,
+      activityAwards: createGamificationActivityCompletionAward(gamification),
+    },
+  })
 
   const projectMembership = createProjectMembershipModule()
 

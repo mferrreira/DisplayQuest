@@ -79,6 +79,13 @@ export interface ActivityRequestFields {
   requestedAt: Date
 }
 
+/** Escrita da fase de aprovar (V5-7b, DEC-76): status + quem aprovou + quando. */
+export interface ActivityApprovalFields {
+  status: string
+  approvedBy: number
+  approvedAt: Date
+}
+
 export interface ProjectCronogramaPort {
   listGoals(projectId: number): Promise<ProjectGoalRecord[]>
   findGoalById(id: number): Promise<ProjectGoalRecord | null>
@@ -91,5 +98,6 @@ export interface ProjectCronogramaPort {
   createActivity(input: NewProjectActivityInput): Promise<ProjectActivityRecord>
   updateActivity(id: number, fields: ProjectActivityUpdateFields): Promise<ProjectActivityRecord>
   requestActivity(id: number, fields: ActivityRequestFields): Promise<ProjectActivityRecord>
+  approveActivity(id: number, fields: ActivityApprovalFields): Promise<ProjectActivityRecord>
   deleteActivity(id: number): Promise<void>
 }

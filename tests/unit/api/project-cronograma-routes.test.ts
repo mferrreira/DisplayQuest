@@ -143,6 +143,7 @@ vi.mock("@/backend/composition/root", () => {
     },
     update: notUsed("projects.update"),
     delete: notUsed("projects.delete"),
+    incrementPoints: notUsed("projects.incrementPoints"),
   };
 
   const memberships: ProjectManagementMembershipPort = {
@@ -156,6 +157,7 @@ vi.mock("@/backend/composition/root", () => {
     async createMembership() {},
     updateMembershipRoles: notUsed("memberships.updateMembershipRoles"),
     listMembersWithUser: notUsed("memberships.listMembersWithUser"),
+    listActiveMemberUserIds: notUsed("memberships.listActiveMemberUserIds"),
   };
 
   const actors: ProjectActorsPort = {
@@ -220,6 +222,7 @@ vi.mock("@/backend/composition/root", () => {
     async deleteActivity(id: number) {
       mocks.activities.delete(id);
     },
+    approveActivity: notUsed("cronograma.approveActivity"),
   };
 
   const hours: ProjectHoursPort = { sumCompletedSeconds: notUsed("hours.sumCompletedSeconds") };

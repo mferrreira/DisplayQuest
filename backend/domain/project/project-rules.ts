@@ -39,6 +39,15 @@ export const PROJECT_MANAGER_MEMBERSHIP_ROLES: string[] = ["COORDENADOR", "GEREN
 /** Statuses deleteProject accepts (project-management.gateway.ts:151). */
 export const DELETABLE_PROJECT_STATUSES: string[] = ["active", "archived", "on_hold"];
 
+/**
+ * DEC-74: `projects.points` tem PISO 0 na escrita do saldo — diferença deliberada em
+ * relação a `users.points`, que continua sem piso (DEC-39). O delta pode ser negativo
+ * (prêmio de tarefa atrasada credita negativo); o saldo do projeto não passa de zero.
+ */
+export function projectPointsBalance(current: number, delta: number): number {
+  return Math.max(0, current + delta)
+}
+
 /** Volunteer-stats audience (project-management.gateway.ts:173-175). */
 export function isProjectVolunteerRole(roles: string[] | undefined | null): boolean {
   return Boolean(roles?.includes("VOLUNTARIO") || roles?.includes("COLABORADOR"));

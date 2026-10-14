@@ -60,5 +60,14 @@ export function createPrismaProjectManagementMembershipRepository(): ProjectMana
         }),
       )
     },
+    async listActiveMemberUserIds(projectId) {
+      // DEC-149: `situacao` nunca é nula e default ATIVO; INATIVO fica fora da conta.
+      const rows = await prisma.project_members.findMany({
+        where: { projectId, situacao: "ATIVO" },
+        select: { userId: true },
+        orderBy: { joinedAt: "asc" },
+      })
+      return rows.map((row) => row.userId)
+    },
   }
 }

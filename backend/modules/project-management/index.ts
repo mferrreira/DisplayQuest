@@ -31,11 +31,14 @@ import { AddActivityFileUseCase } from "@/backend/modules/project-management/app
 import { RemoveActivityFileUseCase } from "@/backend/modules/project-management/application/use-cases/remove-activity-file.use-case"
 import { AssertCanRequestActivityCompletionUseCase } from "@/backend/modules/project-management/application/use-cases/assert-can-request-activity-completion.use-case"
 import { RequestActivityCompletionUseCase } from "@/backend/modules/project-management/application/use-cases/request-activity-completion.use-case"
+import { ApproveActivityCompletionUseCase } from "@/backend/modules/project-management/application/use-cases/approve-activity-completion.use-case"
 import type { ProjectActorsPort } from "@/backend/modules/project-management/application/ports/project-actors.port"
 import type { ProjectAttachmentsPort } from "@/backend/modules/project-management/application/ports/project-attachments.repository"
 import type { ProjectCronogramaPort } from "@/backend/modules/project-management/application/ports/project-cronograma.repository"
 import type { ProjectActivityFilesPort } from "@/backend/modules/project-management/application/ports/project-activity-files.repository"
 import type { ActivityTasksPort } from "@/backend/modules/project-management/application/ports/activity-tasks.port"
+import type { ActivityEconomyTasksPort } from "@/backend/modules/project-management/application/ports/activity-economy-tasks.port"
+import type { ActivityCompletionAwardPort } from "@/backend/modules/project-management/application/ports/activity-completion-award.port"
 import type { ProjectDeliverablesPort } from "@/backend/modules/project-management/application/ports/project-deliverables.repository"
 import type { ProjectHoursPort } from "@/backend/modules/project-management/application/ports/project-hours.port"
 import type { ProjectManagementMembershipPort } from "@/backend/modules/project-management/application/ports/project-membership.repository"
@@ -46,6 +49,8 @@ import { createPrismaProjectDeliverablesRepository } from "@/backend/modules/pro
 import { createPrismaProjectCronogramaRepository } from "@/backend/modules/project-management/infrastructure/repositories/prisma-project-cronograma.repository"
 import { createPrismaProjectActivityFilesRepository } from "@/backend/modules/project-management/infrastructure/repositories/prisma-project-activity-files.repository"
 import { createPrismaActivityTasksPort } from "@/backend/modules/project-management/infrastructure/repositories/prisma-activity-tasks.port"
+import { createPrismaActivityEconomyTasksPort } from "@/backend/modules/project-management/infrastructure/repositories/prisma-activity-economy-tasks.port"
+import { createNoOpActivityCompletionAward } from "@/backend/modules/project-management/infrastructure/adapters/gamification-activity-completion-award"
 import { createPrismaProjectHoursPort } from "@/backend/modules/project-management/infrastructure/repositories/prisma-project-hours.port"
 import { createPrismaProjectManagementMembershipRepository } from "@/backend/modules/project-management/infrastructure/repositories/prisma-project-membership.repository"
 import { createPrismaProjectRepository } from "@/backend/modules/project-management/infrastructure/repositories/prisma-project.repository"
@@ -104,6 +109,8 @@ export class ProjectManagementModule {
   readonly removeActivityFile: UseCaseExecute<RemoveActivityFileUseCase>
   readonly assertCanRequestActivityCompletion: UseCaseExecute<AssertCanRequestActivityCompletionUseCase>
   readonly requestActivityCompletion: UseCaseExecute<RequestActivityCompletionUseCase>
+  /** V5-7b (DEC-76/77): a fase 2 — aprovar, creditar a distribuição, subir `projects.points`. */
+  readonly approveActivityCompletion: UseCaseExecute<ApproveActivityCompletionUseCase>
 
   constructor(
     private readonly listProjectsForActorUseCase: ListProjectsForActorUseCase,
@@ -139,6 +146,7 @@ export class ProjectManagementModule {
     private readonly removeActivityFileUseCase: RemoveActivityFileUseCase,
     private readonly assertCanRequestActivityCompletionUseCase: AssertCanRequestActivityCompletionUseCase,
     private readonly requestActivityCompletionUseCase: RequestActivityCompletionUseCase,
+    private readonly approveActivityCompletionUseCase: ApproveActivityCompletionUseCase,
   ) {
     this.listProjectsForActor = this.listProjectsForActorUseCase.execute.bind(this.listProjectsForActorUseCase)
     this.getProjectById = this.getProjectByIdUseCase.execute.bind(this.getProjectByIdUseCase)
@@ -175,6 +183,7 @@ export class ProjectManagementModule {
       this.assertCanRequestActivityCompletionUseCase,
     )
     this.requestActivityCompletion = this.requestActivityCompletionUseCase.execute.bind(this.requestActivityCompletionUseCase)
+    this.approveActivityCompletion = this.approveActivityCompletionUseCase.execute.bind(this.approveActivityCompletionUseCase)
   }
 }
 
@@ -188,6 +197,10 @@ export interface ProjectManagementModulePorts {
   cronograma: ProjectCronogramaPort
   activityFiles: ProjectActivityFilesPort
   tasks: ActivityTasksPort
+  /** V5-7b (DEC-104/163): matéria-prima da atribuição (tasks concluídas do projeto). */
+  economyTasks: ActivityEconomyTasksPort
+  /** V5-7b (DEC-21): quem credita o prêmio. O composition root injeta gamification. */
+  activityAwards: ActivityCompletionAwardPort
 }
 
 export interface ProjectManagementModuleFactoryOptions {
@@ -205,6 +218,8 @@ export function createProjectManagementModule(options: ProjectManagementModuleFa
     cronograma: options.ports?.cronograma ?? createPrismaProjectCronogramaRepository(),
     activityFiles: options.ports?.activityFiles ?? createPrismaProjectActivityFilesRepository(),
     tasks: options.ports?.tasks ?? createPrismaActivityTasksPort(),
+    economyTasks: options.ports?.economyTasks ?? createPrismaActivityEconomyTasksPort(),
+    activityAwards: options.ports?.activityAwards ?? createNoOpActivityCompletionAward(),
   }
 
   return new ProjectManagementModule(
@@ -345,6 +360,13 @@ export function createProjectManagementModule(options: ProjectManagementModuleFa
       files: ports.activityFiles,
       tasks: ports.tasks,
       memberships: ports.memberships,
+    }),
+    new ApproveActivityCompletionUseCase({
+      projects: ports.projects,
+      cronograma: ports.cronograma,
+      memberships: ports.memberships,
+      economyTasks: ports.economyTasks,
+      awards: ports.activityAwards,
     }),
   )
 }

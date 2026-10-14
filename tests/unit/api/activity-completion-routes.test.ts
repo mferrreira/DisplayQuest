@@ -21,12 +21,15 @@ import { NextRequest } from "next/server";
 
 import { createIdentityAccessModule } from "@/backend/modules/identity-access";
 import { createProjectManagementModule } from "@/backend/modules/project-management";
+import { projectPointsBalance } from "@/backend/domain";
 import type { Role } from "@/backend/domain";
 import type {
   ActivityFileRecord,
   ProjectActivityFilesPort,
 } from "@/backend/modules/project-management/application/ports/project-activity-files.repository";
 import type { ActivityTasksPort } from "@/backend/modules/project-management/application/ports/activity-tasks.port";
+import type { ActivityEconomyTasksPort } from "@/backend/modules/project-management/application/ports/activity-economy-tasks.port";
+import type { ActivityCompletionAwardPort } from "@/backend/modules/project-management/application/ports/activity-completion-award.port";
 import type {
   ProjectActivityRecord,
   ProjectCronogramaPort,
@@ -48,6 +51,13 @@ const mocks = vi.hoisted(() => ({
   puts: [] as Array<{ key: string; contentType: string; bytes: number }>,
   removes: [] as string[],
   requestWrites: [] as Array<{ id: number; status: string; requestedBy: number }>,
+  // V5-7b — economia da aprovação
+  activeMembers: new Map<number, number[]>(),
+  completedTasks: [] as Array<{ taskId: number; assigneeIds: number[]; completerIds: number[] }>,
+  awardCalls: [] as Array<{ userId: number; activityId: number; points: number }>,
+  awardedKeys: new Set<string>(),
+  pointWrites: [] as Array<{ projectId: number; delta: number; next: number }>,
+  approveWrites: [] as Array<{ id: number; status: string; approvedBy: number }>,
   failFileCreate: false,
   bucketConfigured: true,
   nextId: 100,
@@ -117,6 +127,16 @@ vi.mock("@/backend/composition/root", () => {
     create: notUsed("projects.create"),
     createWithCronograma: notUsed("projects.createWithCronograma"),
     update: notUsed("projects.update"),
+    async incrementPoints(projectId, delta) {
+      // O duplo aplica a MESMA função pura do adaptador real (DEC-90): o piso 0 da DEC-74 é
+      // a escrita congelada, não uma reimplementação do teste.
+      const current = mocks.projects.get(projectId);
+      if (!current) throw new Error("projeto ausente no duplo");
+      const next = projectPointsBalance(current.points ?? 0, delta);
+      mocks.projects.set(projectId, { ...current, points: next });
+      mocks.pointWrites.push({ projectId, delta, next });
+      return next;
+    },
     delete: notUsed("projects.delete"),
   };
 
@@ -127,6 +147,9 @@ vi.mock("@/backend/composition/root", () => {
     createMembership: notUsed("memberships.createMembership"),
     updateMembershipRoles: notUsed("memberships.updateMembershipRoles"),
     listMembersWithUser: notUsed("memberships.listMembersWithUser"),
+    async listActiveMemberUserIds(projectId) {
+      return mocks.activeMembers.get(projectId) ?? [];
+    },
   };
 
   const cronograma: ProjectCronogramaPort = {
@@ -148,6 +171,14 @@ vi.mock("@/backend/composition/root", () => {
       const current = mocks.activities.get(id);
       if (!current) throw new Error("atividade ausente no duplo");
       const next = { ...current, status: fields.status, requestedBy: fields.requestedBy, requestedAt: fields.requestedAt.toISOString() };
+      mocks.activities.set(id, next);
+      return next;
+    },
+    async approveActivity(id, fields) {
+      mocks.approveWrites.push({ id, status: fields.status, approvedBy: fields.approvedBy });
+      const current = mocks.activities.get(id);
+      if (!current) throw new Error("atividade ausente no duplo");
+      const next = { ...current, status: fields.status, approvedBy: fields.approvedBy, approvedAt: fields.approvedAt.toISOString() };
       mocks.activities.set(id, next);
       return next;
     },
@@ -192,11 +223,31 @@ vi.mock("@/backend/composition/root", () => {
     },
   };
 
+  // V5-7b — matéria-prima da atribuição e creditação. O duplo do award espelha a
+  // idempotência por (usuário, atividade) do awardHistory: segunda chamada credita 0.
+  const economyTasks: ActivityEconomyTasksPort = {
+    async listCompletedTaskCredits() {
+      return mocks.completedTasks;
+    },
+  };
+
+  const activityAwards: ActivityCompletionAwardPort = {
+    async awardActivityCompletion(input) {
+      const key = `${input.userId}:${input.activityId}`;
+      if (mocks.awardedKeys.has(key)) {
+        return { pointsAwarded: 0 };
+      }
+      mocks.awardedKeys.add(key);
+      mocks.awardCalls.push(input);
+      return { pointsAwarded: input.points };
+    },
+  };
+
   return {
     getBackendComposition: () => ({
       identityAccess: createIdentityAccessModule(),
       projectManagement: createProjectManagementModule({
-        ports: { projects, memberships, cronograma, activityFiles, tasks },
+        ports: { projects, memberships, cronograma, activityFiles, tasks, economyTasks, activityAwards },
       }),
     }),
   };
@@ -246,6 +297,7 @@ import {
 import { DELETE as DELETE_PROOF } from "@/app/api/projects/[id]/activities/[activityId]/files/[fileId]/route";
 import { GET as GET_PROOF_FILE } from "@/app/api/projects/[id]/activities/[activityId]/files/[fileId]/file/route";
 import { POST as REQUEST_COMPLETION } from "@/app/api/projects/[id]/activities/[activityId]/request-completion/route";
+import { POST as APPROVE_COMPLETION } from "@/app/api/projects/[id]/activities/[activityId]/approve-completion/route";
 
 const PDF_BYTES = new Uint8Array([..."%PDF-1.7\n".split("").map((c) => c.charCodeAt(0))]);
 const PNG_BYTES = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
@@ -283,6 +335,10 @@ beforeEach(() => {
     [3, activityRow(3, 10, { status: "DONE" })],
     [4, activityRow(4, 10)],
     [5, activityRow(5, 20)],
+    // V5-7b: prazo em 2099 — qualquer "hoje" do teste cai no ramo antecipado (×1,5), e o
+    // prêmio sai determinístico sem relógio injetável na rota (a rota usa `new Date()`).
+    [6, activityRow(6, 10, { status: "COMPLETION_REQUESTED", requestedBy: 2, firstMonth: "2099-11", lastMonth: "2099-12" })],
+    [7, activityRow(7, 10, { status: "COMPLETION_REQUESTED", requestedBy: 1, firstMonth: "2099-11", lastMonth: "2099-12" })],
   ]);
   mocks.files = new Map<number, ActivityFileRecord>([
     [
@@ -300,6 +356,17 @@ beforeEach(() => {
     ],
   ]);
   mocks.openTasks = new Map<number, number>([[4, 2]]);
+  // V5-7b: membros ATIVOS do projeto 10 e as tasks concluídas que a atribuição conta
+  // (créditos: 2 → 2 tasks, 3 → 1 task).
+  mocks.activeMembers = new Map<number, number[]>([[10, [2, 3]]]);
+  mocks.completedTasks = [
+    { taskId: 501, assigneeIds: [2], completerIds: [] },
+    { taskId: 502, assigneeIds: [2, 3], completerIds: [3] },
+  ];
+  mocks.awardCalls = [];
+  mocks.awardedKeys = new Set<string>();
+  mocks.pointWrites = [];
+  mocks.approveWrites = [];
   mocks.objects = new Map<string, { body: Uint8Array; contentType: string }>([
     ["projects/10/activities/1/files/parcial.pdf", { body: PDF_BYTES, contentType: "application/pdf" }],
   ]);
@@ -525,5 +592,103 @@ describe("POST request-completion — as recusas do fluxo (DEC-76/99/162)", () =
     login(["VOLUNTARIO"], 2);
     const response = await REQUEST_COMPLETION(postRequest("/x"), context({ id: "abc", activityId: "1" }));
     expect(response.status).toBe(400);
+  });
+});
+
+describe("aprovar conclusão — gate global, economia e saldo (V5-7b, DEC-76/77/103/104)", () => {
+  it("sem sessão: 401 antes de tudo", async () => {
+    const response = await APPROVE_COMPLETION(postRequest("/x"), context({ id: "10", activityId: "6" }));
+    expect(response.status).toBe(401);
+  });
+
+  it("COORDENADOR global sem membership aprova (é o lado dele, DEC-77) e a economia cai", async () => {
+    login(["COORDENADOR"], 1);
+    const response = await APPROVE_COMPLETION(postRequest("/x"), context({ id: "10", activityId: "6" }));
+    expect(response.status).toBe(200);
+    const body = await read(response);
+    expect(body.activity.status).toBe("DONE");
+    expect(body.activity.approvedBy).toBe(1);
+    // 2 meses marcados (nov–dez/2099) → base 200; aprovado muito antes do prazo → ×1,5 = 300.
+    expect(body.award).toBe(300);
+    // Créditos medidos no seed: membro 2 → 2 tasks, membro 3 → 1 task → 200/100 exatos.
+    expect(body.shares).toEqual([
+      { userId: 2, points: 200 },
+      { userId: 3, points: 100 },
+    ]);
+    expect(body.projectsPoints).toBe(300);
+    expect(mocks.pointWrites).toEqual([{ projectId: 10, delta: 300, next: 300 }]);
+    expect(mocks.approveWrites).toEqual([{ id: 6, status: "DONE", approvedBy: 1 }]);
+  });
+
+  it("GERENTE aprova solicitação alheia; o aprovador membro também entra na conta", async () => {
+    // Ator 3 é GERENTE global E membro do projeto 10 — aprova a atividade 2 e recebe sua parte.
+    login(["GERENTE"], 3);
+    const response = await APPROVE_COMPLETION(postRequest("/x"), context({ id: "10", activityId: "2" }));
+    expect(response.status).toBe(200);
+    const body = await read(response);
+    expect(body.activity.status).toBe("DONE");
+    // Atividade 2: abr–jun/2026, prazo 2026-06-30. "Hoje" (2026-10) está atrasado: −10%/dia
+    // estoura a base 300 e o piso 0 (DEC-74) fecha o prêmio em 0 — nada é creditado.
+    expect(body.award).toBe(0);
+    expect(body.shares).toEqual([]);
+    expect(mocks.awardCalls).toHaveLength(0);
+    expect(body.projectsPoints).toBe(0);
+  });
+
+  it("GERENTE não aprova o que ele mesmo pediu (DEC-77); COORDENADOR auto-aprova", async () => {
+    login(["GERENTE"], 1);
+    const denied = await APPROVE_COMPLETION(postRequest("/x"), context({ id: "10", activityId: "7" }));
+    expect(denied.status).toBe(403);
+    expect(mocks.approveWrites).toHaveLength(0);
+
+    login(["COORDENADOR"], 1);
+    const allowed = await APPROVE_COMPLETION(postRequest("/x"), context({ id: "10", activityId: "7" }));
+    expect(allowed.status).toBe(200);
+    expect(mocks.approveWrites).toHaveLength(1);
+  });
+
+  it("papel que não é global manager não aprova — nem líder, nem membro gestor", async () => {
+    login(["VOLUNTARIO"], 2);
+    const asVoluntario = await APPROVE_COMPLETION(postRequest("/x"), context({ id: "10", activityId: "6" }));
+    expect(asVoluntario.status).toBe(403);
+
+    // 3 é membro GERENTE_PROJETO via membership, mas sem papel global aqui.
+    login([], 3);
+    const asMemberOnly = await APPROVE_COMPLETION(postRequest("/x"), context({ id: "10", activityId: "6" }));
+    expect(asMemberOnly.status).toBe(403);
+    expect(mocks.approveWrites).toHaveLength(0);
+  });
+
+  it("409 por status com a frase do domínio — ainda não solicitada e já concluída", async () => {
+    login(["COORDENADOR"], 1);
+
+    const open = await APPROVE_COMPLETION(postRequest("/x"), context({ id: "10", activityId: "1" }));
+    expect(open.status).toBe(409);
+    expect(await read(open)).toMatchObject({ error: "A conclusão desta atividade ainda não foi solicitada" });
+
+    const done = await APPROVE_COMPLETION(postRequest("/x"), context({ id: "10", activityId: "3" }));
+    expect(done.status).toBe(409);
+    expect(await read(done)).toMatchObject({ error: "Esta atividade já foi concluída" });
+
+    expect(mocks.approveWrites).toHaveLength(0);
+  });
+
+  it("atividade de outro projeto: 404 e nada é creditado", async () => {
+    login(["COORDENADOR"], 1);
+    const response = await APPROVE_COMPLETION(postRequest("/x"), context({ id: "20", activityId: "6" }));
+    expect(response.status).toBe(404);
+    expect(mocks.awardCalls).toHaveLength(0);
+    expect(mocks.pointWrites).toHaveLength(0);
+  });
+
+  it("reexecução bate no 409 do status — a economia não roda duas vezes", async () => {
+    login(["COORDENADOR"], 1);
+    const first = await APPROVE_COMPLETION(postRequest("/x"), context({ id: "10", activityId: "6" }));
+    expect(first.status).toBe(200);
+    const second = await APPROVE_COMPLETION(postRequest("/x"), context({ id: "10", activityId: "6" }));
+    expect(second.status).toBe(409);
+    // O primeiro crédito aconteceu uma vez; o segundo pedido nem chegou à economia.
+    expect(mocks.awardCalls).toHaveLength(2);
+    expect(mocks.pointWrites).toHaveLength(1);
   });
 });

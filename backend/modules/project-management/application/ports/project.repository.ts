@@ -71,6 +71,12 @@ export interface ProjectRepositoryPort {
   ): Promise<CreatedProjectWithCronograma>
   /** Full-record update; createdAt/createdBy are NOT written (frozen from the repository). */
   update(record: ProjectRecord): Promise<ProjectRecord>
+  /**
+   * V5-7b (DEC-63/74): incremento do saldo de projeto com PISO 0 na escrita — a regra é a
+   * função pura `projectPointsBalance`, aplicada pelo adaptador (escrita congelada, mesma
+   * natureza do incremento atômico do awardHistory). Devolve o saldo novo.
+   */
+  incrementPoints(projectId: number, delta: number): Promise<number>
   delete(id: number): Promise<void>
 }
 

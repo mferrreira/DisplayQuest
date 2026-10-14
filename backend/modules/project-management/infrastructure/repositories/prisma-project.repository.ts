@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/database/prisma"
+import { projectPointsBalance } from "@/backend/domain"
 import type { ProjectMemberSummary } from "@/backend/domain"
 import type { NewProjectInput, ProjectRecord, ProjectRepositoryPort } from "@/backend/modules/project-management/application/ports/project.repository"
 
@@ -175,6 +176,17 @@ export function createPrismaProjectRepository(): ProjectRepositoryPort {
         include: includeOptions,
       })
       return toRecord(row as unknown as ProjectRow)
+    },
+    async incrementPoints(projectId: number, delta: number) {
+      // DEC-74: o piso é a função pura do domínio aplicada na escrita congelada — o delta
+      // pode ser negativo (prêmio de tarefa atrasada) e o saldo não passa de zero.
+      const current = await prisma.projects.findUnique({ where: { id: projectId }, select: { points: true } })
+      if (!current) {
+        throw new Error(`projeto ${projectId} ausente para incrementar pontos`)
+      }
+      const next = projectPointsBalance(current.points, delta)
+      await prisma.projects.update({ where: { id: projectId }, data: { points: next } })
+      return next
     },
     async delete(id) {
       await prisma.projects.delete({ where: { id } })

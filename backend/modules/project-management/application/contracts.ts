@@ -151,6 +151,19 @@ export interface RequestActivityCompletionCommand {
   now: Date
 }
 
+/**
+ * V5-7b (DEC-76/77): a fase de aprovar. `actorRoles` são os papéis GLOBAIS do ator — o gate
+ * da aprovação é `GLOBAL_PROJECT_MANAGERS` (não membership) e a auto-aprovação só COORDENADOR
+ * precisa do papel para decidir.
+ */
+export interface ApproveActivityCompletionCommand {
+  projectId: number
+  activityId: number
+  actorId: number
+  actorRoles: Role[]
+  now: Date
+}
+
 // ---------------------------------------------------------------------------
 // V5-2d (DEC-102) — imagem do projeto (logo/banner) no bucket
 // ---------------------------------------------------------------------------

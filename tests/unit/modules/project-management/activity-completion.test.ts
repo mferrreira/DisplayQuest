@@ -138,6 +138,9 @@ class Fakes {
       async delete() {
         throw new Error("delete não deveria rodar neste arquivo");
       },
+      async incrementPoints() {
+        throw new Error("incrementPoints não deveria rodar neste arquivo");
+      },
     };
   }
 
@@ -195,6 +198,9 @@ class Fakes {
       async deleteActivity() {
         throw new Error("deleteActivity não deveria rodar neste arquivo");
       },
+      async approveActivity() {
+        throw new Error("approveActivity não deveria rodar neste arquivo");
+      },
     };
   }
 
@@ -250,6 +256,9 @@ class Fakes {
       },
       async listMembersWithUser() {
         return [];
+      },
+      async listActiveMemberUserIds() {
+        throw new Error("listActiveMemberUserIds não deveria rodar neste arquivo");
       },
     };
   }

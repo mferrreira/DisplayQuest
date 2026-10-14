@@ -117,6 +117,7 @@ vi.mock("@/backend/composition/root", () => {
       return next;
     },
     delete: notUsed("projects.delete"),
+    incrementPoints: notUsed("projects.incrementPoints"),
   };
 
   const memberships: ProjectManagementMembershipPort = {
@@ -126,6 +127,7 @@ vi.mock("@/backend/composition/root", () => {
     createMembership: notUsed("memberships.createMembership"),
     updateMembershipRoles: notUsed("memberships.updateMembershipRoles"),
     listMembersWithUser: notUsed("memberships.listMembersWithUser"),
+    listActiveMemberUserIds: notUsed("memberships.listActiveMemberUserIds"),
   };
 
   const actors: ProjectActorsPort = {

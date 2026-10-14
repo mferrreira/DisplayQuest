@@ -106,11 +106,13 @@ export interface CronogramaEditorProps {
   onToggleMonth: (activity: CronogramaActivityRow, monthKey: string) => void
   onDeleteActivity: (activity: CronogramaActivityRow) => void
   /**
-   * V5-7a (DEC-76/162): quem pode PEDIR a conclusão — líder OU membership de gestor. É porta
-   * diferente de `canManage` de propósito (o global sem membership gerencia a grade e não pede;
-   * DEC-77 o coloca do lado que aprova), e quem decide é o servidor: a tela só mostra o botão.
+   * V5-7a/7b (DEC-76/162): quem pode ABRIR o fluxo da linha — pedir (líder OU membership de
+   * gestor) OU aprovar (global manager, DEC-77). São portas diferentes de `canManage` de
+   * propósito: o global sem membership gerencia a grade, não pede, mas aprova. A predicate é
+   * calculada no painel com as funções do domínio (DEC-92); quem decide de verdade é o
+   * servidor, na hora do pedido/aprovação.
    */
-  canRequestCompletion?: boolean
+  canOpenCompletion?: (activity: CronogramaActivityRow) => boolean
   onOpenCompletion?: (activity: CronogramaActivityRow) => void
 }
 
@@ -128,7 +130,7 @@ export function CronogramaEditor({
   onActivityChange,
   onToggleMonth,
   onDeleteActivity,
-  canRequestCompletion = false,
+  canOpenCompletion,
   onOpenCompletion,
 }: CronogramaEditorProps) {
   const currentMonth = today.slice(0, 7)
@@ -322,7 +324,7 @@ export function CronogramaEditor({
 
                       <TableCell>
                         <div className="flex items-center gap-1">
-                          {canRequestCompletion && activity.id !== null && onOpenCompletion ? (
+                          {canOpenCompletion?.(activity) && activity.id !== null && onOpenCompletion ? (
                             <Button
                               type="button"
                               variant="ghost"

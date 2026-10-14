@@ -30,6 +30,7 @@ import { useToast } from "@/contexts/use-toast"
 import { ACTIVITY_NO_PROOF_MESSAGE, ACTIVITY_STATUS_LABELS, type ActivityStatus } from "@/backend/domain"
 import { formatAttachmentSize } from "@/lib/api/project-files"
 import {
+  approveActivityCompletion,
   deleteActivityProof,
   listActivityProofs,
   requestActivityCompletion,
@@ -58,6 +59,8 @@ interface ActivityCompletionDialogProps {
   activity: CronogramaActivityRow
   members: CronogramaMemberOption[]
   canRequest: boolean
+  /** V5-7b (DEC-76/77): global manager que pode aprovar ESTA linha (auto-aprovação já resolvida). */
+  canApprove: boolean
   onOpenChange: (open: boolean) => void
   /** A atividade volta do servidor já na fase nova; o painel escreve no lugar da linha. */
   onRequested: (activity: ProjectActivity) => void
@@ -68,6 +71,7 @@ export function ActivityCompletionDialog({
   activity,
   members,
   canRequest,
+  canApprove,
   onOpenChange,
   onRequested,
 }: ActivityCompletionDialogProps) {
@@ -161,10 +165,36 @@ export function ActivityCompletionDialog({
 
   const status = activity.status ?? "OPEN"
   const requestable = status === "OPEN"
+  const approvable = status === "COMPLETION_REQUESTED"
   const requestedByName =
     activity.requestedBy !== null && activity.requestedBy !== undefined
       ? members.find((member) => member.id === activity.requestedBy)?.name
       : undefined
+
+  const handleApprove = async () => {
+    setBusy(true)
+    try {
+      const result = await approveActivityCompletion(projectId, activityId)
+      onRequested(result.activity)
+      onOpenChange(false)
+      // A tela mostra o número do servidor (R7): o prêmio distribuído, não um cálculo local.
+      toast({
+        title: "Atividade concluída",
+        description:
+          result.award > 0
+            ? `${result.award} pontos distribuídos entre os membros do projeto.`
+            : "Nenhum ponto distribuído — prêmio zerado pelo atraso (piso 0).",
+      })
+    } catch (error) {
+      toast({
+        title: "Ação não permitida",
+        description: error instanceof Error ? error.message : "Falha ao aprovar a conclusão",
+        variant: "destructive",
+      })
+    } finally {
+      setBusy(false)
+    }
+  }
 
   return (
     <Dialog open onOpenChange={onOpenChange}>
@@ -274,6 +304,17 @@ export function ActivityCompletionDialog({
               <p className="text-xs text-muted-foreground">{ACTIVITY_NO_PROOF_MESSAGE}.</p>
               <Button type="button" disabled={busy} onClick={() => void handleRequest()}>
                 Solicitar conclusão
+              </Button>
+            </div>
+          ) : null}
+
+          {canApprove && approvable ? (
+            <div className="grid gap-2">
+              <p className="text-xs text-muted-foreground">
+                Aprovar conclui a atividade e distribui o prêmio entre os membros ativos do projeto.
+              </p>
+              <Button type="button" disabled={busy} onClick={() => void handleApprove()}>
+                Aprovar conclusão
               </Button>
             </div>
           ) : null}

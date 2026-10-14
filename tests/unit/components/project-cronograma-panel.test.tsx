@@ -31,17 +31,23 @@ import { ProjectCronogramaPanel } from "@/components/features/project-cronograma
 import {
   ACTIVITY_MIN_MONTH_MESSAGE,
   ACTIVITY_NO_PROOF_MESSAGE,
+  activityApproveConflictMessage,
+  activityCompletionAward,
   activityOpenTasksMessage,
   activityPeriod,
   activityRequestConflictMessage,
   activityReward,
+  canActorApproveActivityCompletionDecision,
   cronogramaMonthColumns,
+  distributeActivityAward,
   isActivityCurrent,
+  memberTaskCredits,
   monthKeysBetween,
   normalizeActivityDescription,
   normalizeGoalDescription,
   normalizeGoalTarget,
   toggleActivityMonthRange,
+  type Role,
 } from "@/backend/domain";
 
 const PROJECT = 7;
@@ -51,7 +57,7 @@ const END_DATE = "2026-08-31";
 
 /** `useAuth` dobrado: o painel decide o botão do fluxo com a sessão (DEC-92). */
 const authMocks = vi.hoisted(() => ({
-  user: null as null | { id: number; name: string; email: string; roles: string[] },
+  user: null as null | { id: number; name: string; email: string; roles: Role[] },
 }));
 
 vi.mock("@/contexts/auth-context", () => ({
@@ -78,6 +84,8 @@ interface ActivityRow {
   status: string;
   requestedBy: number | null;
   requestedAt: string | null;
+  approvedBy: number | null;
+  approvedAt: string | null;
 }
 
 interface ProofRow {
@@ -96,18 +104,20 @@ interface RecordedRequest {
   json?: Record<string, unknown>;
 }
 
-const mocks = {
-  goals: [] as GoalRow[],
-  activities: [] as ActivityRow[],
-  memberIds: [] as number[],
-  memberRoles: {} as Record<number, string[]>,
-  proofs: [] as ProofRow[],
-  /** Tarefas ABERTAS por atividade — a conta da trava DEC-99 no substituto. */
-  openTasks: {} as Record<number, number>,
-  requests: [] as RecordedRequest[],
-  refuseWrite: false,
-  nextId: 700,
-};
+  const mocks = {
+    goals: [] as GoalRow[],
+    activities: [] as ActivityRow[],
+    memberIds: [] as number[],
+    memberRoles: {} as Record<number, string[]>,
+    proofs: [] as ProofRow[],
+    /** Tarefas ABERTAS por atividade — a conta da trava DEC-99 no substituto. */
+    openTasks: {} as Record<number, number>,
+    /** Matéria-prima da atribuição (DEC-163) — a conta da aprovação no substituto. */
+    completedTasks: [] as Array<{ taskId: number; assigneeIds: number[]; completerIds: number[] }>,
+    requests: [] as RecordedRequest[],
+    refuseWrite: false,
+    nextId: 700,
+  };
 
 function resetStore() {
   mocks.goals = [
@@ -132,6 +142,8 @@ function resetStore() {
       status: "OPEN",
       requestedBy: null,
       requestedAt: null,
+      approvedBy: null,
+      approvedAt: null,
     },
     {
       id: 402,
@@ -144,6 +156,23 @@ function resetStore() {
       status: "OPEN",
       requestedBy: null,
       requestedAt: null,
+      approvedBy: null,
+      approvedAt: null,
+    },
+    // V5-7b: prazo em dez/2026 — "hoje" (15/10) está antecipado → ×1,5 determinístico.
+    {
+      id: 403,
+      projectId: PROJECT,
+      order: 3,
+      description: "Redação final",
+      responsibleId: 4,
+      firstMonth: "2026-11",
+      lastMonth: "2026-12",
+      status: "OPEN",
+      requestedBy: null,
+      requestedAt: null,
+      approvedBy: null,
+      approvedAt: null,
     },
   ];
   mocks.memberIds = [4];
@@ -160,6 +189,7 @@ function resetStore() {
     },
   ];
   mocks.openTasks = {};
+  mocks.completedTasks = [{ taskId: 601, assigneeIds: [4], completerIds: [] }];
   mocks.requests = [];
   mocks.refuseWrite = false;
   mocks.nextId = 700;
@@ -189,8 +219,6 @@ function monthColumns() {
 function activityPayload(activity: ActivityRow) {
   return {
     ...activity,
-    approvedBy: null,
-    approvedAt: null,
     months: monthKeysBetween(activity.firstMonth, activity.lastMonth),
     ...activityPeriod(activity.firstMonth, activity.lastMonth),
     reward: activityReward(activity.firstMonth, activity.lastMonth),
@@ -306,6 +334,45 @@ async function recordingFetch(input: unknown, init: RequestInit = {}) {
     return jsonResponse({ activity: activityPayload(activity) });
   }
 
+  if (resource === "activities" && sub === "approve-completion" && method === "POST") {
+    const activity = mocks.activities.find((row) => row.id === resourceId);
+    if (!activity) return jsonResponse({ error: "Atividade não encontrada" }, 404);
+    // Gate e recusa de status com as FUNÇÕES do domínio (DEC-90): global manager, GERENTE não
+    // aprova o que pediu (DEC-77), e o 409 tem a frase do status (DEC-162).
+    if (!canActorApproveActivityCompletionDecision(authMocks.user?.id ?? -1, authMocks.user?.roles ?? [], activity.requestedBy)) {
+      return jsonResponse(
+        { error: "Usuário não tem permissão para aprovar a conclusão desta atividade" },
+        403,
+      );
+    }
+    if (activity.status !== "COMPLETION_REQUESTED") {
+      return jsonResponse({ error: activityApproveConflictMessage(activity.status as never) }, 409);
+    }
+    // A economia do substituto é a do domínio (DEC-90): prêmio com o dia de hoje, atribuição e
+    // Hamilton sobre os membros ativos.
+    const award = activityCompletionAward({
+      firstMonth: activity.firstMonth,
+      lastMonth: activity.lastMonth,
+      approvedDay: TODAY,
+    });
+    const credits = memberTaskCredits(mocks.completedTasks);
+    const shares = distributeActivityAward(
+      award,
+      mocks.memberIds.map((userId) => ({ userId, completedTasks: credits.get(userId) ?? 0 })),
+    );
+    activity.status = "DONE";
+    activity.approvedBy = authMocks.user?.id ?? null;
+    activity.approvedAt = "2026-10-15T12:00:00.000Z";
+    return jsonResponse({
+      activity: activityPayload(activity),
+      award,
+      shares: [...shares.entries()]
+        .filter(([, points]) => points > 0)
+        .map(([userId, points]) => ({ userId, points })),
+      projectsPoints: award,
+    });
+  }
+
   if (resource === "activities") {
     if (method === "POST") {
       if (mocks.refuseWrite) return writeRefused();
@@ -323,6 +390,8 @@ async function recordingFetch(input: unknown, init: RequestInit = {}) {
         status: "OPEN",
         requestedBy: null,
         requestedAt: null,
+        approvedBy: null,
+        approvedAt: null,
       };
       mocks.activities.push(activity);
       return jsonResponse({ activity: activityPayload(activity) }, 201);
@@ -481,7 +550,8 @@ describe("painel de cronograma", () => {
     // Sem descrição não há POST: linha vazia poluiria o cronograma e o domínio recusa.
     expect(requestsFor("POST", "/activities")).toHaveLength(0);
 
-    const input = screen.getByLabelText("Descrição da atividade 3");
+    // A semente tem 3 linhas (401/402/403) — a linha nova nasce na ordem 4.
+    const input = screen.getByLabelText("Descrição da atividade 4");
     await user.type(input, "Análise dos resultados");
     await user.tab();
 
@@ -647,6 +717,78 @@ describe("painel de cronograma", () => {
       expect(await screen.findByText(activityOpenTasksMessage(2))).toBeInTheDocument();
       // A linha não mudou: a recusa não grava nada.
       expect(screen.queryByText("Conclusão solicitada")).not.toBeInTheDocument();
+    });
+  });
+
+  describe("aprovação da linha (V5-7b, DEC-76/77/103/104)", () => {
+    // Atividade 403 (nov–dez/2026): prazo 31/12/2026 — "hoje" (15/10) está antecipado ≥2 dias,
+    // então o prêmio do substituto é base 200 × 1,5 = 300, determinístico (DEC-103).
+    function seedProofFor403() {
+      mocks.proofs.push({
+        id: 502,
+        activityId: 403,
+        name: "rascunho.pdf",
+        contentType: "application/pdf",
+        size: 1024,
+        uploadedBy: 4,
+        uploadedAt: "2026-10-01T12:00:00.000Z",
+      });
+    }
+
+    it("COORDENADOR sem membership abre a linha pedida, aprova, e a linha vira 'Concluída'", async () => {
+      const user = userEvent.setup({ delay: null });
+      seedProofFor403();
+
+      // Fase 1 — membro gestor pede (DEC-76).
+      mocks.memberRoles = { 4: ["GERENTE_PROJETO"] };
+      const first = renderPanel(true, 99);
+      await screen.findByDisplayValue("Redação final");
+      await user.click(screen.getByRole("button", { name: "Conclusão da atividade 3" }));
+      await user.click(await screen.findByRole("button", { name: "Solicitar conclusão" }));
+      await waitFor(() => expect(requestsFor("POST", "/activities/403/request-completion")).toHaveLength(1));
+      first.unmount();
+
+      // Fase 2 — COORDENADOR global SEM membership: não pede (DEC-77), mas aprova — e por isso
+      // a linha abre para ele (o botão da linha obedece ao par "pedir OU aprovar").
+      authMocks.user = { id: 9, name: "Coordenador", email: "coord@lab.com", roles: ["COORDENADOR"] };
+      renderPanel(true, 99);
+      await screen.findByDisplayValue("Redação final");
+      await user.click(screen.getByRole("button", { name: "Conclusão da atividade 3" }));
+      await user.click(await screen.findByRole("button", { name: "Aprovar conclusão" }));
+
+      await waitFor(() => expect(requestsFor("POST", "/activities/403/approve-completion")).toHaveLength(1));
+      expect(await screen.findByText("Atividade concluída")).toBeInTheDocument();
+      // O número é o do servidor (R7): 200 × 1,5 = 300 distribuídos.
+      expect(screen.getByText("300 pontos distribuídos entre os membros do projeto.")).toBeInTheDocument();
+      // A linha escreveu no lugar: DONE tem rótulo próprio, e o diálogo fechou.
+      expect(screen.getByText("Concluída")).toBeInTheDocument();
+    });
+
+    it("GERENTE não aprova o que ele mesmo pediu — sem botão de aprovar no diálogo (DEC-77)", async () => {
+      const user = userEvent.setup({ delay: null });
+      seedProofFor403();
+      authMocks.user = { id: 4, name: "Gerente", email: "ger@lab.com", roles: ["GERENTE"] };
+      mocks.memberRoles = { 4: ["GERENTE_PROJETO"] };
+      renderPanel(true, 99);
+      await screen.findByDisplayValue("Redação final");
+
+      await user.click(screen.getByRole("button", { name: "Conclusão da atividade 3" }));
+      await user.click(await screen.findByRole("button", { name: "Solicitar conclusão" }));
+      await waitFor(() => expect(requestsFor("POST", "/activities/403/request-completion")).toHaveLength(1));
+
+      // Reabre a linha pedida por ele mesmo: a prova (única no diálogo) prova que reabriu, e o
+      // botão de aprovar não existe para quem pediu (a mesma função do domínio decide, DEC-92).
+      await user.click(screen.getByRole("button", { name: "Conclusão da atividade 3" }));
+      expect(await screen.findByText("rascunho.pdf")).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Aprovar conclusão" })).not.toBeInTheDocument();
+      expect(requestsFor("POST", "/activities/403/approve-completion")).toHaveLength(0);
+    });
+
+    it("quem não pede nem aprova não vê o botão da linha", async () => {
+      // VOLUNTARIO sem membership e sem papel global: nenhuma das duas portas (DEC-76/77).
+      renderPanel(true, 99);
+      await screen.findByDisplayValue("Redação final");
+      expect(screen.queryByRole("button", { name: "Conclusão da atividade 3" })).not.toBeInTheDocument();
     });
   });
 });

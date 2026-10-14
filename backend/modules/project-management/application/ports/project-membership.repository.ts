@@ -29,4 +29,10 @@ export interface ProjectManagementMembershipPort {
   updateMembershipRoles(membershipId: number, roles: Role[]): Promise<void>
   /** joinedAt ASC (frozen from ProjectMembershipRepository.getProjectMembersWithDetails). */
   listMembersWithUser(projectId: number): Promise<ProjectMemberWithUser[]>
+  /**
+   * V5-7b (DEC-104/149): os membros ATIVOS do vínculo (`situacao = ATIVO`) — a base da
+   * distribuição do prêmio. `situacao` não é caminho de saída (remover apaga a linha,
+   * DEC-149); INATIVO existe para o histórico do vínculo e fica fora da conta.
+   */
+  listActiveMemberUserIds(projectId: number): Promise<number[]>
 }

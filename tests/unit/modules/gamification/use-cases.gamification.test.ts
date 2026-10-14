@@ -56,12 +56,14 @@ function makeFakes() {
   const awardHistory: GamificationAwardHistoryPort & { records: AwardRecord[]; awarded: Set<string> } = {
     records: [],
     awarded: new Set<string>(),
-    async hasAward({ description }) {
-      return this.awarded.has(description);
+    async hasAward({ userId, description }) {
+      // Espelha a consulta real (entityId = userId + description): a chave de idempotencia e
+      // por (usuario, descricao) — dois membros da mesma atividade tem cada um a sua (V5-7b).
+      return this.awarded.has(`${userId}:${description}`);
     },
     async awardAndRecord(record) {
       this.records.push(record);
-      this.awarded.add(record.description);
+      this.awarded.add(`${record.userId}:${record.description}`);
       users.data.points += record.pointsAwarded;
     },
   };
@@ -256,6 +258,52 @@ describe("AwardFromTaskCompletionUseCase", () => {
 
     const ws = await module_.awardFromWorkSession({ userId: 1, workSessionId: 42 });
     expect(ws.alreadyAwarded).toBe(false);
+  });
+});
+
+describe("AwardFromActivityCompletionUseCase (V5-7b, DEC-63/104)", () => {
+  it("credita o valor PRONTO da distribuicao, com a chave ACTIVITY_COMPLETED:<atividade>", async () => {
+    const result = await module_.awardFromActivityCompletion({ userId: 1, activityId: 77, points: 120 });
+
+    expect(result.pointsAwarded).toBe(120);
+    expect(result.sourceType).toBe("ACTIVITY_COMPLETED");
+    expect(result.sourceId).toBe(77);
+    expect(fakes.awardHistory.records.at(-1)).toMatchObject({
+      sourceType: "ACTIVITY_COMPLETED",
+      sourceId: 77,
+      description: "GAMIFICATION:ACTIVITY_COMPLETED:77",
+      pointsAwarded: 120,
+    });
+    // O valor nao e re-aritmetico aqui (DEC-103: a escala e do dominio de projeto).
+    expect(fakes.users.data.points).toBe(120);
+  });
+
+  it("idempotencia por (usuario, atividade): reexecucao credita 0", async () => {
+    await module_.awardFromActivityCompletion({ userId: 1, activityId: 78, points: 50 });
+    const dup = await module_.awardFromActivityCompletion({ userId: 1, activityId: 78, points: 50 });
+
+    expect(dup.alreadyAwarded).toBe(true);
+    expect(dup.pointsAwarded).toBe(0);
+    expect(fakes.awardHistory.records).toHaveLength(1);
+  });
+
+  it("cada membro da distribuicao tem a SUA chave para a MESMA atividade", async () => {
+    // O duplo de users serve um por vez; a progressao pos-award de cada membro fala do seu.
+    const a = await module_.awardFromActivityCompletion({ userId: 1, activityId: 79, points: 200 });
+    fakes.users.data = { id: 2, points: 0, completedTasks: 0, weekHours: 0, roles: [] };
+    const b = await module_.awardFromActivityCompletion({ userId: 2, activityId: 79, points: 100 });
+
+    expect(a.alreadyAwarded).toBe(false);
+    expect(b.alreadyAwarded).toBe(false);
+    expect(fakes.awardHistory.records).toHaveLength(2);
+  });
+
+  it("task e atividade com o mesmo id sao independentes (sourceType differentia)", async () => {
+    await module_.awardFromTaskCompletion({ userId: 1, taskId: 80, taskPoints: 10 });
+    const act = await module_.awardFromActivityCompletion({ userId: 1, activityId: 80, points: 300 });
+
+    expect(act.alreadyAwarded).toBe(false);
+    expect(act.pointsAwarded).toBe(300);
   });
 });
 

@@ -236,3 +236,25 @@ export async function requestActivityCompletion(
   )
   return payload.activity
 }
+
+/**
+ * V5-7b (DEC-76/77/103/104): aprovar a conclusão. A resposta carrega a economia — `award`,
+ * `shares` (creditado por membro) e `projectsPoints` (saldo novo) — a tela não recalcula (R7).
+ */
+export interface ActivityApprovalResult {
+  activity: ProjectActivity
+  award: number
+  shares: Array<{ userId: number; points: number }>
+  projectsPoints: number
+}
+
+export async function approveActivityCompletion(
+  projectId: number,
+  activityId: number,
+): Promise<ActivityApprovalResult> {
+  return await request<ActivityApprovalResult>(
+    `/api/projects/${projectId}/activities/${activityId}/approve-completion`,
+    { method: "POST" },
+    "Erro ao aprovar conclusão",
+  )
+}

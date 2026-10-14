@@ -379,6 +379,51 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
 - **Sessões de trabalho:** gestor (`MANAGE_WORK_SESSIONS`) vê ativas+pausadas de todos e pode pausar/retomar/finalizar/excluir; usuário comum opera só as próprias. Anti-farm: teto de 9h por trecho ativo e varredura noturna 23:59 (America/Sao_Paulo) fecha o que ficou aberto overnight/weekend.
 - **Infra e persistência:** Postgres exposto só intra-rede no compose base; `docker-compose.override.yml` (versionado) adiciona `127.0.0.1:5432` loopback para `psql`/vitest. Volumes de `uploads`/`reports`/`postgres_data`/`object_store_data` persistem entre `--build`/`--force-recreate`.
 
+## Conclusão de atividade e economia do projeto (V5-7, 2026-10-14)
+
+- **Fluxo de duas fases (DEC-76/77/161):** a linha do cronograma (`project_activities`) vai OPEN →
+  COMPLETION_REQUESTED (pedida pelo líder OU pela membership de gestor, com pelo menos uma prova
+  anexada — `project_activity_files`, DEC-162) → DONE (aprovada por `GLOBAL_PROJECT_MANAGERS`).
+  GERENTE **não** aprova o que ele mesmo pediu; COORDENADOR auto-aprova; `requestedBy` nulo
+  (SetNull, DEC-155) não gera conflito. O gate da aprovação precisa do `requestedBy`, então na
+  aprovação ele corre **depois** do 404 da atividade: 404 projeto → 404 atividade → 403 gate →
+  409 status (`activityApproveConflictMessage` por status).
+- **Prêmio (DEC-103/74, `backend/domain/project/activity-rules.ts`):** prazo é
+  `activityPeriod().periodoFim` (derivado, nunca gravado). Aprovação ≥2 dias civis antecipada →
+  `Math.round(base×1,5)`; no prazo → base cheia; atraso → −10%/dia com **piso 0** (`Math.max(0, …)`
+  — o piso do projeto é a DEC-74, diferente do caminho de tarefa, sem piso, DEC-39). O dia
+  comparado é `civilDayOfInstant(now)` (DEC-132), nunca `new Date()` solto em regra.
+- **Distribuição (DEC-104/163/164/165):** crédito do membro = tarefas concluídas do projeto em que
+  ele é responsável (`task_assignees`) **ou** completou tarefa pública
+  (`task_user_progress.completedAt`), deduplicado por par (membro, tarefa), sem peso. Só membro com
+  `situacao ATIVO` no vínculo entra na conta, e o **denominador é a soma dos créditos de quem
+  entra** — a leitura literal "tasks do projeto" diluiria o prêmio a zero quando contribuidores
+  saíram. Arredondamento é Hamilton de maior resto: floor da parte exata + restos um a um aos
+  maiores restos fracionários; desempate (resto, contagem de tasks, menor userId); membro com zero
+  tasks nunca recebe resto; **soma das partes == prêmio** em todo ramo, congelado em teste.
+- **Ordem das escritas (DEC-165):** prêmios idempotentes por membro (chave
+  `GAMIFICATION:ACTIVITY_COMPLETED:<atividade>`; a consulta real do awardHistory é
+  `entityId` + `description` — o fake de teste que ignorava o userId escondia colisão entre
+  membros da mesma atividade) → `projects.points` (`projectPointsBalance` piso 0, escrita
+  congelada do adaptador de projects) → **transição de status por último**, o ponto de commit:
+  reexecução bate no 409 antes da economia. Crédito já registrado (share 0) **não** impede o
+  incremento do saldo. Falha de crédito vai pro log e não quebra a conclusão (quirk congelado do
+  caminho de tarefa).
+- **Task → `projects.points` (DEC-63):** `TaskCompletedEvent` carrega `projectId` **obrigatório**
+  (null = quest global) e o publicador incrementa pelo valor **efetivamente creditado** (idempotência
+  devolve 0 e 0 não escreve; negativo passa — o piso é da escrita do projeto). O composition root
+  compartilha o adaptador de projects entre o módulo de projeto e o publicador de tarefa
+  (`TaskProjectPointsPort` local, DEC-21); os três call sites de `publishTaskCompletionAward`
+  (complete ×2, approve ×1) passam `task.projectId ?? null`.
+- **Vocabulário em uma fonte só:** `GamificationSourceType` ganhou `ACTIVITY_COMPLETED` no domínio e
+  `gamification/application/contracts.ts` **re-exporta** o tipo do domínio em vez de manter cópia
+  (a cópia local de 3 membros era exatamente o modo de falha DEC-95/96). O gamification **não**
+  re-aritmética o prêmio: a parte Hamilton chega pronta (DEC-103 — a escala é do domínio de projeto).
+- **UI:** o botão "Conclusão" da linha obedece ao par **pedir OU aprovar** (predicate
+  `canOpenCompletion` no painel, calculada com as funções do domínio, DEC-92); o diálogo mostra
+  "Aprovar conclusão" quando COMPLETION_REQUESTED e o ator pode — quem pediu não vê o botão se for
+  GERENTE. A resposta carrega `activity/award/shares/projectsPoints` e a tela não recalcula (R7).
+
 ## Gotchas reais (verificados empiricamente)
 
 - **npm NÃO injeta `NODE_ENV`** em run-scripts. `NODE_ENV=${NODE_ENV:-development}` em

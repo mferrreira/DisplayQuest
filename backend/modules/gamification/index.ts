@@ -1,4 +1,5 @@
 import { AwardFromTaskCompletionUseCase } from "@/backend/modules/gamification/application/use-cases/award-from-task-completion.use-case"
+import { AwardFromActivityCompletionUseCase } from "@/backend/modules/gamification/application/use-cases/award-from-activity-completion.use-case"
 import { AwardFromWorkSessionUseCase } from "@/backend/modules/gamification/application/use-cases/award-from-work-session.use-case"
 import { AssertCanManageUserBadgesUseCase } from "@/backend/modules/gamification/application/use-cases/assert-can-manage-user-badges.use-case"
 import { EvaluateUserBadgesUseCase } from "@/backend/modules/gamification/application/use-cases/evaluate-user-badges.use-case"
@@ -42,6 +43,8 @@ type UseCaseExecute<T> = T extends { execute: (...args: infer A) => infer R } ? 
 export class GamificationModule {
   readonly awardFromWorkSession: UseCaseExecute<AwardFromWorkSessionUseCase>
   readonly awardFromTaskCompletion: UseCaseExecute<AwardFromTaskCompletionUseCase>
+  /** V5-7b (DEC-63/104): o crédito da parcela de prêmio de atividade aprovada. */
+  readonly awardFromActivityCompletion: UseCaseExecute<AwardFromActivityCompletionUseCase>
   readonly getUserProgression: UseCaseExecute<GetUserProgressionUseCase>
   readonly evaluateUserBadges: UseCaseExecute<EvaluateUserBadgesUseCase>
   readonly listBadges: UseCaseExecute<ListBadgesUseCase>
@@ -61,6 +64,7 @@ export class GamificationModule {
   constructor(
     private readonly awardFromWorkSessionUseCase: AwardFromWorkSessionUseCase,
     private readonly awardFromTaskCompletionUseCase: AwardFromTaskCompletionUseCase,
+    private readonly awardFromActivityCompletionUseCase: AwardFromActivityCompletionUseCase,
     private readonly getUserProgressionUseCase: GetUserProgressionUseCase,
     private readonly evaluateUserBadgesUseCase: EvaluateUserBadgesUseCase,
     private readonly listBadgesUseCase: ListBadgesUseCase,
@@ -77,6 +81,7 @@ export class GamificationModule {
   ) {
     this.awardFromWorkSession = this.awardFromWorkSessionUseCase.execute.bind(this.awardFromWorkSessionUseCase)
     this.awardFromTaskCompletion = this.awardFromTaskCompletionUseCase.execute.bind(this.awardFromTaskCompletionUseCase)
+    this.awardFromActivityCompletion = this.awardFromActivityCompletionUseCase.execute.bind(this.awardFromActivityCompletionUseCase)
     this.getUserProgression = this.getUserProgressionUseCase.execute.bind(this.getUserProgressionUseCase)
     this.evaluateUserBadges = this.evaluateUserBadgesUseCase.execute.bind(this.evaluateUserBadgesUseCase)
     this.listBadges = this.listBadgesUseCase.execute.bind(this.listBadgesUseCase)
@@ -129,6 +134,11 @@ export function createGamificationModule(options: GamificationModuleFactoryOptio
       evaluateUserBadges,
     }),
     new AwardFromTaskCompletionUseCase({
+      awardHistory: ports.awardHistory,
+      progression,
+      evaluateUserBadges,
+    }),
+    new AwardFromActivityCompletionUseCase({
       awardHistory: ports.awardHistory,
       progression,
       evaluateUserBadges,

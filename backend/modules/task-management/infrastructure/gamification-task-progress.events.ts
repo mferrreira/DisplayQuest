@@ -23,8 +23,21 @@ export interface TaskAwardPort {
   awardFromTaskCompletion(input: { userId: number; taskId: number; taskPoints: number }): Promise<TaskAwardOutcome | null>
 }
 
+/**
+ * TaskProjectPointsPort — V5-7b (DEC-63/74, padrão DEC-21): a escrita em `projects.points`
+ * é do módulo de projeto (o piso 0 é a função pura `projectPointsBalance`, aplicada na
+ * escrita congelada do adaptador de projects). O composition root injeta o adaptador real;
+ * o módulo de tarefa só conhece esta interface local — espelho da `TaskAwardPort` acima.
+ */
+export interface TaskProjectPointsPort {
+  incrementProjectPoints(projectId: number, delta: number): Promise<unknown>
+}
+
 class GamificationTaskProgressEvents implements TaskProgressEvents {
-  constructor(private readonly awards: TaskAwardPort) {}
+  constructor(
+    private readonly awards: TaskAwardPort,
+    private readonly projectPoints?: TaskProjectPointsPort,
+  ) {}
 
   async onTaskCompleted(event: TaskCompletedEvent): Promise<number | null> {
     if (!event.userId || !event.taskId) {
@@ -37,10 +50,27 @@ class GamificationTaskProgressEvents implements TaskProgressEvents {
       taskPoints: event.taskPoints,
     })
     // Adaptador sem publisher real (ou de teste) pode devolver nada: `null` é "ninguém creditado".
-    return typeof outcome?.pointsAwarded === "number" ? outcome.pointsAwarded : null
+    const credited = typeof outcome?.pointsAwarded === "number" ? outcome.pointsAwarded : null
+
+    // DEC-63: tarefa de projeto concluída também incrementa `projects.points` — pelo valor
+    // EFETIVAMENTE creditado (idempotência devolve 0, e 0 não escreve: sem re-execução o
+    // saldo não muda duas vezes). Negativo passa — o piso 0 é da escrita do adaptador
+    // (DEC-74), não daqui. Falha desta escrita não quebra a conclusão (mesmo quirk do award).
+    if (credited !== null && credited !== 0 && event.projectId && this.projectPoints) {
+      try {
+        await this.projectPoints.incrementProjectPoints(event.projectId, credited)
+      } catch (error) {
+        console.error("Erro ao incrementar pontos do projeto na conclusão de task:", error)
+      }
+    }
+
+    return credited
   }
 }
 
-export function createTaskProgressEvents(dependencies: { awards: TaskAwardPort }): TaskProgressEvents {
-  return new GamificationTaskProgressEvents(dependencies.awards)
+export function createTaskProgressEvents(dependencies: {
+  awards: TaskAwardPort
+  projectPoints?: TaskProjectPointsPort
+}): TaskProgressEvents {
+  return new GamificationTaskProgressEvents(dependencies.awards, dependencies.projectPoints)
 }

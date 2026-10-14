@@ -13,7 +13,11 @@
  * Pureza (RG-01): nenhuma porta, nenhum repo — os dados entram por argumento.
  */
 
-export type GamificationSourceType = "WORK_SESSION_COMPLETED" | "TASK_COMPLETED" | "MANUAL_ADJUSTMENT";
+export type GamificationSourceType =
+  | "WORK_SESSION_COMPLETED"
+  | "TASK_COMPLETED"
+  | "ACTIVITY_COMPLETED"
+  | "MANUAL_ADJUSTMENT";
 
 export interface UserProgression {
   userId: number;
