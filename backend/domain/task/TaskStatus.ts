@@ -3,7 +3,8 @@
  *
  * `tasks.status` is a plain String column in prisma/schema.prisma (:122, default "to-do"), so
  * the contract of this enum is the set of values the BACKEND writes today
- * (backend/models/Task.ts, backend/modules/task-management/**). Legacy spellings the database
+ * (backend/modules/task-management/** — the old `backend/models/Task.ts`, removed in
+ * D-2/DEC-142, wrote the same set). Legacy spellings the database
  * still contains (`pending`, `completed`, `in_progress`) are deliberately NOT part of this
  * enum: they belong to the wire-tolerance layer (entities/task.ts `wireTaskStatus`).
  */

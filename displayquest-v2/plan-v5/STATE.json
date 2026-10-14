@@ -1,7 +1,7 @@
 {
   "plan": "plan-v5",
   "title": "domínio de projetos maduro: cronograma, pontos, relatórios técnicos, atestados, blobs em bucket S3-compatible (SeaweedFS desde o V5-1, DEC-131)",
-  "version": "5.17.1",
+  "version": "5.17.2",
   "updatedAt": "2026-10-14",
   "status": "in_progress",
   "activeWave": "V5-6",
@@ -719,6 +719,18 @@
         "Prosa medida pelo extrato do DOM: capitulo 3 ganhou o item 'Todas as atividades' nos filtros, a frase do 'Limpar filtros' (o botao existe na barra e nenhuma prosa nomeava), o passo 4 do formulario com a regra da edicao (lista traz todas as linhas, vinculo a etapa encerrada continua salvavel) e as duas figuras. Capitulo 4: a nota 'O cronograma nao e o quadro' passou a dizer que tarefa pode ser LIGADA a uma linha e que apagar a linha deixa a tarefa sem vinculo — a frase antiga prometia isso sem existir vinculo nenhum."
       ],
       "gates": "docs:build: tecnico 15 secoes / 33 figuras, usuario 12 secoes / 41 figuras (eram 39), sem AVISO. docs:check: nenhum caractere suspeito."
+    },
+    {
+      "id": "D-2",
+      "at": "2026-10-14",
+      "title": "backend/models/ encolhe para os 6 builders com importador (DEC-142; fecha GAP-06)",
+      "actions": [
+        "Re-medido antes de apagar: 13 arquivos, 6 com importacao real (Issue, LabEvent, LabNotice, LaboratorySchedule, LabResponsibility, UserSchedule — todos consumidos pelos repositorios Prisma do lab-operations) e 7 com zero importacao em todo o repo (caminhos relativos e re-export conferidos). Saem Badge, DailyLog, Project, ProjectMembership, Purchase, Reward, Task.",
+        "Dez comentarios que citavam os apagados foram reescritos. Tres diziam a relacao no presente e viraram mentira ('models/Project.ts re-exporta', 'mirrors models/Task.ts verbatim', 'models/Task.toJSON (:119-136)'); os historicos ('frozen from', 'identical to') ganharam nota de remocao. O nome do teste 'serializeTask matches models/Task.toJSON shape' passou a 'matches the frozen read-model shape'.",
+        "O guarda citado no escopo foi medido e nao pede ajuste: a regra RG do dependency-cruiser e o teste estrutural (enums-mirror-schema) proibem importar a CAMADA models por inteiro, nao arquivo por arquivo — a camada encolheu, a regra nao mudou.",
+        "backend/README.md: a linha da DEC-24 ('nao sera eliminada') foi substituida pela medida da DEC-142."
+      ],
+      "gates": "tsc: 1 erro pre-existente. arch:check: 913 modulos / 3878 dependencias (eram 920/3881 — os 7 arquivos sairam do grafo), allow-list vazia. Suite completa (5433): 141 arquivos / 1891 testes."
     }
   ],
   "openQuestions": [],
@@ -794,7 +806,7 @@
       "id": "D-2",
       "decision": "DEC-142",
       "title": "backend/models/ encolhe para o que e usado",
-      "status": "approved",
+      "status": "done",
       "scope": "saem os 7 builders sem importador (Badge, DailyLog, Project, ProjectMembership, Purchase, Reward, Task); ficam os 6 consumidos por repositorios do lab-operations (Issue, LabEvent, LabNotice, LaboratorySchedule, LabResponsibility, UserSchedule). Ajusta o guarda que proibe o core de importar a camada. Fecha GAP-06.",
       "closes": "GAP-06 (clean-arch)"
     },

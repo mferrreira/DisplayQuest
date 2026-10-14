@@ -1,5 +1,6 @@
 /**
- * Task fixtures — shapes mirror backend/models/Task.ts toJSON EXACTLY (entities/task.ts parses them).
+ * Task fixtures — shapes mirror the `serializeTask` read model EXACTLY (entities/task.ts
+ * parses them). The old backend/models/Task.toJSON they mirrored was removed in D-2/DEC-142.
  * Cover the matrix: visibility × status × overdue × global. pt-BR content (R9).
  */
 import type { Task } from "@/entities/task";

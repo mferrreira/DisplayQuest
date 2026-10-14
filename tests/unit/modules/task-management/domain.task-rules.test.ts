@@ -208,7 +208,7 @@ describe("read-model clone", () => {
     expect([clone.status, clone.completed, clone.completedAt, clone.assignedTo]).toEqual(["to-do", false, null, null]);
   });
 
-  it("serializeTask matches models/Task.toJSON shape (completedAt ISO, assigneeIds defaulted)", () => {
+  it("serializeTask matches the frozen read-model shape (completedAt ISO, assigneeIds defaulted)", () => {
     const json = serializeTask(taskData({ completedAt: NOW, assigneeIds: undefined }));
     expect(json.completedAt).toBe(NOW.toISOString());
     expect(json.assigneeIds).toEqual([]);

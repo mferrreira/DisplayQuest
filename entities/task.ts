@@ -13,7 +13,8 @@ export const taskStatusSchema = z.enum(["to-do", "in-progress", "in-review", "ad
 export type TaskStatus = z.infer<typeof taskStatusSchema>;
 
 /**
- * D-17: backend models/Task.ts declares 'low'|'medium'|'high'|'urgent' — the gateway does not
+ * D-17: the task priority vocabulary is 'low'|'medium'|'high'|'urgent' (the old backend
+ * models/Task.ts declared it — removed in D-2/DEC-142) — the gateway does not
  * narrow it, so 'urgent' can reach the wire. Omitting it here would fail zod parse for the
  * ENTIRE list. UI renders URGENTE badge (kanban parity).
  */

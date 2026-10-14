@@ -32,8 +32,9 @@ const SCHEMA_USER_ROLES = [
 
 /**
  * Reference for the String columns, taken from what the backend writes today
- * (backend/models/Task.ts, backend/modules/work-execution/infrastructure/
- * work-session-service.gateway.ts, entities/report.ts).
+ * (backend/modules/task-management/**, backend/modules/work-execution/infrastructure/
+ * work-session-service.gateway.ts, entities/report.ts — the old backend/models/Task.ts was
+ * removed in D-2/DEC-142).
  */
 const SCHEMA_TASK_STATUSES = ["to-do", "in-progress", "in-review", "adjust", "done"];
 const SCHEMA_TASK_VISIBILITIES = ["public", "delegated", "private"];

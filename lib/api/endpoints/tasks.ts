@@ -1,6 +1,7 @@
 /**
  * Tasks endpoints — REAL shapes verified from app/api/tasks/route.ts (:45 `{ tasks }`)
- * and backend/models/Task.ts toJSON (:119–136).
+ * and the `serializeTask` read model (the old backend/models/Task.toJSON was removed in
+ * D-2/DEC-142).
  */
 import { z } from "zod";
 import { apiFetch, qs, type QueryParams } from "@/lib/api/client";

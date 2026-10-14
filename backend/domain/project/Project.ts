@@ -1,14 +1,14 @@
 /**
  * Project / ProjectMembership — pure domain contracts of the project aggregate (SPEC §4.5).
  *
- * `ProjectStatus` is authored HERE and `backend/models/Project.ts` re-exports it. Reason
- * measured in batch 0.4: a TypeScript enum is NOMINAL, so a domain copy of the same four
- * values would not accept the value the model enum carries, and the project gateways pass
- * that value straight into `Project.create()`. Sharing one declaration keeps the swap a pure
- * change of import path (AGENT.md §5).
+ * `ProjectStatus` is authored HERE — the only declaration since `backend/models/Project.ts`
+ * was removed in D-2 (DEC-142). Reason measured in batch 0.4: a TypeScript enum is NOMINAL,
+ * so a domain copy of the same four values would not accept the value the model enum carried,
+ * and the project gateways passed that value straight into `Project.create()`. Sharing one
+ * declaration kept the swap a pure change of import path (AGENT.md §5).
  *
  * Same batch-0.4 finding as Task: the ports hand `toJSON()` to the routes, so the contract
- * declares it (mirrors `backend/models/Project.ts` verbatim; tightened in OND5-B1).
+ * declares it (mirrors the old `backend/models/Project.ts` verbatim; tightened in OND5-B1).
  */
 import type { Role } from "../identity";
 

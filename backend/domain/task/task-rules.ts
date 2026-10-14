@@ -194,8 +194,8 @@ export function isProgressAlreadyCompleted(
 }
 
 /**
- * JSON read model identical to `backend/models/Task.toJSON()` (the shape routes already
- * read — batch 0.4 finding). Kept here so domain-built clones serialize the same way.
+ * JSON read model — the shape frozen from the old `models/Task.toJSON()` (batch 0.4 finding;
+ * that file was removed in D-2/DEC-142). Kept here so domain-built clones serialize the same way.
  */
 export function serializeTask(task: Omit<Task, "toJSON">): any {
   return {
@@ -379,7 +379,8 @@ export function approvalDecision(input: {
 }
 
 // ---------------------------------------------------------------------------
-// New-task record (validation frozen from models/Task.create — same messages)
+// New-task record (validation frozen from the old models/Task.create — same messages; the
+// file was removed in D-2/DEC-142)
 // ---------------------------------------------------------------------------
 
 export interface NewTaskInput {
@@ -404,7 +405,8 @@ export interface NewTaskInput {
 }
 
 /**
- * Validate + normalize a new task (models/Task.create semantics, ValidationError typed):
+ * Validate + normalize a new task (semantics of the old models/Task.create, ValidationError
+ * typed):
  * title trimmed (required, <=200), description <=1000, points >=0; the quirk
  * `completedAt = now when completed OR status done` (even with completed=false) is frozen.
  */
