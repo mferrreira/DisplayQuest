@@ -33,6 +33,8 @@ import { GetUserProjectHoursUseCase } from "@/backend/modules/reporting/applicat
 import { GetWeeklyHoursStatsUseCase } from "@/backend/modules/reporting/application/use-cases/get-weekly-hours-stats.use-case"
 import { GetWeeklyReportByIdUseCase } from "@/backend/modules/reporting/application/use-cases/get-weekly-report-by-id.use-case"
 import { ListProjectReportsUseCase } from "@/backend/modules/reporting/application/use-cases/list-project-reports.use-case"
+import { ListTechnicalReportsUseCase } from "@/backend/modules/reporting/application/use-cases/list-technical-reports.use-case"
+import { UpsertTechnicalReportContentUseCase } from "@/backend/modules/reporting/application/use-cases/upsert-technical-report-content.use-case"
 import { ListWeeklyHoursHistoryUseCase } from "@/backend/modules/reporting/application/use-cases/list-weekly-hours-history.use-case"
 import { ListWeeklyReportsUseCase } from "@/backend/modules/reporting/application/use-cases/list-weekly-reports.use-case"
 import { RegisterReportAttachmentUseCase } from "@/backend/modules/reporting/application/use-cases/register-report-attachment.use-case"
@@ -42,6 +44,8 @@ import { UpdateProjectReportUseCase } from "@/backend/modules/reporting/applicat
 import { UpsertWeeklyReportUseCase } from "@/backend/modules/reporting/application/use-cases/upsert-weekly-report.use-case"
 import type { HoursReadRepository } from "@/backend/modules/reporting/application/ports/hours-read.repository"
 import type { ProjectReportsRepository } from "@/backend/modules/reporting/application/ports/project-reports.repository"
+import type { TechnicalReportsRepository } from "@/backend/modules/reporting/application/ports/technical-reports.repository"
+import type { TechnicalReportAccessPort } from "@/backend/modules/reporting/application/ports/technical-report-access.port"
 import type { ReportAttachmentsRepository } from "@/backend/modules/reporting/application/ports/report-attachments.repository"
 import type { ReportingDirectory } from "@/backend/modules/reporting/application/ports/reporting-directory.port"
 import type { ReportStoragePort } from "@/backend/modules/reporting/application/ports/report-storage.port"
@@ -50,6 +54,8 @@ import type { WeeklyHoursHistoryRepository } from "@/backend/modules/reporting/a
 import type { WeeklyReportsRepository } from "@/backend/modules/reporting/application/ports/weekly-reports.repository"
 import { PrismaHoursReadRepository } from "@/backend/modules/reporting/infrastructure/repositories/prisma-hours-read.repository"
 import { PrismaProjectReportsRepository } from "@/backend/modules/reporting/infrastructure/repositories/prisma-project-reports.repository"
+import { PrismaTechnicalReportsRepository } from "@/backend/modules/reporting/infrastructure/repositories/prisma-technical-reports.repository"
+import { PrismaTechnicalReportAccess } from "@/backend/modules/reporting/infrastructure/repositories/prisma-technical-report-access"
 import { PrismaReportAttachmentsRepository } from "@/backend/modules/reporting/infrastructure/repositories/prisma-report-attachments.repository"
 import { PrismaReportingDirectory } from "@/backend/modules/reporting/infrastructure/repositories/prisma-reporting-directory"
 import { PrismaWeeklyHoursHistoryRepository } from "@/backend/modules/reporting/infrastructure/repositories/prisma-weekly-hours-history.repository"
@@ -92,6 +98,9 @@ export class ReportingModule {
     private readonly registerReportAttachmentUseCase: RegisterReportAttachmentUseCase,
     private readonly deleteReportAttachmentUseCase: DeleteReportAttachmentUseCase,
     private readonly sweepStaleReportUploadsUseCase: SweepStaleReportUploadsUseCase,
+    // V5-9 (DEC-70/139): relatório técnico por projeto × tipo.
+    private readonly listTechnicalReportsUseCase: ListTechnicalReportsUseCase,
+    private readonly upsertTechnicalReportContentUseCase: UpsertTechnicalReportContentUseCase,
   ) {}
 
   // B6-3 (D4): os metodos de weekly-reports/historico de horas passaram a receber o ator —
@@ -200,6 +209,22 @@ export class ReportingModule {
   async sweepStaleReportUploads(maxAgeMs?: number) {
     return await this.sweepStaleReportUploadsUseCase.execute(maxAgeMs)
   }
+
+  // V5-9 (DEC-70/139/167): relatório técnico — leitura aberta ao autenticado (filho de
+  // projeto, regra 13 do plano) e escrita "gestão/líder" decidida no use case.
+  async listTechnicalReports(command: { projectId: number }) {
+    return await this.listTechnicalReportsUseCase.execute(command)
+  }
+
+  async upsertTechnicalReportContent(command: {
+    projectId: number;
+    actorId: number;
+    actorRoles: string[];
+    type: string;
+    content: unknown;
+  }) {
+    return await this.upsertTechnicalReportContentUseCase.execute(command)
+  }
 }
 
 /** Thin ports of the module (DEC-17: the seam tests inject; production defaults to Prisma). */
@@ -212,6 +237,9 @@ export interface ReportingModulePorts {
   directory?: ReportingDirectory
   storage?: ReportStoragePort
   publisher?: ReportSubmittedPublisherPort
+  // V5-9 (DEC-70/139): relatório técnico (tabela própria + leitura de projeto própria, RG-04).
+  technicalReports?: TechnicalReportsRepository
+  technicalReportAccess?: TechnicalReportAccessPort
 }
 
 /** Publisher used when the composition root does not wire one (tests/default): no-op with a
@@ -235,6 +263,8 @@ export function createReportingModule(options: ReportingModuleFactoryOptions = {
   const directory = options.ports?.directory ?? new PrismaReportingDirectory()
   const storage = options.ports?.storage ?? new ReportUploadsStorage()
   const publisher = options.ports?.publisher ?? new UnwiredReportSubmittedPublisher()
+  const technicalReports = options.ports?.technicalReports ?? new PrismaTechnicalReportsRepository()
+  const technicalReportAccess = options.ports?.technicalReportAccess ?? new PrismaTechnicalReportAccess()
 
   const getProjectReport = new GetProjectReportUseCase(projectReports, directory)
   const upsertWeeklyReport = new UpsertWeeklyReportUseCase(weeklyReports, hoursRead, directory)
@@ -268,5 +298,7 @@ export function createReportingModule(options: ReportingModuleFactoryOptions = {
     new RegisterReportAttachmentUseCase(projectReports, reportAttachments),
     new DeleteReportAttachmentUseCase(reportAttachments, storage),
     new SweepStaleReportUploadsUseCase(reportAttachments, storage),
+    new ListTechnicalReportsUseCase({ technicalReports, access: technicalReportAccess }),
+    new UpsertTechnicalReportContentUseCase({ technicalReports, access: technicalReportAccess }),
   )
 }

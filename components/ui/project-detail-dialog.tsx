@@ -35,6 +35,7 @@ import { ProjectReportsPanel } from "@/components/features/project-reports-panel
 import { ProjectDeliverablesPanel } from "@/components/features/project-deliverables-panel"
 import { ProjectAttachmentsPanel } from "@/components/features/project-attachments-panel"
 import { ProjectCronogramaPanel } from "@/components/features/project-cronograma-panel"
+import { ProjectTechnicalReportsPanel } from "@/components/features/project-technical-reports-panel"
 import { ProjectMediaHeader } from "@/components/features/project-media-header"
 import { hasAccess } from "@/lib/utils/utils"
 
@@ -300,6 +301,15 @@ export function ProjectDetailDialog({
               projectId={project.id}
               canManage={canManageProjectFiles}
               leaderId={project.leaderId}
+            />
+
+            {/* V5-9 (DEC-70/139/167): relatórios técnicos — um texto editável por tipo. A
+                leitura é a do autenticado; a edição aparece para quem o diálogo reconhece
+                como gestão/líder e o servidor decide de verdade (o quirk da membership não
+                é visível daqui — o 403 chega como erro na tela). */}
+            <ProjectTechnicalReportsPanel
+              projectId={project.id}
+              canManage={canManageProjectFiles}
             />
 
             {/* Project Statistics */}

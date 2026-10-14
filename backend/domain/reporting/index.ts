@@ -51,3 +51,10 @@ export {
   requireWeeklyReportSelfOrView,
   WEEKLY_REPORT_DENIED_MESSAGE,
 } from "./report-access-rules";
+export {
+  TECHNICAL_REPORT_TYPES,
+  isTechnicalReportType,
+  canActorManageTechnicalReportDecision,
+  technicalReportCheckbox,
+  type TechnicalReportType,
+} from "./technical-report-rules";

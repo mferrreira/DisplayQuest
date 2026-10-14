@@ -101,6 +101,7 @@ model projects {
   tasks       tasks[]           @relation("ProjectTasks")
   work_sessions work_sessions[] @relation("WorkSessionProject")
   project_reports project_reports[] @relation("ProjectReports")
+  technical_reports technical_reports[] @relation("ProjectTechnicalReports")
   deliverables project_deliverables[] @relation("ProjectDeliverables")
   attachments  project_attachments[]   @relation("ProjectAttachments")
   goals        project_goals[]         @relation("ProjectGoals")
@@ -390,6 +391,23 @@ model project_reports {
 
   @@unique([projectId, periodType, periodStart, authorId])
   @@index([projectId, periodType])
+}
+
+// V5-9 (DEC-70/139/167): relatório técnico por projeto × tipo — um registro editável por
+// par, sem FK para atividade e sem dono pessoa (DEC-139: o texto é um só; o DOCX é gerado
+// N vezes, um por membro). `content` é o texto editável (rascunho de IA ou humano); os
+// arquivos gerados vivem no bucket com chave derivada, não em coluna.
+model technical_reports {
+  id        Int      @id @default(autoincrement())
+  projectId Int
+  type      String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  project   projects @relation("ProjectTechnicalReports", fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, type])
+  @@map("technical_reports")
 }
 
 model report_attachments {
