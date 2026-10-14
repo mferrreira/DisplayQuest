@@ -12,6 +12,7 @@ import {
   ForbiddenError,
   NotFoundError,
   PROFILE_DENIED_MESSAGE,
+  emptyPersonData,
   userActor,
 } from "@/backend/domain";
 import { AssertCanUpdateUserImageUseCase } from "@/backend/modules/user-management/application/use-cases/assert-can-update-user-image.use-case";
@@ -38,6 +39,7 @@ function userRow(id: number, bannerKey: string | null = null): UserRecord {
     bio: null,
     avatar: null,
     bannerKey,
+    ...emptyPersonData(),
     roles: ["VOLUNTARIO"],
     createdAt: new Date("2026-10-01T12:00:00.000Z"),
   };

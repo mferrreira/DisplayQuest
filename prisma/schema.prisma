@@ -23,6 +23,19 @@ model users {
   bannerKey            String?
   bio                  String?
   profileVisibility    ProfileVisibility      @default(public)
+  // V5-4a (DEC-138): os dados de pessoa que os dois formulários oficiais pedem. Vivem na
+  // PESSOA, não no vínculo — decisão do dono em 2026-10-13. Escrita: o próprio OU quem gerencia
+  // contas (o gate do perfil). Leitura: `cpf` é o único restrito (próprio OU MANAGE_USERS); os
+  // demais seguem a leitura aberta do perfil. Vocabulários fechados em
+  // backend/domain/identity/person-data-rules.ts, derivados dos campos medidos no AcroForm
+  // (nivel_*, is_pibic/is_pibiti/is_btp..., is_cnpq/is_fapemig/is_outra + agencia_outra).
+  cpf                String?
+  registrationNumber String?
+  course             String?
+  scholarshipType    String?
+  fundingAgency      String?
+  fundingAgencyOther String?
+  level              String?
   createdBadges        badges[]               @relation("UserCreatedBadges")
   daily_logs           daily_logs[]           @relation("UserDailyLogs")
   history              history[]              @relation("UserHistory")
@@ -68,6 +81,9 @@ model projects {
   editalNumber  String?
   processNumber String?
   points        Int      @default(0)
+  // V5-4a (DEC-140): o nº PROPPI aparece nos dois formulários oficiais e é dado do projeto,
+  // não da pessoa nem do vínculo.
+  proppiNumber  String?
   // V5-2d (DEC-102): chave do objeto no bucket, nunca um caminho de disco (regra 12 do plano).
   // Uma coluna por slot: "uma logo por projeto" é estrutural, não regra a validar.
   logoKey       String?

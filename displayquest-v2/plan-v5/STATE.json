@@ -1,26 +1,26 @@
 {
   "plan": "plan-v5",
   "title": "domínio de projetos maduro: cronograma, pontos, relatórios técnicos, atestados, blobs em bucket S3-compatible (SeaweedFS desde o V5-1, DEC-131)",
-  "version": "5.10.0",
+  "version": "5.11.0",
   "updatedAt": "2026-10-13",
   "status": "in_progress",
   "activeWave": "V5-4",
-  "activeBatch": "V5-4",
+  "activeBatch": "V5-4b",
   "awaitingInstruction": false,
   "lineage": {
     "previousPlan": "plan-v4 (subtasks, animação, inativação — done em 2026-10-07, ondas V4-1..V4-5d + V4-6b + POS-1, DEC-78..98)",
     "concurrentPlan": null,
-    "note": "a numeracao de decisoes e GLOBAL: DEC-01..29 clean-arch, DEC-30..49 plan-v3, DEC-50..54 B6/D4, DEC-55..60 plan-v4, DEC-61..77 plan-v5 (2026-10-06), DEC-78..98 plan-v4 (houve colisao nos DEC-61..64 — comentarios renumerados, ver AGENTS.md), DEC-99..104 plan-v5 (2026-10-07), DEC-105..114 plan-v6 (2026-10-07), DEC-115..125 clean-arch/B6-restante+B9+B10 (encerrado 2026-10-08), DEC-126/127 plan-v5 (2026-10-09), DEC-128..130 plan-v5/documentos oficiais (2026-10-13), DEC-131 plan-v5/execucao do V5-1 (2026-10-13, servidor do bucket: SeaweedFS no lugar do MinIO), DEC-132 plan-v5/execucao do V5-2b (2026-10-13, datas do projeto como data civil String + periodo invertido recusado), DEC-133/134 plan-v5/execucao do V5-2c (2026-10-13, rota move byte e modulo guarda registro + 403 antes do corpo; tabela de assinatura e nome de exibicao em um lugar so + 17a FK bloqueante), DEC-135 plan-v5/execucao do V5-2d (2026-10-13, logo/banner: slot de lista fechada, so imagem, chave no banco e binario por rota autenticada), DEC-136 plan-v5/execucao do V5-2a (2026-10-13, leitura de projeto e das partes dele aberta ao autenticado; gate de leitura removido das rotas; portas encolheram), DEC-137 plan-v5/execucao do V5-3 (2026-10-13, capa de perfil no bucket com o desenho do DEC-135, gate do perfil na escrita e leitura aberta, chave na sessao e no podio). DEC-138..146 sao do dono, respondidas em 2026-10-13 (ASK-V5-06/07, GAP-05, GAP-06, visibilidade de perfil, seam orfao do plan-v3, ordem do plan-v6, CVE do next). PROXIMA LIVRE: DEC-147. Antes de abrir DEC nova, grep os CINCO STATE.json (clean-arch, plan-v3, plan-v4, plan-v5, plan-v6)."
+    "note": "a numeracao de decisoes e GLOBAL: DEC-01..29 clean-arch, DEC-30..49 plan-v3, DEC-50..54 B6/D4, DEC-55..60 plan-v4, DEC-61..77 plan-v5 (2026-10-06), DEC-78..98 plan-v4 (houve colisao nos DEC-61..64 — comentarios renumerados, ver AGENTS.md), DEC-99..104 plan-v5 (2026-10-07), DEC-105..114 plan-v6 (2026-10-07), DEC-115..125 clean-arch/B6-restante+B9+B10 (encerrado 2026-10-08), DEC-126/127 plan-v5 (2026-10-09), DEC-128..130 plan-v5/documentos oficiais (2026-10-13), DEC-131 plan-v5/execucao do V5-1 (2026-10-13, servidor do bucket: SeaweedFS no lugar do MinIO), DEC-132 plan-v5/execucao do V5-2b (2026-10-13, datas do projeto como data civil String + periodo invertido recusado), DEC-133/134 plan-v5/execucao do V5-2c (2026-10-13, rota move byte e modulo guarda registro + 403 antes do corpo; tabela de assinatura e nome de exibicao em um lugar so + 17a FK bloqueante), DEC-135 plan-v5/execucao do V5-2d (2026-10-13, logo/banner: slot de lista fechada, so imagem, chave no banco e binario por rota autenticada), DEC-136 plan-v5/execucao do V5-2a (2026-10-13, leitura de projeto e das partes dele aberta ao autenticado; gate de leitura removido das rotas; portas encolheram), DEC-137 plan-v5/execucao do V5-3 (2026-10-13, capa de perfil no bucket com o desenho do DEC-135, gate do perfil na escrita e leitura aberta, chave na sessao e no podio). DEC-138..146 sao do dono, respondidas em 2026-10-13 (ASK-V5-06/07, GAP-05, GAP-06, visibilidade de perfil, seam orfao do plan-v3, ordem do plan-v6, CVE do next). DEC-147 plan-v5/execucao do V5-4a (2026-10-13, vocabularios de pessoa derivados do AcroForm medido + CPF validado, mascarado na exibicao e fora da sessao + leitura de CPF self OU MANAGE_USERS) e DEC-148 plan-v5 (2026-10-13, o V5-4 dividido em V5-4a/V5-4b pelo tamanho medido, com G5/G6 uma vez no fechamento). PROXIMA LIVRE: DEC-149. Antes de abrir DEC nova, grep os CINCO STATE.json (clean-arch, plan-v3, plan-v4, plan-v5, plan-v6)."
   },
   "baseline": {
     "measuredAt": "2026-10-13",
-    "measuredOn": "dev, HEAD do V5-3 (antes do commit)",
-    "unitAndFeatures": "113 arquivos / 1517 testes (era 109/1474; o V5-3 somou 4 arquivos e 43 testes: 20 de rota, 11 de use case, 8 de cabeçalho de mídia, 4 de regra de slot)",
-    "fullSuite": "123 arquivos / 1608 testes (era 119/1564), com dq-dev-test-db no ar e DATABASE_URL na 5433",
-    "e2e": "quadro: 2 passando + 1 falha conhecida (cartao a mais na coluna, dado legitimo) + 5 did not run (spec serial); shell: 5 passando. Nenhum spec toca perfil ou ranking, e o V5-3 não mexe no quadro.",
-    "archCheck": "879 modulos / 3635 dependencias, zero violacao, allow-list vazia (era 867/3578)",
-    "previousBaseline": "2026-10-08 (refactor/b6-restante): 95/1280 e 105/1367 | 2026-10-09: 101/1323, arch 822/3370 | V5-2b: 105/1380, full 115/1468, arch 835/3395 | V5-2c: 108/1432, full 118/1521, arch 862/3548 | V5-2d: 108/1455, full 118/1545, arch 867/3585 | V5-2a: 109/1474, full 119/1564, arch 867/3578",
-    "timing": "completa em 73 s (unit+features em paralelo, integracao serial); gotcha medido: com o container dq-dev-test-db parado a completa da 10 arquivos / 15 testes falhos — ambiente, nao regressao (docker start dq-dev-test-db)",
+    "measuredOn": "dev, HEAD do V5-4a (antes do commit)",
+    "unitAndFeatures": "117 arquivos / 1580 testes (era 113/1517; o V5-4a somou 4 arquivos e 63 testes: 17 de regra pura, 15 de use case, 11 de rota, 11 de tela de perfil, mais 5 no painel e 2 no domínio de projeto)",
+    "fullSuite": "127 arquivos / 1672 testes (era 123/1608), com dq-dev-test-db no ar e DATABASE_URL na 5433",
+    "e2e": "quadro: 2 passando + 1 falha conhecida (cartao a mais na coluna, dado legitimo) + 5 did not run (spec serial); shell: 5 passando. Nenhum spec toca perfil, painel ou projeto, e o V5-4a não mexe no quadro.",
+    "archCheck": "884 modulos / 3666 dependencias, zero violacao, allow-list vazia (era 879/3635)",
+    "previousBaseline": "2026-10-08 (refactor/b6-restante): 95/1280 e 105/1367 | 2026-10-09: 101/1323, arch 822/3370 | V5-2b: 105/1380, full 115/1468, arch 835/3395 | V5-2c: 108/1432, full 118/1521, arch 862/3548 | V5-2d: 108/1455, full 118/1545, arch 867/3585 | V5-2a: 109/1474, full 119/1564, arch 867/3578 | V5-3: 113/1517, full 123/1608, arch 879/3635",
+    "timing": "completa em 89 s (unit+features em paralelo, integracao serial); gotcha medido: com o container dq-dev-test-db parado a completa da 10 arquivos / 15 testes falhos — ambiente, nao regressao (docker start dq-dev-test-db)",
     "knownPreExisting": "G2 (npx tsc --noEmit) NAO fecha em 0 nesta branch por 1 erro PRE-EXISTENTE: features/laboratorio/__tests__/floating-timer-tabs.test.tsx:105 usa `exact` em getByRole, que nao existe em ByRoleOptions do @testing-library/dom@10.4.1. Medido em 2026-10-13 e conferido com git stash: identico no HEAD limpo. O comportamento em runtime permanece o pretendido pelo comentario do teste."
   },
   "gates": {
@@ -136,17 +136,31 @@
       "doneAt": "2026-10-13"
     },
     {
-      "id": "V5-4",
+      "id": "V5-4a",
+      "title": "dados de pessoa em users + projects.proppiNumber (perfil e painel)",
+      "status": "done",
+      "decisions": [
+        "DEC-138",
+        "DEC-140",
+        "DEC-147"
+      ],
+      "scope": "Colunas novas em users: cpf, registrationNumber, course, scholarshipType, fundingAgency, fundingAgencyOther, level. projects.proppiNumber. Regras puras com vocabulários fechados derivados do AcroForm medido (DEC-130), CPF validado por dígito verificador e mascarado só na exibição, leitura de CPF restrita a próprio + gestão. Escrita self OU MANAGE_USERS nos dois caminhos (PUT do painel, PATCH do perfil). UI: seção nova no formulário de perfil, bloco de leitura no cartão de perfil, campos no diálogo do painel, campo e linha no diálogo/carta de projeto. Sessão carrega os seis campos abertos e NÃO carrega o CPF.",
+      "why": "Os dois documentos oficiais (DOCX e AcroForm) pedem esses campos, e a DEC-138 decidiu que dado de pessoa vive em users.",
+      "note": "metade do V5-4, aberta pela DEC-148. G5/G6 não rodaram aqui: as três capturas afetadas (perfil-edicao, perfil-configuracoes, dialogo-novo-projeto) só ficam estáveis depois do V5-4b, que mexe na tela de membros — recapturar uma vez no fechamento do V5-4.",
+      "doneAt": "2026-10-13"
+    },
+    {
+      "id": "V5-4b",
       "title": "equipe estendida em project_members",
       "status": "pending",
       "decisions": [
         "DEC-69",
-        "DEC-138",
-        "DEC-140"
+        "DEC-140",
+        "DEC-148"
       ],
-      "scope": "Colunas novas em project_members: lattes, cargaHoraria (Float), categoria (COORDENADOR/MEMBRO/BOLSISTA), situacao (ATIVO/INATIVO), dataEntrada. Colunas novas em users (DEC-138): cpf, matricula, curso, modalidade, fomento, nivel. projects.proppiNumber (DEC-140). Use cases de membro e de usuario passam a aceita-las; UI de gestao e do perfil exibem/editam; roles UserRole[] continuam (ACL não muda). CPF com leitura restrita a proprio e gestao.",
+      "scope": "Colunas novas em project_members: lattes, cargaHoraria (Float), categoria (COORDENADOR/MEMBRO/BOLSISTA), situacao (ATIVO/INATIVO), dataEntrada (data civil String, DEC-132). Use case de perfil de membro + porta updateMembershipProfile; UI de membros no painel de projeto. roles UserRole[] continuam (ACL não muda).",
       "why": "Member do desenho casa ~1:1 com project_members único por par; model novo duplicaria a relação.",
-      "note": "roteiro corrigido em 2026-10-13: matricula saiu de project_members e entrou em users (DEC-138); cargaHoraria continua no vinculo e nao deriva de users.weekHours (DEC-140)."
+      "note": "roteiro corrigido em 2026-10-13: matricula saiu de project_members e entrou em users (DEC-138, executado no V5-4a); cargaHoraria continua no vinculo e nao deriva de users.weekHours (DEC-140)."
     },
     {
       "id": "V5-5",
@@ -289,7 +303,9 @@
     "DEC-143 (dono 2026-10-13): visibilidade de perfil passa a ser regra de leitura implementada, batch novo V5-12. Motivo medido: o campo é gravado (`users.profileVisibility`), editável na aba Configurações, documentado no guia com três valores (Público / Apenas Membros / Privado), e nenhuma decisão no backend o lê — hoje todo perfil é público de fato. A regra entra como decisão pura no domínio de identidade, consumida pela leitura de perfil, com `members_only` casando por projeto em comum.",
     "DEC-144 (dono 2026-10-13): `lib/notifications/browser-notifications.ts` (134 linhas) e o teste dele (231 linhas) são apagados. O seam nasceu na Onda 2 do plan-v3 e ficou órfão quando a F1b saiu do escopo (DEC-49); grep mede zero chamadores em código de aplicação. A notificação nativa está bloqueada nesta instância medida: em HTTP sobre IP de rede o Chrome e o Firefox recusam o pedido de permissão.",
     "DEC-145 (dono 2026-10-13): o plan-v6 não começa antes do plan-v5 fechar. As ondas V6-0..V6-3, que não colidem com nada do plan-v5, ficam paradas junto. A instrução que o plan-v6 esperava existe agora, e é 'depois'.",
-    "DEC-146 (registrada 2026-10-13, sem batch): `next@15.2.4` tem vulnerabilidade conhecida (CVE-2025-66478). Upgrade de framework é decisão de dependência, não de domínio, e o dono decidiu decidir depois, com janela para rodar os gates completos. Nada do plan-v5 depende disso."
+    "DEC-146 (registrada 2026-10-13, sem batch): `next@15.2.4` tem vulnerabilidade conhecida (CVE-2025-66478). Upgrade de framework é decisão de dependência, não de domínio, e o dono decidiu decidir depois, com janela para rodar os gates completos. Nada do plan-v5 depende disso.",
+    "DEC-147 (2026-10-13, execução do V5-4a): os vocabulários de pessoa são **listas fechadas derivadas do AcroForm medido** (DEC-130), não vocabulários inventados: `USER_LEVELS = [MEDIO, GRADUACAO, POS_GRADUACAO]` (os três campos de opção do PDF: `is_medio`, `is_graduacao`, `is_pos_graduacao`), `SCHOLARSHIP_TYPES = [PIBIC, PIBIC_JR, PIBIC_AF, PIBITI, PIBITI_JR, BTP, MESTRADO, DOUTORADO, POS_DOC, VOLUNTARIO]` (`is_pibic`, `is_pibic-jr`, `is_pibic_af`, `is_pibiti`, `is_pibiti_jr`, `is_btp`, `is_mestrado`, `is_doutorado`, `is_posdoc`, `is_voluntario`) e `FUNDING_AGENCIES = [CNPQ, FAPEMIG, OUTRA]` com texto livre `fundingAgencyOther` ao lado de OUTRA — é o par `is_outra` + `agencia_outra` do formulário oficial. Os rótulos de tela vivem **ao lado do token, no mesmo arquivo do domínio** (`USER_LEVEL_LABELS`, `SCHOLARSHIP_TYPE_LABELS`, `FUNDING_AGENCY_LABELS`): a lição da DEC-96 é que vocabulário dentro de componente é o estado que a produção não escreve, e aqui a tela e o documento têm de sair da mesma tabela. `normalizePersonEnum` dobra acentos (NFD) para que a grafia da tela e o token gravado venham da mesma lista; valor fora dela é 400 nomeando o campo. Segunda metade: **CPF é gravado como 11 dígitos** com os dois verificadores validados (`11111111111` recusado como degenerado), mascarado só na exibição, e **deliberadamente fora da sessão** — a sessão vive em cookie, e o CPF não é dado que toda página precisa; a leitura é `GET /api/users/[id]/profile`, que decide o direito a cada chamada. Terceira metade: a leitura do CPF é **self OU MANAGE_USERS** e os demais campos de pessoa seguem a leitura aberta do perfil (DEC-136). `toPublicUser` não carrega CPF; `toPublicUserWithCpf` é o único caminho que carrega, chamado depois de o gate decidir. Medido antes de escrever: os quatro chamadores de `FindUserByIdUseCase` já eram exatamente self OU MANAGE_USERS — a restrição não pediu gate novo, pediu projeção nova. Na LISTA o CPF sai só para quem tem visão completa de contas, porque é ali que o painel o edita. Quarta metade: `fundingAgencyOther` só existe com OUTRA — trocar para CNPq/FAPEMIG **apaga** o texto livre, porque o formulário oficial nunca tem os dois preenchidos. Reversível: as colunas são `String` sem constraint (DEC-141), então adicionar um valor não é migration; o que fecha a lista é a validação.",
+    "DEC-148 (2026-10-13, execução): o V5-4 foi **dividido em V5-4a e V5-4b pelo tamanho medido**, sem mudança de desenho. V5-4a: dados de pessoa em `users` + `projects.proppiNumber` + as telas de perfil, painel e projeto. V5-4b: as colunas de `project_members` (`lattes`, `cargaHoraria`, `categoria`, `situacao`, `dataEntrada`) + use case e tela de membros. Motivo medido: os dois lados têm portas diferentes — `users` já tem módulo, rotas e projeção; `project_members` não tem use case de escrita nenhuma (a rota só add/remove), e o V5-4a já desbloqueia V5-9/V5-10, que pedem campo de pessoa, não campo de vínculo. Consequência registrada: **G5/G6 rodam uma vez, no fechamento do V5-4** — as três capturas que o V5-4a muda (`perfil-edicao`, `perfil-configuracoes`, `dialogo-novo-projeto`) só ficam estáveis depois de a tela de membros mudar também, e reconstruir a imagem do app leva mais de 25 minutos (medido no V5-2d). O mesmo adiamento já foi praticado no V5-2 (V5-2b/2c sem recaptura; V5-2d recapturou)."
   ],
   "batchLog": [
     {
@@ -472,6 +488,30 @@
         "em gate `self OU MANAGE_USERS` o 404 só existe para quem passa: escrevi 'usuário ausente' com um ator que não é o dono e recebi 403 antes do lookup (a ordem medida do delete, B6-4). O ator do caso tem de ser o dono do id que não existe.",
         "porta parcial com `as never` perde o contexto de tipo: os parâmetros dos métodos ficam `implicit any` (TS7006) e o import da porta deixa de ser usado. Tipar à mão.",
         "o guia pode estar mentindo há meses: a mensagem de negação do perfil citada em `08-perfil-e-notificacoes.md` não existe no código (`grep` devolve zero). Ao editar uma seção, `grep` a string que ela cita."
+      ]
+    },
+    {
+      "id": "V5-4a",
+      "at": "2026-10-13",
+      "title": "dados de pessoa em users + projects.proppiNumber — perfil, painel e projeto (DEC-138/140/147)",
+      "actions": [
+        "medido ANTES de escrever: `users` não tinha nenhum campo de pessoa, e os campos que os dois documentos oficiais pedem estão nomeados no AcroForm (DEC-130) — `is_medio`/`is_graduacao`/`is_pos_graduacao`, `is_pibic`/`is_pibic-jr`/`is_pibic_af`/`is_pibiti`/`is_pibiti_jr`/`is_btp`/`is_mestrado`/`is_doutorado`/`is_posdoc`/`is_voluntario`, `is_cnpq`/`is_fapemig`/`is_outra` + `agencia_outra`. As três listas fechadas saem daí (DEC-147), não de inventário meu. Medido também que os quatro chamadores de `FindUserByIdUseCase` já eram self OU MANAGE_USERS: a restrição de leitura do CPF não pediu gate novo.",
+        "schema: sete colunas em `users` (`cpf`, `registrationNumber`, `course`, `scholarshipType`, `fundingAgency`, `fundingAgencyOther`, `level`, todas `String?`) e `projects.proppiNumber String?`, por `prisma migrate diff --from-schema-datamodel/--to-schema-datamodel --script` (offline), gravado como `20261014001355_add_person_data_and_proppi_number` e aplicado com `migrate deploy` na 5432 E na 5433, depois `prisma generate`. Nunca `migrate dev` (a 5432 tem os dados do dono). Sem constraint de CHECK: a lista fechada vive na validação, não no banco (mesma postura da DEC-141).",
+        "dominio: `backend/domain/identity/person-data-rules.ts` — as três listas + rótulos ao lado dos tokens, `normalizePersonEnum` (dobra acentos por NFD para tela e banco falarem a mesma tabela), `normalizeCpf`/`isValidCpf` (11 dígitos, dois verificadores, `11111111111` recusado), `maskCpf`, `applyPersonDataFields` (a MESMA regra dos dois caminhos de escrita), `canActorReadUserCpf`, `emptyPersonData`. `fundingAgency` nomeada apaga `fundingAgencyOther`.",
+        "modulo: `UpdateUserUseCase` (PUT do painel) e `UpdateUserProfileUseCase` (PATCH do perfil) passaram a chamar `applyPersonDataFields` sobre o corpo já filtrado; `FindUserByIdUseCase` devolve `toPublicUserWithCpf`; `ListUsersForActorUseCase` publica os seis campos abertos para quem vê a lista e o CPF só sob `canViewFullUsers`; `create-user`/`register-user` inicializam por `emptyPersonData()`. `SELF_EDITABLE_USER_FIELDS` passou de seis para treze campos (a trava self-editável inclui os sete de pessoa).",
+        "transporte: `toPublicUser` ganhou os seis campos abertos e continua sem CPF; `toPublicUserWithCpf` é o único caminho que carrega CPF. O guarda `identity-rules.test.ts`, que congela a lista exata de chaves, falhou e nomeou os campos — é ele funcionando. A sessão (`lib/auth/config.ts`: `select`, token do jwt, ramo `trigger === \"update\"` e fallback) carrega os seis abertos e NÃO carrega o CPF, que é buscado na rota de perfil.",
+        "UI: seção \"Dados para os documentos oficiais\" em `components/forms/user-profile-form.tsx` (o CPF é buscado em `UserProfilesAPI.getProfile` na montagem e chega mascarado; o submit manda só o que mudou); bloco \"Dados para os documentos\" em `components/ui/user-profile-view.tsx` (leitura só, nunca o CPF); sete campos no diálogo \"Configurar Usuário\" do `ModernAdminPanel` (diff `personDataPatch`); campo \"Número PROPPI\" no `project-dialog` e linha no cartão \"Dados do projeto\" do `project-detail-dialog` (entrou também no `hasProjectData`, senão o cartão continuaria escondido num projeto que só tem PROPPI).",
+        "testes novos: 4 arquivos / 64 testes — 17 de regra pura, 15 de use case (módulo REAL sobre porta falsa), 11 de rota HTTP (módulo REAL sobre porta falsa, lição do B6-2a), 11 de tela (formulário de perfil + cartão de leitura) — mais 5 casos novos no painel (`admin-panel-user-settings.test.tsx`), 2 no domínio de projeto, 1 roundtrip G4 em `users-roundtrip` e PROPPI no roundtrip de `projects-roundtrip`. O guarda congelado de `toPublicUser` foi atualizado com os seis nomes e ganhou o caso 'o mesmo record, pelas duas projeções'.",
+        "G5/G6 adiados de propósito (DEC-148): as três capturas que esta metade muda (`perfil-edicao`, `perfil-configuracoes`, `dialogo-novo-projeto`) só ficam estáveis depois do V5-4b, e reconstruir a imagem do app leva mais de 25 minutos. Rodam uma vez no fechamento do V5-4."
+      ],
+      "gates": "G0 884/3666 zero violacao, allow-list vazia (era 879/3635) | G1 exit 0, nenhuma warning nova (18 warnings, todas em arquivos que já advertiam) | G2 1 erro PRE-EXISTENTE (floating-timer-tabs.test.tsx:105) | G3 116/1564 verde (era 113/1517; +3 arquivos, +47 testes) | G4 completa 127/1672 verde contra dq-dev-test-db (5433) (era 123/1608; +4 arquivos, +64 testes) | G5/G6 ADIADOS para o fechamento do V5-4 (DEC-148)",
+      "gotchas": [
+        "o CPF lido na rota era comparado com a SESSÃO, onde ele não existe: todo salvamento re-enviava o campo e a trava de 'só o que mudou' virava teatro. O teste de tela achou isso; o conserto é `cpfKnown` — o valor que o formulário sabe estar gravado, atualizado pela leitura.",
+        "`Select` do Radix não aceita `\"\"` como valor. Campo nullable usa sentinela `NO_VALUE = \"none\"` e vira `null` no submit; o rótulo \"Sem modalidade\"/\"Sem nível\" é o que a tela mostra para null.",
+        "`SelectTrigger` com só `<SelectValue placeholder>` não tem nome acessível (medido no V4-6b). Os quatro Select novos levam `aria-label` além do `id`/`htmlFor` — sem isso `getByRole(\"combobox\", { name: … })` não acha.",
+        "`bio: \"\"` é enviado pelo formulário de perfil quando a bio é null: quirk PRE-EXISTENTE (o estado vazio é `\"\"` e o diff manda), o servidor reconcilia para null e o teste nomeia o quirk em vez de abençoá-lo. Não é deste batch.",
+        "`UserProfilesAPI.getProfile` estava tipado como `{ profile }` — chave que a rota nunca devolveu (`{ user }`) e que não tinha chamador nenhum. Tipo mentindo sem chamador é invisível até o primeiro chamador.",
+        "o gateway expõe `updateUserProfile(actor, userId, data)` e `findUserById(actor, userId, deniedMessage)` por posição, mas `updateUserImage({ actor, userId, … })` por objeto: os dois formatos convivem na mesma classe, e o roundtrip G4 errou por isso (`tsc` pegou, porque o retorno é `unknown`)."
       ]
     }
   ],

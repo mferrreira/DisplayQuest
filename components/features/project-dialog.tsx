@@ -44,6 +44,7 @@ export function ProjectDialog({ open, onOpenChange, project = null }: ProjectDia
     endDate: "",
     editalNumber: "",
     processNumber: "",
+    proppiNumber: "",
   })
 
   // Reset form when dialog opens/closes or project changes
@@ -60,6 +61,7 @@ export function ProjectDialog({ open, onOpenChange, project = null }: ProjectDia
         endDate: project.endDate || "",
         editalNumber: project.editalNumber || "",
         processNumber: project.processNumber || "",
+        proppiNumber: project.proppiNumber || "",
       })
       void (async () => {
         try {
@@ -84,6 +86,7 @@ export function ProjectDialog({ open, onOpenChange, project = null }: ProjectDia
         endDate: "",
         editalNumber: "",
         processNumber: "",
+        proppiNumber: "",
       })
     }
     setError(null)
@@ -291,6 +294,18 @@ export function ProjectDialog({ open, onOpenChange, project = null }: ProjectDia
                 value={formData.processNumber || ""}
                 onChange={handleChange}
                 placeholder="Ex.: IFNMG-2026/0042"
+              />
+            </div>
+
+            {/* V5-4a (DEC-140): o nº PROPPI sai nos dois formulários oficiais. */}
+            <div className="grid gap-2">
+              <Label htmlFor="proppiNumber">Número PROPPI</Label>
+              <Input
+                id="proppiNumber"
+                name="proppiNumber"
+                value={formData.proppiNumber || ""}
+                onChange={handleChange}
+                placeholder="Ex.: 2026.01.001"
               />
             </div>
 

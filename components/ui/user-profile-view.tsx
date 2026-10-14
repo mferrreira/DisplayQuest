@@ -16,6 +16,14 @@ import {
   User as UserIcon
 } from "lucide-react"
 import { User as UserType } from "@/contexts/types"
+import {
+  FUNDING_AGENCY_LABELS,
+  SCHOLARSHIP_TYPE_LABELS,
+  USER_LEVEL_LABELS,
+  type FundingAgency,
+  type ScholarshipType,
+  type UserLevel,
+} from "@/backend/domain"
 import { formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { UserBadgesCard } from "@/components/ui/user-badges"
@@ -124,6 +132,57 @@ export function UserProfileView({ user, onBack, canEdit = false, onEdit, project
             <div>
               <h3 className="text-sm font-medium text-gray-900 dark:text-foreground mb-2">Sobre</h3>
               <p className="text-gray-700 dark:text-gray-300 leading-relaxed">{user.bio}</p>
+            </div>
+          )}
+
+          {/* V5-4a (DEC-138): os dados de pessoa que o perfil mostra abertamente. O bloco só
+              aparece quando algum deles existe, e o CPF fica de fora de propósito — este cartão
+              também renderiza o perfil de outra pessoa, e o CPF não chega na lista de usuários. */}
+          {(user.course || user.registrationNumber || user.scholarshipType || user.level || user.fundingAgency) && (
+            <div>
+              <h3 className="text-sm font-medium text-gray-900 dark:text-foreground mb-2">
+                Dados para os documentos
+              </h3>
+              <dl className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {user.course && (
+                  <div>
+                    <dt className="text-xs text-muted-foreground">Curso</dt>
+                    <dd className="text-sm text-gray-900 dark:text-foreground">{user.course}</dd>
+                  </div>
+                )}
+                {user.registrationNumber && (
+                  <div>
+                    <dt className="text-xs text-muted-foreground">Matrícula</dt>
+                    <dd className="text-sm text-gray-900 dark:text-foreground">{user.registrationNumber}</dd>
+                  </div>
+                )}
+                {user.scholarshipType && (
+                  <div>
+                    <dt className="text-xs text-muted-foreground">Modalidade de IC</dt>
+                    <dd className="text-sm text-gray-900 dark:text-foreground">
+                      {SCHOLARSHIP_TYPE_LABELS[user.scholarshipType as ScholarshipType] ?? user.scholarshipType}
+                    </dd>
+                  </div>
+                )}
+                {user.level && (
+                  <div>
+                    <dt className="text-xs text-muted-foreground">Nível</dt>
+                    <dd className="text-sm text-gray-900 dark:text-foreground">
+                      {USER_LEVEL_LABELS[user.level as UserLevel] ?? user.level}
+                    </dd>
+                  </div>
+                )}
+                {user.fundingAgency && (
+                  <div>
+                    <dt className="text-xs text-muted-foreground">Instituição de fomento</dt>
+                    <dd className="text-sm text-gray-900 dark:text-foreground">
+                      {user.fundingAgency === "OUTRA" && user.fundingAgencyOther
+                        ? user.fundingAgencyOther
+                        : FUNDING_AGENCY_LABELS[user.fundingAgency as FundingAgency] ?? user.fundingAgency}
+                    </dd>
+                  </div>
+                )}
+              </dl>
             </div>
           )}
 

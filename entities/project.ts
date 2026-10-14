@@ -22,6 +22,8 @@ export const projectSchema = z.object({
   endDate: z.string().nullable().optional(),
   editalNumber: z.string().nullable().optional(),
   processNumber: z.string().nullable().optional(),
+  // V5-4a (DEC-140): nº PROPPI.
+  proppiNumber: z.string().nullable().optional(),
   points: z.number().int().optional(),
   // V5-2d (DEC-102): chave do objeto no bucket (logo/banner). Opcional: o parse não pode quebrar
   // contra uma instância ainda sem a migration aplicada.

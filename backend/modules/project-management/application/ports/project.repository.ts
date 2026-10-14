@@ -22,6 +22,8 @@ export interface ProjectRecord {
   endDate?: string | null;
   editalNumber?: string | null;
   processNumber?: string | null;
+  /** V5-4a (DEC-140): nº PROPPI. */
+  proppiNumber?: string | null;
   points?: number;
   /**
    * V5-2d (DEC-102): chave do objeto no bucket. A coluna guarda a CHAVE, nunca um caminho de
@@ -45,6 +47,8 @@ export interface NewProjectInput {
   endDate: string | null;
   editalNumber: string | null;
   processNumber: string | null;
+  /** V5-4a (DEC-140). */
+  proppiNumber: string | null;
 }
 
 export interface ProjectRepositoryPort {

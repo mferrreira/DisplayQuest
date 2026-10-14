@@ -1,4 +1,4 @@
-import { ConflictError, filterSelfEditableUserFields, hasPermission, NotFoundError, requireActorSelfOrPermission, toUserStatus, ValidationError, normalizeAvatar, toPublicUser } from "@/backend/domain"
+import { applyPersonDataFields, ConflictError, filterSelfEditableUserFields, hasPermission, NotFoundError, requireActorSelfOrPermission, toUserStatus, ValidationError, normalizeAvatar, toPublicUserWithCpf } from "@/backend/domain"
 import type { ActorRef } from "@/backend/domain"
 import type { UserRepositoryPort } from "@/backend/modules/user-management/application/ports/user.repository"
 
@@ -52,6 +52,12 @@ export class UpdateUserUseCase {
       currentUser.roles = [...new Set(editableData.roles as never[])]
     }
 
-    return toPublicUser(await this.repository.update(currentUser))
+    // V5-4a (DEC-138): os sete campos de pessoa, normalizados pela regra pura. Quem não gerencia
+    // já teve o corpo filtrado por `filterSelfEditableUserFields`, que os inclui.
+    applyPersonDataFields(currentUser, editableData)
+
+    // O gate acima é `self OU MANAGE_USERS`, o mesmo direito de ler o CPF (DEC-138): quem acabou
+    // de escrever o próprio CPF recebe o CPF de volta.
+    return toPublicUserWithCpf(await this.repository.update(currentUser))
   }
 }

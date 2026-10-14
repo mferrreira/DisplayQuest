@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -10,6 +10,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { User, UserFormData } from "@/contexts/types"
 import { UserProfilesAPI } from "@/contexts/api-client"
+import {
+  FUNDING_AGENCIES,
+  FUNDING_AGENCY_LABELS,
+  SCHOLARSHIP_TYPES,
+  SCHOLARSHIP_TYPE_LABELS,
+  USER_LEVELS,
+  USER_LEVEL_LABELS,
+  maskCpf,
+} from "@/backend/domain"
 import { AlertCircle, CheckCircle, User as UserIcon } from "lucide-react"
 import { useSession } from "next-auth/react"
 
@@ -18,6 +27,9 @@ interface UserProfileFormProps {
   onUpdate: (updatedUser: User) => void
   onCancel: () => void
 }
+
+/** Sentinela do Select: "sem valor" não pode ser string vazia no Radix. */
+const NO_VALUE = "none"
 
 export function UserProfileForm({ user, onUpdate, onCancel }: UserProfileFormProps) {
   const { update: updateSession } = useSession()
@@ -29,12 +41,46 @@ export function UserProfileForm({ user, onUpdate, onCancel }: UserProfileFormPro
     weekHours: user.weekHours || 0,
     bio: user.bio || "",
     avatar: user.avatar || "",
-    profileVisibility: user.profileVisibility || "public"
+    profileVisibility: user.profileVisibility || "public",
+    // V5-4a (DEC-138): os campos abertos vêm da sessão. O CPF não vem, e é buscado abaixo.
+    registrationNumber: user.registrationNumber ?? null,
+    course: user.course ?? null,
+    scholarshipType: user.scholarshipType ?? null,
+    fundingAgency: user.fundingAgency ?? null,
+    fundingAgencyOther: user.fundingAgencyOther ?? null,
+    level: user.level ?? null,
+    cpf: null,
   })
-  
+
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+
+  // O CPF é o único dado de pessoa com leitura restrita (DEC-138), e a sessão não o carrega:
+  // ele chega pela rota de perfil, que decide o direito a cada chamada.
+  //
+  // `cpfKnown` é o valor que o formulário sabe estar gravado. Sem ele, o CPF lido na rota seria
+  // comparado com a sessão (onde ele não existe) e todo salvamento re-enviaria o campo — a trava
+  // de "só o que mudou" viraria teatro.
+  const [cpfKnown, setCpfKnown] = useState<string | null>(maskCpf(user.cpf ?? null))
+
+  useEffect(() => {
+    let cancelled = false
+    UserProfilesAPI.getProfile(user.id)
+      .then((payload) => {
+        const masked = maskCpf(typeof payload?.user?.cpf === "string" ? payload.user.cpf : null)
+        if (cancelled || masked === null) return
+        setCpfKnown(masked)
+        setFormData((prev) => ({ ...prev, cpf: masked }))
+      })
+      .catch(() => {
+        // Sem leitura disponível o campo fica em branco: preencher de novo é o caminho, e
+        // inventar um CPF a partir de nada não é.
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [user.id])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -44,28 +90,44 @@ export function UserProfileForm({ user, onUpdate, onCancel }: UserProfileFormPro
 
     try {
       const updateData: Partial<UserFormData> = {}
-      
+
       if (formData.name !== user.name) updateData.name = formData.name
       if (formData.bio !== user.bio) updateData.bio = formData.bio
       if (formData.profileVisibility !== user.profileVisibility) updateData.profileVisibility = formData.profileVisibility
       if (formData.weekHours !== user.weekHours) updateData.weekHours = formData.weekHours
-      
-      if (formData.password)       
+
+      if (formData.password)
         updateData.password = formData.password
+
+      // Só o que mudou. "none" no Select é "sem dado", e vai como null.
+      if (formData.cpf !== cpfKnown) updateData.cpf = formData.cpf || null
+      if (formData.registrationNumber !== (user.registrationNumber ?? null)) {
+        updateData.registrationNumber = formData.registrationNumber
+      }
+      if (formData.course !== (user.course ?? null)) updateData.course = formData.course
+      if (formData.scholarshipType !== (user.scholarshipType ?? null)) {
+        updateData.scholarshipType = formData.scholarshipType
+      }
+      if (formData.fundingAgency !== (user.fundingAgency ?? null)) {
+        updateData.fundingAgency = formData.fundingAgency
+      }
+      if (formData.fundingAgencyOther !== (user.fundingAgencyOther ?? null)) {
+        updateData.fundingAgencyOther = formData.fundingAgencyOther
+      }
+      if (formData.level !== (user.level ?? null)) updateData.level = formData.level
 
       const result = await UserProfilesAPI.updateProfile(user.id, updateData)
       const updatedData = result.user
-      console.log(updatedData)
-      
+
       onUpdate(updatedData)
       await updateSession({
         user: {
           ...updatedData,
         },
       })
-      
+
       setSuccess("Perfil atualizado com sucesso!")
-      
+
       // Clear password field
       setFormData(prev => ({ ...prev, password: "" }))
     } catch (err: any) {
@@ -79,6 +141,12 @@ export function UserProfileForm({ user, onUpdate, onCancel }: UserProfileFormPro
   const handleInputChange = (field: keyof UserFormData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }))
   }
+
+  const handleNullableSelect = (field: keyof UserFormData, value: string) => {
+    handleInputChange(field, value === NO_VALUE ? null : value)
+  }
+
+  const fundingAgencyIsOther = formData.fundingAgency === "OUTRA"
 
   return (
     <Card>
@@ -157,6 +225,123 @@ export function UserProfileForm({ user, onUpdate, onCancel }: UserProfileFormPro
                 value={formData.weekHours || 0}
                 onChange={(e) => handleInputChange("weekHours", parseFloat(e.target.value) || 0)}
               />
+            </div>
+          </div>
+
+          {/* V5-4a (DEC-138): os dados que os formulários oficiais pedem — atestado e relatório
+              técnico. A pessoa escreve os próprios; quem gerencia também edita, pelo painel. */}
+          <div className="space-y-4 pt-4 border-t">
+            <h3 className="text-sm font-medium">Dados para os documentos oficiais</h3>
+
+            <div>
+              <Label htmlFor="cpf">CPF</Label>
+              <Input
+                id="cpf"
+                value={formData.cpf ?? ""}
+                onChange={(e) => handleInputChange("cpf", e.target.value)}
+                placeholder="000.000.000-00"
+                inputMode="numeric"
+              />
+              <p className="text-xs text-gray-500 dark:text-muted-foreground mt-1">
+                Só você e quem gerencia contas leem o CPF.
+              </p>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <Label htmlFor="registrationNumber">Matrícula</Label>
+                <Input
+                  id="registrationNumber"
+                  value={formData.registrationNumber ?? ""}
+                  onChange={(e) => handleInputChange("registrationNumber", e.target.value)}
+                  placeholder="Ex.: 2026110001"
+                />
+              </div>
+              <div>
+                <Label htmlFor="course">Curso</Label>
+                <Input
+                  id="course"
+                  value={formData.course ?? ""}
+                  onChange={(e) => handleInputChange("course", e.target.value)}
+                  placeholder="Ex.: Sistemas de Informação"
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <Label htmlFor="scholarshipType">Modalidade de IC</Label>
+                <Select
+                  value={formData.scholarshipType ?? NO_VALUE}
+                  onValueChange={(value) => handleNullableSelect("scholarshipType", value)}
+                >
+                  <SelectTrigger id="scholarshipType" aria-label="Modalidade de IC">
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NO_VALUE}>Sem modalidade</SelectItem>
+                    {SCHOLARSHIP_TYPES.map((token) => (
+                      <SelectItem key={token} value={token}>
+                        {SCHOLARSHIP_TYPE_LABELS[token]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="level">Nível</Label>
+                <Select
+                  value={formData.level ?? NO_VALUE}
+                  onValueChange={(value) => handleNullableSelect("level", value)}
+                >
+                  <SelectTrigger id="level" aria-label="Nível">
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NO_VALUE}>Sem nível</SelectItem>
+                    {USER_LEVELS.map((token) => (
+                      <SelectItem key={token} value={token}>
+                        {USER_LEVEL_LABELS[token]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <Label htmlFor="fundingAgency">Instituição de fomento</Label>
+                <Select
+                  value={formData.fundingAgency ?? NO_VALUE}
+                  onValueChange={(value) => handleNullableSelect("fundingAgency", value)}
+                >
+                  <SelectTrigger id="fundingAgency" aria-label="Instituição de fomento">
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NO_VALUE}>Sem fomento</SelectItem>
+                    {FUNDING_AGENCIES.map((token) => (
+                      <SelectItem key={token} value={token}>
+                        {FUNDING_AGENCY_LABELS[token]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {fundingAgencyIsOther && (
+                <div>
+                  <Label htmlFor="fundingAgencyOther">Nome da instituição</Label>
+                  <Input
+                    id="fundingAgencyOther"
+                    value={formData.fundingAgencyOther ?? ""}
+                    onChange={(e) => handleInputChange("fundingAgencyOther", e.target.value)}
+                    placeholder="Ex.: FAPEMIG"
+                  />
+                </div>
+              )}
             </div>
           </div>
 

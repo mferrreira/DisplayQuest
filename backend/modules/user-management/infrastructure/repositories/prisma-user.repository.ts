@@ -30,6 +30,13 @@ type UserRow = {
   bio: string | null
   avatar: string | null
   bannerKey: string | null
+  cpf: string | null
+  registrationNumber: string | null
+  course: string | null
+  scholarshipType: string | null
+  fundingAgency: string | null
+  fundingAgencyOther: string | null
+  level: string | null
   roles: UserRole[]
   createdAt: Date
 }
@@ -49,6 +56,13 @@ function toRecord(row: UserRow): UserRecord {
     bio: row.bio,
     avatar: row.avatar,
     bannerKey: row.bannerKey,
+    cpf: row.cpf,
+    registrationNumber: row.registrationNumber,
+    course: row.course,
+    scholarshipType: row.scholarshipType,
+    fundingAgency: row.fundingAgency,
+    fundingAgencyOther: row.fundingAgencyOther,
+    level: row.level,
     roles: row.roles,
     createdAt: row.createdAt,
   }
@@ -86,6 +100,13 @@ export class PrismaUserRepository implements UserRepositoryPort {
         bio: record.bio,
         avatar: record.avatar,
         bannerKey: record.bannerKey,
+        cpf: record.cpf,
+        registrationNumber: record.registrationNumber,
+        course: record.course,
+        scholarshipType: record.scholarshipType,
+        fundingAgency: record.fundingAgency,
+        fundingAgencyOther: record.fundingAgencyOther,
+        level: record.level,
         roles: record.roles,
       },
     })
@@ -155,6 +176,13 @@ export class PrismaUserRepository implements UserRepositoryPort {
         avatar: true,
         bannerKey: true,
         bio: true,
+        cpf: true,
+        registrationNumber: true,
+        course: true,
+        scholarshipType: true,
+        fundingAgency: true,
+        fundingAgencyOther: true,
+        level: true,
       },
       orderBy: { name: "asc" },
     })

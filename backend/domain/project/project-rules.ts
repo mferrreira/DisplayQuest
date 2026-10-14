@@ -128,6 +128,8 @@ export interface ProjectRecordLike {
   endDate?: string | null;
   editalNumber?: string | null;
   processNumber?: string | null;
+  /** V5-4a (DEC-140). */
+  proppiNumber?: string | null;
   points?: number;
 }
 
@@ -178,6 +180,7 @@ export function applyProjectUpdate<T extends ProjectRecordLike>(project: T, data
   if (data.endDate !== undefined) next.endDate = normalizeProjectDateField(data.endDate);
   if (data.editalNumber !== undefined) next.editalNumber = normalizeProjectTextField(data.editalNumber);
   if (data.processNumber !== undefined) next.processNumber = normalizeProjectTextField(data.processNumber);
+  if (data.proppiNumber !== undefined) next.proppiNumber = normalizeProjectTextField(data.proppiNumber);
   return next;
 }
 
@@ -230,6 +233,11 @@ export function validateProjectInput(project: Partial<ProjectRecordLike>): strin
   if (project.processNumber && project.processNumber.length > PROJECT_TEXT_FIELD_MAX_LENGTH) {
     errors.push(
       `Número de processo do projeto não pode ter mais de ${PROJECT_TEXT_FIELD_MAX_LENGTH} caracteres`,
+    );
+  }
+  if (project.proppiNumber && project.proppiNumber.length > PROJECT_TEXT_FIELD_MAX_LENGTH) {
+    errors.push(
+      `Número PROPPI do projeto não pode ter mais de ${PROJECT_TEXT_FIELD_MAX_LENGTH} caracteres`,
     );
   }
 

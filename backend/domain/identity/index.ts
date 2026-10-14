@@ -38,7 +38,7 @@ export { normalizeAvatar } from "./avatar";
 export { resolveUserListVisibility, type UserListVisibility } from "./user-visibility";
 export { SELF_EDITABLE_USER_FIELDS, filterSelfEditableUserFields } from "./user-edit-fields";
 export { CREATE_USER_DENIED_MESSAGE, PENDING_MODERATION_DENIED_MESSAGE, PROFILE_DENIED_MESSAGE } from "./user-denied-messages";
-export { toPublicUser, type PublicUser } from "./public-user";
+export { toPublicUser, toPublicUserWithCpf, type PublicUser, type PublicUserWithCpf } from "./public-user";
 export {
   USER_IMAGE_SLOTS,
   USER_IMAGE_SLOT_MESSAGE,
@@ -46,3 +46,27 @@ export {
   userImagePrefix,
   type UserImageSlot,
 } from "./user-image-rules";
+export {
+  FUNDING_AGENCIES,
+  FUNDING_AGENCY_LABELS,
+  PERSON_TEXT_LIMITS,
+  SCHOLARSHIP_TYPES,
+  SCHOLARSHIP_TYPE_LABELS,
+  USER_LEVELS,
+  USER_LEVEL_LABELS,
+  applyPersonDataFields,
+  canActorReadUserCpf,
+  emptyPersonData,
+  maskCpf,
+  normalizeCpf,
+  normalizeFundingAgency,
+  normalizePersonEnum,
+  normalizePersonText,
+  normalizeScholarshipType,
+  normalizeUserLevel,
+  type FundingAgency,
+  type PersonDataFields,
+  type PersonTextField,
+  type ScholarshipType,
+  type UserLevel,
+} from "./person-data-rules";

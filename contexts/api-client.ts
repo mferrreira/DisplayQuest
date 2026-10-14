@@ -617,8 +617,10 @@ export const BadgesAPI = {
 
 // API de Perfis de Usuário
 export const UserProfilesAPI = {
-  // Obter perfil de um usuário
-  getProfile: (userId: number) => fetchAPI<{ profile: any }>(`/api/users/${userId}/profile`),
+  // Obter perfil de um usuário. Medido na rota (app/api/users/[id]/profile/route.ts): o corpo é
+  // `{ user }`, e é a leitura que traz o CPF — o único dado de pessoa com leitura restrita
+  // (DEC-138). O nome `profile` do método é legado; a resposta nunca teve essa chave.
+  getProfile: (userId: number) => fetchAPI<{ user: any }>(`/api/users/${userId}/profile`),
 
   // Atualizar perfil de um usuário
   updateProfile: (userId: number, profileData: any) =>

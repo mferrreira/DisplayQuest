@@ -160,6 +160,7 @@ describe("G4 roundtrip — project-management + project-membership (isolated tes
         endDate: "2026-10-14T02:00:00.000Z", // ainda 13/10 em America/Sao_Paulo
         editalNumber: "EDITAL 12/2026",
         processNumber: "IFNMG-2026/0042",
+        proppiNumber: "2026.01.001", // V5-4a (DEC-140)
         points: 99999, // ignorado de propósito: regra 6 do plano (DEC-63/74)
       },
     });
@@ -167,11 +168,13 @@ describe("G4 roundtrip — project-management + project-membership (isolated tes
     expect(updated.endDate).toBe("2026-10-13");
     expect(updated.editalNumber).toBe("EDITAL 12/2026");
     expect(updated.processNumber).toBe("IFNMG-2026/0042");
+    expect(updated.proppiNumber).toBe("2026.01.001");
     expect(updated.points).toBe(0);
 
     const row = await prisma.projects.findUnique({ where: { id: projectId } });
     expect(row?.startDate).toBe("2026-02-01");
     expect(row?.endDate).toBe("2026-10-13"); // gravado como dia civil, não como o ISO que entrou
+    expect(row?.proppiNumber).toBe("2026.01.001");
     expect(row?.points).toBe(0);
 
     await expect(

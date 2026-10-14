@@ -111,6 +111,13 @@ describe("validateProjectInput — campos novos do projeto (V5-2b)", () => {
     expect(errors).toContain("Número de processo do projeto não pode ter mais de 100 caracteres");
   });
 
+  it("nº PROPPI (V5-4a, DEC-140) tem o mesmo teto e é dado do projeto", () => {
+    expect(validateProjectInput({ ...baseRecord, proppiNumber: "2026.01.001" })).toEqual([]);
+    expect(validateProjectInput({ ...baseRecord, proppiNumber: "p".repeat(101) })).toContain(
+      "Número PROPPI do projeto não pode ter mais de 100 caracteres",
+    );
+  });
+
   it("a mensagem de rejeição continua `Dados inválidos: ...` (quirk congelado)", () => {
     expect(projectValidationMessage(["Data de início do projeto inválida"])).toBe(
       "Dados inválidos: Data de início do projeto inválida",
@@ -130,6 +137,12 @@ describe("applyProjectUpdate — escrita dos campos novos (V5-2b)", () => {
     expect(next.endDate).toBe("2026-10-13");
     expect(next.editalNumber).toBe("EDITAL 12/2026");
     expect(next.processNumber).toBe("IFNMG-2026/0042");
+  });
+
+  it("nº PROPPI entra e sai aparado, e string vazia limpa (V5-4a, DEC-140)", () => {
+    const filled = applyProjectUpdate(baseRecord, { proppiNumber: "  2026.01.001  " });
+    expect(filled.proppiNumber).toBe("2026.01.001");
+    expect(applyProjectUpdate(filled, { proppiNumber: "" }).proppiNumber).toBeNull();
   });
 
   it("string vazia limpa o campo (null), como a descrição", () => {

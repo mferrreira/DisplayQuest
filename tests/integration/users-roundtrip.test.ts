@@ -125,6 +125,71 @@ describe("G4 roundtrip — user-management (isolated test DB)", () => {
     );
   });
 
+  it("dados de pessoa (DEC-138): normalização persiste na coluna, e o CPF só chega a quem tem direito", async () => {
+    const owner = userActor(userId, ["VOLUNTARIO"]);
+
+    const written = (await userModule.updateUserProfile(owner, userId, {
+      cpf: "529.982.247-25",
+      registrationNumber: "  G4-2026  ",
+      course: "Sistemas de Informação",
+      scholarshipType: "PIBIC Jr",
+      fundingAgency: "OUTRA",
+      fundingAgencyOther: "FAPEMIG",
+      level: "Pós-graduação",
+    })) as {
+      cpf: string | null;
+      registrationNumber: string | null;
+      course: string | null;
+      scholarshipType: string | null;
+      fundingAgency: string | null;
+      fundingAgencyOther: string | null;
+      level: string | null;
+    };
+
+    expect(written.cpf).toBe("52998224725");
+    expect(written.scholarshipType).toBe("PIBIC_JR");
+    expect(written.level).toBe("POS_GRADUACAO");
+
+    // Prisma real: o que está na coluna é o token normalizado, não a grafia que chegou.
+    const row = await prisma.users.findUnique({ where: { id: userId } });
+    expect(row?.cpf).toBe("52998224725");
+    expect(row?.registrationNumber).toBe("G4-2026");
+    expect(row?.course).toBe("Sistemas de Informação");
+    expect(row?.fundingAgency).toBe("OUTRA");
+    expect(row?.fundingAgencyOther).toBe("FAPEMIG");
+
+    // Leitura de um usuário: a própria pessoa lê o próprio CPF.
+    const selfRead = (await userModule.findUserById(owner, userId)) as { cpf?: string | null } | null;
+    expect(selfRead?.cpf).toBe("52998224725");
+
+    // Lista: quem não gerencia contas vê os campos abertos e NÃO vê o CPF.
+    const basic = (await userModule.listUsersForActor({ actor: userActor(1, ["VOLUNTARIO"]) })) as Array<
+      Record<string, unknown>
+    >;
+    const basicMine = basic.find((r) => r.id === userId);
+    expect(basicMine?.course).toBe("Sistemas de Informação");
+    expect(basicMine).not.toHaveProperty("cpf");
+
+    // Lista: a gestão vê o CPF, porque é ali que o painel o edita.
+    const full = (await userModule.listUsersForActor({ actor: managerActor })) as Array<
+      Record<string, unknown>
+    >;
+    expect(full.find((r) => r.id === userId)?.cpf).toBe("52998224725");
+
+    // Trocar o fomento para uma agência nomeada apaga o texto livre (o formulário não tem os dois).
+    const switched = (await userModule.updateUserProfile(owner, userId, {
+      fundingAgency: "CNPQ",
+    })) as { fundingAgency: string | null; fundingAgencyOther: string | null };
+    expect(switched.fundingAgencyOther).toBeNull();
+    expect((await prisma.users.findUnique({ where: { id: userId } }))?.fundingAgencyOther).toBeNull();
+
+    // CPF inválido não chega ao banco.
+    await expect(
+      userModule.updateUserProfile(owner, userId, { cpf: "529.982.247-26" })
+    ).rejects.toThrow("CPF inválido");
+    expect((await prisma.users.findUnique({ where: { id: userId } }))?.cpf).toBe("52998224725");
+  });
+
   it("points/roles/hours/status mutations persist and project the public shape", async () => {
     const withPoints = (await userModule.updateUserPoints({ actor: managerActor, userId, action: "add", points: 7 })) as {
       points: number;

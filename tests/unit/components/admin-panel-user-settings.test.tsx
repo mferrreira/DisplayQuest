@@ -357,3 +357,85 @@ describe("V4-4b · o filtro de status do painel", () => {
     expect(screen.queryByRole("button", { name: "Configurar Rita Rejeitada" })).not.toBeInTheDocument();
   });
 });
+
+describe("V5-4a · os dados de pessoa no diálogo do painel (DEC-138)", () => {
+  const pessoaComDados = () =>
+    makeUser({
+      id: 77,
+      name: "Maria Silva",
+      email: "maria@lab.com",
+      points: 120,
+      weekHours: 20,
+      roles: ["VOLUNTARIO"],
+      status: "active",
+      cpf: "52998224725",
+      registrationNumber: "2026110001",
+      course: "Sistemas de Informação",
+      scholarshipType: "PIBIC_JR",
+      fundingAgency: "CNPQ",
+      level: "GRADUACAO",
+    });
+
+  it("o diálogo abre com o que já está gravado, e o CPF chega mascarado", async () => {
+    renderPanel([pessoaComDados()]);
+    await openSettingsFor("Maria Silva");
+
+    expect((screen.getByLabelText("CPF") as HTMLInputElement).value).toBe("529.982.247-25");
+    expect((screen.getByLabelText("Matrícula") as HTMLInputElement).value).toBe("2026110001");
+    expect((screen.getByLabelText("Curso") as HTMLInputElement).value).toBe("Sistemas de Informação");
+    expect(screen.getByRole("combobox", { name: "Modalidade de IC" })).toHaveTextContent("PIBIC Jr");
+    expect(screen.getByRole("combobox", { name: "Nível" })).toHaveTextContent("Graduação");
+    expect(screen.getByRole("combobox", { name: "Instituição de fomento" })).toHaveTextContent("CNPq");
+  });
+
+  it("não mexer nos campos não os envia: abrir e salvar não apaga dado de ninguém", async () => {
+    renderPanel([pessoaComDados()]);
+    await openSettingsFor("Maria Silva");
+    await userEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
+
+    await waitFor(() => expect(captured.some((r) => r.method === "PUT-user")).toBe(true));
+    const body = captured.find((r) => r.method === "PUT-user")!.body;
+
+    expect(body.name).toBe("Maria Silva");
+    for (const field of ["cpf", "registrationNumber", "course", "scholarshipType", "fundingAgency", "level"]) {
+      expect(body).not.toHaveProperty(field);
+    }
+  });
+
+  it("mudar a modalidade chega à API como token da lista fechada", async () => {
+    renderPanel([pessoaComDados()]);
+    await openSettingsFor("Maria Silva");
+
+    await userEvent.click(screen.getByRole("combobox", { name: "Modalidade de IC" }));
+    await userEvent.click(await screen.findByRole("option", { name: "PIBITI" }));
+    await userEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
+
+    await waitFor(() => expect(captured.some((r) => r.method === "PUT-user")).toBe(true));
+    expect(captured.find((r) => r.method === "PUT-user")!.body).toMatchObject({ scholarshipType: "PIBITI" });
+  });
+
+  it("escolher \"Sem modalidade\" envia null (o campo existe para ser limpo, não só preenchido)", async () => {
+    renderPanel([pessoaComDados()]);
+    await openSettingsFor("Maria Silva");
+
+    await userEvent.click(screen.getByRole("combobox", { name: "Modalidade de IC" }));
+    await userEvent.click(await screen.findByRole("option", { name: "Sem modalidade" }));
+    await userEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
+
+    await waitFor(() => expect(captured.some((r) => r.method === "PUT-user")).toBe(true));
+    expect(captured.find((r) => r.method === "PUT-user")!.body).toMatchObject({ scholarshipType: null });
+  });
+
+  it("o texto livre do fomento só existe quando a agência é \"Outra\"", async () => {
+    renderPanel([pessoaComDados()]);
+    await openSettingsFor("Maria Silva");
+
+    // CNPq: o formulário oficial não tem linha de agência livre.
+    expect(screen.queryByLabelText("Nome da instituição")).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("combobox", { name: "Instituição de fomento" }));
+    await userEvent.click(await screen.findByRole("option", { name: "Outra" }));
+
+    expect(await screen.findByLabelText("Nome da instituição")).toBeInTheDocument();
+  });
+});

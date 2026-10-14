@@ -13,7 +13,8 @@
  *  - approve (lista + moderacao): "Acesso negado." com PONTO FINAL.
  *  - delete: gate ANTES do lookup — ausente PARA quem nao pode e 403, nao 404.
  *  - update (PUT): gate + TRAVA DE CAMPOS (filterSelfEditableUserFields) — quem nao gerencia
- *    escreve so os seis campos self-editaveis.
+ *    escreve so os campos self-editaveis (seis desde o B6-4; passaram a treze no V5-4a/DEC-138,
+ *    com os sete campos de pessoa).
  *  - moderate reject: o deleteUser interno recebe o MESMO ator (DEC-54 — quem tem pessoa atras
  *    entrega a pessoa).
  */
@@ -25,6 +26,7 @@ import {
   PENDING_MODERATION_DENIED_MESSAGE,
   PROFILE_DENIED_MESSAGE,
   SYSTEM_REASONS,
+  emptyPersonData,
   systemActor,
   userActor,
 } from "@/backend/domain";
@@ -54,12 +56,12 @@ function makeFixture() {
     {
       id: 1, name: "Ana", email: "ana@x.com", points: 0, completedTasks: 0,
       password: "hashed", status: "active", weekHours: 10, currentWeekHours: 0,
-      profileVisibility: "public", bio: null, avatar: null, bannerKey: null, roles: ["VOLUNTARIO"],
+      profileVisibility: "public", bio: null, avatar: null, bannerKey: null, ...emptyPersonData(), roles: ["VOLUNTARIO"],
     },
     {
       id: 4, name: "Bruno", email: "bruno@x.com", points: 0, completedTasks: 0,
       password: "hashed", status: "pending", weekHours: 0, currentWeekHours: 0,
-      profileVisibility: "public", bio: null, avatar: null, bannerKey: null, roles: [],
+      profileVisibility: "public", bio: null, avatar: null, bannerKey: null, ...emptyPersonData(), roles: [],
     },
   ];
   const writes: string[] = [];

@@ -47,5 +47,16 @@ export const userSchema = z.object({
   bannerKey: z.string().nullable().optional(),
   bio: z.string().nullable().optional(),
   profileVisibility: profileVisibilitySchema.default("public"),
+  /**
+   * V5-4a (DEC-138): dados de pessoa. Todos opcionais — o parse não pode quebrar contra uma
+   * instância ainda sem a migration, e o CPF não chega na lista de usuários (leitura restrita).
+   */
+  cpf: z.string().nullable().optional(),
+  registrationNumber: z.string().nullable().optional(),
+  course: z.string().nullable().optional(),
+  scholarshipType: z.string().nullable().optional(),
+  fundingAgency: z.string().nullable().optional(),
+  fundingAgencyOther: z.string().nullable().optional(),
+  level: z.string().nullable().optional(),
 });
 export type User = z.infer<typeof userSchema>;

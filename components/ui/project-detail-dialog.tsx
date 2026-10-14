@@ -150,6 +150,7 @@ export function ProjectDetailDialog({
     projectEndDate !== null ||
     Boolean(project.editalNumber) ||
     Boolean(project.processNumber) ||
+    Boolean(project.proppiNumber) ||
     projectPoints > 0
 
   // V5-2c: quem vê os controles de escrita de entregáveis/anexos. A AUTORIDADE é o servidor
@@ -267,6 +268,12 @@ export function ProjectDetailDialog({
                       <div>
                         <dt className="text-sm text-muted-foreground">Número do processo</dt>
                         <dd className="font-medium">{project.processNumber}</dd>
+                      </div>
+                    )}
+                    {project.proppiNumber && (
+                      <div>
+                        <dt className="text-sm text-muted-foreground">Número PROPPI</dt>
+                        <dd className="font-medium">{project.proppiNumber}</dd>
                       </div>
                     )}
                     {projectPoints > 0 && (

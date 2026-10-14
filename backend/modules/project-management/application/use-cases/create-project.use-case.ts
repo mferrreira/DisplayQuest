@@ -42,6 +42,8 @@ export class CreateProjectUseCase {
       endDate: normalizeProjectDateField(command.data.endDate),
       editalNumber: normalizeProjectTextField(command.data.editalNumber),
       processNumber: normalizeProjectTextField(command.data.processNumber),
+      // V5-4a (DEC-140): nº PROPPI, dado do projeto.
+      proppiNumber: normalizeProjectTextField(command.data.proppiNumber),
     }
 
     const errors = validateProjectInput(record)

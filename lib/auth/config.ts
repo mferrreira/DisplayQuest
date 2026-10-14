@@ -56,6 +56,13 @@ export const authOptions: AuthOptions = {
         token.bannerKey = (user as any).bannerKey
         token.bio = (user as any).bio
         token.profileVisibility = (user as any).profileVisibility
+        // V5-4a (DEC-138): os campos abertos. O CPF não entra no token nem na sessão.
+        token.registrationNumber = (user as any).registrationNumber
+        token.course = (user as any).course
+        token.scholarshipType = (user as any).scholarshipType
+        token.fundingAgency = (user as any).fundingAgency
+        token.fundingAgencyOther = (user as any).fundingAgencyOther
+        token.level = (user as any).level
         token.points = (user as any).points
         token.completedTasks = (user as any).completedTasks
         token.weekHours = (user as any).weekHours
@@ -71,6 +78,12 @@ export const authOptions: AuthOptions = {
         token.bannerKey = session.user.bannerKey
         token.bio = session.user.bio
         token.profileVisibility = session.user.profileVisibility
+        token.registrationNumber = session.user.registrationNumber
+        token.course = session.user.course
+        token.scholarshipType = session.user.scholarshipType
+        token.fundingAgency = session.user.fundingAgency
+        token.fundingAgencyOther = session.user.fundingAgencyOther
+        token.level = session.user.level
         token.points = session.user.points
         token.completedTasks = session.user.completedTasks
         token.weekHours = session.user.weekHours
@@ -103,6 +116,15 @@ export const authOptions: AuthOptions = {
             bannerKey: true,
             bio: true,
             profileVisibility: true,
+            // V5-4a (DEC-138): os dados de pessoa que o perfil mostra. O CPF fica FORA da sessão
+            // de propósito: ela vive em cookie, e o CPF é o único campo com leitura restrita —
+            // ele sai por `GET /api/users/[id]/profile`, que decide o direito a cada chamada.
+            registrationNumber: true,
+            course: true,
+            scholarshipType: true,
+            fundingAgency: true,
+            fundingAgencyOther: true,
+            level: true,
             points: true,
             completedTasks: true,
             weekHours: true,
@@ -129,6 +151,12 @@ export const authOptions: AuthOptions = {
           bannerKey: token.bannerKey,
           bio: token.bio,
           profileVisibility: token.profileVisibility,
+          registrationNumber: token.registrationNumber,
+          course: token.course,
+          scholarshipType: token.scholarshipType,
+          fundingAgency: token.fundingAgency,
+          fundingAgencyOther: token.fundingAgencyOther,
+          level: token.level,
           points: token.points,
           completedTasks: token.completedTasks,
           weekHours: token.weekHours,

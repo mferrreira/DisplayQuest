@@ -1,10 +1,11 @@
 import {
+  applyPersonDataFields,
   NotFoundError,
   PROFILE_DENIED_MESSAGE,
   requireActorSelfOrPermission,
   ValidationError,
   normalizeAvatar,
-  toPublicUser,
+  toPublicUserWithCpf,
 } from "@/backend/domain"
 import type { ActorRef } from "@/backend/domain"
 import type { PasswordHasher } from "@/backend/modules/user-management/application/ports/password-hasher"
@@ -54,6 +55,10 @@ export class UpdateUserProfileUseCase {
       }
     }
 
-    return toPublicUser(await this.repository.update(user))
+    // V5-4a (DEC-138): CPF, matrícula, curso, modalidade, fomento e nível. O perfil é o lugar
+    // onde a pessoa escreve os próprios dados (DEC-138), e o gate acima já é `self OU MANAGE_USERS`.
+    applyPersonDataFields(user, data)
+
+    return toPublicUserWithCpf(await this.repository.update(user))
   }
 }

@@ -17,6 +17,17 @@ export interface User {
   /** V5-3 (DEC-137): chave da capa do perfil no bucket (`users/<id>/images/banner`). */
   bannerKey?: string | null;
   profileVisibility: "public" | "private" | "members_only";
+  /**
+   * V5-4a (DEC-138): dados de pessoa. `cpf` chega só nas leituras em que a pessoa é o próprio ou
+   * quem gerencia contas; a lista de usuários não o traz.
+   */
+  cpf?: string | null;
+  registrationNumber?: string | null;
+  course?: string | null;
+  scholarshipType?: string | null;
+  fundingAgency?: string | null;
+  fundingAgencyOther?: string | null;
+  level?: string | null;
   badges?: UserBadge[];
   createdAt: Date;
 }
@@ -30,6 +41,13 @@ export interface UserFormData {
   bio?: string | null
   avatar?: string | null
   profileVisibility?: "public" | "private" | "members_only"
+  cpf?: string | null
+  registrationNumber?: string | null
+  course?: string | null
+  scholarshipType?: string | null
+  fundingAgency?: string | null
+  fundingAgencyOther?: string | null
+  level?: string | null
 }
 
 // Project types
@@ -48,6 +66,8 @@ export interface Project {
   endDate?: string | null
   editalNumber?: string | null
   processNumber?: string | null
+  /** V5-4a (DEC-140): nº PROPPI, dado do projeto. */
+  proppiNumber?: string | null
   points?: number
   /** V5-2d (DEC-102): chave do objeto no bucket. A tela não recebe binário, recebe a chave. */
   logoKey?: string | null
@@ -79,6 +99,8 @@ export interface ProjectFormData {
   endDate?: string
   editalNumber?: string
   processNumber?: string
+  /** V5-4a (DEC-140). */
+  proppiNumber?: string
 }
 
 // Badge types

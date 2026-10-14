@@ -52,6 +52,8 @@ export interface IProject {
   endDate?: string | null;
   editalNumber?: string | null;
   processNumber?: string | null;
+  /** V5-4a (DEC-140): nº PROPPI. É dado do projeto, não da pessoa nem do vínculo. */
+  proppiNumber?: string | null;
   points?: number;
 }
 

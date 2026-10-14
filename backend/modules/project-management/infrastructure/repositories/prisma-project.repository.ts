@@ -33,6 +33,7 @@ type ProjectRow = {
   endDate: string | null
   editalNumber: string | null
   processNumber: string | null
+  proppiNumber: string | null
   points: number
   logoKey: string | null
   bannerKey: string | null
@@ -54,6 +55,7 @@ function toRecord(row: ProjectRow): ProjectRecord {
     endDate: row.endDate ?? null,
     editalNumber: row.editalNumber ?? null,
     processNumber: row.processNumber ?? null,
+    proppiNumber: row.proppiNumber ?? null,
     points: row.points ?? 0,
     logoKey: row.logoKey ?? null,
     bannerKey: row.bannerKey ?? null,
@@ -102,6 +104,7 @@ export function createPrismaProjectRepository(): ProjectRepositoryPort {
           endDate: input.endDate ?? null,
           editalNumber: input.editalNumber ?? null,
           processNumber: input.processNumber ?? null,
+          proppiNumber: input.proppiNumber ?? null,
         },
         include: includeOptions,
       })
@@ -125,6 +128,7 @@ export function createPrismaProjectRepository(): ProjectRepositoryPort {
           endDate: record.endDate ?? null,
           editalNumber: record.editalNumber ?? null,
           processNumber: record.processNumber ?? null,
+          proppiNumber: record.proppiNumber ?? null,
           // V5-2d: mesma postura — o record vem do findById, então escrever `?? null` mantém a
           // chave existente quando a requisição não fala de imagem. Quem TROCA a imagem é o use
           // case de imagem, que monta o record com a chave nova.

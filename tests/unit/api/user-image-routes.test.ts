@@ -22,6 +22,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
+import { emptyPersonData } from "@/backend/domain";
 import { createUserManagementModule } from "@/backend/modules/user-management";
 import type { UserRecord } from "@/backend/modules/user-management/application/ports/user.repository";
 import type { BlobStore } from "@/lib/storage/blob-store";
@@ -51,6 +52,7 @@ function userRow(id: number): UserRecord {
     bio: null,
     avatar: null,
     bannerKey: null,
+    ...emptyPersonData(),
     roles: ["VOLUNTARIO"],
     createdAt: new Date("2026-10-01T12:00:00.000Z"),
   };

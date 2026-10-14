@@ -52,6 +52,18 @@ import { NotificationsPanel } from "@/components/ui/notifications-panel"
 import { CreateUserDialog } from "@/components/admin/create-user-dialog"
 import { ManageWorkSessionsDialog } from "@/components/admin/manage-work-sessions-dialog"
 import { hasAccess } from "@/lib/utils/access-control"
+import {
+  FUNDING_AGENCIES,
+  FUNDING_AGENCY_LABELS,
+  SCHOLARSHIP_TYPES,
+  SCHOLARSHIP_TYPE_LABELS,
+  USER_LEVELS,
+  USER_LEVEL_LABELS,
+  maskCpf,
+} from "@/backend/domain"
+
+/** Sentinela do Select: "sem valor" não pode ser string vazia no Radix. */
+const NO_VALUE = "none"
 
 interface ModernAdminPanelProps {
   users: any[]
@@ -84,6 +96,15 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats, onSe
   const [userNameDraft, setUserNameDraft] = useState<string>("")
   const [userEmailDraft, setUserEmailDraft] = useState<string>("")
   const [userBioDraft, setUserBioDraft] = useState<string>("")
+  // V5-4a (DEC-138): os dados de pessoa, editáveis pela gestão. O CPF chega na lista só para quem
+  // tem MANAGE_USERS, que é exatamente quem abre este diálogo.
+  const [userCpfDraft, setUserCpfDraft] = useState<string>("")
+  const [userRegistrationDraft, setUserRegistrationDraft] = useState<string>("")
+  const [userCourseDraft, setUserCourseDraft] = useState<string>("")
+  const [userScholarshipDraft, setUserScholarshipDraft] = useState<string>(NO_VALUE)
+  const [userFundingDraft, setUserFundingDraft] = useState<string>(NO_VALUE)
+  const [userFundingOtherDraft, setUserFundingOtherDraft] = useState<string>("")
+  const [userLevelDraft, setUserLevelDraft] = useState<string>(NO_VALUE)
   const [userPointsAction, setUserPointsAction] = useState<"set" | "add" | "remove">("set")
   const [userPointsValue, setUserPointsValue] = useState<string>("0")
   const [savingUserSettings, setSavingUserSettings] = useState(false)
@@ -134,6 +155,13 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats, onSe
     setUserNameDraft(targetUser?.name || "")
     setUserEmailDraft(targetUser?.email || "")
     setUserBioDraft(targetUser?.bio || "")
+    setUserCpfDraft(maskCpf(targetUser?.cpf ?? null) ?? "")
+    setUserRegistrationDraft(targetUser?.registrationNumber || "")
+    setUserCourseDraft(targetUser?.course || "")
+    setUserScholarshipDraft(targetUser?.scholarshipType || NO_VALUE)
+    setUserFundingDraft(targetUser?.fundingAgency || NO_VALUE)
+    setUserFundingOtherDraft(targetUser?.fundingAgencyOther || "")
+    setUserLevelDraft(targetUser?.level || NO_VALUE)
     setUserPointsAction("set")
     setUserPointsValue(String(targetUser?.points ?? 0))
     setUserSettingsError(null)
@@ -158,6 +186,39 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats, onSe
     } catch (error: unknown) {
       setUserSettingsError(error instanceof Error ? error.message : "Erro ao atualizar status")
     }
+  }
+
+  /**
+   * V5-4a (DEC-138): o corpo de dados de pessoa do PUT, com só o que mudou. O Select usa a
+   * sentinela `NO_VALUE` para "sem dado", que vai como null.
+   */
+  const personDataPatch = (targetUser: any): Record<string, unknown> => {
+    const patch: Record<string, unknown> = {}
+    const text = (draft: string) => draft.trim()
+    const currentText = (value: unknown) => (typeof value === "string" ? value : "")
+
+    if (text(userCpfDraft) !== (maskCpf(targetUser?.cpf ?? null) ?? "")) {
+      patch.cpf = text(userCpfDraft) || null
+    }
+    if (text(userRegistrationDraft) !== currentText(targetUser?.registrationNumber)) {
+      patch.registrationNumber = text(userRegistrationDraft) || null
+    }
+    if (text(userCourseDraft) !== currentText(targetUser?.course)) {
+      patch.course = text(userCourseDraft) || null
+    }
+    if (userScholarshipDraft !== (targetUser?.scholarshipType || NO_VALUE)) {
+      patch.scholarshipType = userScholarshipDraft === NO_VALUE ? null : userScholarshipDraft
+    }
+    if (userFundingDraft !== (targetUser?.fundingAgency || NO_VALUE)) {
+      patch.fundingAgency = userFundingDraft === NO_VALUE ? null : userFundingDraft
+    }
+    if (text(userFundingOtherDraft) !== currentText(targetUser?.fundingAgencyOther)) {
+      patch.fundingAgencyOther = text(userFundingOtherDraft) || null
+    }
+    if (userLevelDraft !== (targetUser?.level || NO_VALUE)) {
+      patch.level = userLevelDraft === NO_VALUE ? null : userLevelDraft
+    }
+    return patch
   }
 
   const saveUserSettings = async () => {
@@ -186,6 +247,9 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats, onSe
           email: userEmailDraft,
           bio: userBioDraft || null,
           weekHours: Number(userWeekHoursDraft),
+          // V5-4a (DEC-138): só o que mudou. Enviar o campo em branco apagaria um dado que a
+          // gestão abriu o diálogo para não mexer.
+          ...personDataPatch(selectedUserForSettings),
         }),
       })
       if (!updateResponse.ok) {
@@ -996,6 +1060,107 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats, onSe
                       placeholder="Biografia do usuário..."
                       rows={2}
                     />
+                  </div>
+                </div>
+              </div>
+
+              {/* V5-4a (DEC-138): os dados que os formulários oficiais pedem. A gestão edita; a
+                  pessoa também edita os próprios na aba Configurações do perfil. */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  <Label className="text-sm font-semibold">Dados para os documentos</Label>
+                </div>
+                <div className="space-y-2 pl-6">
+                  <div className="space-y-1">
+                    <Label htmlFor="userCpf" className="text-xs">CPF</Label>
+                    <Input
+                      id="userCpf"
+                      value={userCpfDraft}
+                      onChange={(e) => setUserCpfDraft(e.target.value)}
+                      placeholder="000.000.000-00"
+                      inputMode="numeric"
+                    />
+                  </div>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <div className="space-y-1">
+                      <Label htmlFor="userRegistration" className="text-xs">Matrícula</Label>
+                      <Input
+                        id="userRegistration"
+                        value={userRegistrationDraft}
+                        onChange={(e) => setUserRegistrationDraft(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="userCourse" className="text-xs">Curso</Label>
+                      <Input
+                        id="userCourse"
+                        value={userCourseDraft}
+                        onChange={(e) => setUserCourseDraft(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <div className="space-y-1">
+                      <Label htmlFor="userScholarship" className="text-xs">Modalidade de IC</Label>
+                      <Select value={userScholarshipDraft} onValueChange={setUserScholarshipDraft}>
+                        <SelectTrigger id="userScholarship" aria-label="Modalidade de IC">
+                          <SelectValue placeholder="Sem modalidade" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={NO_VALUE}>Sem modalidade</SelectItem>
+                          {SCHOLARSHIP_TYPES.map((token) => (
+                            <SelectItem key={token} value={token}>
+                              {SCHOLARSHIP_TYPE_LABELS[token]}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="userLevel" className="text-xs">Nível</Label>
+                      <Select value={userLevelDraft} onValueChange={setUserLevelDraft}>
+                        <SelectTrigger id="userLevel" aria-label="Nível">
+                          <SelectValue placeholder="Sem nível" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={NO_VALUE}>Sem nível</SelectItem>
+                          {USER_LEVELS.map((token) => (
+                            <SelectItem key={token} value={token}>
+                              {USER_LEVEL_LABELS[token]}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <div className="space-y-1">
+                      <Label htmlFor="userFunding" className="text-xs">Instituição de fomento</Label>
+                      <Select value={userFundingDraft} onValueChange={setUserFundingDraft}>
+                        <SelectTrigger id="userFunding" aria-label="Instituição de fomento">
+                          <SelectValue placeholder="Sem fomento" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={NO_VALUE}>Sem fomento</SelectItem>
+                          {FUNDING_AGENCIES.map((token) => (
+                            <SelectItem key={token} value={token}>
+                              {FUNDING_AGENCY_LABELS[token]}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {userFundingDraft === "OUTRA" && (
+                      <div className="space-y-1">
+                        <Label htmlFor="userFundingOther" className="text-xs">Nome da instituição</Label>
+                        <Input
+                          id="userFundingOther"
+                          value={userFundingOtherDraft}
+                          onChange={(e) => setUserFundingOtherDraft(e.target.value)}
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

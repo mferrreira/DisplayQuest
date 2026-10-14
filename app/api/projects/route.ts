@@ -71,6 +71,8 @@ export async function POST(request: Request) {
         endDate: body.endDate,
         editalNumber: body.editalNumber,
         processNumber: body.processNumber,
+        // V5-4a (DEC-140).
+        proppiNumber: body.proppiNumber,
       },
       volunteerIds,
     })

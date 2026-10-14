@@ -43,12 +43,24 @@ export class ListUsersForActorUseCase {
         // V5-3 (DEC-137): a capa chega na mesma lista que o avatar, porque é o pódio do ranking que
         // a renderiza — sem isto a tela teria que chamar uma rota por pessoa.
         bannerKey: row.bannerKey,
+        // V5-4a (DEC-138): os dados de pessoa que o perfil mostra abertamente. Estão na lista
+        // porque é a lista que o painel e a tela de equipe usam; chamar uma rota por pessoa para
+        // exibir curso e modalidade seria o mesmo erro que o comentário de cima evita.
+        registrationNumber: row.registrationNumber,
+        course: row.course,
+        scholarshipType: row.scholarshipType,
+        fundingAgency: row.fundingAgency,
+        fundingAgencyOther: row.fundingAgencyOther,
+        level: row.level,
       }
       if (visibility.canViewFullUsers || visibility.canManageProjectMembers) {
         out.email = row.email
       }
       if (visibility.canViewFullUsers) {
         out.bio = row.bio
+        // DEC-138: o CPF é o único campo de pessoa com leitura restrita. `canViewFullUsers` é
+        // COORDENADOR|GERENTE, que é exatamente MANAGE_USERS — a gestão que edita o campo no painel.
+        out.cpf = row.cpf
       }
       return out
     })
