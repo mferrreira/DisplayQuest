@@ -114,7 +114,7 @@ Desmarcar a única marca de uma linha é recusado: o sistema responde *"A ativid
 :::
 
 ::: nota titulo="O cronograma do projeto não é o quadro de tarefas"
-A grade diz em quais meses a etapa do projeto acontece e quanto ela vale. Tarefa é outra coisa, e continua tendo seu próprio ciclo no quadro. Nenhuma linha do cronograma cria tarefa, e apagar uma linha não apaga tarefa.
+A grade diz em quais meses a etapa do projeto acontece e quanto ela vale. Tarefa é outra coisa, e continua tendo seu próprio ciclo no quadro. Nenhuma linha do cronograma cria tarefa. Uma tarefa pode ser **ligada** a uma linha — o campo **Atividade do cronograma** na criação da tarefa, no quadro — e apagar uma linha não apaga tarefa nenhuma: a tarefa continua no quadro, sem vínculo.
 :::
 
 ::: limite titulo="Quem cria e edita projeto"

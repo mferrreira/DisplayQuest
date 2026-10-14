@@ -1,7 +1,7 @@
 {
   "plan": "plan-v5",
   "title": "domínio de projetos maduro: cronograma, pontos, relatórios técnicos, atestados, blobs em bucket S3-compatible (SeaweedFS desde o V5-1, DEC-131)",
-  "version": "5.17.0",
+  "version": "5.17.1",
   "updatedAt": "2026-10-14",
   "status": "in_progress",
   "activeWave": "V5-6",
@@ -707,6 +707,18 @@
         "Dois gotchas medidos na execucao: (a) Select do Radix dentro de `<form>` renderiza um native select oculto (BubbleSelect) cujas opcoes so existem com a lista aberta — valor controlado sem opcao registrada e desaguado em '' e dispara change no jsdom, o que apagava a pre-selecao; o formulario ignora '' porque a sentinela e `none`. (b) NuqsTestingAdapter sem `hasMemory` nao atualiza o snapshot em `updateUrl`, e a rajada de seis setters da barra chega revertida sob carga paralela — o teste usa `hasMemory` + `rateLimitFactor` e o contrato do 'Limpar filtros' e provado na toolbar."
       ],
       "gates": "tsc: 1 erro pre-existente (floating-timer-tabs:105). eslint: 0. arch:check: 920 modulos / 3881 dependencias, allow-list vazia. Suite completa com DATABASE_URL na 5433: 141 arquivos / 1891 testes."
+    },
+    {
+      "id": "V5-6-fechamento",
+      "at": "2026-10-14",
+      "title": "G5/G6 do vinculo tarefa x atividade: duas capturas novas, primitiva depois no pipeline, prosa medida",
+      "actions": [
+        "Capturas novas: `dialogo-nova-tarefa-atividade` (o campo Atividade do cronograma no dialogo, com a etapa vigente pre-selecionada) e `quadro-filtro-atividade` (a barra com o select de atividade escolhido e o quadro filtrado ao cartao da etapa). As duas foram lidas como PNG, nao so o log do script.",
+        "Pipeline de captura ganhou a primitiva `depois`: selects que so existem depois do passo anterior — o filtro de atividade nasce com o projeto selecionado. O fluxo das duas capturas usa o filtro de projeto do quadro, que pre-seleciona o projeto no dialogo de nova tarefa (defaultProjectId).",
+        "Dado semeado para a captura e apagado depois: 4 atividades nos dois projetos 'Pesquisa em IA' da instancia (a lista de projetos empata nos dois nomes, e semear nos dois torna a captura deterministica qualquer que seja o escolhido) + 2 tarefas ligadas. Contagem de saida: 0 tarefas, 0 atividades.",
+        "Prosa medida pelo extrato do DOM: capitulo 3 ganhou o item 'Todas as atividades' nos filtros, a frase do 'Limpar filtros' (o botao existe na barra e nenhuma prosa nomeava), o passo 4 do formulario com a regra da edicao (lista traz todas as linhas, vinculo a etapa encerrada continua salvavel) e as duas figuras. Capitulo 4: a nota 'O cronograma nao e o quadro' passou a dizer que tarefa pode ser LIGADA a uma linha e que apagar a linha deixa a tarefa sem vinculo — a frase antiga prometia isso sem existir vinculo nenhum."
+      ],
+      "gates": "docs:build: tecnico 15 secoes / 33 figuras, usuario 12 secoes / 41 figuras (eram 39), sem AVISO. docs:check: nenhum caractere suspeito."
     }
   ],
   "openQuestions": [],

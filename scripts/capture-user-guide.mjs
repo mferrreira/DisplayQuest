@@ -105,6 +105,8 @@ const VIEWPORT = { width: 1440, height: 900 };
  *   dialogo  — exige que um diálogo abra, e que contenha este texto
  *              (o omitido fotografa o estado após o clique: nem todo painel
  *              da aplicação é um diálogo modal)
+ *   depois   — selects que só existem depois do passo anterior (V5-6: o filtro
+ *              de atividade só existe com o projeto selecionado)
  */
 const INTERACTIONS = [
   { id: "dialogo-nova-tarefa", role: "coord", route: "/dashboard", abre: "Nova Tarefa", dialogo: "Tarefa" },
@@ -142,6 +144,14 @@ const INTERACTIONS = [
   // plan-v3 OND3-C: o menu de ordenação da coluna é o rótulo que o guia usa — sem a captura, a
   // seção "A ordem dos cartões" descreveria cinco opções que nenhuma foto do guia mostra.
   { id: "quadro-ordenar-coluna", role: "coord", route: "/dashboard", abre: "Ordenar tarefas de A Fazer", verifica: "Ordenar por" },
+  // V5-6 (DEC-158): o seletor de atividade do formulário de nova tarefa. O filtro de projeto do
+  // quadro pré-seleciona o projeto no diálogo (`defaultProjectId`), e o cronograma foi semeado
+  // nos DOIS projetos "Pesquisa em IA" da instância — a captura é a mesma tela qualquer que seja
+  // o escolhido pela lista, que ordena por data e empata nos dois.
+  { id: "dialogo-nova-tarefa-atividade", role: "coord", route: "/dashboard", selecionar: { gatilho: "Todos os projetos", valor: "Pesquisa em IA" }, abre: "Nova Tarefa", rolarAte: "text=Atividade do cronograma", dialogo: "Atividade do cronograma" },
+  // V5-6 (DEC-159): o filtro de atividade da barra do quadro. `depois` é o select que só existe
+  // com o projeto selecionado — a lista de atividades é a do projeto, não uma lista global.
+  { id: "quadro-filtro-atividade", role: "coord", route: "/dashboard", selecionar: { gatilho: "Todos os projetos", valor: "Pesquisa em IA" }, depois: [{ gatilho: "Todas as atividades", valor: "1. Coleta de dados" }], verifica: "Coleta de dados" },
 ];
 
 /** A navegação é um acordeão: os destinos só aparecem quando o grupo é aberto. */
@@ -259,6 +269,25 @@ for (const screen of screens) {
 }
 
 /* --- diálogos e abas --- */
+
+/**
+ * Selects que só existem depois do passo anterior (`depois`, V5-6): o filtro de atividade da
+ * barra só nasce com o projeto selecionado. Mesma mecânica do `selecionar` acima — gatilho pelo
+ * placeholder, opção pelo nome — só que roda depois de abrir/acionar, não antes.
+ */
+async function runSelects(page, selects) {
+  for (const sel of [].concat(selects ?? [])) {
+    await page.getByText(sel.gatilho, { exact: true }).first().click();
+    await page.waitForTimeout(600);
+    if (sel.valor) {
+      await page.getByRole("option", { name: sel.valor, exact: true }).first().click();
+    } else {
+      await page.getByRole("option").first().click();
+    }
+    await page.waitForTimeout(900);
+  }
+}
+
 for (const it of interactions) {
   if (!sessions.has(it.role)) sessions.set(it.role, await openSession(it.role));
   const { page } = sessions.get(it.role);
@@ -323,6 +352,8 @@ for (const it of interactions) {
         await page.waitForTimeout(500);
       }
 
+      await runSelects(page, it.depois);
+
       if (it.dialogo) {
         await page.waitForSelector('[role="dialog"]', { timeout: 12_000 });
         await page.waitForTimeout(700);
@@ -338,6 +369,16 @@ for (const it of interactions) {
         }
         record.after = bodyText.slice(0, 300);
       }
+    } else if (it.depois) {
+      // Captura sem "abrir" nada: o quadro já está na tela, e o passo é só a sequência de
+      // selects da barra (projeto → atividade). A verificação é do texto que o último select
+      // mostra escolhido.
+      await runSelects(page, it.depois);
+      const bodyText = (await page.locator("body").innerText()).replace(/\s+/g, " ");
+      if (it.verifica && !bodyText.includes(it.verifica)) {
+        throw new Error(`após a seleção a tela não contém "${it.verifica}": "${bodyText.slice(0, 140)}"`);
+      }
+      record.after = bodyText.slice(0, 300);
     }
 
     record.url = page.url();
