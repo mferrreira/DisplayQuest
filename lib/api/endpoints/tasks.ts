@@ -57,6 +57,12 @@ export type TaskFilters = QueryParams & {
   /** Filtro por pessoa — resolved CLIENT-side (tasks scoped server-side by actor).
    *  Subsumes the old `mine` toggle: selecting the current user's id = "minhas tarefas". */
   assigneeId?: number;
+  /**
+   * V5-6 (DEC-99) — filtro pela linha do cronograma. CLIENT-side como o de pessoa: a tarefa já
+   * carrega `activityId` no read model, e o servidor não tem consulta por atividade (a contagem
+   * por atividade é o fluxo de solicitar conclusão, V5-7).
+   */
+  activityId?: number;
 };
 
 export const tasksApi = {

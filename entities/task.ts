@@ -87,6 +87,11 @@ export const taskSchema = z.object({
   groupTaskId: z.number().int().nullable().optional(),
   createdBy: z.number().int().nullable().optional(),
   /**
+   * V5-6 (DEC-99): a chave da linha do cronograma a que a tarefa pertence. `optional` porque
+   * resposta de servidor antigo (pré-migration) não traz a chave — mesma razão de `subtasks`.
+   */
+  activityId: z.number().int().nullable().optional(),
+  /**
    * plan-v4 · V4-4: `default([])` é tolerância de wire, não frouxidão de contrato. Uma tarefa sem
    * subtask e uma resposta de servidor antigo (pré-migration) são a mesma coisa para o cliente, e
    * o cartão não pode quebrar por não encontrar a chave.

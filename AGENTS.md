@@ -743,6 +743,20 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   gravado, e o `grep` passa a tratar o `.ts` como binário ("Binary file matches"). Conferir por
   contagem de bytes `< 32` no arquivo; `JSON.stringify` da linha não serve de prova, porque re-escapa
   o que está cru.
+- **Select do Radix dentro de `<form>` apaga valor pré-selecionado sozinho no jsdom (medido no
+  V5-6):** o Radix renderiza um native select oculto (`BubbleSelect`) quando o `Select` está dentro
+  de um form, e as opções dele só existem quando a lista abre. Um valor controlado sem opção
+  registrada é desaguado em `""` e dispara `change` — a pré-seleção da atividade no formulário de
+  tarefa sumia sem nenhum clique. O guarda: o `onValueChange` ignora `""` (a sentinela da casa é
+  `none`, nunca `""`). Fora de form o artefato não aparece — por isso a toolbar do quadro não
+  sofre dele.
+- **`NuqsTestingAdapter` sem `hasMemory` desfaz param recém-escrito sob carga (medido no V5-6):**
+  no adapter de teste, `updateUrl` só atualiza o snapshot da URL quando `hasMemory` está ligado;
+  com o default `false`, a rajada de seis setters da barra do quadro chega a flushar contra a base
+  antiga e o param volta ao valor velho — verde isolado, vermelho na suíte paralela. O teste do
+  filtro de atividade usa `hasMemory` + `rateLimitFactor={1}`; ainda assim o estado final da rajada
+  assenta assíncrono, então o contrato do "Limpar filtros" é provado na toolbar (corpo `{}`), não
+  pela URL.
 
 ## Documentação (docs/)
 

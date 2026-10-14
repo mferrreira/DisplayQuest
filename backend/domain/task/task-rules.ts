@@ -215,6 +215,9 @@ export function serializeTask(task: Omit<Task, "toJSON">): any {
     isGlobal: task.isGlobal,
     groupTaskId: task.groupTaskId ?? null,
     createdBy: task.createdBy,
+    // V5-6 (DEC-99): a chave da linha do cronograma. O read model não traz a atividade inteira —
+    // quem precisa da linha busca pelo id (GET /api/projects/[id]/cronograma).
+    activityId: task.activityId ?? null,
     // plan-v4 · V4-4: as subtasks fazem parte do read model da tarefa. Sem elas o cartão e o
     // diálogo de detalhe continuariam anunciando 10 pontos numa tarefa que vale 10 + 5·n — o
     // número projetado é calculado no cliente (`features/tasks/utils/move-rules.ts`).
@@ -394,6 +397,8 @@ export interface NewTaskInput {
   isGlobal?: boolean;
   groupTaskId?: number | null;
   createdBy?: number | null;
+  /** V5-6 (DEC-99): a linha do cronograma. O use case valida antes de chegar aqui. */
+  activityId?: number | null;
   /** plan-v4 · V4-4: subtasks criadas junto com a mãe (D-D). Aceita string ou `{title}`. */
   subtasks?: unknown;
 }
@@ -433,6 +438,7 @@ export function createTaskRecord(data: NewTaskInput, now: Date): ITask {
     isGlobal: data.isGlobal || false,
     groupTaskId: data.groupTaskId ?? null,
     createdBy: data.createdBy ?? null,
+    activityId: data.activityId ?? null,
     subtasks,
   };
 }

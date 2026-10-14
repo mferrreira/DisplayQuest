@@ -24,6 +24,7 @@ import type { TaskCompletionResult } from "@/backend/modules/task-management/app
 import type { TaskProgressPort } from "@/backend/modules/task-management/application/ports/task-progress.repository"
 import type { TaskProjectsPort } from "@/backend/modules/task-management/application/ports/task-projects.port"
 import type { TaskSubtasksPort } from "@/backend/modules/task-management/application/ports/task-subtasks.repository"
+import type { TaskActivitiesPort } from "@/backend/modules/task-management/application/ports/task-activities.port"
 import type { TaskRepositoryPort } from "@/backend/modules/task-management/application/ports/task.repository"
 import { createPrismaTaskRepository } from "@/backend/modules/task-management/infrastructure/repositories/prisma-task.repository"
 import { createPrismaTaskAssigneesRepository } from "@/backend/modules/task-management/infrastructure/repositories/prisma-task-assignees.repository"
@@ -31,6 +32,7 @@ import { createPrismaTaskProgressRepository } from "@/backend/modules/task-manag
 import { createPrismaTaskActorsRepository } from "@/backend/modules/task-management/infrastructure/repositories/prisma-task-actors.repository"
 import { createPrismaTaskProjectsRepository } from "@/backend/modules/task-management/infrastructure/repositories/prisma-task-projects.repository"
 import { createPrismaTaskSubtasksRepository } from "@/backend/modules/task-management/infrastructure/repositories/prisma-task-subtasks.repository"
+import { createPrismaTaskActivitiesRepository } from "@/backend/modules/task-management/infrastructure/repositories/prisma-task-activities.repository"
 
 /**
  * TaskManagementModule — public surface unchanged for the routes (OND4-B3). The rules now
@@ -68,6 +70,8 @@ export class TaskManagementModule {
     projects: TaskProjectsPort
     notifications: TaskNotificationsPort
     subtasks: TaskSubtasksPort
+    // V5-6 (DEC-99): a leitura da linha do cronograma que a ligação de tarefa precisa.
+    activities: TaskActivitiesPort
     events?: TaskProgressEvents
   }) {
     const getTaskByIdUseCase = new GetTaskByIdUseCase({
@@ -91,6 +95,7 @@ export class TaskManagementModule {
       actors: ports.actors,
       projects: ports.projects,
       subtasks: ports.subtasks,
+      activities: ports.activities,
     })
     const updateTaskUseCase = new UpdateTaskUseCase({
       tasks: ports.tasks,
@@ -100,6 +105,7 @@ export class TaskManagementModule {
       projects: ports.projects,
       notifications: ports.notifications,
       subtasks: ports.subtasks,
+      activities: ports.activities,
     })
     const deleteTaskUseCase = new DeleteTaskUseCase(ports.tasks)
     const completeTaskUseCase = new CompleteTaskUseCase(
@@ -187,6 +193,8 @@ export interface TaskManagementModulePorts {
   notifications?: TaskNotificationsPort
   /** plan-v4 · V4-4: a costura das subtasks (DEC-78). */
   subtasks?: TaskSubtasksPort
+  /** V5-6 (DEC-99): a leitura da linha do cronograma para a ligação de tarefa. */
+  activities?: TaskActivitiesPort
   /** Awards port; the composition root wires the gamification module into the publisher. */
   events?: TaskProgressEvents
 }
@@ -216,6 +224,7 @@ export function createTaskManagementModule(options: TaskManagementModulePorts = 
     projects: options.projects ?? createPrismaTaskProjectsRepository(),
     notifications: options.notifications ?? new UnwiredTaskNotifications(),
     subtasks: options.subtasks ?? createPrismaTaskSubtasksRepository(),
+    activities: options.activities ?? createPrismaTaskActivitiesRepository(),
     events: options.events,
   })
 }

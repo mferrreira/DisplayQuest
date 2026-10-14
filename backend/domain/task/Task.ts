@@ -33,6 +33,13 @@ export interface ITask {
   groupTaskId?: number | null;
   createdBy?: number | null;
   /**
+   * V5-6 (DEC-99) — a linha do cronograma a que a tarefa pertence (Atividade → Tasks). É coluna
+   * do banco (`tasks.activityId`), com FK `SetNull`: apagar a etapa não apaga a tarefa. Quem
+   * valida a ligação (existe, mesmo projeto, não é quest global) é o use case, pela
+   * `TaskActivitiesPort`.
+   */
+  activityId?: number | null;
+  /**
    * plan-v4 · V4-4 — as subtasks da tarefa (DEC-78). É um read model, não uma coluna: o
    * adaptador Prisma escreve `tasks` sem tocar aqui (ver `toRow` em
    * `prisma-task.repository.ts`) e quem preenche é o caso de uso, pela `TaskSubtasksPort`.

@@ -24,6 +24,7 @@ import {
   countActivityMonths,
   cronogramaMonthColumns,
   isActivityCurrent,
+  isActivityPast,
   lastCivilDayOfMonth,
   monthKeyOfCivilDay,
   monthKeysBetween,
@@ -199,6 +200,25 @@ describe("isActivityCurrent — a atividade vigente do V5-6 (regra 8 do plano)",
   it("fora do intervalo não é vigente", () => {
     expect(isActivityCurrent(range, "2026-03-31")).toBe(false);
     expect(isActivityCurrent(range, "2026-07-01")).toBe(false);
+  });
+});
+
+describe("isActivityPast — o que o seletor do formulário não oferece (DEC-99)", () => {
+  const range = { firstMonth: "2026-04", lastMonth: "2026-06" };
+
+  it("passada é a que terminou antes do mês de hoje", () => {
+    expect(isActivityPast(range, "2026-07-01")).toBe(true);
+    expect(isActivityPast(range, "2026-12-31")).toBe(true);
+  });
+
+  it("vigente e futura não são passadas — a borda é o último dia do último mês", () => {
+    expect(isActivityPast(range, "2026-06-30")).toBe(false);
+    expect(isActivityPast(range, "2026-04-15")).toBe(false);
+    expect(isActivityPast({ firstMonth: "2026-11", lastMonth: "2026-12" }, "2026-10-14")).toBe(false);
+  });
+
+  it("hoje dentro do intervalo não é passada mesmo que o intervalo tenha começado antes", () => {
+    expect(isActivityPast({ firstMonth: "2025-01", lastMonth: "2026-10" }, "2026-10-14")).toBe(false);
   });
 });
 

@@ -19,7 +19,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { prisma } from "@/lib/database/prisma";
 import { createTaskManagementModule } from "@/backend/modules/task-management";
 import { createNotificationsModule } from "@/backend/modules/notifications";
-import { ConflictError, ForbiddenError, civilDayOfInstant, userActor } from "@/backend/domain";
+import { ConflictError, ForbiddenError, TASK_ACTIVITY_PROJECT_MESSAGE, civilDayOfInstant, userActor } from "@/backend/domain";
 
 // B7 (D7): o fallback cruzado da factory virou no-op; o roundtrip ASSERTA notificacoes
 // reais no banco, entao injeta o modulo de notifications explicitamente (a composition
@@ -30,6 +30,7 @@ let anaId = 0;
 let leaderId = 0;
 let coordinatorId = 0;
 let projectId = 0;
+let otherProjectId = 0; // V5-6: o projeto estranho, para a recusa de atividade atravessada
 const createdTaskIds: number[] = [];
 
 // B6-7 (D4): os comandos das rotas migradas carregam ActorRef. Os atores do fluxo:
@@ -94,6 +95,8 @@ describe("G4 roundtrip — task-management (isolated test DB)", () => {
       await prisma.tasks.deleteMany({ where: { id: { in: createdTaskIds } } });
     }
     if (projectId) await prisma.projects.delete({ where: { id: projectId } });
+    // V5-6: o projeto estranho e suas atividades saem junto (projects -> project_activities Cascade)
+    if (otherProjectId) await prisma.projects.delete({ where: { id: otherProjectId } });
     if (anaId) await prisma.users.delete({ where: { id: anaId } }); // notifications cascade
     if (leaderId) await prisma.users.delete({ where: { id: leaderId } });
     if (coordinatorId) await prisma.users.delete({ where: { id: coordinatorId } });
@@ -492,5 +495,105 @@ describe("G4 roundtrip — task-management (isolated test DB)", () => {
     expect(stranger).toEqual([]);
     const empty = await taskModule.listTasksForActor({ actor: anaActor(), projectId: 999999 });
     expect(empty).toEqual([]);
+  });
+
+  // V5-6 (DEC-99) — a ligação tarefa × linha do cronograma contra Prisma real. O que só o
+  // roundtrip prova: a coluna existe e sobrevive ao `toRow`/`fromRow`, a recusa de projeto usa a
+  // leitura real da atividade, e o `SET NULL` da FK faz o que a DEC-156 promete — apagar a etapa
+  // não apaga tarefa nenhuma.
+  describe("task × atividade (V5-6, DEC-99)", () => {
+    it("createTask com activityId persiste a coluna", async () => {
+      const activity = await prisma.project_activities.create({
+        data: {
+          projectId,
+          order: 1,
+          description: `G4 etapa ${stamp}`,
+          firstMonth: "2026-10",
+          lastMonth: "2026-11",
+        },
+        select: { id: true },
+      });
+
+      const task = await taskModule.createTask(
+        {
+          title: "G4 tarefa da etapa",
+          completed: false,
+          status: "to-do",
+          priority: "medium",
+          taskVisibility: "delegated",
+          projectId,
+          assignedTo: anaId,
+          activityId: activity.id,
+        },
+        leaderActor(),
+      );
+      createdTaskIds.push(task.id!);
+
+      expect(task.activityId).toBe(activity.id);
+      const row = await prisma.tasks.findUnique({ where: { id: task.id! } });
+      expect(row?.activityId).toBe(activity.id);
+    });
+
+    it("atividade de OUTRO projeto é recusada pela leitura real, e nenhuma linha nasce", async () => {
+      const other = await prisma.projects.create({
+        data: {
+          name: `G4 Outro Projeto ${stamp}`,
+          createdBy: leaderId,
+          leaderId: leaderId,
+          status: "active",
+          createdAt: new Date().toISOString(),
+        },
+        select: { id: true },
+      });
+      otherProjectId = other.id;
+      const foreign = await prisma.project_activities.create({
+        data: {
+          projectId: other.id,
+          order: 1,
+          description: `G4 etapa alheia ${stamp}`,
+          firstMonth: "2026-10",
+          lastMonth: "2026-11",
+        },
+        select: { id: true },
+      });
+
+      await expect(
+        taskModule.createTask(
+          {
+            title: "G4 tarefa atravessada",
+            completed: false,
+            status: "to-do",
+            priority: "medium",
+            taskVisibility: "delegated",
+            projectId,
+            assignedTo: anaId,
+            activityId: foreign.id,
+          },
+          leaderActor(),
+        ),
+      ).rejects.toThrow(TASK_ACTIVITY_PROJECT_MESSAGE);
+
+      const count = await prisma.tasks.count({ where: { title: "G4 tarefa atravessada" } });
+      expect(count).toBe(0);
+    });
+
+    it("apagar a etapa (SET NULL) não apaga tarefa: a tarefa sobrevive sem vínculo", async () => {
+      const activity = await prisma.project_activities.findFirst({
+        where: { projectId, description: `G4 etapa ${stamp}` },
+        select: { id: true },
+      });
+      expect(activity).not.toBeNull();
+
+      // O caminho de apagar linha do cronograma é o do módulo de projeto (deleteActivity), que é
+      // um `delete` simples — o que se mede aqui é o que a FK faz com a tarefa apontando para ela.
+      await prisma.project_activities.delete({ where: { id: activity!.id } });
+
+      const linked = await prisma.tasks.findFirst({
+        where: { title: "G4 tarefa da etapa" },
+        select: { id: true, activityId: true },
+      });
+      expect(linked).not.toBeNull(); // a tarefa continua existindo
+      expect(linked!.activityId).toBeNull(); // e o vínculo sumiu, em vez de arrastar a tarefa
+    });
   });
 });

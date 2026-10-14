@@ -20,6 +20,10 @@ export const TASK_EDITABLE_FIELDS = [
   "completed",
   "taskVisibility",
   "isGlobal",
+  // V5-6 (DEC-99): a linha do cronograma. Entra no filtro de campo porque o gate de quem NÃO tem
+  // MANAGE_TASKS decide sobre o corpo CRU: um corpo com `activityId` de nao-gestor barra com 403,
+  // exatamente como `{points: 5}` barra hoje.
+  "activityId",
 ] as const;
 
 /** plan-v3 OND1-D (AC-P3-03): "points" NAO esta na lista — editar tarefa nao redefine valor. */

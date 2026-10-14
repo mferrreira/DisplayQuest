@@ -264,6 +264,19 @@ export function isActivityCurrent(
   return todayCivilDay >= periodoInicio && todayCivilDay <= periodoFim;
 }
 
+/**
+ * V5-6 (DEC-99): a atividade cuja última mês já passou. O seletor do formulário de criação não
+ * oferece linha passada (DEC-99: "só futuras + vigente"), e o filtro do quadro oferece: ver as
+ * tasks de uma etapa encerrada é legítimo. A recusa é da tela, não do servidor — uma tarefa já
+ * ligada a uma etapa que virou passada continua salvável (o servidor não reescreve o vínculo).
+ */
+export function isActivityPast(
+  range: ActivityMonthRange,
+  todayCivilDay: string,
+): boolean {
+  return range.lastMonth < monthKeyOfCivilDay(todayCivilDay);
+}
+
 export interface CronogramaWindowInput {
   /** `projects.startDate`/`endDate`, data civil ou nulos. */
   startDate: string | null;

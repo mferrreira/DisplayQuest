@@ -15,6 +15,7 @@ import {
   normalizeAssigneeIds,
   NotFoundError,
   progressPatchForStatus,
+  resolveTaskActivityLink,
   statusOnlyPatch,
   supportsSubtasks,
   toTaskView,
@@ -28,6 +29,7 @@ import type { UpdateTaskCommand } from "@/backend/modules/task-management/applic
 import { requireTaskPersonActor } from "@/backend/modules/task-management/application/use-cases/internal/require-task-actor";
 import type { TaskAssigneesPort } from "@/backend/modules/task-management/application/ports/task-assignees.repository";
 import type { TaskActorsPort } from "@/backend/modules/task-management/application/ports/task-actors.port";
+import type { TaskActivitiesPort } from "@/backend/modules/task-management/application/ports/task-activities.port";
 import type { TaskNotificationsPort } from "@/backend/modules/task-management/application/ports/task-notifications.port";
 import type { TaskProgressPort } from "@/backend/modules/task-management/application/ports/task-progress.repository";
 import type { TaskProjectsPort } from "@/backend/modules/task-management/application/ports/task-projects.port";
@@ -67,6 +69,7 @@ export interface UpdateTaskDependencies {
   projects: TaskProjectsPort
   notifications: TaskNotificationsPort
   subtasks: TaskSubtasksPort
+  activities: TaskActivitiesPort
 }
 
 export class UpdateTaskUseCase {
@@ -266,6 +269,28 @@ export class UpdateTaskUseCase {
       next.points = points
     }
     if (data.dueDate !== undefined) next.dueDate = data.dueDate ? String(data.dueDate) : null
+
+    // V5-6 (DEC-99): a linha do cronograma. O projeto efetivo é o da tarefa — o PUT não muda
+    // projeto (quirk medido: `projectId` é filtrado mas nunca aplicado), então a checagem é
+    // sempre contra `next.projectId`. Ausente no corpo não apaga o vínculo: o corpo é parcial.
+    if (data.activityId !== undefined) {
+      const id = Number(data.activityId)
+      const hasShape =
+        data.activityId !== null &&
+        data.activityId !== "" &&
+        Number.isInteger(id) &&
+        id > 0
+      const activity =
+        hasShape && !next.isGlobal
+          ? await this.dependencies.activities.findActivityById(id)
+          : null
+      next.activityId = resolveTaskActivityLink({
+        activityId: data.activityId,
+        activity,
+        projectId: next.projectId ?? null,
+        isGlobal: Boolean(next.isGlobal),
+      })
+    }
 
     const updatedTask = await this.dependencies.tasks.update(command.taskId, next)
 

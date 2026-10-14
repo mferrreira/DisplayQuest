@@ -182,6 +182,9 @@ model project_activities {
   responsible users?   @relation("ActivityResponsible", fields: [responsibleId], references: [id], onDelete: SetNull)
   requestedByUser users? @relation("ActivityCompletionRequester", fields: [requestedBy], references: [id], onDelete: SetNull)
   approvedByUser  users? @relation("ActivityCompletionApprover", fields: [approvedBy], references: [id], onDelete: SetNull)
+  // V5-6 (DEC-99): as tasks da etapa. A leitura do cronograma não inclui tasks (o painel não
+  // lista tarefa por linha); quem conta é o fluxo de solicitar conclusão (V5-7).
+  tasks       tasks[]  @relation("ActivityTasks")
 
   @@index([projectId])
 }
@@ -224,13 +227,20 @@ model tasks {
   isGlobal       Boolean   @default(false)
   groupTaskId    Int?                    // Vincula cópias individuais criadas a partir do mesmo template
   createdBy      Int?
+  // V5-6 (DEC-99): a linha do cronograma a que a tarefa pertence. `SetNull`, não o default
+  // `Restrict`: apagar uma etapa do cronograma não apaga tarefa nenhuma (DEC-156), e a tarefa
+  // sobrevive sem vínculo. A checagem de projeto é do use case, não da FK.
+  activityId     Int?
   creator        users?    @relation("UserCreatedTasks", fields: [createdBy], references: [id])
   assignee       users?    @relation("UserTasks", fields: [assignedTo], references: [id])
   projectObj     projects? @relation("ProjectTasks", fields: [projectId], references: [id])
+  activityObj    project_activities? @relation("ActivityTasks", fields: [activityId], references: [id], onDelete: SetNull)
   assignees      task_assignees[] @relation("TaskAssignees")
   workSessions   work_session_tasks[] @relation("TaskWorkSessions")
   taskProgress   task_user_progress[] @relation("TaskUserProgress")
   subtasks       task_subtasks[]      @relation("TaskSubtasks")
+
+  @@index([activityId])
 }
 
 model task_assignees {

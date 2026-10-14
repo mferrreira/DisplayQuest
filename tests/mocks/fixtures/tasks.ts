@@ -25,6 +25,9 @@ export function makeTask(overrides: Partial<Task> = {}): Task {
     // plan-v4 · V4-4 (DEC-79): a chave existe em toda tarefa. O fixture espelha o read model real,
     // que sempre emite a lista (vazia quando não há subtask).
     subtasks: [],
+    // V5-6 (DEC-99): mesma razão — o read model sempre emite a chave da linha do cronograma
+    // (nula quando a tarefa não pertence a etapa nenhuma).
+    activityId: null,
     ...overrides,
   };
 }

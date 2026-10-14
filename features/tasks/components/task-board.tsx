@@ -6,7 +6,7 @@
  * Overdue + search filter CLIENT-side (GET /api/tasks ignores those params — system-discovery §5);
  * projectId goes to the server (membership-scoped there).
  */
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { DragDropContext, DropResult } from "@hello-pangea/dnd"
 import { useQueryState, parseAsBoolean, parseAsInteger, parseAsString } from "nuqs"
 import { useSession } from "next-auth/react"
@@ -32,6 +32,7 @@ import {
 import { useColumnOrders } from "../hooks/use-column-orders"
 import { sortTasksByColumnOrder, type ColumnOrder } from "../utils/column-order"
 import { isAssignedToUser } from "../utils/is-assigned-to-user"
+import { getCronograma, type ProjectActivity } from "@/lib/api/project-cronograma"
 import type { Task, TaskStatus } from "@/entities/task"
 import { BoardColumn } from "./board-column"
 import { BoardToolbar } from "./board-toolbar"
@@ -58,10 +59,35 @@ export function TaskBoard() {
     parseAsString.withDefault("normal"),
   )
   const [pessoaParam, setPessoaParam] = useQueryState("pessoa", parseAsInteger)
+  // V5-6 (DEC-99): filtro pela linha do cronograma. URL como fonte de verdade, igual ao resto.
+  const [atividadeParam, setAtividadeParam] = useQueryState("atividade", parseAsInteger)
 
   const { data: tasks, isPending, error, refetch } = useTasks(
     projetoParam ? { projectId: projetoParam } : {},
   )
+
+  // V5-6: as atividades do projeto selecionado, para o filtro da barra. Leitura aberta (DEC-136)
+  // — qualquer autenticado vê o cronograma, então a busca não depende de papel. Sem projeto,
+  // sem lista: atividade é do projeto (DEC-99).
+  const [projectActivities, setProjectActivities] = useState<ProjectActivity[]>([])
+  useEffect(() => {
+    if (!projetoParam) {
+      setProjectActivities([])
+      return
+    }
+    let cancelled = false
+    getCronograma(projetoParam)
+      .then((view) => {
+        if (!cancelled) setProjectActivities(view.activities)
+      })
+      .catch(() => {
+        // Cronograma indisponível não pode quebrar o quadro: o filtro simplesmente não aparece.
+        if (!cancelled) setProjectActivities([])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [projetoParam])
   const { updateStatus, complete } = useTaskMutations()
 
   const [editTask, setEditTask] = useState<Task | null>(null)
@@ -91,6 +117,9 @@ export function TaskBoard() {
     let list = tasks ?? []
     if (projetoParam) list = list.filter((t) => t.projectId === projetoParam)
     if (pessoaParam) list = list.filter((t) => isAssignedToUser(t, pessoaParam))
+    // V5-6 (DEC-99): a tarefa carrega `activityId` no read model; filtrar é comparar a chave.
+    // Tarefa sem vínculo nunca casa — o filtro mostra as tasks DA etapa, não "as demais".
+    if (atividadeParam) list = list.filter((t) => t.activityId === atividadeParam)
     if (atrasadasParam || hojeParam)
       list = list.filter(
         (t) => (atrasadasParam && isTaskOverdue(t)) || (hojeParam && isTaskDueToday(t)),
@@ -100,7 +129,7 @@ export function TaskBoard() {
       list = list.filter((t) => t.title.toLowerCase().includes(q))
     }
     return list
-  }, [tasks, projetoParam, pessoaParam, atrasadasParam, hojeParam, buscaParam])
+  }, [tasks, projetoParam, pessoaParam, atrasadasParam, hojeParam, buscaParam, atividadeParam])
 
   const archivedTasks = useMemo(() => filteredTasks.filter((t) => isArchivedTask(t)), [filteredTasks])
   // plan-v3 OND3-C: cada coluna tem a sua ordenação, então a lista NÃO é ordenada aqui — o
@@ -239,6 +268,7 @@ export function TaskBoard() {
           dueToday: hojeParam || undefined,
           search: buscaParam || undefined,
           assigneeId: pessoaParam ?? undefined,
+          activityId: atividadeParam ?? undefined,
         }}
         onFiltersChange={(next) => {
           void setProjetoParam(next.projectId ?? null)
@@ -246,12 +276,14 @@ export function TaskBoard() {
           void setHojeParam(Boolean(next.dueToday))
           void setBuscaParam(next.search ?? "")
           void setPessoaParam(next.assigneeId ?? null)
+          void setAtividadeParam(next.activityId ?? null)
         }}
         overdueCount={overdueCount}
         canCreateTasks={canCreateTasks}
         canSeeProjectSelector={canSeeProjectSelector}
         projects={projects}
         users={users}
+        activities={projectActivities}
         currentUserId={sessionUserId ?? null}
         isCompact={compactaParam === "compacta"}
         onToggleCompact={() => void setCompactaParam(compactaParam === "compacta" ? "normal" : "compacta")}

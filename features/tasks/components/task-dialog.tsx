@@ -40,10 +40,15 @@ import { useUsers } from "@/features/users"
 import { useTaskMutations } from "../hooks/use-tasks"
 import { parseBacklogLines } from "../utils/move-rules"
 import { POINTS_PER_TASK, supportsSubtasks, SUBTASK_TITLE_MAX_LENGTH } from ".."
+import { isActivityPast } from "@/backend/domain"
 import type { Task } from "@/entities/task"
 import { listProjectMembers, type ProjectMember } from "@/lib/api/project-members"
+import { getCronograma, type ProjectActivity } from "@/lib/api/project-cronograma"
 
 type TaskDialogTab = "task" | "backlog"
+
+/** Sentinela do seletor de atividade — o `Select` do Radix não aceita `""` (medido no V5-4a). */
+const NO_ACTIVITY = "none"
 
 const BACKLOG_TEMPLATE = [
   "Comprar reagentes !alta #25/12",
@@ -94,6 +99,15 @@ export function TaskDialog({ open, onOpenChange, task, defaultProjectId }: TaskD
   const [subtaskDrafts, setSubtaskDrafts] = useState<string[]>([])
   const [newSubtaskTitle, setNewSubtaskTitle] = useState("")
 
+  // V5-6 (DEC-99): a linha do cronograma a que a tarefa fica ligada. Não entra no schema do
+  // react-hook-form: a lista vem de uma busca pelo projeto selecionado, e a pré-seleção depende
+  // do `today` que a resposta do cronograma carrega — não é campo digitado, é escolha que a
+  // tela faz a partir de medida do servidor.
+  const [projectActivities, setProjectActivities] = useState<ProjectActivity[]>([])
+  const [cronogramaToday, setCronogramaToday] = useState("")
+  const [activityId, setActivityId] = useState<string>(NO_ACTIVITY)
+  const [activityTouched, setActivityTouched] = useState(false)
+
   const userRoles = (session?.user as { roles?: string[] } | undefined)?.roles ?? []
   const canManageUsers = userRoles.includes("COORDENADOR") || userRoles.includes("GERENTE")
   const canSelectProject = ["COORDENADOR", "GERENTE", "GERENTE_PROJETO"].some((r) =>
@@ -132,6 +146,12 @@ export function TaskDialog({ open, onOpenChange, task, defaultProjectId }: TaskD
       // A lista é rascunho da criação: reabrir o diálogo não pode levar a lista da tarefa anterior.
       setSubtaskDrafts([])
       setNewSubtaskTitle("")
+      // V5-6: reabrir para editar parte do vínculo que a tarefa tem; reabrir para criar parte
+      // do nada (a pré-seleção chega depois, quando o cronograma do projeto carrega).
+      setProjectActivities([])
+      setCronogramaToday("")
+      setActivityId(task?.activityId?.toString() ?? NO_ACTIVITY)
+      setActivityTouched(false)
       reset({
         title: task?.title ?? "",
         description: task?.description ?? "",
@@ -202,6 +222,64 @@ export function TaskDialog({ open, onOpenChange, task, defaultProjectId }: TaskD
     return users
   }, [projectMembers, users])
 
+  /**
+   * V5-6 (DEC-99): as linhas do cronograma do projeto selecionado. Mesma forma do efeito de
+   * membros acima. A leitura é aberta (DEC-136) — qualquer autenticado vê o cronograma — e
+   * falha não quebra o formulário: sem lista, o seletor simplesmente não aparece.
+   */
+  useEffect(() => {
+    const pid = selectedProjectId ? Number(selectedProjectId) : null
+    if (!pid || !Number.isInteger(pid) || pid <= 0) {
+      setProjectActivities([])
+      setCronogramaToday("")
+      return
+    }
+    let cancelled = false
+    getCronograma(pid)
+      .then((view) => {
+        if (cancelled) return
+        setProjectActivities(view.activities)
+        setCronogramaToday(view.today)
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setProjectActivities([])
+          setCronogramaToday("")
+        }
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [selectedProjectId])
+
+  /**
+   * Pré-seleção (DEC-99): na criação, a atividade vigente — a cujo período cobre hoje, medida
+   * pelo servidor (`current` na resposta) — vem escolhida. Uma escolha manual do usuário não é
+   * atropelada: `activityTouched` trava a pré-seleção a partir do primeiro clique.
+   */
+  useEffect(() => {
+    if (task || activityTouched) return
+    const current = projectActivities.find((a) => a.current)
+    setActivityId(current ? String(current.id) : NO_ACTIVITY)
+  }, [projectActivities, task, activityTouched])
+
+  /**
+   * O que a lista oferece (DEC-99):
+   *   criação → só vigente + futuras; linha passada não é escolha de tarefa nova.
+   *   edição  → todas as linhas: uma tarefa ligada a uma etapa que virou passada continua
+   *             salvável — o servidor não reescreve o vínculo (DEC-99), e sumir a opção da
+   *             lista faria o save silenciosamente desligar a tarefa da etapa.
+   */
+  const activityOptions = useMemo(() => {
+    if (!cronogramaToday) return projectActivities
+    if (task) return projectActivities
+    return projectActivities.filter(
+      (a) => !isActivityPast({ firstMonth: a.firstMonth, lastMonth: a.lastMonth }, cronogramaToday),
+    )
+  }, [task, projectActivities, cronogramaToday])
+
+  const showActivityField = !isGlobal && Boolean(selectedProjectId) && activityOptions.length > 0
+
   const onSubmit = async (values: TaskFormValues) => {
     setServerError("")
     const parsed = taskFormSchema.parse(values)
@@ -222,6 +300,12 @@ export function TaskDialog({ open, onOpenChange, task, defaultProjectId }: TaskD
     } else {
       body.projectId = parsed.projectId ? Number(parsed.projectId) : null
       body.assigneeIds = parsed.assigneeIds
+      // V5-6 (DEC-99): a linha do cronograma. Só sai no corpo quando o seletor existe — corpo
+      // sem a chave não apaga vínculo (o corpo é parcial), e um seletor que não carregou não
+      // pode apagar o que o usuário nunca viu.
+      if (showActivityField) {
+        body.activityId = activityId === NO_ACTIVITY ? null : Number(activityId)
+      }
       if (parsed.dueDate) body.dueDate = parsed.dueDate
       if (!parsed.isGlobal && (parsed.assigneeIds?.length ?? 0) > 1) {
         body.creationMode = parsed.creationMode
@@ -357,6 +441,44 @@ export function TaskDialog({ open, onOpenChange, task, defaultProjectId }: TaskD
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* V5-6 (DEC-99): a linha do cronograma do projeto selecionado. O rótulo do
+                  trigger não contém o rótulo do Label (lição do substring, 3.C). */}
+              {showActivityField && (
+                <div className="space-y-2">
+                  <Label htmlFor="task-activity">Atividade do cronograma</Label>
+                  <Select
+                    value={activityId}
+                    onValueChange={(value) => {
+                      // Medido no jsdom: o Select dentro do `<form>` renderiza um native select
+                      // oculto do Radix (BubbleSelect) cujas opções só existem com a lista aberta;
+                      // um valor controlado sem opção registrada é desaguado em `""` e dispara
+                      // change — isso apagava a pré-seleção. O formulário nunca tem item de valor
+                      // `""` (a sentinela é `none`), então `""` é artefato, não escolha.
+                      if (value === "") return
+                      setActivityTouched(true)
+                      setActivityId(value)
+                    }}
+                  >
+                    <SelectTrigger id="task-activity" aria-label="Atividade da tarefa">
+                      <SelectValue placeholder="Sem atividade" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Sem atividade</SelectItem>
+                      {activityOptions.map((activity) => (
+                        <SelectItem key={activity.id} value={activity.id.toString()}>
+                          {activity.order}. {activity.description}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    {task
+                      ? "A tarefa fica ligada a uma linha do cronograma do projeto."
+                      : "Só a atividade vigente e as futuras aparecem; a vigente vem pré-selecionada."}
+                  </p>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label>Responsáveis</Label>

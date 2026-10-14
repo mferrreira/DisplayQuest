@@ -69,3 +69,12 @@ export {
   type AwardableTask,
   type AwardableSubtask,
 } from "./task-rules";
+// V5-6 (DEC-99): a ligação da tarefa com a linha do cronograma
+export {
+  TASK_ACTIVITY_NOT_FOUND_MESSAGE,
+  TASK_ACTIVITY_PROJECT_MESSAGE,
+  TASK_ACTIVITY_GLOBAL_MESSAGE,
+  TASK_ACTIVITY_INVALID_MESSAGE,
+  resolveTaskActivityLink,
+  type TaskActivityRef,
+} from "./task-activity-rules";

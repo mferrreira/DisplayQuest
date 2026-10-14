@@ -5,6 +5,7 @@ import {
   NotFoundError,
   normalizeAssigneeIds,
   requireActorPermission,
+  resolveTaskActivityLink,
   supportsSubtasks,
   toTaskView,
   ValidationError,
@@ -15,6 +16,7 @@ import { requireTaskPersonActor } from "@/backend/modules/task-management/applic
 import type { CreateTaskCommand } from "@/backend/modules/task-management/application/contracts";
 import type { TaskAssigneesPort } from "@/backend/modules/task-management/application/ports/task-assignees.repository";
 import type { TaskActorsPort } from "@/backend/modules/task-management/application/ports/task-actors.port";
+import type { TaskActivitiesPort } from "@/backend/modules/task-management/application/ports/task-activities.port";
 import type { TaskProjectsPort } from "@/backend/modules/task-management/application/ports/task-projects.port";
 import type { TaskSubtasksPort } from "@/backend/modules/task-management/application/ports/task-subtasks.repository";
 import type { TaskRepositoryPort } from "@/backend/modules/task-management/application/ports/task.repository";
@@ -38,6 +40,7 @@ export interface CreateTaskDependencies {
   actors: TaskActorsPort
   projects: TaskProjectsPort
   subtasks: TaskSubtasksPort
+  activities: TaskActivitiesPort
 }
 
 export class CreateTaskUseCase {
@@ -58,6 +61,15 @@ export class CreateTaskUseCase {
 
     const data: CreateTaskCommand = { ...command, createdBy: actorId }
     const normalizedAssigneeIds = normalizeAssigneeIds(data as Record<string, unknown>)
+
+    // V5-6 (DEC-99): a ligação com a linha do cronograma é decidida ANTES de qualquer escrita,
+    // inclusive antes do fan-out individual — N tarefas com vínculo inválido seriam N linhas
+    // erradas, e o vínculo não é campo de cópia: é o mesmo para todas.
+    data.activityId = await this.resolveActivityLink(
+      data.activityId,
+      data.projectId ?? null,
+      Boolean(data.isGlobal),
+    )
 
     const creationMode = data.creationMode ?? "individual"
     if (creationMode === "individual" && !data.isGlobal && normalizedAssigneeIds.length > 1) {
@@ -183,6 +195,30 @@ export class CreateTaskUseCase {
         throw new NotFoundError("Usuário não encontrado")
       }
     }
+  }
+
+  /**
+   * V5-6 (DEC-99): a leitura mínima da atividade (id + projeto) e a decisão pura
+   * `resolveTaskActivityLink`. A lookup só acontece quando o id tem forma de id — um corpo com
+   * `activityId: "abc"` recebe a recusa nomeando o campo, não um erro do Prisma por NaN.
+   */
+  private async resolveActivityLink(
+    activityId: unknown,
+    projectId: number | null,
+    isGlobal: boolean,
+  ): Promise<number | null> {
+    const id = Number(activityId)
+    const hasShape =
+      activityId !== undefined &&
+      activityId !== null &&
+      activityId !== "" &&
+      Number.isInteger(id) &&
+      id > 0
+    const activity =
+      hasShape && !isGlobal
+        ? await this.dependencies.activities.findActivityById(id)
+        : null
+    return resolveTaskActivityLink({ activityId, activity, projectId, isGlobal })
   }
 }
 

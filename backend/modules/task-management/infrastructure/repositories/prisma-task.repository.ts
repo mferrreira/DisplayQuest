@@ -25,6 +25,7 @@ function toRow(data: ITask) {
     isGlobal: data.isGlobal ?? false,
     groupTaskId: data.groupTaskId ?? null,
     createdBy: data.createdBy ?? null,
+    activityId: data.activityId ?? null,
   }
 }
 
@@ -44,6 +45,7 @@ type TaskRow = {
   isGlobal: boolean
   groupTaskId: number | null
   createdBy: number | null
+  activityId: number | null
 }
 
 function toView(row: TaskRow) {
@@ -64,6 +66,7 @@ function toView(row: TaskRow) {
     isGlobal: row.isGlobal,
     groupTaskId: row.groupTaskId,
     createdBy: row.createdBy,
+    activityId: row.activityId,
   })
 }
 
