@@ -28,7 +28,6 @@ import type { Project, Task } from "@/contexts/types"
 import { useAuth } from "@/contexts/auth-context"
 import { useUser } from "@/contexts/user-context"
 import { POINTS_PER_TASK } from "@/features/tasks"
-import { ProjectMembersManager } from "@/components/forms/project-members-manager"
 import { ProjectMembersManagement } from "@/components/features/project-members-management"
 import { ProjectHoursStats } from "@/components/features/project-hours-stats"
 import { ProjectLeaderLogs } from "@/components/features/project-leader-logs"
@@ -155,10 +154,10 @@ export function ProjectDetailDialog({
 
   // V5-2c: quem vê os controles de escrita de entregáveis/anexos. A AUTORIDADE é o servidor
   // (gate de gestão do projeto nos use cases, DEC-92) — isto só decide o que aparece na tela.
-  // Mesma lista de papéis que `project-members-manager.tsx:30` já usa. Quem gerencia pelo papel
-  // da membership sem ter o papel global vê a lista em leitura e, se tentar escrever, recebe o
-  // 403 do servidor como erro — o diálogo não consulta membership, e adivinhar seria a regra em
-  // duas cópias.
+  // Mesma lista de papéis que `project-members-management.tsx` usa em `canManageMembers`. Quem
+  // gerencia pelo papel da membership sem ter o papel global vê a lista em leitura e, se tentar
+  // escrever, recebe o 403 do servidor como erro — o diálogo não consulta membership, e adivinhar
+  // seria a regra em duas cópias.
   const canManageProjectFiles = Boolean(
     user &&
       (project.leaderId === user.id ||

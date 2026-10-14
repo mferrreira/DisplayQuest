@@ -1,7 +1,7 @@
 {
   "plan": "plan-v5",
   "title": "domínio de projetos maduro: cronograma, pontos, relatórios técnicos, atestados, blobs em bucket S3-compatible (SeaweedFS desde o V5-1, DEC-131)",
-  "version": "5.13.0",
+  "version": "5.14.0",
   "updatedAt": "2026-10-13",
   "status": "in_progress",
   "activeWave": "V5-5",
@@ -564,6 +564,22 @@
         "CPF: o verificador desta casa pesa `count + 1 - index` (10..2 para o primeiro digito). Calcular com 9..1 devolve um numero que a propria regra recusa — tres candidatos feitos a mao foram recusados antes de alinhar o peso com a funcao.",
         "`docker compose build app` saiu rapido (minutos, nao 25) porque a camada de `npm i` ja estava em cache da build anterior; o `next build` re-executou. A nota de 25+ minutos do V5-2d vale para cache frio."
       ]
+    },
+    {
+      "id": "D-1+D-4",
+      "at": "2026-10-13",
+      "title": "divida aprovada executada antes das ondas: cleanup de status (D-1) e arquivo morto apagado (D-4)",
+      "actions": [
+        "D-1 (DEC-141): migration `20261014020000_normalize_legacy_task_status` escrita e aplicada com `migrate deploy` na 5432 e na 5433. Medido antes: a 5432 tem 36 tarefas, todas `done`, e a 5433 so tem valores do contrato — ZERO linhas reescritas hoje. A premissa de 2026-10-01 (14 de 18) expirou, e isso foi conferido tabela por tabela (issues: open/in_progress do contrato do laboratorio; projects: active/on_hold do contrato; purchases: delivered/processing; users: active; work_sessions: completed). A migration fica no historico porque o que ela conserta e banco restaurado de backup e a instancia de deploy, que esta maquina nao mede.",
+        "DEC-153: a tolerancia de `entities/task.ts` (wireTaskSchema, que absorvia os tres legados com console.warn) FICA. Tirala antes de a migration rodar no deploy troca um aviso por leitura de tarefa quebrada, e o conteudo do banco de deploy nao e medivel daqui. Sai quando o deploy tiver a migration aplicada.",
+        "guarda nova `tests/unit/scripts/legacy-task-status-migration.test.ts` (4 casos): os tres mapeamentos, ausencia de CHECK/ALTER TABLE/CREATE TYPE (DEC-141 diz 'sem constraint na coluna'), nenhum legado como destino de escrita, e nenhuma outra tabela tocada. Guarda de SQL existe porque o `tsc` nao ve SQL e a coluna e TEXT por decisao.",
+        "D-4 (DEC-150): `components/forms/project-members-manager.tsx` (132 linhas) apagado, com o import orfao de `project-detail-dialog.tsx:31` e o comentario que apontava para a linha 30 do arquivo morto (apontou para `canManageMembers` da tela viva). Medido depois: nenhuma referencia de codigo sobra — o que resta do nome e texto de plano/historico."
+      ],
+      "gates": "D-1: G0 891/3700 allow-list vazia | eslint exit 0 no arquivo novo | G3 122/1651 verde. D-4: G0 890/3689 (um modulo a menos, oito dependencias a menos) | eslint exit 0 | G2 1 erro PRE-EXISTENTE | G3 122/1651 verde.",
+      "gotchas": [
+        "divida com premissa medida no passado precisa ser REMEDIDA antes de executar: o D-1 estava aprovado com '14 de 18 linhas' de 2026-10-01, e hoje sao zero. Rodar a migration mesmo assim e certo (ela e o que conserta outro banco); executar achando que ela conserta a instancia da frente seria mentir no batchLog.",
+        "o contador do arch:check e a prova de que apagar codigo morto apagou algo: 890/3697 virou 890/3689. Se o numero nao mudasse, o arquivo ainda estaria sendo importado em algum lugar."
+      ]
     }
   ],
   "openQuestions": [],
@@ -655,8 +671,10 @@
       "id": "D-4",
       "decision": "DEC-150",
       "title": "project-members-manager.tsx esta morto (achado no V5-4b, dono mandou apagar)",
-      "status": "approved",
+      "status": "done",
       "scope": "components/forms/project-members-manager.tsx (132 linhas) e importado uma unica vez (components/ui/project-detail-dialog.tsx:31) e nunca renderizado; a tela viva de membros e components/features/project-members-management.tsx, usada em quatro lugares (painel admin, AdminProjectManagement, volunteers-management e o dialogo de detalhe). Medido com grep em 2026-10-13. Mesma familia do D-3/DEC-144: apagar e decisao do dono, nao do batch.",
+      "executedAt": "2026-10-13",
+      "execution": "arquivo apagado com `git rm`, import orfao removido e comentario que citava `project-members-manager.tsx:30` reescrito para apontar a `canManageMembers` da tela viva. Medido depois: zero referencias de codigo ao nome; G0 caiu de 890/3697 para 890/3689 (o modulo e as 8 dependencias dele sairam do grafo), G3 122/1651 verde.",
       "closes": null
     }
   ],
