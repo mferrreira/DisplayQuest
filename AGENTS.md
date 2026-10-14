@@ -304,11 +304,14 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   **DEC-179 plan-v5/V5-fix-1 (2026-10-14, conserto pos-encerramento do atestado: CPF sai em 8pt — o
   `/DA` 0 do oficial preenchia a caixa com 23pt; `dia` baixado a 498 para alinhar com o primeiro "de"
   da assinatura — o `ano` fica em 504 porque o segundo "de" está mais alto; folga medida de 1pt nas
-  caixas justas da assinatura, "2026" em 8pt e não 7pt)**).
+  caixas justas da assinatura, "2026" em 8pt e não 7pt)**,
+  **DEC-180 plan-v5/V5-fix-2 (2026-10-14, "Gerar DOCX" salva o texto em edição antes de gerar
+  quando ele difere do salvo — o servidor gera do conteúdo salvo e o rascunho de IA não salvava,
+  daí as tabelas em branco; pipeline DOCX medido íntegro com o conteúdo real do dono)**).
   O V4-4 ia usar
   DEC-61..64 e colidiu; os 28 comentários de código foram renumerados. **Antes de abrir decisão nova, `grep`
   os CINCO `STATE.json` (clean-arch, plan-v3, plan-v4, plan-v5, plan-v6) — a nota antiga que dizia "três"
-  está velha. Próxima livre: DEC-180.**
+  está velha. Próxima livre: DEC-181.**
 - **Subtask (V4-4, DEC-78..83 → regra atual = DEC-97/98):** tabela `task_subtasks` (sem FK para
   `users` — subtask não tem
   responsável próprio), base gravada em `tasks.points` = `10 + 5·n` (DEC-97) e **cada subtask CONCLUÍDA

@@ -217,14 +217,44 @@ describe("painel de relatórios técnicos (V5-9, DEC-70/139)", () => {
       `/api/projects/${PROJECT}/technical-reports/1/file?userId=9`,
     );
     expect(link).toHaveAttribute("download", "relatorio-parcial-bento-lima.docx");
+    // DEC-180: editor igual ao texto salvo → nenhuma PUT redundante.
+    expect(mocks.requests.some((r) => r.method === "PUT")).toBe(false);
   });
 
-  it("DEC-173: sem texto salvo o botão de gerar está HABILITADO — o documento sai pré-preenchido", async () => {
+  it("DEC-180: 'Gerar DOCX' salva o texto em edição ANTES de gerar — o documento sai do que a pessoa vê", async () => {
+    const user = userEvent.setup({ delay: null });
+    renderPanel(true);
+
+    // "Final" não tem linha salva no fixture: o texto digitado só existia no editor.
+    const textarea = await screen.findByLabelText("Texto do relatório Final");
+    await user.type(textarea, "Texto novo do final.");
+    await user.click(screen.getByRole("button", { name: "Gerar documentos do relatório Final" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("link", { name: "Bento Lima" })).toBeInTheDocument();
+    });
+    const put = mocks.requests.find((r) => r.method === "PUT");
+    const post = mocks.requests.find((r) => r.method === "POST" && r.path.includes("/generate"));
+    expect(put?.body).toEqual({ type: "final", content: "Texto novo do final." });
+    expect(post?.path).toBe(`/api/projects/${PROJECT}/technical-reports/final/generate`);
+    // A ordem é o contrato: o servidor lê o conteúdo SALVO — a PUT tem que sair antes.
+    expect(mocks.requests.indexOf(put!)).toBeLessThan(mocks.requests.indexOf(post!));
+  });
+
+  it("DEC-173/180: sem texto salvo o botão de gerar está HABILITADO — editor vazio e sem linha gera sem PUT", async () => {
+    const user = userEvent.setup({ delay: null });
     renderPanel(true);
 
     // "Final" não tem linha salva no fixture — e isso não desabilita mais nada.
     expect(await screen.findByRole("button", { name: "Gerar documentos do relatório Final" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Gerar documentos do relatório Parcial" })).toBeEnabled();
+
+    // Editor vazio == nada salvo: não há o que salvar — o documento sai pré-preenchido.
+    await user.click(screen.getByRole("button", { name: "Gerar documentos do relatório Final" }));
+    await waitFor(() => {
+      expect(mocks.requests.some((r) => r.method === "POST" && r.path.includes("/final/generate"))).toBe(true);
+    });
+    expect(mocks.requests.some((r) => r.method === "PUT")).toBe(false);
   });
 
   it("V5-9b: o 409 do servidor chega na tela com a frase do use case", async () => {

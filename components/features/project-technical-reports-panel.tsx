@@ -30,7 +30,9 @@ import {
  * V5-9b: "Gerar DOCX" dispara a geração lote (um documento oficial por membro ATIVO,
  * DEC-139) e a tela mostra o download de cada arquivo gerado nesta sessão. DEC-173: o
  * botão não exige texto salvo — sem texto o documento sai pré-preenchido com as tabelas
- * em branco.
+ * em branco. DEC-180 (conserto pedido pelo dono): quando o texto em edição difere do
+ * salvo, o botão salva antes de gerar — o documento sai do que a pessoa vê, e o rascunho
+ * de IA aplicado no editor não fica mais de fora do documento.
  *
  * V5-9c: "Rascunhar com IA" pede o texto às três fontes do plano e o aplica no editor
  * SEM salvar (salvar é decisão humana). O rascunho não atropela edição em andamento:
@@ -119,6 +121,17 @@ export function ProjectTechnicalReportsPanel({
   async function handleGenerate(type: TechnicalReportType) {
     setGeneratingType(type)
     try {
+      // DEC-180 (conserto pedido pelo dono: "o texto, mesmo gerado pela IA, não tá sendo
+      // injetado no documento"): o servidor gera do conteúdo SALVO, e o rascunho de IA entra
+      // no editor sem salvar — quem rascunhava e gerava recebia tabelas em branco. O botão
+      // agora salva o texto em edição antes de gerar quando ele difere do salvo: o documento
+      // sai do que a pessoa vê. Editor igual ao salvo (ou vazio sem linha) não escreve nada.
+      const editor = drafts[type] ?? ""
+      const savedContent = reports.get(type)?.content ?? ""
+      if (editor !== savedContent) {
+        const saved = await saveTechnicalReport(projectId, { type, content: editor })
+        setReports((current) => new Map(current).set(type, saved))
+      }
       const files = await generateTechnicalReports(projectId, type)
       setGenerated((current) => ({ ...current, [type]: files }))
       toast({
@@ -207,7 +220,7 @@ export function ProjectTechnicalReportsPanel({
                       size="sm"
                       variant="outline"
                       disabled={savingType !== null}
-                      title="Sem texto salvo, o documento sai pré-preenchido com as tabelas em branco"
+                      title="O texto em edição é salvo antes de gerar; sem texto, o documento sai pré-preenchido com as tabelas em branco"
                       aria-label={`Gerar documentos do relatório ${label}`}
                       onClick={() => handleGenerate(type)}
                     >
