@@ -107,7 +107,7 @@ que a API nao tenha.
 | # | Rota | Arquivo (linhas) | O que aparece hoje | Gate de UI | Guarda de servidor | Alvo |
 |---|---|---|---|---|---|---|
 | 1 | `/dashboard` | `dashboard/page.tsx` (18) | `h1` + `TaskBoard` | nenhum | layout do grupo | RF-V6.4 |
-| 2 | `/dashboard/projetos` | `projetos/page.tsx` (316) | 4 stat cards + filtros + Tabs Dashboard/Lista/Voluntarios | `VIEW_PROJECT_DASHBOARD` (`:122`), `showDashboard` (`:98`), `showVolunteers` (`:99`) | layout do grupo | RF-V6.5, RF-V6.12 |
+| 2 | `/dashboard/projetos` | `projetos/page.tsx` (316) | 4 stat cards + filtros + Tabs Dashboard/Lista/Voluntarios | `VIEW_PROJECT_DASHBOARD` (`:122`), `showDashboard` (`:98` — troca por `DASHBOARD_PROJECT_MANAGER`, DEC-186), `showVolunteers` (`:99`) | layout do grupo | RF-V6.5, RF-V6.12 |
 | 3 | `/dashboard/projetos/[id]` | **nao existe** | hoje e o `project-detail-dialog` num Dialog | 8 expressoes (§2.4.3) | **nenhum** (nao ha rota) | RF-V6.6, RF-V6.13 |
 | 4 | `/dashboard/laboratorio` | `laboratorio/page.tsx` (103) | `h1` + Tabs Agenda/Responsabilidade/Reclamacoes | `VIEW_ALL_DATA` nas abas | layout do grupo | RF-V6.7 |
 | 5 | `/dashboard/weekly-reports` | `weekly-reports/page.tsx` (458) | `h1` + Tabs Usuarios (semanal)/Relatorios de Projeto | `VIEW_WEEKLY_REPORTS` (`:173`), `MANAGE_USERS` (`:215`) | layout do grupo | RF-V6.11 |
@@ -158,6 +158,16 @@ plano corrige e **onde** a decisao de autorizacao e tomada:
   "GERENTE_PROJETO")` (`:98`) e `showVolunteers` = `GERENTE_PROJETO || hasGodMode`, com
   `hasGodMode` = `COORDENADOR || GERENTE` (`:39-41`). Consequencia medida: **COORDENADOR e
   GERENTE nao veem a aba Dashboard**; veem Lista + Voluntarios.
+- **Correcao decidida (DEC-186, unica excecao registrada de "nenhum conjunto muda de
+  valor"):** a aba Dashboard passa a ser governada pela chave nomeada
+  `DASHBOARD_PROJECT_MANAGER` = `["COORDENADOR","GERENTE","GERENTE_PROJETO"]` — o gatilho
+  local vira chave (RF-V6.16 R2) e **ninguem perde o que via**: COORDENADOR e GERENTE
+  passam a ver a aba, `GERENTE_PROJETO` continua. `ProjectManagerDashboard` segue
+  filtrando por `leaderId === user?.id` (`project-manager-dashboard.tsx:31`), entao quem
+  nao lidera projeto nenhum ve o estado vazio que o componente **ja tem** (`:190-197`,
+  "Nenhum projeto atribuido"): nenhuma funcionalidade nova entra por causa disso. O valor
+  coincide com `DASHBOARD_VOLUNTEERS`, mas os dois conjuntos governam **recursos
+  diferentes** (aba do Admin x aba de Projetos) — sao duas chaves de propósito.
 - **Dados:** projetos pelo **contexto legado** `useProject` (`:46`) — nao o `useProjects`
   TanStack do quadro: dois caminhos de dado para a mesma coisa. Contagens derivadas em
   `:66-68`. Membros e horas por pessoa vem de `/volunteers`.
@@ -204,9 +214,9 @@ plano corrige e **onde** a decisao de autorizacao e tomada:
   nav acompanha.
 - **Fica de fora:** a aba **Templates** — o produto nao tem fonte de template para uma tela
   propria (DEC-112); os templates oficiais sao asset de leitura do backend (DEC-128/130).
-- **Aberto (ASK-V6-03):** a **rota** continua `/dashboard/weekly-reports` com rotulo novo,
-  ou o diretorio vira `/dashboard/relatorios`? O caminho nao aparece para o usuario final e
-  renomear toca `nav-config`, a captura do guia e o e2e — por isso nao foi decidido aqui.
+- **Rota (DEC-185):** o diretorio **continua** `/dashboard/weekly-reports`; so o `h1` e o
+  rotulo do nav viram **Relatorios**. O caminho nao aparece para o usuario final e renomear
+  tocaria `nav-config`, a captura do guia e o e2e — custo sem ganho visivel.
 
 #### 2.4.5 Admin — `/dashboard/admin`
 
@@ -354,21 +364,28 @@ permite** — nunca ampliar o servidor para caber no cliente.
 | D | `DASHBOARD_PROJETOS` e **chave morta** | `permissions.ts:30` — **1** ocorrencia no repo inteiro (a propria definicao) | RF-V6.16 (R4) |
 | E | `MANAGE_REWARDS` **duplicada** nas duas matrizes | `permissions.ts:17` (PERMISSIONS) e `:39` (FEATURE_ACCESS), mesmo valor | RF-V6.16 (R4) |
 | F | A **mesma lista** com **duas chaves** na pagina e no nav | `weekly-reports/page.tsx:173` (`VIEW_WEEKLY_REPORTS`) vs `nav-config.ts:57` (`DASHBOARD_WEEKLY_REPORTS`) — conjuntos identicos | RF-V6.16 (R4) |
-| G | `showDashboard`/`showVolunteers` **reimplementam papeis no corpo** da pagina; nao existe chave | `projetos/page.tsx:98-99` + `hasGodMode` (`:39-41` = `COORDENADOR \|\| GERENTE`) | RF-V6.16 (R2) + RF-V6.12 |
+| G | `showDashboard`/`showVolunteers` **reimplementam papeis no corpo** da pagina; nao existe chave | `projetos/page.tsx:98-99` + `hasGodMode` (`:39-41` = `COORDENADOR \|\| GERENTE`) | RF-V6.16 (R2) + RF-V6.12 — **decidido**: `showDashboard` vira `DASHBOARD_PROJECT_MANAGER` = `["COORDENADOR","GERENTE","GERENTE_PROJETO"]` (DEC-186) e `showVolunteers` vira `DASHBOARD_VOLUNTEERS` (DEC-182) |
 | H | **13 de 13** paginas sao client; os unicos pontos server sao os `layout.tsx` — toda decisao de pagina e do cliente | `find app -name 'page.tsx'` = 13 vs `layout.tsx` = 5 (so 2 fazem guarda) | RF-V6.16 (S1) |
-| I | `metadata.title` e a **mesma string generica** em todas as telas | `app/layout.tsx`; **nenhuma** das 13 `page.tsx` pode exportar `metadata` (Next: server-only) | ASK-V6-06 |
+| I | `metadata.title` e a **mesma string generica** ("Sistema de Gerenciamento de Tarefas") em todas as telas — e o mesmo texto e o `h1` do intersticial `/` (`app/page.tsx:22`) | `app/layout.tsx`; **nenhuma** das 13 `page.tsx` pode exportar `metadata` (Next: server-only) | RF-V6.2 (R5) — **decidido**: titulo por tela por efeito no cliente dentro do `PageHeader`, sem RSC e sem `layout.tsx` por segmento; o fallback de `app/layout.tsx` e o `h1` do intersticial passam a citar o produto (DEC-188, onda V6-10) |
 
-**O que NAO e mudanca de permissao.** Nenhum conjunto de papeis medido acima muda de valor
-neste plano: as chaves novas nascem com o **valor medido**, e o caso (C) se fecha pela
-lista que **o dono ja usa na tela** (`MANAGE_REWARDS`, que o servidor ja aplica como
-`MANAGE_PURCHASES`). O unico conjunto *novo* e `DASHBOARD_VOLUNTEERS` (`COORDENADOR`,
-`GERENTE`, `GERENTE_PROJETO`), que e exatamente o `showVolunteers` de
-`projetos/page.tsx:99` — nenhum papel ganha acesso a nada que nao tivesse.
+**O que NAO e mudanca de permissao — com UMA excecao registrada.** Nenhum outro conjunto
+de papeis medido acima muda de valor: as chaves novas nascem com o **valor medido**, e o
+caso (C) se fecha pela lista que **o dono ja usa na tela** (`MANAGE_REWARDS`, que o servidor
+ja aplica como `MANAGE_PURCHASES`). O outro conjunto *novo* e `DASHBOARD_VOLUNTEERS`
+(`COORDENADOR`, `GERENTE`, `GERENTE_PROJETO`), que e exatamente o `showVolunteers` de
+`projetos/page.tsx:99` — nenhum papel ganha acesso a algo que nao tivesse. A **excecao** e
+a aba Dashboard de Projetos: o dono respondeu que a invisibilidade de COORDENADOR/GERENTE
+ali e **bug** (ASK-V6-04) e mandou alinhar com o `hasGodMode` da propria pagina — a chave
+`DASHBOARD_PROJECT_MANAGER` nasce com `["COORDENADOR","GERENTE","GERENTE_PROJETO"]`
+(**DEC-186**). E mudanca de visibilidade pretendida, aditiva: nenhum papel perde acesso.
 
-**Quirk preservado (nao e bug a corrigir aqui).** `showDashboard` (`:98`) e
-`GERENTE_PROJETO` **so**: COORDENADOR e GERENTE nao veem a aba Dashboard da pagina de
-Projetos, e continuam nao vendo — o que muda e so o gatilho, que passa a ser chave
-nomeada. Mudar quem ve isso e decisao de produto, nao de redistribuicao (ASK-V6-04).
+**Quirk corrigido por decisao do dono (DEC-186).** `showDashboard` (`:98`) era
+`GERENTE_PROJETO` **so**, e COORDENADOR e GERENTE nao viam a aba Dashboard da pagina de
+Projetos. O dono classificou isso como **bug** e mandou alinhar com o `hasGodMode` da
+propria pagina (`:39-41`) em 2026-10-14. O gatilho passa a ser a chave nomeada
+`DASHBOARD_PROJECT_MANAGER` e o conjunto vira a **uniao** `COORDENADOR ∪ GERENTE ∪
+GERENTE_PROJETO` — ninguem perde a aba que ja via. Quem nao lidera nenhum projeto ve o
+estado vazio que o `ProjectManagerDashboard` **ja** renderiza (`:190-197`).
 
 ## 3. Atores e papeis
 
@@ -376,7 +393,7 @@ nomeada. Mudar quem ve isso e decisao de produto, nao de redistribuicao (ASK-V6-
 |---|---|---|
 | Dono do DisplayQuest | decide a linguagem visual | fornece as referencias, decide as DEC-105..112, aprova visualmente cada onda |
 | Usuario logado (todos os papeis) | usa as telas | navega, filtra, busca, arrasta cartoes, cria/edita/aprova — **o comportamento nao muda** |
-| Coordenador / Gerente | portas de gestao | ve exatamente os mesmos botoes de hoje nas mesmas telas — incluindo o conjunto de **Voluntarios** (`COORDENADOR`, `GERENTE`, `GERENTE_PROJETO`), que muda de lugar (RF-V6.12) e **nao** de tamanho |
+| Coordenador / Gerente | portas de gestao | ve os mesmos botoes de hoje nas mesmas telas — incluindo o conjunto de **Voluntarios** (`COORDENADOR`, `GERENTE`, `GERENTE_PROJETO`), que muda de lugar (RF-V6.12) e **nao** de tamanho. **Unica excecao de visibilidade do plano:** ganham a aba **Dashboard** da pagina de Projetos, que hoje so o `GERENTE_PROJETO` ve e o dono classificou como bug (DEC-186) |
 | Usuario sem a permissao de uma aba | ve o motivo, nao o vazio | RF-V6.14: aba sem chave **explica** por que; a guarda de entrada responde no **servidor** (RF-V6.16) |
 | Lider de projeto | gestao do proprio projeto | mesmas portas (`leaderId === user.id`) |
 | Agente `build` | executa `/ui-refactor <alvo>` | implementa a onda, roda os gates, reporta |
@@ -422,6 +439,13 @@ nomeada. Mudar quem ve isso e decisao de produto, nao de redistribuicao (ASK-V6-
   - R3: primitivos sao puros (props declarativas), sem busca de dados e sem `useContext`.
   - R4: variantes de badge usam `--success/--info/--warning`, que ja tem variante dark
     automatica — some o par `dark:` casado a mao.
+  - R5 (**DEC-188**): `PageHeader` **tambem declara o titulo do navegador** — um efeito no
+    cliente escreve `document.title = "<titulo da tela> · DisplayQuest"`. Nao ha RSC nesta
+    correcao, nem `layout.tsx` por segmento: as 13 `page.tsx` seguem client e
+    `metadata` segue server-only. `app/layout.tsx` mantem o fallback (rotas sem
+    `PageHeader`, como o intersticial `/`), com o **nome do produto** no lugar da string
+    generica medida. Toda tela que adota o primitivo passa a ter titulo proprio **sem
+    trabalho extra**.
 
 ### RF-V6.3 — Shell de navegacao: sidebar persistente + header compacto
 
@@ -496,6 +520,13 @@ nomeada. Mudar quem ve isso e decisao de produto, nao de redistribuicao (ASK-V6-
   - R5: os contextos legados `useProject` (`projetos/page.tsx:46`) e `useTask` **nao
     mudam de caminho** nesta onda (troca de data layer e refactor de comportamento,
     fora do escopo visual).
+  - R6 (**DEC-186**): a visibilidade da aba **Dashboard** deixa de ser o gatilho inline
+    `roles.includes("GERENTE_PROJETO")` (`projetos/page.tsx:98`) e passa a
+    `hasAccess(roles, "DASHBOARD_PROJECT_MANAGER")` = `["COORDENADOR","GERENTE",
+    "GERENTE_PROJETO"]`. E a **unica** mudanca de visibilidade deste plano: aditiva
+    (ninguem perde a aba) e de apresentacao. O conteudo da aba **nao muda** —
+    `ProjectManagerDashboard` segue filtrando por `leaderId === user?.id` (`:31`) e ja tem
+    o estado vazio (`:190-197`). A aba **Voluntarios** segue intocada aqui (V6-9).
 
 ### RF-V6.6 — Projeto vira rota `/dashboard/projetos/[id]`
 
@@ -627,8 +658,8 @@ nomeada. Mudar quem ve isso e decisao de produto, nao de redistribuicao (ASK-V6-
     pontos ficam ligados por **atalho**.
   - R2: a aba **Templates fica fora** — o produto nao tem fonte de template para uma tela
     propria (DEC-112); os templates oficiais sao asset de leitura do backend (DEC-128/130).
-  - R3: o `h1` e o rotulo do nav passam a **Relatorios**; a **rota** fica como esta
-    (ASK-V6-03).
+  - R3: o `h1` e o rotulo do nav passam a **Relatorios**; a **rota** fica como esta —
+    `/dashboard/weekly-reports` (DEC-185).
   - R4: os gates por aba **preservam o resultado medido**: a aba de usuario segue
     `VIEW_WEEKLY_REPORTS`, a geracao em lote segue `MANAGE_USERS`, e as abas de projeto e
     atestado seguem a autorizacao que o plan-v5 ja colocou nos use cases (lider OU gestao
@@ -724,10 +755,16 @@ nomeada. Mudar quem ve isso e decisao de produto, nao de redistribuicao (ASK-V6-
   - S2: dado restrito continua saindo so pela API.
   - S3: `/dashboard/admin` e o caso a corrigir; a frase de negacao existente e preservada
     e os testes que a fixam continuam verdes.
-  - R1: **nenhum conjunto de papeis muda de valor** — chave nova nasce com o valor medido.
+  - R1: **nenhum conjunto de papeis muda de valor** — chave nova nasce com o valor medido —
+    **com uma excecao registrada**: `DASHBOARD_PROJECT_MANAGER`, cujo valor foi decidido
+    pelo dono (DEC-186) como a uniao `["COORDENADOR","GERENTE","GERENTE_PROJETO"]`.
   - R2: gatilho local vira chave nomeada: `DASHBOARD_VOLUNTEERS` =
-    `["COORDENADOR","GERENTE","GERENTE_PROJETO"]` (o `showVolunteers` medido) e o
-    `showDashboard` medido (`["GERENTE_PROJETO"]`).
+    `["COORDENADOR","GERENTE","GERENTE_PROJETO"]` (o `showVolunteers` medido) e
+    `DASHBOARD_PROJECT_MANAGER` = `["COORDENADOR","GERENTE","GERENTE_PROJETO"]` (o
+    `showDashboard` **corrigido** pela DEC-186, e nao o valor medido, que era
+    `["GERENTE_PROJETO"]`). Os dois valores coincidem hoje, mas governam **recursos
+    diferentes** (aba do Admin x aba de Projetos): sao chaves separadas de proposito, e
+    nenhuma delas e copia da outra.
   - R3: a reimplementacao de `DASHBOARD_ADMIN` em `admin/page.tsx:52` passa a usar a chave.
   - R4: chave duplicada ou morta e resolvida: `MANAGE_REWARDS` fica em **uma** matriz,
     `DASHBOARD_PROJETOS` (0 consumidores) sai, e a pagina e o nav da mesma tela passam a
@@ -904,12 +941,14 @@ a que a versao anterior deste spec **nao contava** — ela sozinha governa 6 dos
 | AC-V6-27 | Given os relatorios, When abro a pagina, Then ha **3 abas** (usuario / projeto / atestados) e o assistente de 3 passos; **nao** ha aba Templates | revisao + `/ui-review relatorios` | RF-V6.11 |
 | AC-V6-28 | Given um relatorio de projeto existente, When comparo antes/depois da redistribuicao, Then ele continua alcancavel pelos **dois** pontos (Relatorios e a aba Arquivos do projeto) | teste de navegacao + §8.4 linha 15 | RF-V6.11 |
 | AC-V6-29 | Given a pagina de Projetos, When conto as abas, Then **nao ha** aba Voluntarios; Given o Painel Administrativo, Then a aba Voluntarios **existe** | `volunteers-tab.test.tsx` + grep | RF-V6.12 |
-| AC-V6-30 | Given os papeis `COORDENADOR`, `GERENTE`, `GERENTE_PROJETO`, When abro o Painel, Then os tres veem a aba Voluntarios e **nenhum outro** papel ve; Given `COORDENADOR`/`GERENTE`, Then nao veem a aba Dashboard de Projetos (quirk preservado) | teste por papel | RF-V6.12/RF-V6.16 |
+| AC-V6-30 | Given os papeis `COORDENADOR`, `GERENTE`, `GERENTE_PROJETO`, When abro o Painel, Then os tres veem a aba Voluntarios e **nenhum outro** papel ve; Given `COORDENADOR`, `GERENTE` e `GERENTE_PROJETO` na pagina de Projetos, Then os tres veem a aba Dashboard (DEC-186) e **nenhum outro** papel ve | teste por papel | RF-V6.12/RF-V6.16 |
 | AC-V6-31 | Given a rota do projeto, When conto as abas, Then sao **5**; When comparo com a §8.4, Then **nenhum dos 20 blocos falta** e cada um esta na aba declarada | teste de presenca + `/ui-review projeto` | RF-V6.13 |
 | AC-V6-32 | Given `/dashboard/admin` sem a permissao, When acesso, Then a decisao e do **servidor** (nao renderiza o painel) e a frase de negacao e a mesma; Given a permissao, Then vejo as abas restantes e **nao** a `settings`, e aba sem chave **diz o motivo** | `admin-guard.test.tsx` + `admin-tabs.test.tsx` | RF-V6.14 |
 | AC-V6-33 | Given o repo, When grepo `loja/gerenciar`, Then **0** ocorrencias e a rota **nao existe** | grep + `ls` | RF-V6.15 |
-| AC-V6-34 | Given o repo, When grepo `DASHBOARD_PROJETOS` (chave morta) e `MANAGE_REWARDS` nas matrizes, Then **0** ocorrencia da primeira (removida) e **1** da segunda; When leio `DASHBOARD_VOLUNTEERS`, Then e `["COORDENADOR","GERENTE","GERENTE_PROJETO"]` | `permission-keys.test.ts` | RF-V6.16 |
+| AC-V6-34 | Given o repo, When grepo `DASHBOARD_PROJETOS` (chave morta) e `MANAGE_REWARDS` nas matrizes, Then **0** ocorrencia da primeira (removida) e **1** da segunda; When leio `DASHBOARD_VOLUNTEERS`, Then e `["COORDENADOR","GERENTE","GERENTE_PROJETO"]`; When leio `DASHBOARD_PROJECT_MANAGER`, Then e `["COORDENADOR","GERENTE","GERENTE_PROJETO"]` (DEC-186) | `permission-keys.test.ts` | RF-V6.16 |
 | AC-V6-35 | Given um `GERENTE`, When abre a fila de Aprovacoes da loja, Then recebe **todas** as compras que o servidor autoriza (nao mais so as proprias) | `purchase-scope-alignment.test.ts` | RF-V6.16 R5 |
+| AC-V6-36 | Given as telas que adotam `PageHeader`, When leio `document.title`, Then cada uma tem o **titulo proprio** (`<titulo> · DisplayQuest`), e as rotas sem `PageHeader` (o intersticial `/`) usam o fallback de `app/layout.tsx`; When grepo `Sistema de Gerenciamento de Tarefas`, Then **0** ocorrencias no `app/` | `page-header.test.tsx` + grep | RF-V6.2 R5 |
+| AC-V6-37 | Given o Painel Administrativo acessado por um `COORDENADOR`, When procuro a aba Voluntarios, Then ela **existe** (nao perdeu nada); Given a pagina de Projetos acessada por `COORDENADOR`/`GERENTE`, When renderiza, Then a aba Dashboard **existe** e a de Voluntarios **nao** | teste por papel | RF-V6.12/RF-V6.16 (DEC-182/DEC-186) |
 
 ## 10. Fora de escopo (desta versao)
 
@@ -921,14 +960,24 @@ a que a versao anterior deste spec **nao contava** — ela sozinha governa 6 dos
 - **Dark mode novo**: nao se mexe nos valores do bloco `.dark` (ja casam com a
   referencia); so se documenta e se consome.
 - **Mudanca de regra/permissao**: nenhuma guarda, nenhum enum, nenhum `hasAccess` —
-  **com uma excecao medida**: RF-V6.16 fecha o buraco de autorizacao da §2.9 (guarda de
-  servidor no admin, chaves mortas/duplicadas, alinhamento do cliente ao servidor). Em
-  **nenhum** caso um conjunto de papeis muda de valor.
+  **com as excecoes registradas**: RF-V6.16 fecha os buracos de autorizacao da §2.9
+  (guarda de servidor no admin, chaves mortas/duplicadas, alinhamento do cliente ao
+  servidor) e **um** conjunto de papeis muda de valor por decisao do dono — o da aba
+  Dashboard de Projetos, que passa a incluir COORDENADOR e GERENTE (DEC-186). Fora dele,
+  nenhum conjunto muda.
 - **Redistribuicao que NAO acontece**: nao se cria destino de navegacao novo, nao se move
-  o Quadro de Tarefas, nao se migra o data layer, e nao se resolve o quirk do
-  `showDashboard` (`[GERENTE_PROJETO]`) — ASK-V6-04.
+  o Quadro de Tarefas e nao se migra o data layer. O quirk do `showDashboard` **sai** por
+  decisao do dono (DEC-186) — e a unica ampliacao de visibilidade do plano, e ela e
+  apresentacao (aba visivel), nao dado: quem passa a ver a aba ja podia ler os mesmos
+  projetos e tarefas pela leitura aberta do plan-v5 (DEC-136).
 - **Renome da rota de Relatorios**: o diretorio continua `/dashboard/weekly-reports` —
-  so o rotulo muda (ASK-V6-03).
+  so o `h1` e o rotulo do nav mudam (DEC-185).
+- **Titulo por rota por `layout.tsx` de segmento**: fica fora — o titulo passa a ser
+  escrito por efeito no cliente, dentro do `PageHeader` (DEC-188), sem RSC.
+- **Nomes de terceiros em telas de gestao** (fila de aprovacao de compras, lista de
+  usuarios do admin): ficam **fora** deste plano (DEC-187) — sao telas de administracao,
+  em que identificar o titular do registro e o proposito da tela; o plano nao amplia
+  visibilidade nenhuma e o **CPF** continua restrito ao self/`MANAGE_USERS` (DEC-138).
 - **Data layer**: trocar os contextos legados de Projetos pelo TanStack `useProjects`
   e refactor de comportamento — fila separada.
 - **Backend**: `prisma/`, `backend/`, `app/api/` intocados.
@@ -948,9 +997,13 @@ a que a versao anterior deste spec **nao contava** — ela sozinha governa 6 dos
 
 ## 12. Perguntas abertas (ASK)
 
-| ID | Pergunta | Situacao |
-|---|---|---|
-| ASK-V6-03 | A rota de Relatorios continua `/dashboard/weekly-reports` com rotulo novo, ou o diretorio vira `/dashboard/relatorios`? | **Aberta.** O caminho nao aparece para o usuario final; renomear toca `nav-config`, a captura do guia e o e2e. Default adotado no plano: **manter a rota** |
-| ASK-V6-04 | O quirk `showDashboard` = `[GERENTE_PROJETO]` (COORDENADOR/GERENTE nao veem a aba Dashboard de Projetos) e intencional? | **Aberta.** Preservado como medido; mudar quem ve e decisao de produto |
-| ASK-V6-05 | A acao `suspender` de usuario (`ModernAdminPanel`) mostra **nome de terceiros** (`purchase-approval`) — isso entra no escopo de privacidade? | **Aberta.** So registrada; nenhuma tela deste plano exibe CPF |
-| ASK-V6-06 | O titulo do navegador e a mesma string generica em todas as telas (medido). Cada rota deve declarar o proprio titulo? | **Aberta.** Todas as 13 paginas sao **client** e `metadata` do Next e server-only, entao a correcao exige um mecanismo novo (server layout por segmento ou efeito no cliente) — decidir antes de incluir como RF |
+**Nenhuma aberta.** As quatro perguntas deste plano foram respondidas pelo dono em
+2026-10-14, na mesma rodada da revisao, e viraram decisao (DEC-185..188). A tabela fica
+como registro do que foi perguntado e decidido: o plano **nao executa onda com ASK aberta**.
+
+| ID | Pergunta | Resposta do dono (2026-10-14) | Decisao |
+|---|---|---|---|
+| ASK-V6-03 | A rota de Relatorios continua `/dashboard/weekly-reports` com rotulo novo, ou o diretorio vira `/dashboard/relatorios`? | **Mantem a rota.** So o `h1` e o rotulo do nav viram "Relatorios"; o caminho nao aparece para o usuario final e renomear tocaria `nav-config`, a captura do guia e o e2e — custo sem ganho visivel | DEC-185 |
+| ASK-V6-04 | O quirk `showDashboard` = `[GERENTE_PROJETO]` (COORDENADOR/GERENTE nao veem a aba Dashboard de Projetos) e intencional? | **E bug: alinhar com o `hasGodMode` da propria pagina.** A aba passa a `DASHBOARD_PROJECT_MANAGER` = `["COORDENADOR","GERENTE","GERENTE_PROJETO"]` — uniao, **ninguem perde** o que ja via | DEC-186 |
+| ASK-V6-05 | A acao `suspender` de usuario (`ModernAdminPanel`) mostra **nome de terceiros** (`purchase-approval`) — isso entra no escopo de privacidade? | **Fora do escopo.** Sao telas de gestao, em que identificar o titular do registro e o proposito da tela; o plano nao amplia visibilidade nenhuma e o **CPF** segue restrito (DEC-138) | DEC-187 |
+| ASK-V6-06 | O titulo do navegador e a mesma string generica em todas as telas (medido). Cada rota deve declarar o proprio titulo? | **Corrigir**, por efeito no cliente dentro do `PageHeader` (`document.title = "<titulo> · DisplayQuest"`), sem RSC e sem `layout.tsx` por segmento; o fallback de `app/layout.tsx` passa a citar o produto | DEC-188 |

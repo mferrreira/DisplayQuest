@@ -15,7 +15,7 @@ displayquest-v2/
 ├── plan-v3/       OPERAÇÃO: correções e features pedidas por quem usa o sistema hoje (sessões, quadro, pontos) — done
 ├── plan-v4/       OPERAÇÃO: subtasks, animação de pontos, inativação (2026-10-05) — done (2026-10-07, DEC-78..98)
 ├── plan-v5/       OPERAÇÃO: domínio de projetos maduro — cronograma, pontos, relatórios técnicos, atestados (2026-10-06) — done (2026-10-14, V5-1..V5-12 + V5-fix-1/V5-fix-2; DEC-61..77, 99..104, 126..180)
-└── plan-v6/       OPERAÇÃO: linguagem visual UI/UX + redistribuição das telas (2026-10-07, revisado 2026-10-14) — spec-driven, ready, nenhuma onda começada (DEC-105..114, 181..184)
+└── plan-v6/       OPERAÇÃO: linguagem visual UI/UX + redistribuição das telas (2026-10-07, revisado 2026-10-14) — spec-driven, ready, nenhuma onda começada (DEC-105..114, 181..188)
 ```
 
 ## Fluxo de dependências (unidirecional)
@@ -80,11 +80,15 @@ plan-v6 (linguagem visual + redistribuição das telas) ──> camada de aprese
   depois do plan-v5. Além da linguagem visual, o plano redistribui **o que aparece em cada
   página**: relatórios unificados na página de Relatórios (DEC-181), aba Voluntários para o
   Painel Administrativo (DEC-182), as 5 abas do detalhe do projeto (DEC-183) e a saída da
-  aba `settings` do admin (DEC-184). É **spec-driven** (`SPEC.md` = fonte de verdade do
+  aba `settings` do admin (DEC-184). As **quatro perguntas abertas foram respondidas pelo
+  dono** em 2026-10-14 (DEC-185..188: a rota de Relatórios não muda; a aba Dashboard de
+  Projetos passa à chave `DASHBOARD_PROJECT_MANAGER` — era bug; nomes de terceiros em tela
+  de gestão ficam fora do escopo; título do navegador por tela, por efeito no cliente), então
+  o plano **não executa onda com pergunta em aberto**. É **spec-driven** (`SPEC.md` = fonte de verdade do
   comportamento, `PLAN.md` = ordem, `STATE.json` = andamento), só mexe em apresentação e
   navegação — **sem** migrar para RSC —, e cobre **todas as telas** em 13 ondas revertíveis
   (V6-0..V6-11, com V6-6a/V6-6b), contínuas da numeração global (DEC-105..114 e
-  DEC-181..184). Ilustrações/texto manuscrito ficaram fora (DEC-109); tema escuro passa a ser
+  DEC-181..188). Ilustrações/texto manuscrito ficaram fora (DEC-109); tema escuro passa a ser
   coberto na skill (DEC-110). A ferramenta de execução é `/ui-refactor <tela>` com gate
   `/ui-review <tela>`.
 

@@ -252,7 +252,7 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   `4c6fab7`, criado 2026-10-06), DEC-78..95 plan-v4
   (V4-4, ASK-V4-06, V4-4b, V4-4c, V4-5a, V4-5b, V4-5c e V4-6b), **DEC-96..98 plan-v4 (2026-10-07,
   pós-encerramento: ASK-V4-33 — tira o filtro morto da tela de voluntários — e o lote POS-1 de pontuação
-  + trava de marcação)**, DEC-99..104 plan-v5, DEC-105..114 plan-v6 (mais DEC-181..184, a revisão do
+  + trava de marcação)**, DEC-99..104 plan-v5, DEC-105..114 plan-v6 (mais DEC-181..188, a revisão do
   plano em 2026-10-14), **DEC-115..125 clean-arch/B6-restante
   + B9/B10 (encerrado 2026-10-08)**, **DEC-126/127 plan-v5 (2026-10-09: meses marcados na grade do
   cronograma e visualização livre de projetos)**, **DEC-128..130 plan-v5/documentos oficiais (2026-10-13:
@@ -314,10 +314,19 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   atalho preservado no detalhe do projeto (181); a aba Voluntários sai de Projetos e entra no Painel
   Administrativo (182); o detalhe do projeto vira rota `/dashboard/projetos/[id]` com as 5 abas da
   referência e rail direito (183); a aba `settings` do painel admin sai e cada aba passa a dizer o
-  motivo quando falta permissão (184))**. O V4-4 ia usar
+  motivo quando falta permissão (184))**, **DEC-185..188 plan-v6 (2026-10-14, as quatro perguntas
+  abertas respondidas pelo dono na mesma rodada: a rota de Relatórios continua
+  `/dashboard/weekly-reports` e só o rótulo vira "Relatórios" (185); a invisibilidade da aba
+  Dashboard de Projetos para COORDENADOR/GERENTE é bug e a aba passa à chave nomeada
+  `DASHBOARD_PROJECT_MANAGER` = `["COORDENADOR","GERENTE","GERENTE_PROJETO"]` — união, ninguém
+  perde o que já via, e é a **única exceção registrada** à regra "nenhum conjunto de papéis muda
+  de valor" (186); nomes de terceiros em telas de gestão ficam fora do escopo de privacidade do
+  plano, e o CPF segue restrito (187); título do navegador por tela, por efeito no cliente dentro
+  do `PageHeader` (`document.title = "<título> · DisplayQuest"`), sem RSC e sem layout por
+  segmento, com o fallback de `app/layout.tsx` citando o produto (188))**. O V4-4 ia usar
   DEC-61..64 e colidiu; os 28 comentários de código foram renumerados. **Antes de abrir decisão nova, `grep`
   os CINCO `STATE.json` (clean-arch, plan-v3, plan-v4, plan-v5, plan-v6) — a nota antiga que dizia "três"
-  está velha. Próxima livre: DEC-185.**
+  está velha. Próxima livre: DEC-189.**
 - **Subtask (V4-4, DEC-78..83 → regra atual = DEC-97/98):** tabela `task_subtasks` (sem FK para
   `users` — subtask não tem
   responsável próprio), base gravada em `tasks.points` = `10 + 5·n` (DEC-97) e **cada subtask CONCLUÍDA

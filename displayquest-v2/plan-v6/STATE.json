@@ -2,7 +2,7 @@
   "plan": "plan-v6",
   "title": "linguagem visual DisplayQuest + redistribuicao das paginas (apresentacao e navegacao)",
   "version": "2.0.0",
-  "updatedAt": "2026-10-14T12:00:00-03:00",
+  "updatedAt": "2026-10-15T09:35:00-03:00",
   "status": "ready",
   "activeWave": null,
   "activeBatch": null,
@@ -10,7 +10,7 @@
   "lineage": {
     "previousPlan": "plan-v5 (FECHADO em 2026-10-14, batch V5-close: bucket SeaweedFS, anexos/imagens, dados de pessoa e de vinculo, cronograma, relatorio tecnico + rascunho de IA, atestados, andamento, visibilidade de perfil). Estado/decisoes em displayquest-v2/plan-v5/{PLAN.md,STATE.json}, STATE.json v5.29.0, DEC-61..77, 99..104 e 126..180.",
     "concurrentPlan": "NENHUM. O plan-v5 fechou (done, 2026-10-14) e a DEC-145 (dono 2026-10-13) determinava que o plan-v6 so comeca depois disso. A DEC-113 (backend e a fonte de verdade; front segue o back) esta SATISFEITA: as telas de V6-4/V6-5/V6-7 sao refatoradas no estado pos-plan-v5 (PROPPI, dados de pessoa e de vinculo, capa de perfil, cronograma, atestados, relatorios tecnicos). Nao ha mais colisao.",
-    "note": "a numeracao de decisoes e GLOBAL: DEC-01..29 clean-arch, DEC-30..49 plan-v3, DEC-50..54 B6/D4, DEC-55..60 plan-v4, DEC-61..77 plan-v5, DEC-78..98 plan-v4, DEC-99..104 plan-v5, DEC-105..114 este plano, DEC-115..125 clean-arch/B6-restante+B9/B10, DEC-126..180 plan-v5 (126/127 em 2026-10-09; 128/130 templates; 131..137 bucket e imagens; 138..152 alinhamento e V5-4; 153..178 V5-5..V5-12; 179/180 V5-fix-1/V5-fix-2 em 2026-10-14). O plan-v5 tomou a DEC-180 no mesmo dia (V5-fix-2, 'Gerar DOCX'), por isso as decisoes desta rodada nascem em DEC-181..184 e nao em DEC-180..183. Proxima decisao: DEC-185. Antes de abrir DEC nova, grep os CINCO STATE.json (clean-arch, plan-v3, plan-v4, plan-v5, plan-v6)."
+    "note": "a numeracao de decisoes e GLOBAL: DEC-01..29 clean-arch, DEC-30..49 plan-v3, DEC-50..54 B6/D4, DEC-55..60 plan-v4, DEC-61..77 plan-v5, DEC-78..98 plan-v4, DEC-99..104 plan-v5, DEC-105..114 este plano, DEC-115..125 clean-arch/B6-restante+B9/B10, DEC-126..180 plan-v5 (126/127 em 2026-10-09; 128/130 templates; 131..137 bucket e imagens; 138..152 alinhamento e V5-4; 153..178 V5-5..V5-12; 179/180 V5-fix-1/V5-fix-2 em 2026-10-14). O plan-v5 tomou a DEC-180 no mesmo dia (V5-fix-2, 'Gerar DOCX'), por isso as decisoes da revisao nascem em DEC-181..184 e nao em DEC-180..183; as QUATRO respostas as ASK deste plano (respondidas pelo dono em 2026-10-14, gravadas em 2026-10-15) sao DEC-185..188 — nenhuma ASK fica aberta. Proxima decisao: DEC-189. Antes de abrir DEC nova, grep os CINCO STATE.json (clean-arch, plan-v3, plan-v4, plan-v5, plan-v6)."
   },
   "baseline": {
     "measuredAt": "2026-10-14",
@@ -50,20 +50,22 @@
       "title": "tokens + primitivos compartilhados (PageHeader, StatCard, EmptyState, SearchInput, status.ts)",
       "status": "pending",
       "decisions": [
-        "DEC-111"
+        "DEC-111",
+        "DEC-188"
       ],
-      "scope": "Novos components/ui/{page-header,stat-card,empty-state,search-input}.tsx e components/ui/status.ts (única fonte status→cor/label). Nesta onda as duas cópias de statusColors/statusLabels passam a importar de status.ts (project-list.tsx:15/:21 e project-detail-dialog.tsx:79/:85 — troca mecânica, o dialog inteiro sai em V6-5; taskStatusColors :91 fica até lá; as do task-card migram em V6-3). Telas NÃO são convertidas ainda. Testes: tests/unit/ui/{page-header,stat-card,empty-state,search-input,status-badges}.test.tsx. Primitivos puros: props declarativas, sem fetch e sem useContext.",
-      "why": "pré-condição central (DEC-111): sem ela, cada uma das 11 telas recria PageHeader/StatCard de novo e o plano reproduz exatamente a dor medida (6 stat cards, 11 h1 com 8 className distintos). Adicionar sem aplicar torna o revert seguro."
+      "scope": "Novos components/ui/{page-header,stat-card,empty-state,search-input}.tsx e components/ui/status.ts (única fonte status→cor/label). TITULO DO NAVEGADOR (DEC-188): page-header.tsx e client e, num useEffect, escreve document.title = '<titulo da tela> · DisplayQuest' — a prop de titulo e obrigatoria, entao toda tela que adotar o primitivo ganha o titulo sem trabalho extra (nao ha RSC, nao ha layout.tsx por segmento, nao ha metadata em page.tsx). O fallback de app/layout.tsx passa a citar o produto; o h1 do intersticial / acompanha no V6-10. Nesta onda as duas cópias de statusColors/statusLabels passam a importar de status.ts (project-list.tsx:15/:21 e project-detail-dialog.tsx:79/:85 — troca mecânica, o dialog inteiro sai em V6-5; taskStatusColors :91 fica até lá; as do task-card migram em V6-3). Telas NÃO são convertidas ainda. Testes: tests/unit/ui/{page-header,stat-card,empty-state,search-input,status-badges}.test.tsx — o de page-header asserta document.title alem do h1 (AC-V6-36). Primitivos puros: props declarativas, sem fetch e sem useContext.",
+      "why": "pré-condição central (DEC-111): sem ela, cada uma das 11 telas recria PageHeader/StatCard de novo e o plano reproduz exatamente a dor medida (6 stat cards, 11 h1 com 8 className distintos). Adicionar sem aplicar torna o revert seguro. E a onda mais barata para o titulo do navegador (DEC-188): o mecanismo vive no primitivo, nao em 13 page.tsx (que sao client e nao aceitam metadata)."
     },
     {
       "id": "V6-2",
       "title": "shell: sidebar desktop persistente + header compacto + chaves de navegação unificadas",
       "status": "pending",
       "decisions": [
-        "DEC-106"
+        "DEC-106",
+        "DEC-186"
       ],
-      "scope": "components/layout/app-sidebar.tsx novo a partir de nav-config.ts (fonte única, sem destino novo); app-header.tsx reduzido a identidade + sino + tema + avatar, com <header> PRESERVADO no DOM (shell.spec.ts:31); item de nav extraído e compartilhado com mobile-menu.tsx; rounded-full sai da navegação (anti-pattern Excessive pills); container de conteúdo mantém container mx-auto p-4 md:p-6. Tokens --sidebar-* existentes passam a ser usados (zero CSS novo). Caracterização ANTES: tests/unit/layout/app-sidebar.test.tsx + teste de nav-config/AppHeader. CHAVES DE PERMISSAO (RF-V6.16 R4), aqui porque nav-config.ts e a fonte unica da navegacao: DASHBOARD_PROJETOS (0 consumidores) SAI; NASCE DASHBOARD_VOLUNTEERS = ['COORDENADOR','GERENTE','GERENTE_PROJETO'] (o showVolunteers medido em app/(dashboard)/dashboard/projetos/page.tsx); a PAGINA e o NAV de relatorios passam a falar a MESMA chave (hoje divergem). Guarda: tests/unit/domain/identity/permission-keys.test.ts (AC-V6-34). NENHUM conjunto de papeis muda de valor (R1): o quirk showDashboard = ['GERENTE_PROJETO'] fica como esta (ASK-V6-04).",
-      "why": "DEC-106 (fase 2 do plano original): a sidebar é a maior divergência da referência (D1) e precisa existir antes das telas nascerem dentro do layout novo. As chaves entram aqui porque este e o unico ponto em que nav-config.ts e tocado; o V6-9 (admin) e o V6-8 (loja) dependem da chave nova."
+      "scope": "components/layout/app-sidebar.tsx novo a partir de nav-config.ts (fonte única, sem destino novo); app-header.tsx reduzido a identidade + sino + tema + avatar, com <header> PRESERVADO no DOM (shell.spec.ts:31); item de nav extraído e compartilhado com mobile-menu.tsx; rounded-full sai da navegação (anti-pattern Excessive pills); container de conteúdo mantém container mx-auto p-4 md:p-6. Tokens --sidebar-* existentes passam a ser usados (zero CSS novo). Caracterização ANTES: tests/unit/layout/app-sidebar.test.tsx + teste de nav-config/AppHeader. CHAVES DE PERMISSAO (RF-V6.16 R4), aqui porque nav-config.ts e a fonte unica da navegacao: DASHBOARD_PROJETOS (0 consumidores) SAI; NASCE DASHBOARD_VOLUNTEERS = ['COORDENADOR','GERENTE','GERENTE_PROJETO'] (o showVolunteers medido em app/(dashboard)/dashboard/projetos/page.tsx); a PAGINA e o NAV de relatorios passam a falar a MESMA chave (hoje divergem). Guarda: tests/unit/domain/identity/permission-keys.test.ts (AC-V6-34). A CHAVE DO PAINEL DE PROJETOS (DEC-186): showDashboard = ['GERENTE_PROJETO'] era BUG — nasce DASHBOARD_PROJECT_MANAGER = ['COORDENADOR','GERENTE','GERENTE_PROJETO'] (o hasGodMode da propria pagina); a chave entra aqui e o CONSUMO troca em V6-4. E a UNICA excecao registrada a regra 'nenhum conjunto de papeis muda de valor': a uniao e aditiva, ninguem perde a aba, e o conteudo da aba nao muda. Fora dela, nenhum conjunto muda.",
+      "why": "DEC-106 (fase 2 do plano original): a sidebar é a maior divergência da referência (D1) e precisa existir antes das telas nascerem dentro do layout novo. As chaves entram aqui porque este e o unico ponto em que nav-config.ts e tocado; o V6-9 (admin) e o V6-8 (loja) dependem da chave nova, e a DEC-186 (aba Dashboard) precisa da chave antes de o V6-4 trocar o gatilho inline."
     },
     {
       "id": "V6-3",
@@ -84,10 +86,11 @@
       "decisions": [
         "DEC-111",
         "DEC-112",
-        "DEC-113"
+        "DEC-113",
+        "DEC-186"
       ],
-      "scope": "Caracterização features/projects/__tests__/project-list.test.tsx ANTES de qualquer mudança de layout. page.tsx: PageHeader único (o h2 'Projetos' da ProjectList sai — D10), 4 stat cards → StatCard, Select de status → chips com contagem de cada status. project-list.tsx: lista vertical no lugar da grade de 3 colunas, progresso derivado de tasks (dado já carregado), statusColors local (:15/:21) some (usa status.ts). SEM tags, SEM avatares de membros na lista (dado não inventado). Contextos legados useProject/useTask NÃO mudam de caminho nesta onda. NAO TOCA a aba Voluntarios: ela CONTINUA aqui ate o V6-9, que a move para o Admin nas DUAS pontas no MESMO commit (RF-V6.12 R4) — remover agora deixaria um commit em que a aba nao existe em lugar nenhum.",
-      "why": "D14/D10 + reaproveitamento dos primitivos do V6-1; a tela não tem NENHUM teste hoje, então a caracterização é obrigatória (AC-V6-16). No estado pos-plan-v5 a pagina ja carrega o wizard de criacao (V5-4) e a aba Voluntarios, que sai so em V6-9."
+      "scope": "Caracterização features/projects/__tests__/project-list.test.tsx ANTES de qualquer mudança de layout. page.tsx: PageHeader único (o h2 'Projetos' da ProjectList sai — D10), 4 stat cards → StatCard, Select de status → chips com contagem de cada status. project-list.tsx: lista vertical no lugar da grade de 3 colunas, progresso derivado de tasks (dado já carregado), statusColors local (:15/:21) some (usa status.ts). ABA DASHBOARD (DEC-186): o gatilho inline showDashboard (:98, roles.includes('GERENTE_PROJETO')) sai e a aba passa a ler hasAccess(roles,'DASHBOARD_PROJECT_MANAGER') = ['COORDENADOR','GERENTE','GERENTE_PROJETO'] (chave nascida em V6-2) — COORDENADOR e GERENTE passam a ver a aba; o ProjectManagerDashboard NAO muda (ja filtra por leaderId === user?.id :31 e ja tem o estado vazio :190-197, entao nao ha tela nova). SEM tags, SEM avatares de membros na lista (dado não inventado). Contextos legados useProject/useTask NÃO mudam de caminho nesta onda. NAO TOCA a aba Voluntarios: ela CONTINUA aqui ate o V6-9, que a move para o Admin nas DUAS pontas no MESMO commit (RF-V6.12 R4) — remover agora deixaria um commit em que a aba nao existe em lugar nenhum.",
+      "why": "D14/D10 + reaproveitamento dos primitivos do V6-1; a tela não tem NENHUM teste hoje, então a caracterização é obrigatória (AC-V6-16). No estado pos-plan-v5 a pagina ja carrega o wizard de criacao (V5-4) e a aba Voluntarios, que sai so em V6-9. A aba Dashboard e a unica mudanca de visibilidade do plano (DEC-186): aditiva e de apresentacao — quem nao lidera projeto ja ve o estado vazio que o componente tem."
     },
     {
       "id": "V6-5",
@@ -119,9 +122,10 @@
       "decisions": [
         "DEC-108",
         "DEC-111",
-        "DEC-181"
+        "DEC-181",
+        "DEC-185"
       ],
-      "scope": "DEC-181 (RF-V6.11): a pagina de relatorios vira UM destino com 3 ABAS — por usuario (semanal) / por projeto / atestados — mais um ASSISTENTE DE 3 PASSOS que unifica o fluxo de geracao (os 3 caminhos viram 1). O que se unifica e o FLUXO, nao o inventario: NENHUM bloco sai do detalhe do projeto, que guarda o atalho; a aba Templates FICA FORA (o template e asset do servidor, DEC-128/130). h1 e rotulo do nav passam a 'Relatorios'; a DECISAO sobre a rota (/dashboard/weekly-reports mantida com rotulo novo vs diretorio renomeado) e a ASK-V6-03. Gate por aba preserva o resultado medido: usuario VIEW_WEEKLY_REPORTS, lote MANAGE_USERS, projeto/atestado o que os use cases ja tem. Vocabulario de tipo (parcial|tecnico-final|final) vem do dominio, sem copia local.",
+      "scope": "DEC-181 (RF-V6.11): a pagina de relatorios vira UM destino com 3 ABAS — por usuario (semanal) / por projeto / atestados — mais um ASSISTENTE DE 3 PASSOS que unifica o fluxo de geracao (os 3 caminhos viram 1). O que se unifica e o FLUXO, nao o inventario: NENHUM bloco sai do detalhe do projeto, que guarda o atalho; a aba Templates FICA FORA (o template e asset do servidor, DEC-128/130). h1 e rotulo do nav passam a 'Relatorios'; a ROTA NAO MUDA: continua /dashboard/weekly-reports (DEC-185 — renomear tocaria nav-config, a captura do guia e o e2e sem ganho visivel). Gate por aba preserva o resultado medido: usuario VIEW_WEEKLY_REPORTS, lote MANAGE_USERS, projeto/atestado o que os use cases ja tem. Vocabulario de tipo (parcial|tecnico-final|final) vem do dominio, sem copia local.",
       "why": "DEC-181 (dono 2026-10-14): hoje a geracao esta espalhada em 3 caminhos; a referencia reports.png mostra um destino unico com abas. A fronteira 'fluxo, nao inventario' e o que impede a mudanca de virar perda de dado no detalhe do projeto."
     },
     {
@@ -141,9 +145,10 @@
       "status": "pending",
       "decisions": [
         "DEC-108",
-        "DEC-111"
+        "DEC-111",
+        "DEC-187"
       ],
-      "scope": "Mesmo roteiro de V6-6a nas 4 abas (nenhuma aba nova); as 15 ocorrencias de paleta de loja e os badges de compra entram no grep da onda. REMOCAO (RF-V6.15): app/(dashboard)/dashboard/loja/gerenciar/ (422 linhas, ZERO inbound medido) SAI — o que ela oferecia ja existe na aba Gerenciar, nada e portado. ALINHAMENTO DE ESCOPO (RF-V6.16 R5, caso C da SPEC §2.9): hoje loja/page.tsx:51 usa MANAGE_REWARDS (que tem GERENTE) mas contexts/reward-context.tsx:68 usa (LABORATORISTA||COORDENADOR), entao um GERENTE ve a fila de Aprovacoes com a lista das PROPRIAS compras — o backend JA autoriza (MANAGE_PURCHASES, purchase-query-scope.ts). O cliente passa a pedir o que o servidor permite. MANAGE_REWARDS fica numa UNICA matriz (hoje esta em duas) — e a unica alteracao permitida em permissions.ts.",
+      "scope": "Mesmo roteiro de V6-6a nas 4 abas (nenhuma aba nova); as 15 ocorrencias de paleta de loja e os badges de compra entram no grep da onda. REMOCAO (RF-V6.15): app/(dashboard)/dashboard/loja/gerenciar/ (422 linhas, ZERO inbound medido) SAI — o que ela oferecia ja existe na aba Gerenciar, nada e portado. ALINHAMENTO DE ESCOPO (RF-V6.16 R5, caso C da SPEC §2.9): hoje loja/page.tsx:51 usa MANAGE_REWARDS (que tem GERENTE) mas contexts/reward-context.tsx:68 usa (LABORATORISTA||COORDENADOR), entao um GERENTE ve a fila de Aprovacoes com a lista das PROPRIAS compras — o backend JA autoriza (MANAGE_PURCHASES, purchase-query-scope.ts). O cliente passa a pedir o que o servidor permite. MANAGE_REWARDS fica numa UNICA matriz (hoje esta em duas) — e a unica alteracao permitida em permissions.ts. NOME DE TERCEIROS (DEC-187): a fila de compras mostra o nome do titular do registro (purchase.user?.name) e isso FICA como esta — tela de gestao, proposito de identificar o titular; nenhuma visibilidade nova, nenhum CPF.",
       "why": "tela independente do shell de gestao; escopo DEC-108. A rota morta e o desalinhamento de escopo sao buracos medidos (§2.9) que entram junto com o passe visual para nao virar uma segunda onda so para eles."
     },
     {
@@ -154,9 +159,10 @@
         "DEC-108",
         "DEC-111",
         "DEC-182",
-        "DEC-184"
+        "DEC-184",
+        "DEC-187"
       ],
-      "scope": "Caracterização de components/admin/ModernAdminPanel.tsx ANTES de qualquer mudança (1339 linhas, 8 abas — overview/users/projects/hours/tasks/notifications/badges/settings, zero testes hoje — só tsc o cobre). GUARDA DE SERVIDOR (RF-V6.14 R3 / RF-V6.16 S3): novo app/(dashboard)/dashboard/admin/layout.tsx decide com DASHBOARD_ADMIN no servidor; hoje admin/page.tsx:52 reimplementa a chave inline e a negativa e um corpo com HTTP 200 (h2 'Acesso Negado' em :75). A FRASE de negacao e o heading autorizado 'Painel Administrativo' sao PRESERVADOS (2 testes os travam: tests/unit/app/admin-sessions-poll.test.tsx:79 e tests/unit/components/admin-panel-user-settings.test.tsx:150). CORTE (RF-V6.14 R4 / DEC-184): a aba settings SAI (placeholder, trigger :403 + content :994); as 7 abas restantes ficam e CADA UMA declara a chave que a governa (canManageUsers :122, canManageProjects :123, canManageTasks :124, canManageSchedule :128, canManageBadges :129, overview/notifications) e aba sem permissao renderiza O MOTIVO, nao vazio. VOLUNTARIOS (RF-V6.12 / DEC-182): volunteers-management.tsx (479 linhas) e MOVIDO para a aba nova — mesma tabela e colunas — sob DASHBOARD_VOLUNTEERS (que nasceu em V6-2), e REMOVIDO de Projetos NO MESMO commit (projetos/page.tsx:99/:261-268/:290). O administrativo fica acessivel por DASHBOARD_ADMIN ∪ DASHBOARD_VOLUNTEERS, com gate POR ABA. Preservar o padrao de erro de mutacao (userSettingsError + <p role='alert'>) para nao abrir unhandled rejection que fecha o gate com exit 1. Guardas: admin-guard.test.tsx, admin-tabs.test.tsx, volunteers-tab.test.tsx.",
+      "scope": "Caracterização de components/admin/ModernAdminPanel.tsx ANTES de qualquer mudança (1339 linhas, 8 abas — overview/users/projects/hours/tasks/notifications/badges/settings, zero testes hoje — só tsc o cobre). GUARDA DE SERVIDOR (RF-V6.14 R3 / RF-V6.16 S3): novo app/(dashboard)/dashboard/admin/layout.tsx decide com DASHBOARD_ADMIN no servidor; hoje admin/page.tsx:52 reimplementa a chave inline e a negativa e um corpo com HTTP 200 (h2 'Acesso Negado' em :75). A FRASE de negacao e o heading autorizado 'Painel Administrativo' sao PRESERVADOS (2 testes os travam: tests/unit/app/admin-sessions-poll.test.tsx:79 e tests/unit/components/admin-panel-user-settings.test.tsx:150). CORTE (RF-V6.14 R4 / DEC-184): a aba settings SAI (placeholder, trigger :403 + content :994); as 7 abas restantes ficam e CADA UMA declara a chave que a governa (canManageUsers :122, canManageProjects :123, canManageTasks :124, canManageSchedule :128, canManageBadges :129, overview/notifications) e aba sem permissao renderiza O MOTIVO, nao vazio. VOLUNTARIOS (RF-V6.12 / DEC-182): volunteers-management.tsx (479 linhas) e MOVIDO para a aba nova — mesma tabela e colunas — sob DASHBOARD_VOLUNTEERS (que nasceu em V6-2), e REMOVIDO de Projetos NO MESMO commit (projetos/page.tsx:99/:261-268/:290). O administrativo fica acessivel por DASHBOARD_ADMIN ∪ DASHBOARD_VOLUNTEERS, com gate POR ABA. Preservar o padrao de erro de mutacao (userSettingsError + <p role='alert'>) para nao abrir unhandled rejection que fecha o gate com exit 1. Guardas: admin-guard.test.tsx, admin-tabs.test.tsx, volunteers-tab.test.tsx. NOME DE TERCEIROS NA ACAO DE SUSPENDER (DEC-187): o painel continua mostrando o nome do titular do registro — tela de gestao; nenhuma visibilidade nova e nenhum CPF (DEC-138).",
       "why": "ultima tela grande por ser a de maior risco da rodada; a caracterizacao protege comportamento que hoje nenhum teste fixa. A onda e a DONA da mudanca de Voluntarios justamente para as duas pontas viverem no mesmo commit (regra 8 de §3.1 do PLAN) — sem estado intermediario em que a aba nao existe em lugar nenhum."
     },
     {
@@ -165,10 +171,11 @@
       "status": "pending",
       "decisions": [
         "DEC-108",
-        "DEC-111"
+        "DEC-111",
+        "DEC-188"
       ],
-      "scope": "Mesmo roteiro de V6-6a, mais: ganham um <h1> (hoje o DOM tem ZERO h1/h2/h3 — o titulo e CardTitle, que renderiza div). Fora do shell, sem dependência de V6-2.",
-      "why": "escopo DEC-108; isolada e pequena, roda perto do fim para reaproveitar madureza do roteiro."
+      "scope": "Mesmo roteiro de V6-6a, mais: ganham um <h1> (hoje o DOM tem ZERO h1/h2/h3 — o titulo e CardTitle, que renderiza div). Fora do shell, sem dependência de V6-2. INTERSTICIAL / (app/page.tsx, fora do grupo do dashboard): o h1 (:22) repete a string generica 'Sistema de Gerenciamento de Tarefas' e passa a citar o produto (DEC-188); a pagina continua só redirecionando — nao ganha PageHeader nem titulo proprio de navegador, ela herda o fallback de app/layout.tsx, que tambem passa a citar o produto.",
+      "why": "escopo DEC-108; isolada e pequena, roda perto do fim para reaproveitar madureza do roteiro. Fecha o ultimo consumidor da string generica (DEC-188): depois dela, grep de 'Sistema de Gerenciamento de Tarefas' em app = 0."
     },
     {
       "id": "V6-11",
@@ -181,9 +188,13 @@
         "DEC-111",
         "DEC-112",
         "DEC-113",
-        "DEC-114"
+        "DEC-114",
+        "DEC-185",
+        "DEC-186",
+        "DEC-187",
+        "DEC-188"
       ],
-      "scope": "Greps globais do escopo em zero (AC-V6-01..06, exceto exceção registrada em DEC) MAIS os greps da redistribuicao (AC-V6-27..35): 'loja/gerenciar' em app/components/lib = 0; DASHBOARD_PROJETOS = 0; MANAGE_REWARDS em permissions.ts = 1; nenhum bloco do checklist de 20 saiu do detalhe do projeto; a aba Voluntarios existe em Exatamente UM lugar (o Admin); permissions.ts so perdeu chave morta/duplicada (nenhum valor mudou). git diff package.json vazio; G0–G6 inteiros; G2 nao piorou frente a decisao do V6-0; G5 docs:build + docs:check; G6 recaptura de docs/screens/ das telas mudadas; displayquest-v2/README.md e AGENTS.md atualizados; STATE.json → done.",
+      "scope": "Greps globais do escopo em zero (AC-V6-01..06, exceto exceção registrada em DEC) MAIS os greps da redistribuicao (AC-V6-27..37): 'loja/gerenciar' em app/components/lib = 0; DASHBOARD_PROJETOS = 0; MANAGE_REWARDS em permissions.ts = 1; showDashboard em app/components = 0 (DEC-186); 'Sistema de Gerenciamento de Tarefas' em app = 0 (DEC-188); titulo proprio em todas as telas com PageHeader (AC-V6-36); visibilidade das abas por papel conferida (AC-V6-37); nenhum bloco do checklist de 20 saiu do detalhe do projeto; a aba Voluntarios existe em Exatamente UM lugar (o Admin); permissions.ts so perdeu chave morta/duplicada (nenhum valor mudou, e a unica excecao — DASHBOARD_PROJECT_MANAGER — nasce com valor decidido pela DEC-186). git diff package.json vazio; G0–G6 inteiros; G2 nao piorou frente a decisao do V6-0; G5 docs:build + docs:check; G6 recaptura de docs/screens/ das telas mudadas; displayquest-v2/README.md e AGENTS.md atualizados; STATE.json → done.",
       "why": "só depois de todas as telas: os greps só dão zero quando o último consumidor sai, e o G5/G6 é obrigatório em batch que muda comportamento visível."
     }
   ],
@@ -201,35 +212,14 @@
     "DEC-181 (dono 2026-10-14, segunda frente do plan-v6): unificar os relatorios num destino so — uma pagina com 3 abas (por usuario / por projeto / atestados) mais um assistente de 3 passos. O que se unifica e o FLUXO de geracao (os 3 caminhos viram 1), NAO o inventario: nenhum bloco sai do detalhe do projeto, que guarda o atalho, e a aba Templates fica FORA (o template e asset do servidor, DEC-128/130). h1 e rotulo do nav passam a 'Relatorios'; se o diretorio /dashboard/weekly-reports tambem muda de nome e a ASK-V6-03. A unificacao de relatorios NAO e uma onda de tokens: por isso o V6-6 foi dividido em V6-6a (Laboratorio) e V6-6b (Relatorios).",
     "DEC-182 (dono 2026-10-14): a aba Voluntarios sai da pagina de Projetos e vira aba do Painel Administrativo. O conjunto medido em app/(dashboard)/dashboard/projetos/page.tsx vira a chave DASHBOARD_VOLUNTEERS = ['COORDENADOR','GERENTE','GERENTE_PROJETO'] (showVolunteers = GERENTE_PROJETO || hasGodMode, e hasGodMode = COORDENADOR||GERENTE). O administrativo fica acessivel por DASHBOARD_ADMIN ∪ DASHBOARD_VOLUNTEERS, com gate POR ABA. A mudanca e feita nas DUAS pontas no MESMO commit (V6-9): remover de Projetos antes deixaria um commit em que a aba nao existe em lugar nenhum.",
     "DEC-183 (dono 2026-10-14): a distribuicao das 5 abas do detalhe do projeto e CONGELADA para nao ser relitigada — Visao geral (midia + nome/status + descricao + dados + ProjectTimeProgress + Informacoes) | Tarefas (cronograma + 4 stat cards + progresso + lista) | Membros (ProjectHoursStats + ProjectMembersManagement) | Arquivos (deliverables + anexos + relatorios tecnicos + atestados + ProjectReportsPanel) | Configuracoes (links + ProjectLeaderLogs); Editar/Excluir no cabecalho. Cada bloco do checklist de 20 da SPEC §8.4 tem uma aba dona.",
-    "DEC-184 (dono 2026-10-14): o Painel Administrativo corta a aba settings (placeholder medido em ModernAdminPanel.tsx:403 (trigger) e :994 (content)) e cada aba restante declara a chave que a governa, mostrando o MOTIVO quando o ator nao tem a permissao em vez de renderizar vazio. O administrativo fica acessivel por DASHBOARD_ADMIN ∪ DASHBOARD_VOLUNTEERS, com gate POR ABA, e a guarda de acesso passa a viver no SERVIDOR (novo admin/layout.tsx) — hoje admin/page.tsx:52 reimplementa DASHBOARD_ADMIN no cliente e a negativa e um corpo com HTTP 200."
+    "DEC-184 (dono 2026-10-14): o Painel Administrativo corta a aba settings (placeholder medido em ModernAdminPanel.tsx:403 (trigger) e :994 (content)) e cada aba restante declara a chave que a governa, mostrando o MOTIVO quando o ator nao tem a permissao em vez de renderizar vazio. O administrativo fica acessivel por DASHBOARD_ADMIN ∪ DASHBOARD_VOLUNTEERS, com gate POR ABA, e a guarda de acesso passa a viver no SERVIDOR (novo admin/layout.tsx) — hoje admin/page.tsx:52 reimplementa DASHBOARD_ADMIN no cliente e a negativa e um corpo com HTTP 200.",
+    "DEC-185 (dono 2026-10-14, ASK-V6-03): A ROTA NAO MUDA. A pagina de Relatorios continua em /dashboard/weekly-reports; so o h1 e o rotulo do nav viram 'Relatorios'. Motivo: o caminho nao aparece para o usuario final e renomear tocaria nav-config, a captura do guia (docs/screens/) e o e2e, sem ganho visivel. Nenhuma onda deste plano cria redirect nem move o diretorio; a RF-V6.11 R3 fecha com esta decisao.",
+    "DEC-186 (dono 2026-10-14, ASK-V6-04) — UNICA EXCECAO a regra R1: a invisibilidade da aba Dashboard de Projetos para COORDENADOR/GERENTE e BUG, e o dono mandou alinhar com o hasGodMode da propria pagina. Nasce a chave nomeada DASHBOARD_PROJECT_MANAGER = ['COORDENADOR','GERENTE','GERENTE_PROJETO'] (o showDashboard medido era ['GERENTE_PROJETO'], inline em projetos/page.tsx:98). E aditiva: ninguem perde a aba e o conteudo da aba NAO muda — ProjectManagerDashboard segue filtrando por leaderId === user?.id (:31) e ja tem o estado vazio 'Nenhum projeto atribuido' (:190-197), entao nao ha funcionalidade nova. A chave nasce em V6-2 (junto das chaves de navegacao) e o consumo troca em V6-4; reverter as duas ondas devolve o comportamento medido. O valor coincide com DASHBOARD_VOLUNTEERS, mas os dois conjuntos governam recursos DIFERENTES (aba do Admin x aba de Projetos) — nao unificar as chaves.",
+    "DEC-187 (dono 2026-10-14, ASK-V6-05): nomes de terceiros em TELAS DE GESTAO ficam FORA do escopo de privacidade deste plano. A acao 'suspender' do painel admin e a fila de Aprovacoes da loja mostram o nome do titular do registro (purchase.user?.name) — e identificar o titular o proposito da tela. O plano nao amplia visibilidade nenhuma, nada novo e exibido, e o CPF segue restrito ao proprio usuario ou a MANAGE_USERS (DEC-138): nenhuma tela deste plano o exibe.",
+    "DEC-188 (dono 2026-10-14, ASK-V6-06): o titulo do navegador passa a ser POR TELA, por efeito no CLIENTE dentro do PageHeader (document.title = '<titulo da tela> · DisplayQuest'), com a prop de titulo obrigatoria. Sem RSC, sem layout.tsx por segmento e sem metadata em page.tsx: as 13 paginas sao client e `metadata` do Next e server-only. O mecanismo mora no primitivo (V6-1), entao toda tela que adota o PageHeader ganha o titulo sem trabalho extra (AC-V6-36). O fallback de app/layout.tsx deixa de citar 'Sistema de Gerenciamento de Tarefas' e passa a citar o produto; o h1 do intersticial / (app/page.tsx:22) acompanha em V6-10. Medicao: nenhum teste afirma a string generica hoje."
   ],
   "batchLog": [],
-  "openQuestions": [
-    {
-      "id": "ASK-V6-03",
-      "question": "A rota de Relatorios continua /dashboard/weekly-reports com rotulo novo, ou o diretorio vira /dashboard/relatorios?",
-      "context": "O caminho nao aparece para o usuario final; renomear toca nav-config, a captura do guia e o e2e. Default adotado no plano: MANTER a rota.",
-      "askedAt": "2026-10-14"
-    },
-    {
-      "id": "ASK-V6-04",
-      "question": "O quirk showDashboard = ['GERENTE_PROJETO'] (COORDENADOR/GERENTE nao veem a aba Dashboard de Projetos) e intencional?",
-      "context": "Preservado como medido em V6-2 (nenhum conjunto de papeis muda de valor); mudar quem ve e decisao de produto.",
-      "askedAt": "2026-10-14"
-    },
-    {
-      "id": "ASK-V6-05",
-      "question": "A acao 'suspender' de usuario (ModernAdminPanel) mostra nome de terceiros (purchase-approval) — isso entra no escopo de privacidade?",
-      "context": "So registrada; nenhuma tela deste plano exibe CPF.",
-      "askedAt": "2026-10-14"
-    },
-    {
-      "id": "ASK-V6-06",
-      "question": "O titulo do navegador e a mesma string generica em todas as telas (medido). Cada rota deve declarar o proprio titulo?",
-      "context": "Todas as 13 page.tsx sao client e metadata do Next e server-only, entao a correcao exige mecanismo novo (server layout por segmento ou efeito no cliente) — decidir antes de virar RF.",
-      "askedAt": "2026-10-14"
-    }
-  ],
+  "openQuestions": [],
   "blockers": [],
   "removedItems": [
     {
@@ -285,6 +275,38 @@
       "question": "Quando o plan-v6 comeca?",
       "answer": "Depois de o plan-v5 fechar (DEC-145, dono 2026-10-13). As ondas V6-0..V6-3, que nao colidem com o plan-v5, ficam paradas junto — o dono nao quer duas frentes abertas.",
       "decision": "DEC-145"
+    },
+    {
+      "id": "ASK-V6-03",
+      "askedAt": "2026-10-14",
+      "answeredAt": "2026-10-14",
+      "question": "A rota de Relatorios continua /dashboard/weekly-reports com rotulo novo, ou o diretorio vira /dashboard/relatorios?",
+      "answer": "Mantem a rota: so o h1 e o rotulo do nav viram 'Relatorios'. O caminho nao aparece para o usuario final e renomear tocaria nav-config, a captura do guia e o e2e — custo sem ganho visivel.",
+      "decision": "DEC-185"
+    },
+    {
+      "id": "ASK-V6-04",
+      "askedAt": "2026-10-14",
+      "answeredAt": "2026-10-14",
+      "question": "O quirk showDashboard = ['GERENTE_PROJETO'] (COORDENADOR/GERENTE nao veem a aba Dashboard de Projetos) e intencional?",
+      "answer": "E bug: alinhar com o hasGodMode da propria pagina. A aba passa a chave nomeada DASHBOARD_PROJECT_MANAGER = ['COORDENADOR','GERENTE','GERENTE_PROJETO'] — uniao, ninguem perde o que ja via. O conteudo da aba nao muda (o componente ja filtra por leaderId e ja tem estado vazio).",
+      "decision": "DEC-186"
+    },
+    {
+      "id": "ASK-V6-05",
+      "askedAt": "2026-10-14",
+      "answeredAt": "2026-10-14",
+      "question": "A acao 'suspender' de usuario (ModernAdminPanel) mostra nome de terceiros (purchase-approval) — isso entra no escopo de privacidade?",
+      "answer": "Fora do escopo: sao telas de gestao, em que identificar o titular do registro e o proposito da tela. O plano nao amplia visibilidade nenhuma e o CPF segue restrito (DEC-138).",
+      "decision": "DEC-187"
+    },
+    {
+      "id": "ASK-V6-06",
+      "askedAt": "2026-10-14",
+      "answeredAt": "2026-10-14",
+      "question": "O titulo do navegador e a mesma string generica em todas as telas (medido). Cada rota deve declarar o proprio titulo?",
+      "answer": "Corrigir, por efeito no cliente dentro do PageHeader (document.title = '<titulo da tela> · DisplayQuest'), sem RSC e sem layout.tsx por segmento; o fallback de app/layout.tsx passa a citar o produto e o h1 do intersticial / acompanha.",
+      "decision": "DEC-188"
     }
   ]
 }
