@@ -140,26 +140,51 @@ A SPEC é quem define o *comportamento*; esta tabela define a *ordem* e o *taman
 
 ### V6-0 — Skill e ferramenta
 
-- `SKILL.md:22-24` → passa a listar as **5** imagens de
-  `references/visual-examples/`: `home.png`, `projects.png`, `project.png`,
-  `reports.png` (a que falta hoje) e `home-darkmode.png` (esta como **autoridade do
-  dark**).
-- **G2 primeiro:** o `tsc --noEmit` **não** fecha em 0 nesta branch (1 erro
-  pré-existente em `features/laboratorio/__tests__/floating-timer-tabs.test.tsx:105`,
-  conferido com `git stash`). V6-0 decide e registra: **consertar** o teste ou declarar
-  a dívida. Enquanto não decidir, o critério de G2 é **não piorar**.
-- `references/design-system.md` → superfície/borda/sombra com contraparte dark
-  (`:5`, `:19-27`, `:41-47`, `:49-62`, `:93`, `:113-117`).
-- `references/visual-language.md` → `:5`, `:13` param de dizer "light"/"pastel" sem
-  qualificar tema; `:16-17`, `:28-50`, `:52-62` (ilustração/manuscrito) **saem**.
-- `references/anti-patterns.md:50-54` → o parágrafo que manda seguir o estilo desenhado
-  **sai**; `:54` vira "sem artwork decorativo".
-- `references/layout-patterns.md:135` → "Decorative illustrations…" **sai**.
-- `references/components.md:36` → remanescente de ilustração **sai**.
-- `.opencode/agents/ui-reviewer.md:31` → prioridade 9 vira "ausência de artwork
-  decorativo" (D-E).
-- `.opencode/commands/ui-refactor.md:33` → "the relevant checks" vira o gate concreto
-  (`arch:check` + `lint` + `tsc --noEmit` + `vitest run`), com baseline.
+**Executada em 2026-10-15 (sem commit: `.opencode/**` é gitignored).**
+
+- `SKILL.md` passa a listar as **5** imagens de `references/visual-examples/`: `home.png`,
+  `projects.png`, `project.png`, `reports.png` e `home-darkmode.png` (esta como
+  **autoridade do dark**). Ganhou a seção **Themes** (dark é primeira classe, os dois temas
+  saem dos tokens de `app/globals.css`, sem ramo de paleta hard-coded) e a regra "sem
+  artwork decorativo".
+- `references/design-system.md` → `:5`, superfície, borda, sombra, tipografia, tags e a
+  escala de raio ganharam a contraparte dark, citando os tokens medidos (`--background` <
+  `--card` < `--popover`, `--border`, `--success`/`--warning`/`--info`/`--destructive`,
+  `--radius` 0.75rem).
+- `references/visual-language.md` → `:5` e a lista de caráter pararam de dizer "light" e
+  "pastel" sem qualificar tema; as seções de ilustração (`:28-50`) e de manuscrito
+  (`:52-62`) **saíram** e deram lugar a **Artwork** ("sem artwork decorativo").
+- `references/anti-patterns.md` → "Generic illustrations" virou **Decorative artwork**:
+  "Do not use illustrations, stock-style artwork or handwritten type".
+- `references/layout-patterns.md` → a linha que permitia ilustração decorativa em espaço
+  vazio **saiu**.
+- `references/components.md:36` → "project icon or illustration" virou "project icon or
+  image".
+- `.opencode/agents/ui-reviewer.md` → prioridade 9 virou "absence of decorative artwork" e
+  a 4 passou a pedir cor **nos dois temas**.
+- `.opencode/commands/ui-refactor.md:33` → o passo 1 do "After implementation" virou o gate
+  concreto (`arch:check`, `lint`, `tsc --noEmit`, `vitest run`), apontando para o
+  `STATE.json` deste plano em vez de congelar um número que as próprias ondas mudam.
+
+**Prova do AC-V6-23 (medida 2026-10-15):** `grep -rniE 'illustrat|hand-drawn|handwritten'`
+em `.opencode/skills` + `.opencode/agents` devolve **4 hits, todas frases de proibição**
+(`SKILL.md:45`, `visual-language.md:28`, `anti-patterns.md:52`, `design-system.md:105`) —
+**nenhuma manda usar**. `SKILL.md` cita as 5 imagens (`:23-27`). A prioridade 9 de
+ilustração saiu do `ui-reviewer.md`.
+
+**G2 (decisão registrada em 2026-10-15):** o erro pré-existente **fica como dívida
+conhecida, não consertado**, e o critério de toda onda deste plano continua **não piorar**.
+O erro é `getByRole` com `exact` em `features/laboratorio/__tests__/floating-timer-tabs.test.tsx:105`
+(`exact` não existe em `ByRoleOptions`); o conserto proposto é de uma linha
+(`{ name: "Pausar", exact: true }` → `{ name: /^Pausar$/ }`), mas **não foi aplicado**:
+sem o toolchain instalado não dá para provar que o teste continua verde, e um teste verde
+não se troca por um palpite. O conserto fica para quem tiver as dependências instaladas.
+
+**Bloqueio medido em 2026-10-15 (vale para V6-1 em diante):** esta árvore **não tem
+`node_modules`** (`ls node_modules` → não existe) e a imagem `displayquest-app` é podada
+(`node_modules/typescript` e `node_modules/vitest` ausentes), então **G0/G1/G2/G3 não rodam
+aqui hoje**. Instalar as dependências é pré-requisito para executar a V6-1 em diante; até
+lã, o critério de gate fica sem medição.
 
 **DC:** AC-V6-23 verde. **Commit:** **nenhum** — `.gitignore:7` ignora `.opencode/**` desde
 antes deste plano, entao a onda nao entra no versionamento (a prova e o grep e o diff local).
@@ -374,15 +399,21 @@ com as duas chaves novas na matriz no valor da decisão.
 |---|---|---|---|
 | **G0** | `npm run arch:check` | exit 0, allow-list **vazia**, **1026 módulos / 4383 deps** | toda onda |
 | **G1** | `npm run lint` | nenhum erro (worktree: `npx eslint --no-eslintrc --config .eslintrc.json <arquivos>`) | toda onda |
-| **G2** | `npx tsc --noEmit` | **NÃO PIORAR** — 1 erro pré-existente (`features/laboratorio/__tests__/floating-timer-tabs.test.tsx:105`); V6-0 decide consertar ou registrar | toda onda |
+| **G2** | `npx tsc --noEmit` | **NÃO PIORAR** — 1 erro pré-existente (`features/laboratorio/__tests__/floating-timer-tabs.test.tsx:105`), **registrado como dívida no V6-0** em 2026-10-15 (não consertado: sem `node_modules` no host não há como verificar o conserto) | toda onda |
 | **G3** | `npx vitest run` | **157 arquivos / 2134 testes** (unit+features), zero failure, **nunca menor** | toda onda |
 | **G4** | roundtrips Prisma | **não se aplica** — plano sem backend (rodar só se alguém tocar `prisma/`, que é erro de escopo) | — |
 | **G5** | `npm run docs:build && npm run docs:check` | verde | ondas com tela visível |
 | **G6** | recapturar `docs/screens/` | — | quando a captura deixa de representar a tela |
 
-**G2 é a primeira coisa a resolver (V6-0).** O `tsc` **não** fecha em 0 nesta branch; o
-critério de toda onda é **não piorar**, e nenhuma onda pode exigir "0 erros" antes da
-decisão do V6-0.
+**G2 está decidido (V6-0, 2026-10-15): o erro pré-existente fica registrado como dívida, não
+consertado.** O `tsc` **não** fecha em 0 nesta branch; o critério de toda onda é **não
+piorar**, e nenhuma onda pode exigir "0 erros" enquanto essa dívida existir. O conserto
+proposto (`getByRole` sem `exact`, ver o bloco do V6-0) está anotado para quem tiver o
+toolchain instalado.
+
+**Bloqueio medido (2026-10-15):** esta árvore **não tem `node_modules`** e a imagem
+`displayquest-app` é podada (sem `typescript` nem `vitest`), então **nenhum gate deste
+plano roda aqui hoje**. Instalar as dependências vem antes do V6-1.
 
 **e2e (requer dev server em `:3001`):**
 `npx playwright test tests/e2e/shell.spec.ts` → 5 passando;

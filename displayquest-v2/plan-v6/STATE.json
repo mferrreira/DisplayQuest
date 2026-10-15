@@ -2,7 +2,7 @@
   "plan": "plan-v6",
   "title": "linguagem visual DisplayQuest + redistribuicao das paginas (apresentacao e navegacao)",
   "version": "2.0.0",
-  "updatedAt": "2026-10-15T09:35:00-03:00",
+  "updatedAt": "2026-10-15T09:55:00-03:00",
   "status": "ready",
   "activeWave": null,
   "activeBatch": null,
@@ -19,14 +19,14 @@
     "fullSuite": "172 arquivos / 2264 testes, com dq-dev-test-db no ar e DATABASE_URL na 5433",
     "e2e": "quadro: 2 passando + 1 falha conhecida (cartão a mais na coluna, dado legítimo da instância — confirmar com git stash) + 5 did not run (spec serial); shell: 5 passando. Requer dev server em :3001",
     "archCheck": "1026 modulos / 4383 dependencias, zero violacao, allow-list vazia",
-    "tsc": "NAO fecha em 0: 1 erro pre-existente em features/laboratorio/__tests__/floating-timer-tabs.test.tsx:105 (conferido com git stash). O criterio deste plano e NAO PIORAR; o V6-0 decide entre consertar ou registrar a divida.",
+    "tsc": "NAO fecha em 0: 1 erro pre-existente em features/laboratorio/__tests__/floating-timer-tabs.test.tsx:105 (getByRole com 'exact', que nao existe em ByRoleOptions; conferido com git stash no plan-v5). O V6-0 decidiu em 2026-10-15 REGISTRAR a divida, nao consertar: o criterio das ondas e NAO PIORAR. ATENCAO MEDIDA no V6-0: a arvore nao tem node_modules e a imagem displayquest-app e podada (sem typescript nem vitest), entao nenhum gate roda neste host hoje (ver blockers).",
     "expectedAtEnd": "tests/unit + features: nunca MENOR que 157/2134 (RNF de nao-regressao); a expectativa e >= 170 arquivos (157 + os 13 arquivos novos da SPEC §8.1), com a contagem de testes crescendo no mesmo passo",
     "timing": "G3 ~35s; suite completa ~50s (medido 2026-10-14)"
   },
   "gates": {
     "G0": "npm run arch:check — exit 0, allow-list VAZIA (baseline 2026-10-14: 1026/4383)",
     "G1": "npm run lint — exit 0 (warnings aceitos, nenhum erro; em worktree: npx eslint --no-eslintrc --config .eslintrc.json <arquivos>)",
-    "G2": "npx tsc --noEmit — NAO PIORAR — 1 erro pre-existente (features/laboratorio/__tests__/floating-timer-tabs.test.tsx:105); V6-0 decide consertar ou registrar divida",
+    "G2": "npx tsc --noEmit — NAO PIORAR — 1 erro pre-existente (features/laboratorio/__tests__/floating-timer-tabs.test.tsx:105), REGISTRADO como divida no V6-0 (2026-10-15), nao consertado (sem node_modules no host, o conserto nao teria verificacao). Nenhuma onda pode exigir 'tsc 0' enquanto a divida existir.",
     "G3": "npx vitest run — zero failure e NUNCA MENOR que 157 arquivos / 2134 testes (unit+features); baseline 2026-10-14",
     "G4": "NAO SE APLICA — plano sem backend. Se algum diff tocar prisma/, backend/ ou app/api/, e erro de escopo (RF-V6.10 R1/R3)",
     "G5": "npm run docs:build + docs:check — obrigatório nas ondas V6-3, V6-4, V6-5, V6-6a, V6-6b, V6-7, V6-8, V6-9, V6-10 e no fechamento V6-11",
@@ -37,13 +37,13 @@
     {
       "id": "V6-0",
       "title": "skill e ferramenta alinhadas (5 imagens incl. reports + dark mode + fim das ilustrações + gates)",
-      "status": "pending",
+      "status": "done",
       "decisions": [
         "DEC-109",
         "DEC-110"
       ],
-      "scope": "Só .opencode/**: SKILL.md passa a listar as 5 imagens de references/visual-examples/ (home, projects, project, reports, home-darkmode — home-darkmode como autoridade do dark); design-system.md/visual-language.md ganham contraparte dark e deixam de dizer 'light'/'pastel' sem qualificar tema; as seções que MANDAM usar ilustração e texto manuscrito saem (visual-language.md:16-17,28-50,52-62; anti-patterns.md:50-54; layout-patterns.md:135; design-system.md:93; components.md:36); agents/ui-reviewer.md:31 deixa de exigir ilustração e passa a verificar a ausência de artwork; commands/ui-refactor.md:33 nomeia o gate concreto (arch:check + lint + tsc --noEmit + vitest run) com o baseline pos-plan-v5. DECISAO DE G2: o tsc NAO fecha em 0 nesta branch (1 erro pre-existente em features/laboratorio/__tests__/floating-timer-tabs.test.tsx:105, conferido com git stash) — V6-0 conserta o teste OU registra a divida e fixa 'nao piorar' como criterio das ondas seguintes. ATENCAO MEDIDA: .gitignore:7 ignora .opencode/** desde antes deste plano — V6-0 e a UNICA onda sem commit (a prova e o grep de AC-V6-23 e o diff local).",
-      "why": "é pré-condição: /ui-review e ui-reviewer guiam todas as outras ondas, e hoje a prioridade 9 do revisor cobraria ilustração (DEC-109). Zero gate técnico depende desta onda. A DEC de G2 tambem e pre-condicao de todas as ondas (nenhuma pode exigir 'tsc 0 erros' antes dela)."
+      "scope": "EXECUTADA 2026-10-15 (sem commit: .opencode/** e gitignored, e nenhum gate tecnico depende da onda). SKILL.md lista as 5 imagens de references/visual-examples/ (home, projects, project, reports, home-darkmode — esta como autoridade do dark), ganhou a secao Themes (dark e primeira classe; os dois temas saem dos tokens de app/globals.css, sem ramo de paleta hard-coded) e a regra 'sem artwork decorativo'. design-system.md ganhou a contraparte dark em superficie, borda, sombra, tipografia, tags e escala de raio, citando tokens medidos (--background < --card < --popover, --border, --success/--warning/--info/--destructive, --radius 0.75rem). visual-language.md: ':5' e a lista de carater pararam de dizer 'light'/'pastel' sem qualificar tema, e as secoes de ilustracao (:28-50) e de manuscrito (:52-62) sairam, dando lugar a 'Artwork'. anti-patterns.md: 'Generic illustrations' virou 'Decorative artwork'. layout-patterns.md: a linha que permitia ilustracao decorativa em espaco vazio saiu. components.md:36 virou 'project icon or image'. agents/ui-reviewer.md: prioridade 9 virou 'absence of decorative artwork' e a 4 passou a pedir cor nos dois temas. commands/ui-refactor.md:33 virou o gate concreto (arch:check, lint, tsc --noEmit, vitest run), apontando para o STATE.json deste plano em vez de congelar numeros que as proprias ondas mudam. PROVA DO AC-V6-23 (medida): grep -rniE 'illustrat|hand-drawn|handwritten' em .opencode/skills + .opencode/agents devolve 4 hits, TODAS frases de proibicao (SKILL.md:45, visual-language.md:28, anti-patterns.md:52, design-system.md:105); SKILL.md cita as 5 imagens em :23-27; a prioridade 9 de ilustracao saiu do ui-reviewer.",
+      "why": "é pré-condição: /ui-review e ui-reviewer guiam todas as outras ondas, e hoje a prioridade 9 do revisor cobraria ilustração (DEC-109). Zero gate técnico depende desta onda. A DEC de G2 tambem e pre-condicao de todas as ondas (nenhuma pode exigir 'tsc 0 erros' antes dela). DECISAO DE G2 (2026-10-15): a divida ficou REGISTRADA, nao consertada — o erro e o 'exact' passado ao getByRole, que nao existe em ByRoleOptions nesta versao; o conserto e uma linha ({name:'Pausar',exact:true} -> {name:/^Pausar$/}) e esta anotado no PLAN.md, mas nao foi aplicado porque sem node_modules nao ha como rodar o teste e provar que continua verde. BLOQUEIO MEDIDO: esta arvore nao tem node_modules e a imagem displayquest-app e podada (sem typescript nem vitest), entao G0/G1/G2/G3 e o e2e nao rodam neste host — instalar as dependencias vem antes do V6-1."
     },
     {
       "id": "V6-1",
@@ -218,9 +218,31 @@
     "DEC-187 (dono 2026-10-14, ASK-V6-05): nomes de terceiros em TELAS DE GESTAO ficam FORA do escopo de privacidade deste plano. A acao 'suspender' do painel admin e a fila de Aprovacoes da loja mostram o nome do titular do registro (purchase.user?.name) — e identificar o titular o proposito da tela. O plano nao amplia visibilidade nenhuma, nada novo e exibido, e o CPF segue restrito ao proprio usuario ou a MANAGE_USERS (DEC-138): nenhuma tela deste plano o exibe.",
     "DEC-188 (dono 2026-10-14, ASK-V6-06): o titulo do navegador passa a ser POR TELA, por efeito no CLIENTE dentro do PageHeader (document.title = '<titulo da tela> · DisplayQuest'), com a prop de titulo obrigatoria. Sem RSC, sem layout.tsx por segmento e sem metadata em page.tsx: as 13 paginas sao client e `metadata` do Next e server-only. O mecanismo mora no primitivo (V6-1), entao toda tela que adota o PageHeader ganha o titulo sem trabalho extra (AC-V6-36). O fallback de app/layout.tsx deixa de citar 'Sistema de Gerenciamento de Tarefas' e passa a citar o produto; o h1 do intersticial / (app/page.tsx:22) acompanha em V6-10. Medicao: nenhum teste afirma a string generica hoje."
   ],
-  "batchLog": [],
+  "batchLog": [
+    {
+      "id": "V6-0",
+      "at": "2026-10-15",
+      "title": "Skill e ferramenta: 5 imagens, dark como primeira classe, fim das ilustracoes, gate concreto e decisao de G2",
+      "actions": [
+        "SKILL.md: as 5 imagens de references/visual-examples/ listadas (reports.png faltava; home-darkmode.png como autoridade do dark), secao Themes nova (dark e primeira classe; os dois temas vem dos tokens de app/globals.css) e a regra 'sem artwork decorativo'.",
+        "design-system.md, visual-language.md, anti-patterns.md, layout-patterns.md e components.md: contraparte dark nos tokens medidos; as secoes que mandavam usar ilustracao e texto manuscrito saem (visual-language.md:28-62 virou 'Artwork'; anti-patterns.md:50-54 virou 'Decorative artwork'; layout-patterns.md:135 saiu; components.md:36 virou 'project icon or image'; design-system.md:93 virou a regra de fonte, sem face manuscrita).",
+        "agents/ui-reviewer.md: a prioridade 9 deixa de cobrar ilustracao e passa a verificar a ausencia de artwork decorativo; a prioridade 4 passa a pedir cor nos dois temas. commands/ui-refactor.md:33 vira o gate concreto (arch:check + lint + tsc --noEmit + vitest run), com o baseline apontando para o STATE.json do plano.",
+        "Prova do AC-V6-23 (grep medido): 4 hits de 'illustrat|hand-drawn|handwritten' em .opencode/skills + .opencode/agents, todas frases de proibicao; nenhuma manda usar. SKILL.md cita as 5 imagens.",
+        "DECISAO DE G2: divida registrada, nao consertada. O erro (getByRole com 'exact' em features/laboratorio/__tests__/floating-timer-tabs.test.tsx:105) e pre-existente e nao passa perto do escopo visual; o conserto de uma linha esta anotado no PLAN.md para quem tiver o toolchain instalado.",
+        "BLOQUEIO MEDIDO: a arvore nao tem node_modules e a imagem displayquest-app e podada (sem typescript nem vitest) — nenhum gate deste plano roda no host hoje. Nenhum comando de gate foi executado nesta onda (nenhum gate tecnico depende dela)."
+      ]
+    }
+  ],
   "openQuestions": [],
-  "blockers": [],
+  "blockers": [
+    {
+      "id": "B-V6-01",
+      "at": "2026-10-15",
+      "what": "esta arvore nao tem node_modules (ls node_modules nao encontra o diretorio) e a imagem displayquest-app e podada: node_modules/typescript e node_modules/vitest nao existem na imagem",
+      "effect": "nenhum gate do plano roda neste host: G0 (arch:check), G1 (lint), G2 (tsc), G3 (vitest) e o e2e dependem do toolchain. O V6-0 nao precisou deles (.opencode/** e gitignored e nenhum gate tecnico depende da onda), mas o V6-1 em diante depende",
+      "needed": "instalar as dependencias (npm ci) antes de executar o V6-1; o conserto da divida de G2 (getByRole sem 'exact') tambem depende disso"
+    }
+  ],
   "removedItems": [
     {
       "item": "Fase 8 do plano anterior — identidade ilustrada (ilustrações SVG desenhadas a mão + rótulos manuscritos)",

@@ -345,7 +345,9 @@ rotulo do elemento que ele governa); `userEvent.setup({delay:null})` sob carga; 
 - **`tsc --noEmit` NAO fecha em 0 nesta branch**: 1 erro **pre-existente** em
   `features/laboratorio/__tests__/floating-timer-tabs.test.tsx:105`, conferido com
   `git stash`. Consequencia para o gate: nenhuma onda pode exigir "tsc 0" antes de esse
-  erro sair — o criterio e **nao piorar**, e o V6-0 decide (consertar ou registrar).
+  erro sair — o criterio e **nao piorar**, e o V6-0 **decidiu em 2026-10-15 registrar o erro
+  como divida**, sem conserto (o host nao tem `node_modules`, entao um conserto nao teria
+  como ser verificado).
 - e2e do quadro: **2 passando + 1 falha conhecida** (cartao a mais na coluna, dado
   legitimo da instancia — confirmar com `git stash` antes de cacar regressao) **+ 5
   "did not run"** (spec serial); e2e do shell: **5 passando**
@@ -845,11 +847,16 @@ npx playwright test tests/e2e/shell.spec.ts        # 5 passando
 npx playwright test tests/e2e/task-board.spec.ts   # 2 passando + 1 falha conhecida + 5 did not run
 ```
 
-**G2 e a primeira coisa a resolver (V6-0).** O `tsc` **nao** fecha em 0 nesta branch por um
-erro pre-existente (`features/laboratorio/__tests__/floating-timer-tabs.test.tsx:105`,
-conferido com `git stash`). Nenhuma onda pode exigir "0 erros" antes de o V6-0 decidir entre
-**consertar** o teste ou **registrar** o erro como divida conhecida — o criterio da onda e
-**nao piorar**.
+**G2 esta decidido (V6-0, 2026-10-15): o erro pre-existente fica registrado como divida
+conhecida, nao consertado.** O `tsc` **nao** fecha em 0 nesta branch por 1 erro em
+`features/laboratorio/__tests__/floating-timer-tabs.test.tsx:105` (conferido com
+`git stash`). O criterio de toda onda e **nao piorar**, e nenhuma onda pode exigir "0 erros"
+enquanto essa divida existir.
+
+**Bloqueio medido no V6-0 (2026-10-15):** esta arvore **nao tem `node_modules`**
+(`ls node_modules` nao encontra) e a imagem `displayquest-app` e podada
+(`node_modules/typescript` e `node_modules/vitest` ausentes). **Nenhum gate deste plano
+roda neste host** ate as dependencias serem instaladas; instalar vem antes do V6-1.
 
 ### 8.3 Contagem esperada ao final
 
@@ -934,7 +941,7 @@ a que a versao anterior deste spec **nao contava** — ela sozinha governa 6 dos
 | AC-V6-20 | Given cada tela restante, When olho, Then tem `PageHeader`, sem paleta cravada e sem degradê | grep por onda + `/ui-review <tela>` | RF-V6.7 |
 | AC-V6-21 | Given `ModernAdminPanel`, When inicio a onda, Then a caracterizacao existe e esta verde antes | `tests/unit/components/admin/*.test.tsx` verde antes do commit de UI | RF-V6.7 |
 | AC-V6-22 | Given tema escuro, When renderizo as telas do escopo, Then nenhuma usa `#000`/`#fff` puro e a hierarquia usa os tokens `.dark` | grep + revisao `/ui-review <tela> --dark` | RF-V6.8 |
-| AC-V6-23 | Given a skill, When grepo `illustrat\|hand-drawn\|handwritten` nos `.md`, Then **0 mandando usar**; `SKILL.md` cita as **5** imagens (hoje cita 2); `ui-reviewer.md` nao tem a prioridade 9 de ilustracao | grep em `.opencode/skills` + `.opencode/agents` | RF-V6.9 |
+| AC-V6-23 | Given a skill, When grepo `illustrat\|hand-drawn\|handwritten` nos `.md`, Then **0 mandando usar** (medido no V6-0 em 2026-10-15: **4 hits, todas proibicao** — `SKILL.md:45`, `visual-language.md:28`, `anti-patterns.md:52`, `design-system.md:105`); `SKILL.md` cita as **5** imagens (hoje cita 2); `ui-reviewer.md` nao tem a prioridade 9 de ilustracao | grep em `.opencode/skills` + `.opencode/agents` | RF-V6.9 |
 | AC-V6-24 | Given a suíte inteira, When rodo `npx vitest run`, Then **zero failure** e **nunca menor que 157/2134** | gate G3 | RF-V6.10 |
 | AC-V6-25 | Given o plano terminado, When comparo `package.json`, Then **nenhuma dependencia nova** | `git diff package.json` vazio | RF-V6.10 |
 | AC-V6-26 | Given telas visiveis mudadas, When rodo G5, Then `docs:build` e `docs:check` verdes e as capturas de `docs/screens/` foram recapturadas (G6) | `npm run docs:build && npm run docs:check` + `git diff docs/screens` | §5 |
