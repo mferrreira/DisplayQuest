@@ -26,8 +26,11 @@ export type Permission = keyof typeof PERMISSIONS;
 
 export const FEATURE_ACCESS = {
   DASHBOARD_ADMIN: ["COORDENADOR", "GERENTE"],
-  DASHBOARD_WEEKLY_REPORTS: ["COORDENADOR", "GERENTE", "LABORATORISTA"],
-  DASHBOARD_PROJETOS: ["COORDENADOR", "GERENTE", "GERENTE_PROJETO", "PESQUISADOR", "COLABORADOR"],
+  // V6-2 (RF-V6.16 R4): a chave gêmea `DASHBOARD_WEEKLY_REPORTS` saiu — nav, guard da
+  // página e weekly-report-context passaram a falar `VIEW_WEEKLY_REPORTS`, que já tinha
+  // o MESMO valor. Uma tela, uma chave.
+  VIEW_WEEKLY_REPORTS: ["COORDENADOR", "GERENTE", "LABORATORISTA"],
+  // V6-2 (RF-V6.16 R4): a chave morta de projetos (0 consumidores) saiu.
   VIEW_PROJECT_DASHBOARD: [
     "COORDENADOR",
     "GERENTE",
@@ -36,7 +39,17 @@ export const FEATURE_ACCESS = {
     "COLABORADOR",
     "VOLUNTARIO",
   ],
-  MANAGE_REWARDS: ["COORDENADOR", "GERENTE", "LABORATORISTA"],
+  // V6-2 (RF-V6.16 R4): a chave de gerenciar recompensas vivia duplicada aqui e em
+  // `PERMISSIONS`. Fica só na autoridade backend; o tripwire E6 (GERENTE gerencia
+  // recompensas) foi para lá.
+  // V6-2 (RF-V6.16 R2 / DEC-186): gatilhos inline da página de projetos viram chaves
+  // nomeadas. `DASHBOARD_VOLUNTEERS` nasce com o valor medido (`showVolunteers` =
+  // GERENTE_PROJETO ∪ hasGodMode); `DASHBOARD_PROJECT_MANAGER` nasce CORRIDO pela DEC-186
+  // (o `showDashboard = ['GERENTE_PROJETO']` era bug — COORDENADOR/GERENTE perderam a aba).
+  // É a única exceção registrada à regra "nenhum conjunto de papéis muda de valor".
+  // O consumo troca em V6-4 (aba Dashboard) e V6-9 (aba Voluntários no Painel).
+  DASHBOARD_VOLUNTEERS: ["COORDENADOR", "GERENTE", "GERENTE_PROJETO"],
+  DASHBOARD_PROJECT_MANAGER: ["COORDENADOR", "GERENTE", "GERENTE_PROJETO"],
   MANAGE_USERS: ["COORDENADOR", "GERENTE"],
   MANAGE_PROJECTS: ["COORDENADOR", "GERENTE", "GERENTE_PROJETO"],
   MANAGE_TASKS: ["COORDENADOR", "GERENTE", "GERENTE_PROJETO", "COLABORADOR", "PESQUISADOR"],
@@ -44,7 +57,6 @@ export const FEATURE_ACCESS = {
   MANAGE_SCHEDULE: ["COORDENADOR", "GERENTE", "LABORATORISTA"],
   MANAGE_BADGES: ["COORDENADOR", "GERENTE", "LABORATORISTA"],
   VIEW_ALL_DATA: ["COORDENADOR", "GERENTE", "LABORATORISTA"],
-  VIEW_WEEKLY_REPORTS: ["COORDENADOR", "GERENTE", "LABORATORISTA"],
   EDIT_PROJECT: ["COORDENADOR", "GERENTE", "GERENTE_PROJETO"],
   EDIT_TASKS: ["COORDENADOR", "GERENTE", "GERENTE_PROJETO", "COLABORADOR"],
   CREATE_TASK: ["COORDENADOR", "GERENTE", "GERENTE_PROJETO", "COLABORADOR", "PESQUISADOR"],

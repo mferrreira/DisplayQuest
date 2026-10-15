@@ -27,7 +27,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { hasAccess } from "@/lib/utils/utils"
+import { hasPermission } from "@/lib/auth/rbac"
 
 export default function ManageRewardsPage() {
   const { user, loading } = useAuth()
@@ -51,7 +51,8 @@ export default function ManageRewardsPage() {
       router.push("/login")
       return false
     }
-    if (!loading && user && !hasAccess(user.roles || [], 'MANAGE_REWARDS')) {
+    // V6-2 (AC-V6-34): MANAGE_REWARDS vive só na matriz de autoridade (PERMISSIONS).
+    if (!loading && user && !hasPermission(user.roles || [], 'MANAGE_REWARDS')) {
       router.push("/dashboard")
       return false
     }
@@ -70,7 +71,7 @@ export default function ManageRewardsPage() {
     )
   }
 
-  if (!hasAccess(user?.roles || [], 'MANAGE_REWARDS')) {
+  if (!hasPermission(user?.roles || [], 'MANAGE_REWARDS')) {
     return (
       <div className="flex min-h-screen flex-col">
         <main className="flex-1 container mx-auto p-4 md:p-6">

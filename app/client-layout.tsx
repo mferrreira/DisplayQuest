@@ -9,6 +9,7 @@ import { ResponsibilityProvider } from "@/contexts/responsibility-context"
 import { SessionProvider } from "next-auth/react"
 import { NuqsAdapter } from "nuqs/adapters/next/app"
 import { AppHeader } from "@/components/layout/app-header"
+import { AppSidebar } from "@/components/layout/app-sidebar"
 import { FloatingSessionTimer } from "@/components/ui/floating-session-timer"
 import { QueryProvider } from "@/shared/providers/query-provider"
 import { Toaster } from "@/components/ui/sonner"
@@ -54,8 +55,16 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
           som tocaria em dobro. */}
       <NotificationSound />
       <AppHeader />
-      {!isPrintRoute && <FloatingSessionTimer />}
-      {children}
+      {/* V6-2 (RF-V6.3): sidebar desktop persistente ao lado do conteúdo; em telas
+          estreitas ela some e o menu é o Sheet do MobileMenu (R5). O container de cada
+          página (`container mx-auto p-4 md:p-6`) não é tocado (R4). */}
+      <div className="flex min-h-[calc(100vh-4rem)]">
+        <AppSidebar />
+        <div className="min-w-0 flex-1">
+          {!isPrintRoute && <FloatingSessionTimer />}
+          {children}
+        </div>
+      </div>
     </DashboardProviders>
   )
 }

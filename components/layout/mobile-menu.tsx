@@ -1,11 +1,11 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { LogOut, Menu, Trophy } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { ThemeToggle } from "@/components/layout/theme-toggle"
+import { NavItemLink } from "@/components/layout/nav-item-link"
 import {
   getNavigationGroups,
   getPrimaryRoleLabel,
@@ -84,11 +84,9 @@ export function MobileMenu() {
               </div>
 
               {points !== null ? (
-                <div className="flex items-center justify-center gap-2 rounded-xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 p-3 dark:border-emerald-700 dark:from-emerald-900/20 dark:to-teal-900/20">
-                  <Trophy className="h-5 w-5 text-amber-500 dark:text-emerald-400" />
-                  <span className="bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-lg font-semibold text-transparent dark:from-emerald-400 dark:to-teal-400">
-                    {points}
-                  </span>
+                <div className="flex items-center justify-center gap-2 rounded-xl border bg-card p-3">
+                  <Trophy className="h-5 w-5 text-warning" aria-hidden="true" />
+                  <span className="text-lg font-semibold">{points}</span>
                 </div>
               ) : null}
             </div>
@@ -111,19 +109,13 @@ export function MobileMenu() {
                   </p>
                   <div className="space-y-1">
                     {visibleItems.map((item) => (
-                      <Link
+                      <NavItemLink
                         key={item.href}
-                        href={item.href}
-                        onClick={() => setIsOpen(false)}
-                        className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition-colors ${
-                          item.active
-                            ? "bg-accent text-accent-foreground"
-                            : "text-muted-foreground hover:bg-accent hover:text-foreground"
-                        }`}
-                      >
-                        <item.icon className="h-5 w-5" />
-                        <span>{item.label}</span>
-                      </Link>
+                        item={item}
+                        active={item.active}
+                        surface="sheet"
+                        onNavigate={() => setIsOpen(false)}
+                      />
                     ))}
                   </div>
                 </div>

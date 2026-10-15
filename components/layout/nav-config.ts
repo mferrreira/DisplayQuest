@@ -54,7 +54,9 @@ const NAVIGATION_GROUPS: NavGroupDef[] = [
         href: "/dashboard/weekly-reports",
         label: "Relatórios Semanais",
         icon: FileText,
-        feature: "DASHBOARD_WEEKLY_REPORTS",
+        // V6-2 (RF-V6.16 R4): mesma chave do guard da página e do weekly-report-context —
+        // a gêmea de navegação saiu da matriz (uma tela, uma chave).
+        feature: "VIEW_WEEKLY_REPORTS",
         matchPrefix: true,
       },
       {

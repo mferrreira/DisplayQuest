@@ -4,7 +4,7 @@
   "version": "2.0.0",
   "updatedAt": "2026-10-15T12:45:00-03:00",
   "status": "executing",
-  "activeWave": null,
+  "activeWave": "V6-2 (done); proxima: V6-3 (home)",
   "activeBatch": null,
   "awaitingInstruction": false,
   "lineage": {
@@ -14,13 +14,13 @@
   },
   "baseline": {
     "measuredAt": "2026-10-15",
-    "measuredOn": "dev, onda V6-1 (primitivos + status.ts) — re-medido depois desse commit; SUB-1 (2026-10-15) deixou 157/2143 e 172/2273; o baseline anterior (2026-10-14, V5-fix-1) era 157/2134 e 172/2264 com 1 erro de tsc",
-    "unitAndFeatures": "162 arquivos / 2160 testes (145/2016 so tests/unit)",
-    "fullSuite": "177 arquivos / 2290 testes, com dq-dev-test-db no ar e DATABASE_URL na 5433",
-    "e2e": "quadro: 2 passando + 1 falha conhecida (cartão a mais na coluna, dado legítimo da instância — confirmar com git stash) + 5 did not run (spec serial); shell: 5 passando. Requer dev server em :3001",
-    "archCheck": "1026 modulos / 4383 dependencias, zero violacao, allow-list vazia",
+    "measuredOn": "dev, onda V6-2 (shell: sidebar + header compacto + chaves) — re-medido depois desse commit; V6-1 (2026-10-15) deixou 162/2160 e 177/2290; SUB-1 deixou 157/2143 e 172/2273",
+    "unitAndFeatures": "166 arquivos / 2181 testes (149/2037 so tests/unit)",
+    "fullSuite": "181 arquivos / 2311 testes, com dq-dev-test-db no ar e DATABASE_URL na 5433",
+    "e2e": "quadro: 8 passando (medido 2026-10-15, V6-2 — a falha conhecida por cartao a mais em 'Em Revisao' NAO reproduziu, o dado da instancia mudou; pode voltar). shell: 5 passando. Requer dev server em :3001 e browser do Playwright instalado (o chromium-headless-shell precisou ser baixado nesta maquina em 2026-10-15; cdn instavel, deixar instalado).",
+    "archCheck": "1042 modulos / 4441 dependencias, zero violacao, allow-list vazia",
     "tsc": "FECHA em 0 desde o lote SUB-1 (2026-10-15): o erro pre-existente em features/laboratorio/__tests__/floating-timer-tabs.test.tsx:105 (getByRole com 'exact', que nao existe em ByRoleOptions) foi consertado la, pela regex ancorada /^Pausar$/ — a divida que o V6-0 registrou esta quitada. node_modules esta instalado no host (B-V6-01 resolvido), entao G0/G1/G2/G3 rodam aqui.",
-    "expectedAtEnd": "tests/unit + features: nunca MENOR que 162/2160 (RNF de nao-regressao); a expectativa e >= 170 arquivos (162 + os 8 arquivos novos da SPEC §8.1 que faltam), com a contagem de testes crescendo no mesmo passo",
+    "expectedAtEnd": "tests/unit + features: nunca MENOR que 166/2181 (RNF de nao-regressao); a expectativa e crescer com os testes novos das ondas seguintes (SPEC 8.1)",
     "timing": "G3 ~35s; suite completa ~50s (medido 2026-10-14)"
   },
   "gates": {
@@ -59,13 +59,14 @@
     {
       "id": "V6-2",
       "title": "shell: sidebar desktop persistente + header compacto + chaves de navegação unificadas",
-      "status": "pending",
+      "status": "done",
       "decisions": [
         "DEC-106",
         "DEC-186"
       ],
       "scope": "components/layout/app-sidebar.tsx novo a partir de nav-config.ts (fonte única, sem destino novo); app-header.tsx reduzido a identidade + sino + tema + avatar, com <header> PRESERVADO no DOM (shell.spec.ts:31); item de nav extraído e compartilhado com mobile-menu.tsx; rounded-full sai da navegação (anti-pattern Excessive pills); container de conteúdo mantém container mx-auto p-4 md:p-6. Tokens --sidebar-* existentes passam a ser usados (zero CSS novo). Caracterização ANTES: tests/unit/layout/app-sidebar.test.tsx + teste de nav-config/AppHeader. CHAVES DE PERMISSAO (RF-V6.16 R4), aqui porque nav-config.ts e a fonte unica da navegacao: DASHBOARD_PROJETOS (0 consumidores) SAI; NASCE DASHBOARD_VOLUNTEERS = ['COORDENADOR','GERENTE','GERENTE_PROJETO'] (o showVolunteers medido em app/(dashboard)/dashboard/projetos/page.tsx); a PAGINA e o NAV de relatorios passam a falar a MESMA chave (hoje divergem). Guarda: tests/unit/domain/identity/permission-keys.test.ts (AC-V6-34). A CHAVE DO PAINEL DE PROJETOS (DEC-186): showDashboard = ['GERENTE_PROJETO'] era BUG — nasce DASHBOARD_PROJECT_MANAGER = ['COORDENADOR','GERENTE','GERENTE_PROJETO'] (o hasGodMode da propria pagina); a chave entra aqui e o CONSUMO troca em V6-4. E a UNICA excecao registrada a regra 'nenhum conjunto de papeis muda de valor': a uniao e aditiva, ninguem perde a aba, e o conteudo da aba nao muda. Fora dela, nenhum conjunto muda.",
-      "why": "DEC-106 (fase 2 do plano original): a sidebar é a maior divergência da referência (D1) e precisa existir antes das telas nascerem dentro do layout novo. As chaves entram aqui porque este e o unico ponto em que nav-config.ts e tocado; o V6-9 (admin) e o V6-8 (loja) dependem da chave nova, e a DEC-186 (aba Dashboard) precisa da chave antes de o V6-4 trocar o gatilho inline."
+      "why": "DEC-106 (fase 2 do plano original): a sidebar é a maior divergência da referência (D1) e precisa existir antes das telas nascerem dentro do layout novo. As chaves entram aqui porque este e o unico ponto em que nav-config.ts e tocado; o V6-9 (admin) e o V6-8 (loja) dependem da chave nova, e a DEC-186 (aba Dashboard) precisa da chave antes de o V6-4 trocar o gatilho inline.",
+      "doneAt": "2026-10-15"
     },
     {
       "id": "V6-3",
@@ -254,6 +255,29 @@
         "G3": "tests/unit+features 162 arquivos / 2160 testes (145/2016 so tests/unit); suíte completa 177 / 2290 com DATABASE_URL na 5433. FLAKE NAO IDENTIFICADO: uma corrida de unit+features deu 1 falha; a reexecucao com filtro de falha e mais tres corridas seguintes deram verde integral, entao o teste que falhou nao foi nomeado — se a falha voltar, capturar o nome antes de concluir por flake (mesma classe do flake de digitacao medido no V4-6b, mas aqui nao medido)",
         "e2e": "nao rodou nesta onda: nenhum arquivo de tela do shell ou do quadro mudou; os primitivos ainda nao tem consumidor de rota"
       }
+    },
+    {
+      "id": "V6-2",
+      "at": "2026-10-15",
+      "title": "Shell: sidebar desktop persistente + header compacto + chaves de navegacao unificadas (RF-V6.3, RF-V6.16 R4, DEC-106/186)",
+      "actions": [
+        "TESTES ANTES (SPEC 8.1): tests/unit/layout/nav-config.test.ts (caracterizacao — 7 testes, verde CONTRA A FONTE ATUAL antes da mudanca: congela os 8 destinos e a filtragem por papel, DEC-112); tests/unit/layout/app-sidebar.test.tsx + app-header.test.tsx (estado-alvo, TDD); tests/unit/domain/identity/permission-keys.test.ts (guarda AC-V6-34). next/link e next/navigation sao duplos nos testes de shell (o jsdom da base nao monta o router do Next; nao havia precedente de renderizar Link em teste).",
+        "components/layout/app-sidebar.tsx NOVO: aside sticky abaixo do header (top-16, h=100vh-4rem), w-60, oculta abaixo de md, construida a partir de nav-config.ts com a MESMA filtragem FEATURE_ACCESS — nenhum destino novo (DEC-112). Tokens --sidebar-* existentes (bg-sidebar/border-sidebar-border/bg-sidebar-accent), zero CSS novo (DEC-110). Lista plana sem cabecalho de grupo: a referencia e plana e 'PROJETOS' sobre 'Projetos' leria como defeito (achado do ui-reviewer, aplicado).",
+        "components/layout/nav-item-link.tsx NOVO (RF-V6.3 R2): o render do item existe uma vez; sidebar usa superficie de tokens --sidebar-*, o Sheet mobile usa accent. Ativo = bg-sidebar-accent + aria-current='page'. Cantos rounded-lg/xl da escala --radius; nenhum pill de borda redonda (AC-V6-09: grep rounded-full em components/layout/* = 0).",
+        "app-header.tsx REDUZIDO (DEC-106): GroupedNavMenu e o <nav> do topo saem; ficam identidade (logo+nome), chip de pontos, sino, tema, avatar. <header> permanece no DOM (R3, shell.spec.ts). O chip de pontos perdeu o degrade amber/orange + pares dark: manuais — virou border bg-card + Trophy text-warning (RF-V6.1). O gatilho do avatar perdeu a borda totalmente redonda. Container do header trocou 'container mx-auto' por largura cheia para alinhar o logo com a rail colada a esquerda (achado 2 do ui-reviewer; o container mx-auto das PAGINAS nao foi tocado — R4).",
+        "mobile-menu.tsx: consome NavItemLink (surface='sheet'); chip de pontos com tokens. O Sheet em si nao mudou (AC-V6-10).",
+        "app/client-layout.tsx: sidebar montada ao lado do conteudo (flex; <div min-w-0 flex-1> envolve timer+children). So em rota /dashboard* (LayoutContent ja decide).",
+        "CHAVES (RF-V6.16 R4 / AC-V6-34), em backend/domain/identity/permissions.ts: DASHBOARD_PROJETOS (0 consumidores) SAI; a gemea de navegacao de relatorios SAI e o nav passa a falar VIEW_WEEKLY_REPORTS — a MESMA chave do guard da pagina (page.tsx:173) e do weekly-report-context (:159), valores identicos medidos, entao R1 nao e violada; MANAGE_REWARDS sai de FEATURE_ACCESS e fica so em PERMISSIONS (autoridade) — os 3 consumidores do cliente (loja/page.tsx, loja/gerenciar x2) migraram de hasAccess para hasPermission (RF-V6.16 R5: o cliente pede a chave que o servidor aplica; a rota loja/gerenciar em si sai so na V6-8); NASCEM DASHBOARD_VOLUNTEERS = [COORDENADOR,GERENTE,GERENTE_PROJETO] (o showVolunteers medido = GERENTE_PROJETO or hasGodMode) e DASHBOARD_PROJECT_MANAGER = [COORDENADOR,GERENTE,GERENTE_PROJETO] (DEC-186, a unica excecao registrada a R1; o consumo troca em V6-4/V6-9). A guarda de paridade rbac-ui-parity.test.ts congela agora 24 chaves (eram 25: -3 +2). O tripwire E6 do rbac-contract migrou para PERMISSIONS.MANAGE_REWARDS.",
+        "Nao ha conflito com B6-3 (a decisao de nao re-expressar a regra composta do BACKEND como FEATURE_ACCESS segue de pe): a unificacao e so no lado cliente (nav + guard da pagina + contexto de fetch)."
+      ],
+      "gates": "arch:check 1042/4441 zero violacao; eslint exit 0 (so avisos <img> pre-existentes); tsc 0; suite completa 181/2311 verde com DATABASE_URL na 5433; G3 (tests/unit features) 166/2181. e2e shell: ver baseline.e2e (browser do Playwright precisou ser instalado nesta maquina — cdn instavel, 3 tentativas).",
+      "observations": [
+        "DIVIDA registrada sem mexer (zero CSS novo em V6-2): --sidebar-accent (240 4.8% 95.9) sobre --sidebar-background (0 0% 98) tem contraste de ~2 pontos de luminancia no tema claro — o item ativo fica quase invisivel so com o token; as referencias mostram tinta azul + contorno. Decisao de token em globals.css para um batch que possa tocar CSS.",
+        "DIVIDA registrada sem mexer: notifications-panel.tsx (sino, ultima superficie do cabecalho) ainda usa paleta crua com pares dark: manuais (text-red-500 dark:text-destructive, hover:bg-gray-50 etc.) — pre-onda, fora do diff; o gate de fechamento do shell (grep paleta) vai esbarrar nela.",
+        "DIVIDA menor: sheet.tsx usa bg-background onde o design-system reserva bg-popover para o que flutua; theme-toggle usa emoji no item 'Sistema' (V6-3 ja manda trocar emoji por lucide).",
+        "O teste do header congela que o sino e montado DUAS vezes no header (cluster desktop + compacto, medido); o contrato e existir, nao quantas vezes.",
+        "G3 medido com 'npx vitest run tests/unit features' — os testes de features moram em features/**/__tests__ (raiz), NAO em tests/features; passar tests/features como filtro roda so tests/unit e engana a contagem."
+      ]
     }
   ],
   "openQuestions": [],

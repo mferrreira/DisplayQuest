@@ -29,7 +29,7 @@ import {
 import { toast } from "@/components/ui/use-toast"
 import { PurchaseApproval } from "@/components/ui/purchase-approval"
 import type { Reward, Purchase } from "@/contexts/types"
-import { hasAccess } from "@/lib/utils/utils"
+import { hasPermission } from "@/lib/auth/rbac"
 
 export default function StorePage() {
   const { user, loading } = useAuth()
@@ -48,7 +48,9 @@ export default function StorePage() {
     available: true,
   })
 
-  const canManageStore = hasAccess(user?.roles || [], 'MANAGE_REWARDS')
+  // V6-2 (AC-V6-34): MANAGE_REWARDS vive só na matriz de autoridade (PERMISSIONS) — o
+  // cliente pede com a mesma chave que o servidor aplica, não uma cópia de visibilidade.
+  const canManageStore = hasPermission(user?.roles || [], 'MANAGE_REWARDS')
 
   useEffect(() => {
     // Redirecionar para login se não estiver autenticado
