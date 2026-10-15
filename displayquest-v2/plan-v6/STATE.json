@@ -2,32 +2,32 @@
   "plan": "plan-v6",
   "title": "linguagem visual DisplayQuest + redistribuicao das paginas (apresentacao e navegacao)",
   "version": "2.0.0",
-  "updatedAt": "2026-10-15T09:55:00-03:00",
-  "status": "ready",
+  "updatedAt": "2026-10-15T12:45:00-03:00",
+  "status": "executing",
   "activeWave": null,
   "activeBatch": null,
   "awaitingInstruction": false,
   "lineage": {
     "previousPlan": "plan-v5 (FECHADO em 2026-10-14, batch V5-close: bucket SeaweedFS, anexos/imagens, dados de pessoa e de vinculo, cronograma, relatorio tecnico + rascunho de IA, atestados, andamento, visibilidade de perfil). Estado/decisoes em displayquest-v2/plan-v5/{PLAN.md,STATE.json}, STATE.json v5.29.0, DEC-61..77, 99..104 e 126..180.",
     "concurrentPlan": "NENHUM. O plan-v5 fechou (done, 2026-10-14) e a DEC-145 (dono 2026-10-13) determinava que o plan-v6 so comeca depois disso. A DEC-113 (backend e a fonte de verdade; front segue o back) esta SATISFEITA: as telas de V6-4/V6-5/V6-7 sao refatoradas no estado pos-plan-v5 (PROPPI, dados de pessoa e de vinculo, capa de perfil, cronograma, atestados, relatorios tecnicos). Nao ha mais colisao.",
-    "note": "a numeracao de decisoes e GLOBAL: DEC-01..29 clean-arch, DEC-30..49 plan-v3, DEC-50..54 B6/D4, DEC-55..60 plan-v4, DEC-61..77 plan-v5, DEC-78..98 plan-v4, DEC-99..104 plan-v5, DEC-105..114 este plano, DEC-115..125 clean-arch/B6-restante+B9/B10, DEC-126..180 plan-v5 (126/127 em 2026-10-09; 128/130 templates; 131..137 bucket e imagens; 138..152 alinhamento e V5-4; 153..178 V5-5..V5-12; 179/180 V5-fix-1/V5-fix-2 em 2026-10-14). O plan-v5 tomou a DEC-180 no mesmo dia (V5-fix-2, 'Gerar DOCX'), por isso as decisoes da revisao nascem em DEC-181..184 e nao em DEC-180..183; as QUATRO respostas as ASK deste plano (respondidas pelo dono em 2026-10-14, gravadas em 2026-10-15) sao DEC-185..188 — nenhuma ASK fica aberta. DEC-189 NAO e deste plano: e do plan-v4 (lote SUB-1, autoridade de subtask, commitado 2026-10-15; o lote chegou a esta arvore citando 185 por engano e foi renumerado antes do commit). Proxima decisao: DEC-190. Antes de abrir DEC nova, grep os CINCO STATE.json (clean-arch, plan-v3, plan-v4, plan-v5, plan-v6)."
+    "note": "a numeracao de decisoes e GLOBAL: DEC-01..29 clean-arch, DEC-30..49 plan-v3, DEC-50..54 B6/D4, DEC-55..60 plan-v4, DEC-61..77 plan-v5, DEC-78..98 plan-v4, DEC-99..104 plan-v5, DEC-105..114 este plano, DEC-115..125 clean-arch/B6-restante+B9/B10, DEC-126..180 plan-v5 (126/127 em 2026-10-09; 128/130 templates; 131..137 bucket e imagens; 138..152 alinhamento e V5-4; 153..178 V5-5..V5-12; 179/180 V5-fix-1/V5-fix-2 em 2026-10-14). O plan-v5 tomou a DEC-180 no mesmo dia (V5-fix-2, 'Gerar DOCX'), por isso as decisoes da revisao nascem em DEC-181..184 e nao em DEC-180..183; as QUATRO respostas as ASK deste plano (respondidas pelo dono em 2026-10-14, gravadas em 2026-10-15) sao DEC-185..188 — nenhuma ASK fica aberta. DEC-189 NAO e deste plano: e do plan-v4 (lote SUB-1, autoridade de subtask, commitado 2026-10-15; o lote chegou a esta arvore citando 185 por engano e foi renumerado antes do commit). DEC-190..203 sao do plan-v7 (servidor MCP, criado 2026-10-15). Proxima decisao: DEC-204. Antes de abrir DEC nova, grep os SEIS STATE.json (clean-arch, plan-v3, plan-v4, plan-v5, plan-v6, plan-v7)."
   },
   "baseline": {
     "measuredAt": "2026-10-15",
-    "measuredOn": "dev, lote SUB-1 do plan-v4 (DEC-189, autoridade de subtask) — re-medido depois desse commit; o baseline anterior (2026-10-14, lote V5-fix-1) era 157/2134 e 172/2264 com 1 erro de tsc",
-    "unitAndFeatures": "157 arquivos / 2143 testes (140/1999 so tests/unit)",
-    "fullSuite": "172 arquivos / 2273 testes, com dq-dev-test-db no ar e DATABASE_URL na 5433",
+    "measuredOn": "dev, onda V6-1 (primitivos + status.ts) — re-medido depois desse commit; SUB-1 (2026-10-15) deixou 157/2143 e 172/2273; o baseline anterior (2026-10-14, V5-fix-1) era 157/2134 e 172/2264 com 1 erro de tsc",
+    "unitAndFeatures": "162 arquivos / 2160 testes (145/2016 so tests/unit)",
+    "fullSuite": "177 arquivos / 2290 testes, com dq-dev-test-db no ar e DATABASE_URL na 5433",
     "e2e": "quadro: 2 passando + 1 falha conhecida (cartão a mais na coluna, dado legítimo da instância — confirmar com git stash) + 5 did not run (spec serial); shell: 5 passando. Requer dev server em :3001",
     "archCheck": "1026 modulos / 4383 dependencias, zero violacao, allow-list vazia",
     "tsc": "FECHA em 0 desde o lote SUB-1 (2026-10-15): o erro pre-existente em features/laboratorio/__tests__/floating-timer-tabs.test.tsx:105 (getByRole com 'exact', que nao existe em ByRoleOptions) foi consertado la, pela regex ancorada /^Pausar$/ — a divida que o V6-0 registrou esta quitada. node_modules esta instalado no host (B-V6-01 resolvido), entao G0/G1/G2/G3 rodam aqui.",
-    "expectedAtEnd": "tests/unit + features: nunca MENOR que 157/2143 (RNF de nao-regressao); a expectativa e >= 170 arquivos (157 + os 13 arquivos novos da SPEC §8.1), com a contagem de testes crescendo no mesmo passo",
+    "expectedAtEnd": "tests/unit + features: nunca MENOR que 162/2160 (RNF de nao-regressao); a expectativa e >= 170 arquivos (162 + os 8 arquivos novos da SPEC §8.1 que faltam), com a contagem de testes crescendo no mesmo passo",
     "timing": "G3 ~35s; suite completa ~50s (medido 2026-10-14)"
   },
   "gates": {
     "G0": "npm run arch:check — exit 0, allow-list VAZIA (baseline 2026-10-14: 1026/4383)",
     "G1": "npm run lint — exit 0 (warnings aceitos, nenhum erro; em worktree: npx eslint --no-eslintrc --config .eslintrc.json <arquivos>)",
     "G2": "npx tsc --noEmit — 0 erros. A divida registrada no V6-0 (1 erro pre-existente em floating-timer-tabs.test.tsx:105) foi quitada pelo lote SUB-1 do plan-v4 em 2026-10-15; desde la as ondas devem fechar com tsc em 0.",
-    "G3": "npx vitest run — zero failure e NUNCA MENOR que 157 arquivos / 2143 testes (unit+features); baseline re-medido 2026-10-15 (lote SUB-1)",
+    "G3": "npx vitest run — zero failure e NUNCA MENOR que 162 arquivos / 2160 testes (unit+features); baseline re-medido 2026-10-15 (V6-1)",
     "G4": "NAO SE APLICA — plano sem backend. Se algum diff tocar prisma/, backend/ ou app/api/, e erro de escopo (RF-V6.10 R1/R3)",
     "G5": "npm run docs:build + docs:check — obrigatório nas ondas V6-3, V6-4, V6-5, V6-6a, V6-6b, V6-7, V6-8, V6-9, V6-10 e no fechamento V6-11",
     "G6": "recapturar docs/screens/ quando a captura deixa de representar a tela (todas as telas mudam de visual nesta rodada)",
@@ -48,7 +48,7 @@
     {
       "id": "V6-1",
       "title": "tokens + primitivos compartilhados (PageHeader, StatCard, EmptyState, SearchInput, status.ts)",
-      "status": "pending",
+      "status": "done",
       "decisions": [
         "DEC-111",
         "DEC-188"
@@ -231,6 +231,29 @@
         "DECISAO DE G2: divida registrada, nao consertada. O erro (getByRole com 'exact' em features/laboratorio/__tests__/floating-timer-tabs.test.tsx:105) e pre-existente e nao passa perto do escopo visual; o conserto de uma linha esta anotado no PLAN.md para quem tiver o toolchain instalado.",
         "BLOQUEIO MEDIDO: a arvore nao tem node_modules e a imagem displayquest-app e podada (sem typescript nem vitest) — nenhum gate deste plano roda no host hoje. Nenhum comando de gate foi executado nesta onda (nenhum gate tecnico depende dela)."
       ]
+    },
+    {
+      "id": "V6-1",
+      "at": "2026-10-15",
+      "title": "Primitivos compartilhados: PageHeader (com titulo do navegador), StatCard, EmptyState, SearchInput, status.ts; as duas copias de status de projeto passam a importar da unica fonte",
+      "actions": [
+        "BLOQUEIO B-V6-01 RESOLVIDO antes da onda: node_modules instalado no host; os cinco gates rodaram aqui (G0/G1/G2/G3 + suíte completa com dq-dev-test-db na 5433 via npm run db:test:up + db:test:setup). A divida de G2 foi quitada no lote SUB-1 do plan-v4 (commit anterior), entao o tsc desta branch fecha em 0 e a onda rodou com 'tsc 0', nao 'nao piorar'.",
+        "components/ui/status.ts novo: projectStatusBadgeClass + projectStatusLabel como unica fonte de status de projeto→cor/label (RF-V6.2 R2). Classes so com tokens semanticos (bg-success/15 text-success, bg-info/15 text-info, bg-muted text-muted-foreground) — sem paleta crua, sem gradiente, sem par dark: casado a mao (R4). border-transparent nao e necessario: a variante default do Badge ja traz e o cn deduplica.",
+        "components/ui/page-header.tsx novo: client, um unico h1 (AC-V6-04), titulo obrigatorio, descricao quieta, acoes a direita, icone LucideIcon opcional. useEffect escreve document.title = '<titulo> · DisplayQuest' (DEC-188, AC-V6-36). Primitivo puro (R3): sem fetch, sem useContext.",
+        "components/ui/stat-card.tsx novo: reproduz o bloco copiado em 6 arquivos (AC-V6-05) — CardHeader 'flex flex-row items-center justify-between space-y-0 pb-2', label text-sm font-medium, valor text-2xl font-bold, dica text-xs text-muted-foreground; icone LucideIcon com h-4 w-4 text-muted-foreground controlados por dentro do primitivo.",
+        "components/ui/empty-state.tsx e search-input.tsx novos: estado vazio sem artwork (DEC-109) com hierarquia tipografica propria (titulo text-base font-medium, descricao text-sm); busca controlada com lupa e aria-label obrigatorio (licao da DEC-86). A busca do quadro (board-toolbar) NAO foi convertida — tem comportamento proprio de breakpoint e a conversao e da V6-3.",
+        "Troca mecanica nas duas copias de status de projeto: project-list.tsx (:15/:21) e project-detail-dialog.tsx (:79/:85) param de definir statusColors/statusLabels proprios e importam de status.ts. As maps de TAREFA do dialog (:91/:99) ficam ate a V6-5, quando o dialog sai; as do cartao migram na V6-3.",
+        "app/layout.tsx: o fallback metadata.title troca 'Sistema de Gerenciamento de Tarefas' por 'DisplayQuest' (DEC-188). O h1 do intersticial / (app/page.tsx:22) fica para a V6-10.",
+        "5 arquivos de teste novos de §8.1: tests/unit/ui/{page-header,stat-card,empty-state,search-input,status-badges}.test.tsx — 17 testes. page-header asserta document.title (inclusive rerender e StrictMode, licao do gotcha do plan-v4); status-badges congela os tres labels pt-BR, veda paleta crua/gradiente/dark: e prova que as duas copias locais sumiram dos dois consumidores.",
+        "/ui-review rodado (ui-reviewer, sem bloqueador): dois ajustes aplicados — hierarquia de titulo no EmptyState e icones tipados LucideIcon com tamanho/cor do primitivo em StatCard/EmptyState; observacoes registradas sem mudanca: document.title sem cleanup (risco so em rota intersticial, coberto pela onda de adocao), Badge preenchido vs tingido (V6-3/V6-5 escolhem o tingido), pl-9 vs pl-10 (o primitivo define o valor canonico)."
+      ],
+      "gates": {
+        "G0": "arch:check 1036 modulos / 4420 dependencias, zero violacao, allow-list vazia",
+        "G1": "eslint --no-eslintrc nos arquivos da onda: exit 0",
+        "G2": "tsc --noEmit: 0 erros (a divida pre-existente foi quitada no SUB-1; a onda exigiu 0)",
+        "G3": "tests/unit+features 162 arquivos / 2160 testes (145/2016 so tests/unit); suíte completa 177 / 2290 com DATABASE_URL na 5433. FLAKE NAO IDENTIFICADO: uma corrida de unit+features deu 1 falha; a reexecucao com filtro de falha e mais tres corridas seguintes deram verde integral, entao o teste que falhou nao foi nomeado — se a falha voltar, capturar o nome antes de concluir por flake (mesma classe do flake de digitacao medido no V4-6b, mas aqui nao medido)",
+        "e2e": "nao rodou nesta onda: nenhum arquivo de tela do shell ou do quadro mudou; os primitivos ainda nao tem consumidor de rota"
+      }
     }
   ],
   "openQuestions": [],

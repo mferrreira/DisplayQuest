@@ -27,6 +27,7 @@ import { BacklogDialog } from "@/components/features/backlog-dialog"
 import type { Project, Task } from "@/contexts/types"
 import { useAuth } from "@/contexts/auth-context"
 import { useUser } from "@/contexts/user-context"
+import { projectStatusBadgeClass, projectStatusLabel } from "@/components/ui/status"
 import { POINTS_PER_TASK } from "@/features/tasks"
 import { ProjectMembersManagement } from "@/components/features/project-members-management"
 import { ProjectHoursStats } from "@/components/features/project-hours-stats"
@@ -76,18 +77,8 @@ export function ProjectDetailDialog({
   ).length
   const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0
 
-  const statusColors = {
-    active: "bg-green-100 text-green-800 dark:bg-success/15 dark:text-green-300",
-    completed: "bg-blue-100 text-blue-800 dark:bg-info/15 dark:text-blue-300",
-    archived: "bg-gray-100 text-gray-800 dark:bg-muted/50 dark:text-gray-200",
-  }
-
-  const statusLabels = {
-    active: "Ativo",
-    completed: "Concluído",
-    archived: "Arquivado",
-  }
-
+  // V6-1 (RF-V6.2 R2): o mapa de status do PROJETO saiu daqui e virou `components/ui/status.ts`
+  // (unica fonte). Os mapas de TAREFA ficam ate a V6-5, quando este dialog inteiro sai.
   const taskStatusColors = {
     "to-do": "bg-yellow-100 text-yellow-800 dark:bg-warning/15 dark:text-yellow-300",
     "in-progress": "bg-blue-100 text-blue-800 dark:bg-info/15 dark:text-blue-300",
@@ -188,8 +179,8 @@ export function ProjectDetailDialog({
               <div className="flex-1">
                 <DialogTitle className="text-2xl">{project.name}</DialogTitle>
                 <div className="flex items-center gap-2 mt-2">
-                  <Badge className={statusColors[project.status as keyof typeof statusColors]}>
-                    {statusLabels[project.status as keyof typeof statusLabels]}
+                  <Badge className={projectStatusBadgeClass[project.status]}>
+                    {projectStatusLabel[project.status]}
                   </Badge>
                   <span className="text-sm text-muted-foreground">
                     Criado em {new Date(project.createdAt).toLocaleDateString("pt-BR")}
@@ -489,8 +480,8 @@ export function ProjectDetailDialog({
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Status:</span>
-                        <Badge className={statusColors[project.status as keyof typeof statusColors]}>
-                          {statusLabels[project.status as keyof typeof statusLabels]}
+                        <Badge className={projectStatusBadgeClass[project.status]}>
+                          {projectStatusLabel[project.status]}
                         </Badge>
                       </div>
                     </div>

@@ -77,8 +77,9 @@ referência mostra** — a lacuna do tema escuro é **texto na skill**, não CSS
 | D-Q | **DEC-187** | **Nomes de terceiros em telas de gestão ficam fora do escopo** (fila de compras, painel admin): o propósito da tela é identificar o titular do registro; nada de visibilidade nova e o **CPF** segue restrito (DEC-138). | dono, 2026-10-14 (ASK-V6-05) |
 | D-R | **DEC-188** | **Título do navegador por tela, por efeito no cliente dentro do `PageHeader`** (`document.title = "<título da tela> · DisplayQuest"`) — sem RSC e sem `layout.tsx` por segmento; `app/layout.tsx` mantém o fallback, com o nome do produto. | dono, 2026-10-14 (ASK-V6-06) |
 
-> **Próxima decisão livre: DEC-190.** DEC-189 é do plan-v4 (lote SUB-1, autoridade de
-> subtask, 2026-10-15). Antes de abrir DEC nova, `grep` os **cinco**
+> **Próxima decisão livre: DEC-204.** DEC-189 é do plan-v4 (lote SUB-1, autoridade de
+> subtask, 2026-10-15) e DEC-190..203 são do plan-v7 (servidor MCP, 2026-10-15). Antes de
+> abrir DEC nova, `grep` os **seis**
 > `STATE.json` (regra global da casa — a numeração é global e já tem buraco). O plan-v5
 > tomou a DEC-180 em 2026-10-14 (V5-fix-2, "Gerar DOCX"), por isso as decisões da revisão
 > nasceram em 181..184 e as **quatro respostas às ASK** em 185..188, no mesmo dia.
@@ -181,11 +182,11 @@ O erro é `getByRole` com `exact` em `features/laboratorio/__tests__/floating-ti
 sem o toolchain instalado não dá para provar que o teste continua verde, e um teste verde
 não se troca por um palpite. O conserto fica para quem tiver as dependências instaladas.
 
-**Bloqueio medido em 2026-10-15 (vale para V6-1 em diante):** esta árvore **não tem
-`node_modules`** (`ls node_modules` → não existe) e a imagem `displayquest-app` é podada
-(`node_modules/typescript` e `node_modules/vitest` ausentes), então **G0/G1/G2/G3 não rodam
-aqui hoje**. Instalar as dependências é pré-requisito para executar a V6-1 em diante; até
-lã, o critério de gate fica sem medição.
+**Bloqueio medido em 2026-10-15 (vale para V6-1 em diante): SUPERADO no mesmo dia.** A
+árvore não tinha `node_modules` e a imagem `displayquest-app` é podada
+(`node_modules/typescript` e `node_modules/vitest` ausentes). As dependências foram
+instaladas no host antes da V6-1, e G0/G1/G2/G3 rodaram nela (arch:check 1036/4420 zero,
+tsc 0, suíte completa 177/2290 com o banco de teste na 5433).
 
 **DC:** AC-V6-23 verde. **Commit:** **nenhum** — `.gitignore:7` ignora `.opencode/**` desde
 antes deste plano, entao a onda nao entra no versionamento (a prova e o grep e o diff local).
@@ -406,15 +407,16 @@ com as duas chaves novas na matriz no valor da decisão.
 | **G5** | `npm run docs:build && npm run docs:check` | verde | ondas com tela visível |
 | **G6** | recapturar `docs/screens/` | — | quando a captura deixa de representar a tela |
 
-**G2 está decidido (V6-0, 2026-10-15): o erro pré-existente fica registrado como dívida, não
-consertado.** O `tsc` **não** fecha em 0 nesta branch; o critério de toda onda é **não
-piorar**, e nenhuma onda pode exigir "0 erros" enquanto essa dívida existir. O conserto
-proposto (`getByRole` sem `exact`, ver o bloco do V6-0) está anotado para quem tiver o
-toolchain instalado.
+**G2 estava decidido (V6-0, 2026-10-15) como dívida registrada, não consertada. SUPERADO no
+mesmo dia (lote SUB-1 do plan-v4, 2026-10-15):** o erro pré-existente em
+`features/laboratorio/__tests__/floating-timer-tabs.test.tsx:105` foi consertado lá — regex
+ancorada `/^Pausar$/` no lugar do `exact`, que não existe em `ByRoleOptions` — com o teste
+verde. O `tsc` desta branch **fecha em 0** desde então; as ondas passam a exigir "tsc 0".
 
-**Bloqueio medido (2026-10-15):** esta árvore **não tem `node_modules`** e a imagem
-`displayquest-app` é podada (sem `typescript` nem `vitest`), então **nenhum gate deste
-plano roda aqui hoje**. Instalar as dependências vem antes do V6-1.
+**Bloqueio medido (2026-10-15): SUPERADO no mesmo dia.** `node_modules` foi instalado no
+host e o banco de teste sobe com `npm run db:test:up` + `db:test:setup`. Os gates rodaram
+na V6-1: arch:check 1036/4420 zero, tsc 0, suíte completa 177/2290 com `DATABASE_URL` na
+5433.
 
 **e2e (requer dev server em `:3001`):**
 `npx playwright test tests/e2e/shell.spec.ts` → 5 passando;
@@ -463,9 +465,9 @@ plano roda aqui hoje**. Instalar as dependências vem antes do V6-1.
   e não em 180..183.
 - **Nenhuma ASK aberta:** o plano não executa onda com pergunta em aberto — a tabela da
   SPEC §12 é registro histórico do que foi perguntado e decidido.
-- **Próxima livre: DEC-190** (DEC-189 é do plan-v4, lote SUB-1 de 2026-10-15). Antes de
-  abrir DEC nova, `grep` os **cinco** `STATE.json`
-  (clean-arch, plan-v3, plan-v4, plan-v5, plan-v6) — a numeração é global e já tem buraco.
+- **Próxima livre: DEC-204** (DEC-189 é do plan-v4, lote SUB-1 de 2026-10-15; DEC-190..203
+  são do plan-v7, 2026-10-15). Antes de abrir DEC nova, `grep` os **seis** `STATE.json`
+  (clean-arch, plan-v3, plan-v4, plan-v5, plan-v6, plan-v7) — a numeração é global e já tem buraco.
 - `ASK-V6-NN` para perguntas ao dono; `GAP-V6-NN` para lacunas abertas.
 
 ## 9. Como executar

@@ -11,18 +11,7 @@ import { ProjectDialog } from "./project-dialog"
 import { Plus, Edit, Trash2, Calendar, Eye } from "lucide-react"
 import type { Project } from "@/contexts/types"
 import { hasAccess } from "@/lib/utils/utils"
-
-const statusColors = {
-  active: "bg-green-100 text-green-800 dark:bg-success/15 dark:text-green-300",
-  completed: "bg-blue-100 text-blue-800 dark:bg-info/15 dark:text-blue-300",
-  archived: "bg-gray-100 text-gray-800 dark:bg-muted/50 dark:text-gray-200",
-}
-
-const statusLabels = {
-  active: "Ativo",
-  completed: "Concluído",
-  archived: "Arquivado",
-}
+import { projectStatusBadgeClass, projectStatusLabel } from "@/components/ui/status"
 
 interface ProjectListProps {
   onProjectSelect?: (project: Project) => void
@@ -129,8 +118,8 @@ export function ProjectList({ onProjectSelect, projects: providedProjects }: Pro
                       Criado em {new Date(project.createdAt).toLocaleDateString("pt-BR")}
                     </CardDescription>
                   </div>
-                  <Badge className={statusColors[project.status as keyof typeof statusColors]}>
-                    {statusLabels[project.status as keyof typeof statusLabels]}
+                  <Badge className={projectStatusBadgeClass[project.status]}>
+                    {projectStatusLabel[project.status]}
                   </Badge>
                 </div>
               </CardHeader>
