@@ -97,12 +97,14 @@ describe("FloatingSessionTimer tabgroup", () => {
     workSessionsMock.activeSession = session;
     render(<FloatingSessionTimer />);
     await user.click(openTimer());
-    // `exact`: o painel tem o botão "Pausar" e o botão de informação do som, cujo nome
-    // acessível é "Como funciona o som ao pausar" — sem `exact` os dois casam e o teste
-    // quebra por strict mode violation. (O botão de informação só apareceu quando o som
-    // passou a ser arquivo: antes, `isAlertSoundSupported` media `AudioContext`, que o
-    // jsdom não implementa, e o botão não era renderizado nenhum.)
-    await user.click(screen.getByRole("button", { name: "Pausar", exact: true }));
+    // Nome acessível exato: o painel tem o botão "Pausar" e o botão de informação do som,
+    // cujo nome acessível é "Como funciona o som ao pausar" — casar por substring faz os
+    // dois baterem e o teste cai em strict mode violation. `exact` não existe em
+    // `ByRoleOptions` (TS2769), então a igualdade exata vem da regex ancorada. (O botão de
+    // informação só apareceu quando o som passou a ser arquivo: antes,
+    // `isAlertSoundSupported` media `AudioContext`, que o jsdom não implementa, e o botão
+    // não era renderizado nenhum.)
+    await user.click(screen.getByRole("button", { name: /^Pausar$/ }));
     await waitFor(() => expect(workSessionsMock.pauseSession).toHaveBeenCalledWith(7));
     expect(ResponsibilitiesAPI.pause).not.toHaveBeenCalled();
   });

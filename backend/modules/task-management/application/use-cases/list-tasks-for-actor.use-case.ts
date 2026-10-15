@@ -1,12 +1,13 @@
-import { canListAllTasks, dedupeTasksById, hasPermission, type Task } from "@/backend/domain";
+import { canListAllTasks, dedupeTasksById, hasPermission, normalizeRoles, type Task } from "@/backend/domain";
 import { requireTaskPersonActor } from "@/backend/modules/task-management/application/use-cases/internal/require-task-actor";
 import type { ListTasksForActorQuery } from "@/backend/modules/task-management/application/contracts";
 import type { TaskAssigneesPort } from "@/backend/modules/task-management/application/ports/task-assignees.repository";
 import type { TaskActorsPort } from "@/backend/modules/task-management/application/ports/task-actors.port";
 import type { TaskProgressPort } from "@/backend/modules/task-management/application/ports/task-progress.repository";
+import type { TaskProjectsPort } from "@/backend/modules/task-management/application/ports/task-projects.port";
 import type { TaskSubtasksPort } from "@/backend/modules/task-management/application/ports/task-subtasks.repository";
 import type { TaskRepositoryPort } from "@/backend/modules/task-management/application/ports/task.repository";
-import { applyActorProgressToTasks, batchAttachSubtasks } from "@/backend/modules/task-management/application/use-cases/internal/task-view";
+import { applyActorProgressToTasks, batchAttachSubtasksForActor } from "@/backend/modules/task-management/application/use-cases/internal/task-view";
 
 /**
  * ListTasksForActorUseCase — OND4-B3 (R2): visibility rules moved from the gateway.
@@ -26,6 +27,7 @@ export interface ListTasksForActorDependencies {
   progress: TaskProgressPort
   actors: TaskActorsPort
   subtasks: TaskSubtasksPort
+  projects: TaskProjectsPort
 }
 
 export class ListTasksForActorUseCase {
@@ -65,6 +67,8 @@ export class ListTasksForActorUseCase {
           actorId,
           this.dependencies,
         ),
+        person.id,
+        person.roles,
       )
     }
 
@@ -74,11 +78,16 @@ export class ListTasksForActorUseCase {
         actorId,
         this.dependencies,
       ),
+      person.id,
+      person.roles,
     )
   }
 
-  private async withSubtasks(tasks: Task[]) {
-    return await batchAttachSubtasks(tasks, this.dependencies.subtasks)
+  private async withSubtasks(tasks: Task[], actorId: number, actorRoles: unknown) {
+    // DEC-189: a lista de subtasks só chega a dono e gestão — o cartão do quadro mostra a
+    // trava exatamente para quem pode operá-la. `actorRoles` e `unknown` (AtorRef, DEC-54);
+    // a decisao de dominio recebe a lista normalizada.
+    return await batchAttachSubtasksForActor(tasks, actorId, normalizeRoles(actorRoles), this.dependencies)
   }
 
   private async scopedForActor(actorId: number) {

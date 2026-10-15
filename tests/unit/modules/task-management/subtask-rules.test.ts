@@ -30,6 +30,9 @@ import {
   subtaskMarkMessage,
   SUBTASK_MARKABLE_STATUSES,
   SUBTASK_TITLE_MAX_LENGTH,
+  SUBTASK_MANAGER_ROLES,
+  canActorOperateSubtasksDecision,
+  type SubtaskAuthorityFacts,
 } from "@/backend/domain";
 
 /**
@@ -238,5 +241,49 @@ describe("V4-4 · o que a regra NÃO é", () => {
     // A assinatura devolve a base da mãe para a data pedida — não existe "premio da subtask"
     // em lugar nenhum do domínio desde a DEC-97 (`awardPointsForSubtask` foi removido).
     expect(totalAwardForCompletion({ dueDate: DUE }, [done()], new Date("2026-10-20T12:00:00.000Z"))).toBe(15);
+  });
+});
+
+describe("DEC-189 · autoridade de subtask — dono ou gestão, nunca 'qualquer um'", () => {
+  const facts = (over: Partial<SubtaskAuthorityFacts>): SubtaskAuthorityFacts => ({
+    actorId: 7,
+    actorRoles: ["VOLUNTARIO"],
+    assigneeIds: [7],
+    projectLeaderId: 1,
+    projectCreatorId: 1,
+    ...over,
+  });
+
+  it("o responsável da mãe é dono", () => {
+    expect(canActorOperateSubtasksDecision(facts({}))).toBe(true);
+  });
+
+  it("COLABORADOR e PESQUISADOR portam MANAGE_TASKS mas NÃO são gestão de subtask — o buraco fechado", () => {
+    // Medido em permissions.ts: MANAGE_TASKS inclui COLABORADOR e PESQUISADOR. Pela regra
+    // antiga (DEC-82) eles marcavam subtask de qualquer um; pela DEC-189, só dono/gestão.
+    expect(canActorOperateSubtasksDecision(facts({ actorId: 12, actorRoles: ["COLABORADOR"], assigneeIds: [7] }))).toBe(false);
+    expect(canActorOperateSubtasksDecision(facts({ actorId: 13, actorRoles: ["PESQUISADOR"], assigneeIds: [7] }))).toBe(false);
+  });
+
+  it("membro do projeto que não é responsável não opera mais (a saída da regra)", () => {
+    // Membership não é fato da decisão: quem só "é do projeto" recebe a mãe com lista vazia.
+    expect(canActorOperateSubtasksDecision(facts({ actorId: 8, assigneeIds: [7] }))).toBe(false);
+  });
+
+  it("COORDENADOR, GERENTE e GERENTE_PROJETO são gestão", () => {
+    for (const role of ["COORDENADOR", "GERENTE", "GERENTE_PROJETO"]) {
+      expect(canActorOperateSubtasksDecision(facts({ actorId: 20, actorRoles: [role], assigneeIds: [7] }))).toBe(true);
+    }
+    expect(SUBTASK_MANAGER_ROLES).toEqual(["COORDENADOR", "GERENTE", "GERENTE_PROJETO"]);
+  });
+
+  it("líder e criador do projeto são gestão mesmo sem papel elevado", () => {
+    expect(canActorOperateSubtasksDecision(facts({ actorId: 1, actorRoles: ["VOLUNTARIO"], assigneeIds: [7] }))).toBe(true);
+    expect(canActorOperateSubtasksDecision(facts({ actorId: 1, projectLeaderId: null, projectCreatorId: 1, assigneeIds: [7] }))).toBe(true);
+  });
+
+  it("tarefa sem projeto: só o responsável opera", () => {
+    expect(canActorOperateSubtasksDecision(facts({ actorId: 1, projectLeaderId: null, projectCreatorId: null, assigneeIds: [7] }))).toBe(false);
+    expect(canActorOperateSubtasksDecision(facts({ assigneeIds: [7, 8] }))).toBe(true); // segundo responsável também é dono
   });
 });

@@ -22,9 +22,12 @@ export {
   serializeSubtask,
   supportsSubtasks,
   normalizeNewSubtasks,
+  SUBTASK_MANAGER_ROLES,
+  canActorOperateSubtasksDecision,
   type ISubtask,
   type NewSubtaskInput,
   type SubtaskLockAction,
+  type SubtaskAuthorityFacts,
 } from "./subtask-rules";
 export {
   isPublicProgressOnlyUpdate,

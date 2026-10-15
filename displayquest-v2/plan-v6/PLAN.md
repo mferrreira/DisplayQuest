@@ -77,7 +77,8 @@ referência mostra** — a lacuna do tema escuro é **texto na skill**, não CSS
 | D-Q | **DEC-187** | **Nomes de terceiros em telas de gestão ficam fora do escopo** (fila de compras, painel admin): o propósito da tela é identificar o titular do registro; nada de visibilidade nova e o **CPF** segue restrito (DEC-138). | dono, 2026-10-14 (ASK-V6-05) |
 | D-R | **DEC-188** | **Título do navegador por tela, por efeito no cliente dentro do `PageHeader`** (`document.title = "<título da tela> · DisplayQuest"`) — sem RSC e sem `layout.tsx` por segmento; `app/layout.tsx` mantém o fallback, com o nome do produto. | dono, 2026-10-14 (ASK-V6-06) |
 
-> **Próxima decisão livre: DEC-189.** Antes de abrir DEC nova, `grep` os **cinco**
+> **Próxima decisão livre: DEC-190.** DEC-189 é do plan-v4 (lote SUB-1, autoridade de
+> subtask, 2026-10-15). Antes de abrir DEC nova, `grep` os **cinco**
 > `STATE.json` (regra global da casa — a numeração é global e já tem buraco). O plan-v5
 > tomou a DEC-180 em 2026-10-14 (V5-fix-2, "Gerar DOCX"), por isso as decisões da revisão
 > nasceram em 181..184 e as **quatro respostas às ASK** em 185..188, no mesmo dia.
@@ -462,7 +463,8 @@ plano roda aqui hoje**. Instalar as dependências vem antes do V6-1.
   e não em 180..183.
 - **Nenhuma ASK aberta:** o plano não executa onda com pergunta em aberto — a tabela da
   SPEC §12 é registro histórico do que foi perguntado e decidido.
-- **Próxima livre: DEC-189.** Antes de abrir DEC nova, `grep` os **cinco** `STATE.json`
+- **Próxima livre: DEC-190** (DEC-189 é do plan-v4, lote SUB-1 de 2026-10-15). Antes de
+  abrir DEC nova, `grep` os **cinco** `STATE.json`
   (clean-arch, plan-v3, plan-v4, plan-v5, plan-v6) — a numeração é global e já tem buraco.
 - `ASK-V6-NN` para perguntas ao dono; `GAP-V6-NN` para lacunas abertas.
 

@@ -1,7 +1,7 @@
 import {
   applyAssigneeIds,
+  canActorOperateSubtasksDecision,
   ForbiddenError,
-  hasPermission,
   isClaimable,
   subtaskBasePoints,
   toTaskView,
@@ -185,19 +185,16 @@ export async function batchAttachSubtasks(tasks: Task[], subtasks: TaskSubtasksP
 
 export interface SubtaskAuthorityDeps {
   assignees: TaskAssigneesPort;
-  actors: TaskActorsPort;
   projects: TaskProjectsPort;
 }
 
 /**
- * "A mesma autoridade de editar a mãe" (resposta do dono, DEC-82), traduzida para as portas
- * deste módulo.
- * A mãe é editada hoje por três portas no `UpdateTaskUseCase`, e a união delas é esta:
- *   - quem tem MANAGE_TASKS ou MANAGE_USERS;
- *   - quem está atribuído à tarefa (coluna `assignedTo` ou `task_assignees`);
- *   - quem criou ou lidera o projeto da tarefa;
- *   - quem é membro do projeto da tarefa.
- * Sem projeto, sem atribuição e sem gestão: barrado.
+ * DEC-189 (2026-10-14): a autoridade de subtask DEIXOU de ser a de editar a mãe (DEC-82).
+ * A união antiga dava `MANAGE_TASKS` em bloco — e COLABORADOR/PESQUISADOR portam essa
+ * permissão (medido em `permissions.ts`), então "qualquer um" marcava subtask de qualquer um,
+ * exatamente o que o dono vetou. A decisão é a pura `canActorOperateSubtasksDecision`:
+ * dono (responsável da mãe) ou gestão (COORDENADOR/GERENTE/GERENTE_PROJETO, líder/criador do
+ * projeto). Membership qualquer e `MANAGE_TASKS` em bloco saíram.
  */
 export async function assertCanOperateSubtasks(
   task: Task,
@@ -205,17 +202,57 @@ export async function assertCanOperateSubtasks(
   actorRoles: string[],
   deps: SubtaskAuthorityDeps,
 ): Promise<void> {
-  const denied = new ForbiddenError("Usuário não pode gerenciar as subtasks desta tarefa");
-  if (hasPermission(actorRoles, "MANAGE_TASKS") || hasPermission(actorRoles, "MANAGE_USERS")) return;
-  if (await isActorAssignedToTask(task, actorId, deps.assignees)) return;
-  if (!task.projectId) throw denied;
+  const assigneeIds = await deps.assignees.listUserIdsByTaskId(task.id!);
+  // `assignedTo` e `number | null | undefined` no `Task` do zod — so numero estreita.
+  if (typeof task.assignedTo === "number" && !assigneeIds.includes(task.assignedTo)) assigneeIds.push(task.assignedTo);
+  let projectLeaderId: number | null = null;
+  let projectCreatorId: number | null = null;
+  if (task.projectId) {
+    const project = await deps.projects.findById(task.projectId);
+    projectLeaderId = project?.leaderId ?? null;
+    projectCreatorId = project?.createdBy ?? null;
+  }
+  if (!canActorOperateSubtasksDecision({ actorId, actorRoles, assigneeIds, projectLeaderId, projectCreatorId })) {
+    throw new ForbiddenError("Usuário não pode gerenciar as subtasks desta tarefa");
+  }
+}
 
-  const project = await deps.projects.findById(task.projectId);
-  if (project && (project.createdBy === actorId || project.leaderId === actorId)) return;
+/**
+ * DEC-189: a leitura obedece à MESMA decisão da escrita — quem não é dono nem gestão recebe
+ * a mãe com a lista vazia (a chave `subtasks` continua presente: `Task` a exige desde o gotcha
+ * do zod `.default([])`). Em lote, como `batchAttachSubtasks`: uma consulta de assignees,
+ * um lookup por projeto distinto, nada de N+1.
+ */
+export async function batchAttachSubtasksForActor(
+  tasks: Task[],
+  actorId: number,
+  actorRoles: string[],
+  deps: { subtasks: TaskSubtasksPort } & SubtaskAuthorityDeps,
+): Promise<Task[]> {
+  const taskIds = tasks.filter((task) => task.id).map((task) => task.id!);
+  if (taskIds.length === 0) return tasks;
+  const [assigneesByTask, grouped] = await Promise.all([
+    deps.assignees.listUserIdsByTaskIds(taskIds),
+    deps.subtasks.listByTaskIds(taskIds),
+  ]);
+  const projectIds = [...new Set(tasks.map((task) => task.projectId).filter((id): id is number => id !== null))];
+  const projects = new Map<number, { leaderId: number | null; createdBy: number | null } | null>();
+  for (const projectId of projectIds) projects.set(projectId, await deps.projects.findById(projectId));
 
-  const memberships = await deps.actors.getUserProjectMemberships(actorId);
-  if (memberships.some((membership) => membership.projectId === task.projectId)) return;
-  throw denied;
+  return tasks.map((task) => {
+    if (!task.id) return task;
+    const assigneeIds = assigneesByTask.get(task.id) ?? [];
+    if (typeof task.assignedTo === "number" && !assigneeIds.includes(task.assignedTo)) assigneeIds.push(task.assignedTo);
+    const project = typeof task.projectId === "number" ? projects.get(task.projectId) ?? null : null;
+    const visible = canActorOperateSubtasksDecision({
+      actorId,
+      actorRoles,
+      assigneeIds,
+      projectLeaderId: project?.leaderId ?? null,
+      projectCreatorId: project?.createdBy ?? null,
+    });
+    return toTaskView({ ...task, subtasks: visible ? grouped.get(task.id) ?? [] : [] });
+  });
 }
 
 /**

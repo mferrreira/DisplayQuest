@@ -453,18 +453,30 @@ describe("V4-4 · janela — criar/renomear/apagar só enquanto a mãe não est�
   });
 });
 
-describe("V4-4 · autoridade — a mesma de editar a mãe", () => {
+describe("DEC-189 · autoridade — dono ou gestão (deixou de ser a mesma de editar a mãe, DEC-82)", () => {
   it("responsável da mãe opera", async () => {
     addTask({ id: 52, assignedTo: 7 });
     expect((await createSubtask(52, 7, "Pelo responsável")).subtask.title).toBe("Pelo responsável");
   });
 
-  it("membro do projeto que não é responsável opera", async () => {
+  it("DEC-189: membro do projeto que não é responsável é BARRADO (a saída da regra antiga)", async () => {
     addTask({ id: 53, assignedTo: 7 });
-    expect((await createSubtask(53, 8, "Pelo colega do projeto")).subtask.id).toBeGreaterThan(0);
+    await expect(createSubtask(53, 8, "Pelo colega do projeto")).rejects.toThrow(ForbiddenError);
+    expect(store.subtasks.size).toBe(0);
   });
 
-  it("quem tem MANAGE_USERS opera", async () => {
+  it("DEC-189: GERENTE_PROJETO é gestão e opera", async () => {
+    addTask({ id: 531, assignedTo: 7 });
+    expect((await createSubtask(531, 9, "Pelo gerente de projeto")).subtask.id).toBeGreaterThan(0);
+  });
+
+  it("DEC-189: o líder do projeto opera mesmo sem papel elevado (user 1 é líder/criador do projeto 3)", async () => {
+    addTask({ id: 532, assignedTo: 7, projectId: 3 });
+    // user 1 é COORDENADOR no fixture; a liderança decide sozinha tambem — coberto na regra pura.
+    expect((await createSubtask(532, 1, "Pelo lider")).subtask.id).toBeGreaterThan(0);
+  });
+
+  it("COORDENADOR (porta MANAGE_USERS da regra antiga) segue operando — agora como gestão da lista", async () => {
     addTask({ id: 54, assignedTo: 7 });
     expect((await createSubtask(54, 1, "Pelo coordenador")).subtask.id).toBeGreaterThan(0);
   });

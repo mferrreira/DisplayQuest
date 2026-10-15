@@ -10,24 +10,24 @@
   "lineage": {
     "previousPlan": "plan-v5 (FECHADO em 2026-10-14, batch V5-close: bucket SeaweedFS, anexos/imagens, dados de pessoa e de vinculo, cronograma, relatorio tecnico + rascunho de IA, atestados, andamento, visibilidade de perfil). Estado/decisoes em displayquest-v2/plan-v5/{PLAN.md,STATE.json}, STATE.json v5.29.0, DEC-61..77, 99..104 e 126..180.",
     "concurrentPlan": "NENHUM. O plan-v5 fechou (done, 2026-10-14) e a DEC-145 (dono 2026-10-13) determinava que o plan-v6 so comeca depois disso. A DEC-113 (backend e a fonte de verdade; front segue o back) esta SATISFEITA: as telas de V6-4/V6-5/V6-7 sao refatoradas no estado pos-plan-v5 (PROPPI, dados de pessoa e de vinculo, capa de perfil, cronograma, atestados, relatorios tecnicos). Nao ha mais colisao.",
-    "note": "a numeracao de decisoes e GLOBAL: DEC-01..29 clean-arch, DEC-30..49 plan-v3, DEC-50..54 B6/D4, DEC-55..60 plan-v4, DEC-61..77 plan-v5, DEC-78..98 plan-v4, DEC-99..104 plan-v5, DEC-105..114 este plano, DEC-115..125 clean-arch/B6-restante+B9/B10, DEC-126..180 plan-v5 (126/127 em 2026-10-09; 128/130 templates; 131..137 bucket e imagens; 138..152 alinhamento e V5-4; 153..178 V5-5..V5-12; 179/180 V5-fix-1/V5-fix-2 em 2026-10-14). O plan-v5 tomou a DEC-180 no mesmo dia (V5-fix-2, 'Gerar DOCX'), por isso as decisoes da revisao nascem em DEC-181..184 e nao em DEC-180..183; as QUATRO respostas as ASK deste plano (respondidas pelo dono em 2026-10-14, gravadas em 2026-10-15) sao DEC-185..188 — nenhuma ASK fica aberta. Proxima decisao: DEC-189. Antes de abrir DEC nova, grep os CINCO STATE.json (clean-arch, plan-v3, plan-v4, plan-v5, plan-v6)."
+    "note": "a numeracao de decisoes e GLOBAL: DEC-01..29 clean-arch, DEC-30..49 plan-v3, DEC-50..54 B6/D4, DEC-55..60 plan-v4, DEC-61..77 plan-v5, DEC-78..98 plan-v4, DEC-99..104 plan-v5, DEC-105..114 este plano, DEC-115..125 clean-arch/B6-restante+B9/B10, DEC-126..180 plan-v5 (126/127 em 2026-10-09; 128/130 templates; 131..137 bucket e imagens; 138..152 alinhamento e V5-4; 153..178 V5-5..V5-12; 179/180 V5-fix-1/V5-fix-2 em 2026-10-14). O plan-v5 tomou a DEC-180 no mesmo dia (V5-fix-2, 'Gerar DOCX'), por isso as decisoes da revisao nascem em DEC-181..184 e nao em DEC-180..183; as QUATRO respostas as ASK deste plano (respondidas pelo dono em 2026-10-14, gravadas em 2026-10-15) sao DEC-185..188 — nenhuma ASK fica aberta. DEC-189 NAO e deste plano: e do plan-v4 (lote SUB-1, autoridade de subtask, commitado 2026-10-15; o lote chegou a esta arvore citando 185 por engano e foi renumerado antes do commit). Proxima decisao: DEC-190. Antes de abrir DEC nova, grep os CINCO STATE.json (clean-arch, plan-v3, plan-v4, plan-v5, plan-v6)."
   },
   "baseline": {
-    "measuredAt": "2026-10-14",
-    "measuredOn": "dev, lote V5-fix-1 (pos-fechamento do plan-v5); nenhum commit do plan-v6 existe ainda",
-    "unitAndFeatures": "157 arquivos / 2134 testes (140/1990 so tests/unit)",
-    "fullSuite": "172 arquivos / 2264 testes, com dq-dev-test-db no ar e DATABASE_URL na 5433",
+    "measuredAt": "2026-10-15",
+    "measuredOn": "dev, lote SUB-1 do plan-v4 (DEC-189, autoridade de subtask) — re-medido depois desse commit; o baseline anterior (2026-10-14, lote V5-fix-1) era 157/2134 e 172/2264 com 1 erro de tsc",
+    "unitAndFeatures": "157 arquivos / 2143 testes (140/1999 so tests/unit)",
+    "fullSuite": "172 arquivos / 2273 testes, com dq-dev-test-db no ar e DATABASE_URL na 5433",
     "e2e": "quadro: 2 passando + 1 falha conhecida (cartão a mais na coluna, dado legítimo da instância — confirmar com git stash) + 5 did not run (spec serial); shell: 5 passando. Requer dev server em :3001",
     "archCheck": "1026 modulos / 4383 dependencias, zero violacao, allow-list vazia",
-    "tsc": "NAO fecha em 0: 1 erro pre-existente em features/laboratorio/__tests__/floating-timer-tabs.test.tsx:105 (getByRole com 'exact', que nao existe em ByRoleOptions; conferido com git stash no plan-v5). O V6-0 decidiu em 2026-10-15 REGISTRAR a divida, nao consertar: o criterio das ondas e NAO PIORAR. ATENCAO MEDIDA no V6-0: a arvore nao tem node_modules e a imagem displayquest-app e podada (sem typescript nem vitest), entao nenhum gate roda neste host hoje (ver blockers).",
-    "expectedAtEnd": "tests/unit + features: nunca MENOR que 157/2134 (RNF de nao-regressao); a expectativa e >= 170 arquivos (157 + os 13 arquivos novos da SPEC §8.1), com a contagem de testes crescendo no mesmo passo",
+    "tsc": "FECHA em 0 desde o lote SUB-1 (2026-10-15): o erro pre-existente em features/laboratorio/__tests__/floating-timer-tabs.test.tsx:105 (getByRole com 'exact', que nao existe em ByRoleOptions) foi consertado la, pela regex ancorada /^Pausar$/ — a divida que o V6-0 registrou esta quitada. node_modules esta instalado no host (B-V6-01 resolvido), entao G0/G1/G2/G3 rodam aqui.",
+    "expectedAtEnd": "tests/unit + features: nunca MENOR que 157/2143 (RNF de nao-regressao); a expectativa e >= 170 arquivos (157 + os 13 arquivos novos da SPEC §8.1), com a contagem de testes crescendo no mesmo passo",
     "timing": "G3 ~35s; suite completa ~50s (medido 2026-10-14)"
   },
   "gates": {
     "G0": "npm run arch:check — exit 0, allow-list VAZIA (baseline 2026-10-14: 1026/4383)",
     "G1": "npm run lint — exit 0 (warnings aceitos, nenhum erro; em worktree: npx eslint --no-eslintrc --config .eslintrc.json <arquivos>)",
-    "G2": "npx tsc --noEmit — NAO PIORAR — 1 erro pre-existente (features/laboratorio/__tests__/floating-timer-tabs.test.tsx:105), REGISTRADO como divida no V6-0 (2026-10-15), nao consertado (sem node_modules no host, o conserto nao teria verificacao). Nenhuma onda pode exigir 'tsc 0' enquanto a divida existir.",
-    "G3": "npx vitest run — zero failure e NUNCA MENOR que 157 arquivos / 2134 testes (unit+features); baseline 2026-10-14",
+    "G2": "npx tsc --noEmit — 0 erros. A divida registrada no V6-0 (1 erro pre-existente em floating-timer-tabs.test.tsx:105) foi quitada pelo lote SUB-1 do plan-v4 em 2026-10-15; desde la as ondas devem fechar com tsc em 0.",
+    "G3": "npx vitest run — zero failure e NUNCA MENOR que 157 arquivos / 2143 testes (unit+features); baseline re-medido 2026-10-15 (lote SUB-1)",
     "G4": "NAO SE APLICA — plano sem backend. Se algum diff tocar prisma/, backend/ ou app/api/, e erro de escopo (RF-V6.10 R1/R3)",
     "G5": "npm run docs:build + docs:check — obrigatório nas ondas V6-3, V6-4, V6-5, V6-6a, V6-6b, V6-7, V6-8, V6-9, V6-10 e no fechamento V6-11",
     "G6": "recapturar docs/screens/ quando a captura deixa de representar a tela (todas as telas mudam de visual nesta rodada)",
@@ -240,7 +240,9 @@
       "at": "2026-10-15",
       "what": "esta arvore nao tem node_modules (ls node_modules nao encontra o diretorio) e a imagem displayquest-app e podada: node_modules/typescript e node_modules/vitest nao existem na imagem",
       "effect": "nenhum gate do plano roda neste host: G0 (arch:check), G1 (lint), G2 (tsc), G3 (vitest) e o e2e dependem do toolchain. O V6-0 nao precisou deles (.opencode/** e gitignored e nenhum gate tecnico depende da onda), mas o V6-1 em diante depende",
-      "needed": "instalar as dependencias (npm ci) antes de executar o V6-1; o conserto da divida de G2 (getByRole sem 'exact') tambem depende disso"
+      "needed": "instalar as dependencias (npm ci) antes de executar o V6-1; o conserto da divida de G2 (getByRole sem 'exact') tambem depende disso",
+      "resolvedAt": "2026-10-15",
+      "resolution": "node_modules instalado no host e verificado: G0/G1/G2/G3 rodaram verdes no lote SUB-1 (2026-10-15), com dq-dev-test-db de pe via npm run db:test:up. A divida de G2 foi quitada no mesmo lote."
     }
   ],
   "removedItems": [

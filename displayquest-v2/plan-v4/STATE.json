@@ -1,7 +1,7 @@
 {
  "plan": "plan-v4",
  "version": "4.0.0",
- "updatedAt": "2026-10-07T09:20:00-03:00",
+ "updatedAt": "2026-10-15T11:20:00-03:00",
  "status": "done",
  "activeWave": "V4-5",
  "activeBatch": null,
@@ -171,7 +171,8 @@
   "DEC-57 (dono 2026-10-05, V4-4/V4-5): a trava 'a mãe não sai de Em Andamento enquanto houver subtask aberta' mora no DOMÍNIO e é aplicada no use case, devolvendo 400 com mensagem dizendo quantas subtasks faltam. Desabilitar só na UI foi rejeitado: a API aceitaria a mesma chamada e a regra existiria metade. A UI desabilita ALEM de bloquear, não em vez de.",
   "DEC-58 (dono 2026-10-05, V4-3): o cabeçalho passa a animar QUALQUER mudança de pontos desde a última vez que aquele usuário viu o número, não só o prêmio da tarefa que ele mesmo mutou. Baseline em dq:points-seen:<userId> via lib/client-storage.ts. O dono aceitou explicitamente a mudança de semântica. Consequências aceitas: primeira vez não anima (sem baseline); trocar de navegador anima de novo; ajuste de admin e compra aprovada também animam. Motivo medido: o sinal só nascia de mutação (use-tasks.ts:92) e só quando awardedTo === sessionUserId — o voluntário que não aprova nunca recebia o delta, e via 10 pts aparecerem sem contagem.",
   "DEC-59 (V4-2): quem conta gradualmente passa a ser o número do CABEÇALHO, não o chip. O chip passa a mostrar o valor final e a transladar ~10px em Y — para cima quando o número sobe, para baixo quando desce — só em desktop. Atenção medida: o chip usa hoje APENAS `animate-in fade-in` porque as variantes com transform sobrescrevem o `-translate-x-1/2` e desalinham o chip (comentário em points-delta.tsx:112). O movimento em Y precisa resolver isso, não ignorar. O contêiner do chip já é `hidden md:flex` (app-header.tsx:146), então desktop-only já é verdade para o chip.",
-  "DEC-96 (dono 2026-10-07, responde ASK-V4-33): TIRAR o filtro de status da tela de voluntarios (`components/features/volunteers-management.tsx`) em vez de levar o status real ate a tela. Medido: `VolunteerEntryOutput.status` e literal `\"active\"` (`backend/domain/project/project-rules.ts:273`) e `toVolunteerEntry` (:295) escreve `status: \"active\"` para todo mundo — o filtro 'Inativo'/'Afastado' era controle morto. O Select de status, o estado `statusFilter`, o `matchesStatus` e o import orfao `Filter` saem; a tela passa a falar o vocabulario real (`pending | active | rejected | suspended`, mesmos rotulos do painel: Pendente/Ativo/Rejeitado/Suspenso). A dívida registrada no guarda `user-status-vocabulary.test.ts` fica VAZIA (`KNOWN_DIVERGENCES = []`) — quitada, nao escondida; um `inactive` novo em qualquer lugar da base quebra o teste 3."
+  "DEC-96 (dono 2026-10-07, responde ASK-V4-33): TIRAR o filtro de status da tela de voluntarios (`components/features/volunteers-management.tsx`) em vez de levar o status real ate a tela. Medido: `VolunteerEntryOutput.status` e literal `\"active\"` (`backend/domain/project/project-rules.ts:273`) e `toVolunteerEntry` (:295) escreve `status: \"active\"` para todo mundo — o filtro 'Inativo'/'Afastado' era controle morto. O Select de status, o estado `statusFilter`, o `matchesStatus` e o import orfao `Filter` saem; a tela passa a falar o vocabulario real (`pending | active | rejected | suspended`, mesmos rotulos do painel: Pendente/Ativo/Rejeitado/Suspenso). A dívida registrada no guarda `user-status-vocabulary.test.ts` fica VAZIA (`KNOWN_DIVERGENCES = []`) — quitada, nao escondida; um `inactive` novo em qualquer lugar da base quebra o teste 3.",
+  "DEC-189 (dono 2026-10-14, pedido pós-encerramento; executado 2026-10-15 no lote SUB-1): a autoridade de subtask DEIXOU de ser a autoridade de editar a mãe (DEC-82). Pedido do dono, palavra por extensa: 'qualquer um pode marcar as subtasks dos outros, isso não pode em hipótese alguma... apenas o owner ou permissões elevadas possam marcar e visualizar'. Buraco medido: a união antiga dava `MANAGE_TASKS` em bloco, e COLABORADOR e PESQUISADOR portam essa permissão (`permissions.ts:22`) — então 'qualquer um' marcava subtask de qualquer um. Regra nova: a pura `canActorOperateSubtasksDecision` (`backend/domain/task/subtask-rules.ts`) — dono (responsável da mãe: `assignedTo` ∪ `task_assignees`) ou gestão (`SUBTASK_MANAGER_ROLES` = COORDENADOR/GERENTE/GERENTE_PROJETO, ou líder/criador do projeto). SAÍRAM da decisão: membership qualquer do projeto e `MANAGE_TASKS`/`MANAGE_USERS` em bloco. Quem portava `MANAGE_USERS` (COORDENADOR, GERENTE) não perde acesso: os dois são gestão na lista nova. A MESMA decisão decide marcar e ver: quem não é dono nem gestão recebe a mãe com a lista VAZIA, nunca um 'não' que confirma que a lista existe — `get-task-by-id` e `list-tasks-for-actor` anexam por `batchAttachSubtasksForActor` (em lote, sem N+1). O gate de escopo da MÃE não mudou (GET: MANAGE_USERS/dono/membro do projeto): ver a mãe é uma coisa, ver a lista é outra. Numeração: o lote chegou de uma sessão anterior citando DEC-185, que o plan-v6 já tinha ocupado (rota de Relatórios); renumerado para DEC-189 antes do commit."
  ],
  "batchLog": [
   {
@@ -464,6 +465,27 @@
     "G3": "87 arquivos / 1107 testes em tests/unit+features; suíte completa 97 / 1192 (DATABASE_URL na 5433)",
     "G4": "roundtrips Prisma contra 127.0.0.1:5433 — tasks-roundtrip 12 casos, inclui a recusa DEC-98 e a base 20",
     "G5": "docs:build (15 seções técnicas / 12 de usuário, 35 figuras) + docs:check: nenhum caractere suspeito"
+   }
+  },
+  {
+   "id": "SUB-1",
+   "at": "2026-10-15",
+   "title": "ajuste pós-encerramento: autoridade de subtask — dono ou gestão, nunca 'qualquer um' (DEC-189)",
+   "actions": [
+    "dominio: `subtask-rules.ts` ganha `SUBTASK_MANAGER_ROLES`, `SubtaskAuthorityFacts` e `canActorOperateSubtasksDecision` (pura, sem `now`); re-export no barrel `backend/domain/task`",
+    "escrita: `assertCanOperateSubtasks` (`internal/task-view.ts`) para de consultar `MANAGE_TASKS`/`MANAGE_USERS` e membership do projeto e chama a decisão pura; `SubtaskAuthorityDeps` encolhe (a porta `actors` saiu dos três use cases de mutação)",
+    "leitura: `get-task-by-id` e `list-tasks-for-actor` anexam subtasks só para quem a MESMA decisão autoriza — `batchAttachSubtasksForActor` em lote (uma consulta de assignees, um lookup por projeto distinto); quem não é dono nem gestão recebe a mãe com `subtasks: []`",
+    "wiring: `GetTaskByIdUseCase` e `ListTasksForActorUseCase` passam a receber a porta `projects` (`TaskProjectsPort`, que os use cases de mutação já tinham)",
+    "testes: +6 em `subtask-rules.test.ts` (decisão pura, incluindo o caso COLABORADOR/PESQUISADOR que portam `MANAGE_TASKS` e ficam de fora) e +3 em `subtask-use-cases.test.ts` (membro do projeto barrado, GERENTE_PROJETO opera, líder opera); o describe 'a mesma de editar a mãe' foi renomeado para DEC-189",
+    "carregado junto da sessão anterior (o lote chegou incompleto, com 10 erros de tsc): `person.roles` (`unknown` do `ActorRef`, DEC-54) passa por `normalizeRoles` nas duas leituras, e `assignedTo`/`projectId` estreitam por `typeof === \"number\"` porque o `Task` do zod admite `undefined`; e o conserto da dívida de G2 do plan-v6 — `floating-timer-tabs.test.tsx:105` troca o `exact` (que não existe em `ByRoleOptions`) pela regex ancorada `/^Pausar$/`"
+   ],
+   "gates": {
+    "G0": "arch:check 1026/4385 zero (allow-list vazia)",
+    "G1": "eslint --no-eslintrc nos arquivos do lote: exit 0",
+    "G2": "tsc --noEmit: 0 erros (a dívida pré-existente de 1 erro foi quitada neste lote)",
+    "G3": "157 arquivos / 2143 testes em tests/unit+features (140/1999 só tests/unit); suíte completa 172 / 2273",
+    "G4": "roundtrips Prisma contra 127.0.0.1:5433 (dq-dev-test-db) — verdes dentro da suíte completa",
+    "e2e": "no nao rodou neste lote: o diff toca o caminho de leitura da API e as regras estao congeladas em unit + roundtrip; o e2e do quadro tem a falha conhecida por dado da instancia"
    }
   }
  ],

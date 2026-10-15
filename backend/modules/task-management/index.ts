@@ -80,6 +80,9 @@ export class TaskManagementModule {
       subtasks: ports.subtasks,
       // B6-7 (D4): o escopo do GET (membro do projeto?) e decidido aqui — precisa da porta.
       actors: ports.actors,
+      // DEC-189: a lista de subtasks so chega a dono/gestao — lider e criador do projeto dao
+      // na decisao.
+      projects: ports.projects,
     })
     const assertCanManageTasksUseCase = new AssertCanManageTasksUseCase()
     const listTasksForActorUseCase = new ListTasksForActorUseCase({
@@ -88,6 +91,8 @@ export class TaskManagementModule {
       progress: ports.progress,
       actors: ports.actors,
       subtasks: ports.subtasks,
+      // DEC-189: visibilidade de subtask por ator (lider/criador do projeto na decisao).
+      projects: ports.projects,
     })
     const createTaskUseCase = new CreateTaskUseCase({
       tasks: ports.tasks,
