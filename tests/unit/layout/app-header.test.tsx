@@ -47,6 +47,12 @@ vi.mock("@/components/layout/theme-toggle", () => ({
   ThemeToggle: () => <button type="button" aria-label="Alternar tema" />,
 }));
 
+// O cronômetro de sessão mora no header agora, mas exige WorkSessionsProvider/ProjectProvider
+// — não é o contrato deste teste (esqueleto do shell: identidade, sino, tema, avatar, hambúrguer).
+vi.mock("@/components/ui/floating-session-timer", () => ({
+  FloatingSessionTimer: () => <button type="button" aria-label="Cronômetro de sessão" />,
+}));
+
 import { AppHeader } from "@/components/layout/app-header";
 
 beforeEach(() => {

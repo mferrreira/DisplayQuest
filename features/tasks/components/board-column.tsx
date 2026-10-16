@@ -66,17 +66,10 @@ const COLUMN_STYLES: Record<TaskStatus, { header: string; icon: LucideIcon }> = 
 
 const COLUMN_TITLES: Record<TaskStatus, string> = {
   "to-do": "A Fazer",
-  "in-progress": "Em Andamento",
+  "in-progress": "Fazendo",
   "in-review": "Em Revisão",
   adjust: "Ajustes",
   done: "Concluído",
-}
-
-// O rótulo visual curto impede que essa faixa fique mais alta que as demais;
-// controles e nomes acessíveis preservam o estado completo.
-const COLUMN_VISIBLE_TITLES: Record<TaskStatus, string> = {
-  ...COLUMN_TITLES,
-  "in-progress": "Fazendo",
 }
 
 export interface BoardColumnProps {
@@ -96,14 +89,13 @@ export interface BoardColumnProps {
 export function BoardColumn({ status, tasks, canAddTask, isCompact, order, onOrderChange, onAddTask, onEdit, onOpenDetail }: BoardColumnProps) {
   const style = COLUMN_STYLES[status]
   const title = COLUMN_TITLES[status]
-  const visibleTitle = COLUMN_VISIBLE_TITLES[status]
 
   return (
     <div className="flex max-h-[calc(100dvh-17rem)] min-h-[400px] flex-col overflow-hidden rounded-lg border bg-muted/30">
       <div className={`flex shrink-0 items-center justify-between border-b px-3 py-3 ${style.header}`}>
         <div className="flex items-center gap-2 text-sm font-semibold">
           <style.icon className="h-4 w-4" aria-hidden="true" />
-          <h2 className="tracking-tight">{visibleTitle}</h2>
+          <h2 className="tracking-tight">{title}</h2>
         </div>
         <div className="flex items-center gap-1">
           <span className="rounded-md border border-current/30 px-2 py-0.5 text-xs font-semibold">

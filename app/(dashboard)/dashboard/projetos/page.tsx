@@ -9,7 +9,6 @@ import { useUser } from "@/contexts/user-context"
 import { ProjectList } from "@/components/features/project-list"
 import { ProjectDialog } from "@/components/features/project-dialog"
 import { ProjectManagerDashboard } from "@/components/features/project-manager-dashboard"
-import { VolunteersManagement } from "@/components/features/volunteers-management"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { PageHeader } from "@/components/ui/page-header"
@@ -19,17 +18,11 @@ import {
   Plus,
   Search,
   BarChart3,
-  Users,
   TrendingUp,
   FolderKanban
 } from "lucide-react"
 import type { Project } from "@/contexts/types"
 import { hasAccess } from "@/lib/utils/access-control"
-
-// Helper para verificar se usuário tem GOD MODE (coordenador ou gerente)
-const hasGodMode = (userRoles: string[]) => {
-  return userRoles?.includes('COORDENADOR') || userRoles?.includes('GERENTE')
-}
 
 
 export default function ProjetosPage() {
@@ -88,15 +81,8 @@ export default function ProjetosPage() {
   // Preserva a aba inicial histórica: gerente de projeto começa no Dashboard; demais
   // papéis começam na lista, mesmo agora que coordenador/gerente também podem abrir o Dashboard.
   const defaultTab = user?.roles?.includes('GERENTE_PROJETO') ? "dashboard" : "list"
-  const showVolunteers = (user?.roles?.includes('GERENTE_PROJETO') || hasGodMode(user?.roles || []))
-  const tabCount = 1 + (showDashboard ? 1 : 0) + (showVolunteers ? 1 : 0)
-  const tabGridClass = tabCount >= 4
-    ? 'grid-cols-4'
-    : tabCount === 3
-      ? 'grid-cols-3'
-      : tabCount === 2
-        ? 'grid-cols-2'
-        : 'grid-cols-1'
+  // V6-9 (RF-V6.12/DEC-182): a aba Voluntários saiu daqui — vive no Painel Administrativo.
+  const tabGridClass = showDashboard ? 'grid-cols-2' : 'grid-cols-1'
 
   if (!user) {
     return (
@@ -170,12 +156,6 @@ export default function ProjetosPage() {
                 <BarChart3 className="h-4 w-4" />
                 Lista de Projetos
               </TabsTrigger>
-              {showVolunteers &&
-                <TabsTrigger value="volunteers" className="flex items-center gap-2">
-                  <Users className="h-4 w-4" />
-                  Voluntários
-                </TabsTrigger>
-              }
             </TabsList>
 
             {/* Tab Dashboard - Apenas para Gerentes de Projeto */}
@@ -198,14 +178,6 @@ export default function ProjetosPage() {
                 showCreateButton={false}
               />
             </TabsContent>
-            
-
-            {/* Tab Voluntários - Apenas para Gerentes de Projeto */}
-            {showVolunteers &&
-            <TabsContent value="volunteers" className="space-y-6">
-              <VolunteersManagement />
-            </TabsContent>
-            }
           </Tabs>
         </div>
 

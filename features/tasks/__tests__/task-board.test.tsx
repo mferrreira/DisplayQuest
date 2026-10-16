@@ -101,8 +101,10 @@ describe("TaskBoard", () => {
     // ao pin do e2e (task-board.spec.ts:396, getByRole heading exact).
     expect(screen.getByRole("heading", { name: "A Fazer" })).toBeVisible();
     expect(screen.getByRole("heading", { name: "Concluído" })).toBeVisible();
-    // archived task (12 days old) lands in history section
-    expect(await screen.findByText(/1 concluída\(s\) há mais de 1 semana/)).toBeVisible();
+    // A tarefa concluída há mais de 1 semana (arquivada) NAO entra nas colunas. Desde o feed
+    // "Atividade recente" nao ha mais secao de historico no quadro — a saida de cena e a
+    // ausencia da linha, nao um card "1 concluída(s) há mais de 1 semana".
+    expect(screen.queryByText("Tarefa concluída antiga")).not.toBeInTheDocument();
   });
 
   it("shows filtered-empty state when overdue filter matches nothing after clearing", async () => {
@@ -167,7 +169,7 @@ describe("TaskBoard", () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "Ações para Tarefa concluída recente" }));
 
-    for (const column of ["A Fazer", "Em Andamento", "Em Revisão", "Ajustes"]) {
+    for (const column of ["A Fazer", "Fazendo", "Em Revisão", "Ajustes"]) {
       expect(screen.queryByRole("menuitem", { name: column })).not.toBeInTheDocument();
     }
     const aviso = screen.getByRole("menuitem", { name: /só volta de coluna para líderes/i });
@@ -198,7 +200,7 @@ describe("TaskBoard", () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "Ações para Tarefa concluída recente" }));
 
-    for (const column of ["A Fazer", "Em Andamento", "Em Revisão", "Ajustes"]) {
+    for (const column of ["A Fazer", "Fazendo", "Em Revisão", "Ajustes"]) {
       expect(await screen.findByRole("menuitem", { name: column })).toBeEnabled();
     }
     expect(screen.queryByRole("menuitem", { name: /só volta de coluna/i })).not.toBeInTheDocument();
@@ -237,7 +239,7 @@ describe("TaskBoard", () => {
 
     expect(titlesInColumn("A Fazer")).toEqual(["A Fazer vencendo", "A Fazer urgente", "A Fazer sem prazo"]);
     // a outra coluna continua em urgência: a preferência é por coluna
-    expect(titlesInColumn("Em Andamento")).toEqual(["Andamento urgente", "Andamento cedo"]);
+    expect(titlesInColumn("Fazendo")).toEqual(["Andamento urgente", "Andamento cedo"]);
   });
 
   it("plan-v3 OND3-C: a ordem escolhida sobrevive ao recarregar, guardada por pessoa", async () => {

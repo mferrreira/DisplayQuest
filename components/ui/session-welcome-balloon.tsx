@@ -11,6 +11,9 @@ interface SessionWelcomeBalloonProps {
   hasNoSession: boolean
   /** Callback to open the session panel (start form). */
   onStartSession: () => void
+  /** Which side of the anchor the balloon opens on. `top` (above) for the floating
+   *  clock; `bottom` (below) for the header button, which sits at the top edge. */
+  side?: "top" | "bottom"
 }
 
 const DISMISS_KEY = "session-welcome-balloon-dismissed"
@@ -24,6 +27,7 @@ export function SessionWelcomeBalloon({
   isLoggedIn,
   hasNoSession,
   onStartSession,
+  side = "top",
 }: SessionWelcomeBalloonProps) {
   const [dismissed, setDismissed] = useState(true)
 
@@ -46,7 +50,9 @@ export function SessionWelcomeBalloon({
     <div
       role="status"
       data-testid="session-welcome-balloon"
-      className="absolute bottom-full left-0 z-10 mb-3 w-64 rounded-lg border bg-popover p-4 text-popover-foreground shadow-md"
+      className={`absolute left-0 z-10 w-64 rounded-lg border bg-popover p-4 text-popover-foreground shadow-md ${
+        side === "bottom" ? "top-full mt-3" : "bottom-full mb-3"
+      }`}
     >
       <button
         type="button"

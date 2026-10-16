@@ -7,13 +7,12 @@ Esta é a lista completa das telas do sistema, com o endereço de cada uma e que
 | Entrada | `/login` | e-mail, senha, link de cadastro | qualquer pessoa, autenticada ou não |
 | Cadastro | `/register` | nome completo, e-mail, senha | qualquer pessoa |
 | Quadro de Tarefas | `/dashboard` | quadro Kanban, filtros, criação de tarefa | todas as funções |
-| Projetos | `/dashboard/projetos` | lista de projetos, detalhe com cronograma, relatórios técnicos e atestados, aba Voluntários | todas as funções; a aba **Voluntários** só para Coordenador, Gerente e Gerente de Projeto |
+| Projetos | `/dashboard/projetos` | lista de projetos, detalhe com cronograma, relatórios técnicos e atestados | todas as funções |
 | Laboratório | `/dashboard/laboratorio` | agenda, responsabilidade, grade de horários, reclamações | todas as funções |
 | Relatórios | `/dashboard/weekly-reports` | relatórios por usuário, relatórios de projeto e atestados | Coordenador, Gerente, Laboratorista |
-| Painel Administrativo | `/dashboard/admin` | oito abas de gestão | Coordenador, Gerente |
-| Loja | `/dashboard/loja` | recompensas disponíveis, minhas compras | todas as funções |
-| Gerenciar Recompensas | `/dashboard/loja/gerenciar` | catálogo, solicitações pendentes, histórico | Coordenador, Gerente, Laboratorista |
-| Ranking | `/dashboard/leaderboard` | classificação por projetos, tarefas e pontos | todas as funções |
+| Painel Administrativo | `/dashboard/admin` | oito abas de gestão, incluindo a aba **Voluntários** | Coordenador e Gerente; o Gerente de Projeto só a aba **Voluntários** |
+| Loja | `/dashboard/loja` | recompensas disponíveis e minhas compras; abas **Aprovações** e **Gerenciar** para quem gerencia | todas as funções; as abas de gestão para Coordenador, Gerente e Laboratorista |
+| Ranking | `/dashboard/leaderboard` | quadro de liderança e classificação por tarefas e pontos | todas as funções |
 | Perfil | `/dashboard/profile` | capa e avatar do **Meu Perfil**, Atividade, Logs Diários, Configurações | todas as funções |
 
 ## Controles que não são telas

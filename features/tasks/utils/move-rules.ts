@@ -10,7 +10,7 @@ export const TASK_STATUSES: TaskStatus[] = ["to-do", "in-progress", "in-review",
 
 export const BOARD_COLUMNS: Array<{ id: TaskStatus; title: string }> = [
   { id: "to-do", title: "A Fazer" },
-  { id: "in-progress", title: "Em Andamento" },
+  { id: "in-progress", title: "Fazendo" },
   { id: "in-review", title: "Em Revisão" },
   { id: "adjust", title: "Ajustes" },
   { id: "done", title: "Concluído" },

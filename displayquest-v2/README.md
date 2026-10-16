@@ -15,7 +15,7 @@ displayquest-v2/
 ├── plan-v3/       OPERAÇÃO: correções e features pedidas por quem usa o sistema hoje (sessões, quadro, pontos) — done
 ├── plan-v4/       OPERAÇÃO: subtasks, animação de pontos, inativação (2026-10-05) — done (2026-10-07, DEC-78..98)
 ├── plan-v5/       OPERAÇÃO: domínio de projetos maduro — cronograma, pontos, relatórios técnicos, atestados (2026-10-06) — done (2026-10-14, V5-1..V5-12 + V5-fix-1/V5-fix-2; DEC-61..77, 99..104, 126..180)
-├── plan-v6/       OPERAÇÃO: linguagem visual UI/UX + redistribuição das telas (2026-10-07, revisado 2026-10-14) — spec-driven, ready, V6-0 executado (DEC-105..114, 181..188)
+├── plan-v6/       OPERAÇÃO: linguagem visual UI/UX + redistribuição das telas (2026-10-07, revisado 2026-10-14) — done (2026-10-16, V6-0..V6-11; DEC-105..114, 181..188)
 └── plan-v7/       OPERAÇÃO: servidor MCP para os agents do laboratório (2026-10-15) — planejado, nenhuma onda começada (DEC-190..203, ASK-V7-01..15)
 ```
 

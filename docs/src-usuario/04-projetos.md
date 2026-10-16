@@ -1,6 +1,6 @@
 # Projetos
 
-Um projeto agrupa tarefas, define quem participa e concentra as horas registradas. A tela **Projetos** tem as abas **Dashboard**, **Lista de Projetos** e **Voluntários**, conforme o seu acesso. Cada linha da lista abre a página dedicada do projeto.
+Um projeto agrupa tarefas, define quem participa e concentra as horas registradas. A tela **Projetos** tem as abas **Dashboard** e **Lista de Projetos**, conforme o seu acesso. Cada linha da lista abre a página dedicada do projeto.
 
 ```foto projetos titulo="A tela Projetos, na aba Lista de Projetos"
 A lista mostra cada projeto em uma linha com status, descrição, andamento, datas e ações disponíveis. Com início e término definidos, o andamento representa o tempo decorrido do projeto; sem o período completo, usa a proporção de tarefas concluídas.
@@ -208,16 +208,14 @@ O PDF é a folha oficial preenchida: título do projeto, número do edital (ou o
 Todo dia 19, o sistema avisa o líder do projeto e os **Coordenador** e **Gerente** que o atestado do mês anterior já pode ser gerado — um aviso por projeto, sem o selo **Urgente**.
 :::
 
-## A aba Voluntários
+## A aba Membros do projeto
 
-A aba **Voluntários** é a gestão de quem participa de cada projeto. Comece escolhendo o projeto em **Selecionar Projeto**: sem projeto escolhido, a aba não mostra equipe nenhuma. Com o projeto escolhido aparecem **Ações de Gerenciamento** — **Total de Voluntários**, **Horas Trabalhadas**, **Tasks Completadas** e **Pontos Conquistados** — e a **Equipe de Voluntários**, com **Adicionar voluntário** e **Remover voluntário** em cada pessoa.
-
-Os dados do vínculo aparecem na aba **Membros** da página dedicada do projeto:
+A equipe de um projeto — adicionar e remover pessoas — é gerida na aba **Voluntários** do Painel Administrativo (capítulo 9). Os dados do vínculo de cada pessoa, porém, ficam na aba **Membros** da página dedicada do projeto:
 
 1. Em **Liderança do Projeto**, escolha a pessoa e clique em **Salvar líder**.
-3. Na linha de cada pessoa, escolha o papel em **Papel do membro** e clique em **Salvar papel**. **Horas** abre as horas da pessoa no projeto; **Remover** tira a pessoa do projeto, com confirmação.
-4. Abaixo da linha está o bloco **Dados do vínculo**, com os campos daquele vínculo: **Currículo Lattes**, **Carga contratada (h/semana)**, **Categoria do vínculo** (**Sem categoria**, **Bolsista** ou **Voluntário**), **Situação do vínculo** (**Ativo** ou **Inativo**) e **Data de entrada**.
-5. Clique em **Salvar vínculo**. Só o que você mexeu é gravado: o que ficou como estava não é apagado, e mexer sem mudar nada não grava nada.
+2. Na linha de cada pessoa, escolha o papel em **Papel do membro** e clique em **Salvar papel**. **Horas** abre as horas da pessoa no projeto; **Remover** tira a pessoa do projeto, com confirmação.
+3. Abaixo da linha está o bloco **Dados do vínculo**, com os campos daquele vínculo: **Currículo Lattes**, **Carga contratada (h/semana)**, **Categoria do vínculo** (**Sem categoria**, **Bolsista** ou **Voluntário**), **Situação do vínculo** (**Ativo** ou **Inativo**) e **Data de entrada**.
+4. Clique em **Salvar vínculo**. Só o que você mexeu é gravado: o que ficou como estava não é apagado, e mexer sem mudar nada não grava nada.
 
 ```foto painel-membros titulo="Os dados do vínculo na aba Membros do projeto"
 A tela avisa: *"A carga contratada é a que sai no atestado; a meta semanal da pessoa é editada no perfil dela."* São dois números diferentes, e os dois continuam existindo ao mesmo tempo.

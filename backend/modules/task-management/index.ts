@@ -26,6 +26,7 @@ import type { TaskProjectsPort } from "@/backend/modules/task-management/applica
 import type { TaskSubtasksPort } from "@/backend/modules/task-management/application/ports/task-subtasks.repository"
 import type { TaskActivitiesPort } from "@/backend/modules/task-management/application/ports/task-activities.port"
 import type { TaskRepositoryPort } from "@/backend/modules/task-management/application/ports/task.repository"
+import type { TaskActivityItem, TaskActivityPort } from "@/backend/modules/task-management/application/ports/task-activity.port"
 import { createPrismaTaskRepository } from "@/backend/modules/task-management/infrastructure/repositories/prisma-task.repository"
 import { createPrismaTaskAssigneesRepository } from "@/backend/modules/task-management/infrastructure/repositories/prisma-task-assignees.repository"
 import { createPrismaTaskProgressRepository } from "@/backend/modules/task-management/infrastructure/repositories/prisma-task-progress.repository"
@@ -56,6 +57,8 @@ export class TaskManagementModule {
   readonly approveTask: (command: { taskId: number; approverId: number }) => Promise<TaskCompletionResult>
   readonly rejectTask: (command: { taskId: number; approverId: number; reason?: string }) => Promise<any>
   readonly globalProgress: (command: { actor: ActorRef }) => Promise<GlobalProgressEntry[]>
+  // Feed "Atividade recente": as acoes mais recentes gravadas em `history` (entityType "task").
+  readonly listActivity: (limit: number) => Promise<TaskActivityItem[]>
   // plan-v4 · V4-4 — subtasks. Devolvem a mãe junto com a subtask porque as duas consequências
   // de mexer numa subtask são da mãe: a base do prêmio muda, e a última concluída move a mãe.
   readonly createTaskSubtask: (command: CreateTaskSubtaskCommand) => Promise<SubtaskMutationResult>
@@ -73,6 +76,9 @@ export class TaskManagementModule {
     // V5-6 (DEC-99): a leitura da linha do cronograma que a ligação de tarefa precisa.
     activities: TaskActivitiesPort
     events?: TaskProgressEvents
+    // Feed "Atividade recente": registro opcional em `history`. Sem porta, nada e gravido e a
+    // leitura devolve vazio (roundtrip G4 e testes de use case seguem sem tocar em history).
+    activity?: TaskActivityPort
   }) {
     const getTaskByIdUseCase = new GetTaskByIdUseCase({
       tasks: ports.tasks,
@@ -170,18 +176,58 @@ export class TaskManagementModule {
       projects: ports.projects,
     })
 
+    // Feed "Atividade recente": os metodos mutadores registram a acao em `history` depois de o
+    // use case resolver. Sem porta injetada (roundtrip G4, testes de use case), nada e gravido.
+    const activity = ports.activity
+    const personId = (actor: ActorRef): number | null => (actor.kind === "user" ? actor.id : null)
+
     this.getTaskById = (command) => getTaskByIdUseCase.execute(command)
     this.listTasksForActor = (query) => listTasksForActorUseCase.execute(query)
     this.assertCanManageTasks = (command) => assertCanManageTasksUseCase.execute(command)
-    this.createTask = (command, actor) => createTaskUseCase.execute(command, actor)
+    this.createTask = async (command, actor) => {
+      const task = await createTaskUseCase.execute(command, actor)
+      const id = personId(actor)
+      if (activity && id != null && task?.id) {
+        await activity.append({ taskId: task.id, taskTitle: task.title, actorId: id, action: "CREATE", toStatus: task.status })
+      }
+      return task
+    }
     // Same Promise.all semantics the module has today (frozen for the routes).
     this.createTaskBacklog = (tasks, actor) => Promise.all(tasks.map((task) => createTaskUseCase.execute(task, actor)))
-    this.updateTask = (command) => updateTaskUseCase.execute(command)
+    this.updateTask = async (command) => {
+      const task = await updateTaskUseCase.execute(command)
+      const id = personId(command.actor)
+      const moved = command.data.status !== undefined && command.data.status !== null
+      if (activity && id != null && moved && task?.id) {
+        await activity.append({ taskId: task.id, taskTitle: task.title, actorId: id, action: "MOVE", toStatus: task.status })
+      }
+      return task
+    }
     this.deleteTask = (command) => deleteTaskUseCase.execute(command)
-    this.completeTask = (command) => completeTaskUseCase.execute(command)
-    this.approveTask = (command) => approveTaskUseCase.execute(command)
-    this.rejectTask = (command) => rejectTaskUseCase.execute(command)
+    this.completeTask = async (command) => {
+      const result = await completeTaskUseCase.execute(command)
+      const id = personId(command.actor)
+      if (activity && id != null && result?.task?.id) {
+        await activity.append({ taskId: result.task.id, taskTitle: result.task.title, actorId: id, action: "COMPLETE", toStatus: result.task.status })
+      }
+      return result
+    }
+    this.approveTask = async (command) => {
+      const result = await approveTaskUseCase.execute(command)
+      if (activity && result?.task?.id) {
+        await activity.append({ taskId: result.task.id, taskTitle: result.task.title, actorId: command.approverId, action: "COMPLETE", toStatus: result.task.status })
+      }
+      return result
+    }
+    this.rejectTask = async (command) => {
+      const task = await rejectTaskUseCase.execute(command)
+      if (activity && task?.id) {
+        await activity.append({ taskId: task.id, taskTitle: task.title, actorId: command.approverId, action: "MOVE", toStatus: task.status })
+      }
+      return task
+    }
     this.globalProgress = (command) => listGlobalProgressUseCase.execute(command)
+    this.listActivity = async (limit) => (activity ? activity.listRecent(limit) : [])
     this.createTaskSubtask = (command) => createTaskSubtaskUseCase.execute(command)
     this.updateTaskSubtask = (command) => updateTaskSubtaskUseCase.execute(command)
     this.deleteTaskSubtask = (command) => deleteTaskSubtaskUseCase.execute(command)
@@ -202,6 +248,8 @@ export interface TaskManagementModulePorts {
   activities?: TaskActivitiesPort
   /** Awards port; the composition root wires the gamification module into the publisher. */
   events?: TaskProgressEvents
+  /** Feed "Atividade recente": registro/leitura em `history` (entityType "task"). */
+  activity?: TaskActivityPort
 }
 
 /**
@@ -231,5 +279,6 @@ export function createTaskManagementModule(options: TaskManagementModulePorts = 
     subtasks: options.subtasks ?? createPrismaTaskSubtasksRepository(),
     activities: options.activities ?? createPrismaTaskActivitiesRepository(),
     events: options.events,
+    activity: options.activity,
   })
 }

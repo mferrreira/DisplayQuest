@@ -8,7 +8,8 @@ import { render, screen } from "@testing-library/react";
  *  - PageHeader com saudacao (um unico h1 — AC-V6-04);
  *  - cabeçalho compacto, sem a fileira de métricas antes do quadro;
  *  - SEM coluna secundaria (DEC-114): nada de <aside>; o quadro ocupa a largura toda;
- *  - faixa com projetos, metas e estatísticas abaixo do quadro, sem fetch novo;
+ *  - faixa com projetos, metas e estatísticas ACIMA do quadro (para as estatísticas
+ *    aparecerem sem rolagem), sem fetch novo;
  *    sem "Atividade recente", sem "Status do sistema", sem ranking
  *    (DEC-112) — por isso o TaskBoard real e duplo: o teste prova o CABECALHO, e a
  *    rede de seguranca do quadro sao os 11 arquivos de features/tasks + o e2e.
@@ -112,14 +113,14 @@ describe("Home — regiao de cabecalho (AC-V6-11)", () => {
     expect(screen.getByTestId("task-board")).toBeInTheDocument();
   });
 
-  it("a faixa complementar fica abaixo do quadro, em vez de ocupar uma coluna lateral", () => {
+  it("a faixa complementar fica acima do quadro, para as estatísticas aparecerem sem rolagem", () => {
     render(<DashboardPage />);
     const board = screen.getByTestId("task-board");
     const overview = screen.getByRole("region", { name: "Resumo do laboratório" });
-    expect(board.compareDocumentPosition(overview) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(board.compareDocumentPosition(overview) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
   });
 
-  it("acrescenta projetos recentes, metas e estatísticas abaixo do quadro", () => {
+  it("acrescenta projetos recentes, metas e estatísticas acima do quadro", () => {
     render(<DashboardPage />);
     const board = screen.getByTestId("task-board");
     const overview = screen.getByRole("region", { name: "Resumo do laboratório" });
@@ -127,9 +128,9 @@ describe("Home — regiao de cabecalho (AC-V6-11)", () => {
     expect(overview).toHaveTextContent("Meta da semana");
     expect(overview).toHaveTextContent("Estatísticas do quadro");
     expect(screen.getByRole("img", { name: /Conclusão de tarefas/ })).toBeVisible();
-    expect(screen.getByRole("img", { name: /Distribuição de tarefas por status/ })).toBeVisible();
+    expect(screen.getByRole("img", { name: /Tarefas concluídas nos últimos 7 dias/ })).toBeVisible();
     expect(overview).toHaveTextContent("Alfa");
-    expect(board.compareDocumentPosition(overview) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(board.compareDocumentPosition(overview) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
     expect(overview.querySelectorAll("a[href^='/dashboard/projetos/']")).toHaveLength(3);
   });
 });

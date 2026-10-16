@@ -124,21 +124,6 @@ export function BoardToolbar({
         {/* h-10 em toda a barra: os SelectTrigger são `h-10` e o `Button` default também
             (o `size="sm"` é `h-9` e destoava 4px deles na mesma fileira). */}
         <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant="outline"
-            onClick={onToggleCompact}
-            aria-pressed={isCompact}
-          >
-            {isCompact ? (
-              <>
-                <LayoutGrid className="mr-1 h-4 w-4" aria-hidden="true" /> Normal
-              </>
-            ) : (
-              <>
-                <Rows3 className="mr-1 h-4 w-4" aria-hidden="true" /> Compacto
-              </>
-            )}
-          </Button>
           {canCreateTasks && (
             <Button onClick={onCreateTask} disabled={isUpdating}>
               <Plus className="mr-1 h-4 w-4" aria-hidden="true" />
@@ -175,6 +160,39 @@ export function BoardToolbar({
             </SelectContent>
           </Select>
         )}
+
+        {/* Controle segmentado de exibição (referência: dois ícones num só, o ativo
+            destacado). Mora na linha dos filtros, não ao lado do "Nova Tarefa". */}
+        <div
+          role="group"
+          aria-label="Modo de exibição das tarefas"
+          className="flex h-10 items-center gap-0.5 rounded-md border bg-background p-0.5"
+        >
+          <button
+            type="button"
+            aria-label="Modo normal"
+            aria-pressed={!isCompact}
+            onClick={() => isCompact && onToggleCompact()}
+            className={cn(
+              "flex h-9 w-9 items-center justify-center rounded-sm transition-colors",
+              !isCompact ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            <LayoutGrid className="h-4 w-4" aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            aria-label="Modo compacto"
+            aria-pressed={isCompact}
+            onClick={() => !isCompact && onToggleCompact()}
+            className={cn(
+              "flex h-9 w-9 items-center justify-center rounded-sm transition-colors",
+              isCompact ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            <Rows3 className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </div>
 
         <Select
           value={filters.assigneeId?.toString() ?? "all"}

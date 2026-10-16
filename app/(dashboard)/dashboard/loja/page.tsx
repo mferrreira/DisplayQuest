@@ -14,7 +14,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
-import { CheckCircle, XCircle, Plus, Edit, Trash2 } from "lucide-react"
+import { CheckCircle, XCircle, Plus, Edit, Trash2, Store, Clock } from "lucide-react"
+import { PageHeader } from "@/components/ui/page-header"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import {
   AlertDialog,
@@ -198,13 +199,13 @@ export default function StorePage() {
     switch (status) {
       case "pending":
         return (
-          <Badge variant="outline" className="flex items-center gap-1">
-            <span className="text-sm text-muted-foreground">Pendente</span>
+          <Badge variant="warning" className="flex items-center gap-1">
+            <Clock className="h-3 w-3" /> Pendente
           </Badge>
         )
       case "approved":
         return (
-          <Badge variant="default" className="bg-green-500 dark:bg-success flex items-center gap-1">
+          <Badge variant="success" className="flex items-center gap-1">
             <CheckCircle className="h-3 w-3" /> Aprovado
           </Badge>
         )
@@ -228,35 +229,34 @@ export default function StorePage() {
   return (
     <div className="flex min-h-screen flex-col">
       <main className="flex-1 container mx-auto p-4 md:p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">Loja de Recompensas</h1>
-          <div className="flex items-center gap-2 bg-amber-50 dark:bg-amber-950/30 px-3 py-1.5 rounded-md">
-            <span className="text-lg font-bold text-amber-600 dark:text-amber-400">{userPoints}</span>
-            <span className="text-sm text-muted-foreground">pontos disponíveis</span>
-          </div>
-        </div>
+        <div className="space-y-6">
+          <PageHeader
+            title="Loja de Recompensas"
+            description="Resgate recompensas com os pontos que você conquistou"
+            icon={Store}
+            actions={
+              <div className="flex items-center gap-2 rounded-md bg-warning/10 px-3 py-1.5">
+                <span className="text-lg font-bold tabular-nums text-warning">{userPoints}</span>
+                <span className="text-sm text-muted-foreground">pontos disponíveis</span>
+              </div>
+            }
+          />
 
         <Tabs defaultValue="rewards">
           <TabsList className="mb-4">
-            <TabsTrigger value="rewards" className="flex items-center gap-1">
-              <span className="text-lg font-bold text-amber-600 dark:text-amber-400">Recompensas</span>
-            </TabsTrigger>
-            <TabsTrigger value="purchases" className="flex items-center gap-1">
-              <span className="text-lg font-bold text-amber-600 dark:text-amber-400">Minhas Compras</span>
-            </TabsTrigger>
+            <TabsTrigger value="rewards">Recompensas</TabsTrigger>
+            <TabsTrigger value="purchases">Minhas Compras</TabsTrigger>
             {canManageStore && (
               <>
-                <TabsTrigger value="approvals" className="flex items-center gap-1 relative">
-                  <span className="text-lg font-bold text-amber-600 dark:text-amber-400">Aprovações</span>
+                <TabsTrigger value="approvals" className="relative">
+                  Aprovações
                   {pendingPurchasesCount > 0 && (
                     <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 text-xs flex items-center justify-center">
                       {pendingPurchasesCount}
                     </Badge>
                   )}
                 </TabsTrigger>
-                <TabsTrigger value="manage" className="flex items-center gap-1">
-                  <span className="text-lg font-bold text-amber-600 dark:text-amber-400">Gerenciar</span>
-                </TabsTrigger>
+                <TabsTrigger value="manage">Gerenciar</TabsTrigger>
               </>
             )}
           </TabsList>
@@ -277,8 +277,8 @@ export default function StorePage() {
                       <CardDescription>{reward.description}</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      <div className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
-                        <span className="text-lg font-bold">{reward.price}</span>
+                      <div className="flex items-center gap-1 text-warning">
+                        <span className="text-lg font-bold tabular-nums">{reward.price}</span>
                         <span className="text-sm text-muted-foreground">pontos</span>
                       </div>
                       <div className="flex justify-end pt-1">
@@ -286,7 +286,7 @@ export default function StorePage() {
                           onClick={() => handlePurchase(reward)}
                           disabled={userPoints < reward.price}
                           variant={userPoints >= reward.price ? "default" : "outline"}
-                          className="min-w-36 rounded-full px-5"
+                          className="min-w-36"
                         >
                           {userPoints >= reward.price ? "Resgatar" : "Pontos insuficientes"}
                         </Button>
@@ -380,7 +380,7 @@ export default function StorePage() {
                             </div>
                           </TableCell>
                           <TableCell>
-                            <Badge variant={reward.available ? "default" : "secondary"}>
+                            <Badge variant={reward.available ? "success" : "secondary"}>
                               {reward.available ? "Disponível" : "Indisponível"}
                             </Badge>
                           </TableCell>
@@ -411,6 +411,7 @@ export default function StorePage() {
             </TabsContent>
           )}
         </Tabs>
+        </div>
 
         {/* Dialog para adicionar/editar recompensa */}
         <Dialog open={isManageDialogOpen} onOpenChange={setIsManageDialogOpen}>

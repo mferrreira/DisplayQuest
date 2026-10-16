@@ -14,6 +14,7 @@ import { createAttestationModule } from "@/backend/modules/attestation"
 import { createNotificationsCertificateReminderNotifier } from "@/backend/modules/attestation/infrastructure/adapters/notifications-certificate-reminder"
 import { createStoreModule } from "@/backend/modules/store"
 import { createTaskManagementModule } from "@/backend/modules/task-management"
+import { createPrismaTaskActivityPort } from "@/backend/modules/task-management/infrastructure/adapters/prisma-task-activity"
 import { createTaskProgressEvents } from "@/backend/modules/task-management/infrastructure/gamification-task-progress.events"
 import { createUserManagementModule } from "@/backend/modules/user-management"
 import { createWorkExecutionModule } from "@/backend/modules/work-execution"
@@ -55,6 +56,9 @@ export function createBackendComposition(): BackendComposition {
         incrementProjectPoints: (projectId, delta) => projectsRepository.incrementPoints(projectId, delta),
       },
     }),
+    // Feed "Atividade recente": grava/le `history` (entityType "task"). Sem migration — a
+    // tabela ja existe como auditoria da casa.
+    activity: createPrismaTaskActivityPort(),
   })
 
   // V5-7b (DEC-21): o prêmio da atividade aprovada sai do módulo de projeto por PORTA LOCAL

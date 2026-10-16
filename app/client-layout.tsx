@@ -45,7 +45,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
   const closeSidebar = useCallback(() => setSidebarOpen(false), [])
   useSidebarOutsideClick(sidebarOpen, closeSidebar)
   const isDashboardRoute = pathname.startsWith("/dashboard")
-  // Print/PDF route: hide the session timer dock in the sidebar on exported PDFs.
+  // Print/PDF route: hide the session timer in the header on exported PDFs.
   const isPrintRoute = /^\/dashboard\/.*\/print$/.test(pathname)
 
   if (!isDashboardRoute) {
@@ -58,12 +58,16 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
           painel é montado duas vezes no cabeçalho (versão de mesa e versão compacta) e o
           som tocaria em dobro. */}
       <NotificationSound />
-      <AppHeader sidebarOpen={sidebarOpen} onToggleSidebar={() => setSidebarOpen((open) => !open)} />
+      <AppHeader
+        sidebarOpen={sidebarOpen}
+        onToggleSidebar={() => setSidebarOpen((open) => !open)}
+        showSessionTimer={!isPrintRoute}
+      />
       {/* Refinamento V6-3: sidebar fixa sobre o conteúdo, fora do fluxo para não reduzir
           a largura do quadro. Em telas estreitas, a navegação segue no Sheet; o cronômetro
-          permanece encaixado no canto inferior. */}
+          de sessão mora no header. */}
       <div className="flex min-h-[calc(100vh-4rem)]">
-        <AppSidebar open={sidebarOpen} showSessionTimer={!isPrintRoute} />
+        <AppSidebar open={sidebarOpen} />
         <div className="min-w-0 flex-1">
           {children}
         </div>

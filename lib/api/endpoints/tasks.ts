@@ -35,6 +35,20 @@ const awardedTaskResponse = z.object({
 const progressResponse = z.object({ progress: z.array(taskUserProgressSchema) });
 const deleteResponse = z.object({ success: z.boolean() });
 
+/** Feed "Atividade recente" — a linha de `history` (entityType "task") ja achatada pela rota. */
+const taskActivityItemSchema = z.object({
+  id: z.number().int(),
+  action: z.enum(["CREATE", "MOVE", "COMPLETE"]),
+  taskId: z.number().int(),
+  taskTitle: z.string(),
+  toStatus: z.string().nullable(),
+  actorId: z.number().int(),
+  actorName: z.string(),
+  at: z.string(),
+});
+const taskActivityResponse = z.object({ items: z.array(taskActivityItemSchema) });
+export type TaskActivityItem = z.infer<typeof taskActivityItemSchema>;
+
 export interface AwardedTaskResponse {
   task: Task;
   awardedTo: number | null;
@@ -78,6 +92,15 @@ export const tasksApi = {
 
   getById(id: number, signal?: AbortSignal) {
     return apiFetch({ path: `/api/tasks/${id}`, schema: taskResponse, signal });
+  },
+
+  /** GET /api/tasks/activity — as acoes mais recentes (feed da Home). */
+  activity(limit = 15, signal?: AbortSignal): Promise<TaskActivityItem[]> {
+    return apiFetch({
+      path: `/api/tasks/activity?limit=${limit}`,
+      schema: taskActivityResponse,
+      signal,
+    }).then((r) => r.items);
   },
 
   create(body: unknown) {

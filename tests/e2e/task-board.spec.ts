@@ -128,7 +128,7 @@ test.describe("task board flows", () => {
 
   test("board renders all five lifecycle columns", async ({ page }) => {
     await login(page);
-    for (const column of ["A Fazer", "Em Andamento", "Em Revisão", "Ajustes", "Concluído"]) {
+    for (const column of ["A Fazer", "Fazendo", "Em Revisão", "Ajustes", "Concluído"]) {
       await expect(page.getByLabel(`Coluna ${column}`)).toBeVisible({ timeout: 15_000 });
     }
 

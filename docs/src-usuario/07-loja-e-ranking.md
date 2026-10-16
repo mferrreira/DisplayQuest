@@ -30,40 +30,39 @@ O sistema recusa resgate de recompensa fora de estoque ou marcada como indispon�
 
 ## Gerenciar a loja
 
-Quem tem a permissão de gerenciar recompensas — **Coordenador**, **Gerente** e **Laboratorista** — encontra em **Gerenciar Recompensas** três abas: **Recompensas**, **Solicitações Pendentes** e **Histórico**.
+Quem gerencia recompensas — **Coordenador**, **Gerente** e **Laboratorista** — encontra na mesma Loja duas abas a mais: **Aprovações** e **Gerenciar**.
 
-Na aba **Recompensas**, a tabela tem as colunas **Nome**, **Descrição**, **Pontos**, **Status** e **Ações**, e o botão **Nova Recompensa** abre o diálogo com **Nome da Recompensa**, **Descrição**, **Pontos Necessários** e a marca **Disponível para Resgate**.
+A aba **Gerenciar** é o catálogo. A tabela tem as colunas **Nome**, **Descrição**, **Preço (Pontos)**, **Status** e **Ações**, e o botão **Adicionar Produto** abre o diálogo **Adicionar Nova Recompensa**, com **Nome da Recompensa**, **Descrição**, **Preço em Pontos** e a marca **Disponível para compra**.
 
-```foto dialogo-nova-recompensa titulo="O diálogo Nova Recompensa"
+```foto loja-gerenciar titulo="A aba Gerenciar, com o catálogo de recompensas"
+É aqui que o catálogo é criado, ajustado e retirado de circulação.
+```
+
+```foto dialogo-nova-recompensa titulo="O diálogo Adicionar Nova Recompensa"
 O preço é um número não negativo; o preço zero existe e é válido.
 ```
 
-Na aba **Solicitações Pendentes**, a tabela **Usuário**, **Recompensa**, **Pontos**, **Data** e **Ações** é onde os pedidos são aprovados ou rejeitados.
+A aba **Aprovações** é a fila de pedidos pendentes: cada linha traz a recompensa pedida, quem pediu e o custo em pontos, e é ali que o pedido é aprovado ou rejeitado.
 
-```foto loja-solicitacoes titulo="A aba Solicitações Pendentes"
+```foto loja-solicitacoes titulo="A aba Aprovações"
 Aprovar confirma o resgate; rejeitar devolve os pontos à pessoa.
-```
-
-```foto loja-gerenciar titulo="A tela Gerenciar Recompensas, na aba Recompensas"
-É aqui que o catálogo é criado, ajustado e retirado de circulação.
 ```
 
 ## O ranking
 
-O **Ranking** ordena as pessoas pelo que produziram. A tela traz o **Quadro de Lideranca** e a **Classificacao completa**, com as colunas **Posicao**, **Usuario**, **Projetos**, **Tarefas concluidas** e **Pontos**.
+O **Ranking** ordena as pessoas pelo que produziram. A tela traz o **Quadro de Liderança** e a **Classificação completa**, com as colunas **Posição**, **Usuário**, **Tarefas concluídas** e **Pontos**.
 
 ```foto ranking-participante titulo="O ranking, na classificação completa"
 A classificação é visível para qualquer pessoa autenticada.
 ```
 
-No **Quadro de Lideranca** os três primeiros têm cartão maior e avatar maior, e o 1º lugar leva mais destaque ainda: quando a pessoa tem **capa** no perfil, a capa aparece como fundo do cartão dela. É a mesma imagem descrita no capítulo 8; o ranking não cria nada, ele mostra o que o perfil tem.
+No **Quadro de Liderança** os três primeiros têm destaque maior e avatar maior, e o 1º lugar leva mais destaque ainda: quando a pessoa tem **capa** no perfil, a capa aparece como fundo do cartão dela. É a mesma imagem descrita no capítulo 8; o ranking não cria nada, ele mostra o que o perfil tem.
 
 O que alimenta cada coluna:
 
 | Coluna | De onde vem |
 | --- | --- |
-| **Projetos** | projetos em que a pessoa participou |
-| **Tarefas concluidas** | tarefas aprovadas, não as entregues para revisão |
+| **Tarefas concluídas** | tarefas aprovadas, não as entregues para revisão |
 | **Pontos** | pontos creditados pelas aprovações, menos as penalidades de atraso e os gastos já completados |
 
 ## Distintivos

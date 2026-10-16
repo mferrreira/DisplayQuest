@@ -96,7 +96,7 @@ describe("painel administrativo · sessões ao vivo", () => {
     expect(mocks.getAll).toHaveBeenCalledTimes(5);
   });
 
-  it("a sessão que a API devolve aparece no cartão", async () => {
+  it("a sessão que a API devolve aparece na visão geral", async () => {
     mocks.getAll.mockImplementation(async () => [
       { id: 501, userId: 2, status: "active", startTime: new Date("2026-10-09T12:00:00.000Z"), activity: "plantao" },
     ]);
@@ -105,13 +105,12 @@ describe("painel administrativo · sessões ao vivo", () => {
       renderPage();
     });
 
-    expect(await screen.findByText(/1 sessão ativa ou pausada/)).toBeInTheDocument();
-    // "Coordenador" aparece mais de uma vez no painel (cabeçalho e linha do cartão), então a
-    // busca é pela linha do cartão: o nome dentro do item que tem "Trabalhando".
+    // A faixa "No laboratório agora" lista a sessão: o nome da pessoa na linha que tem o
+    // selo "Trabalhando". O cartão antigo (com "Iniciado:" e a descrição "N sessão ativa")
+    // saiu na reformulação da Visão Geral; o que este teste fixa é a sessão aparecer.
     const trabalhando = await screen.findByText("Trabalhando");
-    const linha = trabalhando.closest("div.flex.items-center");
+    const linha = trabalhando.closest("li");
     expect(linha?.textContent).toContain("Coordenador");
-    expect(linha?.textContent).toContain("Iniciado:");
   });
 
   it("desmontar a página para o intervalo", async () => {

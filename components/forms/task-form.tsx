@@ -270,7 +270,7 @@ export function TaskForm({
   // Options for select fields
   const statusOptions = [
     { value: "to-do" as const, label: "A Fazer" },
-    { value: "in-progress" as const, label: "Em Andamento" },
+    { value: "in-progress" as const, label: "Fazendo" },
     { value: "in-review" as const, label: "Em Revisão" },
     { value: "adjust" as const, label: "Ajustes" },
     { value: "done" as const, label: "Concluído" },

@@ -77,7 +77,6 @@ const SCREENS = [
   { id: "laboratorio", role: "coord", route: "/dashboard/laboratorio", expect: { url: /\/dashboard\/laboratorio/, anyOf: ["Laboratório", "Plantão"] } },
   { id: "relatorios-semanais", role: "coord", route: "/dashboard/weekly-reports", expect: { url: /\/dashboard\/weekly-reports/, anyOf: ["Relatório"] } },
   { id: "painel-administrativo", role: "coord", route: "/dashboard/admin", expect: { url: /\/dashboard\/admin/, anyOf: ["Administrativo", "Usuário"] } },
-  { id: "loja-gerenciar", role: "coord", route: "/dashboard/loja/gerenciar", expect: { url: /\/dashboard\/loja\/gerenciar/, anyOf: ["Loja", "Recompensa", "Compra"] } },
   { id: "perfil", role: "coord", route: "/dashboard/profile", expect: { url: /\/dashboard\/profile/, anyOf: ["Perfil"] } },
   // V5-4a (DEC-138): o cartão de perfil de OUTRA pessoa é onde os dados de pessoa aparecem em
   // leitura — o cartão "Meu Perfil" da própria página não os mostra. O endereço é o que o link de
@@ -120,10 +119,16 @@ const INTERACTIONS = [
   { id: "laboratorio-agenda", role: "coord", route: "/dashboard/laboratorio", aba: "Agenda", abre: "Adicionar evento", dialogo: "Evento" },
   { id: "laboratorio-responsabilidade", role: "coord", route: "/dashboard/laboratorio", aba: "Responsabilidade" },
   { id: "laboratorio-reclamacoes", role: "coord", route: "/dashboard/laboratorio", aba: "Reclamações" },
-  { id: "dialogo-nova-recompensa", role: "coord", route: "/dashboard/loja/gerenciar", abre: "Nova Recompensa", dialogo: "Recompensa" },
-  { id: "loja-solicitacoes", role: "coord", route: "/dashboard/loja/gerenciar", aba: "Solicitações Pendentes" },
+  // V6-8 (RF-V6.15): a rota morta `loja/gerenciar` saiu; as três capturas da loja passam a sair
+  // da própria `/dashboard/loja`, nas abas vivas (Gerenciar / Aprovações), sem aba nova.
+  { id: "loja-gerenciar", role: "coord", route: "/dashboard/loja", aba: "Gerenciar" },
+  { id: "dialogo-nova-recompensa", role: "coord", route: "/dashboard/loja", aba: "Gerenciar", abre: "Adicionar Produto", dialogo: "Recompensa" },
+  { id: "loja-solicitacoes", role: "coord", route: "/dashboard/loja", aba: "Aprovações" },
   { id: "admin-usuarios", role: "coord", route: "/dashboard/admin", aba: "Usuários" },
   { id: "admin-horas", role: "coord", route: "/dashboard/admin", aba: "Horas" },
+  // V6-9 (RF-V6.12/DEC-182): a aba Voluntários saiu de Projetos e virou aba do Painel
+  // Administrativo. A captura mostra o seletor de projeto (leitura pura — nenhum clique escreve).
+  { id: "admin-voluntarios", role: "coord", route: "/dashboard/admin", aba: "Voluntários", verifica: "Selecionar Projeto" },
   // O formulário de edição mora na aba Configurações. Abrir "Editar Perfil" sem abrir a aba deixa
   // o cartão em modo de edição com o formulário FORA da foto — é o que esta captura fazia até aqui
   // (o extrato media zero `label` na tela). Agora a aba abre antes do botão.

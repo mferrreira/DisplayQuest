@@ -58,7 +58,7 @@ export const taskStatusLabel: Record<Task["status"], string> = {
   // "Concluida". Os dois sempre existiram assim; a unica fonte guarda as duas palavras
   // porque so a do cartao mora aqui.
   "to-do": "A FAZER",
-  "in-progress": "EM ANDAMENTO",
+  "in-progress": "FAZENDO",
   "in-review": "EM REVISÃO",
   adjust: "AJUSTES",
   done: "CONCLUÍDA",

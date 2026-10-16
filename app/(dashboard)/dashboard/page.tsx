@@ -6,9 +6,10 @@
  *
  * Data layer: features/tasks (TanStack Query). Legacy task-context is no longer mounted here.
  *
- * Cabeçalho compacto para dar prioridade vertical ao quadro. O resumo expandido usa os
- * dados que a página já carrega (tarefas, projetos e sessão) e fica abaixo do quadro.
- * Sem coluna secundária (DEC-114): as cinco colunas mantêm a largura horizontal disponível.
+ * Cabeçalho compacto para dar prioridade vertical ao quadro. O resumo (faixa de gráficos)
+ * usa os dados que a página já carrega (tarefas, projetos e sessão) e fica ACIMA do quadro,
+ * para as estatísticas aparecerem sem rolagem. Sem coluna secundária (DEC-114): as cinco
+ * colunas mantêm a largura horizontal disponível.
  */
 import { PageHeader } from "@/components/ui/page-header"
 import { useAuth } from "@/contexts/auth-context"
@@ -34,13 +35,13 @@ export default function DashboardPage() {
             description="Acompanhe os projetos, suas metas e as tarefas do laboratório."
           />
         </div>
-        <TaskBoard />
         <HomeOverview
           projects={projects}
           tasks={tasks}
           weekHours={user?.weekHours ?? 0}
           currentWeekHours={user?.currentWeekHours ?? 0}
         />
+        <TaskBoard />
       </main>
     </div>
   )

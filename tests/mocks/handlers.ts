@@ -139,6 +139,20 @@ export const taskHandlers = [
     return HttpResponse.json(progressResponse.parse({ progress: [] }));
   }),
 
+  // GET /api/tasks/activity — feed "Atividade recente" (history entityType "task"). Titulos
+  // DISTINTOS dos do quadro de proposito: o feed renderiza taskTitle no DOM, e repetir um titulo
+  // do board faria getByText do teste do quadro casar com dois elementos (strict violation).
+  http.get("*/api/tasks/activity", async () => {
+    await delay();
+    return HttpResponse.json({
+      items: [
+        { id: 1, action: "COMPLETE", taskId: 900, taskTitle: "Relatório semanal enviado", toStatus: "done", actorId: 1, actorName: "Guia da Silva", at: new Date().toISOString() },
+        { id: 2, action: "MOVE", taskId: 901, taskTitle: "Onboarding do voluntário", toStatus: "in-review", actorId: 2, actorName: "Ana Souza", at: new Date(Date.now() - 3_600_000).toISOString() },
+        { id: 3, action: "CREATE", taskId: 902, taskTitle: "Reunião de alinhamento", toStatus: "to-do", actorId: 1, actorName: "Guia da Silva", at: new Date(Date.now() - 86_400_000).toISOString() },
+      ],
+    });
+  }),
+
   // GET/PUT/PATCH/DELETE /api/tasks/[id]
   http.get("*/api/tasks/:id", async ({ params }) => {
     await delay();

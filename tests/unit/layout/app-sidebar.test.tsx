@@ -39,12 +39,6 @@ vi.mock("@/contexts/auth-context", () => ({
   }),
 }));
 
-vi.mock("@/components/ui/floating-session-timer", () => ({
-  FloatingSessionTimer: ({ placement }: { placement: string }) => (
-    <div data-testid="sidebar-session-timer" data-placement={placement} />
-  ),
-}));
-
 import { AppSidebar } from "@/components/layout/app-sidebar";
 
 beforeEach(() => {
@@ -95,14 +89,5 @@ describe("AppSidebar (V6-2)", () => {
   it("inicia recolhida quando o shell não informa um estado", () => {
     const { container } = render(<AppSidebar />);
     expect(container.querySelector("#primary-navigation-sidebar")).toHaveAttribute("data-state", "closed");
-  });
-
-  it("ancora o cronômetro no rodapé do menu com o encaixe lateral", () => {
-    const { container } = render(<AppSidebar open />);
-    const nav = container.querySelector("nav");
-    expect(screen.getByTestId("sidebar-session-dock")).toContainElement(screen.getByTestId("sidebar-session-timer"));
-    expect(screen.getByTestId("sidebar-session-timer")).toHaveAttribute("data-placement", "sidebar");
-    expect(screen.getByTestId("sidebar-session-dock")).toHaveClass("shrink-0");
-    expect(nav).toHaveClass("min-h-0", "overflow-y-auto");
   });
 });

@@ -35,7 +35,7 @@ import { getCronograma, type ProjectActivity } from "@/lib/api/project-cronogram
 import type { Task, TaskStatus } from "@/entities/task"
 import { BoardColumn } from "./board-column"
 import { BoardToolbar } from "./board-toolbar"
-import { ArchiveSection } from "./archive-section"
+import { ActivityFeed } from "./activity-feed"
 import { TaskDialog } from "./task-dialog"
 import { TaskDetailDialog } from "./task-detail-dialog"
 
@@ -340,7 +340,7 @@ export function TaskBoard() {
         </DragDropContext>
       )}
 
-      <ArchiveSection tasks={archivedTasks} projects={projects} />
+      <ActivityFeed />
 
       <TaskDialog
         open={dialogOpen}

@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { PointsCounter, PointsDelta } from "@/components/ui/points-delta"
+import { FloatingSessionTimer } from "@/components/ui/floating-session-timer"
 import { Menu, Trophy } from "lucide-react"
 import { getPrimaryRoleLabel } from "@/components/layout/nav-config"
 
@@ -30,9 +31,10 @@ import { getPrimaryRoleLabel } from "@/components/layout/nav-config"
 interface AppHeaderProps {
   sidebarOpen?: boolean
   onToggleSidebar?: () => void
+  showSessionTimer?: boolean
 }
 
-export function AppHeader({ sidebarOpen = true, onToggleSidebar }: AppHeaderProps) {
+export function AppHeader({ sidebarOpen = true, onToggleSidebar, showSessionTimer = true }: AppHeaderProps) {
   const { user, logout } = useAuth()
   const userRoles = user?.roles ?? []
   // Points come from the session (jwt callback enriches from DB) — no all-users fetch needed.
@@ -68,6 +70,8 @@ export function AppHeader({ sidebarOpen = true, onToggleSidebar }: AppHeaderProp
         </div>
 
         <div className="flex items-center justify-end gap-2">
+          {showSessionTimer ? <FloatingSessionTimer placement="header" /> : null}
+
           <div className="hidden items-center gap-2 md:flex">
             {points !== null ? (
               <div className="relative flex items-center gap-2 rounded-lg border bg-card px-3 py-1.5">

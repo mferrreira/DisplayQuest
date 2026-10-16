@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
 import { getNavigationGroups, isNavItemActive } from "@/components/layout/nav-config";
 import { NavItemLink } from "@/components/layout/nav-item-link";
-import { FloatingSessionTimer } from "@/components/ui/floating-session-timer";
 
 /**
  * AppSidebar — plan-v6 · V6-2 (RF-V6.3, DEC-106, AC-V6-08/09).
@@ -14,15 +13,14 @@ import { FloatingSessionTimer } from "@/components/ui/floating-session-timer";
  * `nav-config.ts` — mesma fonte, mesma filtragem `FEATURE_ACCESS`, nenhum destino novo
  * (DEC-112 rejeita os rótulos Times/Inventário/Gamificação que aparecem nas referências).
  * O `<header>` continua no DOM acima (shell.spec.ts trava); em telas estreitas a sidebar
- * navegação some e vale o `Sheet` do `mobile-menu.tsx` (R5); o dock da sessão continua
- * acessível no canto inferior.
+ * navegação some e vale o `Sheet` do `mobile-menu.tsx` (R5); o cronômetro de sessão mora
+ * no header, não mais no rodapé da sidebar.
  *
  * Tokens: usa os `--sidebar-*` que já existem nos dois temas em `app/globals.css` —
  * zero CSS novo (DEC-110). O header é `h-16`, então a sidebar cola embaixo dele
- * (`top-16`, altura `100vh - 4rem`); só a lista de navegação rola, enquanto o dock
- * da sessão fica no rodapé fora dessa área.
+ * (`top-16`, altura `100vh - 4rem`); só a lista de navegação rola.
  */
-export function AppSidebar({ open = false, showSessionTimer = true }: { open?: boolean; showSessionTimer?: boolean }) {
+export function AppSidebar({ open = false }: { open?: boolean }) {
   const { user } = useAuth();
   const pathname = usePathname();
   const groups = getNavigationGroups(user?.roles ?? []);
@@ -49,11 +47,6 @@ export function AppSidebar({ open = false, showSessionTimer = true }: { open?: b
           )),
         )}
       </nav>
-      {showSessionTimer ? (
-        <div data-testid="sidebar-session-dock" className="mt-auto shrink-0 border-0 bg-transparent p-0 md:border-t md:border-sidebar-border md:bg-sidebar md:p-3">
-          <FloatingSessionTimer placement="sidebar" />
-        </div>
-      ) : null}
     </aside>
   );
 }

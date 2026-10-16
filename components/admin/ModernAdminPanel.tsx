@@ -42,8 +42,7 @@ import { UserApproval } from "@/components/features/user-approval"
 import { ProjectMembersManagement } from "@/components/features/project-members-management"
 import { ProjectHoursStats } from "@/components/features/project-hours-stats"
 import { BadgeManager } from "@/components/admin/badge-manager"
-import { AdminStatsCards } from "@/components/admin/AdminStatsCards"
-import { AdminWeeklyHoursTable } from "@/components/admin/AdminWeeklyHoursTable"
+import { AdminOverview } from "@/components/admin/AdminOverview"
 import { AdminProjectManagement } from "@/components/admin/AdminProjectManagement"
 import { AdminHoursManagement } from "@/components/admin/AdminHoursManagement"
 import { AdminNotificationsCenter } from "@/components/admin/AdminNotificationsCenter"
@@ -51,6 +50,7 @@ import { ScheduleGrid } from "@/components/admin/ScheduleGrid"
 import { NotificationsPanel } from "@/components/ui/notifications-panel"
 import { CreateUserDialog } from "@/components/admin/create-user-dialog"
 import { ManageWorkSessionsDialog } from "@/components/admin/manage-work-sessions-dialog"
+import { VolunteersManagement } from "@/components/features/volunteers-management"
 import { hasAccess } from "@/lib/utils/access-control"
 import {
   FUNDING_AGENCIES,
@@ -75,7 +75,28 @@ interface ModernAdminPanelProps {
   onSessionsChanged?: () => void
 }
 
-export function ModernAdminPanel({ users, projects, tasks, sessions, stats, onSessionsChanged }: ModernAdminPanelProps) {
+/**
+ * V6-9 (RF-V6.14 R2): cada aba do painel declara a chave que a governa e, sem ela,
+ * renderiza o motivo — não conteúdo vazio. O mesmo cartão de recusa que a aba de
+ * Projetos já usava, com a chave nomeada no lugar de "gerenciar projetos".
+ */
+function TabPermissionNotice({ feature }: { feature: string }) {
+  return (
+    <Card>
+      <CardContent className="flex items-center justify-center py-8">
+        <div className="text-center">
+          <Shield className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-lg font-semibold mb-2">Acesso Restrito</h3>
+          <p className="text-muted-foreground">
+            Você não tem permissão para ver esta aba ({feature}).
+          </p>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+export function ModernAdminPanel({ users, projects, tasks, sessions, onSessionsChanged }: ModernAdminPanelProps) {
   const { user } = useAuth()
   const { tasks: liveTasks, approveTask, rejectTask, fetchTasks } = useTask()
   const router = useRouter()
@@ -128,11 +149,10 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats, onSe
   const canManageSchedule = hasAccess(user?.roles || [], 'MANAGE_SCHEDULE')
   const canManageBadges = hasAccess(user?.roles || [], 'MANAGE_BADGES')
 
-  // Sessões abertas de todos os usuários. A lista do cartão rola em vez de cortar
-  // (antes eram só as 8 primeiras), e a página recarrega esta lista a cada 30 s.
-  const openSessions = sessions.filter(
-    (session: any) => session.status === 'active' || session.status === 'paused',
-  )
+  // V6-9 (RF-V6.14 R2): as chaves que governam as abas sem uma regra própria — Visão Geral,
+  // Horas e Notificações são o núcleo do administrativo; Voluntários entra pela DEC-182.
+  const canAccessAdmin = hasAccess(user?.roles || [], 'DASHBOARD_ADMIN')
+  const canManageVolunteers = hasAccess(user?.roles || [], 'DASHBOARD_VOLUNTEERS')
 
   const handleRefresh = async () => {
     setRefreshing(true)
@@ -360,17 +380,8 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats, onSe
         </div>
       </div>
 
-      {/* Cards de estatísticas */}
-      <AdminStatsCards 
-        users={users}
-        projects={projects}
-        tasks={tasks}
-        sessions={sessions}
-        stats={stats}
-      />
-
       {/* Tabs principais */}
-      <Tabs defaultValue="overview" className="space-y-6">
+      <Tabs defaultValue={canAccessAdmin ? "overview" : "volunteers"} className="space-y-6">
         <TabsList className="flex w-full overflow-x-auto gap-1 h-auto flex-wrap">
           <TabsTrigger value="overview" className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4" />
@@ -379,6 +390,10 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats, onSe
           <TabsTrigger value="users" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
             <span className="hidden sm:inline">Usuários</span>
+          </TabsTrigger>
+          <TabsTrigger value="volunteers" className="flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            <span className="hidden sm:inline">Voluntários</span>
           </TabsTrigger>
           <TabsTrigger value="projects" className="flex items-center gap-2">
             <Target className="h-4 w-4" />
@@ -400,143 +415,28 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats, onSe
             <Award className="h-4 w-4" />
             <span className="hidden sm:inline">Badges</span>
           </TabsTrigger>
-          <TabsTrigger value="settings" className="flex items-center gap-2">
-            <Settings className="h-4 w-4" />
-            <span className="hidden sm:inline">Configurações</span>
-          </TabsTrigger>
         </TabsList>
 
         {/* Tab Visão Geral */}
         <TabsContent value="overview" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Usuários com sessões ativas/pausadas + gerenciar */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between gap-2">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <Users className="h-5 w-5" />
-                      Sessões Ativas e Pausadas
-                    </CardTitle>
-                    <CardDescription>
-                      {openSessions.length} {openSessions.length === 1 ? 'sessão' : 'sessões'} ativa ou pausada — gerencie via diálogo
-                    </CardDescription>
-                  </div>
-                  <Button size="sm" variant="outline" onClick={() => setManageSessionsOpen(true)}>
-                    Gerenciar sessões
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {openSessions.length === 0 ? (
-                  <div className="text-center py-4">
-                    <Users className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-sm text-muted-foreground">
-                      Nenhuma sessão ativa ou pausada no momento
-                    </p>
-                  </div>
-                ) : (
-                  // Rola dentro do cartão em vez de cortar em 8 (medido em 2026-10-09: a
-                  // lista parava em 8 linhas e o painel não tinha rolagem, então a 9ª sessão
-                  // simplesmente não aparecia). O cartão tem altura limite, o painel não cresce.
-                  <div className="max-h-[22rem] space-y-3 overflow-y-auto pr-1">
-                    {openSessions.map((session) => {
-                      const user = users.find(u => u.id === session.userId)
-                      if (!user) return null
-
-                      const startTime = new Date(session.startTime)
-                      const formatDate = startTime.toLocaleDateString('pt-BR')
-                      const formatTime = startTime.toLocaleTimeString('pt-BR', {
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })
-
-                      return (
-                        <div key={session.id} className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-success/15 flex items-center justify-center">
-                              <span className="text-sm font-medium text-green-600 dark:text-success">
-                                {user.name.split(' ').map((n: string) => n[0]).join('')}
-                              </span>
-                            </div>
-                            <div>
-                              <p className="font-medium">{user.name}</p>
-                              <p className="text-sm text-muted-foreground">
-                                Iniciado: {formatDate} às {formatTime}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <Badge variant="outline" className={session.status === 'paused' ? 'bg-amber-50 dark:bg-warning/10 text-amber-700 dark:text-warning border-amber-200 dark:border-warning/25' : 'bg-green-50 dark:bg-success/10 text-green-700 dark:text-green-300 border-green-200 dark:border-success/25'}>
-                              {session.status === 'paused' ? 'Pausada' : (user.roles?.[0] || 'Usuário')}
-                            </Badge>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {session.status === 'paused' ? 'Pausada' : 'Trabalhando'}
-                            </p>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Projetos em andamento */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Target className="h-5 w-5" />
-                  Projetos em Andamento
-                </CardTitle>
-                <CardDescription>
-                  Projetos ativos e seu progresso
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {projects.filter(p => p.status === 'active').slice(0, 5).map((project) => (
-                    <div key={project.id} className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-medium">{project.name}</h4>
-                        <Badge variant="secondary">{project.status}</Badge>
-                      </div>
-                      <div className="space-y-1">
-                        <div className="flex justify-between text-sm">
-                          <span>Progresso</span>
-                          <span>75%</span>
-                        </div>
-                        <div className="w-full bg-gray-200 dark:bg-muted/60 rounded-full h-2">
-                          <div className="bg-blue-600 dark:bg-info h-2 rounded-full" style={{ width: '75%' }}></div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Tabela de horas semanais */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Clock className="h-5 w-5" />
-                Horas Trabalhadas Esta Semana
-              </CardTitle>
-              <CardDescription>
-                Resumo das horas trabalhadas por todos os usuários
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <AdminWeeklyHoursTable users={users} sessions={sessions} />
-            </CardContent>
-          </Card>
+          {!canAccessAdmin ? (
+            <TabPermissionNotice feature="DASHBOARD_ADMIN" />
+          ) : (
+            <AdminOverview
+              users={users}
+              projects={projects}
+              tasks={tasks}
+              sessions={sessions}
+              onManageSessions={() => setManageSessionsOpen(true)}
+            />
+          )}
         </TabsContent>
 
         {/* Tab Usuários */}
         <TabsContent value="users" className="space-y-6">
-          {canManageUsers && (
+          {!canManageUsers ? (
+            <TabPermissionNotice feature="MANAGE_USERS" />
+          ) : (
             <>
               {/* Filtros */}
               <Card>
@@ -553,7 +453,7 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats, onSe
                   <div className="flex flex-col sm:flex-row gap-4">
                     <div className="flex-1">
                       <div className="relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-muted-foreground/70 h-4 w-4" />
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                         <Input
                           placeholder="Buscar usuários..."
                           value={searchTerm}
@@ -630,8 +530,8 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats, onSe
                       .map((user) => (
                         <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg">
                           <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-info/15 flex items-center justify-center">
-                              <span className="text-sm font-medium text-blue-600 dark:text-info">
+                            <div className="w-10 h-10 rounded-full bg-info/15 flex items-center justify-center">
+                              <span className="text-sm font-medium text-info">
                                 {user.name.split(' ').map((n: string) => n[0]).join('')}
                               </span>
                             </div>
@@ -694,32 +594,39 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats, onSe
               }}
             />
           ) : (
-            <Card>
-              <CardContent className="flex items-center justify-center py-8">
-                <div className="text-center">
-                  <Shield className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">Acesso Restrito</h3>
-                  <p className="text-muted-foreground">
-                    Você não tem permissão para gerenciar projetos.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+            <TabPermissionNotice feature="MANAGE_PROJECTS" />
+          )}
+        </TabsContent>
+
+        {/* Tab Voluntários (V6-9, RF-V6.12/DEC-182): saiu de Projetos, entrou aqui */}
+        <TabsContent value="volunteers" className="space-y-6">
+          {canManageVolunteers ? (
+            <VolunteersManagement />
+          ) : (
+            <TabPermissionNotice feature="DASHBOARD_VOLUNTEERS" />
           )}
         </TabsContent>
 
         {/* Tab Horas */}
         <TabsContent value="hours" className="space-y-6">
+          {!canAccessAdmin ? (
+            <TabPermissionNotice feature="DASHBOARD_ADMIN" />
+          ) : (
+          <>
           <AdminHoursManagement 
             users={users}
             projects={projects}
             sessions={sessions}
           />
+          </>
+          )}
         </TabsContent>
 
         {/* Tab Tarefas */}
         <TabsContent value="tasks" className="space-y-6">
-          {canManageTasks && (
+          {!canManageTasks ? (
+            <TabPermissionNotice feature="MANAGE_TASKS" />
+          ) : (
             <>
               {/* Filtros */}
               <Card>
@@ -741,7 +648,7 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats, onSe
                       <SelectContent>
                         <SelectItem value="all">Todos os status</SelectItem>
                         <SelectItem value="to-do">A Fazer</SelectItem>
-                        <SelectItem value="in-progress">Em Andamento</SelectItem>
+                        <SelectItem value="in-progress">Fazendo</SelectItem>
                         <SelectItem value="in-review">Em Revisão</SelectItem>
                         <SelectItem value="adjust">Ajustes</SelectItem>
                         <SelectItem value="done">Concluído</SelectItem>
@@ -804,7 +711,7 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats, onSe
                               <div className="flex flex-wrap gap-1.5 mt-2">
                                 <Badge variant="outline" className="text-xs">
                                   {task.status === "to-do" ? "A Fazer"
-                                    : task.status === "in-progress" ? "Em Andamento"
+                                    : task.status === "in-progress" ? "Fazendo"
                                     : task.status === "in-review" ? "Em Revisão"
                                     : task.status === "adjust" ? "Ajustes"
                                     : task.status === "done" ? "Concluído"
@@ -830,7 +737,7 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats, onSe
                                       <li key={subtask.id} className="flex items-center gap-1.5 text-xs">
                                         <span
                                           aria-hidden="true"
-                                          className={subtask.completed ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground/60"}
+                                          className={subtask.completed ? "text-success" : "text-muted-foreground/60"}
                                         >
                                           {subtask.completed ? "✓" : "○"}
                                         </span>
@@ -857,7 +764,7 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats, onSe
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  className="text-green-700 dark:text-green-300 border-green-300 dark:border-success/40 hover:bg-green-50 dark:bg-success/10 gap-1"
+                                  className="text-success border-success/40 hover:bg-success/10 gap-1"
                                   disabled={isLoading}
                                   onClick={async () => {
                                     if (inFlightTaskIds.current.has(task.id)) return
@@ -879,7 +786,7 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats, onSe
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  className="text-red-700 dark:text-red-300 border-red-300 dark:border-destructive/40 hover:bg-red-50 dark:bg-destructive/10 gap-1"
+                                  className="text-destructive border-destructive/40 hover:bg-destructive/10 gap-1"
                                   disabled={isLoading}
                                   onClick={async () => {
                                     if (inFlightTaskIds.current.has(task.id)) return
@@ -946,9 +853,9 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats, onSe
                               {task.completedCount}/{task.audienceSize} concluíram
                             </Badge>
                           </div>
-                          <div className="w-full bg-gray-200 dark:bg-muted/60 rounded-full h-1.5">
+                          <div className="w-full bg-muted rounded-full h-1.5">
                             <div
-                              className="bg-green-600 dark:bg-success h-1.5 rounded-full"
+                              className="bg-success h-1.5 rounded-full"
                               style={{ width: `${Math.round(task.completionRate)}%` }}
                             />
                           </div>
@@ -968,6 +875,10 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats, onSe
 
         {/* Tab Notificações */}
         <TabsContent value="notifications" className="space-y-6">
+          {!canAccessAdmin ? (
+            <TabPermissionNotice feature="DASHBOARD_ADMIN" />
+          ) : (
+          <>
           <AdminNotificationsCenter users={users} />
           <Card>
             <CardHeader>
@@ -983,36 +894,17 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats, onSe
               <NotificationsPanel />
             </CardContent>
           </Card>
+          </>
+          )}
         </TabsContent>
 
         {/* Tab Badges */}
         <TabsContent value="badges" className="space-y-6">
-          {canManageBadges && <BadgeManager />}
-        </TabsContent>
-
-        {/* Tab Configurações */}
-        <TabsContent value="settings" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Settings className="h-5 w-5" />
-                Configurações do Sistema
-              </CardTitle>
-              <CardDescription>
-                Configure parâmetros gerais do sistema
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div>
-                  <h3 className="font-medium mb-2">Configurações Gerais</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Configurações básicas do sistema em desenvolvimento...
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          {canManageBadges ? (
+            <BadgeManager />
+          ) : (
+            <TabPermissionNotice feature="MANAGE_BADGES" />
+          )}
         </TabsContent>
       </Tabs>
 
@@ -1306,7 +1198,7 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats, onSe
               {userSettingsError && (
                 // Mesma forma da casa para erro inline (components/features/project-dialog.tsx:210).
                 // `role="alert"` para que a mensagem seja anunciada, não só pintada de vermelho.
-                <p role="alert" className="text-red-600 dark:text-red-400 text-sm">
+                <p role="alert" className="text-destructive text-sm">
                   {userSettingsError}
                 </p>
               )}
