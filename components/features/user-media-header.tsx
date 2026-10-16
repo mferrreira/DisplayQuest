@@ -91,9 +91,13 @@ export function UserMediaHeader({ userId, userName, bannerKey, canEdit, onBanner
     }
   }
 
+  // V6-7 (reimaginacao da tela): a capa deixa de ser uma caixa solta acima do avatar e passa a ser
+  // a faixa do hero — o avatar do cartao sobrepoe a borda inferior (mesmo desenho do cabecalho de
+  // midia do projeto). Os controles viram um par de chips sobre a faixa, para o hero ler como um
+  // objeto so; o `sr-only` dos inputs e os rotulos nao mudam (sao o que o teste fixa).
   return (
-    <div className="mb-4 space-y-3">
-      <div className="h-28 overflow-hidden rounded-lg border bg-muted sm:h-36">
+    <div className="relative">
+      <div className={`h-36 overflow-hidden sm:h-44 ${currentKey ? "bg-muted" : "bg-primary/10"}`}>
         {currentKey ? (
           <>
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -104,7 +108,7 @@ export function UserMediaHeader({ userId, userName, bannerKey, canEdit, onBanner
             />
           </>
         ) : (
-          <div className="flex h-full w-full items-center justify-center gap-2 text-sm text-muted-foreground">
+          <div className="flex h-full w-full items-center justify-center gap-2 text-sm font-medium text-primary/70">
             <ImageOff className="h-5 w-5" />
             Sem capa
           </div>
@@ -112,7 +116,7 @@ export function UserMediaHeader({ userId, userName, bannerKey, canEdit, onBanner
       </div>
 
       {canEdit && (
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="absolute right-3 top-3 z-10 flex flex-wrap items-center gap-2">
           <Input
             ref={inputRef}
             type="file"
@@ -122,12 +126,24 @@ export function UserMediaHeader({ userId, userName, bannerKey, canEdit, onBanner
             disabled={busy}
             onChange={() => handleUpload()}
           />
-          <Button size="sm" variant="outline" disabled={busy} onClick={() => inputRef.current?.click()}>
+          <Button
+            size="sm"
+            variant="secondary"
+            className="bg-background/90 backdrop-blur"
+            disabled={busy}
+            onClick={() => inputRef.current?.click()}
+          >
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
             Enviar capa
           </Button>
           {currentKey && (
-            <Button size="sm" variant="ghost" disabled={busy} onClick={handleRemove}>
+            <Button
+              size="sm"
+              variant="secondary"
+              className="bg-background/90 backdrop-blur"
+              disabled={busy}
+              onClick={handleRemove}
+            >
               <Trash2 className="h-4 w-4" />
               {/* "Tirar" e nao "Remover": o cartao de foto do mesmo perfil ja tem o botao "Remover
                   Foto Atual", e `getByRole` casa por substring (licao da 3.C). */}
