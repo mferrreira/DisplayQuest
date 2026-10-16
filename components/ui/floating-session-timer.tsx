@@ -32,7 +32,7 @@ function formatTime(seconds: number) {
   return [h, m, s].map((value) => value.toString().padStart(2, "0")).join(":")
 }
 
-export function FloatingSessionTimer() {
+export function FloatingSessionTimer({ placement = "floating" }: { placement?: "floating" | "sidebar" }) {
   const { user, loading: authLoading } = useAuth()
   const {
     currentSession,
@@ -292,13 +292,19 @@ export function FloatingSessionTimer() {
           : "paused"
         : "active"
 
+  const panelPlacementClass = placement === "sidebar"
+    ? `relative z-50 max-h-[calc(100dvh-8rem)] max-w-[calc(100vw-2rem)] overflow-y-auto rounded-lg border bg-background/95 shadow-lg backdrop-blur transition-[width,height] duration-300 ease-in-out md:max-h-[calc(100dvh-8rem)] ${
+        expanded ? "w-80 p-3 md:w-full" : "h-16 w-16 p-0 md:h-12 md:w-full"
+      }`
+    : `fixed bottom-[6em] left-[6em] z-50 rounded-lg border bg-background/95 shadow-lg backdrop-blur transition-all duration-200 ${
+        expanded ? "w-80 p-4" : "w-16 h-16 p-0"
+      }`
+
   return (
     <>
       <div
         ref={panelRef}
-        className={`fixed bottom-[6em] left-[6em] z-50 rounded-lg border bg-background/95 shadow-lg backdrop-blur transition-all duration-200 ${
-          expanded ? "w-80 p-4" : "w-16 h-16 p-0"
-        }`}
+        className={panelPlacementClass}
       >
         <SessionWelcomeBalloon
           isLoggedIn={Boolean(user)}
@@ -316,10 +322,10 @@ export function FloatingSessionTimer() {
             <SessionTimerIndicator state={collapsedState} />
           </Button>
         ) : (
-          <Tabs defaultValue="sessao" className="space-y-3">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="sessao">Sessão</TabsTrigger>
-              <TabsTrigger value="responsabilidade">Responsabilidade</TabsTrigger>
+          <Tabs defaultValue="sessao" className="min-w-0 space-y-3">
+            <TabsList className="grid h-auto min-h-10 w-full min-w-0 grid-cols-2">
+              <TabsTrigger value="sessao" className="min-w-0 px-2 text-xs">Sessão</TabsTrigger>
+              <TabsTrigger value="responsabilidade" className="min-w-0 break-words whitespace-normal px-1 text-center text-xs leading-tight">Responsabilidade</TabsTrigger>
             </TabsList>
 
             <TabsContent value="sessao" className="space-y-3 mt-0">
@@ -337,6 +343,31 @@ export function FloatingSessionTimer() {
             </div>
 
             <p className="font-mono text-2xl font-bold">{formatTime(seconds)}</p>
+
+            <div className="flex flex-wrap gap-2">
+              {currentSession?.status === "active" ? (
+                <Button size="sm" variant="outline" onClick={handlePause} disabled={loading}>
+                  <Pause className="mr-1 h-4 w-4" />
+                  Pausar
+                </Button>
+              ) : currentSession ? (
+                <Button size="sm" variant="outline" onClick={handleResume} disabled={loading || !currentSession}>
+                  <PlayCircle className="mr-1 h-4 w-4" />
+                  Continuar
+                </Button>
+              ) : null}
+
+              {currentSession && (
+                <Button size="sm" variant="destructive" onClick={openStopDialog} disabled={loading}>
+                  <StopCircle className="mr-1 h-4 w-4" />
+                  Parar
+                </Button>
+              )}
+
+              <Button size="icon" variant="ghost" className="ml-auto h-8 w-8 shrink-0" onClick={() => setExpanded(false)} aria-label="Recolher cronômetro">
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </div>
 
             <SessionAutoPauseCountdown
               sessionStatus={currentSession?.status ?? null}
@@ -404,30 +435,6 @@ export function FloatingSessionTimer() {
               </div>
             )}
 
-            <div className="flex gap-2">
-              {currentSession?.status === "active" ? (
-                <Button size="sm" variant="outline" onClick={handlePause} disabled={loading}>
-                  <Pause className="h-4 w-4 mr-1" />
-                  Pausar
-                </Button>
-              ) : currentSession ? (
-                <Button size="sm" variant="outline" onClick={handleResume} disabled={loading || !currentSession}>
-                  <PlayCircle className="h-4 w-4 mr-1" />
-                  Continuar
-                </Button>
-              ) : null}
-
-              {currentSession && (
-                <Button size="sm" variant="destructive" onClick={openStopDialog} disabled={loading}>
-                  <StopCircle className="h-4 w-4 mr-1" />
-                  Parar
-                </Button>
-              )}
-
-              <Button size="sm" variant="ghost" onClick={() => setExpanded(false)}>
-                <ChevronDown className="h-4 w-4" />
-              </Button>
-            </div>
             </TabsContent>
 
             <TabsContent value="responsabilidade" className="mt-0">

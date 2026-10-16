@@ -6,12 +6,18 @@ O Quadro de Tarefas é a tela inicial do sistema. É onde o trabalho do laborat�
 Vista de coordenador: o quadro mostra todas as tarefas visíveis, de todos os projetos.
 ```
 
+No alto, a saudação ocupa pouco espaço para manter o quadro em destaque. Abaixo das cinco colunas há três áreas de resumo. **Projetos recentes** mostra o andamento temporal de cada projeto (ou a proporção de tarefas concluídas quando faltam datas). **Meta da semana** representa as horas registradas e a meta com uma barra horizontal. **Estatísticas do quadro** reúne a taxa de conclusão e a distribuição das tarefas por status em gráficos compactos. Os projetos recentes abrem o detalhe do projeto ao serem selecionados.
+
+```foto resumo-home titulo="Resumo da Home: projetos, meta semanal e situação das tarefas"
+A barra compara as horas registradas com a meta semanal; os gráficos ao lado resumem conclusão e distribuição por status.
+```
+
 ## As colunas
 
 | Coluna | O que significa |
 | --- | --- |
 | **A Fazer** | tarefa criada, ainda não começada |
-| **Em Andamento** | alguém está trabalhando nela |
+| **Fazendo** | alguém está trabalhando nela |
 | **Em Revisão** | entregue, esperando aprovação |
 | **Ajustes** | a revisão devolveu a tarefa para correção |
 | **Concluído** | aprovada; os pontos foram creditados |

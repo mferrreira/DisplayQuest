@@ -39,9 +39,14 @@ function monthKey(civilDay: string): string {
 export function ProjectCertificatesPanel({
   projectId,
   canManage,
+  initialMembers,
+  allowGeneration = true,
 }: {
   projectId: number
   canManage: boolean
+  initialMembers?: ProjectMember[]
+  /** Hide local generation when a shared report wizard owns the flow. */
+  allowGeneration?: boolean
 }) {
   const { toast } = useToast()
   const { user } = useAuth()
@@ -55,7 +60,7 @@ export function ProjectCertificatesPanel({
     setLoading(true)
     try {
       const [memberRows, certificateRows] = await Promise.all([
-        listProjectMembers(projectId).catch(() => []),
+        initialMembers ? Promise.resolve(initialMembers) : listProjectMembers(projectId).catch(() => []),
         listCertificates(projectId),
       ])
       setMembers(memberRows)
@@ -70,7 +75,7 @@ export function ProjectCertificatesPanel({
     } finally {
       setLoading(false)
     }
-  }, [projectId, toast])
+  }, [projectId, toast, initialMembers])
 
   useEffect(() => {
     void load()
@@ -134,7 +139,7 @@ export function ProjectCertificatesPanel({
           <ul className="space-y-2">
             {activeMembers.map((member) => {
               const certificate = certificates.get(`${member.userId}:${month}`)
-              const canGenerate = canManage || member.userId === user?.id
+              const canGenerate = allowGeneration && (canManage || member.userId === user?.id)
               return (
                 <li key={member.userId} className="flex items-center justify-between gap-2">
                   <span className="text-sm">{member.userName ?? `Usuário ${member.userId}`}</span>

@@ -198,7 +198,7 @@ export function ResponsibilityTab() {
                   <Clock className="h-5 w-5 mr-2 text-primary" />
                   <span className="text-2xl font-mono">{formatDuration(activeResponsibility.duration)}</span>
                   {activeResponsibility.isPaused && (
-                    <Badge variant="secondary" className="ml-2 bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300">
+                    <Badge variant="secondary" className="ml-2 border-warning/25 bg-warning/10 text-warning">
                       PAUSADA
                     </Badge>
                   )}

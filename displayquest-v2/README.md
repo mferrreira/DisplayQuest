@@ -15,7 +15,8 @@ displayquest-v2/
 ├── plan-v3/       OPERAÇÃO: correções e features pedidas por quem usa o sistema hoje (sessões, quadro, pontos) — done
 ├── plan-v4/       OPERAÇÃO: subtasks, animação de pontos, inativação (2026-10-05) — done (2026-10-07, DEC-78..98)
 ├── plan-v5/       OPERAÇÃO: domínio de projetos maduro — cronograma, pontos, relatórios técnicos, atestados (2026-10-06) — done (2026-10-14, V5-1..V5-12 + V5-fix-1/V5-fix-2; DEC-61..77, 99..104, 126..180)
-└── plan-v6/       OPERAÇÃO: linguagem visual UI/UX + redistribuição das telas (2026-10-07, revisado 2026-10-14) — spec-driven, ready, nenhuma onda começada (DEC-105..114, 181..188)
+├── plan-v6/       OPERAÇÃO: linguagem visual UI/UX + redistribuição das telas (2026-10-07, revisado 2026-10-14) — spec-driven, ready, V6-0 executado (DEC-105..114, 181..188)
+└── plan-v7/       OPERAÇÃO: servidor MCP para os agents do laboratório (2026-10-15) — planejado, nenhuma onda começada (DEC-190..203, ASK-V7-01..15)
 ```
 
 ## Fluxo de dependências (unidirecional)
@@ -38,6 +39,13 @@ plan-v6 (linguagem visual + redistribuição das telas) ──> camada de aprese
                                  O bloqueio antigo (DEC-145, uma frente por vez) caiu com
                                  o fechamento do plan-v5. Home sem coluna secundária,
                                  largura toda (DEC-114).
+
+plan-v7 (servidor MCP para os agents do laboratório) ──> camada de acesso por credencial,
+                                 independente do plan-v6: não toca em tela, não muda
+                                 navegação e não muda valor de permissão. O que ele entrega
+                                 primeiro fica ABAIXO da interface (api_credentials no app,
+                                 DEC-192/199) e só depois vem o servidor MCP em container
+                                 próprio (DEC-190).
 ```
 
 - `spec-v2/` registra a visão do dono (gamificação profunda, projeto mais complexo,
@@ -91,6 +99,19 @@ plan-v6 (linguagem visual + redistribuição das telas) ──> camada de aprese
   DEC-181..188). Ilustrações/texto manuscrito ficaram fora (DEC-109); tema escuro passa a ser
   coberto na skill (DEC-110). A ferramenta de execução é `/ui-refactor <tela>` com gate
   `/ui-review <tela>`.
+- `plan-v7/` nasce da demanda do dono em 2026-10-15: um servidor **MCP**
+  (Model Context Protocol) que os agents do laboratório usam para falar com o DisplayQuest,
+  consumido pela coordenação através de outro projeto. Não vem do `spec-v2` (que já previa
+  SSO/LDAP, mas não MCP): vem de uso, como o plan-v3. O achado que dimensiona o plano é que
+  **não existe hoje nenhum caminho de credencial** no app — `requireApiActor()`
+  (`lib/auth/api-guard.ts`) lê só cookie de sessão, são 260 chamadas em `app/api/` e não há
+  modelo de token no schema —, então a peça 1 (V7-1) é a credencial delegada `api_credentials`
+  com emissão por CLI, e o MCP é a peça 2 (V7-2 em diante). Escopo completo em seis famílias
+  (`read`, `tasks`, `project`, `hours`, `documents`, `people`), 59 tools sobre rotas medidas,
+  transporte duplo (Streamable HTTP + `stdio`), TLS no endpoint do MCP, auditoria em tabela e
+  um contrato plugável para o IdP futuro. Decisões **DEC-190..203**, perguntas **ASK-V7-01..15**
+  (todas respondidas em 2026-10-15; nenhuma aberta), 12 ondas revertíveis
+  (V7-0..V7-11). É **planejado** — nenhuma onda começou.
 
 ## Regras do container
 

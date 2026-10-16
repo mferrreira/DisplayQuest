@@ -26,7 +26,7 @@ describe("nav-config — destinos congelados (caracterização V6-2)", () => {
     ]);
   });
 
-  it("VOLUNTARIO não vê Relatórios Semanais nem Painel Administrativo", () => {
+  it("VOLUNTARIO não vê Relatórios nem Painel Administrativo", () => {
     const hrefs = hrefsFor(["VOLUNTARIO"]);
     expect(hrefs).toContain("/dashboard/projetos"); // VIEW_PROJECT_DASHBOARD inclui VOLUNTARIO
     expect(hrefs).not.toContain("/dashboard/weekly-reports");
@@ -54,7 +54,7 @@ describe("nav-config — destinos congelados (caracterização V6-2)", () => {
       "Quadro de Tarefas",
       "Projetos",
       "Laboratório",
-      "Relatórios Semanais",
+      "Relatórios",
       "Painel Administrativo",
       "Perfil",
       "Loja",

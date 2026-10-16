@@ -16,18 +16,23 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { PointsCounter, PointsDelta } from "@/components/ui/points-delta"
-import { Trophy } from "lucide-react"
+import { Menu, Trophy } from "lucide-react"
 import { getPrimaryRoleLabel } from "@/components/layout/nav-config"
 
 /**
  * AppHeader — plan-v6 · V6-2 (RF-V6.3, DEC-106, AC-V6-08/09).
  *
- * O header compacto: identidade (logo + nome), sino de notificações, tema e avatar.
+ * O header compacto: identidade, controle da sidebar desktop, sino, tema e avatar.
  * A navegação saiu dos pills do topo e foi para a `AppSidebar` (desktop) e para o `Sheet`
  * (mobile) — o `<header>` permanece no DOM, travado por tests/e2e/shell.spec.ts.
  * O chip de pontos perdeu o degradê e a paleta crua (RF-V6.1): só token semântico.
  */
-export function AppHeader() {
+interface AppHeaderProps {
+  sidebarOpen?: boolean
+  onToggleSidebar?: () => void
+}
+
+export function AppHeader({ sidebarOpen = true, onToggleSidebar }: AppHeaderProps) {
   const { user, logout } = useAuth()
   const userRoles = user?.roles ?? []
   // Points come from the session (jwt callback enriches from DB) — no all-users fetch needed.
@@ -35,8 +40,26 @@ export function AppHeader() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="flex h-16 items-center justify-between gap-4 px-4">
-        <div className="flex items-center gap-3">
+      <div className="relative flex h-16 items-center justify-between gap-4 px-4">
+        <div className="flex items-center gap-3 md:pl-10">
+          {onToggleSidebar ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="absolute left-4 top-1/2 hidden -translate-y-1/2 md:inline-flex"
+              aria-label={sidebarOpen ? "Recolher menu lateral" : "Abrir menu lateral"}
+              aria-expanded={sidebarOpen}
+              aria-controls="primary-navigation-sidebar"
+              title={sidebarOpen ? "Recolher menu lateral" : "Abrir menu lateral"}
+              onClick={onToggleSidebar}
+            >
+              <Menu
+                className={`h-5 w-5 transition-transform duration-300 ease-in-out ${sidebarOpen ? "rotate-0" : "rotate-90"}`}
+                aria-hidden="true"
+              />
+            </Button>
+          ) : null}
           <MobileMenu />
           <Link href="/dashboard" className="flex items-center gap-3 transition-opacity hover:opacity-80">
             <img src="/LOGO.png" alt="Display Quest" className="h-10 w-10" />

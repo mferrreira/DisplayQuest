@@ -1,31 +1,30 @@
 # Projetos
 
-Um projeto agrupa tarefas, define quem participa e concentra as horas registradas. A tela **Projetos** tem duas abas: **Lista de Projetos** e **Voluntários**.
+Um projeto agrupa tarefas, define quem participa e concentra as horas registradas. A tela **Projetos** tem as abas **Dashboard**, **Lista de Projetos** e **Voluntários**, conforme o seu acesso. Cada linha da lista abre a página dedicada do projeto.
 
 ```foto projetos titulo="A tela Projetos, na aba Lista de Projetos"
-Cada cartão traz o nome, a data de criação, o status e os links do projeto.
+A lista mostra cada projeto em uma linha com status, descrição, andamento, datas e ações disponíveis. Com início e término definidos, o andamento representa o tempo decorrido do projeto; sem o período completo, usa a proporção de tarefas concluídas.
+```
+
+Na parte superior da tela, combine a busca, o status e **Pessoa**. A pessoa limita a seleção aos projetos com tarefas atribuídas a ela e às próprias tarefas. O mesmo recorte alimenta a aba **Dashboard** e a lista. No Dashboard, **Projeto** restringe ainda mais os gráficos; **Todos os projetos** reúne somente os projetos que passaram pelos filtros do topo. A distribuição por status, o histórico semanal e a lista de andamento acompanham os filtros combinados. O histórico conta conclusões por semana, de segunda a domingo, nas últimas oito semanas.
+
+```foto dashboard-projetos titulo="Dashboard de Projetos com gráficos e histórico semanal"
+Os gráficos e o histórico acompanham o projeto selecionado; a opção **Todos os projetos** reúne o conjunto disponível.
 ```
 
 ## Ver um projeto
 
-A **Lista de Projetos** mostra todos os projetos do sistema, inclusive os que você não participa. Na lista, abra o olho no cartão do projeto. O sistema abre o detalhe, que mostra, nesta ordem:
+A **Lista de Projetos** mostra todos os projetos do sistema, inclusive os que você não participa. Use os filtros **Todos**, **Ativos**, **Concluídos** e **Arquivados** para limitar a lista; os números ao lado indicam quantos projetos há em cada status. A busca filtra pelo nome e pela descrição. Cada linha mostra o status, a descrição e o andamento: quando início e término estão definidos, a barra representa a proporção do período civil já decorrido; se uma dessas datas faltar, mostra a proporção de tarefas concluídas. As datas informadas também aparecem na linha. Para abrir um projeto, use o botão de visualização. A página do projeto abre com o cabeçalho, o status e as ações **Editar** e **Excluir**. O conteúdo é dividido nas abas **Visão geral**, **Tarefas**, **Membros**, **Arquivos** e **Configurações**:
 
-- a **capa** e o **logo** do projeto, quando houver. Sem capa, o espaço do topo diz *"Sem capa"*;
-- o nome, o **Status** (**Ativo**, **Concluído**, **Arquivado**), a data de criação e os botões **Editar** e **Excluir**;
-- a **Descrição**, quando o projeto tem descrição;
-- **Dados do projeto**: **Início**, **Término**, **Número do edital**, **Número do processo**, **Número PROPPI**, **Pontos do projeto** e a barra de **Andamento** do período. Esse card só aparece quando algum desses campos foi preenchido;
-- **Entregáveis**, cada um com o nome e a quantidade em unidades (**2 un.**);
-- **Anexos**, cada um com o nome, o tamanho e o arquivo;
-- **Cronograma**, com as **Metas do projeto** e a grade de meses (a seção *Cronograma do projeto* abaixo);
-- **Relatórios técnicos**, um texto editável por tipo (a seção *Relatórios técnicos do projeto* abaixo);
-- **Atestados de frequência**, um PDF oficial por membro ativo e mês (a seção *Atestados de frequência* abaixo);
-- **Total de Tarefas**, **Concluídas**, **Em Progresso** e **Pendentes**, e o **Progresso Geral** com a taxa de conclusão;
-- **Tarefas do Projeto**, com **Importar Backlog** e **Nova Tarefa**;
-- **Criado por**, **Data de criação** e **Última atualização**;
-- os **Links** cadastrados — quando não há nenhum, a tela diz *"Não há links para esse projeto"*.
+- **Visão geral**: a **capa** e o **logo**, quando houver; a **Descrição**; **Dados do projeto**: **Início**, **Término**, **Número do edital**, **Número do processo**, **Número PROPPI**, **Pontos do projeto** e a barra de **Andamento** do período. Esse card só aparece quando algum desses campos foi preenchido;
+- **Tarefas**: o **Cronograma**, quatro contagens de tarefas, o **Andamento do projeto** (período quando as duas datas existem; tarefas como alternativa) e a lista de tarefas com **Importar Backlog** e **Nova Tarefa**;
+- **Membros**: horas do projeto e gestão dos vínculos, quando você tem acesso;
+- **Arquivos**: entregáveis, anexos, relatórios técnicos, atestados de frequência e relatórios do projeto;
+- **Configurações**: links cadastrados e logs do projeto para a liderança. Quando não há links, a tela diz *"Não há links para esse projeto"*;
+- um resumo lateral com status, datas, criador, líder e quantidade de membros.
 
-```foto dialogo-detalhe-projeto titulo="O detalhe de um projeto"
-É pelo detalhe que se vê o andamento real do projeto: quantas tarefas faltam, quantas estão em curso e quantas terminaram.
+```foto detalhe-projeto titulo="A aba Tarefas da página de um projeto"
+A página dedicada organiza o andamento, as pessoas, os arquivos e as configurações em abas, mantendo o resumo do projeto visível ao lado.
 ```
 
 A barra de **Andamento**, no card **Dados do projeto**, é o relógio do calendário: o percentual do período já decorrido, e a linha nomeia os dias — *"Faltam 45 dias para o término — 120 de 165 dias decorridos"*. Antes do **Início**, a barra está zerada e a linha diz *"Começa em N dias — término em M dias"*; depois do **Término**, *"Encerrado há N dias"*. O dia exato do término ainda conta como dentro do período. Projeto sem **Término** não mostra barra: sem fim não há relógio a desenhar.
@@ -105,7 +104,7 @@ O cronograma é o calendário do projeto. São duas listas no mesmo card: as **M
 
 As colunas são o período do projeto. Um projeto de 1º de março a 31 de agosto tem a grade de mar/2026 a ago/2026. Projeto sem datas tem 12 meses a partir do mês atual. Se uma marca cair fora dessas colunas, a grade se alarga para alcançá-la, e com muitos meses a grade tem largura e se move para o lado.
 
-```foto dialogo-detalhe-projeto-cronograma titulo="O card Cronograma, no detalhe de um projeto"
+```foto projeto-cronograma titulo="O Cronograma na aba Tarefas do projeto"
 O card anuncia a grade que ele mostra: *"out/2026 a set/2027 — 12 meses na grade"*. A etapa *Revisão da literatura* está marcada em out/2026 e nov/2026, e a linha diz *"out/2026 → nov/2026 · 2 meses"*.
 ```
 
@@ -160,7 +159,7 @@ Esses controles aparecem para a liderança e a gerência do projeto. Quem não g
 
 ## Relatórios técnicos do projeto
 
-O relatório técnico é o documento que a iniciação científica exige do projeto: **Parcial**, **Técnico-final** e **Final**. No detalhe do projeto, o card **Relatórios técnicos** tem um texto editável por tipo, e o documento oficial é gerado a partir desse texto.
+O relatório técnico é o documento que a iniciação científica exige do projeto: **Parcial**, **Técnico-final** e **Final**. Na aba **Arquivos** do projeto, o bloco **Relatórios técnicos** tem um texto editável por tipo, e o documento oficial é gerado a partir desse texto.
 
 1. Abra o detalhe do projeto e desça até **Relatórios técnicos**.
 2. Em **Relatório Parcial**, escreva o texto do relatório no campo abaixo — **Texto do relatório Parcial**. O mesmo vale para **Relatório Técnico-final** e **Relatório Final**.
@@ -189,9 +188,9 @@ Os três botões aparecem para o líder e a gestão do projeto. As demais pessoa
 
 ## Atestados de frequência
 
-O atestado de frequência é o documento oficial que certifica a frequência de um membro no projeto em um mês. O card **Atestados de frequência** fica no detalhe do projeto, ao lado dos relatórios técnicos.
+O atestado de frequência é o documento oficial que certifica a frequência de um membro no projeto em um mês. O bloco **Atestados de frequência** fica na aba **Arquivos** da página do projeto.
 
-1. Abra o detalhe do projeto e desça até **Atestados de frequência**.
+1. Abra o projeto, entre na aba **Arquivos** e localize **Atestados de frequência**.
 2. Escolha o **Mês de referência**. O mês proposto é o anterior ao mês atual — o documento atesta o mês inteiro, e o mês em curso ainda não terminou.
 3. Na linha de cada membro **Ativo**, clique em **Gerar atestado**. O botão vira **Regenerar**, e o link **Baixar** passa a aparecer na linha.
 
@@ -213,15 +212,14 @@ Todo dia 19, o sistema avisa o líder do projeto e os **Coordenador** e **Gerent
 
 A aba **Voluntários** é a gestão de quem participa de cada projeto. Comece escolhendo o projeto em **Selecionar Projeto**: sem projeto escolhido, a aba não mostra equipe nenhuma. Com o projeto escolhido aparecem **Ações de Gerenciamento** — **Total de Voluntários**, **Horas Trabalhadas**, **Tasks Completadas** e **Pontos Conquistados** — e a **Equipe de Voluntários**, com **Adicionar voluntário** e **Remover voluntário** em cada pessoa.
 
-Os dados do vínculo estão no diálogo **Gestão Completa**, aberto pelo botão de mesmo nome:
+Os dados do vínculo aparecem na aba **Membros** da página dedicada do projeto:
 
-1. Abra **Gestão Completa**.
-2. Em **Liderança do Projeto**, escolha a pessoa e clique em **Salvar líder**.
+1. Em **Liderança do Projeto**, escolha a pessoa e clique em **Salvar líder**.
 3. Na linha de cada pessoa, escolha o papel em **Papel do membro** e clique em **Salvar papel**. **Horas** abre as horas da pessoa no projeto; **Remover** tira a pessoa do projeto, com confirmação.
 4. Abaixo da linha está o bloco **Dados do vínculo**, com os campos daquele vínculo: **Currículo Lattes**, **Carga contratada (h/semana)**, **Categoria do vínculo** (**Sem categoria**, **Bolsista** ou **Voluntário**), **Situação do vínculo** (**Ativo** ou **Inativo**) e **Data de entrada**.
 5. Clique em **Salvar vínculo**. Só o que você mexeu é gravado: o que ficou como estava não é apagado, e mexer sem mudar nada não grava nada.
 
-```foto painel-membros titulo="O bloco Dados do vínculo, no diálogo Gestão Completa"
+```foto painel-membros titulo="Os dados do vínculo na aba Membros do projeto"
 A tela avisa: *"A carga contratada é a que sai no atestado; a meta semanal da pessoa é editada no perfil dela."* São dois números diferentes, e os dois continuam existindo ao mesmo tempo.
 ```
 

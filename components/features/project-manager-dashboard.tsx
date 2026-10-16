@@ -1,256 +1,93 @@
 "use client"
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
-import {
-  Users,
-  Clock,
-  CheckCircle2,
-  Award,
-  TrendingUp,
-  Target,
-  Calendar,
-  AlertCircle,
-  BarChart3,
-  Eye
-} from "lucide-react"
+import { MiniDonutChart, StackedBarChart, WeeklyBarChart } from "@/components/ui/data-charts"
+import { projectStatusChartColor, projectStatusLabel, taskStatusChartColor, taskStatusLabel } from "@/components/ui/status"
+import { civilDayOfInstant } from "@/backend/domain"
+import { projectProgress } from "@/features/projects/utils/project-progress"
+import { weeklyTaskCompletions } from "@/features/projects/utils/weekly-completions"
 import type { Project, Task } from "@/contexts/types"
 import { isOverdueDateOnly } from "@/lib/date-only"
+import { ArrowUpRight } from "lucide-react"
+import { useEffect, useState } from "react"
 
 interface ProjectManagerDashboardProps {
   projects: Project[]
   tasks: Task[]
-  user: any
+  scopeDescription?: string
   onProjectSelect?: (project: Project) => void
 }
 
-export function ProjectManagerDashboard({ projects, tasks, user, onProjectSelect }: ProjectManagerDashboardProps) {
-  // Calcular estatísticas específicas do gerente
-  const managerProjects = projects.filter(project => project.leaderId === user?.id)
-  const managerTasks = tasks.filter(task => 
-    managerProjects.some(project => project.id === task.projectId)
-  )
-  
-  const totalTasks = managerTasks.length
-  const completedTasks = managerTasks.filter(task => task.status === "done").length
-  const inProgressTasks = managerTasks.filter(task => task.status === "in-progress").length
-  const overdueTasks = managerTasks.filter(task => {
-    if (!task.dueDate || task.status === "done") return false
-    return isOverdueDateOnly(task.dueDate)
-  }).length
-  
-  const totalPoints = managerTasks.reduce((sum, task) => sum + (task.points || 0), 0)
-  const completedPoints = managerTasks
-    .filter(task => task.status === "done")
-    .reduce((sum, task) => sum + (task.points || 0), 0)
-  
-  const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0
-  const pointsRate = totalPoints > 0 ? Math.round((completedPoints / totalPoints) * 100) : 0
+const TASK_STATUSES: Task["status"][] = ["to-do", "in-progress", "in-review", "adjust", "done"]
+
+export function ProjectManagerDashboard({ projects, tasks, scopeDescription, onProjectSelect }: ProjectManagerDashboardProps) {
+  const [selectedProjectId, setSelectedProjectId] = useState("all")
+  useEffect(() => {
+    if (selectedProjectId !== "all" && !projects.some(project => String(project.id) === selectedProjectId)) {
+      setSelectedProjectId("all")
+    }
+  }, [projects, selectedProjectId])
+  const selectedProject = selectedProjectId === "all" ? null : projects.find(project => String(project.id) === selectedProjectId) ?? null
+  const scopedProjects = selectedProject ? [selectedProject] : projects
+  const visibleProjectIds = new Set(scopedProjects.map(project => project.id))
+  const managerProjects = scopedProjects
+  const managerTasks = tasks.filter(task => task.projectId != null && visibleProjectIds.has(task.projectId))
+  const today = civilDayOfInstant(new Date())
+  const taskCounts = Object.fromEntries(TASK_STATUSES.map(status => [status, managerTasks.filter(task => task.status === status).length])) as Record<Task["status"], number>
+  const projectCounts = {
+    active: managerProjects.filter(project => project.status === "active").length,
+    completed: managerProjects.filter(project => project.status === "completed").length,
+    archived: managerProjects.filter(project => project.status === "archived").length,
+  }
+  const overdue = managerTasks.filter(task => task.dueDate && task.status !== "done" && isOverdueDateOnly(task.dueDate)).length
+  const taskSegments = TASK_STATUSES.map(status => ({ label: taskStatusLabel[status], value: taskCounts[status], color: taskStatusChartColor[status] }))
+  const projectSegments = [
+    { label: projectStatusLabel.active, value: projectCounts.active, color: projectStatusChartColor.active },
+    { label: projectStatusLabel.completed, value: projectCounts.completed, color: projectStatusChartColor.completed },
+    { label: projectStatusLabel.archived, value: projectCounts.archived, color: projectStatusChartColor.archived },
+  ]
+  const completed = taskCounts.done
+  const completion = managerTasks.length ? Math.round(completed / managerTasks.length * 100) : 0
+  const weeklyCompletions = weeklyTaskCompletions(managerTasks.filter(task => task.status === "done"), today)
+  const scopeLabel = selectedProject ? `Projeto: ${selectedProject.name}` : scopeDescription || "Todos os projetos"
 
   return (
     <div className="space-y-6">
-      {/* Estatísticas Principais */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Meus Projetos</CardTitle>
-            <Target className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{managerProjects.length}</div>
-            <p className="text-xs text-muted-foreground">
-              {managerProjects.filter(p => p.status === 'active').length} ativos
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tasks Totais</CardTitle>
-            <BarChart3 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalTasks}</div>
-            <p className="text-xs text-muted-foreground">
-              {inProgressTasks} em andamento
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Taxa de Conclusão</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{completionRate}%</div>
-            <p className="text-xs text-muted-foreground">
-              {completedTasks} de {totalTasks} concluídas
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pontos Conquistados</CardTitle>
-            <Award className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{completedPoints}</div>
-            <p className="text-xs text-muted-foreground">
-              {pointsRate}% de {totalPoints} pontos
-            </p>
-          </CardContent>
-        </Card>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-muted-foreground">Estatísticas para <span className="font-medium text-foreground">{scopeLabel}</span></p>
+        <label className="flex items-center gap-2 text-sm"><span className="text-muted-foreground">Projeto</span><select aria-label="Selecionar projeto para estatísticas" value={selectedProjectId} onChange={event => setSelectedProjectId(event.target.value)} className="h-9 max-w-[min(18rem,65vw)] rounded-md border bg-background px-3 text-sm"><option value="all">Todos os projetos</option>{projects.map(project => <option key={project.id} value={project.id}>{project.name}</option>)}</select></label>
       </div>
+      <section aria-label="Indicadores dos projetos" className="grid gap-6 rounded-lg border p-4 md:grid-cols-[minmax(13rem,0.8fr)_minmax(0,1.2fr)] md:p-5">
+        <div className="flex min-w-0 items-center gap-4">
+          <MiniDonutChart label={`${scopeLabel}. Projetos por status: ${projectCounts.active} ativos, ${projectCounts.completed} concluídos, ${projectCounts.archived} arquivados`} centerValue={managerProjects.length} centerLabel="projetos" segments={projectSegments} size={100} />
+          <div className="min-w-0 flex-1"><h2 className="text-sm font-semibold">Projetos</h2><div className="mt-3 space-y-2 text-xs">{projectSegments.map((segment, index) => <div key={segment.label} className="flex items-center justify-between gap-3"><span className="flex items-center gap-2 text-muted-foreground"><span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: segment.color }} />{segment.label}</span><span className="font-medium tabular-nums">{segment.value}</span></div>)}</div></div>
+        </div>
+        <div className="min-w-0 border-t pt-4 md:border-l md:border-t-0 md:pl-5 md:pt-0">
+          <div className="flex items-baseline justify-between gap-3"><h2 className="text-sm font-semibold">Tarefas por status</h2><span className="text-xs text-muted-foreground">{managerTasks.length} no total</span></div>
+          <StackedBarChart label={`${scopeLabel}. Distribuição das tarefas por status`} segments={taskSegments} className="mt-3 h-3.5" />
+          <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3">{taskSegments.map(segment => <div key={segment.label} className="flex items-center justify-between gap-2 text-xs"><span className="flex min-w-0 items-center gap-1.5 truncate text-muted-foreground"><span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: segment.color }} />{segment.label}</span><span className="font-medium tabular-nums">{segment.value}</span></div>)}</div>
+          <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 border-t pt-3 text-xs text-muted-foreground"><span>{completion}% das tarefas concluídas</span>{overdue > 0 && <span className="font-medium text-warning">{overdue} atrasada{overdue === 1 ? "" : "s"}</span>}</div>
+        </div>
+      </section>
 
-      {/* Alertas e Status */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-orange-500 dark:text-orange-400" />
-              Alertas Importantes
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {overdueTasks > 0 && (
-              <div className="flex items-center justify-between p-3 bg-orange-50 dark:bg-orange-500/10 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-orange-500 dark:text-orange-400" />
-                  <span className="text-sm font-medium">Tasks Atrasadas</span>
-                </div>
-                <Badge variant="destructive">{overdueTasks}</Badge>
-              </div>
-            )}
-            
-            {inProgressTasks > 0 && (
-              <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-info/10 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-blue-500 dark:text-info" />
-                  <span className="text-sm font-medium">Em Andamento</span>
-                </div>
-                <Badge variant="secondary">{inProgressTasks}</Badge>
-              </div>
-            )}
-            
-            {completedTasks > 0 && (
-              <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-success/10 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-green-500 dark:text-success" />
-                  <span className="text-sm font-medium">Concluídas</span>
-                </div>
-                <Badge variant="default" className="bg-green-100 text-green-800 dark:bg-success/15 dark:text-green-300">
-                  {completedTasks}
-                </Badge>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+      <section aria-labelledby="weekly-completions-title" className="rounded-lg border p-4 md:p-5">
+        <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2"><div><h2 id="weekly-completions-title" className="text-sm font-semibold">Histórico semanal</h2><p className="text-xs text-muted-foreground">Tarefas do projeto concluídas por semana · últimas 8 semanas</p></div><span className="text-xs text-muted-foreground">Semana de segunda a domingo</span></div>
+          <WeeklyBarChart label={`${scopeLabel}. Histórico semanal de tarefas concluídas`} weeks={weeklyCompletions} />
+      </section>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-green-500 dark:text-success" />
-              Progresso Geral
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <div className="flex justify-between text-sm mb-2">
-                <span>Conclusão de Tasks</span>
-                <span>{completionRate}%</span>
-              </div>
-              <Progress value={completionRate} className="h-2" />
-            </div>
-            
-            <div>
-              <div className="flex justify-between text-sm mb-2">
-                <span>Pontos Conquistados</span>
-                <span>{pointsRate}%</span>
-              </div>
-              <Progress value={pointsRate} className="h-2" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Resumo dos Projetos */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Resumo dos Meus Projetos</CardTitle>
-          <CardDescription>
-            Visão geral do progresso dos seus projetos
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {managerProjects.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <Target className="h-12 w-12 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Nenhum projeto atribuído</h3>
-                <p className="text-sm">
-                  Você ainda não foi designado como líder de nenhum projeto.
-                </p>
-              </div>
-            ) : (
-              <div className="grid gap-4 md:grid-cols-2">
-                {managerProjects.map((project) => {
-                  const projectTasks = tasks.filter(task => task.projectId === project.id)
-                  const projectCompleted = projectTasks.filter(task => task.status === "done").length
-                  const projectTotal = projectTasks.length
-                  const projectProgress = projectTotal > 0 ? Math.round((projectCompleted / projectTotal) * 100) : 0
-                  
-                  return (
-                    <div key={project.id} className="border rounded-lg p-4 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-semibold">{project.name}</h4>
-                        <div className="flex items-center gap-2">
-                          {onProjectSelect && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => onProjectSelect(project)}
-                              aria-label={`Ver detalhes de ${project.name}`}
-                            >
-                              <Eye className="h-3 w-3" />
-                            </Button>
-                          )}
-                          <Badge variant={project.status === 'active' ? 'default' : 'secondary'}>
-                            {project.status === 'active' ? 'Ativo' : 'Concluído'}
-                          </Badge>
-                        </div>
-                      </div>
-                      
-                      {project.description && (
-                        <p className="text-sm text-muted-foreground line-clamp-2">
-                          {project.description}
-                        </p>
-                      )}
-                      
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span>Progresso</span>
-                          <span>{projectProgress}%</span>
-                        </div>
-                        <Progress value={projectProgress} className="h-2" />
-                        <div className="flex justify-between text-xs text-muted-foreground">
-                          <span>{projectCompleted} de {projectTotal} tasks</span>
-                          <span>Criado em {new Date(project.createdAt).toLocaleDateString("pt-BR")}</span>
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
+      <section aria-labelledby="manager-projects-title" className="space-y-3">
+        <div className="flex items-baseline justify-between gap-3"><div><h2 id="manager-projects-title" className="font-semibold">Projetos no recorte</h2><p className="text-sm text-muted-foreground">Andamento temporal, com tarefas como alternativa quando não há período definido.</p></div></div>
+        {managerProjects.length === 0 ? <p className="rounded-lg border px-4 py-8 text-center text-sm text-muted-foreground">Nenhum projeto disponível neste recorte.</p> : <div className="divide-y rounded-lg border">{managerProjects.map(project => {
+          const progress = projectProgress(project, tasks, today)
+          return <div key={project.id} className="grid gap-3 px-4 py-3 sm:grid-cols-[minmax(0,1fr)_minmax(11rem,0.7fr)_auto] sm:items-center">
+            <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h3 className="truncate text-sm font-medium">{project.name}</h3><Badge variant="outline" className="text-xs">{projectStatusLabel[project.status]}</Badge></div>{project.description && <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">{project.description}</p>}</div>
+            <div className="space-y-1"><div className="flex justify-between gap-2 text-xs"><span className="text-muted-foreground">{progress.source === "time" ? "Andamento temporal" : progress.detail}</span><span className="font-medium tabular-nums">{progress.percent}%</span></div><Progress value={progress.percent} className="h-1.5" /></div>
+            {onProjectSelect && <Button variant="ghost" size="sm" className="justify-self-end" onClick={() => onProjectSelect(project)} aria-label={`Ver detalhes de ${project.name}`}>Abrir <ArrowUpRight className="ml-1 h-3.5 w-3.5" /></Button>}
           </div>
-        </CardContent>
-      </Card>
+        })}</div>}
+      </section>
     </div>
   )
 }
-
-

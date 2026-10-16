@@ -9,7 +9,7 @@ Esta é a lista completa das telas do sistema, com o endereço de cada uma e que
 | Quadro de Tarefas | `/dashboard` | quadro Kanban, filtros, criação de tarefa | todas as funções |
 | Projetos | `/dashboard/projetos` | lista de projetos, detalhe com cronograma, relatórios técnicos e atestados, aba Voluntários | todas as funções; a aba **Voluntários** só para Coordenador, Gerente e Gerente de Projeto |
 | Laboratório | `/dashboard/laboratorio` | agenda, responsabilidade, grade de horários, reclamações | todas as funções |
-| Relatórios Semanais | `/dashboard/weekly-reports` | relatório por usuário e relatório de projeto | Coordenador, Gerente, Laboratorista |
+| Relatórios | `/dashboard/weekly-reports` | relatórios por usuário, relatórios de projeto e atestados | Coordenador, Gerente, Laboratorista |
 | Painel Administrativo | `/dashboard/admin` | oito abas de gestão | Coordenador, Gerente |
 | Loja | `/dashboard/loja` | recompensas disponíveis, minhas compras | todas as funções |
 | Gerenciar Recompensas | `/dashboard/loja/gerenciar` | catálogo, solicitações pendentes, histórico | Coordenador, Gerente, Laboratorista |

@@ -39,6 +39,12 @@ vi.mock("@/contexts/auth-context", () => ({
   }),
 }));
 
+vi.mock("@/components/ui/floating-session-timer", () => ({
+  FloatingSessionTimer: ({ placement }: { placement: string }) => (
+    <div data-testid="sidebar-session-timer" data-placement={placement} />
+  ),
+}));
+
 import { AppSidebar } from "@/components/layout/app-sidebar";
 
 beforeEach(() => {
@@ -48,7 +54,7 @@ beforeEach(() => {
 
 describe("AppSidebar (V6-2)", () => {
   it("renderiza os destinos do nav-config para o papel, com os rótulos da fonte", () => {
-    render(<AppSidebar />);
+    render(<AppSidebar open />);
     expect(screen.getByRole("link", { name: /Quadro de Tarefas/ })).toHaveAttribute("href", "/dashboard");
     expect(screen.getByRole("link", { name: /Painel Administrativo/ })).toBeInTheDocument();
     // lista plana como nas referências: o cabeçalho de grupo do nav-config NÃO é
@@ -58,23 +64,45 @@ describe("AppSidebar (V6-2)", () => {
 
   it("VOLUNTARIO não recebe destino que o papel não vê", () => {
     shell.roles = ["VOLUNTARIO"];
-    render(<AppSidebar />);
+    render(<AppSidebar open />);
     expect(screen.getByRole("link", { name: /Projetos/ })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /Painel Administrativo/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: /Relatórios Semanais/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Relatórios/ })).not.toBeInTheDocument();
   });
 
   it("marca o item ativo com aria-current='page' (prefixo vale)", () => {
     shell.pathname = "/dashboard/projetos/42";
-    render(<AppSidebar />);
+    render(<AppSidebar open />);
     expect(screen.getByRole("link", { name: /Projetos/ })).toHaveAttribute("aria-current", "page");
     expect(screen.getByRole("link", { name: /Quadro de Tarefas/ })).not.toHaveAttribute("aria-current");
   });
 
   it("nenhum item de navegação usa rounded-full (AC-V6-09)", () => {
-    const { container } = render(<AppSidebar />);
+    const { container } = render(<AppSidebar open />);
     for (const link of container.querySelectorAll("a")) {
       expect(link.className).not.toContain("rounded-full");
     }
+  });
+
+  it("recolhe a navegação no desktop quando o estado do shell fecha a sidebar", () => {
+    const { container } = render(<AppSidebar open={false} />);
+    const sidebar = container.querySelector("#primary-navigation-sidebar");
+    expect(sidebar).toHaveClass("md:-translate-x-full");
+    expect(sidebar).toHaveAttribute("data-state", "closed");
+    expect(sidebar?.querySelector("nav")).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("inicia recolhida quando o shell não informa um estado", () => {
+    const { container } = render(<AppSidebar />);
+    expect(container.querySelector("#primary-navigation-sidebar")).toHaveAttribute("data-state", "closed");
+  });
+
+  it("ancora o cronômetro no rodapé do menu com o encaixe lateral", () => {
+    const { container } = render(<AppSidebar open />);
+    const nav = container.querySelector("nav");
+    expect(screen.getByTestId("sidebar-session-dock")).toContainElement(screen.getByTestId("sidebar-session-timer"));
+    expect(screen.getByTestId("sidebar-session-timer")).toHaveAttribute("data-placement", "sidebar");
+    expect(screen.getByTestId("sidebar-session-dock")).toHaveClass("shrink-0");
+    expect(nav).toHaveClass("min-h-0", "overflow-y-auto");
   });
 });

@@ -34,7 +34,7 @@ import {
   nextCronogramaOrder,
   toggleActivityMonthRange,
 } from "@/backend/domain"
-import { listProjectMembers } from "@/lib/api/project-members"
+import { listProjectMembers, type ProjectMember } from "@/lib/api/project-members"
 import { ActivityCompletionDialog } from "@/components/features/activity-completion-dialog"
 import {
   createProjectActivity,
@@ -63,6 +63,7 @@ interface ProjectCronogramaPanelProps {
    * domínio que o servidor usa (DEC-92); o 403 que chegar mesmo assim é erro, não botão.
    */
   leaderId?: number | null
+  initialMembers?: ProjectMember[]
 }
 
 interface PersistedGoal {
@@ -104,7 +105,7 @@ function targetFromText(text: string): number | null {
   return text.trim() === "" ? null : Number(text)
 }
 
-export function ProjectCronogramaPanel({ projectId, canManage, leaderId }: ProjectCronogramaPanelProps) {
+export function ProjectCronogramaPanel({ projectId, canManage, leaderId, initialMembers }: ProjectCronogramaPanelProps) {
   const { toast } = useToast()
   const { user } = useAuth()
   const [loading, setLoading] = useState(true)
@@ -124,7 +125,7 @@ export function ProjectCronogramaPanel({ projectId, canManage, leaderId }: Proje
     try {
       const [view, memberRows] = await Promise.all([
         getCronograma(projectId),
-        listProjectMembers(projectId).catch(() => []),
+        initialMembers ? Promise.resolve(initialMembers) : listProjectMembers(projectId).catch(() => []),
       ])
       setMonths(view.months)
       setToday(view.today)
@@ -162,7 +163,7 @@ export function ProjectCronogramaPanel({ projectId, canManage, leaderId }: Proje
     } finally {
       setLoading(false)
     }
-  }, [projectId, toast])
+  }, [projectId, toast, initialMembers])
 
   useEffect(() => {
     load()

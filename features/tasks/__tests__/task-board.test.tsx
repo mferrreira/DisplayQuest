@@ -95,9 +95,12 @@ describe("TaskBoard", () => {
     expect(screen.getByText("Documentar API de sessões")).toBeVisible();
     expect(screen.getByText("Revisar sensor de temperatura")).toBeVisible();
     expect(screen.getByText("Quest global: organizar bancada")).toBeVisible();
-    // column headers with counts
-    expect(screen.getByText("A Fazer")).toBeVisible();
-    expect(screen.getByText("Concluído")).toBeVisible();
+    // column headers with counts — escopo no HEADING: desde a V6-3 o selo de status do
+    // cartao fala o rotulo da unica fonte ("A Fazer", nao mais "A FAZER") e o texto do
+    // cartao colide com o titulo da coluna; o contrato desta linha e o cabecalho, igual
+    // ao pin do e2e (task-board.spec.ts:396, getByRole heading exact).
+    expect(screen.getByRole("heading", { name: "A Fazer" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Concluído" })).toBeVisible();
     // archived task (12 days old) lands in history section
     expect(await screen.findByText(/1 concluída\(s\) há mais de 1 semana/)).toBeVisible();
   });

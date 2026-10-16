@@ -72,7 +72,8 @@ const SCREENS = [
 
   // --- coordenador: superficie completa ---
   { id: "quadro-tarefas", role: "coord", route: "/dashboard", expect: { url: /\/dashboard$/, anyOf: ["Quadro", "Tarefa"] } },
-  { id: "projetos", role: "coord", route: "/dashboard/projetos", expect: { url: /\/dashboard\/projetos/, anyOf: ["Projeto"] } },
+  { id: "resumo-home", role: "coord", route: "/dashboard", expect: { url: /\/dashboard$/, anyOf: ["Meta da semana", "Estatísticas do quadro"] }, capturarElemento: 'section[aria-label="Resumo do laboratório"]' },
+  { id: "projetos", role: "coord", route: "/dashboard/projetos", aba: "Lista de Projetos", expect: { url: /\/dashboard\/projetos/, anyOf: ["Projeto"] } },
   { id: "laboratorio", role: "coord", route: "/dashboard/laboratorio", expect: { url: /\/dashboard\/laboratorio/, anyOf: ["Laboratório", "Plantão"] } },
   { id: "relatorios-semanais", role: "coord", route: "/dashboard/weekly-reports", expect: { url: /\/dashboard\/weekly-reports/, anyOf: ["Relatório"] } },
   { id: "painel-administrativo", role: "coord", route: "/dashboard/admin", expect: { url: /\/dashboard\/admin/, anyOf: ["Administrativo", "Usuário"] } },
@@ -109,6 +110,7 @@ const VIEWPORT = { width: 1440, height: 900 };
  *              de atividade só existe com o projeto selecionado)
  */
 const INTERACTIONS = [
+  { id: "dashboard-projetos", role: "coord", route: "/dashboard/projetos", aba: "Dashboard", verifica: "Histórico semanal" },
   { id: "dialogo-nova-tarefa", role: "coord", route: "/dashboard", abre: "Nova Tarefa", dialogo: "Tarefa" },
   { id: "dialogo-novo-projeto", role: "coord", route: "/dashboard/projetos", abre: "Novo Projeto", dialogo: "Projeto" },
   // V5-5b (DEC-100): o passo opcional de cronograma do wizard de criação. O nome é preenchido
@@ -132,28 +134,27 @@ const INTERACTIONS = [
   { id: "relatorios-gerar-lote", role: "coord", route: "/dashboard/weekly-reports", abre: "Gerar em Lote" },
   // alvo: controle sem rótulo legível, localizado pela estrutura da tela
   { id: "dialogo-detalhe-tarefa", role: "coord", route: "/dashboard", alvo: "button.flex-1.text-left", dialogo: "PONTOS" },
-  { id: "dialogo-detalhe-projeto", role: "coord", route: "/dashboard/projetos", alvo: "button:has(svg.lucide-eye)", dialogo: "Progresso Geral" },
+  { id: "detalhe-projeto", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: "button:has(svg.lucide-eye)" }, projetoTab: "Tarefas", verifica: "Andamento do projeto" },
   // V5-5b (DEC-126/151): a grade meses × atividades do painel Cronograma. O cartão é nomeado
   // porque a lista ordena por data de criação e três projetos da instância têm a mesma data —
   // "o primeiro cartão" não seria a mesma tela em duas execuções.
-  { id: "dialogo-detalhe-projeto-cronograma", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: "button:has(svg.lucide-eye)" }, dialogo: "Cronograma", rolarAte: "text=Adicionar atividade" },
+  { id: "projeto-cronograma", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: "button:has(svg.lucide-eye)" }, projetoTab: "Tarefas", verifica: "Cronograma", rolarAte: "text=Adicionar atividade" },
   // V5-7 (DEC-76/162/165): o diálogo de conclusão da linha, os dois lados. Os dados semeados por
   // SQL (membership de gestor + linhas + prova) são apagados depois da captura — mesmo dado de
   // vida curta do V5-5b/V5-6. Abrir o diálogo só lê; nenhuma captura solicita nem aprova.
-  { id: "dialogo-conclusao-atividade-pedido", role: "part", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: "button:has(svg.lucide-eye)" }, clicar: ["Conclusão da atividade 1"], dialogo: "Solicitar conclusão", rolarAte: "text=Solicitar conclusão" },
-  { id: "dialogo-conclusao-atividade-aprovacao", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: "button:has(svg.lucide-eye)" }, clicar: ["Conclusão da atividade 2"], dialogo: "Aprovar conclusão", rolarAte: "text=Aprovar conclusão" },
-  // V5-4b (DEC-149): o painel de Membros é onde os dados do vínculo se editam. Ele mora dentro
-  // do diálogo "Gestão Completa", aberto pela aba Voluntários da tela Projetos.
-  { id: "painel-membros", role: "coord", route: "/dashboard/projetos", aba: "Voluntários", selecionar: { gatilho: "Selecione um projeto" }, abre: "Gestão Completa", dialogo: "Dados do vínculo", rolarAte: "text=Dados do vínculo" },
+  { id: "dialogo-conclusao-atividade-pedido", role: "part", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: "button:has(svg.lucide-eye)" }, projetoTab: "Tarefas", clicar: ["Conclusão da atividade 1"], dialogo: "Solicitar conclusão", rolarAte: "text=Solicitar conclusão" },
+  { id: "dialogo-conclusao-atividade-aprovacao", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: "button:has(svg.lucide-eye)" }, projetoTab: "Tarefas", clicar: ["Conclusão da atividade 2"], dialogo: "Aprovar conclusão", rolarAte: "text=Aprovar conclusão" },
+  // V5-4b (DEC-149): o painel de Membros faz parte da rota dedicada do projeto.
+  { id: "painel-membros", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: "button:has(svg.lucide-eye)" }, projetoTab: "Membros", verifica: "Dados do vínculo", rolarAte: "text=Dados do vínculo" },
   // V5-9 (DEC-70/139/167/169): o painel de relatórios técnicos mora no diálogo de detalhe do
   // projeto, abaixo do cronograma. O texto semeado via SQL (os três "Pesquisa em IA") mostra o
   // editor preenchido com as três linhas de seção do oficial (DEC-168) e é apagado depois da
   // captura. Nenhuma captura salva, rascunha ou gera — o painel é fotografado em leitura.
-  { id: "painel-relatorios-tecnicos", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: "button:has(svg.lucide-eye)" }, dialogo: "Relatórios técnicos", rolarAte: "text=Relatórios técnicos" },
+  { id: "painel-relatorios-tecnicos", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: "button:has(svg.lucide-eye)" }, projetoTab: "Arquivos", verifica: "Relatórios técnicos", rolarAte: "text=Relatórios técnicos" },
   // V5-10b (DEC-175): o painel de atestados mora no diálogo de detalhe, ao lado do de
   // relatórios técnicos. A captura é leitura pura: o painel lista os membros ativos do mês de
   // referência, e nenhum clique daqui gera PDF.
-  { id: "painel-atestados", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: "button:has(svg.lucide-eye)" }, dialogo: "Atestados de frequência", rolarAte: "text=Atestados de frequência" },
+  { id: "painel-atestados", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: "button:has(svg.lucide-eye)" }, projetoTab: "Arquivos", verifica: "Atestados de frequência", rolarAte: "text=Atestados de frequência" },
   { id: "painel-notificacoes", role: "coord", route: "/dashboard", abre: "/^notifica/i", dialogo: "Notifica" },
   // plan-v3 OND3-C: o menu de ordenação da coluna é o rótulo que o guia usa — sem a captura, a
   // seção "A ordem dos cartões" descreveria cinco opções que nenhuma foto do guia mostra.
@@ -270,7 +271,11 @@ for (const screen of screens) {
 
     record.url = page.url();
     record.dom = await page.evaluate(EXTRACT);
-    await page.screenshot({ path: join(OUT_DIR, `${screen.id}.png`) });
+    if (screen.capturarElemento) {
+      await page.locator(screen.capturarElemento).screenshot({ path: join(OUT_DIR, `${screen.id}.png`) });
+    } else {
+      await page.screenshot({ path: join(OUT_DIR, `${screen.id}.png`) });
+    }
 
     manifest.push(record);
     log(
@@ -343,7 +348,7 @@ for (const it of interactions) {
       await page.waitForTimeout(900);
     }
 
-    if (it.abre || it.alvo || it.cartao) {
+    if (it.abre || it.alvo || it.cartao || it.rolarAteFim) {
       if (it.abre) {
         // Primitiva (V5-8): "/texto/flags" no `abre` vira expressão regular. O rótulo do sino
         // muda com a contagem de não-lidas ("Notificações (1 não lidas)"), e o exact só
@@ -359,6 +364,12 @@ for (const it of interactions) {
         await card.locator(it.cartao.alvo).first().click();
       } else await page.locator(it.alvo).first().click();
       await page.waitForTimeout(900);
+
+      if (it.projetoTab) {
+        await page.waitForURL(/\/dashboard\/projetos\/\d+/, { timeout: 15_000 });
+        await page.getByRole("tab", { name: it.projetoTab, exact: true }).click();
+        await page.waitForTimeout(700);
+      }
 
       // Formulário em etapas (o wizard do projeto, DEC-100): `preencher` existe porque o primeiro
       // passo não avança sem nome, e `clicar` percorre os passos. Nada é enviado: nenhuma captura
@@ -415,8 +426,16 @@ for (const it of interactions) {
       await page.waitForTimeout(500);
       record.roladoPara = it.rolarAte;
     }
+    if (it.rolarAteFim) {
+      await page.evaluate(() => window.scrollTo({ top: document.documentElement.scrollHeight, behavior: "instant" }));
+      await page.waitForTimeout(500);
+    }
     record.dom = await page.evaluate(EXTRACT);
-    await page.screenshot({ path: join(OUT_DIR, `${it.id}.png`) });
+    if (it.capturarElemento) {
+      await page.locator(it.capturarElemento).screenshot({ path: join(OUT_DIR, `${it.id}.png`) });
+    } else {
+      await page.screenshot({ path: join(OUT_DIR, `${it.id}.png`) });
+    }
 
     manifest.push(record);
     log(`✓ ${it.id} — ${record.dialog ? "diálogo" : "aba"} capturado`);

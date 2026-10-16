@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 
 /**
  * V6-2 · AppHeader reduzido (RF-V6.3 R3, DEC-106, AC-V6-08).
@@ -72,7 +72,7 @@ describe("AppHeader (V6-2)", () => {
 
   it("NENHUM destino de navegação no header — a nav migrou para a sidebar", () => {
     render(<AppHeader />);
-    for (const label of ["Quadro de Tarefas", "Painel Administrativo", "Relatórios Semanais", "Ranking"]) {
+    for (const label of ["Quadro de Tarefas", "Painel Administrativo", "Relatórios", "Ranking"]) {
       expect(screen.queryByRole("link", { name: label })).not.toBeInTheDocument();
     }
   });
@@ -80,5 +80,15 @@ describe("AppHeader (V6-2)", () => {
   it("o gatilho do menu mobile (Sheet) continua no header (AC-V6-10)", () => {
     render(<AppHeader />);
     expect(screen.getByRole("button", { name: "Abrir menu" })).toBeInTheDocument();
+  });
+
+  it("oferece controle de hambúrguer para recolher e reabrir a sidebar desktop", () => {
+    const onToggleSidebar = vi.fn();
+    render(<AppHeader sidebarOpen onToggleSidebar={onToggleSidebar} />);
+    const toggle = screen.getByRole("button", { name: "Recolher menu lateral" });
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(toggle).toHaveAttribute("aria-controls", "primary-navigation-sidebar");
+    fireEvent.click(toggle);
+    expect(onToggleSidebar).toHaveBeenCalledOnce();
   });
 });

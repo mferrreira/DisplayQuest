@@ -2,9 +2,9 @@
   "plan": "plan-v6",
   "title": "linguagem visual DisplayQuest + redistribuicao das paginas (apresentacao e navegacao)",
   "version": "2.0.0",
-  "updatedAt": "2026-10-15T12:45:00-03:00",
+  "updatedAt": "2026-10-15T23:59:00-03:00",
   "status": "executing",
-  "activeWave": "V6-2 (done); proxima: V6-3 (home)",
+  "activeWave": "V6-7 (Perfil + Ranking)",
   "activeBatch": null,
   "awaitingInstruction": false,
   "lineage": {
@@ -14,23 +14,23 @@
   },
   "baseline": {
     "measuredAt": "2026-10-15",
-    "measuredOn": "dev, onda V6-2 (shell: sidebar + header compacto + chaves) — re-medido depois desse commit; V6-1 (2026-10-15) deixou 162/2160 e 177/2290; SUB-1 deixou 157/2143 e 172/2273",
-    "unitAndFeatures": "166 arquivos / 2181 testes (149/2037 so tests/unit)",
-    "fullSuite": "181 arquivos / 2311 testes, com dq-dev-test-db no ar e DATABASE_URL na 5433",
+    "measuredOn": "dev, fechamento da onda V6-3: Home compacta + resumo abaixo + sidebar desktop recolhível",
+    "unitAndFeatures": "167 arquivos / 2193 testes (baseline V6-3; arquivo home-summary acrescentado)",
+    "fullSuite": "190 arquivos / 2341 testes na suíte completa, todos passaram no banco isolado dq-dev-test-db (5433), medido no fechamento V6-6b em 2026-10-15.",
     "e2e": "quadro: 8 passando (medido 2026-10-15, V6-2 — a falha conhecida por cartao a mais em 'Em Revisao' NAO reproduziu, o dado da instancia mudou; pode voltar). shell: 5 passando. Requer dev server em :3001 e browser do Playwright instalado (o chromium-headless-shell precisou ser baixado nesta maquina em 2026-10-15; cdn instavel, deixar instalado).",
-    "archCheck": "1042 modulos / 4441 dependencias, zero violacao, allow-list vazia",
+    "archCheck": "1044 módulos / 4461 dependências, zero violação, allow-list vazia (V6-3)",
     "tsc": "FECHA em 0 desde o lote SUB-1 (2026-10-15): o erro pre-existente em features/laboratorio/__tests__/floating-timer-tabs.test.tsx:105 (getByRole com 'exact', que nao existe em ByRoleOptions) foi consertado la, pela regex ancorada /^Pausar$/ — a divida que o V6-0 registrou esta quitada. node_modules esta instalado no host (B-V6-01 resolvido), entao G0/G1/G2/G3 rodam aqui.",
-    "expectedAtEnd": "tests/unit + features: nunca MENOR que 166/2181 (RNF de nao-regressao); a expectativa e crescer com os testes novos das ondas seguintes (SPEC 8.1)",
+    "expectedAtEnd": "tests/unit + features: nunca MENOR que 167/2193 (RNF de não-regressão); medido no fechamento de V6-3 (SPEC 8.1)",
     "timing": "G3 ~35s; suite completa ~50s (medido 2026-10-14)"
   },
   "gates": {
-    "G0": "npm run arch:check — exit 0, allow-list VAZIA (baseline 2026-10-14: 1026/4383)",
-    "G1": "npm run lint — exit 0 (warnings aceitos, nenhum erro; em worktree: npx eslint --no-eslintrc --config .eslintrc.json <arquivos>)",
-    "G2": "npx tsc --noEmit — 0 erros. A divida registrada no V6-0 (1 erro pre-existente em floating-timer-tabs.test.tsx:105) foi quitada pelo lote SUB-1 do plan-v4 em 2026-10-15; desde la as ondas devem fechar com tsc em 0.",
-    "G3": "npx vitest run — zero failure e NUNCA MENOR que 162 arquivos / 2160 testes (unit+features); baseline re-medido 2026-10-15 (V6-1)",
+    "G0": "Última medição V6-6b: npm run arch:check — exit 0, allow-list vazia (1057 módulos / 4519 dependências).",
+    "G1": "Última medição V6-6b: npm run lint — exit 0; avisos existentes fora do escopo.",
+    "G2": "Última medição V6-6b: npx tsc --noEmit — exit 0.",
+    "G3": "Última medição V6-6b: 190 arquivos / 2341 testes, todos passaram; banco isolado dq-dev-test-db (5433). Cadência: uma suíte ao final de cada etapa.",
     "G4": "NAO SE APLICA — plano sem backend. Se algum diff tocar prisma/, backend/ ou app/api/, e erro de escopo (RF-V6.10 R1/R3)",
-    "G5": "npm run docs:build + docs:check — obrigatório nas ondas V6-3, V6-4, V6-5, V6-6a, V6-6b, V6-7, V6-8, V6-9, V6-10 e no fechamento V6-11",
-    "G6": "recapturar docs/screens/ quando a captura deixa de representar a tela (todas as telas mudam de visual nesta rodada)",
+    "G5": "Última medição V6-6b: docs:build + docs:check — exit 0; 15 seções técnicas / 33 figuras, 12 seções de usuário / 44 figuras.",
+    "G6": "V6-6b: relatorios-semanais recapturada após a unificação; as capturas anteriores seguem atualizadas; docs/.capture.env restaurado.",
     "e2e": "npx playwright test tests/e2e/shell.spec.ts (5 passando) e tests/e2e/task-board.spec.ts (2 passando + 1 falha conhecida + 5 did not run) — requer dev server em :3001"
   },
   "waves": [
@@ -71,19 +71,29 @@
     {
       "id": "V6-3",
       "title": "Home: região de cabeçalho + resumo + quadro sem degradê/emoji",
-      "status": "pending",
+      "status": "done",
       "decisions": [
         "DEC-111",
         "DEC-112",
         "DEC-114"
       ],
-      "scope": "app/(dashboard)/dashboard/page.tsx ganha PageHeader com saudação e blocos de resumo SÓ com dado já em memória (overdueCount, isTaskDueToday, status==='done', useProjects(), user.points) — sem Atividade recente, sem Status do sistema, sem fetch de ranking. SEM coluna secundaria: o quadro de 5 colunas ocupa a largura horizontal toda e os blocos de resumo ficam na regiao de cabecalho, acima do quadro (DEC-114). board-column.tsx: tinta chapada no lugar do degradê saturado, lucide no lugar do emoji, sem pill bg-white/20. task-card.tsx: superfície chapada, badges por token (sem gradiente/font-bold text-white/animate-pulse), lucide. rounded-xl/shadow-2xl/hover:shadow-md saem. TRAVA: nenhum aria-label, h2 exato, 'Ordenar tarefas de X', toast ou testid do quadro muda.",
-      "why": "a Home é a tela de destino E a mais testada do repo (11 arquivos em features/tasks/__tests__ + task-board.spec.ts) — é o primeiro teste real da nova linguagem com rede de segurança. O dono recusou a coluna secundaria em 2026-10-07 (DEC-114): 5 colunas + largura cheia para nao espremer as tasks."
+      "scope": "Home compacta; saudação, quadro Kanban de cinco colunas em largura total e faixa de três cards abaixo. Sidebar fixa sobreposta, alinhada à esquerda sob o header, fora do fluxo do conteúdo e fechada por padrão; hamburger absoluto anima o painel. Cronômetro no rodapé do painel desktop e no canto inferior direito em telas pequenas. Coluna exibe “Fazendo”; aria-labels e controles preservam “Em Andamento”. DEC-114 mantida. Refinamento pós-implementação: AppSidebar também inicia fechada; o dock da workSession fica ancorado ao rodapé e cresce para cima, com controles principais junto ao relógio e conteúdo secundário depois. Tabs mantêm largura igual e quebram o texto de Responsabilidade. Verificação do ajuste de usabilidade: AppSidebar + workSession tabs 12/12 nos testes direcionados; tsc 0; lint exit 0 (warnings conhecidos). Correção de layout do dock: a sidebar usa duas áreas irmãs em coluna — nav com min-h-0 e overflow-y-auto; rodapé da workSession com shrink-0 fora da rolagem. Expandir a sessão não desloca o botão e o scroll da navegação não move o dock. Correção pós-fechamento solicitada pelo dono (2026-10-15): os gráficos da faixa inferior agora usam o mesmo recorte URL do TaskBoard (projeto, pessoa, atividade, atrasadas, hoje e busca), com combinações por interseção; tarefas concluídas e projetos recentes seguem os filtros. A causa era HomeOverview receber a query bruta enquanto TaskBoard filtrava internamente.",
+      "why": "A Home é a tela inicial e uma das áreas de maior uso. Remover os cinco retângulos do topo reduz a altura antes do quadro; a sidebar recolhível recupera a largura horizontal quando necessário. A faixa inferior adiciona contexto de projetos e metas sem tirar o quadro do foco, sem nova chamada de dados e mantendo DEC-114.",
+      "completedAt": "2026-10-15",
+      "gates": {
+        "G0": "npm run arch:check — exit 0, allow-list vazia (1044 módulos / 4461 dependências).",
+        "G1": "npm run lint — exit 0; avisos existentes em telas fora do escopo.",
+        "G2": "npx tsc --noEmit — 0 erros.",
+        "G3": "Uma execução completa: 182 arquivos / 2324 testes, 2323 passaram e 1 falhou por asserção antiga de aria-label. Após correção, status-badges.test.tsx + app-sidebar.test.tsx passaram 15/15; sem novo full run por orientação do dono. Refinamento do dock: app-sidebar.test.tsx + floating-timer-tabs.test.tsx, 12/12 aprovados; nenhuma nova execução da suíte completa.",
+        "G4": "Não se aplica ao código da onda. A suíte completa usou dq-dev-test-db isolado em 127.0.0.1:5433.",
+        "G5": "npm run docs:build + docs:check — exit 0; 15 seções técnicas / 33 figuras e 12 seções de usuário / 42 figuras; charset limpo.",
+        "G6": "Capturas de quadro-tarefas.png e quadro-tarefas-participante.png refeitas após sidebar fixa sobreposta e fechada por padrão. Contas temporárias removidas do banco de teste 5433; docs/.capture.env restaurado."
+      }
     },
     {
       "id": "V6-4",
       "title": "Projetos: um título só + chips com contagem + lista vertical",
-      "status": "pending",
+      "status": "done",
       "decisions": [
         "DEC-111",
         "DEC-112",
@@ -91,43 +101,83 @@
         "DEC-186"
       ],
       "scope": "Caracterização features/projects/__tests__/project-list.test.tsx ANTES de qualquer mudança de layout. page.tsx: PageHeader único (o h2 'Projetos' da ProjectList sai — D10), 4 stat cards → StatCard, Select de status → chips com contagem de cada status. project-list.tsx: lista vertical no lugar da grade de 3 colunas, progresso derivado de tasks (dado já carregado), statusColors local (:15/:21) some (usa status.ts). ABA DASHBOARD (DEC-186): o gatilho inline showDashboard (:98, roles.includes('GERENTE_PROJETO')) sai e a aba passa a ler hasAccess(roles,'DASHBOARD_PROJECT_MANAGER') = ['COORDENADOR','GERENTE','GERENTE_PROJETO'] (chave nascida em V6-2) — COORDENADOR e GERENTE passam a ver a aba; o ProjectManagerDashboard NAO muda (ja filtra por leaderId === user?.id :31 e ja tem o estado vazio :190-197, entao nao ha tela nova). SEM tags, SEM avatares de membros na lista (dado não inventado). Contextos legados useProject/useTask NÃO mudam de caminho nesta onda. NAO TOCA a aba Voluntarios: ela CONTINUA aqui ate o V6-9, que a move para o Admin nas DUAS pontas no MESMO commit (RF-V6.12 R4) — remover agora deixaria um commit em que a aba nao existe em lugar nenhum.",
-      "why": "D14/D10 + reaproveitamento dos primitivos do V6-1; a tela não tem NENHUM teste hoje, então a caracterização é obrigatória (AC-V6-16). No estado pos-plan-v5 a pagina ja carrega o wizard de criacao (V5-4) e a aba Voluntarios, que sai so em V6-9. A aba Dashboard e a unica mudanca de visibilidade do plano (DEC-186): aditiva e de apresentacao — quem nao lidera projeto ja ve o estado vazio que o componente tem."
+      "why": "D14/D10 + reaproveitamento dos primitivos do V6-1; a tela não tem NENHUM teste hoje, então a caracterização é obrigatória (AC-V6-16). No estado pos-plan-v5 a pagina ja carrega o wizard de criacao (V5-4) e a aba Voluntarios, que sai so em V6-9. A aba Dashboard e a unica mudanca de visibilidade do plano (DEC-186): aditiva e de apresentacao — quem nao lidera projeto ja ve o estado vazio que o componente tem.",
+      "completedAt": "2026-10-15",
+      "gates": {
+        "G0": "npm run arch:check — exit 0, allow-list vazia (1045 módulos / 4464 dependências).",
+        "G1": "npm run lint — exit 0; warnings existentes em arquivos fora do escopo.",
+        "G2": "npx tsc --noEmit — 0 erros.",
+        "G3": "Uma execução completa ao fechamento da etapa: 183 arquivos / 2328 testes, todos passaram. Banco de teste dq-dev-test-db isolado (5433).",
+        "G4": "Roundtrips permaneceram no banco isolado dq-dev-test-db; sem mudanças de backend nesta onda.",
+        "G5": "npm run docs:build + docs:check — exit 0; 15 seções técnicas / 33 figuras e 12 seções de usuário / 42 figuras; charset limpo.",
+        "G6": "docs/screens/projetos.png recapturada em /dashboard/projetos na aba Lista de Projetos; docs/.capture.env restaurado."
+      }
     },
     {
       "id": "V6-5",
       "title": "Projeto vira rota /dashboard/projetos/[id] com as 5 abas da referência",
-      "status": "pending",
+      "status": "done",
       "decisions": [
         "DEC-107",
         "DEC-113",
         "DEC-183"
       ],
-      "scope": "app/(dashboard)/dashboard/projetos/[id]/page.tsx novo com as 5 ABAS da referencia (DEC-183, RF-V6.13): Visao geral (midia + nome/status + descricao + dados + ProjectTimeProgress + Informacoes) | Tarefas (cronograma + 4 stat cards + progresso + lista) | Membros (ProjectHoursStats + ProjectMembersManagement) | Arquivos (deliverables + anexos + relatorios tecnicos + atestados + ProjectReportsPanel) | Configuracoes (links + ProjectLeaderLogs); Editar/Excluir no cabecalho. Fim do Dialog de 90vh (h-[90vh] :176) e do scroll duplo; leitura por projectsApi.getById(id) + projectsApi.members(id) — 1 fetch por rota, sem N+1; os 2 pontos de entrada navegam; ProjectDetailDialog removido. As 8 EXPRESSOES DE PORTA (medidas de novo; o arquivo passou de 478 para 621 linhas) preservadas com resultado idêntico — medir a porta do servidor ANTES (DEC-92): EDIT_PROJECT :200 e :532; CREATE_TASK :397 e :419; leaderId :584; leaderId||MANAGE_USERS :589; MANAGE_PROJECT_MEMBERS||COORDENADOR||GERENTE :595; e canManageProjectFiles :165-171 (leaderId || MANAGE_USERS || MANAGE_PROJECTS || COORDENADOR/GERENTE/GERENTE_PROJETO) que SOZINHA governa 6 dos 20 blocos (:184, :304, :305, :312, :322, :330). Checklist dos 20 blocos + tabela das 8 expressoes na SPEC §8.4 (AC-V6-19/31). nav-config (:41-44) ja tem matchPrefix, entao 'Projetos' segue ativo; client-layout.tsx ja da provider nesse caminho (:28/:31), NÃO mexer. 'Editar' continua abrindo o ProjectDialog. Quirk nao visual intocado: handleAddLink muta project.links=[:128]. Ordem frente ao plan-v5 resolvida: o plan-v5 fechou em 2026-10-14, entao a tela e lida no estado pos-V5-2 (banner/logo no detail).",
-      "why": "DEC-107: rota dedicada resolve D5 (card explosion + scroll duplo num Dialog de 90vh) e viabiliza 1 fetch de membros em vez de N+1. A DEC-183 (dono 2026-10-14) congela a distribuicao nas 5 abas da referencia para nao ser relitigada; citar e medir as 8 expressoes e o que impede o refactor de perder um gate de papel."
+      "scope": "app/(dashboard)/dashboard/projetos/[id]/page.tsx novo com as 5 ABAS da referencia (DEC-183, RF-V6.13): Visao geral (midia + nome/status + descricao + dados + ProjectTimeProgress + Informacoes) | Tarefas (cronograma + 4 stat cards + progresso + lista) | Membros (ProjectHoursStats + ProjectMembersManagement) | Arquivos (deliverables + anexos + relatorios tecnicos + atestados + ProjectReportsPanel) | Configuracoes (links + ProjectLeaderLogs); Editar/Excluir no cabecalho. Fim do Dialog de 90vh (h-[90vh] :176) e do scroll duplo; leitura por projectsApi.getById(id) + projectsApi.members(id) — 1 fetch por rota, sem N+1; os 2 pontos de entrada navegam; ProjectDetailDialog removido. As 8 EXPRESSOES DE PORTA (medidas de novo; o arquivo passou de 478 para 621 linhas) preservadas com resultado idêntico — medir a porta do servidor ANTES (DEC-92): EDIT_PROJECT :200 e :532; CREATE_TASK :397 e :419; leaderId :584; leaderId||MANAGE_USERS :589; MANAGE_PROJECT_MEMBERS||COORDENADOR||GERENTE :595; e canManageProjectFiles :165-171 (leaderId || MANAGE_USERS || MANAGE_PROJECTS || COORDENADOR/GERENTE/GERENTE_PROJETO) que SOZINHA governa 6 dos 20 blocos (:184, :304, :305, :312, :322, :330). Checklist dos 20 blocos + tabela das 8 expressoes na SPEC §8.4 (AC-V6-19/31). nav-config (:41-44) ja tem matchPrefix, entao 'Projetos' segue ativo; client-layout.tsx ja da provider nesse caminho (:28/:31), NÃO mexer. 'Editar' continua abrindo o ProjectDialog. Quirk nao visual intocado: handleAddLink muta project.links=[:128]. Ordem frente ao plan-v5 resolvida: o plan-v5 fechou em 2026-10-14, entao a tela e lida no estado pos-V5-2 (banner/logo no detail). Ajuste pedido pelo dono durante a execução: andamento temporal como fonte principal quando início e término existem, percentual de tarefas como fallback e como métrica separada; gráficos compactos de rosca/barra empilhada na Home e no Dashboard de Projetos substituem os blocos numéricos de baixo rendimento. Capturas G6: quadro-tarefas, projetos, detalhe-projeto e projeto-cronograma. Complemento do dono: remover os quatro cartões globais e tornar gráficos, histórico e lista dependentes do projeto escolhido; opção Todos os projetos agrega o conjunto disponível. Histórico semanal conta `completedAt` por semana civil (segunda a domingo), 8 semanas. Correção pós-captura a pedido do dono: busca, status e pessoa na faixa superior agora filtram o mesmo conjunto enviado ao Dashboard; filtros combinam por interseção. Pessoa corresponde ao responsável principal ou a qualquer integrante de assigneeIds; projetos sem tarefas dessa pessoa não entram no recorte. A seleção interna de projeto refina esse conjunto; a seleção volta para Todos quando o projeto deixa de passar nos filtros superiores.",
+      "why": "DEC-107: rota dedicada resolve D5 (card explosion + scroll duplo num Dialog de 90vh) e viabiliza 1 fetch de membros em vez de N+1. A DEC-183 (dono 2026-10-14) congela a distribuicao nas 5 abas da referencia para nao ser relitigada; citar e medir as 8 expressoes e o que impede o refactor de perder um gate de papel.",
+      "completedAt": "2026-10-15",
+      "gates": {
+        "G0": "npm run arch:check — exit 0; allow-list vazia, 1053 módulos / 4499 dependências.",
+        "G1": "npm run lint — exit 0; avisos existentes fora do escopo.",
+        "G2": "npx tsc --noEmit — exit 0.",
+        "G3": "Uma execução completa após a correção dos filtros: 188 arquivos / 2337 testes, todos passaram; banco isolado dq-dev-test-db (5433).",
+        "G4": "Não aplicável — sem alteração de backend/Prisma/API.",
+        "G5": "npm run docs:build + docs:check — exit 0; 15 seções técnicas / 33 figuras, 12 seções de usuário / 44 figuras; charset limpo.",
+        "G6": "Capturas quadro-tarefas, resumo-home, projetos, dashboard-projetos, detalhe-projeto e projeto-cronograma atualizadas; docs/.capture.env restaurado."
+      }
     },
     {
       "id": "V6-6a",
       "title": "Laboratório: PageHeader + tokens",
-      "status": "pending",
+      "status": "done",
       "decisions": [
         "DEC-108",
         "DEC-111"
       ],
-      "scope": "PageHeader + tokens no lugar de paleta cravada/degradê + reaproveitar primitivos do V6-1. Nenhuma guarda de permissao, chamada de API ou rótulo muda. NAO toca o timer flutuante nem o auto-pause (regras de negocio, RF-V6.10 R2).",
-      "why": "DEC-108 (todas as telas nesta rodada); baixo risco. Separado do V6-6b porque a unificacao de Relatorios (DEC-181) e uma mudanca estrutural, nao um passe de tokens."
+      "scope": "PageHeader + tokens no lugar de paleta cravada/degradê + reaproveitar primitivos do V6-1. Nenhuma guarda de permissao, chamada de API ou rótulo muda. NAO toca o timer flutuante nem o auto-pause (regras de negocio, RF-V6.10 R2). Página adota PageHeader com o mesmo título e FlaskConical; badge PAUSADA usa token semântico warning nos dois temas. Recapturadas laboratorio e laboratorio-participante.",
+      "why": "DEC-108 (todas as telas nesta rodada); baixo risco. Separado do V6-6b porque a unificacao de Relatorios (DEC-181) e uma mudanca estrutural, nao um passe de tokens.",
+      "completedAt": "2026-10-15",
+      "gates": {
+        "G0": "npm run arch:check — exit 0, allow-list vazia (1055 módulos / 4509 dependências).",
+        "G1": "npm run lint — exit 0; avisos em arquivos fora do escopo.",
+        "G2": "npx tsc --noEmit — 0 erros.",
+        "G3": "Uma execução completa após a correção da Home e a implementação do Laboratório: 189 arquivos / 2339 testes, todos passaram; banco isolado dq-dev-test-db (5433).",
+        "G4": "Não se aplica — sem mudanças em backend, Prisma ou API.",
+        "G5": "npm run docs:build + docs:check — exit 0; 15 seções técnicas / 33 figuras e 12 seções de usuário / 44 figuras; charset limpo.",
+        "G6": "Capturas laboratorio e laboratorio-participante atualizadas; docs/.capture.env restaurado."
+      }
     },
     {
       "id": "V6-6b",
       "title": "Relatórios: destino único com 3 abas + assistente de 3 passos",
-      "status": "pending",
+      "status": "done",
       "decisions": [
         "DEC-108",
         "DEC-111",
         "DEC-181",
         "DEC-185"
       ],
-      "scope": "DEC-181 (RF-V6.11): a pagina de relatorios vira UM destino com 3 ABAS — por usuario (semanal) / por projeto / atestados — mais um ASSISTENTE DE 3 PASSOS que unifica o fluxo de geracao (os 3 caminhos viram 1). O que se unifica e o FLUXO, nao o inventario: NENHUM bloco sai do detalhe do projeto, que guarda o atalho; a aba Templates FICA FORA (o template e asset do servidor, DEC-128/130). h1 e rotulo do nav passam a 'Relatorios'; a ROTA NAO MUDA: continua /dashboard/weekly-reports (DEC-185 — renomear tocaria nav-config, a captura do guia e o e2e sem ganho visivel). Gate por aba preserva o resultado medido: usuario VIEW_WEEKLY_REPORTS, lote MANAGE_USERS, projeto/atestado o que os use cases ja tem. Vocabulario de tipo (parcial|tecnico-final|final) vem do dominio, sem copia local.",
-      "why": "DEC-181 (dono 2026-10-14): hoje a geracao esta espalhada em 3 caminhos; a referencia reports.png mostra um destino unico com abas. A fronteira 'fluxo, nao inventario' e o que impede a mudanca de virar perda de dado no detalhe do projeto."
+      "scope": "DEC-181 (RF-V6.11): /dashboard/weekly-reports unificado em 3 abas — por usuário (semanal), por projeto e atestados — com assistente de três passos. Sem aba Templates. O detalhe do projeto preserva seus painéis e ganhou atalho com projeto pré-selecionado. h1 e navegação dizem 'Relatórios'; rota /dashboard/weekly-reports mantida (DEC-185). Gates existentes e tipos técnicos do domínio preservados. Execução: assistente seleciona destino e projeto, painéis técnico/periódico/atestado renderizados na aba escolhida, guias e captura atualizados.",
+      "why": "DEC-181 (dono 2026-10-14): hoje a geracao esta espalhada em 3 caminhos; a referencia reports.png mostra um destino unico com abas. A fronteira 'fluxo, nao inventario' e o que impede a mudanca de virar perda de dado no detalhe do projeto.",
+      "completedAt": "2026-10-15",
+      "gates": {
+        "G0": "npm run arch:check — exit 0, allow-list vazia (1057 módulos / 4519 dependências).",
+        "G1": "npm run lint — exit 0; avisos preexistentes fora do escopo.",
+        "G2": "npx tsc --noEmit — exit 0.",
+        "G3": "Uma execução completa no fechamento: 190 arquivos / 2341 testes, todos passaram; dq-dev-test-db isolado em 127.0.0.1:5433.",
+        "G4": "Não se aplica — sem mudanças em backend, Prisma ou API.",
+        "G5": "npm run docs:build + docs:check — exit 0; 15 seções técnicas / 33 figuras e 12 seções de usuário / 44 figuras; charset limpo.",
+        "G6": "Captura relatorios-semanais atualizada; docs/.capture.env restaurado."
+      }
     },
     {
       "id": "V6-7",
@@ -278,6 +328,51 @@
         "O teste do header congela que o sino e montado DUAS vezes no header (cluster desktop + compacto, medido); o contrato e existir, nao quantas vezes.",
         "G3 medido com 'npx vitest run tests/unit features' — os testes de features moram em features/**/__tests__ (raiz), NAO em tests/features; passar tests/features como filtro roda so tests/unit e engana a contagem."
       ]
+    },
+    {
+      "id": "V6-3",
+      "at": "2026-10-15",
+      "title": "Home compacta: quadro em destaque, faixa inferior de resumo e sidebar sobreposta recolhível",
+      "actions": [
+        "Home: removida a fileira superior de cinco StatCards; saudação compacta antes do TaskBoard; HomeOverview abaixo com Projetos recentes, Metas da semana e Estatísticas do quadro. Dados já carregados; sem fetch adicional.",
+        "Sidebar: posição fixa sobreposta sob o header, alinhada à esquerda e fora do fluxo flex; fechada por padrão para dar a largura toda ao quadro. O hamburger fica absoluto no header e anima o toggle. Cronômetro fica no rodapé do painel desktop e no canto inferior direito em telas pequenas.",
+        "Coluna: título visual “Fazendo” mantém a faixa na altura das demais; aria-labels e controles continuam “Em Andamento”.",
+        "Documentação atualizada e duas capturas da Home refeitas; contas temporárias removidas e URL local de captura restaurada.",
+        "Cadência de suite completa gravada em PLAN.md. G0/G1/G2/G5 passaram. Full Vitest: 2323/2324; um teste de contrato falhou por exigir literal antigo no aria-label. Após separar o texto visual do acessível, duas suítes direcionadas passaram 15/15. Sem repetir full Vitest.",
+        "Ajuste pós-retorno do dono: estado padrão fechado também no AppSidebar; painel da workSession expandido a partir do rodapé para cima (sem clip inferior), Pausar/Continuar/Parar junto ao relógio e nota/alerta depois; tabs em grid sem vazamento do rótulo Responsabilidade.",
+        "Verificação direcionada do refinamento de acessibilidade do dock + menu: 12/12 testes; tsc 0; lint exit 0 (avisos existentes). Suíte completa não repetida.",
+        "Correção após validação do dono: separadas as áreas de navegação (min-h-0 + scroll próprio) e workSession (rodapé shrink-0 fora do scroll). O botão permanece fixo no menu aberto e rolar a lista não o desloca."
+      ],
+      "gates": {
+        "G0": "arch:check 1044 módulos / 4461 dependências, sem violações.",
+        "G1": "lint exit 0; warnings preexistentes e aviso <img> no header.",
+        "G2": "tsc --noEmit exit 0.",
+        "G3": "Full Vitest 182/2324, com uma falha por seletor literal obsoleto; testes direcionados status-badges + app-sidebar 15/15 após correção, sem full rerun. Refinamento final do menu/dock: dois arquivos direcionados, 12/12 aprovados; sem full rerun.",
+        "G5": "docs:build + docs:check exit 0; 15 seções técnicas/33 figuras e 12 de usuário/42 figuras.",
+        "G6": "Capturas da Home refeitas com sidebar sobreposta e recolhida por padrão; contas temporárias removidas e docs/.capture.env restaurado."
+      }
+    },
+    {
+      "id": "V6-5",
+      "at": "2026-10-15",
+      "title": "Projeto em rota dedicada; andamento temporal, gráficos e histórico semanal por projeto",
+      "actions": [
+        "Detalhe do projeto migrou para /dashboard/projetos/[id] com as cinco abas congeladas na DEC-183; removido ProjectDetailDialog e mantidos os gates de acesso.",
+        "Progresso temporal usa início e término; quando o período está incompleto, tarefas concluídas são fallback. Taxa de tarefas permanece dado separado.",
+        "Home: meta semanal em barra horizontal; conclusão e distribuição de tarefas em gráficos compactos; resumo de projetos recentes usa o mesmo progresso temporal.",
+        "Dashboard de Projetos: removidos quatro cartões globais; seletor de projeto filtra distribuição por status, histórico semanal e lista de andamento. Histórico usa completedAt por semana civil nas últimas oito semanas.",
+        "Docs atualizados e capturas quadro-tarefas, resumo-home, projetos, dashboard-projetos, detalhe-projeto e projeto-cronograma recapturadas; docs:build/check verdes.",
+        "G0 1052/4494 sem violações; G1 exit 0 com avisos fora do escopo; G2 tsc 0; G3 187 arquivos/2336 testes aprovados em uma execução no banco de teste 5433.",
+        "Correção pós-captura: os filtros superiores de busca, status e pessoa agora são combinados antes de alimentar gráficos e lista; testes integrados cobrem o cruzamento. Full Vitest final: 188/2337 passou."
+      ],
+      "gates": {
+        "G0": "arch:check exit 0, allow-list vazia; 1053 módulos / 4499 dependências.",
+        "G1": "lint exit 0; avisos existentes fora do escopo.",
+        "G2": "tsc --noEmit exit 0.",
+        "G3": "Full Vitest 188/2337, todos passaram; dq-dev-test-db (5433).",
+        "G5": "docs:build/check exit 0; 15 seções técnicas / 33 figuras; 12 seções de usuário / 44 figuras.",
+        "G6": "Seis capturas atualizadas; URL de captura restaurada."
+      }
     }
   ],
   "openQuestions": [],

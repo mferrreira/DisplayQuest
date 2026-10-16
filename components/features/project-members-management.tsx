@@ -9,15 +9,23 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { useToast } from "@/contexts/use-toast"
 import { useAuth } from "@/contexts/auth-context"
-import { 
-  Users, 
-  UserMinus, 
-  UserPlus, 
-  Clock, 
-  Crown
+import {
+  Users,
+  UserMinus,
+  UserPlus,
+  Clock,
+  Crown,
+  MoreHorizontal,
+  IdCard,
 } from "lucide-react"
 import type { Project } from "@/contexts/types"
 import {
@@ -36,6 +44,7 @@ import { useProjectMembers } from "@/hooks/use-project-members"
 interface ProjectMembersManagementProps {
   project: Project
   onUpdate?: () => void
+  initialMembers?: ProjectMember[]
 }
 
 /** Sentinela do Select: "sem valor" não pode ser string vazia no Radix (mesma do V5-4a). */
@@ -60,12 +69,45 @@ function draftFromMember(member: ProjectMember): MemberProfileDraft {
   }
 }
 
-export function ProjectMembersManagement({ project, onUpdate }: ProjectMembersManagementProps) {
+/** Rótulo do domínio, com fallback ao token: o vocabulário não é inventado aqui (DEC-96). */
+const categoryLabel = (categoria: string | null) =>
+  (MEMBER_CATEGORY_LABELS as Record<string, string>)[categoria ?? ""] ?? categoria ?? ""
+
+const situationLabel = (situacao: string | null) =>
+  (MEMBER_SITUATION_LABELS as Record<string, string>)[situacao ?? ""] ?? situacao ?? ""
+
+/**
+ * A linha de leitura de quem não gerencia. Monta só com o que existe: um vínculo sem dado
+ * nenhum não ganha linha vazia.
+ */
+function describeMemberProfile(member: ProjectMember) {
+  const parts: string[] = []
+  if (member.cargaHoraria) parts.push(`${member.cargaHoraria} h/semana contratadas`)
+  if (member.categoria) parts.push(categoryLabel(member.categoria))
+  if (member.situacao && member.situacao !== "ATIVO") parts.push(situationLabel(member.situacao))
+  if (member.dataEntrada) parts.push(`entrou em ${formatDateOnly(member.dataEntrada)}`)
+  if (member.lattes) parts.push(`Lattes ${member.lattes}`)
+  return parts.join(" · ")
+}
+
+const ROLE_NAMES: Record<string, string> = {
+  COORDENADOR: "Coordenador",
+  GERENTE: "Gerente",
+  GERENTE_PROJETO: "Gerente de Projeto",
+  PESQUISADOR: "Pesquisador",
+  COLABORADOR: "Colaborador",
+  VOLUNTARIO: "Voluntário",
+}
+
+const getRoleDisplayName = (role: string) => ROLE_NAMES[role] || role
+
+export function ProjectMembersManagement({ project, onUpdate, initialMembers }: ProjectMembersManagementProps) {
   const { user } = useAuth()
   const { toast } = useToast()
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [showRemoveDialog, setShowRemoveDialog] = useState(false)
   const [showHoursDialog, setShowHoursDialog] = useState(false)
+  const [showProfileDialog, setShowProfileDialog] = useState(false)
   const [selectedMember, setSelectedMember] = useState<ProjectMember | null>(null)
   const [newMemberUserId, setNewMemberUserId] = useState<string>("")
   const [newMemberRole, setNewMemberRole] = useState<string>("COLABORADOR")
@@ -92,7 +134,7 @@ export function ProjectMembersManagement({ project, onUpdate }: ProjectMembersMa
     updateMemberRoles,
     updateMemberProfile,
     updateLeader,
-  } = useProjectMembers(project.id, { includeAvailableUsers: canManageMembers })
+  } = useProjectMembers(project.id, { includeAvailableUsers: canManageMembers, initialMembers })
 
   useEffect(() => {
     const leaderId = project.leaderId ?? null
@@ -173,7 +215,10 @@ export function ProjectMembersManagement({ project, onUpdate }: ProjectMembersMa
       patch.dataEntrada = draft.dataEntrada === "" ? null : draft.dataEntrada
     }
 
-    if (Object.keys(patch).length === 0) return
+    if (Object.keys(patch).length === 0) {
+      setShowProfileDialog(false)
+      return
+    }
 
     try {
       await updateMemberProfile(member.id, patch)
@@ -181,6 +226,7 @@ export function ProjectMembersManagement({ project, onUpdate }: ProjectMembersMa
         title: "Sucesso",
         description: `Dados de ${member.userName || `usuário #${member.userId}`} atualizados`,
       })
+      setShowProfileDialog(false)
       onUpdate?.()
     } catch (error) {
       console.error("Erro ao atualizar dados do membro:", error)
@@ -332,51 +378,6 @@ export function ProjectMembersManagement({ project, onUpdate }: ProjectMembersMa
     }
   }
 
-  const getRoleDisplayName = (role: string) => {
-    const roleNames: Record<string, string> = {
-      'COORDENADOR': 'Coordenador',
-      'GERENTE': 'Gerente',
-      'GERENTE_PROJETO': 'Gerente de Projeto',
-      'PESQUISADOR': 'Pesquisador',
-      'COLABORADOR': 'Colaborador',
-      'VOLUNTARIO': 'Voluntário'
-    }
-    return roleNames[role] || role
-  }
-
-  const getRoleBadgeVariant = (role: string) => {
-    switch (role) {
-      case 'COORDENADOR': return 'default'
-      case 'GERENTE': return 'default'
-      case 'GERENTE_PROJETO': return 'secondary'
-      case 'PESQUISADOR': return 'outline'
-      case 'COLABORADOR': return 'outline'
-      case 'VOLUNTARIO': return 'outline'
-      default: return 'outline'
-    }
-  }
-
-  /** Rótulo do domínio, com fallback ao token: o vocabulário não é inventado aqui (DEC-96). */
-  const categoryLabel = (categoria: string | null) =>
-    (MEMBER_CATEGORY_LABELS as Record<string, string>)[categoria ?? ""] ?? categoria ?? ""
-
-  const situationLabel = (situacao: string | null) =>
-    (MEMBER_SITUATION_LABELS as Record<string, string>)[situacao ?? ""] ?? situacao ?? ""
-
-  /**
-   * A linha de leitura de quem não gerencia. Monta só com o que existe: um vínculo sem dado
-   * nenhum não ganha linha vazia.
-   */
-  const describeMemberProfile = (member: ProjectMember) => {
-    const parts: string[] = []
-    if (member.cargaHoraria) parts.push(`${member.cargaHoraria} h/semana contratadas`)
-    if (member.categoria) parts.push(categoryLabel(member.categoria))
-    if (member.situacao && member.situacao !== "ATIVO") parts.push(situationLabel(member.situacao))
-    if (member.dataEntrada) parts.push(`entrou em ${formatDateOnly(member.dataEntrada)}`)
-    if (member.lattes) parts.push(`Lattes ${member.lattes}`)
-    return parts.join(" · ")
-  }
-
   if (loading) {
     return (
       <Card>
@@ -395,361 +396,360 @@ export function ProjectMembersManagement({ project, onUpdate }: ProjectMembersMa
     )
   }
 
+  const leaderName = members.find((member) => member.userId === currentLeaderId)?.userName
+    || (currentLeaderId ? `Usuário #${currentLeaderId}` : "Sem líder")
+
+  // O dialog de vínculo lê o rascunho por id do vínculo, como fazia o formulário inline.
+  const profileMember = canManageMembers ? selectedMember : null
+  const profileMemberName = profileMember
+    ? profileMember.userName || `usuário #${profileMember.userId}`
+    : ""
+  const profileDraft = profileMember
+    ? memberProfileDrafts[profileMember.id] ?? draftFromMember(profileMember)
+    : null
+  const patchProfileDraft = (patch: Partial<MemberProfileDraft>) => {
+    if (!profileMember) return
+    setMemberProfileDrafts((prev) => ({
+      ...prev,
+      [profileMember.id]: { ...(prev[profileMember.id] ?? draftFromMember(profileMember)), ...patch },
+    }))
+  }
+
   return (
     <Card>
-      <CardHeader>
-        <div className="flex justify-between items-center">
+      <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3 space-y-0">
+        <div className="space-y-1.5">
           <CardTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
             Membros do Projeto
           </CardTitle>
-          {canManageMembers && (
-            <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-              <DialogTrigger asChild>
-                <Button size="sm">
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Adicionar Membro
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-h-[90vh] overflow-y-auto sm:overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Adicionar Membro ao Projeto</DialogTitle>
-                  <DialogDescription>
-                    Selecione um usuário para adicionar ao projeto {project.name}.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="user">Usuário</Label>
-                    <Select value={newMemberUserId} onValueChange={setNewMemberUserId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione um usuário" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableUsers.map((user) => (
-                          <SelectItem key={user.id} value={user.id.toString()}>
-                            {user.name} ({user.email})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="role">Função</Label>
-                    <Select value={newMemberRole} onValueChange={setNewMemberRole}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="COLABORADOR">Colaborador</SelectItem>
-                        <SelectItem value="PESQUISADOR">Pesquisador</SelectItem>
-                        <SelectItem value="GERENTE_PROJETO">Gerente de Projeto</SelectItem>
-                        <SelectItem value="VOLUNTARIO">Voluntário</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setShowAddDialog(false)}>
-                    Cancelar
-                  </Button>
-                  <Button onClick={handleAddMember} disabled={!newMemberUserId}>
-                    Adicionar
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          )}
+          <CardDescription>
+            {members.length} membro{members.length !== 1 ? 's' : ''} no projeto
+          </CardDescription>
         </div>
-        <CardDescription>
-          {members.length} membro{members.length !== 1 ? 's' : ''} no projeto
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Tabs defaultValue="members" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="members">Membros</TabsTrigger>
-            <TabsTrigger value="hours">Horas Trabalhadas</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="members" className="space-y-4">
-            {canManageMembers && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <Crown className="h-4 w-4" />
-                    Liderança do Projeto
-                  </CardTitle>
-                  <CardDescription>
-                    Líder atual: {members.find((member) => member.userId === currentLeaderId)?.userName || (currentLeaderId ? `Usuário #${currentLeaderId}` : "Sem líder")}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-col gap-2 md:flex-row">
-                    <Select value={leaderSelection} onValueChange={setLeaderSelection}>
-                      <SelectTrigger className="w-full md:w-72">
-                        <SelectValue placeholder="Selecione o líder" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Sem líder</SelectItem>
-                        {members.map((member) => (
-                          <SelectItem key={member.userId} value={String(member.userId)}>
-                            {member.userName || `Usuário #${member.userId}`}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Button onClick={handleSetLeader}>Salvar líder</Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {members.length === 0 ? (
-              <div className="text-center py-8">
-                <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Nenhum membro encontrado</h3>
-                <p className="text-muted-foreground">
-                  Este projeto ainda não possui membros.
-                </p>
+        {canManageMembers && (
+          <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+            <DialogTrigger asChild>
+              <Button size="sm">
+                <UserPlus className="h-4 w-4 mr-2" />
+                Adicionar Membro
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-h-[90vh] overflow-y-auto sm:overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Adicionar Membro ao Projeto</DialogTitle>
+                <DialogDescription>
+                  Selecione um usuário para adicionar ao projeto {project.name}.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="user">Usuário</Label>
+                  <Select value={newMemberUserId} onValueChange={setNewMemberUserId}>
+                    <SelectTrigger id="user">
+                      <SelectValue placeholder="Selecione um usuário" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableUsers.map((user) => (
+                        <SelectItem key={user.id} value={user.id.toString()}>
+                          {user.name} ({user.email})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="role">Função</Label>
+                  <Select value={newMemberRole} onValueChange={setNewMemberRole}>
+                    <SelectTrigger id="role">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="COLABORADOR">Colaborador</SelectItem>
+                      <SelectItem value="PESQUISADOR">Pesquisador</SelectItem>
+                      <SelectItem value="GERENTE_PROJETO">Gerente de Projeto</SelectItem>
+                      <SelectItem value="VOLUNTARIO">Voluntário</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-            ) : (
-              <div className="space-y-3">
-                {members.map((member) => {
-                  const draft = memberProfileDrafts[member.id] ?? draftFromMember(member)
-                  const summary = describeMemberProfile(member)
-                  // O nome entra no nome acessível de cada controle: cinco campos se repetem por
-                  // membro na mesma tela, e um leitor de tela não pode ouvir "Currículo Lattes"
-                  // cinco vezes sem saber de quem é (mesma família da DEC-86).
-                  const memberName = member.userName || `usuário #${member.userId}`
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowAddDialog(false)}>
+                  Cancelar
+                </Button>
+                <Button onClick={handleAddMember} disabled={!newMemberUserId}>
+                  Adicionar
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {canManageMembers && (
+          <section className="rounded-lg border p-4">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+              <div className="space-y-1">
+                <h3 className="flex items-center gap-2 text-sm font-medium">
+                  <Crown className="h-4 w-4 text-muted-foreground" />
+                  Liderança do projeto
+                </h3>
+                <p className="text-xs text-muted-foreground">Líder atual: {leaderName}</p>
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Select value={leaderSelection} onValueChange={setLeaderSelection}>
+                  <SelectTrigger className="w-full sm:w-72" aria-label="Líder do projeto">
+                    <SelectValue placeholder="Selecione o líder" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sem líder</SelectItem>
+                    {members.map((member) => (
+                      <SelectItem key={member.userId} value={String(member.userId)}>
+                        {member.userName || `Usuário #${member.userId}`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button variant="secondary" onClick={handleSetLeader}>Salvar líder</Button>
+              </div>
+            </div>
+          </section>
+        )}
 
-                  // O rascunho parte do que a tela já mostra, nunca de `prev[id` (que pode ainda
-                  // não existir entre a lista chegar e o efeito que o inicializa).
-                  const patchDraft = (patch: Partial<MemberProfileDraft>) =>
-                    setMemberProfileDrafts((prev) => ({
-                      ...prev,
-                      [member.id]: { ...draft, ...patch },
-                    }))
+        {members.length === 0 ? (
+          <div className="rounded-lg border border-dashed py-10 text-center">
+            <Users className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+            <h3 className="mb-2 text-lg font-semibold">Nenhum membro encontrado</h3>
+            <p className="text-muted-foreground">Este projeto ainda não possui membros.</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {members.map((member) => {
+              const summary = describeMemberProfile(member)
+              // O nome entra no nome acessível de cada controle: cinco campos se repetem por
+              // membro na mesma tela, e um leitor de tela não pode ouvir "Currículo Lattes"
+              // cinco vezes sem saber de quem é (mesma família da DEC-86).
+              const memberName = member.userName || `usuário #${member.userId}`
+              const hoursSummary = [
+                `${member.totalHours || 0}h no projeto`,
+                `esta semana ${member.currentWeekHours || 0}h`,
+              ].join(' · ')
 
-                  return (
-                    <div key={member.id} className="border rounded-lg">
-                      <div className="flex items-center justify-between p-3">
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-10 w-10">
-                            <AvatarFallback>
-                              {(member.userName || `Usuário #${member.userId}`).split(' ').map(n => n[0]).join('').toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <div className="font-medium">{member.userName || `Usuário #${member.userId}`}</div>
-                            <div className="text-sm text-muted-foreground">{member.userEmail || "Sem email"}</div>
-                            <div className="flex gap-1 mt-1">
-                              {member.roles.map((role) => (
-                                <Badge key={role} variant={getRoleBadgeVariant(role)} className="text-xs">
-                                  {getRoleDisplayName(role)}
-                                </Badge>
-                              ))}
-                            </div>
-                          </div>
+              return (
+                <article key={member.id} className="rounded-lg border">
+                  <header className="flex flex-wrap items-start justify-between gap-3 p-4">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <Avatar className="h-10 w-10">
+                        <AvatarFallback>
+                          {memberName.split(' ').map(n => n[0]).join('').toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-medium">{memberName}</span>
+                          {member.roles.map((role) => (
+                            <Badge key={role} variant="outline" className="text-xs">
+                              {getRoleDisplayName(role)}
+                            </Badge>
+                          ))}
                         </div>
-                        {canManageMembers && (
-                          <div className="flex gap-2">
-                            <Select
-                              value={memberRoleDrafts[member.userId] || member.roles?.[0] || "COLABORADOR"}
-                              onValueChange={(value) =>
-                                setMemberRoleDrafts((prev) => ({ ...prev, [member.userId]: value }))
-                              }
-                            >
-                              <SelectTrigger className="w-48" aria-label={`Papel do membro de ${memberName}`}>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="COLABORADOR">Colaborador</SelectItem>
-                                <SelectItem value="PESQUISADOR">Pesquisador</SelectItem>
-                                <SelectItem value="GERENTE_PROJETO">Gerente de Projeto</SelectItem>
-                                <SelectItem value="VOLUNTARIO">Voluntário</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              onClick={() => handleSetMemberRole(member)}
-                            >
-                              Salvar papel
+                        <p className="truncate text-sm text-muted-foreground">{member.userEmail || "Sem email"}</p>
+                        {(member.totalHours || member.currentWeekHours) ? (
+                          <p className="mt-0.5 text-xs text-muted-foreground">{hoursSummary}</p>
+                        ) : null}
+                      </div>
+                    </div>
+                    {canManageMembers && (
+                      <div className="flex items-center gap-2">
+                        <Select
+                          value={memberRoleDrafts[member.userId] || member.roles?.[0] || "COLABORADOR"}
+                          onValueChange={(value) =>
+                            setMemberRoleDrafts((prev) => ({ ...prev, [member.userId]: value }))
+                          }
+                        >
+                          <SelectTrigger className="w-40" aria-label={`Papel do membro de ${memberName}`}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="COLABORADOR">Colaborador</SelectItem>
+                            <SelectItem value="PESQUISADOR">Pesquisador</SelectItem>
+                            <SelectItem value="GERENTE_PROJETO">Gerente de Projeto</SelectItem>
+                            <SelectItem value="VOLUNTARIO">Voluntário</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => handleSetMemberRole(member)}
+                        >
+                          Salvar papel
+                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-9 w-9" aria-label={`Mais ações para ${memberName}`}>
+                              <MoreHorizontal className="h-4 w-4" />
                             </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setSelectedMember(member)
+                                setShowProfileDialog(true)
+                              }}
+                            >
+                              <IdCard className="mr-2 h-4 w-4" />
+                              Editar vínculo
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
                               onClick={() => {
                                 setSelectedMember(member)
                                 setShowHoursDialog(true)
                               }}
                             >
-                              <Clock className="h-4 w-4 mr-1" />
-                              Horas
-                            </Button>
-                            <Button
-                              variant="destructive"
-                              size="sm"
+                              <Clock className="mr-2 h-4 w-4" />
+                              Adicionar horas
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-destructive focus:text-destructive"
                               onClick={() => {
                                 setSelectedMember(member)
                                 setShowRemoveDialog(true)
                               }}
                             >
-                              <UserMinus className="h-4 w-4 mr-1" />
-                              Remover
-                            </Button>
-                          </div>
-                        )}
+                              <UserMinus className="mr-2 h-4 w-4" />
+                              Remover do projeto
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
+                    )}
+                  </header>
 
-                      {/*
-                        V5-4b (DEC-149): os dados do vínculo. Ficam FORA da linha de controles,
-                        porque cinco campos espremeriam o cartão. Quem gerencia o projeto edita;
-                        quem só lê vê a linha resumo, e só quando existe dado (vínculo novo não
-                        ganha linha vazia). A pessoa edita os próprios dados de pessoa no perfil —
-                        aqui se edita o vínculo.
-                      */}
-                      {canManageMembers ? (
-                        <div className="border-t p-3 space-y-3">
-                          <p className="text-sm font-medium">Dados do vínculo</p>
-                          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-                            <div className="grid gap-1">
-                              <Label htmlFor={`lattes-${member.id}`}>Currículo Lattes</Label>
-                              <Input
-                                id={`lattes-${member.id}`}
-                                aria-label={`Currículo Lattes de ${memberName}`}
-                                value={draft.lattes}
-                                onChange={(e) => patchDraft({ lattes: e.target.value })}
-                                placeholder="Ex.: 1234567890123456"
-                              />
-                            </div>
-                            <div className="grid gap-1">
-                              <Label htmlFor={`carga-${member.id}`}>Carga contratada (h/semana)</Label>
-                              <Input
-                                id={`carga-${member.id}`}
-                                aria-label={`Carga contratada (h/semana) de ${memberName}`}
-                                type="number"
-                                min="0"
-                                step="0.5"
-                                value={draft.cargaHoraria}
-                                onChange={(e) => patchDraft({ cargaHoraria: e.target.value })}
-                                placeholder="Ex.: 20"
-                              />
-                            </div>
-                            <div className="grid gap-1">
-                              <Label htmlFor={`categoria-${member.id}`}>Categoria do vínculo</Label>
-                              <Select
-                                value={draft.categoria}
-                                onValueChange={(value) => patchDraft({ categoria: value })}
-                              >
-                                <SelectTrigger
-                                  id={`categoria-${member.id}`}
-                                  aria-label={`Categoria do vínculo de ${memberName}`}
-                                >
-                                  <SelectValue placeholder="Sem categoria" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value={NO_VALUE}>Sem categoria</SelectItem>
-                                  {MEMBER_CATEGORIES.map((token) => (
-                                    <SelectItem key={token} value={token}>
-                                      {MEMBER_CATEGORY_LABELS[token]}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="grid gap-1">
-                              <Label htmlFor={`situacao-${member.id}`}>Situação do vínculo</Label>
-                              <Select
-                                value={draft.situacao}
-                                onValueChange={(value) => patchDraft({ situacao: value })}
-                              >
-                                <SelectTrigger
-                                  id={`situacao-${member.id}`}
-                                  aria-label={`Situação do vínculo de ${memberName}`}
-                                >
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {MEMBER_SITUATIONS.map((token) => (
-                                    <SelectItem key={token} value={token}>
-                                      {MEMBER_SITUATION_LABELS[token]}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="grid gap-1">
-                              <Label htmlFor={`entrada-${member.id}`}>Data de entrada</Label>
-                              <Input
-                                id={`entrada-${member.id}`}
-                                aria-label={`Data de entrada de ${memberName}`}
-                                type="date"
-                                value={draft.dataEntrada}
-                                onChange={(e) => patchDraft({ dataEntrada: e.target.value })}
-                              />
-                            </div>
-                          </div>
-                          <div className="flex items-center justify-between gap-2">
-                            <p className="text-xs text-muted-foreground">
-                              A carga contratada é a que sai no atestado; a meta semanal da pessoa é
-                              editada no perfil dela.
-                            </p>
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              aria-label={`Salvar vínculo de ${memberName}`}
-                              onClick={() => handleSaveMemberProfile(member)}
-                            >
-                              Salvar vínculo
-                            </Button>
-                          </div>
-                        </div>
-                      ) : summary ? (
-                        <div className="border-t px-3 py-2 text-sm text-muted-foreground">
-                          {summary}
-                        </div>
-                      ) : null}
+                  {/*
+                    V5-4b (DEC-149): os dados do vínculo são editados no dialog "Editar vínculo",
+                    aberto pelo menu de ações do membro. Quem só lê vê a linha resumo, e só quando
+                    existe dado (vínculo novo não ganha linha vazia).
+                  */}
+                  {!canManageMembers && summary ? (
+                    <div className="border-t px-4 py-2.5 text-sm text-muted-foreground">
+                      {summary}
                     </div>
-                  )
-                })}
+                  ) : null}
+                </article>
+              )
+            })}
+          </div>
+        )}
+
+        {/* Dialog para editar o vínculo do membro */}
+        <Dialog open={showProfileDialog} onOpenChange={setShowProfileDialog}>
+          <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Editar vínculo</DialogTitle>
+              <DialogDescription>
+                Dados do vínculo de <strong>{profileMemberName || "membro"}</strong> no projeto {project.name}.
+              </DialogDescription>
+            </DialogHeader>
+            {profileMember && profileDraft ? (
+              <div className="space-y-4">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="grid gap-1.5 sm:col-span-2">
+                    <Label htmlFor="profile-lattes">Currículo Lattes</Label>
+                    <Input
+                      id="profile-lattes"
+                      aria-label={`Currículo Lattes de ${profileMemberName}`}
+                      value={profileDraft.lattes}
+                      onChange={(e) => patchProfileDraft({ lattes: e.target.value })}
+                      placeholder="Ex.: 1234567890123456"
+                    />
+                  </div>
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="profile-carga">Carga contratada (h/semana)</Label>
+                    <Input
+                      id="profile-carga"
+                      aria-label={`Carga contratada (h/semana) de ${profileMemberName}`}
+                      type="number"
+                      min="0"
+                      step="0.5"
+                      value={profileDraft.cargaHoraria}
+                      onChange={(e) => patchProfileDraft({ cargaHoraria: e.target.value })}
+                      placeholder="Ex.: 20"
+                    />
+                  </div>
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="profile-entrada">Data de entrada</Label>
+                    <Input
+                      id="profile-entrada"
+                      aria-label={`Data de entrada de ${profileMemberName}`}
+                      type="date"
+                      value={profileDraft.dataEntrada}
+                      onChange={(e) => patchProfileDraft({ dataEntrada: e.target.value })}
+                    />
+                  </div>
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="profile-categoria">Categoria do vínculo</Label>
+                    <Select
+                      value={profileDraft.categoria}
+                      onValueChange={(value) => patchProfileDraft({ categoria: value })}
+                    >
+                      <SelectTrigger
+                        id="profile-categoria"
+                        aria-label={`Categoria do vínculo de ${profileMemberName}`}
+                      >
+                        <SelectValue placeholder="Sem categoria" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={NO_VALUE}>Sem categoria</SelectItem>
+                        {MEMBER_CATEGORIES.map((token) => (
+                          <SelectItem key={token} value={token}>
+                            {MEMBER_CATEGORY_LABELS[token]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="profile-situacao">Situação do vínculo</Label>
+                    <Select
+                      value={profileDraft.situacao}
+                      onValueChange={(value) => patchProfileDraft({ situacao: value })}
+                    >
+                      <SelectTrigger
+                        id="profile-situacao"
+                        aria-label={`Situação do vínculo de ${profileMemberName}`}
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {MEMBER_SITUATIONS.map((token) => (
+                          <SelectItem key={token} value={token}>
+                            {MEMBER_SITUATION_LABELS[token]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  A carga contratada é a que sai no atestado; a meta semanal da pessoa é editada no
+                  perfil dela.
+                </p>
               </div>
-            )}
-          </TabsContent>
-          
-          <TabsContent value="hours" className="space-y-4">
-            <div className="grid gap-4">
-              {members.map((member) => (
-                <Card key={member.id}>
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-8 w-8">
-                          <AvatarFallback className="text-xs">
-                            {(member.userName || `Usuário #${member.userId}`).split(' ').map(n => n[0]).join('').toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <div className="font-medium">{member.userName || `Usuário #${member.userId}`}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {member.roles.map(getRoleDisplayName).join(', ')}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-lg font-bold">{member.totalHours || 0}h</div>
-                        <div className="text-sm text-muted-foreground">
-                          Esta semana: {member.currentWeekHours || 0}h
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </TabsContent>
-        </Tabs>
+            ) : null}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowProfileDialog(false)}>
+                Cancelar
+              </Button>
+              <Button
+                aria-label={`Salvar vínculo de ${profileMemberName}`}
+                onClick={() => profileMember && handleSaveMemberProfile(profileMember)}
+              >
+                Salvar vínculo
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Dialog para remover membro */}
         <Dialog open={showRemoveDialog} onOpenChange={setShowRemoveDialog}>
@@ -782,7 +782,7 @@ export function ProjectMembersManagement({ project, onUpdate }: ProjectMembersMa
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
-              <div>
+              <div className="space-y-1.5">
                 <Label htmlFor="date">Data</Label>
                 <Input
                   id="date"
@@ -791,7 +791,7 @@ export function ProjectMembersManagement({ project, onUpdate }: ProjectMembersMa
                   onChange={(e) => setHoursDate(e.target.value)}
                 />
               </div>
-              <div>
+              <div className="space-y-1.5">
                 <Label htmlFor="hours">Horas</Label>
                 <Input
                   id="hours"

@@ -26,12 +26,11 @@ import {
   completionAwardMessage,
   isArchivedTask,
   isTaskOverdue,
-  isTaskDueToday,
   BOARD_COLUMNS,
 } from "../index"
 import { useColumnOrders } from "../hooks/use-column-orders"
 import { sortTasksByColumnOrder, type ColumnOrder } from "../utils/column-order"
-import { isAssignedToUser } from "../utils/is-assigned-to-user"
+import { filterBoardTasks } from "../utils/filter-board-tasks"
 import { getCronograma, type ProjectActivity } from "@/lib/api/project-cronograma"
 import type { Task, TaskStatus } from "@/entities/task"
 import { BoardColumn } from "./board-column"
@@ -114,21 +113,14 @@ export function TaskBoard() {
   const { orders: columnOrders, setOrder: setColumnOrder } = useColumnOrders(sessionUserId)
 
   const filteredTasks = useMemo(() => {
-    let list = tasks ?? []
-    if (projetoParam) list = list.filter((t) => t.projectId === projetoParam)
-    if (pessoaParam) list = list.filter((t) => isAssignedToUser(t, pessoaParam))
-    // V5-6 (DEC-99): a tarefa carrega `activityId` no read model; filtrar é comparar a chave.
-    // Tarefa sem vínculo nunca casa — o filtro mostra as tasks DA etapa, não "as demais".
-    if (atividadeParam) list = list.filter((t) => t.activityId === atividadeParam)
-    if (atrasadasParam || hojeParam)
-      list = list.filter(
-        (t) => (atrasadasParam && isTaskOverdue(t)) || (hojeParam && isTaskDueToday(t)),
-      )
-    if (buscaParam) {
-      const q = buscaParam.toLowerCase()
-      list = list.filter((t) => t.title.toLowerCase().includes(q))
-    }
-    return list
+    return filterBoardTasks(tasks ?? [], {
+      projectId: projetoParam,
+      assigneeId: pessoaParam,
+      activityId: atividadeParam,
+      overdue: atrasadasParam,
+      dueToday: hojeParam,
+      search: buscaParam,
+    })
   }, [tasks, projetoParam, pessoaParam, atrasadasParam, hojeParam, buscaParam, atividadeParam])
 
   const archivedTasks = useMemo(() => filteredTasks.filter((t) => isArchivedTask(t)), [filteredTasks])

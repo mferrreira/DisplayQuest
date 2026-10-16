@@ -67,7 +67,7 @@ referência mostra** — a lacuna do tema escuro é **texto na skill**, não CSS
 | D-G | **DEC-111** | Execução por `/ui-refactor` + gate `/ui-review`, com os **primitivos centrais antes** de qualquer tela (evita recriar o mesmo componente 6× de novo). | conversa 2026-10-07 |
 | D-H | **DEC-112** | **Nenhuma funcionalidade nova** — sem tags, feed, busca global, gráfico com dependência, destinos de navegação novos. | conversa 2026-10-07 |
 | D-I | **DEC-113** | **Ordem frente ao plan-v5:** não roda primeiro. O backend é a fonte de verdade e o front é implementado seguindo o back — nas colisões (V6-4×V5-4, V6-5×V5-2, V6-7×V5-3) o **plan-v5 executa antes**. V6-0..V6-3 não tocam o plan-v5. | dono, 2026-10-07 |
-| D-J | **DEC-114** | **Home sem coluna secundária:** o draft tem 4 colunas e o DisplayQuest mantém 5 (DEC-112), então o quadro **reaproveita a largura horizontal toda** para não espremer as tasks; o resumo fica na região de cabeçalho, acima do quadro. | dono, 2026-10-07 |
+| D-J | **DEC-114** | **Home sem coluna secundária:** o draft tem 4 colunas e o DisplayQuest mantém 5 (DEC-112), então o quadro **reaproveita a largura horizontal toda** para não espremer as tasks; o resumo fica em três cards abaixo do quadro. | dono, 2026-10-07; refinamento da Home, 2026-10-15 |
 | D-K | **DEC-181** | **Relatórios viram um destino só:** uma página com **3 abas** (por usuário / por projeto / atestados) + **assistente de 3 passos**; o que se unifica é o **fluxo de geração**, não o inventário — nenhum bloco sai do detalhe do projeto, e a aba **Templates fica fora**. | dono, 2026-10-14 |
 | D-L | **DEC-182** | **Voluntários sai de Projetos e vira aba do Painel Administrativo**; o conjunto medido vira a chave `DASHBOARD_VOLUNTEERS` = `["COORDENADOR","GERENTE","GERENTE_PROJETO"]`. | dono, 2026-10-14 |
 | D-M | **DEC-183** | **O detalhe do projeto vira 5 abas** (Visão geral / Tarefas / Membros / Arquivos / Configurações) com rail direito, como a referência; a distribuição é congelada para não ser relitigada. | dono, 2026-10-14 |
@@ -250,7 +250,13 @@ com as duas chaves novas na matriz no valor da decisão.
   `useProjects()`, `user.points`) — **sem** feed, **sem** status de sistema, **sem**
   fetch de ranking (R1 de RF-V6.4).
 - **Sem coluna secundária (DEC-114):** o quadro de 5 colunas ocupa a largura horizontal
-  toda e os blocos de resumo vão na região de cabeçalho, **acima** do quadro.
+  toda; os três cards de resumo ficam em uma faixa **abaixo** do quadro.
+- A navegação desktop abre sobre o conteúdo, abaixo do header, sem participar do fluxo e
+  sem reduzir a largura do quadro. A Home e o componente da sidebar iniciam recolhidos.
+- O dock de workSession ancora no rodapé do menu e cresce para cima ao expandir, para que
+  o conteúdo não seja cortado pelo limite inferior. Relógio e ações Pausar/Continuar/Parar
+  aparecem primeiro; detalhes opcionais vêm depois. As duas tabs dividem a largura do card,
+  com quebra do rótulo longo. Em telas pequenas, o cronômetro fica no canto inferior direito.
 - `board-column.tsx` → tinta chapada no lugar do degradê saturado, `lucide` no lugar do
   emoji; contagem sem pill `bg-white/20` (D3, D6).
 - `task-card.tsx` → superfície chapada, badges por token (sem gradiente/`font-bold
@@ -287,6 +293,8 @@ com as duas chaves novas na matriz no valor da decisão.
 - `projectsApi.getById(id)` + `projectsApi.members(id)` (**1 fetch por rota**, viável
   só aqui) — sem N+1.
 - Os 2 pontos de entrada navegam; `ProjectDetailDialog` **sai**.
+- A barra principal de andamento usa o período civil quando início e término existem; sem uma das datas, usa tarefas concluídas como fallback. A taxa de tarefas segue identificada separadamente.
+- Dashboard de Projetos e Home usam gráficos compactos de distribuição por status e conclusão/meta, sem a fileira de cartões numéricos do Dashboard. O Dashboard permite escolher um projeto; a distribuição, o histórico semanal e a lista acompanham o recorte. O histórico agrupa `completedAt` nas últimas oito semanas civis (segunda a domingo).
 - **Medir a porta do servidor antes** (DEC-92) antes de escrever o gate das **8
   expressões de porta** (tabela congelada na `SPEC.md` §8.4). A 8ª
   (`canManageProjectFiles`, `:165-171`) governa **6 dos 20 blocos** e **já existia** —
@@ -472,6 +480,15 @@ na V6-1: arch:check 1036/4420 zero, tsc 0, suíte completa 177/2290 com `DATABAS
 
 ## 9. Como executar
 
+### Cadência de verificações
+
+Rodar a suíte completa **uma vez ao final de cada etapa/onda**, depois de concluir as
+alterações daquela etapa; não repetir a suíte a cada edição intermediária. Se a rodada
+final encontrar falha, corrigir a causa e usar verificações direcionadas ao arquivo ou
+componente afetado. Repetir a suíte completa apenas no fechamento da próxima etapa ou
+quando o dono pedir explicitamente. Registrar no `STATE.json` o resultado real e qualquer
+verificação direcionada posterior, sem apresentar uma rodada parcial como suíte verde.
+
 ```bash
 # 1. ver a onda atual
 grep -n '"activeBatch"' displayquest-v2/plan-v6/STATE.json
@@ -482,7 +499,8 @@ grep -n '"activeBatch"' displayquest-v2/plan-v6/STATE.json
 # 3. gate de qualidade visual (agente ui-reviewer, read-only)
 /ui-review <alvo-da-onda>
 
-# 4. gates técnicos
+# 4. gates técnicos (a suíte Vitest completa roda uma vez no fechamento da etapa; ver
+#    “Cadência de verificações” acima)
 npm run arch:check && npm run lint && npx tsc --noEmit && npx vitest run
 
 # 5. greps de contrato da redistribuição (ondas V6-1/V6-2/V6-4/V6-8/V6-9)

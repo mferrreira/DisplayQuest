@@ -2,7 +2,9 @@
 
 /**
  * TaskCard (E2/T2.4+T2.5) — replaces components/ui/kanban-card.tsx.
- * Visual parity with legacy gradients/badges; fixes D-15 findings:
+ * plan-v6 · V6-3 (RF-V6.4): superficie chapada de tokens, badges pela unica fonte
+ * (`components/ui/status.ts`), lucide no lugar do emoji — a paridade visual com os
+ * degradês legados da E2 morreu aqui. D-15 findings continuam consertados:
  *  - ALL icon-only controls have aria-label (button-name)
  *  - Progress bar has role/aria (progressbar-name) — via shadcn Progress + wrapper label
  *  - NO nested interactive: DnD handle is a dedicated grip OUTSIDE buttons; card body click opens
@@ -45,6 +47,7 @@ import {
   Users,
   Crown,
   Zap,
+  Globe,
   Check,
   X,
   GripVertical,
@@ -55,6 +58,12 @@ import {
   CalendarClock,
 } from "lucide-react"
 import type { Task, TaskStatus, TaskSubtask } from "@/entities/task"
+import {
+  taskPriorityBadgeClass,
+  taskPriorityLabel,
+  taskStatusBadgeClass,
+  taskStatusLabel,
+} from "@/components/ui/status"
 import { useAuth } from "@/contexts/auth-context"
 import { useProjects } from "@/features/projects"
 import { useUsers } from "@/features/users"
@@ -82,48 +91,9 @@ const STATUS_PROGRESS: Record<Task["status"], number> = {
   done: 100,
 }
 
-const PRIORITY_LABEL: Record<Task["priority"], string> = {
-  low: "BAIXA",
-  medium: "MÉDIA",
-  high: "ALTA",
-  urgent: "URGENTE",
-}
-
-const STATUS_LABEL: Record<Task["status"], string> = {
-  "to-do": "A FAZER",
-  "in-progress": "EM ANDAMENTO",
-  "in-review": "EM REVISÃO",
-  adjust: "AJUSTES",
-  done: "CONCLUÍDA",
-}
-
-function priorityBadgeClass(priority: Task["priority"]): string {
-  switch (priority) {
-    case "high":
-      return "bg-gradient-to-r from-red-500 to-pink-500 text-white border-red-400 dark:from-red-500/20 dark:to-pink-500/20 dark:text-red-300 dark:border-red-500/40"
-    case "urgent":
-      return "bg-gradient-to-r from-fuchsia-600 to-red-600 text-white border-fuchsia-400 dark:from-fuchsia-500/20 dark:to-red-500/20 dark:text-fuchsia-300 dark:border-fuchsia-500/40"
-    case "medium":
-      return "bg-gradient-to-r from-yellow-500 to-orange-500 text-white border-yellow-400 dark:from-yellow-500/20 dark:to-orange-500/20 dark:text-yellow-300 dark:border-yellow-500/40"
-    case "low":
-      return "bg-gradient-to-r from-green-500 to-emerald-500 text-white border-green-400 dark:from-green-500/20 dark:to-emerald-500/20 dark:text-green-300 dark:border-green-500/40"
-  }
-}
-
-function statusBadgeClass(status: Task["status"]): string {
-  switch (status) {
-    case "done":
-      return "bg-gradient-to-r from-emerald-500 to-green-500 text-white border-emerald-400 dark:from-emerald-500/20 dark:to-green-500/20 dark:text-emerald-300 dark:border-emerald-500/40"
-    case "in-progress":
-      return "bg-gradient-to-r from-blue-500 to-cyan-500 text-white border-blue-400 dark:from-blue-500/20 dark:to-cyan-500/20 dark:text-blue-300 dark:border-blue-500/40"
-    case "in-review":
-      return "bg-gradient-to-r from-purple-500 to-violet-500 text-white border-purple-400 dark:from-purple-500/20 dark:to-violet-500/20 dark:text-purple-300 dark:border-purple-500/40"
-    case "adjust":
-      return "bg-gradient-to-r from-orange-500 to-amber-500 text-white border-orange-400 dark:from-orange-500/20 dark:to-amber-500/20 dark:text-orange-300 dark:border-orange-500/40"
-    default:
-      return "bg-gradient-to-r from-slate-500 to-gray-500 text-white border-slate-400 dark:from-slate-500/20 dark:to-gray-500/20 dark:text-slate-300 dark:border-slate-500/40"
-  }
-}
+// V6-3 (RF-V6.2 R2, DEC-111): os rotulos e as classes de status/privacidade do cartao nao
+// sao mais mapas locais — vem de `components/ui/status.ts`, a unica fonte. As copias
+// daqui (degradê saturado + text-white + par dark: a mao) sairam do repo.
 
 export interface TaskCardProps {
   task: Task
@@ -371,17 +341,21 @@ export function TaskCard({ task, index, isOverdue, isDueToday, isCompact, onEdit
     }
   }
 
+  // V6-3 (RF-V6.4, AC-V6-12): superficie chapada — o tom do cartao e tint de token na
+  // borda/fundo, sem degradê e sem par `dark:` (o `.dark` redefine os tokens). Os dois
+  // overlay `animate-pulse` de antes sairam: o sinal de PUBLICA/QUEST GLOBAL ja mora no
+  // selo, e pulsar o cartao inteiro e o anti-pattern que a onda caça.
   const cardTone = isPublicTask
     ? isOverdue
-      ? "border-red-400 bg-gradient-to-br from-red-50 to-red-100 dark:from-red-500/10 dark:to-red-500/5"
+      ? "border-destructive/50 bg-destructive/5"
       : isDueToday
-        ? "border-sky-300 bg-gradient-to-br from-sky-50 to-sky-100 dark:border-sky-500/40 dark:from-sky-500/10 dark:to-sky-500/5"
-        : "border-amber-400 dark:border-amber-500/40 bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 dark:from-amber-400/10 dark:via-yellow-300/5 dark:to-orange-400/10"
+        ? "border-info/50 bg-info/5"
+        : "border-warning/50 bg-warning/5"
     : isOverdue
-      ? "border-red-300 bg-gradient-to-br from-red-50 to-red-100 dark:border-red-500/40 dark:from-red-500/10 dark:to-red-500/5"
+      ? "border-destructive/50 bg-destructive/5"
       : isDueToday
-        ? "border-sky-300 bg-gradient-to-br from-sky-50 to-sky-100 dark:border-sky-500/40 dark:from-sky-500/10 dark:to-sky-500/5"
-        : "border-gray-200 bg-gradient-to-br from-white to-gray-50 dark:border-gray-600 dark:from-gray-800 dark:to-gray-700"
+        ? "border-info/50 bg-info/5"
+        : "border-border bg-card"
 
   return (
     <>
@@ -390,16 +364,9 @@ export function TaskCard({ task, index, isOverdue, isDueToday, isCompact, onEdit
           <div
             ref={provided.innerRef}
             {...provided.draggableProps}
-            className={`mb-3 ${snapshot.isDragging ? "rotate-2 shadow-2xl" : ""}`}
+            className={`mb-3 ${snapshot.isDragging ? "rotate-2 shadow-lg" : ""}`}
           >
             <Card className={`relative overflow-hidden ${cardTone}`}>
-              {isPublicTask && (
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-yellow-200/20 dark:via-yellow-500/10 to-transparent animate-pulse pointer-events-none" />
-              )}
-              {isGlobalTask && (
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-200/20 dark:via-blue-500/10 to-transparent animate-pulse pointer-events-none" />
-              )}
-
               <CardContent className={`relative ${isCompact ? "p-2 pl-5" : "p-4"}`}>
                 {/* DnD grip — the ONLY drag handle; separate from buttons (no nested-interactive) */}
                 <button
@@ -413,8 +380,8 @@ export function TaskCard({ task, index, isOverdue, isDueToday, isCompact, onEdit
 
                 {isPublicTask && !isCompact && (
                   <div className="absolute -top-2 right-6 z-10">
-                    <div className="rounded-full bg-gradient-to-r from-yellow-400 to-amber-500 p-1 shadow-lg">
-                      <Crown className="h-4 w-4 text-white" aria-hidden="true" />
+                    <div className="rounded-md bg-warning p-1 text-warning-foreground">
+                      <Crown className="h-4 w-4" aria-hidden="true" />
                     </div>
                   </div>
                 )}
@@ -426,10 +393,11 @@ export function TaskCard({ task, index, isOverdue, isDueToday, isCompact, onEdit
                     onClick={() => onOpenDetail(task)}
                     aria-label={`Ver detalhes de ${task.title}`}
                   >
-                    <h3 className={`${isCompact ? "line-clamp-1 text-xs font-semibold" : "line-clamp-2 text-sm font-bold"} flex-1 pr-1 text-gray-900 dark:text-gray-100`}>
-                      {task.title}
-                      {isPublicTask && !isCompact && <span className="ml-1">⚡</span>}
-                      {isGlobalTask && !isCompact && <span className="ml-1">🌍</span>}
+                    <h3 className={`${isCompact ? "line-clamp-1 text-xs font-semibold" : "line-clamp-2 text-sm font-bold"} flex items-center gap-1 flex-1 pr-1`}>
+                      <span className={isCompact ? "line-clamp-1" : "line-clamp-2"}>{task.title}</span>
+                      {/* V6-3: o emoji decorativo vira lucide da mesma familia do selo */}
+                      {isPublicTask && !isCompact && <Zap className="h-3.5 w-3.5 shrink-0 text-warning" aria-hidden="true" />}
+                      {isGlobalTask && !isCompact && <Globe className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden="true" />}
                     </h3>
                   </button>
 
@@ -440,7 +408,7 @@ export function TaskCard({ task, index, isOverdue, isDueToday, isCompact, onEdit
                         // frase do domínio no `title` (a mesma que o servidor devolve).
                         <Badge
                           variant="outline"
-                          className="border-amber-400 text-[10px] font-bold text-amber-700 dark:border-amber-500/50 dark:text-amber-300"
+                          className="border-warning/50 text-[10px] font-medium text-warning"
                           title={openSubtasksMessage(openSubtasks.length, "review")}
                         >
                           <AlertTriangle className="mr-1 h-3 w-3" aria-hidden="true" />
@@ -448,7 +416,7 @@ export function TaskCard({ task, index, isOverdue, isDueToday, isCompact, onEdit
                         </Badge>
                       )}
                       <Badge
-                        className="bg-gradient-to-r from-blue-500 to-indigo-500 text-[10px] font-bold text-white dark:from-blue-500/20 dark:to-indigo-500/20 dark:text-blue-300"
+                        className="bg-warning/15 text-[10px] font-medium text-warning"
                         title={pointsBadgeTitle}
                       >
                         {basePoints} pts
@@ -476,7 +444,7 @@ export function TaskCard({ task, index, isOverdue, isDueToday, isCompact, onEdit
                 {!isCompact && (
                   <>
                     {task.description && (
-                      <p className="mb-3 line-clamp-2 pl-4 text-xs text-gray-600 dark:text-gray-400">
+                      <p className="mb-3 line-clamp-2 pl-4 text-xs text-muted-foreground">
                         {task.description}
                       </p>
                     )}
@@ -494,29 +462,26 @@ export function TaskCard({ task, index, isOverdue, isDueToday, isCompact, onEdit
                     </div>
 
                     <div className="mb-3 flex flex-wrap gap-1 pl-4">
-                      <Badge variant="outline" className={`text-xs font-bold ${priorityBadgeClass(task.priority)}`}>
+                      <Badge variant="outline" className={`text-xs font-medium ${taskPriorityBadgeClass[task.priority]}`}>
                         <Flag className="mr-1 h-3 w-3" aria-hidden="true" />
-                        {PRIORITY_LABEL[task.priority]}
+                        {taskPriorityLabel[task.priority]}
                       </Badge>
-                      <Badge variant="outline" className={`text-xs font-bold ${statusBadgeClass(task.status)}`}>
-                        {STATUS_LABEL[task.status]}
+                      <Badge variant="outline" className={`text-xs font-medium ${taskStatusBadgeClass[task.status]}`}>
+                        {taskStatusLabel[task.status]}
                       </Badge>
                       {isPublicTask && (
-                        <Badge className="animate-pulse bg-gradient-to-r from-yellow-400 to-amber-500 text-xs font-bold text-white dark:from-yellow-500/20 dark:to-amber-500/20 dark:text-yellow-300">
+                        <Badge variant="outline" className="bg-warning/15 text-xs font-medium text-warning">
                           <Users className="mr-1 h-3 w-3" aria-hidden="true" />
-                          PÚBLICA
+                          Pública
                         </Badge>
                       )}
                       {isGlobalTask && (
-                        <Badge className="animate-pulse bg-gradient-to-r from-blue-500 to-indigo-500 text-xs font-bold text-white dark:from-blue-500/20 dark:to-indigo-500/20 dark:text-blue-300">
-                          <Zap className="mr-1 h-3 w-3" aria-hidden="true" />
-                          QUEST GLOBAL
+                        <Badge variant="outline" className="bg-primary/15 text-xs font-medium text-primary">
+                          <Globe className="mr-1 h-3 w-3" aria-hidden="true" />
+                          Quest global
                         </Badge>
                       )}
-                      <Badge
-                        className="bg-gradient-to-r from-blue-500 to-indigo-500 text-xs font-bold text-white dark:from-blue-500/20 dark:to-indigo-500/20 dark:text-blue-300"
-                        title={pointsBadgeTitle}
-                      >
+                      <Badge className="bg-warning/15 text-xs font-medium text-warning" title={pointsBadgeTitle}>
                         {basePoints} pts
                       </Badge>
                     </div>
@@ -526,11 +491,11 @@ export function TaskCard({ task, index, isOverdue, isDueToday, isCompact, onEdit
                       // O cartão NÃO é a lista de subtasks: a lista completa, com criar/renomear/
                       // apagar, vive no diálogo de detalhe. Aqui entra só o que falta, porque é o
                       // que falta que trava. Tom âmbar: nada está errado, falta uma etapa.
-                      <div className="mb-3 rounded-md border border-amber-300/80 bg-amber-50/80 px-2 py-1.5 dark:border-amber-500/40 dark:bg-amber-500/10">
-                        <div className="flex items-center gap-1 text-[11px] font-semibold text-amber-900 dark:text-amber-300">
+                      <div className="mb-3 rounded-md border border-warning/40 bg-warning/10 px-2 py-1.5">
+                        <div className="flex items-center gap-1 text-[11px] font-semibold text-warning">
                           <AlertTriangle className="h-3 w-3 shrink-0" aria-hidden="true" />
                           <span>{openSubtasksLabel}</span>
-                          <span className="font-normal text-amber-800/70 dark:text-amber-300/70">
+                          <span className="font-normal text-muted-foreground">
                             · {subtaskProgressLabel}
                           </span>
                         </div>
@@ -546,7 +511,7 @@ export function TaskCard({ task, index, isOverdue, isDueToday, isCompact, onEdit
                               />
                               <label
                                 htmlFor={`subtask-${subtask.id}`}
-                                className="line-clamp-1 text-xs text-slate-700 dark:text-slate-200"
+                                className="line-clamp-1 text-xs text-foreground"
                               >
                                 {subtask.title}
                               </label>
@@ -557,12 +522,12 @@ export function TaskCard({ task, index, isOverdue, isDueToday, isCompact, onEdit
                     )}
 
                     {assigneeIds.length > 0 && (
-                      <div className="mb-3 ml-4 rounded-md border border-slate-200/70 bg-white/60 px-2 py-1.5 dark:border-slate-700/70 dark:bg-slate-900/30">
-                        <div className="flex items-center gap-1 text-[11px] font-medium text-slate-600 dark:text-slate-300">
+                      <div className="mb-3 ml-4 rounded-md border border-border bg-muted/40 px-2 py-1.5">
+                        <div className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
                           <User className="h-3 w-3" aria-hidden="true" />
                           <span>{assigneeIds.length > 1 ? "Delegados" : "Delegado"}</span>
                         </div>
-                        <p className="mt-1 line-clamp-2 text-xs text-slate-700 dark:text-slate-200">
+                        <p className="mt-1 line-clamp-2 text-xs text-foreground">
                           {assigneeIds
                             .map((id) => users.find((u) => u.id === id)?.name ?? `Membro #${id}`)
                             .slice(0, 3)
@@ -582,7 +547,7 @@ export function TaskCard({ task, index, isOverdue, isDueToday, isCompact, onEdit
                             <TooltipTrigger asChild>
                               <Button
                                 size="icon"
-                                className="h-7 w-7 bg-green-500 text-white hover:bg-green-600 dark:bg-success dark:text-success-foreground dark:hover:bg-success/90"
+                                className="h-7 w-7 bg-success text-success-foreground hover:bg-success/90"
                                 aria-label="Aprovar tarefa"
                                 // DEC-80: "nada termina com subtask aberta" vale também na
                                 // aprovação, e a UI desabilita em vez de deixar levar o 400.
@@ -639,7 +604,7 @@ export function TaskCard({ task, index, isOverdue, isDueToday, isCompact, onEdit
                         </span>
                       )}
                       {isDueToday && !isOverdue && (
-                        <span className="flex items-center font-semibold text-sky-600 dark:text-sky-400">
+                        <span className="flex items-center font-semibold text-info">
                           <CalendarClock className="mr-1 h-3 w-3" aria-hidden="true" />
                           Para hoje
                         </span>

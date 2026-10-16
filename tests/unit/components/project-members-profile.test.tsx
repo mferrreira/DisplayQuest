@@ -9,7 +9,8 @@
  * transporte são dobrados.
  *
  * O que este arquivo fixa:
- *   1. os cinco campos chegam na tela com o valor gravado (não em branco);
+ *   1. os cinco campos chegam no dialog "Editar vínculo" (aberto pelo menu de ações do membro)
+ *      com o valor gravado, não em branco;
  *   2. abrir e salvar sem mexer não dispara escrita nenhuma;
  *   3. o corpo enviado é `{ action: "set_profile", membershipId, <só o que mudou> }`;
  *   4. limpar a carga envia `null` (existe caminho para tirar uma carga declarada);
@@ -143,6 +144,13 @@ async function renderScreen() {
   await screen.findByText("Ana");
 }
 
+/** Abre o dialog de vínculo pelo menu de ações do membro. */
+async function openProfile(user: ReturnType<typeof userEvent.setup>, name: string) {
+  await user.click(screen.getByRole("button", { name: `Mais ações para ${name}` }));
+  await user.click(await screen.findByRole("menuitem", { name: "Editar vínculo" }));
+  await screen.findByLabelText(`Currículo Lattes de ${name}`);
+}
+
 function saveButton(name: string) {
   return screen.getByRole("button", { name: `Salvar vínculo de ${name}` });
 }
@@ -155,7 +163,9 @@ beforeEach(() => {
 
 describe("painel de Membros — os dados do vínculo chegam com o valor gravado", () => {
   it("os cinco controles nascem com o que está no banco, não em branco", async () => {
+    const user = userEvent.setup({ delay: null });
     await renderScreen();
+    await openProfile(user, "Ana");
 
     expect(screen.getByLabelText("Currículo Lattes de Ana")).toHaveValue("1234567890123456");
     expect(screen.getByLabelText("Carga contratada (h/semana) de Ana")).toHaveValue(20);
@@ -169,7 +179,9 @@ describe("painel de Membros — os dados do vínculo chegam com o valor gravado"
   });
 
   it("o vínculo sem dado abre vazio, com categoria 'Sem categoria' e situação Ativo", async () => {
+    const user = userEvent.setup({ delay: null });
     await renderScreen();
+    await openProfile(user, "Beto");
 
     expect(screen.getByLabelText("Currículo Lattes de Beto")).toHaveValue("");
     // `toHaveValue(null)`: num `<input type="number">` vazio é assim que a Testing Library devolve
@@ -184,6 +196,7 @@ describe("painel de Membros — os dados do vínculo chegam com o valor gravado"
   it("o rótulo que a tela mostra é o do domínio (DEC-96): token não vira label inventado", async () => {
     const user = userEvent.setup({ delay: null });
     await renderScreen();
+    await openProfile(user, "Ana");
 
     await user.click(screen.getByRole("combobox", { name: "Categoria do vínculo de Ana" }));
     expect((await screen.findAllByRole("option")).map((option) => option.textContent)).toEqual([
@@ -205,6 +218,7 @@ describe("painel de Membros — salvar manda só o diff", () => {
   it("abrir e salvar sem mexer não escreve nada", async () => {
     const user = userEvent.setup({ delay: null });
     await renderScreen();
+    await openProfile(user, "Ana");
 
     await user.click(saveButton("Ana"));
 
@@ -216,6 +230,7 @@ describe("painel de Membros — salvar manda só o diff", () => {
   it("digitar o Lattes envia o campo sozinho, com a ação e o id do vínculo", async () => {
     const user = userEvent.setup({ delay: null });
     await renderScreen();
+    await openProfile(user, "Ana");
 
     const lattes = screen.getByLabelText("Currículo Lattes de Ana");
     await user.clear(lattes);
@@ -236,6 +251,7 @@ describe("painel de Membros — salvar manda só o diff", () => {
   it("trocar a categoria envia o TOKEN, não o rótulo", async () => {
     const user = userEvent.setup({ delay: null });
     await renderScreen();
+    await openProfile(user, "Ana");
 
     await user.click(screen.getByRole("combobox", { name: "Categoria do vínculo de Ana" }));
     await user.click(await screen.findByRole("option", { name: "Voluntário" }));
@@ -248,6 +264,7 @@ describe("painel de Membros — salvar manda só o diff", () => {
   it("limpar a carga envia `null`: existe caminho para tirar uma carga declarada", async () => {
     const user = userEvent.setup({ delay: null });
     await renderScreen();
+    await openProfile(user, "Ana");
 
     await user.clear(screen.getByLabelText("Carga contratada (h/semana) de Ana"));
     await user.click(saveButton("Ana"));
@@ -259,6 +276,7 @@ describe("painel de Membros — salvar manda só o diff", () => {
   it("o que não foi tocado não sai no corpo — e por isso não é apagado no servidor", async () => {
     const user = userEvent.setup({ delay: null });
     await renderScreen();
+    await openProfile(user, "Ana");
 
     await user.type(screen.getByLabelText("Currículo Lattes de Ana"), "00");
     await user.click(saveButton("Ana"));
@@ -270,6 +288,7 @@ describe("painel de Membros — salvar manda só o diff", () => {
   it("a data de entrada sai como data civil", async () => {
     const user = userEvent.setup({ delay: null });
     await renderScreen();
+    await openProfile(user, "Ana");
 
     // `fireEvent` e não `user.type`: `<input type="date">` no jsdom não aceita digitação de
     // calendário, mas o `change` é exatamente o que o navegador dispara ao escolher o dia.

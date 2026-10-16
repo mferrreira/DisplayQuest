@@ -1,0 +1,267 @@
+{
+  "plan": "plan-v7",
+  "title": "servidor MCP para os agents do laboratorio",
+  "version": "1.1.0",
+  "updatedAt": "2026-10-15T11:32:00-03:00",
+  "status": "ready",
+  "activeWave": null,
+  "activeBatch": null,
+  "awaitingInstruction": false,
+  "lineage": {
+    "previousPlan": "plan-v6 (linguagem visual + redistribuicao das telas). Estado/decisoes em displayquest-v2/plan-v6/{PLAN.md,SPEC.md,STATE.json}, DEC-105..114 e 181..188 (a DEC-189 e do plan-v4, lote SUB-1). O plano esta em execucao desde 2026-10-15 (V6-0 fechado; V6-1 ativo no momento em que este STATE foi escrito), nao done.",
+    "concurrentPlan": "plan-v6 esta em execucao (nao done) desde 2026-10-15: V6-0 fechou e a V6-1 estava ativa quando este STATE foi escrito. Os dois planos nao colidem: o plan-v7 nao toca em tela, nao mexe em navegacao, nao muda valor de permissao e nao cria destino de navegacao. A unica sobreposicao de area e a aba Admin do painel, e por isso a emissao de credencial e CLI por DEC-192, sem tela (fora do alcance do V6-9). Se uma onda do v7 for mexer em component/, parar e registrar.",
+    "note": "a numeracao de decisoes e GLOBAL: DEC-01..29 clean-arch, DEC-30..49 plan-v3, DEC-50..54 B6/D4, DEC-55..60 plan-v4, DEC-61..77, 99..104 e 126..180 plan-v5, DEC-78..98 plan-v4, DEC-105..114 e 181..188 plan-v6, DEC-189 plan-v4 (lote SUB-1, autoridade de subtask, commitado 2026-10-15), DEC-190..203 plan-v7. Proxima livre: DEC-204. Antes de abrir DEC nova, grep os SEIS STATE.json (clean-arch, plan-v3, plan-v4, plan-v5, plan-v6, plan-v7). ASK-V7-01..15 sao deste plano e TODAS foram respondidas (2026-10-15). Correcao de numeracao: este plano nasceu reivindicando DEC-189 e a conferencia mostrou que ela ja era do plan-v4 — renumerado antes de qualquer commit."
+  },
+  "baseline": {
+    "measuredAt": "2026-10-15",
+    "measuredOn": "dev, lote SUB-1 do plan-v4 (autoridade de subtask)",
+    "unitAndFeatures": "157 arquivos / 2143 testes (tests/unit + features; 140/1999 so tests/unit)",
+    "fullSuite": "172 arquivos / 2273 testes",
+    "e2e": "quadro: 2 passando + 1 falha conhecida + 5 did not run (serial); shell: 5 passando",
+    "archCheck": "1026 modulos / 4385 dependencias, allow-list vazia",
+    "tsc": "0 erros — a divida do floating-timer-tabs.test.tsx:105 foi consertada no lote SUB-1 do plan-v4 (2026-10-15), entao o G2 voltou a ser tsc 0",
+    "expectedAtEnd": "G0 allow-list vazia; lint sem erro; tsc 0; vitest nunca abaixo de 157/2143; e2e nao faz parte do escopo (nenhuma tela muda)"
+  },
+  "gates": {
+    "G0": "npm run arch:check — exit 0, allow-list VAZIA. Regra nova gravada no V7-0: nada em mcp/ importa backend/, prisma ou @prisma/client (o MCP so fala HTTP).",
+    "G1": "npm run lint — exit 0 (warnings aceitos, nenhum erro; em worktree: npx eslint --no-eslintrc --config .eslintrc.json <arquivos>).",
+    "G2": "npx tsc --noEmit — ZERO. A divida que existia em features/laboratorio/__tests__/floating-timer-tabs.test.tsx:105 foi consertada no lote SUB-1 do plan-v4 (2026-10-15). Nenhuma onda pode deixar tsc com erro.",
+    "G3": "npx vitest run — zero failure e NUNCA MENOR que 157 arquivos / 2143 testes (unit+features). Os testes do MCP vivem em tests/unit/mcp/ porque o projeto unit do vitest.config.mts so inclui tests/unit/**, features/**/__tests__/** e entities/**.",
+    "G4": "roundtrips Prisma so no banco de teste dq-dev-test-db (127.0.0.1:5433) com DATABASE_URL exportado — aplica a V7-1, unica onda que toca schema. Nunca contra a 5432.",
+    "G5": "npm run docs:build + npm run docs:check — V7-11, com o capitulo do MCP em docs/src.",
+    "G6": "NAO SE APLICA — nenhum plano deste nao mexe em tela. Registrar a ausencia em V7-11 em vez de fingir recaptura.",
+    "e2e": "FORA DO ESCOPO — nenhuma tela muda. As falhas conhecidas do spec do quadro nao sao deste plano."
+  },
+  "waves": [
+    {
+      "id": "V7-0",
+      "title": "fechamento do planejamento (README, regra do G0, porta)",
+      "status": "pending",
+      "decisions": [],
+      "scope": "Gravar PLAN/STATE, linhar o plan-v7 no displayquest-v2/README.md, escolher a porta do MCP (8787 medido livre em 2026-10-15), gravar a regra nova no .dependency-cruiser.js (mcp/ nao importa backend/ nem prisma), escrever a secao do plan-v7 no AGENTS.md.",
+      "gate": "STATE.json valido, README indexado, arch:check com allow-list vazia."
+    },
+    {
+      "id": "V7-1",
+      "title": "credencial delegada api_credentials + mcp_audit_log",
+      "status": "pending",
+      "decisions": ["DEC-192", "DEC-193", "DEC-196", "DEC-199", "DEC-203"],
+      "scope": "Peça 1: sem ela o MCP nao tem como atuar por ninguem. Modelos api_credentials e mcp_audit_log (ambos aditivos, onDelete Cascade em api_credentials.userId), ramo Bearer em requireAuth() lendo await headers() de next/headers — PRIMEIRA TAREFA: teste de rota provando que headers() devolve Authorization no Next 15; fallback assinar requireApiActor(req) so nas 39 rotas do inventario (59 pontos de escopo). requireScope(actor, scope) que sessao de cookie sempre passa. CLI cli/credential.js (issue/revoke/list) ligado no cli/index.js com --allow-prod. Env DQ_API_CREDENTIAL. Sequencia de migration do V4-4, nunca prisma migrate dev. Credencial concreta da DEC-203: um agent so, entao a primeira credencial nasce com as seis strings de escopo; o mecanismo continua pronto para emitir uma por familia.",
+      "gate": "G0-G4. Token emitido por CLI autentica GET /api/users; revogado/expirado/suspenso devolvem o status certo; caminho de cookie inalterado."
+    },
+    {
+      "id": "V7-2",
+      "title": "container do MCP, transporte duplo e validacao da spec",
+      "status": "pending",
+      "decisions": ["DEC-190", "DEC-191", "DEC-195", "DEC-198"],
+      "scope": "mcp/ como pacote proprio (package.json e lockfile separados: a linha v2 do SDK exige Zod v4 e o repo fixa zod 3.24.1). Servico mcp-server / display-quest-mcp na porta 8787, env DQ_API_CREDENTIAL e DQ_API_BASE=http://app:3000, SEM DATABASE_URL. POST /mcp unico, GET/DELETE 405, Mcp-Session-Id ignorado. Validacoes: MCP-Protocol-Version (400/-32020), Mcp-Method/Mcp-Name, Origin 403. /.well-known/oauth-protected-resource servindo RFC 9728. Atores por userActor(roles), nunca systemActor.",
+      "gate": "G0-G3. tools/list responde 200, Origin estranho 403, sem token 401 com resource_metadata, linha de auditoria no banco.",
+      "dependsOn": "V7-1"
+    },
+    {
+      "id": "V7-3",
+      "title": "TLS no endpoint do MCP",
+      "status": "pending",
+      "decisions": ["DEC-194", "DEC-200", "DEC-201"],
+      "scope": "O dono respondeu em 2026-10-15, o que desbloqueou a onda: certificado real para um nome interno (DEC-200) e TLS so no endpoint do MCP (DEC-201). Primeiro passo medido: o hostname tem que resolver nos hosts dos agents. Env TLS_CERT_PATH/TLS_KEY_PATH apontando para volume fora da imagem (nada de cert no git nem no Dockerfile). Proxy TLS na frente do 8787, porta 8443, so a 8443 fica publicada e a 8787 passa a ser so interna do compose. proxy_buffering off, X-Accel-Buffering: no nas respostas SSE, sem reescrever Mcp-*/MCP-Protocol-Version/WWW-Authenticate, keep-alive com comentario de 15 s. O salto MCP->app continua http://app:3000 sem TLS dentro do compose, aceito de propósito (DEC-201, risco 8 da PLAN §10).",
+      "gate": "G0-G3. curl https://<nome-interno>:8443/mcp com handshake valido, tools/call com stream completo atravessando o proxy, e a 8787 fora da rede publica.",
+      "dependsOn": "V7-1"
+    },
+    {
+      "id": "V7-4",
+      "title": "tools de leitura (escopo read, 16 tools)",
+      "status": "pending",
+      "decisions": ["DEC-197"],
+      "scope": "Tabela read da PLAN §5 sobre as rotas medidas. requireScope('read') entra nas 15 rotas. Cada tool com teste de caminho feliz, 401 e 403.",
+      "gate": "G0-G3. 16 tools respondendo e escopo negado recusando 403.",
+      "dependsOn": "V7-2"
+    },
+    {
+      "id": "V7-5",
+      "title": "tools de tarefa (escopo tasks, 10 tools)",
+      "status": "pending",
+      "decisions": ["DEC-197"],
+      "scope": "Criacao, edicao, movimento, conclusao, aprovacao/rejeicao e subtasks sobre /api/tasks*. DOIS CONTRATOS MEDIDOS: nao existe rota de movimento — PUT /api/tasks/[id] carrega {status} e quem nao tem MANAGE_TASKS so edita exatamente {status, assignedTo}; e PATCH /api/tasks/[id] NAO e movimento, e conclusao ({action:'complete'}, 400 no resto). Terceira armadilha medida: a autoridade de subtask mudou na DEC-189 (SUB-1, 2026-10-15) — quem nao e dono da mae nem gestao recebe a tarefa com subtasks: [] no GET e na lista, sem 403, e para o MCP isso e o sistema funcionando. Obrigatorio testar a trava de subtask, a janela de in-review/done e os dois lados da visibilidade.",
+      "gate": "G0-G3. Fluxo completo de tarefa pelo MCP e travas respondendo o mesmo codigo da API.",
+      "dependsOn": "V7-4"
+    },
+    {
+      "id": "V7-6",
+      "title": "projeto e cronograma (escopo project, 8 tools)",
+      "status": "pending",
+      "decisions": ["DEC-197"],
+      "scope": "Projetos, entregaveis, atividades do cronograma, pedido e aprovacao de conclusao, prova de atividade. Aprovacao exige GLOBAL_PROJECT_MANAGERS, entao o 403 para membro comum e obrigatorio.",
+      "gate": "G0-G3. Atividade criada, conclusao pedida e aprovada; recusa para quem nao gerencia e 403.",
+      "dependsOn": "V7-5"
+    },
+    {
+      "id": "V7-7",
+      "title": "horas e sessoes (escopo hours, 7 tools)",
+      "status": "pending",
+      "decisions": ["DEC-197"],
+      "scope": "POST/PATCH/DELETE /api/work-sessions e PATCH /api/responsibilities/[id] com {action: pause|resume|end|updateNotes} (medido em app/api/responsibilities/[id]/route.ts:31-48). Teto de 9h por trecho e varredura noturna continuam valendo — nada aqui pode burlar a anti-farm.",
+      "gate": "G0-G3. Iniciar, pausar, retomar e finalizar funcionando.",
+      "dependsOn": "V7-6"
+    },
+    {
+      "id": "V7-8",
+      "title": "documentos (escopo documents, 8 tools)",
+      "status": "pending",
+      "decisions": ["DEC-197", "DEC-202"],
+      "scope": "O dono respondeu em 2026-10-15, o que desbloqueou a onda: binario por resources/read como blob base64 (DEC-202), o formato da spec, um contrato so para DOCX e PDF. Recurso dq://documents/<caminho> que o MCP resolve baixando do app com o mesmo Bearer. TETO DE TAMANHO: o blob-store do V5 aceita ate 20 MB de PDF e 100 MB de video (DEC-131) e base64 infla ~33%, entao a onda mede o tamanho real dos relatorios e atestados e fixa o teto em teste; acima dele a tool recusa nomeando o tamanho. Relatorios tecnicos, atestados, anexos e relatorios semanais; download autenticado continua exigindo o mesmo Bearer.",
+      "gate": "G0-G3. DOCX e PDF baixados pelo MCP byte a byte, e arquivo acima do teto recusado com a mensagem medida.",
+      "dependsOn": "V7-7"
+    },
+    {
+      "id": "V7-9",
+      "title": "gestao de pessoas (escopo people, 10 tools)",
+      "status": "pending",
+      "decisions": ["DEC-197"],
+      "scope": "DEPENDE DA V7-3 (TLS) por DEC-197 — e a unica familia que espera o TLS. Usuarios, aprovacao, status, papeis, pontos e vinculo de projeto. Contrato medido: a rota de vinculo NAO tem DELETE — as cinco acoes (add, remove, set_roles, set_leader, set_profile) passam por POST ou PATCH /api/projects/[id]/members com {action}. Atencao aos quirks: PATCH /api/users/[id]/points aceita negativo (DEC-60) e DELETE de usuario devolve 409 com dependencia (DEC-55).",
+      "gate": "G0-G3. Os quatro testes de recusa passam e nenhuma tool desta familia e alcancavel sem TLS.",
+      "dependsOn": "V7-3"
+    },
+    {
+      "id": "V7-10",
+      "title": "rate limit e revisao de hardening",
+      "status": "pending",
+      "decisions": [],
+      "scope": "Limite por credencial por minuto no MCP com 429. Revisar a mcp_audit_log e provar em teste que token e corpo de documento nao aparecem. Conferir que nenhuma rota fora da §5 recebeu requireScope por engano e que nenhuma rota dentro ficou sem. check:env cobrindo DQ_API_CREDENTIAL.",
+      "gate": "G0-G3. Exceder limite da 429, grep de token no log vazio, lista de rotas com requireScope igual a PLAN §5.",
+      "dependsOn": "V7-9"
+    },
+    {
+      "id": "V7-11",
+      "title": "fechamento (docs G5, registro do G6 nao se aplica)",
+      "status": "pending",
+      "decisions": [],
+      "scope": "Capitulo do documento tecnico em docs/src cobrindo o MCP, o fluxo de credencial e o contrato da PLAN §7. Registrar que G6 nao se aplica. Estado done, openQuestions so com o que realmente ficou aberto.",
+      "gate": "G0-G6.",
+      "dependsOn": "V7-10"
+    }
+  ],
+  "decisionRegistry": [
+    "DEC-190 (dono 2026-10-15, ASK-V7-05): o MCP e um servico novo em container proprio que fala com as rotas HTTP existentes. Nao importa backend/, nao tem Prisma, nao tem acesso ao banco.",
+    "DEC-191 (dono 2026-10-15, ASK-V7-02): o agent age como a pessoa coordenadora — o ator chega ao use case como userActor(roles), nunca systemActor. Guarda em pe: system-callers.test.ts greps systemActor( em app/api/**.",
+    "DEC-192 (dono 2026-10-15, ASK-V7-08): DisplayQuest ganha credencial delegada api_credentials, emitida e revogada por CLI pelo dono. Sem tela de administracao, para nao colidir com o V6-9 do plan-v6.",
+    "DEC-193 (dono 2026-10-15, ASK-V7-09): uma credencial de API por instancia de agent, com escopo sob medida.",
+    "DEC-194 (dono 2026-10-15, ASK-V7-07): TLS no endpoint do MCP. Supera a ASK-V7-04 da mesma rodada ('nao, manter HTTP na LAN'), que foi feita antes da pergunta especifica. O ponto que nenhuma das duas cobriu foi respondido depois: em stdio nao existe endpoint de entrada, e o salto MCP->app continua em texto puro dentro do compose — so o MCP ganha TLS (DEC-201), com a 8787 saindo da rede publica.",
+    "DEC-195 (dono 2026-10-15, ASK-V7-10): transporte duplo — Streamable HTTP remoto e stdio local. Em stdio a spec nao pede autorizacao e a credencial vem do ambiente do processo.",
+    "DEC-196 (dono 2026-10-15, ASK-V7-11): auditoria em tabela mcp_audit_log, consultavel por SQL. Nenhuma tela.",
+    "DEC-197 (dono 2026-10-15, ASK-V7-03): as seis familias de capacidade entram no plano (read, tasks, project, hours, documents, people). A ordem das ondas e o gate de TLS por familia sao do plano.",
+    "DEC-198 (plano): o servidor MCP publica /.well-known/oauth-protected-resource (RFC 9728) desde a V7-2, antes de existir authorization server. Custo baixo e a troca futura vira configuracao, nao codigo.",
+    "DEC-199 (plano): audience separa o token que o app aceita (audience=api) do token que o MCP aceita (audience=mcp). Os dois lados recusam o token do outro, o que e o que impede o passthrough que a spec 2026-07-28 proibe (MCP server e resource server, nunca repassa o token recebido ao upstream).",
+    "DEC-200 (dono 2026-10-15, ASK-V7-12): o certificado do endpoint do MCP e de verdade, emitido para um nome interno. Nao ha CA para instalar nos hosts dos agents. Consequencia medida: o hostname tem que resolver la, entao a V7-3 comeca conferindo a resolucao antes de montar proxy.",
+    "DEC-201 (dono 2026-10-15, ASK-V7-13): TLS so no endpoint do MCP. O app segue HTTP e o salto do MCP para o app dentro do compose continua em texto puro na rede interna. Aceito de propósito, com a 8787 tirada da rede publica do compose, e registrado como risco na PLAN §10.",
+    "DEC-202 (dono 2026-10-15, ASK-V7-15): documento binario chega ao agent por base64 em resources/read, que e o formato da spec. Um contrato so, para DOCX e PDF, em vez de dois por tipo de arquivo.",
+    "DEC-203 (dono 2026-10-15, ASK-V7-14): um unico agent, com as seis familias de capacidade na mesma credencial. O mecanismo de escopo por familia continua existindo (DEC-193) e checado no app, so que a credencial concreta nasce com as seis."
+  ],
+  "batchLog": [],
+  "openQuestions": [],
+  "blockers": [],
+  "removedItems": [],
+  "answeredInstructions": [
+    {
+      "id": "ASK-V7-01",
+      "question": "Quem executa o agent que consome o MCP?",
+      "answer": "Ainda nao definido. O plano aceita os dois caminhos: Streamable HTTP para cliente remoto e stdio para cliente local.",
+      "at": "2026-10-15"
+    },
+    {
+      "id": "ASK-V7-02",
+      "question": "O agent age em nome de quem?",
+      "answer": "Age como a pessoa coordenadora: identidade propagada, ACL por pessoa aplicada, userActor(roles) e nunca systemActor.",
+      "at": "2026-10-15",
+      "decision": "DEC-191"
+    },
+    {
+      "id": "ASK-V7-03",
+      "question": "Quais capacidades entram na primeira leva?",
+      "answer": "Todas as seis familias (leitura, tarefa, projeto/cronograma, horas/sessoes, documentos, gestao de pessoas).",
+      "at": "2026-10-15",
+      "decision": "DEC-197"
+    },
+    {
+      "id": "ASK-V7-04",
+      "question": "Topa HTTPS agora?",
+      "answer": "Superada. Resposta inicial: nao, manter HTTP na LAN. A pergunta seguinte e mais especifica (ASK-V7-07) e e ela que vale.",
+      "at": "2026-10-15"
+    },
+    {
+      "id": "ASK-V7-05",
+      "question": "Onde o MCP vive?",
+      "answer": "Container proprio chamando a API HTTP existente. Nao importa backend/, nao tem Prisma.",
+      "at": "2026-10-15",
+      "decision": "DEC-190"
+    },
+    {
+      "id": "ASK-V7-06",
+      "question": "O IdP/LDAP ja tem escolha?",
+      "answer": "Ainda nao decidido. A PLAN §7 escreve o contrato plugavel que o DisplayQuest exige de qualquer um deles; a escolha e uma decisao futura.",
+      "at": "2026-10-15"
+    },
+    {
+      "id": "ASK-V7-07",
+      "question": "TLS no endpoint do MCP, sim ou nao?",
+      "answer": "Sim, so no endpoint do MCP.",
+      "at": "2026-10-15",
+      "decision": "DEC-194"
+    },
+    {
+      "id": "ASK-V7-08",
+      "question": "Quem cria a credencial?",
+      "answer": "O dono, por CLI. Sem painel de administracao (evita colisao com o V6-9 do plan-v6).",
+      "at": "2026-10-15",
+      "decision": "DEC-192"
+    },
+    {
+      "id": "ASK-V7-09",
+      "question": "Como as credenciais sao distribuidas?",
+      "answer": "Uma credencial por instancia de agent, escopo sob medida.",
+      "at": "2026-10-15",
+      "decision": "DEC-193"
+    },
+    {
+      "id": "ASK-V7-10",
+      "question": "Como o cliente conecta?",
+      "answer": "Os dois: Streamable HTTP remoto e stdio local.",
+      "at": "2026-10-15",
+      "decision": "DEC-195"
+    },
+    {
+      "id": "ASK-V7-11",
+      "question": "A auditoria aparece em algum lugar da interface?",
+      "answer": "Nao. So a tabela mcp_audit_log, consultavel por SQL.",
+      "at": "2026-10-15",
+      "decision": "DEC-196"
+    },
+    {
+      "id": "ASK-V7-12",
+      "question": "O certificado do TLS da V7-3 vem de onde?",
+      "answer": "Certificado real, emitido para um nome interno. Nao ha CA para instalar nos hosts dos agents; o hostname tem que resolver la.",
+      "at": "2026-10-15",
+      "decision": "DEC-200"
+    },
+    {
+      "id": "ASK-V7-13",
+      "question": "O app tambem ganha TLS?",
+      "answer": "Nao. So o endpoint do MCP. O salto do MCP para o app dentro do compose continua em texto puro na rede interna, aceito de propósito, com a 8787 fora da rede publica do compose.",
+      "at": "2026-10-15",
+      "decision": "DEC-201"
+    },
+    {
+      "id": "ASK-V7-14",
+      "question": "Quais agents sao, quantos e o que cada um faz?",
+      "answer": "Um unico agent, fazendo tudo. A credencial concreta nasce com as seis familias de escopo; o mecanismo por familia continua pronto.",
+      "at": "2026-10-15",
+      "decision": "DEC-203"
+    },
+    {
+      "id": "ASK-V7-15",
+      "question": "Binario de documento sai por resources/read ou pela tool?",
+      "answer": "Base64 em resources/read, como recurso MCP com blob, o formato da spec. Um contrato so para DOCX e PDF.",
+      "at": "2026-10-15",
+      "decision": "DEC-202"
+    }
+  ]
+}

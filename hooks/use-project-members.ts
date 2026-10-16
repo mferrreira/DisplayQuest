@@ -21,13 +21,14 @@ interface AvailableUser {
 interface UseProjectMembersOptions {
   enabled?: boolean
   includeAvailableUsers?: boolean
+  initialMembers?: ProjectMember[]
 }
 
 export function useProjectMembers(projectId: number, options: UseProjectMembersOptions = {}) {
   const enabled = options.enabled ?? true
   const includeAvailableUsers = options.includeAvailableUsers ?? false
 
-  const [members, setMembers] = useState<ProjectMember[]>([])
+  const [members, setMembers] = useState<ProjectMember[]>(options.initialMembers ?? [])
   const [availableUsers, setAvailableUsers] = useState<AvailableUser[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -69,8 +70,14 @@ export function useProjectMembers(projectId: number, options: UseProjectMembersO
   }, [enabled, projectId, fetchAvailableUsers])
 
   useEffect(() => {
+    if (options.initialMembers) {
+      setMembers(options.initialMembers)
+      setLoading(false)
+      void fetchAvailableUsers(options.initialMembers.map((member) => member.userId))
+      return
+    }
     void reload()
-  }, [reload])
+  }, [reload, options.initialMembers, fetchAvailableUsers])
 
   const addMember = useCallback(async (userId: number, roles: string[]) => {
     const result = await addProjectMember(projectId, userId, roles)
