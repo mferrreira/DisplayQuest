@@ -1017,3 +1017,32 @@ leitura do texto visível. São observações medidas na instância real, **não
   `refetchOnWindowFocus` global está desligado. Para o som de notificação ter sentido, a
   contagem passou a repetir a cada 5 s (`NOTIFICATION_POLL_MS`); a lista completa segue em
   60 s. O som nasce da SUBIDA da contagem, nunca da primeira leitura.
+
+## Painel admin — quadro de horas restaurado e fila de aprovação (V6-11h/i, 2026-10-17)
+
+- **`sr-only` dentro de scroller estica a PÁGINA com espaço vazio (medido no V6-11h).** O span
+  `sr-only` das subtasks (aba Tarefas do `ModernAdminPanel`) é `position:absolute` e, sem
+  ancestral positioned, tem containing block na RAIZ do documento: os spans escapam do corte do
+  scroller `max-h-[480px] overflow-y-auto` e entram no overflow do `html` — a página media
+  **5899px de altura** com 1px de elemento invisível espalhado (a "barra de rolagem gigante, mas
+  todo o espaço é vazio" que o dono relatou). Provado por experimento no Chromium: `overflow:hidden`
+  NO scroller **não** resolve (containing-block escape ignora clipping), `contain:paint` **resolve**
+  (vira containing block + recorta), e `position:relative` no `<li>` dono do span resolve
+  (página volta a 1258px). Regra: `sr-only` (ou qualquer absolute) dentro de lista rolável exige
+  ancestral `relative`; o jsdom não vê isso — só browser real.
+- **O quadro por semana do painel voltou (`WeeklyHoursTable`, wire em `ModernAdminPanel` aba
+  Horas):** navegador `‹ Hoje ›`, semana atual das sessões, semanas passadas via
+  `GET /api/weekly-hours-history?weekStart=` (fallback `POST create_week_history`), colunas
+  Nome/Email/Horas trabalhadas/Meta/Estado contra `users.weekHours`
+  ("Yh restantes" vermelho, "+Xh extra", "Meta atingida!", "Sem meta definida" quando a meta é 0).
+  `AdminHoursManagement` (relatório por período) continua abaixo dele.
+- **A aba Tarefas abre como fila de aprovação (decisão do dono, V6-11i):** `taskStatusFilter`
+  default é `in-review`, não `all` — medido 0 em revisão na instância (44 done / 28 to-do), então
+  "all" mostrava 72 tarefas de estoque sem nenhum botão Aprovar/Rejeitar. As demais listas
+  seguem pelo mesmo Select. Caracterização em
+  `tests/unit/components/admin/tasks-tab-queue.test.tsx`.
+- **Gotcha de teste: `combobox[0]` do painel NÃO é o filtro de status** — o Select "Exportar"
+  do cabeçalho do painel vem antes no DOM e seus itens são `role="option"` (Usuários/Projetos).
+  Escopo pelo `textContent` do valor selecionado ("Em Revisão"). E a lista de opções do Radix
+  aparece um frame depois no jsdom (`findByRole` com timeout) e está com `pointer-events:none`
+  durante a animação — selecionar opção com `fireEvent.click`, não `userEvent`.
