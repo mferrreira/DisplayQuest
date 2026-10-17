@@ -110,7 +110,9 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, onSessionsC
   const [searchTerm, setSearchTerm] = useState("")
   const [filterRole, setFilterRole] = useState("all")
   const [filterStatus, setFilterStatus] = useState("all")
-  const [taskStatusFilter, setTaskStatusFilter] = useState("all")
+  // Fila de aprovação (pedido do dono, 2026-10-17): a aba abre em Em Revisão,
+  // o uso real da tab; as outras listas ficam pelo filtro de status.
+  const [taskStatusFilter, setTaskStatusFilter] = useState("in-review")
   const [taskProjectFilter, setTaskProjectFilter] = useState("all")
   const [taskActionLoading, setTaskActionLoading] = useState<number | null>(null)
   const [selectedProject, setSelectedProject] = useState<string>("")
