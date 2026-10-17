@@ -10,6 +10,7 @@ import { SessionProvider } from "next-auth/react"
 import { NuqsAdapter } from "nuqs/adapters/next/app"
 import { AppHeader } from "@/components/layout/app-header"
 import { AppSidebar } from "@/components/layout/app-sidebar"
+import { AppFooter } from "@/components/layout/app-footer"
 import { QueryProvider } from "@/shared/providers/query-provider"
 import { Toaster } from "@/components/ui/sonner"
 import { NotificationSound } from "@/components/ui/notification-sound"
@@ -72,6 +73,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
           {children}
         </div>
       </div>
+      <AppFooter />
     </DashboardProviders>
   )
 }
