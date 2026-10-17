@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { ImageOff, Loader2, Trash2, Upload } from "lucide-react"
 import { useToast } from "@/contexts/use-toast"
 import { deleteUserImage, uploadUserImage, userImageUrl } from "@/lib/api/user-images"
@@ -117,7 +116,9 @@ export function UserMediaHeader({ userId, userName, bannerKey, canEdit, onBanner
 
       {canEdit && (
         <div className="absolute right-3 top-3 z-10 flex flex-wrap items-center gap-2">
-          <Input
+          {/* Input cru (mesmo motivo do project-media-header): sr-only + w-full do
+              primitivo compunham um absoluto largo e estouravam a viewport. */}
+          <input
             ref={inputRef}
             type="file"
             accept={IMAGE_ACCEPT}

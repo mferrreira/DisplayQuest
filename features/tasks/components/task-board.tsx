@@ -36,6 +36,7 @@ import type { Task, TaskStatus } from "@/entities/task"
 import { BoardColumn } from "./board-column"
 import { BoardToolbar } from "./board-toolbar"
 import { ActivityFeed } from "./activity-feed"
+import { ArchivedTasksDisclosure } from "./archived-tasks-disclosure"
 import { TaskDialog } from "./task-dialog"
 import { TaskDetailDialog } from "./task-detail-dialog"
 
@@ -341,6 +342,7 @@ export function TaskBoard() {
       )}
 
       <ActivityFeed />
+      <ArchivedTasksDisclosure archived={archivedTasks} />
 
       <TaskDialog
         open={dialogOpen}

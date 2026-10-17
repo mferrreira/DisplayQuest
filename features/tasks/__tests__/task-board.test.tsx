@@ -101,10 +101,16 @@ describe("TaskBoard", () => {
     // ao pin do e2e (task-board.spec.ts:396, getByRole heading exact).
     expect(screen.getByRole("heading", { name: "A Fazer" })).toBeVisible();
     expect(screen.getByRole("heading", { name: "Concluído" })).toBeVisible();
-    // A tarefa concluída há mais de 1 semana (arquivada) NAO entra nas colunas. Desde o feed
-    // "Atividade recente" nao ha mais secao de historico no quadro — a saida de cena e a
-    // ausencia da linha, nao um card "1 concluída(s) há mais de 1 semana".
-    expect(screen.queryByText("Tarefa concluída antiga")).not.toBeInTheDocument();
+    // A tarefa concluída há mais de 1 semana (arquivada) NAO entra nas colunas. Desde o
+    // V6-11d ela fica no recolhimento "Concluídas antigas" (escolha do dono no Must #1 do
+    // review): fora do quadro, alcançavel pelo detalhe `<details>`, e nao some de vez.
+    expect(screen.queryByRole("listitem", { name: "Tarefa concluída antiga" })).not.toBeInTheDocument();
+    const colunas = ["A Fazer", "Fazendo", "Em Revisão", "Ajustes", "Concluído"];
+    for (const col of colunas) {
+      const coluna = screen.getByLabelText(`Coluna ${col}`);
+      expect(within(coluna).queryByText("Tarefa concluída antiga")).not.toBeInTheDocument();
+    }
+    expect(screen.getByText(/Concluídas antigas \(1\)/)).toBeVisible();
   });
 
   it("shows filtered-empty state when overdue filter matches nothing after clearing", async () => {

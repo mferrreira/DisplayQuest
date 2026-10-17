@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { ImageOff, Loader2, Trash2, Upload } from "lucide-react"
 import { useToast } from "@/contexts/use-toast"
 import {
@@ -146,7 +145,10 @@ export function ProjectMediaHeader({
 
       {canManage && (
         <div className="flex flex-wrap items-center gap-2">
-          <Input
+          {/* Input cru, não o primitivo: `sr-only` + `w-full` do primitivo compõem um absoluto
+              de largura da viewport (a ordem das utilities do Tailwind v4 deixava o w-full
+              vencer o sr-only) — era o scroll horizontal medido em /dashboard/projetos/[id]. */}
+          <input
             ref={logoInputRef}
             type="file"
             accept={IMAGE_ACCEPT}
@@ -155,7 +157,7 @@ export function ProjectMediaHeader({
             disabled={busy}
             onChange={() => handleUpload("logo")}
           />
-          <Input
+          <input
             ref={bannerInputRef}
             type="file"
             accept={IMAGE_ACCEPT}
