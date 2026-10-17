@@ -50,8 +50,13 @@ export function SessionWelcomeBalloon({
     <div
       role="status"
       data-testid="session-welcome-balloon"
-      className={`absolute left-0 z-10 w-64 rounded-lg border bg-popover p-4 text-popover-foreground shadow-md ${
-        side === "bottom" ? "top-full mt-3" : "bottom-full mb-3"
+      // plan-v6: o balão do cabeçalho abria de left-0 e o botão do timer fica na borda direita
+      // — em viewport apertada (< 768px) ele estourava a viewport e criava scroll horizontal em
+      // TODA página do dashboard (medido: scrollWidth 790 em 640). O painel expandido ao lado já
+      // resolvia o mesmo problema com right-0 + min(); o balão passa a fazer o igual. A âncora
+      // do flutuante fica na esquerda (`left-[6em]`), lá left-0 continua correto.
+      className={`absolute right-0 z-10 w-64 max-w-[calc(100vw-2rem)] rounded-lg border bg-popover p-4 text-popover-foreground shadow-md ${
+        side === "bottom" ? "top-full mt-3" : "left-0 bottom-full mb-3"
       }`}
     >
       <button
