@@ -58,6 +58,62 @@ describe("resolveMove (legacy kanban-board.tsx:137–164 parity)", () => {
     })
   })
 
+  /**
+   * plan-v6 (pedido do dono): de Ajustes, Concluído é REENVIO para revisão — para TODOS.
+   * Reproduzido no navegador (instância real): o caminho de conclusão barria com o porte
+   * "líder não conclui a própria task" quando a tarefa já estava reivindicada do ciclo
+   * anterior, e o estado sujo `completed=true` dava 409. O remapeamento mata os dois.
+   */
+  describe("Ajustes → Concluído é reenvio (plan-v6)", () => {
+    const taskEmAjustes = makeTask({ status: "adjust" })
+
+    it("remeapa para Em Revisão — não-gestor responsável, tarefa delegada", () => {
+      expect(resolveMove({ task: taskEmAjustes, target: "done", isLeader: false })).toEqual({
+        kind: "remap-to-review",
+      })
+    })
+
+    it("remeapa para Em Revisão — líder inclusive", () => {
+      expect(resolveMove({ task: taskEmAjustes, target: "done", isLeader: true })).toEqual({
+        kind: "remap-to-review",
+      })
+    })
+
+    it("remeapa para Em Revisão — tarefa pública e global inclusive", () => {
+      expect(
+        resolveMove({ task: makeTask({ status: "adjust", taskVisibility: "public" }), target: "done", isLeader: true }),
+      ).toEqual({ kind: "remap-to-review" })
+      expect(
+        resolveMove({ task: makeTask({ status: "adjust", taskVisibility: "public", isGlobal: true }), target: "done", isLeader: false }),
+      ).toEqual({ kind: "remap-to-review" })
+    })
+
+    it("o estado otimista é Em Revisão e o menu continua oferecendo Concluído", () => {
+      const decision = resolveMove({ task: taskEmAjustes, target: "done", isLeader: true })
+      expect(optimisticStatusFor(decision, taskEmAjustes)).toBe("in-review")
+      expect(allowedTargets(taskEmAjustes, true)).toContain("done")
+    })
+
+    it("a trava de subtask continua ANTES do remapeamento (ordem da DEC-80)", () => {
+      const comSubtaskAberta = makeTask({
+        status: "adjust",
+        subtasks: [{ id: 1, taskId: 7, title: "Medir", completed: false, completedAt: null }],
+      })
+      expect(resolveMove({ task: comSubtaskAberta, target: "done", isLeader: true })).toEqual({
+        kind: "blocked",
+        reason: "subtasks-open",
+        openCount: 1,
+      })
+    })
+
+    it("outros estados não mudam: Fazendo → Concluído continua completo", () => {
+      expect(resolveMove({ task: makeTask({ status: "in-progress" }), target: "done", isLeader: true })).toEqual({
+        kind: "complete",
+        status: "done",
+      })
+    })
+  })
+
   it("ordinary moves are status updates", () => {
     expect(resolveMove({ task: delegated, target: "in-progress", isLeader: false })).toEqual({
       kind: "status-update",

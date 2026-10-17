@@ -100,6 +100,20 @@ export function resolveMove(params: {
     return { kind: "blocked", reason: "subtasks-open", openCount };
   }
 
+  /**
+   * plan-v6 (pedido do dono, 2026-10-17): de Ajustes, "Concluído" é REENVIO, não conclusão.
+   *
+   * A tarefa em Ajustes já passou um ciclo de revisão e está reivindicada — o caminho de
+   * conclusão (`complete`) bareria com o porte "líder não conclui a própria task" (403
+   * "Líderes de projeto não podem concluir suas próprias tasks", reproduzido no navegador na
+   * instância real) e com o 409 "Tarefa já concluída" do estado `completed=true` que o ciclo
+   * anterior deixou. O comportamento que o dono quer é o mesmo do lance Fazendo→Concluído:
+   * a tarefa volta para Em Revisão com o toast de envio, e a aprovação é quem credita.
+   */
+  if (task.status === "adjust" && target === "done") {
+    return { kind: "remap-to-review" };
+  }
+
   if (target === "done") {
     if (!isLeader && task.taskVisibility !== "public" && !task.isGlobal) {
       return { kind: "remap-to-review" };
