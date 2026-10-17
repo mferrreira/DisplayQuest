@@ -5,7 +5,7 @@ import { useMemo, useState } from "react"
 import { parseAsBoolean, parseAsInteger, parseAsString, useQueryState } from "nuqs"
 import { ArrowRight, FolderKanban, ChevronDown } from "lucide-react"
 import type { Task } from "@/entities/task"
-import { projectStatusBadgeClass, projectStatusLabel, taskStatusChartColor, taskStatusLabel } from "@/components/ui/status"
+import { projectStatusBadgeClass, projectStatusLabel, taskStatusChartColor, taskStatusSentenceLabel } from "@/components/ui/status"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Button } from "@/components/ui/button"
@@ -62,7 +62,7 @@ export function HomeOverview({ projects, tasks, weekHours, currentWeekHours }: H
   const completion = filteredTasks.length ? Math.round((taskCounts.done / filteredTasks.length) * 100) : 0
   const hoursProgress = weekHours > 0 ? Math.min(100, Math.round((currentWeekHours / weekHours) * 100)) : 0
   const today = civilDayOfInstant(new Date())
-  const statusSegments = TASK_STATUSES.map((status) => ({ label: taskStatusLabel[status], value: taskCounts[status], color: taskStatusChartColor[status] }))
+  const statusSegments = TASK_STATUSES.map((status) => ({ label: taskStatusSentenceLabel[status], value: taskCounts[status], color: taskStatusChartColor[status] }))
   const taskTotal = filteredTasks.length
 
   // Ritmo de conclusões nos últimos 7 dias civis. A chave de hoje vem de `civilDayOfInstant`
@@ -82,7 +82,7 @@ export function HomeOverview({ projects, tasks, weekHours, currentWeekHours }: H
   }, [today, filteredTasks])
 
   return (
-    <section aria-label="Resumo do laboratório" className="mb-5 rounded-lg border bg-card/40">
+    <section aria-label="Resumo do laboratório" className="mb-5 rounded-lg border bg-card">
       <div className="flex items-center justify-between gap-3 px-4 pt-3">
         <h2 className="text-sm font-semibold">Resumo do laboratório</h2>
         <Button
@@ -148,7 +148,7 @@ export function HomeOverview({ projects, tasks, weekHours, currentWeekHours }: H
           <section aria-labelledby="home-task-chart" className="min-w-0 md:col-span-2 md:border-l md:pl-5 lg:col-span-1 lg:border-l lg:pl-5">
             <h3 id="home-task-chart" className="mb-3 text-sm font-semibold">Estatísticas do quadro</h3>
             <div className="flex items-center gap-4">
-              <MiniDonutChart label={`Conclusão de tarefas: ${completion}% (${taskCounts.done} de ${taskTotal})`} centerValue={`${completion}%`} centerLabel="concluídas" segments={[{ label: taskStatusLabel.done, value: taskCounts.done, color: taskStatusChartColor.done }, { label: "Restantes", value: Math.max(0, taskTotal - taskCounts.done), color: "hsl(var(--muted))" }]} size={80} />
+              <MiniDonutChart label={`Conclusão de tarefas: ${completion}% (${taskCounts.done} de ${taskTotal})`} centerValue={`${completion}%`} centerLabel="concluídas" segments={[{ label: taskStatusSentenceLabel.done, value: taskCounts.done, color: taskStatusChartColor.done }, { label: "Restantes", value: Math.max(0, taskTotal - taskCounts.done), color: "hsl(var(--muted))" }]} size={80} />
               <div className="min-w-0 flex-1">
                 <p className="mb-1.5 text-xs font-medium">Concluídas nos últimos 7 dias</p>
                 <WeeklyBarChart weeks={lastSevenDays} label="Tarefas concluídas nos últimos 7 dias" />

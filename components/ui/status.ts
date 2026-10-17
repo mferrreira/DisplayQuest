@@ -45,6 +45,20 @@ export const projectStatusChartColor: Record<Project["status"], string> = {
  * CHUMBO (destructive cheio): a escalada baixa→media→alta→urgente precisa de um degrau
  * a mais que tintado, e `destructive` e o token de alerta da base.
  */
+/**
+ * Rótulos de tarefa em caixa de frase — para os lugares onde o registro do badge
+ * (CAIXA ALTA) não cabe: lengenda de gráfico, frase corrida do feed. Nasce depois de o
+ * review V6-11 (#5/#12) medir o vocabulário re-forkado em `PROJECT_STATUS_META` e em
+ * `STATUS_SENTENCE` (o mesmo modo de falha que a DEC-95/96 fechou no usuário).
+ */
+export const taskStatusSentenceLabel: Record<Task["status"], string> = {
+  "to-do": "A Fazer",
+  "in-progress": "Fazendo",
+  "in-review": "Em Revisão",
+  adjust: "Ajustes",
+  done: "Concluída",
+};
+
 export const taskStatusBadgeClass: Record<Task["status"], string> = {
   "to-do": "bg-muted text-muted-foreground",
   "in-progress": "bg-info/15 text-info",

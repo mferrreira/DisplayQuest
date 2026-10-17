@@ -52,18 +52,9 @@ export function AdminHoursManagement({ users, projects, sessions }: AdminHoursMa
     generateHoursReports()
   }, [users, sessions, filterPeriod])
 
-  // Adicionar log para debug
-  useEffect(() => {
-    console.log('AdminHoursManagement: Sessões atualizadas', sessions.length)
-  }, [sessions])
-
   const generateHoursReports = () => {
     setLoading(true)
-    
-    console.log('AdminHoursManagement: Gerando relatórios...')
-    console.log('Sessões recebidas:', sessions.length)
-    console.log('Filtro de período:', filterPeriod)
-    
+
     const reports: HoursReport[] = users.map(user => {
       const userSessions = sessions.filter(session => 
         session.userId === user.id && session.status === 'completed'
@@ -96,14 +87,6 @@ export function AdminHoursManagement({ users, projects, sessions }: AdminHoursMa
       )
 
       const totalHours = filteredSessions.reduce((sum, session) => sum + (session.duration || 0), 0) / 3600
-      
-      if (user.name === 'Coordenador') {
-        console.log(`Coordenador - Sessões filtradas: ${filteredSessions.length}, Total horas: ${totalHours.toFixed(2)}h`)
-        filteredSessions.forEach(session => {
-          const hours = (session.duration || 0) / 3600
-          console.log(`  - ${session.startTime}: ${hours.toFixed(2)}h`)
-        })
-      }
 
       // Horas da semana atual
       const weekStart = new Date(now)
@@ -290,7 +273,7 @@ export function AdminHoursManagement({ users, projects, sessions }: AdminHoursMa
       </Card>
 
       {/* Horas por pessoa — gráfico de barras (no lugar dos quatro cards de métrica) */}
-      <div className="rounded-lg border bg-card/40 p-4">
+      <div className="rounded-lg border bg-card p-4">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h3 className="flex items-center gap-2 text-sm font-semibold">
             <BarChart3 className="h-4 w-4 text-primary" aria-hidden="true" /> Horas por pessoa
@@ -318,7 +301,7 @@ export function AdminHoursManagement({ users, projects, sessions }: AdminHoursMa
                       <span className="text-xs font-semibold tabular-nums">{formatHours(report.totalHours)}</span>
                     </div>
                     <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                      <span className="block h-full rounded-full bg-info" style={{ width: `${Math.max(4, Math.round((report.totalHours / maxHours) * 100))}%` }} />
+                      <span className="block h-full rounded-full bg-primary" style={{ width: `${Math.max(4, Math.round((report.totalHours / maxHours) * 100))}%` }} />
                     </div>
                   </div>
                 </li>
@@ -342,7 +325,7 @@ export function AdminHoursManagement({ users, projects, sessions }: AdminHoursMa
         <CardContent>
           {loading ? (
             <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-info"></div>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-info"></div>
             </div>
           ) : (
             <Table>
@@ -427,7 +410,7 @@ export function AdminHoursManagement({ users, projects, sessions }: AdminHoursMa
       </Card>
 
       {/* Projetos mais ativos — barras (o "Top Performers" saiu: o gráfico acima já ranqueia por horas) */}
-      <div className="rounded-lg border bg-card/40 p-4">
+      <div className="rounded-lg border bg-card p-4">
         <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold">
           <Target className="h-4 w-4 text-primary" aria-hidden="true" /> Projetos mais ativos
         </h3>
@@ -453,7 +436,7 @@ export function AdminHoursManagement({ users, projects, sessions }: AdminHoursMa
                       <span className="text-xs font-semibold tabular-nums">{formatHours(p.hours)}</span>
                     </div>
                     <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                      <span className="block h-full rounded-full bg-success" style={{ width: `${Math.max(4, Math.round((p.hours / maxHours) * 100))}%` }} />
+                      <span className="block h-full rounded-full bg-primary" style={{ width: `${Math.max(4, Math.round((p.hours / maxHours) * 100))}%` }} />
                     </div>
                   </div>
                 </li>

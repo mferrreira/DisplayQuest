@@ -39,6 +39,7 @@ import {
 import { useAuth } from "@/contexts/auth-context"
 import { useTask } from "@/contexts/task-context"
 import { UserApproval } from "@/components/features/user-approval"
+import { PageHeader } from "@/components/ui/page-header"
 import { ProjectMembersManagement } from "@/components/features/project-members-management"
 import { ProjectHoursStats } from "@/components/features/project-hours-stats"
 import { BadgeManager } from "@/components/admin/badge-manager"
@@ -85,8 +86,10 @@ function TabPermissionNotice({ feature }: { feature: string }) {
     <Card>
       <CardContent className="flex items-center justify-center py-8">
         <div className="text-center">
-          <Shield className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-semibold mb-2">Acesso Restrito</h3>
+          <div className="mb-2 flex items-center justify-center gap-2">
+            <Shield className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
+            <h3 className="text-lg font-semibold">Acesso Restrito</h3>
+          </div>
           <p className="text-muted-foreground">
             Você não tem permissão para ver esta aba ({feature}).
           </p>
@@ -355,12 +358,12 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, onSessionsC
     <div className="space-y-6">
       {/* Header com ações globais */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Painel Administrativo</h1>
-          <p className="text-muted-foreground">
-            Gerencie usuários, projetos, tarefas e todas as funcionalidades do sistema
-          </p>
-        </div>
+        <PageHeader
+          title="Painel Administrativo"
+          description="Gerencie usuários, projetos, tarefas e todas as funcionalidades do sistema"
+          icon={Shield}
+          className="flex-1"
+        />
         <div className="flex gap-2">
           <Button variant="outline" onClick={handleRefresh} disabled={refreshing}>
             <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />

@@ -6,21 +6,13 @@
  * moveu ou concluiu. Compacto (uma linha por acao), sem o card colapsavel que comia espaco.
  */
 import { useTaskActivity } from "@/features/tasks/hooks/use-tasks"
+import { taskStatusSentenceLabel } from "@/components/ui/status"
 import { Activity, ArrowRight, CheckCircle2, Plus } from "lucide-react"
 
 const ACTION_PHRASE: Record<string, string> = {
   CREATE: "criou",
   MOVE: "moveu",
   COMPLETE: "concluiu",
-}
-
-// Rotulos em caixa de frase (o badge do cartao e CAIXA ALTA; aqui a frase corre no paragrafo).
-const STATUS_SENTENCE: Record<string, string> = {
-  "to-do": "A Fazer",
-  "in-progress": "Fazendo",
-  "in-review": "Em Revisão",
-  adjust: "Ajustes",
-  done: "Concluído",
 }
 
 function initials(name: string) {
@@ -43,7 +35,7 @@ function relativeTime(iso: string): string {
 
 function actionPhrase(action: string, toStatus: string | null): string {
   if (action === "MOVE" && toStatus) {
-    return `moveu para ${STATUS_SENTENCE[toStatus] ?? toStatus}`
+    return `moveu para ${taskStatusSentenceLabel[toStatus as keyof typeof taskStatusSentenceLabel] ?? toStatus}`
   }
   return ACTION_PHRASE[action] ?? action
 }
@@ -53,10 +45,10 @@ export function ActivityFeed() {
   const items = data ?? []
 
   return (
-    <section aria-label="Atividade recente" className="rounded-lg border bg-card/40 p-4">
-      <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold">
+    <section aria-label="Atividade recente" className="rounded-lg border bg-card p-4">
+      <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold">
         <Activity className="h-4 w-4 text-primary" aria-hidden="true" /> Atividade recente
-      </h3>
+      </h2>
       {isPending ? (
         <p className="py-3 text-sm text-muted-foreground">Carregando atividade…</p>
       ) : items.length === 0 ? (

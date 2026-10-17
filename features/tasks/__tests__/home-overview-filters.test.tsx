@@ -55,7 +55,7 @@ describe("HomeOverview filters", () => {
     render(<HomeOverview projects={projects} tasks={tasks} weekHours={20} currentWeekHours={5} />)
 
     expect(screen.getByRole("img", { name: /Conclusão de tarefas: 0% \(0 de 1\)/ })).toBeInTheDocument()
-    expect(screen.getByText("A FAZER").parentElement).toHaveTextContent("1")
+    expect(screen.getByText("A Fazer").parentElement).toHaveTextContent("1")
     expect(screen.getByRole("link", { name: /Projeto Alfa/ })).toBeInTheDocument()
     expect(screen.queryByRole("link", { name: /Projeto Beta/ })).not.toBeInTheDocument()
   })

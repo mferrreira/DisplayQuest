@@ -9,9 +9,12 @@
  * últimos 7 dias, projetos com progresso REAL (`projectProgress`) e um placar top 5 por pontos.
  */
 import { civilDayOfInstant } from "@/backend/domain"
+import type { Project } from "@/contexts/types"
 import {
+  projectStatusChartColor,
+  projectStatusLabel,
   taskStatusChartColor,
-  taskStatusLabel,
+  taskStatusSentenceLabel,
 } from "@/components/ui/status"
 import { MiniDonutChart, StackedBarChart, WeeklyBarChart } from "@/components/ui/data-charts"
 import { projectProgress } from "@/features/projects/utils/project-progress"
@@ -21,13 +24,6 @@ import { Button } from "@/components/ui/button"
 import { Activity, Target, Trophy, Users } from "lucide-react"
 
 const TASK_STATUSES = ["to-do", "in-progress", "in-review", "adjust", "done"] as const
-
-const PROJECT_STATUS_META: Record<string, { label: string; color: string }> = {
-  active: { label: "Ativo", color: "hsl(var(--success))" },
-  on_hold: { label: "Em pausa", color: "hsl(var(--warning))" },
-  completed: { label: "Concluído", color: "hsl(var(--info))" },
-  archived: { label: "Arquivado", color: "hsl(var(--muted-foreground))" },
-}
 
 interface AdminOverviewProps {
   users: Array<{ id: number; name: string; points?: number; status?: string; roles?: string[] }>
@@ -51,8 +47,9 @@ export function AdminOverview({ users, projects, tasks, sessions, onManageSessio
   ) as Record<(typeof TASK_STATUSES)[number], number>
   const taskTotal = tasks.length
   const completion = taskTotal ? Math.round((taskCounts.done / taskTotal) * 100) : 0
+  // Lengenda em caixa de frase (review V6-11 #12): CAIXA ALTA é o registro do badge.
   const statusSegments = TASK_STATUSES.map((status) => ({
-    label: taskStatusLabel[status],
+    label: taskStatusSentenceLabel[status],
     value: taskCounts[status],
     color: taskStatusChartColor[status],
   }))
@@ -75,9 +72,9 @@ export function AdminOverview({ users, projects, tasks, sessions, onManageSessio
     return acc
   }, {})
   const projectSegments = Object.entries(projectStatusCounts).map(([status, value]) => ({
-    label: PROJECT_STATUS_META[status]?.label ?? status,
+    label: projectStatusLabel[status as Project["status"]] ?? status,
     value,
-    color: PROJECT_STATUS_META[status]?.color ?? "hsl(var(--muted))",
+    color: projectStatusChartColor[status as Project["status"]] ?? "hsl(var(--muted))",
   }))
   const activeProjects = projects.filter((p) => p.status === "active")
 
@@ -88,7 +85,7 @@ export function AdminOverview({ users, projects, tasks, sessions, onManageSessio
 
   return (
     <div className="space-y-5">
-      <div className="grid gap-5 rounded-lg border bg-card/40 p-4 md:grid-cols-3">
+      <div className="grid gap-5 rounded-lg border bg-card p-4 md:grid-cols-3">
         <section aria-labelledby="admin-live" className="min-w-0">
           <div className="mb-3 flex items-center justify-between gap-2">
             <h3 id="admin-live" className="flex items-center gap-2 text-sm font-semibold">
@@ -106,7 +103,7 @@ export function AdminOverview({ users, projects, tasks, sessions, onManageSessio
                 return (
                   <li key={session.id} className="flex items-center justify-between gap-3">
                     <div className="flex min-w-0 items-center gap-2.5">
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-success/15 text-xs font-medium text-success">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-info/15 text-xs font-medium text-info">
                         {initials(user.name)}
                       </span>
                       <span className="min-w-0 truncate text-sm font-medium">{user.name}</span>
@@ -131,7 +128,7 @@ export function AdminOverview({ users, projects, tasks, sessions, onManageSessio
               centerValue={`${completion}%`}
               centerLabel="concluídas"
               segments={[
-                { label: taskStatusLabel.done, value: taskCounts.done, color: taskStatusChartColor.done },
+                { label: taskStatusSentenceLabel.done, value: taskCounts.done, color: taskStatusChartColor.done },
                 { label: "Restantes", value: Math.max(0, taskTotal - taskCounts.done), color: "hsl(var(--muted))" },
               ]}
               size={80}
@@ -159,7 +156,7 @@ export function AdminOverview({ users, projects, tasks, sessions, onManageSessio
         </section>
       </div>
 
-      <div className="grid gap-5 rounded-lg border bg-card/40 p-4 lg:grid-cols-3">
+      <div className="grid gap-5 rounded-lg border bg-card p-4 lg:grid-cols-3">
         <section aria-labelledby="admin-projects" className="min-w-0 lg:col-span-2">
           <h3 id="admin-projects" className="mb-3 flex items-center gap-2 text-sm font-semibold">
             <Target className="h-4 w-4 text-primary" aria-hidden="true" /> Projetos ativos
