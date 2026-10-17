@@ -46,6 +46,7 @@ import { BadgeManager } from "@/components/admin/badge-manager"
 import { AdminOverview } from "@/components/admin/AdminOverview"
 import { AdminProjectManagement } from "@/components/admin/AdminProjectManagement"
 import { AdminHoursManagement } from "@/components/admin/AdminHoursManagement"
+import { WeeklyHoursTable } from "@/components/admin/weekly-hours-table"
 import { AdminNotificationsCenter } from "@/components/admin/AdminNotificationsCenter"
 import { ScheduleGrid } from "@/components/admin/ScheduleGrid"
 import { NotificationsPanel } from "@/components/ui/notifications-panel"
@@ -616,6 +617,11 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, onSessionsC
             <TabPermissionNotice feature="DASHBOARD_ADMIN" />
           ) : (
           <>
+          {/* Quadro por semana reconstruído (pedido do dono, 2026-10-17): navegador de
+              semanas + estado contra a meta, como no quadro antigo do painel. Ele é a
+              visão semanal; o AdminHoursManagement abaixo mantém os relatórios por
+              período/projeto. */}
+          <WeeklyHoursTable users={users} sessions={sessions} />
           <AdminHoursManagement 
             users={users}
             projects={projects}
@@ -737,7 +743,10 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, onSessionsC
                                   </p>
                                   <ul className="mt-1 space-y-0.5">
                                     {task.subtasks!.map((subtask) => (
-                                      <li key={subtask.id} className="flex items-center gap-1.5 text-xs">
+                                      // relative é o containing block do `sr-only` (absolute):
+                                      // sem ele o span escapa do scroller `max-h-[480px]` e estica
+                                      // a página com espaço vazio (medido: 5899px → 1258px).
+                                      <li key={subtask.id} className="relative flex items-center gap-1.5 text-xs">
                                         <span
                                           aria-hidden="true"
                                           className={subtask.completed ? "text-success" : "text-muted-foreground/60"}
