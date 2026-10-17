@@ -1046,3 +1046,19 @@ leitura do texto visível. São observações medidas na instância real, **não
   Escopo pelo `textContent` do valor selecionado ("Em Revisão"). E a lista de opções do Radix
   aparece um frame depois no jsdom (`findByRole` com timeout) e está com `pointer-events:none`
   durante a animação — selecionar opção com `fireEvent.click`, não `userEvent`.
+
+## Cronograma — "fixa em 12" não reproduz (V6-11j, DEC-204, 2026-10-17)
+
+- **A regra do dono para a grade já está em produção** (DEC-151, `cronogramaMonthColumns`): com datas,
+  as colunas são o período do projeto inclusivo (delta mensal com ceil ≈ contagem de meses marcados);
+  projeto de 6 meses → 6 colunas (medido no wizard), projeto ago/nov-2026 → 4 colunas de período.
+- **O 12 que o dono viu é o fallback de projeto SEM datas** — janela de 12 meses ancorada no mês atual
+  (`CRONOGRAMA_FALLBACK_MONTHS=12`), e todos os projetos de exemplo da instância estão sem datas.
+  Medido por API: projetos 2/10/1 = 12 colunas (out/2026…set/2027); projeto 7 = **14** (as marcas de
+  atividade que vão além do fim alargam a janela até set/2027). Nenhuma tela hardcodiza 12.
+- **Decisão do dono (DEC-204): manter o fallback de 12** quando o projeto não tem datas. Nenhuma
+  mudança de código; a regra DEC-151 permanece intacta. Quem esbarrar nesse pedido de ajuste de novo:
+  é o fallback, não um bug.
+- **Gotcha de medição:** o Cronograma do detalhe do projeto mora na aba **Tarefas** (primeira peça do
+  `TabsContent value="tasks"`, `page.tsx:192`), não numa aba própria — para medir as colunas, entre
+  no projeto, clique "Tarefas" e conte os `th` com padrão `^[a-z]{3}/\d{4}$`.
