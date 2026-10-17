@@ -43,10 +43,19 @@ describe("HomeOverview filters", () => {
     filters.pessoa = 7
     render(<HomeOverview projects={projects} tasks={tasks} weekHours={20} currentWeekHours={5} />)
 
-    expect(screen.getByRole("img", { name: /Conclusão de tarefas: 50% \(1 de 2\)/ })).toBeInTheDocument()
-    expect(screen.getByText("Tarefas concluídas").parentElement).toHaveTextContent("1")
+    expect(screen.getByRole("img", { name: "Distribuição das tarefas por status" })).toBeInTheDocument()
+    expect(screen.getByText("50% das tarefas concluídas")).toBeInTheDocument()
+    expect(screen.getByText("Meta da semana").parentElement).toHaveTextContent("5 / 20 h")
     expect(screen.getByRole("link", { name: /Projeto Alfa/ })).toBeInTheDocument()
     expect(screen.getByRole("link", { name: /Projeto Beta/ })).toBeInTheDocument()
+  })
+
+  it("conta atrasadas pela mesma regra do filtro do quadro", () => {
+    filters.pessoa = 7
+    const atrasada = { id: 99, title: "Atrasada de verdade", status: "to-do", dueDate: "2026-10-01", projectId: 1, assignedTo: 7, assigneeIds: [7] }
+    render(<HomeOverview projects={projects} tasks={[...tasks, atrasada] as never} weekHours={20} currentWeekHours={5} />)
+    expect(screen.getByText("1 atrasada")).toBeInTheDocument()
+    expect(screen.queryByText("2 atrasadas")).not.toBeInTheDocument()
   })
 
   it("combina projeto e pessoa no mesmo recorte", () => {
@@ -54,7 +63,8 @@ describe("HomeOverview filters", () => {
     filters.pessoa = 7
     render(<HomeOverview projects={projects} tasks={tasks} weekHours={20} currentWeekHours={5} />)
 
-    expect(screen.getByRole("img", { name: /Conclusão de tarefas: 0% \(0 de 1\)/ })).toBeInTheDocument()
+    expect(screen.getByRole("img", { name: "Distribuição das tarefas por status" })).toBeInTheDocument()
+    expect(screen.getByText("0% das tarefas concluídas")).toBeInTheDocument()
     expect(screen.getByText("A Fazer").parentElement).toHaveTextContent("1")
     expect(screen.getByRole("link", { name: /Projeto Alfa/ })).toBeInTheDocument()
     expect(screen.queryByRole("link", { name: /Projeto Beta/ })).not.toBeInTheDocument()

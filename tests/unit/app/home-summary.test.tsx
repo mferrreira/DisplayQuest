@@ -120,14 +120,15 @@ describe("Home — regiao de cabecalho (AC-V6-11)", () => {
     expect(board.compareDocumentPosition(overview) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
   });
 
-  it("acrescenta projetos recentes, metas e estatísticas acima do quadro", () => {
+  it("acrescenta projetos recentes, tarefas por status e atividade da semana acima do quadro (V6-11e)", () => {
     render(<DashboardPage />);
     const board = screen.getByTestId("task-board");
     const overview = screen.getByRole("region", { name: "Resumo do laboratório" });
     expect(overview).toHaveTextContent("Projetos recentes");
+    expect(overview).toHaveTextContent("Tarefas por status");
+    expect(overview).toHaveTextContent("Atividade da semana");
     expect(overview).toHaveTextContent("Meta da semana");
-    expect(overview).toHaveTextContent("Estatísticas do quadro");
-    expect(screen.getByRole("img", { name: /Conclusão de tarefas/ })).toBeVisible();
+    expect(screen.getByRole("img", { name: "Distribuição das tarefas por status" })).toBeVisible();
     expect(screen.getByRole("img", { name: /Tarefas concluídas nos últimos 7 dias/ })).toBeVisible();
     expect(overview).toHaveTextContent("Alfa");
     expect(board.compareDocumentPosition(overview) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();

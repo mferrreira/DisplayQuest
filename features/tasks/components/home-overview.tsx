@@ -9,7 +9,8 @@ import { projectStatusBadgeClass, projectStatusLabel, taskStatusChartColor, task
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Button } from "@/components/ui/button"
-import { MiniDonutChart, WeeklyBarChart } from "@/components/ui/data-charts"
+import { StackedBarChart, WeeklyBarChart } from "@/components/ui/data-charts"
+import { isTaskOverdue } from "../utils/move-rules"
 import { civilDayOfInstant } from "@/backend/domain"
 import { projectProgress } from "@/features/projects/utils/project-progress"
 import { filterBoardTasks } from "../utils/filter-board-tasks"
@@ -64,6 +65,9 @@ export function HomeOverview({ projects, tasks, weekHours, currentWeekHours }: H
   const today = civilDayOfInstant(new Date())
   const statusSegments = TASK_STATUSES.map((status) => ({ label: taskStatusSentenceLabel[status], value: taskCounts[status], color: taskStatusChartColor[status] }))
   const taskTotal = filteredTasks.length
+  // Atrasadas é a MESMA regra do filtro do quadro (`isTaskOverdue`), para o número da home
+  // conferir com a contagem do filtro "Somente atrasadas" em qualquer estado da tarefa.
+  const overdueCount = filteredTasks.filter((task) => isTaskOverdue(task)).length
 
   // Ritmo de conclusões nos últimos 7 dias civis. A chave de hoje vem de `civilDayOfInstant`
   // (fuso do laboratório) e os dias anteriores saem por subtração de calendário em UTC — a
@@ -135,25 +139,12 @@ export function HomeOverview({ projects, tasks, weekHours, currentWeekHours }: H
             </div>
           </section>
 
-          <section aria-labelledby="home-weekly-goal" className="min-w-0 md:border-l md:pl-5 lg:border-l lg:pl-5">
-            <h3 id="home-weekly-goal" className="mb-3 text-sm font-semibold">Meta da semana</h3>
-            <div>
-              <div className="mb-2 flex items-baseline justify-between gap-3"><p className="text-sm font-medium">Carga horária</p><p className="text-sm font-semibold tabular-nums">{formatHours(currentWeekHours)}{weekHours > 0 ? ` / ${formatHours(weekHours)} h` : " h"}</p></div>
-              <Progress aria-label={`Meta semanal de horas: ${hoursProgress}%`} value={hoursProgress} className="h-3" />
-              <p className="mt-2 text-xs text-muted-foreground">{weekHours > 0 ? `${hoursProgress}% da meta semanal · horas registradas nesta semana` : "Defina sua meta no perfil"}</p>
+          <section aria-labelledby="home-status-bar" className="min-w-0 md:border-l md:pl-5 lg:border-l lg:pl-5">
+            <div className="mb-3 flex items-baseline justify-between gap-3">
+              <h3 id="home-status-bar" className="text-sm font-semibold">Tarefas por status</h3>
+              <span className="text-xs text-muted-foreground">{taskTotal} no total</span>
             </div>
-            <p className="mt-4 border-t pt-3 text-sm text-muted-foreground">Tarefas concluídas <span className="float-right font-medium tabular-nums text-foreground">{taskCounts.done}</span></p>
-          </section>
-
-          <section aria-labelledby="home-task-chart" className="min-w-0 md:col-span-2 md:border-l md:pl-5 lg:col-span-1 lg:border-l lg:pl-5">
-            <h3 id="home-task-chart" className="mb-3 text-sm font-semibold">Estatísticas do quadro</h3>
-            <div className="flex items-center gap-4">
-              <MiniDonutChart label={`Conclusão de tarefas: ${completion}% (${taskCounts.done} de ${taskTotal})`} centerValue={`${completion}%`} centerLabel="concluídas" segments={[{ label: taskStatusSentenceLabel.done, value: taskCounts.done, color: taskStatusChartColor.done }, { label: "Restantes", value: Math.max(0, taskTotal - taskCounts.done), color: "hsl(var(--muted))" }]} size={80} />
-              <div className="min-w-0 flex-1">
-                <p className="mb-1.5 text-xs font-medium">Concluídas nos últimos 7 dias</p>
-                <WeeklyBarChart weeks={lastSevenDays} label="Tarefas concluídas nos últimos 7 dias" />
-              </div>
-            </div>
+            <StackedBarChart label={`Distribuição das tarefas por status`} segments={statusSegments} className="h-3.5" />
             <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
               {statusSegments.map((segment) => (
                 <div key={segment.label} className="flex items-center justify-between gap-2">
@@ -164,6 +155,27 @@ export function HomeOverview({ projects, tasks, weekHours, currentWeekHours }: H
                   <span className="font-medium tabular-nums">{segment.value}</span>
                 </div>
               ))}
+            </div>
+            <p className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 border-t pt-3 text-xs text-muted-foreground">
+              <span>{completion}% das tarefas concluídas</span>
+              {overdueCount > 0 && <span className="font-medium text-warning">{overdueCount} atrasada{overdueCount === 1 ? "" : "s"}</span>}
+            </p>
+          </section>
+
+          <section aria-labelledby="home-task-chart" className="min-w-0 md:col-span-2 md:border-l md:pl-5 lg:col-span-1 lg:border-l lg:pl-5">
+            <h3 id="home-task-chart" className="mb-3 text-sm font-semibold">Atividade da semana</h3>
+            <p className="mb-1.5 text-xs font-medium">Concluídas nos últimos 7 dias</p>
+            <WeeklyBarChart weeks={lastSevenDays} label="Tarefas concluídas nos últimos 7 dias" />
+            <div className="mt-3 border-t pt-3">
+              <div className="mb-2 flex items-baseline justify-between gap-3"><p className="text-xs font-medium">Meta da semana</p><p className="text-sm font-semibold tabular-nums">{formatHours(currentWeekHours)}{weekHours > 0 ? ` / ${formatHours(weekHours)} h` : " h"}</p></div>
+              {weekHours > 0 ? (
+                <>
+                  <Progress aria-label={`Meta semanal de horas: ${hoursProgress}%`} value={hoursProgress} className="h-2" />
+                  <p className="mt-1.5 text-xs text-muted-foreground">{hoursProgress}% da meta semanal</p>
+                </>
+              ) : (
+                <p className="text-xs text-muted-foreground">Defina sua meta no perfil</p>
+              )}
             </div>
           </section>
         </div>
