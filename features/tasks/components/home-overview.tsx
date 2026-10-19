@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { parseAsBoolean, parseAsInteger, parseAsString, useQueryState } from "nuqs"
 import { ArrowRight, FolderKanban, ChevronDown } from "lucide-react"
 import type { Task } from "@/entities/task"
@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Button } from "@/components/ui/button"
 import { StackedBarChart, WeeklyBarChart } from "@/components/ui/data-charts"
+import { clientStorageKey, readJson, writeJson } from "@/lib/client-storage"
 import { isTaskOverdue } from "../utils/move-rules"
 import { civilDayOfInstant } from "@/backend/domain"
 import { projectProgress } from "@/features/projects/utils/project-progress"
@@ -24,6 +25,10 @@ interface HomeOverviewProps {
 
 const TASK_STATUSES: Task["status"][] = ["to-do", "in-progress", "in-review", "adjust", "done"]
 
+// V6-11m (dono): a preferencia de abrir/fechar a faixa sobrevive a voltar pra Home — senao a
+// pessoa fecha a faixa e ela reabre sozinha a cada visita. Chave no namespace `dq:` da casa.
+const OVERVIEW_OPEN_KEY = clientStorageKey("home", "resumo-aberto")
+
 function formatHours(value: number) {
   return new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 }).format(value)
 }
@@ -37,6 +42,16 @@ function projectStatus(status: string) {
 
 export function HomeOverview({ projects, tasks, weekHours, currentWeekHours }: HomeOverviewProps) {
   const [open, setOpen] = useState(true)
+  // O SSR sempre renderiza aberta (o storage nao existe la); a preferencia entra no primeiro
+  // efeito no cliente — sem isso, o HTML do servidor e o primeiro render divergiriam (hydration).
+  useEffect(() => {
+    setOpen(readJson<boolean>(OVERVIEW_OPEN_KEY, true))
+  }, [])
+  const toggleOpen = () => {
+    const next = !open
+    setOpen(next)
+    writeJson(OVERVIEW_OPEN_KEY, next)
+  }
   const [projectId] = useQueryState("projeto", parseAsInteger)
   const [overdue] = useQueryState("atrasadas", parseAsBoolean.withDefault(false))
   const [dueToday] = useQueryState("hoje", parseAsBoolean.withDefault(false))
@@ -87,7 +102,9 @@ export function HomeOverview({ projects, tasks, weekHours, currentWeekHours }: H
 
   return (
     <section aria-label="Resumo do laboratório" className="mb-5 rounded-lg border bg-card">
-      <div className="flex items-center justify-between gap-3 px-4 pt-3">
+      {/* Fechada, a faixa é só o cabeçalho: o `py-3` dá o mesmo respiro embaixo que o conteúdo
+          aberto daria — sem ele o título e o botão ficam colados no topo ("torto pra baixo"). */}
+      <div className={`flex items-center justify-between gap-3 px-4 ${open ? "pt-3" : "py-3"}`}>
         <h2 className="text-sm font-semibold">Resumo do laboratório</h2>
         <Button
           type="button"
@@ -95,7 +112,7 @@ export function HomeOverview({ projects, tasks, weekHours, currentWeekHours }: H
           size="sm"
           aria-expanded={open}
           aria-controls="home-insights"
-          onClick={() => setOpen((value) => !value)}
+          onClick={toggleOpen}
         >
           {open ? "Ocultar" : "Mostrar"}
           <ChevronDown className={`ml-1 h-4 w-4 transition-transform ${open ? "" : "-rotate-90"}`} aria-hidden="true" />

@@ -138,21 +138,21 @@ export default function LeaderboardPage() {
                     />
                   </>
                 ) : null}
-                <div className="relative flex flex-wrap items-center gap-5 p-6">
-                  <Crown className="h-8 w-8 shrink-0 text-warning" aria-hidden="true" />
-                  <Avatar className="h-16 w-16 border-2 border-warning/50">
+                <div className="relative flex flex-wrap items-center gap-6 p-8">
+                  <Crown className="h-10 w-10 shrink-0 text-warning" aria-hidden="true" />
+                  <Avatar className="h-20 w-20 border-2 border-warning/50">
                     <AvatarImage src={champion.avatar || undefined} alt={champion.name} />
-                    <AvatarFallback className="text-lg font-bold">{getInitials(champion.name)}</AvatarFallback>
+                    <AvatarFallback className="text-xl font-bold">{getInitials(champion.name)}</AvatarFallback>
                   </Avatar>
                   <div className="min-w-0 flex-1">
                     <p className="text-xs font-semibold uppercase tracking-wide text-warning">1º lugar</p>
-                    <p className="truncate text-xl font-bold text-foreground">{champion.name}</p>
+                    <p className="truncate text-2xl font-bold text-foreground">{champion.name}</p>
                     <p className="truncate text-sm text-muted-foreground">
                       {getRoleLabel(champion.roles || []) || "Membro do laboratório"}
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-3xl font-bold tabular-nums text-foreground">{champion.points}</p>
+                    <p className="text-4xl font-bold tabular-nums text-foreground">{champion.points}</p>
                     <p className="text-xs text-muted-foreground">pontos</p>
                   </div>
                 </div>
@@ -217,28 +217,7 @@ export default function LeaderboardPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {podiumUsers.map((rankedUser, index) => (
-                  <TableRow key={rankedUser.id} className={rankedUser.id === user.id ? "bg-primary/5" : ""}>
-                    <TableCell className="font-semibold tabular-nums text-muted-foreground">{index + 1}º</TableCell>
-                    <TableCell>
-                      <Link
-                        href={`/dashboard/profile?userId=${rankedUser.id}`}
-                        className="flex items-center gap-3 rounded-lg p-1 transition-colors hover:bg-muted/60"
-                      >
-                        <Avatar className="h-9 w-9">
-                          <AvatarImage src={rankedUser.avatar || undefined} alt={rankedUser.name} />
-                          <AvatarFallback>{getInitials(rankedUser.name)}</AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="font-medium">{rankedUser.name}</p>
-                          <p className="text-xs text-muted-foreground">{getRoleLabel(rankedUser.roles || [])}</p>
-                        </div>
-                      </Link>
-                    </TableCell>
-                    <TableCell className="tabular-nums">{rankedUser.completedTasks}</TableCell>
-                    <TableCell className="text-right font-bold tabular-nums">{rankedUser.points}</TableCell>
-                  </TableRow>
-                ))}
+                {/* O top 3 ja esta no podio (campeao + 2º/3º) — a tabela comeca no 4º. */}
                 {remainingUsers.map((rankedUser, index) => (
                   <TableRow key={rankedUser.id} className={rankedUser.id === user.id ? "bg-primary/5" : ""}>
                     <TableCell className="font-semibold tabular-nums text-muted-foreground">{index + 4}º</TableCell>

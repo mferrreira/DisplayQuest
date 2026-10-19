@@ -13,14 +13,15 @@
  * A imprensa (rotas /print, PDF do relatório) esconde o rodapé por CSS (`print:hidden`),
  * porque a exportação não deve carregar o chrome institucional.
  */
-// Altura por logo: a proporcao que faz as tres parecerem do mesmo tamanho e a do DESENHO
-// (marca ~36-43px), nao a da caixa. CNPq e Display tem a marca em ~80% da altura; o IFNMG e
-// empilhado (marca ~43% + texto), entao precisa de ~2x a altura para a marca ficar do mesmo
-// porte e o texto interno ficar legivel.
+// Dono (V6-11m): as tres marcas na MESMA altura, e menores que antes — o IFNMG estava em h-24
+// (o unico empilhado na epoca) e dominava o rodape. As tres sao lockups horizontais (razoes
+// 3.25 / 2.97 / 2.55), entao altura unica ja alinha o porte e deixa o IFNMG mais estreito.
+const LOGO_HEIGHT = "h-8"
+
 const LOGOS = [
-  { alt: "CNPq", claro: "/cnpq_logo_modo-claro.png", escuro: "/cnpq_logo_modo-escuro.png", altura: "h-12" },
-  { alt: "IFNMG — Campus Januária", claro: "/logo_ifnmg_modo-claro.png", escuro: "/logo_ifnmg_modo-escuro.png", altura: "h-24" },
-  { alt: "Laboratório Display", claro: "/logo_display_modo-claro.png", escuro: "/logo_display_modo-escuro.png", altura: "h-12" },
+  { alt: "CNPq", claro: "/cnpq_logo_modo-claro.png", escuro: "/cnpq_logo_modo-escuro.png" },
+  { alt: "IFNMG — Campus Januária", claro: "/logo_ifnmg_modo-claro.png", escuro: "/logo_ifnmg_modo-escuro.png" },
+  { alt: "Laboratório Display", claro: "/logo_display_modo-claro.png", escuro: "/logo_display_modo-escuro.png" },
 ]
 
 export function AppFooter() {
@@ -31,9 +32,9 @@ export function AppFooter() {
           {LOGOS.map((logo) => (
             <span key={logo.alt} className="flex items-center">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={logo.claro} alt={logo.alt} className={`${logo.altura} w-auto object-contain dark:hidden`} />
+              <img src={logo.claro} alt={logo.alt} className={`${LOGO_HEIGHT} w-auto object-contain dark:hidden`} />
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={logo.escuro} alt={logo.alt} className={`${logo.altura} hidden w-auto object-contain dark:block`} />
+              <img src={logo.escuro} alt={logo.alt} className={`${LOGO_HEIGHT} hidden w-auto object-contain dark:block`} />
             </span>
           ))}
         </div>

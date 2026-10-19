@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
 
 /**
  * V6-3 (AC-V6-11, RF-V6.4 R1/R2, DEC-114) — a hierarquia da Home.
@@ -133,5 +133,46 @@ describe("Home — regiao de cabecalho (AC-V6-11)", () => {
     expect(overview).toHaveTextContent("Alfa");
     expect(board.compareDocumentPosition(overview) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
     expect(overview.querySelectorAll("a[href^='/dashboard/projetos/']")).toHaveLength(3);
+  });
+});
+
+describe("Home — preferência da faixa 'Resumo do laboratório' (V6-11m)", () => {
+  // jsdom desta base não tem window.localStorage (gotcha da casa) — o shim é local a este bloco,
+  // e o `delete` no afterEach devolve o ambiente ao estado medido para os demais testes.
+  beforeEach(() => {
+    const store = new Map<string, string>();
+    Object.defineProperty(window, "localStorage", {
+      configurable: true,
+      value: {
+        getItem: (key: string) => store.get(key) ?? null,
+        setItem: (key: string, value: string) => void store.set(key, value),
+        removeItem: (key: string) => void store.delete(key),
+        clear: () => store.clear(),
+      },
+    });
+  });
+
+  afterEach(() => {
+    delete (window as { localStorage?: unknown }).localStorage;
+  });
+
+  it("fechar a faixa grava a preferência e a visita seguinte abre fechada", () => {
+    const first = render(<DashboardPage />);
+    fireEvent.click(screen.getByRole("button", { name: "Ocultar" }));
+    expect(window.localStorage.getItem("dq:home:resumo-aberto")).toBe("false");
+    expect(screen.queryByText("Projetos recentes")).not.toBeInTheDocument();
+    first.unmount();
+
+    render(<DashboardPage />);
+    expect(screen.getByRole("button", { name: "Mostrar" })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByText("Projetos recentes")).not.toBeInTheDocument();
+  });
+
+  it("mostrar de novo grava aberto e devolve o conteúdo", () => {
+    render(<DashboardPage />);
+    fireEvent.click(screen.getByRole("button", { name: "Ocultar" }));
+    fireEvent.click(screen.getByRole("button", { name: "Mostrar" }));
+    expect(window.localStorage.getItem("dq:home:resumo-aberto")).toBe("true");
+    expect(screen.getByText("Projetos recentes")).toBeInTheDocument();
   });
 });
