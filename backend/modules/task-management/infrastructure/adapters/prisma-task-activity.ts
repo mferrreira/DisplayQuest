@@ -26,9 +26,9 @@ export function createPrismaTaskActivityPort(): TaskActivityPort {
       })
     },
 
-    async listRecent(limit: number): Promise<TaskActivityItem[]> {
+    async listRecent(limit: number, since?: Date): Promise<TaskActivityItem[]> {
       const rows = await prisma.history.findMany({
-        where: { entityType: "task" },
+        where: { entityType: "task", ...(since ? { performedAt: { gte: since } } : {}) },
         orderBy: { performedAt: "desc" },
         take: limit,
         include: { performer: { select: { id: true, name: true } } },
@@ -46,6 +46,18 @@ export function createPrismaTaskActivityPort(): TaskActivityPort {
           at: row.performedAt.toISOString(),
         }
       })
+    },
+
+    /**
+     * Limpeza periódica (V6-11k): UMA instrução, um só `where`. O filtro por `entityType`
+     * é a trava dura do escopo — as outras famílias de `history` (premiação e avisos) nunca
+     * entram. `deleteMany` é atômico por instrução; não precisa (nem deve) de transação.
+     */
+    async purgeOlderThan(cutoff: Date): Promise<number> {
+      const { count } = await prisma.history.deleteMany({
+        where: { entityType: "task", performedAt: { lt: cutoff } },
+      })
+      return count
     },
   }
 }

@@ -32,5 +32,15 @@ export interface TaskActivityItem {
 
 export interface TaskActivityPort {
   append(entry: TaskActivityEntry): Promise<void>
-  listRecent(limit: number): Promise<TaskActivityItem[]>
+  listRecent(limit: number, since?: Date): Promise<TaskActivityItem[]>
+  /**
+   * Apaga os registros de atividade de tarefa anteriores a `cutoff` e devolve quantos saíram.
+   *
+   * ESCOPO ESTREITO DE PROPÓSITO (V6-11k): só `entityType = "task"` — a tabela `history` é
+   * compartilhada com as premiações de gamification (`action GAMIFICATION_AWARD`, cuja
+   * idempotência LÊ essas linhas para não premiar duas vezes) e com os avisos do laboratório
+   * (`entityType LAB_NOTICE`, que são o próprio quadro de avisos). Apagar qualquer uma dessas
+   * duas famílias é defeito de dados, não limpeza — o filtro por `entityType` é a trava.
+   */
+  purgeOlderThan(cutoff: Date): Promise<number>
 }

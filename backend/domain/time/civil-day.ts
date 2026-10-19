@@ -28,6 +28,18 @@ export function civilDayOfInstant(instant: Date): string {
 }
 
 /**
+ * First instant of the civil day of `instant` — 00:00 in America/Sao_Paulo, as a UTC `Date`.
+ *
+ * É a fronteira usada para dizer "isto é de hoje": a limpeza do feed de atividade (V6-11k)
+ * corta por ela e a leitura do feed filtra por ela. As duas pontas leem da MESMA função de
+ * propósito — duas contas de "hoje" divergiriam em silêncio na virada do dia.
+ */
+export function startOfCivilDayInstant(instant: Date): Date {
+  const [year, month, day] = civilDayOfInstant(instant).split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day) + SP_OFFSET_MS);
+}
+
+/**
  * Calendar day of a stored date. `tasks.dueDate` is a plain `String?` and the board form
  * submits bare `YYYY-MM-DD` (`features/tasks/components/task-dialog.tsx:200`,
  * `<Input type="date">`), while legacy rows and instants arrive as full ISO. Both mean the

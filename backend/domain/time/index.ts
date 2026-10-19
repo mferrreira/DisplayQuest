@@ -1,1 +1,1 @@
-export { civilDayOfDate, civilDayOfInstant, civilDaysBetween } from "./civil-day";
+export { civilDayOfDate, civilDayOfInstant, civilDaysBetween, startOfCivilDayInstant } from "./civil-day";

@@ -8,7 +8,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { civilDayOfDate, civilDayOfInstant, civilDaysBetween } from "@/backend/domain";
+import { civilDayOfDate, civilDayOfInstant, civilDaysBetween, startOfCivilDayInstant } from "@/backend/domain";
 
 describe("civilDayOfInstant — o dia civil do laboratório, não o dia UTC", () => {
   it("meia-noite UTC ainda é o dia anterior em Brasília", () => {
@@ -44,6 +44,35 @@ describe("civilDayOfDate — aceita as duas formas que existem no banco", () => 
     expect(civilDayOfDate("sem prazo")).toBeNull();
     expect(civilDayOfDate("")).toBeNull();
     expect(civilDayOfDate("2026-13-45")).toBeNull();
+  });
+});
+
+describe("startOfCivilDayInstant — a fronteira do dia do laboratório (V6-11k)", () => {
+  it("meia-noite de Brasília é a primeira instância do dia (03:00 UTC)", () => {
+    expect(startOfCivilDayInstant(new Date("2026-06-15T03:00:00.000Z")).toISOString()).toBe(
+      "2026-06-15T03:00:00.000Z",
+    );
+    expect(startOfCivilDayInstant(new Date("2026-06-15T12:34:56.000Z")).toISOString()).toBe(
+      "2026-06-15T03:00:00.000Z",
+    );
+  });
+
+  it("madrugada UTC ainda é o dia anterior — e o corte é a meia-noite DELE", () => {
+    expect(startOfCivilDayInstant(new Date("2026-06-15T00:00:00.000Z")).toISOString()).toBe(
+      "2026-06-14T03:00:00.000Z",
+    );
+    expect(startOfCivilDayInstant(new Date("2026-06-15T02:59:59.999Z")).toISOString()).toBe(
+      "2026-06-14T03:00:00.000Z",
+    );
+  });
+
+  it("cruza mês e ano", () => {
+    expect(startOfCivilDayInstant(new Date("2027-01-01T00:00:00.000Z")).toISOString()).toBe(
+      "2026-12-31T03:00:00.000Z",
+    );
+    expect(startOfCivilDayInstant(new Date("2027-01-01T03:00:00.000Z")).toISOString()).toBe(
+      "2027-01-01T03:00:00.000Z",
+    );
   });
 });
 

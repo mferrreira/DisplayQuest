@@ -4,6 +4,8 @@
  * Feed "Atividade recente" da Home — substitui o card "Histórico de tarefas". Lê as acoes
  * mais recentes gravadas em `history` (entityType "task") pelo modulo de tarefa: quem criou,
  * moveu ou concluiu. Compacto (uma linha por acao), sem o card colapsavel que comia espaco.
+ * Altura fixa com rolagem interna (dono, V6-11k): a lista cresce para dentro do quadro,
+ * nunca para fora — sem isso o card vira uma monstruosidade quando os logs se acumulam.
  */
 import { useTaskActivity } from "@/features/tasks/hooks/use-tasks"
 import { taskStatusSentenceLabel } from "@/components/ui/status"
@@ -54,7 +56,7 @@ export function ActivityFeed() {
       ) : items.length === 0 ? (
         <p className="py-3 text-sm text-muted-foreground">Nenhuma atividade registrada ainda.</p>
       ) : (
-        <ul className="divide-y divide-border">
+        <ul className="max-h-80 overflow-y-auto divide-y divide-border pr-1">
           {items.map((item) => (
             <li key={item.id} className="flex items-center gap-3 py-2">
               <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-info/15 text-[11px] font-medium text-info">

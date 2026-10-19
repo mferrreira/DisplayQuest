@@ -39,6 +39,9 @@ const coordinatorActor = () => userActor(1, ["COORDENADOR"]);
 let tasks: Map<number, Task>;
 let appended: TaskActivityEntry[];
 let seq: { task: number };
+let purgedCutoffs: Date[];
+let purgedCount: number;
+let returnedSince: Date | undefined;
 
 function buildModule(withActivity: boolean) {
   const taskRepo: TaskRepositoryPort = {
@@ -166,7 +169,7 @@ function buildModule(withActivity: boolean) {
     async append(entry) {
       appended.push(entry);
     },
-    async listRecent(limit): Promise<TaskActivityItem[]> {
+    async listRecent(limit, since): Promise<TaskActivityItem[]> {
       const items: TaskActivityItem[] = [
         {
           id: 1,
@@ -179,7 +182,12 @@ function buildModule(withActivity: boolean) {
           at: "2026-10-16T12:00:00.000Z",
         },
       ];
+      if (since) returnedSince = since;
       return items.slice(0, limit);
+    },
+    async purgeOlderThan(cutoff) {
+      purgedCutoffs.push(cutoff);
+      return purgedCount;
     },
   };
 
@@ -207,6 +215,9 @@ beforeEach(() => {
   tasks = new Map();
   appended = [];
   seq = { task: 0 };
+  purgedCutoffs = [];
+  purgedCount = 0;
+  returnedSince = undefined;
 });
 
 describe("registro de atividade no modulo (porta injetada)", () => {
@@ -282,6 +293,11 @@ describe("sem porta de atividade (roundtrip G4, testes de use case)", () => {
     expect(task.id).toBeTruthy();
     await expect(mod.listActivity(10)).resolves.toEqual([]);
   });
+
+  it("a limpeza vira no-op (0) — nao ha bucket de atividade para limpar", async () => {
+    const mod = buildModule(false);
+    await expect(mod.purgeTaskActivity(new Date("2026-10-17T03:00:00.000Z"))).resolves.toBe(0);
+  });
 });
 
 describe("listActivity e a leitura da porta", () => {
@@ -291,5 +307,27 @@ describe("listActivity e a leitura da porta", () => {
 
     expect(items).toHaveLength(1);
     expect(items[0]).toMatchObject({ action: "CREATE", taskTitle: "Lida", actorName: "Coordenador" });
+  });
+
+  it("repassa o corte do dia corrente para a porta (V6-11k: o feed e so de hoje)", async () => {
+    const mod = buildModule(true);
+    const since = new Date("2026-10-17T03:00:00.000Z");
+
+    await mod.listActivity(5, since);
+
+    expect(returnedSince).toEqual(since);
+  });
+});
+
+describe("purgeTaskActivity e a limpeza da porta (V6-11k)", () => {
+  it("repassa o corte do cron e devolve quantos registros saíram", async () => {
+    const mod = buildModule(true);
+    purgedCount = 7;
+    const cutoff = new Date("2026-10-17T03:00:00.000Z");
+
+    const removed = await mod.purgeTaskActivity(cutoff);
+
+    expect(removed).toBe(7);
+    expect(purgedCutoffs).toEqual([cutoff]);
   });
 });

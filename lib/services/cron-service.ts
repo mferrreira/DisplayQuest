@@ -2,6 +2,7 @@ import * as cron from 'node-cron'
 import { getBackendComposition } from '@/backend/composition/root'
 import { SCHEDULED_PAUSE_TIMES } from '@/backend/domain/work'
 import { SYSTEM_REASONS, systemActor } from '@/backend/domain/identity'
+import { startOfCivilDayInstant } from '@/backend/domain'
 
 /**
  * repo-cleanup B3 (D2): as expressões cron de pausa são DERIVADAS de
@@ -67,12 +68,21 @@ export class CronService {
       await this.executeCertificateReminder()
     }, { timezone: 'America/Sao_Paulo' })
 
+    // V6-11k (pedido do dono): limpeza diária do feed "Atividade recente" — 00:07, depois da
+    // virada do dia e do sweep das 23:59. O feed é log simples: só o dia corrente sobrevive.
+    // ESCOPO: `entityType "task"` apenas — a tabela `history` compartilha as premiações
+    // (idempotência LÊ essas linhas) e os avisos do laboratório, que jamais são apagados.
+    this.activityCleanupJob = cron.schedule('7 0 * * *', async () => {
+      await this.executeTaskActivityCleanup()
+    }, { timezone: 'America/Sao_Paulo' })
+
     this.isInitialized = true
   }
 
   private nightlySweepJob: cron.ScheduledTask | null = null
   private overdueScanJob: cron.ScheduledTask | null = null
   private certificateReminderJob: cron.ScheduledTask | null = null
+  private activityCleanupJob: cron.ScheduledTask | null = null
 
   /**
    * Pausa todas as sessões ativas que cruzaram um horário de pausa agendado.
@@ -185,6 +195,29 @@ export class CronService {
   }
 
   /**
+   * V6-11k (pedido do dono): limpeza diária do feed de atividade de tarefa. O corte é o
+   * INÍCIO DO DIA CIVIL de hoje em America/Sao_Paulo (`startOfCivilDayInstant`, a mesma peça
+   * que o filtro de leitura da rota usa) — o que sobra é só o dia corrente.
+   *
+   * Segurança medida (DELETE no banco não admite erro):
+   *   - escopo duro por `entityType "task"` na própria instrução (porta documenta);
+   *   - UMA instrução `deleteMany`, sem transação e sem laço;
+   *   - o número apagado vai para o log com o corte — a limpeza é auditável;
+   *   - falha só vira `console.error`; a rotina volta amanhã e nada quebra. Log de limpeza
+   *     nunca derruba outro job: o try/catch é por job, como os demais.
+   */
+  async executeTaskActivityCleanup() {
+    try {
+      const cutoff = startOfCivilDayInstant(new Date())
+      const { taskManagement } = getBackendComposition()
+      const removed = await taskManagement.purgeTaskActivity(cutoff)
+      console.log(`🧹 Limpeza do feed de atividade: ${removed} registro(s) de tarefa anteriores a ${cutoff.toISOString()}.`)
+    } catch (error) {
+      console.error('❌ Erro na limpeza do feed de atividade:', error)
+    }
+  }
+
+  /**
    * Para o serviço de cron
    */
   stop() {
@@ -205,6 +238,10 @@ export class CronService {
     if (this.certificateReminderJob) {
       this.certificateReminderJob.stop()
       this.certificateReminderJob = null
+    }
+    if (this.activityCleanupJob) {
+      this.activityCleanupJob.stop()
+      this.activityCleanupJob = null
     }
     this.scheduledPauseJobs = []
     this.isInitialized = false

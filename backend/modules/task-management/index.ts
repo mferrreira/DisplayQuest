@@ -58,7 +58,10 @@ export class TaskManagementModule {
   readonly rejectTask: (command: { taskId: number; approverId: number; reason?: string }) => Promise<any>
   readonly globalProgress: (command: { actor: ActorRef }) => Promise<GlobalProgressEntry[]>
   // Feed "Atividade recente": as acoes mais recentes gravadas em `history` (entityType "task").
-  readonly listActivity: (limit: number) => Promise<TaskActivityItem[]>
+  readonly listActivity: (limit: number, since?: Date) => Promise<TaskActivityItem[]>
+  // V6-11k: limpeza periódica do feed (cron). Apaga só `entityType "task"` mais antigo que o
+  // corte; premiações e avisos do lab moram na MESMA tabela e nunca são tocados (porta documenta).
+  readonly purgeTaskActivity: (cutoff: Date) => Promise<number>
   // plan-v4 · V4-4 — subtasks. Devolvem a mãe junto com a subtask porque as duas consequências
   // de mexer numa subtask são da mãe: a base do prêmio muda, e a última concluída move a mãe.
   readonly createTaskSubtask: (command: CreateTaskSubtaskCommand) => Promise<SubtaskMutationResult>
@@ -227,7 +230,8 @@ export class TaskManagementModule {
       return task
     }
     this.globalProgress = (command) => listGlobalProgressUseCase.execute(command)
-    this.listActivity = async (limit) => (activity ? activity.listRecent(limit) : [])
+    this.listActivity = async (limit, since) => (activity ? activity.listRecent(limit, since) : [])
+    this.purgeTaskActivity = async (cutoff) => (activity ? activity.purgeOlderThan(cutoff) : 0)
     this.createTaskSubtask = (command) => createTaskSubtaskUseCase.execute(command)
     this.updateTaskSubtask = (command) => updateTaskSubtaskUseCase.execute(command)
     this.deleteTaskSubtask = (command) => deleteTaskSubtaskUseCase.execute(command)
