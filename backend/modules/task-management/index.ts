@@ -211,7 +211,18 @@ export class TaskManagementModule {
       const result = await completeTaskUseCase.execute(command)
       const id = personId(command.actor)
       if (activity && id != null && result?.task?.id) {
-        await activity.append({ taskId: result.task.id, taskTitle: result.task.title, actorId: id, action: "COMPLETE", toStatus: result.task.status })
+        // O feed nao pode dizer "concluiu" quando o servidor devolveu Em Revisao (tarefa
+        // delegada/de projeto — dono, 2026-10-19): quem arrasta para "Concluído" nesse caso
+        // ENVIA para revisao; a conclusao de fato e a aprovacao, que grava o proprio COMPLETE.
+        // O log obedece o status resultante, nao o nome do metodo.
+        const landedDone = result.task.status === "done"
+        await activity.append({
+          taskId: result.task.id,
+          taskTitle: result.task.title,
+          actorId: id,
+          action: landedDone ? "COMPLETE" : "MOVE",
+          toStatus: result.task.status,
+        })
       }
       return result
     }

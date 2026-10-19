@@ -1097,3 +1097,25 @@ leitura do texto visível. São observações medidas na instância real, **não
   `const purge`); `new Date()` dentro do método do cron compara bem com fake timers
   (`vi.setSystemTime("...T12:34Z")` → corte `...T03:00Z`) e NÃO flake. expressão nova
   `'7 0 * * *'` entra na lista pinada de `tests/unit/services/cron-schedule.test.ts`.
+
+## V6-11m — liderança, resumo da Home, logos e o "concluiu" falso no feed (2026-10-19)
+
+- **Feed não pode dizer "concluiu" antes da aprovação (dono, 2026-10-19):** `completeTask` de
+  tarefa delegada/de projeto devolve `status: "in-review"` (o use case decide: só global/pública
+  cai em `done`), mas o módulo gravava `action: "COMPLETE"` sempre — e o feed renderiza COMPLETE
+  como "concluiu" + check verde. O log agora **obedece o status resultante**: `done` → COMPLETE,
+  `in-review` → MOVE (feed: "moveu para Em Revisão", a mesma frase do remap do cartão). A
+  aprovação continua sendo o único COMPLETE de tarefa de projeto. Congelado em
+  `tests/unit/modules/task-management/task-activity-feed.test.ts` (dois casos: projeto→MOVE,
+  global→COMPLETE).
+- **Liderança (pedido do dono):** bloco do campeão maior (`p-8`, avatar `h-20`, pontos `text-4xl`)
+  e a "Classificação completa" começa no **4º** — o top 3 já está no pódio; a tabela tinha um
+  `podiumUsers.map` duplicado que saiu.
+- **Resumo do laboratório (Home):** o aberto/fechado persiste em `dq:home-aberto`
+  (`clientStorageKey` + `readJson`/`writeJson`); SSR sempre nasce aberto e o `useEffect` aplica a
+  preferência (sem hydration mismatch). Fechada, o cabeçalho usa `py-3` (antes `pt-3` só) — sem o
+  respiro de baixo o título ficava colado no topo ("torto pra baixo").
+- **Logos do rodapé:** as três na MESMA altura (`h-8` = 32px; antes CNPq/Display `h-12`, IFNMG
+  `h-24` → 285px de largura). As três são lockups horizontais (razões 3.25/2.97/2.55), então
+  altura única alinha o porte e estreita o IFNMG (95px). A regra antiga de "proporção pela marca"
+  (V6-11l) foi substituída por decisão do dono.

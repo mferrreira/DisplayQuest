@@ -6,8 +6,10 @@
  *   1. criar tarefa grava CREATE com o status de destino;
  *   2. mover status grava MOVE; editar SEM status (so titulo) NAO grava nada — o feed nao vira
  *      diario de renomeio;
- *   3. concluir grava COMPLETE; aprovar grava COMPLETE (com o approverId, que nao e ator);
- *      rejeitar grava MOVE;
+ *   3. concluir grava COMPLETE so quando o status resultante e "done" (quest global/publica);
+ *      quando o servidor devolve "in-review" (tarefa de projeto), grava MOVE — o feed nao pode
+ *      dizer "concluiu" antes da aprovacao (dono, 2026-10-19); aprovar grava COMPLETE (com o
+ *      approverId, que nao e ator); rejeitar grava MOVE;
  *   4. sem porta injetada (roundtrip G4, testes de use case) nada e gravido e `listActivity`
  *      devolve lista vazia — o modulo nao pode quebrar por falta de bucket de atividade;
  *   5. `listActivity` e so a leitura da porta (o modulo nao rearitmética nada).
@@ -251,15 +253,28 @@ describe("registro de atividade no modulo (porta injetada)", () => {
     expect(appended).toEqual([]);
   });
 
-  it("concluir grava COMPLETE com o status resultante", async () => {
+  it("concluir tarefa de projeto (cai em Em Revisao) grava MOVE, nao COMPLETE — a conclusao de fato e a aprovacao (dono, 2026-10-19)", async () => {
     const mod = buildModule(true);
     const task = await createTask(mod, { title: "Concluir", projectId: PROJECT, status: "in-progress" });
     appended.length = 0;
 
     const result = await mod.completeTask({ actor: coordinatorActor(), taskId: task.id! });
 
+    expect(result.task.status).toBe("in-review");
     expect(appended).toHaveLength(1);
-    expect(appended[0]).toMatchObject({ action: "COMPLETE", taskId: task.id, toStatus: result.task.status, actorId: 1 });
+    expect(appended[0]).toMatchObject({ action: "MOVE", taskId: task.id, toStatus: "in-review", actorId: 1 });
+  });
+
+  it("concluir quest global (cai em Concluido) grava COMPLETE com o status resultante", async () => {
+    const mod = buildModule(true);
+    const task = await createTask(mod, { title: "Quest global", isGlobal: true, status: "in-progress" });
+    appended.length = 0;
+
+    const result = await mod.completeTask({ actor: coordinatorActor(), taskId: task.id! });
+
+    expect(result.task.status).toBe("done");
+    expect(appended).toHaveLength(1);
+    expect(appended[0]).toMatchObject({ action: "COMPLETE", taskId: task.id, toStatus: "done", actorId: 1 });
   });
 
   it("aprovar grava COMPLETE usando o approverId (que nao e ator)", async () => {
