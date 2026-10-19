@@ -1062,3 +1062,38 @@ leitura do texto visível. São observações medidas na instância real, **não
 - **Gotcha de medição:** o Cronograma do detalhe do projeto mora na aba **Tarefas** (primeira peça do
   `TabsContent value="tasks"`, `page.tsx:192`), não numa aba própria — para medir as colunas, entre
   no projeto, clique "Tarefas" e conte os `th` com padrão `^[a-z]{3}/\d{4}$`.
+
+## Rodapé discreto, feed de altura fixa e limpeza diária do feed (V6-11k, 2026-10-18)
+
+- **Rodapé (commit `e18e97b`):** versão discreta do dono — SÓ as logos em um canto
+  (`LOGO.png` do Lab em `h-6` + reserva pontilhada "Logo IFNMG") e o crédito
+  ("Desenvolvido por Márcio Martins Ferreira Júnior") na outra ponta; o nome do instituto
+  e o campus (Januária, NÃO Salinas — correção do dono) moram só em `title`/alt, visível
+  em nenhum texto. A aba "Sobre o Projeto" foi perguntada e o dono recusou ("Não fazer"
+  — o rodapé acabou de ganhar chrome, não recebe mais).
+- **Feed "Atividade recente" da Home:** lista com `max-h-80 overflow-y-auto` — o card
+  cresce para dentro do quadro, nunca para fora (o dono temia "monstruosidade"
+  com logs acumulando). Teto 320px; altura literalmente fixa é um `h-80` de distância.
+- **Limpeza diária do feed (o DELETE que não admite erro):** retenção decidida pelo dono =
+  **só o dia corrente**. Job `'7 0 * * *'` America/Sao_Paulo (`executeTaskActivityCleanup`
+  em `lib/services/cron-service.ts`) chama `taskManagement.purgeTaskActivity(cutoff)`.
+  Corte = `startOfCivilDayInstant(now)` (nova função em `backend/domain/time/civil-day.ts` —
+  00:00 SP = 03:00 UTC; MESMA função do filtro de leitura da rota
+  `/api/tasks/activity`, que agora filtra `performedAt >=` início de hoje). Duas contas de
+  "hoje" em lugares diferentes divergiriam na virada do dia — a função única é a trava.
+- **SCOPO DURO do DELETE (medido em Prisma real):** a tabela `history` tem TRÊS famílias e
+  só a de tarefa é apagável. **`GAMIFICATION_AWARD` (entityType "USER") NUNCA é apagada — a
+  idempotência de premiação LÊ essas linhas (`history.findFirst` por descrição); apagar
+  faria o sistema premiar duas vezes.** `LAB_NOTICE` é o quadro de avisos do laboratório
+  em si, não log. O filtro `entityType: "task" + performedAt < cutoff` está nas DUAS
+  instruções (OptionsMenu: `purgeOlderThan` deleteMany e `listRecent` where), e o
+  roundtrip `tests/integration/task-activity-purge-roundtrip.test.ts` prova contra o banco
+  5433 real: task antiga sai; task de hoje, prêmio antigo e aviso antigo sobrevivem.
+- **Quirk colateral aceito:** `countBlockingDependencies` (delete de usuário, DEC-55) conta
+  `history.performedBy` — limpar logs velhos reduz a contagem e um usuário bloqueado SÓ por
+  logs antigos de tarefa torna-se deletável (409 → 200). Premiação e avisos continuam
+  bloqueando sempre. O guarda `user-delete-schema-drift` não lê esse método, pelo desenho.
+- **Gotcha do job:** `vi.hoisted` no mock da composition root (vi.mock é içado acima do
+  `const purge`); `new Date()` dentro do método do cron compara bem com fake timers
+  (`vi.setSystemTime("...T12:34Z")` → corte `...T03:00Z`) e NÃO flake. expressão nova
+  `'7 0 * * *'` entra na lista pinada de `tests/unit/services/cron-schedule.test.ts`.
