@@ -6,6 +6,19 @@
 
 .opencode/
 
+# Configuracao local de agentes/IDE: cada pessoa tem a sua e nada disso e fonte do
+# produto. `.opencode/` acima segue a mesma regra (a skill do projeto e entregue
+# por fora do repositorio).
+.claude/
+.cursor/
+.windsurf/
+.continue/
+.codex/
+.gemini/
+.specstory/
+.agents/
+.aider*
+
 # Testing
 /coverage
 
