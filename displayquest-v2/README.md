@@ -16,7 +16,8 @@ displayquest-v2/
 ├── plan-v4/       OPERAÇÃO: subtasks, animação de pontos, inativação (2026-10-05) — done (2026-10-07, DEC-78..98)
 ├── plan-v5/       OPERAÇÃO: domínio de projetos maduro — cronograma, pontos, relatórios técnicos, atestados (2026-10-06) — done (2026-10-14, V5-1..V5-12 + V5-fix-1/V5-fix-2; DEC-61..77, 99..104, 126..180)
 ├── plan-v6/       OPERAÇÃO: linguagem visual UI/UX + redistribuição das telas (2026-10-07, revisado 2026-10-14) — done (2026-10-16, V6-0..V6-11; DEC-105..114, 181..188)
-└── plan-v7/       OPERAÇÃO: MCP de validação para o agente consumidor (2026-10-15, revisado 2026-10-21) — planejado, nenhuma onda começada (DEC-190..210, ASK-V7-16..25)
+├── plan-v7/       OPERAÇÃO: MCP de validação para o agente consumidor (2026-10-15, revisado 2026-10-21) — planejado, nenhuma onda começada (DEC-190..210, ASK-V7-16..25)
+└── plan-v8/       OPERAÇÃO: gamificação remodelada — trilhas (pontos mensais, XP/elo de temporada, moeda vitalícia), troféus equipáveis, reset mensal e temporada anual (2026-10-22) — planejado, nenhuma onda começada (MODELO.md = fonte do comportamento; DEC-211..220)
 ```
 
 ## Fluxo de dependências (unidirecional)
@@ -47,7 +48,19 @@ plan-v7 (MCP de validação para o agente consumidor) ──> pacote e serviço 
                                  por e-mail/senha (DEC-205/206), expõe 25 tools na LAN sem
                                  auth de cliente (DEC-207/209) e entrega tools.json +
                                  README. A credencial local e o TLS ficam na fase 2
-                                 (DEC-192/199/200/201).
+                                  (DEC-192/199/200/201).
+
+plan-v8 (gamificação remodelada) ──> nasce do pedido do dono em 2026-10-22 ("repensar do
+                                  zero"): a economia vira quatro trilhas com ciclos
+                                  próprios — pontos mensais (ranking, com snapshot e reset),
+                                  XP e elo da temporada anual (com boosts e penalidades
+                                  próprios), moeda vitalícia (loja; vem só de atividade de
+                                  cronograma aprovada) e troféus vitalícios equipáveis
+                                  (slots liberados pelo elo). `projects.points` sai do
+                                  sistema. O `MODELO.md` é a fonte do comportamento, fechado
+                                  em 6 rodadas com o dono; o plano executa em ondas
+                                  V8-0..V8-8 com G4 obrigatório nas ondas de schema e
+                                  rotina.
 ```
 
 - `spec-v2/` registra a visão do dono (gamificação profunda, projeto mais complexo,
@@ -113,6 +126,22 @@ plan-v7 (MCP de validação para o agente consumidor) ──> pacote e serviço 
   (`api_credentials`/CLI), o TLS, a internet e as 59 tools completas são fase 2
   (DEC-192/199/200/201). Decisões **DEC-190..210**, perguntas **ASK-V7-16..25** (todas
   respondidas; nenhuma aberta), ondas **V7-0..V7-5** na fase 1 e **V7-6..V7-9** adiadas.
+  É **planejado** — nenhuma onda começou.
+- `plan-v8/` nasce do pedido do dono em 2026-10-22: remodelar a gamificação do zero — "ela
+  tem a obrigação de ser a mais bem modelada possível". A modelagem fechou em 6 rodadas de
+  perguntas no mesmo dia e está congelada em `MODELO.md` (fonte de verdade do
+  comportamento, no formato spec-driven do plan-v6): quatro trilhas — **pontos** mensais
+  (placar do ranking, reset mensal com snapshot — DEC-212), **XP** e **elo** da temporada
+  anual (aritmética própria de volume com boosts de constância e penalidades — DEC-214;
+  escada de 6 elos com umbrais a calibrar — DEC-217), **moedas** vitalícias (loja; única
+  fonte: atividade de cronograma aprovada, prêmio atual intacto distribuído pela Hamilton —
+  DEC-215) e **troféus** vitalícios (badges renomeados na UI; conquistados por critério,
+  pessoa equipa até os slots do elo; efeitos com verbos fechados e tiers congelados —
+  DEC-218/219). A virada converte saldo 1:1 (pontos → moeda, preços mantidos — DEC-216);
+  `projects.points` e o publicador DEC-63 saem do sistema; a temporada zera tudo menos
+  moedas e troféus e deixa livro-caixa anual + troféu de campeão (DEC-213). Decisões
+  **DEC-211..220**, perguntas abertas **ASK-V8-23** (ícone do placar, antes de V8-7) e
+  **ASK-V8-24** (ajuste do painel, antes de V8-5), calibrações adiadas **ASK-V8-21/22**.
   É **planejado** — nenhuma onda começou.
 
 ## Regras do container

@@ -24,6 +24,38 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   bucket recusa subir sem ela — e fora da denylist `minioadmin`/`any`/`changeme`). O runner
   lê `process.env`, não `.env` — exporte as variáveis.
 
+## plan-v8 — gamificação remodelada (reservado 2026-10-22)
+
+- **Estado:** `ready` — planejado, nenhuma onda começada. Estado/decisões/modelo:
+  `displayquest-v2/plan-v8/{MODELO.md,PLAN.md,STATE.json}` — MODELO.md é a fonte do
+  comportamento, fechado em 6 rodadas de perguntas ao dono em 2026-10-22; DEC-211..220
+  reservadas (abertas na onda indicada no STATE.json); ondas V8-0..V8-8; ASK-V8-23 (ícone
+  do placar — troca para moeda/raio, Trophy fica só dos troféus) e ASK-V8-24 (ajuste manual
+  do painel sobre as duas trilhas, cada ajuste com linha de `history`) **respondidas pelo
+  dono em 2026-10-22**; calibrações adiadas ASK-V8-21/22 (constantes de XP e umbrais de
+  elo, depois do primeiro ano real).
+- **O desenho em uma linha:** quatro trilhas com ciclos próprios — **pontos** mensais
+  (placar do ranking; reset mensal com snapshot, DEC-212), **XP** e **elo** da temporada
+  anual (aritmética nova de volume: +10/+10/+20 por evento, boosts semanais de constância,
+  penalidades semanais, piso 0, DEC-214; escada BRONZE/PRATA/OURO/PLATINA/DIAMANTE/
+  DESAFIANTE com slots de troféu 0/1/2/2/3/3, DEC-217), **moeda** vitalícia (loja; única
+  fonte: atividade de cronograma aprovada, prêmio atual `100 × meses` com a régua
+  DEC-103/74 intacta distribuída pela Hamilton, DEC-215) e **troféus** vitalícios (badges
+  renomeados na UI; conquistados por critério com janela `mes`/`temporada`/`vida`, pessoa
+  equipa até os slots do elo, efeitos com verbos fechados e tiers congelados, DEC-218/219).
+- **O que muda de measured:** `users.points` perde o triple-role (vira placar mensal); a
+  virada converte saldo 1:1 para `users.coins` (DEC-216); `projects.points` sai do sistema
+  junto do publicador `TaskCompletedEvent` (DEC-63) e do campo "Pontos do projeto"; a
+  derivação dormente de XP/level/elo em `Progression.ts` (sobre `points`, 4 elos, rota sem
+  consumidor de UI) não sobrevive como está.
+- **Rotinas novas (todas `systemActor`, DEC-54):** reset mensal `'0 0 1 * *'`
+  (`MONTHLY_POINTS_RESET`, idempotente por `(userId, month)` — não herda o QUIRK-7C do
+  weekly reset), revisão semanal de XP `'10 0 * * 1'` (`WEEKLY_XP_REVIEW`, idempotente por
+  `(userId, weekStart)`), fechamento de temporada `'5 0 1 1 *'` (`SEASON_CLOSE`, livro-caixa
+  anual + troféu CAMPEÃO pelo maior somatório de pontos mensais, DEC-213).
+- **Absorve:** `displayquest-v2/monthly-points-reset/MODELO.md` (o reset mensal com
+  histórico entra como onda V8-2 do plano).
+
 ## plan-v5 — documentos oficiais, economia do projeto e perfil (2026-10-13..14)
 
 - **Estado:** `done` — **encerrado em 2026-10-14** (batch `V5-close`, G5/G6: rebuild da imagem, 45 capturas
@@ -326,10 +358,13 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   segmento, com o fallback de `app/layout.tsx` citando o produto (188)), **DEC-189 plan-v4
   (2026-10-15, lote SUB-1 pós-encerramento: autoridade de subtask — dono ou gestão, nunca
   `MANAGE_TASKS` em bloco; ver o bloco "Subtask" abaixo), DEC-190..210 plan-v7 (MCP de
-  validação para o agente consumidor; DEC-205..210 na revisão de 2026-10-21). O V4-4 ia usar
-  DEC-61..64 e colidiu; os 28 comentários de código foram renumerados. **Antes de abrir decisão nova, `grep`
-  os SEIS `STATE.json` (clean-arch, plan-v3, plan-v4, plan-v5, plan-v6, plan-v7) — a nota antiga que dizia "três"
-  (e depois "cinco") está velha. Próxima livre: DEC-211.**
+  validação para o agente consumidor; DEC-205..210 na revisão de 2026-10-21), **DEC-211..220
+  plan-v8 (gamificação remodelada, reservadas em 2026-10-22: quatro trilhas — pontos
+  mensais, XP/elo de temporada anual, moeda vitalícia, troféus equipáveis; ver o bloco
+  "plan-v8" abaixo)**. O V4-4 ia usar DEC-61..64 e colidiu; os 28 comentários de código foram
+  renumerados. **Antes de abrir decisão nova, `grep`
+  os SETE `STATE.json` (clean-arch, plan-v3, plan-v4, plan-v5, plan-v6, plan-v7, plan-v8) — a nota antiga que dizia "três"
+  (e depois "cinco") está velha. Próxima livre: DEC-221.**
 - **Subtask (V4-4, DEC-78..83 → regra atual = DEC-97/98/189):** tabela `task_subtasks` (sem FK para
   `users` — subtask não tem
   responsável próprio), base gravada em `tasks.points` = `10 + 5·n` (DEC-97) e **cada subtask CONCLUÍDA
