@@ -12,11 +12,12 @@
  *      fase 2 precisa do `requestedBy`, por isso desceu depois do 404 da atividade).
  *   2. O gate (DEC-76/77): só global manager; GERENTE não aprova o que pediu; COORDENADOR sim.
  *   3. A economia com `now` fixo: ×1,5 antecipada, base no prazo, −10%/dia, piso 0 (DEC-103/74).
- *   4. A ordem das escritas (DEC-165): prêmios → `projects.points` → transição. A transição é
- *      o commit; tudo antes dela é re-executável.
+ *   4. A ordem das escritas (DEC-165, ajustada na V8-1 pelo DEC-215): prêmios → transição. A
+ *      transição é o commit; tudo antes dela é re-executável. O `projects.points` que ficava no
+ *      meio saiu junto da coluna — não há saldo de projeto a subir.
  *   5. Idempotência e falha de crédito não quebram a conclusão (quirk congelado do tarefa).
- *   6. O edge medido da DEC-165: crédito já registrado (0) NÃO impede o incremento do saldo
- *      — quem garante "uma vez só" é a transição de status, não o awardHistory.
+ *   6. O edge medido da DEC-165: crédito já registrado (share 0) NÃO impede a conclusão — quem
+ *      garante "uma vez só" é a transição de status, não o awardHistory.
  */
 import { describe, expect, it, vi } from "vitest";
 import { ConflictError, ForbiddenError, NotFoundError } from "@/backend/domain";
@@ -35,7 +36,6 @@ function projectRow(overrides: Partial<ProjectRecord> = {}): ProjectRecord {
     leaderId: 2,
     status: "active",
     links: null,
-    points: 0,
     logoKey: null,
     bannerKey: null,
     ...overrides,
@@ -83,13 +83,6 @@ class Store {
       projects: {
         async findById() {
           return self.project ? { ...self.project } : null;
-        },
-        async incrementPoints(projectId: number, delta: number) {
-          self.calls.push(`incrementPoints:${projectId}:${delta}`);
-          if (!self.project) throw new Error("projeto ausente");
-          const next = Math.max(0, (self.project.points ?? 0) + delta);
-          self.project = { ...self.project, points: next };
-          return next;
         },
       } as never,
       cronograma: {
@@ -212,16 +205,14 @@ describe("ApproveActivityCompletionUseCase — economia com now fixo (DEC-103/74
       { userId: 2, points: 300 },
       { userId: 3, points: 150 },
     ]);
-    expect(result.projectsPoints).toBe(450);
     expect(result.activity.status).toBe("DONE");
     expect(result.activity.approvedBy).toBe(1);
     expect(result.activity.approvedAt).toBe("2026-06-28T12:00:00.000Z");
 
-    // DEC-165: prêmios primeiro, saldo depois, transição por último (o ponto de commit).
+    // DEC-165 (V8-1): prêmios primeiro, transição por último (o ponto de commit).
     expect(store.calls).toEqual([
       "award:2:1:300",
       "award:3:1:150",
-      "incrementPoints:10:450",
       "approveActivity:1:DONE",
     ]);
   });
@@ -236,9 +227,9 @@ describe("ApproveActivityCompletionUseCase — economia com now fixo (DEC-103/74
     const floored = new Store();
     const result = await floored.approve({ now: "2026-08-01T12:00:00.000Z" });
     expect(result.award).toBe(0);
-    // Prêmio 0: ninguém é chamado, mas o saldo (0) e a transição acontecem.
+    // Prêmio 0: ninguém é chamado, mas a transição acontece.
     expect(result.shares).toEqual([]);
-    expect(storeCalls(floored)).toEqual(["incrementPoints:10:0", "approveActivity:1:DONE"]);
+    expect(storeCalls(floored)).toEqual(["approveActivity:1:DONE"]);
   });
 
   it("membro INATIVO (fora da lista ativa) não entra na conta; sem membros, nada é creditado", async () => {
@@ -252,8 +243,9 @@ describe("ApproveActivityCompletionUseCase — economia com now fixo (DEC-103/74
     nobody.activeMembers = [];
     const empty = await nobody.approve();
     expect(empty.shares).toEqual([]);
-    // O prêmio existe (DEC-63: saldo sobe pelo prêmio) mesmo sem ninguém para recebê-lo.
-    expect(empty.projectsPoints).toBe(450);
+    // O prêmio existe e é distribuído (450) mesmo sem ninguém para recebê-lo.
+    expect(empty.award).toBe(450);
+    expect(storeCalls(nobody)).toEqual(["approveActivity:1:DONE"]);
   });
 
   it("denominador 0 (membros sem tasks): divisão igual pela mesma aritmética Hamilton", async () => {
@@ -267,7 +259,7 @@ describe("ApproveActivityCompletionUseCase — economia com now fixo (DEC-103/74
     ]);
   });
 
-  it("crédito já registrado (idempotência) devolve 0 na share, e o saldo sobe igual mesmo assim (edge DEC-165)", async () => {
+  it("crédito já registrado (idempotência) devolve 0 na share e a conclusão acontece mesmo assim (edge DEC-165)", async () => {
     const store = new Store();
     store.awarded.add("2:1");
     store.awarded.add("3:1");
@@ -278,7 +270,13 @@ describe("ApproveActivityCompletionUseCase — economia com now fixo (DEC-103/74
       { userId: 3, points: 0 },
     ]);
     // Quem garante "uma vez só" é a transição de status (409 na reexecução), não o awardHistory.
-    expect(result.projectsPoints).toBe(450);
+    expect(result.activity.status).toBe("DONE");
+    // O que a share diz é o CREDITADO (0), não o pedido (300/150) — o pedido é o que o award recebe.
+    expect(store.calls).toEqual([
+      "award:2:1:300",
+      "award:3:1:150",
+      "approveActivity:1:DONE",
+    ]);
   });
 
   it("falha de crédito não quebra a conclusão (quirk congelado do caminho de tarefa)", async () => {
@@ -292,7 +290,6 @@ describe("ApproveActivityCompletionUseCase — economia com now fixo (DEC-103/74
       { userId: 2, points: 0 },
       { userId: 3, points: 0 },
     ]);
-    expect(result.projectsPoints).toBe(450);
     expect(spy).toHaveBeenCalled();
     spy.mockRestore();
   });

@@ -3,9 +3,11 @@ export interface TaskCompletedEvent {
   taskId: number;
   taskPoints: number;
   /**
-   * V5-7b (DEC-63): o projeto da tarefa concluída, ou `null` para quest global. É o que
-   * permite ao publicador incrementar `projects.points` na mesma conclusão — o adaptador só
-   * escreve quando há projeto.
+   * V5-7b (DEC-63): o projeto da tarefa concluída, ou `null` para quest global.
+   * V8-1 (DEC-215): ele deixou de ser a chave de uma escrita em `projects.points` (a coluna
+   * saiu) e nenhum adaptador escreve a partir dele hoje. Continua no contrato porque é a
+   * identidade medida do evento: os três call sites (`complete` ×2, `approve` ×1) já a
+   * entregam, e `null` (quest global) é um caso próprio do evento.
    */
   projectId: number | null;
 }

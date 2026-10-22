@@ -9,11 +9,12 @@ const { projectManagement: projectManagementModule } = getBackendComposition()
  * V5-7b (DEC-76/77/103/104) — aprovar a conclusão da atividade (fase 2 das duas fases):
  * COMPLETION_REQUESTED → DONE. Sem corpo: a rota autentica, monta o ator (com os papéis
  * GLOBAIS — o gate da aprovação é `GLOBAL_PROJECT_MANAGERS` e a auto-aprovação só COORDENADOR
- * precisa do papel para decidir) e entrega o `now` do servidor. Gate, status, prêmio,
- * distribuição e `projects.points` são do use case (DEC-157/160).
+ * precisa do papel para decidir) e entrega o `now` do servidor. Gate, status, prêmio e
+ * distribuição são do use case (DEC-157/160).
  *
- * A resposta carrega a economia: `award` (prêmio), `shares` (o que foi creditado por membro,
- * 0 quando já registrado ou o crédito falhou) e `projectsPoints` (saldo novo do projeto).
+ * A resposta carrega a economia: `award` (prêmio) e `shares` (o que foi creditado por membro,
+ * 0 quando já registrado ou o crédito falhou). O `projectsPoints` da V5-7b saiu na V8-1
+ * (DEC-215): não há saldo de projeto a reportar.
  */
 
 export async function POST(
@@ -39,7 +40,7 @@ export async function POST(
       now: new Date(),
     })
     return NextResponse.json(
-      { activity: result.activity, award: result.award, shares: result.shares, projectsPoints: result.projectsPoints },
+      { activity: result.activity, award: result.award, shares: result.shares },
       { status: 200 },
     )
   } catch (error: unknown) {

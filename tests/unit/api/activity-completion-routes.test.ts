@@ -21,7 +21,6 @@ import { NextRequest } from "next/server";
 
 import { createIdentityAccessModule } from "@/backend/modules/identity-access";
 import { createProjectManagementModule } from "@/backend/modules/project-management";
-import { projectPointsBalance } from "@/backend/domain";
 import type { Role } from "@/backend/domain";
 import type {
   ActivityFileRecord,
@@ -56,7 +55,6 @@ const mocks = vi.hoisted(() => ({
   completedTasks: [] as Array<{ taskId: number; assigneeIds: number[]; completerIds: number[] }>,
   awardCalls: [] as Array<{ userId: number; activityId: number; points: number }>,
   awardedKeys: new Set<string>(),
-  pointWrites: [] as Array<{ projectId: number; delta: number; next: number }>,
   approveWrites: [] as Array<{ id: number; status: string; approvedBy: number }>,
   failFileCreate: false,
   bucketConfigured: true,
@@ -84,7 +82,6 @@ function projectRow(id = 10): ProjectRecord {
     leaderId: 2,
     status: "active",
     links: null,
-    points: 0,
     logoKey: null,
     bannerKey: null,
   };
@@ -127,16 +124,6 @@ vi.mock("@/backend/composition/root", () => {
     create: notUsed("projects.create"),
     createWithCronograma: notUsed("projects.createWithCronograma"),
     update: notUsed("projects.update"),
-    async incrementPoints(projectId, delta) {
-      // O duplo aplica a MESMA função pura do adaptador real (DEC-90): o piso 0 da DEC-74 é
-      // a escrita congelada, não uma reimplementação do teste.
-      const current = mocks.projects.get(projectId);
-      if (!current) throw new Error("projeto ausente no duplo");
-      const next = projectPointsBalance(current.points ?? 0, delta);
-      mocks.projects.set(projectId, { ...current, points: next });
-      mocks.pointWrites.push({ projectId, delta, next });
-      return next;
-    },
     delete: notUsed("projects.delete"),
   };
 
@@ -365,7 +352,6 @@ beforeEach(() => {
   ];
   mocks.awardCalls = [];
   mocks.awardedKeys = new Set<string>();
-  mocks.pointWrites = [];
   mocks.approveWrites = [];
   mocks.objects = new Map<string, { body: Uint8Array; contentType: string }>([
     ["projects/10/activities/1/files/parcial.pdf", { body: PDF_BYTES, contentType: "application/pdf" }],
@@ -615,8 +601,7 @@ describe("aprovar conclusão — gate global, economia e saldo (V5-7b, DEC-76/77
       { userId: 2, points: 200 },
       { userId: 3, points: 100 },
     ]);
-    expect(body.projectsPoints).toBe(300);
-    expect(mocks.pointWrites).toEqual([{ projectId: 10, delta: 300, next: 300 }]);
+    // V8-1 (DEC-215): sem `projectsPoints` na resposta — o projeto não tem saldo.
     expect(mocks.approveWrites).toEqual([{ id: 6, status: "DONE", approvedBy: 1 }]);
   });
 
@@ -632,7 +617,6 @@ describe("aprovar conclusão — gate global, economia e saldo (V5-7b, DEC-76/77
     expect(body.award).toBe(0);
     expect(body.shares).toEqual([]);
     expect(mocks.awardCalls).toHaveLength(0);
-    expect(body.projectsPoints).toBe(0);
   });
 
   it("GERENTE não aprova o que ele mesmo pediu (DEC-77); COORDENADOR auto-aprova", async () => {
@@ -678,7 +662,6 @@ describe("aprovar conclusão — gate global, economia e saldo (V5-7b, DEC-76/77
     const response = await APPROVE_COMPLETION(postRequest("/x"), context({ id: "20", activityId: "6" }));
     expect(response.status).toBe(404);
     expect(mocks.awardCalls).toHaveLength(0);
-    expect(mocks.pointWrites).toHaveLength(0);
   });
 
   it("reexecução bate no 409 do status — a economia não roda duas vezes", async () => {
@@ -687,8 +670,9 @@ describe("aprovar conclusão — gate global, economia e saldo (V5-7b, DEC-76/77
     expect(first.status).toBe(200);
     const second = await APPROVE_COMPLETION(postRequest("/x"), context({ id: "10", activityId: "6" }));
     expect(second.status).toBe(409);
-    // O primeiro crédito aconteceu uma vez; o segundo pedido nem chegou à economia.
+    // O primeiro crédito aconteceu uma vez (dois membros); o segundo pedido nem chegou à
+    // economia — a transição de status continua sendo o ponto de commit (DEC-165).
     expect(mocks.awardCalls).toHaveLength(2);
-    expect(mocks.pointWrites).toHaveLength(1);
+    expect(mocks.approveWrites).toHaveLength(1);
   });
 });

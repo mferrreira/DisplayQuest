@@ -8,8 +8,8 @@
  *   2. Sem data de término não há andamento a desenhar — o estado é `sem_datas` e nada é
  *      inventado (o projeto pode não ter período).
  *   3. O percentual é do TEMPO decorrido do período (início → término), não de tarefas:
- *      é o gráfico que o dono pediu ("data_final − dia_de_hoje"), e a premiação do projeto
- *      já tem exibição própria (`projects.points`, DEC-63).
+ *      é o gráfico que o dono pediu ("data_final − dia_de_hoje"). V8-1 (DEC-215) tirou a
+ *      premiação do projeto do sistema, então aqui só existe o relógio do período.
  *   4. Fora do período não existe percentual negativo nem dias negativos: antes do início
  *      o relógio está em 0; depois do término o projeto está `encerrado` a 100%.
  */

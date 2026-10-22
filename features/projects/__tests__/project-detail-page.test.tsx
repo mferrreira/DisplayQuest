@@ -46,7 +46,6 @@ const project = {
   editalNumber: "ED-14",
   processNumber: "PROC-14",
   proppiNumber: "PROPPI-14",
-  points: 20,
   links: [],
 } as any;
 

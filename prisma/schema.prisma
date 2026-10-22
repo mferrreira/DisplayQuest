@@ -11,7 +11,19 @@ model users {
   id                   Int                    @id @default(autoincrement())
   name                 String
   email                String                 @unique
+  // plan-v8 (DEC-211/216): `points` perde o triple-role. Continua uma coluna Int com default 0,
+  // mas passa a ser o PLACAR DO MÊS (ranking) — moeda da loja sai para `coins` e a métrica
+  // cumulativa de ranking sai para os snapshots (`month_history`/`season_history`). Na virada
+  // 1:1 do deploy o saldo atual vira `coins` e o placar começa em 0 (DEC-216).
   points               Int                    @default(0)
+  // V8-1 (DEC-215/216): moeda da loja, VITALÍCIA — única fonte é atividade de cronograma
+  // aprovada (a mudança de destino do crédito é a V8-5). Entre V8-1 e V8-4 a coluna existe sem
+  // fonte, por ordem das ondas (PLAN §4).
+  coins                Int                    @default(0)
+  // V8-1 (DEC-214): XP da TEMPORADA anual, com piso 0 na aritmética do domínio (a regra é a
+  // V8-3). Não confudir com a derivação dormente `xp = max(0, points)` em `Progression.ts`,
+  // que é sobre `points` e não sobrevive como está (V8-6).
+  xp                   Int                    @default(0)
   completedTasks       Int                    @default(0)
   password             String?
   status               String                 @default("pending")
@@ -73,6 +85,11 @@ model users {
   // (auditoria). Nenhum dos dois entra na guarda de FKs bloqueantes.
   certificatesAsMember  certificates[] @relation("CertificateMember")
   certificatesGenerated certificates[] @relation("CertificateGenerator")
+  // V8-1 (DEC-212/213): as duas trilhas de histórico da gamificação nova. Cascade, pelo
+  // precedente de `weekly_hours_history` (a guarda user-delete-schema-drift.test.ts confere:
+  // Cascade não entra em `countBlockingDependencies`).
+  monthHistory  month_history[]  @relation("UserMonthHistory")
+  seasonHistory season_history[] @relation("UserSeasonHistory")
 }
 
 model projects {
@@ -86,12 +103,13 @@ model projects {
   links       Json?
   // V5-2b (DEC-61/63). Datas civis `YYYY-MM-DD` — mesma decisão de `createdAt`/`dueDate`,
   // que já são String: a aritmética do plano é de dias civis (backend/domain/time/civil-day).
-  // `points` é o saldo do projeto (DEC-63), escrito só por use case de economia (DEC-74, piso 0).
+  // V8-1 (DEC-215): `points` SAI daqui. O saldo Hamilton do projeto não é mais trilha do
+  // sistema — o prêmio de atividade aprovada vira moeda da pessoa (`users.coins`, V8-5) e o
+  // publicador `TaskCompletedEvent -> projects.points` (DEC-63) saiu junto.
   startDate     String?
   endDate       String?
   editalNumber  String?
   processNumber String?
-  points        Int      @default(0)
   // V5-4a (DEC-140): o nº PROPPI aparece nos dois formulários oficiais e é dado do projeto,
   // não da pessoa nem do vínculo.
   proppiNumber  String?
@@ -486,6 +504,12 @@ model history {
   newValues   Json?
   description String?
   metadata    Json?
+  // V8-1 (DEC-211): de qual trilha fala esta linha. Vocabulário fechado no domínio
+  // (`backend/domain/gamification/tracks.ts` — POINTS | COINS | XP), com default POINTS. É String
+  // como `entityType`/`action` (mesma escolha da DEC-141 para vocabulário: migration de linha sem
+  // constraint no banco). Toda linha existente nasce POINTS — inclusive os awards antigos.
+  // `metadata.pointsAwarded` passa a ser lido como o montante da trilha desta linha.
+  track       String   @default("POINTS")
   performer   users    @relation("UserHistory", fields: [performedBy], references: [id])
 
   @@index([entityType, entityId])
@@ -554,6 +578,49 @@ model weekly_hours_history {
   user       users    @relation("UserWeeklyHoursHistory", fields: [userId], references: [id], onDelete: Cascade)
 }
 
+// V8-1 (DEC-212): snapshot MENSAL do placar — a memória do ranking que deixou de ser cumulativo.
+// `month` é data civil no formato `YYYY-MM` (a mesma régua de `backend/domain/time/civil-day.ts`,
+// nunca um `Date` instantâneo). `points` guarda o saldo do mês NEGATIVO quando ele foi negativo
+// (o mês perdoa, o histórico não apaga). A quem escreve é o `ResetMonthlyPointsUseCase` da V8-2
+// com `systemActor("MONTHLY_POINTS_RESET")`.
+// Idempotência por `(userId, month)`: a unique abaixo É a trava — o QUIRK-7C do weekly reset
+// (rotina sem deduplicação) não é herdado (DEC-212).
+// Cascade: histórico da pessoa não bloqueia excluir a conta (precedente `weekly_hours_history`).
+model month_history {
+  id             Int      @id @default(autoincrement())
+  userId         Int
+  month          String
+  points         Int
+  completedTasks Int      @default(0)
+  createdAt      DateTime @default(now())
+  user           users    @relation("UserMonthHistory", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, month])
+  @@index([month])
+}
+
+// V8-1 (DEC-213): livro-caixa da TEMPORADA (ano civil) por pessoa. Quem escreve é o
+// `CloseSeasonUseCase` da V8-4 (`systemActor("SEASON_CLOSE")`, idempotência por `(userId, year)`
+// — a unique abaixo é a trava). `points` é o somatório dos pontos mensais do ano, que é também o
+// critério do troféu de CAMPEÃO. `elo`/`position` são preenchidos na V8-4/V8-6: o vocabulário do
+// elo fecha em V8-6 (DEC-217), então a coluna é String por enquanto. Moedas e troféus conquistados
+// não aparecem aqui porque não resetam — não há o que livro-caixar deles.
+model season_history {
+  id             Int      @id @default(autoincrement())
+  userId         Int
+  year           Int
+  points         Int      @default(0)
+  completedTasks Int      @default(0)
+  xp             Int      @default(0)
+  elo            String?
+  position       Int?
+  createdAt      DateTime @default(now())
+  user           users    @relation("UserSeasonHistory", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, year])
+  @@index([year])
+}
+
 model badges {
   id          Int           @id @default(autoincrement())
   name        String
@@ -562,6 +629,13 @@ model badges {
   color       String?
   category    BadgeCategory
   criteria    Json?
+  // V8-1 (DEC-218): lista fechada de `{verb, tier}` — o admin ESCOLHE do menu, nenhum número
+  // livre. A validação do vocabulário (verbos `pontos_tarefa +%`, `pontos_sessao +%`,
+  // `moedas_atividade +%`, `penalidade −%` × Tier1/Tier2/Tier3) é do domínio e entra na V8-6;
+  // a coluna existe agora para a migration do catálogo não ter que esperar o motor.
+  // Cada critério (Json) ganha `window`: `mes | temporada | vida` (DEC-219); o catálogo
+  // existente migra com `vida` na data migration da V8-1.
+  effects     Json?
   isActive    Boolean       @default(true)
   createdAt   DateTime      @default(now())
   createdBy   Int
@@ -573,6 +647,12 @@ model user_badges {
   id       Int      @id @default(autoincrement())
   userId   Int
   badgeId  Int
+  // V8-1 (DEC-218): conquistado é uma coisa, equipado é outra. A conquista continua vitalícia
+  // (a unique abaixo é a trava — nunca se re-conquista); a pessoa escolhe quais ficam ativos no
+  // perfil, e o teto de equipados é o slot do elo DO MOMENTO (BRONZE 0 / PRATA 1 / OURO 2 /
+  // PLATINA 2 / DIAMANTE 3 / DESAFIANTE 3). O teto é regra de código (V8-6), não constraint
+  // aqui: o elo muda com a temporada e a coluna não pode travar isso no banco.
+  equipped Boolean  @default(false)
   earnedAt DateTime @default(now())
   earnedBy Int?
   badge    badges   @relation("BadgeUserBadges", fields: [badgeId], references: [id], onDelete: Cascade)

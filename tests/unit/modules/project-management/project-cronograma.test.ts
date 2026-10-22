@@ -59,7 +59,6 @@ function projectRow(overrides: Partial<ProjectRecord> = {}): ProjectRecord {
     editalNumber: null,
     processNumber: null,
     proppiNumber: null,
-    points: 0,
     logoKey: null,
     bannerKey: null,
     ...overrides,
@@ -130,7 +129,7 @@ class Fakes {
       async create(input) {
         self.simpleCreateCalls += 1;
         const id = self.nextId++;
-        const row = projectRow({ ...input, id, points: 0 });
+        const row = projectRow({ ...input, id });
         self.projects.set(id, row);
         return { ...row };
       },
@@ -147,7 +146,7 @@ class Fakes {
           self.activities.set(activityId, activityRow(activityId, { projectId: id, ...activity }));
           return activityId;
         });
-        const row = projectRow({ ...input, id, points: 0 });
+        const row = projectRow({ ...input, id });
         self.projects.set(id, row);
         return { project: { ...row }, goalIds, activityIds };
       },
@@ -158,9 +157,6 @@ class Fakes {
       },
       async delete(id) {
         self.projects.delete(id);
-      },
-      async incrementPoints() {
-        throw new Error("incrementPoints não deveria rodar neste arquivo");
       },
     };
   }

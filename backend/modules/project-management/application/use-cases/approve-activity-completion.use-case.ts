@@ -27,11 +27,12 @@ import type { ProjectRepositoryPort } from "@/backend/modules/project-management
  * do `requestedBy` da atividade (auto-aprovação, DEC-77), então ele corre DEPOIS do 404 da
  * atividade — 404 projeto → 404 atividade → 403 gate → 409 status.
  *
- * A ordem das ESCRITAS é a decisão medida (DEC-165): prêmios (idempotentes por membro,
- * `GAMIFICATION:ACTIVITY_COMPLETED:<atividade>`) → `projects.points` → transição de status.
- * Qualquer falha antes da transição deixa o mundo re-executável: os prêmios já creditados
- * devolvem 0 na repetição e a atividade segue REQUESTED. A transição por último é o ponto de
- * commit — é o que impede a economia de rodar duas vezes para o mesmo membro.
+ * A ordem das ESCRITAS é a decisão medida (DEC-165), ajustada na V8-1 (DEC-215): prêmios
+ * (idempotentes por membro, `GAMIFICATION:ACTIVITY_COMPLETED:<atividade>`) → transição de
+ * status. O incremento de `projects.points` que ficava no meio saiu junto da coluna. Qualquer
+ * falha antes da transição deixa o mundo re-executável: os prêmios já creditados devolvem 0 na
+ * repetição e a atividade segue REQUESTED. A transição por último é o ponto de commit — é o que
+ * impede a economia de rodar duas vezes para o mesmo membro.
  *
  * A falha de um crédito não quebra a conclusão (quirk congelado do caminho de tarefa,
  * `task-view.ts`): o fluxo registra a atividade concluída e o erro do crédito fica no log.
@@ -54,7 +55,6 @@ export interface ApproveActivityCompletionResult {
   activity: Awaited<ReturnType<ProjectCronogramaPort["approveActivity"]>>
   award: number
   shares: ActivityAwardShare[]
-  projectsPoints: number
 }
 
 export class ApproveActivityCompletionUseCase {
@@ -124,16 +124,12 @@ export class ApproveActivityCompletionUseCase {
       }
     }
 
-    // DEC-63/74: o saldo do projeto sobe pelo prêmio (não pela soma creditada — a transição
-    // roda uma vez, e o piso 0 é da escrita congelada no adaptador).
-    const projectsPoints = await this.dependencies.projects.incrementPoints(command.projectId, award)
-
     const updated = await this.dependencies.cronograma.approveActivity(activity.id, {
       status: "DONE",
       approvedBy: command.actorId,
       approvedAt: command.now,
     })
 
-    return { activity: updated, award, shares: credited, projectsPoints }
+    return { activity: updated, award, shares: credited }
   }
 }

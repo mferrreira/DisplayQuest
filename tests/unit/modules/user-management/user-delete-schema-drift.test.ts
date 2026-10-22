@@ -152,6 +152,12 @@ describe("guarda de deriva — as FKs que bloqueiam excluir usuário (DEC-55)", 
       // V5-10a (DEC-170): o atestado é documento regenerável — apagar a pessoa apaga o
       // atestado dela, e a conta não fica bloqueada por ele.
       "certificates",
+      // plan-v8 V8-1 (DEC-212/213): snapshot mensal e livro-caixa anual são histórico DA PESSOA,
+      // no mesmo caso do `weekly_hours_history` (precedente). Constar bloqueio aqui faria o
+      // repositório procurar dependência que o schema já resolve, e o "cadastro de teste" deixaria
+      // de ser excluível.
+      "month_history",
+      "season_history",
     ]);
     for (const model of cascading) {
       for (const rel of counted) {

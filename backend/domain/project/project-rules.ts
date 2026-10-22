@@ -39,14 +39,11 @@ export const PROJECT_MANAGER_MEMBERSHIP_ROLES: string[] = ["COORDENADOR", "GEREN
 /** Statuses deleteProject accepts (project-management.gateway.ts:151). */
 export const DELETABLE_PROJECT_STATUSES: string[] = ["active", "archived", "on_hold"];
 
-/**
- * DEC-74: `projects.points` tem PISO 0 na escrita do saldo — diferença deliberada em
- * relação a `users.points`, que continua sem piso (DEC-39). O delta pode ser negativo
- * (prêmio de tarefa atrasada credita negativo); o saldo do projeto não passa de zero.
- */
-export function projectPointsBalance(current: number, delta: number): number {
-  return Math.max(0, current + delta)
-}
+// V8-1 (DEC-215): `projectPointsBalance` (DEC-74, o piso 0 do saldo do projeto) saiu daqui junto
+// da coluna `projects.points`. O prêmio da atividade aprovada não tem mais destino de projeto:
+// ele é distribuído às pessoas (Hamilton intacta) e passa a cair na trilha moeda na V8-5.
+// A régua do prêmio em si (DEC-103: 100 × meses, ×1,5 antecipado, −10%/dia com piso 0) continua
+// em `activity-rules.ts` / `cronograma-rules.ts`, intacta.
 
 /** Volunteer-stats audience (project-management.gateway.ts:173-175). */
 export function isProjectVolunteerRole(roles: string[] | undefined | null): boolean {
@@ -132,15 +129,14 @@ export interface ProjectRecordLike {
   leaderId?: number | null;
   status: string;
   links?: unknown;
-  // V5-2b (DEC-61/63): datas civis `YYYY-MM-DD` e texto de cadastro; `points` é lido aqui e
-  // escrito por use case de economia, nunca pela rota de atualização.
+  // V5-2b (DEC-61/63): datas civis `YYYY-MM-DD` e texto de cadastro. V8-1 (DEC-215): o `points`
+  // do projeto saiu junto da coluna — não existe saldo de projeto para ler nem escrever.
   startDate?: string | null;
   endDate?: string | null;
   editalNumber?: string | null;
   processNumber?: string | null;
   /** V5-4a (DEC-140). */
   proppiNumber?: string | null;
-  points?: number;
 }
 
 /** Teto dos campos de texto novos, o mesmo do nome do projeto. */
@@ -386,6 +382,10 @@ export function toVolunteerEntry(
     hoursWorked: roundHours(totalSeconds),
     currentWeekHours: roundHours(weekSeconds),
     tasksCompleted: member.user?.completedTasks || 0,
+    // plan-v8 (DEC-211): a coluna `points` da pessoa passou a ser o PLACAR DO MÊS, então este
+    // número (tela de voluntários, sobre a PESSOA, não sobre o projeto) agora é o placar do mês
+    // corrente. A aritmética e o agregado são os mesmos; quem re-significa a exibição é a V8-7
+    // (DEC-220), não esta onda.
     pointsEarned: member.user?.points || 0,
     status: "active",
     lastActivity: now.toISOString().split("T")[0],

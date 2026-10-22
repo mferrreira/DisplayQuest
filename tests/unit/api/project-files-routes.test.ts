@@ -84,7 +84,6 @@ function projectRow(id = 10): ProjectRecord {
     leaderId: 2,
     status: "active",
     links: null,
-    points: 0,
     logoKey: null,
     bannerKey: null,
   };
@@ -117,7 +116,6 @@ vi.mock("@/backend/composition/root", () => {
       return next;
     },
     delete: notUsed("projects.delete"),
-    incrementPoints: notUsed("projects.incrementPoints"),
   };
 
   const memberships: ProjectManagementMembershipPort = {

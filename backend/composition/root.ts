@@ -42,19 +42,16 @@ export function createBackendComposition(): BackendComposition {
   const gamification = createGamificationModule()
   const userManagement = createUserManagementModule()
 
-  // V5-7b (DEC-21/63/74): o adaptador de `projects` é compartilhado — o módulo de projeto o
-  // usa, e o publicador de conclusão de tarefa o usa para incrementar `projects.points`. O
-  // piso 0 (DEC-74) é a escrita congelada dele e mora num lugar só; o módulo de tarefa só
-  // conhece a porta local `TaskProjectPointsPort`, satisfeita estruturalmente.
+  // V5-7b (DEC-21/63/74): o adaptador de `projects` era compartilhado porque o publicador de
+  // conclusão de tarefa o usava para incrementar `projects.points`. V8-1 (DEC-215): a coluna
+  // saiu, o publicador não escreve mais saldo de projeto, e o compartilhamento perdeu o
+  // motivo — o adaptador volta a ser só do módulo de projeto.
   const projectsRepository = createPrismaProjectRepository()
 
   const taskManagement = createTaskManagementModule({
     notifications,
     events: createTaskProgressEvents({
       awards: gamification,
-      projectPoints: {
-        incrementProjectPoints: (projectId, delta) => projectsRepository.incrementPoints(projectId, delta),
-      },
     }),
     // Feed "Atividade recente": grava/le `history` (entityType "task"). Sem migration — a
     // tabela ja existe como auditoria da casa.

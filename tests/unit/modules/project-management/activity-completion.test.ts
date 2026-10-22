@@ -58,7 +58,6 @@ function projectRow(overrides: Partial<ProjectRecord> = {}): ProjectRecord {
     editalNumber: null,
     processNumber: null,
     proppiNumber: null,
-    points: 0,
     logoKey: null,
     bannerKey: null,
     ...overrides,
@@ -137,9 +136,6 @@ class Fakes {
       },
       async delete() {
         throw new Error("delete não deveria rodar neste arquivo");
-      },
-      async incrementPoints() {
-        throw new Error("incrementPoints não deveria rodar neste arquivo");
       },
     };
   }

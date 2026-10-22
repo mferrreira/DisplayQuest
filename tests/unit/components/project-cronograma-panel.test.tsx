@@ -369,7 +369,6 @@ async function recordingFetch(input: unknown, init: RequestInit = {}) {
       shares: [...shares.entries()]
         .filter(([, points]) => points > 0)
         .map(([userId, points]) => ({ userId, points })),
-      projectsPoints: award,
     });
   }
 

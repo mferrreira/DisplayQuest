@@ -17,14 +17,13 @@ export interface ProjectRecord {
   links?: unknown;
   memberCount?: number;
   members?: ProjectMemberSummary[];
-  /** V5-2b (DEC-61/63): datas civis `YYYY-MM-DD`, texto de cadastro e saldo do projeto. */
+  /** V5-2b (DEC-61/63): datas civis `YYYY-MM-DD` e texto de cadastro. */
   startDate?: string | null;
   endDate?: string | null;
   editalNumber?: string | null;
   processNumber?: string | null;
   /** V5-4a (DEC-140): nº PROPPI. */
   proppiNumber?: string | null;
-  points?: number;
   /**
    * V5-2d (DEC-102): chave do objeto no bucket. A coluna guarda a CHAVE, nunca um caminho de
    * disco, e o binário é lido pelo seam (`lib/storage/blob-store.ts`) na rota de leitura.
@@ -42,7 +41,7 @@ export interface NewProjectInput {
   leaderId: number | null;
   status: string;
   links: unknown;
-  /** V5-2b. `points` não entra: o saldo nasce do default da coluna (DEC-63/74, regra 6). */
+  /** V5-2b. */
   startDate: string | null;
   endDate: string | null;
   editalNumber: string | null;
@@ -71,12 +70,8 @@ export interface ProjectRepositoryPort {
   ): Promise<CreatedProjectWithCronograma>
   /** Full-record update; createdAt/createdBy are NOT written (frozen from the repository). */
   update(record: ProjectRecord): Promise<ProjectRecord>
-  /**
-   * V5-7b (DEC-63/74): incremento do saldo de projeto com PISO 0 na escrita — a regra é a
-   * função pura `projectPointsBalance`, aplicada pelo adaptador (escrita congelada, mesma
-   * natureza do incremento atômico do awardHistory). Devolve o saldo novo.
-   */
-  incrementPoints(projectId: number, delta: number): Promise<number>
+  // V8-1 (DEC-215): `incrementPoints` saiu junto da coluna `projects.points` — não há saldo de
+  // projeto a incrementar (o publicador DEC-63 saiu com ela).
   delete(id: number): Promise<void>
 }
 

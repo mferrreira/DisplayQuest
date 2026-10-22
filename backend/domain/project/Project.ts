@@ -46,7 +46,7 @@ export interface IProject {
    * hora: `projects.createdAt` e `tasks.dueDate` já são `String` no schema e a aritmética do
    * plano é de dias civis em America/Sao_Paulo (`backend/domain/time/civil-day.ts`). Guardar
    * o instante cru reabre o erro que o plan-v3 fechou (meia-noite UTC virando o dia anterior).
-   * `points` é lido pela UI e escrito só por use case de economia (DEC-63/74, regra 6).
+   * V8-1 (DEC-215): o `points` do projeto saiu daqui junto da coluna — não há saldo de projeto.
    */
   startDate?: string | null;
   endDate?: string | null;
@@ -54,7 +54,6 @@ export interface IProject {
   processNumber?: string | null;
   /** V5-4a (DEC-140): nº PROPPI. É dado do projeto, não da pessoa nem do vínculo. */
   proppiNumber?: string | null;
-  points?: number;
 }
 
 export interface Project extends IProject {

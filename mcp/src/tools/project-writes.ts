@@ -61,7 +61,7 @@ export const projectUpdateTool = defineTool({
   name: "project_update",
   title: "Atualizar projeto",
   description:
-    "Atualiza campos do projeto. Não aceita points, logoKey nem bannerKey. Chave ausente não apaga.",
+    "Atualiza campos do projeto. Não aceita logoKey nem bannerKey. Chave ausente não apaga.",
   readOnly: false,
   inputSchema: z.object({
     projectId: z.number().int().positive(),

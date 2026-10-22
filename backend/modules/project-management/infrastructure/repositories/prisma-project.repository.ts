@@ -1,5 +1,4 @@
 import { prisma } from "@/lib/database/prisma"
-import { projectPointsBalance } from "@/backend/domain"
 import type { ProjectMemberSummary } from "@/backend/domain"
 import type { NewProjectInput, ProjectRecord, ProjectRepositoryPort } from "@/backend/modules/project-management/application/ports/project.repository"
 
@@ -35,7 +34,6 @@ type ProjectRow = {
   editalNumber: string | null
   processNumber: string | null
   proppiNumber: string | null
-  points: number
   logoKey: string | null
   bannerKey: string | null
   members?: Array<{ userId: number; roles?: string[]; user?: { id: number; name: string; email: string; roles: string[] } | null }>
@@ -57,7 +55,6 @@ function toRecord(row: ProjectRow): ProjectRecord {
     editalNumber: row.editalNumber ?? null,
     processNumber: row.processNumber ?? null,
     proppiNumber: row.proppiNumber ?? null,
-    points: row.points ?? 0,
     logoKey: row.logoKey ?? null,
     bannerKey: row.bannerKey ?? null,
     memberCount: row._count?.members ?? row.members?.length ?? undefined,
@@ -177,17 +174,8 @@ export function createPrismaProjectRepository(): ProjectRepositoryPort {
       })
       return toRecord(row as unknown as ProjectRow)
     },
-    async incrementPoints(projectId: number, delta: number) {
-      // DEC-74: o piso é a função pura do domínio aplicada na escrita congelada — o delta
-      // pode ser negativo (prêmio de tarefa atrasada) e o saldo não passa de zero.
-      const current = await prisma.projects.findUnique({ where: { id: projectId }, select: { points: true } })
-      if (!current) {
-        throw new Error(`projeto ${projectId} ausente para incrementar pontos`)
-      }
-      const next = projectPointsBalance(current.points, delta)
-      await prisma.projects.update({ where: { id: projectId }, data: { points: next } })
-      return next
-    },
+    // V8-1 (DEC-215): `incrementPoints` (DEC-63/74) saiu junto da coluna `projects.points` —
+    // a escrita congelada com piso 0 não tem mais o que escrever.
     async delete(id) {
       await prisma.projects.delete({ where: { id } })
     },

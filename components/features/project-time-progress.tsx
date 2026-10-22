@@ -12,8 +12,8 @@ import { civilDayOfInstant, projectTimeProgress } from "@/backend/domain"
  * inventa percentual (lição DEC-96: a tela fala o vocabulário da regra, não o próprio).
  *
  * Sem data de término não há andamento a desenhar e o componente não renderiza nada —
- * o projeto pode não ter período. `projects.points` já tem exibição própria no diálogo
- * (DEC-63): aqui é só o relógio do calendário.
+ * o projeto pode não ter período. Aqui é só o relógio do calendário: a economia do projeto
+ * saiu do sistema na V8-1 (DEC-215), e não há saldo a exibir ao lado dele.
  */
 export function ProjectTimeProgress({
   startDate,

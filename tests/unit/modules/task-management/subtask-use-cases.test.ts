@@ -561,8 +561,10 @@ describe("V4-4/V4-5 · DEC-97 — o prêmio creditado na aprovação é a mãe +
     const result = await taskModule.approveTask({ taskId: 62, approverId: 1 });
 
     expect(result.awardedPoints).toBe(20);
-    // V5-7b (DEC-63): o evento carrega o projeto da tarefa — é como a conclusão de task sobe
-    // `projects.points`. A forma exata congelada aqui é o contrato do evento.
+    // V5-7b (DEC-63): o evento carrega o projeto da tarefa, e a forma exata congelada aqui é o
+    // contrato do evento. V8-1 (DEC-215): `projectId` continua no contrato como identidade (é o
+    // que distingue quest de tarefa de projeto), mas não é mais chave de escrita em
+    // `projects.points` — a coluna saiu.
     expect(store.awards).toEqual([{ userId: 7, taskId: 62, taskPoints: 20, projectId: 3 }]);
   });
 

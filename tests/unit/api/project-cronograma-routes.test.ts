@@ -68,7 +68,6 @@ function projectRow(overrides: Partial<ProjectRecord> = {}): ProjectRecord {
     editalNumber: null,
     processNumber: null,
     proppiNumber: null,
-    points: 0,
     logoKey: null,
     bannerKey: null,
     ...overrides,
@@ -139,11 +138,10 @@ vi.mock("@/backend/composition/root", () => {
         const id = mocks.nextId++;
         mocks.activities.set(id, activityRow(id, { projectId: 55, ...activity }));
       }
-      return { project: { ...projectRow(), ...input, id: 55, points: 0 }, goalIds: [], activityIds: [] };
+      return { project: { ...projectRow(), ...input, id: 55 }, goalIds: [], activityIds: [] };
     },
     update: notUsed("projects.update"),
     delete: notUsed("projects.delete"),
-    incrementPoints: notUsed("projects.incrementPoints"),
   };
 
   const memberships: ProjectManagementMembershipPort = {

@@ -136,11 +136,10 @@ describe("G4 roundtrip — project-management + project-membership (isolated tes
     expect(row?.createdBy).toBe(coordId);
     expect(row?.leaderId).toBe(leaderId);
     expect(row?.createdAt).toMatch(/^\d{4}-\d{2}-\d{2}T/); // projects.createdAt is a String column (frozen schema)
-    // V5-2b: migration nullable, sem backfill — projeto criado sem os campos novos nasce
-    // sem período e com o saldo do default da coluna.
+    // V5-2b: migration nullable, sem backfill — projeto criado sem os campos novos nasce sem
+    // período. V8-1 (DEC-215): sem `points` — o projeto não tem saldo.
     expect(row?.startDate).toBeNull();
     expect(row?.endDate).toBeNull();
-    expect(row?.points).toBe(0);
 
     const memberships = await prisma.project_members.findMany({ where: { projectId } });
     const byUser = new Map(memberships.map((m) => [m.userId, m.roles]));
@@ -151,7 +150,7 @@ describe("G4 roundtrip — project-management + project-membership (isolated tes
     expect(byUser.get(betoId)).toEqual(["VOLUNTARIO"]);
   });
 
-  it("campos de dados do projeto (V5-2b): data civil normalizada, edital/processo, e `points` fora do update", async () => {
+  it("campos de dados do projeto (V5-2b): data civil normalizada, edital/processo e PROPPI", async () => {
     const updated = await projectModule.updateProject({
       projectId,
       actorId: coordId,
@@ -161,7 +160,6 @@ describe("G4 roundtrip — project-management + project-membership (isolated tes
         editalNumber: "EDITAL 12/2026",
         processNumber: "IFNMG-2026/0042",
         proppiNumber: "2026.01.001", // V5-4a (DEC-140)
-        points: 99999, // ignorado de propósito: regra 6 do plano (DEC-63/74)
       },
     });
     expect(updated.startDate).toBe("2026-02-01");
@@ -169,13 +167,11 @@ describe("G4 roundtrip — project-management + project-membership (isolated tes
     expect(updated.editalNumber).toBe("EDITAL 12/2026");
     expect(updated.processNumber).toBe("IFNMG-2026/0042");
     expect(updated.proppiNumber).toBe("2026.01.001");
-    expect(updated.points).toBe(0);
 
     const row = await prisma.projects.findUnique({ where: { id: projectId } });
     expect(row?.startDate).toBe("2026-02-01");
     expect(row?.endDate).toBe("2026-10-13"); // gravado como dia civil, não como o ISO que entrou
     expect(row?.proppiNumber).toBe("2026.01.001");
-    expect(row?.points).toBe(0);
 
     await expect(
       projectModule.updateProject({ projectId, actorId: coordId, data: { startDate: "2026-02-29" } }),

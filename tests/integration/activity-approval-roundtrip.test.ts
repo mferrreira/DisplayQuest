@@ -16,8 +16,11 @@
  *   3. membro INATIVO (DEC-149) fica fora da conta mesmo tendo tarefas;
  *   4. o credit de cada membro é uma linha `GAMIFICATION:ACTIVITY_COMPLETED:<atividade>` no
  *      history e incrementa `users.points` de verdade;
- *   5. `projects.points` sobe pelo prêmio com piso 0 (DEC-63/74);
- *   6. GERENTE não auto-aprova (403); COORDENADOR sim (DEC-77).
+ *   5. GERENTE não auto-aprova (403); COORDENADOR sim (DEC-77).
+ *
+ * V8-1 (DEC-215): o item que existia aqui — "`projects.points` sobe pelo prêmio com piso 0
+ * (DEC-63/74)" — saiu junto da coluna. O projeto não tem saldo: o prêmio é só das pessoas (e a
+ * V8-5 muda o destino delas para a trilha moeda).
  *
  * Limpeza: as linhas `history` dos awards têm FK RESTRICT para `users` — saem ANTES dos
  * usuários no afterAll. Só as linhas criadas por este arquivo saem.
@@ -287,13 +290,6 @@ describe("G4 roundtrip — aprovação de atividade e economia do projeto (isola
     expect(bolsista1?.points).toBe(450);
     expect(bolsista2?.points).toBe(450);
     expect(inativo?.points).toBe(0);
-  });
-
-  it("projects.points sobe pelo prêmio com piso 0 (DEC-63/74)", async () => {
-    const project = await prisma.projects.findUnique({ where: { id: projectId }, select: { points: true } });
-    // Etapa A: 450. Etapa B (mesma grade, mesmo dia): +450. Piso 0 nunca foi tocado — deltas
-    // positivos; o piso é provado como regra pura no teste de domínio.
-    expect(project?.points).toBe(900);
   });
 
   it("award já registrado não re-credita: a chave é por (usuário, atividade) no history", async () => {

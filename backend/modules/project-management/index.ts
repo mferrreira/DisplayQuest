@@ -114,7 +114,11 @@ export class ProjectManagementModule {
   readonly removeActivityFile: UseCaseExecute<RemoveActivityFileUseCase>
   readonly assertCanRequestActivityCompletion: UseCaseExecute<AssertCanRequestActivityCompletionUseCase>
   readonly requestActivityCompletion: UseCaseExecute<RequestActivityCompletionUseCase>
-  /** V5-7b (DEC-76/77): a fase 2 — aprovar, creditar a distribuição, subir `projects.points`. */
+  /**
+   * V5-7b (DEC-76/77): a fase 2 — aprovar e creditar a distribuição. V8-1 (DEC-215): o incremento
+   * de `projects.points` que ficava no meio saiu junto da coluna; a transição de status continua
+   * sendo o ponto de commit.
+   */
   readonly approveActivityCompletion: UseCaseExecute<ApproveActivityCompletionUseCase>
   /** V5-8 (DEC-64): varredura de atraso — chamada só pela rotina do cron, sem rota. */
   readonly notifyOverdueActivities: UseCaseExecute<NotifyOverdueActivitiesUseCase>

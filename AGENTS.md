@@ -8,7 +8,7 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
 - **Gate de entrega:** `npm run arch:check` (exit 0, allow-list **vazia**) && `npm run lint` (nada de erro) && `npx tsc --noEmit` (0) && `npx vitest run` (zero failure). A contagem é **por branch**: no `dev` o baseline era **64 arquivos / 721 testes** quando o B8 removeu os 651 testes de paridade; no `plan/v3-operacional`, medido no encerramento do plan-v3 (2026-10-03), são **65 arquivos / 798 testes** em `tests/unit` + `features` e **75 / 881** na suíte completa. Na `dev` de hoje (medido em 2026-10-07, depois do plan-v4 V4-1/V4-2/V4-3/V4-6, do V4-4 de subtasks, dos testes do painel V4-4b/V4-4c, do V4-5a/V4-5b/V4-5c de subtask na UI, do V4-6b de vocabulário de status e do lote pós-encerramento POS-1 — DEC-97/98) são **87 arquivos / 1107 testes** e **97 / 1192** na suíte completa; a suíte e2e do quadro está em **2 passando + 1 falha conhecida + 5 "did not run"** (medido 2026-10-06
 no V4-5c; eram 7 quando a coluna `Em Revisão` tinha um cartão a menos) — o 3º teste quebra por cartão a
 mais na coluna (dado legítimo da instância, não código: hoje são as tarefas 50 e 304), e como o spec é
-serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 5 passando. Compare sempre com o `STATE.json` do plano em que você está. Na `dev` de hoje, medido no fechamento do plan-v6 (2026-10-16, ondas V6-0..V6-11: shell, Home, Projetos, detalhe do projeto, Laboratório, Relatórios, Perfil/Ranking, Loja, Admin, Login/Register), são **179 arquivos / 2224 testes** em `tests/unit` + `features` e **194 / 2354** na suíte completa (G0 1061 módulos / 4531 dependências); o `tsc` desta branch **fecha em 0** — o erro pré-existente em `features/laboratorio/__tests__/floating-timer-tabs.test.tsx:105` foi consertado no `SUB-1` (regex ancorada no lugar do `exact`, que não existe em `ByRoleOptions`). Re-medido em 2026-10-15 (V6-2): o e2e do quadro está em **8 passando** (o spec hoje tem 8 testes; a falha conhecida por cartão a mais em `Em Revisão` **não reproduziu** — o dado da instância mudou; ela pode voltar se o dono mover outro cartão para lá) e o do shell em **5 passando**. Na branch do fechamento do repo-cleanup (`refactor/b6-restante`, medido 2026-10-08 depois do B6-2c..B6-7) o baseline é **95 arquivos / 1280 testes** em `tests/unit` + `features` e **105 / 1367** na suíte completa (G0 810 módulos / 3295 dependências).
+serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 5 passando. Compare sempre com o `STATE.json` do plano em que você está. Na `dev` de hoje, medido no fechamento do plan-v6 (2026-10-16, ondas V6-0..V6-11: shell, Home, Projetos, detalhe do projeto, Laboratório, Relatórios, Perfil/Ranking, Loja, Admin, Login/Register), são **179 arquivos / 2224 testes** em `tests/unit` + `features` e **194 / 2354** na suíte completa (G0 1061 módulos / 4531 dependências); o `tsc` desta branch **fecha em 0** — o erro pré-existente em `features/laboratorio/__tests__/floating-timer-tabs.test.tsx:105` foi consertado no `SUB-1` (regex ancorada no lugar do `exact`, que não existe em `ByRoleOptions`). Re-medido em 2026-10-15 (V6-2): o e2e do quadro está em **8 passando** (o spec hoje tem 8 testes; a falha conhecida por cartão a mais em `Em Revisão` **não reproduziu** — o dado da instância mudou; ela pode voltar se o dono mover outro cartão para lá) e o do shell em **5 passando**. Na branch do fechamento do repo-cleanup (`refactor/b6-restante`, medido 2026-10-08 depois do B6-2c..B6-7) o baseline é **95 arquivos / 1280 testes** em `tests/unit` + `features` e **105 / 1367** na suíte completa (G0 810 módulos / 3295 dependências). Na branch do plan-v8 (`plan-v8/gamificacao`), medido no fechamento da onda **V8-1** (2026-10-22), são **189 arquivos / 2289 testes** no projeto unit (`tests/unit` + `features/**/__tests__` + `entities`) e **206 / 2427** na suíte completa, com **G4 17 / 138** contra a 5433 e G0 **1109 módulos / 4713 dependências** (allow-list vazia).
 - **G4/integração:** roundtrips Prisma real rodam **só** contra o banco de teste isolado `dq-dev-test-db` em `127.0.0.1:5433` (`$env:DATABASE_URL="postgresql://dq_dev:dq_dev_local_only@127.0.0.1:5433/dq_dev_test"; npx vitest run`) — nunca contra o `display-quest-db` (5432, produção local).
 - **Setup do G4 (corrigido 2026-10-02):** `npm run db:test:up` e `npm run db:test:setup` **existem**
   no `package.json` e fazem a sequência completa (`docker compose -f docker-compose.test.yml up -d`,
@@ -26,10 +26,13 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
 
 ## plan-v8 — gamificação remodelada (aberto 2026-10-22)
 
-- **Estado:** `in_progress` — **V8-0 done em 2026-10-22** (baseline re-medido: 188 arquivos /
-  2288 testes em `tests/unit` + `features` + `entities`, 204 / 2419 na suíte completa, G4 16 /
-  131 contra a 5433, G0 1106 módulos / 4703 dependências com allow-list vazia, `tsc` 0,
-  `npm run lint` exit 0 com 15 warnings). DEC-211..220 **abertas** no registry, cada uma com a
+- **Estado:** `in_progress` — **V8-1 done em 2026-10-22** (schema + virada 1:1 + saída de
+  `projects.points`; gates medidos na onda: unit+features 189 arquivos / 2289 testes, suíte
+  completa 206 / 2427, G4 17 / 138 na 5433, G0 1109 módulos / 4713 dependências com allow-list
+  vazia, `tsc` 0, `npm run lint` exit 0 com 15 warnings). Antes disso, **V8-0 done em 2026-10-22**
+  (baseline re-medido: 188 arquivos / 2288 testes em `tests/unit` + `features` + `entities`,
+  204 / 2419 na suíte completa, G4 16 / 131 contra a 5433, G0 1106 módulos / 4703 dependências com
+  allow-list vazia, `tsc` 0, `npm run lint` exit 0 com 15 warnings). DEC-211..220 **abertas** no registry, cada uma com a
   onda indicada, mais **DEC-221** (regime de execução, aberta 2026-10-22; próxima livre
   **DEC-222**). **Regime (DEC-221):** uma onda por vez, autorizada pelo orquestrador do thread
   — sem espera de ordem explícita a partir da V8-1; pare e reporte no fim de cada onda; commit
@@ -45,6 +48,29 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   do painel sobre as duas trilhas, cada ajuste com linha de `history`) **respondidas pelo
   dono em 2026-10-22**; calibrações adiadas ASK-V8-21/22 (constantes de XP e umbrais de
   elo, depois do primeiro ano real).
+- **A V8-1 entregou (2026-10-22):** `users.coins`/`users.xp` (Int, default 0) com as relações
+  `monthHistory`/`seasonHistory`; os modelos `month_history` (`month String` `YYYY-MM`,
+  `@@unique([userId, month])`) e `season_history` (`year Int`, `elo`/`position` nulos,
+  `@@unique([userId, year])`), os dois com `onDelete: Cascade` no caso do `weekly_hours_history`;
+  `history.track String @default("POINTS")`; `badges.effects Json?`; `user_badges.equipped Boolean
+  @default(false)`; e `projects.points` fora do sistema (coluna, campo na tela, `incrementPoints`
+  do adaptador, `TaskProjectPointsPort` do publicador DEC-63). Migration pelo caminho offline do
+  V4-4 (`migrate diff` → gravar → `migrate deploy` → `generate`), aplicada **só na 5433** (23
+  linhas em `_prisma_migrations`); a data migration `prisma/data-migrations/v8-1-virada-1-1.sql`
+  (coins = points 1:1, placar zerado, `window: "vida"` nos critérios do catálogo) foi aplicada na
+  5433 e conferida por soma (`sum(points)` 14 → 0, `sum(coins)` 0 → 14). Ela roda na **5432 real**
+  apenas no V8-CLOSE.
+- **Três decisões de execução da V8-1:** (1) `history.track` é **String** com default, não enum — a
+  mesma escolha da DEC-141 (vocabulário fechado no domínio:
+  `backend/domain/gamification/tracks.ts`, `POINTS | COINS | XP`); a fechadura é a guarda
+  `tests/unit/domain/gamification/gamification-tracks.test.ts`, porque o banco aceita qualquer
+  texto e o `tsc` só protege quem importa a constante. (2) Os dois históricos novos são **Cascade**
+  (snapshot e livro-caixa são histórico DA PESSOA), então as FKs bloqueantes continuam 18 e a lista
+  documentada de cascade do guarda `user-delete-schema-drift.test.ts` ganhou os dois modelos.
+  (3) `entities/user.ts` **não** recebeu `coins`/`xp`: nenhuma rota emite as colunas ainda, e campo
+  na trilha de wire sem consumidor é exatamente a deriva dormente que a DEC-211 enterrou.
+  `TaskCompletedEvent.projectId` ficou no contrato como identidade (é o que distingue quest de tarefa
+  de projeto, congelado em teste), só deixou de ser chave de escrita.
 - **O desenho em uma linha:** quatro trilhas com ciclos próprios — **pontos** mensais
   (placar do ranking; reset mensal com snapshot, DEC-212), **XP** e **elo** da temporada
   anual (aritmética nova de volume: +10/+10/+20 por evento, boosts semanais de constância,
@@ -423,11 +449,17 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   `KNOWN_DIVERGENCES` ficou vazio. Nenhuma tela
   `.tsx` chamava `deleteUser`. O `DELETE /api/users/[id]` agora **recusa com 409** quando há
   dependência; sem dependência continua excluindo (é o caso "cadastro de teste").
-- **18 das 27 FKs para `users` são `RESTRICT`** (default do Prisma, sem `onDelete`); 8
-  cascadeiam (`project_members`, `task_assignees`, `task_user_progress`, `work_sessions`,
-  `weekly_hours_history`, `user_badges.userId`, `notifications`, `certificates.userId` — a 8ª
-  entrou no V5-10a, DEC-170: atestado é documento gerado e regenerável, não bloqueia conta) e 4
-  são `SetNull` (três do cronograma, DEC-155, e `certificates.generatedBy`, DEC-170). A 17ª bloqueante
+- **18 das 32 FKs para `users` não declaram `onDelete`** (o default do Prisma; medido 2026-10-22:
+  32 FK constraints apontando para `users` na 5433); 10 cascadeiam (`project_members`,
+  `task_assignees`, `task_user_progress`, `work_sessions`, `weekly_hours_history`,
+  `user_badges.userId`, `notifications`, `certificates.userId` — a 8ª entrou no V5-10a, DEC-170:
+  atestado é documento gerado e regenerável, não bloqueia conta — mais `month_history` e
+  `season_history`, entradas na V8-1 do plan-v8, DEC-212/213) e 4 são `SetNull` **explícito** no
+  schema (três do cronograma, DEC-155, e `certificates.generatedBy`, DEC-170). Nuance medida no
+  banco: das 18 sem `onDelete`, as 5 de coluna **nullable** (`projects.leaderId`,
+  `tasks.assignedTo`, `tasks.createdBy`, `issues.assigneeId`, `user_badges.earnedBy`) saem como
+  `SET NULL` no Postgres; o que o guarda e `countBlockingDependencies` contam é a política da casa
+  (409 antes do delete), não a regra que o banco aplicaria. A 17ª bloqueante
   entrou no V5-2c
   (`project_attachments.uploadedBy`, DEC-134 — anexo é dado do projeto, não de quem o subiu) e a
   18ª no V5-7a (`project_activity_files.uploadedBy`, DEC-162 — prova de atividade é dado do
@@ -511,17 +543,16 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
 - **Ordem das escritas (DEC-165):** prêmios idempotentes por membro (chave
   `GAMIFICATION:ACTIVITY_COMPLETED:<atividade>`; a consulta real do awardHistory é
   `entityId` + `description` — o fake de teste que ignorava o userId escondia colisão entre
-  membros da mesma atividade) → `projects.points` (`projectPointsBalance` piso 0, escrita
-  congelada do adaptador de projects) → **transição de status por último**, o ponto de commit:
-  reexecução bate no 409 antes da economia. Crédito já registrado (share 0) **não** impede o
-  incremento do saldo. Falha de crédito vai pro log e não quebra a conclusão (quirk congelado do
-  caminho de tarefa).
-- **Task → `projects.points` (DEC-63):** `TaskCompletedEvent` carrega `projectId` **obrigatório**
-  (null = quest global) e o publicador incrementa pelo valor **efetivamente creditado** (idempotência
-  devolve 0 e 0 não escreve; negativo passa — o piso é da escrita do projeto). O composition root
-  compartilha o adaptador de projects entre o módulo de projeto e o publicador de tarefa
-  (`TaskProjectPointsPort` local, DEC-21); os três call sites de `publishTaskCompletionAward`
-  (complete ×2, approve ×1) passam `task.projectId ?? null`.
+  membros da mesma atividade) → **transição de status por último**, o ponto de commit: reexecução
+  bate no 409 antes da economia. Falha de crédito vai pro log e não quebra a conclusão (quirk
+  congelado do caminho de tarefa). O passo de meio que existia aqui — `projects.points`
+  (`projectPointsBalance`, piso 0) — saiu na **V8-1 do plan-v8 (DEC-215)** junto da coluna.
+- **Task → `projects.points` (DEC-63) — SUPERADO pela DEC-215 (V8-1 do plan-v8, 2026-10-22):** o
+  publicador não incrementa saldo de projeto porque a coluna saiu. `TaskCompletedEvent` continua
+  carregando `projectId` **obrigatório** (null = quest global) como identidade do evento, e os três
+  call sites de `publishTaskCompletionAward` (complete ×2, approve ×1) continuam passando
+  `task.projectId ?? null`; o que não existe mais é a `TaskProjectPointsPort` local (DEC-21) e o
+  adaptador compartilhado no composition root.
 - **Vocabulário em uma fonte só:** `GamificationSourceType` ganhou `ACTIVITY_COMPLETED` no domínio e
   `gamification/application/contracts.ts` **re-exporta** o tipo do domínio em vez de manter cópia
   (a cópia local de 3 membros era exatamente o modo de falha DEC-95/96). O gamification **não**

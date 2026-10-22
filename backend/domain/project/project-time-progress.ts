@@ -8,9 +8,8 @@
  * entrada (linhas legadas) porque `civilDayOfDate` resolve os dois formatos para o MESMO
  * dia do calendário do laboratório.
  *
- * O percentual é do TEMPO do período, não de tarefas: a premiação do projeto
- * (`projects.points`, DEC-63) já tem exibição própria, e as duas coisas não devem ser
- * confundidas na tela.
+ * O percentual é do TEMPO do período, não de tarefas. V8-1 (DEC-215) tirou a premiação do
+ * projeto do sistema, então sobra só a leitura temporal: "em execução há quanto do período".
  */
 import { civilDayOfDate, civilDaysBetween } from "@/backend/domain/time/civil-day";
 

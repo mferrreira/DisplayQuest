@@ -7,8 +7,8 @@
  *     America/Sao_Paulo, e `backend/domain/time/civil-day.ts` já é a peça que resolve o
  *     fuso. Guardar ISO cru reabre o erro que o plan-v3 fechou (meia-noite UTC virando o
  *     dia anterior).
- *   - `points` é lido pela UI e **escrito só por use case de economia** (DEC-63/74, regra 6
- *     do plano): nenhum `UPDATE` direto de UI. `applyProjectUpdate` ignora o campo.
+ *   - V8-1 (DEC-215): o `points` do projeto saiu junto da coluna — não há saldo a ler nem a
+ *     escrever (a "regra 6" de o proibir na rota de update deixou de ter objeto).
  *   - edital/processo são texto livre com teto de comprimento, no mesmo padrão do nome.
  */
 import { describe, expect, it } from "vitest";
@@ -159,8 +159,4 @@ describe("applyProjectUpdate — escrita dos campos novos (V5-2b)", () => {
     expect(untouched.startDate).toBeUndefined();
   });
 
-  it("`points` NÃO é escrevível por update (regra 6 do plano: nenhum UPDATE direto de UI)", () => {
-    const next = applyProjectUpdate({ ...baseRecord, points: 300 }, { points: 99999 });
-    expect(next.points).toBe(300);
-  });
 });

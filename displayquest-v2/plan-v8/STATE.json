@@ -1,11 +1,11 @@
 {
   "plan": "plan-v8",
   "title": "Gamificacao remodelada: trilhas, ciclos, moeda, trofeus equipaveis",
-  "version": "1.2.0",
-  "updatedAt": "2026-10-22T14:25:21-03:00",
+  "version": "1.3.0",
+  "updatedAt": "2026-10-22T17:42:54-03:00",
   "status": "in_progress",
-  "activeWave": null,
-  "activeBatch": "V8-0 done; aguardando a instrucao do orquestrador para a V8-1 (regime DEC-221: uma onda por vez, pare e reporte)",
+  "activeWave": "V8-1",
+  "activeBatch": "V8-1 done; parei e reportei (regime DEC-221) - proxima onda V8-2 (ciclo mensal) com autorizacao do orquestrador",
   "awaitingInstruction": true,
   "lineage": {
     "previousPlan": "plan-v6 (linguagem visual + redistribuicao das telas), encerrado em 2026-10-16; plan-v7 (MCP de validacao) planejado em 2026-10-21 e sem ondas executadas. O plan-v8 nao depende do MCP e o MCP nao depende do plan-v8.",
@@ -38,13 +38,16 @@
   "measurements": {
     "currentGates": {
       "measuredAt": "2026-10-22",
-      "measuredBy": "V8-0",
-      "G0": "npm run arch:check - exit 0; allow-list VAZIA; 1106 modulos / 4703 dependencias cruisadas, zero violacao",
-      "G1": "npm run lint - exit 0, 0 erros, 15 warnings pre-existentes (rules-of-hooks e exhaustive-deps em arquivos ja existentes, mais no-img-element)",
+      "measuredBy": "V8-1",
+      "G0": "npm run arch:check - exit 0; allow-list VAZIA; 1109 modulos / 4713 dependencias cruisadas, zero violacao (era 1106 / 4703 na V8-0)",
+      "G1": "npm run lint - exit 0, 0 erros, 15 warnings pre-existentes (mesma contagem da V8-0)",
       "G2": "npx tsc --noEmit - 0 erros",
-      "G3": "npx vitest run - 204 arquivos / 2419 testes verdes; divisao unit+features (tests/unit + features/__tests__ + entities) = 188 arquivos / 2288 testes",
-      "G4": "npx vitest run tests/integration - 16 arquivos / 131 testes verdes contra dq-dev-test-db:5433 com DATABASE_URL exportado para a 5433; a 5432 nao foi tocada",
-      "note": "Armadura da medicao: a arvore nao tinha node_modules (npm ci na raiz; npm ci em mcp/ para o tsc da raiz enxergar o pacote do plan-v7). O banco de teste ja tinha as 22 migrations e recebeu db:seed + g4-normalize.sql. e2e (Playwright) nao re-medido nesta onda: exige dev server na 3001 e mexe no dado da instancia."
+      "G3": "npx vitest run - 206 arquivos / 2427 testes verdes; divisao unit+features (tests/unit + features/__tests__ + entities) = 189 arquivos / 2289 testes (era 188 / 2288)",
+      "G4": "npx vitest run tests/integration - 17 arquivos / 138 testes verdes contra dq-dev-test-db:5433 com DATABASE_URL exportado para a 5433 (era 16 / 131); a 5432 nao foi tocada",
+      "migration": "prisma/migrations/20261022120000_add_gamification_tracks aplicada na 5433 (23 linhas em _prisma_migrations) pelo caminho offline do V4-4 (migrate diff --from-schema-datamodel/--to-schema-datamodel -> gravar -> migrate deploy -> prisma generate). A data migration prisma/data-migrations/v8-1-virada-1-1.sql foi aplicada na 5433 e conferida: sum(points) 14 -> 0, sum(coins) 0 -> 14 em 37 usuarios; 2 badges passaram a declarar window 'vida'. A 5432 (display-quest-db) nao foi tocada.",
+      "note": "Contagem batida com o que mudou: unit +1 arquivo (guarda tests/unit/domain/gamification/gamification-tracks.test.ts, 7 testes) e -6 testes (5 casos do describe 'tarefa de projeto conclui incrementa projects.points (DEC-63/74)' e 1 caso 'points NAO e escrevivel por update'); integration +1 arquivo (tests/integration/gamification-tracks-roundtrip.test.ts, 8 testes) e -1 teste (o roundtrip 'projects.points sobe pelo premio com piso 0'). 2288 + 7 - 6 = 2289; 131 + 8 - 1 = 138; 2289 + 138 = 2427.",
+      "e2e": "NAO re-medido na V8-1: o schema novo nao muda tela nenhuma ainda (nenhuma tela consome coins/xp/equipped), e o spec do quadro e serial e depende do dado da instancia.",
+      "armadura": "Duas medições de ambiente: (a) rodar `npx vitest run tests/unit tests/features` com caminho filtrado NAO reproduz o escopo canonico do projeto unit (que e tests/unit + features/**/__tests__ + entities/**) - o numero certo sai de `npx vitest run` menos `tests/integration`; (b) sem DATABASE_URL exportado para a 5433, tres testes de rota de usuarios falham (user-person-data-routes x2, users-authorization x1) lendo a 5432 - conferido com `git stash`: o baseline falha identico, nao e regressao desta onda."
     }
   },
   "waves": [
@@ -53,7 +56,18 @@
       "title": "baseline, lineage e reserva de decisoes",
       "status": "done",
       "completedAt": "2026-10-22",
-      "decisions": ["DEC-211", "DEC-212", "DEC-213", "DEC-214", "DEC-215", "DEC-216", "DEC-217", "DEC-218", "DEC-219", "DEC-220"],
+      "decisions": [
+        "DEC-211",
+        "DEC-212",
+        "DEC-213",
+        "DEC-214",
+        "DEC-215",
+        "DEC-216",
+        "DEC-217",
+        "DEC-218",
+        "DEC-219",
+        "DEC-220"
+      ],
       "scope": "Re-medir G0-G4 na working tree e gravar; registrar as dez decisoes no decisionRegistry com status aberta; indexar o plan-v8 no displayquest-v2/README.md e atualizar o bloco de numeracao do AGENTS.md (proxima livre DEC-221). Sem codigo.",
       "gate": "STATE.json valido, README indexado, AGENTS.md atualizado, G0-G3 re-medidos verdes.",
       "gateResult": "G0 exit 0 com allow-list vazia, 1106 modulos / 4703 dependencias; G1 exit 0 (0 erros, 15 warnings); G2 0 erros; G3 204 arquivos / 2419 testes (unit+features 188 / 2288); G4 16 arquivos / 131 testes na 5433. STATE.json parseia. README do container e AGENTS.md atualizados. Zero codigo de aplicacao nesta onda.",
@@ -62,17 +76,34 @@
     {
       "id": "V8-1",
       "title": "schema e virada 1:1",
-      "status": "planned",
-      "decisions": ["DEC-211", "DEC-215", "DEC-216", "DEC-219"],
+      "status": "done",
+      "decisions": [
+        "DEC-211",
+        "DEC-215",
+        "DEC-216",
+        "DEC-219"
+      ],
       "scope": "users.coins, users.xp; month_history, season_history; user_badges.equipped; badges.effects (verb+tier fechado) e janela por criterio; history.track; saida de projects.points (coluna, campo na tela, publicador DEC-63). Migration pelo caminho medido do V4-4 (migrate diff -> gravar -> deploy), aplicada SO na 5433 durante o plano (DEC-221); o deploy na 5432 real fica no batch V8-CLOSE. Data migration coins = points 1:1 roda na 5433 para os roundtrips; na 5432 ela acontece no CLOSE. Entidades zod e fixtures ajustados.",
       "gate": "G0-G4. Roundtrip: coins/xp/historicos; guarda da saida de projects.points.",
-      "dependsOn": "V8-0"
+      "dependsOn": "V8-0",
+      "completedAt": "2026-10-22",
+      "gateResult": "G0 exit 0 com allow-list vazia (1109 modulos / 4713 dependencias); G1 exit 0 (0 erros, 15 warnings); G2 0 erros; G3 206 arquivos / 2427 testes (unit+features 189 / 2289); G4 17 arquivos / 138 testes na 5433, com o roundtrip novo das trilhas e sem o teste que provava projects.points. Roundtrip novo prova: coins/xp com default 0 e independentes de points; a data migration da virada lida do arquivo e executada em transacao DESFEITA (moeda = saldo, placar 0, e segunda aplicacao nao move nada); janela 'vida' entra no criterio sem sobrescrever janela existente e sem tocar criterio nulo; projects.points ausente em information_schema; unique (userId, month) e (userId, year) recusando a segunda linha; Cascade apagando os snapshots com a pessoa; a linha de history do award real nascendo track = POINTS.",
+      "executionNotes": [
+        "history.track e String com @default(\"POINTS\"), nao enum: mesma escolha da DEC-141 para vocabulario (migration de linha sem constraint no banco). O vocabulario POINTS | COINS | XP e dono de backend/domain/gamification/tracks.ts, e a guarda tests/unit/domain/gamification/gamification-tracks.test.ts fecha a fechadura (o banco aceitaria qualquer texto).",
+        "month_history e season_history apontam para users com onDelete: Cascade, no caso do weekly_hours_history (snapshot e livro-caixa SAO historico da pessoa). Consequencia medida: as FKs bloqueantes continuam 18 e o guarda user-delete-schema-drift.test.ts ganhou os dois modelos na lista documentada de cascade.",
+        "entities/user.ts NAO recebeu coins/xp: nenhuma rota emite as colunas ainda. A trilha de wire entra junto do consumidor de UI (V8-5/V8-6/V8-7); adiantar campo sem consumidor e o erro que a DEC-211 ja descreveu para a deriva dormente.",
+        "TaskCompletedEvent.projectId continua no contrato (identidade medida nos 3 call sites e congelada em teste de subtask), mas deixou de ser chave de escrita: TaskProjectPointsPort e o incrementPoints do adaptador de projects sairam.",
+        "A resposta de approve-completion perdeu projectsPoints (rota, ActivityApprovalResult e o fake do painel), e o campo 'Pontos do projeto' saiu do detalhe do projeto. O contrato de resposta do premio por membro (award/shares) nao mudou.",
+        "O premio de atividade aprovada ainda credita users.points: a moeda (V8-5) e o XP (V8-3) tem onda propria. Nada em users.coins/users.xp e escrito por use case ainda - hoje so a data migration e o teste."
+      ]
     },
     {
       "id": "V8-2",
       "title": "ciclo mensal",
       "status": "planned",
-      "decisions": ["DEC-212"],
+      "decisions": [
+        "DEC-212"
+      ],
       "scope": "ResetMonthlyPointsUseCase com $transaction unica (snapshot por pessoa com saldo != 0 OU atividade no mes, depois zera), idempotente por (userId, month), cron '0 0 1 * *' America/Sao_Paulo, systemActor(MONTHLY_POINTS_RESET). Snapshot guarda negativo; coluna comeca 0; sem herdar QUIRK-7C do semanal.",
       "gate": "G0-G4. Roundtrip: fechar mes no banco de teste, reexecutar sem duplicar, mes seguinte parte de 0.",
       "dependsOn": "V8-1"
@@ -81,7 +112,9 @@
       "id": "V8-3",
       "title": "motor de XP",
       "status": "planned",
-      "decisions": ["DEC-214"],
+      "decisions": [
+        "DEC-214"
+      ],
       "scope": "xp-rules.ts no dominio com constantes congeladas (MODELO Sec.4); credit XP nos eventos tarefa/sessao/atividade na transacao do award; ReviewWeeklyXpUseCase no cron '10 0 * * 1' (semana civil segunda-domingo), systemActor(WEEKLY_XP_REVIEW), idempotente por (userId, weekStart); piso 0.",
       "gate": "G0-G4. Roundtrip: semana com constancia, semana sem meta, tarefa atrasada.",
       "dependsOn": "V8-1"
@@ -90,7 +123,9 @@
       "id": "V8-4",
       "title": "temporada e campeao",
       "status": "planned",
-      "decisions": ["DEC-213"],
+      "decisions": [
+        "DEC-213"
+      ],
       "scope": "CloseSeasonUseCase no cron '5 0 1 1 *' (depois do snapshot mensal do mesmo dia): season_history por pessoa, trofeu CAMPEAO para o maior somatorio de pontos mensais, reset de pontos/XP/elo/contagens anuais; moedas e trofeus nao sao tocados; idempotencia por (userId, ano).",
       "gate": "G0-G4. Roundtrip: virada com dois anos sinteticos; reexecucao nao duplica.",
       "dependsOn": "V8-2"
@@ -99,7 +134,9 @@
       "id": "V8-5",
       "title": "moeda e loja",
       "status": "planned",
-      "decisions": ["DEC-215"],
+      "decisions": [
+        "DEC-215"
+      ],
       "scope": "Credit do premio de atividade (valor e Hamilton intactos) escreve users.coins (track COINS); loja migra para moeda (preco, suficiencia, decremento, estorno, approval do painel); ajuste manual do painel nas duas trilhas separadas - set/add/remove de PONTOS do mes e de MOEDAS, cada um gravando linha de history (ASK-V8-24 respondida 2026-10-22).",
       "gate": "G0-G3 + G4 (compra: suficiencia e estorno em moeda) + G5.",
       "dependsOn": "V8-1"
@@ -108,7 +145,11 @@
       "id": "V8-6",
       "title": "elo, trofeus equipaveis e motor novo",
       "status": "planned",
-      "decisions": ["DEC-217", "DEC-218", "DEC-219"],
+      "decisions": [
+        "DEC-217",
+        "DEC-218",
+        "DEC-219"
+      ],
       "scope": "Elo derivado do XP da temporada (escada 0/400/900/1500/2400/3600, slots 0/1/2/2/3/3); equip/unequip (dono da conta, slots pelo elo do momento) e rota; motor de criterios reescrito com janelas mes/temporada/vida, quirks consertados (condicao desconhecida = false; criterio 0 avaliado), catalogo migrado com janela vida; efeito lido no instantaneo do credit (boost de pontos/moedas, reducao de penalidade); criacao de trofeu no painel com verbo+tier do menu; GET /api/users/[id]/gamification re-sigificada ou removida.",
       "gate": "G0-G4.",
       "dependsOn": "V8-3"
@@ -117,7 +158,9 @@
       "id": "V8-7",
       "title": "telas",
       "status": "planned",
-      "decisions": ["DEC-220"],
+      "decisions": [
+        "DEC-220"
+      ],
       "scope": "Ranking mensal (pontos do mes; desempate tarefas -> XP -> userId; colunas Pontos, Tarefas, Elo, Trofeus, Moedas); perfil com cartao da temporada e secao Trofeus com equipar; telas de historico mensal e livro-caixa; trofeu de campeao no perfil; renomeio Distintivos -> Trofeus; icone do placar do header troca para moeda/raio e Trophy passa a ser so dos trofeus (ASK-V8-23 respondida 2026-10-22); 'Pontos do projeto' fora da tela. Rejeicoes de API sempre com role=alert (quirk do gate medido no V4-4b).",
       "gate": "G0-G3 + e2e quadro/shell re-medidos contra a 5433 (DEC-221) + G5/G6 parciais.",
       "dependsOn": "V8-5, V8-6"
@@ -135,44 +178,173 @@
       "id": "V8-CLOSE",
       "title": "fechamento do plano: deploy na 5432, merge e e2e na instancia",
       "status": "planned",
-      "decisions": ["DEC-221"],
+      "decisions": [
+        "DEC-221"
+      ],
       "scope": "Depois de V8-8 e do PR unico plan-v8/gamificacao -> dev aberto e vigiado pelo orquestrador: aplicar a migration na 5432 real pelo caminho offline medido no V4-4 (migrate diff -> gravar -> migrate deploy na 5432, com a 5433 ja no mesmo estado) + data migration 1:1 (users.coins = users.points, rewards.price em moeda), prisma generate, rebuild/restart da instancia, e2e do quadro e do shell contra a instancia, conferencia de residuo E2E no banco. Sem codigo novo alem do que o plano ja escreveu.",
       "gate": "G0-G4 verdes na 5433; migration aplicada na 5432 sem RESET; e2e quadro/shell verdes na instancia; PR unido na dev; STATE.json done.",
       "dependsOn": "V8-8"
     }
   ],
   "decisionRegistry": [
-    { "id": "DEC-211", "wave": "V8-1", "status": "aberta", "openedAt": "2026-10-22", "openedBy": "V8-0", "text": "Gamificacao passa a quatro trilhas - pontos mensais (ranking), XP de temporada (volume), elo de temporada (prestigio + slots), moeda vitalicia (loja) - com trofeus vitalicios; vocabulario da UI Pontos / Trofeus (renomeia Distintivos) / Moedas." },
-    { "id": "DEC-212", "wave": "V8-2", "status": "aberta", "openedAt": "2026-10-22", "openedBy": "V8-0", "text": "Ciclo mensal com snapshot por pessoa em $transaction unica, idempotente por (userId, month), cron '0 0 1 * *' America/Sao_Paulo, systemActor(MONTHLY_POINTS_RESET); negativo guardado no snapshot, coluna comeca 0; QUIRK-7C do semanal nao e herdado." },
-    { "id": "DEC-213", "wave": "V8-4", "status": "aberta", "openedAt": "2026-10-22", "openedBy": "V8-0", "text": "Temporada = ano civil. Fechamento: season_history por pessoa + trofeu CAMPEAO para o maior somatorio de pontos mensais + reset de pontos/XP/elo/contagens anuais; moedas e trofeus conquistados nao resetam; idempotencia por (userId, ano); cron '5 0 1 1 *', systemActor(SEASON_CLOSE)." },
-    { "id": "DEC-214", "wave": "V8-3", "status": "aberta", "openedAt": "2026-10-22", "openedBy": "V8-0", "text": "Aritmetica de XP propria com constantes congeladas: +10 tarefa aprovada, +10 sessao concluida, +20 atividade aprovada por membro; boosts semanais 7/7 com sessao +40, 5+ tarefas +20, 10+ +40 (substitutivo); penalidades semanais tarefa atrasada -10, atividade atrasada -20 por membro, atividade aprovada sem sessao do membro no periodo -30, meta semanal nao cumprida (weekHours > 0) -20; piso 0; cron '10 0 * * 1', systemActor(WEEKLY_XP_REVIEW), idempotente por (userId, weekStart)." },
-    { "id": "DEC-215", "wave": "V8-1 + V8-5", "status": "aberta", "openedAt": "2026-10-22", "openedBy": "V8-0", "text": "Moeda vem so de atividade de cronograma aprovada, com o premio atual intacto (100 x meses, x1,5 >= 2 dias civis, -10%/dia piso 0) e a Hamilton intacta; projects.points sai do sistema (coluna, campo na tela, publicador DEC-63)." },
-    { "id": "DEC-216", "wave": "V8-1", "status": "aberta", "openedAt": "2026-10-22", "openedBy": "V8-0", "text": "Virada 1:1 no deploy: users.coins recebe o saldo atual de points; rewards.price vira preco em moeda mantendo os numeros; placar mensal comeca 0; compras pendentes e estornos seguem a trilha moeda." },
-    { "id": "DEC-217", "wave": "V8-6", "status": "aberta", "openedAt": "2026-10-22", "openedBy": "V8-0", "text": "Elo derivado do XP da temporada em 6 degraus - BRONZE 0, PRATA 400, OURO 900, PLATINA 1500, DIAMANTE 2400, DESAFIANTE 3600 - calibraveis com o primeiro ano (ASK-V8-22); slots de trofeu 0/1/2/2/3/3 pelo elo do momento." },
-    { "id": "DEC-218", "wave": "V8-6", "status": "aberta", "openedAt": "2026-10-22", "openedBy": "V8-0", "text": "Trofeus conquistados por criterio (idempotente, vitalicio, nunca re-conquistado); pessoa equipa ate os slots do elo atual; efeitos com verbos fechados (pontos_tarefa +%, pontos_sessao +%, moedas_atividade +%, penalidade -%) e tiers Tier1/Tier2/Tier3 congelados no dominio; admin escolhe verbo e tier do menu, sem numero livre; boost lido no instantaneo do credit." },
-    { "id": "DEC-219", "wave": "V8-1 + V8-6", "status": "aberta", "openedAt": "2026-10-22", "openedBy": "V8-0", "text": "Motor de criterios reescrito com janela por criterio (mes | temporada | vida); completedTasks continua vitalicia; catalogo existente migrado com janela vida; quirks consertados: condicao desconhecida = false (era true), criterio 0 avaliado (era ignorado)." },
-    { "id": "DEC-220", "wave": "V8-7", "status": "aberta", "openedAt": "2026-10-22", "openedBy": "V8-0", "text": "Ranking mensal ordena por pontos do mes, desempate tarefas -> XP -> userId; colunas Pontos / Tarefas (mes) / Elo / Trofeus / Moedas; historico mensal e livro-caixa viram telas; trofeu de campeao no perfil." },
-{ "id": "DEC-221", "wave": "V8-1..V8-CLOSE", "status": "aberta", "openedAt": "2026-10-22", "openedBy": "contrato de execucao do dono em 2026-10-22", "text": "Regime de execucao do plan-v8: as ondas sao autorizadas pelo orquestrador do thread (uma onda por vez, pare e reporte ao fim de cada uma); o merge na dev acontece so no fim do plano, por um PR unico plan-v8/gamificacao -> dev aberto e vigiado pelo orquestrador; durante o plano a migration e escrita e aplicada SO na 5433 (deploy + roundtrips G4 la, e2e da worktree contra a 5433) e o deploy na 5432 real roda apenas no batch V8-CLOSE, seguido de merge, restart da instancia e e2e na 5432; cada onda fecha com commit na branch e STATE.json atualizado no mesmo commit." }
+    {
+      "id": "DEC-211",
+      "wave": "V8-1",
+      "status": "em execucao (V8-1 parcial)",
+      "openedAt": "2026-10-22",
+      "openedBy": "V8-0",
+      "text": "Gamificacao passa a quatro trilhas - pontos mensais (ranking), XP de temporada (volume), elo de temporada (prestigio + slots), moeda vitalicia (loja) - com trofeus vitalicios; vocabulario da UI Pontos / Trofeus (renomeia Distintivos) / Moedas.",
+      "progress": "V8-1: a coluna history.track existe, declara a trilha, e o vocabulario POINTS|COINS|XP tem dono no dominio e guarda. Faltam as trilhas escritas por use case (V8-3/V8-5) e o vocabulario da UI (V8-7)."
+    },
+    {
+      "id": "DEC-212",
+      "wave": "V8-2",
+      "status": "aberta",
+      "openedAt": "2026-10-22",
+      "openedBy": "V8-0",
+      "text": "Ciclo mensal com snapshot por pessoa em $transaction unica, idempotente por (userId, month), cron '0 0 1 * *' America/Sao_Paulo, systemActor(MONTHLY_POINTS_RESET); negativo guardado no snapshot, coluna comeca 0; QUIRK-7C do semanal nao e herdado."
+    },
+    {
+      "id": "DEC-213",
+      "wave": "V8-4",
+      "status": "aberta",
+      "openedAt": "2026-10-22",
+      "openedBy": "V8-0",
+      "text": "Temporada = ano civil. Fechamento: season_history por pessoa + trofeu CAMPEAO para o maior somatorio de pontos mensais + reset de pontos/XP/elo/contagens anuais; moedas e trofeus conquistados nao resetam; idempotencia por (userId, ano); cron '5 0 1 1 *', systemActor(SEASON_CLOSE)."
+    },
+    {
+      "id": "DEC-214",
+      "wave": "V8-3",
+      "status": "aberta",
+      "openedAt": "2026-10-22",
+      "openedBy": "V8-0",
+      "text": "Aritmetica de XP propria com constantes congeladas: +10 tarefa aprovada, +10 sessao concluida, +20 atividade aprovada por membro; boosts semanais 7/7 com sessao +40, 5+ tarefas +20, 10+ +40 (substitutivo); penalidades semanais tarefa atrasada -10, atividade atrasada -20 por membro, atividade aprovada sem sessao do membro no periodo -30, meta semanal nao cumprida (weekHours > 0) -20; piso 0; cron '10 0 * * 1', systemActor(WEEKLY_XP_REVIEW), idempotente por (userId, weekStart)."
+    },
+    {
+      "id": "DEC-215",
+      "wave": "V8-1 + V8-5",
+      "status": "em execucao (V8-1 parcial)",
+      "openedAt": "2026-10-22",
+      "openedBy": "V8-0",
+      "text": "Moeda vem so de atividade de cronograma aprovada, com o premio atual intacto (100 x meses, x1,5 >= 2 dias civis, -10%/dia piso 0) e a Hamilton intacta; projects.points sai do sistema (coluna, campo na tela, publicador DEC-63).",
+      "progress": "V8-1: projects.points saiu do banco, do modelo, da porta/adaptador, do publicador DEC-63 e da tela. Falta o premio de atividade virar moeda (V8-5)."
+    },
+    {
+      "id": "DEC-216",
+      "wave": "V8-1",
+      "status": "em execucao (V8-1 parcial)",
+      "openedAt": "2026-10-22",
+      "openedBy": "V8-0",
+      "text": "Virada 1:1 no deploy: users.coins recebe o saldo atual de points; rewards.price vira preco em moeda mantendo os numeros; placar mensal comeca 0; compras pendentes e estornos seguem a trilha moeda.",
+      "progress": "V8-1: a virada 1:1 esta escrita como data migration (prisma/data-migrations/v8-1-virada-1-1.sql), aplicada na 5433 e provada em roundtrip sobre dado sintetico; placar mensal comeca 0. O preco da loja em moeda vem com a V8-5, e o deploy na 5432 e o roundtrip na instancia real vem no V8-CLOSE."
+    },
+    {
+      "id": "DEC-217",
+      "wave": "V8-6",
+      "status": "aberta",
+      "openedAt": "2026-10-22",
+      "openedBy": "V8-0",
+      "text": "Elo derivado do XP da temporada em 6 degraus - BRONZE 0, PRATA 400, OURO 900, PLATINA 1500, DIAMANTE 2400, DESAFIANTE 3600 - calibraveis com o primeiro ano (ASK-V8-22); slots de trofeu 0/1/2/2/3/3 pelo elo do momento."
+    },
+    {
+      "id": "DEC-218",
+      "wave": "V8-6",
+      "status": "aberta",
+      "openedAt": "2026-10-22",
+      "openedBy": "V8-0",
+      "text": "Trofeus conquistados por criterio (idempotente, vitalicio, nunca re-conquistado); pessoa equipa ate os slots do elo atual; efeitos com verbos fechados (pontos_tarefa +%, pontos_sessao +%, moedas_atividade +%, penalidade -%) e tiers Tier1/Tier2/Tier3 congelados no dominio; admin escolhe verbo e tier do menu, sem numero livre; boost lido no instantaneo do credit."
+    },
+    {
+      "id": "DEC-219",
+      "wave": "V8-1 + V8-6",
+      "status": "em execucao (V8-1 parcial)",
+      "openedAt": "2026-10-22",
+      "openedBy": "V8-0",
+      "text": "Motor de criterios reescrito com janela por criterio (mes | temporada | vida); completedTasks continua vitalicia; catalogo existente migrado com janela vida; quirks consertados: condicao desconhecida = false (era true), criterio 0 avaliado (era ignorado).",
+      "progress": "V8-1: badges.effects (Json?) entrou, user_badges.equipped com default false, e o catalogo migrado declara window 'vida'. O motor de criterios com janela e os quirks consertados (condicao desconhecida = false, criterio 0 avaliado) sao a V8-6."
+    },
+    {
+      "id": "DEC-220",
+      "wave": "V8-7",
+      "status": "aberta",
+      "openedAt": "2026-10-22",
+      "openedBy": "V8-0",
+      "text": "Ranking mensal ordena por pontos do mes, desempate tarefas -> XP -> userId; colunas Pontos / Tarefas (mes) / Elo / Trofeus / Moedas; historico mensal e livro-caixa viram telas; trofeu de campeao no perfil."
+    },
+    {
+      "id": "DEC-221",
+      "wave": "V8-1..V8-CLOSE",
+      "status": "aberta",
+      "openedAt": "2026-10-22",
+      "openedBy": "contrato de execucao do dono em 2026-10-22",
+      "text": "Regime de execucao do plan-v8: as ondas sao autorizadas pelo orquestrador do thread (uma onda por vez, pare e reporte ao fim de cada uma); o merge na dev acontece so no fim do plano, por um PR unico plan-v8/gamificacao -> dev aberto e vigiado pelo orquestrador; durante o plano a migration e escrita e aplicada SO na 5433 (deploy + roundtrips G4 la, e2e da worktree contra a 5433) e o deploy na 5432 real roda apenas no batch V8-CLOSE, seguido de merge, restart da instancia e e2e na 5432; cada onda fecha com commit na branch e STATE.json atualizado no mesmo commit."
+    }
   ],
   "answeredInstructions": [
-    { "id": "RODADAS-1-6", "at": "2026-10-22", "text": "As seis rodadas de modelagem com o dono estao registradas em MODELO.md Sec.10 e viraram as DEC-211..220. Nao ha pergunta de modelagem aberta." },
-    { "id": "ASK-V8-23", "at": "2026-10-22", "text": "Icone do placar no header: troca para moeda/raio (Candidatos lucide: Coins ou Zap); Trophy passa a pertencer so aos trofeus equipaveis (header, menu mobile, cartoes do admin e do perfil)." },
-    { "id": "ASK-V8-24", "at": "2026-10-22", "text": "Ajuste manual do painel admin: as duas trilhas, separadas - set/add/remove de PONTOS do mes e set/add/remove de MOEDAS - cada ajuste com linha de history para auditoria." }
+    {
+      "id": "RODADAS-1-6",
+      "at": "2026-10-22",
+      "text": "As seis rodadas de modelagem com o dono estao registradas em MODELO.md Sec.10 e viraram as DEC-211..220. Nao ha pergunta de modelagem aberta."
+    },
+    {
+      "id": "ASK-V8-23",
+      "at": "2026-10-22",
+      "text": "Icone do placar no header: troca para moeda/raio (Candidatos lucide: Coins ou Zap); Trophy passa a pertencer so aos trofeus equipaveis (header, menu mobile, cartoes do admin e do perfil)."
+    },
+    {
+      "id": "ASK-V8-24",
+      "at": "2026-10-22",
+      "text": "Ajuste manual do painel admin: as duas trilhas, separadas - set/add/remove de PONTOS do mes e set/add/remove de MOEDAS - cada ajuste com linha de history para auditoria."
+    }
   ],
   "historicalInstructions": [
-    { "id": "ORDEM-DO-DONO-V8-1", "at": "2026-10-22", "status": "substituida pela DEC-221 no mesmo dia", "text": "V8-1 (schema + migration na 5432 real do dono) so comeca com ordem explicita do dono. A migration segue o caminho offline medido no V4-4: prisma migrate diff --from-schema-datamodel/--to-schema-datamodel --script, gravar a migration, migrate deploy na 5432 E na 5433, prisma generate, reiniciar o dev server. Nunca migrate dev com risco de RESET na 5432." },
-    { "id": "CONTRATO-DE-EXECUCAO-V8", "at": "2026-10-22", "text": "Decisao do dono em 2026-10-22 (DEC-221): nao ha mais espera de ordem explicita para a V8-1 em diante - o orquestrador do thread autoriza cada onda. Uma onda por vez, pare e reporte no fim dela; a proxima instrucao chega quando os gates da onda anterior estao verdes no STATE.json. Merge so no fim do plano (PR unico plan-v8/gamificacao -> dev, aberto e vigiado pelo orquestrador). Durante o plano a migration vai SO para a 5433; o deploy na 5432 real acontece no batch V8-CLOSE com merge, restart e e2e na 5432. Commit por onda com o STATE.json atualizado no mesmo commit. O caminho offline da migration (migrate diff -> gravar -> migrate deploy, nunca migrate dev com risco de RESET) permanece." }
+    {
+      "id": "ORDEM-DO-DONO-V8-1",
+      "at": "2026-10-22",
+      "status": "substituida pela DEC-221 no mesmo dia",
+      "text": "V8-1 (schema + migration na 5432 real do dono) so comeca com ordem explicita do dono. A migration segue o caminho offline medido no V4-4: prisma migrate diff --from-schema-datamodel/--to-schema-datamodel --script, gravar a migration, migrate deploy na 5432 E na 5433, prisma generate, reiniciar o dev server. Nunca migrate dev com risco de RESET na 5432."
+    },
+    {
+      "id": "CONTRATO-DE-EXECUCAO-V8",
+      "at": "2026-10-22",
+      "text": "Decisao do dono em 2026-10-22 (DEC-221): nao ha mais espera de ordem explicita para a V8-1 em diante - o orquestrador do thread autoriza cada onda. Uma onda por vez, pare e reporte no fim dela; a proxima instrucao chega quando os gates da onda anterior estao verdes no STATE.json. Merge so no fim do plano (PR unico plan-v8/gamificacao -> dev, aberto e vigiado pelo orquestrador). Durante o plano a migration vai SO para a 5433; o deploy na 5432 real acontece no batch V8-CLOSE com merge, restart e e2e na 5432. Commit por onda com o STATE.json atualizado no mesmo commit. O caminho offline da migration (migrate diff -> gravar -> migrate deploy, nunca migrate dev com risco de RESET) permanece."
+    }
   ],
   "openQuestions": [],
   "blockers": [],
   "deferredItems": [
-    { "id": "ASK-V8-21", "text": "Calibracao das constantes de XP (DEC-214) com dados do primeiro ano real. O dono aceitou estimar agora e calibrar depois." },
-    { "id": "ASK-V8-22", "text": "Calibracao dos umbrais de elo (DEC-217: 0/400/900/1500/2400/3600) com dados do primeiro ano real." },
-    { "id": "REDUTOR-1:1", "text": "Redutor de inflacao da virada 1:1 (saldo herdado). O dono aceitou herdar; corrigivel depois com dados." },
-    { "id": "MCP-TOOLS-JSON", "text": "Regenerar mcp/tools.json depois do V8-5/V8-7 para refletir as trilhas novas nas tools de leitura - nota do plan-v7, sem batch." }
+    {
+      "id": "ASK-V8-21",
+      "text": "Calibracao das constantes de XP (DEC-214) com dados do primeiro ano real. O dono aceitou estimar agora e calibrar depois."
+    },
+    {
+      "id": "ASK-V8-22",
+      "text": "Calibracao dos umbrais de elo (DEC-217: 0/400/900/1500/2400/3600) com dados do primeiro ano real."
+    },
+    {
+      "id": "REDUTOR-1:1",
+      "text": "Redutor de inflacao da virada 1:1 (saldo herdado). O dono aceitou herdar; corrigivel depois com dados."
+    },
+    {
+      "id": "MCP-TOOLS-JSON",
+      "text": "Regenerar mcp/tools.json depois do V8-5/V8-7 para refletir as trilhas novas nas tools de leitura - nota do plan-v7, sem batch."
+    }
   ],
   "batchLog": [
-    { "batch": "V8-0", "at": "2026-10-22", "status": "done", "commit": "este commit", "evidence": "Re-medidos os gates na worktree plan-v8/gamificacao (d9add55, a dev com o plano aberto). Armadura medida: a arvore nao tinha node_modules - npm ci na raiz e npm ci em mcp/ foram necessarios; sem as dependencias de mcp/ o tsc da raiz (include **/*.ts) reporta 7 erros em mcp/. G0 exit 0, allow-list vazia (0 entradas pinned a task de onda/batch), 1106 modulos / 4703 dependencias. G1 exit 0, 0 erros, 15 warnings pre-existentes. G2 0 erros. G3 204 arquivos / 2419 testes; unit+features 188 / 2288 (tests/unit 162 / 2110; features + entities 26 / 178). G4 16 arquivos / 131 testes contra dq-dev-test-db:5433 apos npm run db:test:setup; a 5432 nao foi tocada. e2e nao re-medido nesta onda. DEC-211..220 abertas no decisionRegistry com a onda indicada; proxima decisao livre: DEC-221. README do container e AGENTS.md atualizados. Zero codigo de aplicacao." }
+    {
+      "batch": "V8-0",
+      "at": "2026-10-22",
+      "status": "done",
+      "commit": "este commit",
+      "evidence": "Re-medidos os gates na worktree plan-v8/gamificacao (d9add55, a dev com o plano aberto). Armadura medida: a arvore nao tinha node_modules - npm ci na raiz e npm ci em mcp/ foram necessarios; sem as dependencias de mcp/ o tsc da raiz (include **/*.ts) reporta 7 erros em mcp/. G0 exit 0, allow-list vazia (0 entradas pinned a task de onda/batch), 1106 modulos / 4703 dependencias. G1 exit 0, 0 erros, 15 warnings pre-existentes. G2 0 erros. G3 204 arquivos / 2419 testes; unit+features 188 / 2288 (tests/unit 162 / 2110; features + entities 26 / 178). G4 16 arquivos / 131 testes contra dq-dev-test-db:5433 apos npm run db:test:setup; a 5432 nao foi tocada. e2e nao re-medido nesta onda. DEC-211..220 abertas no decisionRegistry com a onda indicada; proxima decisao livre: DEC-221. README do container e AGENTS.md atualizados. Zero codigo de aplicacao."
+    },
+    {
+      "batch": "V8-1",
+      "at": "2026-10-22",
+      "status": "done",
+      "commit": "este commit",
+      "evidence": "Schema: users.coins/users.xp (Int, default 0) com as relacoes monthHistory/seasonHistory; modelos novos month_history (month String YYYY-MM, points, completedTasks, @@unique([userId, month]), @@index([month]), Cascade) e season_history (year Int, points, completedTasks, xp, elo String?, position Int?, @@unique([userId, year]), @@index([year]), Cascade); history.track String @default(\"POINTS\"); badges.effects Json?; user_badges.equipped Boolean @default(false); projects.points removido. Migration pelo caminho offline do V4-4, aplicada na 5433 (23 linhas em _prisma_migrations); prisma generate rodado. Data migration v8-1-virada-1-1.sql aplicada na 5433 e conferida por soma (14 -> 0 em points, 0 -> 14 em coins, 2 badges com window 'vida').\nCodigo: saida completa de projects.points - projectPointsBalance e o campo em Project/ProjectRecordLike/project-rules, incrementPoints na porta e no adaptador Prisma, o passo de economia em ApproveActivityCompletionUseCase (a ordem DEC-165 fica premios -> transicao de status, que continua o ponto de commit), projectsPoints na rota e em ActivityApprovalResult, TaskProjectPointsPort no publicador de tarefa e no composition root, e o campo 'Pontos do projeto' no detalhe do projeto. Trilha declarada no unico caminho que escreve award: DEFAULT_GAMIFICATION_TRACK em prisma-gamification-award-history.port.ts.\nTestes: removidos 5 casos do describe DEC-63/74 (task-completion-award), 1 caso de project-data-fields ('points NAO e escrevivel por update') e 1 roundtrip (projects.points sobe pelo premio); guardas ajustadas (user-delete-schema-drift com os dois modelos cascade; project-cronograma/activity-approval/activity-completion sem incrementPoints; fixas agora sem a escrita do projeto). Criados tests/unit/domain/gamification/gamification-tracks.test.ts (7) e tests/integration/gamification-tracks-roundtrip.test.ts (8). Docs obsoletos atualizados: project-time-progress (dominio e componente), backend/modules/project-management/index.ts, comentario de contrato do evento em subtask-use-cases, mcp/src/tools/project-writes. AGENTS.md atualizado no mesmo commit."
+    }
   ],
   "nextFreeDecision": "DEC-222"
 }
