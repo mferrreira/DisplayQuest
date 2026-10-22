@@ -102,6 +102,44 @@ services:
         echo '✅ Iniciando aplicação...' &&
         node server.js
       "
+    healthcheck:
+      # O Next standalone (server.js) se binda no HOSTNAME do container — não em
+      # 127.0.0.1 (medido: netstat mostra 172.18.0.x:3000). /api/health responde 200
+      # com o banco conectado.
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://$${HOSTNAME}:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # plan-v7 (DEC-190/198): servidor MCP de validação. Consumidor HTTP do app — não vê
+  # banco, bucket nem segredos do app; só a URL interna, o e-mail e a senha da conta de
+  # serviço. A porta 8787 nasce em 0.0.0.0 porque a fase 1 atende a LAN (DEC-196); a
+  # barreira é a rede, não o bind. Nenhuma auth de cliente na fase 1.
+  mcp:
+    build: ./mcp
+    container_name: display-quest-mcp
+    environment:
+      - DQ_API_BASE=http://app:3000
+      - DQ_AGENT_EMAIL=${DQ_AGENT_EMAIL:-mcp-agent@displayquest.local}
+      - DQ_AGENT_PASSWORD=${DQ_AGENT_PASSWORD:?Defina DQ_AGENT_PASSWORD no ambiente/.env}
+      - MCP_PORT=8787
+      - MCP_BIND_IP=0.0.0.0
+      - MCP_REQUEST_TIMEOUT_MS=${MCP_REQUEST_TIMEOUT_MS:-15000}
+      - DQ_ALLOWED_ORIGINS=${DQ_ALLOWED_ORIGINS:-}
+    ports:
+      - "8787:8787"
+    depends_on:
+      app:
+        condition: service_healthy
+    networks:
+      - display-quest-network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8787/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
 
 volumes:
   postgres_data:

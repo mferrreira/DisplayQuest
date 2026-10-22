@@ -16,7 +16,7 @@ displayquest-v2/
 ├── plan-v4/       OPERAÇÃO: subtasks, animação de pontos, inativação (2026-10-05) — done (2026-10-07, DEC-78..98)
 ├── plan-v5/       OPERAÇÃO: domínio de projetos maduro — cronograma, pontos, relatórios técnicos, atestados (2026-10-06) — done (2026-10-14, V5-1..V5-12 + V5-fix-1/V5-fix-2; DEC-61..77, 99..104, 126..180)
 ├── plan-v6/       OPERAÇÃO: linguagem visual UI/UX + redistribuição das telas (2026-10-07, revisado 2026-10-14) — done (2026-10-16, V6-0..V6-11; DEC-105..114, 181..188)
-└── plan-v7/       OPERAÇÃO: servidor MCP para os agents do laboratório (2026-10-15) — planejado, nenhuma onda começada (DEC-190..203, ASK-V7-01..15)
+└── plan-v7/       OPERAÇÃO: MCP de validação para o agente consumidor (2026-10-15, revisado 2026-10-21) — planejado, nenhuma onda começada (DEC-190..210, ASK-V7-16..25)
 ```
 
 ## Fluxo de dependências (unidirecional)
@@ -40,12 +40,14 @@ plan-v6 (linguagem visual + redistribuição das telas) ──> camada de aprese
                                  o fechamento do plan-v5. Home sem coluna secundária,
                                  largura toda (DEC-114).
 
-plan-v7 (servidor MCP para os agents do laboratório) ──> camada de acesso por credencial,
-                                 independente do plan-v6: não toca em tela, não muda
-                                 navegação e não muda valor de permissão. O que ele entrega
-                                 primeiro fica ABAIXO da interface (api_credentials no app,
-                                 DEC-192/199) e só depois vem o servidor MCP em container
-                                 próprio (DEC-190).
+plan-v7 (MCP de validação para o agente consumidor) ──> pacote e serviço separados,
+                                 independentes do plan-v6: não toca em tela, não muda
+                                 navegação, não muda valor de permissão e não altera o
+                                 backend. A fase 1 usa conta de serviço e login NextAuth
+                                 por e-mail/senha (DEC-205/206), expõe 25 tools na LAN sem
+                                 auth de cliente (DEC-207/209) e entrega tools.json +
+                                 README. A credencial local e o TLS ficam na fase 2
+                                 (DEC-192/199/200/201).
 ```
 
 - `spec-v2/` registra a visão do dono (gamificação profunda, projeto mais complexo,
@@ -99,19 +101,19 @@ plan-v7 (servidor MCP para os agents do laboratório) ──> camada de acesso p
   DEC-181..188). Ilustrações/texto manuscrito ficaram fora (DEC-109); tema escuro passa a ser
   coberto na skill (DEC-110). A ferramenta de execução é `/ui-refactor <tela>` com gate
   `/ui-review <tela>`.
-- `plan-v7/` nasce da demanda do dono em 2026-10-15: um servidor **MCP**
-  (Model Context Protocol) que os agents do laboratório usam para falar com o DisplayQuest,
-  consumido pela coordenação através de outro projeto. Não vem do `spec-v2` (que já previa
-  SSO/LDAP, mas não MCP): vem de uso, como o plan-v3. O achado que dimensiona o plano é que
-  **não existe hoje nenhum caminho de credencial** no app — `requireApiActor()`
-  (`lib/auth/api-guard.ts`) lê só cookie de sessão, são 260 chamadas em `app/api/` e não há
-  modelo de token no schema —, então a peça 1 (V7-1) é a credencial delegada `api_credentials`
-  com emissão por CLI, e o MCP é a peça 2 (V7-2 em diante). Escopo completo em seis famílias
-  (`read`, `tasks`, `project`, `hours`, `documents`, `people`), 59 tools sobre rotas medidas,
-  transporte duplo (Streamable HTTP + `stdio`), TLS no endpoint do MCP, auditoria em tabela e
-  um contrato plugável para o IdP futuro. Decisões **DEC-190..203**, perguntas **ASK-V7-01..15**
-  (todas respondidas em 2026-10-15; nenhuma aberta), 12 ondas revertíveis
-  (V7-0..V7-11). É **planejado** — nenhuma onda começou.
+- `plan-v7/` nasce da demanda do dono em 2026-10-15 e foi reescrito em 2026-10-21:
+  um servidor **MCP** (Model Context Protocol) que o agente do outro projeto usa para falar
+  com o DisplayQuest. Não vem do `spec-v2` (que previa SSO/LDAP, mas não MCP): vem de uso,
+  como o plan-v3. A fase de validação não muda o backend: usa a conta de serviço
+  `mcp-agent@displayquest.local` (`COORDENADOR`, id 1099), entra pelo NextAuth com
+  e-mail/senha do ambiente e mantém o cookie em memória (DEC-205/206). O endpoint é
+  Streamable HTTP, sem auth de cliente, restrito à LAN e HTTP (DEC-207/209), com 25 tools
+  — 15 de leitura/análise e 10 de escrita controlada — sobre rotas que já existem. O
+  consumidor recebe `mcp/tools.json` e `mcp/README.md` (DEC-208). A credencial local
+  (`api_credentials`/CLI), o TLS, a internet e as 59 tools completas são fase 2
+  (DEC-192/199/200/201). Decisões **DEC-190..210**, perguntas **ASK-V7-16..25** (todas
+  respondidas; nenhuma aberta), ondas **V7-0..V7-5** na fase 1 e **V7-6..V7-9** adiadas.
+  É **planejado** — nenhuma onda começou.
 
 ## Regras do container
 

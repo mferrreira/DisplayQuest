@@ -325,11 +325,11 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   do `PageHeader` (`document.title = "<título> · DisplayQuest"`), sem RSC e sem layout por
   segmento, com o fallback de `app/layout.tsx` citando o produto (188)), **DEC-189 plan-v4
   (2026-10-15, lote SUB-1 pós-encerramento: autoridade de subtask — dono ou gestão, nunca
-  `MANAGE_TASKS` em bloco; ver o bloco "Subtask" abaixo), **DEC-190..203 plan-v7 (servidor
-  MCP para os agents do laboratório, criado 2026-10-15)**. O V4-4 ia usar
+  `MANAGE_TASKS` em bloco; ver o bloco "Subtask" abaixo), DEC-190..210 plan-v7 (MCP de
+  validação para o agente consumidor; DEC-205..210 na revisão de 2026-10-21). O V4-4 ia usar
   DEC-61..64 e colidiu; os 28 comentários de código foram renumerados. **Antes de abrir decisão nova, `grep`
   os SEIS `STATE.json` (clean-arch, plan-v3, plan-v4, plan-v5, plan-v6, plan-v7) — a nota antiga que dizia "três"
-  (e depois "cinco") está velha. Próxima livre: DEC-204.**
+  (e depois "cinco") está velha. Próxima livre: DEC-211.**
 - **Subtask (V4-4, DEC-78..83 → regra atual = DEC-97/98/189):** tabela `task_subtasks` (sem FK para
   `users` — subtask não tem
   responsável próprio), base gravada em `tasks.points` = `10 + 5·n` (DEC-97) e **cada subtask CONCLUÍDA
