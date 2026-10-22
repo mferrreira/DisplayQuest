@@ -24,12 +24,17 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   bucket recusa subir sem ela — e fora da denylist `minioadmin`/`any`/`changeme`). O runner
   lê `process.env`, não `.env` — exporte as variáveis.
 
-## plan-v8 — gamificação remodelada (reservado 2026-10-22)
+## plan-v8 — gamificação remodelada (aberto 2026-10-22)
 
-- **Estado:** `ready` — planejado, nenhuma onda começada. Estado/decisões/modelo:
+- **Estado:** `in_progress` — **V8-0 done em 2026-10-22** (baseline re-medido: 188 arquivos /
+  2288 testes em `tests/unit` + `features` + `entities`, 204 / 2419 na suíte completa, G4 16 /
+  131 contra a 5433, G0 1106 módulos / 4703 dependências com allow-list vazia, `tsc` 0,
+  `npm run lint` exit 0 com 15 warnings). DEC-211..220 **abertas** no registry, cada uma com a
+  onda indicada. **V8-1 (schema + migration na 5432 real do dono) só começa com ordem explícita
+  do dono**, pelo caminho offline medido no V4-4. Estado/decisões/modelo:
   `displayquest-v2/plan-v8/{MODELO.md,PLAN.md,STATE.json}` — MODELO.md é a fonte do
-  comportamento, fechado em 6 rodadas de perguntas ao dono em 2026-10-22; DEC-211..220
-  reservadas (abertas na onda indicada no STATE.json); ondas V8-0..V8-8; ASK-V8-23 (ícone
+  comportamento, fechado em 6 rodadas de perguntas ao dono em 2026-10-22; ondas V8-0..V8-8;
+  ASK-V8-23 (ícone
   do placar — troca para moeda/raio, Trophy fica só dos troféus) e ASK-V8-24 (ajuste manual
   do painel sobre as duas trilhas, cada ajuste com linha de `history`) **respondidas pelo
   dono em 2026-10-22**; calibrações adiadas ASK-V8-21/22 (constantes de XP e umbrais de
@@ -359,9 +364,9 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   (2026-10-15, lote SUB-1 pós-encerramento: autoridade de subtask — dono ou gestão, nunca
   `MANAGE_TASKS` em bloco; ver o bloco "Subtask" abaixo), DEC-190..210 plan-v7 (MCP de
   validação para o agente consumidor; DEC-205..210 na revisão de 2026-10-21), **DEC-211..220
-  plan-v8 (gamificação remodelada, reservadas em 2026-10-22: quatro trilhas — pontos
-  mensais, XP/elo de temporada anual, moeda vitalícia, troféus equipáveis; ver o bloco
-  "plan-v8" abaixo)**. O V4-4 ia usar DEC-61..64 e colidiu; os 28 comentários de código foram
+   plan-v8 (gamificação remodelada, abertas na V8-0 em 2026-10-22: quatro trilhas — pontos
+   mensais, XP/elo de temporada anual, moeda vitalícia, troféus equipáveis; ver o bloco
+   "plan-v8" abaixo)**. O V4-4 ia usar DEC-61..64 e colidiu; os 28 comentários de código foram
   renumerados. **Antes de abrir decisão nova, `grep`
   os SETE `STATE.json` (clean-arch, plan-v3, plan-v4, plan-v5, plan-v6, plan-v7, plan-v8) — a nota antiga que dizia "três"
   (e depois "cinco") está velha. Próxima livre: DEC-221.**
