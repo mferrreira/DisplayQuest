@@ -135,9 +135,13 @@ tarefa estão descritos no capítulo 10; a forma operacional é a seguinte.
 | Tarefa | Expressão | Disparo |
 | --- | --- | --- |
 | Reinício semanal | `0 0 * * 1` | Consolidação pelo módulo de relatórios |
+| Fechamento mensal do placar | `0 0 1 * *` | Módulo de gamificação: snapshot em `month_history` e placar zerado |
 | Pausa programada, primeiro horário | `30 9 * * *` | Pausa de sessões e de responsabilidade |
 | Pausa programada, demais horários | `0 12,15,17 * * *` | Idem |
 | Varredura noturna | `59 23 * * *` | Persistência da pausa das sessões restantes |
+| Varredura de atraso | `0 8 * * *` | Notificação urgente de atividade de cronograma vencida |
+| Lembrete do atestado | `0 9 19 * *` | Aviso à gestão no dia 19 |
+| Limpeza do feed | `7 0 * * *` | Retenção do log de atividade de tarefa ao dia corrente |
 
 As expressões de pausa não são escritas à mão: elas são derivadas da lista de horários do
 domínio, agrupadas por minuto. Essa derivação existe para impedir que a agenda e a regra de

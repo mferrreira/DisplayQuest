@@ -17,7 +17,7 @@ displayquest-v2/
 ├── plan-v5/       OPERAÇÃO: domínio de projetos maduro — cronograma, pontos, relatórios técnicos, atestados (2026-10-06) — done (2026-10-14, V5-1..V5-12 + V5-fix-1/V5-fix-2; DEC-61..77, 99..104, 126..180)
 ├── plan-v6/       OPERAÇÃO: linguagem visual UI/UX + redistribuição das telas (2026-10-07, revisado 2026-10-14) — done (2026-10-16, V6-0..V6-11; DEC-105..114, 181..188)
 ├── plan-v7/       OPERAÇÃO: MCP de validação para o agente consumidor (2026-10-15, revisado 2026-10-21) — planejado, nenhuma onda começada (DEC-190..210, ASK-V7-16..25)
-└── plan-v8/       OPERAÇÃO: gamificação remodelada — trilhas (pontos mensais, XP/elo de temporada, moeda vitalícia), troféus equipáveis, reset mensal e temporada anual (2026-10-22) — em andamento: V8-1 done (schema das quatro trilhas + virada 1:1 + saída de `projects.points`; migration aplicada só na 5433; DEC-211..221 abertas); regime DEC-221: uma onda por vez autorizada pelo orquestrador, migration só na 5433 até o batch V8-CLOSE (MODELO.md = fonte do comportamento)
+└── plan-v8/       OPERAÇÃO: gamificação remodelada — trilhas (pontos mensais, XP/elo de temporada, moeda vitalícia), troféus equipáveis, reset mensal e temporada anual (2026-10-22) — em andamento: V8-2 done (ciclo mensal dos pontos: `ResetMonthlyPointsUseCase` com snapshot em `month_history`, zeragem da coluna e cron `0 0 1 * *` sem rota nova; DEC-211..221 abertas); regime DEC-221: uma onda por vez autorizada pelo orquestrador, migration só na 5433 até o batch V8-CLOSE (MODELO.md = fonte do comportamento)
 ```
 
 ## Fluxo de dependências (unidirecional)
@@ -157,7 +157,16 @@ plan-v8 (gamificação remodelada) ──> nasce do pedido do dono em 2026-10-22
   `_prisma_migrations`; `sum(points)` 14 → 0 e `sum(coins)` 0 → 14). Gates da onda: 189 arquivos /
   2289 testes no projeto unit, 206 / 2427 na suíte completa, G4 17 / 138, G0 1109 módulos / 4713
   dependências, `tsc` 0, lint exit 0. O deploy na 5432 real e a virada lá ficam no **V8-CLOSE**.
-  Próxima onda: **V8-2** (ciclo mensal), autorizada pelo orquestrador.
+  **V8-2 done** em 2026-10-22: o fechamento mensal sem rota — regras puras em
+  `backend/domain/gamification/monthly-cycle.ts` (mês anterior a `now`, janela `[start,
+  endExclusive)` em dia civil de `America/Sao_Paulo`, audiência "saldo ≠ 0 OU atividade no mês"),
+  port + adapter com `$transaction` (snapshot em `month_history` e depois `users.points = 0`, P2002
+  virando `already-closed`), `ResetMonthlyPointsUseCase` com gate `MANAGE_USERS`, e o job
+  `'0 0 1 * *'` com `systemActor("MONTHLY_POINTS_RESET")`. Gates da onda: 192 arquivos / 2317
+  testes no projeto unit, 210 / 2460 na suíte completa, G4 18 / 143, G0 1117 módulos / 4741
+  dependências, `tsc` 0, lint exit 0 com 15 warnings, G5 `docs:build` + `docs:check` verdes
+  (rodado porque a onda mudou rótulo visível: "Pontos do mês"). Nenhuma migration nova.
+  Próxima onda: **V8-3** (motor de XP, DEC-214), autorizada pelo orquestrador.
 
 ## Regras do container
 

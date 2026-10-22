@@ -1,11 +1,11 @@
 {
   "plan": "plan-v8",
   "title": "Gamificacao remodelada: trilhas, ciclos, moeda, trofeus equipaveis",
-  "version": "1.3.0",
-  "updatedAt": "2026-10-22T17:42:54-03:00",
+  "version": "1.4.0",
+  "updatedAt": "2026-10-22T18:34:04-03:00",
   "status": "in_progress",
-  "activeWave": "V8-1",
-  "activeBatch": "V8-1 done; parei e reportei (regime DEC-221) - proxima onda V8-2 (ciclo mensal) com autorizacao do orquestrador",
+  "activeWave": "V8-2",
+  "activeBatch": "V8-2 done; parei e reportei (regime DEC-221) - proxima onda V8-3 (motor de XP) com autorizacao do orquestrador",
   "awaitingInstruction": true,
   "lineage": {
     "previousPlan": "plan-v6 (linguagem visual + redistribuicao das telas), encerrado em 2026-10-16; plan-v7 (MCP de validacao) planejado em 2026-10-21 e sem ondas executadas. O plan-v8 nao depende do MCP e o MCP nao depende do plan-v8.",
@@ -38,16 +38,17 @@
   "measurements": {
     "currentGates": {
       "measuredAt": "2026-10-22",
-      "measuredBy": "V8-1",
-      "G0": "npm run arch:check - exit 0; allow-list VAZIA; 1109 modulos / 4713 dependencias cruisadas, zero violacao (era 1106 / 4703 na V8-0)",
-      "G1": "npm run lint - exit 0, 0 erros, 15 warnings pre-existentes (mesma contagem da V8-0)",
+      "measuredBy": "V8-2",
+      "G0": "npm run arch:check - exit 0; allow-list VAZIA; 1117 modulos / 4741 dependencias cruisadas, zero violacao (era 1109 / 4713 na V8-1: +8 modulos e +28 dependencias pelos arquivos novos da onda)",
+      "G1": "npm run lint - exit 0, 0 erros, 15 warnings pre-existentes (mesma contagem da V8-0 e da V8-1)",
       "G2": "npx tsc --noEmit - 0 erros",
-      "G3": "npx vitest run - 206 arquivos / 2427 testes verdes; divisao unit+features (tests/unit + features/__tests__ + entities) = 189 arquivos / 2289 testes (era 188 / 2288)",
-      "G4": "npx vitest run tests/integration - 17 arquivos / 138 testes verdes contra dq-dev-test-db:5433 com DATABASE_URL exportado para a 5433 (era 16 / 131); a 5432 nao foi tocada",
-      "migration": "prisma/migrations/20261022120000_add_gamification_tracks aplicada na 5433 (23 linhas em _prisma_migrations) pelo caminho offline do V4-4 (migrate diff --from-schema-datamodel/--to-schema-datamodel -> gravar -> migrate deploy -> prisma generate). A data migration prisma/data-migrations/v8-1-virada-1-1.sql foi aplicada na 5433 e conferida: sum(points) 14 -> 0, sum(coins) 0 -> 14 em 37 usuarios; 2 badges passaram a declarar window 'vida'. A 5432 (display-quest-db) nao foi tocada.",
-      "note": "Contagem batida com o que mudou: unit +1 arquivo (guarda tests/unit/domain/gamification/gamification-tracks.test.ts, 7 testes) e -6 testes (5 casos do describe 'tarefa de projeto conclui incrementa projects.points (DEC-63/74)' e 1 caso 'points NAO e escrevivel por update'); integration +1 arquivo (tests/integration/gamification-tracks-roundtrip.test.ts, 8 testes) e -1 teste (o roundtrip 'projects.points sobe pelo premio com piso 0'). 2288 + 7 - 6 = 2289; 131 + 8 - 1 = 138; 2289 + 138 = 2427.",
-      "e2e": "NAO re-medido na V8-1: o schema novo nao muda tela nenhuma ainda (nenhuma tela consome coins/xp/equipped), e o spec do quadro e serial e depende do dado da instancia.",
-      "armadura": "Duas medições de ambiente: (a) rodar `npx vitest run tests/unit tests/features` com caminho filtrado NAO reproduz o escopo canonico do projeto unit (que e tests/unit + features/**/__tests__ + entities/**) - o numero certo sai de `npx vitest run` menos `tests/integration`; (b) sem DATABASE_URL exportado para a 5433, tres testes de rota de usuarios falham (user-person-data-routes x2, users-authorization x1) lendo a 5432 - conferido com `git stash`: o baseline falha identico, nao e regressao desta onda."
+      "G3": "npx vitest run - 210 arquivos / 2460 testes verdes; divisao canonica unit+features (tests/unit + features/**/__tests__ + entities) = 192 arquivos / 2317 testes (era 189 / 2289)",
+      "G4": "npx vitest run tests/integration - 18 arquivos / 143 testes verdes contra dq-dev-test-db:5433 com DATABASE_URL exportado para a 5433 (era 17 / 138); a 5432 nao foi tocada",
+      "G5": "npm run docs:build -- --only=usuario e -- --only=tecnico: os dois documentos montados sem AVISO (15 secoes / 33 figuras tecnico; 12 secoes / 45 figuras usuario) + npm run docs:check 'nenhum caractere suspeito'. Rodado porque a onda mudou rotulo visivel ('Pontos do mes') e a prosa do guia nomeia controles pelo rotulo que a interface mostra. Os dois inventarios de agenda em docs/src (cap. 10 e cap. 14) foram re-escritos com as oito entradas medidas - eles estavam com quatro entradas e omitiam tres jobs ja existentes (varredura de atraso V5-8, lembrete do atestado V5-10b, limpeza do feed V6-11k)",
+      "migration": "Nenhuma migration nova nesta onda (o fechamento mensal le e escreve o month_history criado na V8-1). _prisma_migrations continua 23 linhas na 5433; a 5432 (display-quest-db) nao foi tocada, e o deploy na 5432 real segue marcado para o V8-CLOSE (DEC-221).",
+      "note": "Contagem batida com o que mudou: unit +3 arquivos e +28 testes (monthly-cycle 11, monthly-reset 14, cron-monthly-points-reset 3); integration +1 arquivo e +5 testes (monthly-points-reset-roundtrip). 2289 + 28 = 2317; 138 + 5 = 143; 2317 + 143 = 2460. Nenhum teste removido: a onda e aditiva.",
+      "e2e": "NAO re-medido na V8-2: nenhuma tela nova, o fechamento mensal nao muda o DOM do quadro nem do shell, e o spec do quadro e serial e depende do dado da instancia (ver AGENTS.md). Re-medir no V8-CLOSE, na 5432, depois do deploy.",
+      "armadura": "Tres medições de ambiente. (a) Rodar `npx vitest run tests/unit tests/features` com caminho filtrado NAO reproduz o escopo canonico do projeto unit (tests/unit + features/**/__tests__ + entities/**). (b) `npx vitest run --project unit` / `--project=integration` falham nesta versao do Vitest com 'No projects matched the filter'; a divisao canonica se mede por subtracao: suíte completa menos `npx vitest run tests/integration` (aqui 210/2460 - 18/143 = 192/2317, batendo com a aritmetica do lote). (c) Sem DATABASE_URL exportado para a 5433, tres testes de rota de usuarios falham (user-person-data-routes x2, users-authorization x1) lendo a 5432 - conferido com git stash: o baseline falha identico, nao e regressao desta onda."
     }
   },
   "waves": [
@@ -100,13 +101,24 @@
     {
       "id": "V8-2",
       "title": "ciclo mensal",
-      "status": "planned",
+      "status": "done",
       "decisions": [
         "DEC-212"
       ],
       "scope": "ResetMonthlyPointsUseCase com $transaction unica (snapshot por pessoa com saldo != 0 OU atividade no mes, depois zera), idempotente por (userId, month), cron '0 0 1 * *' America/Sao_Paulo, systemActor(MONTHLY_POINTS_RESET). Snapshot guarda negativo; coluna comeca 0; sem herdar QUIRK-7C do semanal.",
       "gate": "G0-G4. Roundtrip: fechar mes no banco de teste, reexecutar sem duplicar, mes seguinte parte de 0.",
-      "dependsOn": "V8-1"
+      "dependsOn": "V8-1",
+      "completedAt": "2026-10-22",
+      "gateResult": "G0 exit 0 com allow-list VAZIA (1117 modulos / 4741 dependencias; era 1109 / 4713). G1 exit 0, 0 erros, 15 warnings pre-existentes. G2 0 erros. G3 210 arquivos / 2460 testes verdes (unit+features 192 arquivos / 2317 testes; era 189 / 2289). G4 18 arquivos / 143 testes na 5433 com DATABASE_URL exportado (era 17 / 138); a 5432 nao foi tocada. G5 rodado a mais do que o plano pedia (a onda mudou rotulo visivel): docs:build dos dois documentos sem AVISO (tecnico 15 secoes / 33 figuras; usuario 12 secoes / 45 figuras) e docs:check 'nenhum caractere suspeito'. Nenhuma migration nova: month_history ja existia da V8-1, _prisma_migrations continua em 23 na 5433. Banco de teste conferido limpo depois do roundtrip: month_history com 0 linhas, season_history 0, nenhum residuo 'V8-2%' em users ou tasks, sum(points) 0, sum(coins) 14.",
+      "executionNotes": [
+        "A contagem do mes sai das DUAS familias que hoje creditam users.completedTasks, com as MESMAS condicoes medidas dos dois incrementos (complete-task.use-case.ts:113-119 e approve-task.use-case.ts:126): task_user_progress.completedAt na janela, mais tasks.completedAt do responsavel com isGlobal false e taskVisibility != public. Sem o filtro de visibilidade a tarefa publica atribuida entraria nas duas queries; o roundtrip congela 4 e prova o 2 + 3 - 1 consultando o banco direto.",
+        "Idempotencia em duas camadas: o use case consulta hasMonthSnapshot ANTES de zerar (a zeragem nao acontece atras de um dedup que nao foi lido), e no banco a trava e a unique (userId, month) dentro da $transaction, com P2002 devolvido como already-closed. O QUIRK-7C do weekly reset NAO e herdado: mes fechado nao reabre. O roundtrip prova que a segunda run nao cria linha e nao zera o saldo do mes em curso.",
+        "Audiencia ampla medida: quem tem saldo != 0 OU atividade no mes fecha o mes; suspenso com saldo ganha snapshot (DEC-55 fecha a entrada, nao o livro-caixa); saldo 0 sem atividade no mes nao ganha linha. A lista vem de listAllUsersForClose (todos os usuarios), nao da lista de ativos.",
+        "Sem rota nova de proposito: o fechamento so e chamado pela agenda, com systemActor(MONTHLY_POINTS_RESET) (DEC-54). O teste do job monta o modulo gamification REAL sobre port falsa, para o gate nao sumir do teste (a licao medida do B6-2a); o guarda tests/unit/domain/identity/system-actor.test.ts continua provando que nenhuma rota declara ator de sistema, e a razao nova entrou na lista de bypass do proprio teste.",
+        "Rotulo ajustado onde a palavra 'pontos' ja significa o mes: 'Pontos do mes' na aba Voluntarios do painel, nos cartoes da Visao Geral ('Pontos do mes' e 'Média do mes:') e no cartao do perfil. Medido por grep: nenhuma string dessas era pinada por teste nenhum. As colunas novas do ranking (Elo, Trofeus, Moedas) ficam na V8-7.",
+        "Consequencia de sequencia, medida e aceita (nenhum codigo novo aqui): a loja ainda gasta users.points (prisma-purchase.repository.ts faz decrement/increment na coluna) e so passa a moeda na V8-5 (DEC-215). No intervalo V8-2..V8-4 o fechamento mensal zeraria tambem o que foi gasto na loja - no dev/teste isso de fato acontece; na producao nao, porque a agenda real comeca a valer no V8-CLOSE, depois da V8-5. Registrado para o fechamento nao tratar como bug.",
+        "G6 adiado com motivo: o container da instancia roda a IMAGEM, nao a arvore de trabalho, entao recapturar hoje fotografaria os rotulos antigos e o guia passaria a descrever o que nao existe. A recaptura do painel, do perfil e do ranking fica na onda V8-8 (G5/G6), onde o plano fecha o guia."
+      ]
     },
     {
       "id": "V8-3",
@@ -199,10 +211,11 @@
     {
       "id": "DEC-212",
       "wave": "V8-2",
-      "status": "aberta",
+      "status": "executada (V8-2, 2026-10-22)",
       "openedAt": "2026-10-22",
       "openedBy": "V8-0",
-      "text": "Ciclo mensal com snapshot por pessoa em $transaction unica, idempotente por (userId, month), cron '0 0 1 * *' America/Sao_Paulo, systemActor(MONTHLY_POINTS_RESET); negativo guardado no snapshot, coluna comeca 0; QUIRK-7C do semanal nao e herdado."
+      "text": "Ciclo mensal com snapshot por pessoa em $transaction unica, idempotente por (userId, month), cron '0 0 1 * *' America/Sao_Paulo, systemActor(MONTHLY_POINTS_RESET); negativo guardado no snapshot, coluna comeca 0; QUIRK-7C do semanal nao e herdado.",
+      "executionNote": "Entregue como medido: $transaction unica (snapshot por pessoa com saldo != 0 OU atividade no mes, depois users.points = 0), dedup por (userId, month) lido antes de zerar e garantido pela unique do banco, cron '0 0 1 * *' America/Sao_Paulo chamado so pela agenda com systemActor(MONTHLY_POINTS_RESET), negativo fotografado no snapshot, coluna comecando em 0, QUIRK-7C do semanal nao herdado. A unica coisa nao planejada que a onda registrou foi a contagem do mes: ela precisou sair das duas familias de conclusao (task_user_progress e tasks do responsavel, com o filtro de visibilidade do increment) - sem isso o snapshot de tarefas nao bateria com o que users.completedTasks ja conta."
     },
     {
       "id": "DEC-213",
@@ -328,6 +341,10 @@
     {
       "id": "MCP-TOOLS-JSON",
       "text": "Regenerar mcp/tools.json depois do V8-5/V8-7 para refletir as trilhas novas nas tools de leitura - nota do plan-v7, sem batch."
+    },
+    {
+      "id": "G6-CAPTURA-V8",
+      "text": "Recaptura das telas do guia que a V8-2 tornou antigas (Visao Geral do painel, aba Voluntarios, cartao do perfil, ranking). Adiado porque o container da instancia roda a imagem, nao a arvore: recapturar agora fotografaria os rotulos antigos. Executar na onda V8-8 (G5/G6), depois de rebuild da imagem."
     }
   ],
   "batchLog": [
@@ -344,6 +361,13 @@
       "status": "done",
       "commit": "este commit",
       "evidence": "Schema: users.coins/users.xp (Int, default 0) com as relacoes monthHistory/seasonHistory; modelos novos month_history (month String YYYY-MM, points, completedTasks, @@unique([userId, month]), @@index([month]), Cascade) e season_history (year Int, points, completedTasks, xp, elo String?, position Int?, @@unique([userId, year]), @@index([year]), Cascade); history.track String @default(\"POINTS\"); badges.effects Json?; user_badges.equipped Boolean @default(false); projects.points removido. Migration pelo caminho offline do V4-4, aplicada na 5433 (23 linhas em _prisma_migrations); prisma generate rodado. Data migration v8-1-virada-1-1.sql aplicada na 5433 e conferida por soma (14 -> 0 em points, 0 -> 14 em coins, 2 badges com window 'vida').\nCodigo: saida completa de projects.points - projectPointsBalance e o campo em Project/ProjectRecordLike/project-rules, incrementPoints na porta e no adaptador Prisma, o passo de economia em ApproveActivityCompletionUseCase (a ordem DEC-165 fica premios -> transicao de status, que continua o ponto de commit), projectsPoints na rota e em ActivityApprovalResult, TaskProjectPointsPort no publicador de tarefa e no composition root, e o campo 'Pontos do projeto' no detalhe do projeto. Trilha declarada no unico caminho que escreve award: DEFAULT_GAMIFICATION_TRACK em prisma-gamification-award-history.port.ts.\nTestes: removidos 5 casos do describe DEC-63/74 (task-completion-award), 1 caso de project-data-fields ('points NAO e escrevivel por update') e 1 roundtrip (projects.points sobe pelo premio); guardas ajustadas (user-delete-schema-drift com os dois modelos cascade; project-cronograma/activity-approval/activity-completion sem incrementPoints; fixas agora sem a escrita do projeto). Criados tests/unit/domain/gamification/gamification-tracks.test.ts (7) e tests/integration/gamification-tracks-roundtrip.test.ts (8). Docs obsoletos atualizados: project-time-progress (dominio e componente), backend/modules/project-management/index.ts, comentario de contrato do evento em subtask-use-cases, mcp/src/tools/project-writes. AGENTS.md atualizado no mesmo commit."
+    },
+    {
+      "batch": "V8-2",
+      "at": "2026-10-22",
+      "status": "done",
+      "commit": "este commit",
+      "evidence": "Regras puras novas em backend/domain/gamification/monthly-cycle.ts (closingMonthOfInstant, monthWindow com [start, endExclusive) ancorado em startOfCivilDayInstant, shouldSnapshotClosedMonth, POINTS_AFTER_MONTH_CLOSE = 0), exportadas pelo index do dominio.\nPort MonthlyPointsCyclePort (listAllUsersForClose, countTasksCompletedInMonth, hasMonthSnapshot, closeMonth) e adapter Prisma prisma-monthly-points-cycle.port.ts: a transacao escreve month_history e depois zera users.points, com P2002 devolvido como false (ja fechado).\nResetMonthlyPointsUseCase com gate MANAGE_USERS e a frase MONTHLY_POINTS_RESET_DENIED_MESSAGE, contratos ResetMonthlyPointsCommand / MonthlyCloseOutcome / ResetMonthlyPointsResult, e o metodo resetMonthlyPoints no GamificationModule (port default createPrismaMonthlyPointsCyclePort). Rotas novas: NENHUMA.\nAgenda: SYSTEM_REASONS.MONTHLY_POINTS_RESET em backend/domain/identity/actor-ref.ts e o job '0 0 1 * *' (America/Sao_Paulo) agendado logo depois do weekly reset em lib/services/cron-service.ts, com executeMonthlyPointsReset(), stop() e getStatus() atualizados.\nUI (rotulo): 'Pontos do mes' em components/admin/AdminOverview.tsx, components/admin/AdminStatsCards.tsx ('Média do mes:'), components/ui/user-profile-view.tsx e components/features/volunteers-management.tsx.\nTestes novos: tests/unit/domain/gamification/monthly-cycle.test.ts (11), tests/unit/modules/gamification/monthly-reset.test.ts (14: gate, audiencia ampla, negativo, sem atividade, duas runs, mes seguinte, janela inclusive nas duas pontas), tests/unit/services/cron-monthly-points-reset.test.ts (3: systemActor declarado, reexecucao, falha virando console.error), tests/integration/monthly-points-reset-roundtrip.test.ts (5 contra a 5433). Guarda de cron atualizada: '0 0 1 * *' pinada em tests/unit/services/cron-schedule.test.ts (inclusive na lista de exclusao do teste das expressoes de pausa); razao nova em tests/unit/domain/identity/system-actor.test.ts.\nDocs (G5): guia 07-loja-e-ranking (coluna Pontos = placar do mes + o callout 'O placar fecha no dia 1') e 09-administracao ('Pontos do mes' na aba Voluntarios); docs/src cap. 10 e cap. 14 com o inventario medido das oito entradas da agenda. docs:build e docs:check verdes, sem AVISO. Nenhuma migration nova; 5432 intocada; banco de teste conferido limpo."
     }
   ],
   "nextFreeDecision": "DEC-222"

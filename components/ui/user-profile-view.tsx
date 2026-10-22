@@ -187,7 +187,7 @@ export function UserProfileView({ user, onBack, canEdit = false, onEdit, project
 
       {/* Fatos — rotulo quieto + algarismo grande sobre a regua, sem caixa. */}
       <dl aria-label="Resumo do usuário" className="grid grid-cols-2 gap-x-8 gap-y-6 sm:grid-cols-4">
-        <Fact label="Pontos" value={user.points} hint="pontos acumulados" icon={Trophy} />
+        <Fact label="Pontos" value={user.points} hint="placar do mês" icon={Trophy} />
         <Fact label="Tarefas" value={user.completedTasks} hint="tarefas concluídas" icon={Target} />
         <Fact label="Horas/Sem" value={user.weekHours} hint="meta semanal" icon={Clock} />
         <Fact label="Funções" value={user.roles.length} hint="papéis no laboratório" icon={ShieldCheck} />

@@ -63,7 +63,15 @@ O que alimenta cada coluna:
 | Coluna | De onde vem |
 | --- | --- |
 | **Tarefas concluídas** | tarefas aprovadas, não as entregues para revisão |
-| **Pontos** | pontos creditados pelas aprovações, menos as penalidades de atraso e os gastos já completados |
+| **Pontos** | o placar do mês corrente: pontos creditados pelas aprovações, menos as penalidades de atraso e os gastos já completados |
+
+::: nota titulo="O placar fecha no dia 1"
+O **Pontos** do ranking é o mês corrente. No dia 1, às 00:00 (fuso do laboratório), o sistema
+fecha o mês: o número e a contagem de tarefas daquele mês vão para o histórico da pessoa —
+inclusive quando são negativos — e o placar recomeça em zero. Antes o número nunca zerava; hoje
+o ranking mostra o mês em curso, e o mês encerrado fica no histórico da pessoa.
+O fechamento não é botão nem rota: é a agenda do sistema, e reexecutá-lo não duplica o mês.
+:::
 
 ## Distintivos
 

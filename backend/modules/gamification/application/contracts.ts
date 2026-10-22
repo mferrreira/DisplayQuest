@@ -1,4 +1,4 @@
-import type { ActorRef, GamificationSourceType } from "@/backend/domain"
+import type { ActorRef, GamificationSourceType, MonthKey } from "@/backend/domain"
 
 /**
  * O vocabulário é o do domínio (`Progression.ts`) — re-exportado, não copiado. A cópia local
@@ -88,4 +88,34 @@ export interface AwardBadgeCommand {
    * só constrói o ator a partir da sessão.
    */
   actor: ActorRef
+}
+
+/**
+ * plan-v8 V8-2 (DEC-212) — o fechamento mensal do placar. `now` entra por parâmetro de propósito
+ * (lição DEC-132): o mês a fechar é aritmética de dia civil do instante da run, e só o chamador
+ * sabe que instante é "agora". Regra nenhuma lê `new Date()`.
+ */
+export interface ResetMonthlyPointsCommand {
+  actor: ActorRef
+  now: Date
+}
+
+export type MonthlyCloseStatus = "closed" | "already-closed" | "without-activity"
+
+export interface MonthlyCloseOutcome {
+  userId: number
+  name: string
+  month: MonthKey
+  /** O saldo fotografado — pode ser negativo (DEC-39). */
+  points: number
+  completedTasksOfMonth: number
+  status: MonthlyCloseStatus
+}
+
+export interface ResetMonthlyPointsResult {
+  month: MonthKey
+  closed: number
+  alreadyClosed: number
+  skippedWithoutActivity: number
+  outcomes: MonthlyCloseOutcome[]
 }

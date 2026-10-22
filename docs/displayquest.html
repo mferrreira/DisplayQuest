@@ -2787,7 +2787,9 @@ tempo de execução.</p>
 vem de um arquivo de sobreposição versionado, que amarra a publicação ao endereço de
 retorno local, e não à interface externa. O efeito é que o banco é acessível a partir da
 própria máquina hospedeira para depuração, e não é acessível a partir da rede.</p></div></figure><h3 id="agenda-de-tarefas-periodicas">Agenda de tarefas periódicas</h3>
-<p>A agenda roda dentro do processo do servidor, no fuso do laboratório. São quatro entradas.</p>
+<p>A agenda roda dentro do processo do servidor, no fuso do laboratório. São oito entradas,
+medidas no serviço de agenda (a pausa programada são dois grupos, derivados da grade de
+horários do domínio).</p>
 <table>
 <thead>
 <tr>
@@ -2803,6 +2805,11 @@ própria máquina hospedeira para depuração, e não é acessível a partir da 
 <td>Consolida a semana e reinicia a contagem corrente</td>
 </tr>
 <tr>
+<td>Fechamento mensal do placar</td>
+<td>Dia 1, às 00:00</td>
+<td>Fotografar o saldo e as tarefas do mês no histórico da pessoa e zerar o placar</td>
+</tr>
+<tr>
 <td>Pausa programada</td>
 <td>09:30</td>
 <td>Pausa as sessões ativas no horário marcado</td>
@@ -2816,6 +2823,21 @@ própria máquina hospedeira para depuração, e não é acessível a partir da 
 <td>Varredura noturna</td>
 <td>23:59</td>
 <td>Converte em pausada toda sessão ativa remanescente</td>
+</tr>
+<tr>
+<td>Varredura de atraso</td>
+<td>Todos os dias, às 08:00</td>
+<td>Atividade de cronograma vencida vira notificação urgente para a gestão</td>
+</tr>
+<tr>
+<td>Lembrete do atestado</td>
+<td>Dia 19, às 09:00</td>
+<td>Lembra a gestão do atestado mensal de frequência</td>
+</tr>
+<tr>
+<td>Limpeza do feed</td>
+<td>Todos os dias, às 00:07</td>
+<td>Apaga o log de atividade de tarefa anterior ao dia corrente</td>
 </tr>
 </tbody>
 </table>
@@ -3944,6 +3966,11 @@ tarefa estão descritos no capítulo 10; a forma operacional é a seguinte.</p>
 <td>Consolidação pelo módulo de relatórios</td>
 </tr>
 <tr>
+<td>Fechamento mensal do placar</td>
+<td><code>0 0 1 * *</code></td>
+<td>Módulo de gamificação: snapshot em <code>month_history</code> e placar zerado</td>
+</tr>
+<tr>
 <td>Pausa programada, primeiro horário</td>
 <td><code>30 9 * * *</code></td>
 <td>Pausa de sessões e de responsabilidade</td>
@@ -3957,6 +3984,21 @@ tarefa estão descritos no capítulo 10; a forma operacional é a seguinte.</p>
 <td>Varredura noturna</td>
 <td><code>59 23 * * *</code></td>
 <td>Persistência da pausa das sessões restantes</td>
+</tr>
+<tr>
+<td>Varredura de atraso</td>
+<td><code>0 8 * * *</code></td>
+<td>Notificação urgente de atividade de cronograma vencida</td>
+</tr>
+<tr>
+<td>Lembrete do atestado</td>
+<td><code>0 9 19 * *</code></td>
+<td>Aviso à gestão no dia 19</td>
+</tr>
+<tr>
+<td>Limpeza do feed</td>
+<td><code>7 0 * * *</code></td>
+<td>Retenção do log de atividade de tarefa ao dia corrente</td>
 </tr>
 </tbody>
 </table>
@@ -4398,7 +4440,7 @@ expressa como migração versionada não pertence a este sistema.</p>
 <footer class="dq-footer">
   <p>
     Conteúdo gerado a partir de <code>docs/src/</code> e <code>docs/diagrams/</code>. Diagramas em notação UML (PlantUML). O conteúdo reflete o estado do
-    código no commit <code>7d44c59 (2026-10-16)</code>.
+    código no commit <code>7b5315c (2026-10-22)</code>.
   </p>
 </footer>
 

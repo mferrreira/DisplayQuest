@@ -43,6 +43,16 @@ export class CronService {
       timezone: 'America/Sao_Paulo' // Fuso horário do Brasil
     })
 
+    // plan-v8 V8-2 (DEC-212): fechamento mensal do placar — dia 1 às 00:00. Agendado depois do
+    // weekly reset e logo antes das pausas programadas: quem fecha é o mês anterior a `now`, em
+    // dia civil de America/Sao_Paulo, então o que o sweep das 23:59 do último dia persistiu já
+    // está na coluna quando o snapshot é lido. Idempotente por (userId, month): restart de
+    // container não duplica linha nem zera o mês em curso. Sem rota — rotina não é ação de
+    // pessoa (DEC-54).
+    this.monthlyPointsResetJob = cron.schedule('0 0 1 * *', async () => {
+      await this.executeMonthlyPointsReset()
+    }, { timezone: 'America/Sao_Paulo' })
+
     // Pause automático das work sessions: horários vindos de SCHEDULED_PAUSE_TIMES (D2)
     this.scheduledPauseJobs = pauseCronExpressions(SCHEDULED_PAUSE_TIMES).map((expression) =>
       cron.schedule(expression, async () => {
@@ -83,6 +93,7 @@ export class CronService {
   private overdueScanJob: cron.ScheduledTask | null = null
   private certificateReminderJob: cron.ScheduledTask | null = null
   private activityCleanupJob: cron.ScheduledTask | null = null
+  private monthlyPointsResetJob: cron.ScheduledTask | null = null
 
   /**
    * Pausa todas as sessões ativas que cruzaram um horário de pausa agendado.
@@ -218,6 +229,29 @@ export class CronService {
   }
 
   /**
+   * Fechamento mensal do placar (plan-v8 V8-2, DEC-212): snapshot em `month_history` + `users.points`
+   * zerado, por pessoa, com dedup por `(userId, month)`. Rotina sem pessoa —
+   * systemActor(MONTHLY_POINTS_RESET), o bypass declarado (DEC-54, mesmo padrão do reset semanal de
+   * horas que motivou a DEC-54): o gate de MANAGE_USERS mora no use case e o único chamador é este
+   * job. Não existe rota de propósito.
+   */
+  async executeMonthlyPointsReset() {
+    try {
+      const { gamification } = getBackendComposition()
+      const result = await gamification.resetMonthlyPoints({
+        actor: systemActor(SYSTEM_REASONS.MONTHLY_POINTS_RESET),
+        now: new Date(),
+      })
+      console.log(
+        `📅 Fechamento mensal de pontos (${result.month}): ${result.closed} fechada(s), ` +
+          `${result.alreadyClosed} já fechada(s), ${result.skippedWithoutActivity} sem atividade.`,
+      )
+    } catch (error) {
+      console.error('❌ Erro ao executar o fechamento mensal de pontos:', error)
+    }
+  }
+
+  /**
    * Para o serviço de cron
    */
   stop() {
@@ -242,6 +276,10 @@ export class CronService {
     if (this.activityCleanupJob) {
       this.activityCleanupJob.stop()
       this.activityCleanupJob = null
+    }
+    if (this.monthlyPointsResetJob) {
+      this.monthlyPointsResetJob.stop()
+      this.monthlyPointsResetJob = null
     }
     this.scheduledPauseJobs = []
     this.isInitialized = false
@@ -285,7 +323,9 @@ export class CronService {
       isInitialized: this.isInitialized,
       weeklyResetRunning: this.weeklyResetJob !== null,
       weeklyResetNextRun: nextMonday.toISOString(),
-      weeklyResetSchedule: '0 0 * * 1 (Segunda-feira às 00:00)'
+      weeklyResetSchedule: '0 0 * * 1 (Segunda-feira às 00:00)',
+      monthlyPointsResetRunning: this.monthlyPointsResetJob !== null,
+      monthlyPointsResetSchedule: '0 0 1 * * (Dia 1 às 00:00)'
     }
   }
 }

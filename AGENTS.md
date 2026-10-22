@@ -8,7 +8,7 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
 - **Gate de entrega:** `npm run arch:check` (exit 0, allow-list **vazia**) && `npm run lint` (nada de erro) && `npx tsc --noEmit` (0) && `npx vitest run` (zero failure). A contagem é **por branch**: no `dev` o baseline era **64 arquivos / 721 testes** quando o B8 removeu os 651 testes de paridade; no `plan/v3-operacional`, medido no encerramento do plan-v3 (2026-10-03), são **65 arquivos / 798 testes** em `tests/unit` + `features` e **75 / 881** na suíte completa. Na `dev` de hoje (medido em 2026-10-07, depois do plan-v4 V4-1/V4-2/V4-3/V4-6, do V4-4 de subtasks, dos testes do painel V4-4b/V4-4c, do V4-5a/V4-5b/V4-5c de subtask na UI, do V4-6b de vocabulário de status e do lote pós-encerramento POS-1 — DEC-97/98) são **87 arquivos / 1107 testes** e **97 / 1192** na suíte completa; a suíte e2e do quadro está em **2 passando + 1 falha conhecida + 5 "did not run"** (medido 2026-10-06
 no V4-5c; eram 7 quando a coluna `Em Revisão` tinha um cartão a menos) — o 3º teste quebra por cartão a
 mais na coluna (dado legítimo da instância, não código: hoje são as tarefas 50 e 304), e como o spec é
-serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 5 passando. Compare sempre com o `STATE.json` do plano em que você está. Na `dev` de hoje, medido no fechamento do plan-v6 (2026-10-16, ondas V6-0..V6-11: shell, Home, Projetos, detalhe do projeto, Laboratório, Relatórios, Perfil/Ranking, Loja, Admin, Login/Register), são **179 arquivos / 2224 testes** em `tests/unit` + `features` e **194 / 2354** na suíte completa (G0 1061 módulos / 4531 dependências); o `tsc` desta branch **fecha em 0** — o erro pré-existente em `features/laboratorio/__tests__/floating-timer-tabs.test.tsx:105` foi consertado no `SUB-1` (regex ancorada no lugar do `exact`, que não existe em `ByRoleOptions`). Re-medido em 2026-10-15 (V6-2): o e2e do quadro está em **8 passando** (o spec hoje tem 8 testes; a falha conhecida por cartão a mais em `Em Revisão` **não reproduziu** — o dado da instância mudou; ela pode voltar se o dono mover outro cartão para lá) e o do shell em **5 passando**. Na branch do fechamento do repo-cleanup (`refactor/b6-restante`, medido 2026-10-08 depois do B6-2c..B6-7) o baseline é **95 arquivos / 1280 testes** em `tests/unit` + `features` e **105 / 1367** na suíte completa (G0 810 módulos / 3295 dependências). Na branch do plan-v8 (`plan-v8/gamificacao`), medido no fechamento da onda **V8-1** (2026-10-22), são **189 arquivos / 2289 testes** no projeto unit (`tests/unit` + `features/**/__tests__` + `entities`) e **206 / 2427** na suíte completa, com **G4 17 / 138** contra a 5433 e G0 **1109 módulos / 4713 dependências** (allow-list vazia).
+serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 5 passando. Compare sempre com o `STATE.json` do plano em que você está. Na `dev` de hoje, medido no fechamento do plan-v6 (2026-10-16, ondas V6-0..V6-11: shell, Home, Projetos, detalhe do projeto, Laboratório, Relatórios, Perfil/Ranking, Loja, Admin, Login/Register), são **179 arquivos / 2224 testes** em `tests/unit` + `features` e **194 / 2354** na suíte completa (G0 1061 módulos / 4531 dependências); o `tsc` desta branch **fecha em 0** — o erro pré-existente em `features/laboratorio/__tests__/floating-timer-tabs.test.tsx:105` foi consertado no `SUB-1` (regex ancorada no lugar do `exact`, que não existe em `ByRoleOptions`). Re-medido em 2026-10-15 (V6-2): o e2e do quadro está em **8 passando** (o spec hoje tem 8 testes; a falha conhecida por cartão a mais em `Em Revisão` **não reproduziu** — o dado da instância mudou; ela pode voltar se o dono mover outro cartão para lá) e o do shell em **5 passando**. Na branch do fechamento do repo-cleanup (`refactor/b6-restante`, medido 2026-10-08 depois do B6-2c..B6-7) o baseline é **95 arquivos / 1280 testes** em `tests/unit` + `features` e **105 / 1367** na suíte completa (G0 810 módulos / 3295 dependências). Na branch do plan-v8 (`plan-v8/gamificacao`), medido no fechamento da onda **V8-2** (2026-10-22), são **192 arquivos / 2317 testes** no projeto unit (`tests/unit` + `features/**/__tests__` + `entities`) e **210 / 2460** na suíte completa, com **G4 18 / 143** contra a 5433 e G0 **1117 módulos / 4741 dependências** (allow-list vazia).
 - **G4/integração:** roundtrips Prisma real rodam **só** contra o banco de teste isolado `dq-dev-test-db` em `127.0.0.1:5433` (`$env:DATABASE_URL="postgresql://dq_dev:dq_dev_local_only@127.0.0.1:5433/dq_dev_test"; npx vitest run`) — nunca contra o `display-quest-db` (5432, produção local).
 - **Setup do G4 (corrigido 2026-10-02):** `npm run db:test:up` e `npm run db:test:setup` **existem**
   no `package.json` e fazem a sequência completa (`docker compose -f docker-compose.test.yml up -d`,
@@ -26,7 +26,12 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
 
 ## plan-v8 — gamificação remodelada (aberto 2026-10-22)
 
-- **Estado:** `in_progress` — **V8-1 done em 2026-10-22** (schema + virada 1:1 + saída de
+- **Estado:** `in_progress` — **V8-2 done em 2026-10-22** (ciclo mensal: `ResetMonthlyPointsUseCase`,
+  `month_history` escrito, cron `0 0 1 * *`; gates medidos na onda: unit+features 192 arquivos /
+  2317 testes, suíte completa 210 / 2460, G4 18 / 143 na 5433, G0 1117 módulos / 4741 dependências
+  com allow-list vazia, `tsc` 0, `npm run lint` exit 0 com 15 warnings, G5 `docs:build` dos dois
+  documentos + `docs:check` verdes; nenhuma migration nova — 23 linhas em `_prisma_migrations`).
+  Antes, **V8-1 done em 2026-10-22** (schema + virada 1:1 + saída de
   `projects.points`; gates medidos na onda: unit+features 189 arquivos / 2289 testes, suíte
   completa 206 / 2427, G4 17 / 138 na 5433, G0 1109 módulos / 4713 dependências com allow-list
   vazia, `tsc` 0, `npm run lint` exit 0 com 15 warnings). Antes disso, **V8-0 done em 2026-10-22**
@@ -60,6 +65,16 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   (coins = points 1:1, placar zerado, `window: "vida"` nos critérios do catálogo) foi aplicada na
   5433 e conferida por soma (`sum(points)` 14 → 0, `sum(coins)` 0 → 14). Ela roda na **5432 real**
   apenas no V8-CLOSE.
+- **A V8-2 entregou (2026-10-22):** o fechamento mensal do placar, **sem rota nenhuma** — só pela
+  agenda. Regras puras em `backend/domain/gamification/monthly-cycle.ts` (mês fechado = o anterior a
+  `now`, janela `[start, endExclusive)` ancorada em `startOfCivilDayInstant`, audiência "saldo ≠ 0 OU
+  atividade no mês", `POINTS_AFTER_MONTH_CLOSE = 0`); port `MonthlyPointsCyclePort` e adapter
+  `prisma-monthly-points-cycle.port.ts`, onde a `$transaction` escreve `month_history` e **depois**
+  zera `users.points` (P2002 devolvido como `already-closed`); `ResetMonthlyPointsUseCase` com gate
+  `MANAGE_USERS` e `resetMonthlyPoints` no `GamificationModule`; job `'0 0 1 * *'`
+  (`America/Sao_Paulo`) agendado logo depois do weekly reset, com
+  `systemActor(SYSTEM_REASONS.MONTHLY_POINTS_RESET)` (DEC-54). Snapshot guarda negativo; coluna
+  recomeça em 0; **o QUIRK-7C do weekly reset não foi herdado** (DEC-212).
 - **Três decisões de execução da V8-1:** (1) `history.track` é **String** com default, não enum — a
   mesma escolha da DEC-141 (vocabulário fechado no domínio:
   `backend/domain/gamification/tracks.ts`, `POINTS | COINS | XP`); a fechadura é a guarda
@@ -71,6 +86,19 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   na trilha de wire sem consumidor é exatamente a deriva dormente que a DEC-211 enterrou.
   `TaskCompletedEvent.projectId` ficou no contrato como identidade (é o que distingue quest de tarefa
   de projeto, congelado em teste), só deixou de ser chave de escrita.
+- **Três decisões de execução da V8-2:** (1) a contagem de tarefas do mês sai das **duas famílias**
+  que hoje creditam `users.completedTasks`, com as MESMAS condições dos dois incrementos medidos
+  (`complete-task.use-case.ts:113-119` e `approve-task.use-case.ts:126`): `task_user_progress.completedAt`
+  na janela **mais** `tasks.completedAt` do responsável com `isGlobal: false` e
+  `taskVisibility != "public"`. Sem o filtro de visibilidade a tarefa pública atribuída entra nas duas
+  queries e o número cresce; `tests/integration/monthly-points-reset-roundtrip.test.ts` congela 4 e prova
+  o `2 + 3 − 1` consultando o banco. (2) A janela é **fechada nas duas pontas**: o corte de fim é
+  exclusivo, o de início inclusivo — a conclusão das `00:00` de 1º/nov (SP) fica FORA de outubro e
+  DENTRO de novembro; instantâneo nenhum se perde e nenhum se conta duas vezes. (3) Idempotência em
+  duas camadas: o use case lê `hasMonthSnapshot` **antes** de zerar (a zeragem nunca vem atrás de um
+  dedup não lido) e o banco garante pela unique `(userId, month)`. O job é testado com o **módulo real
+  montado sobre port falsa** (`tests/unit/services/cron-monthly-points-reset.test.ts`) para o gate não
+  sumir do teste — a lição medida do B6-2a.
 - **O desenho em uma linha:** quatro trilhas com ciclos próprios — **pontos** mensais
   (placar do ranking; reset mensal com snapshot, DEC-212), **XP** e **elo** da temporada
   anual (aritmética nova de volume: +10/+10/+20 por evento, boosts semanais de constância,
@@ -90,8 +118,13 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   weekly reset), revisão semanal de XP `'10 0 * * 1'` (`WEEKLY_XP_REVIEW`, idempotente por
   `(userId, weekStart)`), fechamento de temporada `'5 0 1 1 *'` (`SEASON_CLOSE`, livro-caixa
   anual + troféu CAMPEÃO pelo maior somatório de pontos mensais, DEC-213).
-- **Absorve:** `displayquest-v2/monthly-points-reset/MODELO.md` (o reset mensal com
-  histórico entra como onda V8-2 do plano).
+- **Status das rotinas novas (medido 2026-10-22):** o reset mensal **existe** desde a V8-2 (job no
+  `lib/services/cron-service.ts`, agendado logo depois do weekly reset, e `executeMonthlyPointsReset()`);
+  a revisão semanal de XP e o fechamento de temporada continuam projeto (V8-3/V8-4). Consequência de
+  sequência aceita e medida: a **loja ainda gasta `users.points`** (`prisma-purchase.repository.ts` faz
+  `decrement`/`increment` na coluna) e só passa à moeda na V8-5 (DEC-215) — no intervalo V8-2..V8-4 o
+  fechamento mensal zeraria também o que foi gasto, o que no dev/teste acontece e na produção não
+  acontece porque a agenda real começa a valer no V8-CLOSE. Não é bug a caçar.
 
 ## plan-v5 — documentos oficiais, economia do projeto e perfil (2026-10-13..14)
 
@@ -918,6 +951,11 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   (`.eslintrc.json` local vs `../../.eslintrc.json` do repo pai, exit ≠ 0 só em worktree).
   No repo pai `npm run lint` passa (exit 0, só warnings). **Workaround validado:** validar
   sempre com `npx eslint --no-eslintrc --config .eslintrc.json <arquivos>` (exit 0 limpo).
+- **`npx vitest run --project unit` / `--project=integration` não funciona nesta versão do Vitest**
+  (medido 2026-10-22, V8-2): "No projects matched the filter", apesar de `vitest.config.mts` declarar os
+  projetos com esses nomes. A divisão canônica unit×integração se mede por **subtração**: `npx vitest run`
+  menos `npx vitest run tests/integration` — e a conta deve bater com a aritmética do lote de arquivos
+  criados, que é a prova de que os dois números são do mesmo escopo.
 - **Enviar env para vitest em worktree:** o runner lê `process.env`, não `.env`, e o `.env`
   tem aspas nos valores. Exportar com `set -a; source .env; set +a; npx vitest run` (o
   `grep/cut` sem aspas também funciona).

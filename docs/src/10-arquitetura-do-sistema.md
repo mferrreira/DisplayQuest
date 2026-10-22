@@ -200,14 +200,20 @@ própria máquina hospedeira para depuração, e não é acessível a partir da 
 
 ### Agenda de tarefas periódicas
 
-A agenda roda dentro do processo do servidor, no fuso do laboratório. São quatro entradas.
+A agenda roda dentro do processo do servidor, no fuso do laboratório. São oito entradas,
+medidas no serviço de agenda (a pausa programada são dois grupos, derivados da grade de
+horários do domínio).
 
 | Agenda | Horário | Efeito |
 | --- | --- | --- |
 | Reinício semanal | Toda segunda-feira, às 00:00 | Consolida a semana e reinicia a contagem corrente |
+| Fechamento mensal do placar | Dia 1, às 00:00 | Fotografar o saldo e as tarefas do mês no histórico da pessoa e zerar o placar |
 | Pausa programada | 09:30 | Pausa as sessões ativas no horário marcado |
 | Pausa programada | 12:00, 15:00 e 17:00 | Idem, nos demais horários |
 | Varredura noturna | 23:59 | Converte em pausada toda sessão ativa remanescente |
+| Varredura de atraso | Todos os dias, às 08:00 | Atividade de cronograma vencida vira notificação urgente para a gestão |
+| Lembrete do atestado | Dia 19, às 09:00 | Lembra a gestão do atestado mensal de frequência |
+| Limpeza do feed | Todos os dias, às 00:07 | Apaga o log de atividade de tarefa anterior ao dia corrente |
 
 ::: limite titulo="A agenda e a réplica única"
 Como a agenda roda dentro do processo web, cada réplica da aplicação executaria a mesma

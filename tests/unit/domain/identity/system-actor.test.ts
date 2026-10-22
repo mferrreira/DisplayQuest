@@ -70,7 +70,8 @@ describe("requireActorPermission", () => {
   });
 
   it("ator de sistema passa em QUALQUER permissão, e é isso que o torna um bypass nomeado", () => {
-    for (const reason of ["NIGHTLY_SWEEP", "SCHEDULED_PAUSE", "WEEKLY_RESET", "SYSTEM_EVENT"] as const) {
+    // MONTHLY_POINTS_RESET entrou na V8-2 do plan-v8 (DEC-212): o fechamento mensal é rotina.
+    for (const reason of ["NIGHTLY_SWEEP", "SCHEDULED_PAUSE", "WEEKLY_RESET", "MONTHLY_POINTS_RESET", "SYSTEM_EVENT"] as const) {
       for (const permission of ["MANAGE_USERS", "MANAGE_NOTIFICATIONS", "MANAGE_PURCHASES"] as const) {
         expect(() => requireActorPermission(systemActor(reason), permission)).not.toThrow();
       }

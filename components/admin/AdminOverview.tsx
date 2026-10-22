@@ -59,8 +59,10 @@ interface AdminOverviewProps {
 
 type ProductivityMetric = "points" | "tasks" | "projects" | "hours"
 
+// V8-2 (DEC-212): o placar de pontos é MENSAL — o mês fecha com snapshot e a coluna volta a 0
+// (plan-v8 MODELO §3). O rótulo diz isso; as colunas novas do ranking (Elo, Troféus, Moedas) são V8-7.
 const PRODUCTIVITY_METRICS: Array<{ id: ProductivityMetric; label: string }> = [
-  { id: "points", label: "Pontos" },
+  { id: "points", label: "Pontos do mês" },
   { id: "tasks", label: "Tarefas" },
   { id: "projects", label: "Projetos" },
   { id: "hours", label: "Horas" },

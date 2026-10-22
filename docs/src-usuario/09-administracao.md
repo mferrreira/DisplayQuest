@@ -48,7 +48,7 @@ A aba **Horas** é a leitura consolidada do tempo registrado. As colunas são **
 
 ## A aba Voluntários
 
-A gestão da equipe de cada projeto mora aqui. Comece escolhendo o projeto em **Selecione um projeto**: sem projeto escolhido, a aba não mostra equipe nenhuma. Com o projeto escolhido aparecem **Ações de Gerenciamento** — **Total de Voluntários**, **Horas Trabalhadas**, **Tasks Completadas** e **Pontos Conquistados** — e a **Equipe de Voluntários**, com **Adicionar voluntário** e **Remover voluntário** em cada pessoa.
+A gestão da equipe de cada projeto mora aqui. Comece escolhendo o projeto em **Selecione um projeto**: sem projeto escolhido, a aba não mostra equipe nenhuma. Com o projeto escolhido aparecem **Ações de Gerenciamento** — **Total de Voluntários**, **Horas Trabalhadas**, **Tasks Completadas** e **Pontos do mês** — e a **Equipe de Voluntários**, com **Adicionar voluntário** e **Remover voluntário** em cada pessoa.
 
 ```foto admin-voluntarios titulo="A aba Voluntários, antes de escolher o projeto"
 O seletor de projeto é o primeiro controle: a equipe só aparece depois de escolher.
