@@ -10,11 +10,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import { ActivityFeed } from "../components/activity-feed";
 
-function renderFeed() {
+function renderFeed(projectId?: number | null) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
-      <ActivityFeed />
+      <ActivityFeed projectId={projectId} />
     </QueryClientProvider>,
   );
 }
@@ -48,5 +48,12 @@ describe("ActivityFeed", () => {
     expect(await screen.findByText("agora")).toBeVisible();
     expect(screen.getByText("há 1 h")).toBeVisible();
     expect(screen.getByText("ontem")).toBeVisible();
+  });
+
+  it("projeto selecionado recorta o feed (manda projectId na leitura)", async () => {
+    renderFeed(999);
+
+    expect(await screen.findByText("Atividade do projeto filtrado")).toBeVisible();
+    expect(screen.queryByText("Relatório semanal enviado")).not.toBeInTheDocument();
   });
 });

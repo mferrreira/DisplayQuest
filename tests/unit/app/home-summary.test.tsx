@@ -129,7 +129,7 @@ describe("Home — regiao de cabecalho (AC-V6-11)", () => {
     expect(overview).toHaveTextContent("Atividade da semana");
     expect(overview).toHaveTextContent("Meta da semana");
     expect(screen.getByRole("img", { name: "Distribuição das tarefas por status" })).toBeVisible();
-    expect(screen.getByRole("img", { name: /Tarefas concluídas nos últimos 7 dias/ })).toBeVisible();
+    expect(screen.getByRole("img", { name: /Tarefas e subtasks concluídas nos últimos 7 dias/ })).toBeVisible();
     expect(overview).toHaveTextContent("Alfa");
     expect(board.compareDocumentPosition(overview) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
     expect(overview.querySelectorAll("a[href^='/dashboard/projetos/']")).toHaveLength(3);

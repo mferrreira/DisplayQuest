@@ -142,8 +142,17 @@ export const taskHandlers = [
   // GET /api/tasks/activity — feed "Atividade recente" (history entityType "task"). Titulos
   // DISTINTOS dos do quadro de proposito: o feed renderiza taskTitle no DOM, e repetir um titulo
   // do board faria getByText do teste do quadro casar com dois elementos (strict violation).
-  http.get("*/api/tasks/activity", async () => {
+  http.get("*/api/tasks/activity", async ({ request }) => {
     await delay();
+    // O componente manda `projectId` quando o quadro tem projeto selecionado; este atalho
+    // prova que o recorte sai na URL (o recorte real e do servidor).
+    if (new URL(request.url).searchParams.get("projectId") === "999") {
+      return HttpResponse.json({
+        items: [
+          { id: 4, action: "MOVE", taskId: 903, taskTitle: "Atividade do projeto filtrado", toStatus: "in-progress", actorId: 1, actorName: "Guia da Silva", at: new Date().toISOString() },
+        ],
+      });
+    }
     return HttpResponse.json({
       items: [
         { id: 1, action: "COMPLETE", taskId: 900, taskTitle: "Relatório semanal enviado", toStatus: "done", actorId: 1, actorName: "Guia da Silva", at: new Date().toISOString() },

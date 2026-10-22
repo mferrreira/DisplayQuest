@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { render, screen } from "@testing-library/react"
+import { civilDayOfInstant } from "@/backend/domain"
 
 const filters = vi.hoisted(() => ({
   projeto: null as number | null,
@@ -29,16 +30,16 @@ const tasks = [
   { id: 3, title: "Concluir Beta", status: "done", assignedTo: 7, assigneeIds: [7], projectId: 2, activityId: 22, dueDate: null },
 ] as never
 
-describe("HomeOverview filters", () => {
-  beforeEach(() => {
-    filters.projeto = null
-    filters.atrasadas = false
-    filters.hoje = false
-    filters.busca = ""
-    filters.pessoa = null
-    filters.atividade = null
-  })
+beforeEach(() => {
+  filters.projeto = null
+  filters.atrasadas = false
+  filters.hoje = false
+  filters.busca = ""
+  filters.pessoa = null
+  filters.atividade = null
+})
 
+describe("HomeOverview filters", () => {
   it("recalcula os gráficos e projetos recentes ao filtrar por pessoa", () => {
     filters.pessoa = 7
     render(<HomeOverview projects={projects} tasks={tasks} weekHours={20} currentWeekHours={5} />)
@@ -68,5 +69,49 @@ describe("HomeOverview filters", () => {
     expect(screen.getByText("A Fazer").parentElement).toHaveTextContent("1")
     expect(screen.getByRole("link", { name: /Projeto Alfa/ })).toBeInTheDocument()
     expect(screen.queryByRole("link", { name: /Projeto Beta/ })).not.toBeInTheDocument()
+  })
+})
+
+/**
+ * "Atividade da semana" (pedido do dono, 2026-10-22): uma mãe pode ter 50 subtasks e a barra
+ * não pode contar a mãe como 1. Conclusão de subtask conta igual à de tarefa, cada uma no dia
+ * civil em que aconteceu. O título de cada coluna ("dia a dia: N conclusões") é o que a barra
+ * mede — é por ele que a contagem se prova.
+ */
+describe("Atividade da semana — subtask conta", () => {
+  it("a barra do dia soma a tarefa e as subtasks concluídas naquele dia civil", () => {
+    const today = civilDayOfInstant(new Date())
+    const noon = (day: string) => `${day}T12:00:00.000Z`
+    const daysAgo = (n: number) => new Date(Date.parse(`${today}T00:00:00Z`) - n * 86_400_000).toISOString().slice(0, 10)
+    const yesterday = daysAgo(1)
+    const fiveAgo = daysAgo(5)
+
+    const withSubtasks = [
+      {
+        id: 200,
+        title: "Mãe com subtasks",
+        status: "done",
+        completedAt: noon(today),
+        projectId: 1,
+        assignedTo: 7,
+        assigneeIds: [7],
+        dueDate: null,
+        subtasks: [
+          { id: 1, title: "hoje", completed: true, completedAt: noon(today) },
+          { id: 2, title: "ontem", completed: true, completedAt: noon(yesterday) },
+          { id: 3, title: "há cinco dias", completed: true, completedAt: noon(fiveAgo) },
+          { id: 4, title: "aberta", completed: false, completedAt: null },
+        ],
+      },
+      { id: 201, title: "Feita ontem", status: "done", completedAt: noon(yesterday), dueDate: null },
+    ] as never
+
+    render(<HomeOverview projects={projects} tasks={withSubtasks} weekHours={20} currentWeekHours={5} />)
+
+    const chart = screen.getByRole("img", { name: "Tarefas e subtasks concluídas nos últimos 7 dias" })
+    // hoje = mãe (1) + subtask de hoje (1); ontem = subtask (1) + tarefa 201 (1); há 5 dias só a subtask.
+    expect(chart.querySelector(`[title^="${today} a ${today}"]`)).toHaveAttribute("title", `${today} a ${today}: 2 conclusões`)
+    expect(chart.querySelector(`[title^="${yesterday} a ${yesterday}"]`)).toHaveAttribute("title", `${yesterday} a ${yesterday}: 2 conclusões`)
+    expect(chart.querySelector(`[title^="${fiveAgo} a ${fiveAgo}"]`)).toHaveAttribute("title", `${fiveAgo} a ${fiveAgo}: 1 conclusões`)
   })
 })

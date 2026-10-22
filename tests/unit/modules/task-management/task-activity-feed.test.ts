@@ -27,6 +27,7 @@ import type {
   TaskActivityEntry,
   TaskActivityItem,
   TaskActivityPort,
+  TaskActivityScope,
 } from "@/backend/modules/task-management/application/ports/task-activity.port";
 import type { TaskAssigneesPort } from "@/backend/modules/task-management/application/ports/task-assignees.repository";
 import type { TaskNotificationsPort } from "@/backend/modules/task-management/application/ports/task-notifications.port";
@@ -44,6 +45,7 @@ let seq: { task: number };
 let purgedCutoffs: Date[];
 let purgedCount: number;
 let returnedSince: Date | undefined;
+let returnedScope: TaskActivityScope | undefined;
 
 function buildModule(withActivity: boolean) {
   const taskRepo: TaskRepositoryPort = {
@@ -125,12 +127,17 @@ function buildModule(withActivity: boolean) {
 
   const actors = {
     async findById(id: number): Promise<TaskActorRecord | null> {
-      if (id !== 1) return null;
-      return { id, name: "Coordenador", roles: ["COORDENADOR"], completedTasks: 0 };
+      if (id === 1) {
+        return { id, name: "Coordenador", roles: ["COORDENADOR"], completedTasks: 0 };
+      }
+      if (id === 2) {
+        return { id, name: "Ana Souza", roles: ["COLABORADOR"], completedTasks: 0 };
+      }
+      return null;
     },
     async incrementCompletedTasks() {},
     async getUserProjectMemberships() {
-      return [];
+      return [{ projectId: PROJECT }];
     },
     async listActiveUsers() {
       return [];
@@ -171,7 +178,7 @@ function buildModule(withActivity: boolean) {
     async append(entry) {
       appended.push(entry);
     },
-    async listRecent(limit, since): Promise<TaskActivityItem[]> {
+    async listRecent(limit, since, scope): Promise<TaskActivityItem[]> {
       const items: TaskActivityItem[] = [
         {
           id: 1,
@@ -185,6 +192,7 @@ function buildModule(withActivity: boolean) {
         },
       ];
       if (since) returnedSince = since;
+      returnedScope = scope;
       return items.slice(0, limit);
     },
     async purgeOlderThan(cutoff) {
@@ -220,6 +228,7 @@ beforeEach(() => {
   purgedCutoffs = [];
   purgedCount = 0;
   returnedSince = undefined;
+  returnedScope = undefined;
 });
 
 describe("registro de atividade no modulo (porta injetada)", () => {
@@ -228,7 +237,7 @@ describe("registro de atividade no modulo (porta injetada)", () => {
     const task = await createTask(mod, { title: "Nova etapa", projectId: PROJECT });
 
     expect(appended).toEqual([
-      { taskId: task.id, taskTitle: "Nova etapa", actorId: 1, action: "CREATE", toStatus: task.status },
+      { taskId: task.id, taskTitle: "Nova etapa", actorId: 1, action: "CREATE", toStatus: task.status, projectId: PROJECT },
     ]);
   });
 
@@ -277,13 +286,30 @@ describe("registro de atividade no modulo (porta injetada)", () => {
     expect(appended[0]).toMatchObject({ action: "COMPLETE", taskId: task.id, toStatus: "done", actorId: 1 });
   });
 
-  it("aprovar grava COMPLETE usando o approverId (que nao e ator)", async () => {
+  it("aprovar credita a conclusao ao RESPONSAVEL, nao a quem aprovou", async () => {
     const mod = buildModule(true);
-    const task = await createTask(mod, { title: "Aprovar", projectId: PROJECT, status: "in-review" });
+    const task = await createTask(mod, {
+      title: "Aprovar",
+      projectId: PROJECT,
+      status: "in-review",
+      assignedTo: 2,
+    });
     appended.length = 0;
 
     const result = await mod.approveTask({ taskId: task.id!, approverId: 1 });
 
+    expect(appended).toHaveLength(1);
+    expect(appended[0]).toMatchObject({ action: "COMPLETE", taskId: task.id, toStatus: result.task.status, actorId: 2 });
+  });
+
+  it("aprovar tarefa SEM responsavel usa o aprovador como fallback do feed", async () => {
+    const mod = buildModule(true);
+    const task = await createTask(mod, { title: "Sem dono", projectId: PROJECT, status: "in-review" });
+    appended.length = 0;
+
+    const result = await mod.approveTask({ taskId: task.id!, approverId: 1 });
+
+    expect(result.task.assignedTo ?? null).toBeNull();
     expect(appended).toHaveLength(1);
     expect(appended[0]).toMatchObject({ action: "COMPLETE", taskId: task.id, toStatus: result.task.status, actorId: 1 });
   });
@@ -331,6 +357,22 @@ describe("listActivity e a leitura da porta", () => {
     await mod.listActivity(5, since);
 
     expect(returnedSince).toEqual(since);
+  });
+
+  it("sem projeto selecionado recorta pelos projetos da pessoa", async () => {
+    const mod = buildModule(true);
+
+    await mod.listActivity(5, undefined, { actorId: 1 });
+
+    expect(returnedScope).toEqual({ projectId: undefined, projectIds: [PROJECT] });
+  });
+
+  it("com projeto selecionado nao consulta memberships e recorta so por ele", async () => {
+    const mod = buildModule(true);
+
+    await mod.listActivity(5, undefined, { actorId: 1, projectId: 99 });
+
+    expect(returnedScope).toEqual({ projectId: 99, projectIds: undefined });
   });
 });
 

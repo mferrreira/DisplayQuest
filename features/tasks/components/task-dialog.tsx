@@ -5,7 +5,7 @@
  * Mirrors gateway constraints: title 1–200, description ≤1000,
  * isGlobal requires MANAGE_USERS and disables project/assignees/visibility (gateway :86–93).
  */
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -43,7 +43,7 @@ import { POINTS_PER_TASK, supportsSubtasks, SUBTASK_TITLE_MAX_LENGTH } from ".."
 import { isActivityPast } from "@/backend/domain"
 import type { Task } from "@/entities/task"
 import { listProjectMembers, type ProjectMember } from "@/lib/api/project-members"
-import { getCronograma, type ProjectActivity } from "@/lib/api/project-cronograma"
+import { getCronograma, type ProjectActivity, type ProjectCronogramaView } from "@/lib/api/project-cronograma"
 
 type TaskDialogTab = "task" | "backlog"
 
@@ -105,8 +105,13 @@ export function TaskDialog({ open, onOpenChange, task, defaultProjectId }: TaskD
   // tela faz a partir de medida do servidor.
   const [projectActivities, setProjectActivities] = useState<ProjectActivity[]>([])
   const [cronogramaToday, setCronogramaToday] = useState("")
+  const [activitiesLoading, setActivitiesLoading] = useState(false)
   const [activityId, setActivityId] = useState<string>(NO_ACTIVITY)
   const [activityTouched, setActivityTouched] = useState(false)
+  // O cache vive no ref (não no estado): reabrir o diálogo não pode apagar o que já foi
+  // buscado — era o que fazia o seletor sumir a cada abertura e renascer só quando a busca
+  // voltava. A revalidação em segundo plano continua buscando; o cache só encurta o vazio.
+  const cronogramaCacheRef = useRef<Map<number, ProjectCronogramaView>>(new Map())
 
   const userRoles = (session?.user as { roles?: string[] } | undefined)?.roles ?? []
   const canManageUsers = userRoles.includes("COORDENADOR") || userRoles.includes("GERENTE")
@@ -147,9 +152,9 @@ export function TaskDialog({ open, onOpenChange, task, defaultProjectId }: TaskD
       setSubtaskDrafts([])
       setNewSubtaskTitle("")
       // V5-6: reabrir para editar parte do vínculo que a tarefa tem; reabrir para criar parte
-      // do nada (a pré-seleção chega depois, quando o cronograma do projeto carrega).
-      setProjectActivities([])
-      setCronogramaToday("")
+      // do nada (a pré-seleção chega depois, quando o cronograma do projeto carrega). A lista
+      // NÃO é apagada aqui: o cache do ref devolve o que já foi buscado e o efeito do projeto
+      // selecionado decide o resto.
       setActivityId(task?.activityId?.toString() ?? NO_ACTIVITY)
       setActivityTouched(false)
       reset({
@@ -225,43 +230,68 @@ export function TaskDialog({ open, onOpenChange, task, defaultProjectId }: TaskD
   /**
    * V5-6 (DEC-99): as linhas do cronograma do projeto selecionado. Mesma forma do efeito de
    * membros acima. A leitura é aberta (DEC-136) — qualquer autenticado vê o cronograma — e
-   * falha não quebra o formulário: sem lista, o seletor simplesmente não aparece.
+   * falha não quebra o formulário: sem lista, o seletor mostra só "Sem atividade".
+   *
+   * O cache por projeto (ref) faz a reabertura sair com a última lista conhecida enquanto a
+   * revalidação busca de novo; sem cache, a busca vira loading visível — o controle está no
+   * diálogo desde a montagem, nunca "depois que der tempo".
    */
   useEffect(() => {
+    if (!open) return
     const pid = selectedProjectId ? Number(selectedProjectId) : null
     if (!pid || !Number.isInteger(pid) || pid <= 0) {
       setProjectActivities([])
       setCronogramaToday("")
+      setActivitiesLoading(false)
       return
     }
+    const cached = cronogramaCacheRef.current.get(pid)
+    if (cached) {
+      setProjectActivities(cached.activities)
+      setCronogramaToday(cached.today)
+      setActivitiesLoading(false)
+    } else {
+      setProjectActivities([])
+      setCronogramaToday("")
+      setActivitiesLoading(true)
+    }
+    // A busca sempre rearma na abertura: o cache encurta o vazio, mas o cronograma pode ter
+    // sido editado enquanto o diálogo estava fechado.
     let cancelled = false
     getCronograma(pid)
       .then((view) => {
         if (cancelled) return
+        cronogramaCacheRef.current.set(pid, view)
         setProjectActivities(view.activities)
         setCronogramaToday(view.today)
+        setActivitiesLoading(false)
       })
       .catch(() => {
-        if (!cancelled) {
+        if (cancelled) return
+        // Sem cache anterior a lista fica vazia (o seletor continua lá, só "Sem atividade");
+        // com cache, a última leitura conhecida segue servindo enquanto a busca não volta.
+        if (!cached) {
           setProjectActivities([])
           setCronogramaToday("")
         }
+        setActivitiesLoading(false)
       })
     return () => {
       cancelled = true
     }
-  }, [selectedProjectId])
+  }, [open, selectedProjectId])
 
   /**
    * Pré-seleção (DEC-99): na criação, a atividade vigente — a cujo período cobre hoje, medida
    * pelo servidor (`current` na resposta) — vem escolhida. Uma escolha manual do usuário não é
    * atropelada: `activityTouched` trava a pré-seleção a partir do primeiro clique.
+   * `open` entra porque reabrir reposiciona o valor (o efeito de reset não conhece a lista).
    */
   useEffect(() => {
-    if (task || activityTouched) return
+    if (!open || task || activityTouched) return
     const current = projectActivities.find((a) => a.current)
     setActivityId(current ? String(current.id) : NO_ACTIVITY)
-  }, [projectActivities, task, activityTouched])
+  }, [open, projectActivities, task, activityTouched])
 
   /**
    * O que a lista oferece (DEC-99):
@@ -278,7 +308,11 @@ export function TaskDialog({ open, onOpenChange, task, defaultProjectId }: TaskD
     )
   }, [task, projectActivities, cronogramaToday])
 
-  const showActivityField = !isGlobal && Boolean(selectedProjectId) && activityOptions.length > 0
+  // O seletor existe sempre que há projeto (e a tarefa não é global): com cronograma ele lista
+  // as linhas; sem, oferece só "Sem atividade"; carregando, nasce desabilitado. A promessa é
+  // estrutural — o controle está montado com o diálogo, não "quando a busca der tempo".
+  const showActivityField = !isGlobal && Boolean(selectedProjectId)
+  const activityListReady = !activitiesLoading && activityOptions.length > 0
 
   const onSubmit = async (values: TaskFormValues) => {
     setServerError("")
@@ -300,10 +334,10 @@ export function TaskDialog({ open, onOpenChange, task, defaultProjectId }: TaskD
     } else {
       body.projectId = parsed.projectId ? Number(parsed.projectId) : null
       body.assigneeIds = parsed.assigneeIds
-      // V5-6 (DEC-99): a linha do cronograma. Só sai no corpo quando o seletor existe — corpo
-      // sem a chave não apaga vínculo (o corpo é parcial), e um seletor que não carregou não
-      // pode apagar o que o usuário nunca viu.
-      if (showActivityField) {
+      // V5-6 (DEC-99): a linha do cronograma. Só sai no corpo quando a lista terminou de
+      // carregar e tem opções — corpo sem a chave não apaga vínculo (o corpo é parcial), e um
+      // seletor ainda carregando não pode apagar o que o usuário nunca viu.
+      if (showActivityField && activityListReady) {
         body.activityId = activityId === NO_ACTIVITY ? null : Number(activityId)
       }
       if (parsed.dueDate) body.dueDate = parsed.dueDate
@@ -443,12 +477,17 @@ export function TaskDialog({ open, onOpenChange, task, defaultProjectId }: TaskD
               </div>
 
               {/* V5-6 (DEC-99): a linha do cronograma do projeto selecionado. O rótulo do
-                  trigger não contém o rótulo do Label (lição do substring, 3.C). */}
+                  trigger não contém o rótulo do Label (lição do substring, 3.C). Montado junto
+                  com o diálogo sempre que há projeto: carregando nasce desabilitado com
+                  "Carregando...", e o item "Sem atividade" só existe quando a lista terminou —
+                  enquanto ele não existe, o valor `none` não casa com opção nenhuma e o
+                  placeholder é o que a pessoa lê. */}
               {showActivityField && (
                 <div className="space-y-2">
                   <Label htmlFor="task-activity">Atividade do cronograma</Label>
                   <Select
                     value={activityId}
+                    disabled={activitiesLoading}
                     onValueChange={(value) => {
                       // Medido no jsdom: o Select dentro do `<form>` renderiza um native select
                       // oculto do Radix (BubbleSelect) cujas opções só existem com a lista aberta;
@@ -461,10 +500,16 @@ export function TaskDialog({ open, onOpenChange, task, defaultProjectId }: TaskD
                     }}
                   >
                     <SelectTrigger id="task-activity" aria-label="Atividade da tarefa">
-                      <SelectValue placeholder="Sem atividade" />
+                      {/* SelectValue só imprime a opção que casa com o valor; carregando não há
+                          opção de valor algum, então o aviso é um texto direto no trigger. */}
+                      {activitiesLoading ? (
+                        <span className="text-muted-foreground">Carregando...</span>
+                      ) : (
+                        <SelectValue placeholder="Sem atividade" />
+                      )}
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">Sem atividade</SelectItem>
+                      {!activitiesLoading && <SelectItem value="none">Sem atividade</SelectItem>}
                       {activityOptions.map((activity) => (
                         <SelectItem key={activity.id} value={activity.id.toString()}>
                           {activity.order}. {activity.description}
@@ -473,9 +518,13 @@ export function TaskDialog({ open, onOpenChange, task, defaultProjectId }: TaskD
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
-                    {task
-                      ? "A tarefa fica ligada a uma linha do cronograma do projeto."
-                      : "Só a atividade vigente e as futuras aparecem; a vigente vem pré-selecionada."}
+                    {activitiesLoading
+                      ? "Buscando as linhas do cronograma do projeto."
+                      : task
+                        ? "A tarefa fica ligada a uma linha do cronograma do projeto."
+                        : activityOptions.length === 0
+                          ? "O cronograma do projeto ainda não tem linhas."
+                          : "Só a atividade vigente e as futuras aparecem; a vigente vem pré-selecionada."}
                   </p>
                 </div>
               )}

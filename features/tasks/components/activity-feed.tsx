@@ -6,6 +6,9 @@
  * moveu ou concluiu. Compacto (uma linha por acao), sem o card colapsavel que comia espaco.
  * Altura fixa com rolagem interna (dono, V6-11k): a lista cresce para dentro do quadro,
  * nunca para fora — sem isso o card vira uma monstruosidade quando os logs se acumulam.
+ *
+ * O recorte acompanha o quadro (dono, 2026-10-21): projeto selecionado filtra por ele;
+ * sem seleção, aparecem so os projetos de que a pessoa e membro (mais as tarefas globais).
  */
 import { useTaskActivity } from "@/features/tasks/hooks/use-tasks"
 import { taskStatusSentenceLabel } from "@/components/ui/status"
@@ -42,8 +45,8 @@ function actionPhrase(action: string, toStatus: string | null): string {
   return ACTION_PHRASE[action] ?? action
 }
 
-export function ActivityFeed() {
-  const { data, isPending } = useTaskActivity(12)
+export function ActivityFeed({ projectId }: { projectId?: number | null }) {
+  const { data, isPending } = useTaskActivity(12, projectId)
   const items = data ?? []
 
   return (

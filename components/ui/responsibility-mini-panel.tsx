@@ -18,8 +18,9 @@ function formatDuration(seconds: number): string {
 }
 
 /**
- * Compact responsibility timer for the floating session timer's second tab.
- * Same shared state as /dashboard/laboratorio?tab=responsabilidade (no
+ * Compact responsibility timer for the floating session timer, rendered below the
+ * session section for the roles that run the lab (no longer a second tab nobody
+ * opens). Same shared state as /dashboard/laboratorio?tab=responsabilidade (no
  * duplication): assume/release the lab, live duration, paused badge, and a
  * disabled assume button naming the current owner when someone else holds it.
  */

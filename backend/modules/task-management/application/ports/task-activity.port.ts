@@ -17,6 +17,19 @@ export interface TaskActivityEntry {
   actorId: number
   action: TaskActivityAction
   toStatus?: string | null
+  /** Projeto da tarefa no instante da acao; `null` em quest global. */
+  projectId?: number | null
+}
+
+/**
+ * Recorte do feed: o projeto selecionado no quadro OU os projetos da pessoa.
+ *
+ * `projectIds` e a lista de memberships resolvida pelo modulo; o adapter nao consulta
+ * `project_members` por conta propria. Tarefa global (sem projeto) aparece nos dois recortes.
+ */
+export interface TaskActivityScope {
+  projectId?: number | null
+  projectIds?: number[]
 }
 
 export interface TaskActivityItem {
@@ -32,7 +45,7 @@ export interface TaskActivityItem {
 
 export interface TaskActivityPort {
   append(entry: TaskActivityEntry): Promise<void>
-  listRecent(limit: number, since?: Date): Promise<TaskActivityItem[]>
+  listRecent(limit: number, since?: Date, scope?: TaskActivityScope): Promise<TaskActivityItem[]>
   /**
    * Apaga os registros de atividade de tarefa anteriores a `cutoff` e devolve quantos saíram.
    *

@@ -58,7 +58,12 @@ export class TaskManagementModule {
   readonly rejectTask: (command: { taskId: number; approverId: number; reason?: string }) => Promise<any>
   readonly globalProgress: (command: { actor: ActorRef }) => Promise<GlobalProgressEntry[]>
   // Feed "Atividade recente": as acoes mais recentes gravadas em `history` (entityType "task").
-  readonly listActivity: (limit: number, since?: Date) => Promise<TaskActivityItem[]>
+  // `scope` recorta pelo projeto selecionado no quadro ou pelos projetos da pessoa.
+  readonly listActivity: (
+    limit: number,
+    since?: Date,
+    scope?: { actorId?: number; projectId?: number | null },
+  ) => Promise<TaskActivityItem[]>
   // V6-11k: limpeza periódica do feed (cron). Apaga só `entityType "task"` mais antigo que o
   // corte; premiações e avisos do lab moram na MESMA tabela e nunca são tocados (porta documenta).
   readonly purgeTaskActivity: (cutoff: Date) => Promise<number>
@@ -191,7 +196,7 @@ export class TaskManagementModule {
       const task = await createTaskUseCase.execute(command, actor)
       const id = personId(actor)
       if (activity && id != null && task?.id) {
-        await activity.append({ taskId: task.id, taskTitle: task.title, actorId: id, action: "CREATE", toStatus: task.status })
+        await activity.append({ taskId: task.id, taskTitle: task.title, actorId: id, action: "CREATE", toStatus: task.status, projectId: task.projectId ?? null })
       }
       return task
     }
@@ -202,7 +207,7 @@ export class TaskManagementModule {
       const id = personId(command.actor)
       const moved = command.data.status !== undefined && command.data.status !== null
       if (activity && id != null && moved && task?.id) {
-        await activity.append({ taskId: task.id, taskTitle: task.title, actorId: id, action: "MOVE", toStatus: task.status })
+        await activity.append({ taskId: task.id, taskTitle: task.title, actorId: id, action: "MOVE", toStatus: task.status, projectId: task.projectId ?? null })
       }
       return task
     }
@@ -222,6 +227,7 @@ export class TaskManagementModule {
           actorId: id,
           action: landedDone ? "COMPLETE" : "MOVE",
           toStatus: result.task.status,
+          projectId: result.task.projectId ?? null,
         })
       }
       return result
@@ -229,19 +235,38 @@ export class TaskManagementModule {
     this.approveTask = async (command) => {
       const result = await approveTaskUseCase.execute(command)
       if (activity && result?.task?.id) {
-        await activity.append({ taskId: result.task.id, taskTitle: result.task.title, actorId: command.approverId, action: "COMPLETE", toStatus: result.task.status })
+        // A aprovacao e o momento em que a tarefa delegada termina; o feed credita a CONCLUSAO
+        // a quem era responsavel, nao a quem clicou em Aprovar. O aprovador so aparece quando a
+        // tarefa nao tem responsavel nenhum (fallback).
+        const responsibleId =
+          result.task.assignedTo ?? result.task.assigneeIds?.[0] ?? command.approverId
+        await activity.append({ taskId: result.task.id, taskTitle: result.task.title, actorId: responsibleId, action: "COMPLETE", toStatus: result.task.status, projectId: result.task.projectId ?? null })
       }
       return result
     }
     this.rejectTask = async (command) => {
       const task = await rejectTaskUseCase.execute(command)
       if (activity && task?.id) {
-        await activity.append({ taskId: task.id, taskTitle: task.title, actorId: command.approverId, action: "MOVE", toStatus: task.status })
+        await activity.append({ taskId: task.id, taskTitle: task.title, actorId: command.approverId, action: "MOVE", toStatus: task.status, projectId: task.projectId ?? null })
       }
       return task
     }
     this.globalProgress = (command) => listGlobalProgressUseCase.execute(command)
-    this.listActivity = async (limit, since) => (activity ? activity.listRecent(limit, since) : [])
+    this.listActivity = async (limit, since, scope) => {
+      if (!activity) return []
+      let projectIds: number[] | undefined
+      // Com projeto selecionado o recorte e direto; sem ele, so os projetos da pessoa (mais as
+      // tarefas globais, que nao pertencem a projeto nenhum). A lista de memberships NAO e
+      // consultada quando o projeto ja foi escolhido — seria trabalho jogado fora.
+      if (scope?.projectId == null && scope?.actorId != null) {
+        const memberships = await ports.actors.getUserProjectMemberships(scope.actorId)
+        projectIds = memberships.map((membership) => membership.projectId)
+      }
+      return activity.listRecent(limit, since, {
+        projectId: scope?.projectId ?? undefined,
+        projectIds,
+      })
+    }
     this.purgeTaskActivity = async (cutoff) => (activity ? activity.purgeOlderThan(cutoff) : 0)
     this.createTaskSubtask = (command) => createTaskSubtaskUseCase.execute(command)
     this.updateTaskSubtask = (command) => updateTaskSubtaskUseCase.execute(command)

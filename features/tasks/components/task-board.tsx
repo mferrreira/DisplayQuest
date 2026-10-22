@@ -341,7 +341,7 @@ export function TaskBoard() {
         </DragDropContext>
       )}
 
-      <ActivityFeed />
+      <ActivityFeed projectId={projetoParam} />
       <ArchivedTasksDisclosure archived={archivedTasks} />
 
       <TaskDialog

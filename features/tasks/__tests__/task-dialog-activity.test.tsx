@@ -7,13 +7,17 @@
  *      a tela não calcula fuso).
  *   3. A lista da criação não oferece linha passada; a da edição oferece (DEC-99: a recusa é
  *      do seletor, não do servidor — tarefa ligada a etapa que virou passada continua salvável).
- *   4. O submit manda `activityId`; "Sem atividade" manda `null`; sem cronograma o campo não
- *      existe e o corpo não leva a chave (corpo parcial não apaga vínculo).
+ *   4. O submit manda `activityId`; "Sem atividade" manda `null`; corpo SEM a lista carregada
+ *      não leva a chave (corpo parcial não apaga vínculo) — carregando ou sem linha, o campo
+ *      existe e diz o que está havendo ("Carregando..." / "Sem atividade").
  *   5. Quest global não tem seletor (atividade é do projeto, e quest não tem projeto).
+ *   6. O campo monta com o diálogo, não "quando a busca der tempo": carregando nasce
+ *      desabilitado, e reabrir o diálogo devolve a lista já buscada do cache do componente.
  *
  * As mutações são dobradas para GRAVAR o corpo enviado — é a prova de o que o cliente manda,
  * não de o que o servidor aceita (isso fica em tests/unit/api/task-activity-link-routes.test.ts).
- * O cronograma é dobrado na seam de lib (precedente medido do V5-5b: sem handler MSW).
+ * O cronograma é dobrado na seam de lib (precedente medido do V5-5b: sem handler MSW), com gate
+ * controlável para segurar o loading e contador para provar a revalidação do reabrir.
  */
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -34,6 +38,9 @@ const mocks = vi.hoisted(() => ({
   created: [] as Record<string, unknown>[],
   updated: [] as Array<{ id: number; data: Record<string, unknown> }>,
   cronogramaView: null as ProjectCronogramaView | null,
+  // Gate pendurado: enquanto pendurado, a busca NÃO resolve — é o mundo do "carregando".
+  cronogramaGate: null as Promise<void> | null,
+  cronogramaCalls: 0,
 }));
 
 const activity = (over: Partial<ProjectActivity> & { id: number; order: number; description: string }): ProjectActivity => ({
@@ -79,7 +86,11 @@ vi.mock("@/lib/api/project-members", () => ({
 }));
 
 vi.mock("@/lib/api/project-cronograma", () => ({
-  getCronograma: async () => mocks.cronogramaView,
+  getCronograma: async () => {
+    mocks.cronogramaCalls += 1;
+    if (mocks.cronogramaGate) await mocks.cronogramaGate;
+    return mocks.cronogramaView;
+  },
 }));
 
 vi.mock("@/features/tasks/hooks/use-tasks", () => ({
@@ -127,12 +138,18 @@ function renderDialog(task: ReturnType<typeof makeTask> | null) {
 
 async function openActivitySelect() {
   const user = userEvent.setup({ delay: null });
-  await user.click(await screen.findByRole("combobox", { name: "Atividade da tarefa" }));
+  const trigger = await screen.findByRole("combobox", { name: "Atividade da tarefa" });
+  // O campo monta desabilitado (loading) e só abre quando a lista termina — abrir antes é
+  // click em controle desabilitado.
+  await waitFor(() => expect(trigger).not.toBeDisabled());
+  await user.click(trigger);
 }
 
 beforeEach(() => {
   mocks.created = [];
   mocks.updated = [];
+  mocks.cronogramaGate = null;
+  mocks.cronogramaCalls = 0;
   seedCronograma();
 });
 
@@ -157,7 +174,8 @@ describe("seletor de atividade — criação", () => {
     renderDialog(null);
     const user = userEvent.setup({ delay: null });
 
-    await screen.findByRole("combobox", { name: "Atividade da tarefa" });
+    const trigger = await screen.findByRole("combobox", { name: "Atividade da tarefa" });
+    await waitFor(() => expect(trigger).toHaveTextContent("1. Etapa vigente"));
     await user.type(screen.getByRole("textbox", { name: "Título" }), "Ler os artigos da etapa");
     await user.click(screen.getByRole("button", { name: "Criar Tarefa" }));
 
@@ -178,19 +196,61 @@ describe("seletor de atividade — criação", () => {
     expect(mocks.created[0].activityId).toBeNull();
   });
 
-  it("sem linha no cronograma o seletor não existe, e o corpo não leva a chave", async () => {
+  it("sem linha no cronograma o seletor existe só com \"Sem atividade\", e o corpo não leva a chave", async () => {
     mocks.cronogramaView = { projectId: 3, today: "2026-10-14", months: [], goals: [], activities: [] };
     renderDialog(null);
 
-    // O projeto está selecionado (defaultProjectId), mas não há atividade: nada de seletor.
-    await screen.findByRole("combobox", { name: "Projeto da tarefa" });
-    expect(screen.queryByRole("combobox", { name: "Atividade da tarefa" })).not.toBeInTheDocument();
+    // O projeto está selecionado (defaultProjectId), mas não há atividade: o campo continua lá
+    // e diz isso — "Sem atividade" é a única opção. Sem opção de lista, o corpo não leva a
+    // chave (corpo parcial não apaga vínculo).
+    const trigger = await screen.findByRole("combobox", { name: "Atividade da tarefa" });
+    await waitFor(() => expect(trigger).not.toBeDisabled());
+    expect(trigger).toHaveTextContent("Sem atividade");
+    expect(screen.getByText("O cronograma do projeto ainda não tem linhas.")).toBeInTheDocument();
 
     const user = userEvent.setup({ delay: null });
     await user.type(screen.getByRole("textbox", { name: "Título" }), "Tarefa sem cronograma");
     await user.click(screen.getByRole("button", { name: "Criar Tarefa" }));
 
     expect(mocks.created[0]).not.toHaveProperty("activityId");
+  });
+
+  it("o campo monta com o diálogo e anuncia o carregamento", () => {
+    mocks.cronogramaGate = new Promise(() => {});
+    renderDialog(null);
+
+    // Sem await: a prova é que o controle existe na montagem, desabilitado, antes de qualquer
+    // resposta do servidor — "demora pra aparecer" é exatamente a ausência deste estado.
+    const trigger = screen.getByRole("combobox", { name: "Atividade da tarefa" });
+    expect(trigger).toBeDisabled();
+    expect(trigger).toHaveTextContent("Carregando...");
+  });
+
+  it("enviar enquanto o cronograma carrega não leva activityId no corpo", async () => {
+    mocks.cronogramaGate = new Promise(() => {});
+    renderDialog(null);
+    const user = userEvent.setup({ delay: null });
+
+    await user.type(screen.getByRole("textbox", { name: "Título" }), "Tarefa no escuro");
+    await user.click(screen.getByRole("button", { name: "Criar Tarefa" }));
+
+    expect(mocks.created).toHaveLength(1);
+    expect(mocks.created[0]).not.toHaveProperty("activityId");
+  });
+
+  it("reabrir o diálogo devolve o cronograma já buscado, sem esperar a revalidação", async () => {
+    const view = renderDialog(null);
+    const first = await screen.findByRole("combobox", { name: "Atividade da tarefa" });
+    await waitFor(() => expect(first).toHaveTextContent("1. Etapa vigente"));
+
+    view.rerender(<TaskDialog open={false} onOpenChange={() => {}} task={null} defaultProjectId={3} />);
+    view.rerender(<TaskDialog open onOpenChange={() => {}} task={null} defaultProjectId={3} />);
+
+    // Sem await: o cache do componente devolve a lista na hora; a revalidação continua
+    // buscando (duas chamadas para dois aberturas), mas o campo não renasce vazio.
+    const reopened = screen.getByRole("combobox", { name: "Atividade da tarefa" });
+    expect(reopened).toHaveTextContent("1. Etapa vigente");
+    expect(mocks.cronogramaCalls).toBe(2);
   });
 
   it("quest global não tem seletor de atividade", async () => {
@@ -221,7 +281,8 @@ describe("seletor de atividade — edição", () => {
     renderDialog(linked);
     const user = userEvent.setup({ delay: null });
 
-    await screen.findByRole("combobox", { name: "Atividade da tarefa" });
+    const trigger = await screen.findByRole("combobox", { name: "Atividade da tarefa" });
+    await waitFor(() => expect(trigger).not.toBeDisabled());
     await user.click(screen.getByRole("button", { name: "Salvar" }));
 
     expect(mocks.updated).toHaveLength(1);

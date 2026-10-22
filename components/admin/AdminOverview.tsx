@@ -6,9 +6,11 @@
  * Saiu dos quatro retângulos de métrica (um deles só para "pontos totais / média", inútil) e
  * do progresso "75%" fixo no código. Entra em gráficos com o dado que o painel já carrega:
  * quem está no laboratório agora (sessões), tarefas por status, ritmo de conclusões nos
- * últimos 7 dias, projetos com progresso REAL (`projectProgress`) e um placar top 5 por pontos.
+ * últimos 7 dias, projetos com progresso REAL (`projectProgress`) e um placar top 5 com
+ * métrica trocável (pontos, tarefas, projetos ou horas).
  */
-import { civilDayOfInstant } from "@/backend/domain"
+import { useState } from "react"
+import { civilDayOfInstant, MAX_STRETCH_SEC } from "@/backend/domain"
 import type { Project } from "@/contexts/types"
 import {
   projectStatusChartColor,
@@ -26,15 +28,70 @@ import { Activity, Target, Trophy, Users } from "lucide-react"
 const TASK_STATUSES = ["to-do", "in-progress", "in-review", "adjust", "done"] as const
 
 interface AdminOverviewProps {
-  users: Array<{ id: number; name: string; points?: number; status?: string; roles?: string[] }>
-  projects: Array<{ id: number; name: string; status: string; startDate?: string | null; endDate?: string | null }>
+  users: Array<{
+    id: number
+    name: string
+    points?: number
+    completedTasks?: number
+    status?: string
+    roles?: string[]
+  }>
+  projects: Array<{
+    id: number
+    name: string
+    status: string
+    startDate?: string | null
+    endDate?: string | null
+    createdBy?: number
+    leaderId?: number | null
+    members?: Array<{ userId: number }>
+  }>
   tasks: Array<{ id: number; status: string; projectId?: number | null; completedAt?: string | Date | null }>
-  sessions: Array<{ id: number; userId: number; status: string; startTime: string | Date }>
+  sessions: Array<{
+    id: number
+    userId: number
+    status: string
+    startTime: string | Date
+    duration?: number | null
+  }>
   onManageSessions: () => void
 }
 
+type ProductivityMetric = "points" | "tasks" | "projects" | "hours"
+
+const PRODUCTIVITY_METRICS: Array<{ id: ProductivityMetric; label: string }> = [
+  { id: "points", label: "Pontos" },
+  { id: "tasks", label: "Tarefas" },
+  { id: "projects", label: "Projetos" },
+  { id: "hours", label: "Horas" },
+]
+
 function initials(name: string) {
   return name.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()
+}
+
+function formatMetric(value: number, metric: ProductivityMetric) {
+  if (metric === "hours") {
+    return `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 }).format(value)} h`
+  }
+  if (metric === "points") return `${value} pts`
+  if (metric === "projects") return `${value} projeto${value === 1 ? "" : "s"}`
+  return `${value} tarefa${value === 1 ? "" : "s"}`
+}
+
+/**
+ * Mesma conta do cronômetro (`getElapsedSeconds` do WorkSessionsProvider): `duration` já
+ * acumula os trechos pausados, e a sessão ativa soma o trecho corrente com o teto anti-farm.
+ */
+function sessionSeconds(
+  session: AdminOverviewProps["sessions"][number],
+  nowMs: number,
+) {
+  const accumulated = typeof session.duration === "number" ? session.duration : 0
+  if (session.status !== "active") return accumulated
+  const start = new Date(session.startTime).getTime()
+  const running = Math.min(MAX_STRETCH_SEC, Math.max(0, (nowMs - start) / 1000))
+  return accumulated + running
 }
 
 export function AdminOverview({ users, projects, tasks, sessions, onManageSessions }: AdminOverviewProps) {
@@ -78,10 +135,39 @@ export function AdminOverview({ users, projects, tasks, sessions, onManageSessio
   }))
   const activeProjects = projects.filter((p) => p.status === "active")
 
-  const leaderboard = [...users]
-    .sort((a, b) => (b.points ?? 0) - (a.points ?? 0))
+  // Destaques de produtividade (dono, 2026-10-21): pontos sozinhos repetiam o quadro de
+  // liderança. O mesmo placar agora mostra quatro leituras — pontos, tarefas concluídas,
+  // projetos de que a pessoa participa e horas de sessão — e a métrica escolhida ordena.
+  const [productivityMetric, setProductivityMetric] = useState<ProductivityMetric>("points")
+  const nowMs = Date.now()
+  const productivity = users.map((user) => {
+    const projectCount = projects.filter(
+      (project) =>
+        project.leaderId === user.id ||
+        project.createdBy === user.id ||
+        project.members?.some((member) => member.userId === user.id),
+    ).length
+    const seconds = sessions
+      .filter((session) => session.userId === user.id)
+      .reduce((sum, session) => sum + sessionSeconds(session, nowMs), 0)
+    return {
+      id: user.id,
+      name: user.name,
+      points: user.points ?? 0,
+      tasks: user.completedTasks ?? 0,
+      projects: projectCount,
+      hours: seconds / 3600,
+    }
+  })
+  const leaderboard = [...productivity]
+    .sort(
+      (a, b) =>
+        b[productivityMetric] - a[productivityMetric] ||
+        b.points - a.points ||
+        a.name.localeCompare(b.name, "pt-BR"),
+    )
     .slice(0, 5)
-  const maxPoints = Math.max(1, ...leaderboard.map((u) => Math.max(0, u.points ?? 0)))
+  const maxMetric = Math.max(1, ...leaderboard.map((person) => Math.max(0, person[productivityMetric])))
 
   return (
     <div className="space-y-5">
@@ -202,27 +288,51 @@ export function AdminOverview({ users, projects, tasks, sessions, onManageSessio
         </section>
 
         <section aria-labelledby="admin-leaderboard" className="min-w-0 lg:border-l lg:pl-5">
-          <h3 id="admin-leaderboard" className="mb-3 flex items-center gap-2 text-sm font-semibold">
-            <Trophy className="h-4 w-4 text-primary" aria-hidden="true" /> Top 5 em pontos
-          </h3>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <h3 id="admin-leaderboard" className="flex items-center gap-2 text-sm font-semibold">
+              <Trophy className="h-4 w-4 text-primary" aria-hidden="true" /> Top 5 em produtividade
+            </h3>
+            <div role="group" aria-label="Métrica do ranking" className="flex flex-wrap gap-1">
+              {PRODUCTIVITY_METRICS.map((metric) => (
+                <Button
+                  key={metric.id}
+                  type="button"
+                  size="sm"
+                  variant={productivityMetric === metric.id ? "default" : "outline"}
+                  aria-pressed={productivityMetric === metric.id}
+                  className="h-7 px-2 text-xs"
+                  onClick={() => setProductivityMetric(metric.id)}
+                >
+                  {metric.label}
+                </Button>
+              ))}
+            </div>
+          </div>
           {leaderboard.length === 0 ? (
             <p className="py-3 text-sm text-muted-foreground">Sem pessoas cadastradas.</p>
           ) : (
-            <ol className="space-y-2.5">
-              {leaderboard.map((user, index) => (
-                <li key={user.id} className="flex items-center gap-3">
+            <ol className="space-y-3">
+              {leaderboard.map((person, index) => (
+                <li key={person.id} className="flex items-center gap-3">
                   <span className="w-4 shrink-0 text-xs font-semibold tabular-nums text-muted-foreground">{index + 1}</span>
                   <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-info/15 text-[11px] font-medium text-info">
-                    {initials(user.name)}
+                    {initials(person.name)}
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-baseline justify-between gap-2">
-                      <span className="truncate text-sm font-medium">{user.name}</span>
-                      <span className="text-xs font-semibold tabular-nums">{user.points ?? 0} pts</span>
+                      <span className="truncate text-sm font-medium">{person.name}</span>
+                      <span className="shrink-0 text-xs font-semibold tabular-nums">
+                        {formatMetric(person[productivityMetric], productivityMetric)}
+                      </span>
                     </div>
                     <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                      <span className="block h-full rounded-full bg-primary" style={{ width: `${Math.max(4, Math.round((Math.max(0, user.points ?? 0) / maxPoints) * 100))}%` }} />
+                      <span className="block h-full rounded-full bg-primary" style={{ width: `${Math.max(4, Math.round((Math.max(0, person[productivityMetric]) / maxMetric) * 100))}%` }} />
                     </div>
+                    <p className="mt-1 truncate text-[11px] text-muted-foreground">
+                      {PRODUCTIVITY_METRICS.filter((metric) => metric.id !== productivityMetric)
+                        .map((metric) => formatMetric(person[metric.id], metric.id))
+                        .join(" · ")}
+                    </p>
                   </div>
                 </li>
               ))}

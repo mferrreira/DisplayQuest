@@ -28,7 +28,8 @@ export const queryKeys = {
     details: () => [...queryKeys.tasks.all, "detail"] as const,
     detail: (id: number) => [...queryKeys.tasks.details(), id] as const,
     progress: (userId: number) => [...queryKeys.tasks.all, "progress", userId] as const,
-    activity: () => [...queryKeys.tasks.all, "activity"] as const,
+    activity: (projectId: number | null = null) =>
+      [...queryKeys.tasks.all, "activity", projectId] as const,
   },
 
   projects: {

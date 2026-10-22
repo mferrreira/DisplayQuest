@@ -8,7 +8,6 @@ import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Pause, PlayCircle, StopCircle, ChevronDown, Clock, PauseCircle } from "lucide-react"
 import { useProject } from "@/contexts/project-context"
 import { getNextScheduledPause, getMissedScheduledPause, toSafeDate } from "@/lib/work-sessions/schedule"
@@ -292,26 +291,27 @@ export function FloatingSessionTimer({ placement = "floating" }: { placement?: "
           : "paused"
         : "active"
 
-  const panel = (
-          <Tabs defaultValue="sessao" className="min-w-0 space-y-3">
-            <TabsList className="grid h-auto min-h-10 w-full min-w-0 grid-cols-2">
-              <TabsTrigger value="sessao" className="min-w-0 px-2 text-xs">Sessão</TabsTrigger>
-              <TabsTrigger value="responsabilidade" className="min-w-0 break-words whitespace-normal px-1 text-center text-xs leading-tight">Responsabilidade</TabsTrigger>
-            </TabsList>
+  // Painel de responsabilidade — quem gere o laboratório: laboratorista em diante (gerente de
+  // projeto, gerente, coordenador). Para esses papéis o painel sai da aba escondida e passa a
+  // ser renderizado abaixo da sessão; para os demais não monta nada (não podem assumir).
+  const RESPONSIBILITY_PANEL_ROLES = ["LABORATORISTA", "GERENTE_PROJETO", "GERENTE", "COORDENADOR"]
+  const showResponsibilityPanel =
+    user?.roles?.some((role) => RESPONSIBILITY_PANEL_ROLES.includes(role)) ?? false
 
-            <TabsContent value="sessao" className="space-y-3 mt-0">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-medium">Sessão de Trabalho</p>
-              <span className="text-xs text-muted-foreground">
-                {!user && authLoading
-                  ? "Carregando..."
-                  : !currentSession
-                  ? "Sem sessão"
-                  : currentSession.status === "paused"
-                    ? "Pausada"
-                    : "Ativa"}
-              </span>
-            </div>
+  const panel = (
+    <div className="min-w-0 space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-medium">Sessão de Trabalho</p>
+        <span className="text-xs text-muted-foreground">
+          {!user && authLoading
+            ? "Carregando..."
+            : !currentSession
+            ? "Sem sessão"
+            : currentSession.status === "paused"
+              ? "Pausada"
+              : "Ativa"}
+        </span>
+      </div>
 
             <p className="font-mono text-2xl font-bold">{formatTime(seconds)}</p>
 
@@ -406,17 +406,15 @@ export function FloatingSessionTimer({ placement = "floating" }: { placement?: "
               </div>
             )}
 
-            </TabsContent>
-
-            <TabsContent value="responsabilidade" className="mt-0">
-              <ResponsibilityMiniPanel />
-              <div className="mt-2 flex justify-end">
-                <Button size="sm" variant="ghost" onClick={() => setExpanded(false)}>
-                  <ChevronDown className="h-4 w-4" />
-                </Button>
-              </div>
-            </TabsContent>
-          </Tabs>
+      {/* Responsabilidade abaixo da sessão — não mais uma aba que "quase ninguém lembra de
+          abrir": para quem pode assumir o laboratório (laboratorista, gerente de projeto,
+          gerente, coordenador) o painel da responsabilidade é sempre renderizado junto. */}
+      {showResponsibilityPanel && (
+        <div className="border-t pt-3">
+          <ResponsibilityMiniPanel />
+        </div>
+      )}
+    </div>
   )
 
   return (

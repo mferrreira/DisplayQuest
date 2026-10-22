@@ -94,10 +94,15 @@ export const tasksApi = {
     return apiFetch({ path: `/api/tasks/${id}`, schema: taskResponse, signal });
   },
 
-  /** GET /api/tasks/activity — as acoes mais recentes (feed da Home). */
-  activity(limit = 15, signal?: AbortSignal): Promise<TaskActivityItem[]> {
+  /**
+   * GET /api/tasks/activity — as acoes mais recentes (feed da Home).
+   * `projectId` recorta o projeto selecionado no quadro; ausente = projetos da pessoa.
+   */
+  activity(limit = 15, projectId?: number | null, signal?: AbortSignal): Promise<TaskActivityItem[]> {
+    const params = new URLSearchParams({ limit: String(limit) })
+    if (projectId != null) params.set("projectId", String(projectId))
     return apiFetch({
-      path: `/api/tasks/activity?limit=${limit}`,
+      path: `/api/tasks/activity?${params.toString()}`,
       schema: taskActivityResponse,
       signal,
     }).then((r) => r.items);

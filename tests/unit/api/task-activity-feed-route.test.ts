@@ -16,14 +16,20 @@ import { NextRequest } from "next/server";
 const mocks = vi.hoisted(() => ({
   session: null as null | { id: number; email: string; name: string; roles: string[]; status: string },
   limits: [] as number[],
+  scopes: [] as Array<{ actorId?: number; projectId?: number | null }>,
   items: [] as unknown[],
 }));
 
 vi.mock("@/backend/composition/root", () => ({
   getBackendComposition: () => ({
     taskManagement: {
-      listActivity: async (limit: number) => {
+      listActivity: async (
+        limit: number,
+        _since?: Date,
+        scope?: { actorId?: number; projectId?: number | null },
+      ) => {
         mocks.limits.push(limit);
+        mocks.scopes.push(scope ?? {});
         return mocks.items;
       },
     },
@@ -50,6 +56,7 @@ function request(path: string) {
 beforeEach(() => {
   mocks.session = null;
   mocks.limits = [];
+  mocks.scopes = [];
   mocks.items = [
     { id: 1, action: "CREATE", taskId: 1, taskTitle: "Lida", toStatus: "to-do", actorId: 1, actorName: "Coordenador", at: "2026-10-16T12:00:00.000Z" },
   ];
@@ -100,5 +107,19 @@ describe("GET /api/tasks/activity", () => {
     await activityRoute(request("/api/tasks/activity?limit=0"));
     await activityRoute(request("/api/tasks/activity?limit=-5"));
     expect(mocks.limits).toEqual([50, 1, 1]);
+  });
+
+  it("repassa o ator e o projeto selecionado para o recorte", async () => {
+    login(["COORDENADOR"], 7);
+    await activityRoute(request("/api/tasks/activity?projectId=3"));
+
+    expect(mocks.scopes).toEqual([{ actorId: 7, projectId: 3 }]);
+  });
+
+  it("sem projeto valido o recorte fica so no ator (projetos da pessoa)", async () => {
+    login(["VOLUNTARIO"], 7);
+    await activityRoute(request("/api/tasks/activity?projectId=abc"));
+
+    expect(mocks.scopes).toEqual([{ actorId: 7, projectId: undefined }]);
   });
 });

@@ -87,14 +87,26 @@ export function HomeOverview({ projects, tasks, weekHours, currentWeekHours }: H
   // Ritmo de conclusões nos últimos 7 dias civis. A chave de hoje vem de `civilDayOfInstant`
   // (fuso do laboratório) e os dias anteriores saem por subtração de calendário em UTC — a
   // mesma noção de dia civil, sem `new Date()` solto na aritmética (DEC-132).
+  // Conclusão de SUBTASK conta tanto quanto a da tarefa (pedido do dono, 2026-10-22): uma mãe
+  // pode ter 50 subtasks e o ritmo da semana não pode dizer "1" para elas. Quem não vê a lista
+  // (DEC-189: a mãe chega com `subtasks: []`) conta só o que pode ver — o gráfico é do que a
+  // pessoa enxerga no quadro.
   const lastSevenDays = useMemo(() => {
-    const [y, m, d] = today.split("-").map(Number)
+    const todayInstant = Date.parse(`${today}T12:00:00Z`)
     const buckets: Array<{ weekStart: string; weekEnd: string; label: string; count: number }> = []
     for (let i = 6; i >= 0; i--) {
-      const day = new Date(Date.UTC(y, m - 1, d - i))
-      const key = day.toISOString().slice(0, 10)
-      const label = `${String(day.getUTCDate()).padStart(2, "0")}/${String(day.getUTCMonth() + 1).padStart(2, "0")}`
-      const count = filteredTasks.filter((task) => task.completedAt && civilDayOfInstant(new Date(task.completedAt)) === key).length
+      const day = new Date(todayInstant - i * 86_400_000)
+      const key = civilDayOfInstant(day)
+      const dayNumber = Number(key.slice(8, 10))
+      const dayMonth = Number(key.slice(5, 7))
+      const label = `${String(dayNumber).padStart(2, "0")}/${String(dayMonth).padStart(2, "0")}`
+      const count = filteredTasks.reduce((total, task) => {
+        let n = task.completedAt && civilDayOfInstant(new Date(task.completedAt)) === key ? 1 : 0
+        for (const subtask of task.subtasks ?? []) {
+          if (subtask.completedAt && civilDayOfInstant(new Date(subtask.completedAt)) === key) n += 1
+        }
+        return total + n
+      }, 0)
       buckets.push({ weekStart: key, weekEnd: key, label, count })
     }
     return buckets
@@ -181,8 +193,8 @@ export function HomeOverview({ projects, tasks, weekHours, currentWeekHours }: H
 
           <section aria-labelledby="home-task-chart" className="min-w-0 md:col-span-2 md:border-l md:pl-5 lg:col-span-1 lg:border-l lg:pl-5">
             <h3 id="home-task-chart" className="mb-3 text-sm font-semibold">Atividade da semana</h3>
-            <p className="mb-1.5 text-xs font-medium">Concluídas nos últimos 7 dias</p>
-            <WeeklyBarChart weeks={lastSevenDays} label="Tarefas concluídas nos últimos 7 dias" />
+            <p className="mb-1.5 text-xs font-medium">Tarefas e subtasks concluídas nos últimos 7 dias</p>
+            <WeeklyBarChart weeks={lastSevenDays} label="Tarefas e subtasks concluídas nos últimos 7 dias" valueNoun="conclusões" />
             <div className="mt-3 border-t pt-3">
               <div className="mb-2 flex items-baseline justify-between gap-3"><p className="text-xs font-medium">Meta da semana</p><p className="text-sm font-semibold tabular-nums">{formatHours(currentWeekHours)}{weekHours > 0 ? ` / ${formatHours(weekHours)} h` : " h"}</p></div>
               {weekHours > 0 ? (
