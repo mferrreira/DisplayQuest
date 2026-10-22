@@ -30,11 +30,17 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   2288 testes em `tests/unit` + `features` + `entities`, 204 / 2419 na suíte completa, G4 16 /
   131 contra a 5433, G0 1106 módulos / 4703 dependências com allow-list vazia, `tsc` 0,
   `npm run lint` exit 0 com 15 warnings). DEC-211..220 **abertas** no registry, cada uma com a
-  onda indicada. **V8-1 (schema + migration na 5432 real do dono) só começa com ordem explícita
-  do dono**, pelo caminho offline medido no V4-4. Estado/decisões/modelo:
+  onda indicada, mais **DEC-221** (regime de execução, aberta 2026-10-22; próxima livre
+  **DEC-222**). **Regime (DEC-221):** uma onda por vez, autorizada pelo orquestrador do thread
+  — sem espera de ordem explícita a partir da V8-1; pare e reporte no fim de cada onda; commit
+  `plan-v8 <ONDA>: …` com o `STATE.json` atualizado no mesmo commit; durante o plano a
+  migration é escrita e aplicada **só na 5433** (deploy, roundtrips G4 e e2e da worktree rodam
+  lá) e o deploy na **5432 real** do dono acontece apenas no batch **V8-CLOSE**, pelo caminho
+  offline medido no V4-4, seguido de merge (PR único `plan-v8/gamificacao` → `dev`, aberto e
+  vigiado pelo orquestrador), restart da instância e e2e na 5432. Estado/decisões/modelo:
   `displayquest-v2/plan-v8/{MODELO.md,PLAN.md,STATE.json}` — MODELO.md é a fonte do
-  comportamento, fechado em 6 rodadas de perguntas ao dono em 2026-10-22; ondas V8-0..V8-8;
-  ASK-V8-23 (ícone
+  comportamento, fechado em 6 rodadas de perguntas ao dono em 2026-10-22; ondas V8-0..V8-8 e
+  V8-CLOSE; ASK-V8-23 (ícone
   do placar — troca para moeda/raio, Trophy fica só dos troféus) e ASK-V8-24 (ajuste manual
   do painel sobre as duas trilhas, cada ajuste com linha de `history`) **respondidas pelo
   dono em 2026-10-22**; calibrações adiadas ASK-V8-21/22 (constantes de XP e umbrais de
@@ -365,11 +371,12 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   `MANAGE_TASKS` em bloco; ver o bloco "Subtask" abaixo), DEC-190..210 plan-v7 (MCP de
   validação para o agente consumidor; DEC-205..210 na revisão de 2026-10-21), **DEC-211..220
    plan-v8 (gamificação remodelada, abertas na V8-0 em 2026-10-22: quatro trilhas — pontos
-   mensais, XP/elo de temporada anual, moeda vitalícia, troféus equipáveis; ver o bloco
+   mensais, XP/elo de temporada anual, moeda vitalícia, troféus equipáveis; mais **DEC-221**,
+   regime de execução do plano, aberta em 2026-10-22; ver o bloco
    "plan-v8" abaixo)**. O V4-4 ia usar DEC-61..64 e colidiu; os 28 comentários de código foram
   renumerados. **Antes de abrir decisão nova, `grep`
-  os SETE `STATE.json` (clean-arch, plan-v3, plan-v4, plan-v5, plan-v6, plan-v7, plan-v8) — a nota antiga que dizia "três"
-  (e depois "cinco") está velha. Próxima livre: DEC-221.**
+   os SETE `STATE.json` (clean-arch, plan-v3, plan-v4, plan-v5, plan-v6, plan-v7, plan-v8) — a nota antiga que dizia "três"
+   (e depois "cinco") está velha. Próxima livre: DEC-222.**
 - **Subtask (V4-4, DEC-78..83 → regra atual = DEC-97/98/189):** tabela `task_subtasks` (sem FK para
   `users` — subtask não tem
   responsável próprio), base gravada em `tasks.points` = `10 + 5·n` (DEC-97) e **cada subtask CONCLUÍDA

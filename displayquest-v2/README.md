@@ -17,7 +17,7 @@ displayquest-v2/
 ├── plan-v5/       OPERAÇÃO: domínio de projetos maduro — cronograma, pontos, relatórios técnicos, atestados (2026-10-06) — done (2026-10-14, V5-1..V5-12 + V5-fix-1/V5-fix-2; DEC-61..77, 99..104, 126..180)
 ├── plan-v6/       OPERAÇÃO: linguagem visual UI/UX + redistribuição das telas (2026-10-07, revisado 2026-10-14) — done (2026-10-16, V6-0..V6-11; DEC-105..114, 181..188)
 ├── plan-v7/       OPERAÇÃO: MCP de validação para o agente consumidor (2026-10-15, revisado 2026-10-21) — planejado, nenhuma onda começada (DEC-190..210, ASK-V7-16..25)
-└── plan-v8/       OPERAÇÃO: gamificação remodelada — trilhas (pontos mensais, XP/elo de temporada, moeda vitalícia), troféus equipáveis, reset mensal e temporada anual (2026-10-22) — em andamento: V8-0 done (baseline re-medido, DEC-211..220 abertas), V8-1 aguarda ordem do dono (MODELO.md = fonte do comportamento)
+└── plan-v8/       OPERAÇÃO: gamificação remodelada — trilhas (pontos mensais, XP/elo de temporada, moeda vitalícia), troféus equipáveis, reset mensal e temporada anual (2026-10-22) — em andamento: V8-0 done (baseline re-medido, DEC-211..221 abertas); regime DEC-221: uma onda por vez autorizada pelo orquestrador, migration só na 5433 até o batch V8-CLOSE (MODELO.md = fonte do comportamento)
 ```
 
 ## Fluxo de dependências (unidirecional)
@@ -140,13 +140,18 @@ plan-v8 (gamificação remodelada) ──> nasce do pedido do dono em 2026-10-22
   DEC-218/219). A virada converte saldo 1:1 (pontos → moeda, preços mantidos — DEC-216);
   `projects.points` e o publicador DEC-63 saem do sistema; a temporada zera tudo menos
   moedas e troféus e deixa livro-caixa anual + troféu de campeão (DEC-213). Decisões
-  **DEC-211..220** (abertas na V8-0), perguntas **ASK-V8-23** (ícone do placar) e **ASK-V8-24**
+  **DEC-211..221** (as 211..220 abertas na V8-0; **DEC-221** é o regime de execução assinado
+  pelo dono no mesmo dia: ondas autorizadas pelo orquestrador, uma por vez, merge só no fim do
+  plano pelo PR único `plan-v8/gamificacao` → `dev`, migration **só na 5433** durante o plano e
+  deploy na 5432 real apenas no batch **V8-CLOSE**), perguntas **ASK-V8-23** (ícone do placar) e
+  **ASK-V8-24**
   (ajuste do painel) **respondidas pelo dono em 2026-10-22**, calibrações adiadas
   **ASK-V8-21/22**. **V8-0 done** em 2026-10-22: baseline re-medido (188 arquivos / 2288 testes
   em `tests/unit` + `features` + `entities`, 204 / 2419 na suíte completa, G4 16 / 131 contra a
   5433, G0 1106 módulos / 4703 dependências com allow-list vazia, `tsc` 0, lint exit 0) e as
-  dez decisões abertas no registry. **V8-1** (schema + migration na 5432 real do dono, pelo
-  caminho offline do V4-4) **aguarda ordem explícita do dono**.
+  dez decisões abertas no registry. Próxima onda: **V8-1** (schema + migration), autorizada
+  pelo orquestrador; a migration vai só para a 5433 e o deploy na 5432 real fica no
+  **V8-CLOSE**.
 
 ## Regras do container
 

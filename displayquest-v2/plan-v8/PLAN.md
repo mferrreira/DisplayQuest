@@ -2,15 +2,18 @@
 
 > Plano aberto em 2026-10-22 a partir do modelo fechado em 6 rodadas de perguntas ao dono
 > (mesma data). A fonte de verdade do comportamento é [MODELO.md](./MODELO.md) — este
-> PLAN.md é a ordem de execução. Nenhuma onda começou; o `STATE.json` diz `ready`.
+> PLAN.md é a ordem de execução. **V8-0 está done** (2026-10-22); as demais ondas seguem o
+> regime da **DEC-221**: uma onda por vez, autorizada pelo orquestrador, e a migration só
+> toca a 5433 até o batch **V8-CLOSE**.
 
 - [MODELO.md](./MODELO.md): o sistema remodelado (trilhas, ciclos, aritmética, gramáticas).
 - [STATE.json](./STATE.json): estado, decisões, ondas, baseline e perguntas.
 - Números medidos em 2026-10-22, salvo indicação contrária.
-- Decisões deste plano: **DEC-211..220** reservadas (numeração global contínua — ver o
-  bloco de numeração no `AGENTS.md`; a próxima livre depois deste plano é DEC-221). Antes
-  de abrir DEC nova, `grep` os **SETE** `STATE.json` (clean-arch, plan-v3, plan-v4,
-  plan-v5, plan-v6, plan-v7, plan-v8).
+- Decisões deste plano: **DEC-211..220** (abertas na V8-0) mais **DEC-221** (regime de execução,
+  aberta em 2026-10-22 pelo contrato assinado pelo dono). Numeração global contínua — ver o
+  bloco de numeração no `AGENTS.md`; a próxima livre depois deste plano é **DEC-222**. Antes
+  de abrir DEC nova, `grep` os **SETE** `STATE.json` (clean-arch, plan-v3, plan-v4, plan-v5,
+  plan-v6, plan-v7, plan-v8).
 
 ## 1. Objetivo
 
@@ -60,18 +63,23 @@ As trilhas e seus ciclos estão no MODELO.md §1; resumido:
 ## 3. Ondas
 
 Toda onda fecha com G0 (arch:check, allow-list vazia) + G1 (lint) + G2 (tsc 0) + G3
-(vitest, nunca abaixo do baseline do STATE.json); ondas que mudam schema ou rotina fecham
-com **G4** (roundtrips Prisma só contra `dq-dev-test-db`/5433 — `npm run db:test:up` +
+(vitest, nunca abaixo do baseline do STATE.json); ondas que mudam schema ou rotina fecham com
+**G4** (roundtrips Prisma só contra `dq-dev-test-db`/5433 — `npm run db:test:up` +
 `npm run db:test:setup` primeiro); ondas que mudam comportamento visível fecham com G5
-(`docs:build` + `docs:check`); a última onda fecha G6 (recaptura do guia).
+(`docs:build` + `docs:check`); a última onda fecha G6 (recaptura do guia). Pelo regime da
+**DEC-221**: cada onda fecha com commit na branch (`plan-v8 <ONDA>: …`) com o `STATE.json`
+atualizado no mesmo commit, e o merge na `dev` acontece **só no fim do plano**, pelo batch
+**V8-CLOSE**.
 
-### V8-0 — baseline, lineage e reserva de decisões
+### V8-0 — baseline, lineage e abertura das decisões — **done em 2026-10-22**
 Re-medir G0–G4 na working tree atual (inclui os três consertos de UI de 2026-10-22:
 204 arquivos / 2419 testes na suíte completa medidos neste dia; re-medir a divisão
 unit+features). Gravar no STATE.json. Indexar o plan-v8 no `displayquest-v2/README.md` e
 no bloco de numeração do `AGENTS.md`. Registrar DEC-211, 212, 213, 214, 215, 216, 217,
 218, 219, 220 no decisionRegistry do STATE.json (abertas com o texto do §5).
-Sem código.
+Sem código. **Medido:** G0 1106 módulos / 4703 dependências com allow-list vazia; G1 exit 0
+(0 erros, 15 warnings); G2 0 erros; G3 204 / 2419 (unit+features 188 / 2288); G4 16 / 131 na
+5433.
 
 ### V8-1 — schema e virada 1:1
 Decisões: DEC-211, DEC-215, DEC-216. `users.coins Int @default(0)`, `users.xp Int
@@ -83,9 +91,11 @@ critério ganha janela (`mes | temporada | vida`); `history` ganha `track` (POIN
 `projects.points`, o campo da tela do projeto e o publicador `TaskCompletedEvent →
 projects.points` (DEC-63). Migration pelo caminho medido do V4-4: `prisma migrate diff
 --from-schema-datamodel/--to-schema-datamodel --script`, gravar como migration, `migrate
-deploy` na 5432 **e** na 5433, `prisma generate`, reiniciar o dev server (gotcha medido:
-`generate` não alcança processo em pé). Data migration 1:1: `users.coins = users.points`
-no deploy; placar mensal começa em 0. Entidades zod e fixtures ajustados (gotcha medido:
+deploy` na **5433** — durante o plano a migration **só** toca a 5433 (DEC-221) —, `prisma
+generate`, reiniciar o dev server (gotcha medido: `generate` não alcança processo em pé).
+O `migrate deploy` na 5432 real acontece no batch **V8-CLOSE**. Data migration 1:1:
+`users.coins = users.points` aplicada na 5433 para os roundtrips (na 5432, no CLOSE); placar
+mensal começa em 0. Entidades zod e fixtures ajustados (gotcha medido:
 `.default` no zod exige a chave no tipo de saída). G4 roundtrip: coins/xp/históricos.
 Gates: G0–G4.
 
@@ -147,13 +157,22 @@ histórico mensal e livro-caixa da temporada; troféu de campeão no perfil do c
 renomeio "Distintivos" → "Troféus"; ícone do placar do header trocado (**ASK-V8-23
 respondida antes da onda**); "Pontos do projeto" sai da tela (se não saiu em V8-1 por
 ordem de dependência, sai aqui — o registro diz qual onda fecha). Gates: G0–G3 + e2e do
-quadro/shell re-medidos.
+quadro/shell re-medidos contra a 5433 (DEC-221).
 
 ### V8-8 — fechamento G5/G6
 `docs:build` + `docs:check` com o texto técnico (`docs/src`, novo capítulo de gamificação)
 e de usuário (`docs/src-usuario`, vocabulário novo), recaptura das telas do guia que
-mudaram (`docs/screens`), re-leitura da prosa (`docs:check` + ruidos). Fecha com o STATE
-`done`.
+mudaram (`docs/screens`), re-leitura da prosa (`docs:check` + ruidos).
+
+### V8-CLOSE — deploy na 5432, merge e e2e na instância (DEC-221)
+Batch de fechamento do plano, depois de V8-8: abrir e vigiar o PR único
+`plan-v8/gamificacao` → `dev`; aplicar a migration na **5432 real** pelo caminho offline
+medido no V4-4 (a 5433 já está no mesmo estado, e é ela que validou os roundtrips) com a
+data migration 1:1 (`users.coins = users.points`, `rewards.price` em moeda); `prisma
+generate`; rebuild/restart da instância; e2e do quadro e do shell contra a instância;
+conferir `select count(*) from tasks where title like 'E2E%'` (tem que dar 0). Gates: G0–G4
+verdes na 5433, migration aplicada na 5432 sem RESET, e2e verdes na instância, PR unido na
+`dev`. Fecha com o `STATE.json` em `done`.
 
 ## 4. Linhas duras do plano
 
@@ -165,10 +184,18 @@ mudaram (`docs/screens`), re-leitura da prosa (`docs:check` + ruidos). Fecha com
 - A loja cobra moeda a partir de V8-5; entre V8-1 e V8-4 a moeda existe no schema sem
   fonte — o plano aceita isso por ordem das ondas, e nenhum batch entrega a loja em
   estados intermediários para uso de produção além do que já existe.
-- Migration roda na 5432 (dados reais do dono) pelo caminho offline medido no V4-4 — nunca
-  `migrate dev` com possível RESET.
+- **Regime do plano (DEC-221, dono em 2026-10-22):** uma onda por vez, autorizada pelo
+  orquestrador do thread; cada onda para e reporta no fim, e a próxima instrução chega quando
+  os gates da anterior estão verdes no `STATE.json`. Cada onda fecha com commit na branch
+  (`plan-v8 <ONDA>: …`) com o `STATE.json` atualizado no mesmo commit.
+- Migration **só na 5433** durante o plano (deploy + roundtrips G4 + e2e da worktree rodam
+  contra a 5433). O deploy na 5432 real (dados reais do dono) acontece uma única vez, no batch
+  **V8-CLOSE**, depois de V8-8 e do PR único aberto, seguindo o caminho offline medido no V4-4
+  (`migrate diff` → gravar → `migrate deploy`) — nunca `migrate dev` com possível RESET.
+- O merge na `dev` acontece **só no fim do plano**, pelo PR único `plan-v8/gamificacao` → `dev`
+  aberto e vigiado pelo orquestrador. Nada entra na `dev` onda por onda.
 
-## 5. Decisões reservadas (abertas na onda indicada)
+## 5. Decisões do plano (abertas no `decisionRegistry`)
 
 - **DEC-211** (V8-1): a gamificação passa a quatro trilhas — pontos mensais (ranking), XP
   de temporada (volume), elo de temporada (prestígio + slots), moeda vitalícia (loja) —
@@ -210,6 +237,12 @@ mudaram (`docs/screens`), re-leitura da prosa (`docs:check` + ruidos). Fecha com
 - **DEC-220** (V8-7): ranking mensal ordena por pontos do mês, desempate tarefas → XP →
   userId; colunas Pontos / Tarefas (mês) / Elo / Troféus / Moedas; histórico mensal e
   livro-caixa viram telas; troféu de campeão no perfil.
+- **DEC-221** (V8-1..V8-CLOSE, aberta em 2026-10-22 pelo contrato assinado pelo dono): regime
+  de execução — ondas autorizadas pelo orquestrador (uma por vez, pare e reporte); merge só no
+  fim do plano pelo PR único `plan-v8/gamificacao` → `dev`; durante o plano a migration vai
+  **só** para a 5433 (G4 e e2e da worktree rodam lá) e o deploy na 5432 real acontece no batch
+  V8-CLOSE com merge, restart da instância e e2e na 5432; commit por onda com o `STATE.json`
+  atualizado no mesmo commit.
 
 ## 6. Perguntas
 
@@ -236,7 +269,9 @@ mudaram (`docs/screens`), re-leitura da prosa (`docs:check` + ruidos). Fecha com
 - Roundtrips G4 só na 5433 isolada (`db:test:up` + `db:test:setup` + `g4-normalize.sql`),
   nunca na 5432; o runner lê `process.env`.
 - Migration da 5432 pelo caminho `migrate diff` → gravar migration → `migrate deploy`
-  (medido no V4-4; `migrate dev` pode pedir RESET e a 5432 é a produção local do dono).
+  (medido no V4-4; `migrate dev` pode pedir RESET e a 5432 é a produção local do dono). No
+  plan-v8 isso só acontece no batch **V8-CLOSE** (DEC-221); durante o plano a migration vai
+  apenas para a 5433.
 - `prisma generate` não alcança processo em execução — reiniciar o dev server depois de
   gerar (medido no V4-4).
 - Zod `.default` muda o tipo de saída (`Task`/`User` literais de fixture precisam das

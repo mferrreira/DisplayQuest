@@ -1,18 +1,18 @@
 {
   "plan": "plan-v8",
   "title": "Gamificacao remodelada: trilhas, ciclos, moeda, trofeus equipaveis",
-  "version": "1.1.0",
-  "updatedAt": "2026-10-22T14:10:29-03:00",
+  "version": "1.2.0",
+  "updatedAt": "2026-10-22T14:25:21-03:00",
   "status": "in_progress",
   "activeWave": null,
-  "activeBatch": "V8-0 done; V8-1 (schema + migration na 5432 real) aguarda ordem explicita do dono",
+  "activeBatch": "V8-0 done; aguardando a instrucao do orquestrador para a V8-1 (regime DEC-221: uma onda por vez, pare e reporte)",
   "awaitingInstruction": true,
   "lineage": {
     "previousPlan": "plan-v6 (linguagem visual + redistribuicao das telas), encerrado em 2026-10-16; plan-v7 (MCP de validacao) planejado em 2026-10-21 e sem ondas executadas. O plan-v8 nao depende do MCP e o MCP nao depende do plan-v8.",
     "concurrentPlan": "nenhum em execucao. Se o plan-v7 comecar durante o plan-v8: o MCP so fala HTTP com as rotas e nao toca backend/, prisma/ ou as rotas de gamificacao; o contrato das tools de leitura de pontos/moeda sera re-gerado em tools.json depois do V8-5 (nota registrada, sem batch).",
     "modelSource": "MODELO.md neste folder - fonte de verdade do comportamento, fechada em 6 rodadas de perguntas ao dono em 2026-10-22. O plano executa o modelo; divergencia entre codigo e MODELO.md e treated as bug do codigo ou ASK nova, nunca como ajuste silencioso do modelo.",
     "absorbedModel": "displayquest-v2/monthly-points-reset/MODELO.md (2026-10-22) entra no plano como a onda V8-2.",
-    "note": "a numeracao de decisoes e GLOBAL: DEC-01..29 clean-arch, DEC-30..49 plan-v3, DEC-50..54 B6/D4, DEC-55..60 e 78..98 e 189 plan-v4, DEC-61..77, 99..104 e 126..180 plan-v5, DEC-105..114, 181..188 e 204 plan-v6, DEC-190..210 plan-v7, DEC-211..220 plan-v8 (abertas na V8-0, 2026-10-22). Antes de abrir DEC nova, grep os SETE STATE.json (clean-arch, plan-v3, plan-v4, plan-v5, plan-v6, plan-v7, plan-v8). Proxima livre apos este plano: DEC-221."
+    "note": "a numeracao de decisoes e GLOBAL: DEC-01..29 clean-arch, DEC-30..49 plan-v3, DEC-50..54 B6/D4, DEC-55..60 e 78..98 e 189 plan-v4, DEC-61..77, 99..104 e 126..180 plan-v5, DEC-105..114, 181..188 e 204 plan-v6, DEC-190..210 plan-v7, DEC-211..220 plan-v8 (abertas na V8-0, 2026-10-22), DEC-221 plan-v8 (regime de execucao do plano, aberta 2026-10-22). Antes de abrir DEC nova, grep os SETE STATE.json (clean-arch, plan-v3, plan-v4, plan-v5, plan-v6, plan-v7, plan-v8). Proxima livre apos este plano: DEC-222."
   },
   "baseline": {
     "measuredAt": "2026-10-22",
@@ -31,7 +31,7 @@
     "G1": "npm run lint - exit 0, nenhum erro. Em worktree: npx eslint --no-eslintrc --config .eslintrc.json <arquivos>.",
     "G2": "npx tsc --noEmit - ZERO.",
     "G3": "npx vitest run - zero failure e nunca abaixo do baseline gravado. O banco de teste 5433 precisa estar no ar (docker start dq-dev-test-db) e DATABASE_URL exportado para a 5433.",
-    "G4": "roundtrips Prisma real SO contra dq-dev-test-db em 127.0.0.1:5433 (npm run db:test:up + npm run db:test:setup; nunca tocar na 5432). Obrigatorio nas ondas V8-1, V8-2, V8-3, V8-4, V8-5, V8-6.",
+    "G4": "roundtrips Prisma real SO contra dq-dev-test-db em 127.0.0.1:5433 (npm run db:test:up + npm run db:test:setup). Durante o plano a migration e aplicada SO na 5433; o deploy na 5432 real roda apenas no batch V8-CLOSE (DEC-221). Obrigatorio nas ondas V8-1, V8-2, V8-3, V8-4, V8-5, V8-6.",
     "G5": "npm run docs:build + npm run docs:check em toda onda que muda comportamento visivel (V8-5, V8-7) e no fechamento.",
     "G6": "recapturar as telas do guia quando a captura deixa de representar a tela (V8-7 e fechamento V8-8)."
   },
@@ -64,7 +64,7 @@
       "title": "schema e virada 1:1",
       "status": "planned",
       "decisions": ["DEC-211", "DEC-215", "DEC-216", "DEC-219"],
-      "scope": "users.coins, users.xp; month_history, season_history; user_badges.equipped; badges.effects (verb+tier fechado) e janela por criterio; history.track; saida de projects.points (coluna, campo na tela, publicador DEC-63). Migration pelo caminho medido do V4-4 (migrate diff -> gravar -> deploy na 5432 e na 5433 -> generate -> reiniciar dev server). Data migration coins = points 1:1; placar mensal comeca 0. Entidades zod e fixtures ajustados.",
+      "scope": "users.coins, users.xp; month_history, season_history; user_badges.equipped; badges.effects (verb+tier fechado) e janela por criterio; history.track; saida de projects.points (coluna, campo na tela, publicador DEC-63). Migration pelo caminho medido do V4-4 (migrate diff -> gravar -> deploy), aplicada SO na 5433 durante o plano (DEC-221); o deploy na 5432 real fica no batch V8-CLOSE. Data migration coins = points 1:1 roda na 5433 para os roundtrips; na 5432 ela acontece no CLOSE. Entidades zod e fixtures ajustados.",
       "gate": "G0-G4. Roundtrip: coins/xp/historicos; guarda da saida de projects.points.",
       "dependsOn": "V8-0"
     },
@@ -119,7 +119,7 @@
       "status": "planned",
       "decisions": ["DEC-220"],
       "scope": "Ranking mensal (pontos do mes; desempate tarefas -> XP -> userId; colunas Pontos, Tarefas, Elo, Trofeus, Moedas); perfil com cartao da temporada e secao Trofeus com equipar; telas de historico mensal e livro-caixa; trofeu de campeao no perfil; renomeio Distintivos -> Trofeus; icone do placar do header troca para moeda/raio e Trophy passa a ser so dos trofeus (ASK-V8-23 respondida 2026-10-22); 'Pontos do projeto' fora da tela. Rejeicoes de API sempre com role=alert (quirk do gate medido no V4-4b).",
-      "gate": "G0-G3 + e2e quadro/shell re-medidos + G5/G6 parciais.",
+      "gate": "G0-G3 + e2e quadro/shell re-medidos contra a 5433 (DEC-221) + G5/G6 parciais.",
       "dependsOn": "V8-5, V8-6"
     },
     {
@@ -130,6 +130,15 @@
       "scope": "docs/src (capitulo novo de gamificacao) e docs/src-usuario com o vocabulario novo; docs:build + docs:check; recaptura das telas mudadas do guia; releitura da prosa.",
       "gate": "G5 + G6 verdes; STATE.json done.",
       "dependsOn": "V8-7"
+    },
+    {
+      "id": "V8-CLOSE",
+      "title": "fechamento do plano: deploy na 5432, merge e e2e na instancia",
+      "status": "planned",
+      "decisions": ["DEC-221"],
+      "scope": "Depois de V8-8 e do PR unico plan-v8/gamificacao -> dev aberto e vigiado pelo orquestrador: aplicar a migration na 5432 real pelo caminho offline medido no V4-4 (migrate diff -> gravar -> migrate deploy na 5432, com a 5433 ja no mesmo estado) + data migration 1:1 (users.coins = users.points, rewards.price em moeda), prisma generate, rebuild/restart da instancia, e2e do quadro e do shell contra a instancia, conferencia de residuo E2E no banco. Sem codigo novo alem do que o plano ja escreveu.",
+      "gate": "G0-G4 verdes na 5433; migration aplicada na 5432 sem RESET; e2e quadro/shell verdes na instancia; PR unido na dev; STATE.json done.",
+      "dependsOn": "V8-8"
     }
   ],
   "decisionRegistry": [
@@ -142,7 +151,8 @@
     { "id": "DEC-217", "wave": "V8-6", "status": "aberta", "openedAt": "2026-10-22", "openedBy": "V8-0", "text": "Elo derivado do XP da temporada em 6 degraus - BRONZE 0, PRATA 400, OURO 900, PLATINA 1500, DIAMANTE 2400, DESAFIANTE 3600 - calibraveis com o primeiro ano (ASK-V8-22); slots de trofeu 0/1/2/2/3/3 pelo elo do momento." },
     { "id": "DEC-218", "wave": "V8-6", "status": "aberta", "openedAt": "2026-10-22", "openedBy": "V8-0", "text": "Trofeus conquistados por criterio (idempotente, vitalicio, nunca re-conquistado); pessoa equipa ate os slots do elo atual; efeitos com verbos fechados (pontos_tarefa +%, pontos_sessao +%, moedas_atividade +%, penalidade -%) e tiers Tier1/Tier2/Tier3 congelados no dominio; admin escolhe verbo e tier do menu, sem numero livre; boost lido no instantaneo do credit." },
     { "id": "DEC-219", "wave": "V8-1 + V8-6", "status": "aberta", "openedAt": "2026-10-22", "openedBy": "V8-0", "text": "Motor de criterios reescrito com janela por criterio (mes | temporada | vida); completedTasks continua vitalicia; catalogo existente migrado com janela vida; quirks consertados: condicao desconhecida = false (era true), criterio 0 avaliado (era ignorado)." },
-    { "id": "DEC-220", "wave": "V8-7", "status": "aberta", "openedAt": "2026-10-22", "openedBy": "V8-0", "text": "Ranking mensal ordena por pontos do mes, desempate tarefas -> XP -> userId; colunas Pontos / Tarefas (mes) / Elo / Trofeus / Moedas; historico mensal e livro-caixa viram telas; trofeu de campeao no perfil." }
+    { "id": "DEC-220", "wave": "V8-7", "status": "aberta", "openedAt": "2026-10-22", "openedBy": "V8-0", "text": "Ranking mensal ordena por pontos do mes, desempate tarefas -> XP -> userId; colunas Pontos / Tarefas (mes) / Elo / Trofeus / Moedas; historico mensal e livro-caixa viram telas; trofeu de campeao no perfil." },
+{ "id": "DEC-221", "wave": "V8-1..V8-CLOSE", "status": "aberta", "openedAt": "2026-10-22", "openedBy": "contrato de execucao do dono em 2026-10-22", "text": "Regime de execucao do plan-v8: as ondas sao autorizadas pelo orquestrador do thread (uma onda por vez, pare e reporte ao fim de cada uma); o merge na dev acontece so no fim do plano, por um PR unico plan-v8/gamificacao -> dev aberto e vigiado pelo orquestrador; durante o plano a migration e escrita e aplicada SO na 5433 (deploy + roundtrips G4 la, e2e da worktree contra a 5433) e o deploy na 5432 real roda apenas no batch V8-CLOSE, seguido de merge, restart da instancia e e2e na 5432; cada onda fecha com commit na branch e STATE.json atualizado no mesmo commit." }
   ],
   "answeredInstructions": [
     { "id": "RODADAS-1-6", "at": "2026-10-22", "text": "As seis rodadas de modelagem com o dono estao registradas em MODELO.md Sec.10 e viraram as DEC-211..220. Nao ha pergunta de modelagem aberta." },
@@ -150,7 +160,8 @@
     { "id": "ASK-V8-24", "at": "2026-10-22", "text": "Ajuste manual do painel admin: as duas trilhas, separadas - set/add/remove de PONTOS do mes e set/add/remove de MOEDAS - cada ajuste com linha de history para auditoria." }
   ],
   "historicalInstructions": [
-    { "id": "ORDEM-DO-DONO-V8-1", "at": "2026-10-22", "text": "V8-1 (schema + migration na 5432 real do dono) so comeca com ordem explicita do dono. A migration segue o caminho offline medido no V4-4: prisma migrate diff --from-schema-datamodel/--to-schema-datamodel --script, gravar a migration, migrate deploy na 5432 E na 5433, prisma generate, reiniciar o dev server. Nunca migrate dev com risco de RESET na 5432." }
+    { "id": "ORDEM-DO-DONO-V8-1", "at": "2026-10-22", "status": "substituida pela DEC-221 no mesmo dia", "text": "V8-1 (schema + migration na 5432 real do dono) so comeca com ordem explicita do dono. A migration segue o caminho offline medido no V4-4: prisma migrate diff --from-schema-datamodel/--to-schema-datamodel --script, gravar a migration, migrate deploy na 5432 E na 5433, prisma generate, reiniciar o dev server. Nunca migrate dev com risco de RESET na 5432." },
+    { "id": "CONTRATO-DE-EXECUCAO-V8", "at": "2026-10-22", "text": "Decisao do dono em 2026-10-22 (DEC-221): nao ha mais espera de ordem explicita para a V8-1 em diante - o orquestrador do thread autoriza cada onda. Uma onda por vez, pare e reporte no fim dela; a proxima instrucao chega quando os gates da onda anterior estao verdes no STATE.json. Merge so no fim do plano (PR unico plan-v8/gamificacao -> dev, aberto e vigiado pelo orquestrador). Durante o plano a migration vai SO para a 5433; o deploy na 5432 real acontece no batch V8-CLOSE com merge, restart e e2e na 5432. Commit por onda com o STATE.json atualizado no mesmo commit. O caminho offline da migration (migrate diff -> gravar -> migrate deploy, nunca migrate dev com risco de RESET) permanece." }
   ],
   "openQuestions": [],
   "blockers": [],
@@ -163,5 +174,5 @@
   "batchLog": [
     { "batch": "V8-0", "at": "2026-10-22", "status": "done", "commit": "este commit", "evidence": "Re-medidos os gates na worktree plan-v8/gamificacao (d9add55, a dev com o plano aberto). Armadura medida: a arvore nao tinha node_modules - npm ci na raiz e npm ci em mcp/ foram necessarios; sem as dependencias de mcp/ o tsc da raiz (include **/*.ts) reporta 7 erros em mcp/. G0 exit 0, allow-list vazia (0 entradas pinned a task de onda/batch), 1106 modulos / 4703 dependencias. G1 exit 0, 0 erros, 15 warnings pre-existentes. G2 0 erros. G3 204 arquivos / 2419 testes; unit+features 188 / 2288 (tests/unit 162 / 2110; features + entities 26 / 178). G4 16 arquivos / 131 testes contra dq-dev-test-db:5433 apos npm run db:test:setup; a 5432 nao foi tocada. e2e nao re-medido nesta onda. DEC-211..220 abertas no decisionRegistry com a onda indicada; proxima decisao livre: DEC-221. README do container e AGENTS.md atualizados. Zero codigo de aplicacao." }
   ],
-  "nextFreeDecision": "DEC-221"
+  "nextFreeDecision": "DEC-222"
 }
