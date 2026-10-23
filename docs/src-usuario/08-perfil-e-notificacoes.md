@@ -99,6 +99,21 @@ existem aqui. Um mês encerrado com placar negativo aparece negativo, e a tempor
 fechou em 1º vem destacada. Quando ainda não houve fechamento, a tabela diz *"Nenhum mês fechado
 ainda."* ou *"Nenhuma temporada fechada ainda."*
 
+```foto perfil-temporada titulo="O cartão da temporada, no perfil"
+A cifra de XP diz o degrau e o quanto falta para o próximo (*Ouro · faltam 550 XP para Platina*), e
+**Slots de troféu** diz quantos a pessoa pode manter equipados ao mesmo tempo. **Ver o quadro do mês**
+leva ao Quadro de Liderança.
+```
+
+```foto perfil-trofeus titulo="A prateleira de troféus, no perfil"
+Um troféu conquistado pode estar **Equipado** ou **Na prateleira**. A linha do topo diz quantos slots
+estão usados e o elo que os libera (*1 de 2 slots usados · elo Ouro*).
+```
+
+```foto perfil-ciclos titulo="Os ciclos fechados da pessoa, no perfil"
+As duas tabelas são a memória dos fechamentos: cada mês encerrado e cada ano encerrado, com posição e
+degrau tais como ficaram no instante do fechamento.
+```
 
 
 Os **Logs Diários** são o rastro das sessões encerradas. Você edita os seus próprios logs. **Coordenador** é a única função que enxerga os logs de todas as pessoas.

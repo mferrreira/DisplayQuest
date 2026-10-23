@@ -39,7 +39,7 @@ export function CycleHistory({
   const seasons = history.seasons
 
   return (
-    <div className={`space-y-6 ${className}`}>
+    <div className={`space-y-6 ${className}`} data-testid="cycle-history">
       <section aria-labelledby="cycle-history-months" className="space-y-3">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 id="cycle-history-months" className="text-sm font-semibold">

@@ -59,7 +59,9 @@ O preço é um número não negativo; o preço zero existe e é válido.
 ```
 
 A aba **Aprovações** é a fila de pedidos pendentes: cada linha traz a recompensa pedida, quem pediu
-e o custo em moedas, e é ali que o pedido é aprovado ou rejeitado.
+e o custo em moedas, e é ali que o pedido é aprovado ou rejeitado — pelos botões **Aprovar** e **Negar**
+da linha. O rótulo da aba carrega a contagem do que está esperando (*Aprovações 1*), e a tabela tem as
+colunas **Usuário**, **Recompensa**, **Moedas**, **Data da Solicitação**, **Status** e **Ações**.
 
 ```foto loja-solicitacoes titulo="A aba Aprovações"
 Aprovar confirma o resgate; rejeitar devolve as moedas à pessoa.
@@ -105,6 +107,12 @@ O mesmo quadro entrega o **Livro-caixa da temporada**: a tabela do ano que já f
 **Usuário**, **Pontos**, **Tarefas**, **XP** e **Elo** — os números fotografados no fechamento, que a
 zeragem de janeiro não apaga. Em 1º lugar está o campeão do ano, que recebe o troféu **CAMPEÃO**.
 Enquanto nenhum ano foi fechado, a tabela diz *"Nenhum ano fechado ainda."*.
+
+```foto ranking-livro-caixa titulo="O Livro-caixa da temporada, abaixo da classificação"
+O elo desta tabela é o degrau que o ano tinha quando fechou. O elo da classificação acima é o de hoje,
+derivado do XP da temporada em curso: os dois podem ser diferentes, e é assim que o ano fica legível
+depois da zeragem.
+```
 
 ## Troféus
 

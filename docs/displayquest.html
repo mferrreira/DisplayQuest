@@ -2330,6 +2330,31 @@ produto, e está congelada por teste.</p>
 <td>RF-09</td>
 </tr>
 <tr>
+<td>RB-84</td>
+<td>O quadro do mês sai ordenado pela régua do servidor — pontos do mês, depois tarefas do mês, depois experiência, depois o identificador do cadastro — e as tarefas do mês são contadas com as mesmas condições do fechamento mensal, sem contar a tarefa pública duas vezes</td>
+<td>RF-09</td>
+</tr>
+<tr>
+<td>RB-85</td>
+<td>Na tela do quadro, o degrau é derivado da experiência da temporada: a coluna guardada no equipamento não é lida ali, porque ela declara o degrau do momento em que foi escrita e os slots abertos têm que ser os da régua viva</td>
+<td>RF-09</td>
+</tr>
+<tr>
+<td>RB-86</td>
+<td>O livro-caixa reporta o ano encerrado como ele foi gravado: posição e degrau fotografados no fechamento, legíveis depois da zeragem</td>
+<td>RF-09</td>
+</tr>
+<tr>
+<td>RB-87</td>
+<td>A prateleira de troféus e os ciclos fechados de outra pessoa são leitura aberta de quem está autenticado; as trilhas de saldo — placar do mês, moedas, experiência, degrau e slots — são da própria pessoa ou de quem gerencia contas</td>
+<td>RF-09</td>
+</tr>
+<tr>
+<td>RB-88</td>
+<td>A prateleira é a conquista junta com o catálogo, e a linha de conquista sem catálogo não é mostrada; nenhum número de trilha é recalculado na tela</td>
+<td>RF-09</td>
+</tr>
+<tr>
 <td>RB-58</td>
 <td>Comunicados são entregues apenas a contas ativas</td>
 <td>RF-10</td>
@@ -3588,9 +3613,9 @@ responder, a partir de qualquer um dos níveis, onde o comportamento é decidido
 </tr>
 <tr>
 <td>RF-09 · Pontos, distintivos e recompensa</td>
-<td>Consultar progresso, Resgatar, Aprovar compra, Conceder badge</td>
-<td>RB-51 a RB-57, RB-67 a RB-83</td>
-<td>Recompensa, Compra, Distintivo, Premiação</td>
+<td>Consultar progresso, Consultar quadro do mês, Consultar livro-caixa, Consultar troféus e ciclos da pessoa, Equipar e desequipar distintivo, Resgatar, Aprovar compra, Conceder badge, Fechar mês, Revisar semana, Fechar temporada</td>
+<td>RB-51 a RB-57, RB-67 a RB-88</td>
+<td>Recompensa, Compra, Distintivo, Premiação, Fechamento</td>
 <td><code>store</code>, <code>gamification</code></td>
 </tr>
 <tr>
@@ -3647,7 +3672,7 @@ enunciados na forma de condição observável.</p>
 </tr>
 <tr>
 <td>RF-09</td>
-<td>Resgatar com moedas insuficientes é recusado. Repetir o mesmo evento não credita a trilha duas vezes. Comprar congela o preço do item.</td>
+<td>Resgatar com moedas insuficientes é recusado. Repetir o mesmo evento não credita a trilha duas vezes. Comprar congela o preço do item. Fechar o mês escreve o retrato e zera o placar; reexecutar não duplica. O quadro do mês vem na ordem da régua do servidor, e o degrau que ele mostra vem da experiência da temporada. O livro-caixa mostra o degrau fotografado no fechamento. Equipar além do slot do degrau é recusado com a frase do degrau, e quem equipa é sempre a própria pessoa.</td>
 </tr>
 <tr>
 <td>RF-10</td>
@@ -4558,7 +4583,7 @@ expressa como migração versionada não pertence a este sistema.</p>
 <footer class="dq-footer">
   <p>
     Conteúdo gerado a partir de <code>docs/src/</code> e <code>docs/diagrams/</code>. Diagramas em notação UML (PlantUML). O conteúdo reflete o estado do
-    código no commit <code>8743374 (2026-10-23)</code>.
+    código no commit <code>33a17f9 (2026-10-23)</code>.
   </p>
 </footer>
 

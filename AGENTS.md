@@ -8,7 +8,7 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
 - **Gate de entrega:** `npm run arch:check` (exit 0, allow-list **vazia**) && `npm run lint` (nada de erro) && `npx tsc --noEmit` (0) && `npx vitest run` (zero failure). A contagem é **por branch**: no `dev` o baseline era **64 arquivos / 721 testes** quando o B8 removeu os 651 testes de paridade; no `plan/v3-operacional`, medido no encerramento do plan-v3 (2026-10-03), são **65 arquivos / 798 testes** em `tests/unit` + `features` e **75 / 881** na suíte completa. Na `dev` de hoje (medido em 2026-10-07, depois do plan-v4 V4-1/V4-2/V4-3/V4-6, do V4-4 de subtasks, dos testes do painel V4-4b/V4-4c, do V4-5a/V4-5b/V4-5c de subtask na UI, do V4-6b de vocabulário de status e do lote pós-encerramento POS-1 — DEC-97/98) são **87 arquivos / 1107 testes** e **97 / 1192** na suíte completa; a suíte e2e do quadro está em **2 passando + 1 falha conhecida + 5 "did not run"** (medido 2026-10-06
 no V4-5c; eram 7 quando a coluna `Em Revisão` tinha um cartão a menos) — o 3º teste quebra por cartão a
 mais na coluna (dado legítimo da instância, não código: hoje são as tarefas 50 e 304), e como o spec é
-serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 5 passando. Compare sempre com o `STATE.json` do plano em que você está. Na `dev` de hoje, medido no fechamento do plan-v6 (2026-10-16, ondas V6-0..V6-11: shell, Home, Projetos, detalhe do projeto, Laboratório, Relatórios, Perfil/Ranking, Loja, Admin, Login/Register), são **179 arquivos / 2224 testes** em `tests/unit` + `features` e **194 / 2354** na suíte completa (G0 1061 módulos / 4531 dependências); o `tsc` desta branch **fecha em 0** — o erro pré-existente em `features/laboratorio/__tests__/floating-timer-tabs.test.tsx:105` foi consertado no `SUB-1` (regex ancorada no lugar do `exact`, que não existe em `ByRoleOptions`). Re-medido em 2026-10-15 (V6-2): o e2e do quadro está em **8 passando** (o spec hoje tem 8 testes; a falha conhecida por cartão a mais em `Em Revisão` **não reproduziu** — o dado da instância mudou; ela pode voltar se o dono mover outro cartão para lá) e o do shell em **5 passando**. Na branch do fechamento do repo-cleanup (`refactor/b6-restante`, medido 2026-10-08 depois do B6-2c..B6-7) o baseline é **95 arquivos / 1280 testes** em `tests/unit` + `features` e **105 / 1367** na suíte completa (G0 810 módulos / 3295 dependências). Na branch do plan-v8 (`plan-v8/gamificacao`), medido no fechamento da onda **V8-5** (2026-10-22), são **199 arquivos / 2400 testes** no projeto unit (`tests/unit` + `features/**/__tests__` + `entities`) e **220 / 2561** na suíte completa, com **G4 21 / 161** contra a 5433 e G0 **1140 módulos / 4833 dependências** (allow-list vazia), `tsc` 0 e lint exit 0 com **17** warnings pré-existentes (a nota de "15 warnings" das ondas V8-0/V8-1/V8-2 não reproduz nesta árvore: conferido com `git stash`, sem a onda a árvore também dá 17). Medido no fechamento da onda **V8-6** (2026-10-23), na mesma branch: **204 arquivos / 2469 testes** no projeto unit e **225 / 2634** na suíte completa, com **G4 21 / 165** na 5433 e G0 **1152 módulos / 4889 dependências** (allow-list vazia), `tsc` 0 e lint exit 0 com os mesmos **17** warnings. Medido no fechamento da onda **V8-7** (2026-10-23), na mesma branch: **212 arquivos / 2525 testes** no projeto unit e **234 / 2695** na suíte completa, com **G4 22 / 170** na 5433 e G0 **1172 módulos / 4984 dependências** (allow-list vazia), `tsc` 0 e lint exit 0 com os mesmos **17** warnings (os quatro warnings que aparecem no conjunto alterado da onda são todos preexistentes); o e2e foi re-medido na worktree contra a 5433, com dev server próprio na porta 3002 e config Playwright temporário: **quadro 8 passando e shell 5 passando** (ver as três notas novas em "Gotchas reais").
+serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 5 passando. Compare sempre com o `STATE.json` do plano em que você está. Na `dev` de hoje, medido no fechamento do plan-v6 (2026-10-16, ondas V6-0..V6-11: shell, Home, Projetos, detalhe do projeto, Laboratório, Relatórios, Perfil/Ranking, Loja, Admin, Login/Register), são **179 arquivos / 2224 testes** em `tests/unit` + `features` e **194 / 2354** na suíte completa (G0 1061 módulos / 4531 dependências); o `tsc` desta branch **fecha em 0** — o erro pré-existente em `features/laboratorio/__tests__/floating-timer-tabs.test.tsx:105` foi consertado no `SUB-1` (regex ancorada no lugar do `exact`, que não existe em `ByRoleOptions`). Re-medido em 2026-10-15 (V6-2): o e2e do quadro está em **8 passando** (o spec hoje tem 8 testes; a falha conhecida por cartão a mais em `Em Revisão` **não reproduziu** — o dado da instância mudou; ela pode voltar se o dono mover outro cartão para lá) e o do shell em **5 passando**. Na branch do fechamento do repo-cleanup (`refactor/b6-restante`, medido 2026-10-08 depois do B6-2c..B6-7) o baseline é **95 arquivos / 1280 testes** em `tests/unit` + `features` e **105 / 1367** na suíte completa (G0 810 módulos / 3295 dependências). Na branch do plan-v8 (`plan-v8/gamificacao`), medido no fechamento da onda **V8-5** (2026-10-22), são **199 arquivos / 2400 testes** no projeto unit (`tests/unit` + `features/**/__tests__` + `entities`) e **220 / 2561** na suíte completa, com **G4 21 / 161** contra a 5433 e G0 **1140 módulos / 4833 dependências** (allow-list vazia), `tsc` 0 e lint exit 0 com **17** warnings pré-existentes (a nota de "15 warnings" das ondas V8-0/V8-1/V8-2 não reproduz nesta árvore: conferido com `git stash`, sem a onda a árvore também dá 17). Medido no fechamento da onda **V8-6** (2026-10-23), na mesma branch: **204 arquivos / 2469 testes** no projeto unit e **225 / 2634** na suíte completa, com **G4 21 / 165** na 5433 e G0 **1152 módulos / 4889 dependências** (allow-list vazia), `tsc` 0 e lint exit 0 com os mesmos **17** warnings. Medido no fechamento da onda **V8-7** (2026-10-23), na mesma branch: **212 arquivos / 2525 testes** no projeto unit e **234 / 2695** na suíte completa, com **G4 22 / 170** na 5433 e G0 **1172 módulos / 4984 dependências** (allow-list vazia), `tsc` 0 e lint exit 0 com os mesmos **17** warnings (os quatro warnings que aparecem no conjunto alterado da onda são todos preexistentes); o e2e foi re-medido na worktree contra a 5433, com dev server próprio na porta 3002 e config Playwright temporário: **quadro 8 passando e shell 5 passando** (ver as três notas novas em "Gotchas reais"). Medido no fechamento da onda **V8-8** (2026-10-23), na mesma branch: **213 arquivos / 2528 testes** no projeto unit e **235 / 2698** na suíte completa, com **G4 22 / 170** na 5433 e G0 **1177 módulos / 4988 dependências** (allow-list vazia — o salto de +5 módulos vem da fechadura `tests/unit/prisma/seed-resolution.test.ts` e do `prisma/seed.dev.ts` agora alcançado), `tsc` 0, lint exit 0 nos arquivos da onda, `docs:build` e `docs:check` verdes; o e2e não foi re-medido porque nada do quadro nem do shell mudou.
 - **G4/integração:** roundtrips Prisma real rodam **só** contra o banco de teste isolado `dq-dev-test-db` em `127.0.0.1:5433` (`$env:DATABASE_URL="postgresql://dq_dev:dq_dev_local_only@127.0.0.1:5433/dq_dev_test"; npx vitest run`) — nunca contra o `display-quest-db` (5432, produção local).
 - **Setup do G4 (corrigido 2026-10-02):** `npm run db:test:up` e `npm run db:test:setup` **existem**
   no `package.json` e fazem a sequência completa (`docker compose -f docker-compose.test.yml up -d`,
@@ -26,7 +26,7 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
 
 ## plan-v8 — gamificação remodelada (aberto 2026-10-22)
 
-- **Estado:** `in_progress` — **V8-7 done em 2026-10-23** (troféus e trilhas na UI: `ListMonthlyRankingUseCase` +
+- **Estado:** `in_progress` — **V8-8 done em 2026-10-23** (fechamento G5/G6: RB-84..RB-88 no capítulo 07 e rastreabilidade até RB-88; guia com as sete capturas novas do perfil/quadro/painel e as abas Horas e Visão Geral reescritas a partir do que os PNGs medem; 22 capturas (8 novas, 14 refeitas); o require do seed nomeando `./seed.dev.ts` (DEC-227, dívida `SEED-DEV-JS`); gates unit+features **213 arquivos / 2528 testes**, suíte completa **235 / 2698**, G4 **22 / 170** na 5433, G0 **1177 módulos / 4988 dependências** com allow-list vazia, `tsc` 0, lint exit 0 nos arquivos da onda com os mesmos 17 warnings, `docs:build` (técnico 15 seções / 33 figuras; guia 12 seções / **53** figuras) e `docs:check` verdes; e2e **não re-medido** na onda — nenhum arquivo do quadro nem do shell mudou. Próxima onda: **V8-CLOSE**. Antes, **V8-7 done em 2026-10-23** (troféus e trilhas na UI: `ListMonthlyRankingUseCase` +
   `prisma-monthly-ranking.port.ts` com quatro queries em lote e a régua `points → tarefas do mês → xp → userId`
   DECIDIDA NO SERVIDOR (elo DERIVADO do XP, não a coluna), mais `GET /api/gamification/ranking` e o quadro
   reescrito com as colunas Posição / Usuário / Pontos / Tarefas (mês) / Elo / Troféus / Moedas e a tabela
@@ -101,7 +101,11 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   assentados do mesmo quadro, não um teto absoluto), as duas abertas e executadas na V8-7; mais **DEC-226** (os
   capítulos técnicos seguem dizendo "distintivo" enquanto a tela diz "troféu": a correspondência foi declarada no
   capítulo 9 em vez de reescrever dez capítulos; renomear é decisão do dono no fechamento), aberta 2026-10-23;
-  próxima livre **DEC-227**). **Regime (DEC-221):** uma onda por vez, autorizada pelo orquestrador do thread
+  mais **DEC-227** (`prisma/seed.ts` nomeia a extensão do arquivo que exige: sem ela o require resolve o
+  artefato compilado e versionado `prisma/seed.dev.js`, que roda o próprio `main()` com o conteúdo de um
+  seed antigo e o script reporta "Seed completa finalizada" deixando a base no estado dos roundtrips —
+  aberta e executada na V8-8, com dívida `SEED-DEV-JS` para o dono remover o artefato), aberta e executada
+  2026-10-23; próxima livre **DEC-228**). **Regime (DEC-221):** uma onda por vez, autorizada pelo orquestrador do thread
   — sem espera de ordem explícita a partir da V8-1; pare e reporte no fim de cada onda; commit
   `plan-v8 <ONDA>: …` com o `STATE.json` atualizado no mesmo commit; durante o plano a
   migration é escrita e aplicada **só na 5433** (deploy, roundtrips G4 e e2e da worktree rodam
@@ -694,7 +698,7 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
     "plan-v8" abaixo)**. O V4-4 ia usar DEC-61..64 e colidiu; os 28 comentários de código foram
    renumerados. **Antes de abrir decisão nova, `grep`
     os SETE `STATE.json` (clean-arch, plan-v3, plan-v4, plan-v5, plan-v6, plan-v7, plan-v8) — a nota antiga que dizia "três"
-    (e depois "cinco") está velha. Próxima livre: DEC-227.**
+    (e depois "cinco") está velha. Próxima livre: DEC-228.**
 - **Subtask (V4-4, DEC-78..83 → regra atual = DEC-97/98/189):** tabela `task_subtasks` (sem FK para
   `users` — subtask não tem
   responsável próprio), base gravada em `tasks.points` = `10 + 5·n` (DEC-97) e **cada subtask CONCLUÍDA
@@ -1053,6 +1057,36 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   cria tarefas `E2E%`, completa-as e a limpeza (`count(*) … 'E2E%'` = 0) confere as linhas. O prêmio do
   catch-up fica em `users.points` e não sai junto. Confira o saldo do coordenador na base de teste e
   restaure-o, senão o próximo lote começa com um placar que não é o dele.
+- **O seed pode rodar sem seminar (medido 2026-10-23, V8-8):** `npm run db:test:setup` reportou "Seed
+  completa finalizada" com a 5433 no estado que os roundtrips deixaram — 39 pessoas e os badges "Mentor
+  da Semana"/"Guardião do Laboratório" de outro tempo. `prisma/seed.ts` chamava
+  `createRequire(…)("./seed.dev")` **sem extensão**, e a resolução escolheu o artefato compilado e
+  versionado `prisma/seed.dev.js`, que roda o próprio `main()` com o conteúdo de um seed antigo. O `tsc`,
+  o lint e o G0 não veem a troca: quem decide é o sistema de arquivos. Conserto (DEC-227): nomear
+  `./seed.dev.ts`, com fechadura `tests/unit/prisma/seed-resolution.test.ts`. O artefato continua
+  versionado (dívida `SEED-DEV-JS`, remoção é decisão do dono).
+- **Captura de tela compartilhando página entra na fila do navegador (medido 2026-10-23, V8-8):** o
+  `scripts/capture-user-guide.mjs` reusava uma página por papel, e os fetches do layout (sessões, tarefas,
+  projetos, notificações a cada 5 s) continuavam pendurados da tela anterior — medido: 17 requisições sem
+  resposta entre 2,7 s e 5,5 s. Com o teto de seis conexões por origem do Chromium em HTTP/1.1 do `next dev`,
+  o fetch da tela seguinte nunca saía da fila e a captura fotografava o estado de espera ("Quadro
+  indisponível."). Duas correções: **cada captura abre e fecha a própria página** e uma **passada de
+  aquecimento por cada rota da execução** (descartada), que tira a compilação sob demanda do caminho. Antes:
+  5 falhas em 19 telas; depois: 18 de 18.
+- **`innerText` devolve o texto RENDERIZADO, não o texto do fonte (medido 2026-10-23, V8-8):** a tipografia
+  da casa escreve as cifras do cartão da temporada em caixa alta (`PONTOS DO MÊS`), e a verificação de tela
+  do script comparava caixa exata — falhava por tipografia, não por tela. A comparação do extrato é em caixa
+  baixa; o extrato continua gravando a grafia que a tela mostra. Mesma família do `aria-label`: o bloco
+  `aria-label="Trilha de saldo"` não entra em `innerText`; o que a tela mostra é o valor do seletor
+  (`Pontos do mês`) e a linha `Atual: 1600 pontos · "Definir" aceita valor negativo`. E rótulo que carrega
+  contagem ("Aprovações 1") não casa com `exact: true` — o script aceitou expressão regular no campo `aba`.
+- **Captura antiga só é descoberta lendo o PNG (medido 2026-10-23, V8-8):** `admin-horas` estava versionado
+  do painel anterior à V6-11 — quatro cards de métrica, aba "Badges" e botão "Resetar Semana" — e a prosa do
+  guia descrevia essa tela, incluindo "a Visão Geral abre com a tabela semanal de horas", que hoje está na
+  aba Horas. Não existe botão de reset da semana: a zeragem é da agenda (`'0 0 * * 1'`,
+  `resetWeeklyHoursHistory` com `systemActor(WEEKLY_RESET)`), e o controle medido da Visão Geral é o botão
+  **Gerenciar** do card "No laboratório agora". O log do script passou todas essas capturas; só a leitura dos
+  PNGs mostrou a divergência.
 - **O spec do quadro é `mode: "serial"` e depende do estado do teste anterior (medido 2026-10-05):**
   o teste 3 ("leader approves") só acha o fixture porque o **teste 2** o moveu para `Em Revisão` —
   rodar `-g "leader approves"` sozinho falha na linha 181 (`element(s) not found`) e isso **não é

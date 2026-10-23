@@ -80,18 +80,58 @@ const SCREENS = [
   { id: "perfil", role: "coord", route: "/dashboard/profile", expect: { url: /\/dashboard\/profile/, anyOf: ["Perfil"] } },
   // V5-4a (DEC-138): o cartão de perfil de OUTRA pessoa é onde os dados de pessoa aparecem em
   // leitura — o cartão "Meu Perfil" da própria página não os mostra. O endereço é o que o link de
-  // uma pessoa no Ranking produz; o id é a conta de captura do guia (docs/.capture.env).
-  { id: "perfil-de-outra-pessoa", role: "coord", route: "/dashboard/profile?userId=21", expect: { url: /\/dashboard\/profile/, anyOf: ["Dados para os documentos"] } },
+  // uma pessoa no Ranking produz; a identidade é a conta de captura do participante, lida do
+  // servidor (DEC-224), não um número escrito aqui. O rótulo lido na tela é "Dados para os
+  // documentos" (o bloco de LEITURA); "…oficiais" é o título do formulário de edição.
+  { id: "perfil-de-outra-pessoa", role: "coord", route: "/dashboard/profile?userId={outra}", expect: { url: /\/dashboard\/profile/, anyOf: ["Dados para os documentos"] } },
+
+  // plan-v8 V8-7/V8-8: as três peças novas do perfil são fotografadas como bloco, porque cada uma
+  // mora abaixo da dobra da página inteira (o cartão logo abaixo do cabeçalho, a prateleira e o
+  // histórico depois das abas).
+  { id: "perfil-temporada", role: "part", route: "/dashboard/profile", expect: { url: /\/dashboard\/profile/, anyOf: ["Pontos do mês", "XP da temporada"] }, capturarElemento: 'section[aria-labelledby="season-card"]' },
+  { id: "perfil-trofeus", role: "part", route: "/dashboard/profile", rolarAte: '[data-testid="trophy-shelf"]', expect: { url: /\/dashboard\/profile/, anyOf: ["Troféus", "Nenhum troféu conquistado ainda"] }, capturarElemento: '[data-testid="trophy-shelf"]' },
+  { id: "perfil-ciclos", role: "part", route: "/dashboard/profile", rolarAte: '[data-testid="cycle-history"]', expect: { url: /\/dashboard\/profile/, anyOf: ["Meses fechados"] }, capturarElemento: '[data-testid="cycle-history"]' },
 
   // --- participante: superficie reduzida, usada para mostrar a variação de papel ---
   { id: "quadro-tarefas-participante", role: "part", route: "/dashboard", expect: { url: /\/dashboard$/, anyOf: ["Quadro", "Tarefa"] } },
   { id: "laboratorio-participante", role: "part", route: "/dashboard/laboratorio", expect: { url: /\/dashboard\/laboratorio/, anyOf: ["Laboratório", "Plantão"] } },
   { id: "loja-participante", role: "part", route: "/dashboard/loja", expect: { url: /\/dashboard\/loja$/, anyOf: ["Loja", "Recompensa", "Ponto"] } },
   { id: "ranking-participante", role: "part", route: "/dashboard/leaderboard", expect: { url: /\/dashboard\/leaderboard/, anyOf: ["Ranking", "Pontos"] } },
+  // V8-7: o livro-caixa da temporada mora na mesma página do quadro, abaixo da dobra.
+  { id: "ranking-livro-caixa", role: "part", route: "/dashboard/leaderboard", rolarAte: 'section[aria-labelledby="season-book"]', expect: { url: /\/dashboard\/leaderboard/, anyOf: ["Livro-caixa da temporada"] }, capturarElemento: 'section[aria-labelledby="season-book"]' },
   { id: "perfil-participante", role: "part", route: "/dashboard/profile", expect: { url: /\/dashboard\/profile/, anyOf: ["Perfil"] } },
 ];
 
 const VIEWPORT = { width: 1440, height: 900 };
+
+/**
+ * Texto normalizado do documento. `innerText` devolve o texto RENDERIZADO — e a tipografia da casa
+ * escreve rótulos de cifra em caixa alta ("PONTOS DO MÊS", medido na captura da V8-8). A comparação
+ * do extrato é feita em caixa baixa para que o rótulo medido seja o rótulo, não a tipografia.
+ */
+const textoDoCorpo = async (page) => (await page.locator("body").innerText()).replace(/\s+/g, " ").toLowerCase();
+
+/**
+ * As telas cuja matéria-prima é fetch do cliente (o cartão de temporada, a prateleira, o
+ * histórico, o livro-caixa) assentam depois da primeira pintura. Fotografar no primeiro frame
+ * produz skeleton, e a verificação de "chegou na tela certa" falha por tempo, não por tela.
+ * A verificação espera assentar (até o teto) antes de checar e de fotografar.
+ */
+async function corpoAposAssentar(page, texts, timeoutMs = 30_000) {
+  let body = await textoDoCorpo(page);
+  const deadline = Date.now() + timeoutMs;
+  while (texts && texts.length && !texts.some((t) => body.includes(String(t).toLowerCase())) && Date.now() < deadline) {
+    await page.waitForTimeout(700);
+    body = await textoDoCorpo(page);
+  }
+  return body;
+}
+
+/** O rótulo de aba aceito: texto exato, ou `/regexp/` quando o rótulo carrega contagem. */
+function nomeDaAba(valor) {
+  const rx = /^\/(.+)\/([a-z]*)$/.exec(valor);
+  return rx ? new RegExp(rx[1], rx[2]) : valor;
+}
 
 /**
  * Diálogos e abas: é onde um guia de uso realmente acontece. Cada entrada
@@ -122,10 +162,18 @@ const INTERACTIONS = [
   // V6-8 (RF-V6.15): a rota morta `loja/gerenciar` saiu; as três capturas da loja passam a sair
   // da própria `/dashboard/loja`, nas abas vivas (Gerenciar / Aprovações), sem aba nova.
   { id: "loja-gerenciar", role: "coord", route: "/dashboard/loja", aba: "Gerenciar" },
-  { id: "dialogo-nova-recompensa", role: "coord", route: "/dashboard/loja", aba: "Gerenciar", abre: "Adicionar Produto", dialogo: "Recompensa" },
-  { id: "loja-solicitacoes", role: "coord", route: "/dashboard/loja", aba: "Aprovações" },
+  { id: "dialogo-nova-recompensa", role: "coord", route: "/dashboard/loja", aba: "Gerenciar", esperar: "Gerenciar Produtos da Loja", abre: "Adicionar Produto", dialogo: "Recompensa" },
+  { id: "loja-solicitacoes", role: "coord", route: "/dashboard/loja", aba: "/^Aprovações/" },
   { id: "admin-usuarios", role: "coord", route: "/dashboard/admin", aba: "Usuários" },
   { id: "admin-horas", role: "coord", route: "/dashboard/admin", aba: "Horas" },
+  // plan-v8 V8-7 (DEC-220) / V8-8: a aba Troféus do painel e o formulário que a casa nunca tinha
+  // fotografado — janela do critério, condição especial e efeitos equipáveis (DEC-218/219).
+  { id: "admin-trofeus", role: "coord", route: "/dashboard/admin", aba: "Troféus", verifica: "Gerenciar Troféus" },
+  // V8-5 (ASK-V8-24): o diálogo Configurar Usuário passou a ter SELETOR DE TRILHA (pontos do mês e
+  // moeda). Sem esta captura, o guia descreveria um controle que nenhuma foto mostra.
+  { id: "dialogo-configurar-usuario", role: "coord", route: "/dashboard/admin", aba: "Usuários", abre: "/^Configurar /", dialogo: "Pontos do mês" },
+  { id: "dialogo-novo-trofeu", role: "coord", route: "/dashboard/admin", aba: "Troféus", esperar: "Gerenciar Troféus", abre: "Novo troféu", dialogo: "Janela do critério", rolarAte: "text=Janela do critério" },
+  { id: "dialogo-novo-trofeu-efeitos", role: "coord", route: "/dashboard/admin", aba: "Troféus", esperar: "Gerenciar Troféus", abre: "Novo troféu", dialogo: "Efeitos equipáveis", rolarAte: "text=Efeitos equipáveis" },
   // V6-9 (RF-V6.12/DEC-182): a aba Voluntários saiu de Projetos e virou aba do Painel
   // Administrativo. A captura mostra o seletor de projeto (leitura pura — nenhum clique escreve).
   { id: "admin-voluntarios", role: "coord", route: "/dashboard/admin", aba: "Voluntários", verifica: "Selecionar Projeto" },
@@ -228,7 +276,7 @@ async function openSession(kind) {
     sessionStorage.setItem("session-welcome-balloon-dismissed", "1");
   });
 
-  if (kind === null) return { context, page: await context.newPage() };
+  if (kind === null) return { context };
 
   const email = kind === "coord" ? env.DQ_CAPTURE_EMAIL : env.DQ_CAPTURE_EMAIL_2;
   if (!email) {
@@ -249,29 +297,77 @@ async function openSession(kind) {
     await context.close();
     die(`login falhou para ${email}: a página permaneceu em ${page.url()} — "${body}"`);
   }
-  return { context, page };
+
+  // Aquecimento: o `next dev` compila por rota sob demanda. Medido na captura da V8-8 (2026-10-23):
+  // na primeira visita de cada rota o servidor respondia enquanto compilava, os fetches do layout
+  // ficavam pendurados e — com o teto de seis conexões por origem do Chromium em HTTP/1.1 — a tela
+  // seguinte entrava na fila e era fotografada no estado "Quadro indisponível." Uma passada por cada
+  // rota desta execução, descartada, tira a compilação do caminho da captura.
+  const rotas = new Set(
+    [...screens, ...interactions]
+      .filter((item) => item.role === kind)
+      .map((item) => item.route.replace("{outra}", ""))
+  );
+  for (const rota of rotas) {
+    try {
+      await page.goto(`${env.DQ_CAPTURE_URL}${rota}`, { waitUntil: "domcontentloaded", timeout: 30_000 });
+      await page.waitForTimeout(1200);
+    } catch {
+      /* aquecimento não é captura: o que falha aqui volta a falhar, com mensagem, na captura */
+    }
+  }
+  await page.close().catch(() => null);
+  return { context };
 }
 
 const sessions = new Map();
 
+/**
+ * A identidade da "outra pessoa" (DEC-224): lida da sessão da conta de captura do participante,
+ * não escrita no script. Um número aqui seria uma segunda fonte de verdade para algo que o
+ * servidor devolve — e o id muda de base para base (na 5433 da worktree ele não é o da instância
+ * do dono, e os roundtrips G4 criem/apagam pessoas).
+ */
+async function otherPersonId() {
+  if (!sessions.has("part")) sessions.set("part", await openSession("part"));
+  const response = await sessions.get("part").context.request.get(`${env.DQ_CAPTURE_URL}/api/auth/session`);
+  const session = await response.json().catch(() => null);
+  const id = session?.user?.id;
+  if (!id) die("não consegui a identidade da conta de captura do participante em /api/auth/session");
+  return String(id);
+}
+
 for (const screen of screens) {
-  if (!sessions.has(screen.role)) sessions.set(screen.role, await openSession(screen.role));
-  const { page } = sessions.get(screen.role);
+  const page = await paginaDaSessao(screen.role);
 
   const record = { id: screen.id, role: screen.role ?? "sem sessão", route: screen.route };
   try {
-    await page.goto(`${env.DQ_CAPTURE_URL}${screen.route}`, { waitUntil: "networkidle", timeout: 60_000 });
+    const route = screen.route.includes("{outra}")
+      ? screen.route.replace("{outra}", await otherPersonId())
+      : screen.route;
+    await page.goto(`${env.DQ_CAPTURE_URL}${route}`, { waitUntil: "networkidle", timeout: 60_000 });
     await page.waitForTimeout(900); // animações e chunks sob demanda
 
-    const body = (await page.locator("body").innerText()).replace(/\s+/g, " ");
+    const body = await corpoAposAssentar(page, screen.expect?.anyOf);
     if (/Application error|Internal Server Error|This page could not be found/i.test(body)) {
       throw new Error(`a tela retornou erro: ${body.slice(0, 120)}`);
     }
     if (screen.expect.url && !screen.expect.url.test(page.url())) {
       throw new Error(`URL inesperada ${page.url()} (esperava ${screen.expect.url})`);
     }
-    if (screen.expect.anyOf && !screen.expect.anyOf.some((t) => body.includes(t))) {
-      throw new Error(`nenhum dos textos esperados apareceu: ${screen.expect.anyOf.join(" / ")}`);
+    if (screen.expect.anyOf && !screen.expect.anyOf.some((t) => body.includes(String(t).toLowerCase()))) {
+      throw new Error(
+        `nenhum dos textos esperados apareceu: ${screen.expect.anyOf.join(" / ")} — a tela dizia: "${body.slice(0, 260)}"`
+      );
+    }
+
+    // O bloco que importa pode estar abaixo da dobra (a prateleira do perfil, o livro-caixa do
+    // quadro). É a mesma mecânica do `rolarAte` das interações (V5-4a): sem levar o elemento ao
+    // campo de visão, a captura fotografa a tela errada da tela certa.
+    if (screen.rolarAte) {
+      await page.locator(screen.rolarAte).first().scrollIntoViewIfNeeded();
+      await page.waitForTimeout(500);
+      record.roladoPara = screen.rolarAte;
     }
 
     record.url = page.url();
@@ -289,6 +385,8 @@ for (const screen of screens) {
   } catch (error) {
     failures.push(`${screen.id}: ${error.message}`);
     log(`✗ ${screen.id} — ${error.message}`);
+  } finally {
+    await page.close().catch(() => null);
   }
 }
 
@@ -299,6 +397,16 @@ for (const screen of screens) {
  * barra só nasce com o projeto selecionado. Mesma mecânica do `selecionar` acima — gatilho pelo
  * placeholder, opção pelo nome — só que roda depois de abrir/acionar, não antes.
  */
+/**
+ * Cada captura abre a própria página e a fecha ao terminar: os fetches do layout (sessões, tarefas,
+ * projetos, notificações a cada 5 s) continuam pendurados na página anterior e disputam as seis
+ * conexões por origem do Chromium. Fechá-los devolve a fila para a tela seguinte.
+ */
+async function paginaDaSessao(kind) {
+  if (!sessions.has(kind)) sessions.set(kind, await openSession(kind));
+  return sessions.get(kind).context.newPage();
+}
+
 async function runSelects(page, selects) {
   for (const sel of [].concat(selects ?? [])) {
     await page.getByText(sel.gatilho, { exact: true }).first().click();
@@ -313,8 +421,7 @@ async function runSelects(page, selects) {
 }
 
 for (const it of interactions) {
-  if (!sessions.has(it.role)) sessions.set(it.role, await openSession(it.role));
-  const { page } = sessions.get(it.role);
+  const page = await paginaDaSessao(it.role);
 
   const record = { id: it.id, role: it.role === "coord" ? "coordenador" : "participante", route: it.route };
   try {
@@ -322,17 +429,28 @@ for (const it of interactions) {
     await page.waitForTimeout(800);
 
     if (it.aba) {
-      await page.getByRole("tab", { name: it.aba, exact: true }).first().click();
+      // O rótulo pode carregar contagem ("Aprovações 1", medido na loja): `/texto/` no `aba`
+      // vira expressão, mesma primitiva já usada no `abre` (V5-8).
+      const aba = nomeDaAba(it.aba);
+      await page
+        .getByRole("tab", aba instanceof RegExp ? { name: aba } : { name: aba, exact: true })
+        .first()
+        .click();
       await page.waitForTimeout(800);
       record.aba = it.aba;
+
+      // Antes de agir dentro da aba, o conteúdo dela precisa assentar: o gerenciador de troféus
+      // renderiza spinner enquanto busca o catálogo, e clicar "Novo troféu" nesse intervalo não
+      // acha o botão (medido na primeira tentativa da V8-8).
+      if (it.esperar) await corpoAposAssentar(page, [it.esperar]);
 
       // Verificação também para captura de aba. Sem isso, uma aba que mudou de conteúdo é
       // fotografada em silêncio — foi assim que o guia continuou descrevendo um filtro de status
       // que o DEC-96 já tinha tirado da tela. Quando a captura também abre algo, a verificação é
       // do que existe DEPOIS do clique, e fica no ramo de baixo.
       if (it.verifica && !it.abre && !it.alvo) {
-        const tabText = (await page.locator("body").innerText()).replace(/\s+/g, " ");
-        if (!tabText.includes(it.verifica)) {
+        const tabText = await corpoAposAssentar(page, [it.verifica]);
+        if (!tabText.includes(String(it.verifica).toLowerCase())) {
           throw new Error(`a aba "${it.aba}" não contém "${it.verifica}": "${tabText.slice(0, 140)}"`);
         }
       }
@@ -399,13 +517,13 @@ for (const it of interactions) {
         const dialogText = (await page.locator('[role="dialog"]').allInnerTexts())
           .join(" ")
           .replace(/\s+/g, " ");
-        if (!dialogText.includes(it.dialogo)) {
+        if (!dialogText.toLowerCase().includes(String(it.dialogo).toLowerCase())) {
           throw new Error(`o diálogo aberto não contém "${it.dialogo}": "${dialogText.slice(0, 120)}"`);
         }
         record.dialog = dialogText.slice(-400);
       } else {
-        const bodyText = (await page.locator("body").innerText()).replace(/\s+/g, " ");
-        if (it.verifica && !bodyText.includes(it.verifica)) {
+        const bodyText = await corpoAposAssentar(page, it.verifica ? [it.verifica] : null);
+        if (it.verifica && !bodyText.includes(String(it.verifica).toLowerCase())) {
           throw new Error(`após o clique a tela não contém "${it.verifica}": "${bodyText.slice(0, 140)}"`);
         }
         record.after = bodyText.slice(0, 300);
@@ -415,7 +533,7 @@ for (const it of interactions) {
       // selects da barra (projeto → atividade). A verificação é do texto que o último select
       // mostra escolhido.
       await runSelects(page, it.depois);
-      const bodyText = (await page.locator("body").innerText()).replace(/\s+/g, " ");
+      const bodyText = await corpoAposAssentar(page, it.verifica ? [it.verifica] : null);
       if (it.verifica && !bodyText.includes(it.verifica)) {
         throw new Error(`após a seleção a tela não contém "${it.verifica}": "${bodyText.slice(0, 140)}"`);
       }
@@ -447,12 +565,14 @@ for (const it of interactions) {
   } catch (error) {
     failures.push(`${it.id}: ${error.message}`);
     log(`✗ ${it.id} — ${error.message}`);
+  } finally {
+    await page.close().catch(() => null);
   }
 }
 
 /* --- navegação: um registro por grupo, com o grupo aberto --- */
 if (!wanted) {
-  const { page } = sessions.get(NAVIGATION.role) ?? (await openSession(NAVIGATION.role));
+  const page = await paginaDaSessao(NAVIGATION.role);
   for (const grupo of NAVIGATION.grupos) {
     const id = `navegacao-${grupo.toLowerCase().replace(/[^a-z]/g, "")}`;
     try {
@@ -471,6 +591,7 @@ if (!wanted) {
       log(`✗ ${id} — ${error.message}`);
     }
   }
+  await page.close().catch(() => null);
 }
 
 await browser.close();

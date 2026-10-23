@@ -1,9 +1,11 @@
 # Administração
 
-O **Painel Administrativo** é a tela de quem mantém o sistema funcionando. Está organizado em oito abas: **Visão Geral**, **Usuários**, **Projetos**, **Horas**, **Tarefas**, **Voluntários**, **Notificações** e **Badges**.
-
+O **Painel Administrativo** é a tela de quem mantém o sistema funcionando. Está organizado em oito abas: **Visão Geral**, **Usuários**, **Projetos**, **Horas**, **Tarefas**, **Voluntários**, **Notificações** e **Troféus**.
 ```foto painel-administrativo titulo="O Painel Administrativo, na aba Visão Geral"
-A Visão Geral abre com "Horas Trabalhadas por Usuário (Semana Atual)": **Nome**, **Email**, **Horas Trabalhadas**, **Horas Esperadas** e **Diferença**.
+A Visão Geral abre com **No laboratório agora** (quem tem sessão ativa, com **Gerenciar**), **Tarefas
+por status** (o percentual concluído e a contagem das cinco colunas), **Concluídas nos últimos 7 dias**
+e **Projetos ativos**. Abaixo, o **Top 5 em produtividade** tem seletor de trilha — **Pontos do mês**,
+**Tarefas**, **Projetos**, **Horas** — e é o quadro por semana de horas que fica na aba **Horas**.
 ```
 
 ::: nota titulo="Quem entra"
@@ -29,6 +31,12 @@ A aba **Usuários** é onde as contas pendentes são resolvidas e onde as contas
   saldo negativo. Cada ajuste fica registrado no histórico da pessoa, com trilha, valor antes e
   valor depois.
 
+```foto dialogo-configurar-usuario titulo="O diálogo Configurar Usuário, no bloco Saldo"
+O bloco **Saldo** mostra o seletor da trilha (o valor visível é **Pontos do mês** ou **Moedas**), a ação
+e o número, com a linha do valor de hoje embaixo: *Atual: 1600 pontos · “Definir” aceita valor
+negativo*. Trocar a trilha troca a linha — o que está sendo ajustado é sempre o que a linha declara.
+```
+
 ```foto admin-usuarios titulo="A aba Usuários"
 A lista traz as contas e, abaixo, a grade de horários por função.
 ```
@@ -39,10 +47,24 @@ Uma conta criada por **Novo Usuário** ou aprovada em **Aprovar** passa a permit
 
 ## Horas
 
-A aba **Horas** é a leitura consolidada do tempo registrado. As colunas são **Usuário**, **Horas Totais**, **Esta Semana**, **Sessões**, **Duração Média**, **Projetos** e **Produtividade**. Acima da tabela, os filtros **Todas as funções**, **Todos os projetos** e **Esta semana** definem o recorte; **Exportar** produz o arquivo da tabela.
+A aba **Horas** tem duas leituras, uma acima da outra.
 
-```foto admin-horas titulo="A aba Horas"
-É a primeira lugar a consultar quando um número de horas parece errado: ele mostra sessões e duração média, não só o total.
+A primeira é o quadro da semana — **Horas por usuário · Semana atual**, com a navegação ‹ **Hoje** ›
+para recuar às semanas já fechadas. As colunas são **Nome**, **Email**, **Horas trabalhadas**, **Meta**
+e **Estado**, e o estado é a diferença contra a meta da pessoa: em vermelho quando falta (*40.0h
+restantes*), como acréscimo quando sobra, *"Meta atingida!"* quando empata e *"Sem meta definida"*
+quando a meta é zero.
+
+A segunda é a **Gestão de Horas Trabalhadas**, o relatório por período. Ela tem o campo **Buscar
+usuários...**, os seletores **Filtrar por função** (com **Todas as funções**), **Filtrar por projeto**
+(com **Todos os projetos**) e o de período — **Esta semana**, **Este mês**, **Este trimestre**, **Este
+ano**, **Todo período** — e o botão **Exportar**, que produz o arquivo da tabela. As colunas são
+**Usuário**, **Horas Totais**, **Esta Semana**, **Sessões**, **Duração Média**, **Projetos** e
+**Produtividade**.
+
+```foto admin-horas titulo="A aba Horas: a semana atual e, abaixo, o relatório por período"
+É o primeiro lugar a consultar quando um número de horas parece errado: o quadro da semana mostra o que
+cada pessoa trabalhou contra a meta dela, e o relatório embaixo acrescenta sessões e duração média.
 ```
 
 ## As outras abas
@@ -57,6 +79,11 @@ A aba **Horas** é a leitura consolidada do tempo registrado. As colunas são **
 
 ## A aba Troféus
 
+```foto admin-trofeus titulo="A aba Troféus, com o catálogo"
+O catálogo ocupa a aba inteira: cada troféu é um card com nome, categoria e descrição, e o botão
+**Novo troféu** no alto abre o formulário. Sem troféu criado, a aba diz *"Nenhum troféu criado"*.
+```
+
 O botão **Novo troféu** abre o formulário, e um troféu é criado com **Nome do troféu**, **Descrição**, **Categoria**, **Ícone (emoji ou nome)**, **Cor** e o interruptor **Troféu ativo**. O que decide se a pessoa recebe o troféu é o bloco de critério, e ele começa pela **Janela do critério**:
 
 - **Mês em curso** mede **Pontos** e **Tarefas** do mês que ainda não fechou.
@@ -65,7 +92,19 @@ O botão **Novo troféu** abre o formulário, e um troféu é criado com **Nome 
 
 Só aparecem no formulário as métricas da janela escolhida: um troféu de mês não ganha campo de moedas porque a janela de mês não mede moedas. Preencher uma métrica fora da janela é recusado com o nome do campo, e um critério sem métrica nenhuma também é recusado — sem critério, o troféu não é concedido sozinho. Abaixo das métricas há **Condição especial**, texto livre para as condições que não são contagem, como *"primeiro a completar 100 tarefas"*.
 
+```foto dialogo-novo-trofeu titulo="O formulário Criar novo troféu, no bloco do critério"
+O formulário tem três blocos — **Informações Básicas**, **Critérios para Conquistar** e **Efeitos
+equipáveis** — e o bloco do critério começa dizendo *"Escolha a janela que o troféu mede e preencha só o
+que ele exige. Campo vazio não vale zero: não mede aquilo."* Ao editar um troféu existente, o título
+passa a **Editar troféu**.
+```
+
 O bloco **Efeitos equipáveis** declara o que o troféu faz enquanto a pessoa o mantém equipado. Cada efeito tem **Verbo** — *Pontos de tarefa +%*, *Pontos de sessão +%*, *Moedas de atividade +%* ou *Penalidade de atraso −%* — e **Tier**: *Tier 1 (5%)*, *Tier 2 (10%)* ou *Tier 3 (15%)*. O valor vem do tier, e não há número livre a preencher. Um troféu sem efeito é só conquistável: não muda nenhum credit.
+
+```foto dialogo-novo-trofeu-efeitos titulo="O bloco Efeitos equipáveis, aberto por Adicionar efeito"
+Sem efeito declarado, o bloco diz *"Sem efeito: o troféu é só conquistável, não muda nenhum credit."*;
+**Adicionar efeito** cria a linha com **Verbo** e **Tier**, e cada linha tem o controle que a remove.
+```
 
 O painel define o catálogo; a pessoa não equipa troféu pelo painel. A escolha de quais manter equipados é dela, na prateleira do próprio perfil (capítulo 8), e quem equipa é sempre a própria pessoa — nenhuma rotina do sistema equipou ou desequipou troféu de ninguém. O painel concede e edita; o efeito sobre os créditos seguintes vale enquanto o troféu está equipado.
 
@@ -81,10 +120,13 @@ Quem gerencia a equipe é a gestão do sistema e o **Gerente de Projeto**. Os da
 
 ## Sessões e semana
 
-Dois controles da Visão Geral mexem no registro de trabalho:
+Um controle da Visão Geral mexe no registro de trabalho: o botão **Gerenciar** do card **No laboratório
+agora** abre o diálogo **Gerenciar sessões (ativas e pausadas)**, onde as sessões de todas as pessoas
+podem ser pausadas, retomadas, finalizadas e excluídas.
 
-- **Gerenciar sessões** abre a gestão das sessões de trabalho de todas as pessoas — pausar, retomar, finalizar e excluir.
-- **Resetar Semana** zera as horas da semana corrente. É uma ação que apaga contagem, não uma correção pontual: para ajustar uma pessoa, corrija a sessão dela, não a semana inteira.
+A semana de horas não tem botão de reset. Ela zera sozinha, pela agenda do sistema, na virada para
+segunda-feira (00:00 do fuso do laboratório). Isso é proposital: zerar a semana é apagar contagem, e a
+correção de uma pessoa se faz pela sessão ou pelo log dela, não pela semana inteira.
 
 ::: limite titulo="O que a administração não faz pelo painel"
 Não existe no painel uma forma de reescrever o histórico de um período já relatado, nem de transferir horas de uma pessoa para outra. Correção de registro se faz pela sessão ou pelo log, e o relatório é gerado de novo depois.

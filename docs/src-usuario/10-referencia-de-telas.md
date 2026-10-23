@@ -13,7 +13,7 @@ Esta é a lista completa das telas do sistema, com o endereço de cada uma e que
 | Painel Administrativo | `/dashboard/admin` | oito abas de gestão, incluindo a aba **Voluntários** | Coordenador e Gerente; o Gerente de Projeto só a aba **Voluntários** |
 | Loja | `/dashboard/loja` | recompensas disponíveis e minhas compras; abas **Aprovações** e **Gerenciar** para quem gerencia | todas as funções; as abas de gestão para Coordenador, Gerente e Laboratorista |
 | Ranking | `/dashboard/leaderboard` | quadro do mês: liderança, pontos, tarefas do mês, elo, troféus e moedas — e o livro-caixa da temporada já fechada | todas as funções |
-| Perfil | `/dashboard/profile` | capa e avatar do **Meu Perfil**, Atividade, Logs Diários, Configurações | todas as funções |
+| Perfil | `/dashboard/profile` | capa e avatar do **Meu Perfil**, as trilhas da temporada (cartão com pontos do mês, XP, moedas e slots), as abas Atividade, Logs Diários e Configurações, a prateleira de troféus equipáveis e o histórico dos ciclos fechados | todas as funções |
 
 ## Controles que não são telas
 
@@ -43,3 +43,5 @@ Esta é a lista completa das telas do sistema, com o endereço de cada uma e que
 | Categoria do vínculo | Bolsista, Voluntário, sem categoria |
 | Relatório técnico | Parcial, Técnico-final, Final |
 | Visibilidade do perfil | Público, Apenas Membros, Privado — a regra que obedece a escolha existe e decide a leitura de perfil (capítulo 8) |
+| Janela do critério de troféu | Mês em curso, Temporada (ano em curso), Vida inteira — a janela decide quais métricas o formulário oferece (capítulo 9) |
+| Troféu conquistado × equipado | conquistado é para sempre; equipado é escolha da pessoa, limitada pelos slots do degrau: Bronze 0, Prata 1, Ouro e Platina 2, Diamante e Desafiante 3 |

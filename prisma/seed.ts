@@ -9,4 +9,7 @@ import { createRequire } from "node:module"
 assertSeedAllowed()
 
 const requireSeedDev = createRequire(import.meta.url)
-requireSeedDev("./seed.dev")
+// MEDIDO em 2026-10-23 (V8-8): sem a extensao, o require.resolve escolhe o artefato compilado e
+// commitado `prisma/seed.dev.js` (que nao chama main) e a seed nao roda — o banco fica no estado
+// que os roundtrips deixaram. Nomear o arquivo decide a resolucao.
+requireSeedDev("./seed.dev.ts")

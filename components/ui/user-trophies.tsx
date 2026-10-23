@@ -136,7 +136,7 @@ export function UserTrophies({ userId, canEquip = false, championYears = [], lim
   const championSet = new Set(championYears)
 
   return (
-    <div className={`space-y-3 ${className}`}>
+    <div className={`space-y-3 ${className}`} data-testid="trophy-shelf">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <div className="flex items-center gap-2">
           <Trophy className="h-4 w-4 text-muted-foreground" aria-hidden="true" />

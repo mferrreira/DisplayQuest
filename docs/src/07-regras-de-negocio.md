@@ -129,6 +129,11 @@ produto, e está congelada por teste.
 | RB-81 | O efeito do distintivo tem verbo e tier de listas fechadas, incide sobre a base antes da penalidade, e vale enquanto o distintivo está equipado | RF-09 |
 | RB-82 | Equipar e desequipar distintivo é decisão da própria pessoa, e cada mudança deixa linha de auditoria com o estado antes e depois | RF-09 |
 | RB-83 | O ajuste manual de saldo declara a trilha, e nenhuma ação escreve moeda negativa | RF-09 |
+| RB-84 | O quadro do mês sai ordenado pela régua do servidor — pontos do mês, depois tarefas do mês, depois experiência, depois o identificador do cadastro — e as tarefas do mês são contadas com as mesmas condições do fechamento mensal, sem contar a tarefa pública duas vezes | RF-09 |
+| RB-85 | Na tela do quadro, o degrau é derivado da experiência da temporada: a coluna guardada no equipamento não é lida ali, porque ela declara o degrau do momento em que foi escrita e os slots abertos têm que ser os da régua viva | RF-09 |
+| RB-86 | O livro-caixa reporta o ano encerrado como ele foi gravado: posição e degrau fotografados no fechamento, legíveis depois da zeragem | RF-09 |
+| RB-87 | A prateleira de troféus e os ciclos fechados de outra pessoa são leitura aberta de quem está autenticado; as trilhas de saldo — placar do mês, moedas, experiência, degrau e slots — são da própria pessoa ou de quem gerencia contas | RF-09 |
+| RB-88 | A prateleira é a conquista junta com o catálogo, e a linha de conquista sem catálogo não é mostrada; nenhum número de trilha é recalculado na tela | RF-09 |
 | RB-58 | Comunicados são entregues apenas a contas ativas | RF-10 |
 
 ## RB · Comunicação

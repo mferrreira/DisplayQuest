@@ -17,7 +17,7 @@ responder, a partir de qualquer um dos níveis, onde o comportamento é decidido
 | RF-06 · Relatório com anexo | Criar, Editar, Excluir relatório, Anexar, Baixar | RB-32 a RB-38 | Relatório de projeto, Anexo | `reporting` |
 | RF-07 · Plantão único e visível | Assumir, Pausar, Retomar, Encerrar responsabilidade, Abrir e tratar issue | RB-39 a RB-41, RB-44 a RB-50 | Responsabilidade, Issue | `lab-operations` |
 | RF-08 · Grade com escrita restrita | Consultar grade, Editar a própria grade, Editar grade de terceiros | RB-42, RB-43 | Grade do laboratório, Grade pessoal | `lab-operations` |
-| RF-09 · Pontos, distintivos e recompensa | Consultar progresso, Resgatar, Aprovar compra, Conceder badge | RB-51 a RB-57, RB-67 a RB-83 | Recompensa, Compra, Distintivo, Premiação | `store`, `gamification` |
+| RF-09 · Pontos, distintivos e recompensa | Consultar progresso, Consultar quadro do mês, Consultar livro-caixa, Consultar troféus e ciclos da pessoa, Equipar e desequipar distintivo, Resgatar, Aprovar compra, Conceder badge, Fechar mês, Revisar semana, Fechar temporada | RB-51 a RB-57, RB-67 a RB-88 | Recompensa, Compra, Distintivo, Premiação, Fechamento | `store`, `gamification` |
 | RF-10 · Comunicado interno | Transmitir comunicado, Ler notificação, Marcar tudo como lido | RB-58 a RB-61 | Notificação, Público | `notifications` |
 
 ## Critérios de aceitação por requisito
@@ -35,7 +35,7 @@ enunciados na forma de condição observável.
 | RF-06 | Anexo de relatório não é acessível por endereço direto sem sessão autorizada. Um arquivo com extensão permitida e conteúdo divergente é recusado. |
 | RF-07 | Assumir plantão com outro já ativo é recusado. O plantão pausado acumula tempo e o encerrado deixa de aparecer como ativo. |
 | RF-08 | Qualquer conta autenticada lê a grade completa. Escrever na grade de terceiros sem a permissão de gestão de usuários produz 403. |
-| RF-09 | Resgatar com moedas insuficientes é recusado. Repetir o mesmo evento não credita a trilha duas vezes. Comprar congela o preço do item. |
+| RF-09 | Resgatar com moedas insuficientes é recusado. Repetir o mesmo evento não credita a trilha duas vezes. Comprar congela o preço do item. Fechar o mês escreve o retrato e zera o placar; reexecutar não duplica. O quadro do mês vem na ordem da régua do servidor, e o degrau que ele mostra vem da experiência da temporada. O livro-caixa mostra o degrau fotografado no fechamento. Equipar além do slot do degrau é recusado com a frase do degrau, e quem equipa é sempre a própria pessoa. |
 | RF-10 | Uma notificação dirigida aparece apenas para o destinatário. Um comunicado geral aparece para todas as contas ativas. |
 
 ## Inventário de rotas

@@ -78,6 +78,11 @@ const RETIRED_PHRASES = [
   "Erro ao carregar badges",
   ">Badges<",
   "Badges ({",
+  // Medidas na mesma guarda, depois da captura: o estado vazio do catálogo também era lido pela
+  // pessoa com o nome da tabela ("Nenhum badge criado"), e a tela diz troféu.
+  "Nenhum badge criado",
+  "Crie seu primeiro badge",
+  "Criar Primeiro Badge",
 ] as const;
 
 describe("o vocabulário de tela do troféu (MODELO §1)", () => {

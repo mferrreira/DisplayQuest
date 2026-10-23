@@ -646,11 +646,11 @@ export function BadgeManager() {
       {badges.length === 0 && (
         <div className="text-center py-12">
           <Award className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-foreground mb-2">Nenhum badge criado</h3>
-          <p className="text-muted-foreground mb-4">Crie seu primeiro badge para começar a motivar os usuários</p>
+          <h3 className="text-lg font-medium text-foreground mb-2">Nenhum troféu criado</h3>
+          <p className="text-muted-foreground mb-4">Crie seu primeiro troféu para começar a motivar os usuários</p>
           <Button onClick={() => setShowCreateDialog(true)}>
             <Plus className="h-4 w-4 mr-2" />
-            Criar Primeiro Badge
+            Criar Primeiro Troféu
           </Button>
         </div>
       )}
