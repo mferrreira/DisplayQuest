@@ -164,8 +164,42 @@ quadro/shell re-medidos contra a 5433 (DEC-221).
 e de usuário (`docs/src-usuario`, vocabulário novo), recaptura das telas do guia que
 mudaram (`docs/screens`), re-leitura da prosa (`docs:check` + ruidos).
 
+### V8-9 — refino de frente das telas da gamificação (padrão displayquest-ui)
+Decisão: DEC-228. Pedido do dono em 2026-10-23 ("dá pra melhorar muito do jeito que
+tá — seguindo o padrão estabelecido antes de começar o v8"). As telas nascidas na V8-7
+(ranking mensal, cartão da temporada, prateleira de troféus, histórico mensal e
+livro-caixa, aba Troféus do painel) são revisitadas contra as referências do skill
+`.opencode/skills/displayquest-ui/references/` (design-system, visual-language,
+layout-patterns, components, anti-patterns) e os tokens de `app/globals.css` nas duas
+párias de tema: tokens de cor em vez de palette crua, escala `--radius`, cores semânticas
+pelos tokens `--success/--warning/--info/--destructive`, sem card explosion, hierarquia
+tipográfica, densidade preservada, responsivo intacto. Rotas, fluxo de dados e aritmética
+NÃO mudam. Entram também as robustezas medidas no mesmo dia: a tela de perfil quebra com
+sessão parcial (`user.roles` sem guarda) e telas de gestão que renderizam vazias em
+silêncio em vez de dizer o motivo (padrão DEC-184). Gates: G0–G3 + e2e re-medidos quando o
+markup coberto pelos specs mudar + G6 para as telas que mudarem visualmente.
+
+### V8-10 — pacote de troféus (registro fechado)
+Decisão: DEC-229. Pacote = registro fechado no domínio, ancorado na categoria do Badge
+(`achievement`/`milestone`/`special` + as que o catálogo carrega); cada pacote tem
+identidade visual própria no domínio (moldura e paleta por tier DEC-218, congeladas); o
+badge pertence ao pacote pela categoria — nenhum vocabulário de pacote é inventável em
+tela (pacote novo é decisão nova, DEC-96/95 na alma); a prateleira do perfil agrupa por
+pacote; o formulário de criação no painel mostra o pacote. Pipeline de artes externas
+(SVG de terceiros, silhueta por badge, licenciamento) NÃO entra: fica como decisão futura
+com ASK próprio (as famílias ainda não têm donos). Gates: G0–G4 + G6 para as telas que
+mudarem.
+
+### V8-11 — quadro de projetos (placar mensal por projeto)
+Decisão: DEC-230. Placar mensal de PROJETO na tela de ranking: pontos creditados a membros
+por **tarefas daquele projeto** no mês corrente (awardHistory do mês × `task.projectId`),
+desempate por tarefas concluídas no mês → id do projeto. Leitura pura derivada — nenhuma
+coluna nova de placar de projeto (`projects.points` continua fora do sistema, DEC-215);
+mesma janela do ciclo mensal (DEC-212). Colunas: Posição, Projeto, Pontos do mês, Tarefas,
+Membros ativos. Gates: G0–G4 + G6 para a tela nova.
+
 ### V8-CLOSE — deploy na 5432, merge e e2e na instância (DEC-221)
-Batch de fechamento do plano, depois de V8-8: abrir e vigiar o PR único
+Batch de fechamento do plano, depois de V8-11: abrir e vigiar o PR único
 `plan-v8/gamificacao` → `dev`; aplicar a migration na **5432 real** pelo caminho offline
 medido no V4-4 (a 5433 já está no mesmo estado, e é ela que validou os roundtrips) com a
 data migration 1:1 (`users.coins = users.points`, `rewards.price` em moeda); `prisma

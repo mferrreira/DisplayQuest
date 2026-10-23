@@ -1,11 +1,11 @@
 {
   "plan": "plan-v8",
   "title": "Gamificacao remodelada: trilhas, ciclos, moeda, trofeus equipaveis",
-  "version": "1.10.0",
+  "version": "1.11.0",
   "updatedAt": "2026-10-23",
   "status": "in_progress",
-  "activeWave": "V8-CLOSE",
-  "activeBatch": "V8-CLOSE",
+  "activeWave": "V8-9",
+  "activeBatch": "V8-9",
   "awaitingInstruction": true,
   "lineage": {
     "previousPlan": "plan-v6 (linguagem visual + redistribuicao das telas), encerrado em 2026-10-16; plan-v7 (MCP de validacao) planejado em 2026-10-21 e sem ondas executadas. O plan-v8 nao depende do MCP e o MCP nao depende do plan-v8.",
@@ -214,6 +214,39 @@
       "executionNotes": "(1) MEDIDO antes de mexer: `npm run db:test:setup` dizia 'Seed completa finalizada' e a 5433 continuava no estado que os roundtrips deixavam - 39 pessoas e os badges 'Mentor da Semana' e 'Guardiao do Laboratorio' de outro tempo. Causa: `createRequire(...)('./seed.dev')` sem extensao resolve o artefato compilado e versionado `prisma/seed.dev.js`, que roda o proprio main() com o conteudo antigo. Nenhum teste de seed, o tsc ou o lint veem isso: so o sistema de arquivos decide, e decide errado quando existe retrato no caminho. Conserto: nomear o arquivo. O artefato continua versionado (decisao do dono remove-lo) e a fechadura passa a falhar se a forma sem extensao voltar.\n\n(2) A captura rodou na worktree com dev server proprio na 3002 e DATABASE_URL na 5433, com docs/.capture.env (gitignored) apontando para as contas do seed. As telas novas do guia tem materia-prima de fetch do cliente, e a primeira tentativa falhou em cinco delas com estados de espera ('Quadro indisponivel.' com o fetch ainda pendurado). Medidas com pedidos sem resposta: 17 fetches do layout pendurados por 2,7 s a 5,5 s numa pagina que reuse a pagina anterior. Duas correcoes no script: cada captura abre e fecha a propria pagina (os fetches pendurados disputam as seis conexoes por origem do Chromium em HTTP/1.1) e uma passada de aquecimento por cada rota da execucao, descartada, tira a compilacao sob demanda do `next dev` do caminho. Depois disso 18 de 18 passaram.\n\n(3) `innerText` devolve o texto RENDERIZADO: a tipografia da casa escreve as cifras do cartao da temporada em caixa alta ('PONTOS DO MÊS'), e a verificacao de tela comparava caixa exata - falhava por tipografia, nao por tela. A comparacao do extrato passou a ser em caixa baixa; o extrato continua gravando a grafia que a tela mostra.\n\n(4) Duas capturas que o script nao cobria estavam fotografando tela antiga e foram refeitas: admin-horas era o painel anterior a V6-11 (quatro cards de metrica, aba 'Badges', botao 'Resetar Semana') e a prosa do guia descrevia essa tela - o texto dizia que a Visao Geral abre com a tabela semanal de horas, que hoje esta na aba Horas. A fechadura aqui foi LER OS PNGS, nao o log do script.\n\n(5) O rotulo medido da aba de aprovacoes da loja carrega a contagem ('Aprovacoes 1'), entao o seletor exato do script nao a achava; o campo `aba` aceitou expressao regular, mesma primitiva do `abre` da V5-8. O bloco Saldo do dialogo Configurar Usuario tem `aria-label='Trilha de saldo'` - que nao entra em innerText - e o que a tela mostra e o valor do seletor ('Pontos do mes') mais a linha 'Atual: 1600 pontos - \"Definir\" aceita valor negativo'.\n\n(6) Dado de captura e dado de roundtrip nao convivem: a recaptura usou tests/fixtures/g6-capture-seed.sql (trilhas vivas, dois meses fechados, uma temporada 2025 fechada com posicao e elo, trofeus com um equipado). Antes de re-rodar a G4 a base voltou ao estado canonico por `npm run db:test:setup` (medido: month_history 0, season_history 0, user_badges 2, CAMPEAO no catalogo). Deixar `season_history` de 2025 na base faria o roundtrip do fechamento de temporada bater em 'already-closed' por causa do dado da captura."
     },
     {
+      "id": "V8-9",
+      "title": "refino de frente das telas da gamificacao (padrao displayquest-ui)",
+      "status": "planned",
+      "decisions": [
+        "DEC-228"
+      ],
+      "scope": "Revisitar as telas nascidas na V8-7 (ranking mensal, cartao da temporada, prateleira de trofeus, historico mensal e livro-caixa, aba Trofeus do painel) contra as referencias do skill displayquest-ui (.opencode/skills/displayquest-ui/references/*): tokens de app/globals.css nas duas pais, escala --radius, cores semanticias via token, sem card explosion, hierarquia tipografica, densidade informacional preservada, responsivo intacto. Sem mexer em rotas, fluxo de dados ou aritmetica. Inclui as robustezes medidas no tick de 2026-10-23: tela que quebra com sessao parcial (profile/page.tsx:241 user.roles sem guarda) e telas de gestão que renderizam vazias em silencio em vez de dizer o motivo (padrao da casa DEC-184).",
+      "gate": "G0-G3; e2e do quadro/shell re-medidos na 5433 quando o markup coberto pelos specs mudar; G6 com recaptura das telas que mudarem visualmente.",
+      "dependsOn": "V8-8"
+    },
+    {
+      "id": "V8-10",
+      "title": "pacote de trofeus (registro fechado de pacotes)",
+      "status": "planned",
+      "decisions": [
+        "DEC-229"
+      ],
+      "scope": "Registro fechado de PACOTES de trofeus no dominio: pacote ancorado na categoria do Badge (achievement/milestone/special + as que o catalogo carrega), cada pacote com identidade visual propria (moldura/palete por tier DEC-218, congelada no dominio); badge ganha o pacote por categoria (nenhum vocabulario novo de pacote inventavel em tela - pacote novo e decisao nova); prateleira do perfil agrupa por pacote; criação no painel mostra o pacote. Pipeline de artes externas (SVG de terceiros, silhueta por badge, licenciamento) NAO entra nesta onda: fica como decisao futura com ASK proprio.",
+      "gate": "G0-G4; G6 para as telas que mudarem.",
+      "dependsOn": "V8-9"
+    },
+    {
+      "id": "V8-11",
+      "title": "quadro de projetos (placar mensal por projeto)",
+      "status": "planned",
+      "decisions": [
+        "DEC-230"
+      ],
+      "scope": "Placar mensal de PROJETO na tela de ranking: pontos creditados a membros por TAREFAS daquele projeto no mes corrente (awardHistory do mes x task.projectId), desempate por tarefas concluidas no mes -> id do projeto. Leitura pura derivada (nenhuma coluna nova de placar de projeto - projects.points continua fora do sistema, DEC-215); mesma janela do ciclo mensal DEC-212. Colunas: Posicao, Projeto, Pontos do mes, Tarefas, Membros ativos.",
+      "gate": "G0-G4; G6 para a tela nova.",
+      "dependsOn": "V8-10"
+    },
+    {
       "id": "V8-CLOSE",
       "title": "fechamento do plano: deploy na 5432, merge e e2e na instancia",
       "status": "planned",
@@ -222,7 +255,7 @@
       ],
       "scope": "Depois de V8-8 e do PR unico plan-v8/gamificacao -> dev aberto e vigiado pelo orquestrador: aplicar a migration na 5432 real pelo caminho offline medido no V4-4 (migrate diff -> gravar -> migrate deploy na 5432, com a 5433 ja no mesmo estado) + data migration 1:1 (users.coins = users.points, rewards.price em moeda), prisma generate, rebuild/restart da instancia, e2e do quadro e do shell contra a instancia, conferencia de residuo E2E no banco. Sem codigo novo alem do que o plano ja escreveu.",
       "gate": "G0-G4 verdes na 5433; migration aplicada na 5432 sem RESET; e2e quadro/shell verdes na instancia; PR unido na dev; STATE.json done.",
-      "dependsOn": "V8-8"
+      "dependsOn": "V8-11"
     }
   ],
   "decisionRegistry": [
@@ -369,6 +402,21 @@
       "openedAt": "2026-10-23",
       "openedBy": "recaptura do guia na worktree - a 5433 nao estava no estado do seed",
       "text": "prisma/seed.ts passa a nomear a extensao do arquivo que exige: requireSeedDev('./seed.dev.ts'). Sem a extensao, a resolucao escolhe prisma/seed.dev.js - artefato compilado e versionado, retrato de um seed antigo, que roda o proprio main() e faz o script reportar 'Seed completa finalizada' deixando a base no estado que os roundtrips deixaram (medido na 5433: 39 pessoas, badges 'Mentor da Semana' e 'Guardiao do Laboratorio', sem as contas e os trofeus do seed atual). O tsc, o lint e o gate G0 nao veem a troca: quem decide e o sistema de arquivos. Fechadura nova: tests/unit/prisma/seed-resolution.test.ts (3 casos - a extensao nomeada, a forma sem extensao proibida, e a existencia do artefato gravada como deuda). DIVIDA ABERTA: prisma/seed.dev.js continua versionado; remove-lo (ou ignore-lo) e decisao do dono no V8-CLOSE."
+    },
+    {
+      "id": "DEC-228",
+      "title": "O padrao visual do skill displayquest-ui (references/ + tokens) governa o refino das telas da gamificacao; rotas, fluxo de dados e aritmetica ficam intactos.",
+      "opened": "aberta (onda V8-9; pedido do dono em 2026-10-23)"
+    },
+    {
+      "id": "DEC-229",
+      "title": "Pacote de trofeus = registro fechado no dominio ancorado na categoria do Badge, com moldura/paleta por tier; pacote novo so entra por decisao registrada; pipeline de artes externas fica fora (ASK futuro).",
+      "opened": "aberta (onda V8-10; pedido do dono em 2026-10-23)"
+    },
+    {
+      "id": "DEC-230",
+      "title": "Quadro de projetos: placar mensal por projeto = pontos de tarefa do mes atribuidos via task.projectId, desempate tarefas->id; leitura derivada, sem coluna de placar de projeto.",
+      "opened": "aberta (onda V8-11; pedido do dono em 2026-10-23)"
     }
   ],
   "answeredInstructions": [
@@ -504,7 +552,14 @@
       "status": "done",
       "commit": "este commit",
       "evidence": "G5/G6 do plan-v8. Tecnico: RB-84..RB-88 no capitulo 07 (leitura do quadro, elo derivado, livro-caixa, abertura das conquistas, prateleira junta com o catalogo); capitulo 13 com RB-67 a RB-88, os casos de uso de leitura e os tres fechamentos, e o criterio de RF-09 reescrito. Guia: 07 (captura do livro-caixa, 'Aprovacoes 1' com colunas medidas), 08 (tres capturas novas do perfil), 09 (oito abas corrigidas para Trofeus; capturas da aba Trofeus, do formulario 'Criar novo trofeu' com Janela do criterio/Condicao especial/Efeitos equipaveis e do bloco Saldo; aba Horas reescrita com o quadro semanal medido; 'Resetar Semana' corrigido - nao existe botao, a zeragem e da agenda 0 0 * * 1), 10 (perfil com cartao da temporada, prateleira e ciclos; duas linhas novas de vocabulario). 22 capturas (8 novas, 14 refeitas) conferidas lendo os PNGs. scripts/capture-user-guide.mjs: pagina nova por captura + aquecimento das rotas (medido: 17 fetches do layout pendurados disputando as seis conexoes por origem), verificacao em caixa baixa (a tipografia escreve as cifras em caixa alta), `aba` aceitando expressao regular ('/Aprovacoes/'), esperar antes de agir dentro da aba, `rolarAte` nas telas, e a identidade da outra pessoa lida da sessao (DEC-224). prisma/seed.ts nomeia './seed.dev.ts' (DEC-227) com fechadura nova de 3 casos.\nGates: G0 1177/4988 allow-list VAZIA; G1 exit 0 nos arquivos da onda; G2 tsc 0; G3 235 arquivos / 2698 testes (unit+features 213 / 2528); G4 22 / 170 na 5433 com a base devolvida ao estado canonico por db:test:setup; G5 docs:build (tecnico 15 secoes / 33 figuras, guia 12 secoes / 53 figuras) + docs:check verdes; G6 executado. e2e nao re-medido (nada do quadro nem do shell mudou)."
+    },
+    {
+      "batch": "V8-RESERVA-1",
+      "at": "2026-10-23",
+      "status": "done",
+      "commit": "este commit",
+      "evidence": "Ondas novas reservadas por pedido do dono em 2026-10-23 ('pode adicionar no final da onda' - pacote de badges e leaderboard de projeto - e 'manda refinar o front'): V8-9 (refino de frente), V8-10 (pacote de trofeus), V8-11 (quadro de projetos); V8-CLOSE passa a depender de V8-11. DEC-228/229/230 abertas. Medido antes de reservar: nenhum 'pacote/pack/familia/emblema' e nenhum 'ranking de projeto' em MODELO/PLAN/STATE nem no codigo da branch (zero ocorrencias nos quatro grep)."
     }
   ],
-  "nextFreeDecision": "DEC-228"
+  "nextFreeDecision": "DEC-231"
 }
