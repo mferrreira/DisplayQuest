@@ -8,7 +8,7 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
 - **Gate de entrega:** `npm run arch:check` (exit 0, allow-list **vazia**) && `npm run lint` (nada de erro) && `npx tsc --noEmit` (0) && `npx vitest run` (zero failure). A contagem é **por branch**: no `dev` o baseline era **64 arquivos / 721 testes** quando o B8 removeu os 651 testes de paridade; no `plan/v3-operacional`, medido no encerramento do plan-v3 (2026-10-03), são **65 arquivos / 798 testes** em `tests/unit` + `features` e **75 / 881** na suíte completa. Na `dev` de hoje (medido em 2026-10-07, depois do plan-v4 V4-1/V4-2/V4-3/V4-6, do V4-4 de subtasks, dos testes do painel V4-4b/V4-4c, do V4-5a/V4-5b/V4-5c de subtask na UI, do V4-6b de vocabulário de status e do lote pós-encerramento POS-1 — DEC-97/98) são **87 arquivos / 1107 testes** e **97 / 1192** na suíte completa; a suíte e2e do quadro está em **2 passando + 1 falha conhecida + 5 "did not run"** (medido 2026-10-06
 no V4-5c; eram 7 quando a coluna `Em Revisão` tinha um cartão a menos) — o 3º teste quebra por cartão a
 mais na coluna (dado legítimo da instância, não código: hoje são as tarefas 50 e 304), e como o spec é
-serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 5 passando. Compare sempre com o `STATE.json` do plano em que você está. Na `dev` de hoje, medido no fechamento do plan-v6 (2026-10-16, ondas V6-0..V6-11: shell, Home, Projetos, detalhe do projeto, Laboratório, Relatórios, Perfil/Ranking, Loja, Admin, Login/Register), são **179 arquivos / 2224 testes** em `tests/unit` + `features` e **194 / 2354** na suíte completa (G0 1061 módulos / 4531 dependências); o `tsc` desta branch **fecha em 0** — o erro pré-existente em `features/laboratorio/__tests__/floating-timer-tabs.test.tsx:105` foi consertado no `SUB-1` (regex ancorada no lugar do `exact`, que não existe em `ByRoleOptions`). Re-medido em 2026-10-15 (V6-2): o e2e do quadro está em **8 passando** (o spec hoje tem 8 testes; a falha conhecida por cartão a mais em `Em Revisão` **não reproduziu** — o dado da instância mudou; ela pode voltar se o dono mover outro cartão para lá) e o do shell em **5 passando**. Na branch do fechamento do repo-cleanup (`refactor/b6-restante`, medido 2026-10-08 depois do B6-2c..B6-7) o baseline é **95 arquivos / 1280 testes** em `tests/unit` + `features` e **105 / 1367** na suíte completa (G0 810 módulos / 3295 dependências). Na branch do plan-v8 (`plan-v8/gamificacao`), medido no fechamento da onda **V8-3** (2026-10-22), são **195 arquivos / 2347 testes** no projeto unit (`tests/unit` + `features/**/__tests__` + `entities`) e **214 / 2495** na suíte completa, com **G4 19 / 148** contra a 5433 e G0 **1125 módulos / 4770 dependências** (allow-list vazia), `tsc` 0 e lint exit 0 com **17** warnings pré-existentes (a nota de "15 warnings" das ondas V8-0/V8-1/V8-2 não reproduz nesta árvore: conferido com `git stash`, sem a onda a árvore também dá 17).
+serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 5 passando. Compare sempre com o `STATE.json` do plano em que você está. Na `dev` de hoje, medido no fechamento do plan-v6 (2026-10-16, ondas V6-0..V6-11: shell, Home, Projetos, detalhe do projeto, Laboratório, Relatórios, Perfil/Ranking, Loja, Admin, Login/Register), são **179 arquivos / 2224 testes** em `tests/unit` + `features` e **194 / 2354** na suíte completa (G0 1061 módulos / 4531 dependências); o `tsc` desta branch **fecha em 0** — o erro pré-existente em `features/laboratorio/__tests__/floating-timer-tabs.test.tsx:105` foi consertado no `SUB-1` (regex ancorada no lugar do `exact`, que não existe em `ByRoleOptions`). Re-medido em 2026-10-15 (V6-2): o e2e do quadro está em **8 passando** (o spec hoje tem 8 testes; a falha conhecida por cartão a mais em `Em Revisão` **não reproduziu** — o dado da instância mudou; ela pode voltar se o dono mover outro cartão para lá) e o do shell em **5 passando**. Na branch do fechamento do repo-cleanup (`refactor/b6-restante`, medido 2026-10-08 depois do B6-2c..B6-7) o baseline é **95 arquivos / 1280 testes** em `tests/unit` + `features` e **105 / 1367** na suíte completa (G0 810 módulos / 3295 dependências). Na branch do plan-v8 (`plan-v8/gamificacao`), medido no fechamento da onda **V8-4** (2026-10-22), são **198 arquivos / 2378 testes** no projeto unit (`tests/unit` + `features/**/__tests__` + `entities`) e **218 / 2532** na suíte completa, com **G4 20 / 154** contra a 5433 e G0 **1135 módulos / 4808 dependências** (allow-list vazia), `tsc` 0 e lint exit 0 com **17** warnings pré-existentes (a nota de "15 warnings" das ondas V8-0/V8-1/V8-2 não reproduz nesta árvore: conferido com `git stash`, sem a onda a árvore também dá 17).
 - **G4/integração:** roundtrips Prisma real rodam **só** contra o banco de teste isolado `dq-dev-test-db` em `127.0.0.1:5433` (`$env:DATABASE_URL="postgresql://dq_dev:dq_dev_local_only@127.0.0.1:5433/dq_dev_test"; npx vitest run`) — nunca contra o `display-quest-db` (5432, produção local).
 - **Setup do G4 (corrigido 2026-10-02):** `npm run db:test:up` e `npm run db:test:setup` **existem**
   no `package.json` e fazem a sequência completa (`docker compose -f docker-compose.test.yml up -d`,
@@ -26,7 +26,15 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
 
 ## plan-v8 — gamificação remodelada (aberto 2026-10-22)
 
-- **Estado:** `in_progress` — **V8-3 done em 2026-10-22** (motor de XP da temporada: `xp-rules.ts` no
+- **Estado:** `in_progress` — **V8-4 done em 2026-10-22** (fechamento de temporada anual: `season.ts` no
+  domínio, `CloseSeasonUseCase` com `season_history` + zeragem de `points`/`xp` na mesma transação, troféu
+  CAMPEÃO ao primeiro colocado com chave `GAMIFICATION:SEASON_CHAMPION:<ano>:<pessoa>`, cron `5 0 1 1 *`;
+  gates medidos na onda: unit+features 198 arquivos / 2378 testes, suíte completa 218 / 2532, G4 20 / 154 na
+  5433, G0 1135 módulos / 4808 dependências com allow-list vazia, `tsc` 0, lint exit 0 com 17 warnings, G5
+  com a décima entrada da agenda nos dois inventários de `docs/src`; nenhuma migration de schema nova — 23
+  linhas em `_prisma_migrations`, e a data migration `prisma/data-migrations/v8-4-badge-campeao.sql` aplicada
+  **só na 5433** (troféu no catálogo com `criteria` nulo; aplicada duas vezes: `INSERT 0 1` e depois `INSERT 0 0`).
+  Antes, **V8-3 done em 2026-10-22** (motor de XP da temporada: `xp-rules.ts` no
   domínio, credit +10/+10/+20 na transação do award com linha `track "XP"`, `ReviewWeeklyXpUseCase` com
   boosts e penalidades e piso 0, cron `10 0 * * 1`; gates medidos na onda: unit+features 195 arquivos /
   2347 testes, suíte completa 214 / 2495, G4 19 / 148 na 5433, G0 1125 módulos / 4770 dependências com
@@ -110,6 +118,37 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   recebeu não ganha +20 nem paga; atraso usa as réguas existentes (`daysLateForTask` DEC-97,
   `activityPeriod` + `civilDaysBetween` DEC-103) e a sessão que quita o −30 é a que solapa o período da
   linha **no mesmo projeto** (ou sem projeto declarado).
+- **A V8-4 entregou (2026-10-22):** o fechamento da temporada anual, **sem rota e sem tela nova**. Regras puras
+  em `backend/domain/gamification/season.ts` (`closingSeasonYearOfInstant`, `seasonMonthPrefix`,
+  `isSeasonParticipant`, `compareSeasonStandings` / `rankSeasonStandings`, `seasonChampionOf`,
+  `SEASON_CHAMPION_BADGE_NAME`, `seasonChampionDescription`); ports `SeasonCyclePort` (agregado do ano em duas
+  queries, `getSeasonSnapshot`, `closeSeason` escrevendo `season_history` + `users.points = 0` + `users.xp = 0` no
+  mesmo `$transaction`, `listSeasonStandings`) e `SeasonChampionPort` (concessão idempotente do troféu) com os
+  adaptadores `prisma-season-cycle.port.ts` e `prisma-season-champion.port.ts`; `CloseSeasonUseCase` (gate
+  `MANAGE_USERS`) e `closeSeason` no `GamificationModule`; job `'5 0 1 1 *'` (`America/Sao_Paulo`) agendado logo
+  depois do fechamento mensal, com `systemActor(SYSTEM_REASONS.SEASON_CLOSE)` (DEC-54); troféu **CAMPEÃO** seedado
+  pela data migration `prisma/data-migrations/v8-4-badge-campeao.sql` e pelo `prisma/seed.dev.ts`.
+- **Seis decisões de execução da V8-4:** (1) O ano fechado é o **anterior** ao ano civil do `now` em dia civil SP,
+  e o job das `00:05` de 1/jan roda cinco minutos **depois** do fechamento mensal das `00:00` — que fotografou
+  dezembro — então a soma do ano recém-fechado já inclui dezembro e nenhum ano em curso é fechado.
+  (2) O troféu entra no catálogo por **seed com `criteria` nulo**, não por critério: com critério nulo
+  `badgeCriteriaMet` corta em `!criteria` e não concede nada, enquanto uma `specialCondition` nova cairia no
+  **QUIRK-6C** (condição desconhecida devolve verdadeiro) e o motor de avaliação — disparado por conclusão de
+  tarefa — daria o CAMPEÃO a todo mundo. Quem concede é a rotina, e só ela; o vocabulário de critério com janela
+  `temporada` chega na V8-6 (DEC-218/219). (3) O troféu é **vitalício e a concessão é por ano**: a unique
+  `(userId, badgeId)` de `user_badges` não duplica a conquista, e a chave
+  `GAMIFICATION:SEASON_CHAMPION:<ano>:<pessoa>` na linha de auditoria é a idempotência do ANO — sem tabela nova,
+  mesma escolha da revisão semanal de XP. Quem é campeão duas vezes tem um `user_badges` e duas linhas de decisão.
+  A linha não declara trilha: `POINTS | COINS | XP` são trilhas de **saldo** e troféu é `user_badges` (a própria
+  guarda das trilhas diz isso), então a coluna fica com o default. (4) **Elo nulo por decisão**: a linha nasce com
+  `elo` nulo e `position` preenchida pela régua pontos → tarefas → XP → userId; `userId` único torna a ordem TOTAL,
+  então o campeão é sempre um só e a hipótese de "conceder a todos os empatados" não é necessária. A escada com
+  umbrais (DEC-217) é a V8-6 — antecipá-la aqui seria a V8-6 entrando de contrabando. (5) O campeão é resolvido
+  **do livro lido de volta** (`listSeasonStandings`), depois das escritas, não da memória da run: é o que faz uma
+  run repetida — ou uma que encontrou metade das pessoas já fechadas — escolher o mesmo campeão da run original.
+  (6) `SeasonChampionPort` existe separada do ciclo porque o `AwardBadgeUseCase` tem gate `MANAGE_USERS` e é a
+  autoridade de um humano concedendo troféu; acoplá-lo à rotina de sistema (ou abrir exceção no gate dele) era o
+  jeito de as duas regras divergirem sem o `tsc` ver.
 - **Três decisões de execução da V8-1:** (1) `history.track` é **String** com default, não enum — a
   mesma escolha da DEC-141 (vocabulário fechado no domínio:
   `backend/domain/gamification/tracks.ts`, `POINTS | COINS | XP`); a fechadura é a guarda
@@ -153,10 +192,12 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   weekly reset), revisão semanal de XP `'10 0 * * 1'` (`WEEKLY_XP_REVIEW`, idempotente por
   `(userId, weekStart)`), fechamento de temporada `'5 0 1 1 *'` (`SEASON_CLOSE`, livro-caixa
   anual + troféu CAMPEÃO pelo maior somatório de pontos mensais, DEC-213).
-- **Status das rotinas novas (medido 2026-10-22):** o reset mensal **existe** desde a V8-2 e a revisão
-  semanal de XP **existe** desde a V8-3 (jobs `'0 0 1 * *'` e `'10 0 * * 1'` em `lib/services/cron-service.ts`,
-  agendados logo depois do weekly reset, com `executeMonthlyPointsReset()` e `executeWeeklyXpReview()`); o
-  fechamento de temporada `'5 0 1 1 *'` continua projeto (V8-4). Consequência de sequência aceita e medida:
+- **Status das rotinas novas (medido 2026-10-22):** as três rotinas da gamificação **existem** — reset
+  mensal `'0 0 1 * *'` (V8-2), revisão semanal de XP `'10 0 * * 1'` (V8-3) e fechamento de temporada
+  `'5 0 1 1 *'` (V8-4), os três em `lib/services/cron-service.ts` agendados logo depois do weekly reset, com
+  `executeMonthlyPointsReset()`, `executeWeeklyXpReview()` e `executeSeasonClose()`; as três expressões estão
+  pinadas em `tests/unit/services/cron-schedule.test.ts` e os três motivos em `SYSTEM_REASONS`. Consequência de
+  sequência aceita e medida:
   a **loja ainda gasta `users.points`** (`prisma-purchase.repository.ts` faz
   `decrement`/`increment` na coluna) e só passa à moeda na V8-5 (DEC-215) — no intervalo V8-2..V8-4 o
   fechamento mensal zeraria também o que foi gasto, o que no dev/teste acontece e na produção não
@@ -167,7 +208,9 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   points) e sai por `GET /api/users/[id]/gamification`. Depois da V8-2 o segundo zera todo mês junto com
   `points` enquanto o primeiro acumula a temporada. Consumidor medido: **nenhuma tela** (grep em
   `features`/`components` não acha quem lê a rota), então nada mostra os dois números hoje. Fecha de fato
-  pela escada de elo da DEC-217 — decidir em V8-4, executar na V8-6/V8-7.
+  pela escada de elo da DEC-217. A V8-4 registrou a decisão contrária a antecipá-la: o livro-caixa da temporada
+  nasce com `elo` nulo porque nenhum lugar do sistema guarda elo hoje (`Progression.ts` deriva de points), e a
+  escada fecha na V8-6/V8-7.
 
 ## plan-v5 — documentos oficiais, economia do projeto e perfil (2026-10-13..14)
 

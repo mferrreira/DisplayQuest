@@ -73,7 +73,8 @@ describe("requireActorPermission", () => {
     // MONTHLY_POINTS_RESET entrou na V8-2 do plan-v8 (DEC-212): o fechamento mensal é rotina.
     // WEEKLY_XP_REVIEW entrou na V8-3 (DEC-214): a revisão semanal de XP é rotina, e o gate de
     // MANAGE_USERS mora no use case — sem o bypass declarado, o job pararia no 403 (DEC-54).
-    for (const reason of ["NIGHTLY_SWEEP", "SCHEDULED_PAUSE", "WEEKLY_RESET", "MONTHLY_POINTS_RESET", "WEEKLY_XP_REVIEW", "SYSTEM_EVENT"] as const) {
+    // SEASON_CLOSE entrou na V8-4 (DEC-213): a virada de temporada é rotina, com o mesmo gate.
+    for (const reason of ["NIGHTLY_SWEEP", "SCHEDULED_PAUSE", "WEEKLY_RESET", "MONTHLY_POINTS_RESET", "WEEKLY_XP_REVIEW", "SEASON_CLOSE", "SYSTEM_EVENT"] as const) {
       for (const permission of ["MANAGE_USERS", "MANAGE_NOTIFICATIONS", "MANAGE_PURCHASES"] as const) {
         expect(() => requireActorPermission(systemActor(reason), permission)).not.toThrow();
       }

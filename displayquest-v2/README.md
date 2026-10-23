@@ -17,7 +17,7 @@ displayquest-v2/
 ├── plan-v5/       OPERAÇÃO: domínio de projetos maduro — cronograma, pontos, relatórios técnicos, atestados (2026-10-06) — done (2026-10-14, V5-1..V5-12 + V5-fix-1/V5-fix-2; DEC-61..77, 99..104, 126..180)
 ├── plan-v6/       OPERAÇÃO: linguagem visual UI/UX + redistribuição das telas (2026-10-07, revisado 2026-10-14) — done (2026-10-16, V6-0..V6-11; DEC-105..114, 181..188)
 ├── plan-v7/       OPERAÇÃO: MCP de validação para o agente consumidor (2026-10-15, revisado 2026-10-21) — planejado, nenhuma onda começada (DEC-190..210, ASK-V7-16..25)
-└── plan-v8/       OPERAÇÃO: gamificação remodelada — trilhas (pontos mensais, XP/elo de temporada, moeda vitalícia), troféus equipáveis, reset mensal e temporada anual (2026-10-22) — em andamento: V8-3 done (ciclo mensal do placar e motor de XP da temporada: `ResetMonthlyPointsUseCase` com snapshot em `month_history` + cron `0 0 1 * *`, e `xp-rules.ts` + `ReviewWeeklyXpUseCase` com cron `10 0 * * 1`, ambos sem rota nova; DEC-211..221 abertas); regime DEC-221: uma onda por vez autorizada pelo orquestrador, migration só na 5433 até o batch V8-CLOSE (MODELO.md = fonte do comportamento)
+└── plan-v8/       OPERAÇÃO: gamificação remodelada — trilhas (pontos mensais, XP/elo de temporada, moeda vitalícia), troféus equipáveis, reset mensal e temporada anual (2026-10-22) — em andamento: V8-4 done (ciclo mensal do placar, motor de XP da temporada e fechamento de temporada anual: `ResetMonthlyPointsUseCase` com snapshot em `month_history` + cron `0 0 1 * *`, `xp-rules.ts` + `ReviewWeeklyXpUseCase` com cron `10 0 * * 1`, e `season.ts` + `CloseSeasonUseCase` com `season_history`, zeragem de `points`/`xp` e troféu CAMPEÃO + cron `5 0 1 1 *`, os três sem rota nova; DEC-211..221 abertas); regime DEC-221: uma onda por vez autorizada pelo orquestrador, migration só na 5433 até o batch V8-CLOSE (MODELO.md = fonte do comportamento)
 ```
 
 ## Fluxo de dependências (unidirecional)
@@ -180,8 +180,23 @@ plan-v8 (gamificação remodelada) ──> nasce do pedido do dono em 2026-10-22
   195 arquivos / 2347 testes no projeto unit, 214 / 2495 na suíte completa, G4 19 / 148, G0 1125 módulos
   / 4770 dependências, `tsc` 0, lint exit 0 (17 warnings pré-existentes, re-contados com `git stash`),
   G5 com a nona entrada da agenda nos dois inventários de `docs/src`. Nenhuma migration nova; 5432
-  intocada. Onda encerrada e reportada ao orquestrador; próxima: **V8-4** (fechamento de temporada,
-  DEC-213).
+  intocada.
+  **V8-4 done** em 2026-10-22: o fechamento de temporada anual sem rota e sem tela nova — regras puras em
+  `backend/domain/gamification/season.ts` (o ano fechado é o ANTERIOR ao do `now` em dia civil SP; audiência "mês
+  fotografado no ano OU `xp ≠ 0`"; régua pontos → tarefas → XP → userId, que `userId` único torna TOTAL, então o
+  campeão é um só). `SeasonCyclePort` agrega o ano em duas queries e escreve `season_history` + `users.points = 0`
+  + `users.xp = 0` no MESMO `$transaction` (moeda, contador vitalício e `user_badges` fora da instrução); o troféu
+  **CAMPEÃO** é concedido pela `SeasonChampionPort` com a chave `GAMIFICATION:SEASON_CHAMPION:<ano>:<pessoa>` —
+  sem tabela nova, e o troféu é vitalício pela unique `(userId, badgeId)`: campeão em dois anos tem um troféu e
+  duas linhas de auditoria. O campeão é lido DO LIVRO (`listSeasonStandings`) depois das escritas. O troféu entra
+  no catálogo pela data migration `prisma/data-migrations/v8-4-badge-campeao.sql` com **`criteria` nulo** — com
+  critério nulo o motor atual não concede nada, e uma `specialCondition` nova cairia no QUIRK-6C e daria o
+  troféu a todo mundo. `elo` nasce nulo: a escada com umbrais é a DEC-217 (V8-6). Gates da onda: 198 arquivos /
+  2378 testes no projeto unit, 218 / 2532 na suíte completa, G4 20 / 154, G0 1135 módulos / 4808 dependências,
+  `tsc` 0, lint exit 0 (17 warnings pré-existentes), G5 com a décima entrada da agenda nos dois inventários de
+  `docs/src`. Nenhuma migration de schema (23 linhas em `_prisma_migrations`); a data migration do troféu aplicada
+  **só na 5433** e conferida idempotente (INSERT 0 1, depois INSERT 0 0); 5432 intocada. Onda encerrada e
+  reportada ao orquestrador; próxima: **V8-5** (moeda e loja, DEC-215).
 
 ## Regras do container
 

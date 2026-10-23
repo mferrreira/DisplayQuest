@@ -64,6 +64,18 @@ export class CronService {
       await this.executeWeeklyXpReview()
     }, { timezone: 'America/Sao_Paulo' })
 
+    // plan-v8 V8-4 (DEC-213): fechamento da temporada anual — 1º de janeiro às 00:05. Os cinco
+    // minutos depois do fechamento mensal das 00:00 são decorativos: no dia 1 o mensal fotografa
+    // DEZEMBRO do ano que terminou, e a temporada soma os doze meses do ano já fechado, dezembro
+    // incluído. Quem fecha é o ano anterior a `now` em dia civil de America/Sao_Paulo
+    // (closingSeasonYearOfInstant), nunca o ano em curso. Idempotente por (userId, year) para a
+    // linha do ano e por GAMIFICATION:SEASON_CHAMPION:<ano>:<pessoa> para o troféu. Zera pontos e
+    // XP; moeda e troféus conquistados ficam (MODELO §4). Sem rota — rotina não é ação de pessoa
+    // (DEC-54).
+    this.seasonCloseJob = cron.schedule('5 0 1 1 *', async () => {
+      await this.executeSeasonClose()
+    }, { timezone: 'America/Sao_Paulo' })
+
     this.scheduledPauseJobs = pauseCronExpressions(SCHEDULED_PAUSE_TIMES).map((expression) =>
       cron.schedule(expression, async () => {
         await this.executeScheduledPause()
@@ -105,6 +117,7 @@ export class CronService {
   private activityCleanupJob: cron.ScheduledTask | null = null
   private monthlyPointsResetJob: cron.ScheduledTask | null = null
   private weeklyXpReviewJob: cron.ScheduledTask | null = null
+  private seasonCloseJob: cron.ScheduledTask | null = null
 
   /**
    * Pausa todas as sessões ativas que cruzaram um horário de pausa agendado.
@@ -286,6 +299,32 @@ export class CronService {
   }
 
   /**
+   * Fechamento da temporada anual (plan-v8 V8-4, DEC-213): snapshot do ano em `season_history` +
+   * `users.points` e `users.xp` zerados, e o troféu CAMPEÃO ao primeiro colocado do ano. Rotina sem
+   * pessoa — systemActor(SEASON_CLOSE), o mesmo padrão dos dois ciclos anteriores (DEC-54): o gate de
+   * MANAGE_USERS mora no use case e o único chamador é este job. O ano a fechar é decidido pelo use
+   * case (`closingSeasonYearOfInstant(now)`), nunca aqui. Sem rota de propósito.
+   */
+  async executeSeasonClose() {
+    try {
+      const { gamification } = getBackendComposition()
+      const result = await gamification.closeSeason({
+        actor: systemActor(SYSTEM_REASONS.SEASON_CLOSE),
+        now: new Date(),
+      })
+      const champion = result.champion.userId
+        ? `campeão: ${result.champion.name} (${result.champion.status})`
+        : 'sem campeão'
+      console.log(
+        `🏆 Fechamento de temporada (${result.year}): ${result.closed} fechada(s), ` +
+          `${result.alreadyClosed} já fechada(s), ${result.skippedWithoutActivity} sem atividade, ${champion}.`,
+      )
+    } catch (error) {
+      console.error('❌ Erro ao executar o fechamento de temporada:', error)
+    }
+  }
+
+  /**
    * Para o serviço de cron
    */
   stop() {
@@ -318,6 +357,10 @@ export class CronService {
     if (this.weeklyXpReviewJob) {
       this.weeklyXpReviewJob.stop()
       this.weeklyXpReviewJob = null
+    }
+    if (this.seasonCloseJob) {
+      this.seasonCloseJob.stop()
+      this.seasonCloseJob = null
     }
     this.scheduledPauseJobs = []
     this.isInitialized = false
@@ -365,7 +408,9 @@ export class CronService {
       monthlyPointsResetRunning: this.monthlyPointsResetJob !== null,
       monthlyPointsResetSchedule: '0 0 1 * * (Dia 1 às 00:00)',
       weeklyXpReviewRunning: this.weeklyXpReviewJob !== null,
-      weeklyXpReviewSchedule: '10 0 * * 1 (Segunda-feira às 00:10)'
+      weeklyXpReviewSchedule: '10 0 * * 1 (Segunda-feira às 00:10)',
+      seasonCloseRunning: this.seasonCloseJob !== null,
+      seasonCloseSchedule: '5 0 1 1 * (1º de janeiro às 00:05)'
     }
   }
 }

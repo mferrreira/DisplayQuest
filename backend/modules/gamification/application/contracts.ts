@@ -1,4 +1,4 @@
-import type { ActorRef, GamificationSourceType, MonthKey, WeekKey, XpAdjustment } from "@/backend/domain"
+import type { ActorRef, GamificationSourceType, MonthKey, SeasonKey, WeekKey, XpAdjustment } from "@/backend/domain"
 
 /**
  * O vocabulário é o do domínio (`Progression.ts`) — re-exportado, não copiado. A cópia local
@@ -154,4 +154,57 @@ export interface ReviewWeeklyXpResult {
   alreadyReviewed: number
   withoutAdjustment: number
   outcomes: WeeklyXpReviewOutcome[]
+}
+
+/**
+ * plan-v8 V8-4 (DEC-213): o fechamento da temporada anual. Mesma forma dos dois comandos de ciclo
+ * anteriores — `now` entra por parâmetro e o ano a fechar vem da aritmética de dia civil
+ * (`closingSeasonYearOfInstant`). O chamador de hoje é o cron com `systemActor`; o gate já monta o
+ * caminho de disparo manual do painel (Q12 do modelo) sem rota nova.
+ */
+export interface CloseSeasonCommand {
+  actor: ActorRef
+  now: Date
+}
+
+export type SeasonCloseStatus = "closed" | "already-closed" | "without-activity"
+
+export interface SeasonCloseOutcome {
+  userId: number
+  name: string
+  year: SeasonKey
+  status: SeasonCloseStatus
+  /**
+   * O somatório dos `month_history` do ano — não o saldo da coluna. Na reexecução a coluna já está
+   * zerada e o que se reporta é o que o livro diz.
+   */
+  points: number
+  completedTasks: number
+  xp: number
+  /** Posição na temporada (1 = CAMPEÃO). Nula para quem não entrou no livro. */
+  position: number | null
+}
+
+/**
+ * O troféu do ano. `sem-participante` é o estado de uma temporada cujo livro-caixa ficou vazio —
+ * ninguém fecha, ninguém é campeão. `badge-ausente` é o estado do catálogo sem o troféu: as linhas de
+ * temporada continuam escritas e a rotina loga o aviso.
+ */
+export type SeasonChampionStatus = "awarded" | "already-awarded" | "badge-ausente" | "sem-participante"
+
+export interface SeasonChampionResult {
+  userId: number | null
+  name: string | null
+  points: number
+  badgeId: number | null
+  status: SeasonChampionStatus
+}
+
+export interface CloseSeasonResult {
+  year: SeasonKey
+  closed: number
+  alreadyClosed: number
+  skippedWithoutActivity: number
+  outcomes: SeasonCloseOutcome[]
+  champion: SeasonChampionResult
 }

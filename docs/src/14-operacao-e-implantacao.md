@@ -137,6 +137,7 @@ tarefa estão descritos no capítulo 10; a forma operacional é a seguinte.
 | Reinício semanal | `0 0 * * 1` | Consolidação pelo módulo de relatórios |
 | Fechamento mensal do placar | `0 0 1 * *` | Módulo de gamificação: snapshot em `month_history` e placar zerado |
 | Revisão semanal de XP | `10 0 * * 1` | Módulo de gamificação: boosts e penalidades da semana fechada, aplicados sobre `users.xp` |
+| Fechamento de temporada | `5 0 1 1 *` | Módulo de gamificação: snapshot em `season_history`, `users.points` e `users.xp` zerados, e o troféu do ano concedido ao primeiro colocado |
 | Pausa programada, primeiro horário | `30 9 * * *` | Pausa de sessões e de responsabilidade |
 | Pausa programada, demais horários | `0 12,15,17 * * *` | Idem |
 | Varredura noturna | `59 23 * * *` | Persistência da pausa das sessões restantes |

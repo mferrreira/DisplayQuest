@@ -2787,7 +2787,7 @@ tempo de execução.</p>
 vem de um arquivo de sobreposição versionado, que amarra a publicação ao endereço de
 retorno local, e não à interface externa. O efeito é que o banco é acessível a partir da
 própria máquina hospedeira para depuração, e não é acessível a partir da rede.</p></div></figure><h3 id="agenda-de-tarefas-periodicas">Agenda de tarefas periódicas</h3>
-<p>A agenda roda dentro do processo do servidor, no fuso do laboratório. São nove entradas,
+<p>A agenda roda dentro do processo do servidor, no fuso do laboratório. São dez entradas,
 medidas no serviço de agenda (a pausa programada são dois grupos, derivados da grade de
 horários do domínio).</p>
 <table>
@@ -2813,6 +2813,11 @@ horários do domínio).</p>
 <td>Revisão semanal de XP</td>
 <td>Toda segunda-feira, às 00:10</td>
 <td>Somar os boosts de constância e de produtividade da semana que fechou e descontar as penalidades, com a trilha sem valor negativo</td>
+</tr>
+<tr>
+<td>Fechamento de temporada</td>
+<td>1º de janeiro, às 00:05</td>
+<td>Fotografar o ano no histórico da pessoa, zerar o placar e o XP da temporada e conceder o troféu ao primeiro colocado do ano</td>
 </tr>
 <tr>
 <td>Pausa programada</td>
@@ -3981,6 +3986,11 @@ tarefa estão descritos no capítulo 10; a forma operacional é a seguinte.</p>
 <td>Módulo de gamificação: boosts e penalidades da semana fechada, aplicados sobre <code>users.xp</code></td>
 </tr>
 <tr>
+<td>Fechamento de temporada</td>
+<td><code>5 0 1 1 *</code></td>
+<td>Módulo de gamificação: snapshot em <code>season_history</code>, <code>users.points</code> e <code>users.xp</code> zerados, e o troféu do ano concedido ao primeiro colocado</td>
+</tr>
+<tr>
 <td>Pausa programada, primeiro horário</td>
 <td><code>30 9 * * *</code></td>
 <td>Pausa de sessões e de responsabilidade</td>
@@ -4450,7 +4460,7 @@ expressa como migração versionada não pertence a este sistema.</p>
 <footer class="dq-footer">
   <p>
     Conteúdo gerado a partir de <code>docs/src/</code> e <code>docs/diagrams/</code>. Diagramas em notação UML (PlantUML). O conteúdo reflete o estado do
-    código no commit <code>1daab4b (2026-10-22)</code>.
+    código no commit <code>0cbbac9 (2026-10-22)</code>.
   </p>
 </footer>
 

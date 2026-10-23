@@ -2,6 +2,7 @@ import { AwardFromTaskCompletionUseCase } from "@/backend/modules/gamification/a
 import { AwardFromActivityCompletionUseCase } from "@/backend/modules/gamification/application/use-cases/award-from-activity-completion.use-case"
 import { AwardFromWorkSessionUseCase } from "@/backend/modules/gamification/application/use-cases/award-from-work-session.use-case"
 import { AssertCanManageUserBadgesUseCase } from "@/backend/modules/gamification/application/use-cases/assert-can-manage-user-badges.use-case"
+import { CloseSeasonUseCase } from "@/backend/modules/gamification/application/use-cases/close-season.use-case"
 import { EvaluateUserBadgesUseCase } from "@/backend/modules/gamification/application/use-cases/evaluate-user-badges.use-case"
 import { GetUserProgressionUseCase } from "@/backend/modules/gamification/application/use-cases/get-user-progression.use-case"
 import { ReadUserProgressionUseCase } from "@/backend/modules/gamification/application/use-cases/read-user-progression.use-case"
@@ -22,6 +23,8 @@ import type { BadgeCatalogPort } from "@/backend/modules/gamification/applicatio
 import type { GamificationAwardHistoryPort } from "@/backend/modules/gamification/application/ports/gamification-award-history.port"
 import type { GamificationUsersPort } from "@/backend/modules/gamification/application/ports/gamification-users.port"
 import type { MonthlyPointsCyclePort } from "@/backend/modules/gamification/application/ports/monthly-points-cycle.port"
+import type { SeasonChampionPort } from "@/backend/modules/gamification/application/ports/season-champion.port"
+import type { SeasonCyclePort } from "@/backend/modules/gamification/application/ports/season-cycle.port"
 import type { WeeklyXpReviewPort } from "@/backend/modules/gamification/application/ports/weekly-xp-review.port"
 import type { UserBadgePort } from "@/backend/modules/gamification/application/ports/user-badge.port"
 import type { UserStatsPort } from "@/backend/modules/gamification/application/ports/user-stats.port"
@@ -29,6 +32,8 @@ import { createPrismaBadgeCatalogPort } from "@/backend/modules/gamification/inf
 import { createPrismaGamificationAwardHistoryPort } from "@/backend/modules/gamification/infrastructure/repositories/prisma-gamification-award-history.port"
 import { createPrismaGamificationUsersPort } from "@/backend/modules/gamification/infrastructure/repositories/prisma-gamification-users.port"
 import { createPrismaMonthlyPointsCyclePort } from "@/backend/modules/gamification/infrastructure/repositories/prisma-monthly-points-cycle.port"
+import { createPrismaSeasonChampionPort } from "@/backend/modules/gamification/infrastructure/repositories/prisma-season-champion.port"
+import { createPrismaSeasonCyclePort } from "@/backend/modules/gamification/infrastructure/repositories/prisma-season-cycle.port"
 import { createPrismaWeeklyXpReviewPort } from "@/backend/modules/gamification/infrastructure/repositories/prisma-weekly-xp-review.port"
 import { createPrismaUserBadgePort } from "@/backend/modules/gamification/infrastructure/repositories/prisma-user-badge.port"
 import { createPrismaUserStatsPort } from "@/backend/modules/gamification/infrastructure/repositories/prisma-user-stats.port"
@@ -70,6 +75,8 @@ export class GamificationModule {
   readonly resetMonthlyPoints: UseCaseExecute<ResetMonthlyPointsUseCase>
   /** plan-v8 V8-3 (DEC-214): revisao semanal de XP — chamada só pela rotina do cron, sem rota. */
   readonly reviewWeeklyXp: UseCaseExecute<ReviewWeeklyXpUseCase>
+  /** plan-v8 V8-4 (DEC-213): fechamento da temporada anual — chamado só pela rotina do cron, sem rota. */
+  readonly closeSeason: UseCaseExecute<CloseSeasonUseCase>
 
   constructor(
     private readonly awardFromWorkSessionUseCase: AwardFromWorkSessionUseCase,
@@ -90,6 +97,7 @@ export class GamificationModule {
     private readonly readUserProgressionUseCase: ReadUserProgressionUseCase,
     private readonly resetMonthlyPointsUseCase: ResetMonthlyPointsUseCase,
     private readonly reviewWeeklyXpUseCase: ReviewWeeklyXpUseCase,
+    private readonly closeSeasonUseCase: CloseSeasonUseCase,
   ) {
     this.awardFromWorkSession = this.awardFromWorkSessionUseCase.execute.bind(this.awardFromWorkSessionUseCase)
     this.awardFromTaskCompletion = this.awardFromTaskCompletionUseCase.execute.bind(this.awardFromTaskCompletionUseCase)
@@ -109,6 +117,7 @@ export class GamificationModule {
     this.readUserProgression = this.readUserProgressionUseCase.execute.bind(this.readUserProgressionUseCase)
     this.resetMonthlyPoints = this.resetMonthlyPointsUseCase.execute.bind(this.resetMonthlyPointsUseCase)
     this.reviewWeeklyXp = this.reviewWeeklyXpUseCase.execute.bind(this.reviewWeeklyXpUseCase)
+    this.closeSeason = this.closeSeasonUseCase.execute.bind(this.closeSeasonUseCase)
   }
 }
 
@@ -120,6 +129,8 @@ export interface GamificationModulePorts {
   stats: UserStatsPort
   monthlyCycle: MonthlyPointsCyclePort
   weeklyXp: WeeklyXpReviewPort
+  seasonCycle: SeasonCyclePort
+  seasonChampion: SeasonChampionPort
 }
 
 export interface GamificationModuleFactoryOptions {
@@ -135,6 +146,8 @@ export function createGamificationModule(options: GamificationModuleFactoryOptio
     stats: options.ports?.stats ?? createPrismaUserStatsPort(),
     monthlyCycle: options.ports?.monthlyCycle ?? createPrismaMonthlyPointsCyclePort(),
     weeklyXp: options.ports?.weeklyXp ?? createPrismaWeeklyXpReviewPort(),
+    seasonCycle: options.ports?.seasonCycle ?? createPrismaSeasonCyclePort(),
+    seasonChampion: options.ports?.seasonChampion ?? createPrismaSeasonChampionPort(),
   }
 
   const progression = new GetUserProgressionUseCase({ users: ports.users })
@@ -178,5 +191,7 @@ export function createGamificationModule(options: GamificationModuleFactoryOptio
     new ResetMonthlyPointsUseCase({ cycle: ports.monthlyCycle }),
     // V8-3 (DEC-214): a revisao semanal de XP. Chamada só pelo cron; o gate de MANAGE_USERS mora aqui.
     new ReviewWeeklyXpUseCase({ weeklyXp: ports.weeklyXp }),
+    // V8-4 (DEC-213): o fechamento da temporada. Chamado só pelo cron; o gate de MANAGE_USERS mora aqui.
+    new CloseSeasonUseCase({ cycle: ports.seasonCycle, champion: ports.seasonChampion }),
   )
 }

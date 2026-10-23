@@ -49,6 +49,8 @@ export const SYSTEM_REASONS = {
   MONTHLY_POINTS_RESET: "MONTHLY_POINTS_RESET",
   /** `cron-service.ts` — weekly XP review: boosts, penalties and the 0 floor on `users.xp` (plan-v8 V8-3, DEC-214). */
   WEEKLY_XP_REVIEW: "WEEKLY_XP_REVIEW",
+  /** `cron-service.ts` — annual season close: `season_history` snapshot, champion trophy, points and XP zeroed (plan-v8 V8-4, DEC-213). */
+  SEASON_CLOSE: "SEASON_CLOSE",
   /** `cron-service.ts` — daily overdue-activity scan (V5-8, DEC-64). */
   OVERDUE_SCAN: "OVERDUE_SCAN",
   /** `cron-service.ts` — monthly attendance-certificate reminder, day 19 (V5-10b, DEC-72). */

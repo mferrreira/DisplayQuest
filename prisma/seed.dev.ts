@@ -713,6 +713,24 @@ async function main() {
         createdAt: addDays(now, -18),
       },
     }),
+    // plan-v8 V8-4 (DEC-213): o troféu da temporada. Sem critério: quem concede é a rotina de
+    // fechamento de temporada, não o motor de avaliação (critério com specialCondition nova caía no
+    // QUIRK-6C e concedia o troféu a todo mundo). O catálogo real recebe o mesmo pela data migration
+    // `prisma/data-migrations/v8-4-badge-campeao.sql`.
+    prisma.badges.create({
+      data: {
+        name: "CAMPEÃO",
+        description:
+          "Concedido automaticamente na virada de temporada a quem somou mais pontos mensais no ano. Vitalício: não reseta, e entra nos slots de troféu do elo.",
+        icon: "trophy",
+        color: "#f59e0b",
+        category: "special",
+        criteria: Prisma.JsonNull,
+        isActive: true,
+        createdBy: coord.id,
+        createdAt: addDays(now, -16),
+      },
+    }),
   ])
 
   await prisma.user_badges.createMany({
