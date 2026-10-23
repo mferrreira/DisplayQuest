@@ -66,3 +66,41 @@ export function civilDaysBetween(from: string, to: string): number {
   const [ty, tm, td] = to.split("-").map(Number);
   return Math.round((Date.UTC(ty, tm - 1, td) - Date.UTC(fy, fm - 1, fd)) / DAY_MS);
 }
+
+/**
+ * Abreviações do mês civil, na ordem do calendário. Mora no `time` porque o mês é do calendário,
+ * não de uma tela: a grade do cronograma (V5-5) e o histórico mensal do placar (V8-7) mostram o
+ * mesmo mês, e duas tabelas de `jan..dez` em dois domínios é a lição da DEC-90/96 (a régua virando
+ * cópia).
+ */
+export const MONTH_ABBREVIATIONS = [
+  "jan",
+  "fev",
+  "mar",
+  "abr",
+  "mai",
+  "jun",
+  "jul",
+  "ago",
+  "set",
+  "out",
+  "nov",
+  "dez",
+] as const;
+
+/** `YYYY-MM` é mês civil — `2026-13` não é, e `2026-0` também não. */
+export function isCivilMonthKey(value: string): boolean {
+  if (!/^\d{4}-\d{2}$/.test(value)) return false;
+  const month = Number(value.slice(5, 7));
+  return Number.isInteger(month) && month >= 1 && month <= 12;
+}
+
+/**
+ * O rótulo do mês civil: `2026-03` é `mar/2026`. Nunca `new Date(...).toLocaleDateString` — o erro
+ * que a DEC-132 fechou (`new Date("2026-03")` é 1º de março UTC e vira fevereiro no fuso do
+ * laboratório). O chamador valida a forma ANTES de chamar, porque a frase de recusa é do chamador.
+ */
+export function civilMonthLabel(monthKey: string): string {
+  const month = Number(monthKey.slice(5, 7));
+  return `${MONTH_ABBREVIATIONS[month - 1]}/${monthKey.slice(0, 4)}`;
+}

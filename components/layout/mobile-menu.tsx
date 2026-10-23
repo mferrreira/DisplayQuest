@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { usePathname } from "next/navigation"
-import { LogOut, Menu, Trophy } from "lucide-react"
+import { LogOut, Menu, Zap } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { ThemeToggle } from "@/components/layout/theme-toggle"
 import { NavItemLink } from "@/components/layout/nav-item-link"
@@ -85,7 +85,7 @@ export function MobileMenu() {
 
               {points !== null ? (
                 <div className="flex items-center justify-center gap-2 rounded-xl border bg-card p-3">
-                  <Trophy className="h-5 w-5 text-warning" aria-hidden="true" />
+                  <Zap className="h-5 w-5 text-warning" aria-hidden="true" />
                   <span className="text-lg font-semibold">{points}</span>
                 </div>
               ) : null}

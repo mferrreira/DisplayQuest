@@ -31,7 +31,7 @@ atualiza a progressão.
 | Registros | Log diário vinculado à sessão, relatório semanal e relatório de projeto por período |
 | Arquivos | Avatares públicos em WebP e anexos de relatório em área privada, servidos por rota autenticada |
 | Laboratório | Plantão de responsabilidade, grade de horários, eventos e ciclo de vida de issues |
-| Engajamento | Pontos, experiência, níveis, distintivos com critérios avaliáveis, loja de recompensas e ranking |
+| Engajamento | Placar do mês, XP e degrau da temporada, moeda vitalícia, troféus com critérios avaliáveis e equipáveis, loja de recompensas e quadro do mês |
 | Comunicação | Notificações internas por evento e avisos gerais |
 | Operação | Agenda interna de reinício semanal, pausa programada e varredura noturna |
 

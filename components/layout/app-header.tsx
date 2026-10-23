@@ -17,7 +17,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { PointsCounter, PointsDelta } from "@/components/ui/points-delta"
 import { FloatingSessionTimer } from "@/components/ui/floating-session-timer"
-import { Menu, Trophy } from "lucide-react"
+import { Menu, Zap } from "lucide-react"
 import { getPrimaryRoleLabel } from "@/components/layout/nav-config"
 
 /**
@@ -75,7 +75,7 @@ export function AppHeader({ sidebarOpen = true, onToggleSidebar, showSessionTime
           <div className="hidden items-center gap-2 md:flex">
             {points !== null ? (
               <div className="relative flex items-center gap-2 rounded-lg border bg-card px-3 py-1.5">
-                <Trophy className="h-4 w-4 text-warning" aria-hidden="true" />
+                <Zap className="h-4 w-4 text-warning" aria-hidden="true" />
                 <span className="text-sm font-semibold">
                   {/* V4-2 (DEC-59): quem conta gradualmente é este número, não o chip.
                       V4-3 (DEC-58): o `userId` é o que permite animar uma mudança que chegou por

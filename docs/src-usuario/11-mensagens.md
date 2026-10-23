@@ -103,23 +103,24 @@ Quem gerencia pessoas ajusta saldo no diálogo **Configurar Usuário**, escolhen
 | **Usuário não possui moedas suficientes** | **Remover** de moeda acima do saldo | remova menos, ou defina o valor desejado |
 | **Usuário não possui pontos suficientes** | **Remover** de pontos acima do saldo | remova menos, ou defina o valor desejado |
 
-## Distintivos e troféus
+## Troféus
 
 | O sistema diz | Por quê | O que fazer |
 | --- | --- | --- |
 | **Critério points não vale na janela vida** (a frase muda com o campo e a janela) | a métrica preenchida não é medida pela janela escolhida — **Pontos** são do mês e **XP** são da temporada | escolha a janela que mede aquela métrica, ou troque a métrica |
 | **Critério do troféu fora do vocabulário: minHours** (a frase nomeia o campo) | o campo não existe no vocabulário do sistema | use só as métricas que o formulário mostra |
 | **Janela do critério inválida: use mes, temporada ou vida** | a janela escolhida não existe | escolha **Mês em curso**, **Temporada (ano em curso)** ou **Vida inteira** |
-| **Defina pelo menos um critério do troféu** | o distintivo seria salvo sem medir nada | preencha uma métrica ou a **Condição especial** |
+| **Defina pelo menos um critério do troféu** | o troféu seria salvo sem medir nada | preencha uma métrica ou a **Condição especial** |
 | **Efeito do troféu só tem verbo e tier** | o efeito veio com informação além do que o vocabulário permite | escolha o **Verbo** e o **Tier** do menu |
 | **Verbo de efeito do troféu inválido** / **Tier de efeito do troféu inválido** | o efeito não é um dos quatro verbos, ou o tier não é um dos três | escolha pelo menu, que tem só as opções válidas |
-| **Efeito do troféu duplicado** | o mesmo verbo duas vezes no mesmo distintivo | deixe um efeito por verbo |
+| **Efeito do troféu duplicado** | o mesmo verbo duas vezes no mesmo troféu | deixe um efeito por verbo |
 | **Ação inválida** | o pedido de equipar não é **equip** nem **unequip** | use um dos dois |
-| **Badge inválido** | o identificador do distintivo não é um número | escolha o distintivo na lista |
-| **Badge não encontrado** | o distintivo não existe no catálogo | escolha um distintivo ativo |
-| **Usuário não possui este troféu** | a pessoa ainda não conquistou aquele distintivo | conceda primeiro, ou escolha outro |
+| **Badge inválido** | o identificador do troféu não é um número | escolha o troféu na lista |
+| **Badge não encontrado** | o troféu não existe no catálogo | escolha um troféu ativo |
+| **Usuário não possui este troféu** | a pessoa ainda não conquistou aquele troféu | conceda primeiro, ou escolha outro |
 | **Só a própria pessoa pode equipar seus troféus.** | o pedido veio de outra conta | a escolha do que está equipado é da própria pessoa |
-| **Seu elo Prata permite equipar até 1 troféu.** (a frase vem com o elo e o limite: 0, 1, 2 ou 3) | já há distintivos equipados demais para o degrau da pessoa na temporada | desequipa um antes de equipar outro |
+| **Quadro indisponível.** | o quadro do mês não carregou | abra de novo; se persistir, avise a administração |
+| **Seu elo Prata permite equipar até 1 troféu.** (a frase vem com o elo e o limite: 0, 1, 2 ou 3) | já há troféus equipados demais para o degrau da pessoa na temporada | desequipa um antes de equipar outro |
 
 ## Laboratório e reclamações
 

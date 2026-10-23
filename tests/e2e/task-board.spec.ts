@@ -1,5 +1,5 @@
-import { test, expect, type Page } from "@playwright/test";
-import { login, apiSession } from "./helpers";
+import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
+import { apiSession, login, sessionUserId } from "./helpers";
 
 /**
  * Task-board E2E flows (E2/T2.7 closeout) — REAL backend on the dev server (:3001).
@@ -20,8 +20,29 @@ import { login, apiSession } from "./helpers";
  */
 
 const TASK_TITLE = "E2E fluxo delegada";
-const COORDENADOR_ID = 2;
 const TASK_POINTS = 10;
+
+/**
+ * O id do coordenador é LIDO da sessão (helpers.sessionUserId), não escrito aqui. O número 2 era a
+ * identidade dele na instância local do dono; na base de teste isolada (5433) o coordenador semeado
+ * tem outro id e os roundtrips G4 movem ids — com o número fixo, o primeiro teste do spec morria em
+ * GET /api/users/2 com 404 e o spec serial não chegava aos outros sete.
+ *
+ * A cache é por CONTEXTO de request: o id é o mesmo, mas a sessão não é — `page.request` e o fixture
+ * `request` são contextos diferentes, e autenticar um não autentica o outro. Medido: com o cache
+ * global, o teste do catch-up chegava com o id na memória e sem sessão no `request`, e o GET
+ * respondia sem corpo de usuário.
+ */
+const coordenadorIds = new Map<APIRequestContext, number>();
+
+async function resolveCoordenadorId(request: APIRequestContext): Promise<number> {
+  const cached = coordenadorIds.get(request);
+  if (cached != null) return cached;
+  await apiSession(request);
+  const id = await sessionUserId(request);
+  coordenadorIds.set(request, id);
+  return id;
+}
 
 /* --- OND3-A: fixtures de estouro de coluna (a altura limitada é o que se prova) --- */
 
@@ -30,8 +51,8 @@ const OVERFLOW_TITLE = "E2E coluna com scroll";
 const OVERFLOW_TASKS = 8;
 let overflowTaskIds: number[] = [];
 
-async function createOverflowTasks(page: Page) {
-  for (let i = 1; i <= OVERFLOW_TASKS; i++) {
+async function createOverflowTasks(page: Page, first = 1, count = OVERFLOW_TASKS) {
+  for (let i = first; i < first + count; i++) {
     const res = await page.request.post("/api/tasks", {
       data: {
         title: `${OVERFLOW_TITLE} ${i}`,
@@ -71,14 +92,15 @@ async function cardOrder(page: Page, column: string): Promise<string[]> {
 }
 
 async function createFixtureTask(page: Page) {
+  const coordenador = await resolveCoordenadorId(page.request);
   const res = await page.request.post("/api/tasks", {
     data: {
       title: TASK_TITLE,
       description: "Tarefa criada pelo teste E2E — deletada ao final.",
       status: "to-do", // single-create route does not default it (D-19)
       taskVisibility: "delegated",
-      assignedTo: COORDENADOR_ID, // approval awards points to the session user → badge observable
-      assigneeIds: [COORDENADOR_ID],
+      assignedTo: coordenador, // approval awards points to the session user → badge observable
+      assigneeIds: [coordenador],
       points: TASK_POINTS,
       priority: "medium",
       isGlobal: false,
@@ -119,7 +141,7 @@ test.describe("task board flows", () => {
     }
     if (pointsBefore != null) {
       await request
-        .patch(`/api/users/${COORDENADOR_ID}/points`, {
+        .patch(`/api/users/${await resolveCoordenadorId(request)}/points`, {
           // V8-5: o ajuste de saldo declara a trilha (POINTS é o placar do mês).
           data: { track: "POINTS", action: "set", amount: pointsBefore },
         })
@@ -134,7 +156,7 @@ test.describe("task board flows", () => {
     }
 
     // capture pre-test points for restoration + the increment assertion
-    const res = await page.request.get(`/api/users/${COORDENADOR_ID}`);
+    const res = await page.request.get(`/api/users/${await resolveCoordenadorId(page.request)}`);
     const user = await res.json();
     pointsBefore = user.user.points as number;
     // `Number.isFinite`, e NAO `>= 0`. Medido na instância real em 2026-10-05: o Coordenador está
@@ -208,7 +230,7 @@ test.describe("task board flows", () => {
 
     // plan-v3 OND4-B: o chip do prêmio creditado aparece no contador e some sozinho. V4-2 mudou
     // o que ele mostra: o valor FINAL de imediato (a contagem foi para o total). Só aparece aqui
-    // porque o fixture entrega a tarefa ao PRÓPRIO aprovador (`assignedTo: COORDENADOR_ID`): a
+    // porque o fixture entrega a tarefa ao PRÓPRIO aprovador (`assignedTo: coordenador`): a
     // aprovação credita o responsável, e sem essa coincidência o chip — e o próprio badge — não
     // mexeriam (ver DEC-48).
     //
@@ -239,7 +261,7 @@ test.describe("task board flows", () => {
 
     // plan-v3 OND4-B: o chip mostra o prêmio creditado. V4-2 mudou o que ele mostra: o valor
     // FINAL de imediato (a contagem foi para o total). Só aparece aqui porque o fixture entrega
-    // a tarefa ao PRÓPRIO aprovador (`assignedTo: COORDENADOR_ID`): a aprovação credita o
+    // a tarefa ao PRÓPRIO aprovador (`assignedTo: coordenador`): a aprovação credita o
     // responsável, e sem essa coincidência o chip — e o próprio badge — não mexeriam (DEC-48).
     expect(medida!.texto).toContain("+10");
     // Geometria é do navegador, não do jsdom. Duas coisas:
@@ -351,7 +373,7 @@ test.describe("task board flows", () => {
       .toBe("adjust");
 
     // cleanup inside authenticated context: restore points BEFORE deleting (task award already banked)
-    const restore = await page.request.patch(`/api/users/${COORDENADOR_ID}/points`, {
+    const restore = await page.request.patch(`/api/users/${await resolveCoordenadorId(page.request)}/points`, {
       data: { track: "POINTS", action: "set", amount: pointsBefore },
     });
     expect(restore.ok()).toBeTruthy();
@@ -370,12 +392,25 @@ test.describe("task board flows", () => {
    */
   test("coluna limitada em altura, com scroll próprio e cabeçalho fixo", async ({ page }) => {
     await login(page);
+    const column = page.getByLabel("Coluna A Fazer");
+    const feed = page.getByLabel("Atividade recente");
     await createOverflowTasks(page);
-    try {
-      await page.reload();
-      const column = page.getByLabel("Coluna A Fazer");
-      await expect(column.getByText(`${OVERFLOW_TITLE} 1`)).toBeVisible({ timeout: 15_000 });
 
+    /**
+     * Recarrega e espera as DUAS peças assíncronas do quadro antes de medir altura: os cartões e o
+     * feed "Atividade recente". Ler antes do feed é medir a página incompleta — medido 1072 px sem
+     * ele contra 1590 px com ele, e essa diferença (não os cartões) é o que fazia as duas leituras
+     * antigas deste teste divergirem.
+     */
+    const alturaAssentada = async (marcador: string) => {
+      await page.reload();
+      await expect(column.getByText(marcador)).toBeVisible({ timeout: 15_000 });
+      await expect(feed).toBeVisible({ timeout: 15_000 });
+      return page.evaluate(() => document.documentElement.scrollHeight);
+    };
+
+    const alturaComOito = await alturaAssentada(`${OVERFLOW_TITLE} 1`);
+    try {
       const geometry = await column.evaluate((el) => ({
         clientHeight: el.clientHeight,
         scrollHeight: el.scrollHeight,
@@ -390,8 +425,18 @@ test.describe("task board flows", () => {
       // 2. …e o conteúdo é maior que ela, então o scroll é da coluna (overflow-y: auto)
       expect(geometry.scrollHeight).toBeGreaterThan(geometry.clientHeight);
       expect(geometry.overflowY).toBe("auto");
-      // 3. a página não cresce com o número de cartões: uma tela e meia cobrem o quadro
-      expect(geometry.docHeight).toBeLessThan(geometry.viewportHeight * 1.5);
+      // 3. a página não cresce com o número de CARTÕES: dobrou os cartões, a altura é a mesma.
+      //
+      //    O teto absoluto que estava aqui (1,5 × viewport) media o quadro SOZINHO e deixou de valer
+      //    quando o quadro ganhou a seção "Atividade recente" (V6-11k, 2026-10-18). Comparar com o
+      //    estado "sem cartões" também não mede a coluna: cada cartão novo escreve uma linha no feed,
+      //    e a altura DAQUELA seção cresce até o teto próprio dela (lista com `max-h-80`, V6-11k).
+      //    Medido na instância de teste em 2026-10-23, viewport de 720 px (DEC-224): 1590 px de página
+      //    com oito cartões e 1590 px com dezesseis. A régua honesta é a diferença entre dois estados
+      //    do mesmo quadro, com o feed assentado nos dois.
+      expect(geometry.docHeight).toBe(alturaComOito);
+      await createOverflowTasks(page, OVERFLOW_TASKS + 1, OVERFLOW_TASKS);
+      expect(await alturaAssentada(`${OVERFLOW_TITLE} ${OVERFLOW_TASKS + 1}`), "a página cresceu com cartões a mais").toBe(alturaComOito);
 
       // 4. rolar a coluna não arrasta a página (overscroll-contain) e o cabeçalho fica
       const header = page.getByRole("heading", { name: "A Fazer", exact: true });
@@ -493,7 +538,7 @@ test.describe("task board flows", () => {
           .filter((key) => key.includes("column-order"))
           .map((key) => `${key}=${window.localStorage.getItem(key)}`),
       );
-      expect(guardada).toContain(`dq:column-order:${COORDENADOR_ID}:to-do="prazo"`);
+      expect(guardada).toContain(`dq:column-order:${await resolveCoordenadorId(page.request)}:to-do="prazo"`);
 
       // e a prova que o jsdom não dá: depois de recarregar, a ordem é a mesma
       await page.reload();
@@ -538,8 +583,8 @@ test.describe("task board flows", () => {
     page,
     request,
   }) => {
-    await apiSession(request);
-    const current = (await (await request.get(`/api/users/${COORDENADOR_ID}`)).json()).user.points as number;
+    const coordenador = await resolveCoordenadorId(request);
+    const current = (await (await request.get(`/api/users/${await resolveCoordenadorId(request)}`)).json()).user.points as number;
     const lembrado = current - 30;
 
     await page.addInitScript(
@@ -569,7 +614,7 @@ test.describe("task board flows", () => {
           observer.observe(document, { childList: true, subtree: true });
         }
       },
-      [`dq:points-seen:${COORDENADOR_ID}`, String(lembrado)],
+      [`dq:points-seen:${coordenador}`, String(lembrado)],
     );
 
     await login(page);
@@ -590,7 +635,7 @@ test.describe("task board flows", () => {
     // E a baseline avançou: reabrir não conta a mesma coisa duas vezes.
     const guardadoAgora = await page.evaluate(
       (chave) => window.localStorage.getItem(chave),
-      `dq:points-seen:${COORDENADOR_ID}`,
+      `dq:points-seen:${coordenador}`,
     );
     expect(Number(guardadoAgora)).toBe(current);
   });

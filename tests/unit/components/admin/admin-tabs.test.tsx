@@ -76,7 +76,9 @@ describe("as abas do painel", () => {
     renderPanel();
 
     expect(screen.getByRole("heading", { name: "Painel Administrativo" })).toBeInTheDocument();
-    for (const name of [/visão geral/i, /usuários/i, /projetos/i, /horas/i, /tarefas/i, /voluntários/i, /notificações/i, /badges/i]) {
+    // V8-7 (DEC-220): a aba passou a se chamar Troféus (o vocabulário de tela; o valor interno
+    // continua "badges"). A asserção acompanha a tela medida, não o código lido.
+    for (const name of [/visão geral/i, /usuários/i, /projetos/i, /horas/i, /tarefas/i, /voluntários/i, /notificações/i, /troféus/i]) {
       expect(screen.getByRole("tab", { name })).toBeInTheDocument();
     }
     expect(screen.queryByRole("tab", { name: /configurações/i })).not.toBeInTheDocument();

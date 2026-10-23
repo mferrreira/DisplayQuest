@@ -23,8 +23,8 @@ import {
   Mail,
   ShieldCheck,
   Target,
-  Trophy,
   User as UserIcon,
+  Zap,
 } from "lucide-react"
 import { User as UserType } from "@/contexts/types"
 import {
@@ -37,7 +37,7 @@ import {
 } from "@/backend/domain"
 import { formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { UserBadges } from "@/components/ui/user-badges"
+import { UserTrophies } from "@/components/ui/user-trophies"
 
 interface UserProfileViewProps {
   user: UserType
@@ -187,8 +187,8 @@ export function UserProfileView({ user, onBack, canEdit = false, onEdit, project
 
       {/* Fatos — rotulo quieto + algarismo grande sobre a regua, sem caixa. */}
       <dl aria-label="Resumo do usuário" className="grid grid-cols-2 gap-x-8 gap-y-6 sm:grid-cols-4">
-        <Fact label="Pontos" value={user.points} hint="placar do mês" icon={Trophy} />
-        <Fact label="Tarefas" value={user.completedTasks} hint="tarefas concluídas" icon={Target} />
+        <Fact label="Pontos do mês" value={user.points} hint="o placar fecha no fim do mês" icon={Zap} />
+        <Fact label="Tarefas" value={user.completedTasks} hint="concluídas na vida" icon={Target} />
         <Fact label="Horas/Sem" value={user.weekHours} hint="meta semanal" icon={Clock} />
         <Fact label="Funções" value={user.roles.length} hint="papéis no laboratório" icon={ShieldCheck} />
       </dl>
@@ -274,8 +274,10 @@ export function UserProfileView({ user, onBack, canEdit = false, onEdit, project
         </div>
       )}
 
+      {/* V8-7 (DEC-220): o perfil do OUTRO mostra os troféus sem botão de equipar — a autoridade de
+          equipar é da própria pessoa (DEC-218) e este componente renderiza gente que não é a sessão. */}
       <div className="border-t border-border pt-6">
-        <UserBadges userId={user.id} limit={8} />
+        <UserTrophies userId={user.id} limit={8} />
       </div>
     </div>
   )

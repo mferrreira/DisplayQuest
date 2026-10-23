@@ -67,6 +67,13 @@ function fakeCycle(world: FakeWorld): MonthlyPointsCyclePort {
       user.points = 0;
       return true;
     },
+    // V8-7 (DEC-220): a tela de histórico lê o mesmo livro. A fake devolve as linhas escritas, mais
+    // recente primeiro — a ordem do adaptador.
+    listMonthHistory: async (userId) =>
+      world.snapshots
+        .filter((s) => s.userId === userId)
+        .map((s) => ({ month: s.month, points: s.points, completedTasks: s.completedTasksOfMonth }))
+        .sort((left, right) => (left.month < right.month ? 1 : -1)),
   };
 }
 

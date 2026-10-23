@@ -67,31 +67,56 @@ Aprovar confirma o resgate; rejeitar devolve as moedas à pessoa.
 
 ## O ranking
 
-O **Ranking** ordena as pessoas pelo que produziram. A tela traz o **Quadro de Liderança** e a **Classificação completa**, com as colunas **Posição**, **Usuário**, **Tarefas concluídas** e **Pontos**.
+A tela se chama **Quadro de Liderança** e traz o mês no título (*Quadro de Liderança — out/2026*). A
+primeira peça é a sua: **Sua posição** com o algarismo grande, a linha de números (*N pontos · N
+tarefas no mês · XP N (temporada) · elo Ouro*) e o fio **Seu progresso até o topo**. Abaixo vem o
+campeão do mês em bloco maior — quando a pessoa tem **capa** no perfil, a capa entra como fundo do
+bloco dela — e os 2º e 3º lugares. A **Classificação completa** começa no 4º (o top 3 já está acima) e
+tem as colunas **Posição**, **Usuário**, **Pontos**, **Tarefas (mês)**, **Elo**, **Troféus** e
+**Moedas**.
 
 ```foto ranking-participante titulo="O ranking, na classificação completa"
-A classificação é visível para qualquer pessoa autenticada.
+A classificação é visível para qualquer pessoa autenticada. Clique em qualquer nome para abrir o
+perfil daquela pessoa.
 ```
-
-No **Quadro de Liderança** os três primeiros têm destaque maior e avatar maior, e o 1º lugar leva mais destaque ainda: quando a pessoa tem **capa** no perfil, a capa aparece como fundo do cartão dela. É a mesma imagem descrita no capítulo 8; o ranking não cria nada, ele mostra o que o perfil tem.
 
 O que alimenta cada coluna:
 
 | Coluna | De onde vem |
 | --- | --- |
-| **Tarefas concluídas** | tarefas aprovadas, não as entregues para revisão |
 | **Pontos** | o placar do mês corrente: pontos creditados pelas aprovações, menos as penalidades de atraso. A loja não entra aqui — ela cobra moedas |
+| **Tarefas (mês)** | as tarefas do mês em curso, contadas das duas formas que creditam a pessoa (a conclusão própria e a aprovação da tarefa que era dela), sem contar a tarefa pública duas vezes |
+| **Elo** | o degrau do XP da temporada — não uma coluna à parte: é o XP que decide o elo e o elo que decide quantos troféus a pessoa mantém equipados |
+| **Troféus** | quantos a pessoa mantém equipados e quantos tem conquistados (*1 / 3*) |
+| **Moedas** | a carteira vitalícia, que o fechamento do mês não toca |
+
+A ordem da régua é **pontos**, depois **tarefas do mês**, depois **XP**, e o último desempate é o
+cadastro. Quem aplica a régua é o servidor: a tela mostra a ordem que o quadro devolve e não reordena nada.
 
 ::: nota titulo="O placar fecha no dia 1"
 O **Pontos** do ranking é o mês corrente. No dia 1, às 00:00 (fuso do laboratório), o sistema
 fecha o mês: o número e a contagem de tarefas daquele mês vão para o histórico da pessoa —
 inclusive quando são negativos — e o placar recomeça em zero. Antes o número nunca zerava; hoje
-o ranking mostra o mês em curso, e o mês encerrado fica no histórico da pessoa.
+o ranking mostra o mês em curso, e o mês encerrado fica no histórico da pessoa (capítulo 8).
 O fechamento não é botão nem rota: é a agenda do sistema, e reexecutá-lo não duplica o mês.
 :::
 
-## Distintivos
+O mesmo quadro entrega o **Livro-caixa da temporada**: a tabela do ano que já fechou, com **Posição**,
+**Usuário**, **Pontos**, **Tarefas**, **XP** e **Elo** — os números fotografados no fechamento, que a
+zeragem de janeiro não apaga. Em 1º lugar está o campeão do ano, que recebe o troféu **CAMPEÃO**.
+Enquanto nenhum ano foi fechado, a tabela diz *"Nenhum ano fechado ainda."*.
 
-Além dos dois saldos, o sistema concede **distintivos** — marcas de conquista, agrupadas por categoria, cada uma com um critério que declara a janela que mede: mês em curso, temporada ou vida inteira. Quem tem a permissão de gerenciar distintivos cria e edita os modelos no Painel Administrativo (capítulo 9); as pessoas os recebem e os veem no próprio perfil.
+## Troféus
 
-O distintivo pode declarar um efeito, que vale enquanto o distintivo está equipado: um acréscimo percentual sobre os créditos seguintes — pontos de tarefa, pontos de sessão, moedas de atividade — ou a redução da penalidade de atraso. O credit afetado registra no histórico o distintivo que participou do número, e o que a pessoa mantém equipado depende do degrau dela na temporada.
+Além dos dois saldos, o sistema concede **troféus** — conquistas vitalícias, agrupadas por categoria,
+cada uma com um critério que declara a janela que mede: mês em curso, temporada ou vida inteira. Quem
+tem a permissão de gerenciar troféus cria e edita os modelos no Painel Administrativo (capítulo 9); as
+pessoas os recebem e os veem — e escolhem quais manter equipados — no próprio perfil (capítulo 8). A
+conquista não some quando o mês ou o ano fecha: é para sempre.
+
+O troféu pode declarar um efeito, que vale enquanto o troféu está equipado: um acréscimo percentual
+sobre os créditos seguintes — pontos de tarefa, pontos de sessão, moedas de atividade — ou a redução
+da penalidade de atraso. O credit afetado registra no histórico o troféu que participou do número, e
+quantos troféus a pessoa mantém equipados depende do degrau dela na temporada: **Bronze** não abre
+slot, **Prata** abre um, **Ouro** e **Platina** abrem dois, **Diamante** e **Desafiante** abrem três.
+

@@ -119,9 +119,13 @@ export function createPrismaSeasonCyclePort(): SeasonCyclePort {
           points: true,
           completedTasks: true,
           xp: true,
+          elo: true,
+          position: true,
           user: { select: { name: true } },
         },
-        orderBy: { userId: "asc" },
+        // A posição do livro, não a da régua viva: depois da virada o XP zerou e só esta linha diz
+        // em que lugar a pessoa fechou o ano. `userId` desempata a leitura de linhas sem posição.
+        orderBy: [{ position: "asc" }, { userId: "asc" }],
       });
       return rows.map((row) => ({
         userId: row.userId,
@@ -129,7 +133,33 @@ export function createPrismaSeasonCyclePort(): SeasonCyclePort {
         points: row.points,
         completedTasks: row.completedTasks,
         xp: row.xp,
+        elo: row.elo,
+        position: row.position,
       }));
+    },
+
+    async listSeasonHistoryForUser(userId) {
+      const rows = await prisma.season_history.findMany({
+        where: { userId },
+        select: { year: true, points: true, completedTasks: true, xp: true, elo: true, position: true },
+        orderBy: { year: "desc" },
+      });
+      return rows.map((row) => ({
+        year: row.year,
+        points: row.points,
+        completedTasks: row.completedTasks,
+        xp: row.xp,
+        elo: row.elo,
+        position: row.position,
+      }));
+    },
+
+    async latestClosedSeasonYear() {
+      const row = await prisma.season_history.findFirst({
+        select: { year: true },
+        orderBy: { year: "desc" },
+      });
+      return row?.year ?? null;
     },
   };
 }

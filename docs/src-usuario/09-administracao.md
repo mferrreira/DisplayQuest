@@ -7,7 +7,7 @@ A Visão Geral abre com "Horas Trabalhadas por Usuário (Semana Atual)": **Nome*
 ```
 
 ::: nota titulo="Quem entra"
-O destino **Painel Administrativo** aparece para **Coordenador** e **Gerente**, e também para o **Gerente de Projeto** — este, porém, só enxerga a aba **Voluntários**, que é onde ele gerencia a equipe dos seus projetos. Parte do que o painel contém — distintivos, notificações, sessões — está aberta também ao **Laboratorista**, pelas permissões específicas de cada função. Cada aba declara a chave que a governa: quem entra sem a chave daquela aba vê o motivo, não uma tela vazia.
+O destino **Painel Administrativo** aparece para **Coordenador** e **Gerente**, e também para o **Gerente de Projeto** — este, porém, só enxerga a aba **Voluntários**, que é onde ele gerencia a equipe dos seus projetos. Parte do que o painel contém — troféus, notificações, sessões — está aberta também ao **Laboratorista**, pelas permissões específicas de cada função. Cada aba declara a chave que a governa: quem entra sem a chave daquela aba vê o motivo, não uma tela vazia.
 :::
 
 ## Usuários
@@ -53,21 +53,21 @@ A aba **Horas** é a leitura consolidada do tempo registrado. As colunas são **
 | **Tarefas** | ver tarefas de todos os projetos, além do que o quadro mostra — com a lista de subtasks de cada tarefa em leitura: a contagem (por exemplo *"2/5 concluídas"*) e cada etapa marcada com ✓ ou ○, sem checkbox |
 | **Voluntários** | gerenciar a equipe de cada projeto — adicionar e remover pessoas (seção *A aba Voluntários* abaixo) |
 | **Notificações** | enviar aviso para uma pessoa ou para o laboratório |
-| **Badges** | criar e editar distintivos: **Nome do Badge**, **Descrição**, **Categoria**, **Ícone (emoji ou nome)**, **Cor**, **Badge ativo**, **Janela do critério** com as métricas da janela, **Condição especial** e **Efeitos equipáveis** (seção *A aba Badges* abaixo) |
+| **Troféus** | criar e editar o catálogo de troféus: **Nome do troféu**, **Descrição**, **Categoria**, **Ícone (emoji ou nome)**, **Cor**, **Troféu ativo**, **Janela do critério** com as métricas da janela, **Condição especial** e **Efeitos equipáveis** (seção *A aba Troféus* abaixo) |
 
-## A aba Badges
+## A aba Troféus
 
-Um distintivo é criado com **Nome do Badge**, **Descrição**, **Categoria**, **Ícone (emoji ou nome)**, **Cor** e o interruptor **Badge ativo**. O que decide se a pessoa recebe o distintivo é o bloco de critério, e ele começa pela **Janela do critério**:
+O botão **Novo troféu** abre o formulário, e um troféu é criado com **Nome do troféu**, **Descrição**, **Categoria**, **Ícone (emoji ou nome)**, **Cor** e o interruptor **Troféu ativo**. O que decide se a pessoa recebe o troféu é o bloco de critério, e ele começa pela **Janela do critério**:
 
 - **Mês em curso** mede **Pontos** e **Tarefas** do mês que ainda não fechou.
 - **Temporada (ano em curso)** mede **Pontos**, **Tarefas** e **XP da temporada** somados do começo do ano até hoje.
 - **Vida inteira** mede **Tarefas**, **Moedas**, **Sessões de trabalho**, **Projetos**, **Horas semanais** e **Dias consecutivos**.
 
-Só aparecem no formulário as métricas da janela escolhida: um distintivo de mês não ganha campo de moedas porque a janela de mês não mede moedas. Preencher uma métrica fora da janela é recusado com o nome do campo, e um critério sem métrica nenhuma também é recusado — sem critério, o distintivo não é concedido sozinho. Abaixo das métricas há **Condição especial**, texto livre para as condições que não são contagem, como *"primeiro a completar 100 tarefas"*.
+Só aparecem no formulário as métricas da janela escolhida: um troféu de mês não ganha campo de moedas porque a janela de mês não mede moedas. Preencher uma métrica fora da janela é recusado com o nome do campo, e um critério sem métrica nenhuma também é recusado — sem critério, o troféu não é concedido sozinho. Abaixo das métricas há **Condição especial**, texto livre para as condições que não são contagem, como *"primeiro a completar 100 tarefas"*.
 
-O bloco **Efeitos equipáveis** declara o que o distintivo faz enquanto a pessoa o mantém equipado. Cada efeito tem **Verbo** — *Pontos de tarefa +%*, *Pontos de sessão +%*, *Moedas de atividade +%* ou *Penalidade de atraso −%* — e **Tier**: *Tier 1 (5%)*, *Tier 2 (10%)* ou *Tier 3 (15%)*. O valor vem do tier, e não há número livre a preencher. Um distintivo sem efeito é só conquistável: não muda nenhum credit.
+O bloco **Efeitos equipáveis** declara o que o troféu faz enquanto a pessoa o mantém equipado. Cada efeito tem **Verbo** — *Pontos de tarefa +%*, *Pontos de sessão +%*, *Moedas de atividade +%* ou *Penalidade de atraso −%* — e **Tier**: *Tier 1 (5%)*, *Tier 2 (10%)* ou *Tier 3 (15%)*. O valor vem do tier, e não há número livre a preencher. Um troféu sem efeito é só conquistável: não muda nenhum credit.
 
-O painel define o catálogo. A escolha de quais distintivos manter equipados ainda não tem tela para a pessoa — o que já vale é o efeito sobre os créditos seguintes, quando o distintivo está equipado.
+O painel define o catálogo; a pessoa não equipa troféu pelo painel. A escolha de quais manter equipados é dela, na prateleira do próprio perfil (capítulo 8), e quem equipa é sempre a própria pessoa — nenhuma rotina do sistema equipou ou desequipou troféu de ninguém. O painel concede e edita; o efeito sobre os créditos seguintes vale enquanto o troféu está equipado.
 
 ## A aba Voluntários
 
@@ -98,7 +98,7 @@ Não existe no painel uma forma de reescrever o histórico de um período já re
 | Criar conta | sim | sim | — | — |
 | Gerenciar sessões de outros | sim | sim | sim | — |
 | Gerenciar loja e recompensas | sim | sim | sim | — |
-| Gerenciar distintivos | sim | sim | sim | — |
+| Gerenciar troféus | sim | sim | sim | — |
 | Criar e editar projeto | sim | sim | — | sim |
 | Criar e editar tarefa | sim | sim | — | sim |
 | Definir grade de horários | sim | sim | sim | — |

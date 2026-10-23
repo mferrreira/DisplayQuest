@@ -8,7 +8,7 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
 - **Gate de entrega:** `npm run arch:check` (exit 0, allow-list **vazia**) && `npm run lint` (nada de erro) && `npx tsc --noEmit` (0) && `npx vitest run` (zero failure). A contagem é **por branch**: no `dev` o baseline era **64 arquivos / 721 testes** quando o B8 removeu os 651 testes de paridade; no `plan/v3-operacional`, medido no encerramento do plan-v3 (2026-10-03), são **65 arquivos / 798 testes** em `tests/unit` + `features` e **75 / 881** na suíte completa. Na `dev` de hoje (medido em 2026-10-07, depois do plan-v4 V4-1/V4-2/V4-3/V4-6, do V4-4 de subtasks, dos testes do painel V4-4b/V4-4c, do V4-5a/V4-5b/V4-5c de subtask na UI, do V4-6b de vocabulário de status e do lote pós-encerramento POS-1 — DEC-97/98) são **87 arquivos / 1107 testes** e **97 / 1192** na suíte completa; a suíte e2e do quadro está em **2 passando + 1 falha conhecida + 5 "did not run"** (medido 2026-10-06
 no V4-5c; eram 7 quando a coluna `Em Revisão` tinha um cartão a menos) — o 3º teste quebra por cartão a
 mais na coluna (dado legítimo da instância, não código: hoje são as tarefas 50 e 304), e como o spec é
-serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 5 passando. Compare sempre com o `STATE.json` do plano em que você está. Na `dev` de hoje, medido no fechamento do plan-v6 (2026-10-16, ondas V6-0..V6-11: shell, Home, Projetos, detalhe do projeto, Laboratório, Relatórios, Perfil/Ranking, Loja, Admin, Login/Register), são **179 arquivos / 2224 testes** em `tests/unit` + `features` e **194 / 2354** na suíte completa (G0 1061 módulos / 4531 dependências); o `tsc` desta branch **fecha em 0** — o erro pré-existente em `features/laboratorio/__tests__/floating-timer-tabs.test.tsx:105` foi consertado no `SUB-1` (regex ancorada no lugar do `exact`, que não existe em `ByRoleOptions`). Re-medido em 2026-10-15 (V6-2): o e2e do quadro está em **8 passando** (o spec hoje tem 8 testes; a falha conhecida por cartão a mais em `Em Revisão` **não reproduziu** — o dado da instância mudou; ela pode voltar se o dono mover outro cartão para lá) e o do shell em **5 passando**. Na branch do fechamento do repo-cleanup (`refactor/b6-restante`, medido 2026-10-08 depois do B6-2c..B6-7) o baseline é **95 arquivos / 1280 testes** em `tests/unit` + `features` e **105 / 1367** na suíte completa (G0 810 módulos / 3295 dependências). Na branch do plan-v8 (`plan-v8/gamificacao`), medido no fechamento da onda **V8-5** (2026-10-22), são **199 arquivos / 2400 testes** no projeto unit (`tests/unit` + `features/**/__tests__` + `entities`) e **220 / 2561** na suíte completa, com **G4 21 / 161** contra a 5433 e G0 **1140 módulos / 4833 dependências** (allow-list vazia), `tsc` 0 e lint exit 0 com **17** warnings pré-existentes (a nota de "15 warnings" das ondas V8-0/V8-1/V8-2 não reproduz nesta árvore: conferido com `git stash`, sem a onda a árvore também dá 17). Medido no fechamento da onda **V8-6** (2026-10-23), na mesma branch: **204 arquivos / 2469 testes** no projeto unit e **225 / 2634** na suíte completa, com **G4 21 / 165** na 5433 e G0 **1152 módulos / 4889 dependências** (allow-list vazia), `tsc` 0 e lint exit 0 com os mesmos **17** warnings.
+serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 5 passando. Compare sempre com o `STATE.json` do plano em que você está. Na `dev` de hoje, medido no fechamento do plan-v6 (2026-10-16, ondas V6-0..V6-11: shell, Home, Projetos, detalhe do projeto, Laboratório, Relatórios, Perfil/Ranking, Loja, Admin, Login/Register), são **179 arquivos / 2224 testes** em `tests/unit` + `features` e **194 / 2354** na suíte completa (G0 1061 módulos / 4531 dependências); o `tsc` desta branch **fecha em 0** — o erro pré-existente em `features/laboratorio/__tests__/floating-timer-tabs.test.tsx:105` foi consertado no `SUB-1` (regex ancorada no lugar do `exact`, que não existe em `ByRoleOptions`). Re-medido em 2026-10-15 (V6-2): o e2e do quadro está em **8 passando** (o spec hoje tem 8 testes; a falha conhecida por cartão a mais em `Em Revisão` **não reproduziu** — o dado da instância mudou; ela pode voltar se o dono mover outro cartão para lá) e o do shell em **5 passando**. Na branch do fechamento do repo-cleanup (`refactor/b6-restante`, medido 2026-10-08 depois do B6-2c..B6-7) o baseline é **95 arquivos / 1280 testes** em `tests/unit` + `features` e **105 / 1367** na suíte completa (G0 810 módulos / 3295 dependências). Na branch do plan-v8 (`plan-v8/gamificacao`), medido no fechamento da onda **V8-5** (2026-10-22), são **199 arquivos / 2400 testes** no projeto unit (`tests/unit` + `features/**/__tests__` + `entities`) e **220 / 2561** na suíte completa, com **G4 21 / 161** contra a 5433 e G0 **1140 módulos / 4833 dependências** (allow-list vazia), `tsc` 0 e lint exit 0 com **17** warnings pré-existentes (a nota de "15 warnings" das ondas V8-0/V8-1/V8-2 não reproduz nesta árvore: conferido com `git stash`, sem a onda a árvore também dá 17). Medido no fechamento da onda **V8-6** (2026-10-23), na mesma branch: **204 arquivos / 2469 testes** no projeto unit e **225 / 2634** na suíte completa, com **G4 21 / 165** na 5433 e G0 **1152 módulos / 4889 dependências** (allow-list vazia), `tsc` 0 e lint exit 0 com os mesmos **17** warnings. Medido no fechamento da onda **V8-7** (2026-10-23), na mesma branch: **212 arquivos / 2525 testes** no projeto unit e **234 / 2695** na suíte completa, com **G4 22 / 170** na 5433 e G0 **1172 módulos / 4984 dependências** (allow-list vazia), `tsc` 0 e lint exit 0 com os mesmos **17** warnings (os quatro warnings que aparecem no conjunto alterado da onda são todos preexistentes); o e2e foi re-medido na worktree contra a 5433, com dev server próprio na porta 3002 e config Playwright temporário: **quadro 8 passando e shell 5 passando** (ver as três notas novas em "Gotchas reais").
 - **G4/integração:** roundtrips Prisma real rodam **só** contra o banco de teste isolado `dq-dev-test-db` em `127.0.0.1:5433` (`$env:DATABASE_URL="postgresql://dq_dev:dq_dev_local_only@127.0.0.1:5433/dq_dev_test"; npx vitest run`) — nunca contra o `display-quest-db` (5432, produção local).
 - **Setup do G4 (corrigido 2026-10-02):** `npm run db:test:up` e `npm run db:test:setup` **existem**
   no `package.json` e fazem a sequência completa (`docker compose -f docker-compose.test.yml up -d`,
@@ -26,7 +26,26 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
 
 ## plan-v8 — gamificação remodelada (aberto 2026-10-22)
 
-- **Estado:** `in_progress` — **V8-6 done em 2026-10-23** (escada de elo da temporada com coluna nova
+- **Estado:** `in_progress` — **V8-7 done em 2026-10-23** (troféus e trilhas na UI: `ListMonthlyRankingUseCase` +
+  `prisma-monthly-ranking.port.ts` com quatro queries em lote e a régua `points → tarefas do mês → xp → userId`
+  DECIDIDA NO SERVIDOR (elo DERIVADO do XP, não a coluna), mais `GET /api/gamification/ranking` e o quadro
+  reescrito com as colunas Posição / Usuário / Pontos / Tarefas (mês) / Elo / Troféus / Moedas e a tabela
+  começando no 4º; livro-caixa da temporada por `GET /api/gamification/season-book`; perfil com `SeasonCard`,
+  prateleira equipável lida por `GET /api/users/[id]/trophies` (o use case junta a conquista ao catálogo — a tela
+  de conquistas estava VAZIA porque `toUserBadge` não entrega o catálogo) e histórico dos ciclos por
+  `GET /api/users/[id]/gamification/history` (meses fechados, temporadas fechadas, `championYears` lidos da
+  `position` 1); `components/ui/user-badges.tsx` apagada; vocabulário "Badges" → "Troféus" na TELA (aba e
+  formulário; valor interno da aba, componente, API e tabela continuam `badges`) e ícone do placar `Zap`
+  (ASK-V8-23, respondida 2026-10-22); guardas novos `tests/unit/domain/gamification/gamification-vocabulary.test.ts`
+  (12 casos) e `trophy-window-guard.test.ts` estendido para a **quarta conta de tarefa** (16); gates medidos na
+  onda: unit+features 212 arquivos / 2525 testes, suíte completa 234 / 2695, G4 22 / 170 na 5433, G0 1172 módulos /
+  4984 dependências com allow-list vazia, `tsc` 0, lint exit 0 com 17 warnings, G5 com os capítulos do guia
+  07/08/09/10/11 e os técnicos 02/09/10/13 (`docs:build` dos dois documentos + `docs:check` verdes); G6 não
+  re-captura — `ranking-participante`, as três capturas de perfil e `painel-administrativo` ficaram antigas e a
+  prateleira não tem captura nenhuma (lote somado à dívida G6 da V8-2); e2e do quadro e do shell re-medidos na
+  worktree contra a 5433 com servidor próprio na 3002, com **DEC-224** (identidade do coordenador lida da sessão)
+  e **DEC-225** (altura do quadro comparada entre dois estados assentados); nenhuma migration de schema nova na
+  onda. Antes, **V8-6 done em 2026-10-23** (escada de elo da temporada com coluna nova
   `users.elo` (migration `20261023120000_add_users_elo`, 24 linhas em `_prisma_migrations`), equip/desequip de
   troféu pela rota `PATCH /api/users/[id]/trophies` com autoridade da própria pessoa e slot do elo do momento, motor
   de critérios reescrito com janela `mes|temporada|vida` (QUIRK-6C consertado: condição desconhecida não concede;
@@ -40,7 +59,8 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   captura versionada mostra o formulário de troféus do painel. Data migration
   `prisma/data-migrations/v8-6-badge-criteria-vocab.sql` (**DEC-223**) conferida na 5433 por tabela temporária com
   rollback e aplicada lá (`UPDATE 0`: as linhas já estavam convertidas); na 5432 real ela roda no V8-CLOSE. Próxima
-  onda: **V8-7** (troféus e trilhas na UI). Antes, **V8-5 done em 2026-10-22** (moeda vitalícia: o prêmio de atividade
+  onda: **V8-8** (fechamento G5/G6: `docs:build`/`docs:check` com o texto técnico e de usuário, recaptura das
+  telas do guia que mudaram, re-leitura da prosa). Antes, **V8-5 done em 2026-10-22** (moeda vitalícia: o prêmio de atividade
   aprovada credita `users.coins` com `track COINS`, a loja cobra, debita e estorna moeda, e o painel ajusta as
   duas trilhas separadas com linha de auditoria; gates medidos na onda: unit+features 199 arquivos / 2400
   testes, suíte completa 220 / 2561, G4 21 / 161 na 5433, G0 1140 módulos / 4833 dependências com allow-list
@@ -75,7 +95,13 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   onda indicada, mais **DEC-221** (regime de execução) e **DEC-222** (moeda não aceita saldo negativo no
   ajuste do painel), as duas abertas 2026-10-22, mais **DEC-223** (a data migration do vocabulário de critério troca
   `minHours` por `weeklyHours` por EDIÇÃO do Json, não por reconstrução do objeto; catálogo das 5432 medido: duas
-  linhas `{"minHours": 10}` sem janela), aberta 2026-10-23 na V8-6; próxima livre **DEC-224**). **Regime (DEC-221):** uma onda por vez, autorizada pelo orquestrador do thread
+  linhas `{"minHours": 10}` sem janela), aberta 2026-10-23 na V8-6; mais **DEC-224** (o e2e do quadro lê a
+  identidade do coordenador de `/api/auth/session`, com cache por contexto de request, em lugar do
+  `COORDENADOR_ID = 2` da instância do dono) e **DEC-225** (a asserção de altura do quadro compara dois estados
+  assentados do mesmo quadro, não um teto absoluto), as duas abertas e executadas na V8-7; mais **DEC-226** (os
+  capítulos técnicos seguem dizendo "distintivo" enquanto a tela diz "troféu": a correspondência foi declarada no
+  capítulo 9 em vez de reescrever dez capítulos; renomear é decisão do dono no fechamento), aberta 2026-10-23;
+  próxima livre **DEC-227**). **Regime (DEC-221):** uma onda por vez, autorizada pelo orquestrador do thread
   — sem espera de ordem explícita a partir da V8-1; pare e reporte no fim de cada onda; commit
   `plan-v8 <ONDA>: …` com o `STATE.json` atualizado no mesmo commit; durante o plano a
   migration é escrita e aplicada **só na 5433** (deploy, roundtrips G4 e e2e da worktree rodam
@@ -89,6 +115,49 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   do painel sobre as duas trilhas, cada ajuste com linha de `history`) **respondidas pelo
   dono em 2026-10-22**; calibrações adiadas ASK-V8-21/22 (constantes de XP e umbrais de
   elo, depois do primeiro ano real).
+- **A V8-7 entregou (2026-10-23):** as trilhas e os troféus na tela, com o número vindo do servidor. Regras e
+  ports de leitura em `backend/modules/gamification/`: `application/ports/monthly-ranking.port.ts` +
+  `infrastructure/repositories/prisma-monthly-ranking.port.ts` (`users` com `points`/`coins`/`xp` — sem
+  `completedTasks` nem `elo`; `task_user_progress.groupBy` por `userId`; `tasks.groupBy` por `assignedTo` com
+  `assignedTo: { not: null }`, `isGlobal: false` e `taskVisibility: { not: "public" }`; `user_badges.groupBy`
+  contando total e equipados), `list-monthly-ranking.use-case.ts` (janela do mês do `now`, `rankSeasonStandings`
+  reaproveitado, elo derivado por `eloForSeasonXp`), `read-season-ledger.use-case.ts` (livro do último ano
+  fechado), `read-user-cycle-history.use-case.ts` (meses e temporadas fechadas + `championYears` pela `position` 1)
+  e `list-user-trophies.use-case.ts` (conquista × catálogo, efeitos por `readTrophyEffects`, linha sem catálogo
+  descartada). Rotas: `app/api/gamification/ranking`, `app/api/gamification/season-book`,
+  `app/api/users/[id]/gamification/history` e o GET em `app/api/users/[id]/trophies` (leitura aberta; as quatro
+  rotas recusam 401 e 400 **antes** de tocar qualquer port). Telas: `components/ui/season-card.tsx`,
+  `components/ui/user-trophies.tsx` (com `UserTrophiesChip`), `components/ui/cycle-history.tsx`, quadro reescrito
+  (`app/(dashboard)/dashboard/leaderboard/page.tsx`: "Sua posição", campeão do mês com capa, 2º/3º, Classificação
+  completa a partir do 4º, livro-caixa; sem `.sort(`) e perfil reescrito (`app/(dashboard)/dashboard/profile/page.tsx`:
+  três cifras, `SeasonCard`, prateleira com `canEquip`, histórico dos ciclos; sem o fact "Posição" nem o fetch de
+  ranking). `components/ui/user-badges.tsx` foi apagada; `user-profile-view.tsx` e `user-search.tsx` consomem
+  `UserTrophies`/`UserTrophiesChip`. Guardas: `tests/unit/domain/gamification/gamification-vocabulary.test.ts` (12)
+  e `trophy-window-guard.test.ts` (16, quatro contas), `tests/integration/monthly-ranking-roundtrip.test.ts` (5).
+- **Oito decisões de execução da V8-7:** (1) A tela de conquistas estava **VAZIA** por um motivo de camada:
+  `toUserBadge` não inclui o badge, `user_badges.badge` é `Cascade` (órfão não existe no banco) e o componente
+  filtrava linha sem catálogo — sobrava nada. O conserto é `ListUserTrophiesUseCase` juntando
+  `UserBadgePort.findByUserId` + `BadgeCatalogPort.findAll`, sem tocar o contrato aberto `GET /api/user-badges`.
+  (2) Uma superficie por leitura: `user-badges.tsx` saiu (nenhum importador vivo; `UserBadgesCard` era código
+  morto) e a guarda fecha a volta das frases "Gerenciar Badges"/"Badge ativo". O vocabulário novo é de **tela**:
+  aba, componente, API e tabela continuam `badges`/`BadgesAPI`/`value="badges"`. (3) O elo do quadro é derivado
+  do XP e isso foi provado com dado do banco: a pessoa do roundtrip tem a **coluna** `users.elo` em DIAMANTE com
+  `xp = 0`, e a linha do quadro diz BRONZE — ler a coluna mostraria um degrau que não casa com os slots que a
+  escada abre (DEC-217). O elo do livro-caixa é outro: o degrau fotografado no fechamento, lido como foi gravado.
+  (4) O lote do quadro é a **quarta conta de tarefa** da casa (fechamento mensal, revisão semanal de XP, critério
+  de troféu, ranking). `trophy-window-guard.test.ts` confere os quatro adaptadores letra a letra, aceitando só o
+  recorte do lote (`by: ["assignedTo"]` + `assignedTo: { not: null }` no lugar de `assignedTo: userId` — recorte
+  diferente, mesma população), e o roundtrip conferiu o **número** na 5433, pessoa por pessoa, contra
+  `UserStatsPort.countTasksCompletedSince` na mesma janela; a tarefa pública atribuída com linha de progresso conta
+  UMA vez. (5) Quem ordena é o domínio: a tela fazia `[...users].sort((l, r) => r.points - l.points)` — uma
+  segunda régua na UI, sem desempate e sem tarefas do mês — e a guarda confere que não existe `.sort(` na página.
+  (6) Ordem de recusa medida: 401 antes de qualquer port, 400 `"Usuario invalido"` antes de qualquer port,
+  VOLUNTARIO com leitura aberta de histórico e troféus de outra pessoa, e `GET /api/users/[id]/gamification`
+  continuando self OU `MANAGE_USERS` (saldo vivo é restrito, livro é aberto). (7) O campeão do perfil é
+  reconhecido pela `position` 1 do livro (`championYears`), não pelo nome na tela;
+  `SEASON_CHAMPION_BADGE_NAME` só marca o card correspondente. (8) Os capítulos técnicos de `docs/src` seguem
+  dizendo "distintivo" (DEC-226): a correspondência com "troféu" da interface foi declarada no começo do
+  capítulo 9 em vez de reescrita em dez capítulos.
 - **A V8-6 entregou (2026-10-23):** o elo, o equip e o motor novo. Regras puras em
   `backend/domain/gamification/elo-rules.ts` (`ELO_XP_THRESHOLDS` 0/400/900/1500/2400/3600,
   `ELO_TROPHY_SLOTS` 0/1/2/2/3/3, `FIRST_SEASON_ELO`, `seasonClosingEloForXp`, `trophySlotMessage`),
@@ -619,11 +688,13 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
    plan-v8 (gamificação remodelada, abertas na V8-0 em 2026-10-22: quatro trilhas — pontos
    mensais, XP/elo de temporada anual, moeda vitalícia, troféus equipáveis; mais **DEC-221** (regime de
    execução do plano) e **DEC-222** (ajuste de moeda não aceita saldo negativo), as duas abertas em
-   2026-10-22; mais **DEC-223** (data migration do vocabulário de critério, aberta 2026-10-23 na V8-6); ver o bloco
-   "plan-v8" abaixo)**. O V4-4 ia usar DEC-61..64 e colidiu; os 28 comentários de código foram
-  renumerados. **Antes de abrir decisão nova, `grep`
-   os SETE `STATE.json` (clean-arch, plan-v3, plan-v4, plan-v5, plan-v6, plan-v7, plan-v8) — a nota antiga que dizia "três"
-   (e depois "cinco") está velha. Próxima livre: DEC-224.**
+    2026-10-22; mais **DEC-223** (data migration do vocabulário de critério, aberta 2026-10-23 na V8-6); mais **DEC-224/225**
+    (e2e do quadro: identidade lida da sessão; altura comparada entre dois estados assentados), abertas e executadas
+    na V8-7, e **DEC-226** (vocabulário "distintivo" nos capítulos técnicos vs "troféu" na tela), aberta 2026-10-23; ver o bloco
+    "plan-v8" abaixo)**. O V4-4 ia usar DEC-61..64 e colidiu; os 28 comentários de código foram
+   renumerados. **Antes de abrir decisão nova, `grep`
+    os SETE `STATE.json` (clean-arch, plan-v3, plan-v4, plan-v5, plan-v6, plan-v7, plan-v8) — a nota antiga que dizia "três"
+    (e depois "cinco") está velha. Próxima livre: DEC-227.**
 - **Subtask (V4-4, DEC-78..83 → regra atual = DEC-97/98/189):** tabela `task_subtasks` (sem FK para
   `users` — subtask não tem
   responsável próprio), base gravada em `tasks.points` = `10 + 5·n` (DEC-97) e **cada subtask CONCLUÍDA
@@ -958,6 +1029,30 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   `baseURL: http://localhost:3001` (o compose do repo serve em 3000, e a suíte de integração
   precisa do banco). O spec do quadro cria e apaga as próprias tarefas — depois de rodar, confira
   `select count(*) from tasks where title like 'E2E%'` na base (tem que dar 0).
+- **O e2e da worktree não pode reusar o dev server do dono (medido 2026-10-23, V8-7):** na máquina
+  o `:3001` é o `next dev` do checkout do dono, rodando OUTRO código, e o `webServer` do
+  `playwright.config.ts` tem `reuseExistingServer: true` — apontar o spec ali mediria a árvore errada
+  e não diria nada. O que fecha: subir o dev server da própria worktree numa porta livre (a onda usou
+  3002) com `DATABASE_URL` na 5433, e um config Playwright temporário com `baseURL` nessa porta
+  (`--config`), apagado depois da medição. O e2e da worktree roda contra a 5433 (é a base do plano).
+- **Identidade de usuário no e2e: ler da sessão, não escrever no spec (DEC-224, 2026-10-23):**
+  `COORDENADOR_ID = 2` era o id do coordenador na 5432 do dono. Na 5433 o coordenador semeado tem outro
+  id e os roundtrips G4 criem/apagam pessoas e movem ids, então o primeiro teste do quadro morria em
+  `GET /api/users/2` com 404 e o spec serial não chegava aos outros sete. `helpers.sessionUserId(request)`
+  lê `/api/auth/session`; o cache precisa ser **por contexto de request** (um `Map` global serviu o id a
+  um teste que ainda não tinha sessão no próprio `request` e devolveu corpo sem usuário). Escrever o número
+  no spec é a mesma família do erro que a casa já registrou em `ASK-V4-33`: uma segunda fonte de verdade
+  para algo que o servidor devolve.
+- **Altura de página é leitura assíncrona (medido 2026-10-23, DEC-225):** a asserção `docHeight <
+  1,5 x viewport` do cenário AC-P3-06 media o quadro **sozinho** e parou de valer quando a página ganhou o
+  feed "Atividade recente" (V6-11k, que tem o próprio `max-h-80`): medido 1590 px com viewport de 720 px,
+  antes e depois de dobrar os cartões. Ler a página antes do feed assentar dava 1072 px — a divergência era
+  a leitura, não os cartões. O que prova a coluna limitada é a **diferença entre dois estados assentados do
+  mesmo quadro** (8 cartões × 16 cartões), não um teto absoluto nem o estado vazio.
+- **Apagar as tarefas do e2e não apaga o que elas creditaram (medido 2026-10-23):** o spec do quadro
+  cria tarefas `E2E%`, completa-as e a limpeza (`count(*) … 'E2E%'` = 0) confere as linhas. O prêmio do
+  catch-up fica em `users.points` e não sai junto. Confira o saldo do coordenador na base de teste e
+  restaure-o, senão o próximo lote começa com um placar que não é o dele.
 - **O spec do quadro é `mode: "serial"` e depende do estado do teste anterior (medido 2026-10-05):**
   o teste 3 ("leader approves") só acha o fixture porque o **teste 2** o moveu para `Em Revisão` —
   rodar `-g "leader approves"` sozinho falha na linha 181 (`element(s) not found`) e isso **não é

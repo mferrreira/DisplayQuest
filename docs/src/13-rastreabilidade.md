@@ -40,7 +40,7 @@ enunciados na forma de condição observável.
 
 ## Inventário de rotas
 
-As setenta e sete rotas estão agrupadas por área. Cada grupo indica o verbo HTTP principal
+As oitenta rotas estão agrupadas por área. Cada grupo indica o verbo HTTP principal
 e o nível de autorização aplicado.
 
 | Grupo | Rotas | Autorização |
@@ -49,14 +49,14 @@ e o nível de autorização aplicado.
 | Saúde | `/health` | Pública |
 | Agenda | `/cron/status` | Autenticada |
 | Contas | `/users`, `/users/[id]`, `/users/approve`, `/users/[id]/roles`, `/users/[id]/status`, `/users/[id]/points`, `/users/[id]/deduct-hours` | Permissão de gestão de usuários, ou autoria |
-| Perfis | `/users/[id]/profile`, `/users/profiles`, `/users/[id]/avatar`, `/users/avatar`, `/users/statistics`, `/users/leaderboard`, `/users/[id]/gamification`, `/users/[id]/trophies` | Autenticada, ou autoria |
+| Perfis | `/users/[id]/profile`, `/users/profiles`, `/users/[id]/avatar`, `/users/avatar`, `/users/statistics`, `/users/leaderboard`, `/users/[id]/gamification`, `/users/[id]/gamification/history`, `/users/[id]/trophies` | Autenticada, ou autoria |
 | Projetos | `/projects`, `/projects/[id]`, `/projects/stats`, `/projects/[id]/members`, `/projects/[id]/volunteers`, `/projects/[id]/hours`, `/projects/[id]/hours-history`, `/projects/[id]/weekly-hours` | Permissão de gestão de projetos, ou participação |
 | Tarefas | `/tasks`, `/tasks/[id]`, `/tasks/[id]/approve`, `/tasks/[id]/reject`, `/tasks/global-progress` | Permissão de gestão de tarefas, ou autoria |
 | Sessões | `/work-sessions`, `/work-sessions/[id]` | Autoria, ou permissão de gestão de sessões |
 | Registros e relatórios | `/daily_logs`, `/daily_logs/[id]`, `/weekly-reports`, `/weekly-reports/[id]`, `/weekly-reports/bulk`, `/weekly-reports/generate`, `/weekly-hours-history`, `/project-reports`, `/project-reports/[id]`, `/project-reports/[id]/aggregate`, `/project-reports/[id]/export.csv` | Permissão de relatórios, ou autoria |
 | Arquivos | `/project-reports/[id]/attachments`, `/attachments/[id]`, `/report-files/[...path]`, `/uploads/avatars/[userId]/[filename]` | Regra de leitura do relatório; avatar por autoria |
 | Laboratório | `/responsibilities`, `/responsibilities/[id]`, `/laboratory-schedule`, `/laboratory-schedule/[id]`, `/schedules`, `/schedules/[id]`, `/schedules/bulk`, `/lab-events`, `/lab-events/[id]`, `/lab-events/upcoming`, `/lab-notices`, `/lab-notices/[id]`, `/issues`, `/issues/[id]`, `/issues/[id]/assign`, `/issues/[id]/resolve`, `/issues/[id]/status` | Leitura autenticada; escrita conforme a permissão da área |
-| Engajamento | `/badges`, `/badges/[id]`, `/user-badges`, `/user-badges/[userId]/[badgeId]`, `/rewards`, `/rewards/[id]`, `/purchases`, `/purchases/[id]` | Permissão de recompensas, ou autoria |
+| Engajamento | `/badges`, `/badges/[id]`, `/user-badges`, `/user-badges/[userId]/[badgeId]`, `/gamification/ranking`, `/gamification/season-book`, `/rewards`, `/rewards/[id]`, `/purchases`, `/purchases/[id]` | Escrita: permissão de recompensas, ou autoria. Leitura do quadro do mês e do livro-caixa: qualquer autenticado |
 | Comunicação | `/notifications`, `/notifications/[id]`, `/notifications/mark-all-read` | Autoria |
 
 ## Páginas da interface

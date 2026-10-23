@@ -132,7 +132,22 @@ describe("domain/gamification: progressão da temporada (DEC-212/214/215/217)", 
       coins: 30,
       elo: "OURO",
       trophySlots: 2,
+      // V8-7 (DEC-220): o cartão da temporada mostra o próximo degrau com o XP que falta — o número
+      // sai da escada, não da tela.
+      nextElo: "PLATINA",
+      xpToNextElo: 560,
     });
+  });
+
+  it("no topo da escada não há próximo degrau, e a tela não inventa progresso", () => {
+    const top = computeSeasonProgression({ userId: 9, points: 0, xp: 3600, coins: 0 });
+    expect(top.elo).toBe("DESAFIANTE");
+    expect(top.nextElo).toBeNull();
+    expect(top.xpToNextElo).toBeNull();
+
+    const justBelow = computeSeasonProgression({ userId: 9, points: 0, xp: 3599, coins: 0 });
+    expect(justBelow.nextElo).toBe("DESAFIANTE");
+    expect(justBelow.xpToNextElo).toBe(1);
   });
 
   it("placar do mês não move o elo: quem decide a escada é o XP da temporada", () => {

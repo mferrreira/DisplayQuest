@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Search, User, X } from "lucide-react"
 import { User as UserType } from "@/contexts/types"
 import { UserProfilesAPI } from "@/contexts/api-client"
-import { UserBadges } from "@/components/ui/user-badges"
+import { UserTrophiesChip } from "@/components/ui/user-trophies"
 
 interface UserSearchProps {
   onUserSelect: (user: UserType) => void
@@ -165,7 +165,7 @@ export function UserSearch({ onUserSelect, placeholder = "Buscar usuários..." }
                   
 
                   <div className="mt-2">
-                    <UserBadges userId={user.id} limit={3} />
+                    <UserTrophiesChip userId={user.id} limit={3} />
                   </div>
                 </div>
               ))}

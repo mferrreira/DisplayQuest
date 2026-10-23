@@ -73,7 +73,7 @@ natureza: autorização é uma função das matrizes do domínio, não um fluxo 
 | `work-execution` | Sessões de trabalho, registros diários e relatórios |
 | `lab-operations` | Plantão, grades, eventos, avisos e issues |
 | `store` | Catálogo de recompensas, compras e fluxo de resgate |
-| `gamification` | Pontos, experiência, níveis, distintivos e ranking |
+| `gamification` | As quatro trilhas — placar do mês, XP e degrau da temporada, moeda vitalícia e troféus equipáveis — com o quadro do mês e o livro-caixa da temporada |
 | `reporting` | Relatórios de projeto e anexos |
 | `notifications` | Registro e entrega de notificações internas |
 

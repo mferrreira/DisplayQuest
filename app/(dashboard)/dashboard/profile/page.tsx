@@ -30,18 +30,20 @@ import { Progress } from "@/components/ui/progress"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { UserBadges } from "@/components/ui/user-badges"
+import { SeasonCard } from "@/components/ui/season-card"
+import { UserTrophies } from "@/components/ui/user-trophies"
+import { CycleHistory } from "@/components/ui/cycle-history"
+import { GamificationAPI } from "@/contexts/api-client"
 import { TimerCard } from "@/components/ui/timer-card"
 import { getRoleDisplayName } from "@/lib/utils/access-control"
 import { useWorkSessions } from "@/hooks/use-work-sessions"
 import {
-  ArrowRight,
   Calendar,
   CalendarDays,
   Settings,
   User as UserIcon,
 } from "lucide-react"
-import type { User } from "@/contexts/types"
+import type { User, UserCycleHistory } from "@/contexts/types"
 
 function Fact({
   label,
@@ -76,6 +78,9 @@ function ProfilePageContent() {
   const [viewingUser, setViewingUser] = useState<User | null>(null)
   const [showProfileForm, setShowProfileForm] = useState(false)
   const [activeTab, setActiveTab] = useState("activity")
+  // V8-7 (DEC-220): os livros da pessoa. Uma busca só, lida pela tela e distribuída para a prateleira
+  // (os anos de campeã) e para o histórico (meses e temporadas).
+  const [cycleHistory, setCycleHistory] = useState<UserCycleHistory | null>(null)
 
   const today = new Date()
 
@@ -109,6 +114,21 @@ function ProfilePageContent() {
       getWeeklyHours(user.id, monday.toISOString(), sunday.toISOString()).then(setWeeklyHours)
     }
   }, [user, sessions, getWeeklyHours, monday, sunday])
+
+  useEffect(() => {
+    if (!user) return
+    let alive = true
+    GamificationAPI.getCycleHistory(user.id)
+      .then((response) => {
+        if (alive) setCycleHistory(response.history ?? null)
+      })
+      .catch(() => {
+        if (alive) setCycleHistory(null)
+      })
+    return () => {
+      alive = false
+    }
+  }, [user])
 
   const handleBackToProfile = () => {
     setViewingUser(null)
@@ -166,9 +186,6 @@ function ProfilePageContent() {
   const myProjects = projects.filter(
     (project) => project.leaderId === user.id || project.members?.some((member) => member.userId === user.id),
   )
-  const rankedUsers = [...users].sort((left, right) => (right.points ?? 0) - (left.points ?? 0))
-  const myRank = rankedUsers.findIndex((candidate) => candidate.id === user.id) + 1
-
   const goalPercent = metaSemanal > 0 ? Math.min(100, Math.round((progressoSemanal / metaSemanal) * 100)) : 0
   const goalRemaining = metaSemanal - progressoSemanal
   const goalHint =
@@ -230,26 +247,18 @@ function ProfilePageContent() {
           </section>
 
           {/* Fatos — rotulo quieto + algarismo grande sobre a regua, sem caixa. */}
-          <dl aria-label="Resumo do perfil" className="grid grid-cols-2 gap-x-8 gap-y-6 sm:grid-cols-4">
-            <Fact label="Pontos" value={user.points} hint="acumulados" />
-            <Fact label="Tarefas" value={user.completedTasks} hint="concluídas" />
+          <dl aria-label="Resumo do perfil" className="grid grid-cols-2 gap-x-8 gap-y-6 sm:grid-cols-3">
+            <Fact label="Pontos do mês" value={user.points} hint="o placar fecha no fim do mês" />
+            <Fact label="Tarefas" value={user.completedTasks} hint="concluídas na vida" />
             <Fact
               label="Horas na semana"
               value={`${progressoSemanal.toFixed(1)} h`}
               hint={metaSemanal > 0 ? `meta de ${metaSemanal} h` : "sem meta"}
             />
-            <Fact
-              label="Posição"
-              value={myRank > 0 ? `${myRank}º` : "—"}
-              hint={`de ${rankedUsers.length} pessoas`}
-              action={
-                <Link href="/dashboard/leaderboard" className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
-                  Ver ranking
-                  <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-                </Link>
-              }
-            />
           </dl>
+
+          {/* Trilhas da temporada (V8-7, DEC-220): XP, elo, moedas e slots vêm do read model. */}
+          <SeasonCard userId={user.id} />
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
             <TabsList className="grid w-full grid-cols-3">
@@ -371,8 +380,18 @@ function ProfilePageContent() {
             </TabsContent>
           </Tabs>
 
+          {/* Troféus (V8-7, DEC-220): a prateleira é desta pessoa, então ela equip. Os anos de campeã
+              vêm do livro-caixa, não de um nome conferido na tela. */}
           <div className="border-t border-border pt-6">
-            <UserBadges userId={user.id} limit={8} />
+            <UserTrophies
+              userId={user.id}
+              canEquip
+              championYears={cycleHistory?.championYears ?? []}
+            />
+          </div>
+
+          <div className="border-t border-border pt-6">
+            <CycleHistory history={cycleHistory} />
           </div>
         </div>
       </main>

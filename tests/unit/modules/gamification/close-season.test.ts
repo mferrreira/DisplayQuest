@@ -148,9 +148,30 @@ function fakeCycle(world: FakeWorld): SeasonCyclePort {
           points: snapshot.points,
           completedTasks: snapshot.completedTasks,
           xp: snapshot.xp,
+          // V8-7 (DEC-220): o livro devolve o que foi escrito — o degrau e a posição fotografados.
+          elo: snapshot.elo,
+          position: snapshot.position,
         })
       }
       return standings
+    },
+    // V8-7 (DEC-220): as duas leituras do livro que a tela de histórico e o livro-caixa usam.
+    async listSeasonHistoryForUser(userId) {
+      return [...world.book.values()]
+        .filter((snapshot) => snapshot.userId === userId)
+        .sort((left, right) => right.year - left.year)
+        .map(({ year, points, completedTasks, xp, elo, position }) => ({
+          year,
+          points,
+          completedTasks,
+          xp,
+          elo,
+          position,
+        }));
+    },
+    async latestClosedSeasonYear() {
+      const years = [...world.book.values()].map((snapshot) => snapshot.year);
+      return years.length === 0 ? null : Math.max(...years);
     },
   };
 }

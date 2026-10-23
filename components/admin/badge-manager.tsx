@@ -167,7 +167,7 @@ export function BadgeManager() {
   }
 
   const handleDelete = async (badgeId: number) => {
-    if (!confirm('Tem certeza que deseja excluir este badge?')) return
+    if (!confirm('Tem certeza que deseja excluir este troféu?')) return
     
     try {
       await BadgesAPI.delete(badgeId)
@@ -270,20 +270,23 @@ export function BadgeManager() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-foreground">Gerenciar Badges</h2>
-          <p className="text-muted-foreground">Crie e gerencie badges para motivar os usuários</p>
+          {/* V8-7 (DEC-220): o vocabulário de tela é troféu (MODELO §1). O código continua
+              falando `badge` porque a tabela é `badges`; trocar os dois juntos é a mudança de schema
+              que a onda não pediu. */}
+          <h2 className="text-2xl font-bold text-foreground">Gerenciar Troféus</h2>
+          <p className="text-muted-foreground">Crie e gerencie troféus para motivar os usuários</p>
         </div>
         <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
           <DialogTrigger asChild>
             <Button onClick={() => { setEditingBadge(null); resetForm(); }}>
               <Plus className="h-4 w-4 mr-2" />
-              Novo Badge
+              Novo troféu
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto sm:overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
-                {editingBadge ? 'Editar Badge' : 'Criar Novo Badge'}
+                {editingBadge ? 'Editar troféu' : 'Criar novo troféu'}
               </DialogTitle>
             </DialogHeader>
             
@@ -294,7 +297,7 @@ export function BadgeManager() {
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="name">Nome do Badge</Label>
+                    <Label htmlFor="name">Nome do troféu</Label>
                     <Input
                       id="name"
                       value={formData.name}
@@ -328,7 +331,7 @@ export function BadgeManager() {
                     id="description"
                     value={formData.description}
                     onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                    placeholder="Descreva o que este badge representa..."
+                    placeholder="Descreva o que este troféu representa..."
                     rows={3}
                     required
                   />
@@ -361,7 +364,7 @@ export function BadgeManager() {
                     checked={formData.isActive}
                     onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isActive: checked }))}
                   />
-                  <Label htmlFor="isActive">Badge ativo</Label>
+                  <Label htmlFor="isActive">Troféu ativo</Label>
                 </div>
               </div>
 
@@ -525,7 +528,7 @@ export function BadgeManager() {
                   Cancelar
                 </Button>
                 <Button type="submit">
-                  {editingBadge ? 'Atualizar' : 'Criar'} Badge
+                  {editingBadge ? 'Atualizar troféu' : 'Criar troféu'}
                 </Button>
               </div>
             </form>

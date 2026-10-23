@@ -23,7 +23,7 @@ import {
   Activity,
   Shield,
   Calendar,
-  Award,
+  Trophy,
   FileText,
   Plus,
   Search,
@@ -427,9 +427,12 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, onSessionsC
             <Bell className="h-4 w-4" />
             <span className="hidden sm:inline">Notificações</span>
           </TabsTrigger>
+          {/* V8-7 (DEC-220): a aba diz o nome do produto. O valor interno continua "badges" e o
+              componente continua se chamando BadgeManager — a tabela e `badges`; o vocabulario novo
+              e de tela (MODELO §1), nao de schema. */}
           <TabsTrigger value="badges" className="flex items-center gap-2">
-            <Award className="h-4 w-4" />
-            <span className="hidden sm:inline">Badges</span>
+            <Trophy className="h-4 w-4" />
+            <span className="hidden sm:inline">Troféus</span>
           </TabsTrigger>
         </TabsList>
 

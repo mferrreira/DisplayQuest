@@ -12,7 +12,7 @@ Esta é a lista completa das telas do sistema, com o endereço de cada uma e que
 | Relatórios | `/dashboard/weekly-reports` | relatórios por usuário, relatórios de projeto e atestados | Coordenador, Gerente, Laboratorista |
 | Painel Administrativo | `/dashboard/admin` | oito abas de gestão, incluindo a aba **Voluntários** | Coordenador e Gerente; o Gerente de Projeto só a aba **Voluntários** |
 | Loja | `/dashboard/loja` | recompensas disponíveis e minhas compras; abas **Aprovações** e **Gerenciar** para quem gerencia | todas as funções; as abas de gestão para Coordenador, Gerente e Laboratorista |
-| Ranking | `/dashboard/leaderboard` | quadro de liderança e classificação por tarefas e pontos | todas as funções |
+| Ranking | `/dashboard/leaderboard` | quadro do mês: liderança, pontos, tarefas do mês, elo, troféus e moedas — e o livro-caixa da temporada já fechada | todas as funções |
 | Perfil | `/dashboard/profile` | capa e avatar do **Meu Perfil**, Atividade, Logs Diários, Configurações | todas as funções |
 
 ## Controles que não são telas

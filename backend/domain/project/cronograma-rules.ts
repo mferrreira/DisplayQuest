@@ -23,7 +23,7 @@
  * Aqui só existe o que a grade precisa para existir: mês, intervalo, período derivado, ordem.
  */
 import { ValidationError } from "../errors";
-import { civilDayOfDate } from "../time/civil-day";
+import { civilDayOfDate, civilMonthLabel, isCivilMonthKey } from "../time/civil-day";
 
 /** Vocabulário de status da atividade (DEC-76: duas fases, solicitar e aprovar). */
 export const ACTIVITY_STATUSES = ["OPEN", "COMPLETION_REQUESTED", "DONE"] as const;
@@ -40,29 +40,16 @@ export const ACTIVITY_STATUS_LABELS: Record<ActivityStatus, string> = {
  * Rótulo de coluna da grade: `2026-03` é `mar/2026`. Existe no domínio porque é o rótulo do
  * token, não uma formatação de tela — e formatar mês com `new Date(...).toLocaleDateString` é o
  * erro que a DEC-132 fechou (`new Date("2026-03")` é 1º de março UTC e vira fevereiro no fuso).
+ *
+ * V8-7 (DEC-220): a tabela de abreviações e o rótulo desceram para `time/civil-day.ts`, porque o
+ * histórico mensal do placar passou a mostrar o MESMO mês. A validação e a frase de recusa continuam
+ * aqui, que é onde o mês do cronograma tem vocabulário próprio (`ACTIVITY_MONTH_MESSAGE`).
  */
-export const MONTH_ABBREVIATIONS = [
-  "jan",
-  "fev",
-  "mar",
-  "abr",
-  "mai",
-  "jun",
-  "jul",
-  "ago",
-  "set",
-  "out",
-  "nov",
-  "dez",
-] as const;
-
 export function monthColumnLabel(monthKey: string): string {
-  const month = Number(monthKey.slice(5, 7));
-  const year = monthKey.slice(0, 4);
-  if (!Number.isInteger(month) || month < 1 || month > 12) {
+  if (!isCivilMonthKey(monthKey)) {
     throw new ValidationError(ACTIVITY_MONTH_MESSAGE);
   }
-  return `${MONTH_ABBREVIATIONS[month - 1]}/${year}`;
+  return civilMonthLabel(monthKey);
 }
 
 /** A coluna nasce aberta; fechar é o que o fluxo do V5-7 faz. */

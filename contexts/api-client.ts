@@ -1,5 +1,14 @@
 // Cliente de API para fazer chamadas aos endpoints
 
+import type {
+  MonthlyRanking,
+  SeasonBook,
+  SeasonProgression,
+  TrophyEquipOutcome,
+  UserCycleHistory,
+  UserTrophyEntry,
+} from "@/contexts/types"
+
 // Função genérica para fazer requisições
 export async function fetchAPI<T>(url: string, options: RequestInit = {}): Promise<T> {
   if (process.env.NODE_ENV !== "production") {
@@ -613,6 +622,40 @@ export const BadgesAPI = {
       : `/api/user-badges?userId=${userId}`
     return fetchAPI<{ badges: any[]; recentBadges: any[]; count: number }>(url)
   },
+}
+
+/**
+ * API da gamificação — plan-v8 V8-7 (DEC-220). As quatro trilhas em leitura e o equip de troféu.
+ *
+ * O cliente existe porque as telas da onda consomem estas rotas; a rota de equip existia desde a V8-6
+ * sem chamador de tela (decisão registrada na própria rota), e o cliente não entrava antes de haver
+ * quem o chamasse (DEC-211). Os tipos de retorno são os de `contexts/types.ts`, que tiram o token do
+ * elo do domínio em vez de copiá-lo.
+ */
+export const GamificationAPI = {
+  /** Trilhas da pessoa: placar do mês, XP/elo da temporada, moeda e slots de troféu. */
+  getProgression: (userId: number) =>
+    fetchAPI<{ progression: SeasonProgression }>(`/api/users/${userId}/gamification`),
+
+  /** Quadro do mês em curso, já na ordem da régua. */
+  getRanking: () => fetchAPI<{ ranking: MonthlyRanking }>("/api/gamification/ranking"),
+
+  /** Livro-caixa da última temporada fechada. */
+  getSeasonBook: () => fetchAPI<{ ledger: SeasonBook }>("/api/gamification/season-book"),
+
+  /** Meses e temporadas fechados da pessoa, e os anos em que foi campeã. */
+  getCycleHistory: (userId: number) =>
+    fetchAPI<{ history: UserCycleHistory }>(`/api/users/${userId}/gamification/history`),
+
+  /** Equipar/desequipar um troféu conquistado. A autoridade é da própria pessoa (DEC-218). */
+  changeTrophyEquip: (userId: number, badgeId: number, action: "equip" | "unequip") =>
+    fetchAPI<{ outcome: TrophyEquipOutcome }>(`/api/users/${userId}/trophies`, {
+      method: "PATCH",
+      body: JSON.stringify({ badgeId, action }),
+    }),
+
+  /** A prateleira do perfil: conquistas com nome, efeito do catálogo e estado de equip. */
+  getTrophies: (userId: number) => fetchAPI<{ trophies: UserTrophyEntry[] }>(`/api/users/${userId}/trophies`),
 }
 
 // API de Perfis de Usuário

@@ -80,6 +80,42 @@ export interface SeasonCyclePort {
    */
   closeSeason(write: SeasonSnapshotWrite): Promise<boolean>;
 
-  /** O livro-caixa do ano lido de volta: é dele que sai o campeão, não da memória da run. */
-  listSeasonStandings(year: SeasonKey): Promise<SeasonStanding[]>;
+  /**
+   * O livro-caixa do ano lido de volta: é dele que sai o campeão, não da memória da run.
+   *
+   * V8-7 (DEC-220) acrescenta o que o livro já tinha escrito e a tela agora mostra: o degrau
+   * fotografado (`elo`, nulo nas linhas da V8-4) e a posição que a própria rotina escreveu. Depois da
+   * virada o XP da pessoa está zerado, então a posição e o elo do ano fechado SÓ existem aqui — a
+   * régua viva não os reconstitui, e é por isso que a tela do livro-caixa lê a coluna `position` em
+   * vez de re-aritmética-la.
+   */
+  listSeasonStandings(year: SeasonKey): Promise<ClosedSeasonStanding[]>;
+
+  /**
+   * V8-7 (DEC-220): o livro-caixa DA PESSOA, temporada por temporada, mais recente primeiro. É o que
+   * o perfil mostra e é dele que sai o destaque de campeão (`position === 1` do último fechamento).
+   */
+  listSeasonHistoryForUser(userId: number): Promise<SeasonHistoryRow[]>;
+
+  /**
+   * V8-7 (DEC-220): o último ano que tem linha no livro, ou `null` quando nenhuma temporada fechou
+   * ainda. O quadro mostra o livro do último fechamento — não um ano inventado a partir do relógio
+   * (o ano em curso nunca fecha, do mesmo modo que o mês em curso nunca tem snapshot).
+   */
+  latestClosedSeasonYear(): Promise<SeasonKey | null>;
+}
+
+/** A linha do livro, lida como ela foi escrita. */
+export interface ClosedSeasonStanding extends SeasonStanding {
+  elo: string | null;
+  position: number | null;
+}
+
+export interface SeasonHistoryRow {
+  year: SeasonKey;
+  points: number;
+  completedTasks: number;
+  xp: number;
+  elo: string | null;
+  position: number | null;
 }

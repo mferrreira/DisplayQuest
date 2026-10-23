@@ -91,6 +91,14 @@ export interface RankedSeasonStanding extends SeasonStanding {
 }
 
 /**
+ * O número do campeão na régua da temporada. Vive aqui porque a posição 1 é a definição do troféu
+ * (quem fecha o ano na frente recebe o CAMPEÃO) e porque a tela do perfil (V8-7) reconhece o campeão
+ * do livro pela MESMA constante — `position === 1` escrito em dois lugares é o modo de falha da
+ * DEC-90/96.
+ */
+export const SEASON_CHAMPION_POSITION = 1;
+
+/**
  * A régua de desempate da temporada (MODELO §3 para o ranking mensal e §4 para o campeão, a MESMA
  * ordem em os dois lugares — dois desempates diferentes fariam o campeão divergir do placar que a
  * pessoa vê). Pontos, tarefas e XP são decrescentes; `userId` crescente é o que fecha a ordem.

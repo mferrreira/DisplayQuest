@@ -23,11 +23,32 @@ const { gamification: gamificationModule } = getBackendComposition()
  * decide: a rota não tem como saber se o ator é a pessoa sem lê-lo. Nada sobre o troféu (se existe,
  * se está equipado, quantos há) é lido antes do gate rodar.
  *
- * Sem consumidor de tela nesta onda: a tela que equipa é a do perfil, e ela é a V8-7 (DEC-220). A
- * rota existe agora porque o comportamento do equipar é o da onda e é congelado nos testes de rota
- * (`trophy-equip-routes.test.ts`); o cliente não ganha método antes de existir quem o chame
- * (mesma disciplina da DEC-211 sobre campo dormente em trilha de wire).
+ * O GET da mesma rota (V8-7, DEC-220) é a leitura da prateleira: as conquistas com nome, descrição e
+ * efeito do catálogo, mais o estado de equip. É leitura aberta (a mesma decisão do dono para
+ * `GET /api/user-badges`: ver o perfil do outro inclui ver os troféus dele) e por isso não divide o
+ * gate do PATCH — quem olha não é quem move.
+ *
+ * A rota ficou sem chamador de tela na V8-6 (o comportamento do equipar é que era a onda, congelado em
+ * `trophy-equip-routes.test.ts`); a tela que equipa chegou na V8-7 com o cliente `GamificationAPI`.
  */
+export async function GET(_request: Request, context: { params: Promise<{ id: string }> }) {
+  try {
+    const auth = await requireApiActor()
+    if (auth.error) return auth.error
+
+    const params = await context.params
+    const userId = Number(params.id)
+    if (!Number.isInteger(userId) || userId <= 0) {
+      return NextResponse.json({ error: "Usuário inválido" }, { status: 400 })
+    }
+
+    const trophies = await gamificationModule.listUserTrophies({ userId })
+    return NextResponse.json({ trophies })
+  } catch (error) {
+    return routeErrorResponse(error, { fallback: "Erro ao buscar os troféus do usuário", exposeMessage: true })
+  }
+}
+
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const auth = await requireApiActor()

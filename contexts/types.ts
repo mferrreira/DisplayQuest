@@ -1,4 +1,6 @@
 // User types
+import type { EloTier, TrophyEffect } from "@/backend/domain"
+
 export type UserRole = 'COORDENADOR' | 'GERENTE' | 'LABORATORISTA' | 'PESQUISADOR' | 'GERENTE_PROJETO' | 'COLABORADOR' | 'VOLUNTARIO';
 
 export interface User {
@@ -658,4 +660,108 @@ export interface WorkSessionContextType {
   deleteSession: (id: number) => Promise<void>
   getActiveSession: (userId: number) => WorkSession | null
   getWeeklyHours: (userId: number, weekStart: string, weekEnd: string) => Promise<number>
+}
+
+/**
+ * plan-v8 V8-7 (DEC-220) — as leituras da gamificação que as telas de trilha consomem.
+ *
+ * O token do elo vem do domínio (`EloTier`), não de uma união copiada aqui: a escada é uma tabela só
+ * (DEC-217) e a lição da DEC-95/96 é que vocabulário duplicado em tela diverge do vocabulário que
+ * decide. Já o elo FOTOGRAFADO no livro-caixa é `string | null`: a linha pode dizer um valor que a
+ * escada de hoje não conhece (e o `eloForSeasonXp` da época era outro), então a leitura não reescreve
+ * o livro — a tela mostra o rótulo quando o token é da escada e um traço quando não é.
+ */
+export interface SeasonProgression {
+  userId: number
+  /** Placar do MÊS em curso. */
+  points: number
+  xp: number
+  coins: number
+  elo: EloTier
+  trophySlots: number
+  nextElo: EloTier | null
+  xpToNextElo: number | null
+}
+
+export interface MonthlyRankingRow {
+  /** Posição da régua do mês (pontos → tarefas → XP → userId). */
+  position: number
+  userId: number
+  name: string
+  avatar: string | null
+  bannerKey: string | null
+  roles: string[]
+  points: number
+  monthTasks: number
+  xp: number
+  coins: number
+  elo: EloTier
+  trophiesEquipped: number
+  trophiesTotal: number
+}
+
+export interface MonthlyRanking {
+  /** `YYYY-MM` do mês que o quadro mostra. */
+  month: string
+  rows: MonthlyRankingRow[]
+}
+
+export interface ClosedSeasonStanding {
+  userId: number
+  name: string
+  points: number
+  completedTasks: number
+  xp: number
+  elo: string | null
+  position: number | null
+}
+
+export interface SeasonBook {
+  year: number | null
+  standings: ClosedSeasonStanding[]
+}
+
+export interface MonthHistoryEntry {
+  month: string
+  points: number
+  completedTasks: number
+}
+
+export interface SeasonHistoryEntry {
+  year: number
+  points: number
+  completedTasks: number
+  xp: number
+  elo: string | null
+  position: number | null
+}
+
+export interface UserCycleHistory {
+  months: MonthHistoryEntry[]
+  seasons: SeasonHistoryEntry[]
+  championYears: number[]
+}
+
+export interface TrophyEquipOutcome {
+  userId: number
+  badgeId: number
+  action: "equip" | "unequip"
+  elo: string
+  slots: number
+  equippedBefore: number
+  equippedAfter: number
+  unchanged: boolean
+}
+
+/** Uma conquista da prateleira: o troféu do catálogo + o estado de equip da conquista. */
+export interface UserTrophyEntry {
+  /** O id da conquista (`user_badges.id`) — é sobre ele que o equip escreve. */
+  userBadgeId: number
+  badgeId: number
+  name: string
+  description: string
+  equipped: boolean
+  earnedAt: string | null
+  /** Verbos e tiers do catálogo. Os rótulos vêm do domínio (`TROPHY_EFFECT_LABELS`). */
+  effects: TrophyEffect[]
 }

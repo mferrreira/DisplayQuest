@@ -11,8 +11,8 @@ import {
   Home,
   Shield,
   ShoppingBag,
-  Trophy,
   User,
+  Zap,
   type LucideIcon,
 } from "lucide-react"
 import { hasFeatureAccess, type FeatureAccess } from "@/lib/auth/features"
@@ -73,7 +73,7 @@ const NAVIGATION_GROUPS: NavGroupDef[] = [
     items: [
       { href: "/dashboard/profile", label: "Perfil", icon: User, matchPrefix: true },
       { href: "/dashboard/loja", label: "Loja", icon: ShoppingBag, matchPrefix: true },
-      { href: "/dashboard/leaderboard", label: "Ranking", icon: Trophy, matchPrefix: true },
+      { href: "/dashboard/leaderboard", label: "Ranking", icon: Zap, matchPrefix: true },
     ],
   },
 ]

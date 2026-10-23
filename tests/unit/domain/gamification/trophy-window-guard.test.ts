@@ -1,19 +1,21 @@
 // @vitest-environment node
 /**
- * plan-v8 V8-6 (DEC-217/219) — guarda das janelas do troféu e das três contas de tarefa que as sustentam.
+ * plan-v8 V8-6 (DEC-217/219) e V8-7 (DEC-220) — guarda das janelas do troféu e das quatro contas de
+ * tarefa que as sustentam.
  *
  * Por que este arquivo existe: a janela do critério (`mes | temporada | vida`) é decidida no domínio,
- * mas a MÉTRICA que ela mede sai de três adaptadores diferentes, escritos em ondas diferentes:
+ * mas a MÉTRICA que ela mede sai de quatro adaptadores diferentes, escritos em ondas diferentes:
  *   - `prisma-monthly-points-cycle.port.ts` (V8-2) — o placar mensal e `month_history.completedTasks`;
  *   - `prisma-weekly-xp-review.port.ts` (V8-3) — a régua semanal de XP;
- *   - `prisma-user-stats.port.ts` → `countTasksCompletedSince` (V8-6) — o critério do troféu.
+ *   - `prisma-user-stats.port.ts` → `countTasksCompletedSince` (V8-6) — o critério do troféu;
+ *   - `prisma-monthly-ranking.port.ts` (V8-7) — a coluna "Tarefas (mês)" do quadro.
  *
- * As três contam a mesma população de tarefas com as MESMAS condições (as duas famílias que creditam
+ * As quatro contam a mesma população de tarefas com as MESMAS condições (as duas famílias que creditam
  * `users.completedTasks`, com o filtro de visibilidade medido em `complete-task.use-case.ts` e
  * `approve-task.use-case.ts`). Se uma delas escrever `taskVisibility` de um jeito próprio, o critério,
- * o placar e a revisão de XP passam a contar pessoas diferentes — e o `tsc` não vê: as três são `number`.
- * É o mesmo modo de falha que a DEC-90/96 (mock reimplementando regra) e a DEC-95/96 (vocabulário em
- * cópia), e por isso a fechadura é estrutural, lendo o código de produção.
+ * o placar, a revisão de XP e o quadro passam a contar pessoas diferentes — e o `tsc` não vê: todas são
+ * `number`. É o mesmo modo de falha que a DEC-90/96 (mock reimplementando regra) e a DEC-95/96
+ * (vocabulário em cópia), e por isso a fechadura é estrutural, lendo o código de produção.
  *
  * O que está congelado aqui:
  *   - o vocabulário das janelas e o default (`vida`), e que o vocabulário NÃO tem cópia na application
@@ -21,7 +23,8 @@
  *   - `trophyFactReadsFor` (a resposta do domínio a "que leitura eu pago?") conferida contra a
  *     composição real das métricas em `trophyMetricsForWindow` — para que as listas de leitura não
  *     virem uma tabela paralela;
- *   - as condições das três contas de tarefa, idênticas letra a letra;
+ *   - as condições das quatro contas de tarefa, idênticas letra a letra (a única diferença admitida é o
+ *     lote do quadro, que agrupa por dono em vez de filtrar por cadastro);
  *   - a soma da temporada lida pelo prefixo nomeado pelo domínio (`seasonMonthPrefix`), não por um
  *     `2026%` escrito à mão.
  *
@@ -52,6 +55,8 @@ function read(relativePath: string): string {
 const MONTHLY_PORT = "backend/modules/gamification/infrastructure/repositories/prisma-monthly-points-cycle.port.ts";
 const WEEKLY_PORT = "backend/modules/gamification/infrastructure/repositories/prisma-weekly-xp-review.port.ts";
 const STATS_PORT = "backend/modules/gamification/infrastructure/repositories/prisma-user-stats.port.ts";
+// V8-7 (DEC-220): o quadro do mês é a QUARTA conta da mesma população, contada em lote.
+const RANKING_PORT = "backend/modules/gamification/infrastructure/repositories/prisma-monthly-ranking.port.ts";
 const EVALUATE_USE_CASE = "backend/modules/gamification/application/use-cases/evaluate-user-badges.use-case.ts";
 const CONTRACTS = "backend/modules/gamification/application/contracts.ts";
 const BADGE_PANEL = "components/admin/badge-manager.tsx";
@@ -157,7 +162,7 @@ describe("as listas de leitura são a MESMA tabela das métricas", () => {
   });
 });
 
-describe("as três contas de tarefa obedecem as MESMAS condições", () => {
+describe("as quatro contas de tarefa obedecem as MESMAS condições", () => {
   /**
    * As duas famílias que creditam `users.completedTasks` (medido nos dois incrementos):
    *   - `task_user_progress.completedAt` — a conclusão individual (caminho pública/global);
@@ -183,9 +188,39 @@ describe("as três contas de tarefa obedecem as MESMAS condições", () => {
     });
   }
 
+  /**
+   * O quadro do mês (V8-7) é a mesma população contada em LOTE, então a única diferença admitida é a
+   * forma do recorte por pessoa: onde os outros três filtram `assignedTo: userId` por cadastro, o lote
+   * agrupa por dono (`by: ["assignedTo"]`) e exige `assignedTo: { not: null }` — que recorta exatamente
+   * a mesma população (tarefa sem dono não tem para quem ser contada). Qualquer OUTRA diferença é a
+   * segunda régua que esta guarda existe para impedir.
+   */
+  it("ranking: as mesmas condições, contadas em lote", () => {
+    const source = read(RANKING_PORT);
+    for (const fragment of SHARED_FRAGMENTS) {
+      if (fragment === "assignedTo: userId") continue;
+      expect(source, `ranking perdeu "${fragment}"`).toContain(fragment);
+    }
+    expect(source).toContain('by: ["assignedTo"]');
+    expect(source).toContain("assignedTo: { not: null }");
+    expect(source).not.toContain('taskVisibility: "public"');
+    // A trilha vitalícia não entra no quadro do mês (MODELO §2), e o elo é derivado do XP no use case:
+    // as COLUNAS não podem ser lidas aqui (o texto solto aparece nos comentários, a assinatura de
+    // coluna não).
+    expect(source).not.toContain("completedTasks:");
+    expect(source).not.toContain("elo:");
+  });
+
   it("a soma das duas famílias é feita na port, não no use case", () => {
     expect(read(STATS_PORT)).toContain("progressos + delegadasAprovadas");
     expect(read(MONTHLY_PORT)).toContain("progressos + delegadasAprovadas");
+    // No lote do quadro não existe a expressão de soma por pessoa: as duas famílias são acumuladas no
+    // MESMO mapa da port. As duas linhas abaixo são o par — falta uma e o número do mês fica menor.
+    const ranking = read(RANKING_PORT);
+    expect(ranking).toContain("prisma.task_user_progress.groupBy");
+    expect(ranking).toContain("prisma.tasks.groupBy");
+    expect(ranking).toContain("tasksByUser.set(row.userId, (tasksByUser.get(row.userId) ?? 0) + row._count._all)");
+    expect(ranking).toContain("tasksByUser.set(row.assignedTo, (tasksByUser.get(row.assignedTo) ?? 0) + row._count._all)");
   });
 
   it("as duas famílias espelham os dois incrementos de `completedTasks`", () => {

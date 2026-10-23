@@ -17,6 +17,13 @@ Os nomes de classe estão em português, porque este é o vocabulário do domín
 laboratório. Os nomes de atributo mantêm a forma do campo persistido onde a diferença seria
 apenas estilística, para que o modelo permaneça rastreável até o capítulo 11.
 
+Uma correspondência de nome precisa ficar dita aqui: a interface chama **troféu** — é a palavra
+que aparece no perfil, na prateleira equipável e na aba do painel administrativo (DEC-220). Este
+documento chama o conceito **distintivo**, e a tabela persistida é `badges`. Os três nomes existem e a
+correspondência é exatamente essa; não existe um quarto vocabulário no código, e a fechadura
+`tests/unit/domain/gamification/gamification-vocabulary.test.ts` confere que a tela não voltou a dizer
+*badge*.
+
 ## Identidade e acesso
 
 ```figure cl-identidade titulo="Modelo conceitual da identidade, do acesso e do perfil"

@@ -51,8 +51,24 @@ export interface MonthlyPointsCyclePort {
 
   /**
    * Snapshot + `users.points = 0` na MESMA transação (MODELO mensal §2: não existe estado em que o
-   * mês está fechado e a coluna aberta, nem o inverso). Devolve `false` quando o mês já fechou —
-   * a unique `(userId, month)` é quem diz, e o chamador não zera de novo.
+   * mês está fechado e a coluna aberta, nem o inverso). Devolve `false` quando o mês já fechou — a
+   * unique `(userId, month)` é quem diz, e o chamador não zera de novo.
    */
   closeMonth(write: MonthSnapshotWrite): Promise<boolean>;
+
+  /**
+   * V8-7 (DEC-220): o histórico mensal DA PESSOA — a memória que o ranking mensal perdeu ao virar
+   * quadro de um mês só (MODELO §3). É esta port que lê `month_history`: uma port por tabela, para
+   * o histórico da tela e a soma da temporada não virarem dois leitores com duas ordens próprias.
+   * Mais recente primeiro; a pessoa que não tem linha não tem histórico (o livro registra o que
+   * aconteceu, não um 0 por cadastro).
+   */
+  listMonthHistory(userId: number): Promise<MonthHistoryRow[]>;
+}
+
+/** Uma linha fotografada pelo fechamento. O negativo do snapshot está aqui (DEC-39 sobrevive). */
+export interface MonthHistoryRow {
+  month: MonthKey;
+  points: number;
+  completedTasks: number;
 }

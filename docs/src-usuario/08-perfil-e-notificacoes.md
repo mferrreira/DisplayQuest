@@ -73,7 +73,33 @@ São imagens, só isso: PDF e vídeo não entram aqui. O arquivo vai para o buck
 
 A capa é sua, e quem a escreve é você — ou quem tem permissão de gerenciar contas. Quem a **vê** é qualquer pessoa autenticada: ela aparece no seu perfil, no perfil aberto por outra pessoa e no cartão de quem está em 1º lugar no ranking.
 
-## Os logs diários
+## As trilhas e os troféus no perfil
+
+O perfil é também onde a pessoa vê e mexe nas quatro trilhas do engajamento (capítulo 7). Abaixo do
+cartão **Meu Perfil** ficam três cifras — **Pontos do mês** (*o placar fecha no fim do mês*),
+**Tarefas** (*concluídas na vida*) e **Horas na semana** (com a meta da pessoa). Logo depois vem o
+cartão da temporada, com **Pontos do mês**, **XP da temporada**, **Moedas** e **Slots de troféu**: o XP
+acumula ao longo do ano, o degrau do elo é o que o XP define, e o degrau é o que abre slots.
+
+Mais abaixo, depois das abas, ficam a prateleira de troféus e o histórico dos ciclos.
+
+**Troféus** lista o que a pessoa conquistou. Cada card diz **Equipado** ou **Na prateleira** e tem o
+botão **Equipar** / **Desequipar** — quem equipa é a própria pessoa, não a administração. A linha
+acima da lista diz quantos slots estão usados (*1 de 2 slots usados*) e o elo que os libera. Quando o
+slot está cheio, o botão de equipar não responde; e se ainda assim a recusa vier do sistema, a frase
+do degrau aparece como aviso — *"Seu elo Prata permite equipar até 1 troféu."*. Quem fechou um ano em
+1º lugar tem a linha **Campeão** com os anos, e o card do troféu **CAMPEÃO** vem marcado. O efeito do
+troféu equipado vale enquanto ele está equipado, e o credit que ele altera registra no histórico o
+troféu que participou do número.
+
+O histórico vem em duas tabelas: **Meses fechados** (**Mês**, **Pontos**, **Tarefas**) e **Temporadas
+fechadas** (**Temporada**, **Posição**, **Pontos**, **Tarefas**, **XP**, **Elo**). São os números
+fotografados pelos fechamentos — depois da zeragem, o número do mês encerrado e o do ano fechado só
+existem aqui. Um mês encerrado com placar negativo aparece negativo, e a temporada em que a pessoa
+fechou em 1º vem destacada. Quando ainda não houve fechamento, a tabela diz *"Nenhum mês fechado
+ainda."* ou *"Nenhuma temporada fechada ainda."*
+
+
 
 Os **Logs Diários** são o rastro das sessões encerradas. Você edita os seus próprios logs. **Coordenador** é a única função que enxerga os logs de todas as pessoas.
 

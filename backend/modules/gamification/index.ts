@@ -5,6 +5,10 @@ import { AssertCanManageUserBadgesUseCase } from "@/backend/modules/gamification
 import { CloseSeasonUseCase } from "@/backend/modules/gamification/application/use-cases/close-season.use-case"
 import { EvaluateUserBadgesUseCase } from "@/backend/modules/gamification/application/use-cases/evaluate-user-badges.use-case"
 import { GetUserProgressionUseCase } from "@/backend/modules/gamification/application/use-cases/get-user-progression.use-case"
+import { ListMonthlyRankingUseCase } from "@/backend/modules/gamification/application/use-cases/list-monthly-ranking.use-case"
+import { ListUserTrophiesUseCase } from "@/backend/modules/gamification/application/use-cases/list-user-trophies.use-case"
+import { ReadSeasonLedgerUseCase } from "@/backend/modules/gamification/application/use-cases/read-season-ledger.use-case"
+import { ReadUserCycleHistoryUseCase } from "@/backend/modules/gamification/application/use-cases/read-user-cycle-history.use-case"
 import { ReadUserProgressionUseCase } from "@/backend/modules/gamification/application/use-cases/read-user-progression.use-case"
 import { ResetMonthlyPointsUseCase } from "@/backend/modules/gamification/application/use-cases/reset-monthly-points.use-case"
 import { ReviewWeeklyXpUseCase } from "@/backend/modules/gamification/application/use-cases/review-weekly-xp.use-case"
@@ -24,6 +28,7 @@ import type { BadgeCatalogPort } from "@/backend/modules/gamification/applicatio
 import type { GamificationAwardHistoryPort } from "@/backend/modules/gamification/application/ports/gamification-award-history.port"
 import type { GamificationUsersPort } from "@/backend/modules/gamification/application/ports/gamification-users.port"
 import type { MonthlyPointsCyclePort } from "@/backend/modules/gamification/application/ports/monthly-points-cycle.port"
+import type { MonthlyRankingPort } from "@/backend/modules/gamification/application/ports/monthly-ranking.port"
 import type { SeasonChampionPort } from "@/backend/modules/gamification/application/ports/season-champion.port"
 import type { SeasonCyclePort } from "@/backend/modules/gamification/application/ports/season-cycle.port"
 import type { TrophyEquipPort } from "@/backend/modules/gamification/application/ports/trophy-equip.port"
@@ -34,6 +39,7 @@ import { createPrismaBadgeCatalogPort } from "@/backend/modules/gamification/inf
 import { createPrismaGamificationAwardHistoryPort } from "@/backend/modules/gamification/infrastructure/repositories/prisma-gamification-award-history.port"
 import { createPrismaGamificationUsersPort } from "@/backend/modules/gamification/infrastructure/repositories/prisma-gamification-users.port"
 import { createPrismaMonthlyPointsCyclePort } from "@/backend/modules/gamification/infrastructure/repositories/prisma-monthly-points-cycle.port"
+import { createPrismaMonthlyRankingPort } from "@/backend/modules/gamification/infrastructure/repositories/prisma-monthly-ranking.port"
 import { createPrismaSeasonChampionPort } from "@/backend/modules/gamification/infrastructure/repositories/prisma-season-champion.port"
 import { createPrismaSeasonCyclePort } from "@/backend/modules/gamification/infrastructure/repositories/prisma-season-cycle.port"
 import { createPrismaTrophyEquipPort } from "@/backend/modules/gamification/infrastructure/repositories/prisma-trophy-equip.port"
@@ -86,6 +92,17 @@ export class GamificationModule {
    * idempotência e linha de auditoria são a mesma máquina contada nos dois sentidos.
    */
   readonly changeTrophyEquip: UseCaseExecute<ChangeTrophyEquipUseCase>
+  /**
+   * plan-v8 V8-7 (DEC-220): o quadro do MÊS em curso (MODELO §3). Leitura aberta — a ordem é a régua
+   * da temporada (`rankSeasonStandings`), e o elo é a escada lida do XP, não a coluna.
+   */
+  readonly listMonthlyRanking: UseCaseExecute<ListMonthlyRankingUseCase>
+  /** plan-v8 V8-7 (DEC-220): o livro-caixa da última temporada fechada, lido como foi escrito. */
+  readonly readSeasonLedger: UseCaseExecute<ReadSeasonLedgerUseCase>
+  /** plan-v8 V8-7 (DEC-220): meses e temporadas fechados DA PESSOA, e os anos em que foi campeã. */
+  readonly readUserCycleHistory: UseCaseExecute<ReadUserCycleHistoryUseCase>
+  /** plan-v8 V8-7 (DEC-220): a prateleira do perfil — conquistas com nome, efeito e estado de equip. */
+  readonly listUserTrophies: UseCaseExecute<ListUserTrophiesUseCase>
 
   constructor(
     private readonly awardFromWorkSessionUseCase: AwardFromWorkSessionUseCase,
@@ -108,6 +125,10 @@ export class GamificationModule {
     private readonly reviewWeeklyXpUseCase: ReviewWeeklyXpUseCase,
     private readonly closeSeasonUseCase: CloseSeasonUseCase,
     private readonly changeTrophyEquipUseCase: ChangeTrophyEquipUseCase,
+    private readonly listMonthlyRankingUseCase: ListMonthlyRankingUseCase,
+    private readonly readSeasonLedgerUseCase: ReadSeasonLedgerUseCase,
+    private readonly readUserCycleHistoryUseCase: ReadUserCycleHistoryUseCase,
+    private readonly listUserTrophiesUseCase: ListUserTrophiesUseCase,
   ) {
     this.awardFromWorkSession = this.awardFromWorkSessionUseCase.execute.bind(this.awardFromWorkSessionUseCase)
     this.awardFromTaskCompletion = this.awardFromTaskCompletionUseCase.execute.bind(this.awardFromTaskCompletionUseCase)
@@ -129,6 +150,10 @@ export class GamificationModule {
     this.reviewWeeklyXp = this.reviewWeeklyXpUseCase.execute.bind(this.reviewWeeklyXpUseCase)
     this.closeSeason = this.closeSeasonUseCase.execute.bind(this.closeSeasonUseCase)
     this.changeTrophyEquip = this.changeTrophyEquipUseCase.execute.bind(this.changeTrophyEquipUseCase)
+    this.listMonthlyRanking = this.listMonthlyRankingUseCase.execute.bind(this.listMonthlyRankingUseCase)
+    this.readSeasonLedger = this.readSeasonLedgerUseCase.execute.bind(this.readSeasonLedgerUseCase)
+    this.readUserCycleHistory = this.readUserCycleHistoryUseCase.execute.bind(this.readUserCycleHistoryUseCase)
+    this.listUserTrophies = this.listUserTrophiesUseCase.execute.bind(this.listUserTrophiesUseCase)
   }
 }
 
@@ -144,6 +169,8 @@ export interface GamificationModulePorts {
   seasonChampion: SeasonChampionPort
   /** plan-v8 V8-6 (DEC-218): a escrita do equip/desequip, ledger incluso na transação. */
   trophyEquip: TrophyEquipPort
+  /** plan-v8 V8-7 (DEC-220): a leitura do quadro do mês em curso, em lote. */
+  monthlyRanking: MonthlyRankingPort
 }
 
 export interface GamificationModuleFactoryOptions {
@@ -162,6 +189,7 @@ export function createGamificationModule(options: GamificationModuleFactoryOptio
     seasonCycle: options.ports?.seasonCycle ?? createPrismaSeasonCyclePort(),
     seasonChampion: options.ports?.seasonChampion ?? createPrismaSeasonChampionPort(),
     trophyEquip: options.ports?.trophyEquip ?? createPrismaTrophyEquipPort(),
+    monthlyRanking: options.ports?.monthlyRanking ?? createPrismaMonthlyRankingPort(),
   }
 
   const progression = new GetUserProgressionUseCase({ users: ports.users })
@@ -216,5 +244,16 @@ export function createGamificationModule(options: GamificationModuleFactoryOptio
     // V8-6 (DEC-218): o equip/desequip. Sem gate de gestao: a autoridade e `requireActorSelf` dentro
     // do use case, e o teto de slot e a escada lida do XP (o mesmo lookup do read model).
     new ChangeTrophyEquipUseCase({ progression, equip: ports.trophyEquip }),
+    // V8-7 (DEC-220): o quadro do mes em curso. A ordem e a regua da temporada, o elo e a escada lida
+    // do XP, e a contagem mensal e o lote do adaptador com as condicoes das duas familias de tarefa.
+    new ListMonthlyRankingUseCase({ ranking: ports.monthlyRanking }),
+    // V8-7 (DEC-220): o livro-caixa do ultimo fechamento. Le as duas tabelas pelas portas dos proprios
+    // ciclos (uma port por tabela), sem re-aritmetica: o numero do livro e o que a tela mostra.
+    new ReadSeasonLedgerUseCase({ cycle: ports.seasonCycle }),
+    // V8-7 (DEC-220): o historico da pessoa (meses + temporadas) e os anos em que fechou como campea.
+    new ReadUserCycleHistoryUseCase({ monthlyCycle: ports.monthlyCycle, seasonCycle: ports.seasonCycle }),
+    // V8-7 (DEC-220): a prateleira. O join conquista × catalogo acontece no use case; as duas tabelas
+    // seguem tendo uma port cada.
+    new ListUserTrophiesUseCase({ userBadges: ports.userBadges, badges: ports.badges }),
   )
 }

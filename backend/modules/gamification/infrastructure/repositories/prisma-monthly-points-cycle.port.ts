@@ -79,6 +79,19 @@ export function createPrismaMonthlyPointsCyclePort(): MonthlyPointsCyclePort {
         throw error;
       }
     },
+
+    async listMonthHistory(userId) {
+      const rows = await prisma.month_history.findMany({
+        where: { userId },
+        select: { month: true, points: true, completedTasks: true },
+        orderBy: { month: "desc" },
+      });
+      return rows.map((row) => ({
+        month: row.month,
+        points: row.points,
+        completedTasks: row.completedTasks,
+      }));
+    },
   };
 }
 

@@ -119,3 +119,13 @@ export function trophySlotMessage(elo: EloTier): string {
 export function seasonClosingEloForXp(seasonXp: number): EloTier {
   return eloForSeasonXp(seasonXp);
 }
+
+/**
+ * A linha de slots do perfil e da prateleira de troféus (V8-7, DEC-220): quantos equipados sobre
+ * quantos o degrau abre. Mora ao lado de `trophySlotMessage` porque é a MESMA conta do slot dita de
+ * dois modos — a recusa (409) e o estado. Um texto de "2 de 3 slots" escrito na tela seria a régua
+ * de slot em dois lugares (a lição da DEC-90/96).
+ */
+export function trophySlotProgressLabel(equipped: number, slots: number): string {
+  return `${equipped} de ${slots} ${slots === 1 ? "slot" : "slots"} ${slots === 1 ? "usado" : "usados"}`;
+}

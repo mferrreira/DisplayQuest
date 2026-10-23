@@ -19,7 +19,7 @@
  * Pureza (RG-01): nenhuma porta, nenhum repo — os dados entram por argumento.
  */
 
-import { eloForSeasonXp, trophySlotsForElo, type EloTier } from "@/backend/domain/gamification/elo-rules";
+import { eloForSeasonXp, nextEloLadderStep, trophySlotsForElo, type EloTier } from "@/backend/domain/gamification/elo-rules";
 
 export type GamificationSourceType =
   | "WORK_SESSION_COMPLETED"
@@ -39,6 +39,14 @@ export interface UserProgression {
   coins: number;
   elo: EloTier;
   trophySlots: number;
+  /**
+   * V8-7 (DEC-220): o próximo degrau da escada no perfil ("XP/elo com próximo degrau"). `null` no
+   * topo — DESAFIANTE não tem degrau seguinte, e um `elo: "DESAFIANTE"` repetido seria a tela
+   * inventando progresso que a escada não tem.
+   */
+  nextElo: EloTier | null;
+  /** O XP que falta para `nextElo`. `null` junto com `nextElo`. */
+  xpToNextElo: number | null;
 }
 
 /** Chave de idempotencia do award (history.description) — frozen golden. */
@@ -77,6 +85,7 @@ export interface SeasonProgressionInput {
 export function computeSeasonProgression(input: SeasonProgressionInput): UserProgression {
   const xp = Number.isFinite(input.xp) ? Math.max(0, input.xp) : 0;
   const elo = eloForSeasonXp(xp);
+  const next = nextEloLadderStep(xp);
   return {
     userId: input.userId,
     points: input.points,
@@ -84,5 +93,7 @@ export function computeSeasonProgression(input: SeasonProgressionInput): UserPro
     coins: Number.isFinite(input.coins) ? input.coins : 0,
     elo,
     trophySlots: trophySlotsForElo(elo),
+    nextElo: next?.elo ?? null,
+    xpToNextElo: next?.xpMissing ?? null,
   };
 }
