@@ -17,7 +17,7 @@ displayquest-v2/
 ├── plan-v5/       OPERAÇÃO: domínio de projetos maduro — cronograma, pontos, relatórios técnicos, atestados (2026-10-06) — done (2026-10-14, V5-1..V5-12 + V5-fix-1/V5-fix-2; DEC-61..77, 99..104, 126..180)
 ├── plan-v6/       OPERAÇÃO: linguagem visual UI/UX + redistribuição das telas (2026-10-07, revisado 2026-10-14) — done (2026-10-16, V6-0..V6-11; DEC-105..114, 181..188)
 ├── plan-v7/       OPERAÇÃO: MCP de validação para o agente consumidor (2026-10-15, revisado 2026-10-21) — planejado, nenhuma onda começada (DEC-190..210, ASK-V7-16..25)
-└── plan-v8/       OPERAÇÃO: gamificação remodelada — trilhas (pontos mensais, XP/elo de temporada, moeda vitalícia), troféus equipáveis, reset mensal e temporada anual (2026-10-22) — em andamento: V8-5 done (ciclo mensal do placar, motor de XP da temporada, fechamento de temporada anual e moeda vitalícia: `ResetMonthlyPointsUseCase` com snapshot em `month_history` + cron `0 0 1 * *`, `xp-rules.ts` + `ReviewWeeklyXpUseCase` com cron `10 0 * * 1`, `season.ts` + `CloseSeasonUseCase` com `season_history`, zeragem de `points`/`xp` e troféu CAMPEÃO + cron `5 0 1 1 *` — os três sem rota nova — e a V8-5: prêmio de atividade aprovada creditando `users.coins` (track COINS), loja em moeda (suficiência, débito e estorno) e ajuste manual do painel nas duas trilhas com linha de auditoria `TRACK_ADJUSTMENT` (`track-adjustment-rules.ts` + `AdjustUserBalanceUseCase`); DEC-211..222 abertas); regime DEC-221: uma onda por vez autorizada pelo orquestrador, migration só na 5433 até o batch V8-CLOSE (MODELO.md = fonte do comportamento)
+└── plan-v8/       OPERAÇÃO: gamificação remodelada — trilhas (pontos mensais, XP/elo de temporada, moeda vitalícia), troféus equipáveis, reset mensal e temporada anual (2026-10-22) — em andamento: V8-6 done (escada de elo da temporada, troféus equipáveis por slot do elo e motor de critérios com janela `mes|temporada|vida`: `elo-rules.ts` + coluna `users.elo`, `trophy-effects.ts` com verbo+tier aplicado no instantâneo do credit, `trophy-equip-rules.ts` + `PATCH /api/users/[id]/trophies` com autoridade da própria pessoa, painel de troféus com janela e efeitos do menu; sobre as ondas anteriores — ciclo mensal do placar, motor de XP da temporada, fechamento de temporada anual e moeda vitalícia: `ResetMonthlyPointsUseCase` com snapshot em `month_history` + cron `0 0 1 * *`, `xp-rules.ts` + `ReviewWeeklyXpUseCase` com cron `10 0 * * 1`, `season.ts` + `CloseSeasonUseCase` com `season_history`, zeragem de `points`/`xp` e troféu CAMPEÃO + cron `5 0 1 1 *` — os três sem rota nova — e a V8-5: prêmio de atividade aprovada creditando `users.coins` (track COINS), loja em moeda (suficiência, débito e estorno) e ajuste manual do painel nas duas trilhas com linha de auditoria `TRACK_ADJUSTMENT` (`track-adjustment-rules.ts` + `AdjustUserBalanceUseCase`); DEC-211..223 abertas); regime DEC-221: uma onda por vez autorizada pelo orquestrador, migration só na 5433 até o batch V8-CLOSE (MODELO.md = fonte do comportamento)
 ```
 
 ## Fluxo de dependências (unidirecional)
@@ -140,8 +140,8 @@ plan-v8 (gamificação remodelada) ──> nasce do pedido do dono em 2026-10-22
   DEC-218/219). A virada converte saldo 1:1 (pontos → moeda, preços mantidos — DEC-216);
   `projects.points` e o publicador DEC-63 saem do sistema; a temporada zera tudo menos
   moedas e troféus e deixa livro-caixa anual + troféu de campeão (DEC-213). Decisões
-  **DEC-211..221** (as 211..220 abertas na V8-0; **DEC-221** é o regime de execução assinado
-  pelo dono no mesmo dia: ondas autorizadas pelo orquestrador, uma por vez, merge só no fim do
+  **DEC-211..223** (as 211..220 abertas na V8-0; **DEC-221** é o regime de execução assinado
+  pelo dono no mesmo dia; **DEC-222** aberta na V8-5 e **DEC-223** na V8-6: ondas autorizadas pelo orquestrador, uma por vez, merge só no fim do
   plano pelo PR único `plan-v8/gamificacao` → `dev`, migration **só na 5433** durante o plano e
   deploy na 5432 real apenas no batch **V8-CLOSE**), perguntas **ASK-V8-23** (ícone do placar) e
   **ASK-V8-24**
@@ -196,7 +196,25 @@ plan-v8 (gamificação remodelada) ──> nasce do pedido do dono em 2026-10-22
   `tsc` 0, lint exit 0 (17 warnings pré-existentes), G5 com a décima entrada da agenda nos dois inventários de
   `docs/src`. Nenhuma migration de schema (23 linhas em `_prisma_migrations`); a data migration do troféu aplicada
   **só na 5433** e conferida idempotente (INSERT 0 1, depois INSERT 0 0); 5432 intocada. Onda encerrada e
-  reportada ao orquestrador; próxima: **V8-5** (moeda e loja, DEC-215).
+  reportada ao orquestrador. **V8-5 done** em 2026-10-22: a moeda vitalícia em funcionamento — prêmio de atividade
+  aprovada creditando `users.coins` com linha `track COINS`, loja cobrando/debitando/estornando a mesma moeda e
+  ajuste manual do painel nas duas trilhas com linha `TRACK_ADJUSTMENT` (`track-adjustment-rules.ts`,
+  `AdjustUserBalanceUseCase`, `PATCH /api/users/[id]/points` com `{ track, action, amount }`), **DEC-222** aberta
+  (moeda não aceita saldo negativo); gates 199 arquivos / 2400 testes no projeto unit, 220 / 2561 na suíte completa,
+  G4 21 / 161, G0 1140 / 4833, `tsc` 0, lint exit 0 (17 warnings), G5 no guia (capítulos 4/7/9/11/12) e
+  no modelo conceitual. **V8-6 done** em 2026-10-23: escada de elo da temporada (umbrais 0/400/900/1500/2400/3600,
+  slots 0/1/2/2/3/3) com coluna `users.elo` (migration `20261023120000_add_users_elo`, 24 linhas em
+  `_prisma_migrations`), equip/desequip por `PATCH /api/users/[id]/trophies` com autoridade da própria pessoa
+  (`requireActorSelf`) e slot do elo do momento, motor de critérios reescrito com janela `mes|temporada|vida`
+  (condição desconhecida deixa de conceder — QUIRK-6C; critério `0` é avaliado; chave fora do vocabulário não
+  concede), efeito de troféu verbo+tier aplicado no instantâneo do credit (`trophy-effects.ts`, `latePenalty`
+  atravessando a porta de tarefa), elo fotografado em `season_history.elo` e coluna voltando a BRONZE na virada,
+  read model `GET /api/users/[id]/gamification` re-significado (fecha a dívida XP-DUPLICADO) e painel de troféus com
+  janela e efeitos do menu; **DEC-223** aberta (data migration do vocabulário de critério por edição do Json;
+  catálogo das 5432 medido: duas linhas `{"minHours": 10}`); gates 204 arquivos / 2469 testes no projeto unit,
+  225 / 2634 na suíte completa, G4 21 / 165, G0 1152 / 4889, `tsc` 0, lint exit 0 (17 warnings), G5 com os capítulos
+  técnicos 07/09/10/11/13/14, os dois diagramas do engajamento e as seções 07/09/11 do guia. Onda encerrada e
+  reportada ao orquestrador; próxima: **V8-7** (troféus e trilhas na UI, DEC-220).
 
 ## Regras do container
 

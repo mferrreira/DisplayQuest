@@ -694,7 +694,10 @@ async function main() {
         icon: "sparkles",
         color: "#22c55e",
         category: "achievement",
-        criteria: { tasks: 5 },
+        // V8-6 (DEC-219): cada critério declara a janela que mede. "as primeiras tarefas no
+        // sistema" é contagem vitalícia, e `weeklyHours` é a constância das últimas semanas — as duas
+        // na janela `vida`.
+        criteria: { window: "vida", tasks: 5 },
         isActive: true,
         createdBy: coord.id,
         createdAt: addDays(now, -20),
@@ -707,7 +710,7 @@ async function main() {
         icon: "timer",
         color: "#3b82f6",
         category: "milestone",
-        criteria: { weeklyHours: 8 },
+        criteria: { window: "vida", weeklyHours: 8 },
         isActive: true,
         createdBy: manager.id,
         createdAt: addDays(now, -18),

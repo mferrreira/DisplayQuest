@@ -1,5 +1,6 @@
-import { POINTS_GAMIFICATION_TRACK, XP_EVENT_WORK_SESSION, buildAwardDescription, workSessionAwardPoints, xpAwardDescription } from "@/backend/domain"
+import { POINTS_GAMIFICATION_TRACK, TROPHY_BOOST_VERB_BY_SOURCE, XP_EVENT_WORK_SESSION, applyTrophyCredit, buildAwardDescription, readTrophyEffects, trophyCreditLedger, workSessionAwardPoints, xpAwardDescription } from "@/backend/domain"
 import type { GamificationSourceType } from "@/backend/domain"
+import type { UserBadgePort } from "@/backend/modules/gamification/application/ports/user-badge.port"
 import type {
   AwardFromWorkSessionCommand,
   GamificationAwardResult,
@@ -24,6 +25,8 @@ export interface AwardFromWorkSessionDependencies {
   awardHistory: GamificationAwardHistoryPort
   progression: GetUserProgressionUseCase
   evaluateUserBadges: EvaluateUserBadgesUseCase
+  /** V8-6 (DEC-218): o verbo `pontos_sessao` dos troféus equipados no instantâneo do credit. */
+  userBadges: UserBadgePort
 }
 
 export class AwardFromWorkSessionUseCase {
@@ -53,6 +56,14 @@ export class AwardFromWorkSessionUseCase {
     }
 
     const amount = workSessionAwardPoints(command.durationSeconds, command.completedTaskIds)
+    // V8-6 (DEC-218/219): sem penalidade na fonte de sessão (a régua é de duração e tarefas),
+    // então o efeito aqui é só o boost de `pontos_sessao`. Sem troféu equipado, o número é o golden.
+    const effects = readTrophyEffects(
+      (await this.dependencies.userBadges.findEquippedEffectsByUserId(command.userId)).flatMap((row) => row.effects),
+    )
+    const trophyVerb = TROPHY_BOOST_VERB_BY_SOURCE[sourceType]
+    const credit = applyTrophyCredit({ boostVerb: trophyVerb, amount, effects })
+    const trophy = trophyCreditLedger(credit, trophyVerb)
     // V8-3 (DEC-214): +10 flat por SESSÃO concluída. O evento é o fim da sessão
     // (completeWorkSession → onWorkSessionCompleted), não o valor do prêmio da sessão, que é
     // aritmética de duração e de tarefas (QUIRK-6B congelado).
@@ -63,9 +74,10 @@ export class AwardFromWorkSessionUseCase {
       sourceType,
       sourceId,
       description,
-      amount,
+      amount: credit.amount,
       track: POINTS_GAMIFICATION_TRACK,
       xp: { description: xpAwardDescription(sourceType, sourceId), amount: xpAwarded },
+      trophy: trophy ?? undefined,
     })
 
     const newProgression = await this.dependencies.progression.execute(command.userId)
@@ -76,7 +88,7 @@ export class AwardFromWorkSessionUseCase {
       userId: command.userId,
       sourceType,
       sourceId,
-      amountAwarded: amount,
+      amountAwarded: credit.amount,
       track: POINTS_GAMIFICATION_TRACK,
       xpAwarded,
       newProgression,

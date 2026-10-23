@@ -11,6 +11,14 @@ import { userActor } from "@/backend/domain"
 // para ReadUserProgressionUseCase. A ORDEM é a medida: validação do id (400 "Usuário inválido")
 // ANTES do gate, então a rota valida e depois chama — quem não é dono nem gestor continua
 // recebendo 403 depois do 400, exatamente como antes.
+//
+// plan-v8 V8-6 (DEC-217): a carga foi RE-SIGNIFICADA, não removida — medida por grep, nenhum
+// componente lê esta rota hoje (a dívida XP-DUPLICADO da V8-3 media exatamente isso), então mudar a
+// forma não quebra tela. Sai `{ points, xp, coins, elo, trophySlots }` no lugar de
+// `{ points, xp, level, elo, nextLevelXp, progressToNextLevel }`: as trilhas de verdade e a escada da
+// temporada, sem a derivação de `level` sobre pontos (MODELO §8). O elo reportado é o derivado do XP
+// pela escada — o mesmo número que a coluna `users.elo` guarda, porque toda escrita de XP recomputa
+// o elo na mesma transação.
 
 const { gamification: gamificationModule } = getBackendComposition()
 export async function GET(_request: Request, context: { params: Promise<{ id: string }> }) {

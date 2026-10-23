@@ -31,16 +31,18 @@ const NO_MANAGEMENT_ROLES = ["VOLUNTARIO"];
 function makeFakes() {
   const users: GamificationUsersPort & {
     calls: string[];
-    data: { id: number; points: number; coins: number; completedTasks: number; weekHours: number; roles: string[] };
+    data: { id: number; points: number; coins: number; xp: number; completedTasks: number; weekHours: number; roles: string[] };
     allUsers: Array<{ id: number; points: number; completedTasks: number }>;
   } = {
     calls: [],
-    data: { id: 1, points: 0, coins: 0, completedTasks: 0, weekHours: 0, roles: [] as string[] },
+    data: { id: 1, points: 0, coins: 0, xp: 0, completedTasks: 0, weekHours: 0, roles: [] as string[] },
     allUsers: [] as Array<{ id: number; points: number; completedTasks: number }>,
+    // V8-6 (DEC-217): o lookup devolve as TRILHAS (placar do mes, XP da temporada, moeda), e o elo é
+    // derivado pelo dominio a partir do XP — o fake devolve fatos, como o adaptador.
     async findProgressionById(userId) {
       this.calls.push(`findProgressionById:${userId}`);
       if (this.data.id !== userId) return null;
-      return { id: this.data.id, points: this.data.points };
+      return { id: this.data.id, points: this.data.points, xp: this.data.xp, coins: this.data.coins };
     },
     async findUserById(userId) {
       this.calls.push(`findUserById:${userId}`);
@@ -70,6 +72,11 @@ function makeFakes() {
         users.data.coins += record.amount;
       } else {
         users.data.points += record.amount;
+      }
+      // V8-3 (DEC-214) + V8-6 (DEC-217): o XP cai na mesma transação, e o elo é derivado dele na
+      // leitura — o fake incrementa a coluna como o adaptador e deixa o dominio derivar o degrau.
+      if (record.xp) {
+        users.data.xp += record.xp.amount;
       }
     },
   };
@@ -126,6 +133,21 @@ function makeFakes() {
       const idx = this.store.findIndex((ub) => ub.id === id);
       if (idx !== -1) this.store.splice(idx, 1);
     },
+    async countEquipped(userId) {
+      return this.store.filter((ub) => ub.userId === userId && ub.equipped === true).length;
+    },
+    // V8-6 (DEC-219): o join com o catálogo, como no adaptador — o efeito é do catálogo, a decisão
+    // de estar equipado é da pessoa.
+    async findEquippedEffectsByUserId(userId) {
+      return this.store
+        .filter((ub) => ub.userId === userId && ub.equipped === true)
+        .map((ub) => ({ badgeId: ub.badgeId, effects: badges.store.find((b) => b.id === ub.badgeId)?.effects ?? null }));
+    },
+    async setEquipped(id, equipped) {
+      const idx = this.store.findIndex((ub) => ub.id === id);
+      this.store[idx] = { ...this.store[idx], equipped };
+      return this.store[idx];
+    },
   };
 
   const stats: UserStatsPort & {
@@ -133,11 +155,15 @@ function makeFakes() {
     sessions: number;
     weekly: WeeklyHoursSample[];
     daily: Date[];
+    monthTasks?: number;
+    season?: { points: number; completedTasks: number };
   } = {
     projects: 0,
     sessions: 0,
     weekly: [],
     daily: [],
+    monthTasks: 0,
+    season: { points: 0, completedTasks: 0 },
     async projectsCount() {
       return this.projects;
     },
@@ -149,6 +175,14 @@ function makeFakes() {
     },
     async dailyLogDates() {
       return this.daily;
+    },
+    // V8-6 (DEC-219): as leituras das janelas novas. O fake devolve o que os fixtures declaram; a
+    // conta de duas famílias é do adaptador e está congelada no roundtrip G4.
+    async countTasksCompletedSince(userId, window) {
+      return this.monthTasks ?? 0;
+    },
+    async closedSeasonSums(userId, year) {
+      return this.season ?? { points: 0, completedTasks: 0 };
     },
   };
 
@@ -196,7 +230,9 @@ describe("AwardFromWorkSessionUseCase (orquestracao frozen golden)", () => {
     expect(result.xpAwarded).toBe(10);
     expect(result.alreadyAwarded).toBe(false);
     expect(result.newProgression.points).toBe(30);
-    expect(result.newProgression.level).toBe(0);
+    expect(result.newProgression.xp).toBe(10);
+    expect(result.newProgression.elo).toBe("BRONZE");
+    expect(result.newProgression.trophySlots).toBe(0);
 
     expect(fakes.awardHistory.records).toHaveLength(1);
     expect(fakes.awardHistory.records[0]).toEqual({
@@ -226,7 +262,9 @@ describe("AwardFromWorkSessionUseCase (orquestracao frozen golden)", () => {
       name: "Marcante",
       description: "d",
       category: "achievement",
-      criteria: { points: 20 },
+      // V8-6 (DEC-219): o critério declara a janela. "20 pontos" mede o placar do mês em curso — a
+      // janela `mes`, não a vida inteira (que não tem pontos desde a virada da DEC-216).
+      criteria: { window: "mes", points: 20 },
       isActive: true,
       createdBy: 1,
     });
@@ -240,7 +278,7 @@ describe("AwardFromWorkSessionUseCase (orquestracao frozen golden)", () => {
   });
 
   it("usuario inexistente: falha no progression pos-award (mesmo ponto de falha do legado)", async () => {
-    fakes.users.data = { id: 999, points: 0, coins: 0, completedTasks: 0, weekHours: 0, roles: [] };
+    fakes.users.data = { id: 999, points: 0, coins: 0, xp: 0, completedTasks: 0, weekHours: 0, roles: [] };
     await expect(module_.awardFromWorkSession({ userId: 1, workSessionId: 1 })).rejects.toThrow("Usuário não encontrado");
   });
 });
@@ -305,7 +343,7 @@ describe("AwardFromActivityCompletionUseCase (V5-7b, DEC-63/104)", () => {
   it("cada membro da distribuicao tem a SUA chave para a MESMA atividade", async () => {
     // O duplo de users serve um por vez; a progressao pos-award de cada membro fala do seu.
     const a = await module_.awardFromActivityCompletion({ userId: 1, activityId: 79, coins: 200 });
-    fakes.users.data = { id: 2, points: 0, coins: 0, completedTasks: 0, weekHours: 0, roles: [] };
+    fakes.users.data = { id: 2, points: 0, coins: 0, xp: 0, completedTasks: 0, weekHours: 0, roles: [] };
     const b = await module_.awardFromActivityCompletion({ userId: 2, activityId: 79, coins: 100 });
 
     expect(a.alreadyAwarded).toBe(false);
@@ -334,13 +372,18 @@ describe("GetUserProgressionUseCase", () => {
     }
   });
 
-  it("progressao pela regra pura", async () => {
+  it("progressao da temporada: o elo vem do XP da temporada, não do placar do mês (DEC-217)", async () => {
+    // O número de antes (`level` de points) morreu junto com a derivada: placar é mensal (DEC-212) e
+    // a escada é do XP da temporada (DEC-214). 900 XP é a fronteira do OURO, que dá 2 slots.
     fakes.users.data.points = 250;
+    fakes.users.data.xp = 900;
+    fakes.users.data.coins = 40;
     const p = await module_.getUserProgression(1);
-    expect(p.level).toBe(2);
-    expect(p.nextLevelXp).toBe(300);
-    expect(p.progressToNextLevel).toBe(50);
-    expect(p.elo).toBe("BRONZE");
+    expect(p.points).toBe(250);
+    expect(p.xp).toBe(900);
+    expect(p.coins).toBe(40);
+    expect(p.elo).toBe("OURO");
+    expect(p.trophySlots).toBe(2);
   });
 });
 
@@ -358,9 +401,11 @@ describe("EvaluateUserBadgesUseCase", () => {
   it("concede criterios atingidos com earnedBy null e ignora inativos/ja conquistados", async () => {
     fakes.users.data.points = 100;
     fakes.badges.store.push(
-      { id: 1, name: "A", description: "d", category: "achievement", criteria: { points: 50 }, isActive: true, createdBy: 1 },
+      // Janela `mes`: o limiar mede o placar do mês em curso (`users.points`), que é o que o credit
+      // incrementa hoje. Sem a janela declarada o critério não fecha — `points` não é métrica de vida.
+      { id: 1, name: "A", description: "d", category: "achievement", criteria: { window: "mes", points: 50 }, isActive: true, createdBy: 1 },
       { id: 2, name: "B", description: "d", category: "achievement", criteria: null, isActive: true, createdBy: 1 },
-      { id: 3, name: "C", description: "d", category: "achievement", criteria: { points: 50 }, isActive: false, createdBy: 1 },
+      { id: 3, name: "C", description: "d", category: "achievement", criteria: { window: "mes", points: 50 }, isActive: false, createdBy: 1 },
     );
     fakes.userBadges.store.push({ id: 99, userId: 1, badgeId: 2, earnedAt: new Date(), earnedBy: null });
 
@@ -385,7 +430,7 @@ describe("EvaluateUserBadgesUseCase", () => {
 
   it("falha de concessao engolida com console.error (padrao legado) e badge fora da lista", async () => {
     fakes.users.data.points = 100;
-    fakes.badges.store.push({ id: 5, name: "X", description: "d", category: "achievement", criteria: { points: 50 }, isActive: true, createdBy: 1 });
+    fakes.badges.store.push({ id: 5, name: "X", description: "d", category: "achievement", criteria: { window: "mes", points: 50 }, isActive: true, createdBy: 1 });
     const originalCreate = fakes.userBadges.create.bind(fakes.userBadges);
     fakes.userBadges.create = async () => {
       throw new Error("db down");
@@ -433,11 +478,13 @@ describe("badge management use cases", () => {
       name: " Novo ",
       description: " desc ",
       category: "milestone",
-      criteria: { points: 10 },
+      criteria: { window: "mes", points: 10 },
       createdBy: 2,
     });
     expect(badge.name).toBe("Novo");
-    expect(fakes.badges.created[0]).toMatchObject({ name: "Novo", icon: null, criteria: { points: 10 }, isActive: true, createdBy: 2 });
+    // O payload que chega ao port já vem com a janela declarada (DEC-219): a linha gravada diz o que
+    // o limiar mede, e não há critério sem janela no vocabulário novo.
+    expect(fakes.badges.created[0]).toMatchObject({ name: "Novo", icon: null, criteria: { window: "mes", points: 10 }, effects: [], isActive: true, createdBy: 2 });
   });
 
   it("UpdateBadgeUseCase: NotFound legado + merge parcial", async () => {

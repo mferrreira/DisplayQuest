@@ -1,5 +1,6 @@
-import { COINS_GAMIFICATION_TRACK, XP_EVENT_ACTIVITY_COMPLETED, buildAwardDescription, xpAwardDescription } from "@/backend/domain"
+import { COINS_GAMIFICATION_TRACK, TROPHY_BOOST_VERB_BY_SOURCE, XP_EVENT_ACTIVITY_COMPLETED, applyTrophyCredit, buildAwardDescription, readTrophyEffects, trophyCreditLedger, xpAwardDescription } from "@/backend/domain"
 import type { GamificationSourceType } from "@/backend/domain"
+import type { UserBadgePort } from "@/backend/modules/gamification/application/ports/user-badge.port"
 import type {
   AwardFromActivityCompletionCommand,
   GamificationAwardResult,
@@ -31,6 +32,8 @@ export interface AwardFromActivityCompletionDependencies {
   awardHistory: GamificationAwardHistoryPort
   progression: GetUserProgressionUseCase
   evaluateUserBadges: EvaluateUserBadgesUseCase
+  /** V8-6 (DEC-218): o verbo `moedas_atividade` dos troféus equipados no instantâneo do credit. */
+  userBadges: UserBadgePort
 }
 
 export class AwardFromActivityCompletionUseCase {
@@ -60,6 +63,23 @@ export class AwardFromActivityCompletionUseCase {
     }
 
     const amount = command.coins
+    // V8-6 (DEC-218/219): o boost entra no que a PESSOA recebe, depois da parcela Hamilton já
+    // calculada (DEC-164) — a distribuição continua sendo feita sobre o prêmio sem efeito, com a
+    // soma das partes igual ao prêmio; o troféu é o multiplicador do crédito individual, e a linha
+    // do ledger reporta os dois números. Por isso a conta Hamilton não é refeita com boost: refazê-la
+    // por membro quebraria "soma das partes == prêmio" (DEC-164/165), congelado em teste.
+    //
+    // A penalidade da atividade (−10%/dia, piso 0, DEC-103/74) NÃO é redutível por troféu nesta onda:
+    // ela está embutida no prêmio ANTES da distribuição e a gamificação recebe a parcela pronta
+    // (DEC-103: a escala é do projeto). Descontar por membro depois de distribuído seria a régua do
+    // projeto re-aritmética pela gamificação — exatamente o que a DEC-103 proíbe. Registrado como
+    // não-objetivo da V8-6; o verbo `penalidade` atua hoje nos caminhos de tarefa (DEC-219).
+    const effects = readTrophyEffects(
+      (await this.dependencies.userBadges.findEquippedEffectsByUserId(command.userId)).flatMap((row) => row.effects),
+    )
+    const trophyVerb = TROPHY_BOOST_VERB_BY_SOURCE[sourceType]
+    const credit = applyTrophyCredit({ boostVerb: trophyVerb, amount, effects })
+    const trophy = trophyCreditLedger(credit, trophyVerb)
     // V8-3 (DEC-214): +20 por MEMBRO — o use case já é chamado uma vez por membro da
     // distribuição Hamilton (DEC-164), então este número é por linha de distribuição, não por
     // atividade. O valor da moeda/prêmio continua chegando pronto: gamification não re-aritmética
@@ -71,9 +91,10 @@ export class AwardFromActivityCompletionUseCase {
       sourceType,
       sourceId,
       description,
-      amount,
+      amount: credit.amount,
       track: COINS_GAMIFICATION_TRACK,
       xp: { description: xpAwardDescription(sourceType, sourceId), amount: xpAwarded },
+      trophy: trophy ?? undefined,
     })
 
     const newProgression = await this.dependencies.progression.execute(command.userId)
@@ -84,7 +105,7 @@ export class AwardFromActivityCompletionUseCase {
       userId: command.userId,
       sourceType,
       sourceId,
-      amountAwarded: amount,
+      amountAwarded: credit.amount,
       track: COINS_GAMIFICATION_TRACK,
       xpAwarded,
       newProgression,

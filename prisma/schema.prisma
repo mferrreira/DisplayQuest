@@ -24,6 +24,14 @@ model users {
   // V8-3). Não confudir com a derivação dormente `xp = max(0, points)` em `Progression.ts`,
   // que é sobre `points` e não sobrevive como está (V8-6).
   xp                   Int                    @default(0)
+  // V8-6 (DEC-217): o elo da TEMPORADA, derivado do XP pela escada do dominio
+  // (`backend/domain/gamification/elo-rules.ts` — BRONZE 0 / PRATA 400 / OURO 900 / PLATINA 1500 /
+  // DIAMANTE 2400 / DESAFIANTE 3600, slots 0/1/2/2/3/3). String com default, como `status` e
+  // `track`: o vocabulario e fechado no dominio e a guarda e o teste (`gamification-elo.test.ts`),
+  // porque o banco aceitaria qualquer texto e o `tsc` so protege quem importa a constante. Toda
+  // escrita de XP recomputa o elo na mesma transacao (evento, revisao semanal), e o fechamento da
+  // temporada devolve o elo ao primeiro degrau junto com o XP.
+  elo                  String                 @default("BRONZE")
   completedTasks       Int                    @default(0)
   password             String?
   status               String                 @default("pending")

@@ -9,6 +9,7 @@ import {
   openSubtasksCount,
   supportsSubtasks,
   systemActor,
+  calculateLatePenalty,
   totalAwardForCompletion,
   type Task,
 } from "@/backend/domain";
@@ -126,7 +127,9 @@ export class ApproveTaskUseCase {
         if (task.taskVisibility !== "public" && !task.isGlobal) {
           await this.dependencies.actors.incrementCompletedTasks(taskWithAssignees.assignedTo)
         }
-        const pointsToAward = totalAwardForCompletion(task, awardableSubtasks(task, subtaskRows), new Date())
+        const awardInstant = new Date()
+        const pointsToAward = totalAwardForCompletion(task, awardableSubtasks(task, subtaskRows), awardInstant)
+        const latePenalty = calculateLatePenalty(task, awardInstant)
         // plan-v3 OND4-A: o creditado, não o pedido. `awardedTo` é quem recebeu.
         awardedPoints = await publishTaskCompletionAward(
           this.events,
@@ -134,6 +137,7 @@ export class ApproveTaskUseCase {
           command.taskId,
           pointsToAward,
           task.projectId ?? null,
+          latePenalty,
         )
         awardedTo = taskWithAssignees.assignedTo
       }

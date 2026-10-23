@@ -36,6 +36,7 @@ import {
   ReviewWeeklyXpUseCase,
   WEEKLY_XP_REVIEW_DENIED_MESSAGE,
 } from "@/backend/modules/gamification/application/use-cases/review-weekly-xp.use-case";
+import { eloForSeasonXp } from "@/backend/domain/gamification";
 
 const EMPTY_FACTS: WeeklyXpDataFacts = {
   daysWithSession: 0,
@@ -70,17 +71,21 @@ function fakeWeeklyXp(world: FakeWorld): WeeklyXpReviewPort {
     },
     applyWeeklyXpAdjustment: async (write) => {
       if (world.writes.some((w) => key(w.userId, w.weekStart) === key(write.userId, write.weekStart))) {
-        return { applied: false, xpBefore: 0, xpAfter: 0 } satisfies WeeklyXpApplyResult;
+        return { applied: false, xpBefore: 0, xpAfter: 0, eloBefore: "BRONZE", eloAfter: "BRONZE" } satisfies WeeklyXpApplyResult;
       }
       world.writes.push(write);
       const user = world.users.find((u) => u.userId === write.userId)!;
       const xpBefore = user.xp;
+      const eloBefore = user.elo;
       // O piso é regra do ADAPTADOR (`applyXpFloor` sobre o XP lido na transação). A fake reproduz
       // o efeito para o use case ter um `xpAfter` real para reportar; a fórmula em si é congelada em
       // tests/unit/domain/gamification/xp-rules.test.ts.
       user.xp = Math.max(0, xpBefore + write.netAmount);
-      if (world.denyOnRace) return { applied: false, xpBefore, xpAfter: xpBefore };
-      return { applied: true, xpBefore, xpAfter: user.xp };
+      // V8-6 (DEC-217): o elo sai da MESMA transação do XP — quem escreve o degrau é o adaptador, a
+      // partir do XP que ele mesmo acabou de gravar. A fake espelha isso, não o use case.
+      user.elo = eloForSeasonXp(user.xp);
+      if (world.denyOnRace) return { applied: false, xpBefore, xpAfter: xpBefore, eloBefore, eloAfter: eloBefore };
+      return { applied: true, xpBefore, xpAfter: user.xp, eloBefore, eloAfter: user.elo };
     },
   };
 }
@@ -90,11 +95,13 @@ let useCase: ReviewWeeklyXpUseCase;
 
 beforeEach(() => {
   world = {
+    // V8-6 (DEC-217): o candidato traz o elo da COLUNA lida (o adaptador seleciona `elo`), não uma
+    // derivada do use case — é o valor que o outcome reporta quando não há escrita.
     users: [
-      { userId: 1, name: "Ana Constante", xp: 120, weekHoursGoal: 20 },
-      { userId: 2, name: "Bruno Atrasado", xp: 5, weekHoursGoal: 20 },
-      { userId: 3, name: "Carla Sem Semana", xp: 40, weekHoursGoal: 0 },
-      { userId: 4, name: "Dora Alta Produtividade", xp: 0, weekHoursGoal: 10 },
+      { userId: 1, name: "Ana Constante", xp: 120, elo: "BRONZE", weekHoursGoal: 20 },
+      { userId: 2, name: "Bruno Atrasado", xp: 5, elo: "BRONZE", weekHoursGoal: 20 },
+      { userId: 3, name: "Carla Sem Semana", xp: 40, elo: "BRONZE", weekHoursGoal: 0 },
+      { userId: 4, name: "Dora Alta Produtividade", xp: 0, elo: "BRONZE", weekHoursGoal: 10 },
     ],
     facts: {
       // 7 dias com sessão → boost de constância; 6 tarefas → boost de 5+; horas acima da meta → sem
@@ -159,6 +166,8 @@ describe("ReviewWeeklyXpUseCase — a semana que fechou (V8-3, DEC-214)", () => 
     expect(ana.netAmount).toBe(60);
     expect(ana.xpBefore).toBe(120);
     expect(ana.xpAfter).toBe(180);
+    expect(ana.eloBefore).toBe("BRONZE");
+    expect(ana.eloAfter).toBe("BRONZE");
 
     const dora = result.outcomes.find((o) => o.userId === 4)!;
     expect(dora.adjustments).toHaveLength(1);
@@ -180,6 +189,9 @@ describe("ReviewWeeklyXpUseCase — a semana que fechou (V8-3, DEC-214)", () => 
     // XP 5 − 80 → 0 (DEC-214): o valor reportado é o do adaptador depois do `applyXpFloor`.
     expect(bruno.xpBefore).toBe(5);
     expect(bruno.xpAfter).toBe(0);
+    // O piso não derruba degrau: 5 XP já era BRONZE e 0 XP continua BRONZE (DEC-214 + DEC-217).
+    expect(bruno.eloBefore).toBe("BRONZE");
+    expect(bruno.eloAfter).toBe("BRONZE");
     expect(world.users.find((u) => u.userId === 2)!.xp).toBe(0);
   });
 
@@ -217,6 +229,23 @@ describe("ReviewWeeklyXpUseCase — a semana que fechou (V8-3, DEC-214)", () => 
       expect(outcome.netAmount).toBe(0);
       expect(outcome.xpAfter).toBe(outcome.xpBefore);
     }
+  });
+
+  it("o degrau do elo acompanha o XP dentro da mesma escrita (DEC-217)", async () => {
+    // 380 XP + 60 da revisão cruza o umbral de 400 do PRATA. O que o outcome reporta é o degrau
+    // ANTES e o DEPOIS da escrita, ambos medidos pelo adaptador sobre a coluna.
+    world.users[0].xp = 380;
+    world.users[0].elo = eloForSeasonXp(380);
+
+    const result = await useCase.execute({ actor: SYSTEM, now: new Date("2026-10-19T03:10:00Z") });
+    const ana = result.outcomes.find((o) => o.userId === 1)!;
+
+    expect(ana.netAmount).toBe(60);
+    expect(ana.xpBefore).toBe(380);
+    expect(ana.xpAfter).toBe(440);
+    expect(ana.eloBefore).toBe("BRONZE");
+    expect(ana.eloAfter).toBe("PRATA");
+    expect(world.users.find((u) => u.userId === 1)!.elo).toBe("PRATA");
   });
 
   it("a chave escrita é a de reexecução por pessoa e semana", async () => {

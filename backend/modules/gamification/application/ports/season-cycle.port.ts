@@ -35,7 +35,11 @@ export interface SeasonSnapshot {
   points: number;
   completedTasks: number;
   xp: number;
-  /** Nula enquanto a escada de elo não existe (DEC-217 é a V8-6). */
+  /**
+   * V8-6 (DEC-217): o elo da temporada no instante do fechamento. A coluna do livro continua
+   * nula porque as linhas escritas pela V8-4 nasceram sem elo (nenhum lugar do sistema guardava
+   * elo na época) — a leitura não reescreve o livro; quem fecha depois da onda escreve o degrau.
+   */
   elo: string | null;
   position: number | null;
 }
@@ -46,8 +50,8 @@ export interface SeasonSnapshotWrite {
   points: number;
   completedTasks: number;
   xp: number;
-  /** Nulo por decisão: elo é a V8-6 (DEC-217); a posição da temporada é o que existe hoje. */
-  elo: string | null;
+  /** V8-6 (DEC-217): o degrau com que a pessoa fecha o ano, derivado do `xp` desta mesma escrita. */
+  elo: string;
   position: number;
 }
 
@@ -67,10 +71,12 @@ export interface SeasonCyclePort {
   getSeasonSnapshot(userId: number, year: SeasonKey): Promise<SeasonSnapshot | null>;
 
   /**
-   * `season_history` + `users.points = 0` + `users.xp = 0` na MESMA transação: não existe estado em
-   * que a temporada está fechada e a trilha aberta, nem o inverso. `users.coins` e `user_badges` não
-   * entram aqui — moeda e troféu são vitalícios (MODELO §4). Devolve `false` no conflito de unique
-   * `(userId, year)`, que é o backstop da corrida.
+   * `season_history` + `users.points = 0` + `users.xp = 0` + `users.elo = primeiro degrau` na MESMA
+   * transação: não existe estado em que a temporada está fechada e a trilha aberta, nem o inverso — e
+   * o elo não pode ficar apontando para o degrau do ano que acabou de fechar (DEC-217: a temporada
+   * recomeça no primeiro degrau). `users.coins` e `user_badges` não entram aqui — moeda, troféu e o
+   * elo FOTOGRAFADO em `season_history.elo` são vitalícios (MODELO §4). Devolve `false` no conflito
+   * de unique `(userId, year)`, que é o backstop da corrida.
    */
   closeSeason(write: SeasonSnapshotWrite): Promise<boolean>;
 

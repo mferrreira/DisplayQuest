@@ -1,4 +1,4 @@
-import type { WeekKey, XpAdjustment } from "@/backend/domain/gamification";
+import type { EloTier, WeekKey, XpAdjustment } from "@/backend/domain/gamification";
 
 /**
  * WeeklyXpReviewPort — plan-v8 V8-3 (DEC-214). O que a revisão semanal de XP lê e escreve.
@@ -22,6 +22,8 @@ export interface WeeklyReviewCandidate {
   xp: number;
   /** `users.weekHours` — a meta declarada. Zero significa "sem meta", e meta zero não cobra. */
   weekHoursGoal: number;
+  /** V8-6 (DEC-217): o elo da temporada antes da revisão, para o outcome reportar o degrau. */
+  elo: string;
 }
 
 /** Os fatos da semana contados pelo adaptador (a meta vem do candidato, não daqui). */
@@ -57,6 +59,14 @@ export interface WeeklyXpApplyResult {
   applied: boolean;
   xpBefore: number;
   xpAfter: number;
+  /**
+   * V8-6 (DEC-217): a penalidade da revisão pode derrubar o XP abaixo de um umbral, e o piso 0 pode
+   * devolvê-lo — o elo é recalculado na MESMA transação e os dois degraus são o que o outcome
+   * reporta. "Quem cai na virada de temporada, cai no season close; quem cai na revisão, cai na
+   * revisão."
+   */
+  eloBefore: string;
+  eloAfter: string;
 }
 
 export interface WeeklyXpReviewPort {

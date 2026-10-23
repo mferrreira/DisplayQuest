@@ -1,7 +1,8 @@
 import { Prisma } from "@prisma/client"
 import type { badges } from "@prisma/client"
 import { prisma } from "@/lib/database/prisma"
-import type { Badge, BadgeCategory, BadgeCriteria } from "@/backend/domain"
+import type { Badge, BadgeCategory, BadgeCriteria, TrophyEffect } from "@/backend/domain"
+import { readTrophyEffects } from "@/backend/domain"
 import type { BadgeCatalogPort } from "@/backend/modules/gamification/application/ports/badge-catalog.port"
 
 /**
@@ -20,6 +21,8 @@ function toBadge(row: badges): Badge {
     color: row.color,
     category: row.category as BadgeCategory,
     criteria: (row.criteria as BadgeCriteria | null) ?? null,
+    // DEC-218: o Json do catálogo, lido defensivamente (efeito inválido no banco não concede nada).
+    effects: readTrophyEffects(row.effects),
     isActive: row.isActive,
     createdAt: row.createdAt,
     createdBy: row.createdBy,
@@ -28,6 +31,13 @@ function toBadge(row: badges): Badge {
 
 function criteriaForWrite(criteria: BadgeCriteria | null | undefined): Prisma.InputJsonValue {
   return criteria == null ? (Prisma.JsonNull as unknown as Prisma.InputJsonValue) : (criteria as Prisma.InputJsonValue)
+}
+
+/** Efeito nenhum é `JsonNull` (a coluna fica limpa de lista vazia), e `readTrophyEffects(null)` devolve `[]`. */
+function effectsForWrite(effects: TrophyEffect[] | null | undefined): Prisma.InputJsonValue {
+  return effects == null || effects.length === 0
+    ? (Prisma.JsonNull as unknown as Prisma.InputJsonValue)
+    : (effects as unknown as Prisma.InputJsonValue)
 }
 
 export function createPrismaBadgeCatalogPort(): BadgeCatalogPort {
@@ -63,6 +73,7 @@ export function createPrismaBadgeCatalogPort(): BadgeCatalogPort {
           color: data.color ?? null,
           category: data.category,
           criteria: criteriaForWrite(data.criteria),
+          effects: effectsForWrite(data.effects),
           isActive: data.isActive,
           createdBy: data.createdBy,
         },
@@ -79,6 +90,7 @@ export function createPrismaBadgeCatalogPort(): BadgeCatalogPort {
           color: badge.color ?? null,
           category: badge.category,
           criteria: criteriaForWrite(badge.criteria),
+          effects: effectsForWrite(badge.effects),
           isActive: badge.isActive,
           createdBy: badge.createdBy,
         },

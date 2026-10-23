@@ -192,8 +192,9 @@ describe("CronService.executeSeasonClose (V8-4, DEC-213)", () => {
       [1, 1, 300, 22, 400],
       [2, 2, 300, 18, 300],
     ]);
-    // Elo nulo: a escada é a V8-6 (DEC-217).
-    expect(rows.map((row) => row.elo)).toEqual([null, null]);
+    // V8-6 (DEC-217): o elo fotografado é o degrau do XP com que o ano fecha — 400 XP é a fronteira
+    // inclusiva do PRATA, 300 fica em BRONZE. O job não calcula elo nenhum: quem escreve é o port.
+    expect(rows.map((row) => row.elo)).toEqual(["PRATA", "BRONZE"]);
 
     // Zeragem seletiva: as duas trilhas da temporada zeram, moeda e contador vitalício ficam.
     expect(h.world.users.map((u) => [u.points, u.xp, u.coins, u.completedTasks])).toEqual([

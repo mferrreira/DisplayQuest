@@ -66,10 +66,13 @@ importa: uma restrição de banco não pode ser contornada por um caminho de esc
 | `daily_logs` | Sessão única | Garante um registro diário por sessão |
 | `project_reports` | Projeto, período, início e autor únicos | Impede relatórios concorrentes para o mesmo período |
 | `user_badges` | Par usuário e distintivo único | Impede concessão duplicada |
+| `month_history` | Par usuário e mês únicos | Impede dois retratos do mesmo mês |
+| `season_history` | Par usuário e ano únicos | Impede dois fechamentos do mesmo ano |
 
 As remoções em cascata seguem a dependência de existência. Remover uma pessoa remove suas
 participações em projetos, atribuições de tarefa, progressos individuais, notificações,
-sessões de trabalho, histórico de horas e concessões de distintivo; remover uma tarefa
+sessões de trabalho, histórico de horas, concessões de distintivo e os retratos de mês e de
+temporada; remover uma tarefa
 remove suas atribuições, progressos e vínculos com sessões; remover um relatório remove
 seus anexos; remover um distintivo remove as concessões correspondentes.
 
@@ -101,6 +104,7 @@ manter o sistema.
 | Data e hora tipada | Sessões, logs, notificações, issues, auditoria | Comparação e ordenação corretas no banco |
 | Texto em formato de data | Criação do projeto, compra, pausa da responsabilidade | Comparação depende do formato; ordenação frágil |
 | Texto em formato de hora | Grades de horário | Comparação lexicográfica funciona para o formato de 24 horas |
+| Texto em formato de mês | Retrato mensal do placar (`month_history.month`, `YYYY-MM`) | O mês é decidido no código, no fuso do laboratório; o banco só guarda e ordena texto |
 
 A terceira linha é a única em que a escolha de texto é segura: o formato de hora com dois
 dígitos por campo ordena corretamente como texto. As duas primeiras são heranças que
@@ -113,7 +117,9 @@ As tabelas que crescem com o uso são, em ordem: a trilha de auditoria, as notif
 logs diários, as sessões de trabalho e a progressão individual. A trilha de auditoria
 cresce a cada operação auditada e é a candidata natural a uma política de retenção.
 
-As tabelas de catálogo — recompensas e distintivos — são pequenas e mudam raramente. As
+Os retratos de fechamento crescem por pessoa e por período, não por operação: doze linhas por
+pessoa no ano no retrato mensal, e uma linha por pessoa no ano no retrato de temporada. As tabelas
+de catálogo — recompensas e distintivos — são pequenas e mudam raramente. As
 tabelas de configuração — grades — são pequenas e mudam por decisão administrativa.
 
 ::: nota titulo="Auditoria sem política de retenção"

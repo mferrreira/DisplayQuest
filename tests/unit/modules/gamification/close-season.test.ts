@@ -24,6 +24,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
 import {
+  FIRST_SEASON_ELO,
   SEASON_CHAMPION_BADGE_NAME,
   SEASON_POINTS_AFTER_CLOSE,
   SEASON_XP_AFTER_CLOSE,
@@ -53,6 +54,8 @@ interface LiveUser {
   name: string;
   points: number;
   xp: number;
+  /** V8-6 (DEC-217): a coluna existe e a virada a devolve ao primeiro degrau. */
+  elo: string;
   coins: number;
   completedTasks: number;
 }
@@ -127,6 +130,9 @@ function fakeCycle(world: FakeWorld): SeasonCyclePort {
       if (live) {
         live.points = SEASON_POINTS_AFTER_CLOSE;
         live.xp = SEASON_XP_AFTER_CLOSE;
+        // V8-6 (DEC-217): o elo da COLUNA volta ao primeiro degrau junto com o XP. O degrau do ano que
+        // fechou não se perde: fica em `season_history.elo`, escrito acima com o valor de `write.elo`.
+        live.elo = FIRST_SEASON_ELO;
       }
       return true;
     },
@@ -187,7 +193,7 @@ function useCase(world: FakeWorld) {
 
 /** Uma pessoa com atividade no ano: placar, XP e moeda vitalícia. */
 function person(userId: number, over: Partial<LiveUser> = {}): LiveUser {
-  return { userId, name: `usuário ${userId}`, points: 0, xp: 0, coins: 0, completedTasks: 0, ...over };
+  return { userId, name: `usuário ${userId}`, points: 0, xp: 0, elo: FIRST_SEASON_ELO, coins: 0, completedTasks: 0, ...over };
 }
 
 describe("fechamento de temporada — gate e ano (DEC-213)", () => {
@@ -222,8 +228,9 @@ describe("fechamento de temporada — snapshot, zeragem e o que fica", () => {
         points: 120,
         completedTasks: 8,
         xp: 240,
-        // Elo é a V8-6 (DEC-217): a linha nasce sem elo e com posição.
-        elo: null,
+        // V8-6 (DEC-217): a linha nasce com a posição E com o elo do ano que fecha — 240 XP ainda é
+        // BRONZE (o umbral do PRATA é 400). Quem decide o degrau é o port, a partir do XP lido.
+        elo: "BRONZE",
         position: 1,
       },
     ]);
@@ -244,6 +251,7 @@ describe("fechamento de temporada — snapshot, zeragem e o que fica", () => {
         points: 120,
         completedTasks: 8,
         xp: 240,
+        elo: "BRONZE",
         position: 1,
       },
     ]);
@@ -278,7 +286,7 @@ describe("fechamento de temporada — snapshot, zeragem e o que fica", () => {
         points: 0,
         completedTasks: 0,
         xp: 20,
-        elo: null,
+        elo: "BRONZE",
         position: 1,
       },
     ]);
@@ -300,6 +308,31 @@ describe("fechamento de temporada — posição e campeão", () => {
       13: { monthsInYear: 1, seasonPoints: -40, seasonCompletedTasks: 1 },
     },
   };
+
+  it("o elo do livro é o degrau do XP do ano fechado, não o da coluna (DEC-217)", async () => {
+    // Os quatro tem XP 240, 90, 500 e 0: três BRONZE e um PRATA. O elo entra na linha escrita pelo
+    // port a partir do XP que a pessoa tem NA RUN — a coluna zera logo depois, e o degrau fotografado
+    // é a única memória dele.
+    // Cópias: os fixtures de `fourUsers` são compartilhados com os testes de posição, e a run zera o
+    // XP dos objetos — compartilhar seria um teste depender do outro.
+    const world = makeWorld(fourUsers.map((candidate) => ({ ...candidate })), fourAggregates);
+    await useCase(world).execute({ actor: systemActor("SEASON_CLOSE"), now: RUN_2027 });
+
+    const eloByUser = new Map(world.writes.map((write) => [write.userId, write.elo]));
+    expect([...eloByUser.entries()].sort()).toEqual([
+      [10, "BRONZE"],
+      [11, "BRONZE"],
+      [12, "PRATA"],
+      [13, "BRONZE"],
+    ]);
+    // A coluna volta ao primeiro degrau junto com o XP; o livro guarda o degrau do ano.
+    expect(world.users.map((u) => [u.xp, u.elo])).toEqual([
+      [0, "BRONZE"],
+      [0, "BRONZE"],
+      [0, "BRONZE"],
+      [0, "BRONZE"],
+    ]);
+  });
 
   it("a posição segue a régua do domínio, com o negativo do snapshot perdendo do 0", async () => {
     const world = makeWorld(fourUsers, fourAggregates);
@@ -395,7 +428,9 @@ describe("fechamento de temporada — reexecução", () => {
     expect(result.closed).toBe(0);
     expect(result.alreadyClosed).toBe(1);
     // O que se reporta é o livro, não a coluna (que a run original já zerou).
-    expect(result.outcomes[0]).toMatchObject({ status: "already-closed", points: 400, xp: 900, position: 1 });
+    // O elo reportado vem do LIVRO lido de volta, e esta linha foi escrita antes de a escada existir
+    // (V8-4): o livro não se reescreve, então ela continua com elo nulo.
+    expect(result.outcomes[0]).toMatchObject({ status: "already-closed", points: 400, xp: 900, elo: null, position: 1 });
     // E o que ainda estava na coluna fica onde estava: zeragem não vem atrás de um dedup não lido.
     expect(world.users[0].points).toBe(50);
     expect(world.users[0].xp).toBe(50);

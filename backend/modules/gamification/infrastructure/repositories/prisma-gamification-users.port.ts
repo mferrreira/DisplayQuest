@@ -16,14 +16,22 @@ export function createPrismaGamificationUsersPort(): GamificationUsersPort {
     async findProgressionById(userId) {
       const user = await prisma.users.findUnique({
         where: { id: userId },
-        select: { id: true, points: true },
+        select: { id: true, points: true, xp: true, coins: true },
       })
-      return user ? { id: user.id, points: user.points } : null
+      return user ? { id: user.id, points: user.points, xp: user.xp, coins: user.coins } : null
     },
     async findUserById(userId) {
       const user = await prisma.users.findUnique({
         where: { id: userId },
-        select: { id: true, points: true, completedTasks: true, weekHours: true, roles: true },
+        select: {
+          id: true,
+          points: true,
+          completedTasks: true,
+          weekHours: true,
+          roles: true,
+          xp: true,
+          coins: true,
+        },
       })
       if (!user) {
         return null
@@ -34,6 +42,8 @@ export function createPrismaGamificationUsersPort(): GamificationUsersPort {
         completedTasks: user.completedTasks,
         weekHours: user.weekHours,
         roles: (user.roles ?? []) as unknown as string[],
+        xp: user.xp,
+        coins: user.coins,
       }
       return record
     },

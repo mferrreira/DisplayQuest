@@ -111,13 +111,24 @@ produto, e está congelada por teste.
 
 | Id | Regra | Realiza |
 | --- | --- | --- |
-| RB-51 | O resgate debita pontos e grava a compra na mesma transação | RF-09 |
+| RB-51 | O resgate debita moedas e grava a compra na mesma transação | RF-09 |
 | RB-52 | Nome e preço do item são congelados no momento da compra | RF-09 |
 | RB-53 | Apenas compras pendentes podem ser aprovadas | RF-09 |
 | RB-54 | Apenas compras aprovadas podem ser concluídas na entrega | RF-09 |
 | RB-55 | A award é idempotente pela descrição canônica do lançamento | RF-09 |
-| RB-56 | Uma award já concedida devolve zero pontos e a progressão vigente, nunca zerada | RF-09 |
+| RB-56 | Uma award já concedida devolve zero na trilha do lançamento e a progressão vigente, nunca zerada | RF-09 |
 | RB-57 | Os distintivos são avaliados depois do crédito, e o resultado da avaliação não altera a award | RF-09 |
+| RB-73 | O fechamento mensal fotografa o mês encerrado no histórico da pessoa e zera o placar; reexecutar não duplica o mês | RF-09 |
+| RB-74 | O snapshot mensal guarda saldo negativo, e a coluna do placar recomeça em zero | RF-09 |
+| RB-75 | O motor de experiência credita dez pontos por tarefa concluída, dez por sessão concluída e vinte por membro em atividade aprovada, na mesma transação do prêmio | RF-09 |
+| RB-76 | A revisão semanal de experiência aplica boost de constância e penalidade de atraso substituindo o valor menor, nunca somando, e a trilha tem piso zero | RF-09 |
+| RB-77 | O fechamento de temporada fotografa o ano no histórico da pessoa, zera placar e experiência, e concede o distintivo do ano a quem tem a maior soma dos meses encerrados | RF-09 |
+| RB-78 | O degrau da escada vem da experiência da temporada por umbrais crescentes, e o degrau limita quantos distintivos a pessoa pode equipar | RF-09 |
+| RB-79 | O critério do distintivo declara a janela que mede, e um critério que pede uma métrica que a janela não mede não concede | RF-09 |
+| RB-80 | Condição especial fora do vocabulário e critério sem limiar não concedem | RF-09 |
+| RB-81 | O efeito do distintivo tem verbo e tier de listas fechadas, incide sobre a base antes da penalidade, e vale enquanto o distintivo está equipado | RF-09 |
+| RB-82 | Equipar e desequipar distintivo é decisão da própria pessoa, e cada mudança deixa linha de auditoria com o estado antes e depois | RF-09 |
+| RB-83 | O ajuste manual de saldo declara a trilha, e nenhuma ação escreve moeda negativa | RF-09 |
 | RB-58 | Comunicados são entregues apenas a contas ativas | RF-10 |
 
 ## RB · Comunicação

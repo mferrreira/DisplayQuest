@@ -16,6 +16,8 @@ function toUserBadge(row: user_badges): UserBadge {
     id: row.id,
     userId: row.userId,
     badgeId: row.badgeId,
+    // V8-1 (DEC-218) criou a coluna; V8-6 é a onda que a escreve e a lê.
+    equipped: row.equipped,
     earnedAt: row.earnedAt,
     earnedBy: row.earnedBy,
   }
@@ -57,6 +59,23 @@ export function createPrismaUserBadgePort(): UserBadgePort {
     },
     async delete(id) {
       await prisma.user_badges.delete({ where: { id } })
+    },
+    async countEquipped(userId) {
+      return await prisma.user_badges.count({ where: { userId, equipped: true } })
+    },
+    async findEquippedEffectsByUserId(userId) {
+      const rows = await prisma.user_badges.findMany({
+        where: { userId, equipped: true },
+        select: { badgeId: true, badge: { select: { effects: true } } },
+      })
+      return rows.map((row) => ({ badgeId: row.badgeId, effects: row.badge.effects }))
+    },
+    async setEquipped(id, equipped) {
+      const row = await prisma.user_badges.update({
+        where: { id },
+        data: { equipped },
+      })
+      return toUserBadge(row)
     },
   }
 }

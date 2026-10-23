@@ -41,9 +41,10 @@ class "<<entidade>>\nDistintivo" as Badge {
   - descricao : String
   - categoria : Categoria
   - criterios : Json?
+  - efeitos : Json?
   - ativo : Boolean = true
   - criadoPor : Int
-  + criteriosAtendidos(estatisticas) : Boolean
+  + criteriosAtendidos(fatos, janela) : Boolean
 }
 
 enum "Categoria" as Categoria {
@@ -53,33 +54,87 @@ enum "Categoria" as Categoria {
   social
 }
 
+enum "Janela do critério" as Janela {
+  mes
+  temporada
+  vida
+}
+
 class "Concessão\nde distintivo" as Concessao {
   - usuarioId : Int
   - distintivoId : Int
   - obtidoEm : DateTime
   - concedidoPor : Int?
+  - equipado : Boolean = false
 }
 
-class "Progressão" as Progressao {
+class "Fechamento\nmensal" as FechamentoMensal {
+  - usuarioId : Int
+  - mes : String (YYYY-MM)
+  - pontos : Int
+  - tarefasConcluidas : Int
+}
+
+class "Fechamento\nde temporada" as FechamentoTemporada {
+  - usuarioId : Int
+  - ano : Int
+  - elo : String?
+  - posicao : Int?
+  - pontos : Int
   - xp : Int
-  - nivel : Int
-  - elo : Int
-  + nivelParaXp(xp) : Int
-  + eloParaXp(xp) : Int
+  - tarefasConcluidas : Int
+}
+
+class "Progressão\nda temporada" as Progressao {
+  - pontosMes : Int
+  - moedas : Int
+  - experiencia : Int
+  - elo : String
+  - slotsDeTrofeu : Int
+  + degrauParaXp(xp) : String
+  + slotsParaDegrau(elo) : Int
 }
 
 class "Premiação" as Premiacao {
   - origem : Origem
   - idOrigem : Int
-  + pontosPorSessao(duracao) : Int
-  + pontosPorTarefa(tarefa, conclusao) : Int
+  - trilha : Trilha
+  + valorPorSessao(duracao) : Int
+  + valorPorTarefa(tarefa, conclusao) : Int
+  + valorPorAtividade(periodo, aprovacao) : Int
   + descricao() : String
 }
 
 enum "Origem" as Origem {
   sessao_concluida
   tarefa_concluida
+  atividade_aprovada
   ajuste_manual
+}
+
+enum "Trilha" as Trilha {
+  pontos
+  moedas
+}
+
+class "Efeito do distintivo" as Efeito {
+  - verbo : Verbo
+  - tier : Tier
+  + aplicar(valor) : Int
+  + reduzir(penalidade) : Int
+}
+
+enum "Verbo" as Verbo {
+  pontos_tarefa
+  pontos_sessao
+  moedas_atividade
+  penalidade
+}
+
+enum "Tier" as Tier {
+  Tier1
+  Tier2
+  Tier3
 }
 
 class "Usuário" as Usuario
@@ -89,15 +144,22 @@ Usuario "1" --> "0..*" Compra : faz
 Recompensa "1" --> "0..*" Compra : origina
 Usuario "1" *-- "0..*" Concessao : recebe
 Badge "1" *-- "0..*" Concessao : agrupa
-Usuario "1" --> "0..1" Progressao : acumula
+Badge "1" *-- "0..*" Efeito : declara
+Usuario "1" *-- "0..*" FechamentoMensal : fotografou
+Usuario "1" *-- "0..*" FechamentoTemporada : fechou a temporada
+Usuario "1" --> "0..1" Progressao : reporta
 Premiacao "1" --> "0..*" Historico : registra
+Badge ..> Janela : o critério mede
 
 note right of Compra
   Nome e preço são copiados para
   a compra no momento do
   resgate. Alterar a recompensa
   depois não muda o que foi
-  cobrado de quem comprou.
+  cobrado de quem comprou. O
+  resgate cobra a moeda vitalícia,
+  e a devolução volta na mesma
+  moeda.
 end note
 
 note bottom of Premiacao
@@ -107,8 +169,31 @@ note bottom of Premiacao
   gravada na trilha de
   auditoria, de modo que
   repetir a conclusão da mesma
-  tarefa não credita pontos
-  duas vezes.
+  tarefa não credita duas vezes.
+  A linha declara a trilha do
+  credit; o credit de XP da
+  temporada entra como linha
+  própria na mesma transação.
+end note
+
+note bottom of Badge
+  O critério declara a janela que
+  mede, e só lê as métricas
+  daquela janela: um critério que
+  pede uma métrica que a janela
+  não mede não concede. Conquistado
+  não é equipado — equipar obedece
+  ao slot do elo, e o efeito só
+  vale enquanto equipado.
+end note
+
+note bottom of Progressao
+  Não é tabela: é o que a rota de
+  progressão reporta. Os degraus
+  (Bronze a Desafiante) vêm da
+  experiência da temporada, e o
+  degrau decide quantos distintivos
+  a pessoa pode equipar.
 end note
 
 @enduml

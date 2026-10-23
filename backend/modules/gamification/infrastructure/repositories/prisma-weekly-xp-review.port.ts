@@ -4,6 +4,7 @@ import {
   civilDayOfInstant,
   civilDaysBetween,
   daysLateForTask,
+  eloForSeasonXp,
   startOfCivilDayInstant,
   weeklyXpReviewDescription,
   XP_GAMIFICATION_TRACK,
@@ -48,7 +49,7 @@ export function createPrismaWeeklyXpReviewPort(): WeeklyXpReviewPort {
   return {
     async listUsersForWeeklyReview() {
       const rows = await prisma.users.findMany({
-        select: { id: true, name: true, xp: true, weekHours: true },
+        select: { id: true, name: true, xp: true, weekHours: true, elo: true },
         orderBy: { id: "asc" },
       });
       return rows.map<WeeklyReviewCandidate>((row) => ({
@@ -56,6 +57,7 @@ export function createPrismaWeeklyXpReviewPort(): WeeklyXpReviewPort {
         name: row.name,
         xp: row.xp,
         weekHoursGoal: row.weekHours,
+        elo: row.elo,
       }));
     },
 
@@ -140,12 +142,13 @@ export function createPrismaWeeklyXpReviewPort(): WeeklyXpReviewPort {
           },
           select: { id: true },
         });
-        if (existing) return { applied: false, xpBefore: 0, xpAfter: 0 };
+        if (existing) return { applied: false, xpBefore: 0, xpAfter: 0, eloBefore: "", eloAfter: "" };
 
-        const user = await tx.users.findUnique({ where: { id: userId }, select: { xp: true } });
-        if (!user) return { applied: false, xpBefore: 0, xpAfter: 0 };
+        const user = await tx.users.findUnique({ where: { id: userId }, select: { xp: true, elo: true } });
+        if (!user) return { applied: false, xpBefore: 0, xpAfter: 0, eloBefore: "", eloAfter: "" };
 
         const xpAfter = applyXpFloor(user.xp, netAmount);
+        const eloAfter = eloForSeasonXp(xpAfter);
 
         await tx.history.create({
           data: {
@@ -172,9 +175,9 @@ export function createPrismaWeeklyXpReviewPort(): WeeklyXpReviewPort {
           },
         });
 
-        await tx.users.update({ where: { id: userId }, data: { xp: xpAfter } });
+        await tx.users.update({ where: { id: userId }, data: { xp: xpAfter, elo: eloAfter } });
 
-        return { applied: true, xpBefore: user.xp, xpAfter };
+        return { applied: true, xpBefore: user.xp, xpAfter, eloBefore: user.elo, eloAfter };
       });
     },
   };

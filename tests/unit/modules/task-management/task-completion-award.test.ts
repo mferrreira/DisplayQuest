@@ -26,9 +26,11 @@ describe("gamification-task-progress.events — o creditado atravessa a porta (O
     const events = createTaskProgressEvents({ awards: { awardFromTaskCompletion } });
 
     // O pedido foi 15 (o que o domínio calculou); o creditado foi 0 (o award já existia).
-    const credited = await events.onTaskCompleted({ userId: 3, taskId: 7, taskPoints: 15, projectId: null });
+    const credited = await events.onTaskCompleted({ userId: 3, taskId: 7, taskPoints: 15, projectId: null, latePenalty: 20 });
 
-    expect(awardFromTaskCompletion).toHaveBeenCalledWith({ userId: 3, taskId: 7, taskPoints: 15 });
+    // V8-6 (DEC-219): a componente de atraso atravessa a porta junto com o total. O total sozinho não
+    // diz quanto dele é punição, e é a componente que o verbo `penalidade` dos troféus equipados reduz.
+    expect(awardFromTaskCompletion).toHaveBeenCalledWith({ userId: 3, taskId: 7, taskPoints: 15, latePenalty: 20 });
     expect(credited).toBe(0);
   });
 
@@ -37,15 +39,15 @@ describe("gamification-task-progress.events — o creditado atravessa a porta (O
       awards: { awardFromTaskCompletion: async () => ({ amountAwarded: -37140 }) },
     });
 
-    expect(await events.onTaskCompleted({ userId: 3, taskId: 7, taskPoints: -37140, projectId: null })).toBe(-37140);
+    expect(await events.onTaskCompleted({ userId: 3, taskId: 7, taskPoints: -37140, projectId: null, latePenalty: 37150 })).toBe(-37140);
   });
 
   it("sem userId/taskId não credita ninguém e não chama o award", async () => {
     const awardFromTaskCompletion = vi.fn(async () => ({ amountAwarded: 10 }));
     const events = createTaskProgressEvents({ awards: { awardFromTaskCompletion } });
 
-    expect(await events.onTaskCompleted({ userId: 0, taskId: 7, taskPoints: 10, projectId: null })).toBeNull();
-    expect(await events.onTaskCompleted({ userId: 3, taskId: 0, taskPoints: 10, projectId: null })).toBeNull();
+    expect(await events.onTaskCompleted({ userId: 0, taskId: 7, taskPoints: 10, projectId: null, latePenalty: 0 })).toBeNull();
+    expect(await events.onTaskCompleted({ userId: 3, taskId: 0, taskPoints: 10, projectId: null, latePenalty: 0 })).toBeNull();
     expect(awardFromTaskCompletion).not.toHaveBeenCalled();
   });
 
@@ -54,7 +56,7 @@ describe("gamification-task-progress.events — o creditado atravessa a porta (O
       awards: { awardFromTaskCompletion: async () => null },
     });
 
-    expect(await events.onTaskCompleted({ userId: 3, taskId: 7, taskPoints: 10, projectId: null })).toBeNull();
+    expect(await events.onTaskCompleted({ userId: 3, taskId: 7, taskPoints: 10, projectId: null, latePenalty: 0 })).toBeNull();
   });
 });
 
@@ -67,7 +69,7 @@ describe("publishTaskCompletionAward — falha de award não quebra a conclusão
       },
     };
 
-    const credited = await publishTaskCompletionAward(events, 3, 7, 10, null);
+    const credited = await publishTaskCompletionAward(events, 3, 7, 10, null, 0);
 
     expect(credited).toBeNull();
     expect(consoleError).toHaveBeenCalled();
@@ -75,12 +77,12 @@ describe("publishTaskCompletionAward — falha de award não quebra a conclusão
   });
 
   it("publisher ausente devolve null — é o caminho do roundtrip G4", async () => {
-    expect(await publishTaskCompletionAward(undefined, 3, 7, 10, 9)).toBeNull();
+    expect(await publishTaskCompletionAward(undefined, 3, 7, 10, 9, 0)).toBeNull();
   });
 
   it("no caminho feliz devolve o creditado", async () => {
     const events = { onTaskCompleted: async () => 15 };
 
-    expect(await publishTaskCompletionAward(events, 3, 7, 10, 9)).toBe(15);
+    expect(await publishTaskCompletionAward(events, 3, 7, 10, 9, 30)).toBe(15);
   });
 });

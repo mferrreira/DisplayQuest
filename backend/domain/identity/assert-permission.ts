@@ -85,6 +85,20 @@ export function requireActorSelfOrPermission(
 }
 
 /**
+ * requireActorSelf — "age em si mesmo, e mais ninguem" (plan-v8 V8-6, DEC-218).
+ *
+ * A metade `self` de `requireActorSelfOrPermission` tomada sozinha: quem equipar trofeu e a pessoa
+ * que conquistou o trofeu, e nao existe permissao que empreste esse direito. Diferente dos gates de
+ * gestao, o ator de sistema NAO passa aqui: nao ha rotina de sistema que equipar trofeu de ninguem,
+ * e deixar o bypass aberto seria uma porta sem chamador — o mesmo tipo de porta que a DEC-54 teve
+ * que fechar quando um gate desceu para um use case chamado por rotina.
+ */
+export function requireActorSelf(actor: ActorRef, ownerUserId: number, message: string = ACCESS_DENIED_MESSAGE): void {
+  if (actor.kind === "user" && actor.id === ownerUserId) return;
+  throw new ForbiddenError(message);
+}
+
+/**
  * requireActorAnyRole — a forma tipada de `ensureAnyRole` (D4, B6-6). A decisao e sobre PAPEIS
  * (nao permissao): os gates de responsabilidades do laboratorio sao listas de papel na rota
  * legado. System passa (bypass declarado, DEC-54) — o que barra rota e o guarda system-actor.

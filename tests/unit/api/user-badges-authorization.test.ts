@@ -99,12 +99,25 @@ vi.mock("@/backend/composition/root", () => {
       const index = mocks.userBadges.findIndex((ub) => ub.id === id);
       if (index !== -1) mocks.userBadges.splice(index, 1);
     },
+    // V8-6 (DEC-218/219): os três métodos novos do troféu equipado. Estas rotas não os exercem, então
+    // falham alto — o contrato HTTP do equip está congelado em trophy-equip-routes.test.ts.
+    async countEquipped() {
+      return notUsed("userBadges.countEquipped")();
+    },
+    async findEquippedEffectsByUserId() {
+      return notUsed("userBadges.findEquippedEffectsByUserId")();
+    },
+    async setEquipped() {
+      return notUsed("userBadges.setEquipped")();
+    },
   };
 
   const users: GamificationUsersPort = {
     async findProgressionById(userId) {
       const points = mocks.progression.get(userId);
-      return points === undefined ? null : { id: userId, points };
+      // V8-6 (DEC-217): o lookup fala as três trilhas. Este arquivo é o do GATE, então o XP e a moeda
+      // entram zerados — quem congela os valores das trilhas é gamification-routes.test.ts.
+      return points === undefined ? null : { id: userId, points, xp: 0, coins: 0 };
     },
     async findUserById() {
       return notUsed("users.findUserById")();
@@ -374,7 +387,10 @@ describe("GET /api/users/[id]/gamification — self-or-manage", () => {
     login(NO_MANAGEMENT_ROLES, ACTOR_ID);
     const response = await userGamification(request(`/api/users/${ACTOR_ID}/gamification`), params({ id: String(ACTOR_ID) }));
     expect(response.status).toBe(200);
-    expect(await body(response)).toMatchObject({ progression: { userId: ACTOR_ID, points: 120 } });
+    // O payload re-significado (V8-6): placar do mês, XP da temporada, moeda, e o elo derivado do XP.
+    expect(await body(response)).toMatchObject({
+      progression: { userId: ACTOR_ID, points: 120, xp: 0, coins: 0, elo: "BRONZE", trophySlots: 0 },
+    });
   });
 
   it("VOLUNTARIO lendo a progressão de OUTRO leva 403 'Acesso negado'", async () => {

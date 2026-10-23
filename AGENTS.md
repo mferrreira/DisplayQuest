@@ -8,7 +8,7 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
 - **Gate de entrega:** `npm run arch:check` (exit 0, allow-list **vazia**) && `npm run lint` (nada de erro) && `npx tsc --noEmit` (0) && `npx vitest run` (zero failure). A contagem é **por branch**: no `dev` o baseline era **64 arquivos / 721 testes** quando o B8 removeu os 651 testes de paridade; no `plan/v3-operacional`, medido no encerramento do plan-v3 (2026-10-03), são **65 arquivos / 798 testes** em `tests/unit` + `features` e **75 / 881** na suíte completa. Na `dev` de hoje (medido em 2026-10-07, depois do plan-v4 V4-1/V4-2/V4-3/V4-6, do V4-4 de subtasks, dos testes do painel V4-4b/V4-4c, do V4-5a/V4-5b/V4-5c de subtask na UI, do V4-6b de vocabulário de status e do lote pós-encerramento POS-1 — DEC-97/98) são **87 arquivos / 1107 testes** e **97 / 1192** na suíte completa; a suíte e2e do quadro está em **2 passando + 1 falha conhecida + 5 "did not run"** (medido 2026-10-06
 no V4-5c; eram 7 quando a coluna `Em Revisão` tinha um cartão a menos) — o 3º teste quebra por cartão a
 mais na coluna (dado legítimo da instância, não código: hoje são as tarefas 50 e 304), e como o spec é
-serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 5 passando. Compare sempre com o `STATE.json` do plano em que você está. Na `dev` de hoje, medido no fechamento do plan-v6 (2026-10-16, ondas V6-0..V6-11: shell, Home, Projetos, detalhe do projeto, Laboratório, Relatórios, Perfil/Ranking, Loja, Admin, Login/Register), são **179 arquivos / 2224 testes** em `tests/unit` + `features` e **194 / 2354** na suíte completa (G0 1061 módulos / 4531 dependências); o `tsc` desta branch **fecha em 0** — o erro pré-existente em `features/laboratorio/__tests__/floating-timer-tabs.test.tsx:105` foi consertado no `SUB-1` (regex ancorada no lugar do `exact`, que não existe em `ByRoleOptions`). Re-medido em 2026-10-15 (V6-2): o e2e do quadro está em **8 passando** (o spec hoje tem 8 testes; a falha conhecida por cartão a mais em `Em Revisão` **não reproduziu** — o dado da instância mudou; ela pode voltar se o dono mover outro cartão para lá) e o do shell em **5 passando**. Na branch do fechamento do repo-cleanup (`refactor/b6-restante`, medido 2026-10-08 depois do B6-2c..B6-7) o baseline é **95 arquivos / 1280 testes** em `tests/unit` + `features` e **105 / 1367** na suíte completa (G0 810 módulos / 3295 dependências). Na branch do plan-v8 (`plan-v8/gamificacao`), medido no fechamento da onda **V8-5** (2026-10-22), são **199 arquivos / 2400 testes** no projeto unit (`tests/unit` + `features/**/__tests__` + `entities`) e **220 / 2561** na suíte completa, com **G4 21 / 161** contra a 5433 e G0 **1140 módulos / 4833 dependências** (allow-list vazia), `tsc` 0 e lint exit 0 com **17** warnings pré-existentes (a nota de "15 warnings" das ondas V8-0/V8-1/V8-2 não reproduz nesta árvore: conferido com `git stash`, sem a onda a árvore também dá 17).
+serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 5 passando. Compare sempre com o `STATE.json` do plano em que você está. Na `dev` de hoje, medido no fechamento do plan-v6 (2026-10-16, ondas V6-0..V6-11: shell, Home, Projetos, detalhe do projeto, Laboratório, Relatórios, Perfil/Ranking, Loja, Admin, Login/Register), são **179 arquivos / 2224 testes** em `tests/unit` + `features` e **194 / 2354** na suíte completa (G0 1061 módulos / 4531 dependências); o `tsc` desta branch **fecha em 0** — o erro pré-existente em `features/laboratorio/__tests__/floating-timer-tabs.test.tsx:105` foi consertado no `SUB-1` (regex ancorada no lugar do `exact`, que não existe em `ByRoleOptions`). Re-medido em 2026-10-15 (V6-2): o e2e do quadro está em **8 passando** (o spec hoje tem 8 testes; a falha conhecida por cartão a mais em `Em Revisão` **não reproduziu** — o dado da instância mudou; ela pode voltar se o dono mover outro cartão para lá) e o do shell em **5 passando**. Na branch do fechamento do repo-cleanup (`refactor/b6-restante`, medido 2026-10-08 depois do B6-2c..B6-7) o baseline é **95 arquivos / 1280 testes** em `tests/unit` + `features` e **105 / 1367** na suíte completa (G0 810 módulos / 3295 dependências). Na branch do plan-v8 (`plan-v8/gamificacao`), medido no fechamento da onda **V8-5** (2026-10-22), são **199 arquivos / 2400 testes** no projeto unit (`tests/unit` + `features/**/__tests__` + `entities`) e **220 / 2561** na suíte completa, com **G4 21 / 161** contra a 5433 e G0 **1140 módulos / 4833 dependências** (allow-list vazia), `tsc` 0 e lint exit 0 com **17** warnings pré-existentes (a nota de "15 warnings" das ondas V8-0/V8-1/V8-2 não reproduz nesta árvore: conferido com `git stash`, sem a onda a árvore também dá 17). Medido no fechamento da onda **V8-6** (2026-10-23), na mesma branch: **204 arquivos / 2469 testes** no projeto unit e **225 / 2634** na suíte completa, com **G4 21 / 165** na 5433 e G0 **1152 módulos / 4889 dependências** (allow-list vazia), `tsc` 0 e lint exit 0 com os mesmos **17** warnings.
 - **G4/integração:** roundtrips Prisma real rodam **só** contra o banco de teste isolado `dq-dev-test-db` em `127.0.0.1:5433` (`$env:DATABASE_URL="postgresql://dq_dev:dq_dev_local_only@127.0.0.1:5433/dq_dev_test"; npx vitest run`) — nunca contra o `display-quest-db` (5432, produção local).
 - **Setup do G4 (corrigido 2026-10-02):** `npm run db:test:up` e `npm run db:test:setup` **existem**
   no `package.json` e fazem a sequência completa (`docker compose -f docker-compose.test.yml up -d`,
@@ -26,7 +26,21 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
 
 ## plan-v8 — gamificação remodelada (aberto 2026-10-22)
 
-- **Estado:** `in_progress` — **V8-5 done em 2026-10-22** (moeda vitalícia: o prêmio de atividade
+- **Estado:** `in_progress` — **V8-6 done em 2026-10-23** (escada de elo da temporada com coluna nova
+  `users.elo` (migration `20261023120000_add_users_elo`, 24 linhas em `_prisma_migrations`), equip/desequip de
+  troféu pela rota `PATCH /api/users/[id]/trophies` com autoridade da própria pessoa e slot do elo do momento, motor
+  de critérios reescrito com janela `mes|temporada|vida` (QUIRK-6C consertado: condição desconhecida não concede;
+  critério `0` é avaliado; chave fora do vocabulário não concede) e efeito de troféu com verbo+tier aplicado no
+  instantâneo do credit, com `latePenalty` atravessando a porta de tarefa; painel de troféus com janela e efeitos do
+  menu (nenhum número livre); `GET /api/users/[id]/gamification` re-significada (trilhas + degrau + slots), o que
+  fecha a dívida XP-DUPLICADO; gates medidos na onda: unit+features 204 arquivos / 2469 testes, suíte completa
+  225 / 2634, G4 21 / 165 na 5433, G0 1152 módulos / 4889 dependências com allow-list vazia, `tsc` 0, lint exit 0
+  com 17 warnings, G5 com os capítulos técnicos 07/09/10/11/13/14, os dois diagramas do engajamento e as seções
+  07/09/11 do guia atualizados (`docs:build` dos dois documentos + `docs:check` verdes); G6 não re-captura — nenhuma
+  captura versionada mostra o formulário de troféus do painel. Data migration
+  `prisma/data-migrations/v8-6-badge-criteria-vocab.sql` (**DEC-223**) conferida na 5433 por tabela temporária com
+  rollback e aplicada lá (`UPDATE 0`: as linhas já estavam convertidas); na 5432 real ela roda no V8-CLOSE. Próxima
+  onda: **V8-7** (troféus e trilhas na UI). Antes, **V8-5 done em 2026-10-22** (moeda vitalícia: o prêmio de atividade
   aprovada credita `users.coins` com `track COINS`, a loja cobra, debita e estorna moeda, e o painel ajusta as
   duas trilhas separadas com linha de auditoria; gates medidos na onda: unit+features 199 arquivos / 2400
   testes, suíte completa 220 / 2561, G4 21 / 161 na 5433, G0 1140 módulos / 4833 dependências com allow-list
@@ -59,7 +73,9 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   204 / 2419 na suíte completa, G4 16 / 131 contra a 5433, G0 1106 módulos / 4703 dependências com
   allow-list vazia, `tsc` 0, `npm run lint` exit 0 com 15 warnings). DEC-211..220 **abertas** no registry, cada uma com a
   onda indicada, mais **DEC-221** (regime de execução) e **DEC-222** (moeda não aceita saldo negativo no
-  ajuste do painel), as duas abertas 2026-10-22; próxima livre **DEC-223**). **Regime (DEC-221):** uma onda por vez, autorizada pelo orquestrador do thread
+  ajuste do painel), as duas abertas 2026-10-22, mais **DEC-223** (a data migration do vocabulário de critério troca
+  `minHours` por `weeklyHours` por EDIÇÃO do Json, não por reconstrução do objeto; catálogo das 5432 medido: duas
+  linhas `{"minHours": 10}` sem janela), aberta 2026-10-23 na V8-6; próxima livre **DEC-224**). **Regime (DEC-221):** uma onda por vez, autorizada pelo orquestrador do thread
   — sem espera de ordem explícita a partir da V8-1; pare e reporte no fim de cada onda; commit
   `plan-v8 <ONDA>: …` com o `STATE.json` atualizado no mesmo commit; durante o plano a
   migration é escrita e aplicada **só na 5433** (deploy, roundtrips G4 e e2e da worktree rodam
@@ -73,6 +89,46 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   do painel sobre as duas trilhas, cada ajuste com linha de `history`) **respondidas pelo
   dono em 2026-10-22**; calibrações adiadas ASK-V8-21/22 (constantes de XP e umbrais de
   elo, depois do primeiro ano real).
+- **A V8-6 entregou (2026-10-23):** o elo, o equip e o motor novo. Regras puras em
+  `backend/domain/gamification/elo-rules.ts` (`ELO_XP_THRESHOLDS` 0/400/900/1500/2400/3600,
+  `ELO_TROPHY_SLOTS` 0/1/2/2/3/3, `FIRST_SEASON_ELO`, `seasonClosingEloForXp`, `trophySlotMessage`),
+  `trophy-effects.ts` (verbo+tier fechados, `TROPHY_TIER_PERCENT` 5/10/15%, boost sobre a base antes da penalidade,
+  redução de penalidade com teto 100%) e `trophy-equip-rules.ts` (ações, frases, chave de auditoria,
+  `canEquipWithinSlots`), mais `requireActorSelf` em `backend/domain/identity/assert-permission.ts`, a porta
+  `trophy-equip.port.ts` com o adaptador `prisma-trophy-equip.port.ts` (linha `TROPHY_EQUIP | TROPHY_UNEQUIP` com
+  `oldValues { equipped }` e `newValues { equipped, ...auditoria, elo, slots }`; `unchanged` não escreve), o
+  `ChangeTrophyEquipUseCase` e a rota fina `app/api/users/[id]/trophies` (sem cliente em `contexts/api-client.ts`
+  até a V8-7 ter tela). O motor de critérios foi reescrito em `badge-rules.ts`: `WINDOW_METRICS` por janela,
+  `normalizeBadgeCriteria`, `badgeCriteriaMet` com limiar AVALIADO, `specialConditionMet` de vocabulário fechado,
+  `trophyFactReadsFor`, e `trophyMetricsForWindow` com a temporada somando os meses fechados **mais** o mês em curso.
+  `prisma-user-stats.port.ts` ganhou `countTasksCompletedSince` (as DUAS famílias com as MESMAS condições do
+  fechamento mensal e da revisão semanal) e `closedSeasonSums` lida por `seasonMonthPrefix`. O efeito é aplicado nos
+  três awards, o elo é rederivado no MESMO `$transaction` do credit de XP, e `close-season` grava
+  `season_history.elo` pelo XP do ano. O painel `components/admin/badge-manager.tsx` passou a ter
+  **Janela do critério**, as métricas só da janela escolhida, **Condição especial** e **Efeitos equipáveis**
+  (Verbo + Tier do menu). `GET /api/users/[id]/gamification` reporta `points`/`coins`/`xp`/`elo`/`trophySlots`.
+
+- **Sete decisões de execução da V8-6:** (1) PRATA tem **slot 1** (a escada é 0/1/2/2/3/3), e a frase do slot é
+  singular quando o limite é 1 (`Seu elo Prata permite equipar até 1 troféu.`) — a frase é a resposta 409 e foi
+  medida, não derivada. (2) `points` é métrica do **mês** e `xp` é métrica da **temporada**; nenhuma das duas é
+  métrica de `vida`, e `specialCondition` só é métrica de `vida` — as condições de unicidade só fecham na janela que
+  carrega a métrica ("primeiro a 100 **pontos**" exige `mes`, "primeiro a 100 **tarefas**" exige `vida`). Um critério
+  gravado antes da onda que pede métrica que a janela não mede **não concede**: é o motor dizendo "não meça o que não
+  mede", e a data migration da DEC-223 trata o `minHours` legado exatamente por esse caminho. (3) O efeito incide
+  sobre a **base antes da penalidade**, e a redução de penalidade tem teto de 100%; o valor só existe enquanto o
+  troféu está equipado, e a linha do credit declara o troféu — o Prisma descarta `trophy: undefined`, então a linha
+  sem efeito continua **sem** a propriedade. (4) A penalidade entrou no contrato do award como `latePenalty`
+  (evento → command → use case) porque o boost precisa saber o que é base e o que é punição;
+  `task_user_progress.awardedPoints` continua guardando o valor da régua e o ledger, o valor creditado — divergência
+  aceita e medida. (5) Autoridade do equip é da **própria pessoa**, e o sistema **não** passa (`requireActorSelf`):
+  nenhuma rotina equipa troféu de ninguém, e o gate corre **antes** de ler o troféu — o 403 não escreve linha.
+  (6) O elo fotografado no livro é o degrau do XP com que o ano fechou (`seasonClosingEloForXp`) e a coluna volta a
+  `BRONZE` na virada, o que substitui o "elo nulo por decisão" da V8-4: o ano fechado continua legível depois da
+  zeragem. (7) Quem decide **o que a avaliação paga** é o domínio (`trophyFactReadsFor`), não token escrito no use
+  case, e as três contas de tarefa (fechamento mensal, revisão semanal, critério do troféu) compartilham as MESMAS
+  condições de família e visibilidade — o guarda `tests/unit/domain/gamification/trophy-window-guard.test.ts` confere
+  as listas de leitura contra a **composição real** das métricas, para que não virem uma segunda régua.
+
 - **A V8-1 entregou (2026-10-22):** `users.coins`/`users.xp` (Int, default 0) com as relações
   `monthHistory`/`seasonHistory`; os modelos `month_history` (`month String` `YYYY-MM`,
   `@@unique([userId, month])`) e `season_history` (`year Int`, `elo`/`position` nulos,
@@ -248,15 +304,14 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   (DEC-215/216):** `prisma-purchase.repository.ts` faz `decrement`/`increment` em `users.coins`, e o guarda
   `tests/unit/domain/gamification/gamification-tracks.test.ts` confere por texto que a loja toca a moeda e nunca
   o placar do mês — as duas colunas são `Int` e o `tsc` aceitaria a errada.
-- **Dívida medida na V8-3 (XP-DUPLICADO, sem batch ainda):** existem dois "XP". `users.xp` é a trilha da
-  temporada, escrita pelo motor; `UserProgression.xp` em `backend/domain/gamification/Progression.ts` é
-  **derivado** (`max(0, points)`, level `floor(xp/100)`, elos BRONZE/PRATA/OURO/DIAMANTE por faixa de
-  points) e sai por `GET /api/users/[id]/gamification`. Depois da V8-2 o segundo zera todo mês junto com
-  `points` enquanto o primeiro acumula a temporada. Consumidor medido: **nenhuma tela** (grep em
-  `features`/`components` não acha quem lê a rota), então nada mostra os dois números hoje. Fecha de fato
-  pela escada de elo da DEC-217. A V8-4 registrou a decisão contrária a antecipá-la: o livro-caixa da temporada
-  nasce com `elo` nulo porque nenhum lugar do sistema guarda elo hoje (`Progression.ts` deriva de points), e a
-  escada fecha na V8-6/V8-7.
+- **Dívida da V8-3 (XP-DUPLICADO) — FECHADA na V8-6 (2026-10-23):** existiam dois "XP". `users.xp` é a trilha
+  da temporada, escrita pelo motor; `UserProgression.xp` em `Progression.ts` era **derivado** (`max(0, points)`,
+  level `floor(xp/100)`, elos BRONZE/PRATA/OURO/DIAMANTE por faixa de points) e saía por
+  `GET /api/users/[id]/gamification`. Depois da V8-2 o segundo zera todo mês junto com `points` enquanto o primeiro
+  acumula a temporada. A V8-6 substituiu a derivada: `Progression.ts` ficou com as réguas de premiação e o read model
+  `computeSeasonProgression` (`points` do mês + `coins` + `xp` + `elo` + `trophySlots`), a escada é
+  `backend/domain/gamification/elo-rules.ts` (DEC-217) e `eloParaXp`/`nivelParaXp` não existem mais no backend (grep
+  medido). Consumidor de tela continua não existindo — as telas de troféu e de ranking com elo são a V8-7.
 
 ## plan-v5 — documentos oficiais, economia do projeto e perfil (2026-10-13..14)
 
@@ -564,10 +619,11 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
    plan-v8 (gamificação remodelada, abertas na V8-0 em 2026-10-22: quatro trilhas — pontos
    mensais, XP/elo de temporada anual, moeda vitalícia, troféus equipáveis; mais **DEC-221** (regime de
    execução do plano) e **DEC-222** (ajuste de moeda não aceita saldo negativo), as duas abertas em
-   2026-10-22; ver o bloco "plan-v8" abaixo)**. O V4-4 ia usar DEC-61..64 e colidiu; os 28 comentários de código foram
+   2026-10-22; mais **DEC-223** (data migration do vocabulário de critério, aberta 2026-10-23 na V8-6); ver o bloco
+   "plan-v8" abaixo)**. O V4-4 ia usar DEC-61..64 e colidiu; os 28 comentários de código foram
   renumerados. **Antes de abrir decisão nova, `grep`
    os SETE `STATE.json` (clean-arch, plan-v3, plan-v4, plan-v5, plan-v6, plan-v7, plan-v8) — a nota antiga que dizia "três"
-   (e depois "cinco") está velha. Próxima livre: DEC-223.**
+   (e depois "cinco") está velha. Próxima livre: DEC-224.**
 - **Subtask (V4-4, DEC-78..83 → regra atual = DEC-97/98/189):** tabela `task_subtasks` (sem FK para
   `users` — subtask não tem
   responsável próprio), base gravada em `tasks.points` = `10 + 5·n` (DEC-97) e **cada subtask CONCLUÍDA
@@ -1029,6 +1085,13 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
 - **Fake de repositório tem que devolver CÓPIA na leitura (medido no V5-3 e de novo no V5-4a):**
   `findById` devolvendo o objeto vivo do Map faz a falha do `update` parecer sucesso, porque os use
   cases mutam o record antes de gravar. O sintoma é o caso de compensação ficando verde.
+- **Store de mock semeada por versão só existe depois da primeira port chamada (medido na V8-6,
+  `tests/unit/api/trophy-equip-routes.test.ts`):** o `vi.mock` do factory ressemeia a store quando a
+  versão muda, então escrever XP/saldo no Map pelo lado do ANTES da primeira chamada é escrever num
+  objeto que a própria chamada substitui — o caso "slot cheio" ficava verde com o XP errado (BRONZE
+  com 900 XP). Caminho: a re-semeadura expõe um ajuste (`mocks.setXp`) que primeiro semeia e depois
+  escreve. O reverso também é prova: se o gate bloqueia antes de qualquer port, a store nem é semeada,
+  e `writes` vazio diz mais do que checar o estado do troféu.
 - **Os métodos do módulo misturam chamada por posição e por objeto (medido no V5-4a):**
   `updateUserProfile(actor, userId, data)` e `findUserById(actor, userId, deniedMessage)` são por
   posição; `updateUserImage({ actor, userId, slot, blobKey })` e `listUsersForActor({ actor })` são por

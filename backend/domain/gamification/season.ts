@@ -46,6 +46,16 @@ export function closingSeasonYearOfInstant(instant: Date): SeasonKey {
 }
 
 /**
+ * O ano CIVIL EM CURSO do instante (Temporada em curso), visto em America/Sao_Paulo. É o que a
+ * janela `temporada` de um critério de troféu mede (DEC-219): o XP e a soma de pontos do ano que
+ * ainda não fechou. Distinto do que a rotina fecha (`closingSeasonYearOfInstant`), que é o anterior.
+ */
+export function currentSeasonYearOfInstant(instant: Date): SeasonKey {
+  const [year] = civilDayOfInstant(instant).split("-").map(Number);
+  return year;
+}
+
+/**
  * O prefixo que seleciona os meses de uma temporada em `month_history.month` (`YYYY-MM`).
  * Mora aqui porque o formato do mês é do domínio (`monthly-cycle.ts`), e o filtro do adaptador tem
  * que sair da mesma fonte — um `LIKE '2025%'` escrito à mão no SQL é o mesmo erro da DEC-90/96.

@@ -8,6 +8,7 @@ import { GetUserProgressionUseCase } from "@/backend/modules/gamification/applic
 import { ReadUserProgressionUseCase } from "@/backend/modules/gamification/application/use-cases/read-user-progression.use-case"
 import { ResetMonthlyPointsUseCase } from "@/backend/modules/gamification/application/use-cases/reset-monthly-points.use-case"
 import { ReviewWeeklyXpUseCase } from "@/backend/modules/gamification/application/use-cases/review-weekly-xp.use-case"
+import { ChangeTrophyEquipUseCase } from "@/backend/modules/gamification/application/use-cases/trophy-equip.use-case"
 import {
   AwardBadgeUseCase,
   CreateBadgeUseCase,
@@ -25,6 +26,7 @@ import type { GamificationUsersPort } from "@/backend/modules/gamification/appli
 import type { MonthlyPointsCyclePort } from "@/backend/modules/gamification/application/ports/monthly-points-cycle.port"
 import type { SeasonChampionPort } from "@/backend/modules/gamification/application/ports/season-champion.port"
 import type { SeasonCyclePort } from "@/backend/modules/gamification/application/ports/season-cycle.port"
+import type { TrophyEquipPort } from "@/backend/modules/gamification/application/ports/trophy-equip.port"
 import type { WeeklyXpReviewPort } from "@/backend/modules/gamification/application/ports/weekly-xp-review.port"
 import type { UserBadgePort } from "@/backend/modules/gamification/application/ports/user-badge.port"
 import type { UserStatsPort } from "@/backend/modules/gamification/application/ports/user-stats.port"
@@ -34,6 +36,7 @@ import { createPrismaGamificationUsersPort } from "@/backend/modules/gamificatio
 import { createPrismaMonthlyPointsCyclePort } from "@/backend/modules/gamification/infrastructure/repositories/prisma-monthly-points-cycle.port"
 import { createPrismaSeasonChampionPort } from "@/backend/modules/gamification/infrastructure/repositories/prisma-season-champion.port"
 import { createPrismaSeasonCyclePort } from "@/backend/modules/gamification/infrastructure/repositories/prisma-season-cycle.port"
+import { createPrismaTrophyEquipPort } from "@/backend/modules/gamification/infrastructure/repositories/prisma-trophy-equip.port"
 import { createPrismaWeeklyXpReviewPort } from "@/backend/modules/gamification/infrastructure/repositories/prisma-weekly-xp-review.port"
 import { createPrismaUserBadgePort } from "@/backend/modules/gamification/infrastructure/repositories/prisma-user-badge.port"
 import { createPrismaUserStatsPort } from "@/backend/modules/gamification/infrastructure/repositories/prisma-user-stats.port"
@@ -77,6 +80,12 @@ export class GamificationModule {
   readonly reviewWeeklyXp: UseCaseExecute<ReviewWeeklyXpUseCase>
   /** plan-v8 V8-4 (DEC-213): fechamento da temporada anual — chamado só pela rotina do cron, sem rota. */
   readonly closeSeason: UseCaseExecute<CloseSeasonUseCase>
+  /**
+   * plan-v8 V8-6 (DEC-218): equipar/desequipar troféu conquistado — a pessoa age sobre si mesma.
+   * Uma só entrada para as duas ações (`action: "equip" | "unequip"`), porque slot, autoridade,
+   * idempotência e linha de auditoria são a mesma máquina contada nos dois sentidos.
+   */
+  readonly changeTrophyEquip: UseCaseExecute<ChangeTrophyEquipUseCase>
 
   constructor(
     private readonly awardFromWorkSessionUseCase: AwardFromWorkSessionUseCase,
@@ -98,6 +107,7 @@ export class GamificationModule {
     private readonly resetMonthlyPointsUseCase: ResetMonthlyPointsUseCase,
     private readonly reviewWeeklyXpUseCase: ReviewWeeklyXpUseCase,
     private readonly closeSeasonUseCase: CloseSeasonUseCase,
+    private readonly changeTrophyEquipUseCase: ChangeTrophyEquipUseCase,
   ) {
     this.awardFromWorkSession = this.awardFromWorkSessionUseCase.execute.bind(this.awardFromWorkSessionUseCase)
     this.awardFromTaskCompletion = this.awardFromTaskCompletionUseCase.execute.bind(this.awardFromTaskCompletionUseCase)
@@ -118,6 +128,7 @@ export class GamificationModule {
     this.resetMonthlyPoints = this.resetMonthlyPointsUseCase.execute.bind(this.resetMonthlyPointsUseCase)
     this.reviewWeeklyXp = this.reviewWeeklyXpUseCase.execute.bind(this.reviewWeeklyXpUseCase)
     this.closeSeason = this.closeSeasonUseCase.execute.bind(this.closeSeasonUseCase)
+    this.changeTrophyEquip = this.changeTrophyEquipUseCase.execute.bind(this.changeTrophyEquipUseCase)
   }
 }
 
@@ -131,6 +142,8 @@ export interface GamificationModulePorts {
   weeklyXp: WeeklyXpReviewPort
   seasonCycle: SeasonCyclePort
   seasonChampion: SeasonChampionPort
+  /** plan-v8 V8-6 (DEC-218): a escrita do equip/desequip, ledger incluso na transação. */
+  trophyEquip: TrophyEquipPort
 }
 
 export interface GamificationModuleFactoryOptions {
@@ -148,6 +161,7 @@ export function createGamificationModule(options: GamificationModuleFactoryOptio
     weeklyXp: options.ports?.weeklyXp ?? createPrismaWeeklyXpReviewPort(),
     seasonCycle: options.ports?.seasonCycle ?? createPrismaSeasonCyclePort(),
     seasonChampion: options.ports?.seasonChampion ?? createPrismaSeasonChampionPort(),
+    trophyEquip: options.ports?.trophyEquip ?? createPrismaTrophyEquipPort(),
   }
 
   const progression = new GetUserProgressionUseCase({ users: ports.users })
@@ -159,20 +173,26 @@ export function createGamificationModule(options: GamificationModuleFactoryOptio
   })
 
   return new GamificationModule(
+    // V8-6 (DEC-218/219): os três creditos passaram a ler os trofeus EQUIPADOS da pessoa no
+    // instantaneo do credit. A mesma port de sempre (`userBadges`), com a leitura nova
+    // (`findEquippedEffectsByUserId`) — sem segunda fonte de "o que esta equipado hoje".
     new AwardFromWorkSessionUseCase({
       awardHistory: ports.awardHistory,
       progression,
       evaluateUserBadges,
+      userBadges: ports.userBadges,
     }),
     new AwardFromTaskCompletionUseCase({
       awardHistory: ports.awardHistory,
       progression,
       evaluateUserBadges,
+      userBadges: ports.userBadges,
     }),
     new AwardFromActivityCompletionUseCase({
       awardHistory: ports.awardHistory,
       progression,
       evaluateUserBadges,
+      userBadges: ports.userBadges,
     }),
     progression,
     evaluateUserBadges,
@@ -193,5 +213,8 @@ export function createGamificationModule(options: GamificationModuleFactoryOptio
     new ReviewWeeklyXpUseCase({ weeklyXp: ports.weeklyXp }),
     // V8-4 (DEC-213): o fechamento da temporada. Chamado só pelo cron; o gate de MANAGE_USERS mora aqui.
     new CloseSeasonUseCase({ cycle: ports.seasonCycle, champion: ports.seasonChampion }),
+    // V8-6 (DEC-218): o equip/desequip. Sem gate de gestao: a autoridade e `requireActorSelf` dentro
+    // do use case, e o teto de slot e a escada lida do XP (o mesmo lookup do read model).
+    new ChangeTrophyEquipUseCase({ progression, equip: ports.trophyEquip }),
   )
 }

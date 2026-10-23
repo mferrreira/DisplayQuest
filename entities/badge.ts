@@ -16,6 +16,10 @@ export const badgeSchema = z.object({
   color: z.string().nullable().optional(),
   category: badgeCategorySchema,
   criteria: z.unknown().nullable().optional(), // Json? — owned by backend rules
+  // V8-6 (DEC-218): o Json dos efeitos equipáveis, na mesma regra do critério — a lista de verbos e
+  // tiers é fechada no domínio (`trophy-effects.ts`) e a leitura é defensiva; a trilha de wire só
+  // carrega o Json.
+  effects: z.unknown().nullable().optional(), // Json? — owned by backend rules
   isActive: z.boolean().default(true),
   createdAt: dateTimeString.optional(),
   createdBy: z.number().int(),
@@ -28,7 +32,11 @@ export const userBadgeSchema = z.object({
   badgeId: z.number().int(),
   earnedAt: dateTimeString,
   earnedBy: z.number().int().nullable().optional(),
+  // V8-6 (DEC-218): qual dos troféus conquistados está equipado. Opcional no wire: as linhas
+  // anteriores à coluna (e os fixtures antigos) não a declaram — `UserRecord.coins` na V8-5 é o
+  // precedente de por que ausente não é apagado.
   /** APIs may embed the badge definition; optional until T0.5 confirms per-endpoint shape. */
   badge: badgeSchema.optional(),
+  equipped: z.boolean().optional(),
 });
 export type UserBadge = z.infer<typeof userBadgeSchema>;

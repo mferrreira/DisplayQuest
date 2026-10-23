@@ -1,4 +1,4 @@
-import type { ActorRef, GamificationSourceType, GamificationTrack, MonthKey, SeasonKey, WeekKey, XpAdjustment } from "@/backend/domain"
+import type { ActorRef, GamificationSourceType, GamificationTrack, MonthKey, SeasonKey, TrophyCriterionWindow, TrophyEquipAction, UserProgression, WeekKey, XpAdjustment } from "@/backend/domain"
 
 /**
  * O vocabulário é o do domínio (`Progression.ts`) — re-exportado, não copiado. A cópia local
@@ -19,6 +19,13 @@ export interface AwardFromTaskCompletionCommand {
   taskId: number
   /** GAP-04 (fecha em OND6-B2): null era aceito em runtime (default 10) sem estar no tipo. */
   taskPoints?: number | null
+  /**
+   * plan-v8 V8-6 (DEC-219): quanto de `taskPoints` é punição de atraso, contado pela MESMA régua
+   * que o produziu (`calculateLatePenalty`, DEC-39). O verbo `penalidade` dos troféus equipados
+   * precisa da componente: o total não diz quanto dele é punição. Ausente é 0 (o chamador sem
+   * calendário — teste, publisher sem atraso — não pede redução nenhuma).
+   */
+  latePenalty?: number | null
 }
 
 /**
@@ -38,15 +45,13 @@ export interface AwardFromActivityCompletionCommand {
   coins: number
 }
 
-export interface UserProgression {
-  userId: number
-  points: number
-  xp: number
-  level: number
-  elo: string
-  nextLevelXp: number
-  progressToNextLevel: number
-}
+/**
+ * V8-6 (DEC-217): a progressao passa a ser a das trilhas — placar do mes, XP da temporada, moeda
+ * vitalicia, elo derivado do XP pela escada e os slots que o elo abre. O `level`/`nextLevelXp`/
+ * `progressToNextLevel` derivados de `points` sairam junto da derivação dormente (MODELO §8).
+ * O type e o do dominio, re-exportado (mesma disciplina da DEC-95/96 contra copia local).
+ */
+export type { UserProgression }
 
 export interface GamificationAwardResult {
   userId: number
@@ -67,13 +72,22 @@ export interface GamificationAwardResult {
 }
 
 export interface BadgeCriteriaInput {
+  /** Re-exportado do domínio (DEC-219): a cópia local do vocabulário é a segunda régua. */
+  window?: TrophyCriterionWindow
   points?: number
   tasks?: number
+  xp?: number
+  coins?: number
   projects?: number
   workSessions?: number
   weeklyHours?: number
   consecutiveDays?: number
   specialCondition?: string
+}
+
+export interface BadgeEffectsInput {
+  verb: string
+  tier: string
 }
 
 export interface CreateBadgeCommand {
@@ -83,8 +97,40 @@ export interface CreateBadgeCommand {
   icon?: string | null
   color?: string | null
   criteria?: BadgeCriteriaInput | null
+  /** V8-6 (DEC-218): o admin escolhe verbo e tier do menu fechado — nenhum número livre. */
+  effects?: BadgeEffectsInput[] | null
   isActive?: boolean
   createdBy: number
+}
+
+/**
+ * V8-6 (DEC-218): equipar/desequipar. `actor` decide a autoridade (só a própria pessoa), e o slot é
+ * o do elo DO MOMENTO (DEC-217). A troca não recalcula credit passado: nenhum caminho de troféu
+ * reescreve um `history` já escrito.
+ */
+/** O vocabulário é o do domínio (`trophy-equip-rules.ts`), re-exportado — a cópia local de vocabulário
+ * é exatamente o modo de falha que a DEC-95/96 mediu (a de `GamificationSourceType`). */
+export type { TrophyEquipAction }
+
+export interface ChangeTrophyEquipCommand {
+  actor: ActorRef
+  userId: number
+  /** Cru: o use case valida depois do gate (precedente `requireBadgeId`, B6-2a). */
+  badgeId: unknown
+  action: unknown
+}
+
+export interface TrophyEquipOutcome {
+  userId: number
+  badgeId: number
+  action: TrophyEquipAction
+  /** O elo e o slot que decidiram o movimento. */
+  elo: string
+  slots: number
+  equippedBefore: number
+  equippedAfter: number
+  /** `true` quando o estado já era o pedido (equipar equipado / desequipar desequipado). */
+  unchanged: boolean
 }
 
 export interface UpdateBadgeCommand {
@@ -159,6 +205,9 @@ export interface WeeklyXpReviewOutcome {
   xpBefore: number
   /** Depois do piso 0 (DEC-214): nunca negativo. */
   xpAfter: number
+  /** V8-6 (DEC-217): o degrau antes e depois da revisao — penalidade pode derrubar um umbral. */
+  eloBefore: string
+  eloAfter: string
 }
 
 export interface ReviewWeeklyXpResult {
@@ -196,6 +245,13 @@ export interface SeasonCloseOutcome {
   xp: number
   /** Posição na temporada (1 = CAMPEÃO). Nula para quem não entrou no livro. */
   position: number | null
+  /**
+   * V8-6 (DEC-217): o elo com que a pessoa FECHOU a temporada (o degrau do XP da temporada no
+   * instante do fechamento), gravado em `season_history.elo`. A COLUNA `users.elo` volta ao primeiro
+   * degrau junto com o XP; o que fica para sempre é o valor desta linha. Nula só nas linhas escritas
+   * pela V8-4, antes de a escada existir — o livro não se reescreve.
+   */
+  elo: string | null
 }
 
 /**

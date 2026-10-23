@@ -43,7 +43,7 @@ type Store = {
   memberships: Map<number, number[]>; // userId -> projectIds
   roles: Map<number, string[]>;
   published: Array<{ eventType: string; audience: number[] }>;
-  awards: Array<{ userId: number; taskId: number; taskPoints: number }>;
+  awards: Array<{ userId: number; taskId: number; taskPoints: number; latePenalty: number }>;
   completedTasks: number[];
 };
 
@@ -222,7 +222,7 @@ function buildModule() {
   };
 
   const events = {
-    async onTaskCompleted(event: { userId: number; taskId: number; taskPoints: number }) {
+    async onTaskCompleted(event: { userId: number; taskId: number; taskPoints: number; projectId: number | null; latePenalty: number }) {
       store.awards.push(event);
       return event.taskPoints;
     },
@@ -565,7 +565,9 @@ describe("V4-4/V4-5 · DEC-97 — o prêmio creditado na aprovação é a mãe +
     // contrato do evento. V8-1 (DEC-215): `projectId` continua no contrato como identidade (é o
     // que distingue quest de tarefa de projeto), mas não é mais chave de escrita em
     // `projects.points` — a coluna saiu.
-    expect(store.awards).toEqual([{ userId: 7, taskId: 62, taskPoints: 20, projectId: 3 }]);
+    // V8-6 (DEC-219): o evento carrega também a COMPONENTE de atraso. O total sozinha não diz quanto
+    // dele é punição, e é a componente que o verbo `penalidade` dos troféus equipados reduz.
+    expect(store.awards).toEqual([{ userId: 7, taskId: 62, taskPoints: 20, projectId: 3, latePenalty: 0 }]);
   });
 
   it("o exemplo da DEC-78 recalculado pela DEC-97: mãe −40, base com 3 subtasks 25 → −25", async () => {
@@ -579,6 +581,9 @@ describe("V4-4/V4-5 · DEC-97 — o prêmio creditado na aprovação é a mãe +
     // (10 + 3·5 = 25) e o atraso da mãe (5 dias × 10) desconta uma vez só.
     const result = await taskModule.approveTask({ taskId: 63, approverId: 1 });
     expect(result.awardedPoints).toBe(-25);
+    // A mesma conta, agora com as duas metades separadas: 25 de base creditados e 50 de penalidade
+    // descontados. O valor creditado continua −25 (DEC-39, sem piso no caminho de tarefa).
+    expect(store.awards).toEqual([{ userId: 7, taskId: 63, taskPoints: -25, projectId: 3, latePenalty: 50 }]);
   });
 
   it("tarefa sem subtask continua creditando exatamente o que creditava antes", async () => {

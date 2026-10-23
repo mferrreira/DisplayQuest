@@ -1,5 +1,6 @@
-import { POINTS_GAMIFICATION_TRACK, XP_EVENT_TASK_COMPLETED, buildAwardDescription, taskAwardPoints, xpAwardDescription } from "@/backend/domain"
+import { POINTS_GAMIFICATION_TRACK, TROPHY_BOOST_VERB_BY_SOURCE, XP_EVENT_TASK_COMPLETED, applyTrophyCredit, buildAwardDescription, readTrophyEffects, taskAwardPoints, trophyCreditLedger, xpAwardDescription } from "@/backend/domain"
 import type { GamificationSourceType } from "@/backend/domain"
+import type { UserBadgePort } from "@/backend/modules/gamification/application/ports/user-badge.port"
 import type {
   AwardFromTaskCompletionCommand,
   GamificationAwardResult,
@@ -22,12 +23,27 @@ import type { GetUserProgressionUseCase } from "@/backend/modules/gamification/a
  *
  * V8-5 (DEC-215): o campo do montante passou a `amountAwarded` e o record declara `track`. A
  * tarefa continua creditando POINTS: o que mudou de destino foi só o prêmio de atividade.
+ *
+ * V8-6 (DEC-218/219): os troféus EQUIPADOS entram na conta no instantâneo do credit. O valor que a
+ * régua produziu (`taskPoints`, já atravessada pelo prazo) é o `amount` do pedido, e a `latePenalty`
+ * que o publicador trouxe (DEC-219) é a componente que o verbo `penalidade` desconta — sem ela,
+ * `-20` não diz quanto de `-20` é punição. Quem aplica é a regra pura (`applyTrophyCredit`); este
+ * use case só monta o pedido e leva o resultado para o ledger. Sem troféu equipado o número é
+ * exatamente o de antes, e é isso que mantém os golden de premiação intactos.
+ *
+ * Consequência medida e aceita: `task_user_progress.awardedPoints` guarda o valor da RÉGUA (o prêmio
+ * que a tarefa produziu), e o ledger guarda o que a PESSOA recebeu (com o boost). Os dois divergem
+ * quando há boost equipado, e cada um responde uma pergunta: a progressão da tarefa fala do trabalho,
+ * o livro-caixa da gamificação fala do crédito. A resposta HTTP leva o creditado (DEC-93: o chip
+ * mostra o que o servidor creditou), nunca o recalculado pela régua.
  */
 
 export interface AwardFromTaskCompletionDependencies {
   awardHistory: GamificationAwardHistoryPort
   progression: GetUserProgressionUseCase
   evaluateUserBadges: EvaluateUserBadgesUseCase
+  /** V8-6: os efeitos dos troféus equipados, lidos no instantâneo do credit. */
+  userBadges: UserBadgePort
 }
 
 export class AwardFromTaskCompletionUseCase {
@@ -57,6 +73,18 @@ export class AwardFromTaskCompletionUseCase {
     }
 
     const amount = taskAwardPoints(command.taskPoints)
+    // V8-6 (DEC-218/219): o boost é lido AGORA — o que já foi creditado não se recalcula.
+    const effects = readTrophyEffects(
+      (await this.dependencies.userBadges.findEquippedEffectsByUserId(command.userId)).flatMap((row) => row.effects),
+    )
+    const trophyVerb = TROPHY_BOOST_VERB_BY_SOURCE[sourceType]
+    const credit = applyTrophyCredit({
+      boostVerb: trophyVerb,
+      amount,
+      penalty: command.latePenalty ?? null,
+      effects,
+    })
+    const trophy = trophyCreditLedger(credit, trophyVerb)
     // V8-3 (DEC-214): XP é +10 FLAT por tarefa aprovada — não deriva do valor do prêmio, que
     // obedece ao prazo (DEC-97). O caminho só é chamado quando a tarefa chegou a `done`
     // (completeTask credita no `done`; approveTask credita na aprovação; delegated em
@@ -68,9 +96,10 @@ export class AwardFromTaskCompletionUseCase {
       sourceType,
       sourceId,
       description,
-      amount,
+      amount: credit.amount,
       track: POINTS_GAMIFICATION_TRACK,
       xp: { description: xpAwardDescription(sourceType, sourceId), amount: xpAwarded },
+      trophy: trophy ?? undefined,
     })
 
     const newProgression = await this.dependencies.progression.execute(command.userId)
@@ -81,7 +110,7 @@ export class AwardFromTaskCompletionUseCase {
       userId: command.userId,
       sourceType,
       sourceId,
-      amountAwarded: amount,
+      amountAwarded: credit.amount,
       track: POINTS_GAMIFICATION_TRACK,
       xpAwarded,
       newProgression,

@@ -69,6 +69,8 @@ export class ReviewWeeklyXpUseCase {
           netAmount: 0,
           xpBefore: candidate.xp,
           xpAfter: candidate.xp,
+          eloBefore: candidate.elo,
+          eloAfter: candidate.elo,
         });
         continue;
       }
@@ -87,6 +89,8 @@ export class ReviewWeeklyXpUseCase {
           netAmount: 0,
           xpBefore: candidate.xp,
           xpAfter: candidate.xp,
+          eloBefore: candidate.elo,
+          eloAfter: candidate.elo,
         });
         continue;
       }
@@ -111,6 +115,8 @@ export class ReviewWeeklyXpUseCase {
           netAmount: 0,
           xpBefore: candidate.xp,
           xpAfter: candidate.xp,
+          eloBefore: candidate.elo,
+          eloAfter: candidate.elo,
         });
         continue;
       }
@@ -125,6 +131,8 @@ export class ReviewWeeklyXpUseCase {
         netAmount,
         xpBefore: applied.xpBefore,
         xpAfter: applied.xpAfter,
+        eloBefore: applied.eloBefore,
+        eloAfter: applied.eloAfter,
       });
     }
 

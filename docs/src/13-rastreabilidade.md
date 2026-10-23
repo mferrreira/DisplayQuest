@@ -17,7 +17,7 @@ responder, a partir de qualquer um dos níveis, onde o comportamento é decidido
 | RF-06 · Relatório com anexo | Criar, Editar, Excluir relatório, Anexar, Baixar | RB-32 a RB-38 | Relatório de projeto, Anexo | `reporting` |
 | RF-07 · Plantão único e visível | Assumir, Pausar, Retomar, Encerrar responsabilidade, Abrir e tratar issue | RB-39 a RB-41, RB-44 a RB-50 | Responsabilidade, Issue | `lab-operations` |
 | RF-08 · Grade com escrita restrita | Consultar grade, Editar a própria grade, Editar grade de terceiros | RB-42, RB-43 | Grade do laboratório, Grade pessoal | `lab-operations` |
-| RF-09 · Pontos, distintivos e recompensa | Consultar progresso, Resgatar, Aprovar compra, Conceder badge | RB-51 a RB-57, RB-67 a RB-70 | Recompensa, Compra, Distintivo, Premiação | `store`, `gamification` |
+| RF-09 · Pontos, distintivos e recompensa | Consultar progresso, Resgatar, Aprovar compra, Conceder badge | RB-51 a RB-57, RB-67 a RB-83 | Recompensa, Compra, Distintivo, Premiação | `store`, `gamification` |
 | RF-10 · Comunicado interno | Transmitir comunicado, Ler notificação, Marcar tudo como lido | RB-58 a RB-61 | Notificação, Público | `notifications` |
 
 ## Critérios de aceitação por requisito
@@ -49,7 +49,7 @@ e o nível de autorização aplicado.
 | Saúde | `/health` | Pública |
 | Agenda | `/cron/status` | Autenticada |
 | Contas | `/users`, `/users/[id]`, `/users/approve`, `/users/[id]/roles`, `/users/[id]/status`, `/users/[id]/points`, `/users/[id]/deduct-hours` | Permissão de gestão de usuários, ou autoria |
-| Perfis | `/users/[id]/profile`, `/users/profiles`, `/users/[id]/avatar`, `/users/avatar`, `/users/statistics`, `/users/leaderboard`, `/users/[id]/gamification` | Autenticada, ou autoria |
+| Perfis | `/users/[id]/profile`, `/users/profiles`, `/users/[id]/avatar`, `/users/avatar`, `/users/statistics`, `/users/leaderboard`, `/users/[id]/gamification`, `/users/[id]/trophies` | Autenticada, ou autoria |
 | Projetos | `/projects`, `/projects/[id]`, `/projects/stats`, `/projects/[id]/members`, `/projects/[id]/volunteers`, `/projects/[id]/hours`, `/projects/[id]/hours-history`, `/projects/[id]/weekly-hours` | Permissão de gestão de projetos, ou participação |
 | Tarefas | `/tasks`, `/tasks/[id]`, `/tasks/[id]/approve`, `/tasks/[id]/reject`, `/tasks/global-progress` | Permissão de gestão de tarefas, ou autoria |
 | Sessões | `/work-sessions`, `/work-sessions/[id]` | Autoria, ou permissão de gestão de sessões |

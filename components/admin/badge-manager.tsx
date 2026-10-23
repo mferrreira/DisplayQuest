@@ -24,16 +24,37 @@ import {
   Settings
 } from "lucide-react"
 import { BadgesAPI } from "@/contexts/api-client"
+import {
+  DEFAULT_TROPHY_CRITERION_WINDOW,
+  TROPHY_CRITERION_FIELDS,
+  TROPHY_CRITERION_WINDOWS,
+  TROPHY_CRITERION_WINDOW_LABELS,
+  TROPHY_CRITERION_LABELS,
+  TROPHY_EFFECT_LABELS,
+  TROPHY_EFFECT_VERBS,
+  TROPHY_TIER_LABELS,
+  TROPHY_TIERS,
+  trophyCriterionFieldsForWindow,
+  type BadgeCriteria,
+  type TrophyCriterionWindow,
+  type TrophyEffect,
+  type TrophyEffectVerb,
+  type TrophyTier,
+} from "@/backend/domain"
 
-interface BadgeCriteria {
-  points?: number
-  tasks?: number
-  projects?: number
-  workSessions?: number
-  weeklyHours?: number
-  consecutiveDays?: number
-  specialCondition?: string
-}
+/**
+ * plan-v8 V8-6 (DEC-218/219): o formulário passou a falar o vocabulário FECHADO do domínio —
+ * `TROPHY_CRITERION_WINDOWS`, `TROPHY_CRITERION_LABELS`, `TROPHY_EFFECT_VERBS`, `TROPHY_TIERS`. A
+ * lição medida da DEC-96 é que uma tabela de rótulos local no componente é uma segunda régua, e a
+ * primeira deixa de ser lida por ninguém. O painel não pode oferecer um critério que a validação do
+ * domínio recusa, nem um efeito com número livre: o número mora no tier.
+ *
+ * As duas regras de escrita que a onda consertou:
+ *   - campo vazio sai do payload (`criteria: null` quando nada foi preenchido). O `parseInt(...) || 0`
+ *     antigo escrevia 0 em todo campo não preenchido, e "critério 0" deixou de ser ignorado (DEC-219:
+ *     `0` é avaliado) — o formulário antigo criava troféus concedidos a todo mundo.
+ *   - `window` declara o que o critério mede, e o formulário só mostra os campos que a janela mede.
+ */
 
 interface BadgeData {
   id?: number
@@ -43,8 +64,35 @@ interface BadgeData {
   color?: string
   category: 'achievement' | 'milestone' | 'special' | 'social'
   criteria?: BadgeCriteria
+  effects?: TrophyEffect[]
   isActive: boolean
   createdBy: number
+}
+
+/** O payload do critério: só o que foi preenchido, com a janela declarada. Vazio é `null`. */
+function criteriaPayload(criteria: BadgeCriteria | undefined): Record<string, unknown> | null {
+  if (!criteria) return null
+  const filled: Record<string, number | string> = {}
+  for (const [key, value] of Object.entries(criteria)) {
+    if (key === "window") continue
+    if (value === undefined || value === null) continue
+    if (typeof value === "string" && !value.trim()) continue
+    if (typeof value === "number" && !Number.isFinite(value)) continue
+    filled[key] = value
+  }
+  if (Object.keys(filled).length === 0) return null
+  return { window: criteria.window ?? DEFAULT_TROPHY_CRITERION_WINDOW, ...filled }
+}
+
+function effectsPayload(effects: TrophyEffect[] | undefined): TrophyEffect[] | null {
+  const filled = (effects ?? []).filter((effect) => effect.verb && effect.tier)
+  return filled.length === 0 ? null : filled
+}
+
+/** O payload do form: `criteria` e `effects` nunca vão como objeto com campos vazios zerados. */
+function formPayload(form: BadgeData) {
+  const { criteria, effects, ...rest } = form
+  return { ...rest, criteria: criteriaPayload(criteria), effects: effectsPayload(effects) }
 }
 
 const categoryIcons = {
@@ -72,7 +120,8 @@ export function BadgeManager() {
     icon: '',
     color: '#3B82F6',
     category: 'achievement',
-    criteria: {},
+    criteria: { window: DEFAULT_TROPHY_CRITERION_WINDOW },
+    effects: [],
     isActive: true,
     createdBy: 0 // Will be set by server from authenticated user
   })
@@ -97,9 +146,9 @@ export function BadgeManager() {
     e.preventDefault()
     try {
       if (editingBadge) {
-        await BadgesAPI.update(editingBadge.id!, formData)
+        await BadgesAPI.update(editingBadge.id!, formPayload(formData))
       } else {
-        await BadgesAPI.create(formData)
+        await BadgesAPI.create(formPayload(formData))
       }
       
       setShowCreateDialog(false)
@@ -135,21 +184,73 @@ export function BadgeManager() {
       icon: '',
       color: '#3B82F6',
       category: 'achievement',
-      criteria: {},
+      criteria: { window: DEFAULT_TROPHY_CRITERION_WINDOW },
+      effects: [],
       isActive: true,
       createdBy: 0
     })
   }
 
-  const updateCriteria = (field: keyof BadgeCriteria, value: number | string) => {
+  const setCriterionWindow = (window: TrophyCriterionWindow) => {
+    // Trocar a janela descarta os campos que ela não mede: deixar `coins` gravado num critério de
+    // `mes` seria o jeito de o payload ir para o 400 do domínio com um campo que a tela ofereceu.
+    setFormData(prev => {
+      const kept: BadgeCriteria = { window }
+      const target = kept as unknown as Record<string, number | string>
+      for (const field of trophyCriterionFieldsForWindow(window)) {
+        const value = prev.criteria?.[field]
+        if (value !== undefined) target[field] = value
+      }
+      return { ...prev, criteria: kept }
+    })
+  }
+
+  const updateCriteria = (field: keyof BadgeCriteria, value: string) => {
+    // Campo vazio sai do critério (não vira 0). É a diferença entre "não mede isto" e "mede zero",
+    // e desde a DEC-219 as duas coisas são decisões diferentes do motor.
+    setFormData(prev => {
+      const next: BadgeCriteria = { ...prev.criteria, window: prev.criteria?.window ?? DEFAULT_TROPHY_CRITERION_WINDOW }
+      if (value === "") {
+        delete next[field]
+        return { ...prev, criteria: next }
+      }
+      if (field === "specialCondition") {
+        next.specialCondition = value
+        return { ...prev, criteria: next }
+      }
+      const parsed = Number(value)
+      if (!Number.isFinite(parsed)) return prev
+      // Os campos numéricos do critério são todos `number`, e o campo vem da lista da janela. O
+      // cast é sobre a indexação dinâmica (a chave é `keyof BadgeCriteria`), não sobre o valor.
+      const numericFields = next as unknown as Record<string, number>
+      numericFields[field] = parsed
+      return { ...prev, criteria: next }
+    })
+  }
+
+  const updateEffect = (index: number, patch: Partial<TrophyEffect>) => {
+    setFormData(prev => {
+      const effects = [...(prev.effects ?? [])]
+      effects[index] = { ...effects[index], ...patch }
+      return { ...prev, effects }
+    })
+  }
+
+  const addEffect = () => {
     setFormData(prev => ({
       ...prev,
-      criteria: {
-        ...prev.criteria,
-        [field]: value
-      }
+      effects: [...(prev.effects ?? []), { verb: TROPHY_EFFECT_VERBS[0], tier: TROPHY_TIERS[0] }],
     }))
   }
+
+  const removeEffect = (index: number) => {
+    setFormData(prev => ({ ...prev, effects: (prev.effects ?? []).filter((_, i) => i !== index) }))
+  }
+
+  const criteriaWindow = formData.criteria?.window ?? DEFAULT_TROPHY_CRITERION_WINDOW
+  const windowFields = trophyCriterionFieldsForWindow(criteriaWindow)
+  const numericFields = windowFields.filter((field) => field !== "specialCondition") as (keyof typeof TROPHY_CRITERION_LABELS)[]
+  const specialConditionField = windowFields.includes("specialCondition")
 
   const getCategoryIcon = (category: string) => {
     const IconComponent = categoryIcons[category as keyof typeof categoryIcons] || Trophy
@@ -266,87 +367,157 @@ export function BadgeManager() {
 
               <Separator />
 
-              {/* Criteria */}
+              {/* Criteria — DEC-219: a janela declara o que o critério mede, e o formulário só
+                  mostra os campos que a janela mede. */}
               <div className="space-y-4">
                 <h3 className="text-lg font-medium">Critérios para Conquistar</h3>
                 <p className="text-sm text-muted-foreground">
-                  Defina os critérios que o usuário deve atingir para ganhar este badge
+                  Escolha a janela que o troféu mede e preencha só o que ele exige. Campo vazio não
+                  vale zero: não mede aquilo.
                 </p>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="points">Pontos mínimos</Label>
-                    <Input
-                      id="points"
-                      type="number"
-                      value={formData.criteria?.points || ''}
-                      onChange={(e) => updateCriteria('points', parseInt(e.target.value) || 0)}
-                      placeholder="0"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="tasks">Tarefas concluídas</Label>
-                    <Input
-                      id="tasks"
-                      type="number"
-                      value={formData.criteria?.tasks || ''}
-                      onChange={(e) => updateCriteria('tasks', parseInt(e.target.value) || 0)}
-                      placeholder="0"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="projects">Projetos participados</Label>
-                    <Input
-                      id="projects"
-                      type="number"
-                      value={formData.criteria?.projects || ''}
-                      onChange={(e) => updateCriteria('projects', parseInt(e.target.value) || 0)}
-                      placeholder="0"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="workSessions">Sessões de trabalho</Label>
-                    <Input
-                      id="workSessions"
-                      type="number"
-                      value={formData.criteria?.workSessions || ''}
-                      onChange={(e) => updateCriteria('workSessions', parseInt(e.target.value) || 0)}
-                      placeholder="0"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="weeklyHours">Horas semanais</Label>
-                    <Input
-                      id="weeklyHours"
-                      type="number"
-                      step="0.5"
-                      value={formData.criteria?.weeklyHours || ''}
-                      onChange={(e) => updateCriteria('weeklyHours', parseFloat(e.target.value) || 0)}
-                      placeholder="0"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="consecutiveDays">Dias consecutivos</Label>
-                    <Input
-                      id="consecutiveDays"
-                      type="number"
-                      value={formData.criteria?.consecutiveDays || ''}
-                      onChange={(e) => updateCriteria('consecutiveDays', parseInt(e.target.value) || 0)}
-                      placeholder="0"
-                    />
-                  </div>
+                <div>
+                  <Label htmlFor="criteria-window">Janela do critério</Label>
+                  <Select
+                    value={criteriaWindow}
+                    onValueChange={(value) => {
+                      // O Select do Radix dentro de <form> monta um select nativo oculto, e uma
+                      // mudança sem opção registrada chega como "" (medido no V5-6). "" não é
+                      // vocabulário: é ignorado.
+                      if (value === "") return
+                      setCriterionWindow(value as TrophyCriterionWindow)
+                    }}
+                  >
+                    <SelectTrigger id="criteria-window" aria-label="Janela do critério">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {TROPHY_CRITERION_WINDOWS.map((window) => (
+                        <SelectItem key={window} value={window}>
+                          {TROPHY_CRITERION_WINDOW_LABELS[window]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
-                <div>
-                  <Label htmlFor="specialCondition">Condição especial</Label>
-                  <Textarea
-                    id="specialCondition"
-                    value={formData.criteria?.specialCondition || ''}
-                    onChange={(e) => updateCriteria('specialCondition', e.target.value)}
-                    placeholder="Ex: Primeiro usuário a completar 100 tarefas..."
-                    rows={2}
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  {numericFields.map((field) => (
+                    <div key={field}>
+                      <Label htmlFor={`criteria-${field}`}>{TROPHY_CRITERION_LABELS[field]}</Label>
+                      <Input
+                        id={`criteria-${field}`}
+                        type="number"
+                        step={field === "weeklyHours" ? "0.5" : "1"}
+                        min={0}
+                        value={formData.criteria?.[field] ?? ""}
+                        onChange={(e) => updateCriteria(field, e.target.value)}
+                        placeholder="vazio"
+                      />
+                    </div>
+                  ))}
                 </div>
+
+                {specialConditionField && (
+                  <div>
+                    <Label htmlFor="specialCondition">Condição especial</Label>
+                    <Textarea
+                      id="specialCondition"
+                      value={formData.criteria?.specialCondition || ""}
+                      onChange={(e) => updateCriteria("specialCondition", e.target.value)}
+                      placeholder="Ex: Primeiro usuário a completar 100 tarefas..."
+                      rows={2}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Condição especial não substitui as métricas: o motor novo não a conhece como
+                      métrica, e um troféu concedido por rotina (o CAMPEÃO da temporada) não tem
+                      critério nenhum.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <Separator />
+
+              {/* Efeitos — DEC-218: verbo e tier do menu fechado. Nenhum número livre. */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-medium">Efeitos equipáveis</h3>
+                    <p className="text-sm text-muted-foreground">
+                      O que este troféu faz quando a pessoa o equipar. O valor vem do tier, e o tier é
+                      uma lista fechada — não há número a preencher.
+                    </p>
+                  </div>
+                  <Button type="button" variant="outline" size="sm" onClick={addEffect}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Adicionar efeito
+                  </Button>
+                </div>
+
+                {(formData.effects ?? []).length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    Sem efeito: o troféu é só conquistável, não muda nenhum credit.
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {(formData.effects ?? []).map((effect, index) => (
+                      <div key={`${effect.verb}-${effect.tier}-${index}`} className="grid grid-cols-[1fr_1fr_auto] gap-3 items-end">
+                        <div>
+                          <Label htmlFor={`effect-verb-${index}`}>Verbo</Label>
+                          <Select
+                            value={effect.verb}
+                            onValueChange={(value) => {
+                              if (value === "") return
+                              updateEffect(index, { verb: value as TrophyEffectVerb })
+                            }}
+                          >
+                            <SelectTrigger id={`effect-verb-${index}`} aria-label={`Verbo do efeito ${index + 1}`}>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {TROPHY_EFFECT_VERBS.map((verb) => (
+                                <SelectItem key={verb} value={verb}>
+                                  {TROPHY_EFFECT_LABELS[verb]}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label htmlFor={`effect-tier-${index}`}>Tier</Label>
+                          <Select
+                            value={effect.tier}
+                            onValueChange={(value) => {
+                              if (value === "") return
+                              updateEffect(index, { tier: value as TrophyTier })
+                            }}
+                          >
+                            <SelectTrigger id={`effect-tier-${index}`} aria-label={`Tier do efeito ${index + 1}`}>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {TROPHY_TIERS.map((tier) => (
+                                <SelectItem key={tier} value={tier}>
+                                  {TROPHY_TIER_LABELS[tier]}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          aria-label={`Remover efeito ${index + 1}`}
+                          onClick={() => removeEffect(index)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="flex justify-end space-x-2">
@@ -409,42 +580,53 @@ export function BadgeManager() {
               
               {badge.criteria && (
                 <div className="space-y-2">
-                  <h4 className="text-sm font-medium text-foreground">Critérios:</h4>
+                  <h4 className="text-sm font-medium text-foreground">Critérios</h4>
+                  <p className="text-xs text-muted-foreground">
+                    Janela:{" "}
+                    {TROPHY_CRITERION_WINDOW_LABELS[(badge.criteria.window ?? DEFAULT_TROPHY_CRITERION_WINDOW) as TrophyCriterionWindow]}
+                  </p>
                   <div className="space-y-1 text-xs text-muted-foreground">
-                    {badge.criteria.points && (
-                      <div className="flex items-center space-x-2">
-                        <Trophy className="h-3 w-3" />
-                        <span>{badge.criteria.points} pontos</span>
-                      </div>
-                    )}
-                    {badge.criteria.tasks && (
-                      <div className="flex items-center space-x-2">
-                        <Target className="h-3 w-3" />
-                        <span>{badge.criteria.tasks} tarefas</span>
-                      </div>
-                    )}
-                    {badge.criteria.projects && (
-                      <div className="flex items-center space-x-2">
-                        <Users className="h-3 w-3" />
-                        <span>{badge.criteria.projects} projetos</span>
-                      </div>
-                    )}
-                    {badge.criteria.weeklyHours && (
-                      <div className="flex items-center space-x-2">
-                        <Clock className="h-3 w-3" />
-                        <span>{badge.criteria.weeklyHours}h/semana</span>
-                      </div>
-                    )}
-                    {badge.criteria.specialCondition && (
-                      <div className="flex items-center space-x-2">
-                        <Star className="h-3 w-3" />
-                        <span className="truncate">{badge.criteria.specialCondition}</span>
-                      </div>
-                    )}
+                    {TROPHY_CRITERION_FIELDS.map((field) => {
+                      const value = field === "specialCondition"
+                        ? badge.criteria?.specialCondition
+                        : badge.criteria?.[field]
+                      if (value === undefined || value === null || value === "") return null
+                      return (
+                        <div key={field} className="flex items-center space-x-2">
+                          {field === "specialCondition" ? (
+                            <Star className="h-3 w-3" />
+                          ) : (
+                            <Target className="h-3 w-3" />
+                          )}
+                          <span className="truncate">
+                            {field === "specialCondition"
+                              ? String(value)
+                              : `${TROPHY_CRITERION_LABELS[field as keyof typeof TROPHY_CRITERION_LABELS]}: ${value}`}
+                          </span>
+                        </div>
+                      )
+                    })}
                   </div>
                 </div>
               )}
-              
+
+              {(badge.effects ?? []).length > 0 && (
+                <div className="space-y-2 mt-3">
+                  <h4 className="text-sm font-medium text-foreground">Efeitos equipáveis</h4>
+                  <div className="space-y-1 text-xs text-muted-foreground">
+                    {(badge.effects ?? []).map((effect) => (
+                      <div key={`${effect.verb}-${effect.tier}`} className="flex items-center space-x-2">
+                        <Trophy className="h-3 w-3" />
+                        <span>
+                          {TROPHY_EFFECT_LABELS[effect.verb as keyof typeof TROPHY_EFFECT_LABELS]} ·{" "}
+                          {TROPHY_TIER_LABELS[effect.tier as keyof typeof TROPHY_TIER_LABELS]}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="flex items-center justify-between mt-4 pt-3 border-t">
                 <div className="flex items-center space-x-2">
                   <div className={`w-2 h-2 rounded-full ${badge.isActive ? 'bg-success' : 'bg-muted-foreground'}`} />

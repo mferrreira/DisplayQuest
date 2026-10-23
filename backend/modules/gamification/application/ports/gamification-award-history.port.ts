@@ -1,4 +1,4 @@
-import type { AwardBalanceTrack, GamificationSourceType } from "@/backend/domain";
+import type { AwardBalanceTrack, GamificationSourceType, TrophyCreditLedger } from "@/backend/domain";
 
 /**
  * GamificationAwardHistoryPort — OND6-B2. Idempotencia + award atomico, congelados
@@ -51,6 +51,13 @@ export interface AwardRecord {
   /** Trilha do credit e da linha. Ausente é POINTS (o default da coluna e o credit antigo). */
   track?: AwardBalanceTrack;
   xp?: XpAwardWrite;
+  /**
+   * plan-v8 V8-6 (DEC-219): a auditoria do efeito de troféu que já está aplicado em `amount`. O
+   * valor chega ajustado porque quem aplica é a regra pura no use case (sobre o valor da régua e a
+   * penalidade que a régua descontou); o port só escreve o número e a explicação dele. Ausente é
+   * "sem efeito de troféu", e a linha continua exatamente como era antes da onda.
+   */
+  trophy?: TrophyCreditLedger;
 }
 
 export interface GamificationAwardHistoryPort {

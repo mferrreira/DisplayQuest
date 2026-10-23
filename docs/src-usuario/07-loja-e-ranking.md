@@ -92,4 +92,6 @@ O fechamento não é botão nem rota: é a agenda do sistema, e reexecutá-lo n�
 
 ## Distintivos
 
-Além dos dois saldos, o sistema concede **distintivos** — marcas de conquista, agrupadas por categoria. Quem tem a permissão de gerenciar distintivos cria e edita os modelos no Painel Administrativo; as pessoas os recebem e os veem no próprio perfil.
+Além dos dois saldos, o sistema concede **distintivos** — marcas de conquista, agrupadas por categoria, cada uma com um critério que declara a janela que mede: mês em curso, temporada ou vida inteira. Quem tem a permissão de gerenciar distintivos cria e edita os modelos no Painel Administrativo (capítulo 9); as pessoas os recebem e os veem no próprio perfil.
+
+O distintivo pode declarar um efeito, que vale enquanto o distintivo está equipado: um acréscimo percentual sobre os créditos seguintes — pontos de tarefa, pontos de sessão, moedas de atividade — ou a redução da penalidade de atraso. O credit afetado registra no histórico o distintivo que participou do número, e o que a pessoa mantém equipado depende do degrau dela na temporada.

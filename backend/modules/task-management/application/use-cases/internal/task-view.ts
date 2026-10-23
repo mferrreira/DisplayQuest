@@ -138,10 +138,11 @@ export async function publishTaskCompletionAward(
   taskId: number,
   taskPoints: number,
   projectId: number | null,
+  latePenalty: number,
 ): Promise<number | null> {
   if (!events) return null;
   try {
-    return await events.onTaskCompleted({ userId, taskId, taskPoints, projectId });
+    return await events.onTaskCompleted({ userId, taskId, taskPoints, projectId, latePenalty });
   } catch (error) {
     console.error("Erro ao publicar progressão de gamificação para conclusão de task:", error);
     return null;

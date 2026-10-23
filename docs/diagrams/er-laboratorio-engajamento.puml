@@ -180,6 +180,49 @@ entity "purchases" as PU {
   status : String
 }
 
+entity "badges" as B {
+  * id : Int <<PK>>
+  --
+  name : String
+  description : String
+  category : String
+  criteria : Json? <<com janela>>
+  effects : Json? <<verbo e tier>>
+  isActive : Boolean
+  createdBy : Int <<FK>>
+}
+
+entity "user_badges" as UB {
+  * id : Int <<PK>>
+  --
+  userId : Int <<FK>>
+  badgeId : Int <<FK>>
+  equipped : Boolean
+  earnedAt : DateTime
+  earnedBy : Int? <<FK>>
+}
+
+entity "month_history" as MH {
+  * id : Int <<PK>>
+  --
+  userId : Int <<FK>>
+  month : String <<YYYY-MM>>
+  points : Int
+  completedTasks : Int
+}
+
+entity "season_history" as SH {
+  * id : Int <<PK>>
+  --
+  userId : Int <<FK>>
+  year : Int
+  elo : String?
+  position : Int?
+  points : Int
+  xp : Int
+  completedTasks : Int
+}
+
 entity "kanban_boards" as KB {
   * id : Int <<PK>>
   --
@@ -208,6 +251,11 @@ U |o--o{ ISS : recebe
 U ||--o{ N : recebe
 U ||--o{ PU : compra
 RW ||--o{ PU : origina
+U ||--o{ UB : conquista
+B ||--o{ UB : concede
+B |o--o{ UB : assinada por
+U ||--o{ MH : fecha o mês
+U ||--o{ SH : fecha a temporada
 
 note top of WS
   A sessão é o coração do registro de
@@ -251,6 +299,32 @@ note bottom of N
   Notificações são internas ao painel:
   o sistema não envia correio
   eletrônico.
+end note
+
+note bottom of MH
+  Retrato do mês encerrado, escrito pela
+  agenda e nunca reescrito: a unique por
+  pessoa e mês é a trava de reexecução.
+  O placar da coluna recomeça em zero;
+  o retrato guarda até o valor negativo.
+end note
+
+note bottom of SH
+  Retrato do ano encerrado: soma dos
+  meses, experiência da temporada, o
+  degrau com que o ano fechou e a
+  posição na régua. É a base do troféu
+  do ano, e a coluna volta ao degrau
+  inicial na virada.
+end note
+
+note bottom of UB
+  Conquistado e equipado são colunas
+  diferentes: a conquista é vitalícia e
+  única por par, o equipamento é escolha
+  da pessoa e o teto vem do degrau da
+  temporada — regra de código, não
+  constraint daqui.
 end note
 
 @enduml

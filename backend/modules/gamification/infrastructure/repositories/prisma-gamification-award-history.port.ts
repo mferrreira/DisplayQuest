@@ -1,6 +1,6 @@
 import { Prisma } from "@prisma/client"
 import { prisma } from "@/lib/database/prisma"
-import { COINS_GAMIFICATION_TRACK, POINTS_GAMIFICATION_TRACK, XP_GAMIFICATION_TRACK } from "@/backend/domain"
+import { COINS_GAMIFICATION_TRACK, POINTS_GAMIFICATION_TRACK, XP_GAMIFICATION_TRACK, eloForSeasonXp } from "@/backend/domain"
 import type { AwardBalanceTrack } from "@/backend/domain"
 import type { GamificationAwardHistoryPort } from "@/backend/modules/gamification/application/ports/gamification-award-history.port"
 
@@ -56,11 +56,18 @@ export function createPrismaGamificationAwardHistoryPort(): GamificationAwardHis
       })
       return Boolean(existing)
     },
-    async awardAndRecord({ userId, sourceType, sourceId, description, amount, track, xp }) {
+    async awardAndRecord({ userId, sourceType, sourceId, description, amount, track, xp, trophy }) {
       const balanceTrack = track ?? POINTS_GAMIFICATION_TRACK
       const amountKey = LEDGER_AMOUNT_KEY[balanceTrack]
       const balanceColumn = BALANCE_COLUMN[balanceTrack]
       const increment = { increment: amount }
+
+      // V8-6 (DEC-219): a linha carrega a auditoria do efeito quando houve efeito. Montado como
+      // `InputJsonObject` e não como objeto literal com spread condicional: a chave do montante é
+      // computada (ela NOMEIA a trilha, V8-5) e o `tsc` perde o tipo do literal quando entra um
+      // spread condicional por cima dela.
+      const ledgerValues: Record<string, unknown> = { sourceType, sourceId, [amountKey]: amount }
+      if (trophy) ledgerValues.trophy = trophy
 
       await prisma.$transaction(async (tx) => {
         await tx.users.update({
@@ -77,28 +84,29 @@ export function createPrismaGamificationAwardHistoryPort(): GamificationAwardHis
             description,
             track: balanceTrack,
             oldValues: Prisma.JsonNull,
-            newValues: {
-              sourceType,
-              sourceId,
-              [amountKey]: amount,
-            },
-            metadata: {
-              domain: "gamification",
-              sourceType,
-              sourceId,
-              [amountKey]: amount,
-            },
+            newValues: ledgerValues as Prisma.InputJsonValue,
+            metadata: { domain: "gamification", ...ledgerValues } as Prisma.InputJsonValue,
           },
         })
 
         if (xp) {
-          await tx.users.update({
+          // V8-6 (DEC-217): o elo da temporada é recalculado na MESMA transação do XP. O update devolve
+          // a linha com o valor já incrementado (`select`), e é sobre esse número — nunca sobre um XP
+          // lido antes do credit — que a escada decide o degrau. Quem completa tarefa e sobe a OURO,
+          // sobe na hora; o elo não espera a revisão semanal.
+          const afterXp = await tx.users.update({
             where: { id: userId },
             data: {
               xp: {
                 increment: xp.amount,
               },
             },
+            select: { xp: true },
+          })
+
+          await tx.users.update({
+            where: { id: userId },
+            data: { elo: eloForSeasonXp(afterXp.xp) },
           })
 
           await tx.history.create({

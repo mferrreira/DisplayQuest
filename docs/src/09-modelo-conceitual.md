@@ -101,16 +101,18 @@ de uma pessoa. A primeira orienta, a segunda declara.
 ## Engajamento
 
 ```figure cl-engajamento titulo="Modelo conceitual do engajamento, da loja e da progressão"
-O engajamento é composto por quatro peças que operam em conjunto. A recompensa é o item de
-catálogo; a compra é o pedido de resgate, com dados congelados; o distintivo é a
-condecoração com critérios avaliáveis; e a premiação é o registro de saldos concedidos.
+O engajamento é composto por cinco peças que operam em conjunto. A recompensa é o item de
+catálogo; a compra é o pedido de resgate, com dados congelados; o distintivo é a condecoração com
+critérios avaliáveis e efeitos; a premiação é o registro de saldos concedidos; e os fechamentos —
+mensal e de temporada — são a fotografia do que a trilha acumulou, guardada antes da zeragem.
 
 O reconhecimento tem trilhas, e cada trilha tem ciclo próprio. **Pontos** são o placar do mês:
 creditados pelas aprovações de tarefa, zerados pelo fechamento mensal, que guarda o mês encerrado
 em histórico por pessoa. **Moedas** são a carteira vitalícia: única fonte é o prêmio de uma
 atividade de cronograma aprovada, e é delas que a loja cobra. **Experiência** é a trilha da
-temporada anual, escrita pelo motor de XP e revisada semanalmente. O **distintivo** não é saldo:
-é conquista, guardada por pessoa e por troféu.
+temporada anual, escrita pelo motor de XP e revisada semanalmente, e zerada pelo fechamento de
+temporada junto do placar do ano. O **distintivo** não é saldo: é conquista, registrada uma vez
+por pessoa e distintivo, e equipável até o limite do degrau.
 
 A premiação merece atenção. Ela não é uma entidade armazenada como tal: é o conceito que
 descreve a concessão de um saldo a partir de uma origem — sessão concluída, tarefa concluída,
@@ -119,10 +121,19 @@ com o identificador da origem formam a chave da idempotência: repetir um evento
 vezes. O ajuste manual de saldo é ação de gestão, tem trilha declarada e deixa a mesma linha de
 auditoria, em família separada do credit de evento.
 
-A progressão hoje exibida é derivada da soma de experiências acumulada a partir do placar de
-pontos. A derivação ainda existe e é função pura, mas não descreve as trilhas novas: a temporada
-usa a experiência própria do motor, e a escada de elo que substitui a derivação é decisão do
-plano em curso. Quem lê a rota de progressão lê, hoje, um número derivado do placar mensal.
+A progressão é a leitura das trilhas, e não uma quinta trilha: a rota reporta o placar do mês, as
+moedas, a experiência da temporada, o **degrau** e os **slots** de distintivo. O degrau vem da
+experiência por uma escada fechada — Bronze, Prata, Ouro, Platina, Diamante e Desafiante — e o
+degrau decide quantos distintivos a pessoa pode equipar (zero, um, dois, dois, três e três). Não é
+tabela: é decisão pura, recalculada a partir do que as colunas já guardam.
+
+O distintivo tem duas camadas que a distinção entre conquistar e equipar separa. A conquista é o
+par pessoa e distintivo, e é avaliada pelo critério, que declara a **janela** que mede (mês em
+curso, temporada ou vida inteira) e só lê as métricas daquela janela. O equipamento obedece ao slot
+do degrau, é decisão da própria pessoa e deixa linha de auditoria com o estado antes e depois. Um
+distintivo com **efeito** muda o credit seguinte enquanto estiver equipado: o efeito tem verbo
+(pontos de tarefa, pontos de sessão, moedas de atividade, penalidade) e tier de uma lista fechada, e
+a linha do credit nomeia o troféu que participou do número.
 ```
 
 ## Notificação e auditoria

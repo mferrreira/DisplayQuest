@@ -39,6 +39,17 @@ export function closingMonthOfInstant(instant: Date): MonthKey {
 }
 
 /**
+ * O mês CIVIL EM CURSO do instante, visto em America/Sao_Paulo. Não é o mês que a rotina fecha
+ * (`closingMonthOfInstant`): o fechamento fotografa o anterior, enquanto a janela `mes` de um
+ * critério de troféu (DEC-219) mede o que a pessoa está fazendo agora — e o snapshot do mês em
+ * curso ainda não existe, porque ele só nasce no fechamento.
+ */
+export function currentMonthOfInstant(instant: Date): MonthKey {
+  const [year, month] = civilDayOfInstant(instant).split("-").map(Number);
+  return `${year}-${pad(month)}`;
+}
+
+/**
  * Janela do mês em instantâneos UTC, meia-noite de America/Sao_Paulo nos dois cortes:
  * `[start, endExclusive)`. O corte é EXCLUSIVO de propósito — `completedAt` e companhia são
  * instântes, e uma tarefa concluída às 23:59:59 do último dia tem que entrar no mês.

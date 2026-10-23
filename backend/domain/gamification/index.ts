@@ -1,6 +1,10 @@
-export type { Badge, BadgeCategory, BadgeCriteria, UserBadge } from "./Badge";
+export type { Badge, BadgeCategory, BadgeCriteria, TrophyCriterionWindow, UserBadge } from "./Badge";
+export { DEFAULT_TROPHY_CRITERION_WINDOW, TROPHY_CRITERION_WINDOWS } from "./Badge";
 export * from "./Progression";
 export * from "./badge-rules";
+export * from "./elo-rules";
+export * from "./trophy-effects";
+export * from "./trophy-equip-rules";
 export * from "./monthly-cycle";
 export * from "./season";
 export * from "./track-adjustment-rules";

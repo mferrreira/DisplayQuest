@@ -14,6 +14,11 @@
  * Module built with `createGamificationModule()` exactly as the composition root builds
  * it (use cases over the thin Prisma adapters).
  *
+ * plan-v8 V8-6 (DEC-217/218/219) acrescenta ao fim do arquivo: o elo da COLUNA acompanha o XP
+ * creditado dentro da mesma transacao, o trofeu equipado entra na conta do credit com a linha do
+ * ledger declarando a base e o bonus, o desequipar devolve o numero da regia, e o slot do elo /
+ * a autoridade da propria pessoa recusam o que a regra nao deixa fazer.
+ *
  * O banco de teste pode conter badges seedados — as asserções olham para os IDs criados
  * por este arquivo, nunca para contagens globais. Cleanup em afterAll: history (FK
  * performedBy -> users, sem cascade), depois badges (user_badges cascade com badge/user),
@@ -38,11 +43,19 @@ const stamp = Date.now();
 const WORK_SESSION_ID = 900000 + (stamp % 1000);
 const TASK_ID = 910000 + (stamp % 1000);
 const TASK_ID_2 = 920000 + (stamp % 1000);
+const TASK_ID_3 = 930000 + (stamp % 1000);
+const TASK_ID_4 = 940000 + (stamp % 1000);
+const TASK_ID_5 = 950000 + (stamp % 1000);
+const TASK_ID_6 = 960000 + (stamp % 1000);
 
 let userId = 0;
 let badgeId = 0;
 let criteriaBadgeId = 0;
 let manualBadgeId = 0;
+let trophyBadgeId = 0;
+let secondTrophyBadgeId = 0;
+let thirdTrophyBadgeId = 0;
+let foreignTrophyBadgeId = 0;
 
 describe("G4 roundtrip — gamification (isolated test DB)", () => {
   beforeAll(async () => {
@@ -63,7 +76,8 @@ describe("G4 roundtrip — gamification (isolated test DB)", () => {
       name: "  G6 Pioneiro  ",
       description: "  badge de roundtrip  ",
       category: "milestone",
-      criteria: { points: 999999 }, // nunca atingido por acidente
+      // V8-6 (DEC-219): todo criterio declara a janela. "pontos" mede o placar do mes em curso.
+      criteria: { window: "mes", points: 999999 }, // nunca atingido por acidente
       isActive: false, // QUIRK-6B: sera gravado como TRUE
       createdBy: userId,
     });
@@ -82,10 +96,15 @@ describe("G4 roundtrip — gamification (isolated test DB)", () => {
   });
 
   afterAll(async () => {
+    // V8-6 (DEC-219): a linha do equip e assinada por quem equipou (history.performedBy, FK
+    // RESTRICT), entao apagar a pessoa exige apagar a linha antes. E a mesma consequencia da familia
+    // DEC-55 medida na V8-5: quem assina uma linha de auditoria passa a nao ser deletavel.
     await prisma.history.deleteMany({
-      where: { action: "GAMIFICATION_AWARD", entityId: userId },
+      where: { entityId: userId, action: { in: ["GAMIFICATION_AWARD", "TROPHY_EQUIP", "TROPHY_UNEQUIP"] } },
     });
-    await prisma.badges.deleteMany({ where: { id: { in: [badgeId, criteriaBadgeId, manualBadgeId] } } });
+    await prisma.badges.deleteMany({
+      where: { id: { in: [badgeId, criteriaBadgeId, manualBadgeId, trophyBadgeId, secondTrophyBadgeId, thirdTrophyBadgeId, foreignTrophyBadgeId] } },
+    });
     await prisma.users.delete({ where: { id: userId } });
   });
 
@@ -94,7 +113,7 @@ describe("G4 roundtrip — gamification (isolated test DB)", () => {
     expect(row?.name).toBe("G6 Pioneiro");
     expect(row?.description).toBe("badge de roundtrip");
     expect(row?.isActive).toBe(true); // QUIRK-6B
-    expect(row?.criteria).toEqual({ points: 999999 });
+    expect(row?.criteria).toEqual({ window: "mes", points: 999999 });
     expect(row?.createdBy).toBe(userId);
   });
 
@@ -117,7 +136,7 @@ describe("G4 roundtrip — gamification (isolated test DB)", () => {
     });
     expect(updated.name).toBe("G6 Pioneiro v2");
     expect(updated.isActive).toBe(false);
-    expect(updated.criteria).toEqual({ points: 999999 });
+    expect(updated.criteria).toEqual({ window: "mes", points: 999999 });
 
     const row = await prisma.badges.findUnique({ where: { id: badgeId } });
     expect(row?.isActive).toBe(false);
@@ -198,10 +217,13 @@ describe("G4 roundtrip — gamification (isolated test DB)", () => {
 
     const progression = await gamification.getUserProgression(userId);
     expect(progression.points).toBe(55); // 30 + 15 + 10
-    expect(progression.level).toBe(0);
-    expect(progression.nextLevelXp).toBe(100);
-    expect(progression.progressToNextLevel).toBe(55);
+    // V8-6 (DEC-217): a derivada antiga (level/nextLevelXp/progressToNextLevel sobre points) morreu com
+    // a trilha. O payload sao as tres trilhas e o degrau derivado do XP da temporada (30 XP: +10 por
+    // sessao, +10 por tarefa, +10 por tarefa).
+    expect(progression.xp).toBe(30);
+    expect(progression.coins).toBe(0);
     expect(progression.elo).toBe("BRONZE");
+    expect(progression.trophySlots).toBe(0);
   });
 
   it("evaluateUserBadges: concessao automatica FUNCIONA na wiring nova (divergencia QUIRK-6A vs legado)", async () => {
@@ -210,7 +232,8 @@ describe("G4 roundtrip — gamification (isolated test DB)", () => {
       name: `G6 Marcante ${stamp}`,
       description: "criterio atingivel no roundtrip",
       category: "achievement",
-      criteria: { points: 40 },
+      // V8-6 (DEC-219): a janela e obrigatoria no vocabulario novo; `mes` e o que mede o placar.
+      criteria: { window: "mes", points: 40 },
       createdBy: userId,
     });
     criteriaBadgeId = criteriaBadge.id!;
@@ -252,6 +275,160 @@ describe("G4 roundtrip — gamification (isolated test DB)", () => {
     await gamification.deleteBadge({ actorRoles: MANAGER_ROLES, id: badgeId });
     expect(await prisma.badges.findUnique({ where: { id: badgeId } })).toBeNull();
     await expect(gamification.deleteBadge({ actorRoles: MANAGER_ROLES, id: badgeId })).rejects.toThrow("Badge não encontrado");
+  });
+
+  it("V8-6 (DEC-217): o elo da COLUNA acompanha o XP creditado, na mesma transacao", async () => {
+    // Semeamos o degrau pela coluna do XP (a escada e derivada dele) e deixamos a coluna `elo`
+    // DESATUALIZADA de proposito: 400 XP e a fronteira do PRATA e a coluna ainda diz BRONZE. O que
+    // prova este teste e que quem escreve o degrau e o credit de XP, nao uma rotina a parte.
+    await prisma.users.update({ where: { id: userId }, data: { xp: 400 } });
+    const stale = await prisma.users.findUnique({ where: { id: userId }, select: { xp: true, elo: true } });
+    expect(stale?.xp).toBe(400);
+    expect(stale?.elo).toBe("BRONZE");
+
+    const read = await gamification.getUserProgression(userId);
+    expect(read.elo).toBe("PRATA"); // derivado do XP lido
+    expect(read.trophySlots).toBe(1); // PRATA = 1 slot (DEC-217: 0/1/2/2/3/3)
+
+    // Nenhum trofeu equipado ainda: o numero e exatamente o da regia (DEC-218 "sem efeito, sem conta").
+    const award = await gamification.awardFromTaskCompletion({ userId, taskId: TASK_ID_3, taskPoints: 20, latePenalty: 0 });
+    expect(award.amountAwarded).toBe(20);
+    expect(award.xpAwarded).toBe(10);
+
+    const after = await prisma.users.findUnique({ where: { id: userId }, select: { xp: true, elo: true } });
+    expect(after?.xp).toBe(410);
+    expect(after?.elo).toBe("PRATA");
+  });
+
+  it("V8-6 (DEC-218): o trofeu equipado entra na conta do credit, e o ledger declara a base", async () => {
+    const trophy = await gamification.createBadge({
+      actorRoles: MANAGER_ROLES,
+      name: `G6 Trofeu +10% ${stamp}`,
+      description: "efeito de pontos de tarefa",
+      category: "special",
+      effects: [{ verb: "pontos_tarefa", tier: "Tier2" }],
+      createdBy: userId,
+    });
+    trophyBadgeId = trophy.id!;
+
+    // A gestao CONCEDE (MANAGE_REWARDS/MANAGE_USERS); equipar e da pessoa (DEC-219).
+    await gamification.awardBadge({ badgeId: trophyBadgeId, userId, awardedBy: userId, actor: userActor(userId, MANAGER_ROLES) });
+    const equipped = await gamification.changeTrophyEquip({ actor: userActor(userId, []), userId, badgeId: trophyBadgeId, action: "equip" });
+    expect(equipped).toMatchObject({ userId, badgeId: trophyBadgeId, action: "equip", elo: "PRATA", slots: 1, equippedBefore: 0, equippedAfter: 1, unchanged: false });
+
+    const row = await prisma.user_badges.findUnique({ where: { userId_badgeId: { userId, badgeId: trophyBadgeId } } });
+    expect(row?.equipped).toBe(true);
+
+    const audit = await prisma.history.findFirst({
+      where: { action: "TROPHY_EQUIP", entityId: userId, description: `GAMIFICATION:TROPHY_EQUIP:${userId}:${trophyBadgeId}` },
+    });
+    expect(audit).not.toBeNull();
+    expect(audit?.performedBy).toBe(userId); // a linha e assinada pela pessoa
+    expect(audit?.oldValues).toEqual({ equipped: false });
+    expect((audit?.newValues as Record<string, unknown>).equipped).toBe(true);
+    expect(audit?.metadata).toMatchObject({ action: "equip", badgeId: trophyBadgeId, equippedBefore: 0, equippedAfter: 1, elo: "PRATA", slots: 1 });
+
+    // A regia produziu 70 com 30 de atraso embutido; o boost Tier2 (10%) incide sobre o valor ANTES da
+    // penalidade (100 -> 110) e a penalidade continua 30 porque nenhum verbo de reducao foi equipado.
+    const award = await gamification.awardFromTaskCompletion({ userId, taskId: TASK_ID_4, taskPoints: 70, latePenalty: 30 });
+    expect(award.amountAwarded).toBe(80);
+    expect(award.xpAwarded).toBe(10); // XP nao tem verbo: a trilha da temporada e volume bruto (DEC-214)
+
+    const ledger = await prisma.history.findFirst({
+      where: { action: "GAMIFICATION_AWARD", entityId: userId, description: `GAMIFICATION:TASK_COMPLETED:${TASK_ID_4}` },
+    });
+    expect((ledger?.newValues as Record<string, unknown>).pointsAwarded).toBe(80);
+    expect((ledger?.newValues as Record<string, unknown>).trophy).toEqual({
+      verb: "pontos_tarefa",
+      effects: [{ verb: "pontos_tarefa", tier: "Tier2" }],
+      baseAmount: 70,
+      bonus: 10,
+      penaltyBefore: 30,
+      penaltyAfter: 30,
+    });
+
+    const coins = await prisma.users.findUnique({ where: { id: userId }, select: { coins: true, points: true } });
+    expect(coins?.coins).toBe(0); // boost nenhum na moeda: outra fonte, outro verbo
+  });
+
+  it("V8-6 (DEC-218): desequipar devolve o numero da regia, e a linha volta a nao falar de trofeu", async () => {
+    const off = await gamification.changeTrophyEquip({ actor: userActor(userId, []), userId, badgeId: trophyBadgeId, action: "unequip" });
+    expect(off).toMatchObject({ action: "unequip", equippedBefore: 1, equippedAfter: 0, unchanged: false });
+
+    const award = await gamification.awardFromTaskCompletion({ userId, taskId: TASK_ID_5, taskPoints: 70, latePenalty: 30 });
+    expect(award.amountAwarded).toBe(70); // o mesmo pedido de antes, sem o trofeu na conta
+
+    const ledger = await prisma.history.findFirst({
+      where: { action: "GAMIFICATION_AWARD", entityId: userId, description: `GAMIFICATION:TASK_COMPLETED:${TASK_ID_5}` },
+    });
+    expect((ledger?.newValues as Record<string, unknown>).pointsAwarded).toBe(70);
+    expect(ledger?.newValues).not.toHaveProperty("trophy"); // sem efeito, a linha e exatamente a de antes
+  });
+
+  it("V8-6 (DEC-217/219): o slot do elo, a posse e a autoridade da pessoa decidem o equip", async () => {
+    const second = await gamification.createBadge({
+      actorRoles: MANAGER_ROLES,
+      name: `G6 Trofeu 2 ${stamp}`,
+      description: "cabe no slot depois do primeiro",
+      category: "special",
+      createdBy: userId,
+    });
+    secondTrophyBadgeId = second.id!;
+    const third = await gamification.createBadge({
+      actorRoles: MANAGER_ROLES,
+      name: `G6 Trofeu 3 ${stamp}`,
+      description: "concedido, nunca equipado",
+      category: "special",
+      createdBy: userId,
+    });
+    thirdTrophyBadgeId = third.id!;
+
+    const actor = userActor(userId, []);
+    const granted = userActor(userId, MANAGER_ROLES);
+    // `trophyBadgeId` ja esta conquistado desde o teste do efeito (a conquista e vitalicia pela unique
+    // `(userId, badgeId)`); o que se concede aqui sao os dois trofeus novos.
+    await gamification.awardBadge({ badgeId: secondTrophyBadgeId, userId, awardedBy: userId, actor: granted });
+    await gamification.awardBadge({ badgeId: thirdTrophyBadgeId, userId, awardedBy: userId, actor: granted });
+
+    // PRATA = 1 slot (DEC-217): o primeiro cabe, o segundo e recusado nomeando o elo e o limite.
+    expect((await gamification.changeTrophyEquip({ actor, userId, badgeId: trophyBadgeId, action: "equip" })).equippedAfter).toBe(1);
+    await expect(gamification.changeTrophyEquip({ actor, userId, badgeId: secondTrophyBadgeId, action: "equip" }))
+      .rejects.toThrow("Seu elo Prata permite equipar até 1 troféu.");
+
+    // Desequipar o que ja esta desequipado e no-op sem linha nova (repetir clique nao e evento): o
+    // livro-caixa registra o que aconteceu, nao o que foi tentado.
+    const noop = await gamification.changeTrophyEquip({ actor, userId, badgeId: secondTrophyBadgeId, action: "unequip" });
+    expect(noop.unchanged).toBe(true);
+    // A contagem e do CONJUNTO equipado da pessoa (1: o primeiro trofeu), nao do trofeu pedido — o
+    // no-op nao mexe em nada.
+    expect(noop.equippedBefore).toBe(1);
+    expect(noop.equippedAfter).toBe(1);
+    const unequipLines = await prisma.history.count({
+      where: { action: "TROPHY_UNEQUIP", entityId: userId, description: `GAMIFICATION:TROPHY_UNEQUIP:${userId}:${secondTrophyBadgeId}` },
+    });
+    expect(unequipLines).toBe(0);
+
+    // Quem nao e a pessoa nao equipa, com MANAGE_USERS na mesa (DEC-219): a gestao concede e remove,
+    // quem equipa e a propria pessoa.
+    await expect(gamification.changeTrophyEquip({ actor: userActor(999999, MANAGER_ROLES), userId, badgeId: trophyBadgeId, action: "equip" }))
+      .rejects.toThrow("Só a própria pessoa pode equipar seus troféus.");
+
+    // Elo sem slot nenhum (BRONZE = 0): a mesma frase contada no degrau, nao um texto a parte.
+    await prisma.users.update({ where: { id: userId }, data: { xp: 100 } });
+    await expect(gamification.changeTrophyEquip({ actor, userId, badgeId: secondTrophyBadgeId, action: "equip" }))
+      .rejects.toThrow("Seu elo Bronze permite equipar até 0 troféus.");
+
+    // Trofeu que a pessoa nao tem: nao ha o que equipar.
+    const foreign = await gamification.createBadge({
+      actorRoles: MANAGER_ROLES,
+      name: `G6 Trofeu estranho ${stamp}`,
+      description: "existe no catalogo, nao nesta pessoa",
+      category: "special",
+      createdBy: userId,
+    });
+    foreignTrophyBadgeId = foreign.id!;
+    await expect(gamification.changeTrophyEquip({ actor, userId, badgeId: foreignTrophyBadgeId, action: "equip" }))
+      .rejects.toThrow("Usuário não possui este troféu");
   });
 
   it("usuario inexistente: getUserProgression -> 'Usuário não encontrado'; award falha no tx (sem history)", async () => {

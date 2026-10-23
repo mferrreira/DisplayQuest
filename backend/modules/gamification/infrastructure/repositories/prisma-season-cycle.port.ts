@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 
 import {
+  FIRST_SEASON_ELO,
   SEASON_POINTS_AFTER_CLOSE,
   SEASON_XP_AFTER_CLOSE,
   seasonMonthPrefix,
@@ -24,10 +25,11 @@ import { prisma } from "@/lib/database/prisma";
  * `user_badges` não aparecem na instrução: moeda e troféu são vitalícios (MODELO §4), e a prova de
  * que isso não muda está no roundtrip da onda.
  *
- * O elo vai nulo de propósito: a escada com umbrais é a DEC-217 e entra na V8-6. Hoje nenhum lugar do
- * sistema guarda elo (o `Progression.ts` deriva de pontos numa trilha que a virada zera), então o
- * livro-caixa grava o que existe — pontos, tarefas, XP e a posição — e deixa o elo para a onda que o
- * define.
+ * V8-6 (DEC-217) fecha o elo: a linha do ano fotografa o degrau do XP da temporada no instante do
+ * fechamento, e a COLUNA `users.elo` volta ao primeiro degrau junto com o XP — a temporada recomeça
+ * em BRONZE, e o degrau alcançado fica só no livro. As linhas escritas pela V8-4 seguem com `elo`
+ * nulo: o livro não se reescreve, e a leitura devolve o que a linha diz (a coluna do schema continua
+ * nula por isso).
  */
 export function createPrismaSeasonCyclePort(): SeasonCyclePort {
   return {
@@ -91,7 +93,13 @@ export function createPrismaSeasonCyclePort(): SeasonCyclePort {
           });
           await tx.users.update({
             where: { id: userId },
-            data: { points: SEASON_POINTS_AFTER_CLOSE, xp: SEASON_XP_AFTER_CLOSE },
+            data: {
+              points: SEASON_POINTS_AFTER_CLOSE,
+              xp: SEASON_XP_AFTER_CLOSE,
+              // DEC-217: zerar o XP sem zerar o elo deixaria a pessoa no degrau do ano encerrado,
+              // abrindo a temporada com um slot de troféu herdado. Os dois zerp juntos.
+              elo: FIRST_SEASON_ELO,
+            },
           });
         });
         return true;

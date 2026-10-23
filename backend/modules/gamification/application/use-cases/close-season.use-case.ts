@@ -5,6 +5,7 @@ import {
   rankSeasonStandings,
   seasonChampionDescription,
   seasonChampionOf,
+  seasonClosingEloForXp,
 } from "@/backend/domain/gamification"
 import { requireActorPermission } from "@/backend/domain/identity"
 import type { SeasonChampionPort } from "@/backend/modules/gamification/application/ports/season-champion.port"
@@ -40,9 +41,12 @@ export const SEASON_CLOSE_DENIED_MESSAGE = "Apenas coordenadores e gerentes pode
  * 4. **Troféu sem tabela.** A chave `GAMIFICATION:SEASON_CHAMPION:<ano>:<pessoa>` na linha de
  *    auditoria é a idempotência do troféu (mesma escolha da revisão semanal de XP). O badge é vitalício
  *    pela unique `(userId, badgeId)`: quem foi campeão em dois anos tem um troféu e duas linhas.
- * 5. **Sem elo ainda.** A linha nasce com `elo: null` e `position` preenchida: a escada com umbrais é
- *    a DEC-217 (V8-6). Sem ela não existe elo armazenado em lugar nenhum, e inventar um aqui é a V8-6
- *    entrando de contrabando na V8-4.
+ * 5. **Elo fotografado, elo zerado.** A DEC-217 (V8-6) fechou a escada: a linha do ano agora grava o
+ *    degrau do XP com que a pessoa fecha o ano (`seasonClosingEloForXp`), e o port zera a COLUNA
+ *    `users.elo` junto com o XP. As duas coisas juntas são a regra: o degrau alcançado vira memória da
+ *    temporada, e a temporada nova começa no primeiro degrau — sem zerar a coluna, a pessoa abriria o
+ *    ano com o slot de troféu do ano encerrado. As linhas já escritas pela V8-4 ficam com `elo` nulo
+ *    (o livro não se reescreve) e o outcome reporta o que a linha diz.
  *
  * O gate é o dos ciclos anteriores (`MANAGE_USERS`, com `systemActor` bypassando — DEC-54). Hoje o
  * chamador é o cron; nenhuma rota declara ator de sistema (a guarda `system-actor.test.ts` falha o
@@ -82,6 +86,7 @@ export class CloseSeasonUseCase {
           points: snapshot.points,
           completedTasks: snapshot.completedTasks,
           xp: snapshot.xp,
+          elo: snapshot.elo,
           position: snapshot.position,
         })
         continue
@@ -97,6 +102,7 @@ export class CloseSeasonUseCase {
           points: 0,
           completedTasks: 0,
           xp: 0,
+          elo: null,
           position: null,
         })
         continue
@@ -123,7 +129,7 @@ export class CloseSeasonUseCase {
         points: standing.points,
         completedTasks: standing.completedTasks,
         xp: standing.xp,
-        elo: null,
+        elo: seasonClosingEloForXp(standing.xp),
         position: standing.position,
       })
 
@@ -140,6 +146,7 @@ export class CloseSeasonUseCase {
           points: snapshot?.points ?? standing.points,
           completedTasks: snapshot?.completedTasks ?? standing.completedTasks,
           xp: snapshot?.xp ?? standing.xp,
+          elo: snapshot?.elo ?? null,
           position: snapshot?.position ?? standing.position,
         })
         continue
@@ -154,6 +161,7 @@ export class CloseSeasonUseCase {
         points: standing.points,
         completedTasks: standing.completedTasks,
         xp: standing.xp,
+        elo: seasonClosingEloForXp(standing.xp),
         position: standing.position,
       })
     }

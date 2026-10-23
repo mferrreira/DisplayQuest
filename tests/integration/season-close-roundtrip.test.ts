@@ -9,7 +9,8 @@
  *      de 2025 somam 200/6, e as linhas de 2023/2024 do MESMO usuário não entram na conta de 2025;
  *   2. o trio "snapshot + `points = 0` + `xp = 0`" acontece JUNTO numa `$transaction`, e `coins` e
  *      `completedTasks` (vitalícios) continuam com o valor de antes — MODELO §4, lido no banco;
- *   3. `elo` é nulo e `position` é a régua do domínio (pontos → tarefas → XP → userId), com quem tem
+ *   3. `elo` é o degrau do XP com que o ano FECHOU (V8-6, DEC-217) e `position` é a régua do domínio
+ *      (pontos → tarefas → XP → userId), com quem tem
  *      só XP entrando no livro com 0/0;
  *   4. idempotência por `(userId, year)`: reexecutar não cria linha, não zera o saldo da temporada em
  *      curso e não concede troféu de novo;
@@ -149,17 +150,19 @@ describe("G4 roundtrip — fechamento de temporada (isolated test DB, 5433)", ()
     return [row?.points, row?.xp, row?.coins, row?.completedTasks];
   }
 
-  it("o agregado do ano sai do month_history pelo prefixo do ano, e o livro nasce com posição e elo nulo", async () => {
-    const result = await closeSeasonYear(RUN_2023, { [anaId]: 80, [brunoId]: 40, [carlaId]: 0, [daniId]: 0 });
+  it("o agregado do ano sai do month_history pelo prefixo do ano, e o livro nasce com posição e elo do ano fechado", async () => {
+    const result = await closeSeasonYear(RUN_2023, { [anaId]: 480, [brunoId]: 40, [carlaId]: 0, [daniId]: 0 });
 
     expect(result.year).toBe(2023);
 
     // Ana: só a linha de 2023 entra na conta (as de 2024 e 2025 são de outro ano).
     const ana = await seasonRow(anaId, 2023);
-    expect(ana).toMatchObject({ year: 2023, points: 50, completedTasks: 2, xp: 80, elo: null, position: 1 });
+    // 480 XP é PRATA (DEC-217): o livro fotografa o degrau da temporada que acabou, e é a única
+    // memória dele depois que a coluna `users.elo` volta a BRONZE junto com o XP.
+    expect(ana).toMatchObject({ year: 2023, points: 50, completedTasks: 2, xp: 480, elo: "PRATA", position: 1 });
 
     const bruno = await seasonRow(brunoId, 2023);
-    expect(bruno).toMatchObject({ points: 10, completedTasks: 1, xp: 40, elo: null, position: 2 });
+    expect(bruno).toMatchObject({ points: 10, completedTasks: 1, xp: 40, elo: "BRONZE", position: 2 });
 
     // Carla não tem linha de 2023 nem XP: fica fora do livro (sem linha de zeros). Dani idem.
     expect(await seasonRow(carlaId, 2023)).toBeNull();
@@ -167,6 +170,9 @@ describe("G4 roundtrip — fechamento de temporada (isolated test DB, 5433)", ()
     expect(result.outcomes.filter((o) => o.status === "without-activity").map((o) => o.userId)).toEqual(
       expect.arrayContaining([carlaId, daniId]),
     );
+
+    // A coluna volta ao primeiro degrau na virada (DEC-217): o degrau fotografado fica no livro.
+    expect(await prisma.users.findUnique({ where: { id: anaId }, select: { elo: true } })).toMatchObject({ elo: "BRONZE" });
 
     // Zeragem seletiva nas duas trilhas da temporada; moeda e contador vitalício intactos.
     expect(await columnsOf(anaId)).toEqual([0, 0, 500, 42]);
@@ -205,7 +211,7 @@ describe("G4 roundtrip — fechamento de temporada (isolated test DB, 5433)", ()
     expect(result.champion).toMatchObject({ userId: brunoId, points: 90, status: "awarded", badgeId: championBadgeId });
 
     const carla = await seasonRow(carlaId, 2024);
-    expect(carla).toMatchObject({ points: 5, completedTasks: 1, xp: 15, position: 3 });
+    expect(carla).toMatchObject({ points: 5, completedTasks: 1, xp: 15, elo: "BRONZE", position: 3 });
     expect(await columnsOf(carlaId)).toEqual([0, 0, 7, 4]);
 
     const brunoBadges = await prisma.user_badges.findMany({ where: { userId: brunoId, badgeId: championBadgeId } });
@@ -213,24 +219,26 @@ describe("G4 roundtrip — fechamento de temporada (isolated test DB, 5433)", ()
   });
 
   it("2025 soma três meses, inclui suspenso com atividade e quem só tem XP, e revalida o troféu vitalício", async () => {
-    const result = await closeSeasonYear(RUN_2025, { [anaId]: 240, [brunoId]: 120, [carlaId]: 30, [daniId]: 0 });
+    const result = await closeSeasonYear(RUN_2025, { [anaId]: 940, [brunoId]: 120, [carlaId]: 30, [daniId]: 0 });
     expect(result.year).toBe(2025);
 
     const ana = await seasonRow(anaId, 2025);
     // 100 + 60 + 40 somados pelas três linhas de 2025 (as linhas de 2023/2024 ficam fora).
-    expect(ana).toMatchObject({ points: 200, completedTasks: 6, xp: 240, elo: null, position: 1 });
+    // 940 XP fecha a temporada em OURO (umbral 900), e OURO é o degrau que dava os slots de troféu
+    // daquele ano — a linha é o retrato, não o saldo.
+    expect(ana).toMatchObject({ points: 200, completedTasks: 6, xp: 940, elo: "OURO", position: 1 });
 
     const bruno = await seasonRow(brunoId, 2025);
-    expect(bruno).toMatchObject({ points: 160, completedTasks: 9, xp: 120, position: 2 });
+    expect(bruno).toMatchObject({ points: 160, completedTasks: 9, xp: 120, elo: "BRONZE", position: 2 });
 
     // Dani está SUSPENSA e tem linha de mês: a audiência é ampla, ela fecha o ano (DEC-55 diz que
     // suspenso continua no sistema, só não pode agir).
     const dani = await seasonRow(daniId, 2025);
-    expect(dani).toMatchObject({ points: 20, completedTasks: 1, xp: 0, position: 3 });
+    expect(dani).toMatchObject({ points: 20, completedTasks: 1, xp: 0, elo: "BRONZE", position: 3 });
 
     // Carla não tem mês em 2025 e tem XP: entra no livro com 0/0 pela trilha aberta.
     const carla = await seasonRow(carlaId, 2025);
-    expect(carla).toMatchObject({ points: 0, completedTasks: 0, xp: 30, position: 4 });
+    expect(carla).toMatchObject({ points: 0, completedTasks: 0, xp: 30, elo: "BRONZE", position: 4 });
 
     // Ana outra vez: o troféu é vitalício (unique `(userId, badgeId)`), então a concessão de 2025 é
     // "já conquistado" — com UMA linha de user_badges e DUAS linhas de auditoria, uma por ano.
@@ -248,7 +256,9 @@ describe("G4 roundtrip — fechamento de temporada (isolated test DB, 5433)", ()
     expect(segunda.year).toBe(2025);
 
     const outcome = segunda.outcomes.find((o) => o.userId === anaId);
-    expect(outcome).toMatchObject({ status: "already-closed", points: 200, completedTasks: 6, xp: 240, position: 1 });
+    // O elo reportado na reexecução vem do LIVRO lido de volta (OURO de 2025), não da coluna — que
+    // já voltou a BRONZE com a zeragem.
+    expect(outcome).toMatchObject({ status: "already-closed", points: 200, completedTasks: 6, xp: 940, elo: "OURO", position: 1 });
     expect(segunda.closed).toBe(0);
 
     expect(await prisma.season_history.count({ where: { userId: anaId, year: 2025 } })).toBe(1);

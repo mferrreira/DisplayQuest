@@ -10,6 +10,15 @@ export interface TaskCompletedEvent {
    * entregam, e `null` (quest global) é um caso próprio do evento.
    */
   projectId: number | null;
+  /**
+   * plan-v8 V8-6 (DEC-219): quanto da `taskPoints` é punição de atraso. O total não mostra a
+   * componente — `10 − 3×10 = −20` não diz quanto dele é penalidade — e o verbo `penalidade` dos
+   * troféus equipados só existe para descontar UMA componente. Quem conta é a MESMA régua que
+   * produziu o total (`calculateLatePenalty`, DEC-39), no MESMO instante do cálculo do prêmio:
+   * outra conta de atraso aqui seria a dívida medida do plan-v3 (duas matemáticas de atraso)
+   * reaberta dentro do credit.
+   */
+  latePenalty: number;
 }
 
 /**

@@ -1,6 +1,7 @@
 import {
   assertSubtasksAllowTransition,
   awardPointsForCompletion,
+  calculateLatePenalty,
   canBeCompleted,
   ConflictError,
   ForbiddenError,
@@ -107,6 +108,7 @@ export class CompleteTaskUseCase {
 
       const now = new Date()
       const pointsToAward = awardPointsForCompletion(task, now)
+      const latePenalty = calculateLatePenalty(task, now)
 
       await this.dependencies.progress.upsert({
         taskId: task.id!,
@@ -124,6 +126,7 @@ export class CompleteTaskUseCase {
         command.taskId,
         pointsToAward,
         task.projectId ?? null,
+        latePenalty,
       )
 
       return {
@@ -198,13 +201,18 @@ export class CompleteTaskUseCase {
     let awardedPoints: number | null = null
     if (finalStatus === "done") {
       await this.dependencies.actors.incrementCompletedTasks(userId)
-      const pointsToAward = totalAwardForCompletion(workingTask, awardableSubtasks(workingTask, subtaskRows), new Date())
+      // O MESMO instante serve as duas contas (prêmio e penalidade): calcular o atraso num `new Date()`
+      // diferente do do prêmio é a conta de atraso divergindo dentro do próprio credit (DEC-219).
+      const awardInstant = new Date()
+      const pointsToAward = totalAwardForCompletion(workingTask, awardableSubtasks(workingTask, subtaskRows), awardInstant)
+      const latePenalty = calculateLatePenalty(workingTask, awardInstant)
       awardedPoints = await publishTaskCompletionAward(
         this.events,
         userId,
         command.taskId,
         pointsToAward,
         workingTask.projectId ?? null,
+        latePenalty,
       )
     }
 
