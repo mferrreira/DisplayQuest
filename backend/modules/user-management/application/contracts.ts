@@ -1,4 +1,4 @@
-import type { ActorRef, UserImageSlot, UserRole } from "@/backend/domain"
+import type { ActorRef, AwardBalanceTrack, TrackAdjustmentAction, UserImageSlot, UserRole } from "@/backend/domain"
 
 /**
  * B6-4 (D4): o escopo da lista passou a ser decidido a partir do `ActorRef` — o `actorRoles`
@@ -18,12 +18,21 @@ export interface DeductUserHoursCommand {
   deductedByRoles: string[]
 }
 
-export interface UpdateUserPointsCommand {
-  /** B6-4 (D4): gate MANAGE_USERS puro no use case (rota preserva a ordem gate-antes-de-400 com assert). */
+/**
+ * plan-v8 V8-5 (DEC-215 + ASK-V8-24): o ajuste manual do painel sobre as DUAS trilhas de saldo,
+ * separadas — `set`/`add`/`remove` de PONTOS do mês e de MOEDAS, cada ajuste com linha de
+ * `history`. Era `UpdateUserPointsCommand` com `points`, e o nome mentia desde que o painel
+ * passou a poder ajustar moeda: `track` é obrigatório porque o destino do número é a decisão que
+ * o comando carrega, e `amount` é o número informado.
+ *
+ * B6-4 (D4): gate MANAGE_USERS puro no use case (a rota preserva a ordem gate-antes-de-400 com o assert).
+ */
+export interface AdjustUserBalanceCommand {
   actor: ActorRef
   userId: number
-  action: "add" | "remove" | "set"
-  points: number
+  track: AwardBalanceTrack
+  action: TrackAdjustmentAction
+  amount: number
 }
 
 export interface UpdateUserRolesCommand {

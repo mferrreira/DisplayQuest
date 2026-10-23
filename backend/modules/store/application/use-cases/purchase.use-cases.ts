@@ -135,7 +135,7 @@ export class CreatePurchaseUseCase {
     assertPurchaseEligibility(user, reward)
 
     const snapshot = buildPurchaseSnapshot(userId, reward, new Date())
-    return await this.purchases.createWithPointDeduction(snapshot)
+    return await this.purchases.createWithCoinDeduction(snapshot)
   }
 }
 
@@ -212,7 +212,7 @@ export class PatchPurchaseUseCase {
     const shouldRefund = shouldRefundOnReject(purchase.status)
     const updated = await this.purchases.update(purchaseId, { ...purchase, status: "rejected" })
     if (shouldRefund) {
-      await this.purchases.refundPoints(purchase.userId, purchase.price)
+      await this.purchases.refundCoins(purchase.userId, purchase.price)
     }
     return updated
   }
@@ -230,7 +230,7 @@ export class PatchPurchaseUseCase {
     const shouldRefund = shouldRefundOnCancel(purchase.status)
     const updated = await this.purchases.update(purchaseId, { ...purchase, status: "cancelled" })
     if (shouldRefund) {
-      await this.purchases.refundPoints(purchase.userId, purchase.price)
+      await this.purchases.refundCoins(purchase.userId, purchase.price)
     }
     return updated
   }

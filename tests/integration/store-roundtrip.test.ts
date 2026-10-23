@@ -8,7 +8,7 @@
  *
  * Fluxo: createReward -> getReward/listRewards (shape JSON com fantasma null) ->
  * updateReward + patchReward FUNCIONANDO (DEC-23 — o conserto do QUIRK-8S1 provado no
- * banco real) -> createPurchase happy (debito de pontos) + validacoes tipadas
+ * banco real) -> createPurchase happy (debito de MOEDA, DEC-215/216 da V8-5) + validacoes tipadas
  * (NotFound/Validation) -> escopo A2 no use case (deny preservado) -> patchPurchase
  * approve/reject (refund)/complete/cancel -> updatePurchase cego -> deletes -> FK P2003
  * em deleteReward com compra.
@@ -47,9 +47,15 @@ let rewardId = 0;
 let offRewardId = 0;
 let purchaseId = 0;
 
-async function points(id: number): Promise<number> {
-  const user = await prisma.users.findUnique({ where: { id }, select: { points: true } });
-  return user?.points ?? -1;
+/**
+ * V8-5 (DEC-215/216): a loja cobra e estorna a MOEDA vitalícia, não o placar mensal. A leitura é
+ * `users.coins` porque é a trilha que o adaptador toca — e o gate do guarda
+ * (`gamification-tracks.test.ts`) confere a coluna no adaptador por texto, enquanto aqui a
+ * transação é conferida contra o banco.
+ */
+async function coins(id: number): Promise<number> {
+  const user = await prisma.users.findUnique({ where: { id }, select: { coins: true } });
+  return user?.coins ?? -1;
 }
 
 describe("G4 roundtrip — store (isolated test DB)", () => {
@@ -61,7 +67,7 @@ describe("G4 roundtrip — store (isolated test DB)", () => {
         password: "g4-dummy-hash",
         status: "active",
         roles: ["VOLUNTARIO"],
-        points: 100,
+        coins: 100,
       },
       select: { id: true },
     });
@@ -72,7 +78,7 @@ describe("G4 roundtrip — store (isolated test DB)", () => {
         password: "g4-dummy-hash",
         status: "active",
         roles: ["COORDENADOR"],
-        points: 5,
+        coins: 5,
       },
       select: { id: true },
     });
@@ -119,7 +125,7 @@ describe("G4 roundtrip — store (isolated test DB)", () => {
     const purchase = await store.createPurchase({ actor: buyer, data: { userId, rewardId } });
     purchaseId = purchase.id as number;
     expect(purchase).toMatchObject({ userId, rewardId, rewardName: `G8 Kit ${stamp}`, price: 25, status: "pending" });
-    expect(await points(userId)).toBe(75);
+    expect(await coins(userId)).toBe(75);
 
     // "PARA OUTRO" e "userId invalido" so chegam na validacao de compra com quem PODE comprar
     // para outro (gate 403 viria antes) — o ator dessas chamadas e o manager.
@@ -128,8 +134,13 @@ describe("G4 roundtrip — store (isolated test DB)", () => {
     await expect(store.createPurchase({ actor: buyer, data: { userId, rewardId: 999999 } })).rejects.toThrow(NotFoundError);
     await expect(store.createPurchase({ actor: buyer, data: { userId, rewardId: offRewardId } })).rejects.toThrow(ValidationError);
 
+    // O gerente tem 5 moedas e o prêmio custa 25: a suficiência é da trilha moeda, com a frase da
+    // moeda (DEC-222 não é daqui — é `set` do painel; aqui é a loja).
     await expect(store.createPurchase({ actor: manager, data: { userId: otherUserId, rewardId } })).rejects.toThrow(ValidationError);
-    expect(await points(otherUserId)).toBe(5);
+    await expect(store.createPurchase({ actor: manager, data: { userId: otherUserId, rewardId } })).rejects.toThrow(
+      "Moedas insuficientes. Você tem 5 moedas, mas precisa de 25 moedas",
+    );
+    expect(await coins(otherUserId)).toBe(5);
   });
 
   it("listPurchases: escopo A2 no use case (deny preservado) + proprias compras", async () => {
@@ -153,7 +164,7 @@ describe("G4 roundtrip — store (isolated test DB)", () => {
     // o ator e o manager. A negacao por papel e testada em use-cases.purchase-authorization.
     const rejected = await store.patchPurchase({ actor: manager, purchaseId, action: "reject" });
     expect(rejected.status).toBe("rejected");
-    expect(await points(userId)).toBe(100); // reembolso pelo preco congelado no snapshot (25)
+    expect(await coins(userId)).toBe(100); // reembolso pelo preco congelado no snapshot (25)
 
     await expect(store.patchPurchase({ actor: manager, purchaseId, action: "approve" })).rejects.toThrow(ConflictError);
     await expect(store.patchPurchase({ actor: manager, purchaseId, action: "complete" })).rejects.toThrow(ConflictError);
@@ -161,7 +172,7 @@ describe("G4 roundtrip — store (isolated test DB)", () => {
 
   it("updatePurchase cego (QUIRK-8S4) + approve->complete->cancel guardado + delete", async () => {
     const second = await store.createPurchase({ actor: buyer, data: { userId, rewardId } });
-    expect(await points(userId)).toBe(75);
+    expect(await coins(userId)).toBe(75);
 
     const approved = await store.patchPurchase({ actor: manager, purchaseId: second.id as number, action: "approve" });
     expect(approved.status).toBe("approved");
@@ -176,7 +187,7 @@ describe("G4 roundtrip — store (isolated test DB)", () => {
     // cancel agora passa (status != completed) e NAO reembolsa (status nao-pending/approved)
     const cancelled = await store.patchPurchase({ actor: manager, purchaseId: second.id as number, action: "cancel" });
     expect(cancelled.status).toBe("cancelled");
-    expect(await points(userId)).toBe(75);
+    expect(await coins(userId)).toBe(75);
 
     await store.deletePurchase({ actor: manager, purchaseId: second.id as number });
     await store.deletePurchase({ actor: manager, purchaseId });

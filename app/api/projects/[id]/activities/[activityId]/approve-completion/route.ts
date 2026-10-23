@@ -12,7 +12,7 @@ const { projectManagement: projectManagementModule } = getBackendComposition()
  * precisa do papel para decidir) e entrega o `now` do servidor. Gate, status, prêmio e
  * distribuição são do use case (DEC-157/160).
  *
- * A resposta carrega a economia: `award` (prêmio) e `shares` (o que foi creditado por membro,
+ * A resposta carrega a economia: `award` (prêmio) e `shares` (a moeda creditada por membro,
  * 0 quando já registrado ou o crédito falhou). O `projectsPoints` da V5-7b saiu na V8-1
  * (DEC-215): não há saldo de projeto a reportar.
  */

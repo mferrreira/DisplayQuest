@@ -27,7 +27,7 @@ import { ListUsersForActorUseCase } from "@/backend/modules/user-management/appl
 import { ModeratePendingUserUseCase } from "@/backend/modules/user-management/application/use-cases/moderate-pending-user.use-case";
 import { RegisterUserUseCase } from "@/backend/modules/user-management/application/use-cases/register-user.use-case";
 import { UpdateUserUseCase } from "@/backend/modules/user-management/application/use-cases/update-user.use-case";
-import { UpdateUserPointsUseCase } from "@/backend/modules/user-management/application/use-cases/update-user-points.use-case";
+import { AdjustUserBalanceUseCase } from "@/backend/modules/user-management/application/use-cases/adjust-user-balance.use-case";
 import { UpdateUserProfileUseCase } from "@/backend/modules/user-management/application/use-cases/update-user-profile.use-case";
 import { UpdateUserRolesUseCase } from "@/backend/modules/user-management/application/use-cases/update-user-roles.use-case";
 import { UpdateUserStatusUseCase } from "@/backend/modules/user-management/application/use-cases/update-user-status.use-case";
@@ -307,30 +307,72 @@ describe("UpdateUserProfileUseCase", () => {
   });
 });
 
-describe("UpdateUserPointsUseCase", () => {
-  const useCase = () => new UpdateUserPointsUseCase(repository);
+describe("AdjustUserBalanceUseCase (V8-5, ASK-V8-24)", () => {
+  // O ledger entra como duplo GRAVADOR: a aritmética não é reimplementada aqui (lição DEC-90) —
+  // ela é provada na regra pura (tests/unit/domain/gamification/track-adjustment.test.ts) e contra
+  // o banco real (tests/integration/balance-adjustment-roundtrip.test.ts). O que este bloco prova
+  // é o que o caso de uso decide: gate, 404, a trilha/ação/número que chegam ao ledger, e a
+  // projeção com `coins`.
+  function ledger() {
+    return {
+      calls: [] as Array<{ userId: number; actorId: number; track: string; action: string; amount: number }>,
+      async adjust(command: { userId: number; actorId: number; track: "POINTS" | "COINS"; action: "add" | "remove" | "set"; amount: number }) {
+        this.calls.push({ ...command });
+        return { applied: true as const, track: command.track, balanceBefore: 0, balanceAfter: command.amount };
+      },
+    };
+  }
 
-  it("add floors at 0; remove rejects negative/insufficient (ValidationError); set assigns", async () => {
-    expect(((await useCase().execute({ actor: managerActor, userId: 1, action: "add", points: -50 })) as { points: number }).points).toBe(0);
-    await expect(useCase().execute({ actor: managerActor, userId: 1, action: "remove", points: -1 })).rejects.toMatchObject({
-      name: "ValidationError",
-      message: "Pontos não podem ser negativos",
-    });
-    await expect(useCase().execute({ actor: managerActor, userId: 1, action: "remove", points: 999 })).rejects.toMatchObject({
-      name: "ValidationError",
-      message: "Usuário não possui pontos suficientes",
-    });
-    expect(((await useCase().execute({ actor: managerActor, userId: 1, action: "set", points: 42 })) as { points: number }).points).toBe(42);
+  it("grava o ajuste na trilha declarada, assinado pelo ator, e devolve a projeção pública com coins", async () => {
+    const l = ledger();
+    const points = (await new AdjustUserBalanceUseCase(repository, l).execute({
+      actor: managerActor,
+      userId: 1,
+      track: "POINTS",
+      action: "set",
+      amount: 42,
+    })) as { points: number; coins: number };
+
+    expect(l.calls).toEqual([{ userId: 1, actorId: 999, track: "POINTS", action: "set", amount: 42 }]);
+    // `coins` chega na resposta do ajuste: quem ajustou precisa ver o saldo da outra trilha para
+    // não ajustar às cegas, e o gate MANAGE_USERS já deu direito a ele.
+    expect(points).toMatchObject({ coins: 0 });
   });
 
-  it("V4-6 (DEC-60): set aceita negativo — a premiação produz total negativo (DEC-39) e a administração precisava escrevê-lo de volta", async () => {
-    expect(((await useCase().execute({ actor: managerActor, userId: 1, action: "set", points: -20 })) as { points: number }).points).toBe(-20);
-    // Sem checagem de suficiência: `set` não tira nada de ninguém, é valor absoluto. Um usuário
-    // em 0 vai para -31030 sem objeção — é exatamente o estado medido no Gerente da instância.
-    expect(((await useCase().execute({ actor: managerActor, userId: 1, action: "set", points: -31030 })) as { points: number }).points).toBe(-31030);
-    // As outras duas ações continuam como estavam.
-    expect(((await useCase().execute({ actor: managerActor, userId: 1, action: "set", points: 50 })) as { points: number }).points).toBe(50);
-    expect(((await useCase().execute({ actor: managerActor, userId: 1, action: "add", points: -60 })) as { points: number }).points).toBe(0);
+  it("a trilha moeda chega ao ledger como COINS (o painel ajusta as duas, separadas)", async () => {
+    const l = ledger();
+    await new AdjustUserBalanceUseCase(repository, l).execute({
+      actor: managerActor,
+      userId: 1,
+      track: "COINS",
+      action: "add",
+      amount: 300,
+    });
+    expect(l.calls).toEqual([{ userId: 1, actorId: 999, track: "COINS", action: "add", amount: 300 }]);
+  });
+
+  it("usuário inexistente é 404 antes do ledger", async () => {
+    const l = ledger();
+    await expect(
+      new AdjustUserBalanceUseCase(repository, l).execute({
+        actor: managerActor,
+        userId: 999,
+        track: "POINTS",
+        action: "set",
+        amount: 5,
+      }),
+    ).rejects.toMatchObject({ name: "NotFoundError", message: "Usuário não encontrado" });
+    expect(l.calls).toEqual([]);
+  });
+
+  it("ledger devolvendo usuario-ausente vira o mesmo 404 congelado, não um 500", async () => {
+    await expect(
+      new AdjustUserBalanceUseCase(repository, {
+        async adjust() {
+          return { applied: false as const, reason: "usuario-ausente" as const };
+        },
+      }).execute({ actor: managerActor, userId: 1, track: "COINS", action: "remove", amount: 10 }),
+    ).rejects.toMatchObject({ name: "NotFoundError", status: 404 });
   });
 });
 

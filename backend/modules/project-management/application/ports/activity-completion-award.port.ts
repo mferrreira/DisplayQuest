@@ -8,16 +8,20 @@
  *
  * Idempotência por membro: a chave é a descrição `GAMIFICATION:ACTIVITY_COMPLETED:<atividade>`
  * no awardHistory (mesma máquina do caminho de tarefa). Reexecução credita 0, não dois.
+ *
+ * V8-5 (DEC-215): o que atravessa a porta é MOEDA — `coins` é a parcela Hamilton calculada pelo
+ * domínio de projeto (`activity-rules.ts`), e o valor entra intacto. A porta não sabe em que
+ * coluna o credit cai: quem decide a trilha é o gamification.
  */
 export interface ActivityAwardOutcome {
-  /** Valor creditado por esta chamada. 0 quando o award já estava registrado (idempotência). */
-  pointsAwarded: number
+  /** Valor creditado em moeda por esta chamada. 0 quando o award já estava registrado. */
+  coinsAwarded: number
 }
 
 export interface ActivityCompletionAwardPort {
   awardActivityCompletion(input: {
     userId: number
     activityId: number
-    points: number
+    coins: number
   }): Promise<ActivityAwardOutcome | null>
 }

@@ -240,12 +240,14 @@ export async function requestActivityCompletion(
 /**
  * V5-7b (DEC-76/77/103/104): aprovar a conclusão. A resposta carrega a economia — `award` e
  * `shares` (creditado por membro) — a tela não recalcula (R7). O `projectsPoints` saiu na V8-1
- * (DEC-215) junto da coluna `projects.points`.
+ * (DEC-215) junto da coluna `projects.points`, e na V8-5 (DEC-215) a parcela passou a falar de
+ * moeda: `coins`. Nenhum consumidor da tela existe hoje (medido por grep) — a chave do wire muda
+ * junto do destino do valor para a resposta não continuar mentindo.
  */
 export interface ActivityApprovalResult {
   activity: ProjectActivity
   award: number
-  shares: Array<{ userId: number; points: number }>
+  shares: Array<{ userId: number; coins: number }>
 }
 
 export async function approveActivityCompletion(

@@ -7,6 +7,11 @@ export interface User {
   email: string;
   roles: UserRole[];
   points: number;
+  /**
+   * plan-v8 V8-5 (DEC-215/216): a moeda vitalícia (loja). Chega só na linha da própria pessoa e na
+   * da gestão — a mesma regra de leitura do CPF — então é opcional aqui.
+   */
+  coins?: number;
   completedTasks: number;
   password?: string;
   status: string;

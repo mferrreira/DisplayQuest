@@ -6,7 +6,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { DomainError, ForbiddenError, NotFoundError, userActor } from "@/backend/domain";
+import { COINS_GAMIFICATION_TRACK, DomainError, ForbiddenError, NotFoundError, POINTS_GAMIFICATION_TRACK, userActor } from "@/backend/domain";
 import type { Badge, UserBadge } from "@/backend/domain";
 import { createGamificationModule } from "@/backend/modules/gamification";
 import type { BadgeCatalogPort } from "@/backend/modules/gamification/application/ports/badge-catalog.port";
@@ -31,11 +31,11 @@ const NO_MANAGEMENT_ROLES = ["VOLUNTARIO"];
 function makeFakes() {
   const users: GamificationUsersPort & {
     calls: string[];
-    data: { id: number; points: number; completedTasks: number; weekHours: number; roles: string[] };
+    data: { id: number; points: number; coins: number; completedTasks: number; weekHours: number; roles: string[] };
     allUsers: Array<{ id: number; points: number; completedTasks: number }>;
   } = {
     calls: [],
-    data: { id: 1, points: 0, completedTasks: 0, weekHours: 0, roles: [] as string[] },
+    data: { id: 1, points: 0, coins: 0, completedTasks: 0, weekHours: 0, roles: [] as string[] },
     allUsers: [] as Array<{ id: number; points: number; completedTasks: number }>,
     async findProgressionById(userId) {
       this.calls.push(`findProgressionById:${userId}`);
@@ -64,7 +64,13 @@ function makeFakes() {
     async awardAndRecord(record) {
       this.records.push(record);
       this.awarded.add(`${record.userId}:${record.description}`);
-      users.data.points += record.pointsAwarded;
+      // V8-5 (DEC-215): o fake segue a trilha declarada no record, como o adaptador real —
+      // moeda nao cai em pontos.
+      if (record.track === COINS_GAMIFICATION_TRACK) {
+        users.data.coins += record.amount;
+      } else {
+        users.data.points += record.amount;
+      }
     },
   };
 
@@ -183,7 +189,8 @@ describe("AwardFromWorkSessionUseCase (orquestracao frozen golden)", () => {
   it("concede pontos, grava history com descricao da regra e devolve progressao pos-credit", async () => {
     const result = await module_.awardFromWorkSession({ userId: 1, workSessionId: 42, durationSeconds: 7200 });
 
-    expect(result.pointsAwarded).toBe(30);
+    expect(result.amountAwarded).toBe(30);
+    expect(result.track).toBe(POINTS_GAMIFICATION_TRACK);
     // V8-3 (DEC-214): xpAwarded passou a ser o XP creditado em users.xp (+10 flat por sessao),
     // nao o espelho do premio de pontos.
     expect(result.xpAwarded).toBe(10);
@@ -197,7 +204,8 @@ describe("AwardFromWorkSessionUseCase (orquestracao frozen golden)", () => {
       sourceType: "WORK_SESSION_COMPLETED",
       sourceId: 42,
       description: "GAMIFICATION:WORK_SESSION_COMPLETED:42",
-      pointsAwarded: 30,
+      amount: 30,
+      track: POINTS_GAMIFICATION_TRACK,
       xp: { description: "GAMIFICATION:XP:WORK_SESSION_COMPLETED:42", amount: 10 },
     });
   });
@@ -207,7 +215,7 @@ describe("AwardFromWorkSessionUseCase (orquestracao frozen golden)", () => {
     const second = await module_.awardFromWorkSession({ userId: 1, workSessionId: 42, durationSeconds: 7200 });
 
     expect(second.alreadyAwarded).toBe(true);
-    expect(second.pointsAwarded).toBe(0);
+    expect(second.amountAwarded).toBe(0);
     expect(second.newProgression.points).toBe(30);
     expect(fakes.awardHistory.records).toHaveLength(1);
   });
@@ -225,14 +233,14 @@ describe("AwardFromWorkSessionUseCase (orquestracao frozen golden)", () => {
 
     const result = await module_.awardFromWorkSession({ userId: 1, workSessionId: 42, durationSeconds: 7200 });
 
-    expect(result.pointsAwarded).toBe(30);
+    expect(result.amountAwarded).toBe(30);
     // QUIRK-6A corrigido na impl nova: a concessao automatica FUNCIONA.
     expect(fakes.userBadges.store).toHaveLength(1);
     expect(fakes.userBadges.store[0]).toMatchObject({ userId: 1, badgeId: 3, earnedBy: null });
   });
 
   it("usuario inexistente: falha no progression pos-award (mesmo ponto de falha do legado)", async () => {
-    fakes.users.data = { id: 999, points: 0, completedTasks: 0, weekHours: 0, roles: [] };
+    fakes.users.data = { id: 999, points: 0, coins: 0, completedTasks: 0, weekHours: 0, roles: [] };
     await expect(module_.awardFromWorkSession({ userId: 1, workSessionId: 1 })).rejects.toThrow("Usuário não encontrado");
   });
 });
@@ -240,16 +248,16 @@ describe("AwardFromWorkSessionUseCase (orquestracao frozen golden)", () => {
 describe("AwardFromTaskCompletionUseCase", () => {
   it("default 10 em undefined/null; floor; 0 => 0 (sem clamp)", async () => {
     const a = await module_.awardFromTaskCompletion({ userId: 1, taskId: 9 });
-    expect(a.pointsAwarded).toBe(10);
+    expect(a.amountAwarded).toBe(10);
 
     const b = await module_.awardFromTaskCompletion({ userId: 1, taskId: 10, taskPoints: null });
-    expect(b.pointsAwarded).toBe(10);
+    expect(b.amountAwarded).toBe(10);
 
     const c = await module_.awardFromTaskCompletion({ userId: 1, taskId: 11, taskPoints: 15.7 });
-    expect(c.pointsAwarded).toBe(15);
+    expect(c.amountAwarded).toBe(15);
 
     const d = await module_.awardFromTaskCompletion({ userId: 1, taskId: 12, taskPoints: 0 });
-    expect(d.pointsAwarded).toBe(0);
+    expect(d.amountAwarded).toBe(0);
     expect(d.alreadyAwarded).toBe(false);
   });
 
@@ -264,36 +272,41 @@ describe("AwardFromTaskCompletionUseCase", () => {
 });
 
 describe("AwardFromActivityCompletionUseCase (V5-7b, DEC-63/104)", () => {
-  it("credita o valor PRONTO da distribuicao, com a chave ACTIVITY_COMPLETED:<atividade>", async () => {
-    const result = await module_.awardFromActivityCompletion({ userId: 1, activityId: 77, points: 120 });
+  it("credita em MOEDA o valor PRONTO da distribuicao, com a chave ACTIVITY_COMPLETED:<atividade> (V8-5)", async () => {
+    const result = await module_.awardFromActivityCompletion({ userId: 1, activityId: 77, coins: 120 });
 
-    expect(result.pointsAwarded).toBe(120);
+    expect(result.amountAwarded).toBe(120);
+    // V8-5 (DEC-215): o destino mudou e a aritmetica nao. O credit declara a trilha moeda.
+    expect(result.track).toBe(COINS_GAMIFICATION_TRACK);
     expect(result.sourceType).toBe("ACTIVITY_COMPLETED");
     expect(result.sourceId).toBe(77);
     expect(fakes.awardHistory.records.at(-1)).toMatchObject({
       sourceType: "ACTIVITY_COMPLETED",
       sourceId: 77,
       description: "GAMIFICATION:ACTIVITY_COMPLETED:77",
-      pointsAwarded: 120,
+      amount: 120,
+      track: COINS_GAMIFICATION_TRACK,
     });
     // O valor nao e re-aritmetico aqui (DEC-103: a escala e do dominio de projeto).
-    expect(fakes.users.data.points).toBe(120);
+    expect(fakes.users.data.coins).toBe(120);
+    // E o placar do mes nao mexe: moeda nao cai em pontos.
+    expect(fakes.users.data.points).toBe(0);
   });
 
   it("idempotencia por (usuario, atividade): reexecucao credita 0", async () => {
-    await module_.awardFromActivityCompletion({ userId: 1, activityId: 78, points: 50 });
-    const dup = await module_.awardFromActivityCompletion({ userId: 1, activityId: 78, points: 50 });
+    await module_.awardFromActivityCompletion({ userId: 1, activityId: 78, coins: 50 });
+    const dup = await module_.awardFromActivityCompletion({ userId: 1, activityId: 78, coins: 50 });
 
     expect(dup.alreadyAwarded).toBe(true);
-    expect(dup.pointsAwarded).toBe(0);
+    expect(dup.amountAwarded).toBe(0);
     expect(fakes.awardHistory.records).toHaveLength(1);
   });
 
   it("cada membro da distribuicao tem a SUA chave para a MESMA atividade", async () => {
     // O duplo de users serve um por vez; a progressao pos-award de cada membro fala do seu.
-    const a = await module_.awardFromActivityCompletion({ userId: 1, activityId: 79, points: 200 });
-    fakes.users.data = { id: 2, points: 0, completedTasks: 0, weekHours: 0, roles: [] };
-    const b = await module_.awardFromActivityCompletion({ userId: 2, activityId: 79, points: 100 });
+    const a = await module_.awardFromActivityCompletion({ userId: 1, activityId: 79, coins: 200 });
+    fakes.users.data = { id: 2, points: 0, coins: 0, completedTasks: 0, weekHours: 0, roles: [] };
+    const b = await module_.awardFromActivityCompletion({ userId: 2, activityId: 79, coins: 100 });
 
     expect(a.alreadyAwarded).toBe(false);
     expect(b.alreadyAwarded).toBe(false);
@@ -302,10 +315,11 @@ describe("AwardFromActivityCompletionUseCase (V5-7b, DEC-63/104)", () => {
 
   it("task e atividade com o mesmo id sao independentes (sourceType differentia)", async () => {
     await module_.awardFromTaskCompletion({ userId: 1, taskId: 80, taskPoints: 10 });
-    const act = await module_.awardFromActivityCompletion({ userId: 1, activityId: 80, points: 300 });
+    const act = await module_.awardFromActivityCompletion({ userId: 1, activityId: 80, coins: 300 });
 
     expect(act.alreadyAwarded).toBe(false);
-    expect(act.pointsAwarded).toBe(300);
+    expect(act.amountAwarded).toBe(300);
+    expect(act.track).toBe(COINS_GAMIFICATION_TRACK);
   });
 });
 

@@ -21,6 +21,7 @@ type UserRow = {
   name: string
   email: string
   points: number
+  coins: number
   completedTasks: number
   password: string | null
   status: string
@@ -47,6 +48,7 @@ function toRecord(row: UserRow): UserRecord {
     name: row.name,
     email: row.email,
     points: row.points,
+    coins: row.coins,
     completedTasks: row.completedTasks,
     password: row.password,
     status: toUserStatus(row.status),
@@ -91,6 +93,10 @@ export class PrismaUserRepository implements UserRepositoryPort {
         name: record.name,
         email: record.email,
         points: record.points,
+        // V8-5: ausente no record é "não mexer na coluna" (Prisma descarta `undefined`), que é o
+        // comportamento certo para record de fixture antiga — nenhum caminho de ajuste de saldo
+        // depende disto: o ledger escreve `coins` na transação, não por aqui.
+        coins: record.coins,
         completedTasks: record.completedTasks,
         password: record.password,
         status: record.status,
@@ -175,6 +181,7 @@ export class PrismaUserRepository implements UserRepositoryPort {
         status: true,
         weekHours: true,
         points: true,
+        coins: true,
         completedTasks: true,
         avatar: true,
         bannerKey: true,

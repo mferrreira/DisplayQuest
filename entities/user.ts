@@ -35,6 +35,12 @@ export const userSchema = z.object({
   name: z.string(),
   email: z.string().optional(), // omitted by listUsersForActor for roles without full view
   points: z.number().int(),
+  /**
+   * plan-v8 V8-5 (DEC-215/216): a moeda vitalícia. Opcional porque a lista de usuários só a
+   * entrega a quem tem direito (próprio OU gestão, a mesma regra do CPF) — loja e painel são os
+   * consumidores que a lêem.
+   */
+  coins: z.number().int().optional(),
   completedTasks: z.number().int(),
   password: z.string().nullable().optional(), // never sent by API responses that matter; defensive
   status: userStatusSchema,

@@ -53,7 +53,7 @@ const mocks = vi.hoisted(() => ({
   // V5-7b — economia da aprovação
   activeMembers: new Map<number, number[]>(),
   completedTasks: [] as Array<{ taskId: number; assigneeIds: number[]; completerIds: number[] }>,
-  awardCalls: [] as Array<{ userId: number; activityId: number; points: number }>,
+  awardCalls: [] as Array<{ userId: number; activityId: number; coins: number }>,
   awardedKeys: new Set<string>(),
   approveWrites: [] as Array<{ id: number; status: string; approvedBy: number }>,
   failFileCreate: false,
@@ -222,11 +222,11 @@ vi.mock("@/backend/composition/root", () => {
     async awardActivityCompletion(input) {
       const key = `${input.userId}:${input.activityId}`;
       if (mocks.awardedKeys.has(key)) {
-        return { pointsAwarded: 0 };
+        return { coinsAwarded: 0 };
       }
       mocks.awardedKeys.add(key);
       mocks.awardCalls.push(input);
-      return { pointsAwarded: input.points };
+      return { coinsAwarded: input.coins };
     },
   };
 
@@ -598,8 +598,8 @@ describe("aprovar conclusão — gate global, economia e saldo (V5-7b, DEC-76/77
     expect(body.award).toBe(300);
     // Créditos medidos no seed: membro 2 → 2 tasks, membro 3 → 1 task → 200/100 exatos.
     expect(body.shares).toEqual([
-      { userId: 2, points: 200 },
-      { userId: 3, points: 100 },
+      { userId: 2, coins: 200 },
+      { userId: 3, coins: 100 },
     ]);
     // V8-1 (DEC-215): sem `projectsPoints` na resposta — o projeto não tem saldo.
     expect(mocks.approveWrites).toEqual([{ id: 6, status: "DONE", approvedBy: 1 }]);

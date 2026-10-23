@@ -16,12 +16,12 @@ export interface TaskCompletedEvent {
  * plan-v3 OND4-A (AC-P3-08) — o publicador deixa de engolir o resultado do award.
  *
  * Medido antes de mudar (2026-10-03): `awardFromTaskCompletion` (gamification) devolvia
- * `GamificationAwardResult { pointsAwarded, alreadyAwarded, newProgression }` e o adaptador
+ * `GamificationAwardResult { pointsAwarded → hoje `amountAwarded` + `track` (V8-5), alreadyAwarded, newProgression }` e o adaptador
  * daqui **descartava**: a porta era `Promise<void>` e o caso de uso só tinha em mãos o valor
  * que pediu (`awardPointsForCompletion`), não o valor creditado. As duas coisas divergem de
  * verdade, por três peculiaridades congeladas do outro lado:
  *
- *   - **idempotência**: award já registrado → `pointsAwarded: 0` (o pedido era 10);
+ *   - **idempotência**: award já registrado → montante 0 (o pedido era 10);
  *   - **`taskAwardPoints`**: `Math.floor` sem clamp — peculiaridade própria do caminho de tarefa;
  *   - **`alreadyAwarded`**: a segunda conclusão da mesma tarefa credita zero, e é o número
  *     honesto para a interface mostrar "não mudou nada".

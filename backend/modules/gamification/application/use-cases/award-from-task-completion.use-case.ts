@@ -1,4 +1,4 @@
-import { XP_EVENT_TASK_COMPLETED, buildAwardDescription, taskAwardPoints, xpAwardDescription } from "@/backend/domain"
+import { POINTS_GAMIFICATION_TRACK, XP_EVENT_TASK_COMPLETED, buildAwardDescription, taskAwardPoints, xpAwardDescription } from "@/backend/domain"
 import type { GamificationSourceType } from "@/backend/domain"
 import type {
   AwardFromTaskCompletionCommand,
@@ -15,10 +15,13 @@ import type { GetUserProgressionUseCase } from "@/backend/modules/gamification/a
  * de task), idempotencia por DESCRICAO `GAMIFICATION:TASK_COMPLETED:<id>`,
  * avaliacao de badges depois do credit.
  *
- * V8-3 (DEC-214): `xpAwarded` deixa de ser o espelho de `pointsAwarded` (a derivação dormente de
+ * V8-3 (DEC-214): `xpAwarded` deixa de ser o espelho do montante do prêmio (a derivação dormente de
  * `Progression.ts`) e passa a ser o XP creditado em `users.xp`: +10 flat por tarefa aprovada, na
  * mesma transação do prêmio. Nenhum consumidor do valor espelhado existia (medido por grep: o campo
  * não sai de rota nenhuma).
+ *
+ * V8-5 (DEC-215): o campo do montante passou a `amountAwarded` e o record declara `track`. A
+ * tarefa continua creditando POINTS: o que mudou de destino foi só o prêmio de atividade.
  */
 
 export interface AwardFromTaskCompletionDependencies {
@@ -45,14 +48,15 @@ export class AwardFromTaskCompletionUseCase {
         userId: command.userId,
         sourceType,
         sourceId,
-        pointsAwarded: 0,
+        amountAwarded: 0,
+        track: POINTS_GAMIFICATION_TRACK,
         xpAwarded: 0,
         newProgression: progression,
         alreadyAwarded: true,
       }
     }
 
-    const pointsAwarded = taskAwardPoints(command.taskPoints)
+    const amount = taskAwardPoints(command.taskPoints)
     // V8-3 (DEC-214): XP é +10 FLAT por tarefa aprovada — não deriva do valor do prêmio, que
     // obedece ao prazo (DEC-97). O caminho só é chamado quando a tarefa chegou a `done`
     // (completeTask credita no `done`; approveTask credita na aprovação; delegated em
@@ -64,7 +68,8 @@ export class AwardFromTaskCompletionUseCase {
       sourceType,
       sourceId,
       description,
-      pointsAwarded,
+      amount,
+      track: POINTS_GAMIFICATION_TRACK,
       xp: { description: xpAwardDescription(sourceType, sourceId), amount: xpAwarded },
     })
 
@@ -76,7 +81,8 @@ export class AwardFromTaskCompletionUseCase {
       userId: command.userId,
       sourceType,
       sourceId,
-      pointsAwarded,
+      amountAwarded: amount,
+      track: POINTS_GAMIFICATION_TRACK,
       xpAwarded,
       newProgression,
       alreadyAwarded: false,

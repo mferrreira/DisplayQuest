@@ -132,8 +132,11 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, onSessionsC
   const [userFundingDraft, setUserFundingDraft] = useState<string>(NO_VALUE)
   const [userFundingOtherDraft, setUserFundingOtherDraft] = useState<string>("")
   const [userLevelDraft, setUserLevelDraft] = useState<string>(NO_VALUE)
-  const [userPointsAction, setUserPointsAction] = useState<"set" | "add" | "remove">("set")
-  const [userPointsValue, setUserPointsValue] = useState<string>("0")
+  // V8-5 (ASK-V8-24): o ajuste do painel passou a ter TRILHA — pontos do mês e moeda vitalícia são
+  // saldos diferentes, cada ajuste com sua linha de auditoria. A gramática é a mesma das duas.
+  const [userBalanceTrack, setUserBalanceTrack] = useState<"POINTS" | "COINS">("POINTS")
+  const [userBalanceAction, setUserBalanceAction] = useState<"set" | "add" | "remove">("set")
+  const [userBalanceValue, setUserBalanceValue] = useState<string>("0")
   const [savingUserSettings, setSavingUserSettings] = useState(false)
   // DEC-85 (medido ao escrever os testes do V4-4b): `saveUserSettings` e `updateUserStatus`
   // LANÇAM em toda falância e ninguém captura. O `onClick` devolve a promise rejeitada, o React
@@ -188,8 +191,10 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, onSessionsC
     setUserFundingDraft(targetUser?.fundingAgency || NO_VALUE)
     setUserFundingOtherDraft(targetUser?.fundingAgencyOther || "")
     setUserLevelDraft(targetUser?.level || NO_VALUE)
-    setUserPointsAction("set")
-    setUserPointsValue(String(targetUser?.points ?? 0))
+    // O diálogo abre na trilha histórica (pontos do mês) com o saldo dela no campo.
+    setUserBalanceTrack("POINTS")
+    setUserBalanceAction("set")
+    setUserBalanceValue(String(targetUser?.points ?? 0))
     setUserSettingsError(null)
   }
 
@@ -292,21 +297,26 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, onSessionsC
       // não-negativos: chão em 0 e suficiência são regras próprias dessas duas ações.
       // Vazio não é número: antes, `Number("")` é 0 e o painel enviava `set 0`, zerando os
       // pontos de alguém por um campo esvaziado — o mesmo quirk que a DEC-84 recusou no servidor.
-      const pointsNum = Number(userPointsValue)
-      const pointsIsNumeric = userPointsValue.trim() !== "" && Number.isFinite(pointsNum)
-      const pointsAllowed = pointsIsNumeric && (userPointsAction === "set" || pointsNum >= 0)
-      if (pointsAllowed) {
-        const pointsResponse = await fetch(`/api/users/${selectedUserForSettings.id}/points`, {
+      const balanceNum = Number(userBalanceValue)
+      const balanceIsNumeric = userBalanceValue.trim() !== "" && Number.isFinite(balanceNum)
+      // DEC-222: o negativo é permitido só em `set` da trilha pontos (DEC-60). Na moeda nenhuma das
+      // três ações escreve saldo negativo — o painel espelha a régua para não enviar o que o
+      // servidor recusa, e a recusa do servidor continua sendo a palavra final.
+      const balanceAllowed =
+        balanceIsNumeric && (userBalanceAction === "set" ? userBalanceTrack === "POINTS" || balanceNum >= 0 : balanceNum >= 0)
+      if (balanceAllowed) {
+        const balanceResponse = await fetch(`/api/users/${selectedUserForSettings.id}/points`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            action: userPointsAction,
-            points: pointsNum,
+            track: userBalanceTrack,
+            action: userBalanceAction,
+            amount: balanceNum,
           }),
         })
-        if (!pointsResponse.ok) {
-          const payload = await pointsResponse.json().catch(() => ({}))
-          throw new Error(payload?.error || "Erro ao atualizar pontos")
+        if (!balanceResponse.ok) {
+          const payload = await balanceResponse.json().catch(() => ({}))
+          throw new Error(payload?.error || "Erro ao atualizar o saldo")
         }
       }
 
@@ -927,7 +937,7 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, onSessionsC
           <DialogHeader>
             <DialogTitle>Configurar Usuário</DialogTitle>
             <DialogDescription>
-              Gerencie perfil, funções, pontos e status do usuário.
+              Gerencie perfil, funções, saldo (pontos e moedas) e status do usuário.
             </DialogDescription>
           </DialogHeader>
           {selectedUserForSettings && (
@@ -1128,16 +1138,25 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, onSessionsC
                 </div>
               </div>
 
-              {/* Pontos */}
+              {/* Saldo: as duas trilhas, ajustadas uma de cada vez (V8-5, ASK-V8-24) */}
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <Zap className="h-4 w-4 text-muted-foreground" />
-                  <Label className="text-sm font-semibold">Pontos</Label>
+                  <Label className="text-sm font-semibold">Saldo</Label>
                 </div>
                 <div className="pl-6">
-                  <div className="flex gap-2">
-                    <Select value={userPointsAction} onValueChange={(v) => setUserPointsAction(v as "set" | "add" | "remove")}>
-                      <SelectTrigger className="w-36" aria-label="Ação de pontos">
+                  <div className="flex flex-wrap gap-2">
+                    <Select value={userBalanceTrack} onValueChange={(v) => setUserBalanceTrack(v as "POINTS" | "COINS")}>
+                      <SelectTrigger className="w-40" aria-label="Trilha de saldo">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="POINTS">Pontos do mês</SelectItem>
+                        <SelectItem value="COINS">Moedas</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Select value={userBalanceAction} onValueChange={(v) => setUserBalanceAction(v as "set" | "add" | "remove")}>
+                      <SelectTrigger className="w-36" aria-label="Ação de saldo">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -1148,27 +1167,29 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, onSessionsC
                     </Select>
                     <Input
                       type="number"
-                      id="userPointsValue"
+                      id="userBalanceValue"
                       // Medido ao escrever os testes do V4-4b: o input não tinha id nem rótulo
-                      // associado — o único "Pontos" próximo é o título da seção, sem `htmlFor`.
+                      // associado — o único texto próximo era o título da seção, sem `htmlFor`.
                       // Sem nome acessível o campo é invisível para leitor de tela e inalcançável
-                      // por teste. (Nota: o texto contém "pontos"; quem buscar por substring
-                      // `getByLabel("Pontos")` casa com ele — use rótulo exato.)
-                      aria-label="Valor de pontos"
-                      // DEC-60: "Definir" é valor absoluto e aceita negativo, porque a premiação
-                      // pode deixar o total de alguém negativo (DEC-39, penalidade sem piso) e a
-                      // administração precisava conseguir escrever esse valor de volta.
-                      // "Adicionar"/"Remover" continuam não-negativos — o chão em 0 e a
-                      // suficiência são regras próprias dessas duas ações.
-                      min={userPointsAction === "set" ? undefined : "0"}
-                      value={userPointsValue}
-                      onChange={(e) => setUserPointsValue(e.target.value)}
+                      // por teste. O rótulo é "Valor de saldo" (não "… de pontos") de propósito:
+                      // a trilha é um controle próprio, e um rótulo que CONTÉM o rótulo do outro
+                      // controle é o modo de falha já medido na casa (substring do `getByLabel`).
+                      aria-label="Valor de saldo"
+                      // DEC-60: na trilha pontos, "Definir" é valor absoluto e aceita negativo,
+                      // porque a premiação pode deixar o total de alguém negativo (DEC-39, penalidade
+                      // sem piso) e a administração precisava conseguir escrever esse valor de volta.
+                      // Na moeda não (DEC-222). "Adicionar"/"Remover" continuam não-negativos nas
+                      // duas trilhas — chão em 0 e suficiência são regras próprias dessas duas ações.
+                      min={userBalanceAction === "set" && userBalanceTrack === "POINTS" ? undefined : "0"}
+                      value={userBalanceValue}
+                      onChange={(e) => setUserBalanceValue(e.target.value)}
                       className="flex-1"
                     />
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Atual: {selectedUserForSettings.points ?? 0} pontos
-                    {userPointsAction === "set" ? " · “Definir” aceita valor negativo" : ""}
+                    Atual: {userBalanceTrack === "POINTS" ? selectedUserForSettings.points ?? 0 : selectedUserForSettings.coins ?? 0}{" "}
+                    {userBalanceTrack === "POINTS" ? "pontos" : "moedas"}
+                    {userBalanceAction === "set" && userBalanceTrack === "POINTS" ? " · “Definir” aceita valor negativo" : ""}
                   </p>
                 </div>
               </div>

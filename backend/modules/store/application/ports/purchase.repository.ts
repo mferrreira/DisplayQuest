@@ -1,17 +1,20 @@
 import type { IPurchase, PurchaseStatus } from "@/backend/domain"
 
 /**
- * OND8-B3 — porta fina de `purchases` + pontos (R2). Table-level only.
- * `createWithPointDeduction` é o único método transacional: o adapter roda o $transaction
- * legado (re-check de usuário/points dentro da transação — QUIRK-8S7) e propaga os erros
+ * OND8-B3 — porta fina de `purchases` + saldo (R2). Table-level only.
+ * `createWithCoinDeduction` é o único método transacional: o adapter roda o $transaction
+ * legado (re-check de usuário e de saldo dentro da transação — QUIRK-8S7) e propaga os erros
  * tipados com as mensagens verbatim.
+ *
+ * plan-v8 V8-5 (DEC-215/216): o saldo da loja é moeda. Cobrança e estorno acontecem em
+ * `users.coins`; `rewards.price` continua o mesmo número (virada 1:1 do V8-CLOSE).
  * `update` recebe o registro JÁ MESCLADO pelo use case (merge cego do legado — QUIRK-8S4);
  * o adapter escreve só as colunas conhecidas.
  */
 export interface PurchaseUserRef {
   id: number
   name: string
-  points: number
+  coins: number
 }
 
 export interface NewPurchase {
@@ -30,8 +33,8 @@ export interface PurchaseRepository {
   findByRewardId(rewardId: number): Promise<IPurchase[]>
   findByStatus(status: string): Promise<IPurchase[]>
   findUserById(userId: number): Promise<PurchaseUserRef | null>
-  createWithPointDeduction(input: NewPurchase): Promise<IPurchase>
+  createWithCoinDeduction(input: NewPurchase): Promise<IPurchase>
   update(id: number, merged: IPurchase): Promise<IPurchase>
   delete(id: number): Promise<void>
-  refundPoints(userId: number, amount: number): Promise<void>
+  refundCoins(userId: number, amount: number): Promise<void>
 }

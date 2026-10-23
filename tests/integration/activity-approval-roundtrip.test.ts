@@ -15,7 +15,7 @@
  *      `task_user_progress` na mesma conta;
  *   3. membro INATIVO (DEC-149) fica fora da conta mesmo tendo tarefas;
  *   4. o credit de cada membro é uma linha `GAMIFICATION:ACTIVITY_COMPLETED:<atividade>` no
- *      history e incrementa `users.points` de verdade;
+ *      history, na trilha COINS, e incrementa `users.coins` de verdade (V8-5, DEC-215/216);
  *   5. GERENTE não auto-aprova (403); COORDENADOR sim (DEC-77).
  *
  * V8-1 (DEC-215): o item que existia aqui — "`projects.points` sobe pelo prêmio com piso 0
@@ -31,7 +31,7 @@ import { prisma } from "@/lib/database/prisma";
 import { createProjectManagementModule } from "@/backend/modules/project-management";
 import { createGamificationModule } from "@/backend/modules/gamification";
 import { createGamificationActivityCompletionAward } from "@/backend/modules/project-management/infrastructure/adapters/gamification-activity-completion-award";
-import { ConflictError, ForbiddenError } from "@/backend/domain";
+import { COINS_GAMIFICATION_TRACK, ConflictError, ForbiddenError } from "@/backend/domain";
 
 const stamp = Date.now();
 // Aprovação em 28/06/2026: 2 dias antes do prazo 30/06 → ×1,5 da base 300 = 450 (DEC-103).
@@ -274,22 +274,31 @@ describe("G4 roundtrip — aprovação de atividade e economia do projeto (isola
         action: "GAMIFICATION_AWARD",
         description: `GAMIFICATION:ACTIVITY_COMPLETED:${activityA}`,
       },
-      select: { entityId: true, newValues: true },
+      select: { entityId: true, newValues: true, track: true },
       orderBy: { entityId: "asc" },
     });
     expect(shares).toHaveLength(2);
+    // V8-5 (DEC-215/216): a linha do prêmio de atividade declara a trilha moeda e o montante na
+    // chave que nomeia a trilha — a mesma linha lida de volta é o que prova o contrato.
+    expect(shares.map((row) => row.track)).toEqual([COINS_GAMIFICATION_TRACK, COINS_GAMIFICATION_TRACK]);
+    expect(shares.map((row) => (row.newValues as { coinsAwarded: number }).coinsAwarded)).toEqual([225, 225]);
     // Promise.all cria os usuários em paralelo — a comparação é de conjunto, não de ordem de id.
     expect([...shares.map((row) => row.entityId)].sort((a, b) => a - b)).toEqual(
       [bolsista1Id, bolsista2Id].sort((a, b) => a - b),
     );
 
-    const bolsista1 = await prisma.users.findUnique({ where: { id: bolsista1Id }, select: { points: true } });
-    const bolsista2 = await prisma.users.findUnique({ where: { id: bolsista2Id }, select: { points: true } });
-    const inativo = await prisma.users.findUnique({ where: { id: inativoId }, select: { points: true } });
-    // As duas etapas aprovadas (A e B) têm a mesma grade e a mesma conta: 225 + 225 cada.
-    expect(bolsista1?.points).toBe(450);
-    expect(bolsista2?.points).toBe(450);
-    expect(inativo?.points).toBe(0);
+    // As duas etapas aprovadas (A e B) têm a mesma grade e a mesma conta: 225 + 225 cada — na MOEDA.
+    const bolsista1 = await prisma.users.findUnique({ where: { id: bolsista1Id }, select: { coins: true, points: true } });
+    const bolsista2 = await prisma.users.findUnique({ where: { id: bolsista2Id }, select: { coins: true, points: true } });
+    const inativo = await prisma.users.findUnique({ where: { id: inativoId }, select: { coins: true, points: true } });
+    expect(bolsista1?.coins).toBe(450);
+    expect(bolsista2?.coins).toBe(450);
+    expect(inativo?.coins).toBe(0);
+    // O placar do mês fica intacto: a trilha do prêmio de atividade é a moeda (DEC-215). O ponto é
+    // medido porque as duas colunas coexistem em `users` e um `increment` na coluna errada passaria
+    // no `tsc` sem nada dizer.
+    expect(bolsista1?.points).toBe(0);
+    expect(bolsista2?.points).toBe(0);
   });
 
   it("award já registrado não re-credita: a chave é por (usuário, atividade) no history", async () => {

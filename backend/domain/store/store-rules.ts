@@ -109,10 +109,14 @@ export function parsePurchaseRequest(data: Record<string, unknown>): { userId: n
 }
 
 /**
- * Elegibilidade na ordem legada: usuário -> recompensa -> available -> stock -> points.
+ * Elegibilidade na ordem legada: usuário -> recompensa -> available -> stock -> saldo.
  * O branch de stock é inatingível em produção (8S2), mantido por paridade.
+ *
+ * plan-v8 V8-5 (DEC-215/216): o saldo cobrado é MOEDA (`users.coins`), não o placar do mês. A
+ * virada 1:1 do V8-CLOSE manteve os números do catálogo (DEC-216), então a régua é a mesma de
+ * antes — só mudou de trilha, e a frase nomeia a trilha que cobra.
  */
-export function assertPurchaseEligibility(user: { points: number } | null, reward: IReward | null): void {
+export function assertPurchaseEligibility(user: { coins: number } | null, reward: IReward | null): void {
   if (!user) throw new NotFoundError("Usuário não encontrado")
   if (!reward) throw new NotFoundError("Recompensa não encontrada")
   if (!reward.available) throw new ValidationError("Esta recompensa não está disponível")
@@ -120,8 +124,8 @@ export function assertPurchaseEligibility(user: { points: number } | null, rewar
   const inStock = reward.stock === null || reward.stock === undefined || reward.stock > 0
   if (!inStock) throw new ValidationError("Esta recompensa está fora de estoque")
 
-  if (user.points < reward.price) {
-    throw new ValidationError(`Pontos insuficientes. Você tem ${user.points} pontos, mas precisa de ${reward.price} pontos`)
+  if (user.coins < reward.price) {
+    throw new ValidationError(`Moedas insuficientes. Você tem ${user.coins} moedas, mas precisa de ${reward.price} moedas`)
   }
 }
 

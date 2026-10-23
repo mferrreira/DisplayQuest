@@ -4,9 +4,13 @@ import type { IPurchase, PurchaseStatus } from "@/backend/domain"
 import type { NewPurchase, PurchaseRepository, PurchaseUserRef } from "@/backend/modules/store/application/ports/purchase.repository"
 
 /**
- * OND8-B3 — adapter Prisma fino de `purchases` + pontos (R2).
- * O $transaction legado (QUIRK-8S7) mora aqui: re-check de usuário/points DENTRO da
+ * OND8-B3 — adapter Prisma fino de `purchases` + saldo (R2).
+ * O $transaction legado (QUIRK-8S7) mora aqui: re-check de usuário e de saldo DENTRO da
  * transação com as mensagens verbatim, decrement + create atômicos.
+ *
+ * plan-v8 V8-5 (DEC-215/216): as duas colunas de saldo do caminho da compra são `coins`
+ * (cobrança na criação, increment no estorno). A ordem das escritas e a mensagem verbatim
+ * continuam as do legado; o que mudou é a trilha que o re-check lê e a que o decrement toca.
  * `update` escreve as colunas do registro já mesclado pelo use case (merge cego legado —
  * QUIRK-8S4); chaves desconhecidas são ignoradas, como o toPrisma legado fazia.
  * purchaseDate: coluna String ISO (igual ao legado).
@@ -63,27 +67,27 @@ export class PrismaPurchaseRepository implements PurchaseRepository {
   }
 
   async findUserById(userId: number): Promise<PurchaseUserRef | null> {
-    return await prisma.users.findUnique({ where: { id: userId }, select: { id: true, name: true, points: true } })
+    return await prisma.users.findUnique({ where: { id: userId }, select: { id: true, name: true, coins: true } })
   }
 
-  async createWithPointDeduction(input: NewPurchase): Promise<IPurchase> {
+  async createWithCoinDeduction(input: NewPurchase): Promise<IPurchase> {
     const created = await prisma.$transaction(async (tx: any) => {
       const currentUser = await tx.users.findUnique({
         where: { id: input.userId },
-        select: { id: true, points: true },
+        select: { id: true, coins: true },
       })
 
       if (!currentUser) {
         throw new NotFoundError("Usuário não encontrado")
       }
 
-      if (currentUser.points < input.price) {
+      if (currentUser.coins < input.price) {
         throw new ValidationError(
-          `Pontos insuficientes. Você tem ${currentUser.points} pontos, mas precisa de ${input.price} pontos`,
+          `Moedas insuficientes. Você tem ${currentUser.coins} moedas, mas precisa de ${input.price} moedas`,
         )
       }
 
-      await tx.users.update({ where: { id: input.userId }, data: { points: { decrement: input.price } } })
+      await tx.users.update({ where: { id: input.userId }, data: { coins: { decrement: input.price } } })
 
       return await tx.purchases.create({
         data: {
@@ -121,7 +125,7 @@ export class PrismaPurchaseRepository implements PurchaseRepository {
     await prisma.purchases.delete({ where: { id } })
   }
 
-  async refundPoints(userId: number, amount: number): Promise<void> {
-    await prisma.users.update({ where: { id: userId }, data: { points: { increment: amount } } })
+  async refundCoins(userId: number, amount: number): Promise<void> {
+    await prisma.users.update({ where: { id: userId }, data: { coins: { increment: amount } } })
   }
 }

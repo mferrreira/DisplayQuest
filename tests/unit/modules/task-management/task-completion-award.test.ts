@@ -3,7 +3,7 @@
  * plan-v3 OND4-A (AC-P3-08) — a fronteira do prêmio devolve o valor **creditado**.
  *
  * Medido antes de escrever (2026-10-03): `awardFromTaskCompletion` (gamification) devolve
- * `GamificationAwardResult { pointsAwarded, alreadyAwarded, newProgression }`, e o adaptador
+ * `GamificationAwardResult { pointsAwarded — hoje amountAwarded + track (V8-5) —, alreadyAwarded, newProgression }`, e o adaptador
  * daqui **descartava** — a porta era `Promise<void>`. Os casos de uso só conheciam o valor que
  * *pediram* (`awardPointsForCompletion`), que não é o creditado por três razões que existem e
  * são congeladas do outro lado:
@@ -22,7 +22,7 @@ import { publishTaskCompletionAward } from "@/backend/modules/task-management/ap
 
 describe("gamification-task-progress.events — o creditado atravessa a porta (OND4-A)", () => {
   it("devolve o valor creditado pelo award, e não o valor pedido", async () => {
-    const awardFromTaskCompletion = vi.fn(async () => ({ pointsAwarded: 0, alreadyAwarded: true }));
+    const awardFromTaskCompletion = vi.fn(async () => ({ amountAwarded: 0, alreadyAwarded: true }));
     const events = createTaskProgressEvents({ awards: { awardFromTaskCompletion } });
 
     // O pedido foi 15 (o que o domínio calculou); o creditado foi 0 (o award já existia).
@@ -34,14 +34,14 @@ describe("gamification-task-progress.events — o creditado atravessa a porta (O
 
   it("repassa prêmio negativo sem piso (DEC-39)", async () => {
     const events = createTaskProgressEvents({
-      awards: { awardFromTaskCompletion: async () => ({ pointsAwarded: -37140 }) },
+      awards: { awardFromTaskCompletion: async () => ({ amountAwarded: -37140 }) },
     });
 
     expect(await events.onTaskCompleted({ userId: 3, taskId: 7, taskPoints: -37140, projectId: null })).toBe(-37140);
   });
 
   it("sem userId/taskId não credita ninguém e não chama o award", async () => {
-    const awardFromTaskCompletion = vi.fn(async () => ({ pointsAwarded: 10 }));
+    const awardFromTaskCompletion = vi.fn(async () => ({ amountAwarded: 10 }));
     const events = createTaskProgressEvents({ awards: { awardFromTaskCompletion } });
 
     expect(await events.onTaskCompleted({ userId: 0, taskId: 7, taskPoints: 10, projectId: null })).toBeNull();

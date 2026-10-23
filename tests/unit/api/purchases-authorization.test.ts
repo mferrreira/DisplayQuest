@@ -53,9 +53,10 @@ vi.mock("@/backend/composition/root", () => {
       return mocks.purchases.filter((p) => p.rewardId === rewardId) as never;
     },
     async findUserById(userId: number) {
-      return (userId === 42 || userId === 77 ? { id: userId, name: `Usuário ${userId}`, points: 100 } : null) as never;
+      // V8-5 (DEC-215/216): suficiência e estorno acontecem na moeda.
+      return (userId === 42 || userId === 77 ? { id: userId, name: `Usuário ${userId}`, coins: 100 } : null) as never;
     },
-    async createWithPointDeduction(snapshot: object) {
+    async createWithCoinDeduction(snapshot: object) {
       mocks.writes.push(`create:${(snapshot as { userId: number }).userId}`);
       const created = { id: 90 + mocks.purchases.length, ...(snapshot as object) };
       mocks.purchases.push(created);
@@ -72,7 +73,7 @@ vi.mock("@/backend/composition/root", () => {
       mocks.writes.push(`delete:${id}`);
       mocks.purchases.splice(mocks.purchases.findIndex((p) => p.id === id), 1);
     },
-    async refundPoints(userId: number, price: number) {
+    async refundCoins(userId: number, price: number) {
       mocks.refunds.push({ userId, price });
     },
   } as unknown as PurchaseRepository;

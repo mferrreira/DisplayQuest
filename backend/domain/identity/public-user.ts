@@ -36,6 +36,17 @@ export interface PublicUser {
   createdAt?: Date;
 }
 
+/**
+ * plan-v8 V8-5 (DEC-215): `coins` é a moeda vitalícia da pessoa — o saldo que a loja cobra e que
+ * o painel ajusta. Não entra em `toPublicUser`: a leitura é da própria pessoa ou da gestão
+ * (`canActorReadUserCpf` é exatamente self OU MANAGE_USERS, e a lista de usuários publica a moeda
+ * sob a MESMA regra do CPF), então a projeção existe só para os dois caminhos que já decidiram
+ * o direito: o ajuste de saldo (gate MANAGE_USERS) e a linha da lista quando o direito casa.
+ */
+export type PublicUserWithCoins = PublicUser & { coins: number };
+
+export type PublicUserSourceWithCoins = PublicUserSource & { coins?: number | null };
+
 export type PublicUserWithCpf = PublicUser & { cpf: string | null };
 
 interface PublicUserSource {
@@ -93,6 +104,14 @@ export function toPublicUser(user: PublicUserSource): PublicUser {
  * O gate é `canActorReadUserCpf`, e ele mora no use case: esta função não decide nada,
  * só projeta o campo depois de a decisão ter sido tomada.
  */
+/**
+ * Projeção depois de a leitura ter direito à moeda (ajuste de saldo no painel, linha da lista sob
+ * a regra do CPF). Ausente na ENTRADA é 0: a coluna tem default 0 e fixture antiga não a conhece.
+ */
+export function toPublicUserWithCoins(user: PublicUserSourceWithCoins): PublicUserWithCoins {
+  return { ...toPublicUser(user), coins: user.coins ?? 0 };
+}
+
 export function toPublicUserWithCpf(
   user: PublicUserSource & { cpf?: string | null },
 ): PublicUserWithCpf {

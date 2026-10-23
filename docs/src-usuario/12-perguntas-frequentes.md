@@ -38,11 +38,11 @@ Marcar uma subtask como concluída só é permitido com a tarefa em **Em Andamen
 
 ## Dá para transferir horas ou pontos entre pessoas?
 
-Não. Não há transferência de horas nem de pontos, e não há edição manual de saldo. O que existe é corrigir o registro que originou o número — a sessão, o log ou a tarefa — e gerar o relatório de novo.
+Não. Nenhuma pessoa transfere horas ou saldos entre contas. O que existe é corrigir o registro que originou o número — a sessão, o log ou a tarefa — e gerar o relatório de novo. Ajuste manual de saldo é ação de gestão, no **Painel Administrativo**, feita trilha por trilha (capítulo 9): pontos do mês e moedas são ajustados separadamente, e cada ajuste fica registrado no histórico da pessoa.
 
 ## O botão da recompensa não responde. Por quê?
 
-Porque o saldo não cobre o custo: o botão aparece como **Pontos insuficientes** e não faz nada. Também pode ser recompensa fora de estoque ou retirada do catálogo, caso em que o sistema diz o motivo.
+Porque o saldo de moedas não cobre o custo: o botão aparece como **Moedas insuficientes** e não faz nada. Moeda vem da atividade do cronograma aprovada (capítulo 4); ponto do mês não compra nada. Também pode ser recompensa fora de estoque ou retirada do catálogo, caso em que o sistema diz o motivo.
 
 ## Não consigo criar projeto. Quem pode?
 

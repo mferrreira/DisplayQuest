@@ -18,7 +18,16 @@ A aba **Usuários** é onde as contas pendentes são resolvidas e onde as contas
 - **Novo Usuário** cria uma conta diretamente, sem passar pelo cadastro público.
 - **Definir Horários** monta a grade de horários da função, a mesma grade da tela Laboratório.
 - Os filtros **Todas** e **Todos** reduzem a lista por função e por situação.
-- O ícone de configuração de cada pessoa — o controle tem o nome **Configurar \<nome\>** — abre o diálogo **Configurar Usuário**. Além de função, carga semanal e pontos, ele tem o bloco dos dados dos documentos oficiais: **CPF**, **Matrícula**, **Curso**, **Modalidade de IC**, **Nível** e **Instituição de fomento**. São os mesmos campos que a pessoa edita no próprio perfil; aqui, é a gestão que escreve.
+- O ícone de configuração de cada pessoa — o controle tem o nome **Configurar \<nome\>** — abre o diálogo **Configurar Usuário**. Além de função, carga semanal e **saldo**, ele tem o bloco dos dados dos documentos oficiais: **CPF**, **Matrícula**, **Curso**, **Modalidade de IC**, **Nível** e **Instituição de fomento**. São os mesmos campos que a pessoa edita no próprio perfil; aqui, é a gestão que escreve.
+
+  O bloco de saldo ajusta as duas trilhas separadamente, uma por vez: o seletor **Trilha de saldo**
+  escolhe **Pontos do mês** ou **Moedas**, o seletor **Ação de saldo** escolhe **Definir**,
+  **Adicionar** ou **Remover**, e o campo **Valor de saldo** recebe o número (o rótulo do campo é o
+  que o teste e o leitor de tela usam; a linha abaixo dele diz o valor atual da trilha escolhida).
+  Na trilha pontos, **Definir** aceita valor negativo — a premiação de tarefa produz total negativo
+  e a gestão precisa conseguir escrevê-lo de volta. Na trilha moeda, nenhuma das três ações aceita
+  saldo negativo. Cada ajuste fica registrado no histórico da pessoa, com trilha, valor antes e
+  valor depois.
 
 ```foto admin-usuarios titulo="A aba Usuários"
 A lista traz as contas e, abaixo, a grade de horários por função.

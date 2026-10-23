@@ -9,8 +9,9 @@ import { domainErrorResponse } from "@/lib/api/domain-error-response"
 // `canManagePurchases` com hasPermission — entrega o ActorRef e o use case decide. O deny
 // devolve o corpo 403 legado EXATO { error: "Acesso negado" } (resolucao de escopo, nao gate).
 // EVOLUTION (documentada): createPurchase ("Usuario nao encontrado" / "Recompensa nao
-// encontrada" / "Pontos insuficientes...") antes caia no 500 com details; agora NotFoundError
-// -> 404 e ValidationError -> 400 (mensagens pinadas no contract 8.3).
+// encontrada" / "Moedas insuficientes..." — a sufiencia e da moeda desde a V8-5, DEC-215/216)
+// antes caia no 500 com details; agora NotFoundError -> 404 e ValidationError -> 400 (mensagens
+// pinadas no contract 8.3).
 // B6-2d: o gate cross-actor de POST (comprar PARA OUTRO exige MANAGE_PURCHASES) desceu para
 // CreatePurchaseUseCase. A validacao "userId inválido" FICA na rota: a ordem medida (B6-0) e
 // 400 antes do 403, e ela e validacao de entrada, nao autorizacao — mover para o use case

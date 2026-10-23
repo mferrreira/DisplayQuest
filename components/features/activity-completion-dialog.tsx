@@ -182,8 +182,9 @@ export function ActivityCompletionDialog({
         title: "Atividade concluída",
         description:
           result.award > 0
-            ? `${result.award} pontos distribuídos entre os membros do projeto.`
-            : "Nenhum ponto distribuído — prêmio zerado pelo atraso (piso 0).",
+            // V8-5 (DEC-215): o prêmio distribuído é moeda, não ponto do mês.
+            ? `${result.award} moedas distribuídas entre os membros do projeto.`
+            : "Nenhuma moeda distribuída — prêmio zerado pelo atraso (piso 0).",
       })
     } catch (error) {
       toast({

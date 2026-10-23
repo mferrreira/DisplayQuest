@@ -5,7 +5,7 @@ import type {
   ListLeaderboardQuery,
   ListUserProfilesQuery,
   ListUsersForActorQuery,
-  UpdateUserPointsCommand,
+  AdjustUserBalanceCommand,
   UpdateUserRolesCommand,
   UpdateUserStatusCommand,
 } from "@/backend/modules/user-management/application/contracts"
@@ -34,7 +34,8 @@ export interface UserManagementGateway {
   moderatePendingUser(actor: ActorRef, userId: number, action: "approve" | "reject"): Promise<unknown>
   /** self || MANAGE_USERS com a mensagem própria "Não autorizado". */
   updateUserProfile(actor: ActorRef, userId: number, data: Record<string, unknown>): Promise<unknown>
-  updateUserPoints(command: UpdateUserPointsCommand): Promise<unknown>
+  /** V8-5 (ASK-V8-24): ajuste manual de trilha — pontos do mês ou moeda, cada um com linha de history. */
+  adjustUserBalance(command: AdjustUserBalanceCommand): Promise<unknown>
   deductUserHours(command: DeductUserHoursCommand): Promise<unknown>
   updateUserRoles(command: UpdateUserRolesCommand): Promise<unknown>
   updateUserStatus(command: UpdateUserStatusCommand): Promise<unknown>

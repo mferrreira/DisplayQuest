@@ -508,7 +508,8 @@ model history {
   // (`backend/domain/gamification/tracks.ts` — POINTS | COINS | XP), com default POINTS. É String
   // como `entityType`/`action` (mesma escolha da DEC-141 para vocabulário: migration de linha sem
   // constraint no banco). Toda linha existente nasce POINTS — inclusive os awards antigos.
-  // `metadata.pointsAwarded` passa a ser lido como o montante da trilha desta linha.
+  // A chave do montante no JSON nomeia a trilha da linha (`pointsAwarded`, `coinsAwarded` na V8-5,
+  // `xpAwarded` na V8-3); uma linha de ledger fala de uma trilha só.
   track       String   @default("POINTS")
   performer   users    @relation("UserHistory", fields: [performedBy], references: [id])
 

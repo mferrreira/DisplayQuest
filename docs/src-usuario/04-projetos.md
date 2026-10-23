@@ -16,7 +16,7 @@ Os gráficos e o histórico acompanham o projeto selecionado; a opção **Todos 
 
 A **Lista de Projetos** mostra todos os projetos do sistema, inclusive os que você não participa. Use os filtros **Todos**, **Ativos**, **Concluídos** e **Arquivados** para limitar a lista; os números ao lado indicam quantos projetos há em cada status. A busca filtra pelo nome e pela descrição. Cada linha mostra o status, a descrição e o andamento: quando início e término estão definidos, a barra representa a proporção do período civil já decorrido; se uma dessas datas faltar, mostra a proporção de tarefas concluídas. As datas informadas também aparecem na linha. Para abrir um projeto, use o botão de visualização. A página do projeto abre com o cabeçalho, o status e as ações **Editar** e **Excluir**. O conteúdo é dividido nas abas **Visão geral**, **Tarefas**, **Membros**, **Arquivos** e **Configurações**:
 
-- **Visão geral**: a **capa** e o **logo**, quando houver; a **Descrição**; **Dados do projeto**: **Início**, **Término**, **Número do edital**, **Número do processo**, **Número PROPPI**, **Pontos do projeto** e a barra de **Andamento** do período. Esse card só aparece quando algum desses campos foi preenchido;
+- **Visão geral**: a **capa** e o **logo**, quando houver; a **Descrição**; **Dados do projeto**: **Início**, **Término**, **Número do edital**, **Número do processo**, **Número PROPPI** e a barra de **Andamento** do período. Esse card só aparece quando algum desses campos foi preenchido; O projeto **não tem saldo**: ele não acumula pontos nem moedas (capítulo 7);
 - **Tarefas**: o **Cronograma**, quatro contagens de tarefas, o **Andamento do projeto** (período quando as duas datas existem; tarefas como alternativa) e a lista de tarefas com **Importar Backlog** e **Nova Tarefa**;
 - **Membros**: horas do projeto e gestão dos vínculos, quando você tem acesso;
 - **Arquivos**: entregáveis, anexos, relatórios técnicos, atestados de frequência e relatórios do projeto;
@@ -56,7 +56,7 @@ A criação tem três passos, e o diálogo diz em qual você está: *"Passo 1 de
 Nome com até 100 caracteres e descrição com até 500. O **Avançar** da foto está desabilitado porque o nome está vazio.
 ```
 
-Editar e excluir um projeto são ações do cartão, na lista. Editar é uma página só, sem passos: o cronograma da edição se mexe no detalhe, não no formulário. O **Pontos do projeto** não é campo do formulário: ele aparece no detalhe quando existe.
+Editar e excluir um projeto são ações do cartão, na lista. Editar é uma página só, sem passos: o cronograma da edição se mexe no detalhe, não no formulário. Não existe campo de pontos do projeto: o que uma etapa produz vai para as pessoas, não para o projeto.
 
 ## Capa e logo do projeto
 
@@ -99,7 +99,7 @@ O cronograma é o calendário do projeto. São duas listas no mesmo card: as **M
 2. Escreva a descrição da etapa e saia do campo. A linha entra no projeto quando a descrição **e** pelo menos um mês existem, na ordem em que você os fizer: com a descrição já escrita, clicar num mês salva a linha; com o mês já marcado, sair do campo de descrição salva a linha.
 3. Clique no mês em que a etapa começa: clicar em mar/2026 faz a etapa começar em mar/2026, não no primeiro mês da grade. Depois estenda: a linha é sempre contínua, sem buraco no meio. Clicar depois do último estende a etapa. Clicar antes do primeiro estende para trás. Clicar num mês do meio faz daquele mês o último. Clicar no último desmarca.
 4. Em **Responsável**, escolha quem faz a etapa, ou deixe **Sem responsável**. Na lista só aparece quem participa do projeto.
-5. A **Recompensa** acompanha a marcação: 100 pontos por mês marcado. A linha diz quantos meses tem, do lado da descrição: *"out/2026 → nov/2026 · 2 meses"*.
+5. A **Recompensa** acompanha a marcação: 100 moedas por mês marcado. A linha diz quantos meses tem, do lado da descrição: *"out/2026 → nov/2026 · 2 meses"*.
 6. Para apagar a linha, use a lixeira; o sistema pede confirmação. Apagar uma etapa não apaga tarefa nenhuma do projeto.
 
 As colunas são o período do projeto. Um projeto de 1º de março a 31 de agosto tem a grade de mar/2026 a ago/2026. Projeto sem datas tem 12 meses a partir do mês atual. Se uma marca cair fora dessas colunas, a grade se alarga para alcançá-la, e com muitos meses a grade tem largura e se move para o lado.
@@ -119,7 +119,7 @@ Cada etapa tem duas conclusões: quem conduz o projeto **solicita** a conclusão
 1. Na linha, clique em **Conclusão**. Abre o diálogo *Conclusão da atividade*, com o status da etapa.
 2. Em **Provas**, anexe o arquivo que comprova a etapa: escolha o arquivo e clique em **Anexar prova**. A lista mostra nome, tamanho e data da prova, e cada uma pode ser baixada ou apagada.
 3. Clique em **Solicitar conclusão**. Sem prova, o sistema recusa — *"Anexe pelo menos uma prova antes de solicitar a conclusão."* — e a linha continua **Aberta**. Com prova, a linha vira **Conclusão solicitada**, e o diálogo diz quem pediu e quando: *"Solicitada em 10/10/2026 por Guia · Participante"*.
-4. A aprovação é de **Coordenador** ou **Gerente**. A pessoa abre a mesma linha, lê as provas anexadas e clica em **Aprovar conclusão**. O sistema confirma com o número distribuído — *"Atividade concluída"* seguido de *"N pontos distribuídos entre os membros do projeto."* — e a linha vira **Concluída**.
+4. A aprovação é de **Coordenador** ou **Gerente**. A pessoa abre a mesma linha, lê as provas anexadas e clica em **Aprovar conclusão**. O sistema confirma com o número distribuído — *"Atividade concluída"* seguido de *"N moedas distribuídas entre os membros do projeto."* — e a linha vira **Concluída**.
 
 ```foto dialogo-conclusao-atividade-pedido titulo="O diálogo de conclusão de uma etapa aberta, com o botão de solicitar"
 A seção *Provas* está vazia, e a dica diz o que falta: *"Anexe pelo menos uma prova antes de solicitar a conclusão."*
@@ -129,8 +129,8 @@ A seção *Provas* está vazia, e a dica diz o que falta: *"Anexe pelo menos uma
 A linha diz *"Conclusão solicitada"* e *"Solicitada em 14/10/2026 por Guia · Participante"*. A prova *parcial.pdf* (200,0 KB) aparece na lista, com botão de download. A dica diz o que a aprovação faz: *"Aprovar conclui a atividade e distribui o prêmio entre os membros ativos do projeto."*
 ```
 
-::: nota titulo="O que a aprovação faz com os pontos"
-Aprovada a etapa, o prêmio dela — 100 pontos por mês marcado — entra nos pontos do projeto e é distribuído entre os membros **Ativo** da lista de membros, proporcional às tarefas que cada um concluiu no projeto. Quem conclui a etapa antes do prazo do último mês marcado recebe um prêmio maior; quem aprova depois do prazo recebe um prêmio menor. Um membro **Inativo** não recebe parte.
+::: nota titulo="O que a aprovação faz com o prêmio"
+Aprovada a etapa, o prêmio dela — 100 moedas por mês marcado — é distribuído em **moedas** entre os membros **Ativo** da lista de membros, proporcional às tarefas que cada um concluiu no projeto. Quem conclui a etapa antes do prazo do último mês marcado recebe um prêmio maior; quem aprova depois do prazo recebe um prêmio menor. Um membro **Inativo** não recebe parte. O prêmio não passa por saldo do projeto, e não cai no placar mensal de pontos: moeda é a trilha da loja (capítulo 7).
 :::
 
 ::: limite titulo="Quem pede e quem aprova"

@@ -10,13 +10,20 @@ import type {
  * removes the last cross-module import from this module's infrastructure.
  *
  * plan-v3 OND4-A: o retorno passou de `unknown` para a forma que este módulo de fato precisa
- * ler — `pointsAwarded`. Continua sendo uma porta local (o tipo do gamification, `GamificationAwardResult`,
- * não atravessa a fronteira): o módulo de gamification satisfaz a porta estruturalmente porque
- * devolve mais campos, e o adaptador usa só este.
+ * ler — `amountAwarded` (o montante creditado na trilha que o gamification declara). Continua
+ * sendo uma porta local (o tipo do gamification, `GamificationAwardResult`, não atravessa a
+ * fronteira): o módulo de gamification satisfaz a porta estruturalmente porque devolve mais
+ * campos, e o adaptador usa só este. A tarefa credita POINTS (placar do mês), então o nome local
+ * do valor continua `amountAwarded` — a porta descreve o que o gamification devolve.
  */
 export interface TaskAwardOutcome {
-  /** Valor creditado por esta conclusão. 0 quando o award já estava registrado (idempotência). */
-  pointsAwarded: number;
+  /**
+   * Valor creditado por esta conclusão, na trilha que o gamification declara (tarefa = pontos do
+   * mês, V8-5). O nome é o campo do gamification: a porta local descreve o que o outro lado devolve,
+   * e trocá-lo por um nome próprio seria a fronteira mentir sobre o destino.
+   * 0 quando o award já estava registrado (idempotência).
+   */
+  amountAwarded: number;
 }
 
 export interface TaskAwardPort {
@@ -41,7 +48,7 @@ class GamificationTaskProgressEvents implements TaskProgressEvents {
       taskPoints: event.taskPoints,
     })
     // Adaptador sem publisher real (ou de teste) pode devolver nada: `null` é "ninguém creditado".
-    const credited = typeof outcome?.pointsAwarded === "number" ? outcome.pointsAwarded : null
+    const credited = typeof outcome?.amountAwarded === "number" ? outcome.amountAwarded : null
 
     return credited
   }

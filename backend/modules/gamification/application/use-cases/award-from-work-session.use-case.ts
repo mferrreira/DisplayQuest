@@ -1,4 +1,4 @@
-import { XP_EVENT_WORK_SESSION, buildAwardDescription, workSessionAwardPoints, xpAwardDescription } from "@/backend/domain"
+import { POINTS_GAMIFICATION_TRACK, XP_EVENT_WORK_SESSION, buildAwardDescription, workSessionAwardPoints, xpAwardDescription } from "@/backend/domain"
 import type { GamificationSourceType } from "@/backend/domain"
 import type {
   AwardFromWorkSessionCommand,
@@ -12,7 +12,7 @@ import type { GetUserProgressionUseCase } from "@/backend/modules/gamification/a
  * AwardFromWorkSessionUseCase — OND6-B2 (R2). Orquestracao congelada do golden
  * OND6-B1 (PrismaGamificationGateway.awardFromWorkSession :38-78):
  *   1. idempotencia por DESCRICAO `GAMIFICATION:WORK_SESSION_COMPLETED:<id>`;
- *   2. ja concedido -> points 0 + progressao CORRENTE (nao zerada);
+ *   2. ja concedido -> montante 0 + progressao CORRENTE (nao zerada);
  *   3. award atomico (increment + history) via port;
  *   4. progressao lida DEPOIS do credit;
  *   5. avaliacao de badges depois do credit (resultado ignorado no award).
@@ -44,14 +44,15 @@ export class AwardFromWorkSessionUseCase {
         userId: command.userId,
         sourceType,
         sourceId,
-        pointsAwarded: 0,
+        amountAwarded: 0,
+        track: POINTS_GAMIFICATION_TRACK,
         xpAwarded: 0,
         newProgression: progression,
         alreadyAwarded: true,
       }
     }
 
-    const pointsAwarded = workSessionAwardPoints(command.durationSeconds, command.completedTaskIds)
+    const amount = workSessionAwardPoints(command.durationSeconds, command.completedTaskIds)
     // V8-3 (DEC-214): +10 flat por SESSÃO concluída. O evento é o fim da sessão
     // (completeWorkSession → onWorkSessionCompleted), não o valor do prêmio da sessão, que é
     // aritmética de duração e de tarefas (QUIRK-6B congelado).
@@ -62,7 +63,8 @@ export class AwardFromWorkSessionUseCase {
       sourceType,
       sourceId,
       description,
-      pointsAwarded,
+      amount,
+      track: POINTS_GAMIFICATION_TRACK,
       xp: { description: xpAwardDescription(sourceType, sourceId), amount: xpAwarded },
     })
 
@@ -74,7 +76,8 @@ export class AwardFromWorkSessionUseCase {
       userId: command.userId,
       sourceType,
       sourceId,
-      pointsAwarded,
+      amountAwarded: amount,
+      track: POINTS_GAMIFICATION_TRACK,
       xpAwarded,
       newProgression,
       alreadyAwarded: false,

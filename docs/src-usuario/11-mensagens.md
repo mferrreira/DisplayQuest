@@ -78,13 +78,30 @@ Duas recusas existem para o cronograma, mas a grade não deixa você chegar nela
 
 | O sistema diz | Por quê | O que fazer |
 | --- | --- | --- |
-| **Pontos insuficientes** | o saldo não cobre o custo da recompensa | conclua tarefas aprovadas, ou escolha recompensa mais barata |
+| **Moedas insuficientes** | o saldo de moedas não cobre o custo da recompensa (a loja cobra moeda, não ponto do mês) | conclua uma etapa do cronograma de projeto, ou escolha recompensa mais barata |
 | **Esta recompensa não está disponível** | a recompensa foi retirada do catálogo | escolha outra |
 | **Esta recompensa está fora de estoque** | não há unidade disponível | aguarde a reposição |
 | **Apenas compras pendentes podem ser aprovadas** | a compra já saiu do estágio pendente | nada a fazer: ela já foi resolvida |
 | **Apenas compras aprovadas podem ser completadas** | tentativa de completar sem aprovação | aprove antes de completar |
 | **Compras completadas não podem ser canceladas** | o estágio final é definitivo | não há desfazimento pela loja |
 | **Recompensa não encontrada** | a recompensa não existe mais | atualize a lista |
+| **N moedas distribuídas entre os membros do projeto.** | a etapa do cronograma foi aprovada e o prêmio saiu em moedas | o número é o do sistema: a tela não recalcula |
+| **Nenhuma moeda distribuída — prêmio zerado pelo atraso (piso 0).** | a aprovação aconteceu tão atrasada que o prêmio ficou em zero | nada a creditar: o piso do caminho de projeto é zero |
+
+## Ajuste de saldo no painel
+
+Quem gerencia pessoas ajusta saldo no diálogo **Configurar Usuário**, escolhendo antes a trilha
+(**Trilha de saldo**): **Pontos do mês** ou **Moedas**. As três ações são **Definir**, **Adicionar**,
+**Remover**, e cada ajuste fica registrado no histórico da pessoa.
+
+| O sistema diz | Por quê | O que fazer |
+| --- | --- | --- |
+| **Ação inválida** | a ação escolhida não é uma das três | use **Definir**, **Adicionar** ou **Remover** |
+| **Trilha inválida: use POINTS ou COINS** | a trilha pedida não existe (XP e troféu não são saldo ajustável) | escolha **Pontos do mês** ou **Moedas** |
+| **Pontos devem ser um número não negativo** | na trilha pontos, o valor está vazio, não é número, ou é negativo fora do **Definir** | escreva um número; negativo só com **Definir** |
+| **Moedas devem ser um número não negativo** | na trilha moedas o valor é negativo, ou está vazio/não é número | escreva um número não negativo |
+| **Usuário não possui moedas suficientes** | **Remover** de moeda acima do saldo | remova menos, ou defina o valor desejado |
+| **Usuário não possui pontos suficientes** | **Remover** de pontos acima do saldo | remova menos, ou defina o valor desejado |
 
 ## Laboratório e reclamações
 

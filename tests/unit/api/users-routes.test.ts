@@ -105,9 +105,9 @@ const mocks = vi.hoisted(() => {
       requireActorSelfOrPermission(actor, id, "MANAGE_USERS", PROFILE_DENIED_MESSAGE);
       return { id, name: "Ana" };
     },
-    updateUserPoints: async (command: { actor: ActorRef; userId: number }) => {
+    adjustUserBalance: async (command: { actor: ActorRef; userId: number; track: string; action: string; amount: number }) => {
       requireActorPermission(command.actor, "MANAGE_USERS");
-      return { id: command.userId, points: 15 };
+      return { id: command.userId, points: 15, coins: 15 };
     },
     deductUserHours: async () => ({ message: "5 horas retiradas com sucesso", user: { id: 1 } }),
     updateUserRoles: async (command: { actor: ActorRef; userId: number }) => {
@@ -207,9 +207,9 @@ beforeEach(() => {
     requireActorSelfOrPermission(actor, id, "MANAGE_USERS", PROFILE_DENIED_MESSAGE);
     return { id, name: "Ana" };
   };
-  mocks.fakeModule.updateUserPoints = async (command: { actor: ActorRef; userId: number }) => {
+  mocks.fakeModule.adjustUserBalance = async (command: { actor: ActorRef; userId: number }) => {
     requireActorPermission(command.actor, "MANAGE_USERS");
-    return { id: command.userId, points: 15 };
+    return { id: command.userId, points: 15, coins: 15 };
   };
   mocks.fakeModule.deductUserHours = async () => ({
     message: "5 horas retiradas com sucesso",
@@ -403,18 +403,18 @@ describe("/api/users/[id]/roles|status|points PATCH", () => {
   });
 
   it("points: ValidationError insufficient -> 400 with message (was 500); invalid body 400", async () => {
-    mocks.fakeModule.updateUserPoints = async () => {
+    mocks.fakeModule.adjustUserBalance = async () => {
       throw new ValidationError("Usuário não possui pontos suficientes");
     };
     const insufficient = await userPoints(
-      makeRequest("/api/users/1/points", { method: "PATCH", body: { action: "remove", points: 999 } }),
+      makeRequest("/api/users/1/points", { method: "PATCH", body: { action: "remove", track: "POINTS", amount: 999 } }),
       idContext("1"),
     );
     expect(insufficient.status).toBe(400);
     expect((await insufficient.json()).error).toBe("Usuário não possui pontos suficientes");
 
     const invalidBody = await userPoints(
-      makeRequest("/api/users/1/points", { method: "PATCH", body: { action: "add", points: -1 } }),
+      makeRequest("/api/users/1/points", { method: "PATCH", body: { action: "add", track: "POINTS", amount: -1 } }),
       idContext("1"),
     );
     expect(invalidBody.status).toBe(400);

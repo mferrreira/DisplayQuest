@@ -36,6 +36,7 @@ import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { Prisma } from "@prisma/client";
 
+import { COINS_GAMIFICATION_TRACK } from "@/backend/domain";
 import { prisma } from "@/lib/database/prisma";
 import { createGamificationModule } from "@/backend/modules/gamification";
 
@@ -273,7 +274,8 @@ describe("G4 roundtrip — trilhas da gamificação (isolated test DB, 5433)", (
       workSessionId: WORK_SESSION_ID,
       durationSeconds: 3600,
     });
-    expect(result.pointsAwarded).toBe(20);
+    expect(result.amountAwarded).toBe(20);
+    expect(result.track).toBe("POINTS");
 
     const historyRow = await prisma.history.findFirst({
       where: {
@@ -304,5 +306,51 @@ describe("G4 roundtrip — trilhas da gamificação (isolated test DB, 5433)", (
     });
     expect(xpRow?.track).toBe("XP");
     expect((xpRow?.newValues as { xpAwarded: number }).xpAwarded).toBe(10);
+  });
+
+  it("o prêmio de atividade cai na trilha MOEDA e não toca o placar mensal (DEC-215/216)", async () => {
+    const activityId = 910000 + (stamp % 1000);
+    const before = await prisma.users.findUnique({
+      where: { id: awardUserId },
+      select: { points: true, coins: true, xp: true },
+    });
+    expect(before).toEqual({ points: 20, coins: 0, xp: 10 });
+
+    const result = await gamification.awardFromActivityCompletion({
+      userId: awardUserId,
+      activityId,
+      coins: 225,
+    });
+    expect(result.amountAwarded).toBe(225);
+    expect(result.track).toBe(COINS_GAMIFICATION_TRACK);
+    expect(result.xpAwarded).toBe(20);
+
+    const after = await prisma.users.findUnique({ where: { id: awardUserId }, select: { points: true, coins: true, xp: true } });
+    // As três trilhas têm destinos separados: moeda subiu, placar do mês ficou onde estava, XP da
+    // temporada acompanhou o evento (+20 por membro, DEC-214).
+    expect(after).toEqual({ points: 20, coins: 225, xp: 30 });
+
+    const coinsRow = await prisma.history.findFirst({
+      where: {
+        action: "GAMIFICATION_AWARD",
+        entityId: awardUserId,
+        description: `GAMIFICATION:ACTIVITY_COMPLETED:${activityId}`,
+      },
+      select: { track: true, newValues: true },
+    });
+    expect(coinsRow?.track).toBe(COINS_GAMIFICATION_TRACK);
+    expect((coinsRow?.newValues as { coinsAwarded: number }).coinsAwarded).toBe(225);
+
+    // A idempotência é a MESMA descrição da fonte: reexecutar a aprovação credita 0 e não move
+    // saldo nenhum — nem moeda, nem XP (a chave é ACTIVITY_COMPLETED, não XP).
+    const repeat = await gamification.awardFromActivityCompletion({
+      userId: awardUserId,
+      activityId,
+      coins: 225,
+    });
+    expect(repeat).toMatchObject({ amountAwarded: 0, track: COINS_GAMIFICATION_TRACK, xpAwarded: 0, alreadyAwarded: true });
+    expect(await prisma.users.findUnique({ where: { id: awardUserId }, select: { points: true, coins: true, xp: true } })).toEqual(
+      { points: 20, coins: 225, xp: 30 },
+    );
   });
 });

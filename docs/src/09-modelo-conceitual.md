@@ -103,16 +103,26 @@ de uma pessoa. A primeira orienta, a segunda declara.
 ```figure cl-engajamento titulo="Modelo conceitual do engajamento, da loja e da progressão"
 O engajamento é composto por quatro peças que operam em conjunto. A recompensa é o item de
 catálogo; a compra é o pedido de resgate, com dados congelados; o distintivo é a
-condecoração com critérios avaliáveis; e a premiação é o registro de pontos concedidos.
+condecoração com critérios avaliáveis; e a premiação é o registro de saldos concedidos.
+
+O reconhecimento tem trilhas, e cada trilha tem ciclo próprio. **Pontos** são o placar do mês:
+creditados pelas aprovações de tarefa, zerados pelo fechamento mensal, que guarda o mês encerrado
+em histórico por pessoa. **Moedas** são a carteira vitalícia: única fonte é o prêmio de uma
+atividade de cronograma aprovada, e é delas que a loja cobra. **Experiência** é a trilha da
+temporada anual, escrita pelo motor de XP e revisada semanalmente. O **distintivo** não é saldo:
+é conquista, guardada por pessoa e por troféu.
 
 A premiação merece atenção. Ela não é uma entidade armazenada como tal: é o conceito que
-descreve a concessão de pontos a partir de uma origem — sessão concluída, tarefa concluída
-ou ajuste manual. A origem e o identificador da origem formam a chave da idempotência, e é
-por isso que repetir um evento não credita duas vezes.
+descreve a concessão de um saldo a partir de uma origem — sessão concluída, tarefa concluída,
+atividade aprovada ou ajuste manual. A linha de auditoria declara a trilha do credit, e a origem
+com o identificador da origem formam a chave da idempotência: repetir um evento não credita duas
+vezes. O ajuste manual de saldo é ação de gestão, tem trilha declarada e deixa a mesma linha de
+auditoria, em família separada do credit de evento.
 
-A progressão é derivada da soma de experiências. Ela tem nível e elo calculados por função
-pura, o que significa que não há estado de progressão a manter coerente: o valor é sempre
-recomputável a partir dos lançamentos.
+A progressão hoje exibida é derivada da soma de experiências acumulada a partir do placar de
+pontos. A derivação ainda existe e é função pura, mas não descreve as trilhas novas: a temporada
+usa a experiência própria do motor, e a escada de elo que substitui a derivação é decisão do
+plano em curso. Quem lê a rota de progressão lê, hoje, um número derivado do placar mensal.
 ```
 
 ## Notificação e auditoria

@@ -93,13 +93,32 @@ describe("guarda das trilhas da gamificação (DEC-211)", () => {
   it("quem escreve `track` usa a constante do domínio, não literal paralelo", () => {
     // A mesma lição da DEC-90/96: vocabulário em uma fonte só. Um literal `"POINTS"` no adaptador
     // é a segunda cópia da régua, e é assim que o vocabulário diverge sem o tsc ver.
-    const files = [
+    //
+    // V8-5 ampliou a lista com os dois adaptadores que a onda escreveu: o ledger do ajuste manual
+    // (ASK-V8-24), que declara a trilha na linha de auditoria, e a loja, que passou a cobrar a
+    // trilha moeda (DEC-215/216). O primeiro continua banindo o literal; o segundo é conferido pela
+    // coluna que toca, porque a loja não escreve `track` — escreve saldo.
+    const trackFiles = [
       "backend/modules/gamification/infrastructure/repositories/prisma-gamification-award-history.port.ts",
+      "backend/modules/user-management/infrastructure/repositories/prisma-track-adjustment.port.ts",
     ];
-    for (const file of files) {
+    for (const file of trackFiles) {
       const source = readFileSync(path.join(REPO_ROOT, file), "utf8");
-      expect(source).toContain("DEFAULT_GAMIFICATION_TRACK");
+      expect(source).toMatch(/(POINTS|COINS|XP)_GAMIFICATION_TRACK|DEFAULT_GAMIFICATION_TRACK/);
       expect(source).not.toMatch(/track:\s*"/);
     }
+  });
+
+  it("a loja cobra e estorna a MOEDA, nunca o placar do mês (DEC-215/216)", () => {
+    // O gate é estrutural porque a troca de coluna não tem teste de tipo que a impeça: `points` e
+    // `coins` são dois `Int` e o `tsc` aceitaria o errado. Medido na V8-4: enquanto a loja ainda
+    // decrementava `points`, o fechamento mensal zerava também o que tinha sido gasto.
+    const source = readFileSync(
+      path.join(REPO_ROOT, "backend/modules/store/infrastructure/repositories/prisma-purchase.repository.ts"),
+      "utf8",
+    );
+    expect(source).toMatch(/coins:\s*\{\s*decrement/);
+    expect(source).toMatch(/coins:\s*\{\s*increment/);
+    expect(source).not.toMatch(/(points|weekHours|completedTasks):\s*\{\s*(decrement|increment)/);
   });
 });

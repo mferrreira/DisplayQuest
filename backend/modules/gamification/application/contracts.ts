@@ -1,4 +1,4 @@
-import type { ActorRef, GamificationSourceType, MonthKey, SeasonKey, WeekKey, XpAdjustment } from "@/backend/domain"
+import type { ActorRef, GamificationSourceType, GamificationTrack, MonthKey, SeasonKey, WeekKey, XpAdjustment } from "@/backend/domain"
 
 /**
  * O vocabulário é o do domínio (`Progression.ts`) — re-exportado, não copiado. A cópia local
@@ -30,7 +30,12 @@ export interface AwardFromTaskCompletionCommand {
 export interface AwardFromActivityCompletionCommand {
   userId: number
   activityId: number
-  points: number
+  /**
+   * V8-5 (DEC-215): a parcela da distribuição Hamilton agora fala de MOEDA — é o valor do prêmio
+   * de atividade (100 × meses, ×1,5 antecipada, −10%/dia com piso 0, DEC-103/74) na parte que
+   * toca ao membro. O nome do campo seguiu o destino: o valor entra em `users.coins`.
+   */
+  coins: number
 }
 
 export interface UserProgression {
@@ -47,7 +52,15 @@ export interface GamificationAwardResult {
   userId: number
   sourceType: GamificationSourceType
   sourceId: number
-  pointsAwarded: number
+  /**
+   * Montante creditado na trilha declarada abaixo, na coluna de saldo de `users`. Antes o campo
+   * era `pointsAwarded` e o destino era um só; o prêmio de atividade mudou de trilha (V8-5) e o
+   * nome único teria mentido sobre o destino (DEC-215). 0 quando o award já estava registrado.
+   */
+  amountAwarded: number
+  /** Trilha do credit: POINTS (tarefa, sessão) ou COINS (atividade aprovada). */
+  track: GamificationTrack
+  /** Credit da trilha XP da temporada, escrito na mesma transação (DEC-214). */
   xpAwarded: number
   newProgression: UserProgression
   alreadyAwarded: boolean

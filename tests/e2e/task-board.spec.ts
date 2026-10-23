@@ -6,7 +6,7 @@ import { login, apiSession } from "./helpers";
  *
  * Self-contained: the flow creates its own delegated task via the API (page.request shares
  * the logged-in context's cookies), runs it through to-do → in-review → done → adjust, then
- * DELETES it and RESTORES the coordenador's points (PUT /api/users/2 accepts points for
+ * DELETES it and RESTORES the coordenador's points (PATCH /api/users/2/points adjusts a track
  * MANAGE_USERS holders). afterAll is a safety net for failed mid-flow runs (apiSession login).
  * Dev-DB residue: zero.
  *
@@ -120,7 +120,8 @@ test.describe("task board flows", () => {
     if (pointsBefore != null) {
       await request
         .patch(`/api/users/${COORDENADOR_ID}/points`, {
-          data: { action: "set", points: pointsBefore },
+          // V8-5: o ajuste de saldo declara a trilha (POINTS é o placar do mês).
+          data: { track: "POINTS", action: "set", amount: pointsBefore },
         })
         .catch(() => {});
     }
@@ -351,7 +352,7 @@ test.describe("task board flows", () => {
 
     // cleanup inside authenticated context: restore points BEFORE deleting (task award already banked)
     const restore = await page.request.patch(`/api/users/${COORDENADOR_ID}/points`, {
-      data: { action: "set", points: pointsBefore },
+      data: { track: "POINTS", action: "set", amount: pointsBefore },
     });
     expect(restore.ok()).toBeTruthy();
     const del = await page.request.delete(`/api/tasks/${createdTaskId}`);

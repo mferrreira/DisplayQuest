@@ -1,4 +1,4 @@
-import type { GamificationSourceType } from "@/backend/domain";
+import type { AwardBalanceTrack, GamificationSourceType } from "@/backend/domain";
 
 /**
  * GamificationAwardHistoryPort — OND6-B2. Idempotencia + award atomico, congelados
@@ -11,7 +11,12 @@ import type { GamificationSourceType } from "@/backend/domain";
  * trilha — `users.xp` incrementado e uma linha de `history` com track "XP" e a chave
  * `GAMIFICATION:XP:<sourceType>:<sourceId>`. E junto de proposito: creditar pontos sem creditar
  * XP (ou o contrario) e exatamente a deriva que a DEC-211 enterrou. A idempotencia continua a
- * descricao da fonte de pontos — a linha de XP nasce junto dela, nunca depois.
+ * descricao da fonte do credit — a linha de XP nasce junto dela, nunca depois.
+ *
+ * V8-5 (DEC-215): o record declara a trilha do credit (`track`) e o adaptador escreve a coluna de
+ * saldo dessa trilha. O premio de atividade aprovada declara COINS e cai em `users.coins`; os dois
+ * credits antigos (tarefa, sessao) seguem POINTS e caem em `users.points`. A chave de idempotencia
+ * nao muda em nenhum dos dois: e sempre a descricao da fonte.
  */
 
 export interface AwardLookup {
@@ -29,12 +34,22 @@ export interface XpAwardWrite {
   amount: number;
 }
 
+/**
+ * plan-v8 V8-5 (DEC-215): `amount` é o montante creditado na TRILHA declarada por `track`, e a
+ * coluna de `users` que recebe o credit é a da mesma trilha (`points` para POINTS, `coins` para
+ * COINS). Antes o record só sabia creditar pontos; o prêmio de atividade aprovada passou a ser
+ * moeda, e "pointsAwarded" na assinatura seria o nome mentindo sobre o destino. O nome do campo
+ * no JSON do ledger continua nomeando a trilha da linha (`pointsAwarded` / `coinsAwarded`), como
+ * a linha de XP já fazia com `xpAwarded`.
+ */
 export interface AwardRecord {
   userId: number;
   sourceType: GamificationSourceType;
   sourceId: number;
   description: string;
-  pointsAwarded: number;
+  amount: number;
+  /** Trilha do credit e da linha. Ausente é POINTS (o default da coluna e o credit antigo). */
+  track?: AwardBalanceTrack;
   xp?: XpAwardWrite;
 }
 

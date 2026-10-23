@@ -74,7 +74,7 @@ class Store {
   /** Chaves já creditadas — o duplo do awardHistory: segunda chamada devolve 0. */
   awarded = new Set<string>();
   calls: string[] = [];
-  awardOutcomes: Array<{ userId: number; activityId: number; points: number }> = [];
+  awardOutcomes: Array<{ userId: number; activityId: number; coins: number }> = [];
   awardFails = false;
 
   useCase(): ApproveActivityCompletionUseCase {
@@ -113,17 +113,17 @@ class Store {
       } as never,
       awards: {
         async awardActivityCompletion(input) {
-          self.calls.push(`award:${input.userId}:${input.activityId}:${input.points}`);
+          self.calls.push(`award:${input.userId}:${input.activityId}:${input.coins}`);
           if (self.awardFails) {
             throw new Error("gamification fora do ar");
           }
           const key = `${input.userId}:${input.activityId}`;
           if (self.awarded.has(key)) {
-            return { pointsAwarded: 0 };
+            return { coinsAwarded: 0 };
           }
           self.awarded.add(key);
           self.awardOutcomes.push(input);
-          return { pointsAwarded: input.points };
+          return { coinsAwarded: input.coins };
         },
       },
     });
@@ -202,8 +202,8 @@ describe("ApproveActivityCompletionUseCase — economia com now fixo (DEC-103/74
 
     expect(result.award).toBe(450);
     expect(result.shares).toEqual([
-      { userId: 2, points: 300 },
-      { userId: 3, points: 150 },
+      { userId: 2, coins: 300 },
+      { userId: 3, coins: 150 },
     ]);
     expect(result.activity.status).toBe("DONE");
     expect(result.activity.approvedBy).toBe(1);
@@ -237,7 +237,7 @@ describe("ApproveActivityCompletionUseCase — economia com now fixo (DEC-103/74
     store.activeMembers = [2];
     const result = await store.approve();
     // Denominador da conta é a soma dos créditos dos que entram (DEC-165): só o membro 2 → 100% dele.
-    expect(result.shares).toEqual([{ userId: 2, points: 450 }]);
+    expect(result.shares).toEqual([{ userId: 2, coins: 450 }]);
 
     const nobody = new Store();
     nobody.activeMembers = [];
@@ -254,8 +254,8 @@ describe("ApproveActivityCompletionUseCase — economia com now fixo (DEC-103/74
     const result = await store.approve();
     // 450 entre 2 membros: 225/225 exatos.
     expect(result.shares).toEqual([
-      { userId: 2, points: 225 },
-      { userId: 3, points: 225 },
+      { userId: 2, coins: 225 },
+      { userId: 3, coins: 225 },
     ]);
   });
 
@@ -266,8 +266,8 @@ describe("ApproveActivityCompletionUseCase — economia com now fixo (DEC-103/74
     const result = await store.approve();
 
     expect(result.shares).toEqual([
-      { userId: 2, points: 0 },
-      { userId: 3, points: 0 },
+      { userId: 2, coins: 0 },
+      { userId: 3, coins: 0 },
     ]);
     // Quem garante "uma vez só" é a transição de status (409 na reexecução), não o awardHistory.
     expect(result.activity.status).toBe("DONE");
@@ -287,8 +287,8 @@ describe("ApproveActivityCompletionUseCase — economia com now fixo (DEC-103/74
 
     expect(result.activity.status).toBe("DONE");
     expect(result.shares).toEqual([
-      { userId: 2, points: 0 },
-      { userId: 3, points: 0 },
+      { userId: 2, coins: 0 },
+      { userId: 3, coins: 0 },
     ]);
     expect(spy).toHaveBeenCalled();
     spy.mockRestore();

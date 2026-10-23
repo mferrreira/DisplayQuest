@@ -806,7 +806,7 @@ describe("painel de cronograma", () => {
       await waitFor(() => expect(requestsFor("POST", "/activities/403/approve-completion")).toHaveLength(1));
       expect(await screen.findByText("Atividade concluída")).toBeInTheDocument();
       // O número é o do servidor (R7): 200 × 1,5 = 300 distribuídos.
-      expect(screen.getByText("300 pontos distribuídos entre os membros do projeto.")).toBeInTheDocument();
+      expect(screen.getByText("300 moedas distribuídas entre os membros do projeto.")).toBeInTheDocument();
       // A linha escreveu no lugar: DONE tem rótulo próprio, e o diálogo fechou.
       expect(screen.getByText("Concluída")).toBeInTheDocument();
     });

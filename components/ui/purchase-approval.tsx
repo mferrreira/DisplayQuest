@@ -64,7 +64,7 @@ export function PurchaseApproval({ purchases, onPurchaseUpdate }: PurchaseApprov
         await PurchasesAPI.deny(selectedPurchase.id)
         toast({
           title: "Compra negada",
-          description: `A compra de "${selectedPurchase.rewardName}" foi negada e os pontos foram devolvidos.`,
+          description: `A compra de "${selectedPurchase.rewardName}" foi negada e as moedas foram devolvidas.`,
         })
       }
       
@@ -126,7 +126,7 @@ export function PurchaseApproval({ purchases, onPurchaseUpdate }: PurchaseApprov
               <TableRow>
                 <TableHead>Usuário</TableHead>
                 <TableHead>Recompensa</TableHead>
-                <TableHead>Pontos</TableHead>
+                <TableHead>Moedas</TableHead>
                 <TableHead>Data da Solicitação</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Ações</TableHead>
@@ -219,7 +219,7 @@ export function PurchaseApproval({ purchases, onPurchaseUpdate }: PurchaseApprov
                     <span className="font-medium">{selectedPurchase.rewardName}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Pontos:</span>
+                    <span className="text-sm text-muted-foreground">Moedas:</span>
                     <span className="font-medium flex items-center gap-1">
                       <Trophy className="h-4 w-4 text-warning" />
                       {selectedPurchase.price}
@@ -237,7 +237,7 @@ export function PurchaseApproval({ purchases, onPurchaseUpdate }: PurchaseApprov
                   <AlertTriangle className="h-4 w-4" />
                   <AlertDescription>
                     <strong>Aprovar:</strong> A compra será confirmada e o usuário poderá utilizar a recompensa.<br />
-                    <strong>Negar:</strong> A compra será cancelada e os pontos serão devolvidos ao usuário.
+                    <strong>Negar:</strong> A compra será cancelada e as moedas serão devolvidas ao usuário.
                   </AlertDescription>
                 </Alert>
               )}

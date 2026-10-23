@@ -47,8 +47,11 @@ export interface ApproveActivityCompletionDependencies {
 
 export interface ActivityAwardShare {
   userId: number
-  /** O que a distribuição calculou. 0 quando o crédito já estava registrado (idempotência) ou falhou. */
-  points: number
+  /**
+   * A parcela de MOEDA que a distribuição Hamilton calculou para o membro (V8-5, DEC-215).
+   * 0 quando o crédito já estava registrado (idempotência) ou falhou.
+   */
+  coins: number
 }
 
 export interface ApproveActivityCompletionResult {
@@ -107,20 +110,22 @@ export class ApproveActivityCompletionUseCase {
       memberIds.map((userId) => ({ userId, completedTasks: credits.get(userId) ?? 0 })),
     )
 
+    // V8-5 (DEC-215): a distribuição é a mesma Hamilton de DEC-164 (soma das partes == prêmio) e
+    // o que muda é só a trilha do credit: quem recebe é a moeda da pessoa, não o placar do mês.
     const credited: ActivityAwardShare[] = []
-    for (const [userId, points] of shares) {
-      if (points <= 0) continue
+    for (const [userId, coins] of shares) {
+      if (coins <= 0) continue
       try {
         const outcome = await this.dependencies.awards.awardActivityCompletion({
           userId,
           activityId: activity.id,
-          points,
+          coins,
         })
-        credited.push({ userId, points: outcome?.pointsAwarded ?? 0 })
+        credited.push({ userId, coins: outcome?.coinsAwarded ?? 0 })
       } catch (error) {
         // Quirk congelado do caminho de tarefa: falha de award não quebra a conclusão.
         console.error("Erro ao creditar prêmio de atividade aprovada:", error)
-        credited.push({ userId, points: 0 })
+        credited.push({ userId, coins: 0 })
       }
     }
 

@@ -60,9 +60,9 @@ export default function StorePage() {
     }
   }, [user, loading, router])
 
-  // Encontrar usuário atual para obter pontos
+  // Encontrar usuário atual para obter a MOEDA (V8-5, DEC-215/216: a loja cobra a trilha vitalícia)
   const currentUserData = users.find((u) => u.id === user?.id)
-  const userPoints = currentUserData?.points || 0
+  const userCoins = currentUserData?.coins ?? 0
 
   // Obter compras do usuário
   const userPurchases = purchases.filter((p: Purchase) => p.userId === user?.id)
@@ -105,14 +105,14 @@ export default function StorePage() {
       if (purchase) {
         toast({
           title: "Compra realizada com sucesso!",
-          description: `Você adquiriu "${selectedReward.name}" por ${selectedReward.price} pontos.`,
+          description: `Você adquiriu "${selectedReward.name}" por ${selectedReward.price} moedas.`,
           action: "Ver compras",
         })
       } else {
         toast({
           variant: "destructive",
           title: "Erro ao realizar compra",
-          description: "Você não tem pontos suficientes para esta recompensa.",
+          description: "Você não tem moedas suficientes para esta recompensa.",
         })
       }
     } catch (error) {
@@ -232,12 +232,12 @@ export default function StorePage() {
         <div className="space-y-6">
           <PageHeader
             title="Loja de Recompensas"
-            description="Resgate recompensas com os pontos que você conquistou"
+            description="Resgate recompensas com as moedas que você conquistou"
             icon={Store}
             actions={
               <div className="flex items-center gap-2 rounded-md bg-warning/10 px-3 py-1.5">
-                <span className="text-lg font-bold tabular-nums text-warning">{userPoints}</span>
-                <span className="text-sm text-muted-foreground">pontos disponíveis</span>
+                <span className="text-lg font-bold tabular-nums text-warning">{userCoins}</span>
+                <span className="text-sm text-muted-foreground">moedas disponíveis</span>
               </div>
             }
           />
@@ -279,16 +279,16 @@ export default function StorePage() {
                     <CardContent className="space-y-4">
                       <div className="flex items-center gap-1 text-warning">
                         <span className="text-lg font-bold tabular-nums">{reward.price}</span>
-                        <span className="text-sm text-muted-foreground">pontos</span>
+                        <span className="text-sm text-muted-foreground">moedas</span>
                       </div>
                       <div className="flex justify-end pt-1">
                         <Button
                           onClick={() => handlePurchase(reward)}
-                          disabled={userPoints < reward.price}
-                          variant={userPoints >= reward.price ? "default" : "outline"}
+                          disabled={userCoins < reward.price}
+                          variant={userCoins >= reward.price ? "default" : "outline"}
                           className="min-w-36"
                         >
-                          {userPoints >= reward.price ? "Resgatar" : "Pontos insuficientes"}
+                          {userCoins >= reward.price ? "Resgatar" : "Moedas insuficientes"}
                         </Button>
                       </div>
                     </CardContent>
@@ -311,7 +311,7 @@ export default function StorePage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Recompensa</TableHead>
-                      <TableHead>Pontos</TableHead>
+                      <TableHead>Moedas</TableHead>
                       <TableHead>Data</TableHead>
                       <TableHead>Status</TableHead>
                     </TableRow>
@@ -364,7 +364,7 @@ export default function StorePage() {
                       <TableRow>
                         <TableHead>Nome</TableHead>
                         <TableHead>Descrição</TableHead>
-                        <TableHead>Preço (Pontos)</TableHead>
+                        <TableHead>Preço (Moedas)</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Ações</TableHead>
                       </TableRow>
@@ -442,7 +442,7 @@ export default function StorePage() {
                 />
               </div>
               <div>
-                <Label htmlFor="price">Preço em Pontos *</Label>
+                <Label htmlFor="price">Preço em Moedas *</Label>
                 <Input
                   id="price"
                   type="number"
@@ -477,8 +477,8 @@ export default function StorePage() {
             <AlertDialogHeader>
               <AlertDialogTitle>Confirmar Resgate</AlertDialogTitle>
               <AlertDialogDescription>
-                Você está prestes a resgatar "{selectedReward?.name}" por {selectedReward?.price} pontos. Seus pontos
-                serão deduzidos imediatamente e a solicitação será enviada para aprovação.
+                Você está prestes a resgatar "{selectedReward?.name}" por {selectedReward?.price} moedas. Suas moedas
+                serão deduzidas imediatamente e a solicitação será enviada para aprovação.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

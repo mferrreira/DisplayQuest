@@ -90,9 +90,22 @@ function captureRequests() {
   );
 }
 
-function findPointsInput() {
-  // O input de pontos é o único `spinbutton` do diálogo sem associação com rótulo de seção.
-  return screen.getByRole("spinbutton", { name: "Valor de pontos" });
+function findBalanceInput() {
+  // O input de saldo é o único `spinbutton` do diálogo (V8-5: uma linha, duas trilhas).
+  return screen.getByRole("spinbutton", { name: "Valor de saldo" });
+}
+
+async function clickSelectOption(triggerName: RegExp, optionName: string) {
+  await userEvent.click(screen.getByRole("combobox", { name: triggerName }));
+  await userEvent.click(await screen.findByRole("option", { name: optionName }));
+}
+
+function pickBalanceAction(action: "Adicionar" | "Remover" | "Definir") {
+  return clickSelectOption(/ação de saldo/i, action);
+}
+
+function pickBalanceTrack(track: "Pontos do mês" | "Moedas") {
+  return clickSelectOption(/trilha de saldo/i, track);
 }
 
 async function openSettingsFor(name: string) {
@@ -108,6 +121,7 @@ const alvo = () =>
     name: "Maria Silva",
     email: "maria@lab.com",
     points: 120,
+    coins: 40,
     weekHours: 20,
     roles: ["VOLUNTARIO"],
     status: "active",
@@ -170,24 +184,22 @@ describe("V4-4b · o diálogo de configuração do usuário", () => {
     // O texto é montado em três nós ("Atual: " + 120 + " pontos" + a dica da ação), então a
     // busca é por regex no nó do parágrafo, não pela frase inteira.
     expect(screen.getByText(/Atual: 120/)).toBeInTheDocument();
-    expect((findPointsInput() as HTMLInputElement).value).toBe("120");
+    expect((findBalanceInput() as HTMLInputElement).value).toBe("120");
   });
 
   it("DEC-60 na UI: 'Definir' não impõe mínimo; 'Adicionar' e 'Remover' impõem min=0", async () => {
     renderPanel();
     await openSettingsFor("Maria Silva");
 
-    expect(findPointsInput()).not.toHaveAttribute("min");
+    expect(findBalanceInput()).not.toHaveAttribute("min");
     expect(screen.getByText(/“Definir” aceita valor negativo/)).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("combobox", { name: /ação de pontos/i }));
-    await userEvent.click(await screen.findByRole("option", { name: "Adicionar" }));
-    expect(findPointsInput()).toHaveAttribute("min", "0");
+    await pickBalanceAction("Adicionar");
+    expect(findBalanceInput()).toHaveAttribute("min", "0");
     expect(screen.queryByText(/“Definir” aceita valor negativo/)).not.toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("combobox", { name: /ação de pontos/i }));
-    await userEvent.click(await screen.findByRole("option", { name: "Remover" }));
-    expect(findPointsInput()).toHaveAttribute("min", "0");
+    await pickBalanceAction("Remover");
+    expect(findBalanceInput()).toHaveAttribute("min", "0");
   });
 
   it("DEC-60 no salvamento: 'Definir' com valor NEGATIVO chega à API com o número negativo", async () => {
@@ -198,7 +210,7 @@ describe("V4-4b · o diálogo de configuração do usuário", () => {
     renderPanel();
     await openSettingsFor("Maria Silva");
 
-    const input = findPointsInput();
+    const input = findBalanceInput();
     await userEvent.clear(input);
     await userEvent.type(input, "-20");
     await userEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
@@ -206,10 +218,54 @@ describe("V4-4b · o diálogo de configuração do usuário", () => {
     await waitFor(() => {
       expect(captured.some((r) => r.method === "PATCH-points")).toBe(true);
     });
+    // V8-5: o corpo declara a trilha ajustada, e o número saiu de `points` para `amount`
+    // (DEC-84 continua: o que se envia é o valor bruto digitado).
     expect(captured.find((r) => r.method === "PATCH-points")?.body).toEqual({
+      track: "POINTS",
       action: "set",
-      points: -20,
+      amount: -20,
     });
+  });
+
+  it("V8-5: a trilha moeda troca o valor mostrado e envia COINS", async () => {
+    renderPanel();
+    await openSettingsFor("Maria Silva");
+
+    await pickBalanceTrack("Moedas");
+    // O "Atual" passa a falar da trilha escolhida: 40 moedas, não 120 pontos.
+    // O nó do parágrafo é montado em pedaços ("Atual: " + 40 + " moedas"), então a frase é
+    // conferida no nó (getByText pela frase inteira não acha) e a trilha nomeia o saldo.
+    expect(screen.getByText(/Atual: 40/)).toHaveTextContent("40 moedas");
+
+    const input = findBalanceInput();
+    await userEvent.clear(input);
+    await userEvent.type(input, "300");
+    await userEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
+
+    await waitFor(() => expect(captured.some((r) => r.method === "PATCH-points")).toBe(true));
+    expect(captured.find((r) => r.method === "PATCH-points")?.body).toEqual({
+      track: "COINS",
+      action: "set",
+      amount: 300,
+    });
+  });
+
+  it("V8-5 (DEC-222): na moeda, 'Definir' não aceita negativo — o painel não envia o que o servidor recusa", async () => {
+    renderPanel();
+    await openSettingsFor("Maria Silva");
+
+    await pickBalanceTrack("Moedas");
+    // O `min` volta para 0 na moeda (na trilha pontos, 'Definir' é o caso da DEC-60 e não tem mínimo).
+    expect(findBalanceInput()).toHaveAttribute("min", "0");
+    expect(screen.queryByText(/“Definir” aceita valor negativo/)).not.toBeInTheDocument();
+
+    const input = findBalanceInput();
+    await userEvent.clear(input);
+    await userEvent.type(input, "-20");
+    await userEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
+
+    await waitFor(() => expect(captured.some((r) => r.method === "PUT-user")).toBe(true));
+    expect(captured.some((r) => r.method === "PATCH-points")).toBe(false);
   });
 
   it("o salvar dispara as três chamadas na ordem e com o corpo certo", async () => {
@@ -222,7 +278,7 @@ describe("V4-4b · o diálogo de configuração do usuário", () => {
     expect(captured.map((r) => r.method)).toEqual(["PATCH-roles", "PUT-user", "PATCH-points"]);
     expect(captured[0].body).toEqual({ action: "set", roles: ["VOLUNTARIO"] });
     expect(captured[1].body).toMatchObject({ name: "Maria Silva", email: "maria@lab.com", weekHours: 20 });
-    expect(captured[2].body).toEqual({ action: "set", points: 120 });
+    expect(captured[2].body).toEqual({ track: "POINTS", action: "set", amount: 120 });
     expect(mocks.refresh).toHaveBeenCalled();
   });
 
@@ -230,10 +286,9 @@ describe("V4-4b · o diálogo de configuração do usuário", () => {
     renderPanel();
     await openSettingsFor("Maria Silva");
 
-    await userEvent.click(screen.getByRole("combobox", { name: /ação de pontos/i }));
-    await userEvent.click(await screen.findByRole("option", { name: "Adicionar" }));
+    await pickBalanceAction("Adicionar");
 
-    const input = findPointsInput();
+    const input = findBalanceInput();
     await userEvent.clear(input);
     await userEvent.type(input, "-5");
     await userEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
@@ -242,14 +297,14 @@ describe("V4-4b · o diálogo de configuração do usuário", () => {
     expect(captured.some((r) => r.method === "PATCH-points")).toBe(false);
   });
 
-  it("campo de pontos vazio não envia `set 0`: esvaziar não zera os pontos de ninguém", async () => {
+  it("campo de saldo vazio não envia `set 0`: esvaziar não zera os pontos de ninguém", async () => {
     // Caraterizado ao corrigir o guard: antes, `Number("")` é 0, `!isNaN(0)` e `0 >= 0` — o
-    // painel enviava `{action:"set", points:0}` e zerava a conta de um usuário por um campo
+    // painel enviava `{action:"set", amount:0}` e zerava a conta de um usuário por um campo
     // esvaziado. É o mesmo quirk que a DEC-84 recusou no servidor (`points: null` → 0).
     renderPanel();
     await openSettingsFor("Maria Silva");
 
-    await userEvent.clear(findPointsInput());
+    await userEvent.clear(findBalanceInput());
     await userEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
 
     await waitFor(() => expect(captured.some((r) => r.method === "PUT-user")).toBe(true));

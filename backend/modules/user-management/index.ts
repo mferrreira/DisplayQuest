@@ -8,6 +8,7 @@ import type {
 import type { PasswordHasher } from "@/backend/modules/user-management/application/ports/password-hasher"
 import type { UserRepositoryPort } from "@/backend/modules/user-management/application/ports/user.repository"
 import type { ProfileVisibilityPort } from "@/backend/modules/user-management/application/ports/profile-visibility.port"
+import type { TrackAdjustmentLedgerPort } from "@/backend/modules/user-management/application/ports/track-adjustment-ledger.port"
 import { CreateUserUseCase } from "@/backend/modules/user-management/application/use-cases/create-user.use-case"
 import { AssertCanManageUsersUseCase } from "@/backend/modules/user-management/application/use-cases/assert-can-manage-users.use-case"
 import { DeleteUserUseCase } from "@/backend/modules/user-management/application/use-cases/delete-user.use-case"
@@ -21,7 +22,7 @@ import { ListUsersForActorUseCase } from "@/backend/modules/user-management/appl
 import { ModeratePendingUserUseCase } from "@/backend/modules/user-management/application/use-cases/moderate-pending-user.use-case"
 import { RegisterUserUseCase } from "@/backend/modules/user-management/application/use-cases/register-user.use-case"
 import { UpdateUserUseCase } from "@/backend/modules/user-management/application/use-cases/update-user.use-case"
-import { UpdateUserPointsUseCase } from "@/backend/modules/user-management/application/use-cases/update-user-points.use-case"
+import { AdjustUserBalanceUseCase } from "@/backend/modules/user-management/application/use-cases/adjust-user-balance.use-case"
 import { UpdateUserProfileUseCase } from "@/backend/modules/user-management/application/use-cases/update-user-profile.use-case"
 import { UpdateUserImageUseCase } from "@/backend/modules/user-management/application/use-cases/update-user-image.use-case"
 import { GetUserImageUseCase } from "@/backend/modules/user-management/application/use-cases/get-user-image.use-case"
@@ -32,6 +33,7 @@ import { UpdateUserStatusUseCase } from "@/backend/modules/user-management/appli
 import { createBcryptPasswordHasher } from "@/backend/modules/user-management/infrastructure/bcrypt-password-hasher"
 import { createPrismaUserRepository } from "@/backend/modules/user-management/infrastructure/repositories/prisma-user.repository"
 import { createPrismaProfileVisibility } from "@/backend/modules/user-management/infrastructure/repositories/prisma-profile-visibility"
+import { createPrismaTrackAdjustmentLedger } from "@/backend/modules/user-management/infrastructure/repositories/prisma-track-adjustment.port"
 
 type GatewayCall<T> = T extends (...args: infer A) => infer R ? (...args: A) => R : never
 
@@ -65,7 +67,7 @@ export class UserManagementModule {
   readonly listPendingUsers: GatewayCall<UserManagementGateway["listPendingUsers"]>
   readonly moderatePendingUser: GatewayCall<UserManagementGateway["moderatePendingUser"]>
   readonly updateUserProfile: GatewayCall<UserManagementGateway["updateUserProfile"]>
-  readonly updateUserPoints: GatewayCall<UserManagementGateway["updateUserPoints"]>
+  readonly adjustUserBalance: GatewayCall<UserManagementGateway["adjustUserBalance"]>
   readonly deductUserHours: GatewayCall<UserManagementGateway["deductUserHours"]>
   readonly updateUserRoles: GatewayCall<UserManagementGateway["updateUserRoles"]>
   readonly updateUserStatus: GatewayCall<UserManagementGateway["updateUserStatus"]>
@@ -95,7 +97,7 @@ export class UserManagementModule {
     this.listPendingUsers = this.service.listPendingUsers.bind(this.service)
     this.moderatePendingUser = this.service.moderatePendingUser.bind(this.service)
     this.updateUserProfile = this.service.updateUserProfile.bind(this.service)
-    this.updateUserPoints = this.service.updateUserPoints.bind(this.service)
+    this.adjustUserBalance = this.service.adjustUserBalance.bind(this.service)
     this.deductUserHours = this.service.deductUserHours.bind(this.service)
     this.updateUserRoles = this.service.updateUserRoles.bind(this.service)
     this.updateUserStatus = this.service.updateUserStatus.bind(this.service)
@@ -115,12 +117,19 @@ export interface UserManagementModuleFactoryOptions {
   passwordHasher?: PasswordHasher
   /** V5-12 (DEC-143/177): vínculo em comum para a regra de visibilidade de perfil. */
   profileVisibility?: ProfileVisibilityPort
+  /**
+   * plan-v8 V8-5 (ASK-V8-24): o ledger do ajuste manual de trilha. Existe como seam próprio
+   * porque o ajuste escreve saldo + linha de auditoria numa transação só — injetar a porta falsa
+   * deixa o teste do ajuste provar o livro, não o substituto (lição do B6-2a).
+   */
+  trackAdjustment?: TrackAdjustmentLedgerPort
 }
 
 export function createUserManagementModule(options: UserManagementModuleFactoryOptions = {}) {
   const repository = options.repository ?? createPrismaUserRepository()
   const passwordHasher = options.passwordHasher ?? createBcryptPasswordHasher()
   const profileVisibility = options.profileVisibility ?? createPrismaProfileVisibility()
+  const trackAdjustment = options.trackAdjustment ?? createPrismaTrackAdjustmentLedger()
 
   const deleteUserUseCase = new DeleteUserUseCase(repository)
   const service: UserManagementService = {
@@ -135,7 +144,7 @@ export function createUserManagementModule(options: UserManagementModuleFactoryO
       new ModeratePendingUserUseCase(repository, deleteUserUseCase).execute(actor, userId, action),
     updateUserProfile: (actor, userId, data) =>
       new UpdateUserProfileUseCase(repository, passwordHasher).execute(actor, userId, data),
-    updateUserPoints: (command) => new UpdateUserPointsUseCase(repository).execute(command),
+    adjustUserBalance: (command) => new AdjustUserBalanceUseCase(repository, trackAdjustment).execute(command),
     deductUserHours: (command) => new DeductUserHoursUseCase(repository).execute(command),
     updateUserRoles: (command) => new UpdateUserRolesUseCase(repository).execute(command),
     updateUserStatus: (command) => new UpdateUserStatusUseCase(repository).execute(command),

@@ -130,7 +130,8 @@ describe("G4 roundtrip — gamification (isolated test DB)", () => {
       durationSeconds: 7200,
     });
 
-    expect(result.pointsAwarded).toBe(30);
+    expect(result.amountAwarded).toBe(30);
+    expect(result.track).toBe("POINTS");
     expect(result.alreadyAwarded).toBe(false);
     expect(result.newProgression.points).toBe(30);
 
@@ -171,7 +172,7 @@ describe("G4 roundtrip — gamification (isolated test DB)", () => {
     });
 
     expect(second.alreadyAwarded).toBe(true);
-    expect(second.pointsAwarded).toBe(0);
+    expect(second.amountAwarded).toBe(0);
     expect(second.newProgression.points).toBe(30);
 
     const count = await prisma.history.count({
@@ -190,10 +191,10 @@ describe("G4 roundtrip — gamification (isolated test DB)", () => {
 
   it("awardFromTaskCompletion: floor(15.7)=15 e default 10; progressao reflete o acumulado", async () => {
     const a = await gamification.awardFromTaskCompletion({ userId, taskId: TASK_ID, taskPoints: 15.7 });
-    expect(a.pointsAwarded).toBe(15);
+    expect(a.amountAwarded).toBe(15);
 
     const b = await gamification.awardFromTaskCompletion({ userId, taskId: TASK_ID_2 });
-    expect(b.pointsAwarded).toBe(10);
+    expect(b.amountAwarded).toBe(10);
 
     const progression = await gamification.getUserProgression(userId);
     expect(progression.points).toBe(55); // 30 + 15 + 10

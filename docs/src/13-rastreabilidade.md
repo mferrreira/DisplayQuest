@@ -35,7 +35,7 @@ enunciados na forma de condição observável.
 | RF-06 | Anexo de relatório não é acessível por endereço direto sem sessão autorizada. Um arquivo com extensão permitida e conteúdo divergente é recusado. |
 | RF-07 | Assumir plantão com outro já ativo é recusado. O plantão pausado acumula tempo e o encerrado deixa de aparecer como ativo. |
 | RF-08 | Qualquer conta autenticada lê a grade completa. Escrever na grade de terceiros sem a permissão de gestão de usuários produz 403. |
-| RF-09 | Resgatar com pontos insuficientes é recusado. Repetir o mesmo evento não credita pontos duas vezes. Comprar congela o preço do item. |
+| RF-09 | Resgatar com moedas insuficientes é recusado. Repetir o mesmo evento não credita a trilha duas vezes. Comprar congela o preço do item. |
 | RF-10 | Uma notificação dirigida aparece apenas para o destinatário. Um comunicado geral aparece para todas as contas ativas. |
 
 ## Inventário de rotas

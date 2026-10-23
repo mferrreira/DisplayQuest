@@ -17,6 +17,13 @@ export interface UserRecord {
   name: string;
   email: string;
   points: number;
+  /**
+   * plan-v8 V8-5 (DEC-215/216): a moeda vitalícia da pessoa (loja, prêmio de atividade). Opcional
+   * no record porque `update` escreve só o que o record traz (Prisma descarta `undefined`, então
+   * record antigo de fixture não apaga a coluna) e porque o caminho de criação deixa a coluna no
+   * default 0 do schema. Quem escreve moeda de verdade é o ledger do ajuste (V8-5) e o award.
+   */
+  coins?: number;
   completedTasks: number;
   password: string | null;
   status: UserStatus;
@@ -52,6 +59,8 @@ export interface UserSummaryRow {
   status: UserStatus;
   weekHours: number;
   points: number;
+  /** V8-5 (DEC-215): a linha traz a moeda; a política da lista decide quem a recebe (próprio OU gestão). */
+  coins?: number;
   completedTasks: number;
   avatar: string | null;
   bio: string | null;

@@ -92,9 +92,9 @@ function makeFakes() {
       return purchasesDb.filter((p) => p.rewardId === rewardId);
     },
     async findUserById(userId) {
-      return userId === OWNER_ID || userId === OTHER_ID ? { id: userId, name: `Usuário ${userId}`, points: 100 } : null;
+      return userId === OWNER_ID || userId === OTHER_ID ? { id: userId, name: `Usuário ${userId}`, coins: 100 } : null;
     },
-    async createWithPointDeduction(snapshot) {
+    async createWithCoinDeduction(snapshot) {
       writes.push(`create:${(snapshot as { userId: number }).userId}`);
       const created = makePurchase({ id: 90 + purchasesDb.length, ...(snapshot as object) });
       purchasesDb.push(created);
@@ -111,7 +111,7 @@ function makeFakes() {
       writes.push(`delete:${id}`);
       purchasesDb.splice(purchasesDb.findIndex((p) => p.id === id), 1);
     },
-    async refundPoints(userId, price) {
+    async refundCoins(userId, price) {
       refunds.push({ userId, price });
     },
   };

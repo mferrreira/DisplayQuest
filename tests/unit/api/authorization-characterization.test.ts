@@ -165,7 +165,7 @@ vi.mock("@/backend/composition/root", () => {
 
   // B6-2d: a porta de compras deixou de ser "não deveria ser usada" — listPurchases/createPurchase
   // agora passam pelo módulo REAL (a decisão desceu para os use cases). O duplo é a PORTA em
-  // memória; o que ele NÃO faz é decidir autorização. update/delete/refundPoints/findById seguem
+  // memória; o que ele NÃO faz é decidir autorização. update/delete/refundCoins/findById seguem
   // inacessíveis pelas 13 rotas deste arquivo — se um dia forem, o duplo falha alto.
   const notUsed = (name: string) => (): never => {
     throw new Error(`porta de compras não deveria ser usada neste teste: ${name}`);
@@ -185,9 +185,10 @@ vi.mock("@/backend/composition/root", () => {
     },
     async findUserById(userId: number) {
       // 42 e 77 são os usuários das fixtures de POST; qualquer outro id não existe.
-      return (userId === 42 || userId === 77 ? { id: userId, name: `Usuário ${userId}`, points: 100 } : null) as never;
+      // V8-5 (DEC-215/216): a loja cobra a MOEDA, então o usuário que a porta devolve traz moeda.
+      return (userId === 42 || userId === 77 ? { id: userId, name: `Usuário ${userId}`, coins: 100 } : null) as never;
     },
-    async createWithPointDeduction(snapshot: object) {
+    async createWithCoinDeduction(snapshot: object) {
       const purchase = { id: ++mocks.state.purchaseSequence, ...(snapshot as object) };
       mocks.state.purchases.push(purchase);
       return purchase as never;
@@ -195,7 +196,7 @@ vi.mock("@/backend/composition/root", () => {
     findById: notUsed("findById"),
     update: notUsed("update"),
     delete: notUsed("delete"),
-    refundPoints: notUsed("refundPoints"),
+    refundCoins: notUsed("refundCoins"),
   } as unknown as PurchaseRepository;
 
   const realStore = createStoreModule({ ports: { rewards, purchases } });

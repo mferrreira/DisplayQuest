@@ -1,4 +1,4 @@
-import { ForbiddenError, canActorViewProfile, resolveUserListVisibility } from "@/backend/domain"
+import { ForbiddenError, canActorReadUserCpf, canActorViewProfile, resolveUserListVisibility } from "@/backend/domain"
 import type { ListUsersForActorQuery } from "@/backend/modules/user-management/application/contracts"
 import type { UserRepositoryPort } from "@/backend/modules/user-management/application/ports/user.repository"
 import type { ProfileVisibilityPort } from "@/backend/modules/user-management/application/ports/profile-visibility.port"
@@ -61,6 +61,11 @@ export class ListUsersForActorUseCase {
         status: row.status,
         weekHours: row.weekHours,
         points: row.points,
+        // V8-5 (DEC-215): a moeda é a carteira da pessoa — entra na linha sob a MESMA regra do CPF
+        // (`canActorReadUserCpf`: próprio OU gestão), porque o consumidor é a loja da própria
+        // pessoa e o ajuste do painel. Publicar saldo de moeda de todo mundo para todo autenticado
+        // não é decisão do modelo, e não é o que a tela precisa.
+        coins: canActorReadUserCpf(query.actor, row.id) ? row.coins ?? 0 : undefined,
         completedTasks: row.completedTasks,
         avatar: row.avatar,
         // V5-3 (DEC-137): a capa chega na mesma lista que o avatar, porque é o pódio do ranking que

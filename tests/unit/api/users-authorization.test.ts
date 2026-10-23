@@ -84,6 +84,22 @@ vi.mock("@/backend/composition/root", () => {
       userManagement: createUserManagementModule({
         repository: repository as never,
         passwordHasher: { async hash() { return "hashed"; } },
+        // V8-5: o ajuste de saldo escreve pela porta do ledger (não pelo `update` do repositório).
+        // Sem injetar aqui, o módulo real montaria o adaptador Prisma e o teste de autorização
+        // escreveria no banco (a lição do B6-2a: módulo REAL sobre portas FALSAS). O duplo aplica a
+        // MESMA regra do domínio que o adaptador aplica — reimplementar é o modo de falha DEC-90.
+        trackAdjustment: {
+          async adjust({ userId, track, action, amount }: { userId: number; track: "POINTS" | "COINS"; action: "add" | "remove" | "set"; amount: number }) {
+            const { COINS_GAMIFICATION_TRACK, applyTrackAdjustment } = await import("@/backend/domain");
+            const user = mocks.store.find((u) => u.id === userId);
+            if (!user) return { applied: false as const, reason: "usuario-ausente" as const };
+            const before = Number((track === COINS_GAMIFICATION_TRACK ? user.coins : user.points) ?? 0);
+            const after = applyTrackAdjustment(track, action, amount, before);
+            if (track === COINS_GAMIFICATION_TRACK) user.coins = after;
+            else user.points = after;
+            return { applied: true as const, track, balanceBefore: before, balanceAfter: after };
+          },
+        },
       }),
       reporting: createReportingModule({ ports: { directory, hoursRead } }),
     }),
@@ -230,7 +246,7 @@ describe("B6-4 — as 8 rotas de usuários com a autoridade nos use cases", () =
       login(["VOLUNTARIO"], 1);
       expect((await userStatus(request("/api/users/abc/status", { method: "PATCH", body: { action: "approve" } }), params("abc"))).status).toBe(403);
       expect((await userRoles(request("/api/users/1/roles", { method: "PATCH", body: { action: "nao-existe" } }), params("1"))).status).toBe(403);
-      expect((await userPoints(request("/api/users/1/points", { method: "PATCH", body: { action: "set", points: 5 } }), params("1"))).status).toBe(403);
+      expect((await userPoints(request("/api/users/1/points", { method: "PATCH", body: { action: "set", track: "POINTS", amount: 5 } }), params("1"))).status).toBe(403);
     });
 
     it("COORDENADOR passa nos três, e as validações de entrada continuam com as mensagens legadas", async () => {
@@ -242,11 +258,11 @@ describe("B6-4 — as 8 rotas de usuários com a autoridade nos use cases", () =
       const roles = await userRoles(request("/api/users/1/roles", { method: "PATCH", body: { action: "add", role: "PESQUISADOR" } }), params("1"));
       expect(roles.status).toBe(200);
 
-      const points = await userPoints(request("/api/users/1/points", { method: "PATCH", body: { action: "set", points: -20 } }), params("1"));
+      const points = await userPoints(request("/api/users/1/points", { method: "PATCH", body: { action: "set", track: "POINTS", amount: -20 } }), params("1"));
       expect(points.status).toBe(200); // DEC-60: set aceita negativo
       expect((await body(points)).user.points).toBe(-20);
 
-      const invalidAction = await userPoints(request("/api/users/1/points", { method: "PATCH", body: { action: "multiplicar", points: 5 } }), params("1"));
+      const invalidAction = await userPoints(request("/api/users/1/points", { method: "PATCH", body: { action: "multiplicar", track: "POINTS", amount: 5 } }), params("1"));
       expect(invalidAction.status).toBe(400);
     });
   });

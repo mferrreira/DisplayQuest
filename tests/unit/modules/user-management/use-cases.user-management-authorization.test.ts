@@ -38,7 +38,7 @@ import { ListPendingUsersUseCase } from "@/backend/modules/user-management/appli
 import { ListUsersForActorUseCase } from "@/backend/modules/user-management/application/use-cases/list-users-for-actor.use-case";
 import { ModeratePendingUserUseCase } from "@/backend/modules/user-management/application/use-cases/moderate-pending-user.use-case";
 import { UpdateUserUseCase } from "@/backend/modules/user-management/application/use-cases/update-user.use-case";
-import { UpdateUserPointsUseCase } from "@/backend/modules/user-management/application/use-cases/update-user-points.use-case";
+import { AdjustUserBalanceUseCase } from "@/backend/modules/user-management/application/use-cases/adjust-user-balance.use-case";
 import { UpdateUserProfileUseCase } from "@/backend/modules/user-management/application/use-cases/update-user-profile.use-case";
 import { UpdateUserRolesUseCase } from "@/backend/modules/user-management/application/use-cases/update-user-roles.use-case";
 import { UpdateUserStatusUseCase } from "@/backend/modules/user-management/application/use-cases/update-user-status.use-case";
@@ -263,10 +263,33 @@ describe("UpdateUserProfileUseCase — self || MANAGE_USERS com 'Não autorizado
   });
 });
 
-describe("UpdateUserPoints/Roles/StatusUseCase — MANAGE_USERS PURO (B6-4)", () => {
+/**
+ * O duplo do ledger do ajuste (V8-5). NÃO reimplementa a aritmética (lição DEC-90: mock que
+ * reimplementa a regra fica verde com a produção mentindo) — ele só registra e devolve applied,
+ * porque neste arquivo o que se prova é a AUTORIZIDADE e a ordem, e a aritmética mora na regra
+ * pura (`tests/unit/domain/gamification/track-adjustment.test.ts`) e no roundtrip G4 contra o
+ * banco real.
+ */
+function recordingLedger() {
+  return {
+    calls: [] as Array<{ userId: number; actorId: number; track: string; action: string; amount: number }>,
+    async adjust(command: { userId: number; actorId: number; track: "POINTS" | "COINS"; action: "add" | "remove" | "set"; amount: number }) {
+      this.calls.push({ ...command });
+      return { applied: true as const, track: command.track, balanceBefore: 0, balanceAfter: command.amount };
+    },
+  };
+}
+
+describe("AdjustUserBalance/Roles/StatusUseCase — MANAGE_USERS PURO (B6-4)", () => {
   it("nem o DONO passa: points/roles/status são gestão, não self (ordem medida nas rotas)", async () => {
     await expect(
-      new UpdateUserPointsUseCase(fakes.repository).execute({ actor: voluntario, userId: 1, action: "set", points: 5 }),
+      new AdjustUserBalanceUseCase(fakes.repository, recordingLedger()).execute({
+        actor: voluntario,
+        userId: 1,
+        track: "POINTS",
+        action: "set",
+        amount: 5,
+      }),
     ).rejects.toThrow("Acesso negado");
     await expect(
       new UpdateUserRolesUseCase(fakes.repository).execute({ actor: voluntario, userId: 1, action: "set", roles: [] }),
@@ -278,9 +301,20 @@ describe("UpdateUserPoints/Roles/StatusUseCase — MANAGE_USERS PURO (B6-4)", ()
   });
 
   it("COORDENADOR passa nos três", async () => {
-    await expect(
-      new UpdateUserPointsUseCase(fakes.repository).execute({ actor: manager, userId: 1, action: "set", points: -20 }),
-    ).resolves.toMatchObject({ points: -20 }); // DEC-60: set aceita negativo
+    const ledger = recordingLedger();
+    const adjusted = (await new AdjustUserBalanceUseCase(fakes.repository, ledger).execute({
+      actor: manager,
+      userId: 1,
+      track: "POINTS",
+      action: "set",
+      amount: -20,
+    })) as { points: number };
+    // O que este arquivo prova é a AUTORIZIDADE: o comando de ajuste chega ao ledger assinado pelo
+    // ator, com a trilha, a ação e o número pedidos. A aritmética (DEC-60: `set` aceita negativo) é
+    // congelada na regra pura e na rota — reimplementá-la no duplo é o modo de falha DEC-90, e o
+    // saldo da projeção continua o do registro lido porque quem escreve é o ledger.
+    expect(ledger.calls).toEqual([{ userId: 1, actorId: 999, track: "POINTS", action: "set", amount: -20 }]);
+    expect(adjusted.points).toBe(0);
     await expect(
       new UpdateUserRolesUseCase(fakes.repository).execute({ actor: manager, userId: 1, action: "add", role: "PESQUISADOR" }),
     ).resolves.toMatchObject({ roles: ["VOLUNTARIO", "PESQUISADOR"] });

@@ -8,7 +8,7 @@ mitigação de segurança A1–A11 (spec em `.spec/`).
 - **Gate de entrega:** `npm run arch:check` (exit 0, allow-list **vazia**) && `npm run lint` (nada de erro) && `npx tsc --noEmit` (0) && `npx vitest run` (zero failure). A contagem é **por branch**: no `dev` o baseline era **64 arquivos / 721 testes** quando o B8 removeu os 651 testes de paridade; no `plan/v3-operacional`, medido no encerramento do plan-v3 (2026-10-03), são **65 arquivos / 798 testes** em `tests/unit` + `features` e **75 / 881** na suíte completa. Na `dev` de hoje (medido em 2026-10-07, depois do plan-v4 V4-1/V4-2/V4-3/V4-6, do V4-4 de subtasks, dos testes do painel V4-4b/V4-4c, do V4-5a/V4-5b/V4-5c de subtask na UI, do V4-6b de vocabulário de status e do lote pós-encerramento POS-1 — DEC-97/98) são **87 arquivos / 1107 testes** e **97 / 1192** na suíte completa; a suíte e2e do quadro está em **2 passando + 1 falha conhecida + 5 "did not run"** (medido 2026-10-06
 no V4-5c; eram 7 quando a coluna `Em Revisão` tinha um cartão a menos) — o 3º teste quebra por cartão a
 mais na coluna (dado legítimo da instância, não código: hoje são as tarefas 50 e 304), e como o spec é
-serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 5 passando. Compare sempre com o `STATE.json` do plano em que você está. Na `dev` de hoje, medido no fechamento do plan-v6 (2026-10-16, ondas V6-0..V6-11: shell, Home, Projetos, detalhe do projeto, Laboratório, Relatórios, Perfil/Ranking, Loja, Admin, Login/Register), são **179 arquivos / 2224 testes** em `tests/unit` + `features` e **194 / 2354** na suíte completa (G0 1061 módulos / 4531 dependências); o `tsc` desta branch **fecha em 0** — o erro pré-existente em `features/laboratorio/__tests__/floating-timer-tabs.test.tsx:105` foi consertado no `SUB-1` (regex ancorada no lugar do `exact`, que não existe em `ByRoleOptions`). Re-medido em 2026-10-15 (V6-2): o e2e do quadro está em **8 passando** (o spec hoje tem 8 testes; a falha conhecida por cartão a mais em `Em Revisão` **não reproduziu** — o dado da instância mudou; ela pode voltar se o dono mover outro cartão para lá) e o do shell em **5 passando**. Na branch do fechamento do repo-cleanup (`refactor/b6-restante`, medido 2026-10-08 depois do B6-2c..B6-7) o baseline é **95 arquivos / 1280 testes** em `tests/unit` + `features` e **105 / 1367** na suíte completa (G0 810 módulos / 3295 dependências). Na branch do plan-v8 (`plan-v8/gamificacao`), medido no fechamento da onda **V8-4** (2026-10-22), são **198 arquivos / 2378 testes** no projeto unit (`tests/unit` + `features/**/__tests__` + `entities`) e **218 / 2532** na suíte completa, com **G4 20 / 154** contra a 5433 e G0 **1135 módulos / 4808 dependências** (allow-list vazia), `tsc` 0 e lint exit 0 com **17** warnings pré-existentes (a nota de "15 warnings" das ondas V8-0/V8-1/V8-2 não reproduz nesta árvore: conferido com `git stash`, sem a onda a árvore também dá 17).
+serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 5 passando. Compare sempre com o `STATE.json` do plano em que você está. Na `dev` de hoje, medido no fechamento do plan-v6 (2026-10-16, ondas V6-0..V6-11: shell, Home, Projetos, detalhe do projeto, Laboratório, Relatórios, Perfil/Ranking, Loja, Admin, Login/Register), são **179 arquivos / 2224 testes** em `tests/unit` + `features` e **194 / 2354** na suíte completa (G0 1061 módulos / 4531 dependências); o `tsc` desta branch **fecha em 0** — o erro pré-existente em `features/laboratorio/__tests__/floating-timer-tabs.test.tsx:105` foi consertado no `SUB-1` (regex ancorada no lugar do `exact`, que não existe em `ByRoleOptions`). Re-medido em 2026-10-15 (V6-2): o e2e do quadro está em **8 passando** (o spec hoje tem 8 testes; a falha conhecida por cartão a mais em `Em Revisão` **não reproduziu** — o dado da instância mudou; ela pode voltar se o dono mover outro cartão para lá) e o do shell em **5 passando**. Na branch do fechamento do repo-cleanup (`refactor/b6-restante`, medido 2026-10-08 depois do B6-2c..B6-7) o baseline é **95 arquivos / 1280 testes** em `tests/unit` + `features` e **105 / 1367** na suíte completa (G0 810 módulos / 3295 dependências). Na branch do plan-v8 (`plan-v8/gamificacao`), medido no fechamento da onda **V8-5** (2026-10-22), são **199 arquivos / 2400 testes** no projeto unit (`tests/unit` + `features/**/__tests__` + `entities`) e **220 / 2561** na suíte completa, com **G4 21 / 161** contra a 5433 e G0 **1140 módulos / 4833 dependências** (allow-list vazia), `tsc` 0 e lint exit 0 com **17** warnings pré-existentes (a nota de "15 warnings" das ondas V8-0/V8-1/V8-2 não reproduz nesta árvore: conferido com `git stash`, sem a onda a árvore também dá 17).
 - **G4/integração:** roundtrips Prisma real rodam **só** contra o banco de teste isolado `dq-dev-test-db` em `127.0.0.1:5433` (`$env:DATABASE_URL="postgresql://dq_dev:dq_dev_local_only@127.0.0.1:5433/dq_dev_test"; npx vitest run`) — nunca contra o `display-quest-db` (5432, produção local).
 - **Setup do G4 (corrigido 2026-10-02):** `npm run db:test:up` e `npm run db:test:setup` **existem**
   no `package.json` e fazem a sequência completa (`docker compose -f docker-compose.test.yml up -d`,
@@ -26,7 +26,14 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
 
 ## plan-v8 — gamificação remodelada (aberto 2026-10-22)
 
-- **Estado:** `in_progress` — **V8-4 done em 2026-10-22** (fechamento de temporada anual: `season.ts` no
+- **Estado:** `in_progress` — **V8-5 done em 2026-10-22** (moeda vitalícia: o prêmio de atividade
+  aprovada credita `users.coins` com `track COINS`, a loja cobra, debita e estorna moeda, e o painel ajusta as
+  duas trilhas separadas com linha de auditoria; gates medidos na onda: unit+features 199 arquivos / 2400
+  testes, suíte completa 220 / 2561, G4 21 / 161 na 5433, G0 1140 módulos / 4833 dependências com allow-list
+  vazia, `tsc` 0, lint exit 0 com 17 warnings, G5 com os capítulos 4/7/9/11/12 do guia e o modelo conceitual
+  técnico atualizados (`docs:build` dos dois documentos + `docs:check` verdes); nenhuma migration de schema
+  nova — 23 linhas em `_prisma_migrations`, e as data migrations da V8-1 e da V8-4 seguem esperando a 5432 no
+  V8-CLOSE). Antes, **V8-4 done em 2026-10-22** (fechamento de temporada anual: `season.ts` no
   domínio, `CloseSeasonUseCase` com `season_history` + zeragem de `points`/`xp` na mesma transação, troféu
   CAMPEÃO ao primeiro colocado com chave `GAMIFICATION:SEASON_CHAMPION:<ano>:<pessoa>`, cron `5 0 1 1 *`;
   gates medidos na onda: unit+features 198 arquivos / 2378 testes, suíte completa 218 / 2532, G4 20 / 154 na
@@ -51,8 +58,8 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   (baseline re-medido: 188 arquivos / 2288 testes em `tests/unit` + `features` + `entities`,
   204 / 2419 na suíte completa, G4 16 / 131 contra a 5433, G0 1106 módulos / 4703 dependências com
   allow-list vazia, `tsc` 0, `npm run lint` exit 0 com 15 warnings). DEC-211..220 **abertas** no registry, cada uma com a
-  onda indicada, mais **DEC-221** (regime de execução, aberta 2026-10-22; próxima livre
-  **DEC-222**). **Regime (DEC-221):** uma onda por vez, autorizada pelo orquestrador do thread
+  onda indicada, mais **DEC-221** (regime de execução) e **DEC-222** (moeda não aceita saldo negativo no
+  ajuste do painel), as duas abertas 2026-10-22; próxima livre **DEC-223**). **Regime (DEC-221):** uma onda por vez, autorizada pelo orquestrador do thread
   — sem espera de ordem explícita a partir da V8-1; pare e reporte no fim de cada onda; commit
   `plan-v8 <ONDA>: …` com o `STATE.json` atualizado no mesmo commit; durante o plano a
   migration é escrita e aplicada **só na 5433** (deploy, roundtrips G4 e e2e da worktree rodam
@@ -118,6 +125,45 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   recebeu não ganha +20 nem paga; atraso usa as réguas existentes (`daysLateForTask` DEC-97,
   `activityPeriod` + `civilDaysBetween` DEC-103) e a sessão que quita o −30 é a que solapa o período da
   linha **no mesmo projeto** (ou sem projeto declarado).
+- **A V8-5 entregou (2026-10-22):** a moeda vitalícia em funcionamento, **sem rota nova e sem tela nova de
+  trilha**. O prêmio de atividade de cronograma aprovada (DEC-215: `100 × meses`, ×1,5 se a aprovação é ≥2 dias
+  civis antecipada, −10%/dia de atraso com **piso 0** DEC-103/74, distribuição Hamilton DEC-164 intacta) escreve
+  `users.coins` com a linha do ledger em `track COINS`; a loja cobra, debita e estorna na MESMA moeda
+  (`createWithCoinDeduction` / `refundCoins`, frase "Moedas insuficientes. Você tem X moedas, mas precisa de Y
+  moedas"); o painel admin ajusta **as duas trilhas separadas** (`set`/`add`/`remove` de PONTOS do mês e de
+  MOEDAS), cada ajuste gravando linha `action TRACK_ADJUSTMENT` com trilha, saldo antes e depois, assinada pelo
+  ator (`ASK-V8-24`). Regras puras em `backend/domain/gamification/track-adjustment-rules.ts`; port
+  `TrackAdjustmentLedgerPort` com o adaptador `prisma-track-adjustment.port.ts`; `AdjustUserBalanceUseCase`
+  (renomeado de `UpdateUserPointsUseCase`) e `adjustUserBalance` no módulo; rota `PATCH
+  /api/users/[id]/points` com corpo `{ track, action, amount }` (`track` ausente = `POINTS`).
+- **Seis decisões de execução da V8-5:** (1) O valor do prêmio e a régua não mudaram — só o destino. O roundtrip
+  leu os 450/225/225 em `coins` e conferiu, no mesmo registro, que `points` continua 0: as duas colunas coexistem
+  em `users` e um `increment` na coluna errada passaria no `tsc` sem nada dizer. (2) O contrato interno do award
+  parou de mentir: `AwardRecord.pointsAwarded` → `amount` + `track?` (`AwardBalanceTrack = POINTS | COINS`; XP
+  nunca é trilha primária de um award — entra pelo bloco `xp`, e o `tsc` recusa `track: "XP"`), e
+  `GamificationAwardResult.pointsAwarded` → `amountAwarded` + `track`. A chave do montante no JSON **nomeia a
+  trilha da linha** (`pointsAwarded` / `coinsAwarded` / `xpAwarded`) em vez de uma chave genérica: a linha lida de
+  volta diz o que significa, e as linhas antigas continuam corretas porque a coluna `track` delas diz POINTS.
+  (3) O seam do projeto falou moeda junto (`coinsAwarded`, `coins`, `shares: { userId, coins }`) — medido por grep
+  que nenhuma tela consome `award`/`shares`; o que a tela mostra é a frase, que virou "N moedas distribuídas…".
+  (4) A aritmética do ajuste saiu do use case e virou regra pura aplicada pelo adaptador **sobre o saldo lido
+  dentro do `$transaction`** — o número que cai na coluna e o que a linha reporta são o mesmo número, e dois
+  cliques concorrentes não gravam saldo fantasma. (5) **DEC-222**: na moeda nenhuma das três ações escreve saldo
+  negativo (`set` abaixo de zero é recusado). A DEC-60 (negativo aceito) foi decisão da trilha pontos e pela razão
+  dela — a premiação de tarefa produz total negativo (DEC-39); na moeda nenhuma fonte produz negativo (prêmio com
+  piso 0) e moeda negativa seria débito de loja. O painel espelha a régua (o `min` do input volta a 0 na moeda).
+  (6) O ajuste é família separada do credit: `hasAward` lê `GAMIFICATION_AWARD`, e o roundtrip provou no banco que
+  a mesma forma de chave (`GAMIFICATION:ADJUSTMENT:…`) devolve zero linhas na consulta do award; a varredura do
+  feed de tarefa (que apaga `entityType: "task"`) também não alcança a linha. Consequência medida:
+  `history.performedBy` é RESTRICT, então a linha assinada pelo gestor bloqueia a deleção do gestor —
+  `users-roundtrip.test.ts` teve que criar uma pessoa de gestão de verdade (o harness usava id 1, que não existe
+  na 5433) e apagar a própria linha antes das pessoas.
+- **Moeda no read model (V8-5):** moeda é legível pela própria pessoa ou pela gestão — a MESMA regra do CPF
+  (`canActorReadUserCpf`). `toPublicUser` (a lista sem direito) não projeta moeda; existe `toPublicUserWithCoins`
+  para o ajuste e para a leitura com direito. `entities/user.ts` tem `coins` opcional e `contexts/types.ts`
+  também; os consumidores medidos são a tela da loja (cabeçalho "moedas disponíveis", botão "Moedas insuficientes",
+  colunas "Preço (Moedas)") e o painel (o "Atual" da trilha escolhida). `UserRecord.coins` é opcional no port
+  porque o Prisma descarta `undefined` no update: fixture antiga não apaga a coluna.
 - **A V8-4 entregou (2026-10-22):** o fechamento da temporada anual, **sem rota e sem tela nova**. Regras puras
   em `backend/domain/gamification/season.ts` (`closingSeasonYearOfInstant`, `seasonMonthPrefix`,
   `isSeasonParticipant`, `compareSeasonStandings` / `rankSeasonStandings`, `seasonChampionOf`,
@@ -197,11 +243,11 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   `'5 0 1 1 *'` (V8-4), os três em `lib/services/cron-service.ts` agendados logo depois do weekly reset, com
   `executeMonthlyPointsReset()`, `executeWeeklyXpReview()` e `executeSeasonClose()`; as três expressões estão
   pinadas em `tests/unit/services/cron-schedule.test.ts` e os três motivos em `SYSTEM_REASONS`. Consequência de
-  sequência aceita e medida:
-  a **loja ainda gasta `users.points`** (`prisma-purchase.repository.ts` faz
-  `decrement`/`increment` na coluna) e só passa à moeda na V8-5 (DEC-215) — no intervalo V8-2..V8-4 o
-  fechamento mensal zeraria também o que foi gasto, o que no dev/teste acontece e na produção não
-  acontece porque a agenda real começa a valer no V8-CLOSE. Não é bug a caçar.
+  sequência e medida até a V8-4: a loja gastava `users.points`, então o fechamento mensal zerava também o
+  que tinha sido gasto (a sequência ruim que a V8-4 registrou como consequência aceita). **Fechado na V8-5
+  (DEC-215/216):** `prisma-purchase.repository.ts` faz `decrement`/`increment` em `users.coins`, e o guarda
+  `tests/unit/domain/gamification/gamification-tracks.test.ts` confere por texto que a loja toca a moeda e nunca
+  o placar do mês — as duas colunas são `Int` e o `tsc` aceitaria a errada.
 - **Dívida medida na V8-3 (XP-DUPLICADO, sem batch ainda):** existem dois "XP". `users.xp` é a trilha da
   temporada, escrita pelo motor; `UserProgression.xp` em `backend/domain/gamification/Progression.ts` é
   **derivado** (`max(0, points)`, level `floor(xp/100)`, elos BRONZE/PRATA/OURO/DIAMANTE por faixa de
@@ -516,12 +562,12 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   `MANAGE_TASKS` em bloco; ver o bloco "Subtask" abaixo), DEC-190..210 plan-v7 (MCP de
   validação para o agente consumidor; DEC-205..210 na revisão de 2026-10-21), **DEC-211..220
    plan-v8 (gamificação remodelada, abertas na V8-0 em 2026-10-22: quatro trilhas — pontos
-   mensais, XP/elo de temporada anual, moeda vitalícia, troféus equipáveis; mais **DEC-221**,
-   regime de execução do plano, aberta em 2026-10-22; ver o bloco
-   "plan-v8" abaixo)**. O V4-4 ia usar DEC-61..64 e colidiu; os 28 comentários de código foram
+   mensais, XP/elo de temporada anual, moeda vitalícia, troféus equipáveis; mais **DEC-221** (regime de
+   execução do plano) e **DEC-222** (ajuste de moeda não aceita saldo negativo), as duas abertas em
+   2026-10-22; ver o bloco "plan-v8" abaixo)**. O V4-4 ia usar DEC-61..64 e colidiu; os 28 comentários de código foram
   renumerados. **Antes de abrir decisão nova, `grep`
    os SETE `STATE.json` (clean-arch, plan-v3, plan-v4, plan-v5, plan-v6, plan-v7, plan-v8) — a nota antiga que dizia "três"
-   (e depois "cinco") está velha. Próxima livre: DEC-222.**
+   (e depois "cinco") está velha. Próxima livre: DEC-223.**
 - **Subtask (V4-4, DEC-78..83 → regra atual = DEC-97/98/189):** tabela `task_subtasks` (sem FK para
   `users` — subtask não tem
   responsável próprio), base gravada em `tasks.points` = `10 + 5·n` (DEC-97) e **cada subtask CONCLUÍDA
@@ -604,13 +650,17 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   das asserções de coluna (orçamento de 15 s), senão o chip já expirou e o locator não acha nada.
   E a contagem do total se prova com um `MutationObserver` instalado **antes** da ação — poll do
   Playwright chega depois do segundo em que a animação acontece.
-- **`set` de pontos aceita negativo (DEC-60, 2026-10-05):** `PATCH /api/users/[id]/points` com
-  `action: "set"` aceita valor negativo, porque a premiação produz totais negativos (DEC-39;
+- **`set` de pontos aceita negativo (DEC-60, 2026-10-05; corpo novo na V8-5):** o ajuste manual aceita valor
+  negativo na trilha PONTOS, porque a premiação produz totais negativos (DEC-39;
   medido: Coordenador −20, Gerente −31030) e a administração não conseguia escrever um de volta.
   `add` (chão em 0 via `Math.max`) e `remove` (exige suficiência) **continuam** não-negativos. A
   rota valida a **ação antes do número** — necessário para saber se o negativo é permitido, e
   inverte a precedência de dois 400. O input do `ModernAdminPanel` tem `min` condicionado à ação.
-- **Quirk aberto (ASK-V4-06):** `{action:"set", points: null}` zera os pontos em vez de recusar —
+  Desde a V8-5 o corpo de `PATCH /api/users/[id]/points` é `{ track, action, amount }` (`track` ausente =
+  `POINTS`) e a ordem medida passou a gate → id → **ação** → **trilha** → número. A assimetria é a DEC-222: na
+  trilha MOEDA nenhuma das três ações escreve saldo negativo, e o `min` do input volta a 0 quando a trilha é
+  moeda.
+- **Quirk aberto (ASK-V4-06):** `{action:"set", amount: null}` zera o saldo em vez de recusar —
   JSON não tem `Infinity`, `JSON.stringify(Infinity)` é `null`, e `Number(null)` é `0`.
 - **`components/admin/ModernAdminPanel.tsx` não tem teste nenhum** (~1000 linhas). Mudança nele é
   coberta só por `tsc`.

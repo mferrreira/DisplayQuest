@@ -5,7 +5,7 @@
  *
  * Exercises the NEW wiring end-to-end with real Prisma and real bcrypt (no mocks):
  *   registerUser -> listPendingUsers -> moderatePendingUser(approve) -> listUsersForActor ->
- *   updateUserPoints -> updateUserRoles -> deductUserHours -> updateUserStatus -> deleteUser
+ *   adjustUserBalance (trilha pontos) -> updateUserRoles -> deductUserHours -> updateUserStatus -> deleteUser
  * using `createUserManagementModule()` exactly as the composition root builds it
  * (use cases over PrismaUserRepository + BcryptPasswordHasher).
  *
@@ -22,7 +22,14 @@ const userModule = createUserManagementModule();
  * (MANAGE_USERS) — este arquivo exercita o fluxo de administracao (moderar, pontuar, mudar
  * roles/status, excluir); a negacao por papel e provada nos testes de autorizacao do lote.
  */
-const managerActor = userActor(1, ["COORDENADOR"]);
+/**
+ * V8-5 (ASK-V8-24): o ajuste de saldo grava linha de `history` assinada pelo ator, e
+ * `history.performedBy` é FK para `users`. O harness usava o id 1 — que não existe na 5433 (a base
+ * semeada começa no 11) — e isso nunca pesou porque nenhum outro caminho deste arquivo escreve
+ * linha de ledger. Com auditoria no caminho do ajuste, o ator de gestão passa a ser uma pessoa
+ * criada por este arquivo, apagada no `afterAll` junto com as demais.
+ */
+let managerActor = userActor(1, ["COORDENADOR"]);
 const uniqueEmail = `g4-users-${Date.now()}@test.local`;
 const createdUserIds: number[] = [];
 /** V4-1: tarefas criadas para o caso de dependência. Apagadas ANTES dos usuários. */
@@ -30,8 +37,29 @@ const dependentTaskIds: number[] = [];
 let userId = 0;
 
 describe("G4 roundtrip — user-management (isolated test DB)", () => {
+  beforeAll(async () => {
+    const manager = await prisma.users.create({
+      data: {
+        name: "G4 Manager",
+        email: `g4-manager-${Date.now()}@test.local`,
+        password: "bcrypt-nao-usado-aqui",
+        status: "active",
+        roles: ["COORDENADOR"],
+      },
+      select: { id: true },
+    });
+    managerActor = userActor(manager.id, ["COORDENADOR"]);
+    createdUserIds.push(manager.id);
+  });
+
   afterAll(async () => {
-    // Ordem importa: as tarefas apontam para o usuário por FK RESTRICT.
+    // Ordem importa: as tarefas apontam para o usuário por FK RESTRICT. E o mesmo vale para a
+    // auditoria do ajuste (V8-5): `history.performedBy` é RESTRICT, então a linha que o gestor
+    // assinou bloqueia a deleção dele — é exatamente a regra que `countBlockingDependencies` conta
+    // na hora de excluir usuário (DEC-55). A linha é deste arquivo, então este arquivo a apaga.
+    await prisma.history.deleteMany({
+      where: { performedBy: { in: createdUserIds }, action: "TRACK_ADJUSTMENT" },
+    });
     if (dependentTaskIds.length > 0) {
       await prisma.tasks.deleteMany({ where: { id: { in: dependentTaskIds } } });
     }
@@ -191,9 +219,14 @@ describe("G4 roundtrip — user-management (isolated test DB)", () => {
   });
 
   it("points/roles/hours/status mutations persist and project the public shape", async () => {
-    const withPoints = (await userModule.updateUserPoints({ actor: managerActor, userId, action: "add", points: 7 })) as {
-      points: number;
-    };
+    // V8-5 (ASK-V8-24): o ajuste passou a declarar a trilha. Aqui é a trilha pontos (placar do mês).
+    const withPoints = (await userModule.adjustUserBalance({
+      actor: managerActor,
+      userId,
+      track: "POINTS",
+      action: "add",
+      amount: 7,
+    })) as { points: number };
     expect(withPoints.points).toBe(7);
 
     const withRoles = (await userModule.updateUserRoles({

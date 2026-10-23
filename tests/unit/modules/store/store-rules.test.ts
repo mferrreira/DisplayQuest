@@ -104,23 +104,25 @@ describe("parsePurchaseRequest", () => {
 });
 
 describe("assertPurchaseEligibility (ordem legada)", () => {
-  it("usuário -> recompensa -> available -> stock -> points", () => {
+  // V8-5 (DEC-215/216): o saldo cobrado pela loja é moeda. A ordem legada e as frases continuam
+  // as mesmas, com o nome da trilha que cobra.
+  it("usuário -> recompensa -> available -> stock -> moeda", () => {
     expect(() => assertPurchaseEligibility(null, reward())).toThrow(NotFoundError);
     expect(() => assertPurchaseEligibility(null, reward())).toThrow("Usuário não encontrado");
-    expect(() => assertPurchaseEligibility({ points: 100 }, null)).toThrow("Recompensa não encontrada");
-    expect(() => assertPurchaseEligibility({ points: 100 }, reward({ available: false }))).toThrow(
+    expect(() => assertPurchaseEligibility({ coins: 100 }, null)).toThrow("Recompensa não encontrada");
+    expect(() => assertPurchaseEligibility({ coins: 100 }, reward({ available: false }))).toThrow(
       "Esta recompensa não está disponível",
     );
-    expect(() => assertPurchaseEligibility({ points: 5 }, reward({ price: 10 }))).toThrow(
-      "Pontos insuficientes. Você tem 5 pontos, mas precisa de 10 pontos",
+    expect(() => assertPurchaseEligibility({ coins: 5 }, reward({ price: 10 }))).toThrow(
+      "Moedas insuficientes. Você tem 5 moedas, mas precisa de 10 moedas",
     );
-    expect(() => assertPurchaseEligibility({ points: 10 }, reward({ price: 10 }))).not.toThrow();
+    expect(() => assertPurchaseEligibility({ coins: 10 }, reward({ price: 10 }))).not.toThrow();
   });
 
   it("QUIRK-8S2: stock fantasma — branch 'fora de estoque' só dispara com stock > 0 explícito (inatingível em prod)", () => {
-    expect(() => assertPurchaseEligibility({ points: 100 }, reward({ stock: null }))).not.toThrow();
-    expect(() => assertPurchaseEligibility({ points: 100 }, reward({ stock: undefined }))).not.toThrow();
-    expect(() => assertPurchaseEligibility({ points: 100 }, reward({ stock: 0 }))).toThrow(
+    expect(() => assertPurchaseEligibility({ coins: 100 }, reward({ stock: null }))).not.toThrow();
+    expect(() => assertPurchaseEligibility({ coins: 100 }, reward({ stock: undefined }))).not.toThrow();
+    expect(() => assertPurchaseEligibility({ coins: 100 }, reward({ stock: 0 }))).toThrow(
       "Esta recompensa está fora de estoque",
     );
   });
