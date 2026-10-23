@@ -17,7 +17,7 @@ displayquest-v2/
 ├── plan-v5/       OPERAÇÃO: domínio de projetos maduro — cronograma, pontos, relatórios técnicos, atestados (2026-10-06) — done (2026-10-14, V5-1..V5-12 + V5-fix-1/V5-fix-2; DEC-61..77, 99..104, 126..180)
 ├── plan-v6/       OPERAÇÃO: linguagem visual UI/UX + redistribuição das telas (2026-10-07, revisado 2026-10-14) — done (2026-10-16, V6-0..V6-11; DEC-105..114, 181..188)
 ├── plan-v7/       OPERAÇÃO: MCP de validação para o agente consumidor (2026-10-15, revisado 2026-10-21) — planejado, nenhuma onda começada (DEC-190..210, ASK-V7-16..25)
-└── plan-v8/       OPERAÇÃO: gamificação remodelada — trilhas (pontos mensais, XP/elo de temporada, moeda vitalícia), troféus equipáveis, reset mensal e temporada anual (2026-10-22) — em andamento: V8-2 done (ciclo mensal dos pontos: `ResetMonthlyPointsUseCase` com snapshot em `month_history`, zeragem da coluna e cron `0 0 1 * *` sem rota nova; DEC-211..221 abertas); regime DEC-221: uma onda por vez autorizada pelo orquestrador, migration só na 5433 até o batch V8-CLOSE (MODELO.md = fonte do comportamento)
+└── plan-v8/       OPERAÇÃO: gamificação remodelada — trilhas (pontos mensais, XP/elo de temporada, moeda vitalícia), troféus equipáveis, reset mensal e temporada anual (2026-10-22) — em andamento: V8-3 done (ciclo mensal do placar e motor de XP da temporada: `ResetMonthlyPointsUseCase` com snapshot em `month_history` + cron `0 0 1 * *`, e `xp-rules.ts` + `ReviewWeeklyXpUseCase` com cron `10 0 * * 1`, ambos sem rota nova; DEC-211..221 abertas); regime DEC-221: uma onda por vez autorizada pelo orquestrador, migration só na 5433 até o batch V8-CLOSE (MODELO.md = fonte do comportamento)
 ```
 
 ## Fluxo de dependências (unidirecional)
@@ -166,7 +166,22 @@ plan-v8 (gamificação remodelada) ──> nasce do pedido do dono em 2026-10-22
   testes no projeto unit, 210 / 2460 na suíte completa, G4 18 / 143, G0 1117 módulos / 4741
   dependências, `tsc` 0, lint exit 0 com 15 warnings, G5 `docs:build` + `docs:check` verdes
   (rodado porque a onda mudou rótulo visível: "Pontos do mês"). Nenhuma migration nova.
-  Próxima onda: **V8-3** (motor de XP, DEC-214), autorizada pelo orquestrador.
+  **V8-3 done** em 2026-10-22: o motor de XP sem rota e sem tela nova — regras puras em
+  `backend/domain/gamification/xp-rules.ts` (+10 tarefa, +10 sessão, +20 atividade por membro; boosts
+  semanais 40 de constância em 7 dias, 20 em 5+ tarefas, 40 em 10+ **substituindo** o de 5+; penalidades
+  −10/−20/−30/−20 por unidade; piso 0; semana civil `[segunda 00:00 SP, +7d)`). O credit entra no
+  **mesmo `$transaction`** do prêmio, como segunda linha de `history` com `track "XP"` e chave
+  `GAMIFICATION:XP:<sourceType>:<sourceId>` (sourceId vem de tabelas diferentes). `ReviewWeeklyXpUseCase`
+  idempotente por `(userId, weekStart)` **sem tabela nova** — a linha do próprio ledger
+  `GAMIFICATION:XP:WEEKLY_REVIEW:<userId>:<weekStart>` é a chave, lida antes de escrever e reconfirma
+  dentro da transação; semana sem ajuste não escreve linha. O adapter entrega fatos (sessões `completed`
+  por dia civil, as duas famílias de tarefa da V8-2, atividades lidas do ledger da semana com
+  `activityPeriod`/`daysLateForTask` e sessão solapante no mesmo projeto para o −30). Gates da onda:
+  195 arquivos / 2347 testes no projeto unit, 214 / 2495 na suíte completa, G4 19 / 148, G0 1125 módulos
+  / 4770 dependências, `tsc` 0, lint exit 0 (17 warnings pré-existentes, re-contados com `git stash`),
+  G5 com a nona entrada da agenda nos dois inventários de `docs/src`. Nenhuma migration nova; 5432
+  intocada. Onda encerrada e reportada ao orquestrador; próxima: **V8-4** (fechamento de temporada,
+  DEC-213).
 
 ## Regras do container
 

@@ -42,6 +42,7 @@ describe("cron schedule — derivado do domínio (D2)", () => {
     expect(scheduled.map((s) => s.expression)).toEqual([
       "0 0 * * 1", // weekly reset (segunda 00:00)
       "0 0 1 * *", // fechamento mensal do placar (plan-v8 V8-2, DEC-212) — dia 1 às 00:00
+      "10 0 * * 1", // revisao semanal de XP (plan-v8 V8-3, DEC-214) — segunda às 00:10
       "30 9 * * *", // pausa 09:30
       "0 12,15,17 * * *", // pausa 12:00, 15:00 e 17:00
       "59 23 * * *", // sweep noturno anti-farm
@@ -63,6 +64,7 @@ describe("cron schedule — derivado do domínio (D2)", () => {
         (e) =>
           e !== "0 0 * * 1" &&
           e !== "0 0 1 * *" &&
+          e !== "10 0 * * 1" &&
           e !== "59 23 * * *" &&
           e !== "0 8 * * *" &&
           e !== "0 9 19 * *" &&

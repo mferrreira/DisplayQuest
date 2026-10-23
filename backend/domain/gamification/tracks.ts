@@ -21,3 +21,10 @@ export const GAMIFICATION_TRACKS: readonly GamificationTrack[] = ["POINTS", "COI
  * `users.points`, e é POINTS que a linha dele deve dizer depois da migration.
  */
 export const DEFAULT_GAMIFICATION_TRACK: GamificationTrack = "POINTS";
+
+/**
+ * A trilha do volume da temporada. Nomeada aqui (V8-3, DEC-214) porque o adaptador de award escreve
+ * a linha de XP e o adaptador da revisão semanal também: os dois tem que sair do MESMO vocabulário,
+ * não de um literal `"XP"` cada um.
+ */
+export const XP_GAMIFICATION_TRACK: GamificationTrack = "XP";

@@ -1,4 +1,4 @@
-import { buildAwardDescription } from "@/backend/domain"
+import { XP_EVENT_ACTIVITY_COMPLETED, buildAwardDescription, xpAwardDescription } from "@/backend/domain"
 import type { GamificationSourceType } from "@/backend/domain"
 import type {
   AwardFromActivityCompletionCommand,
@@ -53,7 +53,11 @@ export class AwardFromActivityCompletionUseCase {
     }
 
     const pointsAwarded = command.points
-    const xpAwarded = pointsAwarded
+    // V8-3 (DEC-214): +20 por MEMBRO — o use case já é chamado uma vez por membro da
+    // distribuição Hamilton (DEC-164), então este número é por linha de distribuição, não por
+    // atividade. O valor da moeda/prêmio continua chegando pronto: gamification não re-aritmética
+    // prêmio de projeto (DEC-103).
+    const xpAwarded = XP_EVENT_ACTIVITY_COMPLETED
 
     await this.dependencies.awardHistory.awardAndRecord({
       userId: command.userId,
@@ -61,7 +65,7 @@ export class AwardFromActivityCompletionUseCase {
       sourceId,
       description,
       pointsAwarded,
-      xpAwarded,
+      xp: { description: xpAwardDescription(sourceType, sourceId), amount: xpAwarded },
     })
 
     const newProgression = await this.dependencies.progression.execute(command.userId)

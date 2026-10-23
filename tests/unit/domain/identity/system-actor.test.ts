@@ -71,7 +71,9 @@ describe("requireActorPermission", () => {
 
   it("ator de sistema passa em QUALQUER permissão, e é isso que o torna um bypass nomeado", () => {
     // MONTHLY_POINTS_RESET entrou na V8-2 do plan-v8 (DEC-212): o fechamento mensal é rotina.
-    for (const reason of ["NIGHTLY_SWEEP", "SCHEDULED_PAUSE", "WEEKLY_RESET", "MONTHLY_POINTS_RESET", "SYSTEM_EVENT"] as const) {
+    // WEEKLY_XP_REVIEW entrou na V8-3 (DEC-214): a revisão semanal de XP é rotina, e o gate de
+    // MANAGE_USERS mora no use case — sem o bypass declarado, o job pararia no 403 (DEC-54).
+    for (const reason of ["NIGHTLY_SWEEP", "SCHEDULED_PAUSE", "WEEKLY_RESET", "MONTHLY_POINTS_RESET", "WEEKLY_XP_REVIEW", "SYSTEM_EVENT"] as const) {
       for (const permission of ["MANAGE_USERS", "MANAGE_NOTIFICATIONS", "MANAGE_PURCHASES"] as const) {
         expect(() => requireActorPermission(systemActor(reason), permission)).not.toThrow();
       }

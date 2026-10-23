@@ -22,8 +22,9 @@
  *      snapshots e não bloqueia a exclusão — é a premissa que a guarda estrutural
  *      `user-delete-schema-drift.test.ts` assume.
  *   7. O award real declara a trilha: a linha de `history` de um credit de sessão nasce
- *      `track = "POINTS"` (DEC-211). O destino do credit ainda é `users.points` — a V8-5 move o
- *      prêmio de atividade para `users.coins` e a V8-3 escreve `users.xp`.
+ *      `track = "POINTS"` (DEC-211). Desde a V8-3 (DEC-214) o mesmo award escreve a SEGUNDA linha,
+ *      `track = "XP"`, e o credit de XP (+10 da sessão) cai em `users.xp` na mesma transação. O
+ *      prêmio de ponto continua em `users.points`; MOEDA é V8-5.
  *
  * Como nos outros roundtrips: as asserções olham para os IDs criados por este arquivo, nunca
  * para contagens globais. Cleanup em afterAll: `history` (FK `performedBy` RESTRICT), depois os
@@ -285,12 +286,23 @@ describe("G4 roundtrip — trilhas da gamificação (isolated test DB, 5433)", (
     expect(historyRow?.track).toBe("POINTS");
     expect((historyRow?.newValues as { pointsAwarded: number }).pointsAwarded).toBe(20);
 
-    // O credit ainda cai em `users.points` (placar mensal). MOEDA (V8-5) e XP (V8-3) têm destino
-    // próprio e não foram tocados por este award.
+    // O prêmio de ponto cai em `users.points` (placar mensal) e o XP do evento na MESMA run, em
+    // `users.xp` (V8-3, DEC-214: +10 por sessão). MOEDA (V8-5) tem destino próprio e não foi tocada.
     const user = await prisma.users.findUnique({
       where: { id: awardUserId },
       select: { points: true, coins: true, xp: true },
     });
-    expect(user).toEqual({ points: 20, coins: 0, xp: 0 });
+    expect(user).toEqual({ points: 20, coins: 0, xp: 10 });
+
+    const xpRow = await prisma.history.findFirst({
+      where: {
+        action: "GAMIFICATION_AWARD",
+        entityId: awardUserId,
+        description: `GAMIFICATION:XP:WORK_SESSION_COMPLETED:${WORK_SESSION_ID}`,
+      },
+      select: { track: true, newValues: true },
+    });
+    expect(xpRow?.track).toBe("XP");
+    expect((xpRow?.newValues as { xpAwarded: number }).xpAwarded).toBe(10);
   });
 });

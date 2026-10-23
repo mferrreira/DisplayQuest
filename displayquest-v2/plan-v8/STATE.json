@@ -1,11 +1,11 @@
 {
   "plan": "plan-v8",
   "title": "Gamificacao remodelada: trilhas, ciclos, moeda, trofeus equipaveis",
-  "version": "1.4.0",
-  "updatedAt": "2026-10-22T18:34:04-03:00",
+  "version": "1.5.0",
+  "updatedAt": "2026-10-22",
   "status": "in_progress",
-  "activeWave": "V8-2",
-  "activeBatch": "V8-2 done; parei e reportei (regime DEC-221) - proxima onda V8-3 (motor de XP) com autorizacao do orquestrador",
+  "activeWave": "V8-3",
+  "activeBatch": null,
   "awaitingInstruction": true,
   "lineage": {
     "previousPlan": "plan-v6 (linguagem visual + redistribuicao das telas), encerrado em 2026-10-16; plan-v7 (MCP de validacao) planejado em 2026-10-21 e sem ondas executadas. O plan-v8 nao depende do MCP e o MCP nao depende do plan-v8.",
@@ -38,17 +38,17 @@
   "measurements": {
     "currentGates": {
       "measuredAt": "2026-10-22",
-      "measuredBy": "V8-2",
-      "G0": "npm run arch:check - exit 0; allow-list VAZIA; 1117 modulos / 4741 dependencias cruisadas, zero violacao (era 1109 / 4713 na V8-1: +8 modulos e +28 dependencias pelos arquivos novos da onda)",
-      "G1": "npm run lint - exit 0, 0 erros, 15 warnings pre-existentes (mesma contagem da V8-0 e da V8-1)",
+      "measuredBy": "V8-3",
+      "G0": "npm run arch:check - exit 0; allow-list VAZIA; 1125 modulos / 4770 dependencias cruisadas, zero violacao (era 1117 / 4741 na V8-2: +8 modulos / +29 dependencias pelos arquivos novos da onda)",
+      "G1": "npx eslint --no-eslintrc --config .eslintrc.json . - exit 0, 0 erros, 17 warnings pre-existentes. Contagem re-medida com git stash: sem a onda a arvore tambem da 17 - a nota de '15 warnings' gravada em V8-0/V8-1/V8-2 nao reproduz nesta arvore. Nenhum dos 12 arquivos com warning e arquivo da onda.",
       "G2": "npx tsc --noEmit - 0 erros",
-      "G3": "npx vitest run - 210 arquivos / 2460 testes verdes; divisao canonica unit+features (tests/unit + features/**/__tests__ + entities) = 192 arquivos / 2317 testes (era 189 / 2289)",
-      "G4": "npx vitest run tests/integration - 18 arquivos / 143 testes verdes contra dq-dev-test-db:5433 com DATABASE_URL exportado para a 5433 (era 17 / 138); a 5432 nao foi tocada",
-      "G5": "npm run docs:build -- --only=usuario e -- --only=tecnico: os dois documentos montados sem AVISO (15 secoes / 33 figuras tecnico; 12 secoes / 45 figuras usuario) + npm run docs:check 'nenhum caractere suspeito'. Rodado porque a onda mudou rotulo visivel ('Pontos do mes') e a prosa do guia nomeia controles pelo rotulo que a interface mostra. Os dois inventarios de agenda em docs/src (cap. 10 e cap. 14) foram re-escritos com as oito entradas medidas - eles estavam com quatro entradas e omitiam tres jobs ja existentes (varredura de atraso V5-8, lembrete do atestado V5-10b, limpeza do feed V6-11k)",
-      "migration": "Nenhuma migration nova nesta onda (o fechamento mensal le e escreve o month_history criado na V8-1). _prisma_migrations continua 23 linhas na 5433; a 5432 (display-quest-db) nao foi tocada, e o deploy na 5432 real segue marcado para o V8-CLOSE (DEC-221).",
-      "note": "Contagem batida com o que mudou: unit +3 arquivos e +28 testes (monthly-cycle 11, monthly-reset 14, cron-monthly-points-reset 3); integration +1 arquivo e +5 testes (monthly-points-reset-roundtrip). 2289 + 28 = 2317; 138 + 5 = 143; 2317 + 143 = 2460. Nenhum teste removido: a onda e aditiva.",
-      "e2e": "NAO re-medido na V8-2: nenhuma tela nova, o fechamento mensal nao muda o DOM do quadro nem do shell, e o spec do quadro e serial e depende do dado da instancia (ver AGENTS.md). Re-medir no V8-CLOSE, na 5432, depois do deploy.",
-      "armadura": "Tres medições de ambiente. (a) Rodar `npx vitest run tests/unit tests/features` com caminho filtrado NAO reproduz o escopo canonico do projeto unit (tests/unit + features/**/__tests__ + entities/**). (b) `npx vitest run --project unit` / `--project=integration` falham nesta versao do Vitest com 'No projects matched the filter'; a divisao canonica se mede por subtracao: suíte completa menos `npx vitest run tests/integration` (aqui 210/2460 - 18/143 = 192/2317, batendo com a aritmetica do lote). (c) Sem DATABASE_URL exportado para a 5433, tres testes de rota de usuarios falham (user-person-data-routes x2, users-authorization x1) lendo a 5432 - conferido com git stash: o baseline falha identico, nao e regressao desta onda."
+      "G3": "npx vitest run - 214 arquivos / 2495 testes verdes; divisao canonica unit+features (por subtracao, ver armadura) = 195 arquivos / 2347 testes (era 192 / 2317)",
+      "G4": "npx vitest run tests/integration - 19 arquivos / 148 testes verdes contra dq-dev-test-db:5433 com DATABASE_URL exportado para a 5433 (era 18 / 143); a 5432 nao foi tocada",
+      "G5": "npm run docs:build (os dois documentos, sem AVISO: tecnico 15 secoes / 33 figuras; usuario 12 secoes / 45 figuras) + npm run docs:check 'nenhum caractere suspeito'. Os dois inventarios de agenda em docs/src (cap. 10 'nove entradas' e cap. 14) ganharam a entrada medida '10 0 * * 1' (revisao semanal de XP), conferida com o servico de agenda e pinada em tests/unit/services/cron-schedule.test.ts. Guia de usuario nao mudou: a onda nao tem tela nova.",
+      "migration": "Nenhuma migration nova nesta onda - a revisao semanal le users.xp e escreve history, ambos da V8-1, e a deduplicacao e uma linha do ledger, nao tabela. _prisma_migrations continua 23 linhas na 5433; a 5432 (display-quest-db) nao foi tocada, e o deploy na 5432 real segue marcado para o V8-CLOSE (DEC-221).",
+      "note": "Contagem batida com o que mudou: unit +3 arquivos e +30 testes (xp-rules 18, weekly-xp-review 9, cron-weekly-xp-review 3); integration +1 arquivo e +5 testes (weekly-xp-review-roundtrip). 2317 + 30 = 2347; 143 + 5 = 148; 2347 + 148 = 2495. Nenhum teste removido; um golden atualizado (gamification-tracks-roundtrip: o mesmo award de sessao passou a creditar +10 em users.xp e a escrever a linha XP, e a assercao que congelava xp 0 passou a congelar xp 10 com a linha track XP).",
+      "e2e": "NAO re-medido na V8-3: nenhuma tela nova e nenhuma rota nova; o motor de XP nao muda o DOM do quadro nem do shell. Re-medir no V8-CLOSE, na 5432, depois do deploy.",
+      "armadura": "Quatro medicoes de ambiente. (a) Rodar tests/unit tests/features com caminho filtrado NAO reproduz o escopo canonico do projeto unit. (b) `npx vitest run --project unit` / `--project=integration` falham nesta versao do Vitest ('No projects matched the filter'); a divisao canonica se mede por subtracao: 214/2495 menos 19/148 = 195/2347, batendo com a aritmetica do lote. (c) Sem DATABASE_URL exportado para a 5433, tres testes de rota de usuarios falham lendo a 5432 (baseline conferido com git stash). (d) O Prisma recusa array de interface como Json (falta index signature): XpAdjustment passou de interface para alias de type para entrar em newValues sem cast no adaptador - o tsc marca TS2322 na hora, e o alias resolve sem cast."
     }
   },
   "waves": [
@@ -123,13 +123,24 @@
     {
       "id": "V8-3",
       "title": "motor de XP",
-      "status": "planned",
+      "status": "done",
       "decisions": [
         "DEC-214"
       ],
       "scope": "xp-rules.ts no dominio com constantes congeladas (MODELO Sec.4); credit XP nos eventos tarefa/sessao/atividade na transacao do award; ReviewWeeklyXpUseCase no cron '10 0 * * 1' (semana civil segunda-domingo), systemActor(WEEKLY_XP_REVIEW), idempotente por (userId, weekStart); piso 0.",
       "gate": "G0-G4. Roundtrip: semana com constancia, semana sem meta, tarefa atrasada.",
-      "dependsOn": "V8-1"
+      "dependsOn": "V8-1",
+      "completedAt": "2026-10-22",
+      "gateResult": "G0 exit 0 com allow-list VAZIA (1125 modulos / 4770 dependencias; era 1117 / 4741 na V8-2: +8 modulos e +29 dependencias dos arquivos novos da onda). G1 exit 0, 0 erros; warnings pre-existentes re-contados em 17 (conferido com git stash: a arvore sem a onda tambem da 17 - a nota de '15 warnings' das ondas V8-0/V8-1/V8-2 nao reproduz nesta arvore; nenhum warning novo da V8-3). G2 0 erros. G3 214 arquivos / 2495 testes verdes (unit+features por subtracao = 195 arquivos / 2347 testes; era 192 / 2317). G4 19 arquivos / 148 testes na 5433 com DATABASE_URL exportado (era 18 / 143); a 5432 nao foi tocada. G5 rodado: os dois inventarios de agenda em docs/src (cap. 10 e cap. 14) ganharam a nona entrada medida ('10 0 * * 1'); docs:build dos dois documentos sem AVISO (tecnico 15 secoes / 33 figuras; usuario 12 secoes / 45 figuras) e docs:check 'nenhum caractere suspeito'. Nenhuma migration nova (a revisao semanal le e escreve o que ja existe: users.xp, history); _prisma_migrations continua 23 linhas na 5433. Banco de teste conferido limpo depois do roundtrip: history 0 linhas, month_history 0, season_history 0, nenhum residuo 'V8-3%' em users/tasks/projects/work_sessions, sum(xp) 0, sum(points) 0, sum(coins) 14.",
+      "executionNotes": [
+        "Credit de XP entra no MESMO $transaction do premio: o AwardRecord ganhou o bloco opcional xp { description, amount } e o adaptador escreve a segunda linha de history (track 'XP') mais o increment de users.xp. Creditar uma trilha sem a outra e exatamente a deriva dormente que a DEC-211 enterrou. xpAwarded saiu de AwardRecord e GamificationAwardResult.xpAwarded passou a significar o XP creditado em users.xp (10/10/20/0); medido por grep: nenhuma rota consumia o valor espelhado de antes.",
+        "A chave do credit de XP e GAMIFICATION:XP:<sourceType>:<sourceId>, nao apenas <sourceId>: sourceId vem de tabelas diferentes (tarefa, sessao, atividade), entao GAMIFICATION:XP:5 poderia ser tarefa 5 ou sessao 5 e perderia um credit. A idempotencia continua a descricao da fonte de PONTOS (hasAward): premio ja creditado nao credita trilha nova, o que significa que awards anteriores a esta onda nao ganham XP retroativo - a temporada comeca a contar da implantação do motor (consequencia aceita).",
+        "Constancia conta DIAS CIVIS distintos (dois trechos no mesmo dia sao um dia) e so sessao status 'completed' conta, com janela sobre startTime - as mesmas convencoes da leitura de horas. A semana de XP e aritmetica de dia civil do dominio (xpWeekWindow, [segunda 00:00 SP, +7d)), nao a janela date-fns relógio-local do relatorio de horas (QUIRK-7B): divergencia deliberada, documentada no arquivo. Nomes xpWeekWindow/xpWeekDayCount/xpClosedWeekOfInstant/currentXpWeekStartOfInstant porque o index do dominio ja exportava weekWindow (project-rules) e a colisao era de exportacao.",
+        "A revisao semanal deduplica por (userId, weekStart) SEM tabela nova: a linha do proprio ledger com description GAMIFICATION:XP:WEEKLY_REVIEW:<userId>:<weekStart> e a chave, lida antes de escrever (o use case) e reconfirma dentro da $transaction (o adaptador, devolvendo applied false). Semana sem ajuste nao escreve linha: o livro-caixa registra o que aconteceu, nao um zero por linha. Por isso nenhuma migration foi necessaria.",
+        "O adaptador devolve FATOS, nunca decisao (mesmo desenho do fechamento mensal). As atividades da semana sao lidas do proprio ledger (linhas GAMIFICATION_AWARD com newValues.sourceType = ACTIVITY_COMPLETED criadas na janela, deduplicadas por atividade): e a lista Hamilton de DEC-164 ja materializada, entao quem recebeu distribuicao tem linha e paga as penalidades, e quem nao recebeu nao ganha o +20 nem paga -20/-30. Atraso de atividade e medido contra o periodoFim derivado (activityPeriod + civilDaysBetween), a mesma regua do premio (DEC-103); atraso de tarefa e daysLateForTask, a mesma regua do premio (DEC-97). A sessao que quita a penalidade de -30 e a que solapa o periodo da linha NO MESMO PROJETO (ou sem projeto declarado): o roundtrip prova com as sessoes de Ana em P1 quitando a atividade B (P1) e nao quitando C (P2).",
+        "Audiencia ampla, como no fechamento mensal: todos os usuarios, qualquer status - suspenso com meta nao cumprida tambem e revisado (DEC-55 fecha a entrada da pessoa, nao o livro-caixa da temporada). Sem rota nova de proposito: unico chamador e o job, com systemActor(WEEKLY_XP_REVIEW) (DEC-54); o teste do job monta o modulo gamification REAL sobre port falsa para o gate nao sumir do teste (licao do B6-2a).",
+        "Piso 0 aplicado por quem escreve: applyXpFloor sobre o XP lido dentro da transacao; o valor absoluto e escrito na mesma transacao da linha de ledger, nunca um incremento que possa furar o piso. O use case reporta o xpAfter devolvido pelo adaptador (o valor com piso), nao um calculo seu."
+      ]
     },
     {
       "id": "V8-4",
@@ -228,10 +239,11 @@
     {
       "id": "DEC-214",
       "wave": "V8-3",
-      "status": "aberta",
+      "status": "executada (V8-3, 2026-10-22)",
       "openedAt": "2026-10-22",
       "openedBy": "V8-0",
-      "text": "Aritmetica de XP propria com constantes congeladas: +10 tarefa aprovada, +10 sessao concluida, +20 atividade aprovada por membro; boosts semanais 7/7 com sessao +40, 5+ tarefas +20, 10+ +40 (substitutivo); penalidades semanais tarefa atrasada -10, atividade atrasada -20 por membro, atividade aprovada sem sessao do membro no periodo -30, meta semanal nao cumprida (weekHours > 0) -20; piso 0; cron '10 0 * * 1', systemActor(WEEKLY_XP_REVIEW), idempotente por (userId, weekStart)."
+      "text": "Aritmetica de XP propria com constantes congeladas: +10 tarefa aprovada, +10 sessao concluida, +20 atividade aprovada por membro; boosts semanais 7/7 com sessao +40, 5+ tarefas +20, 10+ +40 (substitutivo); penalidades semanais tarefa atrasada -10, atividade atrasada -20 por membro, atividade aprovada sem sessao do membro no periodo -30, meta semanal nao cumprida (weekHours > 0) -20; piso 0; cron '10 0 * * 1', systemActor(WEEKLY_XP_REVIEW), idempotente por (userId, weekStart).",
+      "executionNote": "Executada na V8-3 com as constantes do MODELO Sec.4 congeladas em backend/domain/gamification/xp-rules.ts (+10 tarefa, +10 sessao, +20 atividade por membro; boosts 40 de constancia em 7 dias, 20 em 5+ tarefas, 40 em 10+ substituindo o de 5+; penalidades -10 por tarefa atrasada, -20 por atividade atrasada, -30 por atividade sem sessao do membro no periodo, -20 de meta semanal nao cumprida quando weekHours > 0; piso 0). Credit nos tres eventos existentes na transacao do award, track 'XP' e chave GAMIFICATION:XP:<sourceType>:<sourceId>. ReviewWeeklyXpUseCase idempotente por (userId, weekStart) pela linha do ledger GAMIFICATION:XP:WEEKLY_REVIEW:<userId>:<weekStart>, cron '10 0 * * 1' America/Sao_Paulo com systemActor(WEEKLY_XP_REVIEW), sem rota e sem tela nova. A calibracao das constantes segue adiada (ASK-V8-21) - o que foi congelado aqui e a ARITMETICA e os limiares do MODELO, nao uma calibracao."
     },
     {
       "id": "DEC-215",
@@ -345,6 +357,14 @@
     {
       "id": "G6-CAPTURA-V8",
       "text": "Recaptura das telas do guia que a V8-2 tornou antigas (Visao Geral do painel, aba Voluntarios, cartao do perfil, ranking). Adiado porque o container da instancia roda a imagem, nao a arvore: recapturar agora fotografaria os rotulos antigos. Executar na onda V8-8 (G5/G6), depois de rebuild da imagem."
+    },
+    {
+      "id": "DOC-TABELAS",
+      "text": "docs/src/11-modelo-de-dados.md diz 'o esquema tem vinte e cinco tabelas e cinco enumeradores'. Medido na 5433: 35 modelos no schema.prisma (36 tabelas no schema public, contando _prisma_migrations), e eram 33 antes da V8-1. A frase esta atrasada desde antes do plan-v8 e a base de contagem do capitulo nao esta declarada no texto. Consertar exige decidir a base (modelos do schema? tabelas do banco?) - adiada para o fechamento V8-8/G5, onde o capitulo 11 deve ser re-escrito com as trilhas novas (users.coins/users.xp, month_history, season_history)."
+    },
+    {
+      "id": "XP-DUPLICADO",
+      "text": "Desde a V8-3 existem dois 'XP' no sistema. (a) `users.xp`, a trilha da temporada, escrita pelo motor (10/10/20 + boosts - penalidades, piso 0). (b) `UserProgression.xp` em backend/domain/gamification/Progression.ts, DERIVADO (`xp = max(0, points)`, level = floor(xp/100), elos BRONZE/PRATA/OURO/DIAMANTE por faixa de points), emitido por GET /api/users/[id]/gamification. Depois da V8-2 a divergencia e visivel: o (b) zera todo mes junto com `points`, o (a) acumula a temporada. Consumidor medido: nenhuma tela (grep em features/components nao acha quem le a rota), entao nada mostra os dois numeros hoje. Nao mexido na V8-3 por escopo (a onda e de motor, sem rota e sem tela); a substituicao pelo elo da escada DEC-217 e o que fecha isso - decidir em V8-4 (fechamento de temporada) e executar na V8-6/V8-7, quando a trilha aparece na UI."
     }
   ],
   "batchLog": [
@@ -368,6 +388,13 @@
       "status": "done",
       "commit": "este commit",
       "evidence": "Regras puras novas em backend/domain/gamification/monthly-cycle.ts (closingMonthOfInstant, monthWindow com [start, endExclusive) ancorado em startOfCivilDayInstant, shouldSnapshotClosedMonth, POINTS_AFTER_MONTH_CLOSE = 0), exportadas pelo index do dominio.\nPort MonthlyPointsCyclePort (listAllUsersForClose, countTasksCompletedInMonth, hasMonthSnapshot, closeMonth) e adapter Prisma prisma-monthly-points-cycle.port.ts: a transacao escreve month_history e depois zera users.points, com P2002 devolvido como false (ja fechado).\nResetMonthlyPointsUseCase com gate MANAGE_USERS e a frase MONTHLY_POINTS_RESET_DENIED_MESSAGE, contratos ResetMonthlyPointsCommand / MonthlyCloseOutcome / ResetMonthlyPointsResult, e o metodo resetMonthlyPoints no GamificationModule (port default createPrismaMonthlyPointsCyclePort). Rotas novas: NENHUMA.\nAgenda: SYSTEM_REASONS.MONTHLY_POINTS_RESET em backend/domain/identity/actor-ref.ts e o job '0 0 1 * *' (America/Sao_Paulo) agendado logo depois do weekly reset em lib/services/cron-service.ts, com executeMonthlyPointsReset(), stop() e getStatus() atualizados.\nUI (rotulo): 'Pontos do mes' em components/admin/AdminOverview.tsx, components/admin/AdminStatsCards.tsx ('Média do mes:'), components/ui/user-profile-view.tsx e components/features/volunteers-management.tsx.\nTestes novos: tests/unit/domain/gamification/monthly-cycle.test.ts (11), tests/unit/modules/gamification/monthly-reset.test.ts (14: gate, audiencia ampla, negativo, sem atividade, duas runs, mes seguinte, janela inclusive nas duas pontas), tests/unit/services/cron-monthly-points-reset.test.ts (3: systemActor declarado, reexecucao, falha virando console.error), tests/integration/monthly-points-reset-roundtrip.test.ts (5 contra a 5433). Guarda de cron atualizada: '0 0 1 * *' pinada em tests/unit/services/cron-schedule.test.ts (inclusive na lista de exclusao do teste das expressoes de pausa); razao nova em tests/unit/domain/identity/system-actor.test.ts.\nDocs (G5): guia 07-loja-e-ranking (coluna Pontos = placar do mes + o callout 'O placar fecha no dia 1') e 09-administracao ('Pontos do mes' na aba Voluntarios); docs/src cap. 10 e cap. 14 com o inventario medido das oito entradas da agenda. docs:build e docs:check verdes, sem AVISO. Nenhuma migration nova; 5432 intocada; banco de teste conferido limpo."
+    },
+    {
+      "batch": "V8-3",
+      "at": "2026-10-22",
+      "status": "done",
+      "commit": "este commit",
+      "evidence": "Dominio: backend/domain/gamification/xp-rules.ts (constantes da DEC-214; weeklyTasksBoost substitutivo; weeklyConsistencyBoost; weeklyGoalMissed; applyXpFloor; weeklyXpAdjustments item a item na ordem do MODELO; netXpAdjustment; xpAwardDescription; weeklyXpReviewDescription; xpWeekWindow [segunda 00:00 SP, +7d) com corte de fim exclusivo; xpClosedWeekOfInstant; currentXpWeekStartOfInstant; xpWeekDayCount), exportado pelo index do dominio. XP_GAMIFICATION_TRACK entrou em tracks.ts (o vocabulario unico das duas escritas de XP, sem literal 'XP' solto).\nCredit nos eventos: AwardRecord ganhou xp { description, amount } (e perdeu xpAwarded); prisma-gamification-award-history.port.ts escreve, no MESMO $transaction, o increment de users.points + linha POINTS e, havendo bloco xp, o increment de users.xp + linha XP. Os tres use cases de evento passam o bloco: tarefa +10, sessao +10, atividade +20 por membro (o use case ja e chamado uma vez por linha da distribuicao Hamilton, DEC-164). GamificationAwardResult.xpAwarded passou a ser o XP creditado.\nRevisao semanal: WeeklyXpReviewPort (listUsersForWeeklyReview, hasWeeklyReview, getWeeklyFacts, applyWeeklyXpAdjustment) e o adaptador prisma-weekly-xp-review.port.ts - sessoes 'completed' por startTime na janela (dias civis distintos, horas somadas), as DUAS familias de tarefa com o filtro de visibilidade da V8-2 e daysLateForTask, atividades lidas do ledger da semana (dedup por atividade, activityPeriod + civilDaysBetween para atraso, sessao solapante no mesmo projeto para a penalidade de -30), e a escrita em $transaction com findFirst de guarda + applyXpFloor sobre o XP lido dentro da transacao. ReviewWeeklyXpUseCase (gate MANAGE_USERS com WEEKLY_XP_REVIEW_DENIED_MESSAGE, semana fechada por xpClosedWeekOfInstant(now), dedup lida antes de escrever, sem linha quando a semana nao produz ajuste), contratos ReviewWeeklyXpCommand / WeeklyXpReviewOutcome / ReviewWeeklyXpResult e o metodo reviewWeeklyXp no GamificationModule. Rotas novas: NENHUMA. Tela nova: NENHUMA.\nAgenda: SYSTEM_REASONS.WEEKLY_XP_REVIEW em actor-ref.ts e o job '10 0 * * 1' (America/Sao_Paulo) agendado logo depois do fechamento mensal em lib/services/cron-service.ts, com executeWeeklyXpReview(), stop() e getStatus().\nTestes novos: tests/unit/domain/gamification/xp-rules.test.ts (18), tests/unit/modules/gamification/weekly-xp-review.test.ts (9), tests/unit/services/cron-weekly-xp-review.test.ts (3, modulo real sobre port falsa assertando systemActor WEEKLY_XP_REVIEW), tests/integration/weekly-xp-review-roundtrip.test.ts (5 contra a 5433, congelando dias civis, as duas familias, o escopo de projeto da sessao, a fronteira das 00:00 da segunda e a reexecucao). Guardas atualizadas: '10 0 * * 1' pinada em cron-schedule.test.ts (inclusive na lista de exclusao do teste das expressoes de pausa), razao nova em system-actor.test.ts, golden de sessao em use-cases.gamification.test.ts e em gamification-roundtrip.test.ts, e o golden de gamification-tracks-roundtrip.test.ts atualizado (o award de sessao passou a creditar xp 10 e a escrever a linha track XP).\nDocs (G5): inventarios de agenda do cap. 10 ('nove entradas') e do cap. 14 com a nona entrada medida. docs:build e docs:check verdes, sem AVISO. Nenhuma migration nova; 5432 intocada; banco de teste conferido limpo (history/month_history/season_history em 0, residuo 'V8-3%' em 0, sum(xp) 0)."
     }
   ],
   "nextFreeDecision": "DEC-222"

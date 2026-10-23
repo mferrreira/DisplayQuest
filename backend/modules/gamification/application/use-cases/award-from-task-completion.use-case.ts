@@ -1,4 +1,4 @@
-import { buildAwardDescription, taskAwardPoints } from "@/backend/domain"
+import { XP_EVENT_TASK_COMPLETED, buildAwardDescription, taskAwardPoints, xpAwardDescription } from "@/backend/domain"
 import type { GamificationSourceType } from "@/backend/domain"
 import type {
   AwardFromTaskCompletionCommand,
@@ -14,6 +14,11 @@ import type { GetUserProgressionUseCase } from "@/backend/modules/gamification/a
  * undefined/null, Math.floor (0 => 0 SEM clamp minimo — QUIRK proprio do caminho
  * de task), idempotencia por DESCRICAO `GAMIFICATION:TASK_COMPLETED:<id>`,
  * avaliacao de badges depois do credit.
+ *
+ * V8-3 (DEC-214): `xpAwarded` deixa de ser o espelho de `pointsAwarded` (a derivação dormente de
+ * `Progression.ts`) e passa a ser o XP creditado em `users.xp`: +10 flat por tarefa aprovada, na
+ * mesma transação do prêmio. Nenhum consumidor do valor espelhado existia (medido por grep: o campo
+ * não sai de rota nenhuma).
  */
 
 export interface AwardFromTaskCompletionDependencies {
@@ -48,7 +53,11 @@ export class AwardFromTaskCompletionUseCase {
     }
 
     const pointsAwarded = taskAwardPoints(command.taskPoints)
-    const xpAwarded = pointsAwarded
+    // V8-3 (DEC-214): XP é +10 FLAT por tarefa aprovada — não deriva do valor do prêmio, que
+    // obedece ao prazo (DEC-97). O caminho só é chamado quando a tarefa chegou a `done`
+    // (completeTask credita no `done`; approveTask credita na aprovação; delegated em
+    // `in-review` nunca chega aqui) — medido nos três call sites de publishTaskCompletionAward.
+    const xpAwarded = XP_EVENT_TASK_COMPLETED
 
     await this.dependencies.awardHistory.awardAndRecord({
       userId: command.userId,
@@ -56,7 +65,7 @@ export class AwardFromTaskCompletionUseCase {
       sourceId,
       description,
       pointsAwarded,
-      xpAwarded,
+      xp: { description: xpAwardDescription(sourceType, sourceId), amount: xpAwarded },
     })
 
     const newProgression = await this.dependencies.progression.execute(command.userId)

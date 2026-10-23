@@ -184,7 +184,9 @@ describe("AwardFromWorkSessionUseCase (orquestracao frozen golden)", () => {
     const result = await module_.awardFromWorkSession({ userId: 1, workSessionId: 42, durationSeconds: 7200 });
 
     expect(result.pointsAwarded).toBe(30);
-    expect(result.xpAwarded).toBe(30);
+    // V8-3 (DEC-214): xpAwarded passou a ser o XP creditado em users.xp (+10 flat por sessao),
+    // nao o espelho do premio de pontos.
+    expect(result.xpAwarded).toBe(10);
     expect(result.alreadyAwarded).toBe(false);
     expect(result.newProgression.points).toBe(30);
     expect(result.newProgression.level).toBe(0);
@@ -196,7 +198,7 @@ describe("AwardFromWorkSessionUseCase (orquestracao frozen golden)", () => {
       sourceId: 42,
       description: "GAMIFICATION:WORK_SESSION_COMPLETED:42",
       pointsAwarded: 30,
-      xpAwarded: 30,
+      xp: { description: "GAMIFICATION:XP:WORK_SESSION_COMPLETED:42", amount: 10 },
     });
   });
 

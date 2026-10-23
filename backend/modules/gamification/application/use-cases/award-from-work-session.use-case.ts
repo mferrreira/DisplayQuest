@@ -1,4 +1,4 @@
-import { buildAwardDescription, workSessionAwardPoints } from "@/backend/domain"
+import { XP_EVENT_WORK_SESSION, buildAwardDescription, workSessionAwardPoints, xpAwardDescription } from "@/backend/domain"
 import type { GamificationSourceType } from "@/backend/domain"
 import type {
   AwardFromWorkSessionCommand,
@@ -52,7 +52,10 @@ export class AwardFromWorkSessionUseCase {
     }
 
     const pointsAwarded = workSessionAwardPoints(command.durationSeconds, command.completedTaskIds)
-    const xpAwarded = pointsAwarded
+    // V8-3 (DEC-214): +10 flat por SESSÃO concluída. O evento é o fim da sessão
+    // (completeWorkSession → onWorkSessionCompleted), não o valor do prêmio da sessão, que é
+    // aritmética de duração e de tarefas (QUIRK-6B congelado).
+    const xpAwarded = XP_EVENT_WORK_SESSION
 
     await this.dependencies.awardHistory.awardAndRecord({
       userId: command.userId,
@@ -60,7 +63,7 @@ export class AwardFromWorkSessionUseCase {
       sourceId,
       description,
       pointsAwarded,
-      xpAwarded,
+      xp: { description: xpAwardDescription(sourceType, sourceId), amount: xpAwarded },
     })
 
     const newProgression = await this.dependencies.progression.execute(command.userId)

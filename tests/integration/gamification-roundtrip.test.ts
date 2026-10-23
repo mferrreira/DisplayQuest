@@ -146,8 +146,21 @@ describe("G4 roundtrip — gamification (isolated test DB)", () => {
       sourceType: "WORK_SESSION_COMPLETED",
       sourceId: WORK_SESSION_ID,
       pointsAwarded: 30,
-      xpAwarded: 30,
     });
+
+    // V8-3 (DEC-214): a MESMA transacao escreveu a trilha XP — +10 flat por sessao, linha propria
+    // no ledger com track "XP" e chave separada da chave do premio.
+    const xpRow = await prisma.history.findFirst({
+      where: { action: "GAMIFICATION_AWARD", entityId: userId, description: `GAMIFICATION:XP:WORK_SESSION_COMPLETED:${WORK_SESSION_ID}` },
+    });
+    expect(xpRow?.track).toBe("XP");
+    expect(xpRow?.newValues).toEqual({
+      sourceType: "WORK_SESSION_COMPLETED",
+      sourceId: WORK_SESSION_ID,
+      xpAwarded: 10,
+    });
+    const withXp = await prisma.users.findUnique({ where: { id: userId }, select: { xp: true } });
+    expect(withXp?.xp).toBe(10);
   });
 
   it("awardFromWorkSession e idempotente: segunda chamada nao incrementa nem duplica history", async () => {
@@ -165,6 +178,14 @@ describe("G4 roundtrip — gamification (isolated test DB)", () => {
       where: { action: "GAMIFICATION_AWARD", entityId: userId, description: `GAMIFICATION:WORK_SESSION_COMPLETED:${WORK_SESSION_ID}` },
     });
     expect(count).toBe(1);
+
+    // Idempotencia vale para as DUAS trilhas: a chave da fonte guarda tambem o credit de XP.
+    const xpCount = await prisma.history.count({
+      where: { action: "GAMIFICATION_AWARD", entityId: userId, description: `GAMIFICATION:XP:WORK_SESSION_COMPLETED:${WORK_SESSION_ID}` },
+    });
+    expect(xpCount).toBe(1);
+    const stillXp = await prisma.users.findUnique({ where: { id: userId }, select: { xp: true } });
+    expect(stillXp?.xp).toBe(10);
   });
 
   it("awardFromTaskCompletion: floor(15.7)=15 e default 10; progressao reflete o acumulado", async () => {

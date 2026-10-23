@@ -54,6 +54,16 @@ export class CronService {
     }, { timezone: 'America/Sao_Paulo' })
 
     // Pause automático das work sessions: horários vindos de SCHEDULED_PAUSE_TIMES (D2)
+    // plan-v8 V8-3 (DEC-214): revisao semanal de XP — segunda 00:10. Os dez minutos depois do
+    // weekly reset das 00:00 nao sao decorativos: o reset de horas zera `users.weekHours`/histórico e
+    // a varredura noturna das 23:59 já fechou o que ficou aberto no fim de semana, entao a semana que
+    // a revisão lê é a semana fechada, com as horas da semana já persistidas. Idempotente por
+    // (userId, weekStart): reexecucao nao soma boost de novo. Sem rota — rotina nao e acao de pessoa
+    // (DEC-54).
+    this.weeklyXpReviewJob = cron.schedule('10 0 * * 1', async () => {
+      await this.executeWeeklyXpReview()
+    }, { timezone: 'America/Sao_Paulo' })
+
     this.scheduledPauseJobs = pauseCronExpressions(SCHEDULED_PAUSE_TIMES).map((expression) =>
       cron.schedule(expression, async () => {
         await this.executeScheduledPause()
@@ -94,6 +104,7 @@ export class CronService {
   private certificateReminderJob: cron.ScheduledTask | null = null
   private activityCleanupJob: cron.ScheduledTask | null = null
   private monthlyPointsResetJob: cron.ScheduledTask | null = null
+  private weeklyXpReviewJob: cron.ScheduledTask | null = null
 
   /**
    * Pausa todas as sessões ativas que cruzaram um horário de pausa agendado.
@@ -252,6 +263,29 @@ export class CronService {
   }
 
   /**
+   * Revisao semanal da trilha XP (plan-v8 V8-3, DEC-214): boosts de constância e produtividade,
+   * penalidades de atraso e de meta, com piso 0, por pessoa, para a semana que FECOU. Rotina sem
+   * pessoa — systemActor(WEEKLY_XP_REVIEW), o mesmo padrao do reset semanal de horas e do fechamento
+   * mensal (DEC-54): o gate de MANAGE_USERS mora no use case e o unico chamador é este job. A semana
+   * a fechar é decidida pelo use case (`xpClosedWeekOfInstant(now)`), nunca aqui.
+   */
+  async executeWeeklyXpReview() {
+    try {
+      const { gamification } = getBackendComposition()
+      const result = await gamification.reviewWeeklyXp({
+        actor: systemActor(SYSTEM_REASONS.WEEKLY_XP_REVIEW),
+        now: new Date(),
+      })
+      console.log(
+        `⚡ Revisao semanal de XP (${result.weekStart}): ${result.adjusted} ajustada(s), ` +
+          `${result.alreadyReviewed} ja revisada(s), ${result.withoutAdjustment} sem ajuste.`,
+      )
+    } catch (error) {
+      console.error('❌ Erro na revisao semanal de XP:', error)
+    }
+  }
+
+  /**
    * Para o serviço de cron
    */
   stop() {
@@ -280,6 +314,10 @@ export class CronService {
     if (this.monthlyPointsResetJob) {
       this.monthlyPointsResetJob.stop()
       this.monthlyPointsResetJob = null
+    }
+    if (this.weeklyXpReviewJob) {
+      this.weeklyXpReviewJob.stop()
+      this.weeklyXpReviewJob = null
     }
     this.scheduledPauseJobs = []
     this.isInitialized = false
@@ -325,7 +363,9 @@ export class CronService {
       weeklyResetNextRun: nextMonday.toISOString(),
       weeklyResetSchedule: '0 0 * * 1 (Segunda-feira às 00:00)',
       monthlyPointsResetRunning: this.monthlyPointsResetJob !== null,
-      monthlyPointsResetSchedule: '0 0 1 * * (Dia 1 às 00:00)'
+      monthlyPointsResetSchedule: '0 0 1 * * (Dia 1 às 00:00)',
+      weeklyXpReviewRunning: this.weeklyXpReviewJob !== null,
+      weeklyXpReviewSchedule: '10 0 * * 1 (Segunda-feira às 00:10)'
     }
   }
 }

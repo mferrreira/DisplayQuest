@@ -6,6 +6,7 @@ import { EvaluateUserBadgesUseCase } from "@/backend/modules/gamification/applic
 import { GetUserProgressionUseCase } from "@/backend/modules/gamification/application/use-cases/get-user-progression.use-case"
 import { ReadUserProgressionUseCase } from "@/backend/modules/gamification/application/use-cases/read-user-progression.use-case"
 import { ResetMonthlyPointsUseCase } from "@/backend/modules/gamification/application/use-cases/reset-monthly-points.use-case"
+import { ReviewWeeklyXpUseCase } from "@/backend/modules/gamification/application/use-cases/review-weekly-xp.use-case"
 import {
   AwardBadgeUseCase,
   CreateBadgeUseCase,
@@ -21,12 +22,14 @@ import type { BadgeCatalogPort } from "@/backend/modules/gamification/applicatio
 import type { GamificationAwardHistoryPort } from "@/backend/modules/gamification/application/ports/gamification-award-history.port"
 import type { GamificationUsersPort } from "@/backend/modules/gamification/application/ports/gamification-users.port"
 import type { MonthlyPointsCyclePort } from "@/backend/modules/gamification/application/ports/monthly-points-cycle.port"
+import type { WeeklyXpReviewPort } from "@/backend/modules/gamification/application/ports/weekly-xp-review.port"
 import type { UserBadgePort } from "@/backend/modules/gamification/application/ports/user-badge.port"
 import type { UserStatsPort } from "@/backend/modules/gamification/application/ports/user-stats.port"
 import { createPrismaBadgeCatalogPort } from "@/backend/modules/gamification/infrastructure/repositories/prisma-badge-catalog.port"
 import { createPrismaGamificationAwardHistoryPort } from "@/backend/modules/gamification/infrastructure/repositories/prisma-gamification-award-history.port"
 import { createPrismaGamificationUsersPort } from "@/backend/modules/gamification/infrastructure/repositories/prisma-gamification-users.port"
 import { createPrismaMonthlyPointsCyclePort } from "@/backend/modules/gamification/infrastructure/repositories/prisma-monthly-points-cycle.port"
+import { createPrismaWeeklyXpReviewPort } from "@/backend/modules/gamification/infrastructure/repositories/prisma-weekly-xp-review.port"
 import { createPrismaUserBadgePort } from "@/backend/modules/gamification/infrastructure/repositories/prisma-user-badge.port"
 import { createPrismaUserStatsPort } from "@/backend/modules/gamification/infrastructure/repositories/prisma-user-stats.port"
 
@@ -65,6 +68,8 @@ export class GamificationModule {
   readonly readUserProgression: UseCaseExecute<ReadUserProgressionUseCase>
   /** plan-v8 V8-2 (DEC-212): fechamento mensal do placar — chamada só pela rotina do cron, sem rota. */
   readonly resetMonthlyPoints: UseCaseExecute<ResetMonthlyPointsUseCase>
+  /** plan-v8 V8-3 (DEC-214): revisao semanal de XP — chamada só pela rotina do cron, sem rota. */
+  readonly reviewWeeklyXp: UseCaseExecute<ReviewWeeklyXpUseCase>
 
   constructor(
     private readonly awardFromWorkSessionUseCase: AwardFromWorkSessionUseCase,
@@ -84,6 +89,7 @@ export class GamificationModule {
     private readonly assertCanManageUserBadgesUseCase: AssertCanManageUserBadgesUseCase,
     private readonly readUserProgressionUseCase: ReadUserProgressionUseCase,
     private readonly resetMonthlyPointsUseCase: ResetMonthlyPointsUseCase,
+    private readonly reviewWeeklyXpUseCase: ReviewWeeklyXpUseCase,
   ) {
     this.awardFromWorkSession = this.awardFromWorkSessionUseCase.execute.bind(this.awardFromWorkSessionUseCase)
     this.awardFromTaskCompletion = this.awardFromTaskCompletionUseCase.execute.bind(this.awardFromTaskCompletionUseCase)
@@ -102,6 +108,7 @@ export class GamificationModule {
     this.assertCanManageUserBadges = this.assertCanManageUserBadgesUseCase.execute.bind(this.assertCanManageUserBadgesUseCase)
     this.readUserProgression = this.readUserProgressionUseCase.execute.bind(this.readUserProgressionUseCase)
     this.resetMonthlyPoints = this.resetMonthlyPointsUseCase.execute.bind(this.resetMonthlyPointsUseCase)
+    this.reviewWeeklyXp = this.reviewWeeklyXpUseCase.execute.bind(this.reviewWeeklyXpUseCase)
   }
 }
 
@@ -112,6 +119,7 @@ export interface GamificationModulePorts {
   userBadges: UserBadgePort
   stats: UserStatsPort
   monthlyCycle: MonthlyPointsCyclePort
+  weeklyXp: WeeklyXpReviewPort
 }
 
 export interface GamificationModuleFactoryOptions {
@@ -126,6 +134,7 @@ export function createGamificationModule(options: GamificationModuleFactoryOptio
     userBadges: options.ports?.userBadges ?? createPrismaUserBadgePort(),
     stats: options.ports?.stats ?? createPrismaUserStatsPort(),
     monthlyCycle: options.ports?.monthlyCycle ?? createPrismaMonthlyPointsCyclePort(),
+    weeklyXp: options.ports?.weeklyXp ?? createPrismaWeeklyXpReviewPort(),
   }
 
   const progression = new GetUserProgressionUseCase({ users: ports.users })
@@ -167,5 +176,7 @@ export function createGamificationModule(options: GamificationModuleFactoryOptio
     new ReadUserProgressionUseCase(progression),
     // V8-2 (DEC-212): o fechamento mensal. Chamado só pelo cron; o gate de MANAGE_USERS mora aqui.
     new ResetMonthlyPointsUseCase({ cycle: ports.monthlyCycle }),
+    // V8-3 (DEC-214): a revisao semanal de XP. Chamada só pelo cron; o gate de MANAGE_USERS mora aqui.
+    new ReviewWeeklyXpUseCase({ weeklyXp: ports.weeklyXp }),
   )
 }

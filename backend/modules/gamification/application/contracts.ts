@@ -1,4 +1,4 @@
-import type { ActorRef, GamificationSourceType, MonthKey } from "@/backend/domain"
+import type { ActorRef, GamificationSourceType, MonthKey, WeekKey, XpAdjustment } from "@/backend/domain"
 
 /**
  * O vocabulário é o do domínio (`Progression.ts`) — re-exportado, não copiado. A cópia local
@@ -118,4 +118,40 @@ export interface ResetMonthlyPointsResult {
   alreadyClosed: number
   skippedWithoutActivity: number
   outcomes: MonthlyCloseOutcome[]
+}
+
+/**
+ * plan-v8 V8-3 (DEC-214): a revisão semanal de XP. Mesma forma do comando do reset mensal — `now`
+ * entra por parâmetro e a semana a fechar é aritmética de dia civil (`xpClosedWeekOfInstant`).
+ */
+export interface ReviewWeeklyXpCommand {
+  actor: ActorRef
+  now: Date
+}
+
+export type WeeklyXpReviewStatus = "adjusted" | "already-reviewed" | "without-adjustment"
+
+export interface WeeklyXpReviewOutcome {
+  userId: number
+  name: string
+  weekStart: WeekKey
+  status: WeeklyXpReviewStatus
+  /**
+   * Os itens da decisão, um por regra que bateu (boost de constância, penalidade de tarefa atrasada,
+   * ...). A soma é `netAmount`; o item a item é o que permite ao ledger registrar a DECISÃO e não só
+   * o número, que é o que o livro-caixa da temporada (V8-4) vai ler.
+   */
+  adjustments: XpAdjustment[]
+  netAmount: number
+  xpBefore: number
+  /** Depois do piso 0 (DEC-214): nunca negativo. */
+  xpAfter: number
+}
+
+export interface ReviewWeeklyXpResult {
+  weekStart: WeekKey
+  adjusted: number
+  alreadyReviewed: number
+  withoutAdjustment: number
+  outcomes: WeeklyXpReviewOutcome[]
 }
