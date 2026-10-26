@@ -18,6 +18,10 @@ model users {
   weekHours            Float                  @default(0)
   createdAt            DateTime               @default(now())
   currentWeekHours     Float                  @default(0)
+  // plan-v9 (ADR-001, DEC-224): placar do mes em curso. E o numero que o Quadro de Lideranca
+  // ordena e que zera no fechamento de mes. `points` continua o saldo: loja, badges e ajuste do
+  // painel nao mudam de significado neste plano.
+  currentMonthPoints   Int                    @default(0)
   roles                UserRole[]
   avatar               String?
   bannerKey            String?

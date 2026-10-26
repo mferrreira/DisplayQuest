@@ -12,6 +12,8 @@ export interface User {
   status: string;
   weekHours: number;
   currentWeekHours: number;
+  /** plan-v9 (ADR-001, DEC-224): placar do mes em curso, o numero que o Quadro de Lideranca ordena. */
+  currentMonthPoints?: number;
   bio?: string | null;
   avatar?: string | null;
   /** V5-3 (DEC-137): chave da capa do perfil no bucket (`users/<id>/images/banner`). */

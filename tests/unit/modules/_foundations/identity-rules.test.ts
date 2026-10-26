@@ -111,6 +111,10 @@ describe("toPublicUser — password never leaves the record", () => {
         "status",
         "weekHours",
         "currentWeekHours",
+        // plan-v9 (ADR-001, DEC-224): placar do mes em curso. `points` continua o saldo; este e o
+        // numero que o Quadro de Lideranca ordena. A entrada e opcional (fixtures e chamadores
+        // antigos), a saida e sempre presente.
+        "currentMonthPoints",
         "profileVisibility",
         "bio",
         "avatar",

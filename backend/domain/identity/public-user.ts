@@ -16,6 +16,11 @@ export interface PublicUser {
   status: UserStatus;
   weekHours: number;
   currentWeekHours: number;
+  /**
+   * plan-v9 (ADR-001, DEC-224): placar do mes em curso. Sempre presente no payload, como
+   * `currentWeekHours`. `points` continua o saldo.
+   */
+  currentMonthPoints: number;
   profileVisibility: ProfileVisibility;
   bio: string | null;
   avatar: string | null;
@@ -47,6 +52,8 @@ interface PublicUserSource {
   status: UserStatus;
   weekHours: number;
   currentWeekHours: number;
+  /** Opcional na ENTRADA: fixtures e chamadores antigos nao conhecem a coluna ainda. */
+  currentMonthPoints?: number;
   profileVisibility: ProfileVisibility;
   bio: string | null;
   avatar: string | null;
@@ -73,6 +80,7 @@ export function toPublicUser(user: PublicUserSource): PublicUser {
     status: user.status,
     weekHours: user.weekHours,
     currentWeekHours: user.currentWeekHours,
+    currentMonthPoints: user.currentMonthPoints ?? 0,
     profileVisibility: user.profileVisibility,
     bio: user.bio,
     avatar: user.avatar,

@@ -26,6 +26,7 @@ type UserRow = {
   status: string
   weekHours: number
   currentWeekHours: number
+  currentMonthPoints: number
   profileVisibility: ProfileVisibility
   bio: string | null
   avatar: string | null
@@ -52,6 +53,7 @@ function toRecord(row: UserRow): UserRecord {
     status: toUserStatus(row.status),
     weekHours: row.weekHours,
     currentWeekHours: row.currentWeekHours,
+    currentMonthPoints: row.currentMonthPoints,
     profileVisibility: row.profileVisibility,
     bio: row.bio,
     avatar: row.avatar,
@@ -175,6 +177,7 @@ export class PrismaUserRepository implements UserRepositoryPort {
         status: true,
         weekHours: true,
         points: true,
+        currentMonthPoints: true,
         completedTasks: true,
         avatar: true,
         bannerKey: true,
@@ -198,7 +201,8 @@ export class PrismaUserRepository implements UserRepositoryPort {
   async findTopByPoints(limit: number): Promise<UserRecord[]> {
     const rows = await prisma.users.findMany({
       where: { status: "active" },
-      orderBy: { points: "desc" },
+      // plan-v9 (ADR-001, DEC-224): o quadro ordena pelo placar do mes, nao pelo saldo.
+      orderBy: { currentMonthPoints: "desc" },
       take: limit,
     })
     return rows.map(toRecord)

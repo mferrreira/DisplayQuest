@@ -4,6 +4,7 @@ import { AwardFromWorkSessionUseCase } from "@/backend/modules/gamification/appl
 import { AssertCanManageUserBadgesUseCase } from "@/backend/modules/gamification/application/use-cases/assert-can-manage-user-badges.use-case"
 import { EvaluateUserBadgesUseCase } from "@/backend/modules/gamification/application/use-cases/evaluate-user-badges.use-case"
 import { GetUserProgressionUseCase } from "@/backend/modules/gamification/application/use-cases/get-user-progression.use-case"
+import { ReadBoardMonthUseCase } from "@/backend/modules/gamification/application/use-cases/read-board-month.use-case"
 import { ReadUserProgressionUseCase } from "@/backend/modules/gamification/application/use-cases/read-user-progression.use-case"
 import {
   AwardBadgeUseCase,
@@ -60,6 +61,8 @@ export class GamificationModule {
   readonly assertCanManageUserBadges: UseCaseExecute<AssertCanManageUserBadgesUseCase>
   /** D4/B6-2c: self-or-manage sobre a progressão; o lookup sem ator continua em `getUserProgression`. */
   readonly readUserProgression: UseCaseExecute<ReadUserProgressionUseCase>
+  /** plan-v9 S01: qual mes o quadro esta usando e com que trilha (R4). */
+  readonly readBoardMonth: UseCaseExecute<ReadBoardMonthUseCase>
 
   constructor(
     private readonly awardFromWorkSessionUseCase: AwardFromWorkSessionUseCase,
@@ -78,6 +81,7 @@ export class GamificationModule {
     private readonly removeUserBadgeUseCase: RemoveUserBadgeUseCase,
     private readonly assertCanManageUserBadgesUseCase: AssertCanManageUserBadgesUseCase,
     private readonly readUserProgressionUseCase: ReadUserProgressionUseCase,
+    private readonly readBoardMonthUseCase: ReadBoardMonthUseCase,
   ) {
     this.awardFromWorkSession = this.awardFromWorkSessionUseCase.execute.bind(this.awardFromWorkSessionUseCase)
     this.awardFromTaskCompletion = this.awardFromTaskCompletionUseCase.execute.bind(this.awardFromTaskCompletionUseCase)
@@ -95,6 +99,7 @@ export class GamificationModule {
     this.removeUserBadge = this.removeUserBadgeUseCase.execute.bind(this.removeUserBadgeUseCase)
     this.assertCanManageUserBadges = this.assertCanManageUserBadgesUseCase.execute.bind(this.assertCanManageUserBadgesUseCase)
     this.readUserProgression = this.readUserProgressionUseCase.execute.bind(this.readUserProgressionUseCase)
+    this.readBoardMonth = this.readBoardMonthUseCase.execute.bind(this.readBoardMonthUseCase)
   }
 }
 
@@ -156,5 +161,6 @@ export function createGamificationModule(options: GamificationModuleFactoryOptio
     new RemoveUserBadgeUseCase(ports.userBadges),
     new AssertCanManageUserBadgesUseCase(),
     new ReadUserProgressionUseCase(progression),
+    new ReadBoardMonthUseCase(),
   )
 }

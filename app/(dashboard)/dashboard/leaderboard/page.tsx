@@ -9,7 +9,7 @@
  * Os dados sao os que a tela ja carrega (`useUser`); nenhuma busca nova entra aqui.
  */
 import Link from "next/link"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Crown, Medal, Award, Trophy } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
@@ -20,6 +20,13 @@ import { getRoleDisplayName } from "@/lib/utils/access-control"
 import { PageHeader } from "@/components/ui/page-header"
 import { Progress } from "@/components/ui/progress"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { fetchAPI } from "@/contexts/api-client"
+
+/** O que `GET /api/board` declara (S01: só o mês corrente; S03 acrescenta mês fechado). */
+interface BoardMonth {
+  month: string;
+  monthLabel: string;
+}
 
 export default function LeaderboardPage() {
   const { user, loading } = useAuth()
@@ -32,9 +39,33 @@ export default function LeaderboardPage() {
     }
   }, [user, loading, router])
 
-  const sortedUsers = [...users].sort((left, right) => (right.points ?? 0) - (left.points ?? 0))
+  // plan-v9 S01 (R4, DEC-132): o mês é declarado pelo servidor. Calcular mês no navegador é o erro
+  // que a casa já fechou — `new Date("2026-10")` é UTC e o rótulo viraria setembro no fuso local.
+  const [boardMonth, setBoardMonth] = useState<BoardMonth | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    fetchAPI<BoardMonth>("/api/board")
+      .then((month) => {
+        if (!cancelled) setBoardMonth(month)
+      })
+      .catch(() => {
+        if (!cancelled) setBoardMonth(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
-  const currentUserRank = sortedUsers.findIndex((rankedUser) => rankedUser.id === user?.id) + 1
+  // plan-v9 (ADR-001, DEC-224): o quadro ordena pelo placar do mês. `points` é saldo e não decide ordem.
+  const monthScore = (candidate: { currentMonthPoints?: number }) => candidate.currentMonthPoints ?? 0
+
+  const sortedUsers = [...users].sort((left, right) => monthScore(right) - monthScore(left))
+
+  const currentUserIndex = sortedUsers.findIndex((rankedUser) => rankedUser.id === user?.id)
+  const currentUserRank = currentUserIndex + 1
+  // A pessoa tambem sai da lista que o quadro ordena: a sessao ainda carrega o saldo, e o bloco
+  // pessoal precisa do placar do mes (o passo de levar o placar ate a sessao e a S06).
+  const myEntry = currentUserIndex >= 0 ? sortedUsers[currentUserIndex] : user
 
   const getInitials = (name: string) =>
     name
@@ -50,12 +81,12 @@ export default function LeaderboardPage() {
   const remainingUsers = sortedUsers.slice(3)
 
   const leader = sortedUsers[0]
-  const leaderPoints = leader?.points ?? 0
-  const myPoints = user?.points ?? 0
+  const leaderPoints = leader ? monthScore(leader) : 0
+  const myPoints = myEntry ? monthScore(myEntry) : 0
   const pathPercent =
     leaderPoints > 0 ? Math.max(0, Math.min(100, Math.round((myPoints / leaderPoints) * 100))) : 0
   const rival = currentUserRank > 1 ? sortedUsers[currentUserRank - 2] : undefined
-  const gapToRival = rival ? (rival.points ?? 0) - myPoints : 0
+  const gapToRival = rival ? monthScore(rival) - myPoints : 0
 
   if (loading || !user) {
     return (
@@ -71,10 +102,10 @@ export default function LeaderboardPage() {
     currentUserRank === 1
       ? "Você lidera o quadro."
       : gapToRival > 0 && rival
-        ? `Faltam ${gapToRival} pts para alcançar ${rival.name}.`
+        ? `Faltam ${gapToRival} pontos para alcançar ${rival.name}.`
         : rival
           ? `Empatado com ${rival.name}.`
-          : `Líder: ${leader?.name} com ${leaderPoints} pts.`
+          : `Líder: ${leader?.name} com ${leaderPoints} pontos.`
 
   const champion = podiumUsers[0]
   const runnersUp = podiumUsers.slice(1)
@@ -85,7 +116,11 @@ export default function LeaderboardPage() {
         <div className="mx-auto max-w-5xl space-y-8">
           <PageHeader
             title="Quadro de Liderança"
-            description="Acompanhe quem mais pontuou e abra o perfil de cada pessoa."
+            description={
+              boardMonth
+                ? `Placar de ${boardMonth.monthLabel}. Abra o perfil de cada pessoa.`
+                : "Placar do mês em curso. Abra o perfil de cada pessoa."
+            }
             icon={Trophy}
           />
 
@@ -138,21 +173,21 @@ export default function LeaderboardPage() {
                     />
                   </>
                 ) : null}
-                <div className="relative flex flex-wrap items-center gap-6 p-8">
-                  <Crown className="h-10 w-10 shrink-0 text-warning" aria-hidden="true" />
-                  <Avatar className="h-20 w-20 border-2 border-warning/50">
+                <div className="relative flex flex-wrap items-center gap-4 p-5 sm:gap-6 sm:p-8">
+                  <Crown className="h-8 w-8 shrink-0 text-warning sm:h-10 sm:w-10" aria-hidden="true" />
+                  <Avatar className="h-14 w-14 border-2 border-warning/50 sm:h-20 sm:w-20">
                     <AvatarImage src={champion.avatar || undefined} alt={champion.name} />
-                    <AvatarFallback className="text-xl font-bold">{getInitials(champion.name)}</AvatarFallback>
+                    <AvatarFallback className="text-lg font-bold sm:text-xl">{getInitials(champion.name)}</AvatarFallback>
                   </Avatar>
                   <div className="min-w-0 flex-1">
                     <p className="text-xs font-semibold uppercase tracking-wide text-warning">1º lugar</p>
-                    <p className="truncate text-2xl font-bold text-foreground">{champion.name}</p>
-                    <p className="truncate text-sm text-muted-foreground">
+                    <p className="text-xl font-bold text-foreground sm:text-2xl">{champion.name}</p>
+                    <p className="text-sm text-muted-foreground">
                       {getRoleLabel(champion.roles || []) || "Membro do laboratório"}
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-4xl font-bold tabular-nums text-foreground">{champion.points}</p>
+                    <p className="text-4xl font-bold tabular-nums text-foreground">{monthScore(champion)}</p>
                     <p className="text-xs text-muted-foreground">pontos</p>
                   </div>
                 </div>
@@ -193,7 +228,7 @@ export default function LeaderboardPage() {
                         {getRoleLabel(runnerUp.roles || []) || "Membro do laboratório"}
                       </p>
                     </div>
-                    <p className="shrink-0 font-bold tabular-nums text-foreground">{runnerUp.points}</p>
+                    <p className="shrink-0 font-bold tabular-nums text-foreground">{monthScore(runnerUp)}</p>
                   </Link>
                 )
               })}
@@ -205,26 +240,27 @@ export default function LeaderboardPage() {
               <h2 id="leaderboard-full" className="text-sm font-semibold">
                 Classificação completa
               </h2>
-              <p className="text-xs text-muted-foreground">Clique em qualquer usuário para abrir o perfil.</p>
             </div>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[80px]">Posição</TableHead>
+                  <TableHead className="w-[52px] p-2 sm:w-[80px] sm:p-4">Posição</TableHead>
                   <TableHead>Usuário</TableHead>
-                  <TableHead>Tarefas concluídas</TableHead>
-                  <TableHead className="text-right">Pontos</TableHead>
+                  {/* A coluna de tarefas sai abaixo de `sm`: o número que esta tela promete é o
+                      placar do mês, e ele não pode ficar atrás de uma rolagem horizontal. */}
+                  <TableHead className="hidden sm:table-cell">Tarefas concluídas</TableHead>
+                  <TableHead className="text-right">Pontos do mês</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {/* O top 3 ja esta no podio (campeao + 2º/3º) — a tabela comeca no 4º. */}
                 {remainingUsers.map((rankedUser, index) => (
                   <TableRow key={rankedUser.id} className={rankedUser.id === user.id ? "bg-primary/5" : ""}>
-                    <TableCell className="font-semibold tabular-nums text-muted-foreground">{index + 4}º</TableCell>
+                    <TableCell className="p-2 font-semibold tabular-nums text-muted-foreground sm:p-4">{index + 4}º</TableCell>
                     <TableCell>
                       <Link
                         href={`/dashboard/profile?userId=${rankedUser.id}`}
-                        className="flex items-center gap-3 rounded-lg p-1 transition-colors hover:bg-muted/60"
+                        className="flex items-center gap-3 rounded-lg p-1 transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       >
                         <Avatar className="h-9 w-9">
                           <AvatarImage src={rankedUser.avatar || undefined} alt={rankedUser.name} />
@@ -236,8 +272,8 @@ export default function LeaderboardPage() {
                         </div>
                       </Link>
                     </TableCell>
-                    <TableCell className="tabular-nums">{rankedUser.completedTasks}</TableCell>
-                    <TableCell className="text-right font-bold tabular-nums">{rankedUser.points}</TableCell>
+                    <TableCell className="hidden p-2 tabular-nums sm:table-cell sm:p-4">{rankedUser.completedTasks}</TableCell>
+                    <TableCell className="p-2 text-right font-bold tabular-nums sm:p-4">{monthScore(rankedUser)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

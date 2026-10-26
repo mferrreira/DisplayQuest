@@ -41,6 +41,8 @@ export const userSchema = z.object({
   weekHours: z.number(),
   createdAt: dateTimeString.optional(), // not always sent by list endpoints
   currentWeekHours: z.number().optional(), // not always sent by list endpoints
+  /** plan-v9 (ADR-001, DEC-224): placar do mes em curso — o numero que o quadro ordena. */
+  currentMonthPoints: z.number().int().optional(),
   roles: z.array(userRoleSchema),
   avatar: z.string().nullable().optional(),
   /** V5-3 (DEC-137): chave da capa do perfil no bucket. O binário sai por rota autenticada. */

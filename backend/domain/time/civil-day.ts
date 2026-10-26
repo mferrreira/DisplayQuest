@@ -66,3 +66,48 @@ export function civilDaysBetween(from: string, to: string): number {
   const [ty, tm, td] = to.split("-").map(Number);
   return Math.round((Date.UTC(ty, tm - 1, td) - Date.UTC(fy, fm - 1, fd)) / DAY_MS);
 }
+
+/**
+ * Civil month (`YYYY-MM`) of an instant, as seen in America/Sao_Paulo. plan-v9 (R4, DEC-224).
+ *
+ * Mes do quadro e fechamento de mes saem daqui, nunca de `getMonth()` do navegador:
+ * `new Date("2026-10")` e meia-noite UTC e viraria setembro no rotulo (mesma medição do V5-2b).
+ */
+export function civilMonthOfInstant(instant: Date): string {
+  const day = civilDayOfInstant(instant);
+  return day.slice(0, 7);
+}
+
+/** Civil month of the month that closed immediately before `instant` — "2026-09" para uma run em outubro. */
+export function previousCivilMonth(instant: Date): string {
+  const [year, month] = civilMonthOfInstant(instant).split("-").map(Number);
+  const shifted = new Date(Date.UTC(year, month - 2, 1));
+  return `${shifted.getUTCFullYear()}-${pad(shifted.getUTCMonth() + 1)}`;
+}
+
+const CIVIL_MONTH_NAMES_PT = [
+  "janeiro",
+  "fevereiro",
+  "março",
+  "abril",
+  "maio",
+  "junho",
+  "julho",
+  "agosto",
+  "setembro",
+  "outubro",
+  "novembro",
+  "dezembro",
+];
+
+/**
+ * Label of a civil month for a human reader, derived from the `YYYY-MM` string by table lookup.
+ * No `Date` and no locale: montar o rotulo por `toLocaleDateString` reabre o deslocamento de
+ * fuso que a regra acima evita (DEC-132). Retorna `null` para texto que nao e mes civil.
+ */
+export function civilMonthLabel(month: string): string | null {
+  if (!/^\d{4}-\d{2}$/.test(month)) return null;
+  const [year, monthNumber] = month.split("-").map(Number);
+  if (monthNumber < 1 || monthNumber > 12) return null;
+  return `${CIVIL_MONTH_NAMES_PT[monthNumber - 1]} de ${year}`;
+}
