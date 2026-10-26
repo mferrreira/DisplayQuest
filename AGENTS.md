@@ -3,6 +3,14 @@
 Notas de trabalho para agentes neste repositório. Criado em 2026-08-29 durante a
 mitigação de segurança A1–A11 (spec em `.spec/`).
 
+## Planos encerrados moram fora do repositório
+
+A pasta `displayquest-v2/` saiu do repositório em 2026-10-26 (decisão do dono) e está em
+`~/Projetos/displayquest-planos/displayquest-v2/`. Neste arquivo, `$PLANOS` é atalho para ela.
+O plan-v8 (gamificação remodelada) foi revertido na mesma data: a `dev` voltou ao estado de
+`origin/dev` e nenhuma onda dele foi mergeada. Os `PLAN.md`, `STATE.json` e registros `DEC-NN`
+citados abaixo estão lá. Valem como histórico do que foi executado, não como lista de pendências.
+
 ## Verificação
 
 - **Gate de entrega:** `npm run arch:check` (exit 0, allow-list **vazia**) && `npm run lint` (nada de erro) && `npx tsc --noEmit` (0) && `npx vitest run` (zero failure). A contagem é **por branch**: no `dev` o baseline era **64 arquivos / 721 testes** quando o B8 removeu os 651 testes de paridade; no `plan/v3-operacional`, medido no encerramento do plan-v3 (2026-10-03), são **65 arquivos / 798 testes** em `tests/unit` + `features` e **75 / 881** na suíte completa. Na `dev` de hoje (medido em 2026-10-07, depois do plan-v4 V4-1/V4-2/V4-3/V4-6, do V4-4 de subtasks, dos testes do painel V4-4b/V4-4c, do V4-5a/V4-5b/V4-5c de subtask na UI, do V4-6b de vocabulário de status e do lote pós-encerramento POS-1 — DEC-97/98) são **87 arquivos / 1107 testes** e **97 / 1192** na suíte completa; a suíte e2e do quadro está em **2 passando + 1 falha conhecida + 5 "did not run"** (medido 2026-10-06
@@ -28,7 +36,7 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
 
 - **Estado:** `done` — **encerrado em 2026-10-14** (batch `V5-close`, G5/G6: rebuild da imagem, 45 capturas
   do guia, prosa das telas novas, `docs:build`/`docs:check` verdes). Estado/decisões:
-  `displayquest-v2/plan-v5/{PLAN.md,STATE.json}` — STATE.json v5.29.0, 35 batches (V5-1..V5-15 com
+  `$PLANOS/plan-v5/{PLAN.md,STATE.json}` — STATE.json v5.29.0, 35 batches (V5-1..V5-15 com
   sub-batches, mais `V5-9d` de conserto e os fechamentos G5/G6). As decisões do plano são DEC-61..77,
   99..104 e 126..178 (DEC-78..98 do meio são do plan-v4 — houve colisão, ver adiante).
 - **O que o plano entregou:** bucket SeaweedFS + anexos/imagens por rota (V5-1..V5-3), dados de pessoa e de
@@ -148,7 +156,7 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   `@prisma/client`), `backend/modules/<m>/{application/{contracts,ports,use-cases},infrastructure/{repositories,adapters}}`, `backend/composition/root.ts` (único ponto de wiring cruzado; expõe `checkDatabaseHealth`). Ver `backend/README.md`.
 - **Gate G0:** `npm run arch:check` (dependency-cruiser, RG-01..RG-06) com **allow-list
   vazia** desde OND9-B1 — import proibido novo quebra o gate. Não re-adicionar entradas
-  sem decisão registrada em `displayquest-v2/clean-arch/STATE.json`.
+  sem decisão registrada em `$PLANOS/clean-arch/STATE.json`.
 - **Rotas:** finas, via `getBackendComposition()`; erros de domínio mapeados por
   `lib/api/domain-error-response.ts` (`domainErrorResponse`: Validation→400, NotFound→404,
   Conflict→409, Forbidden→403); não-DomainError (enum Prisma, FK P2003) segue no 500 legado.
@@ -159,7 +167,7 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   preservado no git (tag `pre-cleanup` = `12d9d6c`).
 - **Composição:** factories aceitam `repository?`/`ports?` (seam primário); publishers
   entre módulos entram por porta local injetada no composition root (DEC-21).
-- **Estado/decisões:** `displayquest-v2/clean-arch/{PLAN.md,STATE.json}` — STATE.json v2.0.0
+- **Estado/decisões:** `$PLANOS/clean-arch/{PLAN.md,STATE.json}` — STATE.json v2.0.0
   agora monitora o **repo-cleanup** (lotes B0–B11, iniciado 2026-10-01). O histórico da
   refatoração clean-arch (ondas 0–9, 41 batches, AC-00-01..15, DEC-01..DEC-25) está no git
   (tag `pre-cleanup` = `12d9d6c`); o registro DEC-01..28 e os GAPs foram carregados no
@@ -187,7 +195,7 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   é `!canManagePurchases && targetUserId !== actor.id`, então um VOLUNTARIO comprando para si
   recebe 201 e só quem compra para outro recebe 403. Eu acreditava o contrário e o teste de
   caraterização refutou — em autorização, escreva o teste antes de mover o gate.
-- **Estado/decisões (plan-v3):** `displayquest-v2/plan-v3/{PLAN.md,STATE.json}` — STATE.json
+- **Estado/decisões (plan-v3):** `$PLANOS/plan-v3/{PLAN.md,STATE.json}` — STATE.json
   v3.0.0 monitora o plano operacional **plan-v3** (ondas 0–4, 13 batches, AC-P3-01..10,
   DEC-30..DEC-49, GAP-P3-01..04 fechados, GAP-P3-05 aberto, `blockers` vazio). A numeração de
   decisões **continua** a do clean-arch: DEC-01..29 são do clean-arch, DEC-30 em diante são do
@@ -226,7 +234,7 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
 
 ## plan-v4 — subtasks, animação de pontos, inativação de usuário (2026-10-05..10-06)
 
-- **Estado/decisões:** `displayquest-v2/plan-v4/{PLAN.md,STATE.json}` — V4-1, V4-2, V4-3, V4-4,
+- **Estado/decisões:** `$PLANOS/plan-v4/{PLAN.md,STATE.json}` — V4-1, V4-2, V4-3, V4-4,
   **V4-4b**, **V4-4c**, **V4-5a** (subtask no cartão), **V4-5b** (CRUD no diálogo de detalhe),
   **V4-5c** (formulário de nova tarefa + GAP-P3-05 fechado), **V4-6b** (vocabulário de status
   padronizado em `suspended`, fecha ASK-V4-28) e **V4-5d** (G5/G6 do guia, executado 2026-10-07)
@@ -327,9 +335,9 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   (2026-10-15, lote SUB-1 pós-encerramento: autoridade de subtask — dono ou gestão, nunca
   `MANAGE_TASKS` em bloco; ver o bloco "Subtask" abaixo), DEC-190..210 plan-v7 (MCP de
   validação para o agente consumidor; DEC-205..210 na revisão de 2026-10-21). O V4-4 ia usar
-  DEC-61..64 e colidiu; os 28 comentários de código foram renumerados. **Antes de abrir decisão nova, `grep`
-  os SEIS `STATE.json` (clean-arch, plan-v3, plan-v4, plan-v5, plan-v6, plan-v7) — a nota antiga que dizia "três"
-  (e depois "cinco") está velha. Próxima livre: DEC-211.**
+  DEC-61..64 e colidiu; os 28 comentários de código foram renumerados. **Antes de abrir decisão nova,
+  `grep` os `STATE.json` em `$PLANOS/` (clean-arch e plan-v3..plan-v8). O plan-v8 foi revertido, mas
+  os DEC-211..223 dele seguem reservados no arquivo. Próxima livre: DEC-224.**
 - **Subtask (V4-4, DEC-78..83 → regra atual = DEC-97/98/189):** tabela `task_subtasks` (sem FK para
   `users` — subtask não tem
   responsável próprio), base gravada em `tasks.points` = `10 + 5·n` (DEC-97) e **cada subtask CONCLUÍDA

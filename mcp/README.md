@@ -3,7 +3,8 @@
 Servidor MCP que expõe o DisplayQuest a um agente validador. Ele fala com o app
 **só por HTTP**, autenticando como a conta de serviço do ambiente. Nenhum código de
 `app/`, `backend/`, `lib/`, Prisma ou Next é importado aqui (regra `rg11-mcp-no-app`
-do G0). O plano está em `displayquest-v2/plan-v7/PLAN.md`.
+do G0). O plano está fora do repositório, em
+`~/Projetos/displayquest-planos/displayquest-v2/plan-v7/PLAN.md`.
 
 ## Conectar
 

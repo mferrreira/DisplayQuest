@@ -2,9 +2,10 @@
 
 Documentacao de manutencao e contribuicao do backend.
 
-> Atualizado em 2026-10 apos a refatoracao clean-arch (`displayquest-v2/clean-arch`,
-> ondas 0-9): arvore em camadas coberta pelo gate G0, allow-list do dependency-cruiser
-> **vazia**, erros tipados no dominio e rotas finas com mapper compartilhado.
+> Atualizado em 2026-10 apos a refatoracao clean-arch (documentos em
+> ~/Projetos/displayquest-planos/displayquest-v2/clean-arch, ondas 0-9): arvore em camadas
+> coberta pelo gate G0, allow-list do dependency-cruiser **vazia**, erros tipados no dominio e
+> rotas finas com mapper compartilhado.
 
 ## Arquitetura utilizada
 

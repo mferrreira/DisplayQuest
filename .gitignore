@@ -204,5 +204,7 @@ docs/.build/
 # Credenciais usadas pelo script de captura de telas do guia do usuario.
 # Nunca commitar: contem senha de uma conta real da instancia de operacao.
 docs/.capture.env
-displayquest-v2/clean-arch/PENDENCIAS-FINAIS.md
-displayquest-v2/plan-v2/UI-UX.md
+
+# Evidencia das revisoes de UI (screenshots de /ui-review). A referencia em
+# docs/ui-reference/ e versionada; so o diretorio de evidencia e descartavel.
+docs/ui-reference/.review/
