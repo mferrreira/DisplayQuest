@@ -11,6 +11,28 @@ O plan-v8 (gamificação remodelada) foi revertido na mesma data: a `dev` voltou
 `origin/dev` e nenhuma onda dele foi mergeada. Os `PLAN.md`, `STATE.json` e registros `DEC-NN`
 citados abaixo estão lá. Valem como histórico do que foi executado, não como lista de pendências.
 
+## Revert do plan-v8 (2026-10-26)
+
+- O plan-v8 (gamificação remodelada: `users.coins`/`xp`/`elo`, tabelas `month_history` e
+  `season_history`, `history.track`, `badges.effects`, `user_badges.equipped`, troféu CAMPEÃO)
+  não foi mergeado. A `dev` voltou a `origin/dev` (`ad0d9c6`) e recebeu de volta o commit
+  `d39a97e` do plan-v7 (redução de logs SQL e healthcheck), que não tinha relação com o plano.
+- Restos do trabalho anterior guardados para não perder nada: as tags `backup/pre-revert-dev-20261026`
+  (`088cc10`) e `backup/pre-revert-plan-v8-20261026` (`116f7fa`), o WIP do V8-11 em `git stash`
+  ("V8-11 WIP antes do revert 2026-10-26") e o worktree `plan-v8/gamificacao` apontando para
+  `ad0d9c6`.
+- O banco de 5432 foi podado e recriado do zero: `docker compose down -v` derrubou também os
+  volumes `uploads_data`, `report_files_data` e `object_store_data`, a subida do container aplicou
+  as 22 migrations da `origin/dev`, e `npm run db:seed` resemou a instância. O dump anterior ao
+  rollback está em `~/Projetos/displayquest-planos/dq-5432-antes-do-rollback-20261026.dump`.
+- Alinhamento medido: `prisma migrate status` diz up to date, `prisma migrate diff` entre o banco
+  vivo e `prisma/schema.prisma` devolve migração vazia, e o inventário de colunas do 5432 é igual
+  ao do banco de teste de 5433 (34 tabelas, 295 colunas).
+- Gate medido nesta `dev` depois do revert: `arch:check` sem violação (1113 módulos, 4714
+  dependências), lint sem erro, `tsc --noEmit` em 0, `vitest run tests/unit features` com 188
+  arquivos e 2288 testes, suíte completa com 204 arquivos e 2419 testes. Os specs e2e não foram
+  re-medidos.
+
 ## Verificação
 
 - **Gate de entrega:** `npm run arch:check` (exit 0, allow-list **vazia**) && `npm run lint` (nada de erro) && `npx tsc --noEmit` (0) && `npx vitest run` (zero failure). A contagem é **por branch**: no `dev` o baseline era **64 arquivos / 721 testes** quando o B8 removeu os 651 testes de paridade; no `plan/v3-operacional`, medido no encerramento do plan-v3 (2026-10-03), são **65 arquivos / 798 testes** em `tests/unit` + `features` e **75 / 881** na suíte completa. Na `dev` de hoje (medido em 2026-10-07, depois do plan-v4 V4-1/V4-2/V4-3/V4-6, do V4-4 de subtasks, dos testes do painel V4-4b/V4-4c, do V4-5a/V4-5b/V4-5c de subtask na UI, do V4-6b de vocabulário de status e do lote pós-encerramento POS-1 — DEC-97/98) são **87 arquivos / 1107 testes** e **97 / 1192** na suíte completa; a suíte e2e do quadro está em **2 passando + 1 falha conhecida + 5 "did not run"** (medido 2026-10-06
