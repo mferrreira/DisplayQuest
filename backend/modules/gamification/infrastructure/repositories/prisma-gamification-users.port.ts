@@ -1,5 +1,8 @@
 import { prisma } from "@/lib/database/prisma"
+import { ConflictError } from "@/backend/domain/errors"
+import { MONTH_ADJUST_HISTORY_ACTION } from "@/backend/domain"
 import type {
+  AdjustMonthPointsData,
   GamificationUserRecord,
   GamificationUsersPort,
 } from "@/backend/modules/gamification/application/ports/gamification-users.port"
@@ -42,6 +45,46 @@ export function createPrismaGamificationUsersPort(): GamificationUsersPort {
         select: { id: true, points: true, completedTasks: true },
       })
       return users.map((user): UserRankEntry => ({ id: user.id, points: user.points, completedTasks: user.completedTasks }))
+    },
+
+    async findMonthPointsById(userId: number) {
+      const user = await prisma.users.findUnique({
+        where: { id: userId },
+        select: { id: true, currentMonthPoints: true },
+      })
+      return user ? { id: user.id, currentMonthPoints: user.currentMonthPoints } : null
+    },
+
+    // plan-v9 S05 (DEC-228) — o ajuste e a auditoria de quem ajustou numa escrita só. O re-ler
+    // do `previous` dentro da transação é o trava da leitura valsa: se o placar mudou entre a
+    // regra decidir e a escrita chegar, a linha de auditoria mentiria o "de" — recusa inteira,
+    // nada fica escrito a meias (o update sem a linha de auditoria é mentira do mesmo tipo).
+    async adjustMonthPoints(data: AdjustMonthPointsData) {
+      await prisma.$transaction(async (tx) => {
+        const row = await tx.users.findUnique({
+          where: { id: data.userId },
+          select: { currentMonthPoints: true },
+        })
+        if (!row || row.currentMonthPoints !== data.previous) {
+          throw new ConflictError("O placar do mês mudou enquanto o ajuste era calculado. Tente de novo.")
+        }
+        await tx.users.update({
+          where: { id: data.userId },
+          data: { currentMonthPoints: data.next },
+        })
+        await tx.history.create({
+          data: {
+            entityType: "USER",
+            entityId: data.userId,
+            action: MONTH_ADJUST_HISTORY_ACTION,
+            performedBy: data.performedBy,
+            description: data.description,
+            oldValues: { currentMonthPoints: data.previous },
+            newValues: { currentMonthPoints: data.next },
+            metadata: { domain: "gamification", ...data.detail },
+          },
+        })
+      })
     },
   }
 }

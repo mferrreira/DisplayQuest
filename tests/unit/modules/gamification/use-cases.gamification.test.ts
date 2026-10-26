@@ -51,6 +51,14 @@ function makeFakes() {
       this.calls.push("findAllUsers");
       return this.allUsers;
     },
+    async findMonthPointsById(userId: number) {
+      this.calls.push(`findMonthPointsById:${userId}`);
+      if (this.data.id !== userId) return null;
+      return { id: this.data.id, currentMonthPoints: this.data.points };
+    },
+    async adjustMonthPoints() {
+      this.calls.push("adjustMonthPoints");
+    },
   };
 
   const awardHistory: GamificationAwardHistoryPort & { records: AwardRecord[]; awarded: Set<string> } = {

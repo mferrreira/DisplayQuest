@@ -112,6 +112,12 @@ vi.mock("@/backend/composition/root", () => {
     async findAllUsers() {
       return notUsed("users.findAllUsers")();
     },
+    async findMonthPointsById() {
+      return notUsed("users.findMonthPointsById")();
+    },
+    async adjustMonthPoints() {
+      return notUsed("users.adjustMonthPoints")();
+    },
   };
 
   const realGamification = createGamificationModule({
