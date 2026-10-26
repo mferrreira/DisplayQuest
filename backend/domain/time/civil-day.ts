@@ -12,6 +12,8 @@
  * de fuso, este arquivo é o único lugar onde isso precisa ser dito.
  */
 
+import { ValidationError } from "../errors";
+
 const SP_OFFSET_MS = 3 * 60 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -83,6 +85,34 @@ export function previousCivilMonth(instant: Date): string {
   const [year, month] = civilMonthOfInstant(instant).split("-").map(Number);
   const shifted = new Date(Date.UTC(year, month - 2, 1));
   return `${shifted.getUTCFullYear()}-${pad(shifted.getUTCMonth() + 1)}`;
+}
+
+function civilMonthParts(month: string): [number, number] {
+  if (!/^\d{4}-\d{2}$/.test(month)) {
+    throw new ValidationError(`mes civil invalido: ${month}`);
+  }
+  const [year, monthNumber] = month.split("-").map(Number);
+  if (monthNumber < 1 || monthNumber > 12) {
+    throw new ValidationError(`mes civil invalido: ${month}`);
+  }
+  return [year, monthNumber];
+}
+
+/**
+ * First instant of a civil month — 00:00 do dia 1 em America/Sao_Paulo, como `Date` UTC.
+ * plan-v9 S02 (R5, MODELO §6): e a fronteira que a linha de fechamento declara como inicio do
+ * periodo. Meses de 28, 29, 30 e 31 dias saem do calendario, nao de um 30 fixo.
+ */
+export function startOfCivilMonthInstant(month: string): Date {
+  const [year, monthNumber] = civilMonthParts(month);
+  return new Date(Date.UTC(year, monthNumber - 1, 1) + SP_OFFSET_MS);
+}
+
+/** Last instant of a civil month — 23:59:59.999 do ultimo dia, em Sao Paulo. */
+export function endOfCivilMonthInstant(month: string): Date {
+  const [year, monthNumber] = civilMonthParts(month);
+  // Date.UTC(year, monthNumber, 1) e o primeiro dia do mes SEGUINTE (mesNumber e 0-indexado).
+  return new Date(Date.UTC(year, monthNumber, 1) + SP_OFFSET_MS - 1);
 }
 
 const CIVIL_MONTH_NAMES_PT = [

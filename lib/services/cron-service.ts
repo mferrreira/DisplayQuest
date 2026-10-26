@@ -25,6 +25,8 @@ function pauseCronExpressions(times: readonly string[]): string[] {
 
 export class CronService {
   private weeklyResetJob: cron.ScheduledTask | null = null
+  /** plan-v9 S02 (DEC-224): fechamento do mes do Quadro de Lideranca, dia 1 as 00:00. */
+  private monthlyCloseJob: cron.ScheduledTask | null = null
   private scheduledPauseJobs: cron.ScheduledTask[] = []
   private isInitialized = false
 
@@ -41,6 +43,15 @@ export class CronService {
       await this.executeWeeklyReset()
     }, {
       timezone: 'America/Sao_Paulo' // Fuso horário do Brasil
+    })
+
+    // plan-v9 S02 (R5, DEC-224): fechamento do mes do Quadro de Lideranca — dia 1 as 00:00,
+    // depois do sweep noturno das 23:59 do ultimo dia, para nenhum premio creditado na virada
+    // ficar de fora do mes que fecha.
+    this.monthlyCloseJob = cron.schedule('0 0 1 * *', async () => {
+      await this.executeMonthlyBoardClose()
+    }, {
+      timezone: 'America/Sao_Paulo'
     })
 
     // Pause automático das work sessions: horários vindos de SCHEDULED_PAUSE_TIMES (D2)
@@ -147,6 +158,32 @@ export class CronService {
   }
 
   /**
+   * Fechamento do mês do Quadro de Liderança (plan-v9 S02, DEC-224, DEC-225): dia 1 às 00:00,
+   * fechando o mês civil anterior. Rotina sem pessoa — `systemActor(MONTH_CLOSE)`, o bypass
+   * declarado (DEC-54): o `CloseBoardMonthUseCase` checa o ator, e a mesma rotina continua
+   * funcionando quando a gestão dispara o fechamento pela rota.
+   *
+   * Roda depois do sweep noturno das 23:59 do último dia: prêmio creditado pelo sweep entra no
+   * mês que está fechando, não no seguinte (MODELO §12).
+   */
+  private async executeMonthlyBoardClose() {
+    try {
+      const { gamification } = getBackendComposition()
+      const result = await gamification.closeBoardMonth({
+        actor: systemActor(SYSTEM_REASONS.MONTH_CLOSE),
+        now: new Date(),
+      })
+      if (result.closed) {
+        console.log(`📅 Fechamento do quadro de ${result.monthLabel}: ${result.peopleCount} linha(s).`)
+      } else {
+        console.log(`📅 O quadro de ${result.monthLabel} já estava fechado; nada mudou.`)
+      }
+    } catch (error) {
+      console.error('❌ Erro ao fechar o mês do quadro:', error)
+    }
+  }
+
+  /**
    * Varredura diária de atraso (V5-8, DEC-64): atividade vencida e não aprovada vira
    * UMA notificação prioritária (guarda `overdueNotifiedAt`), para o líder do projeto e
    * os coordenadores/gerentes globais. Rotina sem pessoa — systemActor(OVERDUE_SCAN),
@@ -223,6 +260,10 @@ export class CronService {
   stop() {
     if (this.weeklyResetJob) {
       this.weeklyResetJob.stop()
+    }
+    if (this.monthlyCloseJob) {
+      this.monthlyCloseJob.stop()
+      this.monthlyCloseJob = null
     }
     for (const job of this.scheduledPauseJobs) {
       job.stop()

@@ -59,6 +59,9 @@ model users {
   badges               user_badges[]          @relation("UserBadges")
   schedules            user_schedules[]       @relation("UserSchedules")
   weekly_hours_history weekly_hours_history[] @relation("UserWeeklyHoursHistory")
+  // plan-v9 S02 (DEC-225): os meses fechados desta pessoa. Cascade, como o historico semanal de
+  // horas — excluir a conta apaga as linhas dela (ADR-003).
+  monthHistory         month_history[]          @relation("UserMonthHistory")
   weekly_reports       weekly_reports[]       @relation("UserWeeklyReports")
   work_sessions        work_sessions[]        @relation("UserWorkSessions")
   notifications        notifications[]        @relation("UserNotifications")
@@ -556,6 +559,60 @@ model weekly_hours_history {
   totalHours Float
   createdAt  DateTime @default(now())
   user       users    @relation("UserWeeklyHoursHistory", fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// plan-v9 S02 (ADR-002, DEC-224): o registro de que um mes do Quadro de Lideranca fechou.
+//
+// Uma linha por (month, track): e o que faz "run repetida nao muda nada" (R6) ser verdade mesmo
+// quando o mes fecha sem nenhuma pessoa ativa. A trilha e nomeada para o fechamento de uma trilha
+// futura (XP de temporada, moeda) entrar nesta mesma colecao sem tabela nova (ADR-002).
+model board_month_closes {
+  id          Int             @id @default(autoincrement())
+  // AAAA-MM do mes civil do laboratorio (America/Sao_Paulo), derivado em backend/domain/time.
+  month       String
+  // Vocabulario de backend/domain/gamification/board-tracks.ts. Nenhum outro lugar declara lista.
+  track       String
+  // O periodo que a linha declara, em instantes do fuso do laboratorio: 00:00 do dia 1 ate
+  // 23:59:59.999 do ultimo dia. Mes de 28, 29, 30 ou 31 dias sai do calendario, nao de um 30 fixo.
+  periodStart DateTime
+  periodEnd   DateTime
+  closedAt    DateTime
+  // Auditoria de quem disparou a run: "USER:<id>" (rota de gestao) ou "SYSTEM:MONTH_CLOSE" (cron).
+  triggeredBy String
+  peopleCount Int
+  createdAt   DateTime        @default(now())
+  history     month_history[]
+
+  @@unique([month, track])
+  @@index([month])
+}
+
+// plan-v9 S02 (MODELO §6, CA1, CA6, CA7, DEC-226): o estado do quadro no ultimo dia do mes, por
+// pessoa. Toda pessoa `active` na run tem linha, inclusive com valor zero; quem esta fora de
+// `active` nao tem. `userName` e congelado aqui para a linha continuar legivel se o nome mudar.
+model month_history {
+  id          Int      @id @default(autoincrement())
+  closeId     Int
+  userId      Int
+  userName    String
+  month       String
+  track       String
+  // Pode ser negativo (CA6, R10): o placar do mes e guardado como estava no ultimo dia.
+  value       Int
+  // 1-based, sem buraco. Desempate congelado em backend/domain/gamification/month-close-rules.ts.
+  position    Int
+  periodStart DateTime
+  periodEnd   DateTime
+  closedAt    DateTime
+  createdAt   DateTime @default(now())
+
+  close board_month_closes @relation(fields: [closeId], references: [id], onDelete: Cascade)
+  // DEC-225 (ADR-003): CASCADE, como `weekly_hours_history`. A linha do mes sai com a conta, e nao
+  // e uma FK bloqueante — a guarda user-delete-schema-drift.test.ts confere os dois lados.
+  user  users              @relation("UserMonthHistory", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, month, track])
+  @@index([month, track, position])
 }
 
 model badges {

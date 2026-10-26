@@ -152,6 +152,10 @@ describe("guarda de deriva — as FKs que bloqueiam excluir usuário (DEC-55)", 
       // V5-10a (DEC-170): o atestado é documento regenerável — apagar a pessoa apaga o
       // atestado dela, e a conta não fica bloqueada por ele.
       "certificates",
+      // plan-v9 S02 (DEC-225, ADR-003): a linha do mês fechado sai com a conta, como o histórico
+      // semanal de horas. Se alguém trocar o `onDelete` para o default `Restrict`, a coluna entra
+      // em `inSchema` sem entrar na contagem do repositório — e o teste de cima falha nomeando-a.
+      "month_history",
     ]);
     for (const model of cascading) {
       for (const rel of counted) {

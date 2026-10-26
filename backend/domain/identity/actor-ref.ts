@@ -45,6 +45,8 @@ export const SYSTEM_REASONS = {
   SCHEDULED_PAUSE: "SCHEDULED_PAUSE",
   /** `cron-service.ts` — resets last week's hours history. */
   WEEKLY_RESET: "WEEKLY_RESET",
+  /** `cron-service.ts` — closes the board's civil month on day 1, 00:00 (plan-v9 S02, DEC-224). */
+  MONTH_CLOSE: "MONTH_CLOSE",
   /** `cron-service.ts` — daily overdue-activity scan (V5-8, DEC-64). */
   OVERDUE_SCAN: "OVERDUE_SCAN",
   /** `cron-service.ts` — monthly attendance-certificate reminder, day 19 (V5-10b, DEC-72). */

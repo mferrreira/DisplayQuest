@@ -2,6 +2,7 @@ import { AwardFromTaskCompletionUseCase } from "@/backend/modules/gamification/a
 import { AwardFromActivityCompletionUseCase } from "@/backend/modules/gamification/application/use-cases/award-from-activity-completion.use-case"
 import { AwardFromWorkSessionUseCase } from "@/backend/modules/gamification/application/use-cases/award-from-work-session.use-case"
 import { AssertCanManageUserBadgesUseCase } from "@/backend/modules/gamification/application/use-cases/assert-can-manage-user-badges.use-case"
+import { CloseBoardMonthUseCase } from "@/backend/modules/gamification/application/use-cases/close-board-month.use-case"
 import { EvaluateUserBadgesUseCase } from "@/backend/modules/gamification/application/use-cases/evaluate-user-badges.use-case"
 import { GetUserProgressionUseCase } from "@/backend/modules/gamification/application/use-cases/get-user-progression.use-case"
 import { ReadBoardMonthUseCase } from "@/backend/modules/gamification/application/use-cases/read-board-month.use-case"
@@ -18,11 +19,13 @@ import {
   UpdateBadgeUseCase,
 } from "@/backend/modules/gamification/application/use-cases/badge-management.use-cases"
 import type { BadgeCatalogPort } from "@/backend/modules/gamification/application/ports/badge-catalog.port"
+import type { BoardMonthClosePort } from "@/backend/modules/gamification/application/ports/board-month-close.port"
 import type { GamificationAwardHistoryPort } from "@/backend/modules/gamification/application/ports/gamification-award-history.port"
 import type { GamificationUsersPort } from "@/backend/modules/gamification/application/ports/gamification-users.port"
 import type { UserBadgePort } from "@/backend/modules/gamification/application/ports/user-badge.port"
 import type { UserStatsPort } from "@/backend/modules/gamification/application/ports/user-stats.port"
 import { createPrismaBadgeCatalogPort } from "@/backend/modules/gamification/infrastructure/repositories/prisma-badge-catalog.port"
+import { createPrismaBoardMonthClosePort } from "@/backend/modules/gamification/infrastructure/repositories/prisma-board-month-close.port"
 import { createPrismaGamificationAwardHistoryPort } from "@/backend/modules/gamification/infrastructure/repositories/prisma-gamification-award-history.port"
 import { createPrismaGamificationUsersPort } from "@/backend/modules/gamification/infrastructure/repositories/prisma-gamification-users.port"
 import { createPrismaUserBadgePort } from "@/backend/modules/gamification/infrastructure/repositories/prisma-user-badge.port"
@@ -63,6 +66,12 @@ export class GamificationModule {
   readonly readUserProgression: UseCaseExecute<ReadUserProgressionUseCase>
   /** plan-v9 S01: qual mes o quadro esta usando e com que trilha (R4). */
   readonly readBoardMonth: UseCaseExecute<ReadBoardMonthUseCase>
+  /**
+   * plan-v9 S02 (R5, R6, CA2): fecha o mes civil anterior, grava as linhas do quadro e zera o
+   * placar do mes. Dois donos, a familia do DEC-54: `POST /api/board/close` (gestao) e o cron
+   * `0 0 1 * *`, que passa `systemActor("MONTH_CLOSE")`.
+   */
+  readonly closeBoardMonth: UseCaseExecute<CloseBoardMonthUseCase>
 
   constructor(
     private readonly awardFromWorkSessionUseCase: AwardFromWorkSessionUseCase,
@@ -82,6 +91,7 @@ export class GamificationModule {
     private readonly assertCanManageUserBadgesUseCase: AssertCanManageUserBadgesUseCase,
     private readonly readUserProgressionUseCase: ReadUserProgressionUseCase,
     private readonly readBoardMonthUseCase: ReadBoardMonthUseCase,
+    private readonly closeBoardMonthUseCase: CloseBoardMonthUseCase,
   ) {
     this.awardFromWorkSession = this.awardFromWorkSessionUseCase.execute.bind(this.awardFromWorkSessionUseCase)
     this.awardFromTaskCompletion = this.awardFromTaskCompletionUseCase.execute.bind(this.awardFromTaskCompletionUseCase)
@@ -100,6 +110,7 @@ export class GamificationModule {
     this.assertCanManageUserBadges = this.assertCanManageUserBadgesUseCase.execute.bind(this.assertCanManageUserBadgesUseCase)
     this.readUserProgression = this.readUserProgressionUseCase.execute.bind(this.readUserProgressionUseCase)
     this.readBoardMonth = this.readBoardMonthUseCase.execute.bind(this.readBoardMonthUseCase)
+    this.closeBoardMonth = this.closeBoardMonthUseCase.execute.bind(this.closeBoardMonthUseCase)
   }
 }
 
@@ -109,6 +120,8 @@ export interface GamificationModulePorts {
   badges: BadgeCatalogPort
   userBadges: UserBadgePort
   stats: UserStatsPort
+  /** plan-v9 S02: leitura do registro de mes e escrita do fechamento (ADR-002). */
+  monthClose: BoardMonthClosePort
 }
 
 export interface GamificationModuleFactoryOptions {
@@ -122,6 +135,7 @@ export function createGamificationModule(options: GamificationModuleFactoryOptio
     badges: options.ports?.badges ?? createPrismaBadgeCatalogPort(),
     userBadges: options.ports?.userBadges ?? createPrismaUserBadgePort(),
     stats: options.ports?.stats ?? createPrismaUserStatsPort(),
+    monthClose: options.ports?.monthClose ?? createPrismaBoardMonthClosePort(),
   }
 
   const progression = new GetUserProgressionUseCase({ users: ports.users })
@@ -162,5 +176,6 @@ export function createGamificationModule(options: GamificationModuleFactoryOptio
     new AssertCanManageUserBadgesUseCase(),
     new ReadUserProgressionUseCase(progression),
     new ReadBoardMonthUseCase(),
+    new CloseBoardMonthUseCase(ports.monthClose),
   )
 }
