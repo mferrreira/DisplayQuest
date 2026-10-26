@@ -78,6 +78,27 @@ export function createPrismaBoardMonthClosePort(): BoardMonthClosePort {
       return headers
     },
 
+    async listClosedMonthsForUser(userId, track) {
+      const rows = await prisma.month_history.findMany({
+        where: { userId, track },
+        orderBy: [{ month: "desc" }, { position: "asc" }],
+        select: {
+          userId: true,
+          userName: true,
+          month: true,
+          track: true,
+          value: true,
+          position: true,
+          periodStart: true,
+          periodEnd: true,
+          closedAt: true,
+        },
+      })
+      // A linha volta no vocabulario do dominio, como em readClosedMonth (DEC-125): track e
+      // coluna String no banco.
+      return rows.map((row) => ({ ...row, track: toBoardTrack(row.track) }))
+    },
+
     async listPeopleForClose() {
       // Toda pessoa da base, com o status reconciliado pelo vocabulario do dominio (DEC-125): a
       // audiencia de linha e decidida pela regra, e o zerado alcanga toda pessoa (R11).

@@ -48,6 +48,12 @@ export interface BoardMonthClosePort {
   readClosedMonth(month: string, track: BoardTrack): Promise<ClosedMonthRecord | null>
   /** Meses registrados como fechados, do mais recente ao mais antigo (o seletor da tela). */
   listClosedMonths(track: BoardTrack): Promise<ClosedMonthListing[]>
+  /**
+   * plan-v9 S04 (MODELO §7, DEC-232): os meses fechados de UMA pessoa, do mais recente ao mais
+   * antigo. É a mesma tabela do `readClosedMonth` filtrada por pessoa — a leitura é a do
+   * autenticado (R12), e nenhum dado novo aparece por aqui que o quadro por mês não mostre.
+   */
+  listClosedMonthsForUser(userId: number, track: BoardTrack): Promise<MonthCloseRow[]>
 }
 
 /** O mês fechado lido, com as linhas na ordem de posição. */

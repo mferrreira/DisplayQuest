@@ -20,6 +20,7 @@ import {
   Clock,
   FileText,
   FolderKanban,
+  GitCommitHorizontal,
   Mail,
   ShieldCheck,
   Target,
@@ -38,6 +39,7 @@ import {
 import { formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { UserBadges } from "@/components/ui/user-badges"
+import { ProfileMonthsList } from "@/components/ui/profile-months-list"
 
 interface UserProfileViewProps {
   user: UserType
@@ -187,6 +189,7 @@ export function UserProfileView({ user, onBack, canEdit = false, onEdit, project
 
       {/* Fatos — rotulo quieto + algarismo grande sobre a regua, sem caixa. */}
       <dl aria-label="Resumo do usuário" className="grid grid-cols-2 gap-x-8 gap-y-6 sm:grid-cols-4">
+        <Fact label="Placar do mês" value={user.currentMonthPoints ?? 0} hint="zera na virada" icon={GitCommitHorizontal} />
         <Fact label="Pontos" value={user.points} hint="pontos acumulados" icon={Trophy} />
         <Fact label="Tarefas" value={user.completedTasks} hint="tarefas concluídas" icon={Target} />
         <Fact label="Horas/Sem" value={user.weekHours} hint="meta semanal" icon={Clock} />
@@ -271,8 +274,16 @@ export function UserProfileView({ user, onBack, canEdit = false, onEdit, project
               <p className="text-sm text-muted-foreground">Nenhum projeto vinculado no momento.</p>
             )}
           </ProfileSection>
+
         </div>
       )}
+
+      {/* plan-v9 S04 (DEC-232): os meses fechados da pessoa, a mesma lista do perfil próprio.
+          Fora do condicional de propósito: pessoa sem "Sobre", "Funções" e "Projetos" também
+          tem histórico de meses, e a lista do perfil de terceiro acompanha a do próprio. */}
+      <ProfileSection id="profile-months" icon={Trophy} title="Meses fechados">
+        <ProfileMonthsList userId={user.id} />
+      </ProfileSection>
 
       <div className="border-t border-border pt-6">
         <UserBadges userId={user.id} limit={8} />

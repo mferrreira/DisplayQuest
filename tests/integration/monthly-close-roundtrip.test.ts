@@ -25,6 +25,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { prisma } from "@/lib/database/prisma";
 import { createGamificationModule } from "@/backend/modules/gamification";
 import { systemActor, userActor } from "@/backend/domain";
+import { civilMonthLabel } from "@/backend/domain/time";
 
 const gamification = createGamificationModule();
 
@@ -51,6 +52,13 @@ async function rowsFor(userId: number) {
     where: { userId, month: TARGET_MONTH, track: TRACK },
     select: { userId: true, value: true, position: true, userName: true, closedAt: true },
   });
+}
+
+/** Mês civil anterior a `YYYY-MM` (pega emprestado o calendário simples do teste). */
+function previousMonth(month: string): string {
+  const [year, mon] = month.split("-").map(Number);
+  const previous = mon - 1;
+  return previous === 0 ? `${year - 1}-12` : `${year}-${String(previous).padStart(2, "0")}`;
 }
 
 describe("G4 roundtrip — fechamento do mês do quadro (isolated test DB)", () => {
@@ -206,11 +214,18 @@ describe("G4 roundtrip — fechamento do mês do quadro (isolated test DB)", () 
     expect(firstClosed).toBeGreaterThanOrEqual(0);
     expect(restAfter).toBe(true);
 
-    const missing = await gamification.readBoardMonthHistory("2027-11", now);
+    // plan-v9 S04 (fix de gate): o mês-sonda NÃO pode ser hardcodado. A 5433 acumula o dado de
+    // demonstração do dono (o demo.sql do plano fecha meses de exemplo, inclusive um mês vazio,
+    // para o seletor e o perfil vazio), e um mês fixo deixa de ser "ausente" na primeira
+    // reaplicação do demo. Sonda = mês anterior ao mais antigo fechado que o próprio banco
+    // reporta — o fechamento de ninguém alcança ali. `YYYY-MM` zero-padded casa cronologia e
+    // ordem léxica: o primeiro do sort é o mais antigo.
+    const probeMonth = previousMonth([...months.map((month) => month.month)].sort()[0]);
+    const missing = await gamification.readBoardMonthHistory(probeMonth, now);
     expect(missing.closed).toBe(false);
     expect(missing.live).toBe(false);
     expect(missing.entries).toEqual([]);
-    expect(missing.notice).toContain("novembro de 2027");
+    expect(missing.notice).toContain(civilMonthLabel(probeMonth));
 
     // Mes com forma invalida e recusado nomeando o campo, nao devolvido como mes vazio.
     await expect(gamification.readBoardMonthHistory("2028-13", now)).rejects.toThrow(/month invalido/);
@@ -239,7 +254,11 @@ describe("G4 roundtrip — fechamento do mês do quadro (isolated test DB)", () 
       const positions = fixtureEntries.map((entry) => entry.position)
       // A ordem devolvida e a da coluna, deslocada: nao a ordem de insercao (30, 0, -40).
       expect(positions).toEqual([...positions].sort((left, right) => left - right))
-      expect(Math.min(...positions)).toBe(101)
+      // plan-v9 S04 (fix de gate): a BASE da rotacao depende de quantas pessoas ativas de
+      // outrém fecham o mês antes do topo do fixture (a 5433 carrega o demo do dono, com
+      // placar do mes preenchido). O que prova a coluna `position` e o DESLOCAMENTO de +100
+      // sobre a posicao gravada de cada linha, nao o valor absoluto.
+      expect(Math.min(...positions)).toBe(Math.min(...rotation.values()) + 100)
       expect(fixtureEntries.map((entry) => entry.value)).toEqual([30, 0, -40])
     } finally {
       for (const [id, position] of rotation) {

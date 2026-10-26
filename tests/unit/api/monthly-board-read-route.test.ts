@@ -31,6 +31,7 @@ const mocks = vi.hoisted(() => ({
   session: null as null | { id: number; email: string; name: string; roles: string[]; status: string },
   closedRows: [] as MonthCloseRow[],
   closedMonths: [] as Array<{ month: string; closedAt: Date; peopleCount: number }>,
+  closedMonthsForUser: [] as MonthCloseRow[],
   people: [] as MonthClosePerson[],
   liveReads: 0,
   monthReads: [] as string[],
@@ -63,6 +64,9 @@ vi.mock("@/backend/composition/root", () => {
     },
     async listClosedMonths() {
       return mocks.closedMonths;
+    },
+    async listClosedMonthsForUser() {
+      return mocks.closedMonthsForUser ?? [];
     },
   };
 

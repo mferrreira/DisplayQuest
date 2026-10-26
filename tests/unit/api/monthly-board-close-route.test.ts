@@ -51,6 +51,9 @@ vi.mock("@/backend/composition/root", () => {
     async listClosedMonths() {
       throw new Error("lista de meses fechados nao deveria acontecer no fechamento");
     },
+    async listClosedMonthsForUser() {
+      throw new Error("lista de meses de pessoa nao deveria acontecer no fechamento");
+    },
   };
 
   // As outras portas existem porque `createGamificationModule` constrói o módulo inteiro.

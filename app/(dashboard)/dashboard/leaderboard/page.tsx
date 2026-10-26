@@ -29,6 +29,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { EmptyState } from "@/components/ui/empty-state"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { fetchAPI } from "@/contexts/api-client"
+import { compareByBoardPosition } from "@/backend/domain"
 
 /** O que `GET /api/board` declara (S01: mês corrente; S03 acrescenta a lista de meses fechados). */
 interface BoardMonth {
@@ -129,7 +130,15 @@ export default function LeaderboardPage() {
   // plan-v9 (ADR-001, DEC-224): o quadro ordena pelo placar do mês. `points` é saldo e não decide ordem.
   const monthScore = (candidate: { currentMonthPoints?: number }) => candidate.currentMonthPoints ?? 0
 
-  const sortedUsers = [...users].sort((left, right) => monthScore(right) - monthScore(left))
+  // plan-v9 S04 (ADR-005, DEC-227): o vivo desempata com a MESMA régua do fechado — valor desc,
+  // depois nome, depois id. Antes, empate ficava na ordem de chegada da lista e vivo e fechado
+  // diziam ordens diferentes com o mesmo placar.
+  const sortedUsers = [...users].sort((left, right) =>
+    compareByBoardPosition(
+      { id: left.id, name: left.name, currentMonthPoints: left.currentMonthPoints ?? 0 },
+      { id: right.id, name: right.name, currentMonthPoints: right.currentMonthPoints ?? 0 },
+    ),
+  )
 
   const currentUserIndex = sortedUsers.findIndex((rankedUser) => rankedUser.id === user?.id)
   const currentUserRank = currentUserIndex + 1

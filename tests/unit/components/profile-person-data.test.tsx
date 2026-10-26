@@ -26,6 +26,7 @@ const mocks = vi.hoisted(() => ({
   updateSession: vi.fn(),
   getProfile: vi.fn(),
   updateProfile: vi.fn(),
+  fetchAPI: vi.fn(),
 }));
 
 vi.mock("@/contexts/api-client", () => ({
@@ -33,11 +34,25 @@ vi.mock("@/contexts/api-client", () => ({
     getProfile: mocks.getProfile,
     updateProfile: mocks.updateProfile,
   },
+  // plan-v9 S04: o UserProfileView passou a montar ProfileMonthsList, que fala por fetchAPI —
+  // sem o export no duplo, a leitura de meses estoura "No "fetchAPI" export" e os testes do
+  // cartão de terceiro caem junto. O corpo é o da rota real para lista vazia.
+  fetchAPI: mocks.fetchAPI,
 }));
 
 vi.mock("next-auth/react", () => ({
   useSession: () => ({ update: mocks.updateSession }),
 }));
+
+// Resposta padrão para a leitura de meses do perfil de terceiro (rota /api/users/:id/board-months).
+beforeEach(() => {
+  mocks.fetchAPI.mockResolvedValue({
+    months: [],
+    notice: "Nenhum mês fechado ainda. A lista aparece depois do primeiro fechamento.",
+    userId: 7,
+    track: "MONTH_POINTS",
+  });
+});
 
 const me = (overrides: Partial<User> = {}): User => ({
   id: 7,

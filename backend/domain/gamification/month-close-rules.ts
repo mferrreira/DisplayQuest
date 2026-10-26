@@ -68,7 +68,22 @@ export function boardMonthWindow(month: string): { periodStart: Date; periodEnd:
   };
 }
 
-function compareByBoardPosition(a: MonthClosePerson, b: MonthClosePerson): number {
+/**
+ * plan-v9 S04 (ADR-005, DEC-227): a régua de posição sai de privada para exportada. O quadro vivo
+ * desempata com a MESMA função do fechado — antes, empate no vivo ficava na ordem de chegada da
+ * lista, e vivo e fechado diziam ordens diferentes com o mesmo placar. Uma só função, dois quadros.
+ *
+ * A forma mínima que a régua lê é `{ id, name, currentMonthPoints }`: o fechado passa
+ * `MonthClosePerson` direto (structurally igual), e a tela do quadro projeta o placar opcional
+ * como `?? 0` antes de chamar.
+ */
+export interface BoardPositionPerson {
+  id: number;
+  name: string;
+  currentMonthPoints: number;
+}
+
+export function compareByBoardPosition(a: BoardPositionPerson, b: BoardPositionPerson): number {
   if (a.currentMonthPoints !== b.currentMonthPoints) {
     return b.currentMonthPoints - a.currentMonthPoints;
   }

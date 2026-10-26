@@ -10,6 +10,7 @@ import {
   ReadBoardMonthHistoryUseCase,
 } from "@/backend/modules/gamification/application/use-cases/read-board-month-history.use-case"
 import { ReadBoardMonthUseCase } from "@/backend/modules/gamification/application/use-cases/read-board-month.use-case"
+import { ReadUserBoardMonthsUseCase } from "@/backend/modules/gamification/application/use-cases/read-user-board-months.use-case"
 import { ReadUserProgressionUseCase } from "@/backend/modules/gamification/application/use-cases/read-user-progression.use-case"
 import {
   AwardBadgeUseCase,
@@ -84,6 +85,8 @@ export class GamificationModule {
   readonly readBoardMonthHistory: UseCaseExecute<ReadBoardMonthHistoryUseCase>
   /** S03: os meses que ja fecharam, para o seletor da tela saber o que existe abrir. */
   readonly listClosedBoardMonths: UseCaseExecute<ListClosedBoardMonthsUseCase>
+  /** S04 (DEC-232): os meses fechados de uma pessoa, para o perfil listar o historico dela. */
+  readonly readUserBoardMonths: UseCaseExecute<ReadUserBoardMonthsUseCase>
 
   constructor(
     private readonly awardFromWorkSessionUseCase: AwardFromWorkSessionUseCase,
@@ -106,6 +109,7 @@ export class GamificationModule {
     private readonly closeBoardMonthUseCase: CloseBoardMonthUseCase,
     private readonly readBoardMonthHistoryUseCase: ReadBoardMonthHistoryUseCase,
     private readonly listClosedBoardMonthsUseCase: ListClosedBoardMonthsUseCase,
+    private readonly readUserBoardMonthsUseCase: ReadUserBoardMonthsUseCase,
   ) {
     this.awardFromWorkSession = this.awardFromWorkSessionUseCase.execute.bind(this.awardFromWorkSessionUseCase)
     this.awardFromTaskCompletion = this.awardFromTaskCompletionUseCase.execute.bind(this.awardFromTaskCompletionUseCase)
@@ -127,6 +131,7 @@ export class GamificationModule {
     this.closeBoardMonth = this.closeBoardMonthUseCase.execute.bind(this.closeBoardMonthUseCase)
     this.readBoardMonthHistory = this.readBoardMonthHistoryUseCase.execute.bind(this.readBoardMonthHistoryUseCase)
     this.listClosedBoardMonths = this.listClosedBoardMonthsUseCase.execute.bind(this.listClosedBoardMonthsUseCase)
+    this.readUserBoardMonths = this.readUserBoardMonthsUseCase.execute.bind(this.readUserBoardMonthsUseCase)
   }
 }
 
@@ -195,5 +200,6 @@ export function createGamificationModule(options: GamificationModuleFactoryOptio
     new CloseBoardMonthUseCase(ports.monthClose),
     new ReadBoardMonthHistoryUseCase(ports.monthClose),
     new ListClosedBoardMonthsUseCase(ports.monthClose),
+    new ReadUserBoardMonthsUseCase(ports.monthClose),
   )
 }
