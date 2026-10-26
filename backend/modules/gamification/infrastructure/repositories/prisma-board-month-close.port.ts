@@ -3,7 +3,7 @@ import { Prisma } from "@prisma/client"
 import { prisma } from "@/lib/database/prisma"
 import { ConflictError } from "@/backend/domain/errors"
 import { toUserStatus } from "@/backend/domain/identity"
-import { monthAlreadyClosedMessage } from "@/backend/domain/gamification"
+import { monthAlreadyClosedMessage, toBoardTrack } from "@/backend/domain/gamification"
 import type { BoardMonthClosePort, MonthCloseWrite } from "@/backend/modules/gamification/application/ports/board-month-close.port"
 
 /**
@@ -27,6 +27,55 @@ export function createPrismaBoardMonthClosePort(): BoardMonthClosePort {
         select: { month: true, closedAt: true },
       })
       return header ? { month: header.month, closedAt: header.closedAt } : null
+    },
+
+    /**
+     * plan-v9 S03 (R12, CA4, CA8): o mês fechado lido como foi gravado.
+     *
+     * Duas consultas e nada de recalcular ordem: a posição vem da coluna `position`, que o
+     * fechamento escreveu com o desempate congelado do domínio. O mês que não tem registro devolve
+     * `null`, e o use case transforma isso em quadro vazio com aviso — cair no quadro do mês
+     * corrente é exatamente o defeito que CA8 existe para pegar.
+     */
+    async readClosedMonth(month, track) {
+      const header = await prisma.board_month_closes.findUnique({
+        where: { month_track: { month, track } },
+        select: { closedAt: true, peopleCount: true, triggeredBy: true },
+      })
+      if (!header) return null
+
+      const rows = await prisma.month_history.findMany({
+        where: { month, track },
+        orderBy: { position: "asc" },
+        select: {
+          userId: true,
+          userName: true,
+          month: true,
+          track: true,
+          value: true,
+          position: true,
+          periodStart: true,
+          periodEnd: true,
+          closedAt: true,
+        },
+      })
+
+      return {
+        closedAt: header.closedAt,
+        peopleCount: header.peopleCount,
+        triggeredBy: header.triggeredBy,
+        // A linha volta no vocabulario do dominio: `track` e coluna String no banco.
+        rows: rows.map((row) => ({ ...row, track: toBoardTrack(row.track) })),
+      }
+    },
+
+    async listClosedMonths(track) {
+      const headers = await prisma.board_month_closes.findMany({
+        where: { track },
+        orderBy: { month: "desc" },
+        select: { month: true, closedAt: true, peopleCount: true },
+      })
+      return headers
     },
 
     async listPeopleForClose() {

@@ -5,6 +5,10 @@ import { AssertCanManageUserBadgesUseCase } from "@/backend/modules/gamification
 import { CloseBoardMonthUseCase } from "@/backend/modules/gamification/application/use-cases/close-board-month.use-case"
 import { EvaluateUserBadgesUseCase } from "@/backend/modules/gamification/application/use-cases/evaluate-user-badges.use-case"
 import { GetUserProgressionUseCase } from "@/backend/modules/gamification/application/use-cases/get-user-progression.use-case"
+import {
+  ListClosedBoardMonthsUseCase,
+  ReadBoardMonthHistoryUseCase,
+} from "@/backend/modules/gamification/application/use-cases/read-board-month-history.use-case"
 import { ReadBoardMonthUseCase } from "@/backend/modules/gamification/application/use-cases/read-board-month.use-case"
 import { ReadUserProgressionUseCase } from "@/backend/modules/gamification/application/use-cases/read-user-progression.use-case"
 import {
@@ -72,6 +76,14 @@ export class GamificationModule {
    * `0 0 1 * *`, que passa `systemActor("MONTH_CLOSE")`.
    */
   readonly closeBoardMonth: UseCaseExecute<CloseBoardMonthUseCase>
+  /**
+   * plan-v9 S03 (R12, CA4, CA8): o quadro congelado de um mes fechado, e o aviso de mes vazio.
+   * Sem gate de proposito: o quadro e leitura de quem esta autenticado, como o quadro vivo de hoje
+   * (DEC-136), e reordenar na leitura mudaria a historia do mes.
+   */
+  readonly readBoardMonthHistory: UseCaseExecute<ReadBoardMonthHistoryUseCase>
+  /** S03: os meses que ja fecharam, para o seletor da tela saber o que existe abrir. */
+  readonly listClosedBoardMonths: UseCaseExecute<ListClosedBoardMonthsUseCase>
 
   constructor(
     private readonly awardFromWorkSessionUseCase: AwardFromWorkSessionUseCase,
@@ -92,6 +104,8 @@ export class GamificationModule {
     private readonly readUserProgressionUseCase: ReadUserProgressionUseCase,
     private readonly readBoardMonthUseCase: ReadBoardMonthUseCase,
     private readonly closeBoardMonthUseCase: CloseBoardMonthUseCase,
+    private readonly readBoardMonthHistoryUseCase: ReadBoardMonthHistoryUseCase,
+    private readonly listClosedBoardMonthsUseCase: ListClosedBoardMonthsUseCase,
   ) {
     this.awardFromWorkSession = this.awardFromWorkSessionUseCase.execute.bind(this.awardFromWorkSessionUseCase)
     this.awardFromTaskCompletion = this.awardFromTaskCompletionUseCase.execute.bind(this.awardFromTaskCompletionUseCase)
@@ -111,6 +125,8 @@ export class GamificationModule {
     this.readUserProgression = this.readUserProgressionUseCase.execute.bind(this.readUserProgressionUseCase)
     this.readBoardMonth = this.readBoardMonthUseCase.execute.bind(this.readBoardMonthUseCase)
     this.closeBoardMonth = this.closeBoardMonthUseCase.execute.bind(this.closeBoardMonthUseCase)
+    this.readBoardMonthHistory = this.readBoardMonthHistoryUseCase.execute.bind(this.readBoardMonthHistoryUseCase)
+    this.listClosedBoardMonths = this.listClosedBoardMonthsUseCase.execute.bind(this.listClosedBoardMonthsUseCase)
   }
 }
 
@@ -177,5 +193,7 @@ export function createGamificationModule(options: GamificationModuleFactoryOptio
     new ReadUserProgressionUseCase(progression),
     new ReadBoardMonthUseCase(),
     new CloseBoardMonthUseCase(ports.monthClose),
+    new ReadBoardMonthHistoryUseCase(ports.monthClose),
+    new ListClosedBoardMonthsUseCase(ports.monthClose),
   )
 }

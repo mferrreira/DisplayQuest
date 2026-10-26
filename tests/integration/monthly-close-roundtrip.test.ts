@@ -16,7 +16,9 @@
  *  - o placar zerado também para quem não recebeu linha;
  *  - a constraint `(userId, month, track)` e o registro de mês, que juntos fazem a segunda run
  *    não escrever linha e não zerar de novo;
- *  - o `onDelete: Cascade` de `month_history.userId`, que é a DEC-225.
+ *  - o `onDelete: Cascade` de `month_history.userId`, que é a DEC-225;
+ *  - a leitura do mês fechado (S03): valor e posição como foram gravados, e mês sem fechamento
+ *    devolvendo quadro vazio com aviso.
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -163,6 +165,101 @@ describe("G4 roundtrip — fechamento do mês do quadro (isolated test DB)", () 
     });
     expect(rows).toHaveLength(3); // nenhuma linha nova
     expect(rows.find((row) => row.userId === ids[0])?.value).toBe(30); // R7: o valor fechado nao mudou
+  });
+
+  it("o mês fechado é lido com valor e posição congelados, e mês sem fechamento devolve quadro vazio com aviso (S03, CA4, CA8)", async () => {
+    const [alta, zero, suspensa, negativa] = ids;
+    const now = new Date("2028-02-05T12:00:00.000Z"); // mes em curso: fevereiro de 2028
+
+    const closed = await gamification.readBoardMonthHistory(TARGET_MONTH, now);
+    expect(closed.month).toBe(TARGET_MONTH);
+    expect(closed.monthLabel).toBe("janeiro de 2028");
+    expect(closed.closed).toBe(true);
+    expect(closed.live).toBe(false);
+    expect(closed.closedAt).toBe(RUN_INSTANT.toISOString());
+    expect(closed.notice).toContain("fechado");
+
+    // As asserções se escopam nas fixturAS do arquivo (lição medida): o banco tem as pessoas do
+    // seed, e um placar maior que 30 nelas mudaria a posição absoluta do fechamento.
+    const fixtureSet = new Set(ids);
+    const fixtureEntries = closed.entries.filter((entry) => fixtureSet.has(entry.userId));
+    const byUser = new Map(fixtureEntries.map((entry) => [entry.userId, entry]));
+    expect(byUser.get(alta)?.value).toBe(30);
+    expect(byUser.get(zero)?.value).toBe(0);
+    expect(byUser.get(negativa)?.value).toBe(-40);
+    // CA7: a suspensa tem placar no mes que fechou e nao tem linha.
+    expect(byUser.has(suspensa)).toBe(false);
+
+    // O que a leitura devolve e a linha gravada, nao o placar vivo: `alta` tem 25 no mes em curso
+    // depois do premio da corrida anterior, e a linha de janeiro continua em 30.
+    expect(byUser.get(alta)?.name).toContain("Ativa Alta");
+    expect(byUser.get(alta)?.position).toBeLessThan(byUser.get(zero)!.position);
+    expect(byUser.get(zero)!.position).toBeLessThan(byUser.get(negativa)!.position);
+    // Posicao sem buraco no quadro inteiro do mes, gravada 1-based.
+    expect(closed.entries.map((entry) => entry.position)).toEqual(
+      closed.entries.map((entry, index) => index + 1),
+    );
+
+    const months = await gamification.listClosedBoardMonths();
+    const firstClosed = months.findIndex((month) => month.month === TARGET_MONTH);
+    const restAfter = months.slice(firstClosed + 1).every((month) => month.month < TARGET_MONTH);
+    expect(firstClosed).toBeGreaterThanOrEqual(0);
+    expect(restAfter).toBe(true);
+
+    const missing = await gamification.readBoardMonthHistory("2027-11", now);
+    expect(missing.closed).toBe(false);
+    expect(missing.live).toBe(false);
+    expect(missing.entries).toEqual([]);
+    expect(missing.notice).toContain("novembro de 2027");
+
+    // Mes com forma invalida e recusado nomeando o campo, nao devolvido como mes vazio.
+    await expect(gamification.readBoardMonthHistory("2028-13", now)).rejects.toThrow(/month invalido/);
+  });
+
+  it("a leitura ordena pela coluna position, não pela ordem física das linhas (CA4, S03)", async () => {
+    // O seed do arquivo escreveu as linhas na ordem do fechamento. Baralhar a posição no banco e o
+    // unico modo de provar que `orderBy: { position: "asc" }` existe: sem ele, a leitura seguiria a
+    // ordem de insercao e este teste passaria verde com o adaptador sem ordenacao.
+    const shuffled = new Map<number, number>()
+    const rows = await prisma.month_history.findMany({
+      where: { userId: { in: ids }, month: TARGET_MONTH, track: TRACK },
+      select: { id: true, position: true },
+    })
+    const rotation = new Map(rows.map((row) => [row.id, row.position]))
+    for (const [id, position] of rotation) {
+      shuffled.set(id, position + 100)
+    }
+    for (const [id, position] of shuffled) {
+      await prisma.month_history.update({ where: { id }, data: { position } })
+    }
+
+    try {
+      const read = await gamification.readBoardMonthHistory(TARGET_MONTH, new Date("2028-02-05T12:00:00.000Z"))
+      const fixtureEntries = read.entries.filter((entry) => ids.includes(entry.userId))
+      const positions = fixtureEntries.map((entry) => entry.position)
+      // A ordem devolvida e a da coluna, deslocada: nao a ordem de insercao (30, 0, -40).
+      expect(positions).toEqual([...positions].sort((left, right) => left - right))
+      expect(Math.min(...positions)).toBe(101)
+      expect(fixtureEntries.map((entry) => entry.value)).toEqual([30, 0, -40])
+    } finally {
+      for (const [id, position] of rotation) {
+        await prisma.month_history.update({ where: { id }, data: { position } })
+      }
+    }
+  });
+
+  it("o mês corrente pedido responde pelo placar vivo, não por quadro vazio (R9, S03)", async () => {
+    const now = new Date("2028-02-05T12:00:00.000Z");
+
+    const current = await gamification.readBoardMonthHistory("2028-02", now);
+
+    expect(current.month).toBe("2028-02");
+    expect(current.monthLabel).toBe("fevereiro de 2028");
+    expect(current.closed).toBe(false);
+    expect(current.live).toBe(true); // R9: quem chama resolve este mes pelo placar vivo
+    expect(current.entries).toEqual([]);
+    expect(current.notice).toContain("fevereiro de 2028");
+    expect(current.notice).not.toContain("vazio");
   });
 
   it("month_history.userId cascadeia: a linha do mês sai com a conta (ADR-003, DEC-225)", async () => {

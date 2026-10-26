@@ -43,6 +43,14 @@ vi.mock("@/backend/composition/root", () => {
     async writeClose(input) {
       mocks.writes.push(input);
     },
+    // O fechamento nao lee mes fechado nem lista meses. Se um caminho novo usar estas portas aqui,
+    // o erro e alto em vez de silencioso (padrao da casa para porta nao exercitada).
+    async readClosedMonth() {
+      throw new Error("leitura de mes fechado nao deveria acontecer no fechamento");
+    },
+    async listClosedMonths() {
+      throw new Error("lista de meses fechados nao deveria acontecer no fechamento");
+    },
   };
 
   // As outras portas existem porque `createGamificationModule` constrói o módulo inteiro.

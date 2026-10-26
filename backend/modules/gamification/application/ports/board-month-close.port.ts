@@ -39,4 +39,28 @@ export interface BoardMonthClosePort {
   listPeopleForClose(): Promise<MonthClosePerson[]>
   /** Escrita completa do fechamento, num único commit. */
   writeClose(input: MonthCloseWrite): Promise<void>
+  /**
+   * plan-v9 S03 (MODELO R12, CA4, CA8): leitura do mês fechado.
+   *
+   * `null` quando o mês nunca fechou — quem chama devolve quadro vazio com aviso, e nunca o
+   * quadro do mês em curso. As linhas vêm como foram gravadas: valor e posição congelados.
+   */
+  readClosedMonth(month: string, track: BoardTrack): Promise<ClosedMonthRecord | null>
+  /** Meses registrados como fechados, do mais recente ao mais antigo (o seletor da tela). */
+  listClosedMonths(track: BoardTrack): Promise<ClosedMonthListing[]>
+}
+
+/** O mês fechado lido, com as linhas na ordem de posição. */
+export interface ClosedMonthRecord {
+  closedAt: Date
+  peopleCount: number
+  triggeredBy: string
+  rows: MonthCloseRow[]
+}
+
+/** O essencial de um mês fechado para quem precisa listar meses. */
+export interface ClosedMonthListing {
+  month: string
+  closedAt: Date
+  peopleCount: number
 }
