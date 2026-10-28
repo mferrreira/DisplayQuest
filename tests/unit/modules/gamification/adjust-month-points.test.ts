@@ -13,7 +13,34 @@
  * (a auditoria precisa de uma pessoa); não há chamador de sistema — `requireActorPermission`
  * deixaria passar pelo bypass declarado do cron (BI6-2b/DEC-54), então o use case mata o ramo.
  */
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const adapterHarness = vi.hoisted(() => {
+  const writes: Array<Record<string, unknown>> = [];
+  const state = { currentMonthPoints: 70 };
+  const tx = {
+    users: {
+      findUnique: vi.fn(async () => ({ currentMonthPoints: state.currentMonthPoints })),
+      update: vi.fn(async ({ data }: { data: Record<string, unknown> }) => {
+        writes.push(data);
+        state.currentMonthPoints = data.currentMonthPoints as number;
+      }),
+    },
+    history: { create: vi.fn(async () => undefined) },
+  };
+  return {
+    writes,
+    state,
+    tx,
+    prisma: { $transaction: vi.fn(async (callback: (transaction: typeof tx) => Promise<unknown>) => callback(tx)) },
+    reset: () => {
+      writes.length = 0;
+      state.currentMonthPoints = 70;
+    },
+  };
+});
+
+vi.mock("@/lib/database/prisma", () => ({ prisma: adapterHarness.prisma }));
 
 import { createGamificationModule } from "@/backend/modules/gamification";
 import type { GamificationUsersPort } from "@/backend/modules/gamification/application/ports/gamification-users.port";
@@ -26,6 +53,7 @@ import {
 import { ForbiddenError, NotFoundError, ValidationError } from "@/backend/domain/errors";
 import { systemActor, userActor } from "@/backend/domain/identity";
 import { isDomainError } from "@/backend/domain";
+import { createPrismaGamificationUsersPort } from "@/backend/modules/gamification/infrastructure/repositories/prisma-gamification-users.port";
 
 const NOW = new Date("2026-10-20T12:00:00.000Z");
 const MANAGER = userActor(77, ["COORDENADOR"]);
@@ -198,6 +226,36 @@ describe("AdjustMonthPointsUseCase — ajuste do placar do mês (DEC-228)", () =
     expect(state.written?.description).toBe("GAMIFICATION:MONTH_POINTS_ADJUST:2026-10");
     expect(state.written?.detail).toEqual({ action: "remove", points: 15, month: "2026-10" });
     expect(MONTH_ADJUST_HISTORY_ACTION).not.toBe("GAMIFICATION_AWARD");
+  });
+});
+
+describe("S11 — o adaptador de ajuste não toca no saldo", () => {
+  beforeEach(() => adapterHarness.reset());
+
+  it("ajusta apenas currentMonthPoints e mantém os campos da auditoria", async () => {
+    const port = createPrismaGamificationUsersPort();
+    await port.adjustMonthPoints({
+      userId: 3,
+      previous: 70,
+      next: 55,
+      month: "2026-10",
+      performedBy: 77,
+      description: "GAMIFICATION:MONTH_POINTS_ADJUST:2026-10",
+      detail: { action: "set", points: 55, month: "2026-10" },
+    });
+
+    expect(adapterHarness.writes).toEqual([{ currentMonthPoints: 55 }]);
+    expect(adapterHarness.writes[0]).not.toHaveProperty("points");
+    expect(adapterHarness.tx.history.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: MONTH_ADJUST_HISTORY_ACTION,
+          performedBy: 77,
+          oldValues: { currentMonthPoints: 70 },
+          newValues: { currentMonthPoints: 55 },
+        }),
+      }),
+    );
   });
 });
 
