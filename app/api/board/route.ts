@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     }
 
     const closedMonths = await gamification.listClosedBoardMonths()
-    return NextResponse.json({ ...gamification.readBoardMonth(new Date()), closedMonths })
+    return NextResponse.json({ ...gamification.readBoardMonth(new Date()), live: true, closedMonths })
   } catch (error) {
     return routeErrorResponse(error, { fallback: "Erro ao ler o mês do quadro" })
   }

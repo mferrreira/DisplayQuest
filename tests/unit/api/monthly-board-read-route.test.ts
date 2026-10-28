@@ -275,6 +275,7 @@ describe("GET /api/board — mês em curso e a lista de meses fechados", () => {
     expect(body.month).toBe("2028-02");
     expect(body.monthLabel).toBe("fevereiro de 2028");
     expect(body.closed).toBe(false);
+    expect(body.live).toBe(true);
     expect(body.closedMonths).toEqual([
       { month: "2028-01", monthLabel: "janeiro de 2028" },
       { month: "2027-12", monthLabel: "dezembro de 2027" },

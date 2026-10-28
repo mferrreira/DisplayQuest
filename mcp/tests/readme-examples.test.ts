@@ -18,7 +18,7 @@ import type { BinaryResponse, DisplayQuestClient, RequestOptions } from "../src/
 const README_EXAMPLES: Record<string, Record<string, unknown>> = {
   people_list: {},
   people_statistics: { type: "status" },
-  leaderboard_get: { type: "points", limit: 5 },
+  leaderboard_get: { month: "2026-09" },
   project_list: {},
   project_get: { projectId: 7 },
   project_overview: { projectId: 7 },
@@ -139,6 +139,7 @@ describe("o que o schema anunciado recusa", () => {
     ["technical_report_save", { projectId: 7, type: "rascunho", content: "x" }],
     ["activity_update", { projectId: 7 }],
     ["weekly_report_bulk_generate", { periodType: "quinzenal", from: "2026-10-12", to: "2026-10-18" }],
+    ["leaderboard_get", { month: "setembro/2026" }],
   ] as const
 
   for (const [name, args] of SCHEMA_VIOLATIONS) {
