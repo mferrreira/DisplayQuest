@@ -87,14 +87,24 @@ export function previousCivilMonth(instant: Date): string {
   return `${shifted.getUTCFullYear()}-${pad(shifted.getUTCMonth() + 1)}`;
 }
 
+/**
+ * A forma de um mes civil `AAAA-MM`, como pergunta em vez de lancar. plan-v9 S06.
+ *
+ * Existe para a leitura do lado do cliente (`lib/points-seen.ts`) decidir "este baseline tem
+ * mes?" com a MESMA forma que a aritmetica de acima aceita. Uma segunda regex no cliente era o
+ * modo de falha medido da DEC-95/96: dois vocabularios da mesma coisa divergindo em silencio.
+ */
+export function isCivilMonth(value: unknown): value is string {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}$/.test(value)) return false;
+  const monthNumber = Number(value.slice(5, 7));
+  return monthNumber >= 1 && monthNumber <= 12;
+}
+
 function civilMonthParts(month: string): [number, number] {
-  if (!/^\d{4}-\d{2}$/.test(month)) {
+  if (!isCivilMonth(month)) {
     throw new ValidationError(`mes civil invalido: ${month}`);
   }
   const [year, monthNumber] = month.split("-").map(Number);
-  if (monthNumber < 1 || monthNumber > 12) {
-    throw new ValidationError(`mes civil invalido: ${month}`);
-  }
   return [year, monthNumber];
 }
 
@@ -136,8 +146,7 @@ const CIVIL_MONTH_NAMES_PT = [
  * fuso que a regra acima evita (DEC-132). Retorna `null` para texto que nao e mes civil.
  */
 export function civilMonthLabel(month: string): string | null {
-  if (!/^\d{4}-\d{2}$/.test(month)) return null;
+  if (!isCivilMonth(month)) return null;
   const [year, monthNumber] = month.split("-").map(Number);
-  if (monthNumber < 1 || monthNumber > 12) return null;
   return `${CIVIL_MONTH_NAMES_PT[monthNumber - 1]} de ${year}`;
 }
