@@ -117,9 +117,12 @@ vi.mock("@/contexts/api-client", () => ({ fetchAPI, UsersAPI: {} }));
 
 import LeaderboardPage from "@/app/(dashboard)/dashboard/leaderboard/page";
 
+const boardSeed = structuredClone(fixtures.board);
+
 describe("S01 — Quadro de Liderança pelo placar do mês", () => {
   beforeEach(() => {
     fetchAPI.mockClear();
+    fixtures.board = structuredClone(boardSeed);
   });
 
   it("o campeão do quadro é quem tem mais placar no mês, não quem tem mais saldo", async () => {
@@ -147,5 +150,25 @@ describe("S01 — Quadro de Liderança pelo placar do mês", () => {
     render(<LeaderboardPage />);
     expect(await screen.findByText(/outubro de 2026/)).toBeInTheDocument();
     expect(fetchAPI).toHaveBeenCalledWith("/api/board");
+  });
+
+  it("usa o mesmo acento para o 2º e o 3º lugares e o raio do token no campeão", async () => {
+    render(<LeaderboardPage />);
+    const podium = await screen.findByRole("region", { name: "Segundo e terceiro lugares" });
+    expect(within(podium).getByText("2º").className).toContain("text-warning");
+    expect(within(podium).getByText("3º").className).toContain("text-warning");
+
+    const champion = await screen.findByRole("region", { name: "Campeão do quadro" });
+    const card = champion.querySelector("a");
+    expect(card?.className).toContain("rounded-lg");
+    expect(card?.className).not.toContain("rounded-2xl");
+  });
+
+  it("usa o primitivo EmptyState quando o placar do mês ainda está vazio", async () => {
+    fixtures.board = boardSeed.map((person) => ({ ...person, currentMonthPoints: 0 }));
+    render(<LeaderboardPage />);
+    expect(await screen.findByText("Quadro vazio")).toBeInTheDocument();
+    expect(screen.getByText("Placar de outubro de 2026. Abra o perfil de cada pessoa.")).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Sua posição" })).not.toBeInTheDocument();
   });
 });

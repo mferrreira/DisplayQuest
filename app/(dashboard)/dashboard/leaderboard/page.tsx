@@ -222,6 +222,7 @@ export default function LeaderboardPage() {
   const remainingUsers = entries.slice(3)
   const champion = podiumUsers[0]
   const runnersUp = podiumUsers.slice(1)
+  const currentBoardEmpty = !closedBoardReady && entries.every((entry) => entry.value === 0)
 
   const monthSelector = (
     <Select value={selectedMonth} onValueChange={(value) => setSelectedMonth(value)}>
@@ -274,7 +275,7 @@ export default function LeaderboardPage() {
           />
 
           {/* Sua posição — só no mês em curso. Mês fechado não tem progresso contra o líder de hoje. */}
-          {!closedBoardReady && !closedBoardPending && !closedBoardFailed && (
+          {!closedBoardReady && !closedBoardPending && !closedBoardFailed && !currentBoardEmpty && (
             <section
               aria-label="Sua posição"
               className="flex flex-wrap items-end justify-between gap-6 border-b border-border pb-6"
@@ -346,6 +347,13 @@ export default function LeaderboardPage() {
                 }
               />
             </div>
+          ) : currentBoardEmpty ? (
+            <EmptyState
+              icon={Trophy}
+              title="Quadro vazio"
+              description="Ainda não há pontos no placar deste mês."
+              className="rounded-lg border border-dashed border-border"
+            />
           ) : (
             // Quadro vivo e fechado-com-linhas dividem o mesmo corpo. No fechado o wrapper é região
             // viva (role="status"): trocar de mês precisa ser anunciado também quando há linhas —
@@ -360,7 +368,7 @@ export default function LeaderboardPage() {
                 <section aria-label="Campeão do quadro">
                   <Link
                     href={`/dashboard/profile?userId=${champion.id}`}
-                    className="relative block overflow-hidden rounded-2xl border border-warning/30 bg-warning/5 transition-colors hover:border-warning/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="relative block overflow-hidden rounded-lg border border-warning/30 bg-warning/5 transition-colors hover:border-warning/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     {/* V5-3 (DEC-137): a capa do 1º lugar entra como fundo translúcido do bloco. */}
                     {champion.bannerKey ? (
@@ -412,7 +420,7 @@ export default function LeaderboardPage() {
                 >
                   {runnersUp.map((runnerUp) => {
                     const Icon = runnerUp.position === 2 ? Medal : Award
-                    const accent = runnerUp.position === 2 ? "text-muted-foreground" : "text-warning"
+                    const accent = "text-warning"
                     return (
                       <Link
                         key={runnerUp.id}
