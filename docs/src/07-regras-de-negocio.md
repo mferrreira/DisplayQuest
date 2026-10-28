@@ -120,6 +120,15 @@ produto, e está congelada por teste.
 | RB-57 | Os distintivos são avaliados depois do crédito, e o resultado da avaliação não altera a award | RF-09 |
 | RB-58 | Comunicados são entregues apenas a contas ativas | RF-10 |
 
+## RB · Placar mensal
+
+| Id | Regra | Realiza |
+| --- | --- | --- |
+| RB-73 | Um prêmio creditado atualiza o saldo e o placar do mês na mesma transação | RF-09 |
+| RB-74 | Compras e reembolsos da loja alteram o saldo, sem alterar o placar do mês | RF-09 |
+| RB-75 | O fechamento congela valor e posição do placar e zera apenas os pontos do mês | RF-09 |
+| RB-76 | A correção administrativa altera somente o placar do mês corrente e mantém auditoria; meses fechados permanecem imutáveis | RF-09 |
+
 ## RB · Comunicação
 
 | Id | Regra | Realiza |
