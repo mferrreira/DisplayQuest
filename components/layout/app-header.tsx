@@ -37,8 +37,13 @@ interface AppHeaderProps {
 export function AppHeader({ sidebarOpen = true, onToggleSidebar, showSessionTimer = true }: AppHeaderProps) {
   const { user, logout } = useAuth()
   const userRoles = user?.roles ?? []
-  // Points come from the session (jwt callback enriches from DB) — no all-users fetch needed.
-  const points = user?.points ?? null
+  // plan-v9 S06 (ADR-007, DEC-229): o número anunciado na pílula é o PLACAR DO MÊS — o mesmo que
+  // ordena o Quadro de Liderança — e não mais o saldo. O saldo (`points`) continua no menu do
+  // avatar e no perfil; o que mudou é o lugar que a pílula ocupa.
+  // O mês vem da sessão (`lib/auth/config.ts`), calculado no servidor com a aritmética do domínio:
+  // mês civil não se deduz no navegador (DEC-132).
+  const monthPoints = user?.currentMonthPoints ?? null
+  const month = user?.currentMonth ?? null
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -73,14 +78,18 @@ export function AppHeader({ sidebarOpen = true, onToggleSidebar, showSessionTime
           {showSessionTimer ? <FloatingSessionTimer placement="header" /> : null}
 
           <div className="hidden items-center gap-2 md:flex">
-            {points !== null ? (
+            {monthPoints !== null ? (
               <div className="relative flex items-center gap-2 rounded-lg border bg-card px-3 py-1.5">
                 <Trophy className="h-4 w-4 text-warning" aria-hidden="true" />
+                {/* ADR-007: o rótulo diz o que o número É. Sem "pontos" solto, que leria como saldo. */}
+                <span className="sr-only">Placar do mês</span>
                 <span className="text-sm font-semibold">
                   {/* V4-2 (DEC-59): quem conta gradualmente é este número, não o chip.
                       V4-3 (DEC-58): o `userId` é o que permite animar uma mudança que chegou por
-                      refresh/login — a baseline do último total visto é por pessoa. */}
-                  <PointsCounter points={points} userId={user?.id} />
+                      refresh/login — a baseline do último total visto é por pessoa.
+                      S06 (R13): o `month` é o que re-tarifica o número na virada do mês, sem
+                      contar a queda e sem chip — o reset é mês novo, não perda. */}
+                  <PointsCounter points={monthPoints} month={month} userId={user?.id} />
                 </span>
                 {/* plan-v3 OND4-B: o prêmio desta entrega, ancorado no contador que ele explica. */}
                 <PointsDelta />
@@ -117,9 +126,11 @@ export function AppHeader({ sidebarOpen = true, onToggleSidebar, showSessionTime
                     <span className="mt-1 text-xs font-normal">
                       {getPrimaryRoleLabel(userRoles)}
                     </span>
-                    {points !== null ? (
+                    {user?.points !== undefined && user?.points !== null ? (
                       <span className="mt-1 text-xs font-medium text-warning">
-                        {points} pontos
+                        {/* S06 (ADR-007): o saldo tem lugar e nome próprios — a pílula conta o
+                            placar do mês, e este é o saldo que a loja gasta e os badges medem. */}
+                        Saldo: {user.points} pontos
                       </span>
                     ) : null}
                   </div>

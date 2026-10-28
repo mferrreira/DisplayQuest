@@ -42,23 +42,20 @@ export const peopleStatisticsTool = defineTool({
 
 export const leaderboardGetTool = defineTool({
   name: "leaderboard_get",
-  title: "Ranking",
-  description: "Ranking por pontos (default) ou por tarefas concluídas.",
+  title: "Quadro mensal",
+  description:
+    "Lê o quadro do mês corrente quando month é omitido ou vazio, e o fechamento de um mês nomeado. live indica que o mês ainda usa o placar atual.",
   readOnly: true,
   inputSchema: z.object({
-    type: z.enum(["points", "tasks"]).optional(),
-    limit: z.number().int().positive().max(200).optional(),
+    month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/).optional().or(z.literal("")),
   }),
-  returns: "users: ranking; type: critério usado.",
-  errors: [401],
+  returns: "Resposta de GET /api/board: mês, rótulo, live, estado do fechamento, entries e aviso; o mês corrente também inclui closedMonths.",
+  errors: [400, 401],
   handler: async (args, ctx) => {
-    const body = await ctx.client.request({
+    return ctx.client.request({
       method: "GET",
-      path: "/api/users/leaderboard",
-      query: { type: args.type, limit: args.limit },
+      path: "/api/board",
+      query: args.month ? { month: args.month } : {},
     })
-    const record = body as Record<string, unknown>
-    const users = sanitizeUsers(record.users)
-    return { users, type: record.type ?? args.type ?? "points", count: users.length }
   },
 })

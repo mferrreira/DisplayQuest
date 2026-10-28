@@ -22,6 +22,12 @@ export interface UserRecord {
   status: UserStatus;
   weekHours: number;
   currentWeekHours: number;
+  /**
+   * plan-v9 (ADR-001, DEC-224): placar do mes em curso. `points` e o saldo; este e o numero que o
+   * Quadro de Lideranca ordena e que o fechamento de mes zera. Opcional na ENTRADA (fixtures e
+   * chamadores antigos nao conhecem a coluna ainda); nos adaptadores Prisma ela sempre vem.
+   */
+  currentMonthPoints?: number;
   profileVisibility: ProfileVisibility;
   bio: string | null;
   avatar: string | null;
@@ -52,6 +58,9 @@ export interface UserSummaryRow {
   status: UserStatus;
   weekHours: number;
   points: number;
+  /** plan-v9 (DEC-224): placar do mes em curso, a trilha que o quadro ordena. Opcional na ENTRADA,
+   *  como em `UserRecord`; `toPublicUser` projeta sempre um numero. */
+  currentMonthPoints?: number;
   completedTasks: number;
   avatar: string | null;
   bio: string | null;

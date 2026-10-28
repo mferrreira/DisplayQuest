@@ -12,6 +12,14 @@ export interface User {
   status: string;
   weekHours: number;
   currentWeekHours: number;
+  /** plan-v9 (ADR-001, DEC-224): placar do mes em curso, o numero que o Quadro de Lideranca ordena. */
+  currentMonthPoints?: number;
+  /**
+   * plan-v9 S06 (ADR-007, R4): o mes civil em curso do quadro (`AAAA-MM`), nomeado pelo servidor com
+   * a aritmetica de dia civil do dominio. O cabecalho compara com a baseline guardada no navegador
+   * para re-tarificar o placar na virada sem animar a queda (R13).
+   */
+  currentMonth?: string;
   bio?: string | null;
   avatar?: string | null;
   /** V5-3 (DEC-137): chave da capa do perfil no bucket (`users/<id>/images/banner`). */

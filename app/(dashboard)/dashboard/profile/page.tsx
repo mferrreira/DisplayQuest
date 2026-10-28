@@ -33,12 +33,15 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { UserBadges } from "@/components/ui/user-badges"
 import { TimerCard } from "@/components/ui/timer-card"
 import { getRoleDisplayName } from "@/lib/utils/access-control"
+import { compareByBoardPosition } from "@/backend/domain"
+import { ProfileMonthsList } from "@/components/ui/profile-months-list"
 import { useWorkSessions } from "@/hooks/use-work-sessions"
 import {
   ArrowRight,
   Calendar,
   CalendarDays,
   Settings,
+  Trophy,
   User as UserIcon,
 } from "lucide-react"
 import type { User } from "@/contexts/types"
@@ -166,8 +169,24 @@ function ProfilePageContent() {
   const myProjects = projects.filter(
     (project) => project.leaderId === user.id || project.members?.some((member) => member.userId === user.id),
   )
-  const rankedUsers = [...users].sort((left, right) => (right.points ?? 0) - (left.points ?? 0))
-  const myRank = rankedUsers.findIndex((candidate) => candidate.id === user.id) + 1
+  // plan-v9 S04 (DEC-232): a posição do perfil é a posição do MÊS, a mesma régua do quadro vivo
+  // (ADR-005): valor desc, depois nome, depois id. Antes ordenava pelo saldo acumulado, e perfil
+  // e quadro anunciavam postos diferentes no mesmo instante.
+  const rankedUsers = [...users].sort((left, right) =>
+    compareByBoardPosition(
+      { id: left.id, name: left.name, currentMonthPoints: left.currentMonthPoints ?? 0 },
+      { id: right.id, name: right.name, currentMonthPoints: right.currentMonthPoints ?? 0 },
+    ),
+  )
+  // plan-v9 S04 (fix pós-review): o placar do mês vem da LISTA (currentMonthPoints), não da
+  // sessão — o session callback não carrega o campo, e ler de `user` aqui congelava o Fato em 0
+  // enquanto o quadro do mesmo instante mostrava o valor real (achado nas capturas, ui-reviewer
+  // B1). Mesma lista do rank, nenhuma busca nova; o cabeçalho passa a ler a mesma fonte na S06
+  // (DEC-229).
+  const myListIndex = rankedUsers.findIndex((candidate) => candidate.id === user.id)
+  const myEntry = myListIndex >= 0 ? rankedUsers[myListIndex] : undefined
+  const myRank = myListIndex + 1
+  const monthPoints = myEntry?.currentMonthPoints ?? 0
 
   const goalPercent = metaSemanal > 0 ? Math.min(100, Math.round((progressoSemanal / metaSemanal) * 100)) : 0
   const goalRemaining = metaSemanal - progressoSemanal
@@ -231,6 +250,7 @@ function ProfilePageContent() {
 
           {/* Fatos — rotulo quieto + algarismo grande sobre a regua, sem caixa. */}
           <dl aria-label="Resumo do perfil" className="grid grid-cols-2 gap-x-8 gap-y-6 sm:grid-cols-4">
+            <Fact label="Placar do mês" value={monthPoints} hint="zera na virada" />
             <Fact label="Pontos" value={user.points} hint="acumulados" />
             <Fact label="Tarefas" value={user.completedTasks} hint="concluídas" />
             <Fact
@@ -241,7 +261,7 @@ function ProfilePageContent() {
             <Fact
               label="Posição"
               value={myRank > 0 ? `${myRank}º` : "—"}
-              hint={`de ${rankedUsers.length} pessoas`}
+              hint={`do mês, de ${rankedUsers.length} pessoas`}
               action={
                 <Link href="/dashboard/leaderboard" className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
                   Ver ranking
@@ -250,6 +270,19 @@ function ProfilePageContent() {
               }
             />
           </dl>
+
+          {/* plan-v9 S04 (§7, DEC-232): os meses fechados da pessoa, com estado vazio quando
+              nenhum mês fechou ainda. O placar do mês em curso vive no Fato acima; aqui é
+              histórico, do mais recente ao mais antigo. */}
+          <section aria-labelledby="profile-months">
+            <div className="mb-3 flex items-center gap-2">
+              <Trophy className="h-4 w-4 text-primary" aria-hidden="true" />
+              <h2 id="profile-months" className="text-sm font-semibold">
+                Meses fechados
+              </h2>
+            </div>
+            <ProfileMonthsList userId={user.id} />
+          </section>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
             <TabsList className="grid w-full grid-cols-3">

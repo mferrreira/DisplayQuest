@@ -83,7 +83,7 @@ Contrato completo em `tools.json` (gerado do schema; `npm run tools:json`). Suce
 |---|---|---|
 | `people_list` | `GET /api/users` | nenhum |
 | `people_statistics` | `GET /api/users/statistics` | `type?: roles\|status\|general` |
-| `leaderboard_get` | `GET /api/users/leaderboard` | `type?: points\|tasks`, `limit?` |
+| `leaderboard_get` | `GET /api/board` | `month?: AAAA-MM` (omitido ou vazio = mês corrente) |
 | `project_list` | `GET /api/projects` | nenhum |
 | `project_get` | `GET /api/projects/[id]` | `projectId` |
 | `project_overview` | composta | `projectId`, `sections?` |

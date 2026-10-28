@@ -61,6 +61,10 @@ export class ListUsersForActorUseCase {
         status: row.status,
         weekHours: row.weekHours,
         points: row.points,
+        // plan-v9 (ADR-001, DEC-224): o placar do mes chega na mesma lista que o saldo, porque e a
+        // lista que o Quadro de Lideranca ordena (mesma licao do `bannerKey` na DEC-137: chamar uma
+        // rota por pessoa seria o mesmo erro).
+        currentMonthPoints: row.currentMonthPoints ?? 0,
         completedTasks: row.completedTasks,
         avatar: row.avatar,
         // V5-3 (DEC-137): a capa chega na mesma lista que o avatar, porque é o pódio do ranking que

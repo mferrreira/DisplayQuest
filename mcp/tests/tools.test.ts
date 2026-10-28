@@ -149,6 +149,28 @@ describe("execução das tools", () => {
     expect(warnings.length).toBeGreaterThan(0)
     expect(warnings[0]).toMatchObject({ code: "upstream_forbidden", status: 403 })
   })
+
+  it("leaderboard_get: mês omitido lê o quadro vivo sem parâmetros", async () => {
+    const liveBoard = { month: "2026-10", monthLabel: "outubro de 2026", track: "month-points", closed: false, live: true, entries: [{ userId: 4, name: "Ana", value: 12, position: 1 }], closedMonths: [] }
+    const client = clientReturning(() => liveBoard)
+    const result = await runTool(toolByName("leaderboard_get"), {}, { client })
+    expect((client.request as ReturnType<typeof vi.fn>)).toHaveBeenCalledWith({ method: "GET", path: "/api/board", query: {} })
+    expect(result.structuredContent).toEqual(liveBoard)
+  })
+
+  it("leaderboard_get: mês nomeado devolve o fechamento HTTP sem remodelar", async () => {
+    const history = { month: "2026-09", monthLabel: "setembro de 2026", track: "month-points", closed: true, live: false, closedAt: "2026-10-01T03:00:00.000Z", entries: [{ userId: 4, name: "Ana", value: 9, position: 1 }], notice: "Mês fechado" }
+    const client = clientReturning(() => history)
+    const result = await runTool(toolByName("leaderboard_get"), { month: "2026-09" }, { client })
+    expect(client.request).toHaveBeenCalledWith({ method: "GET", path: "/api/board", query: { month: "2026-09" } })
+    expect(result.structuredContent).toEqual(history)
+  })
+
+  it("leaderboard_get: mês vazio equivale a mês omitido", async () => {
+    const client = clientReturning(() => ({ month: "2026-10", live: true }))
+    await runTool(toolByName("leaderboard_get"), { month: "" }, { client })
+    expect(client.request).toHaveBeenCalledWith({ method: "GET", path: "/api/board", query: {} })
+  })
 })
 
 describe("people_list não devolve CPF nem senha", () => {

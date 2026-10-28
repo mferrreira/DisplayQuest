@@ -12,6 +12,8 @@ import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Textarea } from "@/components/ui/textarea"
+import { MonthsTable } from "@/components/admin/months-table"
+import { MonthsCloseTrigger } from "@/components/admin/months-close-trigger"
 import {
   Users,
   BarChart3,
@@ -23,6 +25,7 @@ import {
   Activity,
   Shield,
   Calendar,
+  CalendarClock,
   Award,
   FileText,
   Plus,
@@ -144,6 +147,9 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, onSessionsC
   const [loadingGlobalTasks, setLoadingGlobalTasks] = useState(false)
   const [createUserOpen, setCreateUserOpen] = useState(false)
   const [manageSessionsOpen, setManageSessionsOpen] = useState(false)
+  // S05: o fechar mês do gatilho sobe este número, e MonthsTable re-lê o catálogo — o mês
+  // recém-fechado entra no seletor sem refresh do painel inteiro.
+  const [monthsRefreshKey, setMonthsRefreshKey] = useState(0)
 
   // Verificar permissões do usuário
   const canManageUsers = hasAccess(user?.roles || [], 'MANAGE_USERS')
@@ -388,7 +394,7 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, onSessionsC
 
       {/* Tabs principais */}
       <Tabs defaultValue={canAccessAdmin ? "overview" : "volunteers"} className="space-y-6">
-        <TabsList className="flex w-full overflow-x-auto gap-1 h-auto flex-wrap">
+        <TabsList className="flex w-full overflow-x-auto gap-1 h-auto flex-nowrap">
           <TabsTrigger value="overview" className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4" />
             <span className="hidden sm:inline">Visão Geral</span>
@@ -408,6 +414,10 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, onSessionsC
           <TabsTrigger value="hours" className="flex items-center gap-2">
             <Clock className="h-4 w-4" />
             <span className="hidden sm:inline">Horas</span>
+          </TabsTrigger>
+          <TabsTrigger value="months" className="flex items-center gap-2">
+            <CalendarClock className="h-4 w-4" />
+            <span className="hidden sm:inline">Meses</span>
           </TabsTrigger>
           <TabsTrigger value="tasks" className="flex items-center gap-2">
             <Activity className="h-4 w-4" />
@@ -624,12 +634,33 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, onSessionsC
               visão semanal; o AdminHoursManagement abaixo mantém os relatórios por
               período/projeto. */}
           <WeeklyHoursTable users={users} sessions={sessions} />
-          <AdminHoursManagement 
+          <AdminHoursManagement
             users={users}
             projects={projects}
             sessions={sessions}
           />
           </>
+          )}
+        </TabsContent>
+
+        {/* Tab Meses — plan-v9 S05 (MODELO §7; ADR-006/DEC-228). O placar mensal é dado de
+            gestão: a chave é MANAGE_USERS, a mesma do fechamento (CA9) e do ajuste (DEC-60
+            espelhado). Sem ela a aba diz o motivo, como as outras oito (V6-9/DEC-184). */}
+        <TabsContent value="months" className="space-y-6">
+          {!canManageUsers ? (
+            <TabPermissionNotice feature="MANAGE_USERS" />
+          ) : (
+            <MonthsTable
+              rows={users}
+              canAdjust={canManageUsers}
+              refreshKey={monthsRefreshKey}
+            />
+          )}
+          {canManageUsers && (
+            <MonthsCloseTrigger
+              canManage={canManageUsers}
+              onClosed={() => setMonthsRefreshKey((key) => key + 1)}
+            />
           )}
         </TabsContent>
 

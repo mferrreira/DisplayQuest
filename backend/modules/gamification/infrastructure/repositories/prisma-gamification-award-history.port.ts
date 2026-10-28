@@ -24,10 +24,17 @@ export function createPrismaGamificationAwardHistoryPort(): GamificationAwardHis
     },
     async awardAndRecord({ userId, sourceType, sourceId, description, pointsAwarded, xpAwarded }) {
       await prisma.$transaction(async (tx) => {
+        // plan-v9 (ADR-001, R2, DEC-224): o mesmo premio escreve as duas trilhas, no mesmo tx.
+        // `points` e o saldo (loja, badges, ajuste). `currentMonthPoints` e o placar do mes que o
+        // Quadro de Lideranca ordena. Escrever uma depois da outra deixaria a pessoa premiada com
+        // um quadro que nao sabe do premio.
         await tx.users.update({
           where: { id: userId },
           data: {
             points: {
+              increment: pointsAwarded,
+            },
+            currentMonthPoints: {
               increment: pointsAwarded,
             },
           },
