@@ -17,7 +17,10 @@ export interface WorkSession {
   id?: number;
   userId: number;
   userName: string;
+  /** Current active stretch start; changes when a paused session resumes. */
   startTime: Date;
+  /** Immutable first start; null for legacy rows whose original value cannot be recovered. */
+  originalStartTime?: Date | null;
   endTime?: Date | null;
   duration?: number | null;
   activity?: string | null;

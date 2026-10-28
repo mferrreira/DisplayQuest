@@ -24,6 +24,7 @@ import { UserRole } from "@prisma/client";
 import { prisma } from "@/lib/database/prisma";
 import { createAttestationModule } from "@/backend/modules/attestation";
 import { ForbiddenError, NotFoundError } from "@/backend/domain";
+import { PrismaAttestationSources } from "@/backend/modules/attestation/infrastructure/repositories/prisma-attestation-sources";
 
 const stamp = Date.now();
 const attestation = createAttestationModule();
@@ -97,6 +98,7 @@ describe("G4 roundtrip — atestado de frequência (isolated test DB)", () => {
 
   afterAll(async () => {
     // certificates cascadeia com o projeto e com o membro; generatedBy é SetNull.
+    await prisma.work_sessions.deleteMany({ where: { projectId } });
     await prisma.projects.delete({ where: { id: projectId } });
     await prisma.users.deleteMany({ where: { id: { in: createdUserIds } } });
   });
@@ -115,6 +117,26 @@ describe("G4 roundtrip — atestado de frequência (isolated test DB)", () => {
 
     const rows = await prisma.certificates.findMany({ where: { projectId } });
     expect(rows).toHaveLength(1);
+  });
+
+  it("busca sessões concluídas do membro no mês mesmo sem vínculo com task", async () => {
+    const session = await prisma.work_sessions.create({
+      data: {
+        userId: membroId,
+        userName: "Membro de teste",
+        projectId,
+        originalStartTime: new Date("2026-09-08T10:00:00.000Z"),
+        startTime: new Date("2026-09-08T10:00:00.000Z"),
+        endTime: new Date("2026-09-08T11:00:00.000Z"),
+        duration: 3600,
+        activity: "Catalogação de amostras",
+        status: "completed",
+      },
+      select: { id: true },
+    });
+    const rows = await new PrismaAttestationSources().listCompletedSessionLogs(projectId, membroId, "2026-09");
+    expect(rows).toContainEqual(expect.objectContaining({ activity: "Catalogação de amostras" }));
+    await prisma.work_sessions.delete({ where: { id: session.id } });
   });
 
   it("regenerar o mesmo trio atualiza a MESMA linha (upsert, DEC-170)", async () => {

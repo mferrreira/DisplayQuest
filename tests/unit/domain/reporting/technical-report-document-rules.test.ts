@@ -140,6 +140,21 @@ describe("relatório técnico — regras do documento (V5-9b, DEC-129/168)", () 
     it("texto vazio devolve três vazios", () => {
       expect(splitReportBody("")).toEqual({ descricao: "", resultados: "", comentarios: "" });
     });
+
+    it("o Final preserva títulos científicos e distribui o manuscrito nas três áreas do DOCX oficial", () => {
+      const body = splitReportBody([
+        "Título (português)", "Pesquisa", "Título (English)", "Research",
+        "Resumo", "Resumo factual.", "Abstract", "Factual abstract.",
+        "1 Introdução", "Contexto.", "2 Referencial teórico", "Literatura fornecida.",
+        "3 Metodologia", "Método registrado.", "4 Resultados e discussão", "Resultado medido.",
+        "5 Conclusão", "Conclusão limitada.", "Referências", "[COMPLEMENTAÇÃO DA AUTORIA: bibliografia]",
+      ].join("\n"), "final");
+      expect(body.descricao).toContain("Título (português)");
+      expect(body.descricao).toContain("3 Metodologia");
+      expect(body.resultados).toContain("4 Resultados e discussão");
+      expect(body.comentarios).toContain("5 Conclusão");
+      expect(body.comentarios).toContain("Referências");
+    });
   });
 
   describe("linha de checkbox — o literal medido do oficial (DEC-167)", () => {

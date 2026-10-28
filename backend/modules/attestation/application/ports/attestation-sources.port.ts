@@ -32,6 +32,12 @@ export interface CertificateMemberContext {
   cargaHoraria: number | null;
 }
 
+export interface AttestationSessionLogRow {
+  activity: string | null;
+  note: string | null;
+  endTime: string;
+}
+
 export interface AttestationSourcesPort {
   /** `actorId` nulo quando o chamador não tem gate (listagem): `actorMembershipRoles` sai nulo. */
   findProjectContext(projectId: number, actorId: number | null): Promise<CertificateProjectContext | null>;
@@ -39,4 +45,6 @@ export interface AttestationSourcesPort {
   /** Cronograma INTEIRO do projeto, na ordem da grade — o corpo filtra o cruza com o mês,
    * a situação do projeto olha o plano todo (contrato congelado em `attestation-rules.test.ts`). */
   listScheduleActivities(projectId: number): Promise<AttestationActivityRow[]>;
+  /** Sessões concluídas do membro no mês; independente da existência de tasks. */
+  listCompletedSessionLogs(projectId: number, userId: number, month: string): Promise<AttestationSessionLogRow[]>;
 }

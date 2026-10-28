@@ -134,9 +134,12 @@ export function ProjectTechnicalReportsPanel({
       }
       const files = await generateTechnicalReports(projectId, type)
       setGenerated((current) => ({ ...current, [type]: files }))
+      const missing = [...new Set(files.flatMap((file) => file.warnings ?? []))]
       toast({
-        title: "Documentos gerados",
-        description: `${files.length} arquivo(s) — um por membro ativo do projeto.`,
+        title: missing.length ? "Documentos gerados com campos faltando" : "Documentos gerados",
+        description: missing.length
+          ? `${files.length} arquivo(s). Complete estes dados e gere novamente: ${missing.join(", ")}.`
+          : `${files.length} arquivo(s) — um por membro ativo do projeto.`,
       })
     } catch (error) {
       // Rejeição tratada (DEC-85): handler async sem catch derruba o gate (V4-4b).

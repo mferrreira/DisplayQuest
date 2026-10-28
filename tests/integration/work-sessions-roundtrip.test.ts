@@ -57,6 +57,7 @@ describe("G4 roundtrip — work-execution (isolated test DB)", () => {
     expect(row?.duration).toBeNull();
     expect(row?.activity).toBe("Lab G4");
     expect(row?.startTime.getTime()).toBeLessThanOrEqual(Date.now() + 5_000);
+    expect(row?.originalStartTime?.getTime()).toBe(row?.startTime.getTime());
   });
 
   it("pause freezes the stretch (server-computed, capped) and persists status=paused", async () => {
@@ -88,6 +89,7 @@ describe("G4 roundtrip — work-execution (isolated test DB)", () => {
     expect(resumed.endTime).toBeNull();
     expect(resumed.duration).toBe(before?.duration ?? 0);
     expect(resumed.startTime.getTime()).toBeGreaterThanOrEqual(before!.endTime!.getTime());
+    expect(resumed.originalStartTime?.getTime()).toBe(before?.originalStartTime?.getTime());
   });
 
   it("completeWorkSession closes at the server clock and UPSERTS the daily log with the auto-note", async () => {

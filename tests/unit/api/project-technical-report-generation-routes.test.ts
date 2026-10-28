@@ -275,6 +275,7 @@ describe("POST /api/projects/[id]/technical-reports/[type]/generate (V5-9b)", ()
         memberName: "Bento Lima",
         key: "projects/3/technical-reports/1/9.docx",
         fileName: "relatorio-parcial-bento-lima.docx",
+        warnings: ["Número PROPPI"],
       },
     ]);
     // bytes NÃO saem na resposta — saem no bucket.
@@ -331,6 +332,7 @@ describe("POST /api/projects/[id]/technical-reports/[type]/generate (V5-9b)", ()
         memberName: "Bento Lima",
         key: "projects/3/technical-reports/1/9.docx",
         fileName: "relatorio-parcial-bento-lima.docx",
+        warnings: ["Número PROPPI"],
       },
     ]);
     // O registro criado tem conteúdo vazio — o editor o mostra em branco para escrever à mão.

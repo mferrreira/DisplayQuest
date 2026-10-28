@@ -107,6 +107,34 @@ function activityLines(activities: ReportDraftActivityRow[]): string {
  * português.
  */
 export function buildTechnicalReportDraftPrompt(input: ReportDraftPromptInput): string {
+  if (input.type === "final") {
+    return [
+      `Redija o manuscrito final de iniciação científica do projeto “${input.project.name}” ` +
+        `${input.project.proppiNumber ? `(${input.project.proppiNumber}) ` : ""}` +
+        `para o período ${input.period.periodoInicio} a ${input.period.periodoFim}.`,
+      "",
+      "Siga as diretrizes RECITAL/IFNMG e ABNT NBR 6022:2018. Produza texto acadêmico claro, coeso, " +
+        "preciso e impessoal, com título e resumo em português e inglês, palavras-chave e keywords, " +
+        "introdução, referencial teórico, metodologia, resultados e discussão, conclusão e referências.",
+      "",
+      "REGRAS DE EVIDÊNCIA: use apenas fatos sustentados pelas fontes abaixo. Os registros documentam " +
+        "atividades, tarefas e cronograma, mas podem não conter dados, instrumentos, amostra, análise, " +
+        "resultados ou bibliografia. Não invente métodos, números, conclusões nem citações. Quando faltar " +
+        "base, mantenha a seção e escreva [COMPLEMENTAÇÃO DA AUTORIA: indique precisamente o dado ou a " +
+        "referência que precisa ser fornecido]. Não apresente esse marcador como parte do artigo publicado.",
+      "",
+      "Estrutura obrigatória, nesta ordem e com estes títulos:",
+      "Título (português)\nTítulo (English)\nResumo\nPalavras-chave\nAbstract\nKeywords\n" +
+        "1 Introdução\n2 Referencial teórico\n3 Metodologia\n4 Resultados e discussão\n5 Conclusão\nReferências",
+      "",
+      "Não transforme tarefas concluídas em resultados científicos sem evidência observável. Não crie " +
+        "referências. Se fontes não contiverem literatura citada, sinalize a lacuna em Referências.",
+      "",
+      "Registros de sessão de trabalho do período:", sessionLines(input.sessions), "",
+      "Tarefas do projeto:", taskLines(input.tasks), "",
+      "Atividades do cronograma do projeto:", activityLines(input.activities),
+    ].join("\n");
+  }
   return [
     `Você escreve o corpo do relatório ${input.type} de Iniciação Científica do projeto ` +
       `"${input.project.name}"` +

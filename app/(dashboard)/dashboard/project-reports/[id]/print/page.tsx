@@ -17,11 +17,12 @@ interface AggregateData {
     title: string | null
     content: string
   }
-  logs: Array<{ id: number; userName: string | null; date: string; startTime: string | null; endTime: string | null; note: string | null }>
+  logs: Array<{ id: number; userName: string | null; date: string; startTime: string | null; activeStartTime: string | null; endTime: string | null; note: string | null }>
   sessions: Array<{
     id: number
     userName: string
-    startTime: string
+    startTime: string | null
+    activeStartTime: string
     endTime: string | null
     durationHours: number | null
     activity: string | null
@@ -94,6 +95,11 @@ export default function ProjectReportPrintPage({ params }: { params: Promise<{ i
 
       <section className="mb-8">
         <h2 className="font-semibold mb-2">Sessões ({data.totals.sessionCount}) · Total: {data.totals.totalHours.toFixed(1)}h</h2>
+        {data.sessions.some((session) => session.startTime === null) && (
+          <p className="mb-2 text-sm text-amber-800 print:text-black">
+            Aviso: há sessões cujo início original não pode ser recuperado. O horário do trecho ativo aparece separado.
+          </p>
+        )}
         {data.sessions.length === 0 && (
           <p className="text-sm text-muted-foreground">Nenhuma sessão na janela.</p>
         )}
@@ -103,7 +109,8 @@ export default function ProjectReportPrintPage({ params }: { params: Promise<{ i
             <table className="w-full text-sm border-collapse">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left py-1">Início</th>
+                  <th className="text-left py-1">Início original</th>
+                  <th className="text-left py-1">Início do trecho ativo</th>
                   <th className="text-left py-1">Fim</th>
                   <th className="text-right py-1">Horas</th>
                   <th className="text-left py-1">Local</th>
@@ -114,6 +121,7 @@ export default function ProjectReportPrintPage({ params }: { params: Promise<{ i
                 {section.items.map((session) => (
                   <tr key={session.id} className="border-b align-top">
                     <td className="py-1 pr-2">{fmt(session.startTime)}</td>
+                    <td className="py-1 pr-2">{fmt(session.activeStartTime)}</td>
                     <td className="py-1 pr-2">{fmt(session.endTime)}</td>
                     <td className="py-1 pr-2 text-right">{session.durationHours != null ? session.durationHours.toFixed(2) : "-"}</td>
                     <td className="py-1 pr-2">{session.location ?? "-"}</td>
@@ -135,9 +143,11 @@ export default function ProjectReportPrintPage({ params }: { params: Promise<{ i
             <ul className="text-sm space-y-1">
               {section.items.map((log) => (
                 <li key={log.id}>
-                  {log.startTime && log.endTime
-                    ? `${fmt(log.startTime)} → ${fmt(log.endTime)}`
-                    : fmt(log.startTime ?? log.date)}{" "}
+                  {log.startTime
+                    ? `${fmt(log.startTime)}${log.endTime ? ` → ${fmt(log.endTime)}` : ""}`
+                    : log.activeStartTime
+                      ? `Início original indisponível (trecho ativo ${fmt(log.activeStartTime)})${log.endTime ? ` → ${fmt(log.endTime)}` : ""}`
+                      : fmt(log.date)}{" "}
                   — {log.note ?? "-"}
                 </li>
               ))}

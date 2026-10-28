@@ -57,6 +57,7 @@ export interface GeneratedTechnicalReportFile {
   key: string;
   fileName: string;
   bytes: Uint8Array;
+  warnings: string[];
 }
 
 export interface GenerateTechnicalReportResult {
@@ -136,12 +137,24 @@ export class GenerateTechnicalReportUseCase {
         now,
       });
       const bytes = await this.ports.docx.render(commands);
+      const labels: Record<string, string> = {
+        titulo: "Título do projeto", proppi: "Número PROPPI", coordenador: "Coordenação",
+        orientador: "Orientação", estudante_nome: "Nome do estudante", estudante_curso: "Curso",
+        modalidade: "Modalidade", instituicao_fomento: "Agência financiadora",
+        projeto_inicio: "Início do projeto", projeto_termino: "Término do projeto",
+        periodo_inicio: "Início do período", periodo_fim: "Fim do período",
+        data_relatorio: "Data do relatório",
+      };
+      const warnings = Object.entries(labels)
+        .filter(([key]) => !commands[key]?.trim())
+        .map(([, label]) => label);
       files.push({
         userId: member.userId,
         memberName: member.name,
         key: technicalReportFileKey(command.projectId, report.id, member.userId),
         fileName: technicalReportFileName(type, member.name),
         bytes,
+        warnings,
       });
     }
 

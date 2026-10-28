@@ -91,11 +91,14 @@ export function ProjectCertificatesPanel({
   async function handleGenerate(member: ProjectMember) {
     setGeneratingUserId(member.userId)
     try {
-      const certificate = await generateCertificate(projectId, { userId: member.userId, month })
+      const generated = await generateCertificate(projectId, { userId: member.userId, month })
+      const certificate = generated.certificate
       setCertificates((current) => new Map(current).set(`${certificate.userId}:${certificate.month}`, certificate))
       toast({
-        title: "Atestado gerado",
-        description: `${member.userName ?? "Membro"} — ${monthNameLong(certificate.month)}`,
+        title: generated.warnings.length ? "Atestado gerado com campos faltando" : "Atestado gerado",
+        description: generated.warnings.length
+          ? `${generated.warnings.join(", ")}. Complete esses dados e regenere para preencher o PDF.`
+          : `${member.userName ?? "Membro"} — ${monthNameLong(certificate.month)}`,
       })
     } catch (error) {
       toast({

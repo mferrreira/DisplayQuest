@@ -29,6 +29,24 @@ export interface AttestationActivityRow {
   status: string;
 }
 
+export interface AttestationSessionLogRow {
+  activity: string | null;
+  note: string | null;
+  endTime: string;
+}
+
+/** Compacta fatos dos logs sem inferir resultados; sessões sem anotação mantêm a atividade. */
+export function summarizeAttestationSessionLogs(rows: AttestationSessionLogRow[]): string | null {
+  const statements = [...new Set(rows.map((row) => {
+    const note = row.note?.trim();
+    const activity = row.activity?.trim();
+    const usefulNote = note && !note.startsWith("Sessão de trabalho finalizada") ? note : null;
+    if (activity && usefulNote && !usefulNote.includes(activity)) return `${activity}: ${usefulNote}`;
+    return usefulNote ?? activity ?? "Sessão de trabalho registrada";
+  }))];
+  return statements.length > 0 ? statements.join("; ") : null;
+}
+
 export interface AttestationFieldInput {
   project: { name: string; editalNumber: string | null; proppiNumber: string | null };
   member: {
@@ -43,9 +61,35 @@ export interface AttestationFieldInput {
   membership: { categoria: string | null; cargaHoraria: number | null };
   /** Atividades do cronograma que cruzam o mês de referência, na ordem da grade. */
   activities: AttestationActivityRow[];
+  /** Síntese factual das sessões concluídas do membro no mês, sem task obrigatória. */
+  sessionSummary?: string | null;
   month: AttestationMonth;
   /** Data civil da geração já decomposta (DEC-132). */
   now: { dia: string; mes: string; ano: string };
+}
+
+/** Campos preenchíveis sem valor; campos institucionais estáticos ficam fora do aviso. */
+export function missingAttestationFieldLabels(input: AttestationFieldInput): string[] {
+  const missing: string[] = [];
+  const check = (value: unknown, label: string) => {
+    if (value === null || value === undefined || (typeof value === "string" && value.trim() === "")) missing.push(label);
+  };
+  check(input.project.name, "Título do projeto");
+  check(input.project.editalNumber ?? input.project.proppiNumber, "Edital/PROPPI");
+  check(input.member.name, "Nome do estudante");
+  check(formatCpfForDocument(input.member.cpf), "CPF");
+  check(input.member.registrationNumber, "Matrícula");
+  check(input.member.level, "Nível de ensino");
+  check(input.membership.cargaHoraria, "Carga horária");
+  check(input.membership.categoria, "Categoria do vínculo");
+  check(input.member.scholarshipType, "Modalidade");
+  check(input.member.fundingAgency, "Agência financiadora");
+  if (input.member.fundingAgency === "OUTRA") check(input.member.fundingAgencyOther, "Outra agência financiadora");
+  if (!input.activities.some((activity) => activity.firstMonth <= input.month && activity.lastMonth >= input.month)) {
+    missing.push("Atividades do cronograma no mês");
+  }
+  if (!input.sessionSummary) missing.push("Síntese dos logs de sessão no mês");
+  return missing;
 }
 
 /** Nome dos campos conforme medido no oficial (DEC-130, guarda de inventário). */
@@ -235,7 +279,10 @@ export function buildAttestationFields(input: AttestationFieldInput): Record<str
     (activity) => activity.firstMonth <= input.month && activity.lastMonth >= input.month,
   );
   if (overlapping[0]) fields.atividades_1 = overlapping[0].description;
-  if (overlapping[1]) fields.atividade_2 = overlapping[1].description;
+  const secondActivity = [overlapping[1]?.description, input.sessionSummary?.trim()]
+    .filter((value): value is string => Boolean(value))
+    .join("; ");
+  if (secondActivity) fields.atividade_2 = secondActivity;
 
   // SITUAÇÃO ATUAL DO PROJETO
   fields[STATUS_CHECKBOX[projectScheduleStatus(input.activities, input.month)]] = true;

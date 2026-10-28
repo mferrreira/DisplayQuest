@@ -49,9 +49,13 @@ O relatório registra o estado do período no momento em que foi gerado. Se uma 
 
 Na aba **Por projeto**, escolha o tipo **Parcial**, **Técnico-final** ou **Final**. O texto é editável e pode ser salvo; **Rascunhar com IA** cria uma sugestão para revisão. **Gerar DOCX** produz um documento oficial por membro ativo do projeto.
 
+O rascunho de **Final** segue as diretrizes RECITAL/IFNMG e ABNT NBR 6022:2018: título e resumo em português e inglês, palavras-chave e keywords, introdução, referencial teórico, metodologia, resultados e discussão, conclusão e referências. As fontes do sistema registram atividades, tarefas e cronograma; quando não sustentam uma parte científica, o rascunho marca o que a autoria precisa completar. Confira métodos, evidências e referências, complete as lacunas e revise o texto antes de entregar. O sistema não inventa resultados nem citações.
+
+Depois da geração, um aviso lista dados dinâmicos ausentes no cadastro. O documento continua disponível; complete os dados e gere novamente para preencher esses campos.
+
 ## Gerar atestado de frequência
 
-No assistente, escolha **Atestado de frequência**, selecione o projeto e abra a aba **Atestados**. Escolha o mês de referência e gere o PDF para você ou para os membros que pode gerenciar. Por padrão, a tela seleciona o mês anterior.
+No assistente, escolha **Atestado de frequência**, selecione o projeto e abra a aba **Atestados**. Escolha o mês de referência e gere o PDF para você ou para os membros que pode gerenciar. Por padrão, a tela seleciona o mês anterior. A descrição preserva o cronograma e acrescenta uma síntese compacta das sessões concluídas no mês, inclusive as que não têm tarefa vinculada. Se faltarem dados dinâmicos, a tela avisa depois de gerar sem bloquear o PDF.
 
 ## Onde as horas aparecem antes de virar relatório
 

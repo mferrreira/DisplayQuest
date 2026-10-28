@@ -157,6 +157,9 @@ describe("geração do DOCX do relatório técnico (V5-9b, DEC-129/139)", () => 
     });
     expect(result.files[1].key).toBe("projects/3/technical-reports/1/10.docx");
     expect(result.files[1].fileName).toBe("relatorio-parcial-dina-raca.docx");
+    expect(result.files[0].warnings).toEqual([]);
+    expect(result.files[1].warnings).toContain("Curso");
+    expect(result.files[1].warnings).toContain("Modalidade");
     expect(result.files[0].bytes).toBeInstanceOf(Uint8Array);
     expect(result.report.type).toBe("parcial");
   });

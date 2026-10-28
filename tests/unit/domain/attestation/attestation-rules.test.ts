@@ -28,6 +28,8 @@ import {
   normalizeAttestationMonth,
   previousMonth,
   projectScheduleStatus,
+  summarizeAttestationSessionLogs,
+  missingAttestationFieldLabels,
 } from "@/backend/domain";
 
 const project = { name: "IA no campo", editalNumber: "EDITAL 09/2026", proppiNumber: "PROPPI-2026-017" };
@@ -177,6 +179,36 @@ describe("preenchimento do AcroForm (V5-10a, DEC-130/140/171)", () => {
     const f = fields({ activities: [] });
     expect(f.atividades_1).toBeUndefined();
     expect(f.atividade_2).toBeUndefined();
+  });
+
+  it("mantém cronograma na primeira linha e acrescenta síntese dos logs na segunda", () => {
+    const f = fields({ sessionSummary: "Revisão bibliográfica: leitura e fichamento" });
+    expect(f.atividades_1).toBe("Levantamento bibliográfico");
+    expect(f.atividade_2).toBe("Coleta de dados; Revisão bibliográfica: leitura e fichamento");
+  });
+});
+
+describe("síntese mensal dos logs do atestado", () => {
+  it("deduplica registros iguais e não cria resultado sem anotação", () => {
+    expect(summarizeAttestationSessionLogs([
+      { activity: "Revisão bibliográfica", note: "leitura de artigos", endTime: "2026-09-02" },
+      { activity: "Revisão bibliográfica", note: "leitura de artigos", endTime: "2026-09-03" },
+      { activity: "Coleta de dados", note: "Sessão de trabalho finalizada. Atividade: Coleta de dados", endTime: "2026-09-04" },
+    ])).toBe("Revisão bibliográfica: leitura de artigos; Coleta de dados");
+  });
+
+  it("avisa dados preenchíveis faltantes sem tornar a geração inválida", () => {
+    const input = {
+      project: { ...project, editalNumber: null, proppiNumber: null },
+      member: { ...member, cpf: null, registrationNumber: null, level: null, scholarshipType: null, fundingAgency: null },
+      membership: { categoria: null, cargaHoraria: null },
+      activities: [],
+      month: "2026-10",
+      now: { dia: "19", mes: "outubro", ano: "2026" },
+    };
+    expect(missingAttestationFieldLabels(input)).toContain("CPF");
+    expect(missingAttestationFieldLabels(input)).toContain("Atividades do cronograma no mês");
+    expect(() => buildAttestationFields(input)).not.toThrow();
   });
 });
 

@@ -67,6 +67,7 @@ export async function POST(
           memberName: file.memberName,
           key: file.key,
           fileName: file.fileName,
+          warnings: file.warnings,
         })),
       },
       { status: 201 },

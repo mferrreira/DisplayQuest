@@ -69,6 +69,7 @@ export interface GeneratedTechnicalReportFile {
   memberName: string
   key: string
   fileName: string
+  warnings: string[]
 }
 
 export async function generateTechnicalReports(

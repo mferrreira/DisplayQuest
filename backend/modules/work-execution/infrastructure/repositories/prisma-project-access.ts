@@ -35,6 +35,7 @@ function toWorkSession(row: {
   userId: number
   userName: string
   startTime: Date
+  originalStartTime: Date | null
   endTime: Date | null
   duration: number | null
   activity: string | null
@@ -49,6 +50,7 @@ function toWorkSession(row: {
     userId: row.userId,
     userName: row.userName,
     startTime: row.startTime,
+    originalStartTime: row.originalStartTime,
     endTime: row.endTime,
     duration: row.duration,
     activity: row.activity,

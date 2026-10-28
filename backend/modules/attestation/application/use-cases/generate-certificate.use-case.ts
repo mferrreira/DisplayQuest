@@ -25,8 +25,10 @@ import {
   certificateFileName,
   civilDayOfInstant,
   monthNameLong,
+  missingAttestationFieldLabels,
   normalizeAttestationMonth,
   previousMonth,
+  summarizeAttestationSessionLogs,
   type AttestationMonth,
 } from "@/backend/domain";
 
@@ -49,6 +51,7 @@ export interface GenerateCertificateCommand {
 
 export interface GenerateCertificateResult {
   certificate: CertificateRecord;
+  warnings: string[];
   /** Bytes do PDF preenchido — a rota move ao bucket (DEC-133). */
   pdfBytes: Uint8Array;
 }
@@ -92,8 +95,13 @@ export class GenerateCertificateUseCase {
     }
 
     const activities = await this.ports.sources.listScheduleActivities(command.projectId);
+    const sessionLogs = await this.ports.sources.listCompletedSessionLogs(
+      command.projectId,
+      command.userId,
+      month,
+    );
 
-    const fields = buildAttestationFields({
+    const fieldInput = {
       project: {
         name: context.name,
         editalNumber: context.editalNumber,
@@ -110,10 +118,13 @@ export class GenerateCertificateUseCase {
       },
       membership: { categoria: member.categoria, cargaHoraria: member.cargaHoraria },
       activities,
+      sessionSummary: summarizeAttestationSessionLogs(sessionLogs),
       month,
       // Assinatura = data civil da GERAÇÃO (DEC-171); o mês de referência entra só no corpo (`data`).
       now: { dia: civilDay.slice(8, 10), mes: monthNameLong(civilDay.slice(0, 7)), ano: civilDay.slice(0, 4) },
-    });
+    };
+    const warnings = missingAttestationFieldLabels(fieldInput);
+    const fields = buildAttestationFields(fieldInput);
 
     const pdfBytes = await this.ports.pdf.renderPdf(fields);
 
@@ -126,6 +137,6 @@ export class GenerateCertificateUseCase {
       generatedBy: command.actorId,
     });
 
-    return { certificate, pdfBytes };
+    return { certificate, pdfBytes, warnings };
   }
 }

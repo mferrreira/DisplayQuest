@@ -27,6 +27,7 @@ interface WorkSessionItem {
   userName?: string
   activity: string | null
   location: string | null
+  originalStartTime: string | string[] | null
   startTime: string | string[]
   endTime: string | string[] | null
   duration: number | null
@@ -157,7 +158,10 @@ export function ProjectLeaderLogs({ projectId }: ProjectLeaderLogsProps) {
                         {session.userName || `Usuário ${session.userId}`}
                       </Badge>
                       <span className="text-xs text-muted-foreground">
-                        {formatDateTime(session.startTime)} → {formatDateTime(session.endTime)}
+                        {session.originalStartTime
+                          ? `Início original: ${formatDateTime(session.originalStartTime)}`
+                          : "Início original indisponível"}
+                        {` · Trecho ativo: ${formatDateTime(session.startTime)} → ${formatDateTime(session.endTime)}`}
                       </span>
                       <span className="text-xs font-medium">{formatDuration(session.duration)}</span>
                     </div>

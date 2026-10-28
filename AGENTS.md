@@ -1149,3 +1149,17 @@ leitura do texto visível. São observações medidas na instância real, **não
   `h-24` → 285px de largura). As três são lockups horizontais (razões 3.25/2.97/2.55), então
   altura única alinha o porte e estreita o IFNMG (95px). A regra antiga de "proporção pela marca"
   (V6-11l) foi substituída por decisão do dono.
+
+## plan-v10 — sessões e documentos (2026-10-28)
+
+- **Decisões aceitas:** DEC-233 preserva `work_sessions.originalStartTime` para sessões novas e
+  mantém nulo o início original irrecuperável das antigas, com aviso nas exportações; DEC-234
+  mantém o cronograma do atestado e acrescenta síntese mensal de sessões concluídas, mesmo sem
+  tarefa; DEC-235 confirma Parcial, Técnico-final e Final, com gênero científico só em Final;
+  DEC-236 determina diretrizes RECITAL/IFNMG e ABNT NBR 6022:2018 para o manuscrito Final, com
+  lacunas identificadas e revisão/complementação humana. As quatro decisões estão respondidas;
+  não há DEC pendente no plan-v10.
+- **Plano e histórico:** `$PLANOS/plan-v10-sessoes-e-documentos/{MODELO.md,queue.json,HANDOFF.md}`;
+  fila de oito fatias. A numeração DEC continua a partir do plan-v9 (DEC-232), sem reiniciar.
+- **Migração:** `20261028181000_add_work_session_original_start` adiciona coluna nullable sem
+  backfill. Integrações G4 rodam somente contra `dq-dev-test-db` em 5433, nunca 5432.

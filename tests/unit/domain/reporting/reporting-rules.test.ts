@@ -312,6 +312,7 @@ describe("OND7-B2 domain/reporting — project hours rules", () => {
       userId: 10,
       userName: "Ana",
       startTime: "2026-09-08T10:00:00.000Z",
+      originalStartTime: null,
       endTime: null,
       duration: 3600,
       activity: "A",

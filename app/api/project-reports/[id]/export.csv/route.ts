@@ -33,12 +33,17 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     lines.push(csvCell(report.content))
     lines.push("")
     lines.push(`Sessoes (${totals.sessionCount});Horas totais;${totals.totalHours.toFixed(2)}`)
-    lines.push(["Usuario", "Inicio", "Fim", "Horas", "Atividade", "Local"].map(csvCell).join(";"))
+    lines.push(["Usuario", "Inicio original", "Inicio do trecho ativo", "Fim", "Horas", "Atividade", "Local"].map(csvCell).join(";"))
+    const missingOriginalStarts = sessions.filter((session) => session.startTime === null).length
+    if (missingOriginalStarts > 0) {
+      lines.push(`Aviso;${missingOriginalStarts} sessão(ões) sem início original recuperável; a coluna fica vazia`)
+    }
     for (const session of sessions) {
       lines.push(
         [
           session.userName,
-          new Date(session.startTime).toLocaleString("pt-BR"),
+          session.startTime ? new Date(session.startTime).toLocaleString("pt-BR") : "",
+          new Date(session.activeStartTime).toLocaleString("pt-BR"),
           session.endTime ? new Date(session.endTime).toLocaleString("pt-BR") : "-",
           session.durationHours != null ? session.durationHours.toFixed(2) : "-",
           session.activity ?? "-",
@@ -50,13 +55,14 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     }
     lines.push("")
     lines.push(`Logs diarios (${totals.logCount})`)
-    lines.push(["Usuario", "Data", "Inicio", "Fim", "Nota"].map(csvCell).join(";"))
+    lines.push(["Usuario", "Data", "Inicio original", "Inicio do trecho ativo", "Fim", "Nota"].map(csvCell).join(";"))
     for (const log of logs) {
       lines.push(
         [
           log.userName ?? "-",
           new Date(log.date).toLocaleDateString("pt-BR"),
-          log.startTime ? new Date(log.startTime).toLocaleString("pt-BR") : "-",
+          log.startTime ? new Date(log.startTime).toLocaleString("pt-BR") : "",
+          log.activeStartTime ? new Date(log.activeStartTime).toLocaleString("pt-BR") : "",
           log.endTime ? new Date(log.endTime).toLocaleString("pt-BR") : "-",
           log.note ?? "-",
         ]

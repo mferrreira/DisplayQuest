@@ -93,4 +93,14 @@ describe("prompt do rascunho de IA (V5-9c, DEC-139/168)", () => {
     expect(prompt).toContain("texto puro");
     expect(prompt).toContain("português");
   });
+
+  it("o Final segue RECITAL/IFNMG e deixa lacunas científicas explícitas", () => {
+    const prompt = buildTechnicalReportDraftPrompt({ ...input, type: "final" });
+    for (const section of ["Título (português)", "Título (English)", "Resumo", "Abstract", "Palavras-chave", "Keywords", "1 Introdução", "2 Referencial teórico", "3 Metodologia", "4 Resultados e discussão", "5 Conclusão", "Referências"]) {
+      expect(prompt).toContain(section);
+    }
+    expect(prompt).toContain("ABNT NBR 6022:2018");
+    expect(prompt).toContain("[COMPLEMENTAÇÃO DA AUTORIA:");
+    expect(prompt).toContain("Não crie referências");
+  });
 });

@@ -174,6 +174,8 @@ O Relatório Parcial tem as linhas de seção no texto, e a linha do tipo traz o
 
 **Rascunhar com IA.** O **Rascunhar com IA** escreve o primeiro texto para você. O sistema lê as sessões de trabalho do período, as tarefas do projeto e o cronograma, e o texto aparece no editor. Nada é salvo: confira o texto e clique em **Salvar** quando estiver pronto. O rascunho escreve só o que tem apoio nos registros, e seção sem evidência fica vazia. Se você já estava escrevendo um texto não salvo, o rascunho não passa por cima dele: a tela avisa *"O texto em edição não foi sobrescrito — salve ou limpe antes de rascunhar."* e o seu texto continua.
 
+Para o tipo **Final**, o rascunho usa estrutura científica RECITAL/IFNMG e ABNT NBR 6022:2018, incluindo títulos, resumos e palavras-chave bilíngues, introdução, referencial teórico, metodologia, resultados e discussão, conclusão e referências. Complete as lacunas marcadas com informação verificável e bibliografia efetivamente consultada. O documento pode ser gerado mesmo com lacunas; a autoria deve revisar e completar o manuscrito.
+
 ::: nota titulo="Um documento por membro ativo"
 **Gerar DOCX** gera um documento oficial por pessoa da lista de membros com **Situação do vínculo** **Ativo** — o relatório é o relatório do estudante, e cada estudante tem o seu documento. O período escrito no documento é o período do projeto, cortado no dia da geração.
 :::
@@ -201,7 +203,7 @@ O **Mês de referência** vem com o mês anterior ao atual, e cada membro ativo 
 ```
 
 ::: nota titulo="O que sai na folha oficial"
-O PDF é a folha oficial preenchida: título do projeto, número do edital (ou o número PROPPI, quando o edital não existe), nome, CPF, matrícula, nível, modalidade e agência de fomento da pessoa, e os dados do vínculo — **carga horária** (**8h**, **20h** ou **adaptada**, com o número escrito) e categoria (**Bolsista** ou **Voluntário**). A carga que sai no atestado é a **carga contratada do vínculo**, não as horas registradas em sessões (capítulo 8). A descrição sucinta das atividades traz as duas primeiras etapas do cronograma que cruzam o mês de referência.
+O PDF é a folha oficial preenchida: título do projeto, número do edital (ou o número PROPPI, quando o edital não existe), nome, CPF, matrícula, nível, modalidade e agência de fomento da pessoa, e os dados do vínculo — **carga horária** (**8h**, **20h** ou **adaptada**, com o número escrito) e categoria (**Bolsista** ou **Voluntário**). A carga que sai no atestado é a **carga contratada do vínculo**, não as horas registradas em sessões (capítulo 8). A primeira descrição preserva a atividade do cronograma; a segunda acrescenta a síntese das sessões concluídas no mês, mesmo sem tarefa vinculada. Se faltarem dados dinâmicos, a tela avisa após gerar e você pode completar o cadastro e regenerar.
 :::
 
 ::: nota titulo="O sino lembra"

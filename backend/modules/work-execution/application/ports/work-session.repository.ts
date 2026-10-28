@@ -16,6 +16,7 @@ export interface NewWorkSession {
   userId: number;
   userName: string;
   startTime: Date;
+  originalStartTime: Date;
   endTime?: Date | null;
   duration?: number | null;
   activity?: string | null;

@@ -57,6 +57,7 @@ function sourcesPort(overrides: {
   project?: CertificateProjectContext | null;
   member?: CertificateMemberContext | null;
   activities?: { description: string; firstMonth: string; lastMonth: string; status: string }[];
+  sessionLogs?: { activity: string | null; note: string | null; endTime: string }[];
 } = {}): AttestationSourcesPort & { scheduleCalls: number } {
   let scheduleCalls = 0;
   return {
@@ -75,6 +76,7 @@ function sourcesPort(overrides: {
         { description: "Coleta de dados", firstMonth: "2026-09", lastMonth: "2026-10", status: "OPEN" },
       ];
     },
+    async listCompletedSessionLogs() { return overrides.sessionLogs ?? []; },
   } as AttestationSourcesPort & { scheduleCalls: number };
 }
 
@@ -178,6 +180,17 @@ describe("geração do atestado (V5-10a, DEC-170/171)", () => {
     expect(sources.scheduleCalls).toBe(1);
     expect(pdf.renders[0].data).toBe("outubro");
     expect(pdf.renders[0].atividades_1).toBe("Coleta de dados"); // cruza 2026-10 ✓
+  });
+
+  it("acrescenta logs do mês mesmo sem task na fonte", async () => {
+    const sources = sourcesPort({
+      activities: [],
+      sessionLogs: [{ activity: "Coleta de dados", note: "Amostras catalogadas", endTime: "2026-09-08T12:00:00.000Z" }],
+    });
+    const pdf = pdfPort();
+    await generate({ sources, pdf });
+    expect(pdf.renders[0].atividades_1).toBeUndefined();
+    expect(pdf.renders[0].atividade_2).toBe("Coleta de dados: Amostras catalogadas");
   });
 
   it("o próprio membro gera o seu atestado mesmo sem gestão nenhuma", async () => {

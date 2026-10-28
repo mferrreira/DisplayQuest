@@ -506,6 +506,9 @@ model work_sessions {
   userId    Int
   userName  String
   startTime DateTime    @default(now())
+  // DEC-233: startTime is the current active stretch; this is the immutable first start.
+  // Historical rows stay null because resume may already have overwritten startTime.
+  originalStartTime DateTime?
   endTime   DateTime?
   duration  Float?
   activity  String?

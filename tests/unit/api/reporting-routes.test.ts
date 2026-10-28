@@ -43,6 +43,7 @@ const mocks = vi.hoisted(() => {
     throwKind: null as null | "forbidden" | "notfound" | "notfound-user" | "validation" | "plain" | "p2025",
     fileBytes: null as Uint8Array | null,
     absPath: null as string | null,
+    includeLegacySession: false,
     calls: [] as Array<{ method: string; arg: unknown }>,
   };
   const record = (method: string, arg?: unknown) => {
@@ -167,14 +168,24 @@ const mocks = vi.hoisted(() => {
         sessions: [
           {
             userName: "Ana",
-            startTime: "2026-09-10T12:00:00.000Z",
+            startTime: "2026-09-09T12:00:00.000Z",
+            activeStartTime: "2026-09-10T12:00:00.000Z",
             endTime: "2026-09-10T14:00:00.000Z",
             durationHours: 2,
             activity: "Atividade",
             location: "Lab",
           },
+          ...(state.includeLegacySession ? [{
+            userName: "Bento",
+            startTime: null,
+            activeStartTime: "2026-09-12T12:00:00.000Z",
+            endTime: "2026-09-12T14:00:00.000Z",
+            durationHours: 2,
+            activity: "Sessão antiga",
+            location: null,
+          }] : []),
         ],
-        totals: { sessionCount: 1, totalHours: 2, logCount: 1 },
+        totals: { sessionCount: state.includeLegacySession ? 2 : 1, totalHours: state.includeLegacySession ? 4 : 2, logCount: 1 },
       };
     },
     getUserProjectHours: async (arg: unknown) => {
@@ -593,6 +604,16 @@ describe("GET /api/project-reports/[id]/aggregate e export.csv", () => {
     const csv = new TextDecoder("utf-8", { ignoreBOM: true }).decode(raw);
     expect(csv).toContain('Relatório de projeto;"T"');
     expect(csv).toContain('"Conteúdo"');
+    expect(csv).toContain('"Inicio original";"Inicio do trecho ativo"');
+    expect(csv).toContain('09/09/2026');
+    expect(csv).toContain('10/09/2026');
+
+    mocks.state.includeLegacySession = true;
+    const legacy = await projectReportCsv(makeRequest("/api/project-reports/10/export.csv"), params({ id: "10" }));
+    const legacyCsv = new TextDecoder("utf-8", { ignoreBOM: true }).decode(new Uint8Array(await legacy.arrayBuffer()));
+    expect(legacyCsv).toContain("Aviso;1 sessão(ões) sem início original recuperável; a coluna fica vazia");
+    expect(legacyCsv).toContain('"Bento";"";"12/09/2026');
+    mocks.state.includeLegacySession = false;
 
     mocks.state.throwKind = "notfound";
     const missing = await projectReportCsv(makeRequest("/api/project-reports/999/export.csv"), params({ id: "999" }));

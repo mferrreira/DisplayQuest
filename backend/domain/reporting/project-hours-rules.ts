@@ -102,6 +102,7 @@ export interface HoursSessionRow {
   userId: number
   userName: string | null
   startTime: Date
+  originalStartTime?: Date | null
   endTime: Date | null
   duration: number | null
   activity: string | null
@@ -125,6 +126,7 @@ export interface ProjectHoursAggregate {
     userId: number
     userName: string
     startTime: string
+    originalStartTime: string | null
     endTime: string | null
     duration: number | null
     activity: string | null
@@ -174,6 +176,7 @@ export function aggregateProjectHours(
       userId: session.userId,
       userName: session.userName as string,
       startTime: session.startTime.toISOString(),
+      originalStartTime: session.originalStartTime?.toISOString() ?? null,
       endTime: session.endTime ? session.endTime.toISOString() : null,
       duration: session.duration,
       activity: session.activity,

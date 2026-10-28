@@ -18,6 +18,11 @@ export interface ProjectCertificate {
   updatedAt: string
 }
 
+export interface GeneratedProjectCertificate {
+  certificate: ProjectCertificate
+  warnings: string[]
+}
+
 async function readJson(response: Response) {
   try {
     return await response.json()
@@ -58,8 +63,8 @@ export async function listCertificates(projectId: number): Promise<ProjectCertif
 export async function generateCertificate(
   projectId: number,
   input: { userId: number; month?: string },
-): Promise<ProjectCertificate> {
-  const payload = await request<{ certificate?: ProjectCertificate }>(
+): Promise<GeneratedProjectCertificate> {
+  const payload = await request<{ certificate?: ProjectCertificate; warnings?: string[] }>(
     `/api/projects/${projectId}/certificates`,
     { method: "POST", headers: jsonHeaders, body: JSON.stringify(input) },
     "Erro ao gerar atestado",
@@ -67,7 +72,7 @@ export async function generateCertificate(
   if (!payload.certificate) {
     throw new Error("Erro ao gerar atestado")
   }
-  return payload.certificate
+  return { certificate: payload.certificate, warnings: Array.isArray(payload.warnings) ? payload.warnings : [] }
 }
 
 /**

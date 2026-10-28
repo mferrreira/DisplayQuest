@@ -17,6 +17,7 @@ function toDomain(row: {
   userId: number
   userName: string
   startTime: Date
+  originalStartTime: Date | null
   endTime: Date | null
   duration: number | null
   activity: string | null
@@ -31,6 +32,7 @@ function toDomain(row: {
     userId: row.userId,
     userName: row.userName,
     startTime: row.startTime,
+    originalStartTime: row.originalStartTime,
     endTime: row.endTime,
     duration: row.duration,
     activity: row.activity,
@@ -83,6 +85,7 @@ export class PrismaWorkSessionRepository implements WorkSessionRepositoryPort {
         userId: session.userId,
         userName: session.userName,
         startTime: session.startTime,
+        originalStartTime: session.originalStartTime,
         endTime: session.endTime ?? null,
         duration: session.duration ?? null,
         activity: session.activity ?? null,
@@ -96,7 +99,7 @@ export class PrismaWorkSessionRepository implements WorkSessionRepositoryPort {
 
   async update(id: number, updates: Partial<WorkSession>): Promise<WorkSession> {
     const data: Record<string, unknown> = {}
-    for (const key of ["userName", "startTime", "endTime", "duration", "activity", "location", "projectId", "status"] as const) {
+    for (const key of ["userName", "startTime", "originalStartTime", "endTime", "duration", "activity", "location", "projectId", "status"] as const) {
       if (updates[key] !== undefined) data[key] = updates[key]
     }
 

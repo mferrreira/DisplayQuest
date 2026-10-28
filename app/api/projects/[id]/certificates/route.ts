@@ -84,7 +84,7 @@ export async function POST(
       )
     }
 
-    const { certificate, pdfBytes } = await attestation.generateCertificate({
+    const { certificate, pdfBytes, warnings } = await attestation.generateCertificate({
       projectId,
       actorId: auth.actor.id,
       actorRoles: auth.actor.roles,
@@ -106,6 +106,7 @@ export async function POST(
           createdAt: certificate.createdAt,
           updatedAt: certificate.updatedAt,
         },
+        warnings,
       },
       { status: 201 },
     )

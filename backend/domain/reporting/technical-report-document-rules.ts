@@ -97,7 +97,23 @@ for (const section of REPORT_SECTIONS) {
  * branco); a tabela de destino é por chave, não por posição; texto antes de
  * qualquer cabeçalho reconhecido pertence à Descrição.
  */
-export function splitReportBody(text: string): ReportBody {
+export function splitReportBody(text: string, type?: TechnicalReportType): ReportBody {
+  if (type === "final") {
+    const sections: Record<ReportSection["id"], string[]> = { descricao: [], resultados: [], comentarios: [] };
+    let target: ReportSection["id"] = "descricao";
+    for (const line of text.split(/\r\n|\r|\n/)) {
+      const heading = normalizeReportLine(line);
+      if (/^(4\s+)?resultados(\s+e\s+discussao)?$/.test(heading) || heading === "discussao") target = "resultados";
+      else if (/^(5\s+)?conclusao$/.test(heading) || heading === "referencias") target = "comentarios";
+      else if (/^(1\s+)?introducao$/.test(heading) || /^(2\s+)?referencial teorico$/.test(heading) || /^(3\s+)?metodologia$/.test(heading)) target = "descricao";
+      sections[target].push(line);
+    }
+    return {
+      descricao: sections.descricao.join("\n").trim(),
+      resultados: sections.resultados.join("\n").trim(),
+      comentarios: sections.comentarios.join("\n").trim(),
+    };
+  }
   const blocks: Record<ReportSection["id"], string[][]> = {
     descricao: [[]],
     resultados: [],
@@ -249,7 +265,7 @@ export function buildTechnicalReportCommands(
   input: TechnicalReportDocumentInput,
 ): Record<string, string> {
   const period = technicalReportDocumentPeriod(input.project, input.now);
-  const body = splitReportBody(input.content);
+  const body = splitReportBody(input.content, input.type);
   return {
     periodo_inicio: formatDocumentCivilDay(period.periodoInicio),
     periodo_fim: formatDocumentCivilDay(period.periodoFim),

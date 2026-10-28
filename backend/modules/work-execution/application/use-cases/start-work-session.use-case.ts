@@ -79,6 +79,7 @@ export class StartWorkSessionUseCase {
       userId: command.userId,
       userName,
       startTime,
+      originalStartTime: new Date(startTime),
       endTime: null,
       duration: null,
       activity: command.activity ?? null,

@@ -142,6 +142,7 @@ vi.mock("@/backend/composition/root", () => {
     async listScheduleActivities() {
       return [{ description: "Coleta de dados", firstMonth: "2026-09", lastMonth: "2026-10", status: "OPEN" }];
     },
+    async listCompletedSessionLogs() { return []; },
   };
 
   const pdf: AttestationPdfPort = {

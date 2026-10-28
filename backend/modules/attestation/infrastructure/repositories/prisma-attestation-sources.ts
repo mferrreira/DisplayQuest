@@ -116,4 +116,29 @@ export class PrismaAttestationSources implements AttestationSourcesPort {
       status: activity.status,
     }));
   }
+
+  async listCompletedSessionLogs(projectId: number, userId: number, month: string) {
+    const start = new Date(`${month}-01T00:00:00.000Z`);
+    const [year, rawMonth] = month.split("-").map(Number);
+    const end = new Date(Date.UTC(year, rawMonth, 1));
+    const sessions = await prisma.work_sessions.findMany({
+      where: {
+        projectId,
+        userId,
+        status: "completed",
+        endTime: { gte: start, lt: end },
+      },
+      orderBy: [{ endTime: "asc" }, { id: "asc" }],
+      select: {
+        activity: true,
+        endTime: true,
+        dailyLog: { select: { note: true } },
+      },
+    });
+    return sessions.flatMap((session) => session.endTime ? [{
+      activity: session.activity,
+      note: session.dailyLog?.note ?? null,
+      endTime: session.endTime.toISOString(),
+    }] : []);
+  }
 }
