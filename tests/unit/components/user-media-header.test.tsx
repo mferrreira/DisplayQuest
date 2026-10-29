@@ -277,3 +277,19 @@ describe("cabeçalho de mídia do perfil", () => {
     expect(screen.getByRole("button", { name: "Enviar capa" })).toBeEnabled();
   });
 });
+
+describe("S05 (R4) — faixa da capa do perfil em proporção 16:9", () => {
+  it("com capa: o contêiner da imagem é aspect-video, sem altura fixa", () => {
+    renderHeader(false, "users/7/images/banner/alpha.png");
+    const strip = screen.getByRole("img", { name: "Capa de Ana Souza" }).parentElement!;
+    expect(strip.className).toContain("aspect-video");
+    expect(strip.className).not.toMatch(/(^|\s)h-\d/);
+  });
+
+  it("sem capa: o placeholder ocupa a mesma faixa 16:9", () => {
+    renderHeader(false, null);
+    const strip = screen.getByText("Sem capa").parentElement!;
+    expect(strip.className).toContain("aspect-video");
+    expect(strip.className).not.toMatch(/(^|\s)h-\d/);
+  });
+});

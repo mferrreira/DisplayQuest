@@ -107,7 +107,9 @@ export function ProjectMediaHeader({
   return (
     <div className="space-y-3">
       <div className="relative pb-8">
-        <div className="h-28 overflow-hidden rounded-lg border bg-muted sm:h-36">
+        {/* S05 (R4): a faixa é 16:9 (`aspect-video`), não altura fixa — o logo sobreposto
+            continua fora da faixa pelo `pb-8` do contêiner. */}
+        <div className="aspect-video overflow-hidden rounded-lg border bg-muted">
           {currentBannerKey ? (
             <>
               {/* eslint-disable-next-line @next/next/no-img-element */}
