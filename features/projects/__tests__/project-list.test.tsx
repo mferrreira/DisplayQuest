@@ -39,12 +39,12 @@ describe("ProjectList characterization", () => {
     expect(screen.getByText("Arquivado")).toBeVisible();
   });
 
-  it("selects a project when the view action is used", async () => {
-    const user = userEvent.setup();
+  it("opens the project detail through the whole-card link (S01: the eye button is gone)", () => {
     const onProjectSelect = vi.fn();
     render(<ProjectList projects={[projects[0]]} onProjectSelect={onProjectSelect} />);
-    await user.click(screen.getAllByRole("button").at(-1)!);
-    expect(onProjectSelect).toHaveBeenCalledWith(projects[0]);
+    const link = screen.getByRole("link", { name: "Ver projeto Projeto ativo" });
+    expect(link).toHaveAttribute("href", "/dashboard/projetos/1");
+    expect(screen.queryByRole("button", { name: "Ver projeto Projeto ativo" })).toBeNull();
   });
 
   it("shows management actions only to project managers", () => {
@@ -52,6 +52,8 @@ describe("ProjectList characterization", () => {
     expect(screen.queryAllByRole("button")).toHaveLength(0);
     mocks.auth.user = { id: 7, roles: ["GERENTE"] };
     rerender(<ProjectList projects={[projects[0]]} />);
+    // 3 = "Novo Projeto" + editar + excluir. O olho não era contado aqui: sem
+    // onProjectSelect ele não renderizava, e na S01 ele saiu por completo.
     expect(screen.getAllByRole("button")).toHaveLength(3);
   });
 });
