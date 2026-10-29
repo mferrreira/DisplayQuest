@@ -133,10 +133,13 @@ vi.mock("@/lib/storage/blob-store", async (importOriginal) => {
   return { ...actual, blobStoreFromEnv: () => (mocks.bucketConfigured ? store : null) };
 });
 
+import { REAL_PNG_BYTES } from "@/tests/mocks/fixtures/image-bytes";
 import { DELETE as DELETE_IMAGE, PUT as UPLOAD_IMAGE } from "@/app/api/users/[id]/images/[slot]/route";
 import { GET as GET_IMAGE_FILE } from "@/app/api/users/[id]/images/[slot]/file/route";
 
-const PNG_BYTES = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+// R12 (S12): a capa sai do bucket como WebP, então a rota converte o byte com `sharp` — e `sharp`
+// exige uma imagem inteira, não só a assinatura de 8 bytes. Um PNG real 2×2 é o que entra.
+const PNG_BYTES = REAL_PNG_BYTES;
 const PDF_BYTES = new Uint8Array([..."%PDF-1.7\n".split("").map((c) => c.charCodeAt(0))]);
 
 function login(roles: string[], id: number) {
@@ -229,9 +232,12 @@ describe("subir a capa — ordem e gate antes do byte", () => {
     );
     expect(response.status).toBe(200);
     const body = await read(response);
-    expect(body.user.bannerKey).toMatch(/^users\/7\/images\/banner\/[0-9a-f-]+\.png$/);
+    expect(body.user.bannerKey).toMatch(/^users\/7\/images\/banner\/[0-9a-f-]+\.webp$/);
     expect(mocks.puts).toHaveLength(1);
     expect(mocks.puts[0].key.startsWith("users/7/images/banner/")).toBe(true);
+    // R12 (S12): o objeto gravado é WebP — ContentType `image/webp` e assinatura RIFF/WEBP.
+    expect(mocks.puts[0].contentType).toBe("image/webp");
+    expect(Array.from(mocks.objects.get(mocks.puts[0].key)!.body.subarray(0, 4))).toEqual([0x52, 0x49, 0x46, 0x46]);
     expect(mocks.users.get(7)?.bannerKey).toBe(body.user.bannerKey);
   });
 
@@ -359,9 +365,11 @@ describe("servir o binário", () => {
       context({ id: "7", slot: "banner" }),
     );
     expect(response.status).toBe(200);
-    expect(response.headers.get("content-type")).toBe("image/png");
+    expect(response.headers.get("content-type")).toBe("image/webp");
     expect(response.headers.get("cache-control")).toBe("private, max-age=86400");
-    expect(Array.from(new Uint8Array(await response.arrayBuffer()))).toEqual(Array.from(PNG_BYTES));
+    // R12 (S12): o byte servido é o WebP convertido, não o PNG de origem.
+    const stored = mocks.objects.get(mocks.puts[0].key)!.body;
+    expect(Array.from(new Uint8Array(await response.arrayBuffer()))).toEqual(Array.from(stored));
   });
 
   it("leitura é do autenticado: outra pessoa lê o byte (DEC-127/136)", async () => {

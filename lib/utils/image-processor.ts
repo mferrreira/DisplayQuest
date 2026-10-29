@@ -126,4 +126,14 @@ export class ImageProcessor {
 
     return { valid: true };
   }
+
+  /**
+   * R12 (S12): imagem de capa vai para o bucket como WebP. Convertido pela `sharp` da casa, sem
+   * redimensionar — a capa mantém o quadro do upload, só muda o contêiner. Anexos e provas não
+   * passam por aqui: documento e vídeo preservam o byte original.
+   */
+  static async toWebP(buffer: Buffer): Promise<Uint8Array> {
+    const out = await sharp(buffer).toFormat('webp', { quality: 80 }).toBuffer();
+    return new Uint8Array(out);
+  }
 }
