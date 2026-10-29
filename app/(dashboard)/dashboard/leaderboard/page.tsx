@@ -16,12 +16,11 @@
 import Link from "next/link"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Crown, Medal, Award, Trophy } from "lucide-react"
+import { Trophy } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { useUser } from "@/contexts/user-context"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { userImageUrl } from "@/lib/api/user-images"
 import { getRoleDisplayName } from "@/lib/utils/access-control"
 import { PageHeader } from "@/components/ui/page-header"
 import { Progress } from "@/components/ui/progress"
@@ -29,6 +28,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { EmptyState } from "@/components/ui/empty-state"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { fetchAPI } from "@/contexts/api-client"
+import { LeaderboardPodium } from "@/components/leaderboard/leaderboard-podium"
 import { compareByBoardPosition } from "@/backend/domain"
 
 /** O que `GET /api/board` declara (S01: mês corrente; S03 acrescenta a lista de meses fechados). */
@@ -364,93 +364,7 @@ export default function LeaderboardPage() {
               aria-label={closedBoardReady ? "Quadro do mês fechado" : undefined}
               className="space-y-8"
             >
-              {champion && (
-                <section aria-label="Campeão do quadro">
-                  <Link
-                    href={`/dashboard/profile?userId=${champion.id}`}
-                    className="relative block overflow-hidden rounded-lg border border-warning/30 bg-warning/5 transition-colors hover:border-warning/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  >
-                    {/* V5-3 (DEC-137): a capa do 1º lugar entra como fundo translúcido do bloco. */}
-                    {champion.bannerKey ? (
-                      <>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={userImageUrl(champion.id, "banner", champion.bannerKey)}
-                          alt=""
-                          aria-hidden="true"
-                          className="absolute inset-0 h-full w-full object-cover opacity-20"
-                        />
-                      </>
-                    ) : null}
-                    <div className="relative flex flex-wrap items-center gap-4 p-5 sm:gap-6 sm:p-8">
-                      <Crown className="h-8 w-8 shrink-0 text-warning sm:h-10 sm:w-10" aria-hidden="true" />
-                      <Avatar className="h-14 w-14 border-2 border-warning/50 sm:h-20 sm:w-20">
-                        <AvatarImage src={champion.avatar || undefined} alt={champion.name} />
-                        <AvatarFallback className="text-lg font-bold sm:text-xl">{getInitials(champion.name)}</AvatarFallback>
-                      </Avatar>
-                      {/* Uma palavra só (nome de uma palavra, ou o nome congelado no fechamento) não
-                          quebra sozinha e invadia o número ao lado — medido em 390px: "Coordenador" mede
-                          129px contra 110px de caixa, e o `240` colava no nome. `hyphens-auto` quebra na
-                          sílaba ("Coordena-dor") porque `<html lang="pt-BR">` já existe; `break-words` é a
-                          rede de segurança quando o navegador não tem dicionário para o idioma; o bloco do
-                          número é `shrink-0` para o placar nunca ser espremido (mesma família do valor que
-                          explodia no cartão de tarefa). */}
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-warning">1º lugar</p>
-                        <p className="break-words text-xl font-bold hyphens-auto text-foreground sm:text-2xl">
-                          {champion.name}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {getRoleLabel(champion.roles || []) || "Membro do laboratório"}
-                        </p>
-                      </div>
-                      <div className="shrink-0 text-right">
-                        <p className="text-4xl font-bold tabular-nums text-foreground">{champion.value}</p>
-                        <p className="text-xs text-muted-foreground">pontos</p>
-                      </div>
-                    </div>
-                  </Link>
-                </section>
-              )}
-
-              {runnersUp.length > 0 && (
-                <section
-                  aria-label="Segundo e terceiro lugares"
-                  className="grid gap-8 sm:grid-cols-2 sm:divide-x sm:divide-border"
-                >
-                  {runnersUp.map((runnerUp) => {
-                    const Icon = runnerUp.position === 2 ? Medal : Award
-                    const accent = "text-warning"
-                    return (
-                      <Link
-                        key={runnerUp.id}
-                        href={`/dashboard/profile?userId=${runnerUp.id}`}
-                        className={`flex items-center gap-4 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-                          runnerUp.position === 2 ? "sm:pr-8" : "sm:pl-8"
-                        }`}
-                      >
-                        <span className={`text-3xl font-bold tabular-nums ${accent}`} aria-hidden="true">
-                          {runnerUp.position}º
-                        </span>
-                        <Avatar className="h-12 w-12">
-                          <AvatarImage src={runnerUp.avatar || undefined} alt={runnerUp.name} />
-                          <AvatarFallback>{getInitials(runnerUp.name)}</AvatarFallback>
-                        </Avatar>
-                        <div className="min-w-0 flex-1">
-                          <p className="flex items-center gap-1.5 truncate font-semibold text-foreground">
-                            <Icon className={`h-4 w-4 shrink-0 ${accent}`} aria-hidden="true" />
-                            {runnerUp.name}
-                          </p>
-                          <p className="truncate text-xs text-muted-foreground">
-                            {getRoleLabel(runnerUp.roles || []) || "Membro do laboratório"}
-                          </p>
-                        </div>
-                        <p className="shrink-0 font-bold tabular-nums text-foreground">{runnerUp.value}</p>
-                      </Link>
-                    )
-                  })}
-                </section>
-              )}
+              {champion && <LeaderboardPodium champion={champion} runnersUp={runnersUp} />}
 
               <section aria-labelledby="leaderboard-full" className="space-y-4">
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
