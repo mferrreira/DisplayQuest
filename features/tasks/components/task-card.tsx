@@ -56,6 +56,7 @@ import {
   Lock,
   AlertTriangle,
   CalendarClock,
+  CheckSquare,
 } from "lucide-react"
 import type { Task, TaskStatus, TaskSubtask } from "@/entities/task"
 import {
@@ -491,9 +492,11 @@ export function TaskCard({ task, index, isOverdue, isDueToday, isCompact, onEdit
                       // O cartão NÃO é a lista de subtasks: a lista completa, com criar/renomear/
                       // apagar, vive no diálogo de detalhe. Aqui entra só o que falta, porque é o
                       // que falta que trava. Tom âmbar: nada está errado, falta uma etapa.
-                      <div className="mb-3 rounded-md border border-warning/40 bg-warning/10 px-2 py-1.5">
-                        <div className="flex items-center gap-1 text-[11px] font-semibold text-warning">
-                          <AlertTriangle className="h-3 w-3 shrink-0" aria-hidden="true" />
+                      // S08 (R8, dono): bloco neutro — muted + CheckSquare. O âmbar de aviso
+                      // saiu porque nada está errado: falta uma etapa.
+                      <div className="mb-3 rounded-md border border-border bg-muted px-2 py-1.5">
+                        <div className="flex items-center gap-1 text-[11px] font-semibold text-muted-foreground">
+                          <CheckSquare className="h-3 w-3 shrink-0" aria-hidden="true" />
                           <span>{openSubtasksLabel}</span>
                           <span className="font-normal text-muted-foreground">
                             · {subtaskProgressLabel}

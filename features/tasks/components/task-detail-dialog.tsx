@@ -448,7 +448,8 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit }: TaskDetai
                 )}
 
                 {openSubtasks.length > 0 && task.status !== "done" && (
-                  <p className="mt-2 text-xs text-amber-700 dark:text-amber-400">
+                  // S08 (R8, dono): a frase da trava é neutra — falta uma etapa, não há aviso.
+                  <p className="mt-2 text-xs text-muted-foreground">
                     {openSubtasksMessage(openSubtasks.length, task.status === "in-review" ? "approve" : "review")}
                   </p>
                 )}
