@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { LogOut, Menu, Trophy } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
@@ -84,10 +85,15 @@ export function MobileMenu() {
               </div>
 
               {points !== null ? (
-                <div className="flex items-center justify-center gap-2 rounded-xl border bg-card p-3">
+                // S02 (R2): o placar do menu abre o mesmo destino do placar do cabeçalho.
+                <Link
+                  href="/dashboard/leaderboard"
+                  aria-label="Pontos — abrir quadro de liderança"
+                  className="flex items-center justify-center gap-2 rounded-xl border bg-card p-3 transition-colors hover:border-primary/40"
+                >
                   <Trophy className="h-5 w-5 text-warning" aria-hidden="true" />
                   <span className="text-lg font-semibold">{points}</span>
-                </div>
+                </Link>
               ) : null}
             </div>
           ) : null}

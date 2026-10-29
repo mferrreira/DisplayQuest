@@ -79,7 +79,13 @@ export function AppHeader({ sidebarOpen = true, onToggleSidebar, showSessionTime
 
           <div className="hidden items-center gap-2 md:flex">
             {monthPoints !== null ? (
-              <div className="relative flex items-center gap-2 rounded-lg border bg-card px-3 py-1.5">
+              // S02 (R2): a pílula é link para o quadro de liderança; o número que ela mostra é
+              // o mesmo que ordena o quadro, e o nome do link diz isso.
+              <Link
+                href="/dashboard/leaderboard"
+                aria-label="Placar do mês — abrir quadro de liderança"
+                className="relative flex items-center gap-2 rounded-lg border bg-card px-3 py-1.5 transition-colors hover:border-primary/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring"
+              >
                 <Trophy className="h-4 w-4 text-warning" aria-hidden="true" />
                 {/* ADR-007: o rótulo diz o que o número É. Sem "pontos" solto, que leria como saldo. */}
                 <span className="sr-only">Placar do mês</span>
@@ -93,7 +99,7 @@ export function AppHeader({ sidebarOpen = true, onToggleSidebar, showSessionTime
                 </span>
                 {/* plan-v3 OND4-B: o prêmio desta entrega, ancorado no contador que ele explica. */}
                 <PointsDelta />
-              </div>
+              </Link>
             ) : null}
 
             <NotificationsPanel />
