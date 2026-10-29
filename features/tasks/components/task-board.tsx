@@ -31,6 +31,7 @@ import {
 import { useColumnOrders } from "../hooks/use-column-orders"
 import { sortTasksByColumnOrder, type ColumnOrder } from "../utils/column-order"
 import { filterBoardTasks } from "../utils/filter-board-tasks"
+import { pickDefaultProject } from "../utils/pick-default-project"
 import { getCronograma, type ProjectActivity } from "@/lib/api/project-cronograma"
 import type { Task, TaskStatus } from "@/entities/task"
 import { BoardColumn } from "./board-column"
@@ -62,8 +63,19 @@ export function TaskBoard() {
   // V5-6 (DEC-99): filtro pela linha do cronograma. URL como fonte de verdade, igual ao resto.
   const [atividadeParam, setAtividadeParam] = useQueryState("atividade", parseAsInteger)
 
+  // R11 (S11): abertura do quadro na primeira carga sem `?projeto=`. Líder abre no seu projeto;
+  // senão, no primeiro vínculo de membro; senão, "Todos os projetos". A abertura é derivada, não
+  // escrita na URL: quando a pessoa escolhe (seletor ou chip), o quadro obedece só a URL, e o
+  // global volta sem ser re-atropelado pela regra de abertura.
+  const defaultProjectId = useMemo(
+    () => pickDefaultProject(projects, user?.id),
+    [projects, user],
+  )
+  const [projectChosen, setProjectChosen] = useState(false)
+  const activeProjectId = projectChosen ? (projetoParam ?? null) : (projetoParam ?? defaultProjectId ?? null)
+
   const { data: tasks, isPending, error, refetch } = useTasks(
-    projetoParam ? { projectId: projetoParam } : {},
+    activeProjectId ? { projectId: activeProjectId } : {},
   )
 
   // V5-6: as atividades do projeto selecionado, para o filtro da barra. Leitura aberta (DEC-136)
@@ -71,12 +83,12 @@ export function TaskBoard() {
   // sem lista: atividade é do projeto (DEC-99).
   const [projectActivities, setProjectActivities] = useState<ProjectActivity[]>([])
   useEffect(() => {
-    if (!projetoParam) {
+    if (!activeProjectId) {
       setProjectActivities([])
       return
     }
     let cancelled = false
-    getCronograma(projetoParam)
+    getCronograma(activeProjectId)
       .then((view) => {
         if (!cancelled) setProjectActivities(view.activities)
       })
@@ -87,7 +99,7 @@ export function TaskBoard() {
     return () => {
       cancelled = true
     }
-  }, [projetoParam])
+  }, [activeProjectId])
   const { updateStatus, complete } = useTaskMutations()
 
   const [editTask, setEditTask] = useState<Task | null>(null)
@@ -115,14 +127,14 @@ export function TaskBoard() {
 
   const filteredTasks = useMemo(() => {
     return filterBoardTasks(tasks ?? [], {
-      projectId: projetoParam,
+      projectId: activeProjectId,
       assigneeId: pessoaParam,
       activityId: atividadeParam,
       overdue: atrasadasParam,
       dueToday: hojeParam,
       search: buscaParam,
     })
-  }, [tasks, projetoParam, pessoaParam, atrasadasParam, hojeParam, buscaParam, atividadeParam])
+  }, [tasks, activeProjectId, pessoaParam, atrasadasParam, hojeParam, buscaParam, atividadeParam])
 
   const archivedTasks = useMemo(() => filteredTasks.filter((t) => isArchivedTask(t)), [filteredTasks])
   // plan-v3 OND3-C: cada coluna tem a sua ordenação, então a lista NÃO é ordenada aqui — o
@@ -256,7 +268,7 @@ export function TaskBoard() {
     <div className="space-y-6">
       <BoardToolbar
         filters={{
-          projectId: projetoParam ?? undefined,
+          projectId: activeProjectId ?? undefined,
           overdue: atrasadasParam || undefined,
           dueToday: hojeParam || undefined,
           search: buscaParam || undefined,
@@ -264,6 +276,9 @@ export function TaskBoard() {
           activityId: atividadeParam ?? undefined,
         }}
         onFiltersChange={(next) => {
+          // Qualquer escolha vinda da barra — seletor, chip, troca de pessoa — fixa a abertura:
+          // a partir daqui o quadro obedece só a URL, e a regra de abertura não volta a mandar.
+          setProjectChosen(true)
           void setProjetoParam(next.projectId ?? null)
           void setAtrasadasParam(Boolean(next.overdue))
           void setHojeParam(Boolean(next.dueToday))
@@ -341,14 +356,14 @@ export function TaskBoard() {
         </DragDropContext>
       )}
 
-      <ActivityFeed projectId={projetoParam} />
+      <ActivityFeed projectId={activeProjectId} />
       <ArchivedTasksDisclosure archived={archivedTasks} />
 
       <TaskDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         task={editTask}
-        defaultProjectId={projetoParam ?? undefined}
+        defaultProjectId={activeProjectId ?? undefined}
       />
       <TaskDetailDialog
         task={liveViewTask}

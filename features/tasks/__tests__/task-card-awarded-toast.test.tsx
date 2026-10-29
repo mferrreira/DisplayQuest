@@ -24,7 +24,7 @@ import { NuqsTestingAdapter } from "nuqs/adapters/testing";
 import { Toaster } from "@/components/ui/sonner";
 import { TaskBoard } from "../components/task-board";
 import { completionAwardMessage } from "../utils/move-rules";
-import { resetTaskStore, seedTasks } from "@/tests/mocks/handlers";
+import { resetProjectStore, resetTaskStore, seedProjects, seedTasks } from "@/tests/mocks/handlers";
 import { makeTask } from "@/tests/mocks/fixtures/tasks";
 
 const mockUser = { id: 2, name: "Coordenador", email: "coordenador@lab.com", roles: ["COORDENADOR"] };
@@ -81,6 +81,10 @@ describe("V4-5c · a frase do prêmio creditado (GAP-P3-05)", () => {
 describe("V4-5c · o cartão anuncia o creditado, não o projetado", () => {
   beforeEach(() => {
     resetTaskStore();
+    // R11 (S11): o quadro abre no projeto do líder na primeira carga. O cartão opera sobre tarefa sem
+    // projeto, então não há projetos — o coordenador fica na visão global.
+    resetProjectStore();
+    seedProjects([]);
     installMatchMediaStub();
   });
 

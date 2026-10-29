@@ -26,6 +26,12 @@ export class ListProjectsForActorUseCase {
       throw new ForbiddenError("Acesso negado ao projeto")
     }
 
-    return await this.dependencies.projects.findAll()
+    const projects = await this.dependencies.projects.findAll()
+    // R11 (S11): a lista marca, por projeto, se o ator é membro. É a fonte da primeira carga do
+    // quadro (líder → seu projeto, senão primeiro vínculo, senão todos). Não é coluna: projeção.
+    return projects.map((project) => ({
+      ...project,
+      isMember: project.members?.some((member) => member.userId === query.actorId) ?? false,
+    }))
   }
 }

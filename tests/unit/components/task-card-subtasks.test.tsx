@@ -18,7 +18,10 @@ import { TaskBoard } from "@/features/tasks/components/task-board";
 import { resetTaskStore, seedTasks } from "@/tests/mocks/handlers";
 import { makeTask } from "@/tests/mocks/fixtures/tasks";
 
-const mockUser = { id: 2, name: "Coordenador", email: "coordenador@lab.com", roles: ["COORDENADOR"] };
+// R11 (S11): o quadro abre no projeto do líder na primeira carga. Estes testes de cartão e diálogo
+// de subtask operam sobre tarefas sem projeto, então o ator não lidera nem é membro de nenhum
+// projeto do fixture (líderes 2 e 3) — o quadro fica na visão global.
+const mockUser = { id: 4, name: "Coordenador", email: "coordenador@lab.com", roles: ["COORDENADOR"] };
 
 vi.mock("next-auth/react", async (importOriginal) => {
   const actual = await importOriginal<typeof import("next-auth/react")>();

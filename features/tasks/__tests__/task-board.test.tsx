@@ -11,7 +11,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SessionProvider } from "next-auth/react";
 import { NuqsTestingAdapter } from "nuqs/adapters/testing";
 import { TaskBoard } from "../components/task-board";
-import { resetTaskStore, getTaskStore, seedTasks } from "@/tests/mocks/handlers";
+import { resetProjectStore, resetTaskStore, getTaskStore, seedProjects, seedTasks } from "@/tests/mocks/handlers";
 import { server } from "@/tests/mocks/server";
 import { currentPointsDelta, resetPointsDeltaStore } from "@/lib/points-delta";
 
@@ -80,6 +80,10 @@ function titlesInColumn(columnTitle: string): string[] {
 describe("TaskBoard", () => {
   beforeEach(() => {
     resetTaskStore();
+    // R11 (S11): o quadro abre no projeto do líder na primeira carga. Estes testes operam sobre
+    // tarefas sem projeto, então não há projetos — o coordenador fica na visão global.
+    resetProjectStore();
+    seedProjects([]);
     installMemoryStorage();
   });
 

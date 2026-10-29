@@ -17,6 +17,11 @@ export interface ProjectRecord {
   links?: unknown;
   memberCount?: number;
   members?: ProjectMemberSummary[];
+  /**
+   * R11 (S11): o ator é membro deste projeto? Marcado pelo use case de lista a partir do
+   * vínculo. Não é coluna: é uma projeção da lista para o ator, e só a lista a preenche.
+   */
+  isMember?: boolean;
   /** V5-2b (DEC-61/63): datas civis `YYYY-MM-DD`, texto de cadastro e saldo do projeto. */
   startDate?: string | null;
   endDate?: string | null;

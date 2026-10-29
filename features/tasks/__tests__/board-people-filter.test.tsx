@@ -6,8 +6,10 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TaskBoard } from "../components/task-board";
 import {
+  resetProjectStore,
   resetTaskStore,
   resetUserStore,
+  seedProjects,
   seedTasks,
   seedUsers,
 } from "@/tests/mocks/handlers";
@@ -88,6 +90,10 @@ describe("TaskBoard — filtro por pessoa (select de pessoas)", () => {
   beforeEach(() => {
     resetTaskStore();
     resetUserStore();
+    // R11 (S11): o quadro abre no projeto do líder na primeira carga. Este teste é do filtro de
+    // pessoa sobre tarefas sem projeto, então não há projetos — o coordenador fica na visão global.
+    resetProjectStore();
+    seedProjects([]);
     seedUsers([
       {
         id: 2,
@@ -202,6 +208,8 @@ describe("TaskBoard — busca no mobile (toggle da lupa continua)", () => {
   beforeEach(() => {
     resetTaskStore();
     resetUserStore();
+    resetProjectStore();
+    seedProjects([]);
     stubDesktopViewport(false);
     seedTasks([
       { title: "Minha tarefa delegada", status: "to-do", assigneeIds: [2], taskVisibility: "delegated" },
@@ -254,6 +262,8 @@ describe("TaskBoard — busca no desktop (campo já aberto, sem toggle)", () => 
   beforeEach(() => {
     resetTaskStore();
     resetUserStore();
+    resetProjectStore();
+    seedProjects([]);
     stubDesktopViewport(true);
     seedTasks([
       { title: "Minha tarefa delegada", status: "to-do", assigneeIds: [2], taskVisibility: "delegated" },

@@ -9,7 +9,7 @@
  *  - "Atribuídas a mim" subsumed by the people select (current user = "(você)")
  */
 import { useRef, useState, useSyncExternalStore } from "react"
-import { CalendarClock, CalendarDays, LayoutGrid, Plus, Rows3, Search, TriangleAlert, Users, X } from "lucide-react"
+import { CalendarClock, CalendarDays, Globe, LayoutGrid, Plus, Rows3, Search, TriangleAlert, Users, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -159,6 +159,19 @@ export function BoardToolbar({
               ))}
             </SelectContent>
           </Select>
+        )}
+
+        {/* R11 (S11): o chip devolve a visão global para qualquer papel, inclusive quem não tem
+            o seletor de projeto. Só existe quando um projeto está aberto. */}
+        {filters.projectId != null && (
+          <Button
+            variant="outline"
+            onClick={() => onFiltersChange({ ...filters, projectId: undefined, activityId: undefined })}
+            aria-label="Ver todos os projetos"
+          >
+            <Globe className="mr-1 h-4 w-4" aria-hidden="true" />
+            Ver todos os projetos
+          </Button>
         )}
 
         {/* Controle segmentado de exibição (referência: dois ícones num só, o ativo

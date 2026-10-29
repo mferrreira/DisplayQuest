@@ -29,6 +29,9 @@ export const projectSchema = z.object({
   // contra uma instância ainda sem a migration aplicada.
   logoKey: z.string().nullable().optional(),
   bannerKey: z.string().nullable().optional(),
+  // R11 (S11): projeção da lista para o ator — "este projeto me tem como membro". Opcional:
+  // a lista o preenche, as demais rotas não.
+  isMember: z.boolean().optional(),
 });
 export type Project = z.infer<typeof projectSchema>;
 
