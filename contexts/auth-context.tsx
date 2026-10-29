@@ -10,7 +10,7 @@ interface AuthContextType {
   error: string | null
   login: (email: string, password: string) => Promise<void>
   register: (name: string, email: string, password: string) => Promise<void>
-  logout: () => void
+  logout: () => Promise<void>
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -28,8 +28,12 @@ export function useAuth(): AuthContextType {
     if (result?.error) throw new Error(result.error)
   }
 
-  const logout = () => {
-    signOut({ callbackUrl: `${window.location.origin}/login` })
+  const logout = async () => {
+    // S03 (R3, ADR-001): nem `callbackUrl` absoluta nem `pages.signOut` mantêm o host do acesso
+    // — o NextAuth resolve os dois contra NEXTAUTH_URL (medido em 127.0.0.1:3001). O landing é
+    // feito pelo cliente, com caminho relativo, que é o host da requisição.
+    await signOut({ redirect: false })
+    window.location.href = "/login"
   }
 
   const register = async (name: string, email: string, password: string) => {
