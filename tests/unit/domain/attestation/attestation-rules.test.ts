@@ -157,13 +157,13 @@ describe("preenchimento do AcroForm (V5-10a, DEC-130/140/171)", () => {
     expect(f.is_pibic).toBeUndefined();
   });
 
-  it("as duas atividades do corpo vêm do cronograma que cruza o mês de referência, na ordem", () => {
+  it("a primeira atividade do corpo vem do cronograma que cruza o mês de referência", () => {
     const f = fields();
     expect(f.atividades_1).toBe("Levantamento bibliográfico");
-    expect(f.atividade_2).toBe("Coleta de dados");
+    expect(f.atividade_2).toBeUndefined();
   });
 
-  it("mais que duas atividades: as duas primeiras do cruza entram, a terceira não", () => {
+  it("mais que duas atividades: a primeira do cronograma entra, não concatena as demais", () => {
     const f = fields({
       activities: [
         ...activities,
@@ -171,7 +171,7 @@ describe("preenchimento do AcroForm (V5-10a, DEC-130/140/171)", () => {
       ],
     });
     expect(f.atividades_1).toBe("Levantamento bibliográfico");
-    expect(f.atividade_2).toBe("Coleta de dados");
+    expect(f.atividade_2).toBeUndefined();
     expect(Object.values(f)).not.toContain("Análise dos resultados");
   });
 
@@ -181,10 +181,10 @@ describe("preenchimento do AcroForm (V5-10a, DEC-130/140/171)", () => {
     expect(f.atividade_2).toBeUndefined();
   });
 
-  it("mantém cronograma na primeira linha e acrescenta síntese dos logs na segunda", () => {
+  it("mantém o cronograma na primeira linha e usa apenas a síntese dos logs na segunda", () => {
     const f = fields({ sessionSummary: "Revisão bibliográfica: leitura e fichamento" });
     expect(f.atividades_1).toBe("Levantamento bibliográfico");
-    expect(f.atividade_2).toBe("Coleta de dados; Revisão bibliográfica: leitura e fichamento");
+    expect(f.atividade_2).toBe("Revisão bibliográfica: leitura e fichamento");
   });
 });
 

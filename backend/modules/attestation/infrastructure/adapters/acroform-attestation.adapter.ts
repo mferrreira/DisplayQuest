@@ -49,9 +49,9 @@ const FIELD_PADDING_PT = 4;
  *   da tabela (DEC-174) encolhia os valores para 7pt. A folga interna medida dessas caixas é
  *   ~1pt — com ela, "14" fica em 10pt e "2026" em 8pt.
  */
-const FIELD_GEOMETRY_FIXES: Record<string, { size?: number; y?: number; padding?: number }> = {
+const FIELD_GEOMETRY_FIXES: Record<string, { size?: number; x?: number; y?: number; padding?: number }> = {
   CPF: { size: 8 },
-  dia: { y: 498, padding: 1 },
+  dia: { x: 435, y: 498, size: 9, padding: 1 },
   mes: { padding: 1 },
   ano: { padding: 1 },
 };
@@ -84,6 +84,13 @@ export class AcroFormAttestationAdapter implements AttestationPdfPort {
           if (widget) {
             const rect = widget.getRectangle();
             widget.setRectangle({ x: rect.x, y: fix.y, width: rect.width, height: rect.height });
+          }
+        }
+        if (fix?.x !== undefined) {
+          const widget = field.acroField.getWidgets()[0];
+          if (widget) {
+            const rect = widget.getRectangle();
+            widget.setRectangle({ x: fix.x, y: rect.y, width: rect.width, height: rect.height });
           }
         }
         if (fix?.size !== undefined) field.setFontSize(fix.size);

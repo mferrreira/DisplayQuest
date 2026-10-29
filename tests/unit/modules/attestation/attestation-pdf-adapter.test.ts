@@ -175,11 +175,13 @@ describe("AcroFormAttestationAdapter (V5-10a, DEC-130)", () => {
     expect(appearance!.textRuns).toBe(1);
   });
 
-  it("DEC-179: a linha da assinatura alinha — '14' sai em 10pt (folga medida da caixa de 11pt)", async () => {
+  it("DEC-237 (re-congela DEC-179): a linha da assinatura alinha — '14' sai em 9pt com widget x 435 y 498", async () => {
     const doc = await loadRendered({ dia: "14" });
     const appearance = flatAppearanceWith(doc, appearanceHex("14"));
     expect(appearance).toBeDefined();
-    expect(appearance!.fontSize).toBe(10);
+    // DEC-237 (2026-10-29, dono): o `dia` passa a corpo 9pt com widget reposicionado
+    // (x 435, y 498); o size é declarado na tabela, não derivado da folga.
+    expect(appearance!.fontSize).toBe(9);
     expect(appearance!.textRuns).toBe(1);
   });
 

@@ -11,6 +11,7 @@ import { PrismaCertificatesRepository } from "./infrastructure/repositories/pris
 import { PrismaAttestationSources } from "./infrastructure/repositories/prisma-attestation-sources";
 import { PrismaCertificateReminderScanPort } from "./infrastructure/repositories/prisma-certificate-reminder-scan";
 import { AcroFormAttestationAdapter } from "./infrastructure/adapters/acroform-attestation.adapter";
+import { OpenAiAttestationSummaryAdapter } from "./infrastructure/adapters/openai-attestation-summary.adapter";
 import { createNoOpCertificateReminderNotifier } from "./infrastructure/adapters/notifications-certificate-reminder";
 
 /**
@@ -51,6 +52,7 @@ export interface AttestationModulePorts {
   certificates?: CertificatesRepository;
   sources?: AttestationSourcesPort;
   pdf?: AttestationPdfPort;
+  summary?: import("./application/ports/attestation-summary.port").AttestationSummaryPort;
   reminderScan?: CertificateReminderScanPort;
   reminderNotifier?: CertificateReminderNotifierPort;
 }
@@ -67,7 +69,12 @@ export function createAttestationModule(options: AttestationModuleFactoryOptions
   const reminderNotifier = options.ports?.reminderNotifier ?? createNoOpCertificateReminderNotifier();
 
   return new AttestationModule(
-    new GenerateCertificateUseCase({ sources, pdf, repository: certificates }),
+    new GenerateCertificateUseCase({
+      sources,
+      pdf,
+      repository: certificates,
+      summary: options.ports?.summary ?? new OpenAiAttestationSummaryAdapter(),
+    }),
     new ListCertificatesUseCase({ sources, repository: certificates }),
     new GetCertificateFileUseCase({ sources, repository: certificates }),
     new NotifyCertificateReminderUseCase({ scan: reminderScan, notifier: reminderNotifier }),
