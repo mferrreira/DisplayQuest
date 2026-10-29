@@ -127,7 +127,8 @@ describe("Home — regiao de cabecalho (AC-V6-11)", () => {
     expect(overview).toHaveTextContent("Projetos recentes");
     expect(overview).toHaveTextContent("Tarefas por status");
     expect(overview).toHaveTextContent("Atividade da semana");
-    expect(overview).toHaveTextContent("Meta da semana");
+    // S06 (R6, dono): a barra "Meta da semana" saiu do card do gráfico por design.
+    expect(overview).not.toHaveTextContent("Meta da semana");
     expect(screen.getByRole("img", { name: "Distribuição das tarefas por status" })).toBeVisible();
     expect(screen.getByRole("img", { name: /Tarefas e subtasks concluídas nos últimos 7 dias/ })).toBeVisible();
     expect(overview).toHaveTextContent("Alfa");
