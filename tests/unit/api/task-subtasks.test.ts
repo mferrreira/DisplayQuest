@@ -139,6 +139,9 @@ vi.mock("@/backend/composition/root", () => {
       world.subtasks.set(subtaskId, next);
       return next;
     },
+    async reorder(taskId: number, orderedIds: number[]) {
+      return await this.listByTaskId(taskId)
+    },
     async delete(subtaskId) {
       world.subtasks.delete(subtaskId);
     },

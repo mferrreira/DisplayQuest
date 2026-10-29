@@ -323,6 +323,8 @@ model task_subtasks {
   completed   Boolean   @default(false)
   completedAt DateTime?
   createdAt   DateTime  @default(now())
+  // S09 (plan-v11, R9): ordem própria persistida. Ordem inicial = ordem de criação.
+  sortOrder   Int       @default(0)
   task        tasks     @relation("TaskSubtasks", fields: [taskId], references: [id], onDelete: Cascade)
 
   @@index([taskId])

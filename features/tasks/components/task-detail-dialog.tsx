@@ -5,7 +5,7 @@
  * FIX lines ("FIX (dd/mm/yyyy): reason") render in a distinct "Ajustes solicitados" block (spec §3).
  * Destructive delete uses AlertDialog (A3).
  */
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { useSession } from "next-auth/react"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
@@ -28,7 +28,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Calendar, Check, ListTodo, Pencil, Plus, Trash2, X } from "lucide-react"
+import { Calendar, Check, GripVertical, ListTodo, Pencil, Plus, Trash2, X } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import type { Task, TaskSubtask } from "@/entities/task"
@@ -73,7 +73,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit }: TaskDetai
   const { data: session } = useSession()
   const { data: projects = [] } = useProjects()
   const { data: users = [] } = useUsers()
-  const { approve, reject, remove, createSubtask, updateSubtask, removeSubtask } = useTaskMutations()
+  const { approve, reject, remove, createSubtask, updateSubtask, removeSubtask, reorderSubtasks } = useTaskMutations()
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [rejectOpen, setRejectOpen] = useState(false)
   const [rejectReason, setRejectReason] = useState("")
@@ -82,6 +82,13 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit }: TaskDetai
   const [renamingSubtaskId, setRenamingSubtaskId] = useState<number | null>(null)
   const [renameDraft, setRenameDraft] = useState("")
   const [subtaskToDelete, setSubtaskToDelete] = useState<TaskSubtask | null>(null)
+  const [dragSourceId, setDragSourceId] = useState<number | null>(null)
+  const [dragPreview, setDragPreview] = useState<number[] | null>(null)
+  // Refs, não estado: `fireEvent` dispara dragStart → dragOver → drop na mesma rajada
+  // síncrona, e o `dragOver` handler lê a ordem ANTES do efeito do `dragStart` entrar em
+  // cena. O ref é o que a rajada vê.
+  const dragSourceRef = useRef<number | null>(null)
+  const dragPreviewRef = useRef<number[] | null>(null)
 
   if (!task) return null
 
@@ -217,6 +224,56 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit }: TaskDetai
     }
   }
 
+  const canDragSubtasks = canEditSubtasks && subtaskWindowOpen && subtasks.length > 1
+
+  const displaySubtasks = dragPreview
+    ? dragPreview
+        .map((id) => subtasks.find((s) => s.id === id))
+        .filter((s): s is TaskSubtask => Boolean(s))
+    : subtasks
+
+  const handleDragStart = (id: number) => {
+    if (!canDragSubtasks) return
+    dragSourceRef.current = id
+    dragPreviewRef.current = subtasks.map((s) => s.id)
+    setDragSourceId(id)
+    setDragPreview(dragPreviewRef.current)
+  }
+
+  const handleDragOver = (targetId: number) => {
+    if (!canDragSubtasks || dragSourceRef.current === null || targetId === dragSourceRef.current) return
+    const preview = dragPreviewRef.current ?? subtasks.map((s) => s.id)
+    const sourceIndex = preview.indexOf(dragSourceRef.current!)
+    const targetIndex = preview.indexOf(targetId)
+    const next = preview.filter((id) => id !== dragSourceRef.current)
+    // Arrastar SOBRE o alvo põe a fonte no lugar do alvo: se a fonte vinha antes, ela entra
+    // DEPOIS do alvo na lista sem a fonte; se vinha depois, entra ANTES.
+    next.splice(next.indexOf(targetId) + (sourceIndex < targetIndex ? 1 : 0), 0, dragSourceRef.current!)
+    dragPreviewRef.current = next
+    setDragPreview(next)
+  }
+
+  const handleDrop = async () => {
+    const preview = dragPreviewRef.current
+    dragSourceRef.current = null
+    setDragSourceId(null)
+    if (!canDragSubtasks || !preview) {
+      setDragPreview(null)
+      dragPreviewRef.current = null
+      return
+    }
+    try {
+      await reorderSubtasks.mutateAsync({ id: task.id, orderedIds: preview })
+    } catch {
+      toast.error("Não foi possível reordenar as subtasks", {
+        description: "A ordem voltou à que estava gravada.",
+      })
+    } finally {
+      setDragPreview(null)
+      dragPreviewRef.current = null
+    }
+  }
+
   const handleToggleSubtask = async (subtask: TaskSubtask, completed: boolean) => {
     // DEC-98: marcar exige a mãe em Andamento. A frase é a do domínio — a MESMA que a rota
     // devolve, então quem chega aqui por fora do gate ouve a mesma frase que quem passa.
@@ -346,8 +403,32 @@ export function TaskDetailDialog({ task, open, onOpenChange, onEdit }: TaskDetai
 
                 {subtasks.length > 0 && (
                   <ul className="mt-2 space-y-1.5">
-                    {subtasks.map((subtask) => (
-                      <li key={subtask.id} className="flex items-center gap-2">
+                    {displaySubtasks.map((subtask) => (
+                      <li
+                        key={subtask.id}
+                        className="flex items-center gap-2"
+                        draggable={canDragSubtasks}
+                        onDragStart={() => handleDragStart(subtask.id)}
+                        onDragOver={(e) => {
+                          e.preventDefault()
+                          handleDragOver(subtask.id)
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault()
+                          void handleDrop()
+                        }}
+                        onDragEnd={() => {
+                          setDragSourceId(null)
+                          setDragPreview(null)
+                        }}
+                      >
+                        <span
+                          data-testid={`subtask-handle-${subtask.title}`}
+                          aria-label={`Alça para reordenar ${subtask.title}`}
+                          className="flex h-6 w-5 shrink-0 cursor-grab items-center justify-center text-muted-foreground"
+                        >
+                          <GripVertical className="h-4 w-4" aria-hidden="true" />
+                        </span>
                         <Checkbox
                           aria-label={`Concluir subtask ${subtask.title}`}
                           checked={subtask.completed}

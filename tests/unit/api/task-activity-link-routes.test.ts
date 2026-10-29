@@ -108,6 +108,7 @@ vi.mock("@/backend/composition/root", () => {
           create: boom("subtasks.create"),
           createMany: boom("subtasks.createMany"),
           update: boom("subtasks.update"),
+          reorder: boom("subtasks.reorder"),
           delete: boom("subtasks.delete"),
         },
         assignees: {

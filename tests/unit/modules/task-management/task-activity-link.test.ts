@@ -121,7 +121,10 @@ function buildModule() {
     async update() {
       throw new Error("subtask não é assunto deste arquivo");
     },
-    async delete() {
+async reorder(taskId: number, orderedIds: number[]) {
+      return await this.listByTaskId(taskId)
+    },
+        async delete() {
       throw new Error("subtask não é assunto deste arquivo");
     },
   };

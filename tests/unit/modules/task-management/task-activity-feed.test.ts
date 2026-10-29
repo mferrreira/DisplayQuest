@@ -103,7 +103,10 @@ function buildModule(withActivity: boolean) {
     async update() {
       throw new Error("subtask nao e assunto deste arquivo");
     },
-    async delete() {
+async reorder(taskId: number, orderedIds: number[]) {
+      return await this.listByTaskId(taskId)
+    },
+        async delete() {
       throw new Error("subtask nao e assunto deste arquivo");
     },
   };

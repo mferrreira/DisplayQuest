@@ -313,6 +313,32 @@ export const taskHandlers = [
     return HttpResponse.json(subtaskResponse.parse({ subtask, task: updated }), { status: 201 });
   }),
 
+  // S09 (R9): PUT de reordenação. O mock espelha a rota real: janela da lista, permutação
+  // exata, e a mãe devolvida com a lista na ordem nova.
+  http.put("*/api/tasks/:id/subtasks", async ({ request, params }) => {
+    await delay();
+    const id = Number(params.id);
+    const idx = tasks.findIndex((t) => t.id === id);
+    if (idx === -1) return jsonError("Tarefa não encontrada", 404);
+    const task = tasks[idx];
+    if (!SUBTASK_EDITABLE_STATUSES.includes(task.status)) {
+      return jsonError(subtaskWindowMessage(task.status), 409);
+    }
+    const body = (await request.json()) as { orderedIds?: unknown };
+    const ids = Array.isArray(body?.orderedIds) ? body.orderedIds.map(Number) : [];
+    const current = task.subtasks ?? [];
+    const currentIds = current.map((s) => s.id);
+    const valid =
+      ids.length === currentIds.length &&
+      new Set(ids).size === ids.length &&
+      ids.every((id) => currentIds.includes(id));
+    if (!valid) return jsonError("A ordem deve conter exatamente as subtasks da tarefa", 400);
+    const ordered = ids.map((id) => current.find((s) => s.id === id)!);
+    const updated: typeof task = { ...task, subtasks: ordered };
+    tasks[idx] = updated;
+    return HttpResponse.json({ subtasks: ordered, task: updated });
+  }),
+
   http.patch("*/api/tasks/:id/subtasks/:subtaskId", async ({ request, params }) => {
     await delay();
     const id = Number(params.id);

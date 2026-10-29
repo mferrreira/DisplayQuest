@@ -5,13 +5,24 @@
  * O dono pediu neutral com a contagem "X/N concluídas" permanecendo. Harness do arquivo irmão
  * de features (TaskDetailDialog + SessionProvider + Toaster com stub LOCAL de matchMedia).
  */
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SessionProvider } from "next-auth/react";
 import { Toaster } from "@/components/ui/sonner";
 import { TaskDetailDialog } from "@/features/tasks/components/task-detail-dialog";
-import { seedTasks, resetTaskStore } from "@/tests/mocks/handlers";
+
+// S09: arrastar exige a porta de lista (dono/gestão) — sem sessão, o diálogo renderiza a lista
+// em leitura e o arraste é no-op. A mãe do fixture tem `assignedTo: 2` = o usuário da sessão.
+const mockUser = { id: 2, name: "Coordenador", email: "coordenador@lab.com", roles: ["COORDENADOR"] };
+vi.mock("next-auth/react", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("next-auth/react")>();
+  return {
+    ...actual,
+    useSession: () => ({ data: { user: mockUser, expires: "" }, status: "authenticated" }),
+  };
+});
+import { seedTasks, resetTaskStore, getTaskStore } from "@/tests/mocks/handlers";
 import { makeTask } from "@/tests/mocks/fixtures/tasks";
 
 function installMatchMediaStub() {
@@ -88,5 +99,50 @@ describe("diálogo — subtasks neutras (R8)", () => {
     const phrase = screen.getByText(/Conclua as 2 subtasks restantes antes de/);
     expect(phrase.className).toContain("text-muted-foreground");
     expect(phrase.className).not.toMatch(/amber/);
+  });
+});
+
+describe("S09 (R9) — arrastar reordena e grava", () => {
+  beforeEach(() => {
+    resetTaskStore();
+    // O stub de matchMedia é local ao arquivo e o `afterEach` do bloco S08 o remove; cada bloco
+    // instala o seu (mesma costura medida no irmão de features).
+    installMatchMediaStub();
+  });
+
+  it("cada linha da lista tem alça de arraste nomeada", () => {
+    const task = mother();
+    seedTasks([task]);
+    renderDialog(task);
+    for (const title of ["Ligar a fonte", "Ajustar o zero", "Medir o ruído"]) {
+      expect(screen.getByTestId(`subtask-handle-${title}`)).toBeInTheDocument();
+    }
+  });
+
+  it("arrastar a linha 2 sobre a linha 1 grava a ordem nova via PUT", async () => {
+    const task = mother();
+    seedTasks([task]);
+    renderDialog(task);
+
+    const first = screen.getByTestId("subtask-handle-Ligar a fonte");
+    const second = screen.getByTestId("subtask-handle-Ajustar o zero");
+
+    const dataTransfer = {
+      "text/plain": "",
+      setData: () => {},
+      getData: () => "",
+    };
+    fireEvent.dragStart(first, { dataTransfer });
+    fireEvent.dragOver(second, { dataTransfer });
+    fireEvent.drop(second, { dataTransfer });
+
+    await waitFor(() => {
+      const stored = getTaskStore().find((t) => t.id === 501);
+      expect(stored!.subtasks.map((s) => s.title)).toEqual([
+        "Ajustar o zero",
+        "Ligar a fonte",
+        "Medir o ruído",
+      ]);
+    });
   });
 });

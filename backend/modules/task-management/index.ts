@@ -9,6 +9,9 @@ import { RejectTaskUseCase } from "@/backend/modules/task-management/application
 import { CreateTaskSubtaskUseCase } from "@/backend/modules/task-management/application/use-cases/create-task-subtask.use-case"
 import { UpdateTaskSubtaskUseCase } from "@/backend/modules/task-management/application/use-cases/update-task-subtask.use-case"
 import { DeleteTaskSubtaskUseCase } from "@/backend/modules/task-management/application/use-cases/delete-task-subtask.use-case"
+import { ReorderTaskSubtasksUseCase } from "@/backend/modules/task-management/application/use-cases/reorder-task-subtasks.use-case"
+import type { ReorderTaskSubtasksCommand } from "@/backend/modules/task-management/application/use-cases/reorder-task-subtasks.use-case"
+import type { ReorderSubtasksResult } from "@/backend/modules/task-management/application/contracts"
 import { AssertCanManageTasksUseCase } from "@/backend/modules/task-management/application/use-cases/assert-can-manage-tasks.use-case"
 import { ListGlobalProgressUseCase, type GlobalProgressEntry } from "@/backend/modules/task-management/application/use-cases/list-global-progress.use-case"
 import type { ActorRef } from "@/backend/domain"
@@ -72,6 +75,9 @@ export class TaskManagementModule {
   readonly createTaskSubtask: (command: CreateTaskSubtaskCommand) => Promise<SubtaskMutationResult>
   readonly updateTaskSubtask: (command: UpdateTaskSubtaskCommand) => Promise<SubtaskMutationResult>
   readonly deleteTaskSubtask: (command: DeleteTaskSubtaskCommand) => Promise<SubtaskMutationResult>
+  // S09 (plan-v11, R9): arrastar reordena e grava `sortOrder`. Não escreve prêmio,
+  // não move a mãe, não notifica — é só ordem.
+  readonly reorderTaskSubtasks: (command: ReorderTaskSubtasksCommand) => Promise<ReorderSubtasksResult>
 
   constructor(ports: {
     tasks: TaskRepositoryPort
@@ -183,6 +189,13 @@ export class TaskManagementModule {
       actors: ports.actors,
       projects: ports.projects,
     })
+    const reorderTaskSubtasksUseCase = new ReorderTaskSubtasksUseCase({
+      tasks: ports.tasks,
+      subtasks: ports.subtasks,
+      assignees: ports.assignees,
+      actors: ports.actors,
+      projects: ports.projects,
+    })
 
     // Feed "Atividade recente": os metodos mutadores registram a acao em `history` depois de o
     // use case resolver. Sem porta injetada (roundtrip G4, testes de use case), nada e gravido.
@@ -271,6 +284,7 @@ export class TaskManagementModule {
     this.createTaskSubtask = (command) => createTaskSubtaskUseCase.execute(command)
     this.updateTaskSubtask = (command) => updateTaskSubtaskUseCase.execute(command)
     this.deleteTaskSubtask = (command) => deleteTaskSubtaskUseCase.execute(command)
+    this.reorderTaskSubtasks = (command) => reorderTaskSubtasksUseCase.execute(command)
   }
 }
 

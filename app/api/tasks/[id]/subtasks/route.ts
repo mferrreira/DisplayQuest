@@ -37,3 +37,33 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     return routeErrorResponse(error, { fallback: "Erro ao criar subtask" })
   }
 }
+
+/**
+ * PUT /api/tasks/[id]/subtasks — S09 (plan-v11, R9). Arrastar reordena e grava.
+ *
+ * A rota autentica e mapeia; quem decide é o caso de uso (mesma porta de V4-4). O corpo é a
+ * permutação completa (`orderedIds`) — a lista da mãe, na ordem nova, sem repetido nem estranho.
+ */
+export async function PUT(request: Request, context: { params: Promise<{ id: string }> }) {
+  try {
+    const auth = await requireApiActor()
+    if (auth.error) return auth.error
+
+    const params = await context.params
+    const id = parseInt(params.id)
+    if (Number.isNaN(id)) {
+      return NextResponse.json({ error: "id inválido" }, { status: 400 })
+    }
+
+    const body = await request.json()
+    const { subtasks, task } = await taskManagementModule.reorderTaskSubtasks({
+      taskId: id,
+      actorId: auth.actor.id,
+      orderedIds: body?.orderedIds,
+    })
+
+    return NextResponse.json({ subtasks: subtasks.map(serializeSubtask), task: task.toJSON() })
+  } catch (error) {
+    return routeErrorResponse(error, { fallback: "Erro ao reordenar subtasks" })
+  }
+}

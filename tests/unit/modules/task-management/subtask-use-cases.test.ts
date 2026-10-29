@@ -147,6 +147,9 @@ function buildModule() {
       store.subtasks.set(subtaskId, next);
       return next;
     },
+    async reorder(taskId: number, orderedIds: number[]) {
+      return await this.listByTaskId(taskId)
+    },
     async delete(subtaskId) {
       store.subtasks.delete(subtaskId);
     },

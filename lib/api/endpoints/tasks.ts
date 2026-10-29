@@ -18,6 +18,9 @@ const taskResponse = z.object({ task: wireTaskSchema });
  */
 const subtaskMutationResponse = z.object({ subtask: taskSubtaskSchema, task: wireTaskSchema });
 
+/** S09 (R9): a resposta do PUT de reordenação devolve a lista na ordem nova, junto da mãe. */
+const subtaskReorderResponse = z.object({ subtasks: z.array(taskSubtaskSchema), task: wireTaskSchema });
+
 /**
  * plan-v3 OND4-A (AC-P3-08) — a resposta de concluir/aprovar carrega o prêmio creditado.
  *
@@ -182,6 +185,16 @@ export const tasksApi = {
       method: "PATCH",
       body: data,
       schema: subtaskMutationResponse,
+    });
+  },
+
+  /** S09 (R9): arrastar reordena; o corpo é a permutação completa dos ids. */
+  reorderSubtasks(id: number, orderedIds: number[]): Promise<{ subtasks: { id: number; taskId: number; title: string; completed: boolean; completedAt?: string | null; createdAt?: string | null }[]; task: Record<string, unknown> }> {
+    return apiFetch({
+      path: `/api/tasks/${id}/subtasks`,
+      method: "PUT",
+      body: { orderedIds },
+      schema: subtaskReorderResponse,
     });
   },
 
