@@ -109,7 +109,7 @@ export const taskHandlers = [
       );
     }
     // V4-5c (DEC-82): a mãe nasce com a lista, igual à rota real (app/api/tasks/route.ts:114), e
-    // a base gravada acompanha: 10 + 5·n (DEC-97, substituiu o 10 + 10·n da DEC-83). Sem isto o
+    // a base gravada acompanha: 10 + 10·n (SUBTASK_POINTS=10, restaurado em 2026-10-29). Sem isto o
     // mock aceitaria a mãe sem lista e o teste do formulário provava o input, não o estado gravado.
     const { subtasks: rawSubtasks, ...restOfBody } = body as Record<string, unknown>;
     let subtaskTitles: string[];

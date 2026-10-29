@@ -8,6 +8,7 @@ import { createProjectMembershipModule } from "@/backend/modules/project-members
 import { createProjectManagementModule } from "@/backend/modules/project-management"
 import { createGamificationActivityCompletionAward } from "@/backend/modules/project-management/infrastructure/adapters/gamification-activity-completion-award"
 import { createNotificationsActivityOverdueNotifier } from "@/backend/modules/project-management/infrastructure/adapters/notifications-activity-overdue"
+import { createNotificationsActivityCompletionRequestNotifier } from "@/backend/modules/project-management/infrastructure/adapters/notifications-activity-completion-request"
 import { createPrismaProjectRepository } from "@/backend/modules/project-management/infrastructure/repositories/prisma-project.repository"
 import { createReportingModule } from "@/backend/modules/reporting"
 import { createAttestationModule } from "@/backend/modules/attestation"
@@ -71,6 +72,9 @@ export function createBackendComposition(): BackendComposition {
       // V5-8 (DEC-21/64): a notificação de atraso sai por PORTA LOCAL
       // (`ActivityOverdueNotifierPort`); quem publica é o módulo de notificações.
       overdueNotifier: createNotificationsActivityOverdueNotifier(notifications),
+      // Fix 4 (2026-10-28): a notificação da solicitação de conclusão sai pela MESMA porta local;
+      // quem publica é o módulo de notificações. O flag por projeto é projeção, não wiring cruzado.
+      completionRequestNotifier: createNotificationsActivityCompletionRequestNotifier(notifications),
     },
   })
 

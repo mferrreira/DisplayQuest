@@ -10,7 +10,7 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import { DragDropContext, DropResult } from "@hello-pangea/dnd"
 import { useQueryState, parseAsBoolean, parseAsInteger, parseAsString } from "nuqs"
 import { useSession } from "next-auth/react"
-import { AlertTriangle, Loader2 } from "lucide-react"
+import { AlertTriangle, Loader2, TrendingUp } from "lucide-react"
 import { toast } from "sonner"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -32,14 +32,16 @@ import { useColumnOrders } from "../hooks/use-column-orders"
 import { sortTasksByColumnOrder, type ColumnOrder } from "../utils/column-order"
 import { filterBoardTasks } from "../utils/filter-board-tasks"
 import { pickDefaultProject } from "../utils/pick-default-project"
+import { weeklyConclusionBuckets } from "../utils/weekly-conclusion-buckets"
 import { getCronograma, type ProjectActivity } from "@/lib/api/project-cronograma"
 import type { Task, TaskStatus } from "@/entities/task"
 import { BoardColumn } from "./board-column"
 import { BoardToolbar } from "./board-toolbar"
-import { ActivityFeed } from "./activity-feed"
 import { ArchivedTasksDisclosure } from "./archived-tasks-disclosure"
 import { TaskDialog } from "./task-dialog"
 import { TaskDetailDialog } from "./task-detail-dialog"
+import { WeeklyBarChart } from "@/components/ui/data-charts"
+import { civilDayOfInstant } from "@/backend/domain"
 
 export function TaskBoard() {
   const { data: session } = useSession()
@@ -137,6 +139,13 @@ export function TaskBoard() {
   }, [tasks, activeProjectId, pessoaParam, atrasadasParam, hojeParam, buscaParam, atividadeParam])
 
   const archivedTasks = useMemo(() => filteredTasks.filter((t) => isArchivedTask(t)), [filteredTasks])
+  // O gráfico "Atividade da semana" saiu do bloco de insights da Home para baixo do quadro
+  // (dono, 2026-10-29): o feed "Atividade recente" foi para o bloco de insights. O ritmo é a
+  // mesma conta do que a pessoa enxerga no quadro, no util compartilhado (`weeklyConclusionBuckets`).
+  const lastSevenDays = useMemo(
+    () => weeklyConclusionBuckets(filteredTasks, civilDayOfInstant(new Date())),
+    [filteredTasks],
+  )
   // plan-v3 OND3-C: cada coluna tem a sua ordenação, então a lista NÃO é ordenada aqui — o
   // quadro inteiro não tem uma ordem só. O que sobra é a lista visível, repartida por status
   // abaixo e ordenada dentro de cada coluna.
@@ -356,7 +365,13 @@ export function TaskBoard() {
         </DragDropContext>
       )}
 
-      <ActivityFeed projectId={activeProjectId} />
+      <section aria-label="Atividade da semana" className="rounded-lg border bg-card p-4">
+        <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold">
+          <TrendingUp className="h-4 w-4 text-primary" aria-hidden="true" /> Atividade da semana
+        </h2>
+        <p className="mb-1.5 text-xs font-medium">Tarefas e subtasks concluídas nos últimos 7 dias</p>
+        <WeeklyBarChart weeks={lastSevenDays} label="Tarefas e subtasks concluídas nos últimos 7 dias" valueNoun="conclusões" />
+      </section>
       <ArchivedTasksDisclosure archived={archivedTasks} />
 
       <TaskDialog

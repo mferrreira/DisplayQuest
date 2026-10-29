@@ -24,9 +24,9 @@ import {
 const DUE = "2026-06-15";
 
 describe("plan-v3/v4 · constantes da premiação (DEC-30, DEC-97)", () => {
-  it("10 pontos por tarefa, 5 por subtask, 1,5x só com 2 dias de antecedência", () => {
+  it("10 pontos por tarefa, 10 por subtask, 1,5x só com 2 dias de antecedência", () => {
     expect(POINTS_PER_TASK).toBe(10);
-    expect(SUBTASK_POINTS).toBe(5);
+    expect(SUBTASK_POINTS).toBe(10);
     expect(EARLY_DELIVERY_MULTIPLIER).toBe(1.5);
     expect(EARLY_DELIVERY_MIN_DAYS).toBe(2);
   });

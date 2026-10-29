@@ -152,16 +152,16 @@ describe("S01 — Quadro de Liderança pelo placar do mês", () => {
     expect(fetchAPI).toHaveBeenCalledWith("/api/board");
   });
 
-  it("usa o mesmo acento para o 2º e o 3º lugares e o raio do token no campeão", async () => {
+  it("reverte o visual: campeão em bloco gold (rounded-2xl), 2º prata e 3º bronze", async () => {
     render(<LeaderboardPage />);
     const podium = await screen.findByRole("region", { name: "Segundo e terceiro lugares" });
-    expect(within(podium).getByText("2º").className).toContain("text-warning");
+    // Dono (2026-10-29): o quadro volta à forma do V6-11m — 2º prata (muted), 3º bronze (warning).
+    expect(within(podium).getByText("2º").className).toContain("text-muted-foreground");
     expect(within(podium).getByText("3º").className).toContain("text-warning");
 
     const champion = await screen.findByRole("region", { name: "Campeão do quadro" });
     const card = champion.querySelector("a");
-    expect(card?.className).toContain("rounded-lg");
-    expect(card?.className).not.toContain("rounded-2xl");
+    expect(card?.className).toContain("rounded-2xl");
   });
 
   it("usa o primitivo EmptyState quando o placar do mês ainda está vazio", async () => {

@@ -107,8 +107,9 @@ export function ProjectMediaHeader({
   return (
     <div className="space-y-3">
       <div className="relative pb-8">
-        {/* S05 (R4): a faixa é 16:9 (`aspect-video`), não altura fixa — o logo sobreposto
-            continua fora da faixa pelo `pb-8` do contêiner. */}
+        {/* Dono (2026-10-29): a faixa do banner do projeto volta a 16:9 (`aspect-video`), a mesma
+            proporção do banner de perfil. 21:9 ficou alto demais na largura da página. O logo sobreposto
+            fica no canto de baixo-esquerda da faixa. */}
         <div className="aspect-video overflow-hidden rounded-lg border bg-muted">
           {currentBannerKey ? (
             <>

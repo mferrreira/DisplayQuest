@@ -50,7 +50,7 @@ export function MobileMenu() {
           <span className="sr-only">Abrir menu</span>
         </Button>
       </SheetTrigger>
-      <SheetContent side="left" className="w-[300px] sm:w-[340px]">
+      <SheetContent side="left" className="w-[300px] overflow-y-auto sm:w-[340px]">
         <SheetHeader className="text-left">
           <SheetTitle className="flex items-center gap-3">
             <img src="/LOGO.png" alt="Display Quest" className="h-10 w-10" />

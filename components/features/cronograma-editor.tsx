@@ -256,9 +256,15 @@ export function CronogramaEditor({
                     ? ACTIVITY_STATUS_LABELS[activity.status as keyof typeof ACTIVITY_STATUS_LABELS] ??
                       activity.status
                     : null
+                  // Fix 4: atividade com conclusão solicitada fica avermelhada na linha inteira —
+                  // mesma paleta do cartão de tarefa vencida (`border-destructive/50 bg-destructive/5`).
+                  const isRequested = activity.status === "COMPLETION_REQUESTED"
 
                   return (
-                    <TableRow key={activity.id ?? `novo-${activity.order}`}>
+                    <TableRow
+                      key={activity.id ?? `novo-${activity.order}`}
+                      className={isRequested ? "border-destructive/50 bg-destructive/5" : undefined}
+                    >
                       <TableCell className="min-w-[220px]">
                         <Input
                           value={activity.description}
@@ -339,7 +345,13 @@ export function CronogramaEditor({
                       <TableCell className="text-center">
                         <Badge variant="secondary">{reward === null ? "—" : `${reward} pts`}</Badge>
                         {statusLabel ? (
-                          <p className="mt-1 text-xs text-muted-foreground">{statusLabel}</p>
+                          <p
+                            className={`mt-1 text-xs ${
+                              isRequested ? "font-medium text-destructive" : "text-muted-foreground"
+                            }`}
+                          >
+                            {statusLabel}
+                          </p>
                         ) : null}
                       </TableCell>
 

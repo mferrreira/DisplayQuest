@@ -90,16 +90,28 @@ vi.mock("nuqs", () => ({
 }));
 
 import DashboardPage from "@/app/(dashboard)/dashboard/page";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+
+// A faixa ("Resumo do laboratório") agora contém o feed "Atividade recente" (dono, 2026-10-29),
+// que usa `useQuery` — todo render da Home precisa de um QueryClient. Um cliente novo por teste.
+function renderHome() {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <DashboardPage />
+    </QueryClientProvider>,
+  );
+}
 
 describe("Home — regiao de cabecalho (AC-V6-11)", () => {
   it("tem saudacao e UM unico h1 (AC-V6-04)", () => {
-    render(<DashboardPage />);
+    renderHome();
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Olá, Márcia!");
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
   });
 
   it("mantém o cabeçalho compacto sem a fileira de cinco cartões no topo", () => {
-    const { container } = render(<DashboardPage />);
+    const { container } = renderHome();
     const main = container.querySelector("main");
     expect(main?.firstElementChild).not.toBeNull();
     expect(main?.firstElementChild?.querySelector(".grid")).toBeNull();
@@ -108,29 +120,30 @@ describe("Home — regiao de cabecalho (AC-V6-11)", () => {
   });
 
   it("NAO ha coluna secundaria (DEC-114) — o quadro fica na largura toda", () => {
-    const { container } = render(<DashboardPage />);
+    const { container } = renderHome();
     expect(container.querySelector("aside")).toBeNull();
     expect(screen.getByTestId("task-board")).toBeInTheDocument();
   });
 
   it("a faixa complementar fica acima do quadro, para as estatísticas aparecerem sem rolagem", () => {
-    render(<DashboardPage />);
+    renderHome();
     const board = screen.getByTestId("task-board");
     const overview = screen.getByRole("region", { name: "Resumo do laboratório" });
     expect(board.compareDocumentPosition(overview) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
   });
 
-  it("acrescenta projetos recentes, tarefas por status e atividade da semana acima do quadro (V6-11e)", () => {
-    render(<DashboardPage />);
+  it("acrescenta projetos recentes, tarefas por status e o feed de atividade acima do quadro (dono 2026-10-29)", () => {
+    renderHome();
     const board = screen.getByTestId("task-board");
     const overview = screen.getByRole("region", { name: "Resumo do laboratório" });
     expect(overview).toHaveTextContent("Projetos recentes");
     expect(overview).toHaveTextContent("Tarefas por status");
-    expect(overview).toHaveTextContent("Atividade da semana");
+    expect(overview).toHaveTextContent("Atividade recente");
     // S06 (R6, dono): a barra "Meta da semana" saiu do card do gráfico por design.
     expect(overview).not.toHaveTextContent("Meta da semana");
+    // O gráfico "Atividade da semana" saiu da faixa para baixo do quadro — não mora na faixa.
+    expect(overview).not.toHaveTextContent("Atividade da semana");
     expect(screen.getByRole("img", { name: "Distribuição das tarefas por status" })).toBeVisible();
-    expect(screen.getByRole("img", { name: /Tarefas e subtasks concluídas nos últimos 7 dias/ })).toBeVisible();
     expect(overview).toHaveTextContent("Alfa");
     expect(board.compareDocumentPosition(overview) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
     expect(overview.querySelectorAll("a[href^='/dashboard/projetos/']")).toHaveLength(3);
@@ -158,19 +171,19 @@ describe("Home — preferência da faixa 'Resumo do laboratório' (V6-11m)", () 
   });
 
   it("fechar a faixa grava a preferência e a visita seguinte abre fechada", () => {
-    const first = render(<DashboardPage />);
+    const first = renderHome();
     fireEvent.click(screen.getByRole("button", { name: "Ocultar" }));
     expect(window.localStorage.getItem("dq:home:resumo-aberto")).toBe("false");
     expect(screen.queryByText("Projetos recentes")).not.toBeInTheDocument();
     first.unmount();
 
-    render(<DashboardPage />);
+    renderHome();
     expect(screen.getByRole("button", { name: "Mostrar" })).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByText("Projetos recentes")).not.toBeInTheDocument();
   });
 
   it("mostrar de novo grava aberto e devolve o conteúdo", () => {
-    render(<DashboardPage />);
+    renderHome();
     fireEvent.click(screen.getByRole("button", { name: "Ocultar" }));
     fireEvent.click(screen.getByRole("button", { name: "Mostrar" }));
     expect(window.localStorage.getItem("dq:home:resumo-aberto")).toBe("true");

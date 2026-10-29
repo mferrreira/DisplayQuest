@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { NuqsTestingAdapter } from "nuqs/adapters/testing";
 import { SessionProvider } from "next-auth/react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TaskBoard } from "@/features/tasks/components/task-board";
 import {
@@ -15,9 +15,10 @@ import {
 
 /**
  * R11 (S11): primeira carga do quadro sem `?projeto=`. O quadro abre no projeto do líder, senão
- * no primeiro vínculo de membro, senão na visão global. O chip "Ver todos os projetos" devolve a
- * visão global. O que se prova é o projeto inicial escolhido, medido pelas tarefas que o quadro
- * deixa visíveis — cada projeto tem a sua tarefa, e a filtragem por projeto é o que separa.
+ * no primeiro vínculo de membro, senão na visão global. A volta ao global é a opção "Todos os
+ * projetos" do seletor — não há botão extra no cabeçalho. O que se prova é o projeto inicial
+ * escolhido, medido pelas tarefas que o quadro deixa visíveis — cada projeto tem a sua tarefa, e
+ * a filtragem por projeto é o que separa.
  *
  * jsdom não tem `window.matchMedia` (regra da casa), e a busca é desktop-first: sem o stub o
  * quadro cai no caminho mobile. Este teste é desktop.
@@ -136,7 +137,7 @@ describe("TaskBoard — projeto inicial do quadro (R11)", () => {
     });
   });
 
-  it("o chip 'Ver todos os projetos' devolve a visão global", async () => {
+  it("não há chip extra no cabeçalho: a volta ao global é só a opção do seletor", async () => {
     actor.id = 2;
     actor.roles = ["GERENTE_PROJETO"];
     renderBoard();
@@ -144,8 +145,13 @@ describe("TaskBoard — projeto inicial do quadro (R11)", () => {
       expect(screen.getByText("Tarefa do projeto 1")).toBeVisible();
       expect(screen.queryByText("Tarefa do projeto 2")).not.toBeInTheDocument();
     });
-    const chip = await screen.findByRole("button", { name: "Ver todos os projetos" });
-    chip.click();
+    // Fix do dono: não se põe botão extra no cabeçalho. O seletor de projeto já tem a opção.
+    expect(screen.queryByRole("button", { name: "Ver todos os projetos" })).not.toBeInTheDocument();
+
+    const trigger = screen.getByLabelText("Filtrar tarefas por projeto");
+    fireEvent.click(trigger);
+    const allOption = await screen.findByRole("option", { name: "Todos os projetos" });
+    fireEvent.click(allOption);
     await waitFor(() => {
       expect(screen.getByText("Tarefa do projeto 2")).toBeVisible();
       expect(screen.getByText("Tarefa do projeto 1")).toBeVisible();

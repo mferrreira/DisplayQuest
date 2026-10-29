@@ -32,6 +32,12 @@ import type {
 } from "@/backend/modules/project-management/application/ports/project-activity-files.repository";
 import type { ActivityTasksPort } from "@/backend/modules/project-management/application/ports/activity-tasks.port";
 import type { ProjectManagementMembershipPort } from "@/backend/modules/project-management/application/ports/project-membership.repository";
+import type { ActivityOverdueScanPort } from "@/backend/modules/project-management/application/ports/activity-overdue-scan.port";
+import type {
+  ActivityCompletionRequestNotifierPort,
+  CompletionRequestNotification,
+} from "@/backend/modules/project-management/application/ports/activity-completion-request-notifier.port";
+import type { ActorRef } from "@/backend/domain";
 import { AddActivityFileUseCase } from "@/backend/modules/project-management/application/use-cases/add-activity-file.use-case";
 import { AssertCanRequestActivityCompletionUseCase } from "@/backend/modules/project-management/application/use-cases/assert-can-request-activity-completion.use-case";
 import { GetActivityFileUseCase } from "@/backend/modules/project-management/application/use-cases/get-activity-file.use-case";
@@ -111,6 +117,12 @@ class Fakes {
   requestWrites: Array<{ id: number; status: string; requestedBy: number; requestedAt: string }> = [];
   fileWrites: ActivityFileRecord[] = [];
   fileDeletes: number[] = [];
+  /** Fix 4: papéis globais de gestão ATIVOS devolvidos pelo scan. Default vazio → publicação não roda. */
+  globalManagerIds: number[] = [];
+  /** Fix 4: `true` faz o notificador lançar — o quirk congelado de falha de publicação. */
+  notifierThrows = false;
+  /** Fix 4: notificações de solicitação capturadas pelo duplo do notificador. */
+  publishedRequests: Array<{ notification: CompletionRequestNotification; actor: ActorRef }> = [];
   nextFileId = 100;
 
   projectPort(): ProjectRepositoryPort {
@@ -270,7 +282,36 @@ class Fakes {
       files: this.filesPort(),
       tasks: this.tasksPort(),
       memberships: this.membershipPort(),
+      scan: this.scanPort(),
+      notifier: this.notifierPort(),
     });
+  }
+
+  /** Fix 4: papéis globais de gestão ATIVOS. Por default vazio — a publicação não roda nos testes de gate. */
+  scanPort(): ActivityOverdueScanPort {
+    const self = this;
+    return {
+      async listGlobalManagerUserIds() {
+        return self.globalManagerIds;
+      },
+      async listNotificationCandidates() {
+        return [];
+      },
+      async markOverdueNotified() {
+        return 0;
+      },
+    };
+  }
+
+  /** Fix 4: captura a notificação publicada pelo use case (não publica de verdade). */
+  notifierPort(): ActivityCompletionRequestNotifierPort {
+    const self = this;
+    return {
+      async publishRequest(notification, actor) {
+        if (self.notifierThrows) throw new Error("notificação indisponível");
+        self.publishedRequests.push({ notification, actor });
+      },
+    };
   }
 
   addFileUseCase(): AddActivityFileUseCase {
@@ -337,6 +378,48 @@ describe("RequestActivityCompletionUseCase (V5-7a, DEC-76/99/162)", () => {
     expect(activity.requestedBy).toBe(ACTOR);
     expect(activity.requestedAt).toBe(NOW.toISOString());
     expect(fakes.requestWrites).toHaveLength(1);
+    // Fix 4: sem gestão global ATIVA, nenhuma notificação sai — a publicação não roda.
+    expect(fakes.publishedRequests).toHaveLength(0);
+  });
+
+  it("solicitação notifica a gestão global ATIVA com atividade e projeto, ator de sistema", async () => {
+    fakes.globalManagerIds = [1, 2, 3];
+
+    await fakes.requestUseCase().execute({ projectId: PROJECT, activityId: 1, actorId: ACTOR, now: NOW });
+
+    expect(fakes.publishedRequests).toHaveLength(1);
+    const { notification, actor } = fakes.publishedRequests[0];
+    expect(notification.userIds).toEqual([1, 2, 3]);
+    expect(notification.title).toBe("Conclusão de atividade solicitada");
+    expect(notification.message).toContain("Coleta de dados");
+    expect(notification.message).toContain("Pesquisa em IA");
+    expect(actor.kind).toBe("system");
+  });
+
+  it("notificação não sai antes da escrita: recusa da prova não publica", async () => {
+    fakes.globalManagerIds = [1, 2];
+    fakes.files.clear();
+
+    await expect(
+      fakes.requestUseCase().execute({ projectId: PROJECT, activityId: 1, actorId: ACTOR, now: NOW }),
+    ).rejects.toBeInstanceOf(ValidationError);
+    expect(fakes.publishedRequests).toHaveLength(0);
+    expect(fakes.requestWrites).toHaveLength(0);
+  });
+
+  it("falha do notificador não derruba a solicitação: a atividade fica COMPLETION_REQUESTED", async () => {
+    fakes.globalManagerIds = [1];
+    fakes.notifierThrows = true;
+
+    const activity = await fakes.requestUseCase().execute({
+      projectId: PROJECT,
+      activityId: 1,
+      actorId: ACTOR,
+      now: NOW,
+    });
+    expect(activity.status).toBe("COMPLETION_REQUESTED");
+    expect(fakes.requestWrites).toHaveLength(1);
+    expect(fakes.publishedRequests).toHaveLength(0);
   });
 
   it("membership de gestor que não é líder também pede (DEC-76)", async () => {

@@ -42,4 +42,15 @@ describe("S02 — placar do menu mobile abre o mesmo destino", () => {
     expect(link).toHaveAttribute("href", "/dashboard/leaderboard");
     expect(link).toHaveTextContent("500");
   });
+
+  it("o menu expandido é scrollável — o contêiner do painel tem overflow-y-auto", async () => {
+    const user = userEvent.setup({ delay: null });
+    render(<MobileMenu />);
+
+    await user.click(screen.getByRole("button", { name: "Abrir menu" }));
+    const panel = screen.getByRole("dialog");
+    // Com muitos grupos de navegação a lista passa da altura da tela; sem rolagem, o rodapé
+    // (Tema, Sair) fica inalcançável.
+    expect(panel.className).toContain("overflow-y-auto");
+  });
 });

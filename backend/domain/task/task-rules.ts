@@ -427,9 +427,9 @@ export function createTaskRecord(data: NewTaskInput, now: Date): ITask {
   if (data.description && data.description.length > 1000) {
     throw new ValidationError("Descrição da tarefa não pode ter mais de 1000 caracteres");
   }
-  // plan-v4 · V4-4 (DEC-56) → DEC-97 (2026-10-07): a base passou de 10 + 10·n para
-  // 10 + 5·n (subtask é +5 fixo). Sem subtask continua POINTS_PER_TASK — os testes
-  // congelados do plan-v3 que não usam subtask não se movem.
+  // plan-v4 · V4-4 (DEC-56) → DEC-97 baixou a base para 10 + 5·n; o dono restaurou **10 por
+  // subtask** em 2026-10-29, então `subtaskBasePoints` volta a 10 + 10·n. Sem subtask continua
+  // POINTS_PER_TASK — os testes congelados do plan-v3 que não usam subtask não se movem.
   const subtasks = normalizeNewSubtasks(data.subtasks);
   const points = data.points ?? subtaskBasePoints(subtasks.length);
   if (points < 0) throw new ValidationError("Pontos da tarefa não podem ser negativos");

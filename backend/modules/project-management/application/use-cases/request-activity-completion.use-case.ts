@@ -3,14 +3,21 @@ import {
   ForbiddenError,
   NotFoundError,
   ValidationError,
+  ACTIVITY_COMPLETION_REQUEST_TITLE,
   ACTIVITY_NO_PROOF_MESSAGE,
+  activityCompletionRequestMessage,
   activityOpenTasksMessage,
   activityRequestConflictMessage,
+  completionRequestRecipients,
   isActivityRequestable,
+  systemActor,
+  SYSTEM_REASONS,
 } from "@/backend/domain"
 import type { ActivityStatus } from "@/backend/domain"
 import type { RequestActivityCompletionCommand } from "@/backend/modules/project-management/application/contracts"
 import type { ActivityTasksPort } from "@/backend/modules/project-management/application/ports/activity-tasks.port"
+import type { ActivityOverdueScanPort } from "@/backend/modules/project-management/application/ports/activity-overdue-scan.port"
+import type { ActivityCompletionRequestNotifierPort } from "@/backend/modules/project-management/application/ports/activity-completion-request-notifier.port"
 import type { ProjectActivityFilesPort } from "@/backend/modules/project-management/application/ports/project-activity-files.repository"
 import type { ProjectCronogramaPort } from "@/backend/modules/project-management/application/ports/project-cronograma.repository"
 import type { ProjectManagementMembershipPort } from "@/backend/modules/project-management/application/ports/project-membership.repository"
@@ -40,6 +47,10 @@ export interface RequestActivityCompletionDependencies {
   files: ProjectActivityFilesPort
   tasks: ActivityTasksPort
   memberships: ProjectManagementMembershipPort
+  /** Fix 4: papéis globais de gestão ATIVOS (audiência da notificação de solicitação). */
+  scan: ActivityOverdueScanPort
+  /** Fix 4 (DEC-21): quem publica a notificação prioritária. O composition root injeta notifications. */
+  notifier: ActivityCompletionRequestNotifierPort
 }
 
 export class RequestActivityCompletionUseCase {
@@ -78,10 +89,36 @@ export class RequestActivityCompletionUseCase {
       throw new ValidationError(ACTIVITY_NO_PROOF_MESSAGE)
     }
 
-    return await this.dependencies.cronograma.requestActivity(activity.id, {
+    const requested = await this.dependencies.cronograma.requestActivity(activity.id, {
       status: "COMPLETION_REQUESTED",
       requestedBy: command.actorId,
       requestedAt: command.now,
     })
+
+    // Fix 4: a solicitação é um evento que a gestão precisa ver. Publica DEPOIS da escrita, com
+    // `systemActor` (DEC-54) — quem pediu é pessoa, mas não publica; o sistema anuncia. A
+    // audiência é a gestão global ATIVA (coordenação/gerência), não o líder que pediu. Falha de
+    // notificação não derruba a solicitação: a atividade já está COMPLETION_REQUESTED, e o 409 da
+    // fase protege a reentrada — perder aviso é o quirk aceito do caminho de atraso.
+    const recipients = completionRequestRecipients(
+      await this.dependencies.scan.listGlobalManagerUserIds(),
+    )
+    if (recipients.length > 0) {
+      try {
+        await this.dependencies.notifier.publishRequest(
+          {
+            activityId: activity.id,
+            userIds: recipients,
+            title: ACTIVITY_COMPLETION_REQUEST_TITLE,
+            message: activityCompletionRequestMessage(project.name, activity.description),
+          },
+          systemActor(SYSTEM_REASONS.SYSTEM_EVENT),
+        )
+      } catch (error) {
+        console.error(`⚠️ Não foi possível notificar a solicitação da atividade ${activity.id}:`, error)
+      }
+    }
+
+    return requested
   }
 }

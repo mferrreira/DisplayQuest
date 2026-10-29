@@ -304,9 +304,15 @@ export function AdminProjectManagement({ projects, users, tasks, sessions, onPro
         {filteredProjects.map((project) => {
           const projectTasks = tasks.filter(t => t.projectId === project.id)
           const progress = calculateProjectProgress(project)
-          
+          // Fix 4: projeto com atividade em conclusão solicitada — cartão avermelhado, mesma
+          // paleta do cartão de tarefa vencida (`border-destructive/50 bg-destructive/5`).
+          const completionRequested = project.completionRequested === true
+
           return (
-            <Card key={project.id}>
+            <Card
+              key={project.id}
+              className={completionRequested ? "border-destructive/50 bg-destructive/5" : undefined}
+            >
               <CardHeader>
                 <div className="flex justify-between items-start">
                   <div>
@@ -315,6 +321,9 @@ export function AdminProjectManagement({ projects, users, tasks, sessions, onPro
                       <Badge className={getStatusColor(project.status)}>
                         {getStatusLabel(project.status)}
                       </Badge>
+                      {completionRequested && (
+                        <Badge className="bg-destructive/15 text-destructive">Conclusão solicitada</Badge>
+                      )}
                     </CardTitle>
                     <CardDescription className="mt-2">
                       {project.description || "Sem descrição"}

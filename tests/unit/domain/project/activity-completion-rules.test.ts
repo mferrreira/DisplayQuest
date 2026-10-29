@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  ACTIVITY_COMPLETION_REQUEST_TITLE,
   ACTIVITY_NO_PROOF_MESSAGE,
+  activityCompletionRequestMessage,
   activityOpenTasksMessage,
   activityRequestConflictMessage,
   canActorRequestActivityCompletionDecision,
+  completionRequestRecipients,
   isActivityRequestable,
   projectActivityFilePrefix,
 } from "@/backend/domain";
@@ -79,6 +82,23 @@ describe("regras de conclusão de atividade (V5-7a)", () => {
     it("id sem forma recusa nomeando o lado, antes de montar chave", () => {
       expect(() => projectActivityFilePrefix(0, 42)).toThrow(/projeto inválido/);
       expect(() => projectActivityFilePrefix(9, 0)).toThrow(/atividade inválida/);
+    });
+  });
+
+  describe("notificação da solicitação de conclusão (fix 4)", () => {
+    it("a mensagem carrega atividade e projeto, na frase congelada", () => {
+      expect(ACTIVITY_COMPLETION_REQUEST_TITLE).toBe("Conclusão de atividade solicitada");
+      const msg = activityCompletionRequestMessage("Pesquisa em IA", "Coleta de dados");
+      expect(msg).toContain("Coleta de dados");
+      expect(msg).toContain("Pesquisa em IA");
+    });
+
+    it("audiência é a gestão global, deduplicada e filtrada por id positivo", () => {
+      expect(completionRequestRecipients([1, 2, 2, 0, -3, 5])).toEqual([1, 2, 5]);
+    });
+
+    it("lista vazia não produz destinatário", () => {
+      expect(completionRequestRecipients([])).toEqual([]);
     });
   });
 });

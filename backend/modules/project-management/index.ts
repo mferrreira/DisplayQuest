@@ -54,8 +54,12 @@ import { createPrismaActivityEconomyTasksPort } from "@/backend/modules/project-
 import { createNoOpActivityCompletionAward } from "@/backend/modules/project-management/infrastructure/adapters/gamification-activity-completion-award"
 import { createPrismaActivityOverdueScanPort } from "@/backend/modules/project-management/infrastructure/repositories/prisma-activity-overdue-scan.port"
 import { createNoOpActivityOverdueNotifier } from "@/backend/modules/project-management/infrastructure/adapters/notifications-activity-overdue"
+import { createNoOpActivityCompletionRequestNotifier } from "@/backend/modules/project-management/infrastructure/adapters/notifications-activity-completion-request"
+import { createPrismaProjectCompletionRequestsPort } from "@/backend/modules/project-management/infrastructure/repositories/prisma-project-completion-requests.port"
 import type { ActivityOverdueScanPort } from "@/backend/modules/project-management/application/ports/activity-overdue-scan.port"
 import type { ActivityOverdueNotifierPort } from "@/backend/modules/project-management/application/ports/activity-overdue-notifier.port"
+import type { ActivityCompletionRequestNotifierPort } from "@/backend/modules/project-management/application/ports/activity-completion-request-notifier.port"
+import type { ProjectCompletionRequestsPort } from "@/backend/modules/project-management/application/ports/project-completion-requests.port"
 import { createPrismaProjectHoursPort } from "@/backend/modules/project-management/infrastructure/repositories/prisma-project-hours.port"
 import { createPrismaProjectManagementMembershipRepository } from "@/backend/modules/project-management/infrastructure/repositories/prisma-project-membership.repository"
 import { createPrismaProjectRepository } from "@/backend/modules/project-management/infrastructure/repositories/prisma-project.repository"
@@ -214,6 +218,10 @@ export interface ProjectManagementModulePorts {
   overdueScan: ActivityOverdueScanPort
   /** V5-8 (DEC-21): quem publica a notificação prioritária. O composition root injeta notifications. */
   overdueNotifier: ActivityOverdueNotifierPort
+  /** Fix 4: flag "conclusão solicitada" por projeto (projeção para a tela de gestão). */
+  completionRequests: ProjectCompletionRequestsPort
+  /** Fix 4 (DEC-21): quem publica a notificação da solicitação de conclusão. */
+  completionRequestNotifier: ActivityCompletionRequestNotifierPort
 }
 
 export interface ProjectManagementModuleFactoryOptions {
@@ -235,10 +243,12 @@ export function createProjectManagementModule(options: ProjectManagementModuleFa
     activityAwards: options.ports?.activityAwards ?? createNoOpActivityCompletionAward(),
     overdueScan: options.ports?.overdueScan ?? createPrismaActivityOverdueScanPort(),
     overdueNotifier: options.ports?.overdueNotifier ?? createNoOpActivityOverdueNotifier(),
+    completionRequests: options.ports?.completionRequests ?? createPrismaProjectCompletionRequestsPort(),
+    completionRequestNotifier: options.ports?.completionRequestNotifier ?? createNoOpActivityCompletionRequestNotifier(),
   }
 
   return new ProjectManagementModule(
-    new ListProjectsForActorUseCase({ projects: ports.projects }),
+    new ListProjectsForActorUseCase({ projects: ports.projects, completionRequests: ports.completionRequests }),
     new GetProjectByIdUseCase({ projects: ports.projects }),
     new GetProjectForActorUseCase({ projects: ports.projects }),
     new CanActorManageProjectUseCase({ memberships: ports.memberships, actors: ports.actors }),
@@ -375,6 +385,8 @@ export function createProjectManagementModule(options: ProjectManagementModuleFa
       files: ports.activityFiles,
       tasks: ports.tasks,
       memberships: ports.memberships,
+      scan: ports.overdueScan,
+      notifier: ports.completionRequestNotifier,
     }),
     new ApproveActivityCompletionUseCase({
       projects: ports.projects,

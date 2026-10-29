@@ -16,7 +16,7 @@
 import Link from "next/link"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Trophy } from "lucide-react"
+import { Award, Crown, Medal, Trophy } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { useUser } from "@/contexts/user-context"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -28,7 +28,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { EmptyState } from "@/components/ui/empty-state"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { fetchAPI } from "@/contexts/api-client"
-import { LeaderboardPodium } from "@/components/leaderboard/leaderboard-podium"
+import { userImageUrl } from "@/lib/api/user-images"
 import { compareByBoardPosition } from "@/backend/domain"
 
 /** O que `GET /api/board` declara (S01: mês corrente; S03 acrescenta a lista de meses fechados). */
@@ -364,7 +364,87 @@ export default function LeaderboardPage() {
               aria-label={closedBoardReady ? "Quadro do mês fechado" : undefined}
               className="space-y-8"
             >
-              {champion && <LeaderboardPodium champion={champion} runnersUp={runnersUp} />}
+              {/* Dono (2026-10-29, veredito): a forma antiga é a que fica. O campeão volta a ser a
+                  única superfície com tinta (ouro) — bloco grande com a capa de fundo — e o 2º/3º
+                  voltam a colunas tipográficas com Medal/Award. A Lógica do mês (placar, seletor,
+                  posição do fechamento) fica intacta: `value` é o placar, `position` a linha gravada. */}
+              {champion && (
+                <section aria-label="Campeão do quadro">
+                  <Link
+                    href={`/dashboard/profile?userId=${champion.id}`}
+                    className="relative block overflow-hidden rounded-2xl border border-warning/30 bg-warning/5 transition-colors hover:border-warning/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    {champion.bannerKey ? (
+                      <>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={userImageUrl(champion.id, "banner", champion.bannerKey)}
+                          alt=""
+                          aria-hidden="true"
+                          className="absolute inset-0 h-full w-full object-cover opacity-20"
+                        />
+                      </>
+                    ) : null}
+                    <div className="relative flex flex-wrap items-center gap-6 p-8">
+                      <Crown className="h-10 w-10 shrink-0 text-warning" aria-hidden="true" />
+                      <Avatar className="h-20 w-20 border-2 border-warning/50">
+                        <AvatarImage src={champion.avatar || undefined} alt={champion.name} />
+                        <AvatarFallback className="text-xl font-bold">{getInitials(champion.name)}</AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-warning">1º lugar</p>
+                        <p className="truncate text-2xl font-bold text-foreground">{champion.name}</p>
+                        <p className="truncate text-sm text-muted-foreground">
+                          {getRoleLabel(champion.roles || []) || "Membro do laboratório"}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-4xl font-bold tabular-nums text-foreground">{champion.value}</p>
+                        <p className="text-xs text-muted-foreground">pontos do mês</p>
+                      </div>
+                    </div>
+                  </Link>
+                </section>
+              )}
+
+              {runnersUp.length > 0 && (
+                <section
+                  aria-label="Segundo e terceiro lugares"
+                  className="grid gap-8 sm:grid-cols-2 sm:divide-x sm:divide-border"
+                >
+                  {runnersUp.map((runnerUp) => {
+                    const Icon = runnerUp.position === 2 ? Medal : Award
+                    const accent = runnerUp.position === 2 ? "text-muted-foreground" : "text-warning"
+                    return (
+                      <Link
+                        key={runnerUp.id}
+                        href={`/dashboard/profile?userId=${runnerUp.id}`}
+                        className={`flex items-center gap-4 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                          runnerUp.position === 2 ? "sm:pr-8" : "sm:pl-8"
+                        }`}
+                      >
+                        <span className={`text-3xl font-bold tabular-nums ${accent}`} aria-hidden="true">
+                          {runnerUp.position}º
+                        </span>
+                        <Avatar className="h-12 w-12">
+                          <AvatarImage src={runnerUp.avatar || undefined} alt={runnerUp.name} />
+                          <AvatarFallback>{getInitials(runnerUp.name)}</AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0 flex-1">
+                          <p className="flex items-center gap-1.5 truncate font-semibold text-foreground">
+                            <Icon className={`h-4 w-4 shrink-0 ${accent}`} aria-hidden="true" />
+                            {runnerUp.name}
+                          </p>
+                          <p className="truncate text-xs text-muted-foreground">
+                            {getRoleLabel(runnerUp.roles || []) || "Membro do laboratório"}
+                          </p>
+                        </div>
+                        <p className="shrink-0 font-bold tabular-nums text-foreground">{runnerUp.value}</p>
+                      </Link>
+                    )
+                  })}
+                </section>
+              )}
 
               <section aria-labelledby="leaderboard-full" className="space-y-4">
                 <div className="flex flex-wrap items-baseline justify-between gap-2">

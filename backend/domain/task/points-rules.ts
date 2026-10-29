@@ -26,11 +26,12 @@ import { civilDayOfDate, civilDayOfInstant, civilDaysBetween } from "../time/civ
 export const POINTS_PER_TASK = 10;
 
 /**
- * O que cada subtask SOMA à base da mãe (DEC-97, 2026-10-07 — ajuste do dono ao V4-4).
- * Substitui os 10 por subtask da DEC-56/DEC-83: a base gravada em `tasks.points` passa a ser
- * `10 + 5·n`. É valor FIXO — a subtask não tem pontuação própria pelo prazo (a DEC-78 morreu aqui).
+ * O que cada subtask SOMA à base da mãe. DEC-97 (2026-10-07) tinha baixado a 5; o dono decidiu
+ * em 2026-10-29 que volta a **10** — a base gravada em `tasks.points` passa a ser `10 + 10·n`
+ * (o valor original da DEC-56/DEC-83). É valor FIXO — a subtask não tem pontuação própria pelo
+ * prazo.
  */
-export const SUBTASK_POINTS = 5;
+export const SUBTASK_POINTS = 10;
 
 /**
  * Bônus de entrega antecipada: ×1,5 só com pelo menos `EARLY_DELIVERY_MIN_DAYS` dias civis de

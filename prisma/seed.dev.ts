@@ -851,6 +851,84 @@ async function main() {
     ],
   })
 
+  // Histórico de leaderboard (board_month_closes + month_history) — plan-v9. O quadro de
+  // liderança fecha o placar do mês e congela valor + posição por pessoa ATIVA. Sem linhas
+  // fechadas, o seletor de meses fechados da tela fica vazio. Feedamos os últimos 3 meses
+  // fechados (track MONTH_POINTS) para a demo ter histórico navegável.
+  const activeUsers = [coord, manager, labtech, researcher, projectLead, collaborator, vol1, vol2]
+
+  function monthKey(offset: number) {
+    const d = new Date(now.getUTCFullYear(), now.getUTCMonth() - offset, 1)
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, "0")
+    return { key: `${y}-${m}`, year: y, month: d.getMonth() }
+  }
+
+  const boardTrack = "MONTH_POINTS"
+  // Placar de cada pessoa por mês (offset 1..3). Ordem muda de mês a mês para o histórico ter
+  // posições variadas. Valor pode ser negativo (CA6) — o placar é guardado como estava.
+  const monthlyValues: Array<Record<string, number>> = [
+    { coord: 420, manager: 380, labtech: 260, researcher: 300, projectLead: 340, collaborator: 150, vol1: 120, vol2: 180 },
+    { coord: 300, manager: 500, labtech: 210, researcher: 360, projectLead: 280, collaborator: 200, vol1: 90, vol2: 260 },
+    { coord: 510, manager: 240, labtech: 330, researcher: 200, projectLead: 410, collaborator: 120, vol1: 240, vol2: 160 },
+  ]
+
+  const keyToUserId: Record<string, number> = {
+    coord: coord.id,
+    manager: manager.id,
+    labtech: labtech.id,
+    researcher: researcher.id,
+    projectLead: projectLead.id,
+    collaborator: collaborator.id,
+    vol1: vol1.id,
+    vol2: vol2.id,
+  }
+  const userIdToKey = new Map<number, string>(Object.entries(keyToUserId).map(([k, id]) => [id, k]))
+
+  for (let i = 0; i < monthlyValues.length; i++) {
+    const { key, year, month } = monthKey(i + 1)
+    const periodStart = new Date(year, month, 1, 0, 0, 0, 0)
+    const lastDay = new Date(year, month + 1, 0)
+    const periodEnd = new Date(year, month, lastDay.getDate(), 23, 59, 59, 999)
+
+    const close = await prisma.board_month_closes.create({
+      data: {
+        month: key,
+        track: boardTrack,
+        periodStart,
+        periodEnd,
+        closedAt: periodEnd,
+        triggeredBy: "SYSTEM:MONTH_CLOSE",
+        peopleCount: activeUsers.length,
+        createdAt: periodEnd,
+      },
+    })
+
+    const values = monthlyValues[i]
+    const ordered = activeUsers
+      .map((u) => ({ u, value: values[userIdToKey.get(u.id)!] ?? 0 }))
+      .sort((a, b) => b.value - a.value || a.u.id - b.u.id)
+
+    for (let pos = 0; pos < ordered.length; pos++) {
+      const { u, value } = ordered[pos]
+      await prisma.month_history.create({
+        data: {
+          closeId: close.id,
+          userId: u.id,
+          userName: u.name,
+          month: key,
+          track: boardTrack,
+          value,
+          position: pos + 1,
+          periodStart,
+          periodEnd,
+          closedAt: periodEnd,
+          createdAt: periodEnd,
+        },
+      })
+    }
+  }
+
   console.log("✅ Seed completa finalizada")
   console.log(`Usuários: ${await prisma.users.count()}`)
   console.log(`Projetos: ${await prisma.projects.count()}`)

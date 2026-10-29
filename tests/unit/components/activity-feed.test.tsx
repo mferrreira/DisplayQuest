@@ -1,13 +1,11 @@
 /**
- * S06 (plan-v11, R6) — o feed "Atividade recente" fica abaixo do quadro.
- *
- * Por que existe: o pedido do dono é a ordem da Home — gráfico na faixa, feed abaixo do
- * quadro. A ordem é do DOM do TaskBoard (colunas, depois o feed); o aceite congela a
- * posição relativa, não só a existência do feed (que já era provada no arquivo irmão de
- * features). Harness reusado de task-board.test.tsx: MSW + useSession stub + NuqsTestingAdapter.
+ * Dono (2026-10-29): o gráfico "Atividade da semana" entrou embaixo do quadro e o feed
+ * "Atividade recente" subiu para a faixa. A ordem é do DOM do TaskBoard: colunas, depois o
+ * gráfico. Este arquivo congela a posição relativa do gráfico; a existência do feed na faixa é
+ * provada em home-overview.test.tsx. Harness reusado de task-board.test.tsx.
  */
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SessionProvider } from "next-auth/react";
 import { NuqsTestingAdapter } from "nuqs/adapters/testing";
@@ -39,14 +37,13 @@ function renderBoard() {
   );
 }
 
-describe("feed abaixo do quadro (R6)", () => {
-  it("a seção 'Atividade recente' vem depois das colunas do quadro no DOM", async () => {
+describe("gráfico 'Atividade da semana' abaixo do quadro (dono 2026-10-29)", () => {
+  it("a seção vem depois das colunas do quadro no DOM", async () => {
     renderBoard();
-    // O quadro nasce `aria-busy` enquanto o React Query lê o MSW; a coluna aparece quando as
-    // tarefas chegam (mesma espera de task-board.test.tsx).
     const heading = await screen.findByRole("heading", { name: "A Fazer" });
-    const feed = screen.getByRole("region", { name: "Atividade recente" });
-    expect(heading.compareDocumentPosition(feed) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const chart = screen.getByRole("region", { name: "Atividade da semana" });
+    expect(heading.compareDocumentPosition(chart) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByText("Tarefas e subtasks concluídas nos últimos 7 dias")).toBeInTheDocument();
     expect(server).toBeDefined();
   });
 });

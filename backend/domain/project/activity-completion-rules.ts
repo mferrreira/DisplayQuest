@@ -63,3 +63,37 @@ export function activityOpenTasksMessage(openCount: number): string {
  */
 export const ACTIVITY_NO_PROOF_MESSAGE =
   "Anexe pelo menos uma prova antes de solicitar a conclusão";
+
+/**
+ * Notificação de solicitação de conclusão (fix 4, 2026-10-28). O pedido de conclusão é um
+ * evento que a gestão precisa ver: a rota publica a notificação pelo mesmo caminho do atraso
+ * (DEC-21/64), e quem aprova é a coordenação/gestão global. A fase de pedir não tem rota de
+ * publicação própria: a notificação sai do use case, depois da escrita, com `systemActor`
+ * (DEC-54) — a pessoa que pediu não publica, o sistema anuncia.
+ *
+ * Tipo no vocabulário de `notifications.type` (painel pinta por ele). Título único; a mensagem
+ * carrega atividade e projeto. Audiência: coordenadores/gerentes ATIVOS — quem pediu não
+ * recebe (o líder age, não é avisado de si mesmo), e a deduplicação é por id.
+ */
+export const ACTIVITY_COMPLETION_REQUEST_NOTIFICATION_TYPE = "ACTIVITY_COMPLETION_REQUEST";
+
+export const ACTIVITY_COMPLETION_REQUEST_TITLE = "Conclusão de atividade solicitada";
+
+export function activityCompletionRequestMessage(projectName: string, description: string): string {
+  return (
+    `A conclusão da atividade "${description}" do projeto "${projectName}" foi solicitada. ` +
+    "Aprove a conclusão no cronograma do projeto."
+  );
+}
+
+/**
+ * Audiência da notificação de solicitação: só os papéis globais de gestão (coordenação/gerência
+ * ATIVOS), deduplicada por id. O líder não entra — ele pediu, não é o avisado.
+ */
+export function completionRequestRecipients(globalManagerIds: number[]): number[] {
+  return [
+    ...new Set(
+      globalManagerIds.filter((id) => Number.isInteger(id) && id > 0),
+    ),
+  ];
+}

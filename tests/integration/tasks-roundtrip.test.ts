@@ -312,7 +312,7 @@ describe("G4 roundtrip — task-management (isolated test DB)", () => {
     // é listada — uma linha apagada lá dentro quebraria um teste de outro assunto.
 
     const row = await prisma.tasks.findUnique({ where: { id: task.id! } });
-    expect(row?.points).toBe(20); // DEC-97: 10 da mãe + 5 por subtask (2 subtasks)
+    expect(row?.points).toBe(30); // DEC-97 restaurada em 2026-10-29: 10 da mãe + 10 por subtask (2 subtasks)
 
     const rows = await prisma.task_subtasks.findMany({ where: { taskId: task.id! }, orderBy: { id: "asc" } });
     expect(rows.map((r) => r.title)).toEqual(["Medir a bancada", "Registrar a leitura"]);

@@ -213,10 +213,10 @@ describe("V4-5a · o cartão avisa da trava e deixa concluir a subtask", () => {
   });
 
   it("o badge de pontos mostra a BASE gravada: 10 + 5·concluídas (DEC-97)", async () => {
-    seedMotherWithOpenSubtasks(); // 3 subtasks, 1 concluída → 10 + 5 = 15
+    seedMotherWithOpenSubtasks(); // 3 subtasks, 1 concluída → 10 + 10 = 20
     renderBoard();
 
-    expect(await screen.findAllByText("15 pts")).not.toHaveLength(0);
+    expect(await screen.findAllByText("20 pts")).not.toHaveLength(0);
   });
 
   it("marcar fora de Em Andamento avisa e não grava — a frase é a do servidor (DEC-98)", async () => {
@@ -228,7 +228,7 @@ describe("V4-5a · o cartão avisa da trava e deixa concluir a subtask", () => {
         title: "Revisar o alinhamento",
         status: "in-review",
         assignedTo: 3,
-        points: 15,
+        points: 20,
         subtasks: [openSubtask(911, "Conferir o ruído")],
       }),
     ]);
@@ -256,7 +256,7 @@ describe("V4-5a · o cartão avisa da trava e deixa concluir a subtask", () => {
         title: "Medir o alinhamento",
         status: "in-progress",
         assignedTo: 3,
-        points: 25,
+        points: 40,
         subtasks: [
           closedSubtask(920, "Ligar a fonte"),
           closedSubtask(921, "Ajustar o zero"),
@@ -266,8 +266,8 @@ describe("V4-5a · o cartão avisa da trava e deixa concluir a subtask", () => {
     ]);
     renderBoard();
 
-    // Selo da mãe: 10 + 5·2 concluídas = 20 (DEC-97).
-    expect(await screen.findAllByText("20 pts")).not.toHaveLength(0);
+    // Selo da mãe: 10 + 10·2 concluídas = 30 (DEC-97 restaurada).
+    expect(await screen.findAllByText("30 pts")).not.toHaveLength(0);
 
     await userEvent.click(await screen.findByRole("button", { name: "Ações para Medir o alinhamento" }));
     await userEvent.click(await screen.findByRole("menuitem", { name: /ver detalhes/i }));
@@ -284,10 +284,10 @@ describe("V4-5a · o cartão avisa da trava e deixa concluir a subtask", () => {
       const mother = getTaskStore().find((t) => t.id === 404)!;
       expect(mother.subtasks.find((s) => s.id === 920)?.completed).toBe(false);
     });
-    // ...e a MÃE rederivou do cache: o diálogo diz 1/3 e o selo do cartão cai para 15 pts,
+    // ...e a MÃE rederivou do cache: o diálogo diz 1/3 e o selo do cartão cai para 20 pts,
     // tudo na mesma montagem — sem recarregar a página nem reabrir o diálogo.
     expect(await within(screen.getByRole("dialog")).findByText(/1\/3 concluídas/)).toBeInTheDocument();
-    expect(await screen.findAllByText("15 pts")).not.toHaveLength(0);
+    expect(await screen.findAllByText("20 pts")).not.toHaveLength(0);
   });
 
   it("o menu de ações deixa de oferecer Em Revisão e Concluído enquanto há subtask aberta", async () => {

@@ -359,16 +359,17 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   validação para o agente consumidor; DEC-205..210 na revisão de 2026-10-21). O V4-4 ia usar
   DEC-61..64 e colidiu; os 28 comentários de código foram renumerados. **Antes de abrir decisão nova,
   `grep` os `STATE.json` em `$PLANOS/` (clean-arch e plan-v3..plan-v8). O plan-v8 foi revertido, mas
-  os DEC-211..223 dele seguem reservados no arquivo. Próxima livre: DEC-224.**
-- **Subtask (V4-4, DEC-78..83 → regra atual = DEC-97/98/189):** tabela `task_subtasks` (sem FK para
+  os DEC-211..223 dele seguem reservados no arquivo. Próxima livre: DEC-225.**
+- **Subtask (V4-4, DEC-78..83 → regra atual = DEC-97/98/189/224):** tabela `task_subtasks` (sem FK para
   `users` — subtask não tem
-  responsável próprio), base gravada em `tasks.points` = `10 + 5·n` (DEC-97) e **cada subtask CONCLUÍDA
-  vale +5 fixos dentro dessa base** — a leitura antiga da DEC-78 (subtask pontuada pela regra da mãe no
+  responsável próprio), base gravada em `tasks.points` = `10 + 10·n` (DEC-97 baixou a 5; o dono restaurou
+  **10 por subtask** em 2026-10-29, DEC-224) e **cada subtask CONCLUÍDA
+  vale +10 fixos dentro dessa base** — a leitura antiga da DEC-78 (subtask pontuada pela regra da mãe no
   instante da própria conclusão; exemplo mãe −40 + (+15, 0, −30) = −55) **morreu na DEC-97**. O prêmio da
-  mãe é `(10 + 5·n_concluídas)` atravessando o calendário: **×1,5 se a entrega for ≥2 dias civis
+  mãe é `(10 + 10·n_concluídas)` atravessando o calendário: **×1,5 se a entrega for ≥2 dias civis
   antecipada** (régua nova, vale para toda tarefa, com ou sem subtask — substitui o "1 dia adiantado" da
   DEC-32), no prazo/sem prazo o base cheio, atraso −10/dia sem piso (DEC-39); fracionário arredondado com
-  `Math.round` (25 × 1,5 → 38, congelado em teste). A **trava** (não entrar em `in-review`/`done` com
+  `Math.round` (40 × 1,5 → 60, congelado em teste). A **trava** (não entrar em `in-review`/`done` com
   subtask aberta, vindo de QUALQUER coluna, nos três caminhos `PUT status` / `PATCH complete` / `POST
   approve`) é 400; a **janela** (criar/renomear/apagar a lista de uma mãe em `in-review`/`done`) é 409.
   A **trava de marcação (DEC-98)**: `completed: true` exige mãe em `in-progress` — 409 com a MESMA frase
@@ -786,7 +787,7 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   elements". Caminho: regex no nó do parágrafo (`getByText(/Atual: 120/)`).
 - **`userEvent` sem `userEvent.setup()` é lento sob carga — flake medido (2026-10-06, V4-6b):**
   chamar `userEvent.type/click` direto usa `delay: 0`, e **cada tecla vira um `setTimeout(0)`**. O
-  caso "a mãe nasce com a lista e com a base 10 + 5·n" (`task-dialog-subtasks.test.tsx`) estourou
+  caso "a mãe nasce com a lista e com a base 10 + 10·n" (`task-dialog-subtasks.test.tsx`) estourou
   **5041 ms** numa corrida completa da suíte, verde isolado e no rerun. Correção: `userEvent.setup({
   delay: null })` criado no `beforeEach` e usado como `user.type/user.click` — padrão já usado em
   `task-board.test.tsx`. Suspeitar disso quando um teste de digitação falha **só** sob carga paralela.
@@ -857,7 +858,7 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
 - **Mock que ignora uma chave do corpo esconde defeito do cliente (medido 2026-10-06, V4-5c):** o POST
   `/api/tasks` do mock não tratava `subtasks`, então o teste do formulário passaria verde provando que o
   input existia. Agora ele espelha a rota real: `normalizeNewSubtasks` (400 se inválido), linhas com id
-  e base `10 + 5·n`.
+  e base `10 + 10·n`.
 - **"Quest Global" do formulário é um `Switch` do Radix (`role="switch"`), não uma checkbox** (medido ao
   escrever o teste do V4-5c). O teste que buscava `getByRole("checkbox", { name: "Quest Global" })` falhava
   por isso, não pela regra.

@@ -9,7 +9,7 @@
  *  - "Atribuídas a mim" subsumed by the people select (current user = "(você)")
  */
 import { useRef, useState, useSyncExternalStore } from "react"
-import { CalendarClock, CalendarDays, Globe, LayoutGrid, Plus, Rows3, Search, TriangleAlert, Users, X } from "lucide-react"
+import { CalendarClock, CalendarDays, LayoutGrid, Plus, Rows3, Search, TriangleAlert, Users, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -161,18 +161,8 @@ export function BoardToolbar({
           </Select>
         )}
 
-        {/* R11 (S11): o chip devolve a visão global para qualquer papel, inclusive quem não tem
-            o seletor de projeto. Só existe quando um projeto está aberto. */}
-        {filters.projectId != null && (
-          <Button
-            variant="outline"
-            onClick={() => onFiltersChange({ ...filters, projectId: undefined, activityId: undefined })}
-            aria-label="Ver todos os projetos"
-          >
-            <Globe className="mr-1 h-4 w-4" aria-hidden="true" />
-            Ver todos os projetos
-          </Button>
-        )}
+        {/* R11 (S11): a volta ao global é só a opção "Todos os projetos" do seletor. Não se põe
+            um botão extra no cabeçalho: o chip de S11 era redundante com o seletor. */}
 
         {/* Controle segmentado de exibição (referência: dois ícones num só, o ativo
             destacado). Mora na linha dos filtros, não ao lado do "Nova Tarefa". */}
