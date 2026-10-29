@@ -32,7 +32,10 @@ export function useAuth(): AuthContextType {
     // S03 (R3, ADR-001): nem `callbackUrl` absoluta nem `pages.signOut` mantêm o host do acesso
     // — o NextAuth resolve os dois contra NEXTAUTH_URL (medido em 127.0.0.1:3001). O landing é
     // feito pelo cliente, com caminho relativo, que é o host da requisição.
-    await signOut({ redirect: false })
+    // A falha do signOut não pode virar rejection não tratada no onClick dos dois consumidores
+    // (licão medida do gate: rejection não tratada derruba o Vitest com exit 1). O logout é
+    // terminal: mesmo na falha, o landing é o /login do host em uso.
+    Promise.resolve(signOut({ redirect: false })).catch(() => {})
     window.location.href = "/login"
   }
 

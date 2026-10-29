@@ -89,7 +89,7 @@ export function MobileMenu() {
                 <Link
                   href="/dashboard/leaderboard"
                   aria-label="Pontos — abrir quadro de liderança"
-                  className="flex items-center justify-center gap-2 rounded-xl border bg-card p-3 transition-colors hover:border-primary/40"
+                  className="flex items-center justify-center gap-2 rounded-xl border bg-card p-3 transition-colors hover:border-primary/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring"
                 >
                   <Trophy className="h-5 w-5 text-warning" aria-hidden="true" />
                   <span className="text-lg font-semibold">{points}</span>
