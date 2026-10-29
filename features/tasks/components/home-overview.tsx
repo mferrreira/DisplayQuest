@@ -19,8 +19,6 @@ import { filterBoardTasks } from "../utils/filter-board-tasks"
 interface HomeOverviewProps {
   projects: Array<{ id: number; name: string; createdAt: string; status: string; startDate?: string | null; endDate?: string | null }>
   tasks: Task[]
-  weekHours: number
-  currentWeekHours: number
 }
 
 const TASK_STATUSES: Task["status"][] = ["to-do", "in-progress", "in-review", "adjust", "done"]
@@ -29,10 +27,6 @@ const TASK_STATUSES: Task["status"][] = ["to-do", "in-progress", "in-review", "a
 // pessoa fecha a faixa e ela reabre sozinha a cada visita. Chave no namespace `dq:` da casa.
 const OVERVIEW_OPEN_KEY = clientStorageKey("home", "resumo-aberto")
 
-function formatHours(value: number) {
-  return new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 }).format(value)
-}
-
 function projectStatus(status: string) {
   if (status === "active" || status === "completed" || status === "archived") {
     return { className: projectStatusBadgeClass[status], label: projectStatusLabel[status] }
@@ -40,7 +34,7 @@ function projectStatus(status: string) {
   return { className: "bg-muted text-muted-foreground", label: status }
 }
 
-export function HomeOverview({ projects, tasks, weekHours, currentWeekHours }: HomeOverviewProps) {
+export function HomeOverview({ projects, tasks }: HomeOverviewProps) {
   const [open, setOpen] = useState(true)
   // O SSR sempre renderiza aberta (o storage nao existe la); a preferencia entra no primeiro
   // efeito no cliente — sem isso, o HTML do servidor e o primeiro render divergiriam (hydration).
@@ -76,7 +70,6 @@ export function HomeOverview({ projects, tasks, weekHours, currentWeekHours }: H
     ]),
   ) as Record<Task["status"], number>
   const completion = filteredTasks.length ? Math.round((taskCounts.done / filteredTasks.length) * 100) : 0
-  const hoursProgress = weekHours > 0 ? Math.min(100, Math.round((currentWeekHours / weekHours) * 100)) : 0
   const today = civilDayOfInstant(new Date())
   const statusSegments = TASK_STATUSES.map((status) => ({ label: taskStatusSentenceLabel[status], value: taskCounts[status], color: taskStatusChartColor[status] }))
   const taskTotal = filteredTasks.length
@@ -194,18 +187,8 @@ export function HomeOverview({ projects, tasks, weekHours, currentWeekHours }: H
           <section aria-labelledby="home-task-chart" className="min-w-0 md:col-span-2 md:border-l md:pl-5 lg:col-span-1 lg:border-l lg:pl-5">
             <h3 id="home-task-chart" className="mb-3 text-sm font-semibold">Atividade da semana</h3>
             <p className="mb-1.5 text-xs font-medium">Tarefas e subtasks concluídas nos últimos 7 dias</p>
+            {/* S06 (R6, dono): o gráfico fica na faixa sem a barra de meta de horas. */}
             <WeeklyBarChart weeks={lastSevenDays} label="Tarefas e subtasks concluídas nos últimos 7 dias" valueNoun="conclusões" />
-            <div className="mt-3 border-t pt-3">
-              <div className="mb-2 flex items-baseline justify-between gap-3"><p className="text-xs font-medium">Meta da semana</p><p className="text-sm font-semibold tabular-nums">{formatHours(currentWeekHours)}{weekHours > 0 ? ` / ${formatHours(weekHours)} h` : " h"}</p></div>
-              {weekHours > 0 ? (
-                <>
-                  <Progress aria-label={`Meta semanal de horas: ${hoursProgress}%`} value={hoursProgress} className="h-2" />
-                  <p className="mt-1.5 text-xs text-muted-foreground">{hoursProgress}% da meta semanal</p>
-                </>
-              ) : (
-                <p className="text-xs text-muted-foreground">Defina sua meta no perfil</p>
-              )}
-            </div>
           </section>
         </div>
       )}

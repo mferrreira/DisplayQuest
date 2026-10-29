@@ -42,11 +42,13 @@ beforeEach(() => {
 describe("HomeOverview filters", () => {
   it("recalcula os gráficos e projetos recentes ao filtrar por pessoa", () => {
     filters.pessoa = 7
-    render(<HomeOverview projects={projects} tasks={tasks} weekHours={20} currentWeekHours={5} />)
+    render(<HomeOverview projects={projects} tasks={tasks} />)
 
     expect(screen.getByRole("img", { name: "Distribuição das tarefas por status" })).toBeInTheDocument()
     expect(screen.getByText("50% das tarefas concluídas")).toBeInTheDocument()
-    expect(screen.getByText("Meta da semana").parentElement).toHaveTextContent("5 / 20 h")
+    // S06 (R6): a barra de meta de horas saiu do card do gráfico; o caracterizador
+    // passa a fixar o gráfico da semana, que é o que a faixa agora mostra nesse ponto.
+    expect(screen.getByText("Tarefas e subtasks concluídas nos últimos 7 dias")).toBeInTheDocument()
     expect(screen.getByRole("link", { name: /Projeto Alfa/ })).toBeInTheDocument()
     expect(screen.getByRole("link", { name: /Projeto Beta/ })).toBeInTheDocument()
   })
@@ -54,7 +56,7 @@ describe("HomeOverview filters", () => {
   it("conta atrasadas pela mesma regra do filtro do quadro", () => {
     filters.pessoa = 7
     const atrasada = { id: 99, title: "Atrasada de verdade", status: "to-do", dueDate: "2026-10-01", projectId: 1, assignedTo: 7, assigneeIds: [7] }
-    render(<HomeOverview projects={projects} tasks={[...tasks, atrasada] as never} weekHours={20} currentWeekHours={5} />)
+    render(<HomeOverview projects={projects} tasks={[...tasks, atrasada] as never} />)
     expect(screen.getByText("1 atrasada")).toBeInTheDocument()
     expect(screen.queryByText("2 atrasadas")).not.toBeInTheDocument()
   })
@@ -62,7 +64,7 @@ describe("HomeOverview filters", () => {
   it("combina projeto e pessoa no mesmo recorte", () => {
     filters.projeto = 1
     filters.pessoa = 7
-    render(<HomeOverview projects={projects} tasks={tasks} weekHours={20} currentWeekHours={5} />)
+    render(<HomeOverview projects={projects} tasks={tasks} />)
 
     expect(screen.getByRole("img", { name: "Distribuição das tarefas por status" })).toBeInTheDocument()
     expect(screen.getByText("0% das tarefas concluídas")).toBeInTheDocument()
@@ -106,7 +108,7 @@ describe("Atividade da semana — subtask conta", () => {
       { id: 201, title: "Feita ontem", status: "done", completedAt: noon(yesterday), dueDate: null },
     ] as never
 
-    render(<HomeOverview projects={projects} tasks={withSubtasks} weekHours={20} currentWeekHours={5} />)
+    render(<HomeOverview projects={projects} tasks={withSubtasks} />)
 
     const chart = screen.getByRole("img", { name: "Tarefas e subtasks concluídas nos últimos 7 dias" })
     // hoje = mãe (1) + subtask de hoje (1); ontem = subtask (1) + tarefa 201 (1); há 5 dias só a subtask.
