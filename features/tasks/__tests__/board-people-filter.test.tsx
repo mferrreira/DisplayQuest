@@ -160,7 +160,9 @@ describe("TaskBoard — filtro por pessoa (select de pessoas)", () => {
     expect(screen.getByText("Minha tarefa delegada")).toBeVisible();
     expect(screen.getByText("Minha tarefa atrasada")).toBeVisible();
     expect(screen.queryByText("Tarefa de outro usuário")).not.toBeInTheDocument();
-    expect(screen.queryByText("Tarefa global")).not.toBeInTheDocument();
+    // R10 (S10): quest global pública sem responsável é atribuída a todo usuário, então
+    // ela **entra** no filtro "você". O dado da coluna não muda — só a regra de leitura.
+    expect(screen.getByText("Tarefa global")).toBeVisible();
   });
 
   it("selecting another user filters to that user's tasks", async () => {
@@ -169,7 +171,8 @@ describe("TaskBoard — filtro por pessoa (select de pessoas)", () => {
     await selectPerson("Outro Usuário");
     expect(screen.getByText("Tarefa de outro usuário")).toBeVisible();
     expect(screen.queryByText("Minha tarefa delegada")).not.toBeInTheDocument();
-    expect(screen.queryByText("Tarefa global")).not.toBeInTheDocument();
+    // R10 (S10): a quest global pública sem responsável vale para qualquer pessoa.
+    expect(screen.getByText("Tarefa global")).toBeVisible();
   });
 
   it("combines the person filter with the overdue filter", async () => {
