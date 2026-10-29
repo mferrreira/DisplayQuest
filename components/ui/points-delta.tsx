@@ -48,7 +48,12 @@ import {
   subscribeToPointsDelta,
   type PointsDeltaSignal,
 } from "@/lib/points-delta"
-import { readLastSeenPoints, writeLastSeenPoints } from "@/lib/points-seen"
+import {
+  readLastSeenMonthPoints,
+  readLastSeenPoints,
+  writeLastSeenMonthPoints,
+  writeLastSeenPoints,
+} from "@/lib/points-seen"
 import { cn } from "@/lib/utils/utils"
 
 /** O navegador pede menos movimento? Sem `matchMedia` (navegador antigo, SSR) assume que sim. */
@@ -58,7 +63,7 @@ function prefersReducedMotion(): boolean {
 }
 
 /**
- * O contador do cabeçalho (V4-2, DEC-59; catch-up no V4-3, DEC-58).
+ * O contador do cabeçalho (V4-2, DEC-59; catch-up no V4-3, DEC-58; placar do mês no plan-v9 S06).
  *
  * Anima de `from` até `to` quando o total que ele renderiza **muda**, e não quando um sinal
  * chega. Essa escolha é o que torna o desenho robusto à ordem real medida em `use-tasks.ts`:
@@ -71,6 +76,17 @@ function prefersReducedMotion(): boolean {
  * e conta até o atual. É o caso medido que o dono relatou — voluntário conclui, o líder aprova,
  * o prêmio é creditado na sessão do líder, e o cliente do voluntário nunca viu o número.
  *
+ * plan-v9 S06 (ADR-007/DEC-229, R13, CA10) acrescenta o `month`. Quando a pílula mostra o
+ * **placar do mês**, o fechamento (S02) zera o número — e o zero não é perda: é mês novo. A
+ * baseline mensal (`dq:month-points-seen:<id>`, em `lib/points-seen.ts`) guarda o mês junto com o
+ * valor, e dois caminhos re-tarificam sem animar e sem chip:
+ *  - remontar depois da virada: a baseline lida na montagem é de outro mês, e o valor novo é
+ *    mostrado direto;
+ *  - a mesma sessão atravessando a virada: o mês chega por re-render, e o efeito decide pela
+ *    prop, porque a decisão não pode depender de uma leitura feita na montagem.
+ * Sem `month`, o componente é exatamente o de antes (o saldo, DEC-58) — é o que os testes do
+ * V4-2/V4-3 continuam congelando.
+ *
  * `suppressHydrationWarning` no texto é deliberado: o primeiro valor é específico do navegador
  * (depende do que foi guardado nele), então o HTML do servidor e o do cliente não têm de
  * concordar nesse nó. Sem isso o React acusaria divergência de hidratação por algo que é
@@ -79,12 +95,18 @@ function prefersReducedMotion(): boolean {
 export function PointsCounter({
   points,
   userId,
+  month,
 }: {
   points: number
   /** Quem é a pessoa: a baseline é por usuário, para ninguém animar a mudança de outra. */
   userId?: number | null
+  /**
+   * O mês civil que o número representa (`AAAA-MM`, nomeado pelo servidor — DEC-132). Presente,
+   * a baseline é mensal e a virada re-tarifica; ausente, o comportamento por saldo de sempre.
+   */
+  month?: string | null
 }) {
-  const [shown, setShown] = useState(() => readLastSeenPoints(userId) ?? points)
+  const [shown, setShown] = useState(() => startingValue(points, userId, month))
   /**
    * O total que este componente entregou até aqui.
    *
@@ -99,13 +121,39 @@ export function PointsCounter({
    */
   const displayed = useRef(shown)
   const announcedCatchUp = useRef(false)
+  /** O mês deste número, para o efeito distinguir virada de mudança. */
+  const seenMonth = useRef<string | null>(month ?? null)
 
   useEffect(() => {
     const from = displayed.current
 
+    // Virada do mês (S06): mês novo é re-tarificação, e re-tarificação não é contagem. Sem
+    // `announcePointsDelta` aqui — o R13 congela que o chip não anuncia o reset como perda.
+    if (month && seenMonth.current && seenMonth.current !== month) {
+      seenMonth.current = month
+      displayed.current = points
+      setShown(points)
+      writeLastSeenMonthPoints(userId, month, points)
+      return undefined
+    }
+
     if (from === points) {
       // Sem mudança: só garante que a baseline existe, para a próxima visita ter de onde partir.
-      writeLastSeenPoints(userId, points)
+      if (month) writeLastSeenMonthPoints(userId, month, points)
+      else writeLastSeenPoints(userId, points)
+      return undefined
+    }
+
+    // O placar do mês ZERA (CA10): o zero é o estado de partida da trilha, e contá-lo em câmera
+    // lenta com um chip `−120` seria anunciar o reset como perda — o que o R13 proíbe. Vale para
+    // a virada (mês novo) e para o fechamento manual fora do dia 1 (R6: fecha o mês anterior e
+    // zera o placar dentro do MESMO mês civil), caso que a régua de mês sozinha não alcança.
+    // Um prêmio que chega por mutação anuncia o próprio sinal antes de chegar aqui
+    // (`features/tasks/hooks/use-tasks.ts`), então a penalidade real continua com chip.
+    if (month && points === 0) {
+      displayed.current = points
+      setShown(points)
+      writeLastSeenMonthPoints(userId, month, points)
       return undefined
     }
 
@@ -121,7 +169,7 @@ export function PointsCounter({
     if (prefersReducedMotion()) {
       displayed.current = points
       setShown(points)
-      writeLastSeenPoints(userId, points)
+      persistBaseline(userId, month, points)
       return undefined
     }
 
@@ -137,18 +185,50 @@ export function PointsCounter({
         clearInterval(timer)
         // A baseline só avança quando a contagem terminou: se o usuário fecha a aba no meio,
         // a próxima visita ainda tem o valor antigo de onde partir.
-        writeLastSeenPoints(userId, points)
+        persistBaseline(userId, month, points)
       }
     }, POINTS_DELTA_STEP_MS)
 
     return () => clearInterval(timer)
-  }, [points, userId])
+  }, [points, userId, month])
 
   return (
     <span data-testid="points-total" aria-live="polite" suppressHydrationWarning>
       {shown}
     </span>
   )
+}
+
+/**
+ * De onde o contador começa, na montagem.
+ *
+ * Com mês: a baseline mensal manda. É do MESMO mês → começa no valor guardado e o efeito conta
+ * a distância; é de outro mês → a virada aconteceu enquanto o navegador estava fechado, e o valor
+ * novo é mostrado direto (CA10). Sem baseline, primeira visita: o valor direto.
+ * Sem mês: o caminho do saldo, exatamente o da DEC-58.
+ */
+function startingValue(
+  points: number,
+  userId: number | null | undefined,
+  month: string | null | undefined,
+): number {
+  if (!month) return readLastSeenPoints(userId) ?? points
+  // O zero do placar é sempre o ponto de partida, nunca um destino a contar: mostrar o valor
+  // guardado e cair para 0 no efeito seguinte seria o flash de uma perda que o R13 não permite.
+  if (points === 0) return 0
+  const baseline = readLastSeenMonthPoints(userId)
+  if (!baseline) return points
+  if (baseline.month !== month) return points
+  return baseline.points
+}
+
+function persistBaseline(
+  userId: number | null | undefined,
+  month: string | null | undefined,
+  points: number,
+): void {
+  if (month) writeLastSeenMonthPoints(userId, month, points)
+  else writeLastSeenPoints(userId, points)
 }
 
 /**

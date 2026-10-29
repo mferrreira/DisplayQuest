@@ -21,6 +21,15 @@ export function useTasks(filters: TaskFilters = {}) {
   })
 }
 
+/** Feed "Atividade recente" da Home — as acoes mais recentes gravadas em `history`. */
+export function useTaskActivity(limit = 15, projectId?: number | null) {
+  return useQuery({
+    queryKey: queryKeys.tasks.activity(projectId ?? null),
+    queryFn: () => tasksApi.activity(limit, projectId),
+    staleTime: 30_000,
+  })
+}
+
 /** Cross-cutting invalidation for ANY task mutation (spec §5.3). */
 export function useInvalidateTaskGraph() {
   const queryClient = useQueryClient()

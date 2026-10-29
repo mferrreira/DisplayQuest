@@ -7,8 +7,9 @@ import { useUser } from "@/contexts/user-context"
 import { useResponsibility } from "@/contexts/responsibility-context"
 import { useIssues } from "@/contexts/issue-context"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { AlertCircle } from "lucide-react"
+import { AlertCircle, FlaskConical } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { PageHeader } from "@/components/ui/page-header"
 import { ScheduleTab } from "@/components/features/laboratorio/schedule-tab"
 import { ResponsibilityTab } from "@/components/features/laboratorio/responsibility-tab"
 import { IssuesTab } from "@/components/features/laboratorio/issues-tab"
@@ -85,7 +86,9 @@ export default function LabResponsibilityPage() {
   return (
     <div className="flex min-h-screen flex-col">
       <main className="flex-1 container mx-auto p-4 md:p-6">
-        <h1 className="text-2xl font-bold mb-6">Laboratório</h1>
+        <div className="mb-6">
+          <PageHeader title="Laboratório" icon={FlaskConical} />
+        </div>
 
         {(error || issuesError) && (
           <Alert variant="destructive" className="mb-4">

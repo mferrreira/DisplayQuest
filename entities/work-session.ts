@@ -20,6 +20,7 @@ export const workSessionSchema = z.object({
   userId: z.number().int(),
   userName: z.string(),
   startTime: dateTimeString,
+  originalStartTime: nullableDateTimeString.optional(),
   endTime: nullableDateTimeString.optional(),
   /** Accumulated seconds while paused; null while running. Client MUST derive elapsed from startTime math. */
   duration: z.number().nullable().optional(),

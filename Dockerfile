@@ -41,6 +41,11 @@ COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
 
+# Templates oficiais dos documentos (V5-1a/DEC-128): asset de LEITURA. Não entram no chown
+# abaixo de propósito — a cópia marcada é derivada fora da imagem e só consumida em runtime,
+# então nenhum caminho de escrita novo aparece no container (evita o EACCES do A11).
+COPY --from=builder /app/templates ./templates
+
 # Garante que o usuário nextjs (uid 1001) consiga gravar em /app/public/uploads
 # em runtime (avatares) e em /app/data/uploads (relatórios). A permissão é
 # herdada pelos volumes nomeados `uploads_data` e `report_files_data` do

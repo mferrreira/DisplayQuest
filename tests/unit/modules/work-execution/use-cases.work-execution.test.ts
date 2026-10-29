@@ -101,7 +101,7 @@ class FakeWorkSessions {
   async update(id: number, updates: Partial<WorkSession>) {
     const row = this.rows.find((s) => s.id === id);
     if (!row) throw new Error("Session not found");
-    for (const key of ["userName", "startTime", "endTime", "duration", "activity", "location", "projectId", "status"] as const) {
+    for (const key of ["userName", "startTime", "originalStartTime", "endTime", "duration", "activity", "location", "projectId", "status"] as const) {
       if (updates[key] !== undefined) (row as unknown as Record<string, unknown>)[key] = updates[key];
     }
     return { ...row };
@@ -265,6 +265,7 @@ describe("StartWorkSessionUseCase", () => {
     expect(closed?.duration).toBe(1800); // 12:00 -> 12:30 pause
     expect(session.status).toBe("active");
     expect(session.startTime).toEqual(new Date(T_13Z));
+    expect(session.originalStartTime).toEqual(new Date(T_13Z));
   });
 
   it("membership required for non-managers; MANAGE_WORK_SESSIONS skips it", async () => {
@@ -466,6 +467,7 @@ describe("UpdateWorkSessionUseCase (server-authoritative transitions)", () => {
       id: 1,
       userId: 7,
       startTime: new Date("2026-06-15T12:00:00.000Z"),
+      originalStartTime: new Date("2026-06-15T11:00:00.000Z"),
       status: "paused",
       duration: 1800,
       endTime: PAUSE_1230Z,
@@ -479,6 +481,7 @@ describe("UpdateWorkSessionUseCase (server-authoritative transitions)", () => {
     expect(resumed.status).toBe("active");
     expect(resumed.endTime).toBeNull();
     expect(resumed.startTime).toEqual(new Date(T_13Z));
+    expect(resumed.originalStartTime).toEqual(new Date("2026-06-15T11:00:00.000Z"));
     expect(resumed.duration).toBe(1800);
   });
 

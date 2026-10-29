@@ -279,6 +279,10 @@ function updateDependencies(notifications: unknown) {
     actors: actorPort(),
     projects: { findById: async () => ({ id: 1, name: "P", leaderId: 3, status: "ACTIVE" }) },
     subtasks: subtasksPort(),
+    // V5-6 (DEC-99): a leitura da atividade só acontece quando o corpo traz `activityId`, e estes
+    // testes não trazem. `unusedPort` é o que faz o erro ser alto se um dia trazem (gotcha
+    // medido no V4-4: porta nova montada à mão não é pega pelo `tsc`).
+    activities: unusedPort("activities"),
     notifications,
   } as never;
 }

@@ -1,0 +1,122 @@
+{
+  "project": "DisplayQuest",
+  "version": 1,
+  "updatedAt": "2026-10-24",
+  "dev": {
+    "command": "npm run dev",
+    "baseUrl": "http://localhost:3000",
+    "baseUrlEnv": "UI_REFERENCE_BASE_URL",
+    "readyPath": "/login",
+    "notes": "Next.js dev server on the default port 3000. The repository Playwright config uses port 3001 for e2e; this reference uses the dev default."
+  },
+  "auth": {
+    "required": true,
+    "mode": "form",
+    "loginPath": "/login",
+    "credentialsEnv": ["DQ_CAPTURE_EMAIL", "DQ_CAPTURE_PASSWORD"],
+    "setup": "npm run db:seed",
+    "notes": "Credentials live in docs/.capture.env, which is gitignored. DQ_CAPTURE_EMAIL_2 holds the second role used by the user guide capture script. Login fields are #email and #password."
+  },
+  "viewports": [
+    { "id": "desktop", "width": 1440, "height": 900 },
+    { "id": "mobile", "width": 390, "height": 844 }
+  ],
+  "themes": [
+    { "id": "light", "mechanism": "class", "value": "light" },
+    { "id": "dark", "mechanism": "class", "value": "dark" }
+  ],
+  "screens": [
+    {
+      "id": "home",
+      "route": "/dashboard",
+      "title": "Home",
+      "purpose": "Daily working area: greeting, laboratory summary, Kanban board, recent activity, deadlines and gamification.",
+      "states": ["default"],
+      "captures": ["home-light-desktop", "home-dark-desktop"]
+    },
+    {
+      "id": "projects",
+      "route": "/dashboard/projetos",
+      "title": "Projects",
+      "purpose": "Project list with filters, search, sorting and the Dashboard/List views.",
+      "states": ["default"],
+      "captures": ["projects-light-desktop"]
+    },
+    {
+      "id": "project",
+      "route": "/dashboard/projetos/9",
+      "title": "Project detail",
+      "purpose": "Single project with the Overview, Tasks, Members, Files and Settings tabs. The capture uses demo project 9.",
+      "states": ["default"],
+      "captures": ["project-light-desktop"]
+    },
+    {
+      "id": "reports",
+      "route": "/dashboard/weekly-reports",
+      "title": "Reports",
+      "purpose": "Weekly reports by user, technical reports by project and attendance certificates.",
+      "states": ["default"],
+      "captures": ["reports-light-desktop"]
+    }
+  ],
+  "captures": [
+    {
+      "id": "home-light-desktop",
+      "file": "screens/home-light-desktop.png",
+      "screen": "home",
+      "route": "/dashboard",
+      "theme": "light",
+      "viewport": "desktop",
+      "state": "default"
+    },
+    {
+      "id": "home-dark-desktop",
+      "file": "screens/home-dark-desktop.png",
+      "screen": "home",
+      "route": "/dashboard",
+      "theme": "dark",
+      "viewport": "desktop",
+      "state": "default"
+    },
+    {
+      "id": "projects-light-desktop",
+      "file": "screens/projects-light-desktop.png",
+      "screen": "projects",
+      "route": "/dashboard/projetos",
+      "theme": "light",
+      "viewport": "desktop",
+      "state": "default"
+    },
+    {
+      "id": "project-light-desktop",
+      "file": "screens/project-light-desktop.png",
+      "screen": "project",
+      "route": "/dashboard/projetos/9",
+      "theme": "light",
+      "viewport": "desktop",
+      "state": "default"
+    },
+    {
+      "id": "reports-light-desktop",
+      "file": "screens/reports-light-desktop.png",
+      "screen": "reports",
+      "route": "/dashboard/weekly-reports",
+      "theme": "light",
+      "viewport": "desktop",
+      "state": "default"
+    }
+  ],
+  "references": [
+    "docs/ui-reference/references/visual-language.md",
+    "docs/ui-reference/references/design-system.md",
+    "docs/ui-reference/references/layout-patterns.md",
+    "docs/ui-reference/references/components.md",
+    "docs/ui-reference/references/anti-patterns.md"
+  ],
+  "gates": [
+    { "id": "lint", "command": "npm run lint" },
+    { "id": "types", "command": "npx tsc --noEmit" },
+    { "id": "tests", "command": "npm run test" }
+  ],
+  "evidenceDir": "docs/ui-reference/.review"
+}

@@ -15,6 +15,7 @@ import {
   Trash2, 
   Clock, 
   AlertCircle,
+  AlertTriangle,
   CheckCircle2,
   UserPlus,
   Megaphone
@@ -39,7 +40,12 @@ export function NotificationsPanel({ className }: NotificationsPanelProps) {
   
   const [isOpen, setIsOpen] = useState(false)
 
-  const getNotificationIcon = (type: string) => {
+  const getNotificationIcon = (type: string, priority: boolean) => {
+    // V5-8 (DEC-64): a urgência manda no ícone e na cor — o atraso de atividade é
+    // notificação prioritária por decisão do dono, não por vocabulário de `type`.
+    if (priority) {
+      return <AlertTriangle className="h-4 w-4 text-red-500 dark:text-destructive" />
+    }
     switch (type) {
       case 'TASK_REVIEW_REQUEST':
         return <AlertCircle className="h-4 w-4 text-yellow-500 dark:text-warning" />
@@ -58,7 +64,10 @@ export function NotificationsPanel({ className }: NotificationsPanelProps) {
     }
   }
 
-  const getNotificationColor = (type: string) => {
+  const getNotificationColor = (type: string, priority: boolean) => {
+    if (priority) {
+      return 'bg-red-50 border-red-200 dark:bg-destructive/10 dark:border-destructive/25'
+    }
     switch (type) {
       case 'TASK_REVIEW_REQUEST':
         return 'bg-yellow-50 border-yellow-200 dark:bg-warning/10 dark:border-warning/25'
@@ -158,15 +167,24 @@ export function NotificationsPanel({ className }: NotificationsPanelProps) {
                   {unreadNotifications.map((notification) => (
                     <div
                       key={notification.id}
-                      className={`p-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-muted/40 border-l-4 border-l-blue-500 ${getNotificationColor(notification.type)}`}
+                      className={`p-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-muted/40 border-l-4 ${
+                        notification.priority ? "border-l-red-500" : "border-l-blue-500"
+                      } ${getNotificationColor(notification.type, notification.priority)}`}
                       onClick={() => handleNotificationClick(notification)}
                     >
                       <div className="flex items-start gap-3">
-                        {getNotificationIcon(notification.type)}
+                        {getNotificationIcon(notification.type, notification.priority)}
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 dark:text-foreground">
-                            {notification.title}
-                          </p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-medium text-gray-900 dark:text-foreground">
+                              {notification.title}
+                            </p>
+                            {notification.priority && (
+                              <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                                Urgente
+                              </Badge>
+                            )}
+                          </div>
                           <p className="text-sm text-gray-600 dark:text-muted-foreground mt-1">
                             {notification.message}
                           </p>
@@ -204,15 +222,22 @@ export function NotificationsPanel({ className }: NotificationsPanelProps) {
                   {readNotifications.map((notification) => (
                     <div
                       key={notification.id}
-                      className={`p-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-muted/40 opacity-75 ${getNotificationColor(notification.type)}`}
+                      className={`p-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-muted/40 opacity-75 ${getNotificationColor(notification.type, notification.priority)}`}
                       onClick={() => handleNotificationClick(notification)}
                     >
                       <div className="flex items-start gap-3">
-                        {getNotificationIcon(notification.type)}
+                        {getNotificationIcon(notification.type, notification.priority)}
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-700 dark:text-foreground/90">
-                            {notification.title}
-                          </p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-medium text-gray-700 dark:text-foreground/90">
+                              {notification.title}
+                            </p>
+                            {notification.priority && (
+                              <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                                Urgente
+                              </Badge>
+                            )}
+                          </div>
                           <p className="text-sm text-gray-500 dark:text-muted-foreground mt-1">
                             {notification.message}
                           </p>

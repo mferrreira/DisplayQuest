@@ -19,6 +19,45 @@ services:
       timeout: 5s
       retries: 5
 
+  # V5-1 (DEC-101/DEC-131): bucket S3-compatible dos blobs NOVOS do plan-v5.
+  # Modo `mini` = master + volume + filer + S3 num só processo (é o modo que o próprio
+  # entrypoint da imagem usa). Pinado por DIGEST de propósito: as tags publicadas são só
+  # `latest`/`dev` e nenhuma tem semver; o digest abaixo foi medido em 2026-10-13 e cobre a
+  # imagem multi-arquitetura (amd64 no deploy, arm64 no Mac local).
+  seaweedfs:
+    image: chrislusf/seaweedfs@sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d
+    container_name: display-quest-objects
+    # O entrypoint da imagem é trocado para escrever o `s3.json` a partir do ambiente: NENHUMA
+    # credencial mora no repositório. Sem identidade configurada o S3 responderia como anônimo
+    # (`any`/`any`) — o teste com credencial errada devolveu SignatureDoesNotMatch, então a
+    # identidade vale. `-bucket` cria o bucket na subida; `-master.telemetry=false` corta o
+    # reporte anônimo de estatística.
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e
+        cat > /tmp/s3.json <<EOF
+        {"identities":[{"name":"app","credentials":[{"accessKey":"$${S3_ACCESS_KEY}","secretKey":"$${S3_SECRET_KEY}"}],"actions":["Admin","Read","Write"]}]}
+        EOF
+        exec weed mini -dir=/data -s3.config=/tmp/s3.json -bucket=$${S3_BUCKET} -master.telemetry=false
+    environment:
+      - S3_ACCESS_KEY=${S3_ACCESS_KEY:?Defina S3_ACCESS_KEY no ambiente/.env}
+      - S3_SECRET_KEY=${S3_SECRET_KEY:?Defina S3_SECRET_KEY no ambiente/.env}
+      - S3_BUCKET=${S3_BUCKET:-displayquest}
+    expose:
+      - "8333"
+    volumes:
+      - object_store_data:/data
+    networks:
+      - display-quest-network
+    healthcheck:
+      # O master responde 200 {"IsLeader":true,...} em /cluster/status (medido).
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:9333/cluster/status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
   app:
     build: .
     container_name: display-quest
@@ -29,11 +68,27 @@ services:
       - NEXTAUTH_URL=http://localhost:3000
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:?Defina NEXTAUTH_SECRET no ambiente/.env}
       - NODE_ENV=production
+      # V5-2c (DEC-101/131): primeiro consumidor de produção do bucket. Dentro da rede do
+      # compose o endereço é o nome do serviço, não localhost — a partir do host/scripts é
+      # http://localhost:8333 (ver docker-compose.override.yml). O SeaweedFS exige path-style.
+      - S3_ENDPOINT=http://seaweedfs:8333
+      - S3_BUCKET=${S3_BUCKET:-displayquest}
+      - S3_ACCESS_KEY=${S3_ACCESS_KEY:?Defina S3_ACCESS_KEY no ambiente/.env}
+      - S3_SECRET_KEY=${S3_SECRET_KEY:?Defina S3_SECRET_KEY no ambiente/.env}
+      - S3_FORCE_PATH_STYLE=${S3_FORCE_PATH_STYLE:-true}
+      # V5-9c (DEC-139/152): rascunho de IA. Opcional — sem env o adaptador cai no
+      # default http://localhost:8080/v1, que DENTRO do container é o próprio container.
+      # Quem opera aponta AI_BASE_URL para onde a IA mora (rede do host, tailscale, etc.).
+      - AI_BASE_URL=${AI_BASE_URL:-}
+      - AI_API_KEY=${AI_API_KEY:-}
+      - AI_MODEL=${AI_MODEL:-}
     volumes:
       - uploads_data:/app/public/uploads
       - report_files_data:/app/data/uploads
     depends_on:
       postgres:
+        condition: service_healthy
+      seaweedfs:
         condition: service_healthy
     networks:
       - display-quest-network
@@ -47,9 +102,48 @@ services:
         echo '✅ Iniciando aplicação...' &&
         node server.js
       "
+    healthcheck:
+      # O Next standalone (server.js) se binda no HOSTNAME do container — não em
+      # 127.0.0.1 (medido: netstat mostra 172.18.0.x:3000). /api/health responde 200
+      # com o banco conectado.
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://$${HOSTNAME}:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # plan-v7 (DEC-190/198): servidor MCP de validação. Consumidor HTTP do app — não vê
+  # banco, bucket nem segredos do app; só a URL interna, o e-mail e a senha da conta de
+  # serviço. A porta 8787 nasce em 0.0.0.0 porque a fase 1 atende a LAN (DEC-196); a
+  # barreira é a rede, não o bind. Nenhuma auth de cliente na fase 1.
+  mcp:
+    build: ./mcp
+    container_name: display-quest-mcp
+    environment:
+      - DQ_API_BASE=http://app:3000
+      - DQ_AGENT_EMAIL=${DQ_AGENT_EMAIL:-mcp-agent@displayquest.local}
+      - DQ_AGENT_PASSWORD=${DQ_AGENT_PASSWORD:?Defina DQ_AGENT_PASSWORD no ambiente/.env}
+      - MCP_PORT=8787
+      - MCP_BIND_IP=0.0.0.0
+      - MCP_REQUEST_TIMEOUT_MS=${MCP_REQUEST_TIMEOUT_MS:-15000}
+      - DQ_ALLOWED_ORIGINS=${DQ_ALLOWED_ORIGINS:-}
+    ports:
+      - "8787:8787"
+    depends_on:
+      app:
+        condition: service_healthy
+    networks:
+      - display-quest-network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8787/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
 
 volumes:
   postgres_data:
+  object_store_data:
   uploads_data:
   report_files_data:
 

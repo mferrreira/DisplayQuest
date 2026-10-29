@@ -1,6 +1,7 @@
 /**
  * Tasks endpoints — REAL shapes verified from app/api/tasks/route.ts (:45 `{ tasks }`)
- * and backend/models/Task.ts toJSON (:119–136).
+ * and the `serializeTask` read model (the old backend/models/Task.toJSON was removed in
+ * D-2/DEC-142).
  */
 import { z } from "zod";
 import { apiFetch, qs, type QueryParams } from "@/lib/api/client";
@@ -34,6 +35,20 @@ const awardedTaskResponse = z.object({
 const progressResponse = z.object({ progress: z.array(taskUserProgressSchema) });
 const deleteResponse = z.object({ success: z.boolean() });
 
+/** Feed "Atividade recente" — a linha de `history` (entityType "task") ja achatada pela rota. */
+const taskActivityItemSchema = z.object({
+  id: z.number().int(),
+  action: z.enum(["CREATE", "MOVE", "COMPLETE"]),
+  taskId: z.number().int(),
+  taskTitle: z.string(),
+  toStatus: z.string().nullable(),
+  actorId: z.number().int(),
+  actorName: z.string(),
+  at: z.string(),
+});
+const taskActivityResponse = z.object({ items: z.array(taskActivityItemSchema) });
+export type TaskActivityItem = z.infer<typeof taskActivityItemSchema>;
+
 export interface AwardedTaskResponse {
   task: Task;
   awardedTo: number | null;
@@ -57,6 +72,12 @@ export type TaskFilters = QueryParams & {
   /** Filtro por pessoa — resolved CLIENT-side (tasks scoped server-side by actor).
    *  Subsumes the old `mine` toggle: selecting the current user's id = "minhas tarefas". */
   assigneeId?: number;
+  /**
+   * V5-6 (DEC-99) — filtro pela linha do cronograma. CLIENT-side como o de pessoa: a tarefa já
+   * carrega `activityId` no read model, e o servidor não tem consulta por atividade (a contagem
+   * por atividade é o fluxo de solicitar conclusão, V5-7).
+   */
+  activityId?: number;
 };
 
 export const tasksApi = {
@@ -71,6 +92,20 @@ export const tasksApi = {
 
   getById(id: number, signal?: AbortSignal) {
     return apiFetch({ path: `/api/tasks/${id}`, schema: taskResponse, signal });
+  },
+
+  /**
+   * GET /api/tasks/activity — as acoes mais recentes (feed da Home).
+   * `projectId` recorta o projeto selecionado no quadro; ausente = projetos da pessoa.
+   */
+  activity(limit = 15, projectId?: number | null, signal?: AbortSignal): Promise<TaskActivityItem[]> {
+    const params = new URLSearchParams({ limit: String(limit) })
+    if (projectId != null) params.set("projectId", String(projectId))
+    return apiFetch({
+      path: `/api/tasks/activity?${params.toString()}`,
+      schema: taskActivityResponse,
+      signal,
+    }).then((r) => r.items);
   },
 
   create(body: unknown) {

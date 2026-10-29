@@ -1,17 +1,15 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
-import { Progress } from "@/components/ui/progress"
-import { 
-  Clock, 
-  TrendingUp, 
-  Users, 
+import { WeeklyBarChart } from "@/components/ui/data-charts"
+import { StatCard } from "@/components/ui/stat-card"
+import {
+  Clock,
+  TrendingUp,
+  Users,
   Calendar,
-  BarChart3,
   Target
 } from "lucide-react"
 import type { Project } from "@/contexts/types"
@@ -35,6 +33,11 @@ interface ProjectStats {
     weekEnd: string
     totalHours: number
   }>
+}
+
+/** "dd/MM/yyyy" (o que a API emite) vira "dd/MM" para o eixo do gráfico. */
+function weekAxisLabel(weekStart: string) {
+  return weekStart.slice(0, 5)
 }
 
 export function ProjectHoursStats({ project }: ProjectHoursStatsProps) {
@@ -86,7 +89,9 @@ export function ProjectHoursStats({ project }: ProjectHoursStatsProps) {
             totalHours: user.totalHours || 0,
             currentWeekHours: currentWeekContributor?.totalHours || 0
           })}) || [],
-          weeklyHistory: historyData.history?.weeks?.slice(0, 8) || []
+          // A API devolve as semanas da mais recente para a mais antiga; o gráfico lê da
+          // esquerda (mais antiga) para a direita (atual), como o de tarefas concluídas.
+          weeklyHistory: (historyData.history?.weeks || []).slice(0, 8)
         }
         
         setStats(projectStats)
@@ -100,200 +105,120 @@ export function ProjectHoursStats({ project }: ProjectHoursStatsProps) {
 
   if (loading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BarChart3 className="h-5 w-5" />
-            Estatísticas de Horas
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center py-8">
-            <div className="text-muted-foreground">Carregando estatísticas...</div>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="rounded-lg border p-4 md:p-5">
+        <div className="mb-4 h-5 w-40 animate-pulse rounded bg-muted" />
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div key={index} className="h-24 animate-pulse rounded-lg border bg-muted/40" />
+          ))}
+        </div>
+      </div>
     )
   }
 
   if (!stats) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BarChart3 className="h-5 w-5" />
-            Estatísticas de Horas
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8">
-            <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Nenhuma hora registrada</h3>
-            <p className="text-muted-foreground">
-              Este projeto ainda não possui horas trabalhadas registradas.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="rounded-lg border p-8 text-center">
+        <Clock className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+        <h3 className="mb-2 text-lg font-semibold">Nenhuma hora registrada</h3>
+        <p className="text-muted-foreground">
+          Este projeto ainda não possui horas trabalhadas registradas.
+        </p>
+      </div>
     )
   }
 
   const formatHours = (hours: number) => {
+    if (hours <= 0) return "0h"
     if (hours < 1) {
       return `${Math.round(hours * 60)}min`
     }
     return `${Math.round(hours * 10) / 10}h`
   }
 
+  const averageWeekly = stats.weeklyHistory.length > 0
+    ? stats.weeklyHistory.reduce((sum, week) => sum + week.totalHours, 0) / stats.weeklyHistory.length
+    : 0
+
+  const chartWeeks = [...stats.weeklyHistory].reverse().map((week) => ({
+    weekStart: week.weekStart,
+    weekEnd: week.weekEnd,
+    label: weekAxisLabel(week.weekStart),
+    count: week.totalHours,
+  }))
+
   return (
-    <div className="space-y-6">
-      {/* Cards de Estatísticas Principais */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Horas</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatHours(stats.totalHours)}</div>
-            <p className="text-xs text-muted-foreground">
-              Desde o início do projeto
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Esta Semana</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatHours(stats.currentWeekHours)}</div>
-            <p className="text-xs text-muted-foreground">
-              Últimos 7 dias
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Membros Ativos</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.memberCount}</div>
-            <p className="text-xs text-muted-foreground">
-              Com horas registradas
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Média Semanal</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {formatHours(stats.weeklyHistory.length > 0 
-                ? stats.weeklyHistory.reduce((sum, week) => sum + week.totalHours, 0) / stats.weeklyHistory.length 
-                : 0
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Últimas {stats.weeklyHistory.length} semanas
-            </p>
-          </CardContent>
-        </Card>
+    <div className="space-y-5">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard label="Total de Horas" value={formatHours(stats.totalHours)} hint="Desde o início do projeto" icon={Clock} />
+        <StatCard label="Esta Semana" value={formatHours(stats.currentWeekHours)} hint="Semana atual, de segunda a domingo" icon={Calendar} />
+        <StatCard label="Membros com Horas" value={stats.memberCount} hint="Registraram horas no projeto" icon={Users} />
+        <StatCard label="Média Semanal" value={formatHours(averageWeekly)} hint={`Últimas ${stats.weeklyHistory.length} semanas`} icon={TrendingUp} />
       </div>
 
-      {/* Top Contribuidores */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Target className="h-5 w-5" />
-            Top Contribuidores
-          </CardTitle>
-          <CardDescription>
-            Membros com mais horas trabalhadas no projeto
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {stats.topContributors.length === 0 ? (
-            <div className="text-center py-8">
-              <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Nenhum contribuidor</h3>
-              <p className="text-muted-foreground">
-                Ainda não há horas registradas para este projeto.
-              </p>
+      {stats.weeklyHistory.length > 0 && (
+        <section aria-labelledby="project-weekly-hours-title" className="rounded-lg border p-4 md:p-5">
+          <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
+            <div>
+              <h2 id="project-weekly-hours-title" className="text-sm font-semibold">Histórico semanal</h2>
+              <p className="text-xs text-muted-foreground">Horas trabalhadas por semana · últimas {stats.weeklyHistory.length} semanas</p>
             </div>
-          ) : (
-            <div className="space-y-4">
-              {stats.topContributors.map((contributor, index) => (
-                <div key={contributor.userId} className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground text-sm font-bold">
-                      {index + 1}
+            <span className="text-xs text-muted-foreground">Semana de segunda a domingo</span>
+          </div>
+          <WeeklyBarChart
+            label={`${project.name}. Histórico semanal de horas trabalhadas`}
+            weeks={chartWeeks}
+            formatValue={formatHours}
+            valueNoun="horas trabalhadas"
+          />
+        </section>
+      )}
+
+      <section aria-labelledby="project-top-contributors-title" className="rounded-lg border p-4 md:p-5">
+        <div className="mb-4">
+          <h2 id="project-top-contributors-title" className="flex items-center gap-2 text-sm font-semibold">
+            <Target className="h-4 w-4 text-muted-foreground" />
+            Top contribuidores
+          </h2>
+          <p className="text-xs text-muted-foreground">Membros com mais horas trabalhadas no projeto</p>
+        </div>
+        {stats.topContributors.length === 0 ? (
+          <div className="py-8 text-center">
+            <Users className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+            <h3 className="mb-2 text-lg font-semibold">Nenhum contribuidor</h3>
+            <p className="text-muted-foreground">Ainda não há horas registradas para este projeto.</p>
+          </div>
+        ) : (
+          <ol className="divide-y">
+            {stats.topContributors.map((contributor, index) => (
+              <li key={contributor.userId} className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold tabular-nums text-muted-foreground">
+                    {index + 1}
+                  </span>
+                  <Avatar className="h-9 w-9">
+                    <AvatarFallback className="text-xs">
+                      {contributor.userName.split(' ').map(n => n[0]).join('').toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0">
+                    <div className="truncate font-medium">{contributor.userName}</div>
+                    <div className="text-xs text-muted-foreground">
+                      Esta semana: {formatHours(contributor.currentWeekHours)}
                     </div>
-                    <Avatar className="h-10 w-10">
-                      <AvatarFallback>
-                        {contributor.userName.split(' ').map(n => n[0]).join('').toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <div className="font-medium">{contributor.userName}</div>
-                      <div className="text-sm text-muted-foreground">
-                        Esta semana: {formatHours(contributor.currentWeekHours)}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-bold">{formatHours(contributor.totalHours)}</div>
-                    <Badge variant="outline" className="text-xs">
-                      {Math.round((contributor.totalHours / stats.totalHours) * 100)}% do total
-                    </Badge>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Histórico Semanal */}
-      {stats.weeklyHistory.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5" />
-              Histórico Semanal
-            </CardTitle>
-            <CardDescription>
-              Horas trabalhadas nas últimas semanas
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {stats.weeklyHistory.slice(0, 8).map((week, index) => {
-                const maxHours = Math.max(...stats.weeklyHistory.map(w => w.totalHours))
-                const percentage = maxHours > 0 ? (week.totalHours / maxHours) * 100 : 0
-                
-                return (
-                  <div key={index} className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="font-medium">
-                        {week.weekStart} - {week.weekEnd}
-                      </span>
-                      <span className="font-bold">{formatHours(week.totalHours)}</span>
-                    </div>
-                    <Progress value={percentage} className="h-2" />
-                  </div>
-                )
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+                <div className="flex shrink-0 items-center gap-3 text-right">
+                  <span className="font-semibold tabular-nums">{formatHours(contributor.totalHours)}</span>
+                  <Badge variant="outline" className="text-xs">
+                    {stats.totalHours > 0 ? Math.round((contributor.totalHours / stats.totalHours) * 100) : 0}% do total
+                  </Badge>
+                </div>
+              </li>
+            ))}
+          </ol>
+        )}
+      </section>
     </div>
   )
 }

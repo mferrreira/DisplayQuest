@@ -22,9 +22,29 @@ export interface UserRecord {
   status: UserStatus;
   weekHours: number;
   currentWeekHours: number;
+  /**
+   * plan-v9 (ADR-001, DEC-224): placar do mes em curso. `points` e o saldo; este e o numero que o
+   * Quadro de Lideranca ordena e que o fechamento de mes zera. Opcional na ENTRADA (fixtures e
+   * chamadores antigos nao conhecem a coluna ainda); nos adaptadores Prisma ela sempre vem.
+   */
+  currentMonthPoints?: number;
   profileVisibility: ProfileVisibility;
   bio: string | null;
   avatar: string | null;
+  /** V5-3 (DEC-137): chave do objeto no bucket (`users/<id>/images/banner`). Nunca um caminho de disco. */
+  bannerKey: string | null;
+  /**
+   * V5-4a (DEC-138): dados da pessoa que os formulários oficiais pedem. `cpf` chega aqui
+   * porque o record é o registro inteiro; quem decide se ele sai para o cliente é
+   * `canActorReadUserCpf`, e `toPublicUser` não o projeta.
+   */
+  cpf: string | null;
+  registrationNumber: string | null;
+  course: string | null;
+  scholarshipType: string | null;
+  fundingAgency: string | null;
+  fundingAgencyOther: string | null;
+  level: string | null;
   roles: UserRole[];
   createdAt?: Date;
 }
@@ -38,9 +58,23 @@ export interface UserSummaryRow {
   status: UserStatus;
   weekHours: number;
   points: number;
+  /** plan-v9 (DEC-224): placar do mes em curso, a trilha que o quadro ordena. Opcional na ENTRADA,
+   *  como em `UserRecord`; `toPublicUser` projeta sempre um numero. */
+  currentMonthPoints?: number;
   completedTasks: number;
   avatar: string | null;
   bio: string | null;
+  bannerKey: string | null;
+  /** V5-12 (DEC-143/177): a linha traz o valor do perfil para a regra decidir linha a linha. */
+  profileVisibility: ProfileVisibility;
+  /** V5-4a (DEC-138): a linha traz os dados de pessoa; a política de visibilidade decide qual tier os entrega. */
+  cpf: string | null;
+  registrationNumber: string | null;
+  course: string | null;
+  scholarshipType: string | null;
+  fundingAgency: string | null;
+  fundingAgencyOther: string | null;
+  level: string | null;
 }
 
 export type NewUserRecord = Omit<UserRecord, "id" | "createdAt">;

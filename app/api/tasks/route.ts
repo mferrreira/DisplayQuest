@@ -94,7 +94,10 @@ export async function POST(request: Request) {
       taskVisibility,
       isGlobal,
       creationMode,
-      subtasks
+      subtasks,
+      // V5-6 (DEC-99): a linha do cronograma. Cru de propósito — o use case normaliza e recusa
+      // nomeando o campo (`Atividade do cronograma é inválida`), como faz com o resto do corpo.
+      activityId,
     } = body
 
     // plan-v3 OND1-D (AC-P3-03): `points` não é lido do corpo. createTaskRecord aplica
@@ -115,6 +118,7 @@ export async function POST(request: Request) {
       isGlobal,
       creationMode,
       subtasks,
+      activityId,
     }, actor);
 
     return NextResponse.json({ task: task.toJSON() }, { status: 201 })

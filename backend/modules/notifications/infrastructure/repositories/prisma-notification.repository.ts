@@ -20,6 +20,7 @@ type NotificationRow = {
   message: string
   data: string | null
   read: boolean
+  priority: boolean
   createdAt: Date
   readAt: Date | null
 }
@@ -33,6 +34,7 @@ function toDomain(row: NotificationRow): Notification {
     message: row.message,
     data: row.data,
     read: row.read,
+    priority: row.priority,
     createdAt: row.createdAt.toISOString(),
     readAt: row.readAt ? row.readAt.toISOString() : null,
   }

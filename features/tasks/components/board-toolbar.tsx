@@ -9,7 +9,7 @@
  *  - "Atribuídas a mim" subsumed by the people select (current user = "(você)")
  */
 import { useRef, useState, useSyncExternalStore } from "react"
-import { CalendarClock, LayoutGrid, Plus, Rows3, Search, TriangleAlert, Users, X } from "lucide-react"
+import { CalendarClock, CalendarDays, LayoutGrid, Plus, Rows3, Search, TriangleAlert, Users, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -69,6 +69,12 @@ export interface BoardToolbarProps {
   canSeeProjectSelector: boolean
   projects: Array<{ id: number; name: string }>
   users: Array<{ id: number; name: string }>
+  /**
+   * V5-6 (DEC-99): as linhas do cronograma do projeto selecionado. O filtro de atividade só
+   * existe com projeto selecionado — atividade é do projeto, e listar atividades de todos os
+   * projetos custaria uma requisição por projeto para filtrar uma coluna do quadro.
+   */
+  activities: Array<{ id: number; order: number; description: string }>
   /** Current session user id — rendered as the "(você)" entry in the people select. */
   currentUserId: number | null
   isCompact: boolean
@@ -85,6 +91,7 @@ export function BoardToolbar({
   canSeeProjectSelector,
   projects,
   users,
+  activities,
   currentUserId,
   isCompact,
   onToggleCompact,
@@ -105,7 +112,7 @@ export function BoardToolbar({
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <h2 className="text-lg font-bold">Quadro Kanban</h2>
+          <h2 className="text-lg font-bold">Quadro de Tarefas</h2>
           {overdueCount > 0 && (
             <span className="flex items-center gap-1 text-sm font-semibold text-destructive">
               <TriangleAlert className="h-4 w-4" aria-hidden="true" />
@@ -117,21 +124,6 @@ export function BoardToolbar({
         {/* h-10 em toda a barra: os SelectTrigger são `h-10` e o `Button` default também
             (o `size="sm"` é `h-9` e destoava 4px deles na mesma fileira). */}
         <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant="outline"
-            onClick={onToggleCompact}
-            aria-pressed={isCompact}
-          >
-            {isCompact ? (
-              <>
-                <LayoutGrid className="mr-1 h-4 w-4" aria-hidden="true" /> Normal
-              </>
-            ) : (
-              <>
-                <Rows3 className="mr-1 h-4 w-4" aria-hidden="true" /> Compacto
-              </>
-            )}
-          </Button>
           {canCreateTasks && (
             <Button onClick={onCreateTask} disabled={isUpdating}>
               <Plus className="mr-1 h-4 w-4" aria-hidden="true" />
@@ -146,7 +138,13 @@ export function BoardToolbar({
           <Select
             value={filters.projectId?.toString() ?? "all"}
             onValueChange={(value) =>
-              onFiltersChange({ ...filters, projectId: value === "all" ? undefined : Number(value) })
+              onFiltersChange({
+                ...filters,
+                projectId: value === "all" ? undefined : Number(value),
+                // V5-6: trocar de projeto descarta a atividade — ela pertencia ao projeto antigo
+                // e continuar filtrando por ela deixaria o quadro vazio sem explicação.
+                activityId: undefined,
+              })
             }
           >
             <SelectTrigger className="w-[220px]" aria-label="Filtrar tarefas por projeto">
@@ -162,6 +160,39 @@ export function BoardToolbar({
             </SelectContent>
           </Select>
         )}
+
+        {/* Controle segmentado de exibição (referência: dois ícones num só, o ativo
+            destacado). Mora na linha dos filtros, não ao lado do "Nova Tarefa". */}
+        <div
+          role="group"
+          aria-label="Modo de exibição das tarefas"
+          className="flex h-10 items-center gap-0.5 rounded-md border bg-background p-0.5"
+        >
+          <button
+            type="button"
+            aria-label="Modo normal"
+            aria-pressed={!isCompact}
+            onClick={() => isCompact && onToggleCompact()}
+            className={cn(
+              "flex h-9 w-9 items-center justify-center rounded-sm transition-colors",
+              !isCompact ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            <LayoutGrid className="h-4 w-4" aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            aria-label="Modo compacto"
+            aria-pressed={isCompact}
+            onClick={() => !isCompact && onToggleCompact()}
+            className={cn(
+              "flex h-9 w-9 items-center justify-center rounded-sm transition-colors",
+              isCompact ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            <Rows3 className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </div>
 
         <Select
           value={filters.assigneeId?.toString() ?? "all"}
@@ -187,6 +218,32 @@ export function BoardToolbar({
             ))}
           </SelectContent>
         </Select>
+
+        {/* V5-6 (DEC-99): filtro pela linha do cronograma. Só com projeto selecionado — a lista
+            de atividades vem do cronograma DO projeto (uma requisição, não N). Uma atividade
+            encerrada continua filtrável: ver as tasks de uma etapa passada é legítimo (DEC-99 —
+            a recusa de passada é do formulário de criação, não do filtro). */}
+        {filters.projectId && activities.length > 0 && (
+          <Select
+            value={filters.activityId?.toString() ?? "all"}
+            onValueChange={(value) =>
+              onFiltersChange({ ...filters, activityId: value === "all" ? undefined : Number(value) })
+            }
+          >
+            <SelectTrigger className="w-[220px]" aria-label="Filtrar tarefas por atividade">
+              <CalendarDays className="mr-1 h-4 w-4 text-muted-foreground" aria-hidden="true" />
+              <SelectValue placeholder="Todas as atividades" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas as atividades</SelectItem>
+              {activities.map((activity) => (
+                <SelectItem key={activity.id} value={activity.id.toString()}>
+                  {activity.order}. {activity.description}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -224,7 +281,7 @@ export function BoardToolbar({
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {(filters.projectId || filters.overdue || filters.dueToday || filters.search || filters.assigneeId) && (
+        {(filters.projectId || filters.overdue || filters.dueToday || filters.search || filters.assigneeId || filters.activityId) && (
           <Button
             variant="ghost"
             onClick={() => onFiltersChange({})}

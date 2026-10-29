@@ -8,8 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Pause, PlayCircle, StopCircle, ChevronDown } from "lucide-react"
+import { Pause, PlayCircle, StopCircle, ChevronDown, Clock, PauseCircle } from "lucide-react"
 import { useProject } from "@/contexts/project-context"
 import { getNextScheduledPause, getMissedScheduledPause, toSafeDate } from "@/lib/work-sessions/schedule"
 import { SessionAutoPauseCountdown } from "@/components/ui/session-auto-pause-countdown"
@@ -32,7 +31,7 @@ function formatTime(seconds: number) {
   return [h, m, s].map((value) => value.toString().padStart(2, "0")).join(":")
 }
 
-export function FloatingSessionTimer() {
+export function FloatingSessionTimer({ placement = "floating" }: { placement?: "floating" | "header" }) {
   const { user, loading: authLoading } = useAuth()
   const {
     currentSession,
@@ -292,51 +291,54 @@ export function FloatingSessionTimer() {
           : "paused"
         : "active"
 
-  return (
-    <>
-      <div
-        ref={panelRef}
-        className={`fixed bottom-[6em] left-[6em] z-50 rounded-lg border bg-background/95 shadow-lg backdrop-blur transition-all duration-200 ${
-          expanded ? "w-80 p-4" : "w-16 h-16 p-0"
-        }`}
-      >
-        <SessionWelcomeBalloon
-          isLoggedIn={Boolean(user)}
-          hasNoSession={!currentSession}
-          onStartSession={() => setExpanded(true)}
-        />
-        {!expanded ? (
-          <Button
-            variant="ghost"
-            className="w-full h-full rounded-lg flex items-center justify-center"
-            onClick={() => setExpanded(true)}
-            aria-label={sessionTimerButtonLabel(collapsedState)}
-            data-testid="floating-session-timer-collapsed"
-          >
-            <SessionTimerIndicator state={collapsedState} />
-          </Button>
-        ) : (
-          <Tabs defaultValue="sessao" className="space-y-3">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="sessao">Sessão</TabsTrigger>
-              <TabsTrigger value="responsabilidade">Responsabilidade</TabsTrigger>
-            </TabsList>
+  // Painel de responsabilidade — quem gere o laboratório: laboratorista em diante (gerente de
+  // projeto, gerente, coordenador). Para esses papéis o painel sai da aba escondida e passa a
+  // ser renderizado abaixo da sessão; para os demais não monta nada (não podem assumir).
+  const RESPONSIBILITY_PANEL_ROLES = ["LABORATORISTA", "GERENTE_PROJETO", "GERENTE", "COORDENADOR"]
+  const showResponsibilityPanel =
+    user?.roles?.some((role) => RESPONSIBILITY_PANEL_ROLES.includes(role)) ?? false
 
-            <TabsContent value="sessao" className="space-y-3 mt-0">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-medium">Sessão de Trabalho</p>
-              <span className="text-xs text-muted-foreground">
-                {!user && authLoading
-                  ? "Carregando..."
-                  : !currentSession
-                  ? "Sem sessão"
-                  : currentSession.status === "paused"
-                    ? "Pausada"
-                    : "Ativa"}
-              </span>
-            </div>
+  const panel = (
+    <div className="min-w-0 space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-medium">Sessão de Trabalho</p>
+        <span className="text-xs text-muted-foreground">
+          {!user && authLoading
+            ? "Carregando..."
+            : !currentSession
+            ? "Sem sessão"
+            : currentSession.status === "paused"
+              ? "Pausada"
+              : "Ativa"}
+        </span>
+      </div>
 
             <p className="font-mono text-2xl font-bold">{formatTime(seconds)}</p>
+
+            <div className="flex flex-wrap gap-2">
+              {currentSession?.status === "active" ? (
+                <Button size="sm" variant="outline" onClick={handlePause} disabled={loading}>
+                  <Pause className="mr-1 h-4 w-4" />
+                  Pausar
+                </Button>
+              ) : currentSession ? (
+                <Button size="sm" variant="outline" onClick={handleResume} disabled={loading || !currentSession}>
+                  <PlayCircle className="mr-1 h-4 w-4" />
+                  Continuar
+                </Button>
+              ) : null}
+
+              {currentSession && (
+                <Button size="sm" variant="destructive" onClick={openStopDialog} disabled={loading}>
+                  <StopCircle className="mr-1 h-4 w-4" />
+                  Parar
+                </Button>
+              )}
+
+              <Button size="icon" variant="ghost" className="ml-auto h-8 w-8 shrink-0" onClick={() => setExpanded(false)} aria-label="Recolher cronômetro">
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </div>
 
             <SessionAutoPauseCountdown
               sessionStatus={currentSession?.status ?? null}
@@ -397,50 +399,96 @@ export function FloatingSessionTimer() {
                   value={startLocation}
                   onChange={(event) => setStartLocation(event.target.value)}
                 />
-                {startError && <p className="text-xs text-red-600 dark:text-red-400">{startError}</p>}
+                {startError && <p className="text-xs text-destructive">{startError}</p>}
                 <Button size="sm" onClick={handleStart} disabled={loading || startProjectId === "no-projects"}>
                   Iniciar sessão
                 </Button>
               </div>
             )}
 
-            <div className="flex gap-2">
-              {currentSession?.status === "active" ? (
-                <Button size="sm" variant="outline" onClick={handlePause} disabled={loading}>
-                  <Pause className="h-4 w-4 mr-1" />
-                  Pausar
-                </Button>
-              ) : currentSession ? (
-                <Button size="sm" variant="outline" onClick={handleResume} disabled={loading || !currentSession}>
-                  <PlayCircle className="h-4 w-4 mr-1" />
-                  Continuar
-                </Button>
-              ) : null}
+      {/* Responsabilidade abaixo da sessão — não mais uma aba que "quase ninguém lembra de
+          abrir": para quem pode assumir o laboratório (laboratorista, gerente de projeto,
+          gerente, coordenador) o painel da responsabilidade é sempre renderizado junto. */}
+      {showResponsibilityPanel && (
+        <div className="border-t pt-3">
+          <ResponsibilityMiniPanel />
+        </div>
+      )}
+    </div>
+  )
 
-              {currentSession && (
-                <Button size="sm" variant="destructive" onClick={openStopDialog} disabled={loading}>
-                  <StopCircle className="h-4 w-4 mr-1" />
-                  Parar
-                </Button>
-              )}
-
-              <Button size="sm" variant="ghost" onClick={() => setExpanded(false)}>
-                <ChevronDown className="h-4 w-4" />
-              </Button>
+  return (
+    <>
+      {placement === "header" ? (
+        <div ref={panelRef} className="relative">
+          <SessionWelcomeBalloon
+            isLoggedIn={Boolean(user)}
+            hasNoSession={!currentSession}
+            onStartSession={() => setExpanded(true)}
+            side="bottom"
+          />
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="gap-2"
+            onClick={() => setExpanded((value) => !value)}
+            aria-label={sessionTimerButtonLabel(collapsedState)}
+            aria-expanded={expanded}
+            data-testid="floating-session-timer-collapsed"
+          >
+            {currentSession ? (
+              <>
+                {collapsedState === "active" ? (
+                  <span
+                    data-testid="session-timer-running-dot"
+                    aria-hidden="true"
+                    className="h-2 w-2 rounded-full bg-success motion-safe:animate-pulse"
+                  />
+                ) : (
+                  <PauseCircle data-testid="session-timer-icon-paused" className="h-4 w-4 text-warning" />
+                )}
+                <span className="font-mono text-sm font-semibold tabular-nums">
+                  {formatTime(seconds).slice(0, 5)}
+                </span>
+              </>
+            ) : (
+              <Clock data-testid="session-timer-icon-clock" className="h-4 w-4" aria-hidden="true" />
+            )}
+          </Button>
+          {expanded && (
+            <div className="absolute right-0 top-full z-50 mt-2 w-[min(20rem,calc(100vw-2rem))] rounded-lg border bg-background/95 p-4 shadow-lg backdrop-blur">
+              {panel}
             </div>
-            </TabsContent>
-
-            <TabsContent value="responsabilidade" className="mt-0">
-              <ResponsibilityMiniPanel />
-              <div className="mt-2 flex justify-end">
-                <Button size="sm" variant="ghost" onClick={() => setExpanded(false)}>
-                  <ChevronDown className="h-4 w-4" />
-                </Button>
-              </div>
-            </TabsContent>
-          </Tabs>
-        )}
-      </div>
+          )}
+        </div>
+      ) : (
+        <div
+          ref={panelRef}
+          className={`fixed bottom-[6em] left-[6em] z-50 rounded-lg border bg-background/95 shadow-lg backdrop-blur transition-all duration-200 ${
+            expanded ? "w-80 p-4" : "w-16 h-16 p-0"
+          }`}
+        >
+          <SessionWelcomeBalloon
+            isLoggedIn={Boolean(user)}
+            hasNoSession={!currentSession}
+            onStartSession={() => setExpanded(true)}
+          />
+          {!expanded ? (
+            <Button
+              variant="ghost"
+              className="w-full h-full rounded-lg flex items-center justify-center"
+              onClick={() => setExpanded(true)}
+              aria-label={sessionTimerButtonLabel(collapsedState)}
+              data-testid="floating-session-timer-collapsed"
+            >
+              <SessionTimerIndicator state={collapsedState} />
+            </Button>
+          ) : (
+            panel
+          )}
+        </div>
+      )}
 
       <Dialog open={showStopDialog} onOpenChange={setShowStopDialog}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:overflow-y-auto">

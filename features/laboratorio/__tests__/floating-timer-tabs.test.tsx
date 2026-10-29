@@ -1,7 +1,9 @@
 /**
- * FloatingSessionTimer tabs test — the expanded floating panel is a tabgroup
- * with the current work-session tab and a second compact LabResponsibility
- * tab sharing the same global responsibility state.
+ * FloatingSessionTimer panel test — the expanded floating panel renders the
+ * work-session section AND, for the roles that run the lab (LABORATORISTA e
+ * acima), the compact LabResponsibility section below it. There are no tabs:
+ * the responsibility used to hide in a second tab nobody remembered to open.
+ * The panel shares the same global responsibility state as the lab page.
  */
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
@@ -58,6 +60,7 @@ beforeEach(() => {
   workSessionsMock.activeSession = null;
   responsibilityMock.activeResponsibility = null;
   responsibilityMock.fetchActiveResponsibility.mockResolvedValue(undefined);
+  authMock.user = { id: 1, name: "Lia", roles: ["LABORATORISTA"] };
 });
 
 // plan-v3 OND2-C: o botão fechado passou a anunciar o estado da sessão no nome acessível
@@ -65,24 +68,35 @@ beforeEach(() => {
 // funciona com e sem sessão aberta.
 const openTimer = () => screen.getByLabelText(/abrir timer de sessão/i);
 
-describe("FloatingSessionTimer tabgroup", () => {
-  it("shows Sessão and Responsabilidade tabs when expanded, defaulting to Sessão", async () => {
+describe("FloatingSessionTimer panel", () => {
+  it("renderiza sessão e responsabilidade juntas quando expandido — sem abas", async () => {
     const user = userEvent.setup();
     render(<FloatingSessionTimer />);
     await user.click(openTimer());
-    expect(screen.getByRole("tab", { name: /sessão/i })).toBeVisible();
-    expect(screen.getByRole("tab", { name: /responsabilidade/i })).toBeVisible();
-    expect(screen.getByRole("tab", { name: /sessão/i })).toHaveAttribute("data-state", "active");
+    expect(screen.queryByRole("tab")).not.toBeInTheDocument();
+    expect(screen.getByText("Sessão de Trabalho")).toBeVisible();
     expect(screen.getByText("Sem sessão")).toBeVisible();
+    // A responsabilidade não espera clique em aba nenhuma: está abaixo da sessão.
+    expect(await screen.findByText("Responsabilidade")).toBeVisible();
+    expect(screen.getByText("Laboratório disponível")).toBeVisible();
   });
 
-  it("switches to the shared responsibility state on the second tab", async () => {
+  it("mostra o estado compartilhado de responsabilidade sem nenhum clique", async () => {
     const user = userEvent.setup();
     render(<FloatingSessionTimer />);
     await user.click(openTimer());
-    await user.click(screen.getByRole("tab", { name: /responsabilidade/i }));
     expect(await screen.findByText("Laboratório disponível")).toBeVisible();
     expect(screen.getByRole("button", { name: /estar responsável/i })).toBeVisible();
+  });
+
+  it("não monta a responsabilidade para quem não gere o laboratório", async () => {
+    const user = userEvent.setup();
+    authMock.user = { id: 3, name: "Vovô", roles: ["VOLUNTARIO"] };
+    render(<FloatingSessionTimer />);
+    await user.click(openTimer());
+    expect(await screen.findByText("Sessão de Trabalho")).toBeVisible();
+    expect(screen.queryByText("Responsabilidade")).not.toBeInTheDocument();
+    expect(responsibilityMock.fetchActiveResponsibility).not.toHaveBeenCalled();
   });
 
   it("does not pause the responsibility when the session is paused manually", async () => {
@@ -97,12 +111,14 @@ describe("FloatingSessionTimer tabgroup", () => {
     workSessionsMock.activeSession = session;
     render(<FloatingSessionTimer />);
     await user.click(openTimer());
-    // `exact`: o painel tem o botão "Pausar" e o botão de informação do som, cujo nome
-    // acessível é "Como funciona o som ao pausar" — sem `exact` os dois casam e o teste
-    // quebra por strict mode violation. (O botão de informação só apareceu quando o som
-    // passou a ser arquivo: antes, `isAlertSoundSupported` media `AudioContext`, que o
-    // jsdom não implementa, e o botão não era renderizado nenhum.)
-    await user.click(screen.getByRole("button", { name: "Pausar", exact: true }));
+    // Nome acessível exato: o painel tem o botão "Pausar" e o botão de informação do som,
+    // cujo nome acessível é "Como funciona o som ao pausar" — casar por substring faz os
+    // dois baterem e o teste cai em strict mode violation. `exact` não existe em
+    // `ByRoleOptions` (TS2769), então a igualdade exata vem da regex ancorada. (O botão de
+    // informação só apareceu quando o som passou a ser arquivo: antes,
+    // `isAlertSoundSupported` media `AudioContext`, que o jsdom não implementa, e o botão
+    // não era renderizado nenhum.)
+    await user.click(screen.getByRole("button", { name: /^Pausar$/ }));
     await waitFor(() => expect(workSessionsMock.pauseSession).toHaveBeenCalledWith(7));
     expect(ResponsibilitiesAPI.pause).not.toHaveBeenCalled();
   });
@@ -122,8 +138,7 @@ describe("FloatingSessionTimer tabgroup", () => {
     expect(ResponsibilitiesAPI.resume).not.toHaveBeenCalled();
   });
 
-  it("disables assume in the tab when someone else owns the responsibility", async () => {
-    const user = userEvent.setup();
+  it("desabilita o assume quando a responsabilidade é de outro — sem aba", async () => {
     responsibilityMock.activeResponsibility = {
       id: 9,
       userId: 2,
@@ -132,9 +147,9 @@ describe("FloatingSessionTimer tabgroup", () => {
       duration: 65,
       isPaused: false,
     };
+    const user = userEvent.setup();
     render(<FloatingSessionTimer />);
     await user.click(openTimer());
-    await user.click(screen.getByRole("tab", { name: /responsabilidade/i }));
     expect(await screen.findByText("Bruno")).toBeVisible();
     expect(screen.getByRole("button", { name: /estar responsável/i })).toBeDisabled();
   });

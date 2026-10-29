@@ -24,12 +24,15 @@
     "arch:check:sh": "bash scripts/arch-check.sh",
     "check:env": "node scripts/check-env-secrets.js",
     "docs:build": "node scripts/build-docs.mjs",
-    "docs:check": "python3 scripts/check-docs-charset.py"
+    "docs:check": "python3 scripts/check-docs-charset.py",
+    "templates:tag": "node scripts/tag-report-template.mjs"
   },
   "prisma": {
     "seed": "NODE_ENV=${NODE_ENV:-development} tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1150.0",
+    "@cantoo/pdf-lib": "^2.11.1",
     "@hello-pangea/dnd": "^18.0.1",
     "@hookform/resolvers": "3.9.1",
     "@prisma/client": "6.11.1",
@@ -56,6 +59,7 @@
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
     "date-fns": "latest",
+    "docx-templates": "^4.15.0",
     "lucide-react": "0.454.0",
     "next": "15.2.4",
     "next-auth": "4.24.11",
@@ -89,6 +93,7 @@
     "eslint": "^8.57.1",
     "eslint-config-next": "^15.2.4",
     "jsdom": "^30.0.1",
+    "jszip": "^3.10.2",
     "markdown-it": "^15.0.2",
     "msw": "^2.15.0",
     "postcss": "8",

@@ -1,4 +1,4 @@
-import { ConflictError, ValidationError } from "@/backend/domain"
+import { ConflictError, emptyPersonData, ValidationError } from "@/backend/domain"
 import type { RegisterUserCommand } from "@/backend/modules/user-management/application/contracts"
 import type { PasswordHasher } from "@/backend/modules/user-management/application/ports/password-hasher"
 import type { UserRepositoryPort } from "@/backend/modules/user-management/application/ports/user.repository"
@@ -50,6 +50,9 @@ export class RegisterUserUseCase {
       profileVisibility: "public",
       bio: null,
       avatar: null,
+      bannerKey: null,
+      // V5-4a (DEC-138): quem se cadastra preenche os dados de pessoa depois, no perfil.
+      ...emptyPersonData(),
     })
 
     return toPublicUser(created)

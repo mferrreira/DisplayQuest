@@ -13,7 +13,8 @@ export const taskStatusSchema = z.enum(["to-do", "in-progress", "in-review", "ad
 export type TaskStatus = z.infer<typeof taskStatusSchema>;
 
 /**
- * D-17: backend models/Task.ts declares 'low'|'medium'|'high'|'urgent' — the gateway does not
+ * D-17: the task priority vocabulary is 'low'|'medium'|'high'|'urgent' (the old backend
+ * models/Task.ts declared it — removed in D-2/DEC-142) — the gateway does not
  * narrow it, so 'urgent' can reach the wire. Omitting it here would fail zod parse for the
  * ENTIRE list. UI renders URGENTE badge (kanban parity).
  */
@@ -87,6 +88,11 @@ export const taskSchema = z.object({
   groupTaskId: z.number().int().nullable().optional(),
   createdBy: z.number().int().nullable().optional(),
   /**
+   * V5-6 (DEC-99): a chave da linha do cronograma a que a tarefa pertence. `optional` porque
+   * resposta de servidor antigo (pré-migration) não traz a chave — mesma razão de `subtasks`.
+   */
+  activityId: z.number().int().nullable().optional(),
+  /**
    * plan-v4 · V4-4: `default([])` é tolerância de wire, não frouxidão de contrato. Uma tarefa sem
    * subtask e uma resposta de servidor antigo (pré-migration) são a mesma coisa para o cliente, e
    * o cartão não pode quebrar por não encontrar a chave.
@@ -103,7 +109,8 @@ export type Task = z.infer<typeof taskSchema>;
  * round-trip tests); the WIRE layer uses this explicit, loud normalization map so the board
  * keeps working while the cleanup migration is a pending user decision.
  *
- * DEVIDA RASTREADA: GAP-05 em displayquest-v2/clean-arch/STATE.json (gapRegistry).
+ * DEVIDA RASTREADA: GAP-05 em ~/Projetos/displayquest-planos/displayquest-v2/clean-arch/STATE.json
+ * (gapRegistry).
  * Medido em 2026-10-01 no 5432: 14 de 18 tasks com status legado. A tolerância aqui é
  * a ÚNICA coisa segurando isso — qualquer leitura nova de tasks.status que não passe por
  * wireTaskSchema vaza os valores crus. A correção é a migration de cleanup (D-18), não

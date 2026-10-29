@@ -2,6 +2,12 @@ export interface TaskCompletedEvent {
   userId: number;
   taskId: number;
   taskPoints: number;
+  /**
+   * V5-7b (DEC-63): o projeto da tarefa concluída, ou `null` para quest global. É o que
+   * permite ao publicador incrementar `projects.points` na mesma conclusão — o adaptador só
+   * escreve quando há projeto.
+   */
+  projectId: number | null;
 }
 
 /**

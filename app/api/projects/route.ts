@@ -56,6 +56,14 @@ export async function POST(request: Request) {
           .filter((value: number) => !Number.isNaN(value))
       : []
 
+    const cronograma =
+      body.cronograma && typeof body.cronograma === "object"
+        ? {
+            goals: Array.isArray(body.cronograma.goals) ? body.cronograma.goals : [],
+            activities: Array.isArray(body.cronograma.activities) ? body.cronograma.activities : [],
+          }
+        : undefined
+
     const project = await projectManagementModule.createProject({
       actor,
       actorId: auth.actor.id,
@@ -65,8 +73,19 @@ export async function POST(request: Request) {
         status: body.status || "active",
         leaderId,
         links: body.links || [],
+        // V5-2b: período e cadastro. Ausente vira null na normalização do use case.
+        // `points` não é aceito aqui: o saldo do projeto é escrito por use case de economia.
+        startDate: body.startDate,
+        endDate: body.endDate,
+        editalNumber: body.editalNumber,
+        processNumber: body.processNumber,
+        // V5-4a (DEC-140).
+        proppiNumber: body.proppiNumber,
       },
       volunteerIds,
+      // V5-5 (DEC-100): passo opcional do wizard, cru. Ausente ou vazio é pular o passo, e a
+      // criação continua idêntica à de antes (regra 9 do plano).
+      cronograma,
     })
 
     return NextResponse.json({ project }, { status: 201 })

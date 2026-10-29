@@ -1,7 +1,8 @@
 /**
  * Badge / UserBadge — pure domain contracts of the gamification aggregate (SPEC §4.5).
  *
- * Type-only mirrors of `backend/models/Badge.ts` (interface + class fields). The award/
+ * Authored here: the type-only mirror source (`backend/models/Badge.ts`) was removed in D-2
+ * (DEC-142), and this is the only Badge vocabulary in the codebase. The award/
  * progression rules currently living in `backend/modules/gamification/domain/engines/*` move
  * to this folder as pure rules in OND6-B2, reading data through a port instead of a repository.
  */

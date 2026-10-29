@@ -1,0 +1,81 @@
+import { buildAwardDescription } from "@/backend/domain"
+import type { GamificationSourceType } from "@/backend/domain"
+import type {
+  AwardFromActivityCompletionCommand,
+  GamificationAwardResult,
+} from "@/backend/modules/gamification/application/contracts"
+import type { GamificationAwardHistoryPort } from "@/backend/modules/gamification/application/ports/gamification-award-history.port"
+import type { EvaluateUserBadgesUseCase } from "@/backend/modules/gamification/application/use-cases/evaluate-user-badges.use-case"
+import type { GetUserProgressionUseCase } from "@/backend/modules/gamification/application/use-cases/get-user-progression.use-case"
+
+/**
+ * AwardFromActivityCompletionUseCase — V5-7b (DEC-63/103/104, DEC-21 pelo lado de dentro).
+ *
+ * Mesma máquina do caminho de tarefa (awardHistory.hasAward → awardAndRecord em transação →
+ * progressão → badges), com duas diferenças medidas:
+ *
+ *   - a chave de idempotência é `GAMIFICATION:ACTIVITY_COMPLETED:<atividade>` — como a
+ *     distribuição gera uma linha por membro, cada membro tem a SUA chave para a MESMA
+ *     atividade; reexecutar a aprovação credita 0 a todos, não dois;
+ *   - o valor entra pronto: é a parcela da distribuição Hamilton (DEC-164), decidida no
+ *     domínio de projeto. Gamification não re-aritmética prêmio de projeto (DEC-103: a
+ *     escala é própria do projeto).
+ */
+export interface AwardFromActivityCompletionDependencies {
+  awardHistory: GamificationAwardHistoryPort
+  progression: GetUserProgressionUseCase
+  evaluateUserBadges: EvaluateUserBadgesUseCase
+}
+
+export class AwardFromActivityCompletionUseCase {
+  constructor(private readonly dependencies: AwardFromActivityCompletionDependencies) {}
+
+  async execute(command: AwardFromActivityCompletionCommand): Promise<GamificationAwardResult> {
+    const sourceType: GamificationSourceType = "ACTIVITY_COMPLETED"
+    const sourceId = command.activityId
+    const description = buildAwardDescription(sourceType, sourceId)
+
+    const alreadyAwarded = await this.dependencies.awardHistory.hasAward({
+      userId: command.userId,
+      description,
+    })
+    if (alreadyAwarded) {
+      const progression = await this.dependencies.progression.execute(command.userId)
+      return {
+        userId: command.userId,
+        sourceType,
+        sourceId,
+        pointsAwarded: 0,
+        xpAwarded: 0,
+        newProgression: progression,
+        alreadyAwarded: true,
+      }
+    }
+
+    const pointsAwarded = command.points
+    const xpAwarded = pointsAwarded
+
+    await this.dependencies.awardHistory.awardAndRecord({
+      userId: command.userId,
+      sourceType,
+      sourceId,
+      description,
+      pointsAwarded,
+      xpAwarded,
+    })
+
+    const newProgression = await this.dependencies.progression.execute(command.userId)
+
+    await this.dependencies.evaluateUserBadges.execute(command.userId)
+
+    return {
+      userId: command.userId,
+      sourceType,
+      sourceId,
+      pointsAwarded,
+      xpAwarded,
+      newProgression,
+      alreadyAwarded: false,
+    }
+  }
+}

@@ -135,6 +135,39 @@ export function canEditSubtasksOf(motherStatus: TaskStatus): boolean {
 }
 
 /**
+ * DEC-189 (2026-10-14, pedido do dono: "qualquer um pode marcar as subtasks dos outros, isso
+ * não pode em hipótese alguma... apenas o owner ou permissões elevadas possam marcar e
+ * visualizar"). A autoridade de subtask DEIXOU de ser a autoridade de editar a mãe (DEC-82):
+ * a união antiga dava `MANAGE_TASKS` em bloco — e COLABORADOR e PESQUISADOR portam essa
+ * permissão (medido em `permissions.ts`), então "qualquer um" marcava mesmo.
+ *
+ *   - dono: qualquer responsável da mãe (`assignedTo` ou `task_assignees`);
+ *   - gestão: os papéis COORDENADOR, GERENTE, GERENTE_PROJETO, ou o líder/criador do projeto;
+ *   - SAÍRAM: `MANAGE_TASKS`/`MANAGE_USERS` em bloco e membership qualquer do projeto.
+ *
+ * A mesma decisão decide marcar e ver: quem não é dono nem gestão recebe a mãe com a lista
+ * vazia, nunca um "não" que confirma que a lista existe.
+ */
+export const SUBTASK_MANAGER_ROLES: readonly string[] = ["COORDENADOR", "GERENTE", "GERENTE_PROJETO"];
+
+export interface SubtaskAuthorityFacts {
+  actorId: number;
+  actorRoles: ReadonlyArray<string>;
+  /** Responsáveis da mãe: `assignedTo` ∪ `task_assignees`. */
+  assigneeIds: ReadonlyArray<number>;
+  projectLeaderId: number | null;
+  projectCreatorId: number | null;
+}
+
+export function canActorOperateSubtasksDecision(facts: SubtaskAuthorityFacts): boolean {
+  if (facts.assigneeIds.includes(facts.actorId)) return true;
+  if (facts.actorRoles.some((role) => SUBTASK_MANAGER_ROLES.includes(role))) return true;
+  if (facts.projectLeaderId !== null && facts.projectLeaderId === facts.actorId) return true;
+  if (facts.projectCreatorId !== null && facts.projectCreatorId === facts.actorId) return true;
+  return false;
+}
+
+/**
  * 4. **gate de marcação** (DEC-98, 2026-10-07): MARCAR uma subtask como concluída exige que a
  *    mãe esteja em `in-progress`. Fora disso a interface avisa com toast e a rota recusa.
  *    É a única das quatro regras que a pessoa SENTE como recusa — por isso a frase é uma só

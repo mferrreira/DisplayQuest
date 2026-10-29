@@ -17,6 +17,16 @@ export const SELF_EDITABLE_USER_FIELDS = [
   "avatar",
   "profileVisibility",
   "password",
+  // V5-4a (DEC-138): a pessoa escreve os próprios dados nos formulários oficiais. A lista
+  // cresceu com os sete campos, e o `cpf` entra aqui porque ESCRITA é self OU gestão; a LEITURA
+  // dele é outra regra (`canActorReadUserCpf`).
+  "cpf",
+  "registrationNumber",
+  "course",
+  "scholarshipType",
+  "fundingAgency",
+  "fundingAgencyOther",
+  "level",
 ] as const;
 
 export function filterSelfEditableUserFields(

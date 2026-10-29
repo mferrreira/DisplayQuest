@@ -26,9 +26,18 @@ type UserRow = {
   status: string
   weekHours: number
   currentWeekHours: number
+  currentMonthPoints: number
   profileVisibility: ProfileVisibility
   bio: string | null
   avatar: string | null
+  bannerKey: string | null
+  cpf: string | null
+  registrationNumber: string | null
+  course: string | null
+  scholarshipType: string | null
+  fundingAgency: string | null
+  fundingAgencyOther: string | null
+  level: string | null
   roles: UserRole[]
   createdAt: Date
 }
@@ -44,9 +53,18 @@ function toRecord(row: UserRow): UserRecord {
     status: toUserStatus(row.status),
     weekHours: row.weekHours,
     currentWeekHours: row.currentWeekHours,
+    currentMonthPoints: row.currentMonthPoints,
     profileVisibility: row.profileVisibility,
     bio: row.bio,
     avatar: row.avatar,
+    bannerKey: row.bannerKey,
+    cpf: row.cpf,
+    registrationNumber: row.registrationNumber,
+    course: row.course,
+    scholarshipType: row.scholarshipType,
+    fundingAgency: row.fundingAgency,
+    fundingAgencyOther: row.fundingAgencyOther,
+    level: row.level,
     roles: row.roles,
     createdAt: row.createdAt,
   }
@@ -83,6 +101,14 @@ export class PrismaUserRepository implements UserRepositoryPort {
         profileVisibility: record.profileVisibility,
         bio: record.bio,
         avatar: record.avatar,
+        bannerKey: record.bannerKey,
+        cpf: record.cpf,
+        registrationNumber: record.registrationNumber,
+        course: record.course,
+        scholarshipType: record.scholarshipType,
+        fundingAgency: record.fundingAgency,
+        fundingAgencyOther: record.fundingAgencyOther,
+        level: record.level,
         roles: record.roles,
       },
     })
@@ -119,6 +145,12 @@ export class PrismaUserRepository implements UserRepositoryPort {
       prisma.daily_logs.count({ where: { userId: userId } }),
       prisma.weekly_reports.count({ where: { userId: userId } }),
       prisma.project_reports.count({ where: { authorId: userId } }),
+      // V5-2c: anexo de projeto é dado do projeto, não do usuário — coluna escrita por extenso
+      // de propósito, a guarda user-delete-schema-drift.test.ts não reconhece `{ userId }`.
+      prisma.project_attachments.count({ where: { uploadedBy: userId } }),
+      // V5-7a (DEC-134/162): prova de atividade é dado do projeto, não de quem subiu — a 18ª
+      // FK bloqueante, mesma razão medida do anexo.
+      prisma.project_activity_files.count({ where: { uploadedBy: userId } }),
       prisma.user_schedules.count({ where: { userId: userId } }),
       prisma.history.count({ where: { performedBy: userId } }),
       prisma.lab_events.count({ where: { userId: userId } }),
@@ -145,9 +177,19 @@ export class PrismaUserRepository implements UserRepositoryPort {
         status: true,
         weekHours: true,
         points: true,
+        currentMonthPoints: true,
         completedTasks: true,
         avatar: true,
+        bannerKey: true,
         bio: true,
+        profileVisibility: true,
+        cpf: true,
+        registrationNumber: true,
+        course: true,
+        scholarshipType: true,
+        fundingAgency: true,
+        fundingAgencyOther: true,
+        level: true,
       },
       orderBy: { name: "asc" },
     })
@@ -159,7 +201,8 @@ export class PrismaUserRepository implements UserRepositoryPort {
   async findTopByPoints(limit: number): Promise<UserRecord[]> {
     const rows = await prisma.users.findMany({
       where: { status: "active" },
-      orderBy: { points: "desc" },
+      // plan-v9 (ADR-001, DEC-224): o quadro ordena pelo placar do mes, nao pelo saldo.
+      orderBy: { currentMonthPoints: "desc" },
       take: limit,
     })
     return rows.map(toRecord)

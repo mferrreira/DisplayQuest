@@ -11,6 +11,7 @@ import {
   normalizeAvatar,
   resolveUserListVisibility,
   toPublicUser,
+  toPublicUserWithCpf,
 } from "@/backend/domain";
 
 describe("normalizeAvatar — A11 allow-list (pure)", () => {
@@ -110,13 +111,69 @@ describe("toPublicUser — password never leaves the record", () => {
         "status",
         "weekHours",
         "currentWeekHours",
+        // plan-v9 (ADR-001, DEC-224): placar do mes em curso. `points` continua o saldo; este e o
+        // numero que o Quadro de Lideranca ordena. A entrada e opcional (fixtures e chamadores
+        // antigos), a saida e sempre presente.
+        "currentMonthPoints",
         "profileVisibility",
         "bio",
         "avatar",
+        // V5-3 (DEC-137): a chave da capa do perfil entra no transporte. O record de cima NAO tem a
+        // coluna — a entrada e opcional justamente para chamadores e fixtures que ainda nao a
+        // conhecem, e a saida e sempre presente.
+        "bannerKey",
+        // V5-4a (DEC-138): os dados de pessoa que a leitura aberta do perfil mostra. O `cpf` nao
+        // esta aqui de proposito — e o unico campo com leitura restrita, e sai so por
+        // `toPublicUserWithCpf`, chamada depois de `canActorReadUserCpf` responder "sim".
+        "registrationNumber",
+        "course",
+        "scholarshipType",
+        "fundingAgency",
+        "fundingAgencyOther",
+        "level",
         "roles",
         "createdAt",
       ].sort(),
     );
+    expect(publicUser.bannerKey).toBeNull();
+    expect(publicUser.course).toBeNull();
+    expect(publicUser).not.toHaveProperty("cpf");
+
+    const withBanner = toPublicUser({ ...record, bannerKey: "users/1/images/banner/abc.png" } as never);
+    expect(withBanner.bannerKey).toBe("users/1/images/banner/abc.png");
+  });
+
+  it("a projeção com CPF é outro caminho, e o CPF cru não passa por toPublicUser", () => {
+    const record = {
+      id: 1,
+      name: "Ana",
+      email: "ana@x.com",
+      points: 10,
+      completedTasks: 2,
+      password: "bcrypt:secret",
+      status: "active",
+      weekHours: 10,
+      currentWeekHours: 8,
+      profileVisibility: "public" as const,
+      bio: null,
+      avatar: null,
+      bannerKey: null,
+      cpf: "52998224725",
+      course: "Sistemas de Informação",
+      roles: ["VOLUNTARIO" as const],
+      createdAt: new Date("2026-01-01T00:00:00.000Z"),
+    };
+
+    // O mesmo record, pelas duas projeções: a aberta ignora o CPF que esta na mão.
+    expect(toPublicUser(record as never)).not.toHaveProperty("cpf");
+
+    const restricted = toPublicUserWithCpf(record as never);
+    expect(restricted.cpf).toBe("52998224725");
+    expect(restricted.course).toBe("Sistemas de Informação");
+    expect(restricted).not.toHaveProperty("password");
+
+    // Record sem a coluna: a saida continua presente, como null.
+    expect(toPublicUserWithCpf({ ...record, cpf: undefined } as never).cpf).toBeNull();
   });
 });
 

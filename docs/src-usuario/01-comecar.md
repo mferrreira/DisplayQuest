@@ -38,44 +38,21 @@ O DisplayQuest conhece sete funções: **Coordenador**, **Gerente**, **Gerente d
 
 ## A navegação
 
-Todas as telas internas têm o mesmo cabeçalho. À esquerda está **Display Quest**, que leva de volta ao Quadro de Tarefas. À direita, três grupos de destinos que abrem uma lista ao serem clicados.
+Em telas largas, o botão de hambúrguer no cabeçalho abre a navegação sobre a área de trabalho; ela começa recolhida para deixar o quadro ocupar a tela toda. Clique no mesmo botão para fechar o painel. A lista mostra apenas os destinos permitidos para a sua função.
 
-```foto navegacao-projetos titulo="O grupo Projetos aberto"
-**Projetos** → Quadro de Tarefas, Projetos.
-```
+Na barra lateral aparecem **Quadro de Tarefas**, **Projetos**, **Laboratório**, **Relatórios**, **Painel Administrativo**, **Perfil**, **Loja** e **Ranking**, conforme a permissão da conta.
 
-```foto navegacao-laboratrio titulo="O grupo Laboratório aberto"
-**Laboratório** → Laboratório, Relatórios Semanais, Painel Administrativo.
-```
+Em telas pequenas, use **Abrir menu** no cabeçalho para ver a navegação em um painel.
 
-```foto navegacao-pessoal titulo="O grupo Pessoal aberto"
-**Pessoal** → Perfil, Loja, Ranking.
-```
+No cabeçalho também ficam:
 
-Quando um grupo tem um único destino visível para a sua função, o sistema mostra esse destino direto, sem o rótulo do grupo.
+- **Display Quest**, que leva de volta ao Quadro de Tarefas;
+- o contador de pontos, quando disponível;
+- o sino, que abre o painel de **Notificações** (capítulo 8);
+- **Alternar tema**, que troca entre os temas claro e escuro e guarda a escolha no navegador;
+- o botão com suas iniciais, que abre **Meu Perfil**, **Meus Premios** e **Sair**.
 
-Quem vê cada destino:
-
-| Destino | Funções com acesso |
-| --- | --- |
-| Quadro de Tarefas | todas |
-| Projetos | Coordenador, Gerente, Gerente de Projeto, Pesquisador, Colaborador |
-| Laboratório | todas |
-| Relatórios Semanais | Coordenador, Gerente, Laboratorista |
-| Painel Administrativo | Coordenador, Gerente |
-| Perfil, Loja, Ranking | todas |
-
-Ainda no cabeçalho:
-
-- **Alternar tema** — alterna entre tema claro e escuro. A escolha fica guardada no navegador e vale para todas as telas.
-- O botão com as suas iniciais e o seu nome abre um menu com **Meu Perfil**, **Meus Premios** e **Sair**.
-- O botão de sino abre o painel de **Notificações** (capítulo 8).
-
-Fora do cabeçalho, fixo no canto da tela, está o cronômetro de sessão de trabalho, descrito no capítulo 2.
-
-::: nota titulo="Em janelas estreitas"
-Em telas pequenas o cabeçalho se recolhe atrás do botão **Abrir menu**, que mostra os mesmos grupos e destinos.
-:::
+No rodapé do painel de navegação fica o cronômetro de sessão de trabalho, descrito no capítulo 2. Em telas pequenas, ele permanece no canto inferior direito.
 
 ## Sair
 

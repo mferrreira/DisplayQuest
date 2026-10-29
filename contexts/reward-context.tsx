@@ -4,6 +4,7 @@ import { createContext, useContext, useState, useEffect, useCallback, type React
 import type { Reward, Purchase } from "@/contexts/types"
 import { RewardsAPI, PurchasesAPI } from "@/contexts/api-client"
 import { useAuth } from "@/contexts/auth-context"
+import { hasPermission } from "@/lib/auth/rbac"
 
 interface RewardContextType {
   rewards: Reward[]
@@ -64,8 +65,10 @@ export function RewardProvider({ children }: { children: ReactNode }) {
     if (userId) {
       fetchRewards()
       // Se o usuário pode gerenciar a loja, buscar todas as compras para aprovação
-      // Caso contrário, buscar apenas as compras do usuário
-      const canManageStore = userRoles?.includes('LABORATORISTA') || userRoles?.includes('COORDENADOR');
+      // Caso contrário, buscar apenas as compras do usuário. V6-8 (RF-V6.16 R5, caso C §2.9):
+      // a fonte é a MESMA chave que o servidor aplica (`MANAGE_REWARDS`) — a lista escrita à
+      // mão deixava o GERENTE de fora e ele via só as próprias compras.
+      const canManageStore = hasPermission(userRoles || [], "MANAGE_REWARDS");
       fetchPurchases(canManageStore ? undefined : userId)
     } else {
       setRewards([])

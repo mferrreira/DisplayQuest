@@ -2,9 +2,10 @@
 
 Documentacao de manutencao e contribuicao do backend.
 
-> Atualizado em 2026-10 apos a refatoracao clean-arch (`displayquest-v2/clean-arch`,
-> ondas 0-9): arvore em camadas coberta pelo gate G0, allow-list do dependency-cruiser
-> **vazia**, erros tipados no dominio e rotas finas com mapper compartilhado.
+> Atualizado em 2026-10 apos a refatoracao clean-arch (documentos em
+> ~/Projetos/displayquest-planos/displayquest-v2/clean-arch, ondas 0-9): arvore em camadas
+> coberta pelo gate G0, allow-list do dependency-cruiser **vazia**, erros tipados no dominio e
+> rotas finas com mapper compartilhado.
 
 ## Arquitetura utilizada
 
@@ -98,9 +99,12 @@ imediatamente. Nao re-adicionar entradas sem decisao registrada no STATE.json.**
 - Comportamento legado e congelado por **golden tests** (antes de mexer) e provado
   equivalente por **contract tests** antigo-vs-novo; conserto de quirk exige aprovacao
   do dono (precedente: DEC-23/QUIRK-8S1)
-- `backend/models/` permanece camada de record builders puros (DEC-24) — nao e
-  re-export do dominio nem sera eliminada; formas de linha do schema sao interfaces
-  locais escalares e enums (`UserRole`, `ProfileVisibility`) vem do core
+- `backend/models/` e camada de record builders puros de quem a usa: DEC-142 (2026-10-13,
+  lote D-2) a encolheu para os 6 builders importados pelos repositorios do lab-operations
+  (Issue, LabEvent, LabNotice, LaboratorySchedule, LabResponsibility, UserSchedule); os 7 sem
+  importador (Badge, DailyLog, Project, ProjectMembership, Purchase, Reward, Task) sairam.
+  Nao e re-export do dominio; formas de linha do schema sao interfaces locais escalares e
+  enums (`UserRole`, `ProfileVisibility`) vem do core
 - Publishers de eventos entre modulos sao injetados na composition root via porta
   local do modulo consumidor (DEC-21)
 

@@ -12,9 +12,30 @@ export interface User {
   status: string;
   weekHours: number;
   currentWeekHours: number;
+  /** plan-v9 (ADR-001, DEC-224): placar do mes em curso, o numero que o Quadro de Lideranca ordena. */
+  currentMonthPoints?: number;
+  /**
+   * plan-v9 S06 (ADR-007, R4): o mes civil em curso do quadro (`AAAA-MM`), nomeado pelo servidor com
+   * a aritmetica de dia civil do dominio. O cabecalho compara com a baseline guardada no navegador
+   * para re-tarificar o placar na virada sem animar a queda (R13).
+   */
+  currentMonth?: string;
   bio?: string | null;
   avatar?: string | null;
+  /** V5-3 (DEC-137): chave da capa do perfil no bucket (`users/<id>/images/banner`). */
+  bannerKey?: string | null;
   profileVisibility: "public" | "private" | "members_only";
+  /**
+   * V5-4a (DEC-138): dados de pessoa. `cpf` chega só nas leituras em que a pessoa é o próprio ou
+   * quem gerencia contas; a lista de usuários não o traz.
+   */
+  cpf?: string | null;
+  registrationNumber?: string | null;
+  course?: string | null;
+  scholarshipType?: string | null;
+  fundingAgency?: string | null;
+  fundingAgencyOther?: string | null;
+  level?: string | null;
   badges?: UserBadge[];
   createdAt: Date;
 }
@@ -28,6 +49,13 @@ export interface UserFormData {
   bio?: string | null
   avatar?: string | null
   profileVisibility?: "public" | "private" | "members_only"
+  cpf?: string | null
+  registrationNumber?: string | null
+  course?: string | null
+  scholarshipType?: string | null
+  fundingAgency?: string | null
+  fundingAgencyOther?: string | null
+  level?: string | null
 }
 
 // Project types
@@ -41,6 +69,17 @@ export interface Project {
   status: "active" | "completed" | "archived"
   links?: { label: string; url: string }[]
   members?: ProjectMember[]
+  /** V5-2b: datas civis `YYYY-MM-DD` e saldo do projeto (DEC-61/63). */
+  startDate?: string | null
+  endDate?: string | null
+  editalNumber?: string | null
+  processNumber?: string | null
+  /** V5-4a (DEC-140): nº PROPPI, dado do projeto. */
+  proppiNumber?: string | null
+  points?: number
+  /** V5-2d (DEC-102): chave do objeto no bucket. A tela não recebe binário, recebe a chave. */
+  logoKey?: string | null
+  bannerKey?: string | null
 }
 
 export interface ProjectMember {
@@ -63,6 +102,27 @@ export interface ProjectFormData {
   leaderId?: number | null
   volunteerIds?: number[]
   links?: { label: string; url: string }[]
+  /** V5-2b: `YYYY-MM-DD` do `<input type="date">`; vazio significa "sem data". */
+  startDate?: string
+  endDate?: string
+  editalNumber?: string
+  processNumber?: string
+  /** V5-4a (DEC-140). */
+  proppiNumber?: string
+  /**
+   * V5-5 (DEC-100): o passo opcional do wizard de criação. Ausente ou com as duas listas vazias
+   * é "pular o passo", e o servidor cria o projeto exatamente como antes. A ordem não entra: o
+   * servidor atribui (DEC-156d), e a tela manda a lista na ordem em que aparece.
+   */
+  cronograma?: {
+    goals: Array<{ description: string; target?: number | null }>
+    activities: Array<{
+      description: string
+      firstMonth: string
+      lastMonth: string
+      responsibleId?: number | null
+    }>
+  }
 }
 
 // Badge types

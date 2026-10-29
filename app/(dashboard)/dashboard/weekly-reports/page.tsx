@@ -12,18 +12,29 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { Calendar, FileText, CalendarDays, Plus, Download } from "lucide-react"
+import { Calendar, FileText, CalendarDays, Plus, FolderKanban, UserRound, Award, ArrowRight } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, AlertTriangle } from "lucide-react"
 import { useToast } from "@/contexts/use-toast"
 import type { WeeklyReport } from "@/contexts/types"
+import { groupWeeklyReportsByMonth, monthHeadingLabel, weekHeadingLabel } from "@/lib/reports/weekly-report-groups"
 import { WeeklyReportDetail } from "@/components/ui/weekly-report-detail"
 import { ProjectReportsPanel } from "@/components/features/project-reports-panel"
 import { PERIOD_LABELS } from "@/components/features/project-report-dialog"
 import { REPORT_PERIOD_TYPES, listPeriods, type ReportPeriodType } from "@/lib/constants/report-periods"
+import { PageHeader } from "@/components/ui/page-header"
+import { ProjectTechnicalReportsPanel } from "@/components/features/project-technical-reports-panel"
+import { ProjectCertificatesPanel } from "@/components/features/project-certificates-panel"
+import { useSearchParams } from "next/navigation"
+
+function reportProjectCount(report: WeeklyReport): number {
+  const logs = Array.isArray(report.logs) ? report.logs : []
+  return new Set(logs.map((log) => log.project?.id).filter((id): id is number => typeof id === "number")).size
+}
 
 export default function WeeklyReportsPage() {
+  const searchParams = useSearchParams()
   const { user } = useAuth()
   const { users } = useUser()
   const { projects } = useProject()
@@ -40,6 +51,9 @@ export default function WeeklyReportsPage() {
   const [isBulkGenerating, setIsBulkGenerating] = useState(false)
   const [selectedReport, setSelectedReport] = useState<WeeklyReport | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
+  const [activeTab, setActiveTab] = useState(searchParams.get("tab") === "projetos" ? "projetos" : "usuarios")
+  const [assistantType, setAssistantType] = useState(searchParams.get("tab") === "atestados" ? "atestados" : searchParams.get("tab") === "projetos" ? "projetos" : "usuarios")
+  const [assistantProjectId, setAssistantProjectId] = useState(searchParams.get("projectId") ?? "")
 
   // Set default week (Monday-Sunday, matching backend weekStartsOn: 1)
   useEffect(() => {
@@ -91,6 +105,25 @@ export default function WeeklyReportsPage() {
   }
 
   const activeUserCount = users.filter((user) => user.status === "active").length
+  const selectedProject = projects.find((project) => String(project.id) === assistantProjectId)
+  const canManageSelectedProject = Boolean(selectedProject && user && (
+    selectedProject.leaderId === user.id ||
+    hasAccess(user.roles || [], "MANAGE_USERS") ||
+    hasAccess(user.roles || [], "MANAGE_PROJECTS") ||
+    user.roles.some((role) => ["COORDENADOR", "GERENTE", "GERENTE_PROJETO"].includes(role))
+  ))
+
+  function openAssistantFlow() {
+    if (assistantType === "usuarios") {
+      setActiveTab("usuarios")
+      return
+    }
+    if (!assistantProjectId) {
+      toast({ title: "Selecione um projeto", description: "Escolha o projeto antes de abrir este fluxo." })
+      return
+    }
+    setActiveTab(assistantType === "atestados" ? "atestados" : "projetos")
+  }
 
   const bulkPreviewPeriods = useMemo(() => {
     if (!bulkFrom || !bulkTo) return []
@@ -137,20 +170,13 @@ export default function WeeklyReportsPage() {
     }
   }
 
-  const reportsGroupedByPeriod = useMemo(() => {
-    const groups: Array<{ key: string; reports: WeeklyReport[] }> = []
-    for (const report of weeklyReports) {
-      const key = new Date(report.weekStart).toISOString().slice(0, 10)
-      const group = groups.find((g) => g.key === key)
-      if (group) {
-        group.reports.push(report)
-      } else {
-        groups.push({ key, reports: [report] })
-      }
-    }
-    groups.sort((a, b) => b.key.localeCompare(a.key))
-    return groups
-  }, [weeklyReports])
+  // Dois níveis de agrupamento (pedido do dono): MÊS/ANO no topo e, dentro, a SEMANA
+  // (intervalo de segunda a domingo) com a lista de relatórios — regra pura em
+  // lib/reports/weekly-report-groups.ts, testada isolada do React.
+  const reportsGroupedByMonth = useMemo(
+    () => groupWeeklyReportsByMonth(weeklyReports),
+    [weeklyReports],
+  )
 
   const handleOpenReportDetail = async (report: WeeklyReport) => {
     setDetailLoading(true)
@@ -164,10 +190,6 @@ export default function WeeklyReportsPage() {
 
   const formatDate = (date: Date | string) => {
     return new Date(date).toLocaleDateString('pt-BR')
-  }
-
-  const getWeekRange = (start: Date | string, end: Date | string) => {
-    return `${formatDate(start)} - ${formatDate(end)}`
   }
 
   if (!user || !hasAccess(user.roles || [], 'VIEW_WEEKLY_REPORTS')) {
@@ -184,24 +206,53 @@ export default function WeeklyReportsPage() {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Relatórios Semanais</h1>
-          <p className="text-muted-foreground mt-2">
-            Visualize e gere relatórios semanais baseados nas sessões de trabalho concluídas
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <FileText className="h-6 w-6 text-primary" />
-          <Badge variant="secondary">{weeklyReports.length} relatórios</Badge>
-        </div>
-      </div>
+    <div className="container mx-auto space-y-6 p-4 md:p-6">
+      <PageHeader
+        title="Relatórios"
+        description="Gere e consulte relatórios semanais, documentos técnicos e atestados."
+        icon={FileText}
+        actions={<Badge variant="secondary">{weeklyReports.length} por usuário</Badge>}
+      />
 
-      <Tabs defaultValue="usuarios" className="space-y-6">
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Assistente de geração</CardTitle>
+          <CardDescription>Escolha o tipo, informe o projeto quando necessário e abra o gerador correspondente.</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4 md:grid-cols-[1fr_1fr_auto] md:items-end">
+          <div className="space-y-2">
+            <Label htmlFor="report-assistant-type">1. Tipo de relatório</Label>
+            <Select value={assistantType} onValueChange={setAssistantType}>
+              <SelectTrigger id="report-assistant-type"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="usuarios">Por usuário (semanal)</SelectItem>
+                <SelectItem value="projetos">Por projeto (técnico e periódico)</SelectItem>
+                <SelectItem value="atestados">Atestado de frequência</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="report-assistant-project">2. Projeto</Label>
+            <Select value={assistantProjectId} onValueChange={setAssistantProjectId}>
+              <SelectTrigger id="report-assistant-project" disabled={assistantType === "usuarios"}>
+                <SelectValue placeholder={assistantType === "usuarios" ? "Não necessário" : "Selecione um projeto"} />
+              </SelectTrigger>
+              <SelectContent>
+                {projects.map((project) => <SelectItem key={project.id} value={String(project.id)}>{project.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <Button onClick={openAssistantFlow} className="gap-2">
+            3. Abrir gerador <ArrowRight className="h-4 w-4" />
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList>
-          <TabsTrigger value="usuarios">Usuários (semanal)</TabsTrigger>
-          <TabsTrigger value="projetos">Relatórios de Projeto</TabsTrigger>
+          <TabsTrigger value="usuarios" className="gap-2"><UserRound className="h-4 w-4" />Por usuário</TabsTrigger>
+          <TabsTrigger value="projetos" className="gap-2"><FolderKanban className="h-4 w-4" />Por projeto</TabsTrigger>
+          <TabsTrigger value="atestados" className="gap-2"><Award className="h-4 w-4" />Atestados</TabsTrigger>
         </TabsList>
 
         <TabsContent value="usuarios" className="space-y-6">
@@ -381,54 +432,48 @@ export default function WeeklyReportsPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-8">
-            {reportsGroupedByPeriod.map((group, index) => (
-              <div key={group.key} className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-foreground">
-                    {group.reports.length > 0 ? getWeekRange(group.reports[0].weekStart, group.reports[0].weekEnd) : group.key}
-                  </h3>
-                  <Badge variant="secondary">{group.reports.length} relatório(s)</Badge>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {group.reports.map((report) => (
-                    <Card 
-                      key={report.id} 
-                      className="cursor-pointer hover:shadow-md transition-shadow"
-                      onClick={() => handleOpenReportDetail(report)}
-                    >
-                      <CardHeader className="pb-3">
-                        <div className="flex items-center justify-between">
-                          <CardTitle className="text-lg">{report.userName}</CardTitle>
-                          <Badge variant="outline">
-                            {report.totalLogs} sessões
-                          </Badge>
+          <div className="space-y-10">
+            {reportsGroupedByMonth.map((month) => (
+              <section key={month.key} className="space-y-4" aria-label={monthHeadingLabel(month.key)}>
+                <h3 className="text-lg font-semibold text-foreground">{monthHeadingLabel(month.key)}</h3>
+                {month.weeks.map((week) => (
+                  <div key={week.key} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-medium text-muted-foreground">
+                        Semana {weekHeadingLabel(week)}
+                      </h4>
+                      <Badge variant="secondary">{week.reports.length} relatório(s)</Badge>
+                    </div>
+                    <div className="overflow-hidden rounded-lg border bg-card">
+                      {week.reports.map((report) => (
+                        <div key={report.id} className="flex flex-col gap-3 border-b p-3 last:border-b-0 sm:flex-row sm:items-center sm:gap-4 sm:px-4">
+                          <div className="flex min-w-0 flex-1 items-start gap-3">
+                            <div className="mt-0.5 rounded-md bg-primary/10 p-2 text-primary">
+                              <FileText className="h-4 w-4" aria-hidden="true" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                                <h5 className="truncate font-medium">{report.userName}</h5>
+                                <span className="text-xs text-muted-foreground">gerado em {formatDate(report.createdAt)}</span>
+                              </div>
+                              <p className="mt-1 line-clamp-1 text-sm text-muted-foreground">
+                                {report.summary || "Sem resumo registrado."}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex shrink-0 flex-wrap items-center gap-2 pl-11 sm:pl-0">
+                            <Badge variant="outline">{report.totalLogs} sessões</Badge>
+                            {reportProjectCount(report) > 0 && <Badge variant="secondary">{reportProjectCount(report)} projetos</Badge>}
+                            <Button variant="ghost" size="sm" onClick={() => handleOpenReportDetail(report)} aria-label={`Abrir relatório de ${report.userName}`}>
+                              <FileText className="mr-2 h-4 w-4" />Abrir
+                            </Button>
+                          </div>
                         </div>
-                        <CardDescription className="flex items-center gap-1">
-                          <CalendarDays className="h-4 w-4" />
-                          {getWeekRange(report.weekStart, report.weekEnd)}
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-sm text-gray-600 dark:text-muted-foreground dark:text-gray-400 dark:text-muted-foreground/70 line-clamp-2">
-                          {report.summary || "Nenhum resumo disponível"}
-                        </p>
-                        <div className="flex items-center justify-between mt-3">
-                          <span className="text-xs text-gray-500 dark:text-muted-foreground">
-                            {formatDate(report.createdAt)}
-                          </span>
-                          <Button variant="ghost" size="sm">
-                            <Download className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-                {index < reportsGroupedByPeriod.length - 1 && (
-                  <div className="h-px bg-border" />
-                )}
-              </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </section>
             ))}
           </div>
         )}
@@ -437,7 +482,22 @@ export default function WeeklyReportsPage() {
         </TabsContent>
 
         <TabsContent value="projetos" className="space-y-6">
-          <ProjectReportsPanel projects={projects.map((project) => ({ id: project.id, name: project.name }))} />
+          {selectedProject ? (
+            <>
+              <ProjectTechnicalReportsPanel projectId={selectedProject.id} canManage={canManageSelectedProject} />
+              <ProjectReportsPanel projectId={selectedProject.id} />
+            </>
+          ) : (
+            <Card><CardContent className="py-8 text-center text-sm text-muted-foreground">Escolha um projeto no assistente acima para consultar e gerar relatórios.</CardContent></Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="atestados" className="space-y-6">
+          {selectedProject ? (
+            <ProjectCertificatesPanel projectId={selectedProject.id} canManage={canManageSelectedProject} />
+          ) : (
+            <Card><CardContent className="py-8 text-center text-sm text-muted-foreground">Escolha um projeto no assistente acima para consultar e gerar atestados.</CardContent></Card>
+          )}
         </TabsContent>
       </Tabs>
 

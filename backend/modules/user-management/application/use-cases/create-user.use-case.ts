@@ -1,6 +1,7 @@
 import {
   ConflictError,
   CREATE_USER_DENIED_MESSAGE,
+  emptyPersonData,
   requireActorPermission,
   ValidationError,
 } from "@/backend/domain"
@@ -54,6 +55,9 @@ export class CreateUserUseCase {
       profileVisibility: "public",
       bio: null,
       avatar: null,
+      bannerKey: null,
+      // V5-4a (DEC-138): cadastro novo não tem dado de pessoa.
+      ...emptyPersonData(),
     })
 
     return toPublicUser(created)

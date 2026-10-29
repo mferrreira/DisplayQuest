@@ -3,12 +3,42 @@
 Notas de trabalho para agentes neste repositório. Criado em 2026-08-29 durante a
 mitigação de segurança A1–A11 (spec em `.spec/`).
 
+## Planos encerrados moram fora do repositório
+
+A pasta `displayquest-v2/` saiu do repositório em 2026-10-26 (decisão do dono) e está em
+`~/Projetos/displayquest-planos/displayquest-v2/`. Neste arquivo, `$PLANOS` é atalho para ela.
+O plan-v8 (gamificação remodelada) foi revertido na mesma data: a `dev` voltou ao estado de
+`origin/dev` e nenhuma onda dele foi mergeada. Os `PLAN.md`, `STATE.json` e registros `DEC-NN`
+citados abaixo estão lá. Valem como histórico do que foi executado, não como lista de pendências.
+
+## Revert do plan-v8 (2026-10-26)
+
+- O plan-v8 (gamificação remodelada: `users.coins`/`xp`/`elo`, tabelas `month_history` e
+  `season_history`, `history.track`, `badges.effects`, `user_badges.equipped`, troféu CAMPEÃO)
+  não foi mergeado. A `dev` voltou a `origin/dev` (`ad0d9c6`) e recebeu de volta o commit
+  `d39a97e` do plan-v7 (redução de logs SQL e healthcheck), que não tinha relação com o plano.
+- Restos do trabalho anterior guardados para não perder nada: as tags `backup/pre-revert-dev-20261026`
+  (`088cc10`) e `backup/pre-revert-plan-v8-20261026` (`116f7fa`), o WIP do V8-11 em `git stash`
+  ("V8-11 WIP antes do revert 2026-10-26") e o worktree `plan-v8/gamificacao` apontando para
+  `ad0d9c6`.
+- O banco de 5432 foi podado e recriado do zero: `docker compose down -v` derrubou também os
+  volumes `uploads_data`, `report_files_data` e `object_store_data`, a subida do container aplicou
+  as 22 migrations da `origin/dev`, e `npm run db:seed` resemou a instância. O dump anterior ao
+  rollback está em `~/Projetos/displayquest-planos/dq-5432-antes-do-rollback-20261026.dump`.
+- Alinhamento medido: `prisma migrate status` diz up to date, `prisma migrate diff` entre o banco
+  vivo e `prisma/schema.prisma` devolve migração vazia, e o inventário de colunas do 5432 é igual
+  ao do banco de teste de 5433 (34 tabelas, 295 colunas).
+- Gate medido nesta `dev` depois do revert: `arch:check` sem violação (1113 módulos, 4714
+  dependências), lint sem erro, `tsc --noEmit` em 0, `vitest run tests/unit features` com 188
+  arquivos e 2288 testes, suíte completa com 204 arquivos e 2419 testes. Os specs e2e não foram
+  re-medidos.
+
 ## Verificação
 
 - **Gate de entrega:** `npm run arch:check` (exit 0, allow-list **vazia**) && `npm run lint` (nada de erro) && `npx tsc --noEmit` (0) && `npx vitest run` (zero failure). A contagem é **por branch**: no `dev` o baseline era **64 arquivos / 721 testes** quando o B8 removeu os 651 testes de paridade; no `plan/v3-operacional`, medido no encerramento do plan-v3 (2026-10-03), são **65 arquivos / 798 testes** em `tests/unit` + `features` e **75 / 881** na suíte completa. Na `dev` de hoje (medido em 2026-10-07, depois do plan-v4 V4-1/V4-2/V4-3/V4-6, do V4-4 de subtasks, dos testes do painel V4-4b/V4-4c, do V4-5a/V4-5b/V4-5c de subtask na UI, do V4-6b de vocabulário de status e do lote pós-encerramento POS-1 — DEC-97/98) são **87 arquivos / 1107 testes** e **97 / 1192** na suíte completa; a suíte e2e do quadro está em **2 passando + 1 falha conhecida + 5 "did not run"** (medido 2026-10-06
 no V4-5c; eram 7 quando a coluna `Em Revisão` tinha um cartão a menos) — o 3º teste quebra por cartão a
 mais na coluna (dado legítimo da instância, não código: hoje são as tarefas 50 e 304), e como o spec é
-serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 5 passando. Compare sempre com o `STATE.json` do plano em que você está. Na branch do fechamento do repo-cleanup (`refactor/b6-restante`, medido 2026-10-08 depois do B6-2c..B6-7) o baseline é **95 arquivos / 1280 testes** em `tests/unit` + `features` e **105 / 1367** na suíte completa (G0 810 módulos / 3295 dependências).
+serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 5 passando. Compare sempre com o `STATE.json` do plano em que você está. Na `dev` de hoje, medido no fechamento do plan-v6 (2026-10-16, ondas V6-0..V6-11: shell, Home, Projetos, detalhe do projeto, Laboratório, Relatórios, Perfil/Ranking, Loja, Admin, Login/Register), são **179 arquivos / 2224 testes** em `tests/unit` + `features` e **194 / 2354** na suíte completa (G0 1061 módulos / 4531 dependências); o `tsc` desta branch **fecha em 0** — o erro pré-existente em `features/laboratorio/__tests__/floating-timer-tabs.test.tsx:105` foi consertado no `SUB-1` (regex ancorada no lugar do `exact`, que não existe em `ByRoleOptions`). Re-medido em 2026-10-15 (V6-2): o e2e do quadro está em **8 passando** (o spec hoje tem 8 testes; a falha conhecida por cartão a mais em `Em Revisão` **não reproduziu** — o dado da instância mudou; ela pode voltar se o dono mover outro cartão para lá) e o do shell em **5 passando**. Na branch do fechamento do repo-cleanup (`refactor/b6-restante`, medido 2026-10-08 depois do B6-2c..B6-7) o baseline é **95 arquivos / 1280 testes** em `tests/unit` + `features` e **105 / 1367** na suíte completa (G0 810 módulos / 3295 dependências).
 - **G4/integração:** roundtrips Prisma real rodam **só** contra o banco de teste isolado `dq-dev-test-db` em `127.0.0.1:5433` (`$env:DATABASE_URL="postgresql://dq_dev:dq_dev_local_only@127.0.0.1:5433/dq_dev_test"; npx vitest run`) — nunca contra o `display-quest-db` (5432, produção local).
 - **Setup do G4 (corrigido 2026-10-02):** `npm run db:test:up` e `npm run db:test:setup` **existem**
   no `package.json` e fazem a sequência completa (`docker compose -f docker-compose.test.yml up -d`,
@@ -19,8 +49,127 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
 - **Node local ≠ Node de deploy:** a imagem é `node:20-alpine`; o `engines` não é declarado e
   não há `.nvmrc`. Gate verde local não implica gate verde no deploy quando o Node difere —
   foi assim que o shim `path` (removido) quebrava em Node 22+ e passaria em Node 20.
-- **Secrets:** `npm run check:env` valida `NEXTAUTH_SECRET` (≥32, sem placeholder) e
-  senha do banco (denylist). O runner lê `process.env`, não `.env` — exporte as variáveis.
+- **Secrets:** `npm run check:env` valida `NEXTAUTH_SECRET` (≥32, sem placeholder), a
+  senha do banco (denylist) e, desde o V5-1, `S3_SECRET_KEY` (obrigatória — o serviço do
+  bucket recusa subir sem ela — e fora da denylist `minioadmin`/`any`/`changeme`). O runner
+  lê `process.env`, não `.env` — exporte as variáveis.
+
+## plan-v5 — documentos oficiais, economia do projeto e perfil (2026-10-13..14)
+
+- **Estado:** `done` — **encerrado em 2026-10-14** (batch `V5-close`, G5/G6: rebuild da imagem, 45 capturas
+  do guia, prosa das telas novas, `docs:build`/`docs:check` verdes). Estado/decisões:
+  `$PLANOS/plan-v5/{PLAN.md,STATE.json}` — STATE.json v5.29.0, 35 batches (V5-1..V5-15 com
+  sub-batches, mais `V5-9d` de conserto e os fechamentos G5/G6). As decisões do plano são DEC-61..77,
+  99..104 e 126..178 (DEC-78..98 do meio são do plan-v4 — houve colisão, ver adiante).
+- **O que o plano entregou:** bucket SeaweedFS + anexos/imagens por rota (V5-1..V5-3), dados de pessoa e de
+  vínculo (V5-4a/b), cronograma com grade dinâmica e conclusão em duas fases (V5-5..V5-7), atraso urgente
+  (V5-8), relatório técnico pelo template oficial + rascunho de IA (V5-9), atestados AcroForm + painel +
+  lembrete do dia 19 (V5-10a/b), andamento temporal (V5-11) e visibilidade de perfil como regra de leitura
+  (V5-12, DEC-143/178).
+- **Gotcha do fechamento (medido 2026-10-14):** as capturas do guia dependem de **dado de vida curta**
+  semeado por SQL (atividades "Coleta de dados"/"Revisão da literatura", prova, texto do relatório,
+  membership do Guia, tarefa da etapa) e apagado no fim — o botão da linha do cronograma é nomeado por
+  **ordem** (`Conclusão da atividade 1` = linha de `order` 1), não pela descrição; o filtro de atividade do
+  quadro só renderiza com projeto selecionado **e** atividades no projeto.
+
+## Bucket de objetos (V5-1, 2026-10-13)
+
+- **Servidor: SeaweedFS, não MinIO** (DEC-131). A DEC-101 tinha nomeado MinIO; na execução
+  ele estava **EOL** (repo arquivado em 2026-04-25) e as imagens oficiais saíram do Docker
+  Hub, do `quay.io` e do `ghcr.io` (`docker manifest inspect` falha nos três). O dono
+  escolheu o SeaweedFS. O **escopo** da DEC-101 segue inteiro; só o nome do servidor e o
+  prefixo das envs mudaram (`S3_*`, não `MINIO_*`).
+- **Serviço:** `seaweedfs` em modo `mini` (master + volume + filer + S3 num processo), imagem
+  pinada por **digest** (só existem tags `latest`/`dev`, nenhuma semver),
+  `container_name: display-quest-objects`, volume `object_store_data`, healthcheck em
+  `http://127.0.0.1:9333/cluster/status`, 8333 intra-rede + `127.0.0.1:8333`/`8888` no
+  override. A identidade S3 é escrita em `/tmp/s3.json` no entrypoint a partir de
+  `S3_ACCESS_KEY`/`S3_SECRET_KEY` — **nenhuma credencial no repositório** e sem identidade o
+  S3 responderia como anônimo. `-master.telemetry=false`. O SeaweedFS exige
+  **path-style** (`S3_FORCE_PATH_STYLE=true`).
+- **Env por lado:** do host (scripts/testes) `S3_ENDPOINT=http://localhost:8333`; do
+  container do `app`, `http://seaweedfs:8333` — as envs **entram** no `app` desde o V5-2c, que é o
+  primeiro consumidor de produção (`app/api/projects/[id]/attachments/**`).
+- **Seam:** `lib/storage/blob-store.ts` (allowlist de 8 mimes, tetos 5 MB imagem / 20 MB pdf
+  / 100 MB vídeo — vídeo é teto provisório, nenhuma tela no plan-v5), port
+  `backend/modules/project-management/application/ports/blob-store.port.ts` e adapter
+  `infrastructure/adapters/s3-blob-store.ts`. O cliente S3 é **injetável**: a suíte de unit
+  roda sem bucket no ar. Magic bytes entraram no V5-2c, na peça única `lib/storage/magic-bytes.ts`
+  que os dois seams consomem (DEC-134).
+- **Quem move byte (V5-2c, DEC-133):** a **rota** escreve e lê o objeto pelo seam; o módulo guarda
+  só o metadado (`blobKey`, nome, tipo, tamanho, quem subiu) e a autorização. O `BlobStorePort`
+  **não** está injetado no módulo — os use cases e o roundtrip G4 rodam sem bucket no ar, e a rota
+  responde 503 quando `blobStoreFromEnv()` devolve `null` (ambiente sem `S3_*`). É o desenho já
+  medido em `project-reports`. Consequência de segurança medida: o gate de gestão roda **antes** do
+  corpo ser lido (`AssertCanManageProjectUseCase`) — sem isso, quem não gerencia empurraria bytes
+  ao bucket e só depois receberia o 403.
+- **Gate:** `docker compose up -d` (qualquer serviço) agora exige `S3_ACCESS_KEY` e
+  `S3_SECRET_KEY` no `.env` — `${VAR:?}` falha com mensagem explícita. Desde o V5-2c o serviço
+  `app` consome o bucket (anexos de projeto); os roots legados de upload continuam servindo
+  avatares e relatórios.
+- **Imagem do projeto (V5-2d, DEC-135):** `projects.logoKey`/`bannerKey` guardam a **chave**
+  (`projects/<id>/images/<slot>`, slot só `logo` ou `banner` — lista fechada em
+  `PROJECT_IMAGE_SLOTS`). O binário sai por `GET /api/projects/[id]/images/[slot]/file`, rota
+  autenticada com `Cache-Control: private, max-age=86400`; a tela monta o URL com a chave como
+  parâmetro (`?v=<chave>`), porque o endereço por slot é sempre o mesmo e o navegador serviria a
+  imagem velha. Só imagem passa: `isImageBlobContentType` lê a allowlist da seam — PDF e vídeo são
+  blobs válidos de anexo e não são capa. Trocar imagem apaga o objeto velho, e o use case devolve
+  `previousKey` para a rota poder fazer isso.
+- **Imagem do perfil (V5-3, DEC-137):** mesmo desenho, aplicado a `users`. `users.bannerKey` guarda a
+  **chave** (`users/<id>/images/banner`, slot só `banner` — lista fechada em `USER_IMAGE_SLOTS`), e o
+  binário sai por `GET /api/users/[id]/images/[slot]/file`, autenticada. Escrita é a autoridade do
+  perfil (`self` OU `MANAGE_USERS`, `PROFILE_DENIED_MESSAGE` = "Não autorizado"), com o gate **antes**
+  do corpo do multipart (`AssertCanUpdateUserImageUseCase`); leitura é do autenticado, e a chave chega
+  na **mesma lista** que o avatar (`listUsersForActor`) porque é o pódio do ranking que a renderiza.
+  O avatar **continua no caminho legado de disco** (`public/uploads/avatars`, WebP 300×300, rota sem
+  autenticação) — migrá-lo para o bucket é decisão que ainda não existe. A chave também entra na
+  **sessão** (`lib/auth/config.ts`, select do session callback): o cartão "Meu Perfil" vem de
+  `useAuth()`, e coluna ausente ali não quebra teste nenhum — quebra a tela.
+
+## Templates oficiais dos documentos (V5-1a, 2026-10-13)
+
+- **`templates/` é asset de LEITURA**, versionado: `relatorio-tecnico.docx` (oficial,
+  byte-intacto), `relatorio-tecnico.tagged.docx` (cópia derivada, a que recebe dados no V5-9)
+  e `atestado-frequencia.pdf` (AcroForm oficial). O Dockerfile copia a pasta **antes** do
+  `chown` de `public/uploads`/`data/uploads`, então ela **não** é gravável — nenhum caminho
+  de escrita novo no container. Os originais do dono vivem em `docs/Projeto/` (gitignored).
+- **sha256 congelados:** DOCX `70a81240a7de5a661f280b89f2270b3bfb3f1c67048c92882b19e10ce3841f75`,
+  PDF `ecba85390adbeaf6559652febea281d7c18ea535c0a94dbfff77d615f9b41757`.
+- **A cópia marcada NUNCA é editada à mão.** `npm run templates:tag` a re-deriva do oficial
+  (`scripts/tag-report-template.mjs`) e o guarda
+  `tests/unit/scripts/report-templates-drift.test.ts` falha se a cópia divergir do que o
+  script produz. Os `REPLACEMENTS` têm `expected` por regra: oficial trocado quebra a
+  derivação **nomeando o campo**, em vez de marcar menos campos em silêncio.
+- **Determinismo do zip (gotcha medido):** o `.docx` oficial **não tem** entrada de diretório
+  para `word/` — o `jszip` sintetiza uma no load com `date: new Date()`, e essa é a única
+  entrada que varia. Sem normalizar, cada run escreve um arquivo diferente. Cuidado com a
+  medição: o timestamp DOS tem resolução de **2 s**, então dois runs seguidos parecem
+  determinísticos e não são — o gap de medição tem que ser >2 s. O script normaliza a data de
+  todas as entradas, e o guarda compara a data de **cada entrada** com a referência (não
+  compara dois runs, então não depende de timing).
+- **ARMADILHA CARA — o delimitador do `docx-templates`:** os comandos `{{campo}}` só são
+  reconhecidos com **`cmdDelimiter: ['{{','}}']`**. O default da biblioteca é `+++` (medido:
+  `listCommands` devolve `[]`) e o par `['{','}']` **quebra** a chave dupla (vira dois
+  comandos vazios). O par ancorado está em `CMD_DELIMITER`, em
+  `scripts/tag-report-template.mjs` — quem chamar `createReport` no V5-9 tem que passar o
+  mesmo. Detalhe de tipo: `listCommands`/`createReport` declaram `template: ArrayBuffer`; o
+  `tsc` recusa `Buffer` (TS2345), então copie com `new Uint8Array(buf).buffer`.
+- **Os brancos do DOCX são sublinhados literais dentro de um único run** de Times New Roman
+  12: a troca reescreve o texto dentro do próprio `<w:t>`, sem tocar `w:rPr`, `styles.xml`,
+  `sectPr` nem tema. 13 comandos: `periodo_inicio`, `periodo_fim`, `titulo`, `proppi`,
+  `coordenador`, `projeto_inicio`, `projeto_termino`, `orientador`, `estudante_nome`,
+  `estudante_curso`, `modalidade`, `instituicao_fomento`, `data_relatorio`. Nomes **sem
+  hífen** de propósito (hífen é subtração na expressão da biblioteca); hífen só existe nos
+  nomes de campo do PDF (`is_pibic-jr`), onde são literais.
+- **O PDF tem 42 campos, não 39** (`16 /FT /Tx` + `26 /FT /Btn`). A DEC-130 e o PLAN diziam
+  39; a contagem foi corrigida no V5-1a com `@cantoo/pdf-lib`, e a lista na ordem do arquivo
+  está congelada no guarda. `@cantoo/pdf-lib` e `docx-templates` entram **no V5-1a** (as
+  guardas precisam delas), não no V5-9/V5-10 como o §5 previa.
+- **Dados de exemplo não sobrevivem à cópia marcada:** "Guilherme de Araújo Carneiro" e "Bel
+  em Sistemas de Informação" viraram comandos. Quantos relatórios por projeto é o
+  `ASK-V5-06` (aberto), mas nome real não sai em documento entregue. A linha de tipo e as 3
+  tabelas vazias ficam **sem** marcação de propósito — são V5-9, e somar comando lá obriga a
+  atualizar a lista congelada.
 
 ## Arquitetura clean-arch (refatoração 2026-09/10, ondas 0–9)
 
@@ -29,7 +178,7 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   `@prisma/client`), `backend/modules/<m>/{application/{contracts,ports,use-cases},infrastructure/{repositories,adapters}}`, `backend/composition/root.ts` (único ponto de wiring cruzado; expõe `checkDatabaseHealth`). Ver `backend/README.md`.
 - **Gate G0:** `npm run arch:check` (dependency-cruiser, RG-01..RG-06) com **allow-list
   vazia** desde OND9-B1 — import proibido novo quebra o gate. Não re-adicionar entradas
-  sem decisão registrada em `displayquest-v2/clean-arch/STATE.json`.
+  sem decisão registrada em `$PLANOS/clean-arch/STATE.json`.
 - **Rotas:** finas, via `getBackendComposition()`; erros de domínio mapeados por
   `lib/api/domain-error-response.ts` (`domainErrorResponse`: Validation→400, NotFound→404,
   Conflict→409, Forbidden→403); não-DomainError (enum Prisma, FK P2003) segue no 500 legado.
@@ -40,7 +189,7 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   preservado no git (tag `pre-cleanup` = `12d9d6c`).
 - **Composição:** factories aceitam `repository?`/`ports?` (seam primário); publishers
   entre módulos entram por porta local injetada no composition root (DEC-21).
-- **Estado/decisões:** `displayquest-v2/clean-arch/{PLAN.md,STATE.json}` — STATE.json v2.0.0
+- **Estado/decisões:** `$PLANOS/clean-arch/{PLAN.md,STATE.json}` — STATE.json v2.0.0
   agora monitora o **repo-cleanup** (lotes B0–B11, iniciado 2026-10-01). O histórico da
   refatoração clean-arch (ondas 0–9, 41 batches, AC-00-01..15, DEC-01..DEC-25) está no git
   (tag `pre-cleanup` = `12d9d6c`); o registro DEC-01..28 e os GAPs foram carregados no
@@ -68,7 +217,7 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   é `!canManagePurchases && targetUserId !== actor.id`, então um VOLUNTARIO comprando para si
   recebe 201 e só quem compra para outro recebe 403. Eu acreditava o contrário e o teste de
   caraterização refutou — em autorização, escreva o teste antes de mover o gate.
-- **Estado/decisões (plan-v3):** `displayquest-v2/plan-v3/{PLAN.md,STATE.json}` — STATE.json
+- **Estado/decisões (plan-v3):** `$PLANOS/plan-v3/{PLAN.md,STATE.json}` — STATE.json
   v3.0.0 monitora o plano operacional **plan-v3** (ondas 0–4, 13 batches, AC-P3-01..10,
   DEC-30..DEC-49, GAP-P3-01..04 fechados, GAP-P3-05 aberto, `blockers` vazio). A numeração de
   decisões **continua** a do clean-arch: DEC-01..29 são do clean-arch, DEC-30 em diante são do
@@ -82,12 +231,14 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   aceito em HTTP é o da Onda 2 (visual sempre visível + som opcional). `awaitingInstruction`
   está vazia; as perguntas respondidas ficam em `answeredInstructions` e o que saiu do plano em
   `removedItems`.
-- **Duas coisas seguem abertas de propósito:** `GAP-P3-05` — o toast da conclusão direta ainda
-  anuncia o número *projetado* (`features/tasks/components/task-card.tsx:256`) em vez do
-  creditado pela resposta; corrigir move o aviso para depois da mutação. E o seam
-  `lib/notifications/browser-notifications.ts` (134 linhas + teste), que ficou **órfão** com a
-  F1b fora do escopo: `grep` mostra zero chamadores. Manter ou apagar é decisão do dono
-  (registrada em `PLAN.md` §8).
+- **Duas coisas estavam abertas de propósito, e as duas têm decisão hoje:** `GAP-P3-05` — o
+  toast da conclusão direta anunciava o número *projetado* em vez do creditado pela resposta;
+  **fechado no V4-5c do plan-v4** (DEC-93: o aviso saiu depois da mutação e lê o
+  `awardedPoints` da resposta). E o seam `lib/notifications/browser-notifications.ts`
+  (134 linhas + teste), **órfão** com a F1b fora do escopo: `grep` mede zero chamadores.
+  O dono decidiu **apagar** em 2026-10-13 (**DEC-144**); a execução está no item **D-3** do
+  plan-v5 (§4.1), e a notificação nativa continua bloqueada nesta instância — HTTP em IP de
+  rede, e o navegador recusa o pedido de permissão fora de secure context.
 - **Decisões que mudam o desenho:** premiação **pode ficar negativa** (DEC-39, sem piso — o
   `-37140 pts` medido numa captura é a regra funcionando, não bug isolado); nenhum `UPDATE` em
   `tasks.points` histórico (DEC-40); `@pontos` do backlog aceito e ignorado (DEC-41); a ordenação
@@ -105,7 +256,7 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
 
 ## plan-v4 — subtasks, animação de pontos, inativação de usuário (2026-10-05..10-06)
 
-- **Estado/decisões:** `displayquest-v2/plan-v4/{PLAN.md,STATE.json}` — V4-1, V4-2, V4-3, V4-4,
+- **Estado/decisões:** `$PLANOS/plan-v4/{PLAN.md,STATE.json}` — V4-1, V4-2, V4-3, V4-4,
   **V4-4b**, **V4-4c**, **V4-5a** (subtask no cartão), **V4-5b** (CRUD no diálogo de detalhe),
   **V4-5c** (formulário de nova tarefa + GAP-P3-05 fechado), **V4-6b** (vocabulário de status
   padronizado em `suspended`, fecha ASK-V4-28) e **V4-5d** (G5/G6 do guia, executado 2026-10-07)
@@ -126,17 +277,90 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   **leitura** + contagem na aba **Tarefas** do painel admin (sem checkbox), (5) o par "subtask"
   duplicado sumiu dos dois diálogos (rótulo/título no topo, placeholder com exemplo
   `Ex.: Revisar a introdução`, botão **Adicionar subtask** virou só-ícone `Plus` com `aria-label`).
-- **Numeração de decisão é global e JÁ tem buraco (medido 2026-10-06, atualizado 2026-10-08):** DEC-01..29 clean-arch,
-  DEC-30..49 plan-v3, DEC-50..54 B6/D4, DEC-55..60 plan-v4, **DEC-61..77 plan-v5** (reservadas pelo
-  dono em `displayquest-v2/plan-v5/`, criado 2026-10-06 e ainda **não commitado**), DEC-78..95 plan-v4
+- **Numeração de decisão é global e JÁ tem buraco (medido 2026-10-06, atualizado 2026-10-13):** DEC-01..29 clean-arch,
+  DEC-30..49 plan-v3, DEC-50..54 B6/D4, DEC-55..60 plan-v4, **DEC-61..77 plan-v5** (commitado em
+  `4c6fab7`, criado 2026-10-06), DEC-78..95 plan-v4
   (V4-4, ASK-V4-06, V4-4b, V4-4c, V4-5a, V4-5b, V4-5c e V4-6b), **DEC-96..98 plan-v4 (2026-10-07,
   pós-encerramento: ASK-V4-33 — tira o filtro morto da tela de voluntários — e o lote POS-1 de pontuação
-  + trava de marcação)**, DEC-99..104 plan-v5, DEC-105..114 plan-v6, **DEC-115..123 clean-arch/B6-restante
-  (2026-10-08: B6-2c..B6-7 + acordos da retomada)**. O V4-4 ia usar DEC-61..64 e colidiu; os 28
-  comentários de código foram renumerados. **Antes de abrir decisão nova, `grep` os CINCO `STATE.json`
-  (clean-arch, plan-v3, plan-v4, plan-v5, plan-v6) — a nota antiga que dizia "três" está velha.
-  Próxima livre: DEC-124.**
-- **Subtask (V4-4, DEC-78..83 → regra atual = DEC-97/98):** tabela `task_subtasks` (sem FK para
+  + trava de marcação)**, DEC-99..104 plan-v5, DEC-105..114 plan-v6 (mais DEC-181..188, a revisão do
+  plano em 2026-10-14), **DEC-115..125 clean-arch/B6-restante
+  + B9/B10 (encerrado 2026-10-08)**, **DEC-126/127 plan-v5 (2026-10-09: meses marcados na grade do
+  cronograma e visualização livre de projetos)**, **DEC-128..130 plan-v5/documentos oficiais (2026-10-13:
+  templates viram asset, DOCX preenchido pelo template, AcroForm oficial preenchido)** , **DEC-131 plan-v5
+  (2026-10-13, execução do V5-1: o bucket é SeaweedFS, não MinIO — EOL e imagens fora dos registries — e as
+  envs são `S3_*`)** , **DEC-132 plan-v5 (2026-10-13, execução do V5-2b: datas do projeto são data civil
+  `String` como `createdAt`/`dueDate`, período invertido recusado, e `points` não é escrevível pela rota)**
+  e **DEC-133/134 plan-v5 (2026-10-13, execução do V5-2c: no caminho de arquivo do projeto a rota move byte
+  e o módulo guarda registro + autorização, com o 403 antes do corpo lido; tabela de magic bytes e nome de
+  exibição viram peça única dos dois seams; `project_attachments.uploadedBy` é a 17ª FK bloqueante)**
+  e **DEC-135 plan-v5 (2026-10-13, execução do V5-2d: imagem do projeto é lista fechada de slots `logo`/
+  `banner`, a coluna guarda a CHAVE do bucket, só mime de imagem passa pela allowlist da seam, e o binário
+  sai por rota autenticada com a chave como quebra de cache)**
+  e **DEC-136 plan-v5 (2026-10-13, execução do V5-2a: leitura de projeto e das partes dele é do
+  autenticado — `canActorAccessProjectDecision` de um parâmetro só; Membros e `/volunteers` abertos a
+  pedido do dono; gate de leitura removido das 3 rotas de horas; portas encolheram)**
+  e **DEC-137 plan-v5 (2026-10-13, execução do V5-3: capa de perfil no bucket com o desenho do DEC-135 —
+  `USER_IMAGE_SLOTS` de um valor, `users.bannerKey` guarda a CHAVE, escrita com a autoridade do perfil e
+  o gate antes do corpo, leitura aberta ao autenticado, chave na lista de usuários e na sessão, e o
+  avatar continua no caminho legado de disco)**
+  e **DEC-138..146 plan-v5 (2026-10-13, rodada de alinhamento pedida pelo dono antes do V5-4: dados de
+  pessoa vão todos em `users`, com CPF de leitura restrita (138); relatório técnico por projeto × tipo com
+  DOCX gerado uma vez por membro (139); carga horária é coluna do vínculo e PROPPI é `projects.proppiNumber`
+  (140); cleanup dos status pré-contrato por migration, sem constraint (141); `backend/models/` encolhe para
+  os 6 builders que têm importador (142); visibilidade de perfil vira regra de leitura, batch V5-12 (143); o
+  seam `browser-notifications.ts` sai (144); plan-v6 só depois de o plan-v5 fechar (145); CVE do
+  `next@15.2.4` registrada sem batch (146))**
+  e **DEC-147 plan-v5 (2026-10-13, execução do V5-4a: as listas de pessoa saem dos campos do AcroForm
+  medido — `USER_LEVELS`, `SCHOLARSHIP_TYPES`, `FUNDING_AGENCIES` + texto livre `fundingAgencyOther` só com
+  `OUTRA`; rótulos ao lado dos tokens no domínio; CPF gravado como 11 dígitos com verificadores validados,
+  mascarado só na exibição e fora da sessão; leitura de CPF self OU `MANAGE_USERS`, os demais campos seguem
+  a leitura aberta)**
+  e **DEC-148 plan-v5 (2026-10-13: o V5-4 foi dividido em V5-4a — `users` + `projects.proppiNumber` + telas
+  de perfil/painel/projeto — e V5-4b — `project_members` + tela de membros — pelo tamanho medido, com G5/G6
+  rodando uma vez no fechamento do V5-4)**
+  e **DEC-149 plan-v5 (2026-10-13, execução do V5-4b: `project_members` ganha `lattes`, `cargaHoraria`,
+  `categoria`, `situacao`, `dataEntrada`; `categoria` é `BOLSISTA`/`VOLUNTARIO` vinda dos checkboxes medidos
+  do AcroForm e NÃO é segundo vocabulário de papel, `situacao` é `ATIVO`/`INATIVO` com default `ATIVO` e
+  remover continua apagando, `dataEntrada` exige forma estrita porque `new Date("01/02/2026")` é 2 de
+  janeiro, e quem escreve o vínculo é a ACL do projeto, não `MANAGE_USERS`)**
+  e **DEC-150/151/152 plan-v5 (2026-10-13, rodada final antes do dono sair: D-4 é apagar o arquivo morto
+  `components/forms/project-members-manager.tsx` (150); as colunas de mês da grade do cronograma são o
+  período do projeto, com janela de 12 meses quando ele não tem datas (151); a IA do rascunho tem deploy em
+  `localhost:8080/v1` e dev pela tailscale `100.112.10.76:8080/v1`, medido respondendo (152))**,
+  **DEC-153..176 plan-v5 (2026-10-14, execução dos V5-5..V5-11: cronograma, tarefa×atividade, conclusão de
+  atividade, atraso urgente, atestados, andamento)**, **DEC-177 plan-v5/V5-9d (2026-10-14, conserto do
+  rascunho de IA: período por `civilDayOfDate` — createdAt legado ISO; porta `durationHours`)**,
+  **DEC-178 plan-v5/V5-12 (2026-10-14, visibilidade de perfil vira regra `canActorViewProfile` consumida
+  pela leitura de perfil, lista de usuários e busca de pessoas)**,
+  **DEC-179 plan-v5/V5-fix-1 (2026-10-14, conserto pos-encerramento do atestado: CPF sai em 8pt — o
+  `/DA` 0 do oficial preenchia a caixa com 23pt; `dia` baixado a 498 para alinhar com o primeiro "de"
+  da assinatura — o `ano` fica em 504 porque o segundo "de" está mais alto; folga medida de 1pt nas
+  caixas justas da assinatura, "2026" em 8pt e não 7pt)**,
+  **DEC-180 plan-v5/V5-fix-2 (2026-10-14, "Gerar DOCX" salva o texto em edição antes de gerar
+  quando ele difere do salvo — o servidor gera do conteúdo salvo e o rascunho de IA não salvava,
+  daí as tabelas em branco; pipeline DOCX medido íntegro com o conteúdo real do dono)**,
+  **DEC-181..184 plan-v6 (2026-10-14, revisão do plano antes de executar qualquer onda: relatórios
+  unificados na página de Relatórios com 3 abas e assistente de 3 passos, sem a aba Templates e com o
+  atalho preservado no detalhe do projeto (181); a aba Voluntários sai de Projetos e entra no Painel
+  Administrativo (182); o detalhe do projeto vira rota `/dashboard/projetos/[id]` com as 5 abas da
+  referência e rail direito (183); a aba `settings` do painel admin sai e cada aba passa a dizer o
+  motivo quando falta permissão (184))**, **DEC-185..188 plan-v6 (2026-10-14, as quatro perguntas
+  abertas respondidas pelo dono na mesma rodada: a rota de Relatórios continua
+  `/dashboard/weekly-reports` e só o rótulo vira "Relatórios" (185); a invisibilidade da aba
+  Dashboard de Projetos para COORDENADOR/GERENTE é bug e a aba passa à chave nomeada
+  `DASHBOARD_PROJECT_MANAGER` = `["COORDENADOR","GERENTE","GERENTE_PROJETO"]` — união, ninguém
+  perde o que já via, e é a **única exceção registrada** à regra "nenhum conjunto de papéis muda
+  de valor" (186); nomes de terceiros em telas de gestão ficam fora do escopo de privacidade do
+  plano, e o CPF segue restrito (187); título do navegador por tela, por efeito no cliente dentro
+  do `PageHeader` (`document.title = "<título> · DisplayQuest"`), sem RSC e sem layout por
+  segmento, com o fallback de `app/layout.tsx` citando o produto (188)), **DEC-189 plan-v4
+  (2026-10-15, lote SUB-1 pós-encerramento: autoridade de subtask — dono ou gestão, nunca
+  `MANAGE_TASKS` em bloco; ver o bloco "Subtask" abaixo), DEC-190..210 plan-v7 (MCP de
+  validação para o agente consumidor; DEC-205..210 na revisão de 2026-10-21). O V4-4 ia usar
+  DEC-61..64 e colidiu; os 28 comentários de código foram renumerados. **Antes de abrir decisão nova,
+  `grep` os `STATE.json` em `$PLANOS/` (clean-arch e plan-v3..plan-v8). O plan-v8 foi revertido, mas
+  os DEC-211..223 dele seguem reservados no arquivo. Próxima livre: DEC-224.**
+- **Subtask (V4-4, DEC-78..83 → regra atual = DEC-97/98/189):** tabela `task_subtasks` (sem FK para
   `users` — subtask não tem
   responsável próprio), base gravada em `tasks.points` = `10 + 5·n` (DEC-97) e **cada subtask CONCLUÍDA
   vale +5 fixos dentro dessa base** — a leitura antiga da DEC-78 (subtask pontuada pela regra da mãe no
@@ -152,6 +376,15 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   **antes**, então `done` responde com a frase da janela; **desmarcar** não é marcar e fica livre fora de
   `done`. Concluir subtask não obedece à janela. A última subtask concluída **move a mãe** de
   `in-progress` para `in-review` com a mesma notificação de um movimento humano.
+  **Autoridade (DEC-189, lote SUB-1, 2026-10-15):** marcar e ver a lista pertencem ao **dono**
+  (responsável da mãe: `assignedTo` ∪ `task_assignees`) ou à **gestão** (`SUBTASK_MANAGER_ROLES`
+  = COORDENADOR/GERENTE/GERENTE_PROJETO, ou líder/criador do projeto). A regra antiga (DEC-82,
+  "a mesma de editar a mãe") dava `MANAGE_TASKS` em bloco — e COLABORADOR/PESQUISADOR portam
+  essa permissão, então "qualquer um" marcava; membership qualquer do projeto também saiu. A
+  MESMA decisão (`canActorOperateSubtasksDecision`, decisão pura no domínio) decide marcar e
+  ver: quem não é dono nem gestão recebe a mãe com `subtasks: []` no `GET` e na lista
+  (`batchAttachSubtasksForActor`), nunca um 403 que confirma que a lista existe. O gate de
+  escopo da mãe não mudou.
 - **Excluir usuário não é o caminho (DEC-55):** o que funciona de ponta a ponta é o **bloqueio de
   qualquer status `!== "active"`** — login (`lib/auth/config.ts:30`), API (`lib/auth/server-auth.ts:36`),
   regras de laboratório, bulk weekly reports, cron weekly reset. **Correção medida em 2026-10-06:**
@@ -173,10 +406,16 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   `KNOWN_DIVERGENCES` ficou vazio. Nenhuma tela
   `.tsx` chamava `deleteUser`. O `DELETE /api/users/[id]` agora **recusa com 409** quando há
   dependência; sem dependência continua excluindo (é o caso "cadastro de teste").
-- **16 das 23 FKs para `users` são `RESTRICT`** (default do Prisma, sem `onDelete`); só 7
+- **18 das 27 FKs para `users` são `RESTRICT`** (default do Prisma, sem `onDelete`); 8
   cascadeiam (`project_members`, `task_assignees`, `task_user_progress`, `work_sessions`,
-  `weekly_hours_history`, `user_badges.userId`, `notifications`). Se você mexer no schema e
-  adicionar uma FK para `users` **sem** `onDelete`, o guarda
+  `weekly_hours_history`, `user_badges.userId`, `notifications`, `certificates.userId` — a 8ª
+  entrou no V5-10a, DEC-170: atestado é documento gerado e regenerável, não bloqueia conta) e 4
+  são `SetNull` (três do cronograma, DEC-155, e `certificates.generatedBy`, DEC-170). A 17ª bloqueante
+  entrou no V5-2c
+  (`project_attachments.uploadedBy`, DEC-134 — anexo é dado do projeto, não de quem o subiu) e a
+  18ª no V5-7a (`project_activity_files.uploadedBy`, DEC-162 — prova de atividade é dado do
+  projeto). Se você
+  mexer no schema e adicionar uma FK para `users` **sem** `onDelete`, o guarda
   `tests/unit/modules/user-management/user-delete-schema-drift.test.ts` falha e nomeia a coluna —
   ele compara o schema com o corpo de `countBlockingDependencies`, porque o `tsc` não protege
   contra tabela esquecida.
@@ -220,11 +459,95 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
 ## Perfil do sistema (2026-09-05)
 
 - **Papéis e permissões:** `ADMIN`/`COORDENADOR`/`LABORATORISTA` com `MANAGE_WORK_SESSIONS` gerenciam sessões alheias; `MANAGE_USERS` gerencia grade de horários. Voluntário e demais têm leitura liberada onde faz sentido.
+- **Projeto: leitura aberta, escrita fechada (V5-2a, DEC-127/136):** qualquer autenticado vê todos os projetos — lista, detalhe, entregáveis, anexos, capa/logo, horas agregadas, **Membros** e horas por pessoa (`/volunteers`). A decisão é `canActorAccessProjectDecision(actorId)` no domínio, de um parâmetro só, e não consulta membership. Gestão continua na ACL congelada (`canActorManageProjectDecision`: existindo membership, só os papéis dele decidem — membership `[VOLUNTARIO]` com `COORDENADOR` global **não** gerencia). Não reintroduza gate de leitura na rota: ele não pode responder "não" e o teste de rota voltaria a congelar o substituto, não o sistema.
+- **Dados de pessoa (V5-4a, DEC-138/147):** `users.cpf`/`registrationNumber`/`course`/`scholarshipType`/`fundingAgency`/`fundingAgencyOther`/`level` e `projects.proppiNumber`. As três listas fechadas (`USER_LEVELS`, `SCHOLARSHIP_TYPES`, `FUNDING_AGENCIES`) vêm dos campos do AcroForm medido (DEC-130), com os rótulos ao lado dos tokens em `backend/domain/identity/person-data-rules.ts` — o componente não tem vocabulário próprio (lição da DEC-96), e `normalizePersonEnum` dobra acentos para tela e banco falarem a mesma tabela. Escrita: self OU `MANAGE_USERS`, nos dois caminhos (`UpdateUserUseCase` do painel e `UpdateUserProfileUseCase` do perfil), pela MESMA função `applyPersonDataFields`; `SELF_EDITABLE_USER_FIELDS` passou de seis para treze. Leitura: os seis campos abertos seguem a leitura aberta do perfil (DEC-136) e chegam na lista de usuários; **o CPF é a única exceção** — sai por `toPublicUserWithCpf`, nunca por `toPublicUser`, e na lista só sob `canViewFullUsers`. O CPF **não está na sessão** (cookie): a tela busca em `GET /api/users/[id]/profile`, que decide o direito a cada chamada, e mostra mascarado; gravado como 11 dígitos com os dois verificadores validados.
+- **Dados do vínculo (V5-4b, DEC-69/140/149):** `project_members` ganhou `lattes`, `cargaHoraria` (Float), `categoria`, `situacao`, `dataEntrada`. `categoria` é `BOLSISTA | VOLUNTARIO` (nula quando não declarada) e vem dos dois checkboxes medidos do AcroForm (`is_bolsista`, `is_voluntario`) — **não** é um segundo vocabulário de papel: `roles UserRole[]` continua sendo a ACL do vínculo e só `set_roles` escreve papel. `situacao` é `ATIVO | INATIVO`, nunca nula, e **não é o caminho de sair do projeto**: sair apaga a linha (`RemoveProjectMemberUseCase`) e as horas ficam em `work_sessions`. `cargaHoraria` é a carga contratada (alimenta `carga_8`/`carga_20`/`carga_adaptada` do atestado), teto 168 h, e **não é `users.weekHours`**, a meta semanal da pessoa (DEC-140) — os dois coexistem. `dataEntrada` é data civil com forma exigida; `joinedAt` continua o instantâneo. Escrita: `PATCH /api/projects/[id]/members` com `action: "set_profile"`, gate `canManageProjectMembers` (ACL do projeto, não `MANAGE_USERS`), chave `membershipId`, corpo parcial (chave ausente não apaga). Regra pura em `backend/domain/project/member-data-rules.ts`.
+- **Perfil: visibilidade prometida, regra ainda não escrita (medido 2026-10-13):** `users.profileVisibility` (`public`/`members_only`/`private`) é gravado na criação, editável na aba Configurações e documentado no guia com três valores, mas **nenhuma decisão no backend o lê** — hoje todo perfil é público de fato, e a leitura de usuário é a do autenticado. Implementar a regra é o batch **V5-12** (**DEC-143**). Enquanto ele não roda, não escreva código que finja aplicar a visibilidade, e não descreva os três valores como comportamento.
 - **Kanban:** tema escuro com colunas em cores sólidas por estado (sem degradê), contraste verificado — perfil visual do board é escuro/sólido.
 - **Notificações:** painel em popover; fecha ao clicar fora e com `Escape`, acessível por teclado.
 - **Grade de horários:** leitura aberta (qualquer autenticado vê todos os horários); escrita/bulk restrita a `MANAGE_USERS`.
 - **Sessões de trabalho:** gestor (`MANAGE_WORK_SESSIONS`) vê ativas+pausadas de todos e pode pausar/retomar/finalizar/excluir; usuário comum opera só as próprias. Anti-farm: teto de 9h por trecho ativo e varredura noturna 23:59 (America/Sao_Paulo) fecha o que ficou aberto overnight/weekend.
-- **Infra e persistência:** Postgres exposto só intra-rede no compose base; `docker-compose.override.yml` (versionado) adiciona `127.0.0.1:5432` loopback para `psql`/vitest. Volumes de `uploads`/`reports`/`postgres_data` persistem entre `--build`/`--force-recreate`.
+- **Infra e persistência:** Postgres exposto só intra-rede no compose base; `docker-compose.override.yml` (versionado) adiciona `127.0.0.1:5432` loopback para `psql`/vitest. Volumes de `uploads`/`reports`/`postgres_data`/`object_store_data` persistem entre `--build`/`--force-recreate`.
+
+## Conclusão de atividade, economia do projeto e atraso (V5-7/V5-8, 2026-10-14)
+
+- **Fluxo de duas fases (DEC-76/77/161):** a linha do cronograma (`project_activities`) vai OPEN →
+  COMPLETION_REQUESTED (pedida pelo líder OU pela membership de gestor, com pelo menos uma prova
+  anexada — `project_activity_files`, DEC-162) → DONE (aprovada por `GLOBAL_PROJECT_MANAGERS`).
+  GERENTE **não** aprova o que ele mesmo pediu; COORDENADOR auto-aprova; `requestedBy` nulo
+  (SetNull, DEC-155) não gera conflito. O gate da aprovação precisa do `requestedBy`, então na
+  aprovação ele corre **depois** do 404 da atividade: 404 projeto → 404 atividade → 403 gate →
+  409 status (`activityApproveConflictMessage` por status).
+- **Prêmio (DEC-103/74, `backend/domain/project/activity-rules.ts`):** prazo é
+  `activityPeriod().periodoFim` (derivado, nunca gravado). Aprovação ≥2 dias civis antecipada →
+  `Math.round(base×1,5)`; no prazo → base cheia; atraso → −10%/dia com **piso 0** (`Math.max(0, …)`
+  — o piso do projeto é a DEC-74, diferente do caminho de tarefa, sem piso, DEC-39). O dia
+  comparado é `civilDayOfInstant(now)` (DEC-132), nunca `new Date()` solto em regra.
+- **Distribuição (DEC-104/163/164/165):** crédito do membro = tarefas concluídas do projeto em que
+  ele é responsável (`task_assignees`) **ou** completou tarefa pública
+  (`task_user_progress.completedAt`), deduplicado por par (membro, tarefa), sem peso. Só membro com
+  `situacao ATIVO` no vínculo entra na conta, e o **denominador é a soma dos créditos de quem
+  entra** — a leitura literal "tasks do projeto" diluiria o prêmio a zero quando contribuidores
+  saíram. Arredondamento é Hamilton de maior resto: floor da parte exata + restos um a um aos
+  maiores restos fracionários; desempate (resto, contagem de tasks, menor userId); membro com zero
+  tasks nunca recebe resto; **soma das partes == prêmio** em todo ramo, congelado em teste.
+- **Ordem das escritas (DEC-165):** prêmios idempotentes por membro (chave
+  `GAMIFICATION:ACTIVITY_COMPLETED:<atividade>`; a consulta real do awardHistory é
+  `entityId` + `description` — o fake de teste que ignorava o userId escondia colisão entre
+  membros da mesma atividade) → `projects.points` (`projectPointsBalance` piso 0, escrita
+  congelada do adaptador de projects) → **transição de status por último**, o ponto de commit:
+  reexecução bate no 409 antes da economia. Crédito já registrado (share 0) **não** impede o
+  incremento do saldo. Falha de crédito vai pro log e não quebra a conclusão (quirk congelado do
+  caminho de tarefa).
+- **Task → `projects.points` (DEC-63):** `TaskCompletedEvent` carrega `projectId` **obrigatório**
+  (null = quest global) e o publicador incrementa pelo valor **efetivamente creditado** (idempotência
+  devolve 0 e 0 não escreve; negativo passa — o piso é da escrita do projeto). O composition root
+  compartilha o adaptador de projects entre o módulo de projeto e o publicador de tarefa
+  (`TaskProjectPointsPort` local, DEC-21); os três call sites de `publishTaskCompletionAward`
+  (complete ×2, approve ×1) passam `task.projectId ?? null`.
+- **Vocabulário em uma fonte só:** `GamificationSourceType` ganhou `ACTIVITY_COMPLETED` no domínio e
+  `gamification/application/contracts.ts` **re-exporta** o tipo do domínio em vez de manter cópia
+  (a cópia local de 3 membros era exatamente o modo de falha DEC-95/96). O gamification **não**
+  re-aritmética o prêmio: a parte Hamilton chega pronta (DEC-103 — a escala é do domínio de projeto).
+- **UI:** o botão "Conclusão" da linha obedece ao par **pedir OU aprovar** (predicate
+  `canOpenCompletion` no painel, calculada com as funções do domínio, DEC-92); o diálogo mostra
+  "Aprovar conclusão" quando COMPLETION_REQUESTED e o ator pode — quem pediu não vê o botão se for
+  GERENTE. A resposta carrega `activity/award/shares/projectsPoints` e a tela não recalcula (R7).
+- **Atraso urgente (V5-8, DEC-64/166):** cron diário `'0 8 * * *'` (America/Sao_Paulo) chama
+  `projectManagement.notifyOverdueActivities` com `systemActor(OVERDUE_SCAN)` — **não existe rota**
+  para o scan de propósito (varredura não é ação de pessoa). A urgência é a coluna
+  `notifications.priority` (o painel destaca pela FLAG, não pelo `type`), e a guarda do "uma
+  notificação por atividade" é `overdueNotifiedAt`: a marca sai **só depois** da publicação
+  bem-sucedida (falha de notificação deixa a linha para o scan seguinte; candidato sem
+  destinatário também não é marcado). Audiência: líder + COORDENADOR/GERENTE **ATIVOS**
+  (suspenso não recebe, DEC-55), deduplicada. Vencida é `hoje > activityPeriod().periodoFim` —
+  o próprio dia do prazo ainda é dentro. O use case lê `users` por adaptador próprio do módulo
+  de projeto (RG-04, como `ProjectHoursPort`).
+
+## Relatórios técnicos (V5-9, 2026-10-14)
+
+- **Um texto editável por projeto × tipo** (`technical_reports`, única por `projectId+type`;
+  vocabulário `parcial|tecnico-final|final` — a linha de checkbox binária do DOCX, DEC-167).
+  Gate de escrita: líder OU gestão do projeto (`canActorManageTechnicalReportDecision`, frase
+  congelada "Usuário não tem permissão para editar o relatório técnico deste projeto"); leitura
+  é a do autenticado (regra 13). Ordem de recusa medida nos três use cases (upsert/geração/
+  rascunho): 404 projeto → 403 gate → 400 tipo.
+- **DOCX pelo template oficial** (DEC-128/129/168): a cópia marcada tem 17 comandos
+  (`npm run templates:tag`; guarda congela inventário e ordem); o corpo único é distribuído nas
+  3 tabelas pelas **linhas de cabeçalho** — `REPORT_SECTIONS` no domínio é a fonte única do
+  cortador, do prompt da IA e do adaptador; casamento por linha inteira normalizada, nunca
+  substring; seção sem corpo fica vazia. Geração: um documento por membro **ATIVO** do vínculo
+  (DEC-139/167), período cortado na geração (DEC-132), chave derivada
+  `projects/<id>/technical-reports/<reportId>/<userId>.docx` — a rota move byte ao bucket
+  (DEC-133) e o download é leitura aberta (id forjado não acha objeto: 404).
+- **Rascunho de IA** (DEC-152/169): prompt construído no domínio (`buildTechnicalReportDraftPrompt`,
+  regra de honestidade congelada: só o que tem âncora nas fontes; fonte vazia declarada
+  "sem registros"); adaptador OpenAI-compatible por env (`AI_BASE_URL` default
+  `http://localhost:8080/v1`, `AI_API_KEY` opcional, `AI_MODEL` default `local`; env VAZA do
+  compose conta como ausente — `??` não pega `""`). Falha de IA **não é DomainError**: a rota
+  traduz para **502**, não 500 legado. O rascunho não salva e não atropela edição em andamento.
+- **Rota Next**: os três filhos de `technical-reports/` usam o MESMO slug `[segment]`
+  (gotcha do build, ver "Gotchas reais"); cada handler valida o próprio vocabulário.
 
 ## Gotchas reais (verificados empiricamente)
 
@@ -425,6 +748,11 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   estava de pe desde antes da migration tinha o client antigo em memória — `prisma.task_subtasks` era
   `undefined`, e a primeira chamada da trava devolveria **500 no navegador** com o gate de tipos verde.
   Depois de gerar client, reiniciar o dev server antes de rodar e2e.
+- **Reconstruir o `app` para o G6 leva mais de 25 minutos (medido no V5-2d):** o `docker compose
+  build app` roda `npm i` nos dois stages e depois `next build`. Um timeout de shell padrão mata o
+  build no meio e a imagem continua a antiga (`docker images` mostra a data velha). Rodar em
+  background com `--progress=plain > log`, e conferir a data da imagem antes de recapturar. O
+  container em pé tem o Prisma client e as rotas da imagem, não do working tree.
 - **zod com `.default([])` torna a chave OBRIGATÓRIA no tipo de saída (medido 2026-10-06):** `entities/task.ts`
   aceita `subtasks` ausente no *wire*, mas `Task` (saída de `z.infer`) passa a **exigir** a chave — todo
   literal de `Task` (ex.: `tests/mocks/fixtures/tasks.ts`) precisa dela. Tolerância de parse não é
@@ -478,6 +806,16 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
 - **`SelectTrigger` do Radix com só `<SelectValue placeholder=…>` não tem nome acessível (medido
   2026-10-06):** `getByRole("combobox", { name: "Status" })` não acha. Precisa de `aria-label` no
   trigger. Mesma classe do botão-ícone do painel (DEC-86).
+- **`Select` do Radix não aceita `""` como valor (medido no V5-4a):** campo nullable usa sentinela
+  própria (`NO_VALUE = "none"` no painel e no formulário de perfil) e vira `null` no submit. Sem a
+  sentinela o Select nasce sem valor e o `onValueChange` nunca roda — o campo parece morto.
+- **Fake de repositório tem que devolver CÓPIA na leitura (medido no V5-3 e de novo no V5-4a):**
+  `findById` devolvendo o objeto vivo do Map faz a falha do `update` parecer sucesso, porque os use
+  cases mutam o record antes de gravar. O sintoma é o caso de compensação ficando verde.
+- **Os métodos do módulo misturam chamada por posição e por objeto (medido no V5-4a):**
+  `updateUserProfile(actor, userId, data)` e `findUserById(actor, userId, deniedMessage)` são por
+  posição; `updateUserImage({ actor, userId, slot, blobKey })` e `listUsersForActor({ actor })` são por
+  objeto. O `tsc` não pega a troca porque o retorno é `unknown` — o roundtrip G4 é onde aparece.
 - **`vi.fn(() => true)` tem `mock.calls` tipado como tupla vazia:** acessar `mock.calls[0][0]` dá
   TS2352 + TS2493. Forma correta: `vi.fn<(message?: string) => boolean>(() => true)`.
 - **Filtro da lista de usuários do painel NÃO se aplica ao `ScheduleGrid`** (medido 2026-10-06): ele
@@ -535,13 +873,76 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
 - **Enviar env para vitest em worktree:** o runner lê `process.env`, não `.env`, e o `.env`
   tem aspas nos valores. Exportar com `set -a; source .env; set +a; npx vitest run` (o
   `grep/cut` sem aspas também funciona).
+- **Data civil `YYYY-MM-DD` não se renderiza com `new Date` (medido no V5-2b, DEC-132):**
+  `new Date("2026-10-13")` é meia-noite UTC e `toLocaleDateString("pt-BR")` devolve **12/10**
+  no fuso do laboratório. Campos de data do schema que são data civil (`projects.createdAt`,
+  `tasks.dueDate`, `projects.startDate`/`endDate`) se formatam por substring, e a aritmética é
+  a de `backend/domain/time/civil-day.ts`. Gravar o instantâneo que o `<input type="date">`
+  produz reabre exatamente o erro que o plan-v3 fechou.
+- **`civilDayOfDate` aceita o que `new Date()` aceita — e `new Date("01/02/2026")` é 2 de janeiro
+  (medido no V5-4b):** texto com barra cai no parser do `Date`, que lê mês/dia/ano. Sem exigir a
+  forma, `01/02/2026` virava `2026-01-02` gravado em silêncio. `normalizeMemberEntryDate`
+  (`backend/domain/project/member-data-rules.ts`) exige `YYYY-MM-DD` ou instantâneo ISO e recusa o
+  resto nomeando o campo. O caminho do projeto (`normalizeProjectDateField`, V5-2b) **mantém** o
+  comportamento congelado: nenhuma tela produz essa grafia hoje, e endurecer lá exige mexer em
+  `validateProjectInput` e nos testes congelados do V5-2b.
+- **A garantia "nada é gravado a meias" é do chamador, não da função de normalização (medido no
+  V5-4b):** `applyMemberProfileFields` e `applyPersonDataFields` mutam campo a campo, então um corpo
+  com a metade errada deixa a outra metade mutada NO OBJETO. O que evita a escrita a meias é o use
+  case: ele mergeia sobre cópia do record e só chama `update` depois da função retornar. Ao escrever
+  o teste, prove a garantia no use case — provar na função pura é provar o que ela não promete.
+- **MSW não serve upload neste ambiente (medido no V5-2c):** o `fetch` que o Vitest injeta no jsdom
+  é o do undici, e ele **não serializa** um `File` do jsdom dentro de um `FormData` —
+  `multipartFormDataParser` falha com `assert(typeof value === "string" && webidl.is.USVString(value)
+  || webidl.is.File(value))` antes de qualquer handler chegar. O teste de painel de anexo usa um
+  `fetch` gravador (`vi.stubGlobal("fetch", …)`) que inspeciona o `FormData` direto — prova campo
+  `file`, nome e tipo do arquivo. O multipart de verdade fica congelado no teste de rota
+  (`tests/unit/api/project-files-routes.test.ts`), que exercita a rota com `NextRequest.formData()`.
+- **`user.upload` respeita o `accept` do input e descarta em silêncio (medido no V5-2d):** um PDF
+  enviado a um input com `accept="image/png,image/jpeg,..."` não lança erro e **não dispara
+  `change`** — nenhum handler roda, nenhuma requisição sai. Então teste de UI não prova recusa de
+  mime pelo servidor: prova a lista de aceitação do campo. A recusa do servidor fica no teste de
+  rota. O caso que a tela prova é o que o `accept` deixa passar e o seam recusa (PNG declarado
+  como JPEG).
+- **Rotas Next 15 recebem `{ params: Promise<…> }` (medido no V5-2c):** chamar o handler com um só
+  argumento no teste dá `Cannot read properties of undefined (reading 'params')`, e o
+  `routeErrorResponse` transforma isso em **500** — os 21 casos do arquivo ficaram vermelhos com
+  "expected 500", que não diz nada do problema. Monte `{ params: Promise.resolve({...}) }` num helper
+  **genérico** (`<T extends Record<string,string>>`), senão o `tsc` recusa o `Record<string,string>`
+  no lugar de `{ id: string }`.
+- **Next 15 recusa slug diferente na mesma posição de rota dinâmica (medido no V5-9b, 2026-10-14):**
+  `technical-reports/[type]/generate` e `technical-reports/[reportId]/file` quebraram o
+  `next build` com "You cannot use different slug names for the same dynamic path
+  ('reportId' !== 'type')" — `vitest`, `tsc` e `arch:check` passam verdes e **só o build** falha,
+  o que deixa o erro chegar no `docker compose up --build`. Conserto: um slug só (`[segment]`)
+  nos dois filhos, e cada handler valida o próprio vocabulário (tipo contra a lista fechada do
+  domínio; id numérico).
+- **Bytes de controle entram num arquivo novo pelo caminho da escrita, não pelo código (medido no
+  V5-2c):** `\u0000-\u001f` escrito dentro de uma string JSON vira caractere **real** no arquivo
+  gravado, e o `grep` passa a tratar o `.ts` como binário ("Binary file matches"). Conferir por
+  contagem de bytes `< 32` no arquivo; `JSON.stringify` da linha não serve de prova, porque re-escapa
+  o que está cru.
+- **Select do Radix dentro de `<form>` apaga valor pré-selecionado sozinho no jsdom (medido no
+  V5-6):** o Radix renderiza um native select oculto (`BubbleSelect`) quando o `Select` está dentro
+  de um form, e as opções dele só existem quando a lista abre. Um valor controlado sem opção
+  registrada é desaguado em `""` e dispara `change` — a pré-seleção da atividade no formulário de
+  tarefa sumia sem nenhum clique. O guarda: o `onValueChange` ignora `""` (a sentinela da casa é
+  `none`, nunca `""`). Fora de form o artefato não aparece — por isso a toolbar do quadro não
+  sofre dele.
+- **`NuqsTestingAdapter` sem `hasMemory` desfaz param recém-escrito sob carga (medido no V5-6):**
+  no adapter de teste, `updateUrl` só atualiza o snapshot da URL quando `hasMemory` está ligado;
+  com o default `false`, a rajada de seis setters da barra do quadro chega a flushar contra a base
+  antiga e o param volta ao valor velho — verde isolado, vermelho na suíte paralela. O teste do
+  filtro de atividade usa `hasMemory` + `rateLimitFactor={1}`; ainda assim o estado final da rajada
+  assenta assíncrono, então o contrato do "Limpar filtros" é provado na toolbar (corpo `{}`), não
+  pela URL.
 
 ## Documentação (docs/)
 
 - **Dois documentos, ambos gerados** (nenhum editado à mão): `docs/displayquest.html` (técnico:
   `docs/src/*.md` + `docs/diagrams/*.puml`, 15 capítulos / 33 figuras UML, ~1 MB) e
   `docs/guia-do-usuario.html` (guia de uso: `docs/src-usuario/*.md` + `docs/screens/*.png`,
-  12 capítulos / 34 capturas, ~8 MB). Compartilham `docs/theme/document.css`. `npm run docs:build`
+  12 capítulos / 44 capturas, ~8 MB). Compartilham `docs/theme/document.css`. `npm run docs:build`
   renderiza os SVGs (PlantUML em Docker — requer Docker no ar) e monta os dois; `--only=tecnico`
   ou `--only=usuario` monta um só; `--no-render` reaproveita os SVGs. `npm run docs:check` valida
   os caracteres das fontes (agora também `docs/src-usuario`). Abra por `file://`, sem servidor.
@@ -555,6 +956,18 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   credenciais em `docs/.capture.env` (gitignored). **Algumas capturas gravam de verdade** (ex.:
   *Gerar em Lote* criou 9 relatórios semanais na instância real): confira a lista `INTERACTIONS`
   antes de rodar contra dados reais.
+- **Captura que passa no script pode estar fotografando a tela errada (medido no fechamento do V5-4):**
+  as verificações do script olham texto no **documento**, não o que está no campo de visão. Três modos
+  medidos: (a) abrir um botão cujo alvo está em **outra aba** — `perfil-edicao` clicava "Editar Perfil"
+  com a aba Atividade ativa, o formulário (que mora na aba Configurações) ficava fora da foto e o
+  extrato media **zero** `label`; (b) o bloco que importa fica abaixo da dobra — entrou
+  `rolarAte: "text=<rótulo>"`, que leva o elemento ao campo de visão antes da foto; (c) o balão
+  "Bem-vindo(a)!" tapa rótulos do lado esquerdo — o script escreve `session-welcome-balloon-dismissed`
+  no `sessionStorage` no `addInitScript`, que roda antes dos scripts da página. O guarda é **ler os
+  PNGs**, não só o log do script.
+- **O extrato do DOM não vê controle só de ícone:** `some("button", 80)` descarta texto vazio, então um
+  botão com só `aria-label` (ex.: `Configurar <nome>`, do painel) não aparece no `manifest.json`. Quando
+  o guia nomeia um controle assim, a medida vem do código/teste, e a prosa tem que dizer isso.
 - **Bloco de captura:** ```foto <id> titulo="…"``` embute `docs/screens/<id>.png` como data URI.
   Uma captura referenciada duas vezes derruba o build, igual ao `figure`.
 - **O build é um gate duro:** falha se um `.puml` não renderizar, se um bloco cercado ficar sem
@@ -634,3 +1047,119 @@ leitura do texto visível. São observações medidas na instância real, **não
   `refetchOnWindowFocus` global está desligado. Para o som de notificação ter sentido, a
   contagem passou a repetir a cada 5 s (`NOTIFICATION_POLL_MS`); a lista completa segue em
   60 s. O som nasce da SUBIDA da contagem, nunca da primeira leitura.
+
+## Painel admin — quadro de horas restaurado e fila de aprovação (V6-11h/i, 2026-10-17)
+
+- **`sr-only` dentro de scroller estica a PÁGINA com espaço vazio (medido no V6-11h).** O span
+  `sr-only` das subtasks (aba Tarefas do `ModernAdminPanel`) é `position:absolute` e, sem
+  ancestral positioned, tem containing block na RAIZ do documento: os spans escapam do corte do
+  scroller `max-h-[480px] overflow-y-auto` e entram no overflow do `html` — a página media
+  **5899px de altura** com 1px de elemento invisível espalhado (a "barra de rolagem gigante, mas
+  todo o espaço é vazio" que o dono relatou). Provado por experimento no Chromium: `overflow:hidden`
+  NO scroller **não** resolve (containing-block escape ignora clipping), `contain:paint` **resolve**
+  (vira containing block + recorta), e `position:relative` no `<li>` dono do span resolve
+  (página volta a 1258px). Regra: `sr-only` (ou qualquer absolute) dentro de lista rolável exige
+  ancestral `relative`; o jsdom não vê isso — só browser real.
+- **O quadro por semana do painel voltou (`WeeklyHoursTable`, wire em `ModernAdminPanel` aba
+  Horas):** navegador `‹ Hoje ›`, semana atual das sessões, semanas passadas via
+  `GET /api/weekly-hours-history?weekStart=` (fallback `POST create_week_history`), colunas
+  Nome/Email/Horas trabalhadas/Meta/Estado contra `users.weekHours`
+  ("Yh restantes" vermelho, "+Xh extra", "Meta atingida!", "Sem meta definida" quando a meta é 0).
+  `AdminHoursManagement` (relatório por período) continua abaixo dele.
+- **A aba Tarefas abre como fila de aprovação (decisão do dono, V6-11i):** `taskStatusFilter`
+  default é `in-review`, não `all` — medido 0 em revisão na instância (44 done / 28 to-do), então
+  "all" mostrava 72 tarefas de estoque sem nenhum botão Aprovar/Rejeitar. As demais listas
+  seguem pelo mesmo Select. Caracterização em
+  `tests/unit/components/admin/tasks-tab-queue.test.tsx`.
+- **Gotcha de teste: `combobox[0]` do painel NÃO é o filtro de status** — o Select "Exportar"
+  do cabeçalho do painel vem antes no DOM e seus itens são `role="option"` (Usuários/Projetos).
+  Escopo pelo `textContent` do valor selecionado ("Em Revisão"). E a lista de opções do Radix
+  aparece um frame depois no jsdom (`findByRole` com timeout) e está com `pointer-events:none`
+  durante a animação — selecionar opção com `fireEvent.click`, não `userEvent`.
+
+## Cronograma — "fixa em 12" não reproduz (V6-11j, DEC-204, 2026-10-17)
+
+- **A regra do dono para a grade já está em produção** (DEC-151, `cronogramaMonthColumns`): com datas,
+  as colunas são o período do projeto inclusivo (delta mensal com ceil ≈ contagem de meses marcados);
+  projeto de 6 meses → 6 colunas (medido no wizard), projeto ago/nov-2026 → 4 colunas de período.
+- **O 12 que o dono viu é o fallback de projeto SEM datas** — janela de 12 meses ancorada no mês atual
+  (`CRONOGRAMA_FALLBACK_MONTHS=12`), e todos os projetos de exemplo da instância estão sem datas.
+  Medido por API: projetos 2/10/1 = 12 colunas (out/2026…set/2027); projeto 7 = **14** (as marcas de
+  atividade que vão além do fim alargam a janela até set/2027). Nenhuma tela hardcodiza 12.
+- **Decisão do dono (DEC-204): manter o fallback de 12** quando o projeto não tem datas. Nenhuma
+  mudança de código; a regra DEC-151 permanece intacta. Quem esbarrar nesse pedido de ajuste de novo:
+  é o fallback, não um bug.
+- **Gotcha de medição:** o Cronograma do detalhe do projeto mora na aba **Tarefas** (primeira peça do
+  `TabsContent value="tasks"`, `page.tsx:192`), não numa aba própria — para medir as colunas, entre
+  no projeto, clique "Tarefas" e conte os `th` com padrão `^[a-z]{3}/\d{4}$`.
+
+## Rodapé discreto, feed de altura fixa e limpeza diária do feed (V6-11k, 2026-10-18)
+
+- **Rodapé (commit `e18e97b`):** versão discreta do dono — SÓ as logos em um canto
+  (`LOGO.png` do Lab em `h-6` + reserva pontilhada "Logo IFNMG") e o crédito
+  ("Desenvolvido por Márcio Martins Ferreira Júnior") na outra ponta; o nome do instituto
+  e o campus (Januária, NÃO Salinas — correção do dono) moram só em `title`/alt, visível
+  em nenhum texto. A aba "Sobre o Projeto" foi perguntada e o dono recusou ("Não fazer"
+  — o rodapé acabou de ganhar chrome, não recebe mais).
+- **Feed "Atividade recente" da Home:** lista com `max-h-80 overflow-y-auto` — o card
+  cresce para dentro do quadro, nunca para fora (o dono temia "monstruosidade"
+  com logs acumulando). Teto 320px; altura literalmente fixa é um `h-80` de distância.
+- **Limpeza diária do feed (o DELETE que não admite erro):** retenção decidida pelo dono =
+  **só o dia corrente**. Job `'7 0 * * *'` America/Sao_Paulo (`executeTaskActivityCleanup`
+  em `lib/services/cron-service.ts`) chama `taskManagement.purgeTaskActivity(cutoff)`.
+  Corte = `startOfCivilDayInstant(now)` (nova função em `backend/domain/time/civil-day.ts` —
+  00:00 SP = 03:00 UTC; MESMA função do filtro de leitura da rota
+  `/api/tasks/activity`, que agora filtra `performedAt >=` início de hoje). Duas contas de
+  "hoje" em lugares diferentes divergiriam na virada do dia — a função única é a trava.
+- **SCOPO DURO do DELETE (medido em Prisma real):** a tabela `history` tem TRÊS famílias e
+  só a de tarefa é apagável. **`GAMIFICATION_AWARD` (entityType "USER") NUNCA é apagada — a
+  idempotência de premiação LÊ essas linhas (`history.findFirst` por descrição); apagar
+  faria o sistema premiar duas vezes.** `LAB_NOTICE` é o quadro de avisos do laboratório
+  em si, não log. O filtro `entityType: "task" + performedAt < cutoff` está nas DUAS
+  instruções (OptionsMenu: `purgeOlderThan` deleteMany e `listRecent` where), e o
+  roundtrip `tests/integration/task-activity-purge-roundtrip.test.ts` prova contra o banco
+  5433 real: task antiga sai; task de hoje, prêmio antigo e aviso antigo sobrevivem.
+- **Quirk colateral aceito:** `countBlockingDependencies` (delete de usuário, DEC-55) conta
+  `history.performedBy` — limpar logs velhos reduz a contagem e um usuário bloqueado SÓ por
+  logs antigos de tarefa torna-se deletável (409 → 200). Premiação e avisos continuam
+  bloqueando sempre. O guarda `user-delete-schema-drift` não lê esse método, pelo desenho.
+- **Gotcha do job:** `vi.hoisted` no mock da composition root (vi.mock é içado acima do
+  `const purge`); `new Date()` dentro do método do cron compara bem com fake timers
+  (`vi.setSystemTime("...T12:34Z")` → corte `...T03:00Z`) e NÃO flake. expressão nova
+  `'7 0 * * *'` entra na lista pinada de `tests/unit/services/cron-schedule.test.ts`.
+
+## V6-11m — liderança, resumo da Home, logos e o "concluiu" falso no feed (2026-10-19)
+
+- **Feed não pode dizer "concluiu" antes da aprovação (dono, 2026-10-19):** `completeTask` de
+  tarefa delegada/de projeto devolve `status: "in-review"` (o use case decide: só global/pública
+  cai em `done`), mas o módulo gravava `action: "COMPLETE"` sempre — e o feed renderiza COMPLETE
+  como "concluiu" + check verde. O log agora **obedece o status resultante**: `done` → COMPLETE,
+  `in-review` → MOVE (feed: "moveu para Em Revisão", a mesma frase do remap do cartão). A
+  aprovação continua sendo o único COMPLETE de tarefa de projeto. Congelado em
+  `tests/unit/modules/task-management/task-activity-feed.test.ts` (dois casos: projeto→MOVE,
+  global→COMPLETE).
+- **Liderança (pedido do dono):** bloco do campeão maior (`p-8`, avatar `h-20`, pontos `text-4xl`)
+  e a "Classificação completa" começa no **4º** — o top 3 já está no pódio; a tabela tinha um
+  `podiumUsers.map` duplicado que saiu.
+- **Resumo do laboratório (Home):** o aberto/fechado persiste em `dq:home-aberto`
+  (`clientStorageKey` + `readJson`/`writeJson`); SSR sempre nasce aberto e o `useEffect` aplica a
+  preferência (sem hydration mismatch). Fechada, o cabeçalho usa `py-3` (antes `pt-3` só) — sem o
+  respiro de baixo o título ficava colado no topo ("torto pra baixo").
+- **Logos do rodapé:** as três na MESMA altura (`h-8` = 32px; antes CNPq/Display `h-12`, IFNMG
+  `h-24` → 285px de largura). As três são lockups horizontais (razões 3.25/2.97/2.55), então
+  altura única alinha o porte e estreita o IFNMG (95px). A regra antiga de "proporção pela marca"
+  (V6-11l) foi substituída por decisão do dono.
+
+## plan-v10 — sessões e documentos (2026-10-28)
+
+- **Decisões aceitas:** DEC-233 preserva `work_sessions.originalStartTime` para sessões novas e
+  mantém nulo o início original irrecuperável das antigas, com aviso nas exportações; DEC-234
+  mantém o cronograma do atestado e acrescenta síntese mensal de sessões concluídas, mesmo sem
+  tarefa; DEC-235 confirma Parcial, Técnico-final e Final, com gênero científico só em Final;
+  DEC-236 determina diretrizes RECITAL/IFNMG e ABNT NBR 6022:2018 para o manuscrito Final, com
+  lacunas identificadas e revisão/complementação humana. As quatro decisões estão respondidas;
+  não há DEC pendente no plan-v10.
+- **Plano e histórico:** `$PLANOS/plan-v10-sessoes-e-documentos/{MODELO.md,queue.json,HANDOFF.md}`;
+  fila de oito fatias. A numeração DEC continua a partir do plan-v9 (DEC-232), sem reiniciar.
+- **Migração:** `20261028181000_add_work_session_original_start` adiciona coluna nullable sem
+  backfill. Integrações G4 rodam somente contra `dq-dev-test-db` em 5433, nunca 5432.

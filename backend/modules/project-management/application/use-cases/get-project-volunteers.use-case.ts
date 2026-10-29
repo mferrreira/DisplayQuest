@@ -1,20 +1,21 @@
-import { ForbiddenError, hasPermission, isProjectVolunteerRole, summarizeVolunteerStats, toVolunteerEntry, weekWindow } from "@/backend/domain"
+import { ForbiddenError, canActorAccessProjectDecision, isProjectVolunteerRole, summarizeVolunteerStats, toVolunteerEntry, weekWindow } from "@/backend/domain"
 import type { GetProjectVolunteersQuery } from "@/backend/modules/project-management/application/contracts"
-import type { ProjectActorsPort } from "@/backend/modules/project-management/application/ports/project-actors.port"
 import type { ProjectHoursPort } from "@/backend/modules/project-management/application/ports/project-hours.port"
 import type { ProjectManagementMembershipPort } from "@/backend/modules/project-management/application/ports/project-membership.repository"
-import { resolveCanActorManageProject } from "@/backend/modules/project-management/application/use-cases/internal/project-access"
 
 /**
- * GetProjectVolunteersUseCase — OND5-B2 (R2). Gate frozen from the legacy use case
- * (MANAGE_PROJECTS role OR canActorManageProject); the stats aggregation is frozen from the
- * gateway (:171-246): VOLUNTARIO/COLABORADOR members only (joinedAt ASC), per-member
- * completed-session SUMs over the Monday-based week window, rounded views, totals over the
- * ALREADY-rounded hours.
+ * GetProjectVolunteersUseCase — OND5-B2 (R2). A agregação continua congelada do gateway
+ * (:171-246): só membros VOLUNTARIO/COLABORADOR (joinedAt ASC), SUMs de sessão concluída por
+ * pessoa na semana local segunda-based, visões arredondadas, totais sobre as horas JÁ
+ * arredondadas.
+ *
+ * O gate mudou no V5-2a (DEC-127, decisão do dono no batch): era MANAGE_PROJECTS OU
+ * canActorManageProject — quem não participava do projeto levava 403 no card de horas do
+ * detalhe. Hoje é a decisão de leitura do projeto: qualquer autenticado lê. O `actors` saiu das
+ * dependências porque a leitura não consulta membership nem líder/criador.
  */
 export interface GetProjectVolunteersDependencies {
   memberships: ProjectManagementMembershipPort
-  actors: ProjectActorsPort
   hours: ProjectHoursPort
 }
 
@@ -22,14 +23,7 @@ export class GetProjectVolunteersUseCase {
   constructor(private readonly dependencies: GetProjectVolunteersDependencies) {}
 
   async execute(query: GetProjectVolunteersQuery) {
-    const canViewAll = hasPermission(query.actorRoles, "MANAGE_PROJECTS")
-    const canManageProject = await resolveCanActorManageProject(
-      { memberships: this.dependencies.memberships, actors: this.dependencies.actors },
-      query.projectId,
-      query.actorId,
-    )
-
-    if (!canViewAll && !canManageProject) {
+    if (!canActorAccessProjectDecision(query.actorId)) {
       throw new ForbiddenError("Acesso negado ao projeto")
     }
 

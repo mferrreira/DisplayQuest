@@ -90,6 +90,104 @@ describe("G4 roundtrip — user-management (isolated test DB)", () => {
     const basicMine = basic.find((row) => row.id === userId);
     expect(basicMine).toBeDefined();
     expect(basicMine).not.toHaveProperty("email");
+    // V5-3 (DEC-137): a capa chega na MESMA lista que o avatar, porque é o pódio do ranking que a
+    // renderiza — sem isto a tela teria que chamar uma rota por pessoa.
+    expect(basicMine).toHaveProperty("bannerKey", null);
+  });
+
+  it("capa do perfil: a coluna guarda a CHAVE do bucket, e o roundtrip roda sem bucket no ar", async () => {
+    // DEC-133/137: o módulo guarda registro + autorização; quem move byte é a rota pelo seam. É por
+    // isso que este roundtrip de Prisma real não precisa de SeaweedFS no ar.
+    const owner = userActor(userId, ["VOLUNTARIO"]);
+    const key = `users/${userId}/images/banner/g4-roundtrip.png`;
+
+    const written = await userModule.updateUserImage({ actor: owner, userId, slot: "banner", blobKey: key });
+    expect(written.previousKey).toBeNull();
+    expect(written.user.bannerKey).toBe(key);
+    expect(written.user).not.toHaveProperty("password");
+
+    const row = await prisma.users.findUnique({ where: { id: userId } });
+    expect(row?.bannerKey).toBe(key);
+
+    // Leitura é do autenticado: outra pessoa lê a chave (DEC-127/136).
+    const read = await userModule.getUserImage({ actor: userActor(1, ["VOLUNTARIO"]), userId, slot: "banner" });
+    expect(read).toEqual({ slot: "banner", blobKey: key });
+
+    // Trocar/tirar devolve a chave ANTERIOR — é ela que a rota remove do bucket.
+    const cleared = await userModule.updateUserImage({ actor: managerActor, userId, slot: "banner", blobKey: null });
+    expect(cleared.previousKey).toBe(key);
+    expect(cleared.user.bannerKey).toBeNull();
+    expect((await prisma.users.findUnique({ where: { id: userId } }))?.bannerKey).toBeNull();
+
+    // Slot sem capa responde com o 404 do domínio, não um objeto vazio.
+    await expect(userModule.getUserImage({ actor: owner, userId, slot: "banner" })).rejects.toThrow(
+      "Imagem não encontrada",
+    );
+  });
+
+  it("dados de pessoa (DEC-138): normalização persiste na coluna, e o CPF só chega a quem tem direito", async () => {
+    const owner = userActor(userId, ["VOLUNTARIO"]);
+
+    const written = (await userModule.updateUserProfile(owner, userId, {
+      cpf: "529.982.247-25",
+      registrationNumber: "  G4-2026  ",
+      course: "Sistemas de Informação",
+      scholarshipType: "PIBIC Jr",
+      fundingAgency: "OUTRA",
+      fundingAgencyOther: "FAPEMIG",
+      level: "Pós-graduação",
+    })) as {
+      cpf: string | null;
+      registrationNumber: string | null;
+      course: string | null;
+      scholarshipType: string | null;
+      fundingAgency: string | null;
+      fundingAgencyOther: string | null;
+      level: string | null;
+    };
+
+    expect(written.cpf).toBe("52998224725");
+    expect(written.scholarshipType).toBe("PIBIC_JR");
+    expect(written.level).toBe("POS_GRADUACAO");
+
+    // Prisma real: o que está na coluna é o token normalizado, não a grafia que chegou.
+    const row = await prisma.users.findUnique({ where: { id: userId } });
+    expect(row?.cpf).toBe("52998224725");
+    expect(row?.registrationNumber).toBe("G4-2026");
+    expect(row?.course).toBe("Sistemas de Informação");
+    expect(row?.fundingAgency).toBe("OUTRA");
+    expect(row?.fundingAgencyOther).toBe("FAPEMIG");
+
+    // Leitura de um usuário: a própria pessoa lê o próprio CPF.
+    const selfRead = (await userModule.findUserById(owner, userId)) as { cpf?: string | null } | null;
+    expect(selfRead?.cpf).toBe("52998224725");
+
+    // Lista: quem não gerencia contas vê os campos abertos e NÃO vê o CPF.
+    const basic = (await userModule.listUsersForActor({ actor: userActor(1, ["VOLUNTARIO"]) })) as Array<
+      Record<string, unknown>
+    >;
+    const basicMine = basic.find((r) => r.id === userId);
+    expect(basicMine?.course).toBe("Sistemas de Informação");
+    expect(basicMine).not.toHaveProperty("cpf");
+
+    // Lista: a gestão vê o CPF, porque é ali que o painel o edita.
+    const full = (await userModule.listUsersForActor({ actor: managerActor })) as Array<
+      Record<string, unknown>
+    >;
+    expect(full.find((r) => r.id === userId)?.cpf).toBe("52998224725");
+
+    // Trocar o fomento para uma agência nomeada apaga o texto livre (o formulário não tem os dois).
+    const switched = (await userModule.updateUserProfile(owner, userId, {
+      fundingAgency: "CNPQ",
+    })) as { fundingAgency: string | null; fundingAgencyOther: string | null };
+    expect(switched.fundingAgencyOther).toBeNull();
+    expect((await prisma.users.findUnique({ where: { id: userId } }))?.fundingAgencyOther).toBeNull();
+
+    // CPF inválido não chega ao banco.
+    await expect(
+      userModule.updateUserProfile(owner, userId, { cpf: "529.982.247-26" })
+    ).rejects.toThrow("CPF inválido");
+    expect((await prisma.users.findUnique({ where: { id: userId } }))?.cpf).toBe("52998224725");
   });
 
   it("points/roles/hours/status mutations persist and project the public shape", async () => {

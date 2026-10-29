@@ -40,7 +40,9 @@ describe("RBAC maps", () => {
   });
 
   it("MANAGE_REWARDS includes GERENTE (E6 reward-role-drift tripwire)", () => {
-    expect(FEATURE_ACCESS.MANAGE_REWARDS).toContain("GERENTE");
+    // V6-2 (AC-V6-34): a chave vive só em PERMISSIONS (autoridade backend) — o tripwire
+    // acompanha a matriz onde a chave mora.
+    expect(PERMISSIONS.MANAGE_REWARDS).toContain("GERENTE");
     expect(hasPermission(["GERENTE"], "MANAGE_REWARDS")).toBe(true);
   });
 });

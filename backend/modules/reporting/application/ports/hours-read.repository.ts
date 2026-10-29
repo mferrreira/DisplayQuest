@@ -23,6 +23,7 @@ export interface AggregateSessionRow {
   userId: number
   userName: string
   startTime: Date
+  originalStartTime: Date | null
   endTime: Date | null
   duration: number | null
   activity: string | null
@@ -36,7 +37,7 @@ export interface AggregateDailyLogRow {
   date: Date
   user: { name: string } | null
   project: { name: string } | null
-  workSession: { startTime: Date; endTime: Date | null } | null
+  workSession: { startTime: Date; originalStartTime: Date | null; endTime: Date | null } | null
 }
 
 export interface HoursReadRepository {

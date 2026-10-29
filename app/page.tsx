@@ -19,7 +19,7 @@ export default function Home() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <h1 className="text-3xl font-bold mb-4 text-center">Sistema de Gerenciamento de Tarefas</h1>
+        <h1 className="text-3xl font-bold mb-4 text-center">DisplayQuest</h1>
         <p className="text-muted-foreground text-center">Redirecionando...</p>
       </div>
     </main>

@@ -1,8 +1,17 @@
 import { AwardFromTaskCompletionUseCase } from "@/backend/modules/gamification/application/use-cases/award-from-task-completion.use-case"
+import { AwardFromActivityCompletionUseCase } from "@/backend/modules/gamification/application/use-cases/award-from-activity-completion.use-case"
 import { AwardFromWorkSessionUseCase } from "@/backend/modules/gamification/application/use-cases/award-from-work-session.use-case"
 import { AssertCanManageUserBadgesUseCase } from "@/backend/modules/gamification/application/use-cases/assert-can-manage-user-badges.use-case"
+import { CloseBoardMonthUseCase } from "@/backend/modules/gamification/application/use-cases/close-board-month.use-case"
 import { EvaluateUserBadgesUseCase } from "@/backend/modules/gamification/application/use-cases/evaluate-user-badges.use-case"
 import { GetUserProgressionUseCase } from "@/backend/modules/gamification/application/use-cases/get-user-progression.use-case"
+import {
+  ListClosedBoardMonthsUseCase,
+  ReadBoardMonthHistoryUseCase,
+} from "@/backend/modules/gamification/application/use-cases/read-board-month-history.use-case"
+import { ReadBoardMonthUseCase } from "@/backend/modules/gamification/application/use-cases/read-board-month.use-case"
+import { ReadUserBoardMonthsUseCase } from "@/backend/modules/gamification/application/use-cases/read-user-board-months.use-case"
+import { AdjustMonthPointsUseCase } from "@/backend/modules/gamification/application/use-cases/adjust-month-points.use-case"
 import { ReadUserProgressionUseCase } from "@/backend/modules/gamification/application/use-cases/read-user-progression.use-case"
 import {
   AwardBadgeUseCase,
@@ -16,11 +25,13 @@ import {
   UpdateBadgeUseCase,
 } from "@/backend/modules/gamification/application/use-cases/badge-management.use-cases"
 import type { BadgeCatalogPort } from "@/backend/modules/gamification/application/ports/badge-catalog.port"
+import type { BoardMonthClosePort } from "@/backend/modules/gamification/application/ports/board-month-close.port"
 import type { GamificationAwardHistoryPort } from "@/backend/modules/gamification/application/ports/gamification-award-history.port"
 import type { GamificationUsersPort } from "@/backend/modules/gamification/application/ports/gamification-users.port"
 import type { UserBadgePort } from "@/backend/modules/gamification/application/ports/user-badge.port"
 import type { UserStatsPort } from "@/backend/modules/gamification/application/ports/user-stats.port"
 import { createPrismaBadgeCatalogPort } from "@/backend/modules/gamification/infrastructure/repositories/prisma-badge-catalog.port"
+import { createPrismaBoardMonthClosePort } from "@/backend/modules/gamification/infrastructure/repositories/prisma-board-month-close.port"
 import { createPrismaGamificationAwardHistoryPort } from "@/backend/modules/gamification/infrastructure/repositories/prisma-gamification-award-history.port"
 import { createPrismaGamificationUsersPort } from "@/backend/modules/gamification/infrastructure/repositories/prisma-gamification-users.port"
 import { createPrismaUserBadgePort } from "@/backend/modules/gamification/infrastructure/repositories/prisma-user-badge.port"
@@ -42,6 +53,8 @@ type UseCaseExecute<T> = T extends { execute: (...args: infer A) => infer R } ? 
 export class GamificationModule {
   readonly awardFromWorkSession: UseCaseExecute<AwardFromWorkSessionUseCase>
   readonly awardFromTaskCompletion: UseCaseExecute<AwardFromTaskCompletionUseCase>
+  /** V5-7b (DEC-63/104): o crédito da parcela de prêmio de atividade aprovada. */
+  readonly awardFromActivityCompletion: UseCaseExecute<AwardFromActivityCompletionUseCase>
   readonly getUserProgression: UseCaseExecute<GetUserProgressionUseCase>
   readonly evaluateUserBadges: UseCaseExecute<EvaluateUserBadgesUseCase>
   readonly listBadges: UseCaseExecute<ListBadgesUseCase>
@@ -57,10 +70,34 @@ export class GamificationModule {
   readonly assertCanManageUserBadges: UseCaseExecute<AssertCanManageUserBadgesUseCase>
   /** D4/B6-2c: self-or-manage sobre a progressão; o lookup sem ator continua em `getUserProgression`. */
   readonly readUserProgression: UseCaseExecute<ReadUserProgressionUseCase>
+  /** plan-v9 S01: qual mes o quadro esta usando e com que trilha (R4). */
+  readonly readBoardMonth: UseCaseExecute<ReadBoardMonthUseCase>
+  /**
+   * plan-v9 S02 (R5, R6, CA2): fecha o mes civil anterior, grava as linhas do quadro e zera o
+   * placar do mes. Dois donos, a familia do DEC-54: `POST /api/board/close` (gestao) e o cron
+   * `0 0 1 * *`, que passa `systemActor("MONTH_CLOSE")`.
+   */
+  readonly closeBoardMonth: UseCaseExecute<CloseBoardMonthUseCase>
+  /**
+   * plan-v9 S03 (R12, CA4, CA8): o quadro congelado de um mes fechado, e o aviso de mes vazio.
+   * Sem gate de proposito: o quadro e leitura de quem esta autenticado, como o quadro vivo de hoje
+   * (DEC-136), e reordenar na leitura mudaria a historia do mes.
+   */
+  readonly readBoardMonthHistory: UseCaseExecute<ReadBoardMonthHistoryUseCase>
+  /** S03: os meses que ja fecharam, para o seletor da tela saber o que existe abrir. */
+  readonly listClosedBoardMonths: UseCaseExecute<ListClosedBoardMonthsUseCase>
+  /** S04 (DEC-232): os meses fechados de uma pessoa, para o perfil listar o historico dela. */
+  readonly readUserBoardMonths: UseCaseExecute<ReadUserBoardMonthsUseCase>
+  /**
+   * plan-v9 S05 (DEC-228): ajuste do placar do mes CORRENTE com a linha de auditoria. Sem
+   * chamador de sistema: a rotina de fechamento e o closeBoardMonth; o ajuste e acao de gestao.
+   */
+  readonly adjustMonthPoints: UseCaseExecute<AdjustMonthPointsUseCase>
 
   constructor(
     private readonly awardFromWorkSessionUseCase: AwardFromWorkSessionUseCase,
     private readonly awardFromTaskCompletionUseCase: AwardFromTaskCompletionUseCase,
+    private readonly awardFromActivityCompletionUseCase: AwardFromActivityCompletionUseCase,
     private readonly getUserProgressionUseCase: GetUserProgressionUseCase,
     private readonly evaluateUserBadgesUseCase: EvaluateUserBadgesUseCase,
     private readonly listBadgesUseCase: ListBadgesUseCase,
@@ -74,9 +111,16 @@ export class GamificationModule {
     private readonly removeUserBadgeUseCase: RemoveUserBadgeUseCase,
     private readonly assertCanManageUserBadgesUseCase: AssertCanManageUserBadgesUseCase,
     private readonly readUserProgressionUseCase: ReadUserProgressionUseCase,
+    private readonly readBoardMonthUseCase: ReadBoardMonthUseCase,
+    private readonly closeBoardMonthUseCase: CloseBoardMonthUseCase,
+    private readonly readBoardMonthHistoryUseCase: ReadBoardMonthHistoryUseCase,
+    private readonly listClosedBoardMonthsUseCase: ListClosedBoardMonthsUseCase,
+    private readonly readUserBoardMonthsUseCase: ReadUserBoardMonthsUseCase,
+    private readonly adjustMonthPointsUseCase: AdjustMonthPointsUseCase,
   ) {
     this.awardFromWorkSession = this.awardFromWorkSessionUseCase.execute.bind(this.awardFromWorkSessionUseCase)
     this.awardFromTaskCompletion = this.awardFromTaskCompletionUseCase.execute.bind(this.awardFromTaskCompletionUseCase)
+    this.awardFromActivityCompletion = this.awardFromActivityCompletionUseCase.execute.bind(this.awardFromActivityCompletionUseCase)
     this.getUserProgression = this.getUserProgressionUseCase.execute.bind(this.getUserProgressionUseCase)
     this.evaluateUserBadges = this.evaluateUserBadgesUseCase.execute.bind(this.evaluateUserBadgesUseCase)
     this.listBadges = this.listBadgesUseCase.execute.bind(this.listBadgesUseCase)
@@ -90,6 +134,12 @@ export class GamificationModule {
     this.removeUserBadge = this.removeUserBadgeUseCase.execute.bind(this.removeUserBadgeUseCase)
     this.assertCanManageUserBadges = this.assertCanManageUserBadgesUseCase.execute.bind(this.assertCanManageUserBadgesUseCase)
     this.readUserProgression = this.readUserProgressionUseCase.execute.bind(this.readUserProgressionUseCase)
+    this.readBoardMonth = this.readBoardMonthUseCase.execute.bind(this.readBoardMonthUseCase)
+    this.closeBoardMonth = this.closeBoardMonthUseCase.execute.bind(this.closeBoardMonthUseCase)
+    this.readBoardMonthHistory = this.readBoardMonthHistoryUseCase.execute.bind(this.readBoardMonthHistoryUseCase)
+    this.listClosedBoardMonths = this.listClosedBoardMonthsUseCase.execute.bind(this.listClosedBoardMonthsUseCase)
+    this.readUserBoardMonths = this.readUserBoardMonthsUseCase.execute.bind(this.readUserBoardMonthsUseCase)
+    this.adjustMonthPoints = this.adjustMonthPointsUseCase.execute.bind(this.adjustMonthPointsUseCase)
   }
 }
 
@@ -99,6 +149,8 @@ export interface GamificationModulePorts {
   badges: BadgeCatalogPort
   userBadges: UserBadgePort
   stats: UserStatsPort
+  /** plan-v9 S02: leitura do registro de mes e escrita do fechamento (ADR-002). */
+  monthClose: BoardMonthClosePort
 }
 
 export interface GamificationModuleFactoryOptions {
@@ -112,6 +164,7 @@ export function createGamificationModule(options: GamificationModuleFactoryOptio
     badges: options.ports?.badges ?? createPrismaBadgeCatalogPort(),
     userBadges: options.ports?.userBadges ?? createPrismaUserBadgePort(),
     stats: options.ports?.stats ?? createPrismaUserStatsPort(),
+    monthClose: options.ports?.monthClose ?? createPrismaBoardMonthClosePort(),
   }
 
   const progression = new GetUserProgressionUseCase({ users: ports.users })
@@ -133,6 +186,11 @@ export function createGamificationModule(options: GamificationModuleFactoryOptio
       progression,
       evaluateUserBadges,
     }),
+    new AwardFromActivityCompletionUseCase({
+      awardHistory: ports.awardHistory,
+      progression,
+      evaluateUserBadges,
+    }),
     progression,
     evaluateUserBadges,
     new ListBadgesUseCase(ports.badges),
@@ -146,5 +204,11 @@ export function createGamificationModule(options: GamificationModuleFactoryOptio
     new RemoveUserBadgeUseCase(ports.userBadges),
     new AssertCanManageUserBadgesUseCase(),
     new ReadUserProgressionUseCase(progression),
+    new ReadBoardMonthUseCase(),
+    new CloseBoardMonthUseCase(ports.monthClose),
+    new ReadBoardMonthHistoryUseCase(ports.monthClose),
+    new ListClosedBoardMonthsUseCase(ports.monthClose),
+    new ReadUserBoardMonthsUseCase(ports.monthClose),
+    new AdjustMonthPointsUseCase(ports.users),
   )
 }

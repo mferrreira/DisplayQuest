@@ -66,7 +66,9 @@ export function ManageWorkSessionsDialog({ open, onOpenChange, users, sessions, 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[85vh] overflow-y-auto">
+      {/* O DialogContent base traz `sm:overflow-hidden`; sem o override no breakpoint, ele
+          vencia o `overflow-y-auto` e a lista de sessões ficava cortada sem rolagem. */}
+      <DialogContent className="max-w-5xl max-h-[85vh] overflow-y-auto sm:overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Gerenciar sessões (ativas e pausadas)</DialogTitle>
           <DialogDescription>

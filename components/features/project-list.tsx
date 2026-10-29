@@ -8,32 +8,26 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ProjectDialog } from "./project-dialog"
-import { Plus, Edit, Trash2, Calendar, Eye } from "lucide-react"
-import type { Project } from "@/contexts/types"
+import { Plus, Edit, Trash2, Calendar, Eye, ArrowUpRight } from "lucide-react"
+import type { Project, Task } from "@/contexts/types"
 import { hasAccess } from "@/lib/utils/utils"
-
-const statusColors = {
-  active: "bg-green-100 text-green-800 dark:bg-success/15 dark:text-green-300",
-  completed: "bg-blue-100 text-blue-800 dark:bg-info/15 dark:text-blue-300",
-  archived: "bg-gray-100 text-gray-800 dark:bg-muted/50 dark:text-gray-200",
-}
-
-const statusLabels = {
-  active: "Ativo",
-  completed: "Concluído",
-  archived: "Arquivado",
-}
+import { projectStatusBadgeClass, projectStatusLabel } from "@/components/ui/status"
+import { projectProgress } from "@/features/projects/utils/project-progress"
+import { civilDayOfInstant } from "@/backend/domain"
 
 interface ProjectListProps {
   onProjectSelect?: (project: Project) => void
   projects?: Project[]
+  tasks?: Task[]
+  showCreateButton?: boolean
 }
 
-export function ProjectList({ onProjectSelect, projects: providedProjects }: ProjectListProps) {
+export function ProjectList({ onProjectSelect, projects: providedProjects, tasks = [], showCreateButton = true }: ProjectListProps) {
   const { user } = useAuth()
   const { projects: contextProjects, deleteProject, loading } = useProject()
   const { users } = useUser()
   const projects = providedProjects ?? contextProjects
+  const today = civilDayOfInstant(new Date())
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
 
@@ -83,20 +77,12 @@ export function ProjectList({ onProjectSelect, projects: providedProjects }: Pro
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Projetos</h2>
-          <p className="text-muted-foreground">
-            Gerencie os projetos do laboratório
-          </p>
-        </div>
-        {user && hasAccess(user?.roles || [], 'MANAGE_PROJECTS') && (
+      {showCreateButton && user && hasAccess(user?.roles || [], 'MANAGE_PROJECTS') && (
           <Button onClick={handleCreateNew}>
             <Plus className="mr-2 h-4 w-4" />
             Novo Projeto
           </Button>
-        )}
-      </div>
+      )}
 
       {projects.length === 0 ? (
         <Card>
@@ -109,7 +95,7 @@ export function ProjectList({ onProjectSelect, projects: providedProjects }: Pro
                 : "Comece criando seu primeiro projeto para organizar as atividades do laboratório."
               }
             </p>
-            {user && hasAccess(user?.roles || [], 'MANAGE_PROJECTS') && (
+            {showCreateButton && user && hasAccess(user?.roles || [], 'MANAGE_PROJECTS') && (
               <Button onClick={handleCreateNew}>
                 <Plus className="mr-2 h-4 w-4" />
                 Criar Primeiro Projeto
@@ -118,40 +104,48 @@ export function ProjectList({ onProjectSelect, projects: providedProjects }: Pro
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="space-y-3">
           {projects.map((project) => (
-            <Card key={project.id} className="hover:shadow-md transition-shadow">
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <CardTitle className="text-lg">{project.name}</CardTitle>
-                    <CardDescription>
-                      Criado em {new Date(project.createdAt).toLocaleDateString("pt-BR")}
-                    </CardDescription>
+            <Card key={project.id} className="transition-colors hover:border-primary/40">
+              <CardContent className="grid gap-4 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:p-5">
+                <div className="min-w-0 space-y-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <CardTitle className="text-base">{project.name}</CardTitle>
+                    <Badge className={projectStatusBadgeClass[project.status]}>{projectStatusLabel[project.status]}</Badge>
                   </div>
-                  <Badge className={statusColors[project.status as keyof typeof statusColors]}>
-                    {statusLabels[project.status as keyof typeof statusLabels]}
-                  </Badge>
+                  {project.description && <CardDescription className="line-clamp-2">{project.description}</CardDescription>}
+                  {(() => {
+                    const progress = projectProgress(project, tasks, today)
+                    return (
+                      <div className="space-y-1.5" aria-label={`Progresso de ${project.name}`}>
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                          <span>{progress.source === "time" ? "Andamento temporal" : progress.detail}</span><span>{progress.percent}%</span>
+                        </div>
+                        <div className="h-1.5 overflow-hidden rounded-full bg-muted" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress.percent} aria-label={`Progresso de ${project.name}`}>
+                          <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${progress.percent}%` }} />
+                        </div>
+                      </div>
+                    )
+                  })()}
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                    <span>Criado por {users.find(u => u.id === project.createdBy)?.name || project.createdBy}</span>
+                    <span>Criado em {new Date(project.createdAt).toLocaleDateString("pt-BR")}</span>
+                    {project.startDate && <span>Início: {new Date(`${project.startDate}T00:00:00`).toLocaleDateString("pt-BR")}</span>}
+                    {project.endDate && <span>Término: {new Date(`${project.endDate}T00:00:00`).toLocaleDateString("pt-BR")}</span>}
+                  </div>
+                  {project.links?.filter(link => link?.url && link?.label).length ? (
+                    <div className="flex flex-wrap gap-3 text-sm">
+                      {project.links.filter(link => link?.url && link?.label).map((link, index) => <a className="inline-flex items-center gap-1 text-primary hover:underline" key={index} href={link.url} target="_blank" rel="noopener noreferrer">{link.label}<ArrowUpRight className="h-3 w-3" /></a>)}
+                    </div>
+                  ) : null}
                 </div>
-              </CardHeader>
-              <CardContent>
-                {project.description && (
-                  <p className="text-sm text-muted-foreground mb-4 line-clamp-3">
-                    {project.description}
-                  </p>
-                )}
-
-                <div className="flex justify-between items-center">
-                  <div className="text-xs text-muted-foreground">
-                    Criado por: {users.find(u => u.id === project.createdBy)?.name || project.createdBy}
-                  </div>
-
-                  <div className="flex space-x-2">
+                <div className="flex items-center gap-2 sm:justify-end">
                     {onProjectSelect && (
                       <Button
                         type="button"
                         variant="outline"
                         size="sm"
+                        aria-label={`Ver projeto ${project.name}`}
                         onClick={() => onProjectSelect(project)}
                       >
                         <Eye className="h-3 w-3" />
@@ -162,6 +156,7 @@ export function ProjectList({ onProjectSelect, projects: providedProjects }: Pro
                         <Button
                           variant="outline"
                           size="sm"
+                          aria-label={`Editar projeto ${project.name}`}
                           onClick={() => handleEdit(project)}
                         >
                           <Edit className="h-3 w-3" />
@@ -169,38 +164,14 @@ export function ProjectList({ onProjectSelect, projects: providedProjects }: Pro
                         <Button
                           variant="outline"
                           size="sm"
+                          aria-label={`Excluir projeto ${project.name}`}
                           onClick={() => handleDelete(project.id)}
                         >
                           <Trash2 className="h-3 w-3" />
                         </Button>
                       </>
                     )}
-                  </div>
                 </div>
-
-                {project.links &&
-                  <div>
-                    <hr className="border-t border-gray-300 dark:border-border m-4" />
-                    <h3 className="mt-2 align-middle text-center m-2">Links</h3>
-                    <div className="flex flex-row gap-4 m-4">
-                      {project.links.filter(l => l?.url && l?.label).length > 0
-                        ? project.links
-                          .filter(l => l?.url && l?.label)
-                          .map((l, i) => (
-                            <div className="w-auto h-auto p-4 bg-secondary rounded-md" key={i}>
-                              <a href={l.url} target="_blank" rel="noopener noreferrer">
-                                {l.label}
-                              </a>
-                            </div>
-                          ))
-                        : <div>
-                          <p>Não há links cadastrados nesse projeto.</p>
-                        </div>
-                      }
-                    </div>
-                  </div>
-                }
-
               </CardContent>
             </Card>
           ))}

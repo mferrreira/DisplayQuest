@@ -30,8 +30,16 @@ const REPOSITORY_PATH = path.join(
 /**
  * FKs do schema que apontam para `users`.
  *
- * Uma relação é BLOQUEANTE quando o `@relation` para `users` não declara `onDelete: Cascade` —
- * o default do Prisma é `Restrict`, então ausência de `onDelete` conta como bloqueio.
+ * Uma relação é BLOQUEANTE quando o `@relation` para `users` não declara como a exclusão da
+ * pessoa resolve a linha: `onDelete: Cascade` apaga a linha e `onDelete: SetNull` desliga a
+ * referência. Os dois deixam o `users.delete` funcionar. O default do Prisma é `Restrict`, então
+ * ausência de `onDelete` conta como bloqueio.
+ *
+ * `SetNull` entrou no V5-5 (DEC-155) nas três relações do cronograma com pessoa: a atividade é
+ * dado do projeto, e uma linha de cronograma não pode virar motivo de 409 na exclusão de um
+ * usuário nem desaparecer junto com ele. Contar SetNull como bloqueio faria o repositório procurar
+ * dependência que não bloqueia nada. No V5-10a (DEC-170) entrou a quarta: `certificates.generatedBy`
+ * — quem emitiu o atestado não é dono da conta dele.
  */
 function blockingRelationsInSchema(): Set<string> {
   const schema = readFileSync(SCHEMA_PATH, "utf8");
@@ -49,8 +57,10 @@ function blockingRelationsInSchema(): Set<string> {
 
       const fields = line.match(/fields:\s*\[([^\]]*)\]/);
       if (!fields) continue;
-      const isCascade = /onDelete:\s*Cascade/.test(line);
-      if (isCascade) continue;
+      // Cascade apaga a linha; SetNull desliga a referência. Os dois resolvem sem bloquear a
+      // exclusão da pessoa — só `Restrict` (o default, sem `onDelete`) bloqueia.
+      const resolvesWithoutBlocking = /onDelete:\s*(Cascade|SetNull)/.test(line);
+      if (resolvesWithoutBlocking) continue;
 
       for (const field of fields[1].split(",").map((f) => f.trim()).filter(Boolean)) {
         found.add(`${modelName}.${field}`);
@@ -88,9 +98,13 @@ describe("guarda de deriva — as FKs que bloqueiam excluir usuário (DEC-55)", 
   const inSchema = blockingRelationsInSchema();
   const counted = countedRelationsInRepository();
 
-  it("o schema tem as 16 FKs RESTRICT para users que a medição de 2026-10-05 contou", () => {
+  it("o schema tem as 18 FKs RESTRICT para users que a medição contou", () => {
     // Fixa o tamanho da lista: se o número mudar, alguém mexeu no schema e o repositório precisa
     // acompanhar — é exatamente o aviso que este teste existe para dar.
+    // 16 desde 2026-10-05; a 17ª entrou no V5-2c (`project_attachments.uploadedBy`, DEC-61/101):
+    // o anexo é dado do projeto, então apagar quem o subiu continua bloqueado, como o autor de
+    // relatório. A 18ª entrou no V5-7a (`project_activity_files.uploadedBy`, DEC-134/162): a
+    // prova da atividade é dado do projeto, não de quem a subiu.
     expect([...inSchema].sort()).toEqual(
       [
         "badges.createdBy",
@@ -100,6 +114,8 @@ describe("guarda de deriva — as FKs que bloqueiam excluir usuário (DEC-55)", 
         "issues.reporterId",
         "lab_events.userId",
         "lab_responsibilities.userId",
+        "project_activity_files.uploadedBy",
+        "project_attachments.uploadedBy",
         "project_reports.authorId",
         "projects.createdBy",
         "projects.leaderId",
@@ -133,6 +149,13 @@ describe("guarda de deriva — as FKs que bloqueiam excluir usuário (DEC-55)", 
       "work_sessions",
       "weekly_hours_history",
       "notifications",
+      // V5-10a (DEC-170): o atestado é documento regenerável — apagar a pessoa apaga o
+      // atestado dela, e a conta não fica bloqueada por ele.
+      "certificates",
+      // plan-v9 S02 (DEC-225, ADR-003): a linha do mês fechado sai com a conta, como o histórico
+      // semanal de horas. Se alguém trocar o `onDelete` para o default `Restrict`, a coluna entra
+      // em `inSchema` sem entrar na contagem do repositório — e o teste de cima falha nomeando-a.
+      "month_history",
     ]);
     for (const model of cascading) {
       for (const rel of counted) {
@@ -142,5 +165,41 @@ describe("guarda de deriva — as FKs que bloqueiam excluir usuário (DEC-55)", 
     // `user_badges.userId` é cascade, mas `user_badges.earnedBy` não é: as duas coexistem.
     expect(counted.has("user_badges.earnedBy")).toBe(true);
     expect(counted.has("user_badges.userId")).toBe(false);
+  });
+
+  it("FK `onDelete: SetNull` do cronograma não bloqueia e não é contada (DEC-155)", () => {
+    // As três relações do cronograma com pessoa existem no schema e resolvem por SetNull: a
+    // linha sobrevive sem responsável. Se alguém trocar uma delas para o default `Restrict`, ela
+    // entra em `inSchema` sem entrar em `countBlockingDependencies` — e o teste de cima ("toda FK
+    // bloqueante é contada") falha nomeando a coluna, que é o aviso certo.
+    const schema = readFileSync(SCHEMA_PATH, "utf8");
+    const nullifying = new Set<string>();
+    for (const chunk of schema.split("\nmodel ")) {
+      const modelName = chunk.split("\n")[0].trim().replace(/\s*\{.*$/, "");
+      if (!modelName || modelName === "users") continue;
+      for (const line of chunk.split("\n")) {
+        if (!/^\s*\w+\s+users\??\s+@relation/.test(line)) continue;
+        if (!/onDelete:\s*SetNull/.test(line)) continue;
+        for (const field of (line.match(/fields:\s*\[([^\]]*)\]/)?.[1] ?? "")
+          .split(",")
+          .map((entry) => entry.trim())
+          .filter(Boolean)) {
+          nullifying.add(`${modelName}.${field}`);
+        }
+      }
+    }
+
+    expect([...nullifying].sort()).toEqual(
+      [
+        "certificates.generatedBy",
+        "project_activities.approvedBy",
+        "project_activities.requestedBy",
+        "project_activities.responsibleId",
+      ].sort(),
+    );
+    for (const rel of nullifying) {
+      expect(inSchema.has(rel), rel).toBe(false);
+      expect(counted.has(rel), rel).toBe(false);
+    }
   });
 });

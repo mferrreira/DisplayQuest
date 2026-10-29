@@ -18,10 +18,28 @@ model users {
   weekHours            Float                  @default(0)
   createdAt            DateTime               @default(now())
   currentWeekHours     Float                  @default(0)
+  // plan-v9 (ADR-001, DEC-224): placar do mes em curso. E o numero que o Quadro de Lideranca
+  // ordena e que zera no fechamento de mes. `points` continua o saldo: loja, badges e ajuste do
+  // painel nao mudam de significado neste plano.
+  currentMonthPoints   Int                    @default(0)
   roles                UserRole[]
   avatar               String?
+  bannerKey            String?
   bio                  String?
   profileVisibility    ProfileVisibility      @default(public)
+  // V5-4a (DEC-138): os dados de pessoa que os dois formulários oficiais pedem. Vivem na
+  // PESSOA, não no vínculo — decisão do dono em 2026-10-13. Escrita: o próprio OU quem gerencia
+  // contas (o gate do perfil). Leitura: `cpf` é o único restrito (próprio OU MANAGE_USERS); os
+  // demais seguem a leitura aberta do perfil. Vocabulários fechados em
+  // backend/domain/identity/person-data-rules.ts, derivados dos campos medidos no AcroForm
+  // (nivel_*, is_pibic/is_pibiti/is_btp..., is_cnpq/is_fapemig/is_outra + agencia_outra).
+  cpf                String?
+  registrationNumber String?
+  course             String?
+  scholarshipType    String?
+  fundingAgency      String?
+  fundingAgencyOther String?
+  level              String?
   createdBadges        badges[]               @relation("UserCreatedBadges")
   daily_logs           daily_logs[]           @relation("UserDailyLogs")
   history              history[]              @relation("UserHistory")
@@ -41,10 +59,27 @@ model users {
   badges               user_badges[]          @relation("UserBadges")
   schedules            user_schedules[]       @relation("UserSchedules")
   weekly_hours_history weekly_hours_history[] @relation("UserWeeklyHoursHistory")
+  // plan-v9 S02 (DEC-225): os meses fechados desta pessoa. Cascade, como o historico semanal de
+  // horas — excluir a conta apaga as linhas dela (ADR-003).
+  monthHistory         month_history[]          @relation("UserMonthHistory")
   weekly_reports       weekly_reports[]       @relation("UserWeeklyReports")
   work_sessions        work_sessions[]        @relation("UserWorkSessions")
   notifications        notifications[]        @relation("UserNotifications")
   projectReports       project_reports[]      @relation("ProjectReportAuthor")
+  // V5-2c: quem subiu um anexo do projeto. RESTRICT (sem onDelete) — ver o comentário no
+  // model `project_attachments`; a guarda user-delete-schema-drift.test.ts confere os dois lados.
+  projectAttachments   project_attachments[]  @relation("ProjectAttachmentUploader")
+  uploadedActivityFiles project_activity_files[] @relation("ActivityFileUploader")
+  // V5-5: as três relações do cronograma com pessoa são `SetNull` (ver o comentário no model
+  // `project_activities`): excluir uma pessoa não apaga cronograma nem bloqueia a exclusão.
+  activityResponsibilities   project_activities[] @relation("ActivityResponsible")
+  activityCompletionRequests project_activities[] @relation("ActivityCompletionRequester")
+  activityCompletionApprovals project_activities[] @relation("ActivityCompletionApprover")
+  // V5-10 (DEC-170): atestado é documento GERADO sobre o vínculo — `userId` Cascade (não
+  // bloqueia excluir conta; o PDF é regenerável a partir dos dados) e `generatedBy` SetNull
+  // (auditoria). Nenhum dos dois entra na guarda de FKs bloqueantes.
+  certificatesAsMember  certificates[] @relation("CertificateMember")
+  certificatesGenerated certificates[] @relation("CertificateGenerator")
 }
 
 model projects {
@@ -56,6 +91,21 @@ model projects {
   leaderId    Int?
   status      String
   links       Json?
+  // V5-2b (DEC-61/63). Datas civis `YYYY-MM-DD` — mesma decisão de `createdAt`/`dueDate`,
+  // que já são String: a aritmética do plano é de dias civis (backend/domain/time/civil-day).
+  // `points` é o saldo do projeto (DEC-63), escrito só por use case de economia (DEC-74, piso 0).
+  startDate     String?
+  endDate       String?
+  editalNumber  String?
+  processNumber String?
+  points        Int      @default(0)
+  // V5-4a (DEC-140): o nº PROPPI aparece nos dois formulários oficiais e é dado do projeto,
+  // não da pessoa nem do vínculo.
+  proppiNumber  String?
+  // V5-2d (DEC-102): chave do objeto no bucket, nunca um caminho de disco (regra 12 do plano).
+  // Uma coluna por slot: "uma logo por projeto" é estrutural, não regra a validar.
+  logoKey       String?
+  bannerKey     String?
   daily_logs  daily_logs[]      @relation("ProjectDailyLogs")
   members     project_members[] @relation("ProjectMemberships")
   creator     users             @relation("UserProjects", fields: [createdBy], references: [id])
@@ -63,16 +113,137 @@ model projects {
   tasks       tasks[]           @relation("ProjectTasks")
   work_sessions work_sessions[] @relation("WorkSessionProject")
   project_reports project_reports[] @relation("ProjectReports")
+  technical_reports technical_reports[] @relation("ProjectTechnicalReports")
+  certificates      certificates[]      @relation("ProjectCertificates")
+  deliverables project_deliverables[] @relation("ProjectDeliverables")
+  attachments  project_attachments[]   @relation("ProjectAttachments")
+  goals        project_goals[]         @relation("ProjectGoals")
+  activities   project_activities[]    @relation("ProjectActivities")
+}
+
+// V5-2c (DEC-61/63): entregável é (nome, quantidade) — a lista do que o projeto entrega.
+// Sem FK para users: entregável não tem responsável próprio (mesma escolha de task_subtasks).
+model project_deliverables {
+  id        Int      @id @default(autoincrement())
+  projectId Int
+  name      String
+  quantity  Int      @default(1)
+  createdAt DateTime @default(now())
+  project   projects @relation("ProjectDeliverables", fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+}
+
+// V5-2c (DEC-101): o binário mora no bucket (`blobKey` é a chave), nunca em disco do backend.
+// `uploadedBy` é RESTRICT de propósito, como `project_reports.authorId`: o anexo é dado do
+// projeto, não de quem subiu — excluir o usuário não pode apagar o que o projeto entregou.
+model project_attachments {
+  id          Int      @id @default(autoincrement())
+  projectId   Int
+  blobKey     String   @unique
+  name        String
+  contentType String
+  size        Int
+  uploadedBy  Int
+  uploadedAt  DateTime @default(now())
+  project     projects @relation("ProjectAttachments", fields: [projectId], references: [id], onDelete: Cascade)
+  uploader    users    @relation("ProjectAttachmentUploader", fields: [uploadedBy], references: [id])
+
+  @@index([projectId])
+}
+
+// V5-5 (DEC-61/103/126/151/156): as metas do projeto — os OBJETIVOS ESPECÍFICOS da brochura
+// (seção 5) e os ENTREGÁVEIS quantitativos (seção 10) existem nela, e os dois têm forma
+// diferente: texto puro, ou número + texto. `target` é nulo quando a meta é só texto.
+model project_goals {
+  id          Int      @id @default(autoincrement())
+  projectId   Int
+  order       Int
+  target      Int?
+  description String
+  createdAt   DateTime @default(now())
+  project     projects @relation("ProjectGoals", fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+}
+
+// V5-5: a linha do cronograma. Na brochura é "Etapa N | Descrição da Atividade | Total em
+// Meses"; no sistema (DEC-126) é uma linha da grade meses × atividades, e o total é a contagem
+// das marcas. `firstMonth`/`lastMonth` chegam porque a linha é contígua por decisão — o conjunto
+// de meses é derivado deles, nunca guardado. O período (primeiro dia do primeiro mês ao último
+// dia do último) é derivado na regra, não armazenado.
+model project_activities {
+  id                Int       @id @default(autoincrement())
+  projectId         Int
+  order             Int
+  description       String
+  // `SetNull`, não o default `Restrict`: a atividade é dado do projeto, e excluir uma pessoa não
+  // pode apagar o cronograma nem transformar um responsável em motivo de 409 na exclusão de
+  // usuário (DEC-55). A linha sobrevive sem responsável.
+  responsibleId     Int?
+  firstMonth        String
+  lastMonth         String
+  // DEC-76: duas fases. O formulário não escreve status — só o fluxo de solicitar/aprovar (V5-7).
+  status            String    @default("OPEN")
+  requestedBy       Int?
+  requestedAt       DateTime?
+  approvedBy        Int?
+  approvedAt        DateTime?
+  // DEC-64: uma notificação de atraso por atividade, não uma por dia.
+  overdueNotifiedAt DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  project     projects @relation("ProjectActivities", fields: [projectId], references: [id], onDelete: Cascade)
+  responsible users?   @relation("ActivityResponsible", fields: [responsibleId], references: [id], onDelete: SetNull)
+  requestedByUser users? @relation("ActivityCompletionRequester", fields: [requestedBy], references: [id], onDelete: SetNull)
+  approvedByUser  users? @relation("ActivityCompletionApprover", fields: [approvedBy], references: [id], onDelete: SetNull)
+  // V5-6 (DEC-99): as tasks da etapa. A leitura do cronograma não inclui tasks (o painel não
+  // lista tarefa por linha); quem conta é o fluxo de solicitar conclusão (V5-7).
+  tasks       tasks[]  @relation("ActivityTasks")
+  // V5-7a (DEC-157/162): as provas anexadas para solicitar a conclusão da etapa.
+  files       project_activity_files[] @relation("ActivityEvidence")
+
+  @@index([projectId])
+}
+
+// V5-7a (DEC-76/133/157/162): a prova da atividade. Desenho do anexo de projeto (DEC-133): a
+// rota move byte pelo seam, o módulo guarda metadado + autorização. `uploadedBy` é FK
+// bloqueante (default Restrict): prova é dado do projeto, não de quem subiu — mesma razão
+// medida da 17ª FK (DEC-134). Apagar a linha do cronograma apaga as provas (Cascade): a prova
+// existe para aquela etapa; sem etapa, não há o que provar.
+model project_activity_files {
+  id          Int      @id @default(autoincrement())
+  activityId  Int
+  blobKey     String   @unique
+  name        String
+  contentType String
+  size        Int
+  uploadedBy  Int
+  uploadedAt  DateTime @default(now())
+  activity    project_activities @relation("ActivityEvidence", fields: [activityId], references: [id], onDelete: Cascade)
+  uploader    users              @relation("ActivityFileUploader", fields: [uploadedBy], references: [id])
+
+  @@index([activityId])
 }
 
 model project_members {
-  id        Int        @id @default(autoincrement())
-  projectId Int
-  userId    Int
-  joinedAt  DateTime   @default(now())
-  roles     UserRole[]
-  project   projects   @relation("ProjectMemberships", fields: [projectId], references: [id], onDelete: Cascade)
-  user      users      @relation("UserProjectMemberships", fields: [userId], references: [id], onDelete: Cascade)
+  id           Int      @id @default(autoincrement())
+  projectId    Int
+  userId       Int
+  joinedAt     DateTime @default(now())
+  roles        UserRole[]
+  // V5-4b (DEC-69/140/149): dados do vínculo. `cargaHoraria` é a carga contratada, que alimenta
+  // o atestado (carga_8 / carga_20 / carga_adaptada) — não é `users.weekHours`, a meta semanal da
+  // pessoa (DEC-140). `categoria` sai dos dois checkboxes medidos do AcroForm (`is_bolsista`,
+  // `is_voluntario`) e é nula quando não declarada. `situacao` nunca é nula. `dataEntrada` é data
+  // civil `YYYY-MM-DD` (DEC-132), e `joinedAt` continua o instantâneo em que a linha nasceu.
+  lattes       String?
+  cargaHoraria Float?
+  categoria    String?
+  situacao     String   @default("ATIVO")
+  dataEntrada  String?
+  project      projects @relation("ProjectMemberships", fields: [projectId], references: [id], onDelete: Cascade)
+  user         users    @relation("UserProjectMemberships", fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([projectId, userId])
 }
@@ -93,13 +264,20 @@ model tasks {
   isGlobal       Boolean   @default(false)
   groupTaskId    Int?                    // Vincula cópias individuais criadas a partir do mesmo template
   createdBy      Int?
+  // V5-6 (DEC-99): a linha do cronograma a que a tarefa pertence. `SetNull`, não o default
+  // `Restrict`: apagar uma etapa do cronograma não apaga tarefa nenhuma (DEC-156), e a tarefa
+  // sobrevive sem vínculo. A checagem de projeto é do use case, não da FK.
+  activityId     Int?
   creator        users?    @relation("UserCreatedTasks", fields: [createdBy], references: [id])
   assignee       users?    @relation("UserTasks", fields: [assignedTo], references: [id])
   projectObj     projects? @relation("ProjectTasks", fields: [projectId], references: [id])
+  activityObj    project_activities? @relation("ActivityTasks", fields: [activityId], references: [id], onDelete: SetNull)
   assignees      task_assignees[] @relation("TaskAssignees")
   workSessions   work_session_tasks[] @relation("TaskWorkSessions")
   taskProgress   task_user_progress[] @relation("TaskUserProgress")
   subtasks       task_subtasks[]      @relation("TaskSubtasks")
+
+  @@index([activityId])
 }
 
 model task_assignees {
@@ -228,6 +406,48 @@ model project_reports {
   @@index([projectId, periodType])
 }
 
+// V5-9 (DEC-70/139/167): relatório técnico por projeto × tipo — um registro editável por
+// par, sem FK para atividade e sem dono pessoa (DEC-139: o texto é um só; o DOCX é gerado
+// N vezes, um por membro). `content` é o texto editável (rascunho de IA ou humano); os
+// arquivos gerados vivem no bucket com chave derivada, não em coluna.
+model technical_reports {
+  id        Int      @id @default(autoincrement())
+  projectId Int
+  type      String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  project   projects @relation("ProjectTechnicalReports", fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, type])
+  @@map("technical_reports")
+}
+
+// V5-10 (DEC-75/170/171): atestado de frequência — um por projeto × membro × mês de
+// referência. Sem status próprio (DEC-75: o status do projeto cobre). A linha é o registro;
+// o PDF mora no bucket com chave DERIVADA (`projects/<id>/certificates/<userId>/<month>.pdf`)
+// — regenerar sobrescreve o objeto, como a capa do projeto (DEC-135) e o DOCX (DEC-167).
+// `userId` Cascade e `generatedBy` SetNull: atestado é documento gerado, não dado-fonte;
+// nenhum dos dois bloqueia excluir conta (ver o comentário no model `users`).
+model certificates {
+  id          Int      @id @default(autoincrement())
+  projectId   Int
+  userId      Int
+  month       String
+  blobKey     String
+  fileName    String
+  generatedBy Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project   projects @relation("ProjectCertificates", fields: [projectId], references: [id], onDelete: Cascade)
+  member    users    @relation("CertificateMember", fields: [userId], references: [id], onDelete: Cascade)
+  generator users?   @relation("CertificateGenerator", fields: [generatedBy], references: [id], onDelete: SetNull)
+
+  @@unique([projectId, userId, month])
+  @@map("certificates")
+}
+
 model report_attachments {
   id         Int             @id @default(autoincrement())
   reportId   Int
@@ -286,6 +506,9 @@ model work_sessions {
   userId    Int
   userName  String
   startTime DateTime    @default(now())
+  // DEC-233: startTime is the current active stretch; this is the immutable first start.
+  // Historical rows stay null because resume may already have overwritten startTime.
+  originalStartTime DateTime?
   endTime   DateTime?
   duration  Float?
   activity  String?
@@ -339,6 +562,60 @@ model weekly_hours_history {
   totalHours Float
   createdAt  DateTime @default(now())
   user       users    @relation("UserWeeklyHoursHistory", fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// plan-v9 S02 (ADR-002, DEC-224): o registro de que um mes do Quadro de Lideranca fechou.
+//
+// Uma linha por (month, track): e o que faz "run repetida nao muda nada" (R6) ser verdade mesmo
+// quando o mes fecha sem nenhuma pessoa ativa. A trilha e nomeada para o fechamento de uma trilha
+// futura (XP de temporada, moeda) entrar nesta mesma colecao sem tabela nova (ADR-002).
+model board_month_closes {
+  id          Int             @id @default(autoincrement())
+  // AAAA-MM do mes civil do laboratorio (America/Sao_Paulo), derivado em backend/domain/time.
+  month       String
+  // Vocabulario de backend/domain/gamification/board-tracks.ts. Nenhum outro lugar declara lista.
+  track       String
+  // O periodo que a linha declara, em instantes do fuso do laboratorio: 00:00 do dia 1 ate
+  // 23:59:59.999 do ultimo dia. Mes de 28, 29, 30 ou 31 dias sai do calendario, nao de um 30 fixo.
+  periodStart DateTime
+  periodEnd   DateTime
+  closedAt    DateTime
+  // Auditoria de quem disparou a run: "USER:<id>" (rota de gestao) ou "SYSTEM:MONTH_CLOSE" (cron).
+  triggeredBy String
+  peopleCount Int
+  createdAt   DateTime        @default(now())
+  history     month_history[]
+
+  @@unique([month, track])
+  @@index([month])
+}
+
+// plan-v9 S02 (MODELO §6, CA1, CA6, CA7, DEC-226): o estado do quadro no ultimo dia do mes, por
+// pessoa. Toda pessoa `active` na run tem linha, inclusive com valor zero; quem esta fora de
+// `active` nao tem. `userName` e congelado aqui para a linha continuar legivel se o nome mudar.
+model month_history {
+  id          Int      @id @default(autoincrement())
+  closeId     Int
+  userId      Int
+  userName    String
+  month       String
+  track       String
+  // Pode ser negativo (CA6, R10): o placar do mes e guardado como estava no ultimo dia.
+  value       Int
+  // 1-based, sem buraco. Desempate congelado em backend/domain/gamification/month-close-rules.ts.
+  position    Int
+  periodStart DateTime
+  periodEnd   DateTime
+  closedAt    DateTime
+  createdAt   DateTime @default(now())
+
+  close board_month_closes @relation(fields: [closeId], references: [id], onDelete: Cascade)
+  // DEC-225 (ADR-003): CASCADE, como `weekly_hours_history`. A linha do mes sai com a conta, e nao
+  // e uma FK bloqueante — a guarda user-delete-schema-drift.test.ts confere os dois lados.
+  user  users              @relation("UserMonthHistory", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, month, track])
+  @@index([month, track, position])
 }
 
 model badges {
@@ -430,6 +707,9 @@ model notifications {
   message   String
   data      String?   // JSON data
   read      Boolean   @default(false)
+  // V5-8 (DEC-64): atraso de atividade é notificação URGENTE — o painel destaca por esta
+  // coluna, não pelo `type`. Toda notificação existente nasce `false` (default).
+  priority  Boolean   @default(false)
   createdAt DateTime  @default(now())
   readAt    DateTime?
   

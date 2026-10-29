@@ -5,8 +5,9 @@
  * `task.toJSON()`. A data-only interface therefore is NOT the same shape the ports expose
  * today, and AGENT.md §5 forbids changing the shape of what a consumer reads. `Task` here is
  * therefore the DATA plus the serialisation the adapters already rely on; `ITask` stays the
- * plain input shape. `toJSON(): any` mirrors `backend/models/Task.ts` verbatim — OND4-B2/B4
- * replace it with a real read model instead of quietly widening the contract further.
+ * plain input shape. `toJSON(): any` mirrored `backend/models/Task.ts` verbatim (the file was
+ * removed in D-2/DEC-142) — OND4-B2/B4 built the real read model (`serializeTask`, in
+ * task-rules.ts) instead of quietly widening the contract further.
  */
 import type { TaskStatus } from "./TaskStatus";
 import type { TaskVisibility } from "./TaskVisibility";
@@ -32,6 +33,13 @@ export interface ITask {
   isGlobal?: boolean;
   groupTaskId?: number | null;
   createdBy?: number | null;
+  /**
+   * V5-6 (DEC-99) — a linha do cronograma a que a tarefa pertence (Atividade → Tasks). É coluna
+   * do banco (`tasks.activityId`), com FK `SetNull`: apagar a etapa não apaga a tarefa. Quem
+   * valida a ligação (existe, mesmo projeto, não é quest global) é o use case, pela
+   * `TaskActivitiesPort`.
+   */
+  activityId?: number | null;
   /**
    * plan-v4 · V4-4 — as subtasks da tarefa (DEC-78). É um read model, não uma coluna: o
    * adaptador Prisma escreve `tasks` sem tocar aqui (ver `toRow` em

@@ -1,4 +1,4 @@
-import type { Role, UserRole } from "@/backend/domain"
+import type { MemberProfileFields, Role, UserRole } from "@/backend/domain"
 
 export interface ListProjectMembersQuery {
   projectId: number
@@ -36,7 +36,20 @@ export interface AssignProjectLeaderCommand {
   targetUserId: number | null
 }
 
-export interface ProjectMemberView {
+/**
+ * V5-4b (DEC-149): editar os dados do vínculo. A chave é o `membershipId` — o vínculo, não a
+ * pessoa — porque um mesmo usuário pode ter vínculos em projetos diferentes e o corpo é parcial:
+ * chave ausente não apaga dado.
+ */
+export interface UpdateProjectMemberProfileCommand {
+  projectId: number
+  actorUserId: number
+  actorRoles: Role[]
+  membershipId: number
+  data: Record<string, unknown>
+}
+
+export interface ProjectMemberView extends MemberProfileFields {
   id: number
   userId: number
   userName: string | null
@@ -47,7 +60,7 @@ export interface ProjectMemberView {
   currentWeekHours: number
 }
 
-export interface CreatedProjectMemberView {
+export interface CreatedProjectMemberView extends MemberProfileFields {
   id: number
   userId: number
   userName: string | null

@@ -27,3 +27,4 @@ export * from "./gamification";
 export * from "./project";
 export * from "./lab";
 export * from "./store";
+export * from "./attestation";

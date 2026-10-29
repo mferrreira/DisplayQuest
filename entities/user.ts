@@ -41,9 +41,24 @@ export const userSchema = z.object({
   weekHours: z.number(),
   createdAt: dateTimeString.optional(), // not always sent by list endpoints
   currentWeekHours: z.number().optional(), // not always sent by list endpoints
+  /** plan-v9 (ADR-001, DEC-224): placar do mes em curso — o numero que o quadro ordena. */
+  currentMonthPoints: z.number().int().optional(),
   roles: z.array(userRoleSchema),
   avatar: z.string().nullable().optional(),
+  /** V5-3 (DEC-137): chave da capa do perfil no bucket. O binário sai por rota autenticada. */
+  bannerKey: z.string().nullable().optional(),
   bio: z.string().nullable().optional(),
   profileVisibility: profileVisibilitySchema.default("public"),
+  /**
+   * V5-4a (DEC-138): dados de pessoa. Todos opcionais — o parse não pode quebrar contra uma
+   * instância ainda sem a migration, e o CPF não chega na lista de usuários (leitura restrita).
+   */
+  cpf: z.string().nullable().optional(),
+  registrationNumber: z.string().nullable().optional(),
+  course: z.string().nullable().optional(),
+  scholarshipType: z.string().nullable().optional(),
+  fundingAgency: z.string().nullable().optional(),
+  fundingAgencyOther: z.string().nullable().optional(),
+  level: z.string().nullable().optional(),
 });
 export type User = z.infer<typeof userSchema>;

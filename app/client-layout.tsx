@@ -9,11 +9,14 @@ import { ResponsibilityProvider } from "@/contexts/responsibility-context"
 import { SessionProvider } from "next-auth/react"
 import { NuqsAdapter } from "nuqs/adapters/next/app"
 import { AppHeader } from "@/components/layout/app-header"
-import { FloatingSessionTimer } from "@/components/ui/floating-session-timer"
+import { AppSidebar } from "@/components/layout/app-sidebar"
+import { AppFooter } from "@/components/layout/app-footer"
 import { QueryProvider } from "@/shared/providers/query-provider"
 import { Toaster } from "@/components/ui/sonner"
 import { NotificationSound } from "@/components/ui/notification-sound"
 import { usePathname } from "next/navigation"
+import { useCallback, useState } from "react"
+import { useSidebarOutsideClick } from "@/components/layout/use-sidebar-outside-click"
 import type { Session } from "next-auth"
 
 function DashboardProviders({ children }: { children: React.ReactNode }) {
@@ -38,9 +41,12 @@ function DashboardProviders({ children }: { children: React.ReactNode }) {
 
 function LayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  // A Home nasce com a largura toda disponível; a navegação abre por cima do conteúdo.
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const closeSidebar = useCallback(() => setSidebarOpen(false), [])
+  useSidebarOutsideClick(sidebarOpen, closeSidebar)
   const isDashboardRoute = pathname.startsWith("/dashboard")
-  // Print/PDF route: hide the floating session timer so its fixed button
-  // doesn't render mid-content in the exported PDF (scoped to this route only).
+  // Print/PDF route: hide the session timer in the header on exported PDFs.
   const isPrintRoute = /^\/dashboard\/.*\/print$/.test(pathname)
 
   if (!isDashboardRoute) {
@@ -53,9 +59,21 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
           painel é montado duas vezes no cabeçalho (versão de mesa e versão compacta) e o
           som tocaria em dobro. */}
       <NotificationSound />
-      <AppHeader />
-      {!isPrintRoute && <FloatingSessionTimer />}
-      {children}
+      <AppHeader
+        sidebarOpen={sidebarOpen}
+        onToggleSidebar={() => setSidebarOpen((open) => !open)}
+        showSessionTimer={!isPrintRoute}
+      />
+      {/* Refinamento V6-3: sidebar fixa sobre o conteúdo, fora do fluxo para não reduzir
+          a largura do quadro. Em telas estreitas, a navegação segue no Sheet; o cronômetro
+          de sessão mora no header. */}
+      <div className="flex min-h-[calc(100vh-4rem)]">
+        <AppSidebar open={sidebarOpen} />
+        <div className="min-w-0 flex-1">
+          {children}
+        </div>
+      </div>
+      <AppFooter />
     </DashboardProviders>
   )
 }

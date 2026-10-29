@@ -34,8 +34,8 @@ interface AggregateReport {
     content: string
     attachments: Attachment[]
   }
-  logs: Array<{ id: number; userName: string | null; date: string; startTime: string | null; endTime: string | null; note: string | null }>
-  sessions: Array<{ id: number; userName: string; startTime: string; endTime: string | null; durationHours: number | null; activity: string | null }>
+  logs: Array<{ id: number; userName: string | null; date: string; startTime: string | null; activeStartTime: string | null; endTime: string | null; note: string | null }>
+  sessions: Array<{ id: number; userName: string; startTime: string | null; activeStartTime: string; endTime: string | null; durationHours: number | null; activity: string | null }>
   totals: { logCount: number; sessionCount: number; totalHours: number }
 }
 
@@ -155,6 +155,11 @@ export function ProjectReportDetailDialog({
             {data.sessions.length > 0 && (
               <div>
                 <div className="mb-2 text-sm font-medium">Sessões de trabalho na janela</div>
+                {data.sessions.some((session) => session.startTime === null) && (
+                  <p className="mb-2 text-sm text-amber-800" role="status">
+                    Há sessões cujo início original não pode ser recuperado. O horário do trecho ativo aparece separado.
+                  </p>
+                )}
                 <ScrollArea className="max-h-60 rounded-md border p-2">
                   <ul className="text-sm space-y-3">
                     {groupByPerson(data.sessions, displayMode).map((section) => (
@@ -164,7 +169,10 @@ export function ProjectReportDetailDialog({
                           {section.items.map((session) => (
                             <li key={session.id} className="flex items-center gap-2 flex-wrap">
                               {displayMode !== "grouped" && <Badge variant="outline">{session.userName}</Badge>}
-                              <span className="text-xs text-muted-foreground">{fmt(session.startTime)}</span>
+                              <span className="text-xs text-muted-foreground">
+                                Início original: {session.startTime ? fmt(session.startTime) : "indisponível"}
+                              </span>
+                              <span className="text-xs text-muted-foreground">Trecho: {fmt(session.activeStartTime)}</span>
                               {session.endTime && (
                                 <span className="text-xs text-muted-foreground">→ {fmt(session.endTime)}</span>
                               )}

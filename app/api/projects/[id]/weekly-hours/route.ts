@@ -4,8 +4,8 @@ import { requireApiActor } from "@/lib/auth/api-guard"
 import { getBackendComposition } from "@/backend/composition/root"
 import { domainErrorResponse } from "@/lib/api/domain-error-response"
 // OND7-B4 (R4): DomainErrors mapeados por domainErrorResponse; 500 preservado p/ desconhecidos.
+// V5-2a (DEC-127): leitura de horas semanais do projeto é do autenticado; o gate de acesso saiu.
 const { reporting: reportingModule } = getBackendComposition()
-const { projectManagement: projectManagementModule } = getBackendComposition()
 export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const auth = await requireApiActor()
@@ -22,15 +22,6 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
 
     if (!weekStart) {
       return NextResponse.json({ error: "weekStart é obrigatório" }, { status: 400 })
-    }
-
-    const allowed = await projectManagementModule.canActorAccessProject(
-      projectId,
-      auth.actor.id,
-      auth.actor.roles,
-    )
-    if (!allowed) {
-      return NextResponse.json({ error: "Acesso negado ao projeto" }, { status: 403 })
     }
 
     const hours = await reportingModule.getProjectWeeklyHours(projectId, weekStart)

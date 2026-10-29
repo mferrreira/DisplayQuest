@@ -198,6 +198,19 @@ const rules = [
     to: { path: [LAYER.prisma, "^lib/database/prisma"].join("|") },
   },
 
+  // RG-11 (plan-v7, DEC-190): the MCP package is a consumer of the HTTP API. It never
+  // imports the app, the backend, the ORM or lib — it talks to the running instance.
+  {
+    name: "rg11-mcp-no-app",
+    severity: "error",
+    comment:
+      "plan-v7: mcp/** is an HTTP consumer — it must not import app/, backend/, lib/, Prisma or Next.",
+    from: { path: "^mcp/", pathNot: exemptImporters("rg11-mcp-no-app") },
+    to: {
+      path: [LAYER.prisma, LAYER.next, LAYER.lib, LAYER.outward, "^backend/", "^app/"].join("|"),
+    },
+  },
+
   // RG-05 is a permission, not a prohibition: backend/composition may reach anything.
 ];
 

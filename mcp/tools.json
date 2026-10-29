@@ -1,0 +1,1122 @@
+{
+  "name": "displayquest-mcp",
+  "version": "0.1.0",
+  "protocolVersion": "2026-07-28",
+  "endpoint": "http://<host>:8787/mcp",
+  "transport": "streamable-http",
+  "clientAuth": {
+    "mode": "none",
+    "scope": "LAN only"
+  },
+  "tools": [
+    {
+      "name": "people_list",
+      "title": "Listar pessoas",
+      "description": "Lista as pessoas visíveis ao ator com id, nome, papéis, status, avatar, capa e meta semanal. Não devolve CPF.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      },
+      "returns": "users: lista de pessoas; count: total.",
+      "errors": [
+        401,
+        403
+      ]
+    },
+    {
+      "name": "people_statistics",
+      "title": "Estatísticas de pessoas",
+      "description": "Contagens e estatísticas de usuários. Exige MANAGE_USERS. type: roles, status ou general.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "roles",
+              "status",
+              "general"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      },
+      "returns": "statistics: bloco devolvido pelo app (formato varia com o tipo).",
+      "errors": [
+        401,
+        403
+      ]
+    },
+    {
+      "name": "leaderboard_get",
+      "title": "Quadro mensal",
+      "description": "Lê o quadro do mês corrente quando month é omitido ou vazio, e o fechamento de um mês nomeado. live indica que o mês ainda usa o placar atual.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "month": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+              },
+              {
+                "type": "string",
+                "const": ""
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      },
+      "returns": "Resposta de GET /api/board: mês, rótulo, live, estado do fechamento, entries e aviso; o mês corrente também inclui closedMonths.",
+      "errors": [
+        400,
+        401
+      ]
+    },
+    {
+      "name": "project_list",
+      "title": "Listar projetos",
+      "description": "Lista todos os projetos visíveis ao autenticado.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      },
+      "returns": "projects: lista de projetos; count: total.",
+      "errors": [
+        401
+      ]
+    },
+    {
+      "name": "project_get",
+      "title": "Obter projeto",
+      "description": "Devolve o registro do projeto.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "projectId"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      },
+      "returns": "project: registro do projeto.",
+      "errors": [
+        401,
+        404
+      ]
+    },
+    {
+      "name": "project_overview",
+      "title": "Visão geral do projeto",
+      "description": "Compõe projeto, membros, entregáveis, atividades, tarefas, horas e relatórios técnicos numa chamada. Cada seção opcional que falhar vira um item em warnings; o projeto é o pivô e falha a tool inteira.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "sections": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "members",
+                "deliverables",
+                "activities",
+                "tasks",
+                "hours",
+                "technicalReports",
+                "stats"
+              ]
+            }
+          }
+        },
+        "required": [
+          "projectId"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      },
+      "returns": "project + as seções pedidas (members, deliverables, activities, tasks, hours, technicalReports, stats) + warnings.",
+      "errors": [
+        401,
+        404
+      ]
+    },
+    {
+      "name": "member_performance",
+      "title": "Desempenho de uma pessoa",
+      "description": "Pessoa, tarefas concluídas, pontos, horas, sessões, relatórios e posição no ranking. weekStart/weekEnd recortam só horas e relatórios: sessões e tarefas não aceitam filtro de data.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "projectId": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "weekStart": {
+            "type": "string"
+          },
+          "weekEnd": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "userId"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      },
+      "returns": "user, tasks, completedTasks, points, hours, sessions, weeklyReports, rankingPosition e warnings.",
+      "errors": [
+        401,
+        403
+      ]
+    },
+    {
+      "name": "task_list",
+      "title": "Listar tarefas",
+      "description": "Tarefas visíveis ao ator, opcionalmente de um projeto. Pode vir com subtasks vazias quando a autoridade não permite vê-las.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      },
+      "returns": "tasks: lista de tarefas; count: total.",
+      "errors": [
+        400,
+        401
+      ]
+    },
+    {
+      "name": "global_progress_get",
+      "title": "Progresso global das tarefas",
+      "description": "Progresso das tarefas globais. Exige MANAGE_USERS.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      },
+      "returns": "globalTasks: lista com contagens e taxas por pessoa.",
+      "errors": [
+        401,
+        403
+      ]
+    },
+    {
+      "name": "hours_get",
+      "title": "Horas do projeto",
+      "description": "Horas agregadas do projeto, com recorte opcional por semana.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "weekStart": {
+            "type": "string"
+          },
+          "weekEnd": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "projectId"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      },
+      "returns": "hours: totalHours, sessionCount, hoursByUser e sessions.",
+      "errors": [
+        401,
+        404
+      ]
+    },
+    {
+      "name": "work_sessions_list",
+      "title": "Listar sessões de trabalho",
+      "description": "Sessões no escopo do ator: gestor vê todas, usuário comum vê as próprias. Filtros de pessoa, projeto e status.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "projectId": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "paused",
+              "completed"
+            ]
+          },
+          "active": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      },
+      "returns": "sessions: lista de sessões; count: total.",
+      "errors": [
+        401,
+        403
+      ]
+    },
+    {
+      "name": "weekly_hours_history_get",
+      "title": "Histórico semanal de horas",
+      "description": "Histórico semanal de horas ou estatísticas quando stats=true. Exige MANAGE_USERS no bloco de estatísticas.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "weekStart": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "stats": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      },
+      "returns": "stats quando stats=true; senão history.",
+      "errors": [
+        401,
+        403
+      ]
+    },
+    {
+      "name": "laboratory_schedule_get",
+      "title": "Horários do laboratório",
+      "description": "Horários do laboratório.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      },
+      "returns": "schedules: lista de horários; count: total.",
+      "errors": [
+        401
+      ]
+    },
+    {
+      "name": "weekly_report_list",
+      "title": "Listar relatórios semanais",
+      "description": "Relatórios semanais, com filtros de pessoa e período.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "weekStart": {
+            "type": "string"
+          },
+          "weekEnd": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      },
+      "returns": "weeklyReports: lista de relatórios; count: total.",
+      "errors": [
+        401,
+        403
+      ]
+    },
+    {
+      "name": "technical_report_list",
+      "title": "Listar relatórios técnicos",
+      "description": "Relatórios técnicos do projeto, um por tipo.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "projectId"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      },
+      "returns": "reports: lista de relatórios; count: total.",
+      "errors": [
+        400,
+        401,
+        404
+      ]
+    },
+    {
+      "name": "project_create",
+      "title": "Criar projeto",
+      "description": "Cria o projeto e, opcionalmente, o cronograma inicial. A conta de serviço vira gerente do projeto criado.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "completed",
+              "archived"
+            ]
+          },
+          "leaderId": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "label": {
+                  "type": "string"
+                },
+                "url": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "label",
+                "url"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "startDate": {
+            "type": "string"
+          },
+          "endDate": {
+            "type": "string"
+          },
+          "editalNumber": {
+            "type": "string"
+          },
+          "processNumber": {
+            "type": "string"
+          },
+          "proppiNumber": {
+            "type": "string"
+          },
+          "volunteerIds": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+            }
+          },
+          "cronograma": {
+            "type": "object",
+            "properties": {
+              "goals": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "description": {
+                      "type": "string"
+                    },
+                    "target": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "description"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "activities": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "description": {
+                      "type": "string"
+                    },
+                    "firstMonth": {
+                      "type": "string"
+                    },
+                    "lastMonth": {
+                      "type": "string"
+                    },
+                    "responsibleId": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "exclusiveMinimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "description",
+                    "firstMonth",
+                    "lastMonth"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false
+      },
+      "returns": "project: projeto criado.",
+      "errors": [
+        400,
+        401,
+        403
+      ]
+    },
+    {
+      "name": "project_update",
+      "title": "Atualizar projeto",
+      "description": "Atualiza campos do projeto. Não aceita points, logoKey nem bannerKey. Chave ausente não apaga.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "completed",
+              "archived"
+            ]
+          },
+          "leaderId": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "label": {
+                  "type": "string"
+                },
+                "url": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "label",
+                "url"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "startDate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "endDate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "editalNumber": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "processNumber": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "proppiNumber": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "projectId"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false
+      },
+      "returns": "project: projeto atualizado.",
+      "errors": [
+        400,
+        401,
+        403,
+        404
+      ]
+    },
+    {
+      "name": "deliverable_create",
+      "title": "Criar entregável",
+      "description": "Cria um entregável do projeto.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "quantity": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "projectId",
+          "name",
+          "quantity"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false
+      },
+      "returns": "deliverable: entregável criado.",
+      "errors": [
+        400,
+        401,
+        403,
+        404
+      ]
+    },
+    {
+      "name": "activity_create",
+      "title": "Criar atividade do cronograma",
+      "description": "Cria uma linha do cronograma no intervalo de meses marcado.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1
+          },
+          "firstMonth": {
+            "type": "string",
+            "minLength": 1
+          },
+          "lastMonth": {
+            "type": "string",
+            "minLength": 1
+          },
+          "responsibleId": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "projectId",
+          "description",
+          "firstMonth",
+          "lastMonth"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false
+      },
+      "returns": "activity: linha criada.",
+      "errors": [
+        400,
+        401,
+        403,
+        404
+      ]
+    },
+    {
+      "name": "activity_update",
+      "title": "Atualizar atividade do cronograma",
+      "description": "Atualiza descrição, responsável e meses da linha. Não muda status.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "activityId": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1
+          },
+          "firstMonth": {
+            "type": "string",
+            "minLength": 1
+          },
+          "lastMonth": {
+            "type": "string",
+            "minLength": 1
+          },
+          "responsibleId": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "projectId",
+          "activityId"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false
+      },
+      "returns": "activity: linha atualizada.",
+      "errors": [
+        400,
+        401,
+        403,
+        404
+      ]
+    },
+    {
+      "name": "weekly_report_generate",
+      "title": "Gerar relatório semanal",
+      "description": "Gera o relatório de uma pessoa para o período. Gate: self ou MANAGE_USERS — o laboratorista não gera para terceiro por esta rota.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "weekStart": {
+            "type": "string",
+            "minLength": 1
+          },
+          "weekEnd": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "userId",
+          "weekStart",
+          "weekEnd"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false
+      },
+      "returns": "weeklyReport: relatório gerado.",
+      "errors": [
+        400,
+        401,
+        403,
+        404
+      ]
+    },
+    {
+      "name": "weekly_report_bulk_generate",
+      "title": "Gerar relatórios em lote",
+      "description": "Gera relatórios para TODOS os usuários ativos nos períodos que cobrem de `from` a `to`. Exige MANAGE_USERS. É a escrita de maior alcance do sistema: use período curto e só no projeto de areia.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "periodType": {
+            "type": "string",
+            "enum": [
+              "weekly",
+              "biweekly",
+              "monthly",
+              "semiannual",
+              "annual"
+            ]
+          },
+          "from": {
+            "type": "string",
+            "minLength": 1
+          },
+          "to": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "periodType",
+          "from",
+          "to"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false
+      },
+      "returns": "result: resumo do lote devolvido pelo app.",
+      "errors": [
+        400,
+        401,
+        403
+      ]
+    },
+    {
+      "name": "technical_report_save",
+      "title": "Salvar texto de relatório técnico",
+      "description": "Salva o texto único do par projeto × tipo. Gate de gestão/líder do projeto.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "parcial",
+              "tecnico-final",
+              "final"
+            ]
+          },
+          "content": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "projectId",
+          "type",
+          "content"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false
+      },
+      "returns": "report: registro salvo.",
+      "errors": [
+        400,
+        401,
+        403,
+        404
+      ]
+    },
+    {
+      "name": "technical_report_generate",
+      "title": "Gerar DOCX do relatório técnico",
+      "description": "Gera um DOCX oficial por membro ativo do projeto e grava no bucket. Responde 503 sem bucket configurado.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "parcial",
+              "tecnico-final",
+              "final"
+            ]
+          }
+        },
+        "required": [
+          "projectId",
+          "type"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false
+      },
+      "returns": "files: userId, memberName, key e fileName por membro.",
+      "errors": [
+        400,
+        401,
+        403,
+        404,
+        503
+      ]
+    },
+    {
+      "name": "technical_report_draft",
+      "title": "Rascunho de relatório técnico",
+      "description": "Devolve rascunho de IA a partir das fontes do projeto. Não salva. 502 se a IA estiver fora.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "parcial",
+              "tecnico-final",
+              "final"
+            ]
+          }
+        },
+        "required": [
+          "projectId",
+          "type"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false
+      },
+      "returns": "draft: texto sugerido.",
+      "errors": [
+        400,
+        401,
+        403,
+        404,
+        502
+      ]
+    }
+  ],
+  "resources": [
+    {
+      "uriTemplate": "dq://projects/{projectId}/technical-reports/{reportId}/file?userId={userId}",
+      "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    }
+  ]
+}

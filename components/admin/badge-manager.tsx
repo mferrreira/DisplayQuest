@@ -55,10 +55,10 @@ const categoryIcons = {
 }
 
 const categoryColors = {
-  achievement: 'bg-yellow-100 dark:bg-warning/15 text-yellow-800 dark:text-yellow-300 border-yellow-200 dark:border-warning/25',
-  milestone: 'bg-blue-100 dark:bg-info/15 text-blue-800 dark:text-blue-300 border-blue-200 dark:border-info/25',
-  special: 'bg-purple-100 dark:bg-purple-500/15 text-purple-800 dark:text-purple-300 border-purple-200 dark:border-purple-500/25',
-  social: 'bg-green-100 dark:bg-success/15 text-green-800 dark:text-green-300 border-green-200 dark:border-success/25'
+  achievement: 'bg-warning/15 text-warning border-warning/25',
+  milestone: 'bg-info/15 text-info border-info/25',
+  special: 'bg-review/15 text-review border-review/25',
+  social: 'bg-success/15 text-success border-success/25'
 }
 
 export function BadgeManager() {
@@ -159,7 +159,7 @@ export function BadgeManager() {
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-info"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-info"></div>
       </div>
     )
   }
@@ -169,8 +169,8 @@ export function BadgeManager() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-foreground">Gerenciar Badges</h2>
-          <p className="text-gray-600 dark:text-muted-foreground">Crie e gerencie badges para motivar os usuários</p>
+          <h2 className="text-2xl font-bold text-foreground">Gerenciar Badges</h2>
+          <p className="text-muted-foreground">Crie e gerencie badges para motivar os usuários</p>
         </div>
         <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
           <DialogTrigger asChild>
@@ -269,7 +269,7 @@ export function BadgeManager() {
               {/* Criteria */}
               <div className="space-y-4">
                 <h3 className="text-lg font-medium">Critérios para Conquistar</h3>
-                <p className="text-sm text-gray-600 dark:text-muted-foreground">
+                <p className="text-sm text-muted-foreground">
                   Defina os critérios que o usuário deve atingir para ganhar este badge
                 </p>
 
@@ -405,12 +405,12 @@ export function BadgeManager() {
               </div>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-gray-600 dark:text-muted-foreground mb-4">{badge.description}</p>
+              <p className="text-sm text-muted-foreground mb-4">{badge.description}</p>
               
               {badge.criteria && (
                 <div className="space-y-2">
-                  <h4 className="text-sm font-medium text-gray-900 dark:text-foreground">Critérios:</h4>
-                  <div className="space-y-1 text-xs text-gray-600 dark:text-muted-foreground">
+                  <h4 className="text-sm font-medium text-foreground">Critérios:</h4>
+                  <div className="space-y-1 text-xs text-muted-foreground">
                     {badge.criteria.points && (
                       <div className="flex items-center space-x-2">
                         <Trophy className="h-3 w-3" />
@@ -447,8 +447,8 @@ export function BadgeManager() {
               
               <div className="flex items-center justify-between mt-4 pt-3 border-t">
                 <div className="flex items-center space-x-2">
-                  <div className={`w-2 h-2 rounded-full ${badge.isActive ? 'bg-green-500 dark:bg-success' : 'bg-gray-400'}`} />
-                  <span className="text-xs text-gray-600 dark:text-muted-foreground">
+                  <div className={`w-2 h-2 rounded-full ${badge.isActive ? 'bg-success' : 'bg-muted-foreground'}`} />
+                  <span className="text-xs text-muted-foreground">
                     {badge.isActive ? 'Ativo' : 'Inativo'}
                   </span>
                 </div>
@@ -460,9 +460,9 @@ export function BadgeManager() {
 
       {badges.length === 0 && (
         <div className="text-center py-12">
-          <Award className="h-12 w-12 text-gray-400 dark:text-muted-foreground/70 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 dark:text-foreground mb-2">Nenhum badge criado</h3>
-          <p className="text-gray-600 dark:text-muted-foreground mb-4">Crie seu primeiro badge para começar a motivar os usuários</p>
+          <Award className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-foreground mb-2">Nenhum badge criado</h3>
+          <p className="text-muted-foreground mb-4">Crie seu primeiro badge para começar a motivar os usuários</p>
           <Button onClick={() => setShowCreateDialog(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Criar Primeiro Badge

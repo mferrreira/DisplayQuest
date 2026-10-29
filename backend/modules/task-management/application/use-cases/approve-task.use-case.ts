@@ -133,6 +133,7 @@ export class ApproveTaskUseCase {
           taskWithAssignees.assignedTo,
           command.taskId,
           pointsToAward,
+          task.projectId ?? null,
         )
         awardedTo = taskWithAssignees.assignedTo
       }

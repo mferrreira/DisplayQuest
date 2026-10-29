@@ -14,6 +14,9 @@ export const notificationSchema = z.object({
   /** Stringified JSON per schema.prisma:408 — use safeNotificationData() to unwrap. */
   data: z.string().nullable().optional(),
   read: z.boolean().default(false),
+  // V5-8 (DEC-64): urgente. `.default` no parse exige a chave no tipo de saída
+  // (lição medida do `subtasks` no V4-4) — todo literal `Notification` precisa dela.
+  priority: z.boolean().default(false),
   createdAt: dateTimeString,
   readAt: nullableDateTimeString.optional(),
 });

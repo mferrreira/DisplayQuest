@@ -6,12 +6,18 @@ O Quadro de Tarefas é a tela inicial do sistema. É onde o trabalho do laborat�
 Vista de coordenador: o quadro mostra todas as tarefas visíveis, de todos os projetos.
 ```
 
+No alto, a saudação ocupa pouco espaço para manter o quadro em destaque. Abaixo das cinco colunas há três áreas de resumo. **Projetos recentes** mostra o andamento temporal de cada projeto (ou a proporção de tarefas concluídas quando faltam datas). **Meta da semana** representa as horas registradas e a meta com uma barra horizontal. **Estatísticas do quadro** reúne a taxa de conclusão e a distribuição das tarefas por status em gráficos compactos. Os projetos recentes abrem o detalhe do projeto ao serem selecionados.
+
+```foto resumo-home titulo="Resumo da Home: projetos, meta semanal e situação das tarefas"
+A barra compara as horas registradas com a meta semanal; os gráficos ao lado resumem conclusão e distribuição por status.
+```
+
 ## As colunas
 
 | Coluna | O que significa |
 | --- | --- |
 | **A Fazer** | tarefa criada, ainda não começada |
-| **Em Andamento** | alguém está trabalhando nela |
+| **Fazendo** | alguém está trabalhando nela |
 | **Em Revisão** | entregue, esperando aprovação |
 | **Ajustes** | a revisão devolveu a tarefa para correção |
 | **Concluído** | aprovada; os pontos foram creditados |
@@ -57,8 +63,15 @@ Na barra acima do quadro:
 
 - **Todos os projetos** — restringe o quadro a um projeto.
 - **Todas as pessoas** — restringe às tarefas de uma pessoa.
+- **Todas as atividades** — restringe às tarefas ligadas a uma linha do cronograma do projeto selecionado. Ele só aparece com um projeto escolhido: atividade é do projeto, e a lista é o cronograma dele. A lista inclui etapas já encerradas — ver as tarefas de uma etapa que já passou é legítimo. Trocar de projeto descarta a atividade escolhida.
 - **Vencimento** — ordena pelo prazo.
 - **Compacto** — encolhe os cartões, para ver mais tarefas na tela.
+
+Com um filtro ativo, a barra ganha **Limpar filtros**, que derruba todos de uma vez.
+
+```foto quadro-filtro-atividade titulo="O quadro filtrado por uma atividade do cronograma"
+O select de projeto mostra *Pesquisa em IA*, o de atividade mostra *1. Coleta de dados*, e o quadro ficou só com o cartão ligado a essa etapa.
+```
 
 ## O que o cartão mostra
 
@@ -75,14 +88,19 @@ Título, projeto, pessoas responsáveis, prazo e prioridade. Além disso:
 1. Clique em **Nova Tarefa** na barra do quadro.
 2. Preencha **Título** e **Descrição**.
 3. Escolha o destino: **Quest Global** (sem projeto, visível para todo o laboratório) ou **Projeto**.
-4. Em **Responsáveis**, defina quem executa. Com mais de uma pessoa escolhida aparece **Modo de atribuição**: **Individual** (cada responsável recebe uma tarefa independente) ou **Compartilhado** (todos compartilham o mesmo estado).
-5. Em **Visibilidade**, escolha **Delegada (responsáveis específicos)**, **Pública (qualquer um pode pegar)** ou **Privada (restrita aos responsáveis)**.
-6. Se a visibilidade for **Delegada** ou **Privada**, o campo **Subtasks** aparece: em cada linha, escreva uma etapa da tarefa — o campo traz o exemplo *Ex.: Revisar a introdução* — e clique no ícone **+** ao lado para incluí-la na lista. Cada etapa listada soma 5 pontos à base da tarefa. O campo não aparece para tarefa **Pública** nem para **Quest Global**, e só existe na criação — depois, a lista se edita no detalhe da tarefa (*Ver, editar e excluir*).
-7. Ajuste **Prazo** e **Prioridade** (**Baixa**, **Média**, **Alta**).
-8. Salve.
+4. Com um projeto escolhido e esse projeto tendo cronograma, aparece **Atividade do cronograma**, abaixo de **Projeto**: a tarefa fica ligada a uma linha do cronograma. A lista traz só a atividade vigente e as futuras, e a vigente vem já escolhida — troque se a tarefa pertence a outra etapa, ou escolha **Sem atividade** para deixá-la sem vínculo. **Quest Global** não tem esse campo. Ao **editar** uma tarefa, a lista traz todas as linhas do projeto: uma tarefa ligada a uma etapa que entretanto terminou continua salvável, com o vínculo intacto.
+5. Em **Responsáveis**, defina quem executa. Com mais de uma pessoa escolhida aparece **Modo de atribuição**: **Individual** (cada responsável recebe uma tarefa independente) ou **Compartilhado** (todos compartilham o mesmo estado).
+6. Em **Visibilidade**, escolha **Delegada (responsáveis específicos)**, **Pública (qualquer um pode pegar)** ou **Privada (restrita aos responsáveis)**.
+7. Se a visibilidade for **Delegada** ou **Privada**, o campo **Subtasks** aparece: em cada linha, escreva uma etapa da tarefa — o campo traz o exemplo *Ex.: Revisar a introdução* — e clique no ícone **+** ao lado para incluí-la na lista. Cada etapa listada soma 5 pontos à base da tarefa. O campo não aparece para tarefa **Pública** nem para **Quest Global**, e só existe na criação — depois, a lista se edita no detalhe da tarefa (*Ver, editar e excluir*).
+8. Ajuste **Prazo** e **Prioridade** (**Baixa**, **Média**, **Alta**).
+9. Salve.
 
 ```foto dialogo-nova-tarefa titulo="O diálogo Nova Tarefa"
 A opção Quest Global aparece apenas para quem tem permissão de gerenciar contas.
+```
+
+```foto dialogo-nova-tarefa-atividade titulo="O campo Atividade do cronograma, com o projeto escolhido"
+Com o projeto *Pesquisa em IA* selecionado, o campo já mostra a etapa vigente — *1. Coleta de dados* — e a dica abaixo explica a lista: *"Só a atividade vigente e as futuras aparecem; a vigente vem pré-selecionada."*
 ```
 
 Limites que o sistema aplica: título com até 200 caracteres, descrição com até 1000 e título de subtask com o mesmo limite de 200 (o campo **Subtasks** limita o texto de cada etapa). A pontuação não é preenchida: a tarefa vale 10 pontos, mais 5 por subtask listada, e quem cria não escolhe o valor.

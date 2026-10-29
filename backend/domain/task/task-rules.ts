@@ -194,8 +194,8 @@ export function isProgressAlreadyCompleted(
 }
 
 /**
- * JSON read model identical to `backend/models/Task.toJSON()` (the shape routes already
- * read — batch 0.4 finding). Kept here so domain-built clones serialize the same way.
+ * JSON read model — the shape frozen from the old `models/Task.toJSON()` (batch 0.4 finding;
+ * that file was removed in D-2/DEC-142). Kept here so domain-built clones serialize the same way.
  */
 export function serializeTask(task: Omit<Task, "toJSON">): any {
   return {
@@ -215,6 +215,9 @@ export function serializeTask(task: Omit<Task, "toJSON">): any {
     isGlobal: task.isGlobal,
     groupTaskId: task.groupTaskId ?? null,
     createdBy: task.createdBy,
+    // V5-6 (DEC-99): a chave da linha do cronograma. O read model não traz a atividade inteira —
+    // quem precisa da linha busca pelo id (GET /api/projects/[id]/cronograma).
+    activityId: task.activityId ?? null,
     // plan-v4 · V4-4: as subtasks fazem parte do read model da tarefa. Sem elas o cartão e o
     // diálogo de detalhe continuariam anunciando 10 pontos numa tarefa que vale 10 + 5·n — o
     // número projetado é calculado no cliente (`features/tasks/utils/move-rules.ts`).
@@ -376,7 +379,8 @@ export function approvalDecision(input: {
 }
 
 // ---------------------------------------------------------------------------
-// New-task record (validation frozen from models/Task.create — same messages)
+// New-task record (validation frozen from the old models/Task.create — same messages; the
+// file was removed in D-2/DEC-142)
 // ---------------------------------------------------------------------------
 
 export interface NewTaskInput {
@@ -394,12 +398,15 @@ export interface NewTaskInput {
   isGlobal?: boolean;
   groupTaskId?: number | null;
   createdBy?: number | null;
+  /** V5-6 (DEC-99): a linha do cronograma. O use case valida antes de chegar aqui. */
+  activityId?: number | null;
   /** plan-v4 · V4-4: subtasks criadas junto com a mãe (D-D). Aceita string ou `{title}`. */
   subtasks?: unknown;
 }
 
 /**
- * Validate + normalize a new task (models/Task.create semantics, ValidationError typed):
+ * Validate + normalize a new task (semantics of the old models/Task.create, ValidationError
+ * typed):
  * title trimmed (required, <=200), description <=1000, points >=0; the quirk
  * `completedAt = now when completed OR status done` (even with completed=false) is frozen.
  */
@@ -433,6 +440,7 @@ export function createTaskRecord(data: NewTaskInput, now: Date): ITask {
     isGlobal: data.isGlobal || false,
     groupTaskId: data.groupTaskId ?? null,
     createdBy: data.createdBy ?? null,
+    activityId: data.activityId ?? null,
     subtasks,
   };
 }

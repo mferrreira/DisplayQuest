@@ -64,6 +64,13 @@ export class AddProjectMemberUseCase {
       userEmail: membership.userEmail,
       roles: membership.roles,
       joinedAt: membership.joinedAt.toISOString(),
+      // V5-4b (DEC-149): o vínculo criado já traz os campos (o adapter devolve o record inteiro,
+      // e `dataEntrada` nasce como o dia civil da criação).
+      lattes: membership.lattes,
+      cargaHoraria: membership.cargaHoraria,
+      categoria: membership.categoria,
+      situacao: membership.situacao,
+      dataEntrada: membership.dataEntrada,
     }
   }
 }

@@ -136,7 +136,7 @@ export function SessionTimerIndicator({
   return (
     <span className="relative flex h-full w-full items-center justify-center">
       {paused ? (
-        <PauseCircle className="h-5 w-5 text-amber-500" data-testid="session-timer-icon-paused" />
+        <PauseCircle className="h-5 w-5 text-warning" data-testid="session-timer-icon-paused" />
       ) : (
         <Clock className="h-5 w-5" data-testid="session-timer-icon-clock" />
       )}
@@ -145,7 +145,7 @@ export function SessionTimerIndicator({
         <span
           data-testid="session-timer-auto-pause-dot"
           aria-hidden="true"
-          className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-amber-500 motion-safe:animate-pulse"
+          className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-warning motion-safe:animate-pulse"
         />
       )}
     </span>

@@ -41,9 +41,13 @@ describe("cron schedule — derivado do domínio (D2)", () => {
 
     expect(scheduled.map((s) => s.expression)).toEqual([
       "0 0 * * 1", // weekly reset (segunda 00:00)
+      "0 0 1 * *", // fechamento do mes do quadro (plan-v9 S02, DEC-224) — dia 1 as 00:00
       "30 9 * * *", // pausa 09:30
       "0 12,15,17 * * *", // pausa 12:00, 15:00 e 17:00
       "59 23 * * *", // sweep noturno anti-farm
+      "0 8 * * *", // varredura de atraso (V5-8, DEC-64) — diária às 08:00
+      "0 9 19 * *", // lembrete de atestados (V5-10b, DEC-72) — dia 19 às 09:00
+      "7 0 * * *", // limpeza do feed de atividade (V6-11k) — diária às 00:07
     ])
     for (const s of scheduled) {
       expect(s.options.timezone).toBe("America/Sao_Paulo")
@@ -55,7 +59,15 @@ describe("cron schedule — derivado do domínio (D2)", () => {
 
     const pauseExpressions = scheduled
       .map((s) => s.expression)
-      .filter((e) => e !== "0 0 * * 1" && e !== "59 23 * * *")
+      .filter(
+        (e) =>
+          e !== "0 0 * * 1" &&
+          e !== "0 0 1 * *" && // fechamento do mes do quadro (plan-v9 S02)
+          e !== "59 23 * * *" &&
+          e !== "0 8 * * *" &&
+          e !== "0 9 19 * *" &&
+          e !== "7 0 * * *",
+      )
 
     const covered = new Set<string>()
     for (const expr of pauseExpressions) {

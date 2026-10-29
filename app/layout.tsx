@@ -16,8 +16,10 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
 const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-jetbrains-mono" })
 
 export const metadata: Metadata = {
-  title: "Sistema de Gerenciamento de Tarefas",
-  description: "Aplicativo de gerenciamento de tarefas com quadro Kanban",
+  // DEC-188: o fallback cita o produto. Titulos por tela vivem no PageHeader (efeito no
+  // cliente); esta string so aparece em rotas sem PageHeader (hoje, o intersticial /).
+  title: "DisplayQuest",
+  description: "Gerenciamento de tarefas, projetos e laboratório do DisplayQuest",
   generator: 'v0.dev'
 }
 

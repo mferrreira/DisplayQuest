@@ -1,13 +1,14 @@
 import { test, expect, type Page } from "@playwright/test";
-import { login, apiSession } from "./helpers";
+import { login, apiSession, CREDENTIALS } from "./helpers";
 
 /**
  * Task-board E2E flows (E2/T2.7 closeout) — REAL backend on the dev server (:3001).
  *
  * Self-contained: the flow creates its own delegated task via the API (page.request shares
  * the logged-in context's cookies), runs it through to-do → in-review → done → adjust, then
- * DELETES it and RESTORES the coordenador's points (PUT /api/users/2 accepts points for
- * MANAGE_USERS holders). afterAll is a safety net for failed mid-flow runs (apiSession login).
+ * DELETES it and RESTORES the session user's points and month score (PATCH /api/users/[id]/points
+ * and /month-points accept the values for MANAGE_USERS holders — COORDENADOR is one).
+ * afterAll is a safety net for failed mid-flow runs (apiSession login).
  * Dev-DB residue: zero.
  *
  * Scenarios per .spec/specs/task-board.feature.md §10:
@@ -20,8 +21,28 @@ import { login, apiSession } from "./helpers";
  */
 
 const TASK_TITLE = "E2E fluxo delegada";
-const COORDENADOR_ID = 2;
 const TASK_POINTS = 10;
+
+/**
+ * O id de quem está na sessão da suíte — e NÃO um id fixo da instância.
+ *
+ * Medido em 2026-10-26: o prune do rollback (dono, 2026-10-26) recriou o banco e o seed
+ * recriou as pessoas. `coordenador@lab.com` era id 2 e passou a id 1. A suíte parou no chip do
+ * prêmio: o fixture entregava a tarefa ao id 2 — OUTRA pessoa —, o prêmio era creditado a ela,
+ * e o badge e o chip seguem o número de quem está logado. Conferido com `git stash`: a baseline
+ * falha igual, sem os cambios da S06.
+ *
+ * O login é contrato da suíte; o id é dado da instância, e dado de instância muda. O id é lido
+ * da própria sessão no primeiro teste (modo serial garante que ele roda antes dos demais).
+ */
+let sessionUserId: number | null = null;
+
+function requireSessionUserId(): number {
+  if (sessionUserId == null) {
+    throw new Error("id da sessão não capturado — o teste 1 ('board renders') captura depois do login");
+  }
+  return sessionUserId;
+}
 
 /* --- OND3-A: fixtures de estouro de coluna (a altura limitada é o que se prova) --- */
 
@@ -56,6 +77,13 @@ async function deleteOverflowTasks(page: Page) {
 
 let createdTaskId: number | null = null;
 let pointsBefore: number | null = null;
+/**
+ * plan-v9 S06 (ADR-007/DEC-229): a pílula do cabeçalho conta o PLACAR DO MÊS, e o fechamento zera
+ * essa trilha. A suíte restaura as duas — o saldo (a loja gasta dele) e o placar do mês (o quadro
+ * ordena dele) — porque o prêmio mexe nas duas (R2) e resíduo na instância do dono é dado que ele
+ * usa de verdade.
+ */
+let monthPointsBefore: number | null = null;
 
 /* --- OND3-C: fixtures de ordenação (3 tarefas com prazo e prioridade discordantes) --- */
 
@@ -77,8 +105,8 @@ async function createFixtureTask(page: Page) {
       description: "Tarefa criada pelo teste E2E — deletada ao final.",
       status: "to-do", // single-create route does not default it (D-19)
       taskVisibility: "delegated",
-      assignedTo: COORDENADOR_ID, // approval awards points to the session user → badge observable
-      assigneeIds: [COORDENADOR_ID],
+      assignedTo: requireSessionUserId(), // approval awards points to the session user → badge observable
+      assigneeIds: [requireSessionUserId()],
       points: TASK_POINTS,
       priority: "medium",
       isGlobal: false,
@@ -90,11 +118,12 @@ async function createFixtureTask(page: Page) {
 }
 
 /**
- * Desktop header points badge — o número que conta (V4-2).
+ * Desktop header points badge — o número que conta (V4-2), agora o PLACAR DO MÊS (S06, ADR-007).
  *
  * Antes era `header span.bg-clip-text` com filtro de visível, porque o menu do cabeçalho também
  * renderiza um `span.bg-clip-text` com "N pontos" e o locator casava com os dois. O contador tem
- * `data-testid` desde o V4-2, então a seleção não depende mais de classe de estilo.
+ * `data-testid` desde o V4-2, então a seleção não depende mais de classe de estilo — e desde a
+ * S06 também não depende de qual trilha é: o que muda é o NÚMERO que ela deve mostrar.
  */
 function pointsBadge(page: Page) {
   return page.getByTestId("points-total");
@@ -112,15 +141,25 @@ test.describe("task board flows", () => {
       }
       overflowTaskIds = [];
     }
-    if (createdTaskId == null && pointsBefore == null) return;
+    if (createdTaskId == null && pointsBefore == null && monthPointsBefore == null) return;
     await apiSession(request);
     if (createdTaskId != null) {
       await request.delete(`/api/tasks/${createdTaskId}`).catch(() => {});
     }
     if (pointsBefore != null) {
       await request
-        .patch(`/api/users/${COORDENADOR_ID}/points`, {
+        .patch(`/api/users/${requireSessionUserId()}/points`, {
           data: { action: "set", points: pointsBefore },
+        })
+        .catch(() => {});
+    }
+    // S06: o prêmio creditado mexeu nas duas trilhas (R2). Restaurar só o saldo deixaria o
+    // placar do mês do Coordenador com o resíduo do fixture — e é esse número que o quadro e o
+    // cabeçalho mostram hoje.
+    if (monthPointsBefore != null) {
+      await request
+        .patch(`/api/users/${requireSessionUserId()}/month-points`, {
+          data: { action: "set", points: monthPointsBefore },
         })
         .catch(() => {});
     }
@@ -128,14 +167,25 @@ test.describe("task board flows", () => {
 
   test("board renders all five lifecycle columns", async ({ page }) => {
     await login(page);
-    for (const column of ["A Fazer", "Em Andamento", "Em Revisão", "Ajustes", "Concluído"]) {
+    for (const column of ["A Fazer", "Fazendo", "Em Revisão", "Ajustes", "Concluído"]) {
       await expect(page.getByLabel(`Coluna ${column}`)).toBeVisible({ timeout: 15_000 });
     }
 
-    // capture pre-test points for restoration + the increment assertion
-    const res = await page.request.get(`/api/users/${COORDENADOR_ID}`);
+    // capture pre-test values for restoration + the increment assertion.
+    // S06: as DUAS trilhas — o saldo (restauração) e o placar do mês (o número que a pílula
+    // mostra e que o fixture incrementa).
+    // Quem é a sessão: o id é dado da instância, não contrato da suíte (nota em `sessionUserId`).
+    // O email é a prova de que o id lido é de quem a suíte logou — id de outra pessoa trocaria
+    // o destinatário do prêmio e o chip pararia de aparecer, que é exatamente a falha medida.
+    const sessionBody = await (await page.request.get("/api/auth/session")).json();
+    expect(sessionBody?.user?.email, "a sessão não é o login da suíte").toBe(CREDENTIALS.email);
+    sessionUserId = Number(sessionBody.user.id);
+    expect(Number.isInteger(sessionUserId), "a sessão não devolveu um id numérico").toBe(true);
+
+    const res = await page.request.get(`/api/users/${requireSessionUserId()}`);
     const user = await res.json();
     pointsBefore = user.user.points as number;
+    monthPointsBefore = user.user.currentMonthPoints as number;
     // `Number.isFinite`, e NAO `>= 0`. Medido na instância real em 2026-10-05: o Coordenador está
     // em -20 e o Gerente em -31030, porque a penalidade de atraso **não tem piso** (DEC-39) e o
     // dono usa o sistema de verdade. A suposição "pontos nunca são negativos" já estava sendo
@@ -181,11 +231,12 @@ test.describe("task board flows", () => {
     await expect(reviewColumn.getByText(TASK_TITLE)).toBeVisible({ timeout: 15_000 });
 
     const badge = pointsBadge(page);
-    await expect(badge).toHaveText(String(pointsBefore), { timeout: 10_000 });
+    // S06 (ADR-007): o número da pílula é o placar do mês.
+    await expect(badge).toHaveText(String(monthPointsBefore), { timeout: 10_000 });
 
     // V4-2 (DEC-59): quem conta gradualmente é o número do CABEÇALHO. A prova é a **sequência**
-    // de valores que o elemento assumiu — um salto direto de `pointsBefore` para o valor novo não
-    // produz intermediário nenhum, e era exatamente isso que acontecia antes deste lote.
+    // de valores que o elemento assumiu — um salto direto de `monthPointsBefore` para o valor novo
+    // não produz intermediário nenhum, e era exatamente isso que acontecia antes deste lote.
     //
     // O registro é feito por um MutationObserver dentro da página, e não por poll do Playwright,
     // por causa de tempo: a contagem dura 1 s e o chip vive 1,9 s. Um poll que só começa depois
@@ -207,7 +258,7 @@ test.describe("task board flows", () => {
 
     // plan-v3 OND4-B: o chip do prêmio creditado aparece no contador e some sozinho. V4-2 mudou
     // o que ele mostra: o valor FINAL de imediato (a contagem foi para o total). Só aparece aqui
-    // porque o fixture entrega a tarefa ao PRÓPRIO aprovador (`assignedTo: COORDENADOR_ID`): a
+    // porque o fixture entrega a tarefa ao PRÓPRIO aprovador (`assignedTo: requireSessionUserId()`): a
     // aprovação credita o responsável, e sem essa coincidência o chip — e o próprio badge — não
     // mexeriam (ver DEC-48).
     //
@@ -238,7 +289,7 @@ test.describe("task board flows", () => {
 
     // plan-v3 OND4-B: o chip mostra o prêmio creditado. V4-2 mudou o que ele mostra: o valor
     // FINAL de imediato (a contagem foi para o total). Só aparece aqui porque o fixture entrega
-    // a tarefa ao PRÓPRIO aprovador (`assignedTo: COORDENADOR_ID`): a aprovação credita o
+    // a tarefa ao PRÓPRIO aprovador (`assignedTo: requireSessionUserId()`): a aprovação credita o
     // responsável, e sem essa coincidência o chip — e o próprio badge — não mexeriam (DEC-48).
     expect(medida!.texto).toContain("+10");
     // Geometria é do navegador, não do jsdom. Duas coisas:
@@ -257,7 +308,7 @@ test.describe("task board flows", () => {
     ).toBeLessThanOrEqual(2);
 
     // session refresh (use-tasks.ts refreshPoints) keeps the badge live without reload
-    await expect(badge).toHaveText(String(pointsBefore! + TASK_POINTS), { timeout: 10_000 });
+    await expect(badge).toHaveText(String(monthPointsBefore! + TASK_POINTS), { timeout: 10_000 });
 
     // A contagem, lida do que a página registrou durante o segundo em que ela aconteceu.
     const seenRaw = await page.evaluate(() => {
@@ -266,7 +317,7 @@ test.describe("task board flows", () => {
       return [...((window as unknown as Record<string, Set<string>>).__dqPointsSeen ?? [])];
     });
     const seen = seenRaw.map(Number).filter(Number.isFinite);
-    const intermediarios = seen.filter((v) => v > pointsBefore! && v < pointsBefore! + TASK_POINTS);
+    const intermediarios = seen.filter((v) => v > monthPointsBefore! && v < monthPointsBefore! + TASK_POINTS);
     expect(
       intermediarios.length,
       `o total saltou direto, sem contar (visto na página: ${seen.join(", ")})`,
@@ -350,14 +401,22 @@ test.describe("task board flows", () => {
       .toBe("adjust");
 
     // cleanup inside authenticated context: restore points BEFORE deleting (task award already banked)
-    const restore = await page.request.patch(`/api/users/${COORDENADOR_ID}/points`, {
+    const restore = await page.request.patch(`/api/users/${requireSessionUserId()}/points`, {
       data: { action: "set", points: pointsBefore },
     });
     expect(restore.ok()).toBeTruthy();
+    // S06: e o placar do mês, que o prêmio também mexeu (R2). O ajuste escreve a linha de
+    // auditoria da DEC-228 — a suíte já deixa linhas de prêmio no banco, e um placar com resíduo
+    // do fixture é o que o dono veria no quadro e no cabeçalho.
+    const restoreMonth = await page.request.patch(`/api/users/${requireSessionUserId()}/month-points`, {
+      data: { action: "set", points: monthPointsBefore },
+    });
+    expect(restoreMonth.ok()).toBeTruthy();
     const del = await page.request.delete(`/api/tasks/${createdTaskId}`);
     expect(del.ok()).toBeTruthy();
     createdTaskId = null;
     pointsBefore = null;
+    monthPointsBefore = null;
   });
 
   /**
@@ -369,6 +428,9 @@ test.describe("task board flows", () => {
    */
   test("coluna limitada em altura, com scroll próprio e cabeçalho fixo", async ({ page }) => {
     await login(page);
+    await expect(page.getByLabel("Coluna A Fazer")).toBeVisible({ timeout: 15_000 });
+    // Altura da página ANTES dos fixtures — a base da comparação de crescimento.
+    const docHeightBase = await page.evaluate(() => document.documentElement.scrollHeight);
     await createOverflowTasks(page);
     try {
       await page.reload();
@@ -389,8 +451,14 @@ test.describe("task board flows", () => {
       // 2. …e o conteúdo é maior que ela, então o scroll é da coluna (overflow-y: auto)
       expect(geometry.scrollHeight).toBeGreaterThan(geometry.clientHeight);
       expect(geometry.overflowY).toBe("auto");
-      // 3. a página não cresce com o número de cartões: uma tela e meia cobrem o quadro
-      expect(geometry.docHeight).toBeLessThan(geometry.viewportHeight * 1.5);
+      // 3. a página não cresce com o número de cartões — o que congela aqui é o **delta** com e
+      //    sem os 8 fixtures, medido 2026-10-27: 0. A cota absoluta ("uma tela e meia", medida em
+      //    2026-10-03 na Home antiga) deixou de valer quando o plan-v6 (V6-11k/m) acrescentou ao
+      //    painel blocos pedidos pelo dono — resumo do laboratório, projetos recentes, atividade
+      //    recente — e a Home passou a medir 1590 px com zero fixtures. Cartões não podem esticar
+      //    a página (a coluna tem scroll próprio); o delta é a medida disso. Sem teto de coluna,
+      //    8 cartões (~120 px cada) passariam folgados dos 360 px (meio viewport) abaixo.
+      expect(geometry.docHeight - docHeightBase).toBeLessThan(geometry.viewportHeight * 0.5);
 
       // 4. rolar a coluna não arrasta a página (overscroll-contain) e o cabeçalho fica
       const header = page.getByRole("heading", { name: "A Fazer", exact: true });
@@ -492,7 +560,7 @@ test.describe("task board flows", () => {
           .filter((key) => key.includes("column-order"))
           .map((key) => `${key}=${window.localStorage.getItem(key)}`),
       );
-      expect(guardada).toContain(`dq:column-order:${COORDENADOR_ID}:to-do="prazo"`);
+      expect(guardada).toContain(`dq:column-order:${requireSessionUserId()}:to-do="prazo"`);
 
       // e a prova que o jsdom não dá: depois de recarregar, a ordem é a mesma
       await page.reload();
@@ -528,6 +596,11 @@ test.describe("task board flows", () => {
    * e ao abrir o sistema o contador tem de percorrer essa distância — não mostrar o destino de
    * imediato.
    *
+   * plan-v9 S06 (ADR-007, R13): o número lembrado é o do PLACAR DO MÊS, e a baseline guarda o mês
+   * junto (`dq:month-points-seen:<id>` → `{ month, points }`). O mês vem do servidor
+   * (`GET /api/board`), porque é o mês do quadro, não o mês do relógio do navegador (DEC-132) — e
+   * é ele que decide "mesmo mês: anima" contra "mês novo: re-tarifica sem animar".
+   *
    * O registro é feito por `addInitScript`, que roda antes de qualquer script da página: a
    * contagem dura 1 s e começa na montagem do cabeçalho, que acontece durante a navegação do
    * login. Um observador instalado depois do `login()` chega atrasado — foi assim que a primeira
@@ -538,59 +611,82 @@ test.describe("task board flows", () => {
     request,
   }) => {
     await apiSession(request);
-    const current = (await (await request.get(`/api/users/${COORDENADOR_ID}`)).json()).user.points as number;
-    const lembrado = current - 30;
+    const monthPointsBefore = (await (await request.get(`/api/users/${requireSessionUserId()}`)).json()).user
+      .currentMonthPoints as number;
+    // O mês em curso do QUADRO, nomeado pelo servidor: a baseline só anima se for do mesmo mês.
+    const boardMonth = (await (await request.get("/api/board")).json()).month as string;
+    // Placar SEMEADO: o catch-up anima uma distância dentro do mês, e a instância está com o
+    // placar zerado (o reset é mês novo). Um placar 0 → 0 não tem distância a percorrer — a
+    // régua do reset (R13) mostra 0 direto, e o teste provaria nada.
+    const PLACAR = 40;
+    const LEMBRADO = 10;
+    const seed = await request.patch(`/api/users/${requireSessionUserId()}/month-points`, {
+      data: { action: "set", points: PLACAR },
+    });
+    expect(seed.ok(), "o ajuste do placar do mês (S05) não respondeu").toBeTruthy();
 
-    await page.addInitScript(
-      ([chave, valor]: string[]) => {
-        window.localStorage.setItem(chave, valor);
-        const w = window as unknown as { __dqPointsSeen?: string[] };
-        w.__dqPointsSeen = [];
-        const attach = (): boolean => {
-          const el = document.querySelector("[data-testid='points-total']");
-          if (!el) return false;
-          const record = () => {
-            const value = (el.textContent ?? "").trim();
-            if (w.__dqPointsSeen && w.__dqPointsSeen.at(-1) !== value) w.__dqPointsSeen.push(value);
+    try {
+      await page.addInitScript(
+        ([chave, valor]: string[]) => {
+          window.localStorage.setItem(chave, valor);
+          const w = window as unknown as { __dqPointsSeen?: string[] };
+          w.__dqPointsSeen = [];
+          const attach = (): boolean => {
+            const el = document.querySelector("[data-testid='points-total']");
+            if (!el) return false;
+            const record = () => {
+              const value = (el.textContent ?? "").trim();
+              if (w.__dqPointsSeen && w.__dqPointsSeen.at(-1) !== value) w.__dqPointsSeen.push(value);
+            };
+            record();
+            new MutationObserver(record).observe(el, {
+              childList: true,
+              subtree: true,
+              characterData: true,
+            });
+            return true;
           };
-          record();
-          new MutationObserver(record).observe(el, {
-            childList: true,
-            subtree: true,
-            characterData: true,
-          });
-          return true;
-        };
-        if (!attach()) {
-          const observer = new MutationObserver(() => {
-            if (attach()) observer.disconnect();
-          });
-          observer.observe(document, { childList: true, subtree: true });
-        }
-      },
-      [`dq:points-seen:${COORDENADOR_ID}`, String(lembrado)],
-    );
+          if (!attach()) {
+            const observer = new MutationObserver(() => {
+              if (attach()) observer.disconnect();
+            });
+            observer.observe(document, { childList: true, subtree: true });
+          }
+        },
+        [`dq:month-points-seen:${requireSessionUserId()}`, JSON.stringify({ month: boardMonth, points: LEMBRADO })],
+      );
 
-    await login(page);
+      await login(page);
 
-    const badge = pointsBadge(page);
-    // O destino é alcançado.
-    await expect(badge).toHaveText(String(current), { timeout: 10_000 });
+      const badge = pointsBadge(page);
+      // O destino é alcançado.
+      await expect(badge).toHaveText(String(PLACAR), { timeout: 10_000 });
 
-    const visto = await page.evaluate(() => (window as unknown as { __dqPointsSeen?: string[] }).__dqPointsSeen ?? []);
-    const numeros = visto.map(Number).filter(Number.isFinite);
+      const visto = await page.evaluate(() => (window as unknown as { __dqPointsSeen?: string[] }).__dqPointsSeen ?? []);
+      const numeros = visto.map(Number).filter(Number.isFinite);
 
-    // Começou no valor lembrado, não no real: é isto que separa "animou a mudança" de "mostrou
-    // o total". Se o primeiro número observado já for o destino, não houve contagem nenhuma.
-    expect(numeros[0], `contador começou em ${numeros[0]}, não no valor lembrado`).toBe(lembrado);
-    const intermediarios = numeros.filter((v) => v > lembrado && v < current);
-    expect(intermediarios.length, `o total saltou direto (visto: ${numeros.join(", ")})`).toBeGreaterThan(0);
+      // Começou no valor lembrado, não no real: é isto que separa "animou a mudança" de "mostrou
+      // o total". Se o primeiro número observado já for o destino, não houve contagem nenhuma.
+      expect(numeros[0], `contador começou em ${numeros[0]}, não no valor lembrado`).toBe(LEMBRADO);
+      const intermediarios = numeros.filter((v) => v > LEMBRADO && v < PLACAR);
+      expect(intermediarios.length, `o total saltou direto (visto: ${numeros.join(", ")})`).toBeGreaterThan(0);
 
-    // E a baseline avançou: reabrir não conta a mesma coisa duas vezes.
-    const guardadoAgora = await page.evaluate(
-      (chave) => window.localStorage.getItem(chave),
-      `dq:points-seen:${COORDENADOR_ID}`,
-    );
-    expect(Number(guardadoAgora)).toBe(current);
+      // E a baseline avançou: reabrir não conta a mesma coisa duas vezes.
+      const guardadoAgora = await page.evaluate(
+        (chave) => window.localStorage.getItem(chave),
+        `dq:month-points-seen:${requireSessionUserId()}`,
+      );
+      const baseline = guardadoAgora
+        ? (JSON.parse(guardadoAgora) as { month: string; points: number })
+        : null;
+      expect(baseline?.points, "a baseline do mês não avançou até o valor visto").toBe(PLACAR);
+      expect(baseline?.month, "a baseline gravou outro mês").toBe(boardMonth);
+    } finally {
+      await request
+        .patch(`/api/users/${requireSessionUserId()}/month-points`, {
+          data: { action: "set", points: monthPointsBefore },
+        })
+        .catch(() => {});
+    }
   });
 });

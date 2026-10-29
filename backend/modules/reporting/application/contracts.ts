@@ -108,6 +108,7 @@ export interface ProjectHoursResult {
     userId: number
     userName: string
     startTime: string
+    originalStartTime: string | null
     endTime: string | null
     duration: number | null
     activity: string | null
@@ -224,6 +225,7 @@ export interface ProjectReportAggregateResult {
     userName: string | null
     date: string
     startTime: string | null
+    activeStartTime: string | null
     endTime: string | null
     note: string | null
     projectName: string | null
@@ -232,7 +234,8 @@ export interface ProjectReportAggregateResult {
     id: number
     userId: number
     userName: string
-    startTime: string
+    startTime: string | null
+    activeStartTime: string
     endTime: string | null
     durationHours: number | null
     activity: string | null

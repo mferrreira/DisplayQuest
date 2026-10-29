@@ -58,6 +58,12 @@ export class UpsertProjectMemberRolesUseCase {
       userEmail: membership.userEmail,
       roles: membership.roles,
       joinedAt: membership.joinedAt.toISOString(),
+      // V5-4b (DEC-149): mesma forma do `add` — o record do adapter é a fonte dos campos.
+      lattes: membership.lattes,
+      cargaHoraria: membership.cargaHoraria,
+      categoria: membership.categoria,
+      situacao: membership.situacao,
+      dataEntrada: membership.dataEntrada,
     }
   }
 }

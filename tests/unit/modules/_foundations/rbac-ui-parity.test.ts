@@ -61,7 +61,10 @@ describe("lib/auth/rbac keeps the exact pre-refactor contract", () => {
 describe("lib/auth/features keeps the exact pre-refactor contract", () => {
   it("FEATURE_ACCESS is the domain matrix, not a copy", () => {
     expect(libFeatures.FEATURE_ACCESS).toBe(domain.FEATURE_ACCESS);
-    expect(Object.keys(libFeatures.FEATURE_ACCESS)).toHaveLength(25);
+    // 24 chaves desde V6-2 (RF-V6.16 R4): sai a chave morta de projetos, sai a gêmea de
+    // navegação de relatórios, sai a de gerenciar recompensas (fica só em PERMISSIONS);
+    // entram DASHBOARD_VOLUNTEERS e DASHBOARD_PROJECT_MANAGER (DEC-186). Eram 25.
+    expect(Object.keys(libFeatures.FEATURE_ACCESS)).toHaveLength(24);
   });
 
   it("hasFeatureAccess / hasAnyRole / hasAllRoles are the domain functions", () => {

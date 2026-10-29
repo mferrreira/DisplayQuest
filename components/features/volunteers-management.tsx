@@ -175,13 +175,13 @@ export function VolunteersManagement() {
   const getStatusBadge = (status: Volunteer["status"]) => {
     switch (status) {
       case 'active':
-        return <Badge variant="default" className="bg-green-100 dark:bg-success/15 text-green-800 dark:text-green-300">Ativo</Badge>
+        return <Badge variant="success">Ativo</Badge>
       case 'pending':
         return <Badge variant="secondary">Pendente</Badge>
       case 'rejected':
         return <Badge variant="destructive">Rejeitado</Badge>
       case 'suspended':
-        return <Badge variant="outline" className="border-yellow-200 dark:border-warning/25 text-yellow-800 dark:text-yellow-300">Suspenso</Badge>
+        return <Badge variant="warning">Suspenso</Badge>
       default:
         return <Badge variant="secondary">{status}</Badge>
     }

@@ -8,6 +8,7 @@ import { useProject } from "@/contexts/project-context"
 import { useTask } from "@/contexts/task-context"
 import { ModernAdminPanel } from "@/components/admin/ModernAdminPanel"
 import { WorkSessionsAPI } from "@/contexts/api-client"
+import { canAccessAdminPanel } from "@/lib/utils/access-control"
 import type { WorkSession } from "@/contexts/types"
 
 export default function AdminDashboardPage() {
@@ -49,7 +50,9 @@ export default function AdminDashboardPage() {
     }
   }, [user, loading, router])
 
-  const isAdmin = user?.roles.includes("COORDENADOR") || user?.roles.includes("GERENTE")
+  // RF-V6.16 R3: a lista inline de papéis vira a chave. O cliente só esconde — a decisão de
+  // entrada é do servidor (`admin/layout.tsx`, `DASHBOARD_ADMIN ∪ DASHBOARD_VOLUNTEERS`).
+  const isAdmin = canAccessAdminPanel(user?.roles || [])
 
   if (loading) {
     return (
@@ -57,7 +60,7 @@ export default function AdminDashboardPage() {
         <main className="flex-1 container mx-auto p-4 md:p-6">
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-info mx-auto mb-4"></div>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-info mx-auto mb-4"></div>
               <p className="text-muted-foreground">Carregando painel administrativo...</p>
             </div>
           </div>

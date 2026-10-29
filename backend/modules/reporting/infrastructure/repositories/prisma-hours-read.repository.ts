@@ -87,7 +87,7 @@ export class PrismaHoursReadRepository implements HoursReadRepository {
       include: {
         user: { select: { name: true } },
         project: { select: { name: true } },
-        workSession: { select: { startTime: true, endTime: true } },
+        workSession: { select: { startTime: true, originalStartTime: true, endTime: true } },
       },
       orderBy: { date: "desc" },
     })

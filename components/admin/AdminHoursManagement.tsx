@@ -12,15 +12,12 @@ import { Progress } from "@/components/ui/progress"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { 
   Clock, 
-  TrendingUp, 
-  Users, 
   Calendar,
   Download,
   Filter,
   Search,
   BarChart3,
   Target,
-  Award,
   AlertCircle,
   CheckCircle2
 } from "lucide-react"
@@ -55,18 +52,9 @@ export function AdminHoursManagement({ users, projects, sessions }: AdminHoursMa
     generateHoursReports()
   }, [users, sessions, filterPeriod])
 
-  // Adicionar log para debug
-  useEffect(() => {
-    console.log('AdminHoursManagement: Sessões atualizadas', sessions.length)
-  }, [sessions])
-
   const generateHoursReports = () => {
     setLoading(true)
-    
-    console.log('AdminHoursManagement: Gerando relatórios...')
-    console.log('Sessões recebidas:', sessions.length)
-    console.log('Filtro de período:', filterPeriod)
-    
+
     const reports: HoursReport[] = users.map(user => {
       const userSessions = sessions.filter(session => 
         session.userId === user.id && session.status === 'completed'
@@ -99,14 +87,6 @@ export function AdminHoursManagement({ users, projects, sessions }: AdminHoursMa
       )
 
       const totalHours = filteredSessions.reduce((sum, session) => sum + (session.duration || 0), 0) / 3600
-      
-      if (user.name === 'Coordenador') {
-        console.log(`Coordenador - Sessões filtradas: ${filteredSessions.length}, Total horas: ${totalHours.toFixed(2)}h`)
-        filteredSessions.forEach(session => {
-          const hours = (session.duration || 0) / 3600
-          console.log(`  - ${session.startTime}: ${hours.toFixed(2)}h`)
-        })
-      }
 
       // Horas da semana atual
       const weekStart = new Date(now)
@@ -235,7 +215,7 @@ export function AdminHoursManagement({ users, projects, sessions }: AdminHoursMa
           <div className="flex flex-col lg:flex-row gap-4">
             <div className="flex-1">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-muted-foreground/70 h-4 w-4" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                 <Input
                   placeholder="Buscar usuários..."
                   value={searchTerm}
@@ -292,55 +272,43 @@ export function AdminHoursManagement({ users, projects, sessions }: AdminHoursMa
         </CardContent>
       </Card>
 
-      {/* Estatísticas gerais */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total de Horas</p>
-                <p className="text-2xl font-bold">{formatHours(getTotalHours())}</p>
-              </div>
-              <Clock className="h-8 w-8 text-blue-600 dark:text-info" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total de Sessões</p>
-                <p className="text-2xl font-bold">{getTotalSessions()}</p>
-              </div>
-              <BarChart3 className="h-8 w-8 text-green-600 dark:text-success" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Usuários Ativos</p>
-                <p className="text-2xl font-bold">{hoursReports.filter(r => r.totalHours > 0).length}</p>
-              </div>
-              <Users className="h-8 w-8 text-purple-600 dark:text-purple-400" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Média por Usuário</p>
-                <p className="text-2xl font-bold">{formatHours(getAverageHours())}</p>
-              </div>
-              <TrendingUp className="h-8 w-8 text-orange-600 dark:text-orange-400" />
-            </div>
-          </CardContent>
-        </Card>
+      {/* Horas por pessoa — gráfico de barras (no lugar dos quatro cards de métrica) */}
+      <div className="rounded-lg border bg-card p-4">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h3 className="flex items-center gap-2 text-sm font-semibold">
+            <BarChart3 className="h-4 w-4 text-primary" aria-hidden="true" /> Horas por pessoa
+          </h3>
+          <span className="text-xs text-muted-foreground">
+            {formatHours(getTotalHours())} no período · {getTotalSessions()} sessões · {hoursReports.filter(r => r.totalHours > 0).length} pessoas ativas
+          </span>
+        </div>
+        {loading ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-info" />
+          </div>
+        ) : (() => {
+          const ranked = [...hoursReports].filter(r => r.totalHours > 0).sort((a, b) => b.totalHours - a.totalHours).slice(0, 8)
+          if (ranked.length === 0) return <p className="py-3 text-sm text-muted-foreground">Nenhuma hora registrada no período.</p>
+          const maxHours = Math.max(1, ...ranked.map(r => r.totalHours))
+          return (
+            <ol className="space-y-2.5">
+              {ranked.map((report, index) => (
+                <li key={report.userId} className="flex items-center gap-3">
+                  <span className="w-4 shrink-0 text-xs font-semibold tabular-nums text-muted-foreground">{index + 1}</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span className="truncate text-sm font-medium">{report.userName}</span>
+                      <span className="text-xs font-semibold tabular-nums">{formatHours(report.totalHours)}</span>
+                    </div>
+                    <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                      <span className="block h-full rounded-full bg-primary" style={{ width: `${Math.max(4, Math.round((report.totalHours / maxHours) * 100))}%` }} />
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          )
+        })()}
       </div>
 
       {/* Tabela de relatórios */}
@@ -357,7 +325,7 @@ export function AdminHoursManagement({ users, projects, sessions }: AdminHoursMa
         <CardContent>
           {loading ? (
             <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-info"></div>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-info"></div>
             </div>
           ) : (
             <Table>
@@ -382,8 +350,8 @@ export function AdminHoursManagement({ users, projects, sessions }: AdminHoursMa
                     <TableRow key={report.userId}>
                       <TableCell>
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-info/15 flex items-center justify-center">
-                            <span className="text-sm font-medium text-blue-600 dark:text-info">
+                          <div className="w-8 h-8 rounded-full bg-info/15 flex items-center justify-center">
+                            <span className="text-sm font-medium text-info">
                               {report.userName.split(' ').map((n: string) => n[0]).join('')}
                             </span>
                           </div>
@@ -399,7 +367,7 @@ export function AdminHoursManagement({ users, projects, sessions }: AdminHoursMa
                         <span className="font-medium">{formatHours(report.totalHours)}</span>
                       </TableCell>
                       <TableCell>
-                        <span className="font-medium text-green-600 dark:text-success">
+                        <span className="font-medium text-success">
                           {formatHours(report.currentWeekHours)}
                         </span>
                       </TableCell>
@@ -441,73 +409,41 @@ export function AdminHoursManagement({ users, projects, sessions }: AdminHoursMa
         </CardContent>
       </Card>
 
-      {/* Top performers */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Award className="h-5 w-5" />
-              Top Performers
-            </CardTitle>
-            <CardDescription>
-              Usuários com mais horas trabalhadas
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {hoursReports
-                .sort((a, b) => b.totalHours - a.totalHours)
-                .slice(0, 5)
-                .map((report, index) => (
-                  <div key={report.userId} className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-6 h-6 rounded-full bg-yellow-100 dark:bg-warning/15 flex items-center justify-center">
-                        <span className="text-xs font-bold text-yellow-600 dark:text-warning">
-                          {index + 1}
-                        </span>
-                      </div>
-                      <span className="font-medium">{report.userName}</span>
+      {/* Projetos mais ativos — barras (o "Top Performers" saiu: o gráfico acima já ranqueia por horas) */}
+      <div className="rounded-lg border bg-card p-4">
+        <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold">
+          <Target className="h-4 w-4 text-primary" aria-hidden="true" /> Projetos mais ativos
+        </h3>
+        {(() => {
+          const ranked = projects
+            .map((project) => ({
+              id: project.id,
+              name: project.name,
+              hours: hoursReports.reduce((sum, report) => sum + (report.projectHours[project.id] || 0), 0),
+            }))
+            .filter((p) => p.hours > 0)
+            .sort((a, b) => b.hours - a.hours)
+            .slice(0, 8)
+          if (ranked.length === 0) return <p className="py-3 text-sm text-muted-foreground">Nenhuma hora por projeto no período.</p>
+          const maxHours = Math.max(1, ...ranked.map((p) => p.hours))
+          return (
+            <ol className="space-y-2.5">
+              {ranked.map((p) => (
+                <li key={p.id} className="flex items-center gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span className="truncate text-sm font-medium">{p.name}</span>
+                      <span className="text-xs font-semibold tabular-nums">{formatHours(p.hours)}</span>
                     </div>
-                    <Badge variant="outline">
-                      {formatHours(report.totalHours)}
-                    </Badge>
+                    <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                      <span className="block h-full rounded-full bg-primary" style={{ width: `${Math.max(4, Math.round((p.hours / maxHours) * 100))}%` }} />
+                    </div>
                   </div>
-                ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Target className="h-5 w-5" />
-              Projetos Mais Ativos
-            </CardTitle>
-            <CardDescription>
-              Projetos com mais horas trabalhadas
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {projects.map(project => {
-                const projectHours = hoursReports.reduce((sum, report) => 
-                  sum + (report.projectHours[project.id] || 0), 0
-                )
-                
-                if (projectHours === 0) return null
-                
-                return (
-                  <div key={project.id} className="flex items-center justify-between">
-                    <span className="font-medium">{project.name}</span>
-                    <Badge variant="outline">
-                      {formatHours(projectHours)}
-                    </Badge>
-                  </div>
-                )
-              }).filter(Boolean).slice(0, 5)}
-            </div>
-          </CardContent>
-        </Card>
+                </li>
+              ))}
+            </ol>
+          )
+        })()}
       </div>
     </div>
   )

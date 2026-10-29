@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/database/prisma"
+import { projectPointsBalance } from "@/backend/domain"
 import type { ProjectMemberSummary } from "@/backend/domain"
 import type { NewProjectInput, ProjectRecord, ProjectRepositoryPort } from "@/backend/modules/project-management/application/ports/project.repository"
 
@@ -29,6 +30,14 @@ type ProjectRow = {
   leaderId: number | null
   status: string
   links: unknown
+  startDate: string | null
+  endDate: string | null
+  editalNumber: string | null
+  processNumber: string | null
+  proppiNumber: string | null
+  points: number
+  logoKey: string | null
+  bannerKey: string | null
   members?: Array<{ userId: number; roles?: string[]; user?: { id: number; name: string; email: string; roles: string[] } | null }>
   _count?: { members?: number }
 }
@@ -43,6 +52,14 @@ function toRecord(row: ProjectRow): ProjectRecord {
     leaderId: row.leaderId ?? null,
     status: row.status,
     links: row.links ? row.links : null,
+    startDate: row.startDate ?? null,
+    endDate: row.endDate ?? null,
+    editalNumber: row.editalNumber ?? null,
+    processNumber: row.processNumber ?? null,
+    proppiNumber: row.proppiNumber ?? null,
+    points: row.points ?? 0,
+    logoKey: row.logoKey ?? null,
+    bannerKey: row.bannerKey ?? null,
     memberCount: row._count?.members ?? row.members?.length ?? undefined,
     members: Array.isArray(row.members)
       ? row.members.map(
@@ -60,22 +77,6 @@ export function createPrismaProjectRepository(): ProjectRepositoryPort {
   return {
     async findAll() {
       const rows = await prisma.projects.findMany({ include: includeOptions, orderBy: { createdAt: "desc" } })
-      return rows.map((row) => toRecord(row as unknown as ProjectRow))
-    },
-    async findByUserId(userId) {
-      const rows = await prisma.projects.findMany({
-        where: { members: { some: { userId } } },
-        include: includeOptions,
-        orderBy: { createdAt: "desc" },
-      })
-      return rows.map((row) => toRecord(row as unknown as ProjectRow))
-    },
-    async findByCreatorId(creatorId) {
-      const rows = await prisma.projects.findMany({
-        where: { createdBy: creatorId },
-        include: includeOptions,
-        orderBy: { createdAt: "desc" },
-      })
       return rows.map((row) => toRecord(row as unknown as ProjectRow))
     },
     async findByLeaderId(leaderId) {
@@ -100,10 +101,52 @@ export function createPrismaProjectRepository(): ProjectRepositoryPort {
           leaderId: input.leaderId,
           status: input.status as never,
           links: input.links as never,
+          startDate: input.startDate ?? null,
+          endDate: input.endDate ?? null,
+          editalNumber: input.editalNumber ?? null,
+          processNumber: input.processNumber ?? null,
+          proppiNumber: input.proppiNumber ?? null,
         },
         include: includeOptions,
       })
       return toRecord(row as unknown as ProjectRow)
+    },
+    async createWithCronograma(input, cronograma) {
+      // Filhos aninhados: o Prisma executa pai + filhos numa transação, que é exatamente a
+      // garantia da regra 9 do plano (rollback completo se qualquer linha do cronograma falhar).
+      const row = await prisma.projects.create({
+        data: {
+          name: input.name,
+          description: input.description,
+          createdAt: input.createdAt,
+          createdBy: input.createdBy,
+          leaderId: input.leaderId,
+          status: input.status as never,
+          links: input.links as never,
+          startDate: input.startDate ?? null,
+          endDate: input.endDate ?? null,
+          editalNumber: input.editalNumber ?? null,
+          processNumber: input.processNumber ?? null,
+          proppiNumber: input.proppiNumber ?? null,
+          goals: { create: cronograma.goals },
+          activities: { create: cronograma.activities },
+        },
+        include: {
+          ...includeOptions,
+          goals: { select: { id: true } },
+          activities: { select: { id: true } },
+        },
+      })
+
+      const created = row as unknown as ProjectRow & {
+        goals?: Array<{ id: number }>
+        activities?: Array<{ id: number }>
+      }
+      return {
+        project: toRecord(created),
+        goalIds: (created.goals ?? []).map((goal) => goal.id),
+        activityIds: (created.activities ?? []).map((activity) => activity.id),
+      }
     },
     async update(record: ProjectRecord) {
       if (!record.id) {
@@ -117,10 +160,33 @@ export function createPrismaProjectRepository(): ProjectRepositoryPort {
           leaderId: record.leaderId ?? null,
           status: record.status as never,
           links: record.links as never,
+          // O record vem do findById + applyProjectUpdate, então traz os valores atuais:
+          // escrever `?? null` aqui não apaga o que o corpo da requisição não mencionou.
+          startDate: record.startDate ?? null,
+          endDate: record.endDate ?? null,
+          editalNumber: record.editalNumber ?? null,
+          processNumber: record.processNumber ?? null,
+          proppiNumber: record.proppiNumber ?? null,
+          // V5-2d: mesma postura — o record vem do findById, então escrever `?? null` mantém a
+          // chave existente quando a requisição não fala de imagem. Quem TROCA a imagem é o use
+          // case de imagem, que monta o record com a chave nova.
+          logoKey: record.logoKey ?? null,
+          bannerKey: record.bannerKey ?? null,
         },
         include: includeOptions,
       })
       return toRecord(row as unknown as ProjectRow)
+    },
+    async incrementPoints(projectId: number, delta: number) {
+      // DEC-74: o piso é a função pura do domínio aplicada na escrita congelada — o delta
+      // pode ser negativo (prêmio de tarefa atrasada) e o saldo não passa de zero.
+      const current = await prisma.projects.findUnique({ where: { id: projectId }, select: { points: true } })
+      if (!current) {
+        throw new Error(`projeto ${projectId} ausente para incrementar pontos`)
+      }
+      const next = projectPointsBalance(current.points, delta)
+      await prisma.projects.update({ where: { id: projectId }, data: { points: next } })
+      return next
     },
     async delete(id) {
       await prisma.projects.delete({ where: { id } })

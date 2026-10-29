@@ -181,7 +181,7 @@ describe("V4-5a · o cartão avisa da trava e deixa concluir a subtask", () => {
       expect(mother.subtasks.find((s) => s.id === 902)?.completed).toBe(true);
     });
     // Uma aberta ainda trava: a mãe não se moveu sozinha.
-    expect(cardInColumn("Em Andamento", "Montar a bancada")).toBe(true);
+    expect(cardInColumn("Fazendo", "Montar a bancada")).toBe(true);
     expect(cardInColumn("Em Revisão", "Montar a bancada")).toBe(false);
   });
 
@@ -204,7 +204,7 @@ describe("V4-5a · o cartão avisa da trava e deixa concluir a subtask", () => {
 
     // O cartão mudou de coluna sem a pessoa arrastar.
     await waitFor(() => expect(cardInColumn("Em Revisão", "Montar a bancada")).toBe(true));
-    expect(cardInColumn("Em Andamento", "Montar a bancada")).toBe(false);
+    expect(cardInColumn("Fazendo", "Montar a bancada")).toBe(false);
 
     // E a interface explica o movimento, em vez de deixar a tarefa sumir sozinha de uma coluna.
     expect(await screen.findByText(/Última subtask concluída/)).toBeInTheDocument();

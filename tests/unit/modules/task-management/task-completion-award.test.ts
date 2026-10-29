@@ -26,7 +26,7 @@ describe("gamification-task-progress.events — o creditado atravessa a porta (O
     const events = createTaskProgressEvents({ awards: { awardFromTaskCompletion } });
 
     // O pedido foi 15 (o que o domínio calculou); o creditado foi 0 (o award já existia).
-    const credited = await events.onTaskCompleted({ userId: 3, taskId: 7, taskPoints: 15 });
+    const credited = await events.onTaskCompleted({ userId: 3, taskId: 7, taskPoints: 15, projectId: null });
 
     expect(awardFromTaskCompletion).toHaveBeenCalledWith({ userId: 3, taskId: 7, taskPoints: 15 });
     expect(credited).toBe(0);
@@ -37,15 +37,15 @@ describe("gamification-task-progress.events — o creditado atravessa a porta (O
       awards: { awardFromTaskCompletion: async () => ({ pointsAwarded: -37140 }) },
     });
 
-    expect(await events.onTaskCompleted({ userId: 3, taskId: 7, taskPoints: -37140 })).toBe(-37140);
+    expect(await events.onTaskCompleted({ userId: 3, taskId: 7, taskPoints: -37140, projectId: null })).toBe(-37140);
   });
 
   it("sem userId/taskId não credita ninguém e não chama o award", async () => {
     const awardFromTaskCompletion = vi.fn(async () => ({ pointsAwarded: 10 }));
     const events = createTaskProgressEvents({ awards: { awardFromTaskCompletion } });
 
-    expect(await events.onTaskCompleted({ userId: 0, taskId: 7, taskPoints: 10 })).toBeNull();
-    expect(await events.onTaskCompleted({ userId: 3, taskId: 0, taskPoints: 10 })).toBeNull();
+    expect(await events.onTaskCompleted({ userId: 0, taskId: 7, taskPoints: 10, projectId: null })).toBeNull();
+    expect(await events.onTaskCompleted({ userId: 3, taskId: 0, taskPoints: 10, projectId: null })).toBeNull();
     expect(awardFromTaskCompletion).not.toHaveBeenCalled();
   });
 
@@ -54,7 +54,74 @@ describe("gamification-task-progress.events — o creditado atravessa a porta (O
       awards: { awardFromTaskCompletion: async () => null },
     });
 
-    expect(await events.onTaskCompleted({ userId: 3, taskId: 7, taskPoints: 10 })).toBeNull();
+    expect(await events.onTaskCompleted({ userId: 3, taskId: 7, taskPoints: 10, projectId: null })).toBeNull();
+  });
+});
+
+describe("tarefa de projeto concluída incrementa projects.points (V5-7b, DEC-63/74)", () => {
+  it("incrementa pelo valor CREDITADO, com o projectId do evento", async () => {
+    const incrementProjectPoints = vi.fn(async () => 120);
+    const events = createTaskProgressEvents({
+      awards: { awardFromTaskCompletion: async () => ({ pointsAwarded: 20 }) },
+      projectPoints: { incrementProjectPoints },
+    });
+
+    const credited = await events.onTaskCompleted({ userId: 3, taskId: 7, taskPoints: 20, projectId: 9 });
+
+    expect(credited).toBe(20);
+    expect(incrementProjectPoints).toHaveBeenCalledWith(9, 20);
+  });
+
+  it("idempotência (creditado 0) NÃO escreve — o saldo não muda duas vezes", async () => {
+    const incrementProjectPoints = vi.fn(async () => 100);
+    const events = createTaskProgressEvents({
+      awards: { awardFromTaskCompletion: async () => ({ pointsAwarded: 0, alreadyAwarded: true }) },
+      projectPoints: { incrementProjectPoints },
+    });
+
+    await events.onTaskCompleted({ userId: 3, taskId: 7, taskPoints: 20, projectId: 9 });
+
+    expect(incrementProjectPoints).not.toHaveBeenCalled();
+  });
+
+  it("quest global (projectId null) não toca em projeto nenhum", async () => {
+    const incrementProjectPoints = vi.fn(async () => 100);
+    const events = createTaskProgressEvents({
+      awards: { awardFromTaskCompletion: async () => ({ pointsAwarded: 20 }) },
+      projectPoints: { incrementProjectPoints },
+    });
+
+    await events.onTaskCompleted({ userId: 3, taskId: 7, taskPoints: 20, projectId: null });
+
+    expect(incrementProjectPoints).not.toHaveBeenCalled();
+  });
+
+  it("negativo creditado passa ao adaptador — o piso 0 é da escrita do projeto (DEC-74)", async () => {
+    const incrementProjectPoints = vi.fn(async () => 0);
+    const events = createTaskProgressEvents({
+      awards: { awardFromTaskCompletion: async () => ({ pointsAwarded: -50 }) },
+      projectPoints: { incrementProjectPoints },
+    });
+
+    await events.onTaskCompleted({ userId: 3, taskId: 7, taskPoints: -50, projectId: 9 });
+
+    expect(incrementProjectPoints).toHaveBeenCalledWith(9, -50);
+  });
+
+  it("falha do incremento não quebra a conclusão (mesmo quirk do award)", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    const events = createTaskProgressEvents({
+      awards: { awardFromTaskCompletion: async () => ({ pointsAwarded: 20 }) },
+      projectPoints: {
+        incrementProjectPoints: async () => {
+          throw new Error("projects fora do ar");
+        },
+      },
+    });
+
+    expect(await events.onTaskCompleted({ userId: 3, taskId: 7, taskPoints: 20, projectId: 9 })).toBe(20);
+    expect(consoleError).toHaveBeenCalled();
+    consoleError.mockRestore();
   });
 });
 
@@ -67,7 +134,7 @@ describe("publishTaskCompletionAward — falha de award não quebra a conclusão
       },
     };
 
-    const credited = await publishTaskCompletionAward(events, 3, 7, 10);
+    const credited = await publishTaskCompletionAward(events, 3, 7, 10, null);
 
     expect(credited).toBeNull();
     expect(consoleError).toHaveBeenCalled();
@@ -75,12 +142,12 @@ describe("publishTaskCompletionAward — falha de award não quebra a conclusão
   });
 
   it("publisher ausente devolve null — é o caminho do roundtrip G4", async () => {
-    expect(await publishTaskCompletionAward(undefined, 3, 7, 10)).toBeNull();
+    expect(await publishTaskCompletionAward(undefined, 3, 7, 10, 9)).toBeNull();
   });
 
   it("no caminho feliz devolve o creditado", async () => {
     const events = { onTaskCompleted: async () => 15 };
 
-    expect(await publishTaskCompletionAward(events, 3, 7, 10)).toBe(15);
+    expect(await publishTaskCompletionAward(events, 3, 7, 10, 9)).toBe(15);
   });
 });

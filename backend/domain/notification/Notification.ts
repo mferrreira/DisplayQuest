@@ -18,6 +18,8 @@ export interface INotification {
   message: string;
   data: unknown;
   read: boolean;
+  /** V5-8 (DEC-64): notificação urgente — o painel destaca por esta flag, não pelo `type`. */
+  priority: boolean;
   createdAt: string;
   readAt: string | null;
 }

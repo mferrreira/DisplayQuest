@@ -1,7 +1,8 @@
 "use client"
 
 /**
- * BoardColumn (E2/T2.4) — legacy kanban-column parity: saturated header + count + empty state.
+ * BoardColumn (E2/T2.4) — coluna do quadro: faixa de título por token semântico (V6-3)
+ * + contagem + estado vazio.
  *
  * plan-v3 OND3-A (AC-P3-06) — a coluna tem altura limitada e scroll próprio. Antes, a coluna
  * crescia com o conteúdo e o scroll era o da página inteira: medido na instância, uma coluna
@@ -37,7 +38,7 @@
  * par em `COLUMN_ORDERS` não pode escrever lixo na preferência.
  */
 import { Droppable } from "@hello-pangea/dnd"
-import { ArrowUpDown, PenLine, Plus } from "lucide-react"
+import { AlertTriangle, ArrowUpDown, CheckCircle2, Clock, Eye, PenLine, Pencil, Plus, type LucideIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -52,18 +53,20 @@ import { isTaskOverdue, isTaskDueToday } from "../utils/move-rules"
 import { COLUMN_ORDERS, columnOrderTitle, isColumnOrder, type ColumnOrder } from "../utils/column-order"
 import { TaskCard } from "./task-card"
 
-const COLUMN_STYLES: Record<TaskStatus, { header: string; icon: string }> = {
-  // Modo claro: gradientes vibrantes (histórico); modo escuro: cores sólidas (sem degradê).
-  "to-do": { header: "bg-gradient-to-r from-slate-700 to-gray-600 dark:bg-none dark:bg-slate-800", icon: "🕐" },
-  "in-progress": { header: "bg-gradient-to-r from-blue-600 to-cyan-500 dark:bg-none dark:bg-blue-800", icon: "✏️" },
-  "in-review": { header: "bg-gradient-to-r from-purple-600 to-violet-500 dark:bg-none dark:bg-purple-800", icon: "👁️" },
-  adjust: { header: "bg-gradient-to-r from-orange-600 to-amber-500 dark:bg-none dark:bg-orange-700", icon: "⚠️" },
-  done: { header: "bg-gradient-to-r from-emerald-600 to-green-500 dark:bg-none dark:bg-emerald-700", icon: "✅" },
+const COLUMN_STYLES: Record<TaskStatus, { header: string; icon: LucideIcon }> = {
+  // V6-3 (RF-V6.4 R4, AC-V6-12): tinta chapada de token semantico no lugar do degradê
+  // saturado, lucide no lugar do emoji. O contraste vem do proprio par `--*-foreground`
+  // que o `.dark` redefine — nenhum `dark:` casado a mao, nenhuma paleta crua.
+  "to-do": { header: "bg-muted text-muted-foreground", icon: Clock },
+  "in-progress": { header: "bg-info/10 text-info", icon: Pencil },
+  "in-review": { header: "bg-review/10 text-review", icon: Eye },
+  adjust: { header: "bg-warning/10 text-warning", icon: AlertTriangle },
+  done: { header: "bg-success/10 text-success", icon: CheckCircle2 },
 }
 
 const COLUMN_TITLES: Record<TaskStatus, string> = {
   "to-do": "A Fazer",
-  "in-progress": "Em Andamento",
+  "in-progress": "Fazendo",
   "in-review": "Em Revisão",
   adjust: "Ajustes",
   done: "Concluído",
@@ -88,14 +91,14 @@ export function BoardColumn({ status, tasks, canAddTask, isCompact, order, onOrd
   const title = COLUMN_TITLES[status]
 
   return (
-    <div className="flex max-h-[calc(100dvh-17rem)] min-h-[400px] flex-col overflow-hidden rounded-xl border bg-muted/30 shadow-sm">
-      <div className={`flex shrink-0 items-center justify-between px-3 py-3 ${style.header}`}>
-        <div className="flex items-center gap-2 text-sm font-bold text-white">
-          <span aria-hidden="true">{style.icon}</span>
+    <div className="flex max-h-[calc(100dvh-17rem)] min-h-[400px] flex-col overflow-hidden rounded-lg border bg-muted/30">
+      <div className={`flex shrink-0 items-center justify-between border-b px-3 py-3 ${style.header}`}>
+        <div className="flex items-center gap-2 text-sm font-semibold">
+          <style.icon className="h-4 w-4" aria-hidden="true" />
           <h2 className="tracking-tight">{title}</h2>
         </div>
         <div className="flex items-center gap-1">
-          <span className="rounded-full bg-white/20 px-2 py-0.5 text-xs font-bold text-white">
+          <span className="rounded-md border border-current/30 px-2 py-0.5 text-xs font-semibold">
             {tasks.length}
           </span>
           <DropdownMenu>
@@ -103,7 +106,7 @@ export function BoardColumn({ status, tasks, canAddTask, isCompact, order, onOrd
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-6 w-6 p-0 text-white hover:bg-white/20"
+                className="h-6 w-6 p-0 text-current hover:bg-background/20"
                 aria-label={`Ordenar tarefas de ${title}`}
                 title={`Ordenar por ${columnOrderTitle(order)}`}
               >
@@ -130,7 +133,7 @@ export function BoardColumn({ status, tasks, canAddTask, isCompact, order, onOrd
             <Button
               variant="ghost"
               size="sm"
-              className="h-6 w-6 p-0 text-white hover:bg-white/20"
+              className="h-6 w-6 p-0 text-current hover:bg-background/20"
               onClick={onAddTask}
               aria-label={`Adicionar tarefa em ${title}`}
             >

@@ -51,3 +51,31 @@ export {
   requireWeeklyReportSelfOrView,
   WEEKLY_REPORT_DENIED_MESSAGE,
 } from "./report-access-rules";
+export {
+  TECHNICAL_REPORT_TYPES,
+  isTechnicalReportType,
+  invalidTechnicalReportTypeError,
+  canActorManageTechnicalReportDecision,
+  technicalReportCheckbox,
+  type TechnicalReportType,
+} from "./technical-report-rules";
+export {
+  REPORT_SECTIONS,
+  splitReportBody,
+  technicalReportCheckboxLine,
+  technicalReportDocumentPeriod,
+  formatDocumentCivilDay,
+  technicalReportFileKey,
+  technicalReportFileName,
+  buildTechnicalReportCommands,
+  type ReportSection,
+  type ReportBody,
+  type TechnicalReportDocumentInput,
+} from "./technical-report-document-rules";
+export {
+  buildTechnicalReportDraftPrompt,
+  type ReportDraftPromptInput,
+  type ReportDraftSessionRow,
+  type ReportDraftTaskRow,
+  type ReportDraftActivityRow,
+} from "./report-draft-rules";

@@ -27,9 +27,11 @@ interface ProjectReportsPanelProps {
   projectId?: number
   /** Enables in-panel generation (project picker inside the dialog) when projectId is absent. */
   projects?: Array<{ id: number; name: string }>
+  /** Hide the local generator when a shared report wizard owns this flow. */
+  canCreate?: boolean
 }
 
-export function ProjectReportsPanel({ projectId, projects }: ProjectReportsPanelProps) {
+export function ProjectReportsPanel({ projectId, projects, canCreate = true }: ProjectReportsPanelProps) {
   const { toast } = useToast()
   const [loading, setLoading] = useState(true)
   const [reports, setReports] = useState<ProjectReportListItem[]>([])
@@ -84,9 +86,9 @@ export function ProjectReportsPanel({ projectId, projects }: ProjectReportsPanel
               ))}
             </SelectContent>
           </Select>
-          <Button onClick={() => setCreateOpen(true)}>
+          {canCreate && <Button onClick={() => setCreateOpen(true)}>
             <Plus className="h-4 w-4 mr-2" /> Gerar Relatório
-          </Button>
+          </Button>}
         </div>
 
         {loading ? (
@@ -126,13 +128,13 @@ export function ProjectReportsPanel({ projectId, projects }: ProjectReportsPanel
         )}
       </CardContent>
 
-      <ProjectReportDialog
+      {canCreate && <ProjectReportDialog
         projectId={projectId ?? 0}
         projects={projects}
         open={createOpen}
         onOpenChange={setCreateOpen}
         onSaved={load}
-      />
+      />}
       <ProjectReportDetailDialog reportId={detailReportId} open={detailOpen} onOpenChange={setDetailOpen} />
     </Card>
   )

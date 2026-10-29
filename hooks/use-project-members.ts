@@ -4,7 +4,9 @@ import {
   listProjectMembers,
   removeProjectMember,
   setProjectLeader,
+  setProjectMemberProfile,
   setProjectMemberRoles,
+  type MemberProfilePatch,
   type ProjectMember,
 } from "@/lib/api/project-members"
 
@@ -19,13 +21,14 @@ interface AvailableUser {
 interface UseProjectMembersOptions {
   enabled?: boolean
   includeAvailableUsers?: boolean
+  initialMembers?: ProjectMember[]
 }
 
 export function useProjectMembers(projectId: number, options: UseProjectMembersOptions = {}) {
   const enabled = options.enabled ?? true
   const includeAvailableUsers = options.includeAvailableUsers ?? false
 
-  const [members, setMembers] = useState<ProjectMember[]>([])
+  const [members, setMembers] = useState<ProjectMember[]>(options.initialMembers ?? [])
   const [availableUsers, setAvailableUsers] = useState<AvailableUser[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -67,8 +70,14 @@ export function useProjectMembers(projectId: number, options: UseProjectMembersO
   }, [enabled, projectId, fetchAvailableUsers])
 
   useEffect(() => {
+    if (options.initialMembers) {
+      setMembers(options.initialMembers)
+      setLoading(false)
+      void fetchAvailableUsers(options.initialMembers.map((member) => member.userId))
+      return
+    }
     void reload()
-  }, [reload])
+  }, [reload, options.initialMembers, fetchAvailableUsers])
 
   const addMember = useCallback(async (userId: number, roles: string[]) => {
     const result = await addProjectMember(projectId, userId, roles)
@@ -88,6 +97,15 @@ export function useProjectMembers(projectId: number, options: UseProjectMembersO
     return result
   }, [projectId, reload])
 
+  const updateMemberProfile = useCallback(
+    async (membershipId: number, patch: MemberProfilePatch) => {
+      const result = await setProjectMemberProfile(projectId, membershipId, patch)
+      await reload()
+      return result
+    },
+    [projectId, reload],
+  )
+
   const updateLeader = useCallback(async (userId: number | null) => {
     const result = await setProjectLeader(projectId, userId)
     await reload()
@@ -104,6 +122,7 @@ export function useProjectMembers(projectId: number, options: UseProjectMembersO
     addMember,
     removeMember,
     updateMemberRoles,
+    updateMemberProfile,
     updateLeader,
   }
 }

@@ -53,7 +53,6 @@ export class CreateTaskSubtaskUseCase {
 
     await assertCanOperateSubtasks(task, command.actorId, actor.roles, {
       assignees: this.dependencies.assignees,
-      actors: this.dependencies.actors,
       projects: this.dependencies.projects,
     })
 

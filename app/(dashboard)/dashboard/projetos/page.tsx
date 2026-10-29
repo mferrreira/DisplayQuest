@@ -1,93 +1,75 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { useProject } from "@/contexts/project-context"
 import { useTask } from "@/contexts/task-context"
-import { AppHeader } from "@/components/layout/app-header"
+import { useUser } from "@/contexts/user-context"
 import { ProjectList } from "@/components/features/project-list"
-import { ProjectDetailDialog } from "@/components/ui/project-detail-dialog"
 import { ProjectDialog } from "@/components/features/project-dialog"
 import { ProjectManagerDashboard } from "@/components/features/project-manager-dashboard"
-import { VolunteersManagement } from "@/components/features/volunteers-management"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { PageHeader } from "@/components/ui/page-header"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Plus,
   Search,
-  Filter,
   BarChart3,
-  Calendar,
-  Users,
-  CheckCircle2,
-  Clock,
-  AlertCircle,
-  Archive,
-  UserPlus,
-  Settings,
   TrendingUp,
-  Award
+  FolderKanban
 } from "lucide-react"
 import type { Project } from "@/contexts/types"
 import { hasAccess } from "@/lib/utils/access-control"
 
-// Helper para verificar se usuário tem GOD MODE (coordenador ou gerente)
-const hasGodMode = (userRoles: string[]) => {
-  return userRoles?.includes('COORDENADOR') || userRoles?.includes('GERENTE')
-}
-
 
 export default function ProjetosPage() {
   const { user } = useAuth()
-  const { projects, loading } = useProject()
+  const router = useRouter()
+  const { projects } = useProject()
   const { tasks } = useTask()
+  const { users } = useUser()
 
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
-  const [selectedProject, setSelectedProject] = useState<Project | null>(null)
-  const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false)
+  const [personFilter, setPersonFilter] = useState<string>("all")
   const [isProjectDialogOpen, setIsProjectDialogOpen] = useState(false)
   const [editingProject, setEditingProject] = useState<Project | null>(null)
 
-  // A API já filtra os projetos baseado no usuário, então só aplicamos filtros de busca e status
-  const filteredProjects = projects.filter(project => {
+  // Os filtros do topo são a fonte do recorte tanto da lista quanto dos gráficos.
+  const searchAndStatusProjects = projects.filter(project => {
     const matchesSearch = project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       project.description?.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = statusFilter === "all" || project.status === statusFilter
     return matchesSearch && matchesStatus
   });
+  const personId = personFilter === "all" ? null : Number(personFilter)
+  const personTasks = personId === null ? tasks : tasks.filter(task =>
+    task.assignedTo === personId || task.assigneeIds?.includes(personId),
+  )
+  const filteredProjects = searchAndStatusProjects.filter(project =>
+    personId === null || personTasks.some(task => task.projectId === project.id),
+  )
+  const filteredProjectIds = new Set(filteredProjects.map(project => project.id))
+  const filteredTasks = personTasks.filter(task => task.projectId != null && filteredProjectIds.has(task.projectId))
+  const selectedPerson = personId === null ? null : users.find(person => person.id === personId)
+  const scopeDescription = [
+    searchTerm.trim() ? `busca “${searchTerm.trim()}”` : null,
+    statusFilter !== "all" ? `status ${statusFilter}` : null,
+    selectedPerson ? `pessoa ${selectedPerson.name}` : null,
+  ].filter(Boolean).join(" · ") || "Todos os projetos"
 
   const overallStats = {
     total: projects.length,
     active: projects.filter(p => p.status === "active").length,
     completed: projects.filter(p => p.status === "completed").length,
     archived: projects.filter(p => p.status === "archived").length,
-    totalTasks: tasks.length,
-    completedTasks: tasks.filter(t => t.status === "done").length
   }
 
   const handleProjectClick = (project: Project) => {
-    setSelectedProject(project)
-    setIsDetailDialogOpen(true)
-  }
-
-  const handleEditProject = (project: Project) => {
-    setEditingProject(project)
-    setIsProjectDialogOpen(true)
-  }
-
-  const handleDeleteProject = async (projectId: number) => {
-    if (confirm("Tem certeza que deseja excluir este projeto?")) {
-      try {
-        setIsDetailDialogOpen(false)
-      } catch (error) {
-        console.error("Erro ao excluir projeto:", error)
-      }
-    }
+    router.push(`/dashboard/projetos/${project.id}`)
   }
 
   const handleCreateProject = () => {
@@ -95,16 +77,12 @@ export default function ProjetosPage() {
     setIsProjectDialogOpen(true)
   }
 
-  const showDashboard = user?.roles?.includes('GERENTE_PROJETO') ?? false
-  const showVolunteers = (user?.roles?.includes('GERENTE_PROJETO') || hasGodMode(user?.roles || []))
-  const tabCount = 1 + (showDashboard ? 1 : 0) + (showVolunteers ? 1 : 0)
-  const tabGridClass = tabCount >= 4
-    ? 'grid-cols-4'
-    : tabCount === 3
-      ? 'grid-cols-3'
-      : tabCount === 2
-        ? 'grid-cols-2'
-        : 'grid-cols-1'
+  const showDashboard = hasAccess(user?.roles || [], "DASHBOARD_PROJECT_MANAGER")
+  // Preserva a aba inicial histórica: gerente de projeto começa no Dashboard; demais
+  // papéis começam na lista, mesmo agora que coordenador/gerente também podem abrir o Dashboard.
+  const defaultTab = user?.roles?.includes('GERENTE_PROJETO') ? "dashboard" : "list"
+  // V6-9 (RF-V6.12/DEC-182): a aba Voluntários saiu daqui — vive no Painel Administrativo.
+  const tabGridClass = showDashboard ? 'grid-cols-2' : 'grid-cols-1'
 
   if (!user) {
     return (
@@ -137,116 +115,36 @@ export default function ProjetosPage() {
 
       <main className="flex-1 container mx-auto p-4 md:p-6">
         <div className="space-y-6">
-          {/* Header */}
-          <div className="flex flex-col gap-4">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">
-                {user?.roles?.includes('GERENTE_PROJETO') ? 'Meus Projetos' : 'Gerenciamento de Projetos'}
-              </h1>
-              <p className="text-muted-foreground">
-                {user?.roles?.includes('GERENTE_PROJETO') 
-                  ? 'Gerencie seus projetos e equipe de voluntários'
-                  : 'Organize e acompanhe todos os projetos do laboratório'
-                }
-              </p>
+          <PageHeader
+            title={user.roles.includes('GERENTE_PROJETO') ? 'Meus Projetos' : 'Gerenciamento de Projetos'}
+            description={user.roles.includes('GERENTE_PROJETO') ? 'Gerencie seus projetos e equipe de voluntários' : 'Organize e acompanhe todos os projetos do laboratório'}
+            icon={FolderKanban}
+            actions={hasAccess(user.roles, 'MANAGE_PROJECTS') ? <Button onClick={handleCreateProject}><Plus className="mr-2 h-4 w-4" />Novo Projeto</Button> : undefined}
+          />
+
+          <div className="space-y-4">
+            <div className="flex flex-wrap gap-2" role="group" aria-label="Filtrar projetos por status">
+              {[
+                { id: 'all', label: 'Todos', count: projects.length },
+                { id: 'active', label: 'Ativos', count: overallStats.active },
+                { id: 'completed', label: 'Concluídos', count: overallStats.completed },
+                { id: 'archived', label: 'Arquivados', count: overallStats.archived },
+              ].map(option => <Button key={option.id} type="button" size="sm" variant={statusFilter === option.id ? 'default' : 'outline'} aria-pressed={statusFilter === option.id} onClick={() => setStatusFilter(option.id)}>{option.label}<span className="ml-2 rounded-full bg-background/20 px-1.5 text-xs">{option.count}</span></Button>)}
             </div>
-
-            {/* Statistics Cards */}
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total de Projetos</CardTitle>
-                  <BarChart3 className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{overallStats.total}</div>
-                  <p className="text-xs text-muted-foreground">
-                    {overallStats.active} ativos, {overallStats.completed} concluídos
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Projetos Ativos</CardTitle>
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{overallStats.active}</div>
-                  <p className="text-xs text-muted-foreground">
-                    Em desenvolvimento
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total de Tarefas</CardTitle>
-                  <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{overallStats.totalTasks}</div>
-                  <p className="text-xs text-muted-foreground">
-                    {overallStats.completedTasks} concluídas
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Taxa de Conclusão</CardTitle>
-                  <AlertCircle className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {overallStats.totalTasks > 0
-                      ? Math.round((overallStats.completedTasks / overallStats.totalTasks) * 100)
-                      : 0}%
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Geral dos projetos
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-
-          {/* Filters and Search */}
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar projetos..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 w-full md:w-64"
-                />
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="relative w-full sm:max-w-sm">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                <Input aria-label="Buscar projetos" placeholder="Buscar projetos..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
               </div>
-
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-full md:w-48">
-                  <Filter className="h-4 w-4 mr-2" />
-                  <SelectValue placeholder="Filtrar por status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os status</SelectItem>
-                  <SelectItem value="active">Ativos</SelectItem>
-                  <SelectItem value="completed">Concluídos</SelectItem>
-                  <SelectItem value="archived">Arquivados</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className="text-sm">
-                {filteredProjects.length} projeto{filteredProjects.length !== 1 ? 's' : ''}
-              </Badge>
+              <div className="flex flex-wrap items-center gap-3">
+                <label className="flex items-center gap-2 text-sm"><span className="text-muted-foreground">Pessoa</span><select aria-label="Filtrar por pessoa" value={personFilter} onChange={event => setPersonFilter(event.target.value)} className="h-9 max-w-[min(18rem,60vw)] rounded-md border bg-background px-3 text-sm"><option value="all">Todas as pessoas</option>{users.map(person => <option key={person.id} value={person.id}>{person.name}</option>)}</select></label>
+                <Badge variant="outline" className="w-fit text-sm">{filteredProjects.length} projeto{filteredProjects.length !== 1 ? 's' : ''}</Badge>
+              </div>
             </div>
           </div>
 
           {/* Projects Content */}
-          <Tabs defaultValue={showDashboard ? "dashboard" : "list"} className="space-y-4">
+          <Tabs defaultValue={defaultTab} className="space-y-4">
             <TabsList className={`grid w-full ${tabGridClass}`}>
               {showDashboard &&
                 <TabsTrigger value="dashboard" className="flex items-center gap-2">
@@ -258,21 +156,15 @@ export default function ProjetosPage() {
                 <BarChart3 className="h-4 w-4" />
                 Lista de Projetos
               </TabsTrigger>
-              {showVolunteers &&
-                <TabsTrigger value="volunteers" className="flex items-center gap-2">
-                  <Users className="h-4 w-4" />
-                  Voluntários
-                </TabsTrigger>
-              }
             </TabsList>
 
             {/* Tab Dashboard - Apenas para Gerentes de Projeto */}
             {showDashboard &&
             <TabsContent value="dashboard" className="space-y-4">
               <ProjectManagerDashboard 
-                projects={projects} 
-                tasks={tasks} 
-                user={user} 
+                projects={filteredProjects} 
+                tasks={filteredTasks}
+                scopeDescription={scopeDescription}
                 onProjectSelect={handleProjectClick}
               />
             </TabsContent>
@@ -282,27 +174,12 @@ export default function ProjetosPage() {
               <ProjectList
                 onProjectSelect={handleProjectClick}
                 projects={filteredProjects}
+                tasks={filteredTasks}
+                showCreateButton={false}
               />
             </TabsContent>
-            
-
-            {/* Tab Voluntários - Apenas para Gerentes de Projeto */}
-            {showVolunteers &&
-            <TabsContent value="volunteers" className="space-y-6">
-              <VolunteersManagement />
-            </TabsContent>
-            }
           </Tabs>
         </div>
-
-        {/* Dialogs */}
-        <ProjectDetailDialog
-          project={selectedProject}
-          open={isDetailDialogOpen}
-          onOpenChange={setIsDetailDialogOpen}
-          onEditProject={handleEditProject}
-          onDeleteProject={handleDeleteProject}
-        />
 
         <ProjectDialog
           open={isProjectDialogOpen}

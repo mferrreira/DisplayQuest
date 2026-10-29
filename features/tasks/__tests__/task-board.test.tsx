@@ -95,11 +95,22 @@ describe("TaskBoard", () => {
     expect(screen.getByText("Documentar API de sessões")).toBeVisible();
     expect(screen.getByText("Revisar sensor de temperatura")).toBeVisible();
     expect(screen.getByText("Quest global: organizar bancada")).toBeVisible();
-    // column headers with counts
-    expect(screen.getByText("A Fazer")).toBeVisible();
-    expect(screen.getByText("Concluído")).toBeVisible();
-    // archived task (12 days old) lands in history section
-    expect(await screen.findByText(/1 concluída\(s\) há mais de 1 semana/)).toBeVisible();
+    // column headers with counts — escopo no HEADING: desde a V6-3 o selo de status do
+    // cartao fala o rotulo da unica fonte ("A Fazer", nao mais "A FAZER") e o texto do
+    // cartao colide com o titulo da coluna; o contrato desta linha e o cabecalho, igual
+    // ao pin do e2e (task-board.spec.ts:396, getByRole heading exact).
+    expect(screen.getByRole("heading", { name: "A Fazer" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Concluído" })).toBeVisible();
+    // A tarefa concluída há mais de 1 semana (arquivada) NAO entra nas colunas. Desde o
+    // V6-11d ela fica no recolhimento "Concluídas antigas" (escolha do dono no Must #1 do
+    // review): fora do quadro, alcançavel pelo detalhe `<details>`, e nao some de vez.
+    expect(screen.queryByRole("listitem", { name: "Tarefa concluída antiga" })).not.toBeInTheDocument();
+    const colunas = ["A Fazer", "Fazendo", "Em Revisão", "Ajustes", "Concluído"];
+    for (const col of colunas) {
+      const coluna = screen.getByLabelText(`Coluna ${col}`);
+      expect(within(coluna).queryByText("Tarefa concluída antiga")).not.toBeInTheDocument();
+    }
+    expect(screen.getByText(/Concluídas antigas \(1\)/)).toBeVisible();
   });
 
   it("shows filtered-empty state when overdue filter matches nothing after clearing", async () => {
@@ -164,7 +175,7 @@ describe("TaskBoard", () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "Ações para Tarefa concluída recente" }));
 
-    for (const column of ["A Fazer", "Em Andamento", "Em Revisão", "Ajustes"]) {
+    for (const column of ["A Fazer", "Fazendo", "Em Revisão", "Ajustes"]) {
       expect(screen.queryByRole("menuitem", { name: column })).not.toBeInTheDocument();
     }
     const aviso = screen.getByRole("menuitem", { name: /só volta de coluna para líderes/i });
@@ -195,7 +206,7 @@ describe("TaskBoard", () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "Ações para Tarefa concluída recente" }));
 
-    for (const column of ["A Fazer", "Em Andamento", "Em Revisão", "Ajustes"]) {
+    for (const column of ["A Fazer", "Fazendo", "Em Revisão", "Ajustes"]) {
       expect(await screen.findByRole("menuitem", { name: column })).toBeEnabled();
     }
     expect(screen.queryByRole("menuitem", { name: /só volta de coluna/i })).not.toBeInTheDocument();
@@ -234,7 +245,7 @@ describe("TaskBoard", () => {
 
     expect(titlesInColumn("A Fazer")).toEqual(["A Fazer vencendo", "A Fazer urgente", "A Fazer sem prazo"]);
     // a outra coluna continua em urgência: a preferência é por coluna
-    expect(titlesInColumn("Em Andamento")).toEqual(["Andamento urgente", "Andamento cedo"]);
+    expect(titlesInColumn("Fazendo")).toEqual(["Andamento urgente", "Andamento cedo"]);
   });
 
   it("plan-v3 OND3-C: a ordem escolhida sobrevive ao recarregar, guardada por pessoa", async () => {

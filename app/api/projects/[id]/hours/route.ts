@@ -4,8 +4,10 @@ import { requireApiActor } from "@/lib/auth/api-guard"
 import { getBackendComposition } from "@/backend/composition/root"
 import { domainErrorResponse } from "@/lib/api/domain-error-response"
 // OND7-B4 (R4): DomainErrors mapeados por domainErrorResponse; 500 preservado p/ desconhecidos.
+// V5-2a (DEC-127): o gate `canActorAccessProject` saiu daqui. Leitura de horas do projeto é do
+// autenticado — a regra mora no domínio e não consulta tabela, então consultar um gate que não
+// pode responder "não" na produção só faria o teste de rota congelar o substituto, não o sistema.
 const { reporting: reportingModule } = getBackendComposition()
-const { projectManagement: projectManagementModule } = getBackendComposition()
 export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const auth = await requireApiActor()
@@ -15,15 +17,6 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     const projectId = Number(params.id)
     if (!Number.isInteger(projectId) || projectId <= 0) {
       return NextResponse.json({ error: "Projeto inválido" }, { status: 400 })
-    }
-
-    const allowed = await projectManagementModule.canActorAccessProject(
-      projectId,
-      auth.actor.id,
-      auth.actor.roles,
-    )
-    if (!allowed) {
-      return NextResponse.json({ error: "Acesso negado ao projeto" }, { status: 403 })
     }
 
     const { searchParams } = new URL(request.url)

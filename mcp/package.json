@@ -1,0 +1,31 @@
+{
+  "name": "@displayquest/mcp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Servidor MCP de validação do DisplayQuest (plan-v7, fase 1)",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "npm run tools:json && tsc -p tsconfig.json",
+    "tools:json": "tsx scripts/build-contract.ts",
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "smoke": "node scripts/smoke.mjs",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/node": "2.1.1",
+    "@modelcontextprotocol/server": "2.3.1",
+    "zod": "4.2.0"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/client": "^2.3.1",
+    "@types/node": "^22.10.0",
+    "tsx": "^4.23.15",
+    "typescript": "5.7.3",
+    "vitest": "^4.1.11"
+  }
+}
