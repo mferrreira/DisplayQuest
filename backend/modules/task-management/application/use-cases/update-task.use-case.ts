@@ -2,6 +2,7 @@ import {
   assertSubtasksAllowTransition,
   canManipulateStatusOnly,
   canModifyCompletedTask,
+  canMoveOutOfDoneDecision,
   fallThroughStatusPatch,
   filterTaskEditFields,
   ForbiddenError,
@@ -31,6 +32,7 @@ import type { TaskAssigneesPort } from "@/backend/modules/task-management/applic
 import type { TaskActorsPort } from "@/backend/modules/task-management/application/ports/task-actors.port";
 import type { TaskActivitiesPort } from "@/backend/modules/task-management/application/ports/task-activities.port";
 import type { TaskNotificationsPort } from "@/backend/modules/task-management/application/ports/task-notifications.port";
+import type { TaskProgressEvents } from "@/backend/modules/task-management/application/ports/task-progress.events";
 import type { TaskProgressPort } from "@/backend/modules/task-management/application/ports/task-progress.repository";
 import type { TaskProjectsPort } from "@/backend/modules/task-management/application/ports/task-projects.port";
 import type { TaskSubtasksPort } from "@/backend/modules/task-management/application/ports/task-subtasks.repository";
@@ -70,6 +72,7 @@ export interface UpdateTaskDependencies {
   notifications: TaskNotificationsPort
   subtasks: TaskSubtasksPort
   activities: TaskActivitiesPort
+  events?: TaskProgressEvents
 }
 
 export class UpdateTaskUseCase {
@@ -167,12 +170,28 @@ export class UpdateTaskUseCase {
         throw new ValidationError("Status inválido")
       }
 
+      // R12 (S13): sair de `done` é gate de gestão, antes da escrita. Um responsável sem gestão
+      // que já passou em `canManipulateStatusOnly` não move uma tarefa concluída para trás.
+      if (workingTask.status === "done" && nextStatus !== "done") {
+        const isCreatorLeader = await this.isProjectCreatorOrLeader(actorId, workingTask.projectId)
+        if (!canMoveOutOfDoneDecision(userRoles, isCreatorLeader)) {
+          throw new ForbiddenError("Só a gestão de tarefa pode mover uma tarefa concluída")
+        }
+      }
+
       // plan-v4 · V4-4 (DEC-57): a trava antes de qualquer escrita.
       await this.assertSubtasksAllowTransition(workingTask, nextStatus)
 
       const oldStatus = workingTask.status
       const patch = statusOnlyPatch(nextStatus, new Date())
       workingTask = toTaskView({ ...workingTask, ...patch })
+
+      // R13 (S13): a saida de `done` reverte o credito de quem o recebeu, no mesmo caso de uso,
+      // antes da resposta. So faz sentido para quem de fato creditou (`assignedTo`); quest global
+      // nao tem premiacao de task na tabela de pontos da casa.
+      if (oldStatus === "done" && nextStatus !== "done") {
+        await this.reverseCompletedAward(workingTask)
+      }
 
       if (isReviewRequestTransition(oldStatus, nextStatus) && workingTask.projectId) {
         const project = await this.dependencies.projects.findById(workingTask.projectId)
@@ -237,6 +256,11 @@ export class UpdateTaskUseCase {
         status: patch.status,
         completed: patch.completed,
         ...(patch.completedAt !== undefined ? { completedAt: patch.completedAt } : {}),
+      }
+
+      // R13 (S13): mesma reversao para quem tem MANAGE_TASKS e cai no fall-through.
+      if (oldStatus === "done" && next.status !== "done") {
+        await this.reverseCompletedAward(next)
       }
 
       if (isReviewRequestTransition(oldStatus, data.status as TaskStatus) && next.projectId) {
@@ -313,6 +337,28 @@ export class UpdateTaskUseCase {
     if (!memberships.some((membership) => membership.projectId === projectId)) {
       throw new ForbiddenError("Usuário não pertence ao projeto desta tarefa")
     }
+  }
+
+  /** R12 (S13): criador ou líder do projeto da tarefa. Sem projeto, `false`. */
+  private async isProjectCreatorOrLeader(actorId: number, projectId: number | null | undefined): Promise<boolean> {
+    if (projectId === null || projectId === undefined) return false
+    const project = await this.dependencies.projects.findById(projectId)
+    return Boolean(project) && (project!.createdBy === actorId || project!.leaderId === actorId)
+  }
+
+  /**
+   * R13 (S13): a tarefa saiu de `done`. Reverte o credito do responsavel (`assignedTo`) pela
+   * mesma porta de conclusao. Sem eventos (publisher de teste), nada acontece. Sem `assignedTo`,
+   * nao ha quem creditou — quest global nao tem premio de task na tabela de pontos da casa.
+   */
+  private async reverseCompletedAward(task: Task): Promise<void> {
+    const events = this.dependencies.events
+    if (!events?.onTaskUncompleted || !task.assignedTo || !task.id) return
+    await events.onTaskUncompleted({
+      userId: task.assignedTo,
+      taskId: task.id,
+      projectId: task.projectId ?? null,
+    })
   }
 
   private async ensureAssigneesExist(userIds: number[]) {

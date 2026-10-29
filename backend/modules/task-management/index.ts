@@ -131,6 +131,8 @@ export class TaskManagementModule {
       notifications: ports.notifications,
       subtasks: ports.subtasks,
       activities: ports.activities,
+      // R13 (S13): a saida de `done` reverte o credito pela mesma porta de conclusao.
+      events: ports.events,
     })
     const deleteTaskUseCase = new DeleteTaskUseCase(ports.tasks)
     const completeTaskUseCase = new CompleteTaskUseCase(

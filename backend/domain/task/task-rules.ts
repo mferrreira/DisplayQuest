@@ -336,6 +336,16 @@ export function canModifyCompletedTask(actorRoles: unknown, isProjectCreatorOrLe
   );
 }
 
+/**
+ * R12 (S13): sair de `done` por `PUT` de status é aceito só para gestão de tarefa — COORDENADOR,
+ * GERENTE, GERENTE_PROJETO, criador/líder do projeto. O responsável sem gestão recebe Forbidden.
+ * A regra é a mesma lista do gate de tarefa concluída, menos LABORATORISTA (que R12 não nomeia).
+ * Não é escrita de status, é gate de autoridade, e corre antes de qualquer escrita.
+ */
+export function canMoveOutOfDoneDecision(actorRoles: unknown, isProjectCreatorOrLeader: boolean): boolean {
+  return hasAnyRole(actorRoles, ["COORDENADOR", "GERENTE", "GERENTE_PROJETO"]) || isProjectCreatorOrLeader;
+}
+
 /** Non-public completion needs assignment or MANAGE_TASKS/MANAGE_USERS (gateway :424-431). */
 export function isCompletePermissionDenied(
   visibility: TaskVisibility,

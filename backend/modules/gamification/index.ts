@@ -1,6 +1,7 @@
 import { AwardFromTaskCompletionUseCase } from "@/backend/modules/gamification/application/use-cases/award-from-task-completion.use-case"
 import { AwardFromActivityCompletionUseCase } from "@/backend/modules/gamification/application/use-cases/award-from-activity-completion.use-case"
 import { AwardFromWorkSessionUseCase } from "@/backend/modules/gamification/application/use-cases/award-from-work-session.use-case"
+import { ReverseTaskAwardUseCase } from "@/backend/modules/gamification/application/use-cases/reverse-task-award.use-case"
 import { AssertCanManageUserBadgesUseCase } from "@/backend/modules/gamification/application/use-cases/assert-can-manage-user-badges.use-case"
 import { CloseBoardMonthUseCase } from "@/backend/modules/gamification/application/use-cases/close-board-month.use-case"
 import { EvaluateUserBadgesUseCase } from "@/backend/modules/gamification/application/use-cases/evaluate-user-badges.use-case"
@@ -53,6 +54,8 @@ type UseCaseExecute<T> = T extends { execute: (...args: infer A) => infer R } ? 
 export class GamificationModule {
   readonly awardFromWorkSession: UseCaseExecute<AwardFromWorkSessionUseCase>
   readonly awardFromTaskCompletion: UseCaseExecute<AwardFromTaskCompletionUseCase>
+  /** R13 (S13, ADR-004): a reversão do prêmio de uma tarefa que saiu de `done`. */
+  readonly reverseTaskAward: UseCaseExecute<ReverseTaskAwardUseCase>
   /** V5-7b (DEC-63/104): o crédito da parcela de prêmio de atividade aprovada. */
   readonly awardFromActivityCompletion: UseCaseExecute<AwardFromActivityCompletionUseCase>
   readonly getUserProgression: UseCaseExecute<GetUserProgressionUseCase>
@@ -97,6 +100,7 @@ export class GamificationModule {
   constructor(
     private readonly awardFromWorkSessionUseCase: AwardFromWorkSessionUseCase,
     private readonly awardFromTaskCompletionUseCase: AwardFromTaskCompletionUseCase,
+    private readonly reverseTaskAwardUseCase: ReverseTaskAwardUseCase,
     private readonly awardFromActivityCompletionUseCase: AwardFromActivityCompletionUseCase,
     private readonly getUserProgressionUseCase: GetUserProgressionUseCase,
     private readonly evaluateUserBadgesUseCase: EvaluateUserBadgesUseCase,
@@ -120,6 +124,7 @@ export class GamificationModule {
   ) {
     this.awardFromWorkSession = this.awardFromWorkSessionUseCase.execute.bind(this.awardFromWorkSessionUseCase)
     this.awardFromTaskCompletion = this.awardFromTaskCompletionUseCase.execute.bind(this.awardFromTaskCompletionUseCase)
+    this.reverseTaskAward = this.reverseTaskAwardUseCase.execute.bind(this.reverseTaskAwardUseCase)
     this.awardFromActivityCompletion = this.awardFromActivityCompletionUseCase.execute.bind(this.awardFromActivityCompletionUseCase)
     this.getUserProgression = this.getUserProgressionUseCase.execute.bind(this.getUserProgressionUseCase)
     this.evaluateUserBadges = this.evaluateUserBadgesUseCase.execute.bind(this.evaluateUserBadgesUseCase)
@@ -186,6 +191,7 @@ export function createGamificationModule(options: GamificationModuleFactoryOptio
       progression,
       evaluateUserBadges,
     }),
+    new ReverseTaskAwardUseCase(ports.awardHistory),
     new AwardFromActivityCompletionUseCase({
       awardHistory: ports.awardHistory,
       progression,

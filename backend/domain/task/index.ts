@@ -60,6 +60,7 @@ export {
   isForeignPublicMoveDenied,
   canManipulateStatusOnly,
   canModifyCompletedTask,
+  canMoveOutOfDoneDecision,
   isCompletePermissionDenied,
   isLeaderSelfCompleteDenied,
   approvalDecision,

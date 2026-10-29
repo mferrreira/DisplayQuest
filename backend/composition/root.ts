@@ -52,6 +52,7 @@ export function createBackendComposition(): BackendComposition {
     notifications,
     events: createTaskProgressEvents({
       awards: gamification,
+      reversals: gamification,
       projectPoints: {
         incrementProjectPoints: (projectId, delta) => projectsRepository.incrementPoints(projectId, delta),
       },
