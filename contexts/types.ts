@@ -84,6 +84,10 @@ export interface Project {
   /** V5-2d (DEC-102): chave do objeto no bucket. A tela não recebe binário, recebe a chave. */
   logoKey?: string | null
   bannerKey?: string | null
+  /** plan-v12 (DEC-239): parâmetros do recorte da capa — centro normalizado + zoom. */
+  bannerCropX?: number | null
+  bannerCropY?: number | null
+  bannerCropZoom?: number | null
   /** R11 (S11): projeção da lista para o ator — o ator é membro deste projeto. */
   isMember?: boolean
 }

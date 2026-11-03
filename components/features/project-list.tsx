@@ -15,7 +15,8 @@ import { hasAccess } from "@/lib/utils/utils"
 import { projectStatusBadgeClass, projectStatusLabel } from "@/components/ui/status"
 import { projectProgress } from "@/features/projects/utils/project-progress"
 import { projectImageUrl } from "@/lib/api/project-files"
-import { civilDayOfInstant } from "@/backend/domain"
+import { BannerImage } from "@/components/ui/banner-image"
+import { civilDayOfInstant, bannerCropFromColumns } from "@/backend/domain"
 
 interface ProjectListProps {
   /** S01: o cartão virou link; a página ainda passa a prop, nada a consumir. */
@@ -115,11 +116,12 @@ export function ProjectList({ onProjectSelect, projects: providedProjects, tasks
                 // overflow-hidden ceifa a metade que cruza a emenda (achado da revisão S01).
                 <div className="relative h-16 sm:h-24">
                   <div className="h-full overflow-hidden rounded-t-lg">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
+                    {/* plan-v12 (DEC-239): a peça única `BannerImage` também no cartão da lista —
+                        nenhum site reinventa a conta do recorte. */}
+                    <BannerImage
                       src={projectImageUrl(project.id, "banner", project.bannerKey)}
                       alt={`Capa do projeto ${project.name}`}
-                      className="h-full w-full object-cover"
+                      crop={bannerCropFromColumns(project.bannerCropX, project.bannerCropY, project.bannerCropZoom)}
                     />
                   </div>
                   {project.logoKey && (

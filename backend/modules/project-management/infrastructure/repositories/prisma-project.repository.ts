@@ -38,6 +38,9 @@ type ProjectRow = {
   points: number
   logoKey: string | null
   bannerKey: string | null
+  bannerCropX: number | null
+  bannerCropY: number | null
+  bannerCropZoom: number | null
   members?: Array<{ userId: number; roles?: string[]; user?: { id: number; name: string; email: string; roles: string[] } | null }>
   _count?: { members?: number }
 }
@@ -60,6 +63,9 @@ function toRecord(row: ProjectRow): ProjectRecord {
     points: row.points ?? 0,
     logoKey: row.logoKey ?? null,
     bannerKey: row.bannerKey ?? null,
+    bannerCropX: row.bannerCropX ?? null,
+    bannerCropY: row.bannerCropY ?? null,
+    bannerCropZoom: row.bannerCropZoom ?? null,
     memberCount: row._count?.members ?? row.members?.length ?? undefined,
     members: Array.isArray(row.members)
       ? row.members.map(
@@ -172,6 +178,10 @@ export function createPrismaProjectRepository(): ProjectRepositoryPort {
           // case de imagem, que monta o record com a chave nova.
           logoKey: record.logoKey ?? null,
           bannerKey: record.bannerKey ?? null,
+          // plan-v12 (DEC-239): os parâmetros do recorte seguem a mesma postura do par de chaves.
+          bannerCropX: record.bannerCropX ?? null,
+          bannerCropY: record.bannerCropY ?? null,
+          bannerCropZoom: record.bannerCropZoom ?? null,
         },
         include: includeOptions,
       })

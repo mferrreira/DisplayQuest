@@ -30,7 +30,7 @@
  *     change (medido no V5-2d): o campo de imagem não deixa PDF chegar à rota.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Toaster } from "sonner";
 
@@ -39,6 +39,7 @@ import { ProjectDeliverablesPanel } from "@/components/features/project-delivera
 import { ProjectMediaHeader } from "@/components/features/project-media-header";
 import {
   PROJECT_IMAGE_SLOT_MESSAGE,
+  clampBannerCrop,
   deliverableValidationMessage,
   normalizeDeliverableInput,
   validateDeliverableInput,
@@ -67,7 +68,13 @@ interface AttachmentRow {
 const mocks = {
   deliverables: [] as DeliverableRow[],
   attachments: [] as AttachmentRow[],
-  project: { logoKey: null as string | null, bannerKey: null as string | null },
+  project: {
+    logoKey: null as string | null,
+    bannerKey: null as string | null,
+    bannerCropX: null as number | null,
+    bannerCropY: null as number | null,
+    bannerCropZoom: null as number | null,
+  },
   requests: [] as Array<{ method: string; path: string; json?: Record<string, unknown> }>,
   uploads: [] as Array<{ field: string | null; name: string; type: string; size: number }>,
   removes: [] as string[],
@@ -76,6 +83,11 @@ const mocks = {
 };
 
 const PNG_BYTES = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+
+/** O editor abre sobre o arquivo escolhido; no jsdom não há blob URL real (stub LOCAL, medido no V5-2d). */
+function stubObjectUrl() {
+  URL.createObjectURL = (file: File) => `blob:preview/${file.name}`;
+}
 
 function resetStore() {
   mocks.deliverables = [
@@ -95,7 +107,7 @@ function resetStore() {
   mocks.requests = [];
   mocks.uploads = [];
   mocks.removes = [];
-  mocks.project = { logoKey: null, bannerKey: null };
+  mocks.project = { logoKey: null, bannerKey: null, bannerCropX: null, bannerCropY: null, bannerCropZoom: null };
   mocks.refuseDeliverableWrite = false;
   mocks.nextId = 500;
 }
@@ -208,9 +220,35 @@ async function recordingFetch(input: unknown, init: RequestInit = {}) {
     }
     const field = slot === "logo" ? "logoKey" : "bannerKey";
 
+    // PUT `images/banner/crop` — espelho da rota real: entrada estrita, clamp, sem byte.
+    if (segments[6] === "crop") {
+      const body = JSON.parse(String(init.body)) as Record<string, unknown>;
+      mocks.requests.push({ method, path, json: body });
+      const { x, y, zoom } = body;
+      const strict =
+        typeof x === "number" && typeof y === "number" && typeof zoom === "number" &&
+        Number.isFinite(x) && Number.isFinite(y) && Number.isFinite(zoom) &&
+        x >= 0 && x <= 1 && y >= 0 && y <= 1 && zoom >= 1;
+      if (!strict) {
+        return jsonResponse({ error: "Recorte inválido" }, 400);
+      }
+      const clamped = clampBannerCrop({ x, y, zoom });
+      mocks.project.bannerCropX = clamped.x;
+      mocks.project.bannerCropY = clamped.y;
+      mocks.project.bannerCropZoom = clamped.zoom;
+      return jsonResponse({ project: { ...mocks.project } });
+    }
+
     if (method === "DELETE") {
       const previous = mocks.project[field];
       mocks.project[field] = null;
+      // A escrita no slot `banner` zera as colunas do recorte — o upload de um original novo
+      // nasce com recorte novo, e tirar a faixa não deixa parâmetro órfão (DEC-239).
+      if (slot === "banner") {
+        mocks.project.bannerCropX = null;
+        mocks.project.bannerCropY = null;
+        mocks.project.bannerCropZoom = null;
+      }
       if (previous) mocks.removes.push(previous);
       return jsonResponse({ project: { ...mocks.project } });
     }
@@ -278,6 +316,7 @@ beforeEach(() => {
     })),
   );
   vi.stubGlobal("confirm", vi.fn<(message?: string) => boolean>(() => true));
+  stubObjectUrl();
 });
 
 afterEach(() => {
@@ -456,6 +495,7 @@ describe("cabeçalho de mídia do projeto", () => {
   function renderHeader(
     canManage: boolean,
     keys: { logoKey?: string | null; bannerKey?: string | null } = {},
+    crop: { x: number; y: number; zoom: number } | null = null,
   ) {
     return render(
       <>
@@ -464,6 +504,7 @@ describe("cabeçalho de mídia do projeto", () => {
           projectName="Alpha"
           logoKey={keys.logoKey ?? null}
           bannerKey={keys.bannerKey ?? null}
+          bannerCrop={crop}
           canManage={canManage}
         />
         <Toaster />
@@ -489,7 +530,7 @@ describe("cabeçalho de mídia do projeto", () => {
     expect(screen.queryByRole("button", { name: "Tirar capa" })).not.toBeInTheDocument();
   });
 
-  it("subir a capa escreve no slot banner e o binário passa a ser mostrado", async () => {
+  it("escolher a capa abre o editor sobre o arquivo, e o salvar sobe a chave e grava o recorte", async () => {
     const user = userEvent.setup({ delay: null });
     renderHeader(true);
 
@@ -498,8 +539,23 @@ describe("cabeçalho de mídia do projeto", () => {
       new File([PNG_BYTES], "capa do laboratório.png", { type: "image/png" }),
     );
 
+    // O editor abre com o texto da resolução recomendada e a pré-visualização do arquivo.
+    const dialog = await screen.findByRole("dialog", { name: "Recorte da capa" });
+    expect(screen.getByText(/Resolução recomendada: 2100×900 px \(21:9\)/)).toBeInTheDocument();
+    expect(dialog.querySelector("img")).toHaveAttribute("src", expect.stringContaining("blob:preview/capa do laboratório.png"));
+    // Nada foi gravado antes do salvar (DEC-241).
+    expect(mocks.uploads).toEqual([]);
+    expect(mocks.requests).toEqual([]);
+
+    await user.click(screen.getByRole("button", { name: "Salvar recorte" }));
+
     await waitFor(() => expect(mocks.uploads).toHaveLength(1));
     expect(mocks.uploads[0]).toMatchObject({ field: "file", name: "capa do laboratório.png", type: "image/png" });
+    expect(mocks.requests[0]).toMatchObject({
+      method: "PUT",
+      path: "/api/projects/7/images/banner/crop",
+      json: { x: 0.5, y: 0.5, zoom: 1 },
+    });
     expect(mocks.project.bannerKey).toMatch(/^projects\/7\/images\/banner\//);
     expect(mocks.project.logoKey).toBeNull();
 
@@ -507,11 +563,39 @@ describe("cabeçalho de mídia do projeto", () => {
     expect(image).toHaveAttribute("src", expect.stringContaining("/api/projects/7/images/banner/file"));
   });
 
-  it("o campo de imagem não aceita PDF: nenhuma requisição sai, e o slot não muda", async () => {
+  it("re-recortar abre sobre o binário do bucket, não sobre o recorte, e o salvar grava só as colunas", async () => {
+    const user = userEvent.setup({ delay: null });
+    mocks.project.bannerKey = "projects/7/images/banner/velha.png";
+    renderHeader(true, { bannerKey: mocks.project.bannerKey }, { x: 0.5, y: 0.5, zoom: 1 });
+
+    await user.click(screen.getByRole("button", { name: "Recortar capa" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "Recorte da capa" });
+    // Re-recorte = o ORIGINAL no bucket, com a chave como quebra de cache (encoded pelo seam).
+    expect(dialog.querySelector("img")).toHaveAttribute(
+      "src",
+      expect.stringContaining("v=projects%2F7%2Fimages%2Fbanner%2Fvelha.png"),
+    );
+
+    fireEvent.change(screen.getByRole("slider", { name: "Zoom da capa" }), { target: { value: "2" } });
+    await user.click(screen.getByRole("button", { name: "Salvar recorte" }));
+
+    await waitFor(() =>
+      expect(mocks.requests).toEqual([
+        { method: "PUT", path: "/api/projects/7/images/banner/crop", json: { x: 0.5, y: 0.5, zoom: 2 } },
+      ]),
+    );
+    // O binário não se move: a chave segue a mesma (DEC-239), só as colunas mudam.
+    expect(mocks.project.bannerKey).toBe("projects/7/images/banner/velha.png");
+    expect(mocks.project.bannerCropZoom).toBe(2);
+    expect(mocks.uploads).toEqual([]);
+  });
+
+  it("o campo de imagem não aceita PDF: o editor nem abre, e nenhuma requisição sai", async () => {
     const user = userEvent.setup({ delay: null });
     renderHeader(true);
 
-    // Medido ao escrever: `user.upload` respeita o `accept` do input e descarta o arquivo sem
+    // Medido no V5-2d: `user.upload` respeita o `accept` do input e descarta o arquivo sem
     // disparar change. Então este caso prova a lista de aceitação do CAMPO. A recusa do servidor
     // para um cliente que ignora o `accept` está congelada no teste de rota
     // (`project-files-routes.test.ts`: "PDF não é imagem de projeto").
@@ -520,6 +604,7 @@ describe("cabeçalho de mídia do projeto", () => {
       new File([new TextEncoder().encode("%PDF-1.7\n")], "relatorio.pdf", { type: "application/pdf" }),
     );
 
+    expect(screen.queryByRole("dialog", { name: "Recorte da capa" })).not.toBeInTheDocument();
     expect(mocks.uploads).toEqual([]);
     expect(mocks.project.bannerKey).toBeNull();
     expect(screen.queryByRole("img", { name: "Capa do projeto Alpha" })).not.toBeInTheDocument();
@@ -538,17 +623,36 @@ describe("cabeçalho de mídia do projeto", () => {
     expect(mocks.project.logoKey).toBeNull();
   });
 
-  it("remover a capa limpa o slot, apaga o objeto e o botão de remover some", async () => {
+  it("remover a capa limpa o slot, o objeto e as colunas do recorte", async () => {
     const user = userEvent.setup({ delay: null });
     mocks.project.bannerKey = "projects/7/images/banner/velha.png";
-    renderHeader(true, { bannerKey: mocks.project.bannerKey });
+    mocks.project.bannerCropX = 0.3;
+    mocks.project.bannerCropY = 0.6;
+    mocks.project.bannerCropZoom = 2;
+    renderHeader(true, { bannerKey: mocks.project.bannerKey }, { x: 0.3, y: 0.6, zoom: 2 });
 
     await screen.findByRole("img", { name: "Capa do projeto Alpha" });
     await user.click(screen.getByRole("button", { name: "Tirar capa" }));
 
     await waitFor(() => expect(mocks.project.bannerKey).toBeNull());
     expect(mocks.removes).toEqual(["projects/7/images/banner/velha.png"]);
+    // A chave e o recorte caem juntos: sem a faixa, as colunas não têm função.
+    expect(mocks.project.bannerCropX).toBeNull();
+    expect(mocks.project.bannerCropZoom).toBeNull();
     expect(await screen.findByText("Sem capa")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Tirar capa" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Recortar capa" })).not.toBeInTheDocument();
+  });
+
+  it("a faixa da capa renderiza pela peça única com o recorte, em 21:9 e sem altura fixa", () => {
+    renderHeader(false, { bannerKey: "projects/7/images/banner/alpha.png" }, { x: 0.3, y: 0.6, zoom: 2 });
+    const image = screen.getByRole("img", { name: "Capa do projeto Alpha" });
+    // O `<img>` mora na peça única; a faixa 21:9 é o contêiner de fora.
+    expect(image.closest('[data-banner-crop="true"]')).not.toBeNull();
+    const strip = image.parentElement!.parentElement!;
+    expect(strip.className).toContain("aspect-[21/9]");
+    expect(strip.className).not.toMatch(/(^|\s)h-\d/);
+    // O transform transporta os parâmetros: zoom 2 com centro (0.3, 0.6).
+    expect(image.getAttribute("style")).toContain("scale(2)");
   });
 });

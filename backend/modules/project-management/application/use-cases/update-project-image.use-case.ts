@@ -47,6 +47,9 @@ export class UpdateProjectImageUseCase {
     const updated = await this.dependencies.projects.update({
       ...project,
       [field]: command.blobKey,
+      // plan-v12 (DEC-239): subir/trocar/tirar a capa zera o recorte — o recorte é do
+      // original, e o original acabou de mudar. Mesma regra medido no caminho do perfil.
+      ...(command.slot === "banner" ? { bannerCropX: null, bannerCropY: null, bannerCropZoom: null } : {}),
     })
 
     return {

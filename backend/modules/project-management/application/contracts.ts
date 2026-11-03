@@ -176,6 +176,13 @@ export interface UpdateProjectImageCommand {
   blobKey: string | null
 }
 
+/** plan-v12 (DEC-239): parâmetros do recorte da capa do projeto. Rota clampa antes de chamar. */
+export interface UpdateProjectBannerCropCommand {
+  projectId: number
+  actorId: number
+  params: { x: number; y: number; zoom: number }
+}
+
 export interface GetProjectImageQuery {
   projectId: number
   actorId: number

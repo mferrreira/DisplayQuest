@@ -151,11 +151,28 @@ export type ProjectImageSlot = "logo" | "banner"
 export interface ProjectImageState {
   logoKey: string | null
   bannerKey: string | null
+  bannerCropX: number | null
+  bannerCropY: number | null
+  bannerCropZoom: number | null
 }
 
 function readImageState(payload: unknown): ProjectImageState {
-  const project = (payload as { project?: { logoKey?: string | null; bannerKey?: string | null } })?.project
-  return { logoKey: project?.logoKey ?? null, bannerKey: project?.bannerKey ?? null }
+  const project = (payload as {
+    project?: {
+      logoKey?: string | null
+      bannerKey?: string | null
+      bannerCropX?: number | null
+      bannerCropY?: number | null
+      bannerCropZoom?: number | null
+    }
+  })?.project
+  return {
+    logoKey: project?.logoKey ?? null,
+    bannerKey: project?.bannerKey ?? null,
+    bannerCropX: project?.bannerCropX ?? null,
+    bannerCropY: project?.bannerCropY ?? null,
+    bannerCropZoom: project?.bannerCropZoom ?? null,
+  }
 }
 
 /**
@@ -199,6 +216,22 @@ export async function deleteProjectImage(
     `/api/projects/${projectId}/images/${slot}`,
     { method: "DELETE" },
     "Erro ao remover imagem",
+  )
+  return readImageState(payload)
+}
+
+/**
+ * plan-v12 (DEC-239) — grava os parâmetros do recorte da capa do projeto. A rota clampa; o
+ * cliente manda o que o editor escolheu. A resposta devolve a tupla de chaves + parâmetros.
+ */
+export async function updateProjectBannerCrop(
+  projectId: number,
+  params: { x: number; y: number; zoom: number },
+): Promise<ProjectImageState> {
+  const payload = await request<unknown>(
+    `/api/projects/${projectId}/images/banner/crop`,
+    { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify(params) },
+    "Erro ao gravar o recorte da capa do projeto",
   )
   return readImageState(payload)
 }
