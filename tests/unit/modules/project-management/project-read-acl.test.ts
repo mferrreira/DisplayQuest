@@ -138,6 +138,9 @@ const completionPort: ProjectCompletionRequestsPort = {
   async listProjectIdsWithRequests() {
     return [];
   },
+  async listCompletionRequests() {
+    return [];
+  },
 };
 
 describe("ListProjectsForActorUseCase — a lista não depende do ator", () => {
@@ -173,6 +176,9 @@ describe("ListProjectsForActorUseCase — a lista não depende do ator", () => {
     const flagged: ProjectCompletionRequestsPort = {
       async listProjectIdsWithRequests() {
         return [10];
+      },
+      async listCompletionRequests() {
+        return [];
       },
     };
     const useCase = new ListProjectsForActorUseCase({ projects: port, completionRequests: flagged });

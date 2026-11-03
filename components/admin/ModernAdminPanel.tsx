@@ -37,7 +37,8 @@ import {
   XCircle,
   User,
   Zap,
-  AlertTriangle
+  AlertTriangle,
+  ClipboardCheck
 } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { useTask } from "@/contexts/task-context"
@@ -51,6 +52,7 @@ import { AdminProjectManagement } from "@/components/admin/AdminProjectManagemen
 import { AdminHoursManagement } from "@/components/admin/AdminHoursManagement"
 import { WeeklyHoursTable } from "@/components/admin/weekly-hours-table"
 import { AdminNotificationsCenter } from "@/components/admin/AdminNotificationsCenter"
+import { AdminCompletionRequests } from "@/components/admin/admin-completion-requests"
 import { ScheduleGrid } from "@/components/admin/ScheduleGrid"
 import { NotificationsPanel } from "@/components/ui/notifications-panel"
 import { CreateUserDialog } from "@/components/admin/create-user-dialog"
@@ -422,6 +424,12 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, onSessionsC
           <TabsTrigger value="tasks" className="flex items-center gap-2">
             <Activity className="h-4 w-4" />
             <span className="hidden sm:inline">Tarefas</span>
+          </TabsTrigger>
+          {/* S01 (plan-v12, DEC-238): fila global de solicitações de conclusão — o gate
+              `DASHBOARD_ADMIN` é o MESMO conjunto dos aprovadores globais. */}
+          <TabsTrigger value="conclusoes" className="flex items-center gap-2">
+            <ClipboardCheck className="h-4 w-4" />
+            <span className="hidden sm:inline">Conclusões</span>
           </TabsTrigger>
           <TabsTrigger value="notifications" className="flex items-center gap-2">
             <Bell className="h-4 w-4" />
@@ -915,6 +923,16 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, onSessionsC
                 </CardContent>
               </Card>
             </>
+          )}
+        </TabsContent>
+
+        {/* Tab Conclusões (S01, plan-v12, DEC-238): fila global de solicitações de
+            conclusão; gate `DASHBOARD_ADMIN` = aprovadores globais. */}
+        <TabsContent value="conclusoes" className="space-y-6">
+          {!canAccessAdmin ? (
+            <TabPermissionNotice feature="DASHBOARD_ADMIN" />
+          ) : (
+            <AdminCompletionRequests />
           )}
         </TabsContent>
 

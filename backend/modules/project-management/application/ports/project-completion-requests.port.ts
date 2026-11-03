@@ -1,11 +1,25 @@
 /**
  * ProjectCompletionRequestsPort — projeção de leitura do flag "conclusão solicitada" por projeto
- * (fix 4, 2026-10-28). A lista de projetos marca, por projeto, se ele tem alguma atividade em
- * COMPLETION_REQUESTED; a tela de gestão pinta o cartão avermelhado por esse flag. Não é coluna:
- * é projeção sobre `project_activities`, no mesmo desenho do `isMember` (R11, S11).
+ * (fix 4, 2026-10-28) e da FILA global de solicitações (S01, plan-v12, DEC-238).
  *
- * I/O apenas: devolve os ids dos projetos com solicitação em aberto. A decisão de pintar é da tela.
+ * I/O apenas: a lista de projetos marca, por projeto, se ele tem solicitação em aberto; a fila
+ * devolve as linhas `COMPLETION_REQUESTED` com o nome do projeto e de quem pediu. Nenhuma regra
+ * aqui: o prêmio previsto e o gate de quem aprova são dos use cases, e o botão é da tela.
  */
+export interface CompletionRequestRecord {
+  projectId: number
+  projectName: string
+  activityId: number
+  order: number
+  description: string
+  firstMonth: string
+  lastMonth: string
+  requestedBy: number | null
+  requestedByName: string | null
+  requestedAt: string | null
+}
+
 export interface ProjectCompletionRequestsPort {
-  listProjectIdsWithRequests(): Promise<number[]>;
+  listProjectIdsWithRequests(): Promise<number[]>
+  listCompletionRequests(): Promise<CompletionRequestRecord[]>
 }

@@ -87,6 +87,14 @@ export function activityCompletionRequestMessage(projectName: string, descriptio
 }
 
 /**
+ * Frase do gate de leitura da fila global de conclusões (S01, plan-v12, DEC-238). O gate é
+ * `DASHBOARD_ADMIN` — o MESMO conjunto `["COORDENADOR","GERENTE"]` dos aprovadores globais. A
+ * frase mora no domínio porque a rota e a fila têm de dizer a mesma palavra (lição da DEC-90).
+ */
+export const COMPLETION_QUEUE_DENIED_MESSAGE =
+  "Você não tem permissão para ver as conclusões solicitadas";
+
+/**
  * Audiência da notificação de solicitação: só os papéis globais de gestão (coordenação/gerência
  * ATIVOS), deduplicada por id. O líder não entra — ele pediu, não é o avisado.
  */
