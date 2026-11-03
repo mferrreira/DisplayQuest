@@ -28,7 +28,7 @@ function renderHeader(bannerKey: string | null, logoKey: string | null = null) {
 describe("ProjectMediaHeader — faixa 21:9 (R4 + fix)", () => {
   it("com capa: o contêiner da imagem é aspect-[21/9] (16:9), sem altura fixa", () => {
     renderHeader("projects/3/images/banner/alpha.png", "projects/3/images/logo/alpha.png");
-    const strip = screen.getByRole("img", { name: "Capa do projeto Alpha" }).parentElement!;
+    const strip = screen.getByRole("img", { name: "Capa do projeto Alpha" }).parentElement!.parentElement!;
     expect(strip.className).toContain("aspect-[21/9]");
     expect(strip.className).not.toMatch(/(^|\s)h-\d/);
     expect(screen.getByRole("img", { name: "Logo do projeto Alpha" })).not.toBeNull();
