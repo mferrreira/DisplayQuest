@@ -149,11 +149,14 @@ describe("V4-5a · o cartão avisa da trava e deixa concluir a subtask", () => {
     delete (window as unknown as Record<string, unknown>).matchMedia;
   });
 
-  it("mostra o aviso de trava com a contagem das abertas", async () => {
+  it("mostra o bloco neutro com a contagem, sem o texto das abertas (S03)", async () => {
     seedMotherWithOpenSubtasks();
     renderBoard();
 
-    expect(await screen.findByText(/2 subtasks abertas/)).toBeInTheDocument();
+    const counter = await screen.findByText("1/3 concluídas");
+    const block = counter.closest("div.rounded-md")!;
+    expect(block.querySelector("svg.lucide-square-check-big")).not.toBeNull();
+    expect(screen.queryByText(/subtask aberta/)).not.toBeInTheDocument();
   });
 
   it("cada subtask ABERTA tem uma checkbox nomeada; a concluída não aparece no cartão", async () => {
@@ -321,6 +324,6 @@ describe("V4-5a · o cartão avisa da trava e deixa concluir a subtask", () => {
     expect(approve).toBeDisabled();
     // A trava é sobre o destino, não sobre quem aprova: o Coordenador tem MANAGE_TASKS e mesmo
     // assim não aprova com subtask aberta.
-    expect(await screen.findByText(/1 subtask aberta/)).toBeInTheDocument();
+    expect(await screen.findByText("0/1 concluídas")).toBeInTheDocument();
   });
 });

@@ -239,8 +239,6 @@ export function TaskCard({ task, index, isOverdue, isDueToday, isCompact, onEdit
   const showsSubtaskLock = openSubtasks.length > 0 && task.status !== "done"
   // Frase num nó só: "Atual: {n} pontos" + dica virou três nós e quebrou `getByText` da frase
   // inteira (AGENTS.md, V4-4b). Aqui a contagem é montada antes, como string.
-  const openSubtasksLabel =
-    openSubtasks.length === 1 ? "1 subtask aberta" : `${openSubtasks.length} subtasks abertas`
   const subtaskProgressLabel = `${completedSubtasks.length}/${task.subtasks?.length ?? 0} concluídas`
 
   /** T2.5 keyboard alternative: menu lists allowed targets, same rules as drag (OND3-B). */
@@ -494,13 +492,12 @@ export function TaskCard({ task, index, isOverdue, isDueToday, isCompact, onEdit
                       // que falta que trava. Tom âmbar: nada está errado, falta uma etapa.
                       // S08 (R8, dono): bloco neutro — muted + CheckSquare. O âmbar de aviso
                       // saiu porque nada está errado: falta uma etapa.
+                      // S03 (R8, dono): o texto "X subtask(s) aberta(s)" saiu — o bloco é só
+                      // CheckSquare + a contagem "X/N concluídas".
                       <div className="mb-3 rounded-md border border-border bg-muted px-2 py-1.5">
                         <div className="flex items-center gap-1 text-[11px] font-semibold text-muted-foreground">
                           <CheckSquare className="h-3 w-3 shrink-0" aria-hidden="true" />
-                          <span>{openSubtasksLabel}</span>
-                          <span className="font-normal text-muted-foreground">
-                            · {subtaskProgressLabel}
-                          </span>
+                          <span>{subtaskProgressLabel}</span>
                         </div>
                         <ul className="mt-1.5 space-y-1">
                           {openSubtasks.map((subtask) => (
