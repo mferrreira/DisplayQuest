@@ -42,6 +42,7 @@ A aba **Horas** é a leitura consolidada do tempo registrado. As colunas são **
 | --- | --- |
 | **Projetos** | revisar o conjunto de projetos e seu andamento |
 | **Tarefas** | ver tarefas de todos os projetos, além do que o quadro mostra — com a lista de subtasks de cada tarefa em leitura: a contagem (por exemplo *"2/5 concluídas"*) e cada etapa marcada com ✓ ou ○, sem checkbox |
+| **Conclusões** | a fila global de solicitações de conclusão de atividades, de todos os projetos (aba *Conclusões* abaixo) |
 | **Voluntários** | gerenciar a equipe de cada projeto — adicionar e remover pessoas (seção *A aba Voluntários* abaixo) |
 | **Notificações** | enviar aviso para uma pessoa ou para o laboratório |
 | **Badges** | criar e editar distintivos: **Nome**, **Descrição**, **Categoria** e quem criou |
@@ -55,6 +56,16 @@ O seletor de projeto é o primeiro controle: a equipe só aparece depois de esco
 ```
 
 Quem gerencia a equipe é a gestão do sistema e o **Gerente de Projeto**. Os dados do vínculo de cada pessoa — Lattes, carga contratada, categoria, situação e data de entrada — continuam na aba **Membros** da página do projeto (capítulo 4); aqui é o quadro de quem entra e sai.
+
+## A aba Conclusões
+
+A aba **Conclusões** reúne as solicitações de conclusão de atividades de todos os projetos, não de um só. Cada linha é uma atividade que alguém marcou como pronta, em algum projeto. No fim de cada linha fica o botão **Aprovar**.
+
+```foto admin-conclusoes titulo="A aba Conclusões, com a fila de solicitações"
+Sem solicitação pendente, a aba diz *"Nenhuma conclusão solicitada"*.
+```
+
+**Aprovar** conclui a atividade e distribui o prêmio entre os membros ativos do projeto. **Gerente** não aprova a solicitação que ele mesmo fez; **Coordenador** aprova. A linha sai da fila depois de aprovada. A aba é só a fila: o pedido de conclusão continua no cronograma da página do projeto, onde a linha da atividade é marcada.
 
 ## Sessões e semana
 

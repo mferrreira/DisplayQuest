@@ -14,7 +14,7 @@ Os gráficos e o histórico acompanham o projeto selecionado; a opção **Todos 
 
 ## Ver um projeto
 
-A **Lista de Projetos** mostra todos os projetos do sistema, inclusive os que você não participa. Use os filtros **Todos**, **Ativos**, **Concluídos** e **Arquivados** para limitar a lista; os números ao lado indicam quantos projetos há em cada status. A busca filtra pelo nome e pela descrição. Cada linha mostra o status, a descrição e o andamento: quando início e término estão definidos, a barra representa a proporção do período civil já decorrido; se uma dessas datas faltar, mostra a proporção de tarefas concluídas. As datas informadas também aparecem na linha. Para abrir um projeto, use o botão de visualização. A página do projeto abre com o cabeçalho, o status e as ações **Editar** e **Excluir**. O conteúdo é dividido nas abas **Visão geral**, **Tarefas**, **Membros**, **Arquivos** e **Configurações**:
+A **Lista de Projetos** mostra todos os projetos do sistema, inclusive os que você não participa. Use os filtros **Todos**, **Ativos**, **Concluídos** e **Arquivados** para limitar a lista; os números ao lado indicam quantos projetos há em cada status. A busca filtra pelo nome e pela descrição. Cada linha mostra o status, a descrição e o andamento: quando início e término estão definidos, a barra representa a proporção do período civil já decorrido; se uma dessas datas faltar, mostra a proporção de tarefas concluídas. As datas informadas também aparecem na linha. Cada cartão da lista é um único link: clique em qualquer ponto dele para abrir o projeto. A página do projeto abre com o cabeçalho, o status e as ações **Editar** e **Excluir**. O conteúdo é dividido nas abas **Visão geral**, **Tarefas**, **Membros**, **Arquivos** e **Configurações**:
 
 - **Visão geral**: a **capa** e o **logo**, quando houver; a **Descrição**; **Dados do projeto**: **Início**, **Término**, **Número do edital**, **Número do processo**, **Número PROPPI**, **Pontos do projeto** e a barra de **Andamento** do período. Esse card só aparece quando algum desses campos foi preenchido;
 - **Tarefas**: o **Cronograma**, quatro contagens de tarefas, o **Andamento do projeto** (período quando as duas datas existem; tarefas como alternativa) e a lista de tarefas com **Importar Backlog** e **Nova Tarefa**;
@@ -60,13 +60,24 @@ Editar e excluir um projeto são ações do cartão, na lista. Editar é uma pá
 
 ## Capa e logo do projeto
 
-1. Abra o detalhe do projeto.
-2. Clique em **Enviar capa** e escolha a imagem. Ela ocupa a faixa do topo do diálogo.
-3. Clique em **Enviar logo** e escolha a imagem. O logo aparece redondo, sobre a capa.
-4. Para trocar, envie outra imagem: a nova ocupa o lugar da antiga.
-5. **Tirar capa** e **Tirar logo** aparecem quando o slot tem imagem, e o sistema pede confirmação.
+1. Abra o detalhe do projeto, na aba **Visão geral**.
+2. Clique em **Enviar capa** e escolha a imagem. O editor de recorte abre sobre a imagem escolhida, dentro da moldura 21:9.
+3. No editor, o slider **Zoom da capa** amplia a imagem; arrastar a pré-visualização escolhe a parte visível. A linha *"Resolução recomendada: 2100×900 px (21:9)"* diz o tamanho que preenche a moldura sem recorte.
+4. Clique em **Salvar recorte**: a imagem sobe e a parte escolhida passa a ocupar a faixa da capa.
+5. Clique em **Enviar logo** e escolha a imagem. O logo aparece redondo, sobre a capa. O logo tem o caminho direto, sem editor de recorte.
+6. **Recortar capa** reabre o editor sobre a imagem no bucket, para mudar só a parte visível. **Tirar capa** e **Tirar logo** aparecem quando o slot tem imagem, e o sistema pede confirmação.
 
-São imagens, só isso: PDF e vídeo não entram aqui. O arquivo vai para o bucket de objetos do sistema, e a tela o lê por um endereço que entrega a imagem apenas a quem tem acesso ao projeto.
+São imagens, só isso: PDF e vídeo não entram aqui. O arquivo vai para o bucket de objetos do sistema, e a tela o lê por um endereço que entrega a imagem apenas a quem tem acesso ao projeto. Quem escreve a capa é a gestão do projeto; quem a vê é a mesma regra de leitura do detalhe. O recorte é parâmetro, não corte: a mesma imagem fica no bucket, na mesma chave, e a tela mostra a parte que os números apontam.
+
+```foto faixa-capa-projeto titulo="A capa do projeto na faixa 21:9, na aba Visão geral, com os controles Enviar capa, Enviar logo, Recortar capa, Tirar capa e Tirar logo"
+A capa ocupa a largura plena da moldura 21:9; o logo redondo fica no canto de baixo-esquerda.
+```
+
+```foto editor-recorte-projeto titulo="O editor de recorte da capa do projeto, sobre a imagem no bucket"
+O mesmo diálogo do perfil: slider **Zoom da capa**, pré-visualização arrastável, *"Resolução recomendada: 2100×900 px (21:9)"*.
+```
+
+O **cartão da lista de projetos** usa a mesma capa com o mesmo recorte, na altura própria do cartão — o corte da lista não é a moldura 21:9 do detalhe.
 
 ## Entregáveis
 

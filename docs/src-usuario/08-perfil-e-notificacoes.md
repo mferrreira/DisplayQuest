@@ -63,13 +63,26 @@ Editar o próprio perfil é sempre permitido. Editar o perfil de outra pessoa ex
 
 ## A capa do perfil
 
-Acima do avatar, o cartão **Meu Perfil** tem uma faixa horizontal: é a **capa** da pessoa. Sem capa, a faixa diz *"Sem capa"*.
+Acima do avatar, o cartão **Meu Perfil** tem uma faixa horizontal: é a **capa** da pessoa. A faixa é 21:9 — uma moldura larga e baixa, como a capa de uma rede social. Sem capa, a faixa diz *"Sem capa"*.
 
-1. Clique em **Enviar capa** e escolha a imagem. Ela ocupa a faixa do topo do cartão.
-2. Para trocar, envie outra imagem: a nova ocupa o lugar da antiga.
-3. **Tirar capa** aparece quando a faixa tem imagem, e o sistema pede confirmação.
+1. Clique em **Enviar capa** e escolha a imagem. O editor de recorte abre sobre a imagem escolhida, dentro da moldura 21:9.
+2. No editor, o slider **Zoom da capa** amplia a imagem de 1× a 4×; arrastar a pré-visualização escolhe qual parte fica visível. A linha *"Resolução recomendada: 2100×900 px (21:9)"* diz o tamanho de imagem que preenche a moldura sem recorte.
+3. Clique em **Salvar recorte**: a imagem sobe e a parte escolhida passa a ocupar a faixa.
+4. **Recortar capa** reabre o editor sobre a mesma imagem, agora para mudar só a parte visível. **Tirar capa** aparece quando a faixa tem imagem, e o sistema pede confirmação.
 
 São imagens, só isso: PDF e vídeo não entram aqui. O arquivo vai para o bucket de objetos do sistema, e a tela o lê por um endereço que entrega a imagem apenas a quem está autenticado.
+
+```foto perfil-com-capa titulo="A capa do perfil na faixa 21:9, com os controles Enviar capa, Recortar capa e Tirar capa"
+A faixa tem a altura da moldura 21:9, largura plena; abaixo dela ficam as cifras da semana.
+```
+
+```foto editor-recorte-capa titulo="O editor de recorte da capa, sobre a imagem escolhida"
+O diálogo tem o slider **Zoom da capa**, a pré-visualização arrastável, *"Resolução recomendada: 2100×900 px (21:9)"* e a linha *"Centro permitido neste zoom: ... por eixo"*.
+```
+
+::: nota titulo="O recorte é parâmetro, não corte"
+O editor não recorta o arquivo. Ele guarda três números da imagem escolhida: o centro e o zoom. A mesma imagem fica no bucket, na mesma chave; a tela mostra a parte que os números apontam. Trocar a imagem começa um recorte novo.
+:::
 
 A capa é sua, e quem a escreve é você — ou quem tem permissão de gerenciar contas. Quem a **vê** é qualquer pessoa autenticada: ela aparece no seu perfil, no perfil aberto por outra pessoa e no cartão de quem está em 1º lugar no ranking.
 

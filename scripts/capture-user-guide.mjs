@@ -83,6 +83,11 @@ const SCREENS = [
   // uma pessoa no Ranking produz; o id é a conta de captura do guia (docs/.capture.env).
   { id: "perfil-de-outra-pessoa", role: "coord", route: "/dashboard/profile?userId=21", expect: { url: /\/dashboard\/profile/, anyOf: ["Dados para os documentos"] } },
 
+  // plan-v12 (DEC-240/241): a capa do perfil na faixa 21:9 com o recorte aplicado. A capa semeada
+  // no usuário de captura (`guia.participante`) aponta para o ORIGINAL de `projects/2/images/
+  // banner` no bucket — mesmo binário, leitura pela rota do perfil. O recorte está nas colunas.
+  { id: "perfil-com-capa", role: "part", route: "/dashboard/profile", expect: { url: /\/dashboard\/profile/, anyOf: ["Sem capa", "capa"] } },
+
   // --- participante: superficie reduzida, usada para mostrar a variação de papel ---
   { id: "quadro-tarefas-participante", role: "part", route: "/dashboard", expect: { url: /\/dashboard$/, anyOf: ["Quadro", "Tarefa"] } },
   { id: "laboratorio-participante", role: "part", route: "/dashboard/laboratorio", expect: { url: /\/dashboard\/laboratorio/, anyOf: ["Laboratório", "Plantão"] } },
@@ -139,27 +144,27 @@ const INTERACTIONS = [
   { id: "relatorios-gerar-lote", role: "coord", route: "/dashboard/weekly-reports", abre: "Gerar em Lote" },
   // alvo: controle sem rótulo legível, localizado pela estrutura da tela
   { id: "dialogo-detalhe-tarefa", role: "coord", route: "/dashboard", alvo: "button.flex-1.text-left", dialogo: "PONTOS" },
-  { id: "detalhe-projeto", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: "button:has(svg.lucide-eye)" }, projetoTab: "Tarefas", verifica: "Andamento do projeto" },
+  { id: "detalhe-projeto", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: 'a[aria-label="Ver projeto Pesquisa em IA"]' }, projetoTab: "Tarefas", verifica: "Andamento do projeto" },
   // V5-5b (DEC-126/151): a grade meses × atividades do painel Cronograma. O cartão é nomeado
   // porque a lista ordena por data de criação e três projetos da instância têm a mesma data —
   // "o primeiro cartão" não seria a mesma tela em duas execuções.
-  { id: "projeto-cronograma", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: "button:has(svg.lucide-eye)" }, projetoTab: "Tarefas", verifica: "Cronograma", rolarAte: "text=Adicionar atividade" },
+  { id: "projeto-cronograma", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: 'a[aria-label="Ver projeto Pesquisa em IA"]' }, projetoTab: "Tarefas", verifica: "Cronograma", rolarAte: "text=Adicionar atividade" },
   // V5-7 (DEC-76/162/165): o diálogo de conclusão da linha, os dois lados. Os dados semeados por
   // SQL (membership de gestor + linhas + prova) são apagados depois da captura — mesmo dado de
   // vida curta do V5-5b/V5-6. Abrir o diálogo só lê; nenhuma captura solicita nem aprova.
-  { id: "dialogo-conclusao-atividade-pedido", role: "part", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: "button:has(svg.lucide-eye)" }, projetoTab: "Tarefas", clicar: ["Conclusão da atividade 1"], dialogo: "Solicitar conclusão", rolarAte: "text=Solicitar conclusão" },
-  { id: "dialogo-conclusao-atividade-aprovacao", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: "button:has(svg.lucide-eye)" }, projetoTab: "Tarefas", clicar: ["Conclusão da atividade 2"], dialogo: "Aprovar conclusão", rolarAte: "text=Aprovar conclusão" },
+  { id: "dialogo-conclusao-atividade-pedido", role: "part", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: 'a[aria-label="Ver projeto Pesquisa em IA"]' }, projetoTab: "Tarefas", clicar: ["Conclusão da atividade 1"], dialogo: "Solicitar conclusão", rolarAte: "text=Solicitar conclusão" },
+  { id: "dialogo-conclusao-atividade-aprovacao", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: 'a[aria-label="Ver projeto Pesquisa em IA"]' }, projetoTab: "Tarefas", clicar: ["Conclusão da atividade 2"], dialogo: "Aprovar conclusão", rolarAte: "text=Aprovar conclusão" },
   // V5-4b (DEC-149): o painel de Membros faz parte da rota dedicada do projeto.
-  { id: "painel-membros", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: "button:has(svg.lucide-eye)" }, projetoTab: "Membros", verifica: "Dados do vínculo", rolarAte: "text=Dados do vínculo" },
+  { id: "painel-membros", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: 'a[aria-label="Ver projeto Pesquisa em IA"]' }, projetoTab: "Membros", verifica: "Dados do vínculo", rolarAte: "text=Dados do vínculo" },
   // V5-9 (DEC-70/139/167/169): o painel de relatórios técnicos mora no diálogo de detalhe do
   // projeto, abaixo do cronograma. O texto semeado via SQL (os três "Pesquisa em IA") mostra o
   // editor preenchido com as três linhas de seção do oficial (DEC-168) e é apagado depois da
   // captura. Nenhuma captura salva, rascunha ou gera — o painel é fotografado em leitura.
-  { id: "painel-relatorios-tecnicos", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: "button:has(svg.lucide-eye)" }, projetoTab: "Arquivos", verifica: "Relatórios técnicos", rolarAte: "text=Relatórios técnicos" },
+  { id: "painel-relatorios-tecnicos", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: 'a[aria-label="Ver projeto Pesquisa em IA"]' }, projetoTab: "Arquivos", verifica: "Relatórios técnicos", rolarAte: "text=Relatórios técnicos" },
   // V5-10b (DEC-175): o painel de atestados mora no diálogo de detalhe, ao lado do de
   // relatórios técnicos. A captura é leitura pura: o painel lista os membros ativos do mês de
   // referência, e nenhum clique daqui gera PDF.
-  { id: "painel-atestados", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: "button:has(svg.lucide-eye)" }, projetoTab: "Arquivos", verifica: "Atestados de frequência", rolarAte: "text=Atestados de frequência" },
+  { id: "painel-atestados", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: 'a[aria-label="Ver projeto Pesquisa em IA"]' }, projetoTab: "Arquivos", verifica: "Atestados de frequência", rolarAte: "text=Atestados de frequência" },
   { id: "painel-notificacoes", role: "coord", route: "/dashboard", abre: "/^notifica/i", dialogo: "Notifica" },
   // plan-v3 OND3-C: o menu de ordenação da coluna é o rótulo que o guia usa — sem a captura, a
   // seção "A ordem dos cartões" descreveria cinco opções que nenhuma foto do guia mostra.
@@ -172,6 +177,16 @@ const INTERACTIONS = [
   // V5-6 (DEC-159): o filtro de atividade da barra do quadro. `depois` é o select que só existe
   // com o projeto selecionado — a lista de atividades é a do projeto, não uma lista global.
   { id: "quadro-filtro-atividade", role: "coord", route: "/dashboard", selecionar: { gatilho: "Todos os projetos", valor: "Pesquisa em IA" }, depois: [{ gatilho: "Todas as atividades", valor: "1. Coleta de dados" }], verifica: "Coleta de dados" },
+
+  // plan-v12 (DEC-238): a aba Conclusões do Painel Administrativo — a fila global de solicitações
+  // de conclusão de atividade, criada na S01. Leitura pura: nenhum clique aprova.
+  { id: "admin-conclusoes", role: "coord", route: "/dashboard/admin", aba: "Conclusões", verifica: "Conclusões solicitadas" },
+  // plan-v12 (DEC-241): o editor de recorte da capa, nos dois lados. O "Recortar capa" abre o
+  // diálogo sobre o ORIGINAL no bucket; nenhuma captura salva.
+  { id: "editor-recorte-capa", role: "part", route: "/dashboard/profile", abre: "Recortar capa", dialogo: "Recorte da capa", verifica: "Resolução recomendada", rolarAte: 'text=Zoom' },
+  { id: "editor-recorte-projeto", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: 'a[aria-label="Ver projeto Pesquisa em IA"]' }, projetoTab: "Visão geral", clicar: ["Recortar capa"], dialogo: "Recorte da capa", verifica: "Resolução recomendada", rolarAte: 'text=Zoom' },
+  // plan-v12 (DEC-240): a faixa 21:9 do detalhe do projeto, com o recorte aplicado. Sem clique.
+  { id: "faixa-capa-projeto", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: 'a[aria-label="Ver projeto Pesquisa em IA"]' }, projetoTab: "Visão geral", verifica: "Recortar capa", rolarAte: "text=Recortar capa" },
 ];
 
 /** A navegação é um acordeão: os destinos só aparecem quando o grupo é aberto. */
