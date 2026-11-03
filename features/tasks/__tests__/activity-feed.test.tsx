@@ -56,4 +56,19 @@ describe("ActivityFeed", () => {
     expect(await screen.findByText("Atividade do projeto filtrado")).toBeVisible();
     expect(screen.queryByText("Relatório semanal enviado")).not.toBeInTheDocument();
   });
+
+  it("título longo aparece por inteiro, com quebra, sem corte", async () => {
+    renderFeed();
+    const longTitle = "Auditoria de métricas de sessões do laboratório com revisão manual dos registros abertos";
+
+    const titleEl = await screen.findByText(longTitle);
+    const para = titleEl.closest("p");
+    const line = titleEl.closest("li");
+
+    // `truncate` cortava o título; a quebra exige parágrafo sem corte e alinhamento
+    // `items-start` (ícone e tempo no topo da linha de duas+ linhas).
+    expect(para).not.toHaveClass("truncate");
+    expect(para).toHaveClass("break-words");
+    expect(line).toHaveClass("items-start");
+  });
 });
