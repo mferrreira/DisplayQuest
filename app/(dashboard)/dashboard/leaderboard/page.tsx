@@ -29,7 +29,8 @@ import { EmptyState } from "@/components/ui/empty-state"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { fetchAPI } from "@/contexts/api-client"
 import { userImageUrl } from "@/lib/api/user-images"
-import { compareByBoardPosition } from "@/backend/domain"
+import { BannerImage } from "@/components/ui/banner-image"
+import { compareByBoardPosition, bannerCropFromColumns } from "@/backend/domain"
 
 /** O que `GET /api/board` declara (S01: mês corrente; S03 acrescenta a lista de meses fechados). */
 interface BoardMonth {
@@ -57,6 +58,10 @@ interface BoardEntry {
   position: number;
   avatar?: string | null;
   bannerKey?: string | null;
+  /** plan-v12 (DEC-239): parâmetros do recorte da capa, lidos da mesma lista que a chave. */
+  bannerCropX?: number | null;
+  bannerCropY?: number | null;
+  bannerCropZoom?: number | null;
   roles?: string[];
   completedTasks?: number;
 }
@@ -176,6 +181,9 @@ export default function LeaderboardPage() {
           position: entry.position,
           avatar: account?.avatar,
           bannerKey: account?.bannerKey,
+          bannerCropX: account?.bannerCropX,
+          bannerCropY: account?.bannerCropY,
+          bannerCropZoom: account?.bannerCropZoom,
           roles: account?.roles,
           completedTasks: account?.completedTasks,
         }
@@ -187,6 +195,9 @@ export default function LeaderboardPage() {
         position: index + 1,
         avatar: rankedUser.avatar,
         bannerKey: rankedUser.bannerKey,
+        bannerCropX: rankedUser.bannerCropX,
+        bannerCropY: rankedUser.bannerCropY,
+        bannerCropZoom: rankedUser.bannerCropZoom,
         roles: rankedUser.roles,
         completedTasks: rankedUser.completedTasks,
       }))
@@ -375,15 +386,15 @@ export default function LeaderboardPage() {
                     className="relative block overflow-hidden rounded-2xl border border-warning/30 bg-warning/5 transition-colors hover:border-warning/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     {champion.bannerKey ? (
-                      <>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
+                      // plan-v12 (DEC-239): a peça única `BannerImage` no bloco do campeão — a faixa
+                      // translúcida mostra a parte que a pessoa escolheu no editor.
+                      <div className="absolute inset-0 opacity-20" aria-hidden="true">
+                        <BannerImage
                           src={userImageUrl(champion.id, "banner", champion.bannerKey)}
                           alt=""
-                          aria-hidden="true"
-                          className="absolute inset-0 h-full w-full object-cover opacity-20"
+                          crop={bannerCropFromColumns(champion.bannerCropX, champion.bannerCropY, champion.bannerCropZoom)}
                         />
-                      </>
+                      </div>
                     ) : null}
                     <div className="relative flex flex-wrap items-center gap-6 p-8">
                       <Crown className="h-10 w-10 shrink-0 text-warning" aria-hidden="true" />

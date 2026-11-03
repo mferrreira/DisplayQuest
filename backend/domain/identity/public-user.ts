@@ -27,6 +27,13 @@ export interface PublicUser {
   /** V5-3 (DEC-137): chave da imagem de capa no bucket. Sempre presente no payload. */
   bannerKey: string | null;
   /**
+   * plan-v12 (DEC-239): parâmetros do recorte da capa. `null` = corte centrado de hoje.
+   * Sempre presentes no payload, como `bannerKey`.
+   */
+  bannerCropX: number | null;
+  bannerCropY: number | null;
+  bannerCropZoom: number | null;
+  /**
    * V5-4a (DEC-138): os dados de pessoa que o perfil mostra. `cpf` NÃO está aqui — a leitura do
    * CPF é restrita (próprio OU MANAGE_USERS) e sai só por `toPublicUserWithCpf`, chamada depois
    * de `canActorReadUserCpf` responder "sim".
@@ -59,6 +66,10 @@ interface PublicUserSource {
   avatar: string | null;
   /** Opcional na ENTRADA: chamadores antigos (e fixtures) não conhecem a coluna ainda. */
   bannerKey?: string | null;
+  /** Opcional na ENTRADA, pelo mesmo motivo do `bannerKey` (plan-v12, DEC-239). */
+  bannerCropX?: number | null;
+  bannerCropY?: number | null;
+  bannerCropZoom?: number | null;
   /** Opcional na ENTRADA, pelo mesmo motivo do `bannerKey`. */
   registrationNumber?: string | null;
   course?: string | null;
@@ -85,6 +96,9 @@ export function toPublicUser(user: PublicUserSource): PublicUser {
     bio: user.bio,
     avatar: user.avatar,
     bannerKey: user.bannerKey ?? null,
+    bannerCropX: user.bannerCropX ?? null,
+    bannerCropY: user.bannerCropY ?? null,
+    bannerCropZoom: user.bannerCropZoom ?? null,
     registrationNumber: user.registrationNumber ?? null,
     course: user.course ?? null,
     scholarshipType: user.scholarshipType ?? null,

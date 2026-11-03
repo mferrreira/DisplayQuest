@@ -33,7 +33,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { UserBadges } from "@/components/ui/user-badges"
 import { TimerCard } from "@/components/ui/timer-card"
 import { getRoleDisplayName } from "@/lib/utils/access-control"
-import { compareByBoardPosition } from "@/backend/domain"
+import { compareByBoardPosition, bannerCropFromColumns } from "@/backend/domain"
 import { ProfileMonthsList } from "@/components/ui/profile-months-list"
 import { useWorkSessions } from "@/hooks/use-work-sessions"
 import {
@@ -221,8 +221,21 @@ function ProfilePageContent() {
                 userId={user.id}
                 userName={user.name}
                 bannerKey={user.bannerKey}
+                bannerCrop={bannerCropFromColumns(user.bannerCropX, user.bannerCropY, user.bannerCropZoom)}
                 canEdit
-                onBannerChange={(bannerKey) => setUser({ ...user, bannerKey })}
+                onBannerChange={(bannerKey) => setUser((prev) => (prev ? { ...prev, bannerKey } : prev))}
+                onCropChange={(crop) =>
+                  setUser((prev) =>
+                    prev
+                      ? {
+                          ...prev,
+                          bannerCropX: crop?.x ?? null,
+                          bannerCropY: crop?.y ?? null,
+                          bannerCropZoom: crop?.zoom ?? null,
+                        }
+                      : prev
+                  )
+                }
               />
               <Avatar className="absolute bottom-0 left-6 h-24 w-24 translate-y-1/3 border-4 border-background bg-background sm:h-28 sm:w-28">
                 <AvatarImage src={user.avatar || undefined} alt={user.name} />

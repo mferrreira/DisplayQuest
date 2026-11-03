@@ -24,6 +24,10 @@ export interface User {
   avatar?: string | null;
   /** V5-3 (DEC-137): chave da capa do perfil no bucket (`users/<id>/images/banner`). */
   bannerKey?: string | null;
+  /** plan-v12 (DEC-239): parâmetros do recorte da capa — centro normalizado + zoom. */
+  bannerCropX?: number | null;
+  bannerCropY?: number | null;
+  bannerCropZoom?: number | null;
   profileVisibility: "public" | "private" | "members_only";
   /**
    * V5-4a (DEC-138): dados de pessoa. `cpf` chega só nas leituras em que a pessoa é o próprio ou

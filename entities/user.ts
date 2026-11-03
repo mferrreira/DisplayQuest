@@ -47,6 +47,10 @@ export const userSchema = z.object({
   avatar: z.string().nullable().optional(),
   /** V5-3 (DEC-137): chave da capa do perfil no bucket. O binário sai por rota autenticada. */
   bannerKey: z.string().nullable().optional(),
+  /** plan-v12 (DEC-239): parâmetros do recorte da capa. Orais — instância pré-migration. */
+  bannerCropX: z.number().nullable().optional(),
+  bannerCropY: z.number().nullable().optional(),
+  bannerCropZoom: z.number().nullable().optional(),
   bio: z.string().nullable().optional(),
   profileVisibility: profileVisibilitySchema.default("public"),
   /**

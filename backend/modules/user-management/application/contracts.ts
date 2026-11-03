@@ -1,4 +1,4 @@
-import type { ActorRef, UserImageSlot, UserRole } from "@/backend/domain"
+import type { ActorRef, BannerCropParams, UserImageSlot, UserRole } from "@/backend/domain"
 
 /**
  * B6-4 (D4): o escopo da lista passou a ser decidido a partir do `ActorRef` — o `actorRoles`
@@ -83,4 +83,14 @@ export interface GetUserImageCommand {
   actor: ActorRef
   userId: number
   slot: UserImageSlot
+}
+
+/**
+ * plan-v12 (DEC-239) — parâmetros do recorte da capa. A rota clampa por
+ * `clampBannerCrop` antes de chamar; o use case escreve o que recebeu.
+ */
+export interface UpdateUserBannerCropCommand {
+  actor: ActorRef
+  userId: number
+  params: BannerCropParams
 }

@@ -34,6 +34,13 @@ export interface UserRecord {
   /** V5-3 (DEC-137): chave do objeto no bucket (`users/<id>/images/banner`). Nunca um caminho de disco. */
   bannerKey: string | null;
   /**
+   * plan-v12 (DEC-239): parâmetros do recorte da capa. `null` = corte centrado de hoje.
+   * Opcional na ENTRADA (fixtures e chamadores antigos não conhecem as colunas ainda).
+   */
+  bannerCropX?: number | null;
+  bannerCropY?: number | null;
+  bannerCropZoom?: number | null;
+  /**
    * V5-4a (DEC-138): dados da pessoa que os formulários oficiais pedem. `cpf` chega aqui
    * porque o record é o registro inteiro; quem decide se ele sai para o cliente é
    * `canActorReadUserCpf`, e `toPublicUser` não o projeta.
@@ -65,6 +72,10 @@ export interface UserSummaryRow {
   avatar: string | null;
   bio: string | null;
   bannerKey: string | null;
+  /** plan-v12 (DEC-239): parâmetros do recorte da capa. Opcional na ENTRADA, como `bannerKey`. */
+  bannerCropX?: number | null;
+  bannerCropY?: number | null;
+  bannerCropZoom?: number | null;
   /** V5-12 (DEC-143/177): a linha traz o valor do perfil para a regra decidir linha a linha. */
   profileVisibility: ProfileVisibility;
   /** V5-4a (DEC-138): a linha traz os dados de pessoa; a política de visibilidade decide qual tier os entrega. */

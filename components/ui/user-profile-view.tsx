@@ -9,6 +9,7 @@
  * documentos", e o CPF continua fora — este componente nao recebe o CPF pela lista.
  */
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { BannerImage } from "@/components/ui/banner-image"
 import { userImageUrl } from "@/lib/api/user-images"
 import { Button } from "@/components/ui/button"
 import { PageHeader } from "@/components/ui/page-header"
@@ -29,6 +30,7 @@ import {
 } from "lucide-react"
 import { User as UserType } from "@/contexts/types"
 import {
+  bannerCropFromColumns,
   FUNDING_AGENCY_LABELS,
   SCHOLARSHIP_TYPE_LABELS,
   USER_LEVEL_LABELS,
@@ -137,17 +139,15 @@ export function UserProfileView({ user, onBack, canEdit = false, onEdit, project
       {/* Identidade — um plano so: capa, avatar sobreposto, nome e funcoes. */}
       <section className="overflow-hidden rounded-2xl border border-border">
         <div className="relative">
-          {/* S04 (R4, DEC-240): faixa 21:9 (`aspect-[21/9]`), sem altura fixa. */}
+          {/* S04 (R4, DEC-240): faixa 21:9 (`aspect-[21/9]`), sem altura fixa.
+              plan-v12 (DEC-239): a peça única `BannerImage` renderiza a parte escolhida. */}
           <div className="aspect-[21/9] overflow-hidden bg-primary/10">
             {user.bannerKey ? (
-              <>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={userImageUrl(user.id, "banner", user.bannerKey)}
-                  alt={`Capa de ${user.name}`}
-                  className="h-full w-full object-cover"
-                />
-              </>
+              <BannerImage
+                src={userImageUrl(user.id, "banner", user.bannerKey)}
+                alt={`Capa de ${user.name}`}
+                crop={bannerCropFromColumns(user.bannerCropX, user.bannerCropY, user.bannerCropZoom)}
+              />
             ) : (
               <div className="flex h-full w-full items-center justify-center text-sm font-medium text-primary/70">
                 Sem capa

@@ -31,6 +31,9 @@ type UserRow = {
   bio: string | null
   avatar: string | null
   bannerKey: string | null
+  bannerCropX: number | null
+  bannerCropY: number | null
+  bannerCropZoom: number | null
   cpf: string | null
   registrationNumber: string | null
   course: string | null
@@ -58,6 +61,9 @@ function toRecord(row: UserRow): UserRecord {
     bio: row.bio,
     avatar: row.avatar,
     bannerKey: row.bannerKey,
+    bannerCropX: row.bannerCropX,
+    bannerCropY: row.bannerCropY,
+    bannerCropZoom: row.bannerCropZoom,
     cpf: row.cpf,
     registrationNumber: row.registrationNumber,
     course: row.course,
@@ -102,6 +108,9 @@ export class PrismaUserRepository implements UserRepositoryPort {
         bio: record.bio,
         avatar: record.avatar,
         bannerKey: record.bannerKey,
+        bannerCropX: record.bannerCropX ?? null,
+        bannerCropY: record.bannerCropY ?? null,
+        bannerCropZoom: record.bannerCropZoom ?? null,
         cpf: record.cpf,
         registrationNumber: record.registrationNumber,
         course: record.course,
@@ -181,6 +190,9 @@ export class PrismaUserRepository implements UserRepositoryPort {
         completedTasks: true,
         avatar: true,
         bannerKey: true,
+        bannerCropX: true,
+        bannerCropY: true,
+        bannerCropZoom: true,
         bio: true,
         profileVisibility: true,
         cpf: true,

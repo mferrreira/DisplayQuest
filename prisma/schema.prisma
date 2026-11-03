@@ -25,6 +25,11 @@ model users {
   roles                UserRole[]
   avatar               String?
   bannerKey            String?
+  // plan-v12 (DEC-239): recorte da faixa de capa. Centro normalizado 0..1, zoom >= 1.
+  // Null = o corte centrado de hoje (object-cover). Subir nova capa zera os tres.
+  bannerCropX          Float?
+  bannerCropY          Float?
+  bannerCropZoom       Float?
   bio                  String?
   profileVisibility    ProfileVisibility      @default(public)
   // V5-4a (DEC-138): os dados de pessoa que os dois formulários oficiais pedem. Vivem na
@@ -106,6 +111,10 @@ model projects {
   // Uma coluna por slot: "uma logo por projeto" é estrutural, não regra a validar.
   logoKey       String?
   bannerKey     String?
+  // plan-v12 (DEC-239): recorte da faixa de capa — os mesmos tres campos do perfil.
+  bannerCropX   Float?
+  bannerCropY   Float?
+  bannerCropZoom Float?
   daily_logs  daily_logs[]      @relation("ProjectDailyLogs")
   members     project_members[] @relation("ProjectMemberships")
   creator     users             @relation("UserProjects", fields: [createdBy], references: [id])

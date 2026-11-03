@@ -53,7 +53,8 @@ describe("UserProfileView — faixa 21:9 (R4)", () => {
   it("com capa: o contêiner da imagem é aspect-[21/9], sem altura fixa", () => {
     render(<UserProfileView user={me({ bannerKey: "users/7/images/banner" })} onBack={vi.fn()} />);
 
-    const strip = screen.getByRole("img", { name: "Capa de Ana Souza" }).parentElement!;
+    // plan-v12 (DEC-239): o `<img>` mora na peça única `BannerImage`; a faixa 21:9 é o contêiner de fora.
+    const strip = screen.getByRole("img", { name: "Capa de Ana Souza" }).parentElement!.parentElement!;
     expect(strip.className).toContain("aspect-[21/9]");
     expect(strip.className).not.toMatch(/(^|\s)h-\d/);
   });

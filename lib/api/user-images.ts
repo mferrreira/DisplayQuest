@@ -12,11 +12,21 @@ export type UserImageSlot = "banner"
 
 export interface UserImageState {
   bannerKey: string | null
+  bannerCropX: number | null
+  bannerCropY: number | null
+  bannerCropZoom: number | null
 }
 
 function readImageState(payload: unknown): UserImageState {
-  const user = (payload as { user?: { bannerKey?: string | null } })?.user
-  return { bannerKey: user?.bannerKey ?? null }
+  const user = (payload as {
+    user?: { bannerKey?: string | null; bannerCropX?: number | null; bannerCropY?: number | null; bannerCropZoom?: number | null }
+  })?.user
+  return {
+    bannerKey: user?.bannerKey ?? null,
+    bannerCropX: user?.bannerCropX ?? null,
+    bannerCropY: user?.bannerCropY ?? null,
+    bannerCropZoom: user?.bannerCropZoom ?? null,
+  }
 }
 
 async function request<T>(path: string, init: RequestInit, fallback: string): Promise<T> {
@@ -69,6 +79,22 @@ export async function deleteUserImage(userId: number, slot: UserImageSlot): Prom
     `/api/users/${userId}/images/${slot}`,
     { method: "DELETE" },
     "Erro ao remover capa",
+  )
+  return readImageState(payload)
+}
+
+/**
+ * plan-v12 (DEC-239) — grava os parâmetros do recorte da capa. A rota clampa; o cliente manda
+ * o que o editor escolheu. A resposta devolve o usuário com as três colunas.
+ */
+export async function updateUserBannerCrop(
+  userId: number,
+  params: { x: number; y: number; zoom: number },
+): Promise<UserImageState> {
+  const payload = await request<unknown>(
+    `/api/users/${userId}/images/banner/crop`,
+    { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify(params) },
+    "Erro ao gravar o recorte da capa",
   )
   return readImageState(payload)
 }

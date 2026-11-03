@@ -43,6 +43,11 @@ export class UpdateUserImageUseCase {
     const column = USER_IMAGE_COLUMNS[slot]
     const previousKey = user[column] ?? null
     user[column] = blobKey
+    // plan-v12 (DEC-239): subir nova capa zera o recorte — o recorte é do original, e o
+    // original acabou de mudar. `blobKey: null` (tirar a capa) também zera.
+    user.bannerCropX = null
+    user.bannerCropY = null
+    user.bannerCropZoom = null
 
     return {
       user: toPublicUser(await this.repository.update(user)),
