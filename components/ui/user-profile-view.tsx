@@ -137,8 +137,8 @@ export function UserProfileView({ user, onBack, canEdit = false, onEdit, project
       {/* Identidade — um plano so: capa, avatar sobreposto, nome e funcoes. */}
       <section className="overflow-hidden rounded-2xl border border-border">
         <div className="relative">
-          {/* S05 (R4): faixa 16:9 (`aspect-video`), sem altura fixa. */}
-          <div className="aspect-video overflow-hidden bg-primary/10">
+          {/* S04 (R4, DEC-240): faixa 21:9 (`aspect-[21/9]`), sem altura fixa. */}
+          <div className="aspect-[21/9] overflow-hidden bg-primary/10">
             {user.bannerKey ? (
               <>
                 {/* eslint-disable-next-line @next/next/no-img-element */}

@@ -107,10 +107,10 @@ export function ProjectMediaHeader({
   return (
     <div className="space-y-3">
       <div className="relative pb-8">
-        {/* Dono (2026-10-29): a faixa do banner do projeto volta a 16:9 (`aspect-video`), a mesma
-            proporção do banner de perfil. 21:9 ficou alto demais na largura da página. O logo sobreposto
-            fica no canto de baixo-esquerda da faixa. */}
-        <div className="aspect-video overflow-hidden rounded-lg border bg-muted">
+        {/* Dono (2026-11, DEC-240): a faixa de capa do projeto é 21:9 (`aspect-[21/9]`),
+            largura plena, sem altura fixa; o cartão da lista de projetos mantém h-16 sm:h-24.
+            O logo sobreposto fica no canto de baixo-esquerda da faixa. */}
+        <div className="aspect-[21/9] overflow-hidden rounded-lg border bg-muted">
           {currentBannerKey ? (
             <>
               {/* eslint-disable-next-line @next/next/no-img-element */}

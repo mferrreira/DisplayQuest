@@ -96,8 +96,8 @@ export function UserMediaHeader({ userId, userName, bannerKey, canEdit, onBanner
   // objeto so; o `sr-only` dos inputs e os rotulos nao mudam (sao o que o teste fixa).
   return (
     <div className="relative">
-      {/* S05 (R4): faixa 16:9 (`aspect-video`), sem altura fixa. */}
-      <div className={`aspect-video overflow-hidden ${currentKey ? "bg-muted" : "bg-primary/10"}`}>
+      {/* S04 (R4, DEC-240): faixa 21:9 (`aspect-[21/9]`), sem altura fixa. */}
+      <div className={`aspect-[21/9] overflow-hidden ${currentKey ? "bg-muted" : "bg-primary/10"}`}>
         {currentKey ? (
           <>
             {/* eslint-disable-next-line @next/next/no-img-element */}
