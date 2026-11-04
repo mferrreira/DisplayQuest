@@ -100,6 +100,9 @@ model projects {
   id          Int               @id @default(autoincrement())
   name        String
   description String?
+  // plan-v13 (S01): subtítulo — a linha que aparece abaixo do título na página do projeto.
+  // Texto aparado, vazio vira null, teto 200; a descrição do corpo é outra coluna.
+  subtitle    String?
   createdAt   String
   createdBy   Int
   leaderId    Int?

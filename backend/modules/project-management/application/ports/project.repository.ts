@@ -10,6 +10,8 @@ export interface ProjectRecord {
   id?: number | null;
   name: string;
   description?: string | null;
+  /** plan-v13 (S01): subtítulo aparado, vazio vira null, teto 200. */
+  subtitle?: string | null;
   createdAt: string;
   createdBy: number;
   leaderId?: number | null;
@@ -50,6 +52,8 @@ export interface ProjectRecord {
 export interface NewProjectInput {
   name: string;
   description: string | null;
+  /** plan-v13 (S01): subtítulo aparado, vazio vira null. */
+  subtitle: string | null;
   createdAt: string;
   createdBy: number;
   leaderId: number | null;

@@ -72,6 +72,8 @@ export interface Project {
   id: number
   name: string
   description?: string | null
+  /** plan-v13 (S01): subtítulo aparado abaixo do título; null = sem subtítulo. */
+  subtitle?: string | null
   createdAt: string
   createdBy: number
   leaderId?: number | null
@@ -117,6 +119,8 @@ export interface ProjectMember {
 export interface ProjectFormData {
   name: string
   description: string
+  /** plan-v13 (S01): linha única; vazia no submit = sem subtítulo. */
+  subtitle?: string
   status: "active" | "completed" | "archived"
   leaderId?: number | null
   volunteerIds?: number[]

@@ -10,6 +10,9 @@ export const projectSchema = z.object({
   id: z.number().int(),
   name: z.string(),
   description: z.string().nullable().optional(),
+  // plan-v13 (S01): subtítulo. Opcional: o parse não pode quebrar contra instância sem a
+  // migration aplicada.
+  subtitle: z.string().nullable().optional(),
   createdAt: z.string(), // DB stores String — defensive parsing at UI layer only
   createdBy: z.number().int(),
   leaderId: z.number().int().nullable().optional(),

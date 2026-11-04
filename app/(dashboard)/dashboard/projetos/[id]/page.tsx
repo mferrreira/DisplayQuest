@@ -167,7 +167,9 @@ export default function ProjectDetailPage() {
       </Button>
       <PageHeader
         title={project.name}
-        description={project.description || "Detalhes e acompanhamento do projeto"}
+        // plan-v13 (S01, regra 1): abaixo do título entra o SUBTÍTULO; a descrição mora no
+        // card "Descrição" da aba Visão geral. Sem subtítulo, o fallback de hoje.
+        description={project.subtitle || "Detalhes e acompanhamento do projeto"}
         icon={FolderKanban}
         actions={<div className="flex flex-wrap items-center gap-2"><Badge className={projectStatusBadgeClass[project.status]}>{projectStatusLabel[project.status]}</Badge><Button variant="outline" onClick={() => router.push(`/dashboard/weekly-reports?tab=projetos&projectId=${project.id}`)}><FileText className="mr-2 h-4 w-4" />Relatórios</Button>{user && hasAccess(user.roles, "EDIT_PROJECT") && <><Button variant="outline" onClick={() => { setEditingProject(true); setIsProjectDialogOpen(true) }}><Edit className="mr-2 h-4 w-4" />Editar</Button><Button variant="outline" onClick={handleDeleteProject}><Trash2 className="mr-2 h-4 w-4" />Excluir</Button></>}</div>}
       />

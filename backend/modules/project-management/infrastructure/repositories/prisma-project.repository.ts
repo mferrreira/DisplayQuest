@@ -25,6 +25,7 @@ type ProjectRow = {
   id: number
   name: string
   description: string | null
+  subtitle: string | null
   createdAt: Date | string
   createdBy: number
   leaderId: number | null
@@ -53,6 +54,7 @@ function toRecord(row: ProjectRow): ProjectRecord {
     id: row.id,
     name: row.name,
     description: row.description ?? null,
+    subtitle: row.subtitle ?? null,
     createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : String(row.createdAt),
     createdBy: row.createdBy,
     leaderId: row.leaderId ?? null,
@@ -108,6 +110,7 @@ export function createPrismaProjectRepository(): ProjectRepositoryPort {
         data: {
           name: input.name,
           description: input.description,
+          subtitle: input.subtitle ?? null,
           createdAt: input.createdAt,
           createdBy: input.createdBy,
           leaderId: input.leaderId,
@@ -130,6 +133,7 @@ export function createPrismaProjectRepository(): ProjectRepositoryPort {
         data: {
           name: input.name,
           description: input.description,
+          subtitle: input.subtitle ?? null,
           createdAt: input.createdAt,
           createdBy: input.createdBy,
           leaderId: input.leaderId,
@@ -169,6 +173,7 @@ export function createPrismaProjectRepository(): ProjectRepositoryPort {
         data: {
           name: record.name,
           description: record.description ?? null,
+          subtitle: record.subtitle ?? null,
           leaderId: record.leaderId ?? null,
           status: record.status as never,
           links: record.links as never,

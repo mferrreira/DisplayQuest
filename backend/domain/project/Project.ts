@@ -34,6 +34,8 @@ export interface IProject {
   id?: number;
   name: string;
   description?: string | null;
+  /** plan-v13 (S01): subtítulo — linha aparada abaixo do título, vazia é null, teto 200. */
+  subtitle?: string | null;
   createdAt: string;
   createdBy: number;
   leaderId?: number | null;
