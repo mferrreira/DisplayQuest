@@ -47,6 +47,8 @@ function PodiumBlock({
   height,
   color,
   metalness,
+  emissive,
+  emissiveIntensity,
   inDom,
   onSelect,
 }: {
@@ -54,6 +56,8 @@ function PodiumBlock({
   height: number
   color: string
   metalness: number
+  emissive: string
+  emissiveIntensity: number
   inDom: boolean
   onSelect?: (project: Project) => void
 }) {
@@ -80,7 +84,7 @@ function PodiumBlock({
       onPointerOut={() => setHovered(false)}
     >
       <boxGeometry args={[1.3, height, 1.3]} />
-      <meshStandardMaterial color={color} metalness={metalness} roughness={0.3} />
+      <meshStandardMaterial color={color} metalness={metalness} roughness={0.3} emissive={emissive} emissiveIntensity={emissiveIntensity} />
       {inDom && (
         <Html position={[0, height / 2 + 0.18, 0]} center zIndexRange={[10, 0]} className="pointer-events-none">
           <div className="whitespace-nowrap text-center">
@@ -133,6 +137,8 @@ export function PodiumScene({
             height={podiumBlockHeight(entry.points, maxPoints)}
             color={entry.position === 1 ? colors.gold : colors.neutral}
             metalness={entry.position === 1 ? 0.75 : 0.25}
+            emissive={colors.gold}
+            emissiveIntensity={entry.position === 1 ? 0.12 : 0.02}
             inDom={inDom}
             onSelect={onSelect}
           />
@@ -142,7 +148,7 @@ export function PodiumScene({
         <Float speed={2} rotationIntensity={0.4} floatIntensity={0.6} name="crown">
           <mesh name="crown" position={[0, podiumBlockHeight(entries[0].points, maxPoints) + 0.5, 0]}>
             <torusGeometry args={[0.32, 0.1, 12, 48]} />
-            <meshStandardMaterial color={colors.gold} metalness={0.9} roughness={0.2} />
+            <meshStandardMaterial color={colors.gold} metalness={0.9} roughness={0.2} emissive={colors.gold} emissiveIntensity={0.15} />
           </mesh>
         </Float>
       )}

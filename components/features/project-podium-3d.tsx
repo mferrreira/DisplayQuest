@@ -74,7 +74,7 @@ export function ProjectPodium3D({
   const { resolvedTheme } = useTheme()
   const colors = React.useMemo<PodiumColors>(() => {
     if (typeof document === "undefined") return { gold: "#f6b322", neutral: "#888888" }
-    return { gold: tokenHex("--warning", 45), neutral: tokenHex("--secondary", 35) }
+    return { gold: tokenHex("--warning", 55), neutral: tokenHex("--secondary", 35) }
   }, [resolvedTheme])
 
   if (!webgl || entries.length === 0) return null
