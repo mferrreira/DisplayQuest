@@ -41,6 +41,9 @@ type ProjectRow = {
   bannerCropX: number | null
   bannerCropY: number | null
   bannerCropZoom: number | null
+  logoCropX: number | null
+  logoCropY: number | null
+  logoCropZoom: number | null
   members?: Array<{ userId: number; roles?: string[]; user?: { id: number; name: string; email: string; roles: string[] } | null }>
   _count?: { members?: number }
 }
@@ -66,6 +69,9 @@ function toRecord(row: ProjectRow): ProjectRecord {
     bannerCropX: row.bannerCropX ?? null,
     bannerCropY: row.bannerCropY ?? null,
     bannerCropZoom: row.bannerCropZoom ?? null,
+    logoCropX: row.logoCropX ?? null,
+    logoCropY: row.logoCropY ?? null,
+    logoCropZoom: row.logoCropZoom ?? null,
     memberCount: row._count?.members ?? row.members?.length ?? undefined,
     members: Array.isArray(row.members)
       ? row.members.map(
@@ -182,6 +188,10 @@ export function createPrismaProjectRepository(): ProjectRepositoryPort {
           bannerCropX: record.bannerCropX ?? null,
           bannerCropY: record.bannerCropY ?? null,
           bannerCropZoom: record.bannerCropZoom ?? null,
+          // DEC-242: o recorte quadrado do logo segue a mesma postura.
+          logoCropX: record.logoCropX ?? null,
+          logoCropY: record.logoCropY ?? null,
+          logoCropZoom: record.logoCropZoom ?? null,
         },
         include: includeOptions,
       })

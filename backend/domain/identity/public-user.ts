@@ -24,6 +24,8 @@ export interface PublicUser {
   profileVisibility: ProfileVisibility;
   bio: string | null;
   avatar: string | null;
+  /** DEC-242: chave do avatar no bucket. Sempre presente no payload, como `bannerKey`. */
+  avatarKey: string | null;
   /** V5-3 (DEC-137): chave da imagem de capa no bucket. Sempre presente no payload. */
   bannerKey: string | null;
   /**
@@ -33,6 +35,13 @@ export interface PublicUser {
   bannerCropX: number | null;
   bannerCropY: number | null;
   bannerCropZoom: number | null;
+  /**
+   * DEC-242: parâmetros do recorte quadrado do avatar. Sempre presentes no payload, como
+   * os da capa. O render do avatar não os aplica — a tela é cover simples.
+   */
+  logoCropX: number | null;
+  logoCropY: number | null;
+  logoCropZoom: number | null;
   /**
    * V5-4a (DEC-138): os dados de pessoa que o perfil mostra. `cpf` NÃO está aqui — a leitura do
    * CPF é restrita (próprio OU MANAGE_USERS) e sai só por `toPublicUserWithCpf`, chamada depois
@@ -65,11 +74,17 @@ interface PublicUserSource {
   bio: string | null;
   avatar: string | null;
   /** Opcional na ENTRADA: chamadores antigos (e fixtures) não conhecem a coluna ainda. */
+  avatarKey?: string | null;
+  /** Opcional na ENTRADA: chamadores antigos (e fixtures) não conhecem a coluna ainda. */
   bannerKey?: string | null;
   /** Opcional na ENTRADA, pelo mesmo motivo do `bannerKey` (plan-v12, DEC-239). */
   bannerCropX?: number | null;
   bannerCropY?: number | null;
   bannerCropZoom?: number | null;
+  /** Opcional na ENTRADA, pelo mesmo motivo do `bannerKey` (DEC-242). */
+  logoCropX?: number | null;
+  logoCropY?: number | null;
+  logoCropZoom?: number | null;
   /** Opcional na ENTRADA, pelo mesmo motivo do `bannerKey`. */
   registrationNumber?: string | null;
   course?: string | null;
@@ -95,10 +110,14 @@ export function toPublicUser(user: PublicUserSource): PublicUser {
     profileVisibility: user.profileVisibility,
     bio: user.bio,
     avatar: user.avatar,
+    avatarKey: user.avatarKey ?? null,
     bannerKey: user.bannerKey ?? null,
     bannerCropX: user.bannerCropX ?? null,
     bannerCropY: user.bannerCropY ?? null,
     bannerCropZoom: user.bannerCropZoom ?? null,
+    logoCropX: user.logoCropX ?? null,
+    logoCropY: user.logoCropY ?? null,
+    logoCropZoom: user.logoCropZoom ?? null,
     registrationNumber: user.registrationNumber ?? null,
     course: user.course ?? null,
     scholarshipType: user.scholarshipType ?? null,

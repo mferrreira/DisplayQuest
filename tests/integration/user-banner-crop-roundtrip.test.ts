@@ -76,4 +76,52 @@ describe("G4 roundtrip — recorte da capa do perfil (isolated test DB)", () => 
     expect(row?.bannerCropX).toBeNull();
     expect(row?.bannerCropZoom).toBeNull();
   });
+
+  it("DEC-242: o recorte quadrado do avatar entra nas colunas `logoCrop*` com o mesmo gate", async () => {
+    const self = userActor(userId, ["VOLUNTARIO"]);
+    const updated = await userModule.updateUserAvatarCrop({
+      actor: self,
+      userId,
+      params: { x: 0.4, y: 0.2, zoom: 2.5 },
+    });
+    expect(updated.logoCropX).toBe(0.4);
+    expect(updated.logoCropY).toBe(0.2);
+    expect(updated.logoCropZoom).toBe(2.5);
+
+    const row = await prisma.users.findUnique({ where: { id: userId } });
+    expect(row?.logoCropX).toBe(0.4);
+    expect(row?.logoCropY).toBe(0.2);
+    expect(row?.logoCropZoom).toBe(2.5);
+
+    const listed = (await userModule.listUsersForActor({ actor: managerActor })) as Array<
+      Record<string, unknown>
+    >;
+    const seen = listed.find((u) => u.id === userId);
+    expect(seen?.logoCropX).toBe(0.4);
+    expect(seen?.logoCropZoom).toBe(2.5);
+
+    // Capa de OUTRA pessoa por quem não gerencia: recusa, coluna quadrada intacta.
+    const stranger = userActor(1, ["VOLUNTARIO"]);
+    await expect(
+      userModule.updateUserAvatarCrop({ actor: stranger, userId, params: { x: 0.5, y: 0.5, zoom: 1 } }),
+    ).rejects.toThrow(/autorizado/i);
+    const after = await prisma.users.findUnique({ where: { id: userId } });
+    expect(after?.logoCropX).toBe(0.4);
+
+    // Subir avatar novo zera as colunas quadradas, pela mesma razão da capa.
+    const upload = await userModule.updateUserImage({
+      actor: self,
+      userId,
+      slot: "avatar",
+      blobKey: `users/${userId}/images/avatar/novo.webp`,
+    });
+    expect(upload.user.avatarKey).toBe(`users/${userId}/images/avatar/novo.webp`);
+    expect(upload.user.logoCropX).toBeNull();
+    expect(upload.user.logoCropZoom).toBeNull();
+
+    const rowAfter = await prisma.users.findUnique({ where: { id: userId } });
+    expect(rowAfter?.logoCropX).toBeNull();
+    // A capa não é tocada pela escrita do avatar.
+    expect(rowAfter?.bannerKey).toBe(`users/${userId}/images/banner/novo.webp`);
+  });
 });

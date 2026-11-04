@@ -154,6 +154,9 @@ export interface ProjectImageState {
   bannerCropX: number | null
   bannerCropY: number | null
   bannerCropZoom: number | null
+  logoCropX: number | null
+  logoCropY: number | null
+  logoCropZoom: number | null
 }
 
 function readImageState(payload: unknown): ProjectImageState {
@@ -164,6 +167,9 @@ function readImageState(payload: unknown): ProjectImageState {
       bannerCropX?: number | null
       bannerCropY?: number | null
       bannerCropZoom?: number | null
+      logoCropX?: number | null
+      logoCropY?: number | null
+      logoCropZoom?: number | null
     }
   })?.project
   return {
@@ -172,6 +178,9 @@ function readImageState(payload: unknown): ProjectImageState {
     bannerCropX: project?.bannerCropX ?? null,
     bannerCropY: project?.bannerCropY ?? null,
     bannerCropZoom: project?.bannerCropZoom ?? null,
+    logoCropX: project?.logoCropX ?? null,
+    logoCropY: project?.logoCropY ?? null,
+    logoCropZoom: project?.logoCropZoom ?? null,
   }
 }
 
@@ -232,6 +241,22 @@ export async function updateProjectBannerCrop(
     `/api/projects/${projectId}/images/banner/crop`,
     { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify(params) },
     "Erro ao gravar o recorte da capa do projeto",
+  )
+  return readImageState(payload)
+}
+
+/**
+ * DEC-242 — grava os parâmetros do recorte quadrado do logo. Mesma forma da capa: a rota
+ * clampa, o cliente manda o que o editor quadrado escolheu.
+ */
+export async function updateProjectLogoCrop(
+  projectId: number,
+  params: { x: number; y: number; zoom: number },
+): Promise<ProjectImageState> {
+  const payload = await request<unknown>(
+    `/api/projects/${projectId}/images/logo/crop`,
+    { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify(params) },
+    "Erro ao gravar o recorte do logo do projeto",
   )
   return readImageState(payload)
 }

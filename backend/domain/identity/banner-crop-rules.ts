@@ -78,25 +78,38 @@ export function bannerCropTransform(params: BannerCropParams): {
  * `x ∈ [largura/2, 1 - largura/2]` e `y ∈ [altura/2, 1 - altura/2]`.
  */
 export const BANNER_BAND_ASPECT = 21 / 9;
+/** Faixa quadrada (logo): razão da faixa = 1 (largura = altura). */
+export const SQUARE_BAND_ASPECT = 1;
 
+/**
+ * Geometria da faixa no editor. `bandAspect` é a razão da FAIXA (largura/altura): 21/9 para a
+ * capa, 1 para o logo quadrado. `aspect` é a razão natural da imagem — a moldura do contêiner
+ * segue esta razão, e a faixa se mede dentro dela.
+ */
 export function bannerCropBandRect(
   params: BannerCropParams,
+  bandAspect: number,
   aspect: number,
 ): { left: number; top: number; width: number; height: number } {
   const w = 1 / params.zoom;
-  const h = (w * 9) / 21 * aspect;
+  const h = w / bandAspect;
+  void aspect;
   return { left: params.x - w / 2, top: params.y - h / 2, width: w, height: h };
 }
 
 /**
- * Clamp band-aware: zoom entra em [1, 4]; o centro entra na faixa que o zoom permite,
- * medida pela razão natural da imagem. Faixa mais alta que a imagem não tem centro
- * possível em Y: ela é recortada em cima e em baixo, e o centro fica no meio do eixo.
+ * Clamp band-aware: zoom entra em [1, 4]; o centro entra na faixa que o zoom permite. Faixa mais
+ * alta que a imagem não tem centro possível em Y: ela é recortada em cima e em baixo, e o centro
+ * fica no meio do eixo.
  */
-export function clampCropCenterToBand(params: BannerCropParams, aspect: number): BannerCropParams {
+export function clampCropCenterToBand(
+  params: BannerCropParams,
+  bandAspect: number,
+  aspect: number,
+): BannerCropParams {
   const zoom = Math.min(MAX_BANNER_CROP_ZOOM, Math.max(MIN_BANNER_CROP_ZOOM, params.zoom));
   const w = 1 / zoom;
-  const h = (w * 9) / 21 * aspect;
+  const h = w / bandAspect;
   const xlo = w / 2;
   const xhi = 1 - w / 2;
   const ylo = h / 2;

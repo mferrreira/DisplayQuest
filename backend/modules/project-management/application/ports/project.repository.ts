@@ -40,6 +40,10 @@ export interface ProjectRecord {
   bannerCropX?: number | null;
   bannerCropY?: number | null;
   bannerCropZoom?: number | null;
+  /** DEC-242: recorte quadrado do logo do projeto. Mesma forma da capa. */
+  logoCropX?: number | null;
+  logoCropY?: number | null;
+  logoCropZoom?: number | null;
 }
 
 /** Input for the create write (createdAt already stamped by the use case). */

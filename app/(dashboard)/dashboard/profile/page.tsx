@@ -222,6 +222,8 @@ function ProfilePageContent() {
                 userName={user.name}
                 bannerKey={user.bannerKey}
                 bannerCrop={bannerCropFromColumns(user.bannerCropX, user.bannerCropY, user.bannerCropZoom)}
+                avatarKey={user.avatarKey}
+                avatarCrop={bannerCropFromColumns(user.logoCropX, user.logoCropY, user.logoCropZoom)}
                 canEdit
                 onBannerChange={(bannerKey) => setUser((prev) => (prev ? { ...prev, bannerKey } : prev))}
                 onCropChange={(crop) =>
@@ -232,6 +234,19 @@ function ProfilePageContent() {
                           bannerCropX: crop?.x ?? null,
                           bannerCropY: crop?.y ?? null,
                           bannerCropZoom: crop?.zoom ?? null,
+                        }
+                      : prev
+                  )
+                }
+                onAvatarKeyChange={(avatarKey) => setUser((prev) => (prev ? { ...prev, avatarKey } : prev))}
+                onAvatarCropChange={(crop) =>
+                  setUser((prev) =>
+                    prev
+                      ? {
+                          ...prev,
+                          logoCropX: crop?.x ?? null,
+                          logoCropY: crop?.y ?? null,
+                          logoCropZoom: crop?.zoom ?? null,
                         }
                       : prev
                   )

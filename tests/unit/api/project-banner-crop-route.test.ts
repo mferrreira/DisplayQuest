@@ -43,6 +43,9 @@ function projectRow(id: number): ProjectRecord {
     bannerCropX: null,
     bannerCropY: null,
     bannerCropZoom: null,
+    logoCropX: null,
+    logoCropY: null,
+    logoCropZoom: null,
   };
 }
 
@@ -213,5 +216,28 @@ describe("PUT /api/projects/<id>/images/banner/crop", () => {
     const response = await PUT(cropRequest({ x: 0.5, y: 0.5, zoom: 1 }), context({ id: "2", slot: "banner" }));
     expect(response.status).toBe(200);
     expect(mocks.projects.get(2)!.bannerCropZoom).toBe(1);
+  });
+
+  it("DEC-242: o slot `logo` grava o recorte quadrado nas colunas `logoCrop*`", async () => {
+    login(["COORDENADOR"], 1);
+    const response = await PUT(cropRequest({ x: 0.9, y: 0.05, zoom: 3 }), context({ id: "2", slot: "logo" }));
+    expect(response.status).toBe(200);
+    const project = (await read(response)).project;
+    // Faixa quadrada zoom 3: janela [1/6, 5/6] nos dois eixos — 0.9 sai em 5/6, 0.05 em 1/6.
+    expect(project.logoCropX).toBeCloseTo(1 - 1 / 6, 6);
+    expect(project.logoCropY).toBeCloseTo(1 / 6, 6);
+    expect(project.logoCropZoom).toBe(3);
+    expect(mocks.projects.get(2)!.logoCropX).toBeCloseTo(1 - 1 / 6, 6);
+    // O recorte do logo não toca a capa.
+    expect(mocks.projects.get(2)!.bannerCropX).toBeNull();
+  });
+
+  it("DEC-242: o gate de gestão decide o logo igual à capa", async () => {
+    mocks.memberships.set("2:9", ["VOLUNTARIO"]);
+    login(["COORDENADOR"], 9);
+    const response = await PUT(cropRequest({ x: 0.5, y: 0.5, zoom: 1 }), context({ id: "2", slot: "logo" }));
+    expect(response.status).toBe(403);
+    expect((await read(response)).error).toMatch(/gerenciar/i);
+    expect(mocks.projects.get(2)!.logoCropX).toBeNull();
   });
 });

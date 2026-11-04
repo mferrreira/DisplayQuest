@@ -30,7 +30,7 @@
  *     change (medido no V5-2d): o campo de imagem não deixa PDF chegar à rota.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Toaster } from "sonner";
 
@@ -39,7 +39,9 @@ import { ProjectDeliverablesPanel } from "@/components/features/project-delivera
 import { ProjectMediaHeader } from "@/components/features/project-media-header";
 import {
   PROJECT_IMAGE_SLOT_MESSAGE,
+  SQUARE_BAND_ASPECT,
   clampBannerCrop,
+  clampCropCenterToBand,
   deliverableValidationMessage,
   normalizeDeliverableInput,
   validateDeliverableInput,
@@ -74,6 +76,9 @@ const mocks = {
     bannerCropX: null as number | null,
     bannerCropY: null as number | null,
     bannerCropZoom: null as number | null,
+    logoCropX: null as number | null,
+    logoCropY: null as number | null,
+    logoCropZoom: null as number | null,
   },
   requests: [] as Array<{ method: string; path: string; json?: Record<string, unknown> }>,
   uploads: [] as Array<{ field: string | null; name: string; type: string; size: number }>,
@@ -107,7 +112,16 @@ function resetStore() {
   mocks.requests = [];
   mocks.uploads = [];
   mocks.removes = [];
-  mocks.project = { logoKey: null, bannerKey: null, bannerCropX: null, bannerCropY: null, bannerCropZoom: null };
+  mocks.project = {
+    logoKey: null,
+    bannerKey: null,
+    bannerCropX: null,
+    bannerCropY: null,
+    bannerCropZoom: null,
+    logoCropX: null,
+    logoCropY: null,
+    logoCropZoom: null,
+  };
   mocks.refuseDeliverableWrite = false;
   mocks.nextId = 500;
 }
@@ -220,10 +234,10 @@ async function recordingFetch(input: unknown, init: RequestInit = {}) {
     }
     const field = slot === "logo" ? "logoKey" : "bannerKey";
 
-    // PUT `images/banner/crop` — espelho da rota real: entrada estrita, clamp, sem byte.
+    // PUT `<slot>/crop` — espelho da rota real: entrada estrita, clamp, sem byte. DEC-242: o
+    // clamp do logo quadrado dá a mesma janela de centro; a coluna escrita segue o slot.
     if (segments[6] === "crop") {
       const body = JSON.parse(String(init.body)) as Record<string, unknown>;
-      mocks.requests.push({ method, path, json: body });
       const { x, y, zoom } = body;
       const strict =
         typeof x === "number" && typeof y === "number" && typeof zoom === "number" &&
@@ -232,23 +246,28 @@ async function recordingFetch(input: unknown, init: RequestInit = {}) {
       if (!strict) {
         return jsonResponse({ error: "Recorte inválido" }, 400);
       }
-      const clamped = clampBannerCrop({ x, y, zoom });
-      mocks.project.bannerCropX = clamped.x;
-      mocks.project.bannerCropY = clamped.y;
-      mocks.project.bannerCropZoom = clamped.zoom;
+      // O clamp segue o slot, igual à rota: capa é faixa 21:9, logo é faixa quadrada (DEC-242).
+      const clamped = slot === "logo"
+        ? clampCropCenterToBand({ x, y, zoom }, SQUARE_BAND_ASPECT, SQUARE_BAND_ASPECT)
+        : clampBannerCrop({ x, y, zoom });
+      // O gravador registra o que o servidor PERSISTE (o clampado), não o corpo cru do cliente.
+      mocks.requests.push({ method, path, json: clamped });
+      const cropFields = slot === "logo"
+        ? { logoCropX: clamped.x, logoCropY: clamped.y, logoCropZoom: clamped.zoom }
+        : { bannerCropX: clamped.x, bannerCropY: clamped.y, bannerCropZoom: clamped.zoom };
+      mocks.project = { ...mocks.project, ...cropFields };
       return jsonResponse({ project: { ...mocks.project } });
     }
 
     if (method === "DELETE") {
       const previous = mocks.project[field];
       mocks.project[field] = null;
-      // A escrita no slot `banner` zera as colunas do recorte — o upload de um original novo
-      // nasce com recorte novo, e tirar a faixa não deixa parâmetro órfão (DEC-239).
-      if (slot === "banner") {
-        mocks.project.bannerCropX = null;
-        mocks.project.bannerCropY = null;
-        mocks.project.bannerCropZoom = null;
-      }
+      // A escrita no slot zera as colunas do recorte daquele slot — o upload de um original novo
+      // nasce com recorte novo, e tirar a faixa não deixa parâmetro órfão (DEC-239/242).
+      const zeroed = slot === "logo"
+        ? { logoCropX: null, logoCropY: null, logoCropZoom: null }
+        : { bannerCropX: null, bannerCropY: null, bannerCropZoom: null };
+      mocks.project = { ...mocks.project, ...zeroed };
       if (previous) mocks.removes.push(previous);
       return jsonResponse({ project: { ...mocks.project } });
     }
@@ -280,6 +299,11 @@ async function recordingFetch(input: unknown, init: RequestInit = {}) {
       return jsonResponse({ error: validation.error }, 400);
     }
     mocks.project[field] = `projects/7/images/${slot}/novo-${++mocks.nextId}.png`;
+    // Subir original novo zera o recorte do slot (DEC-239/242): o original mudou.
+    const zeroed = slot === "logo"
+      ? { logoCropX: null, logoCropY: null, logoCropZoom: null }
+      : { bannerCropX: null, bannerCropY: null, bannerCropZoom: null };
+    mocks.project = { ...mocks.project, ...zeroed };
     return jsonResponse({ project: { ...mocks.project } }, 200);
   }
 
@@ -496,6 +520,7 @@ describe("cabeçalho de mídia do projeto", () => {
     canManage: boolean,
     keys: { logoKey?: string | null; bannerKey?: string | null } = {},
     crop: { x: number; y: number; zoom: number } | null = null,
+    logoCrop: { x: number; y: number; zoom: number } | null = null,
   ) {
     return render(
       <>
@@ -505,6 +530,7 @@ describe("cabeçalho de mídia do projeto", () => {
           logoKey={keys.logoKey ?? null}
           bannerKey={keys.bannerKey ?? null}
           bannerCrop={crop}
+          logoCrop={logoCrop}
           canManage={canManage}
         />
         <Toaster />
@@ -590,6 +616,82 @@ describe("cabeçalho de mídia do projeto", () => {
     expect(mocks.uploads).toEqual([]);
   });
 
+  // ---------- DEC-242: o quadrado do logo ----------
+
+  it("escolher o logo abre o editor QUADRADO com a mensagem de resolução do quadrado", async () => {
+    const user = userEvent.setup({ delay: null });
+    renderHeader(true);
+
+    await user.upload(
+      screen.getByLabelText("Imagem do logo"),
+      new File([PNG_BYTES], "logo do lab.png", { type: "image/png" }),
+    );
+
+    const dialog = await screen.findByRole("dialog", { name: "Recorte do logo" });
+    // A faixa quadrada muda a mensagem: 1:1, não 21:9.
+    expect(screen.getByText(/Logo quadrado: resolução recomendada 1000×1000 px \(1:1\)/)).toBeInTheDocument();
+    expect(dialog.querySelector("img")).toHaveAttribute("src", expect.stringContaining("blob:preview/logo do lab.png"));
+    // Nada é gravado antes do salvar.
+    expect(mocks.uploads).toEqual([]);
+    expect(mocks.requests).toEqual([]);
+  });
+
+  it("salvar o logo sobe o arquivo no slot logo e grava o recorte nas colunas `logoCrop*`", async () => {
+    const user = userEvent.setup({ delay: null });
+    renderHeader(true);
+
+    await user.upload(
+      screen.getByLabelText("Imagem do logo"),
+      new File([PNG_BYTES], "logo.png", { type: "image/png" }),
+    );
+    const dialog = await screen.findByRole("dialog", { name: "Recorte do logo" });
+    await user.click(within(dialog).getByRole("button", { name: "Salvar recorte" }));
+
+    await waitFor(() => expect(mocks.uploads).toHaveLength(1));
+    expect(mocks.uploads[0]).toMatchObject({ field: "file", name: "logo.png", type: "image/png" });
+    // Ordem da escrita: primeiro o byte (pelo gravador de uploads), depois as colunas.
+    expect(mocks.requests[0]).toMatchObject({
+      method: "PUT",
+      path: "/api/projects/7/images/logo/crop",
+      json: { x: 0.5, y: 0.5, zoom: 1 },
+    });
+    expect(mocks.project.logoKey).toMatch(/^projects\/7\/images\/logo\//);
+    expect(mocks.project.logoCropX).toBe(0.5);
+    expect(mocks.project.logoCropZoom).toBe(1);
+    // A capa não foi tocada pelo logo.
+    expect(mocks.project.bannerKey).toBeNull();
+  });
+
+  it("re-recortar o logo abre sobre o binário do bucket e o salvar grava só as colunas quadradas, clampadas pelo quadrado", async () => {
+    const user = userEvent.setup({ delay: null });
+    mocks.project.logoKey = "projects/7/images/logo/velho.png";
+    renderHeader(true, { logoKey: mocks.project.logoKey }, null, { x: 0.9, y: 0.05, zoom: 3 });
+
+    await user.click(screen.getByRole("button", { name: "Recortar logo" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "Recorte do logo" });
+    // Re-recorte = o ORIGINAL no bucket, com a chave como quebra de cache.
+    expect(dialog.querySelector("img")).toHaveAttribute(
+      "src",
+      expect.stringContaining("v=projects%2F7%2Fimages%2Flogo%2Fvelho.png"),
+    );
+
+    await user.click(within(dialog).getByRole("button", { name: "Salvar recorte" }));
+
+    await waitFor(() =>
+      expect(mocks.requests).toEqual([
+        { method: "PUT", path: "/api/projects/7/images/logo/crop", json: { x: 1 - 1 / 6, y: 1 / 6, zoom: 3 } },
+      ]),
+    );
+    // Faixa quadrada zoom 3: janela [1/6, 5/6] nos dois eixos — 0.9 sai em 5/6, 0.05 em 1/6.
+    expect(mocks.project.logoCropX).toBeCloseTo(1 - 1 / 6, 6);
+    expect(mocks.project.logoCropZoom).toBe(3);
+    expect(mocks.uploads).toEqual([]);
+    // O binário não se move, e a capa segue intacta.
+    expect(mocks.project.logoKey).toBe("projects/7/images/logo/velho.png");
+    expect(mocks.project.bannerCropX).toBeNull();
+  });
+
   it("o campo de imagem não aceita PDF: o editor nem abre, e nenhuma requisição sai", async () => {
     const user = userEvent.setup({ delay: null });
     renderHeader(true);
@@ -613,10 +715,13 @@ describe("cabeçalho de mídia do projeto", () => {
     const user = userEvent.setup({ delay: null });
     renderHeader(true);
 
+    // DEC-242: o logo passa pelo editor quadrado antes de subir — a recusa chega no salvar.
     await user.upload(
       screen.getByLabelText("Imagem do logo"),
       new File([PNG_BYTES], "disfarçado.jpg", { type: "image/jpeg" }),
     );
+    const dialog = await screen.findByRole("dialog", { name: "Recorte do logo" });
+    await user.click(within(dialog).getByRole("button", { name: "Salvar recorte" }));
 
     expect(await screen.findByText(/Conteúdo não corresponde ao tipo declarado/)).toBeInTheDocument();
     expect(mocks.project.logoKey).toBeNull();

@@ -8,12 +8,14 @@ import {
   deleteProjectImage,
   projectImageUrl,
   updateProjectBannerCrop,
+  updateProjectLogoCrop,
   uploadProjectImage,
   type ProjectImageSlot,
+  type ProjectImageState,
 } from "@/lib/api/project-files"
 import { BannerCropEditor } from "@/components/features/banner-crop-editor"
 import { BannerImage } from "@/components/ui/banner-image"
-import { bannerCropFromColumns, type BannerCropParams } from "@/backend/domain"
+import { bannerCropFromColumns, SQUARE_BAND_ASPECT, type BannerCropParams } from "@/backend/domain"
 
 /**
  * V5-2d (DEC-102) — capa e logo do projeto, no topo do detalhe.
@@ -28,7 +30,10 @@ import { bannerCropFromColumns, type BannerCropParams } from "@/backend/domain"
  * plan-v12 (DEC-241, R7): escolhido o arquivo da capa, o editor 21:9 abre sobre o ORIGINAL
  * (mesmo editor da peça do perfil, DEC-241) e o salvar sobe o arquivo + grava o recorte pela rota
  * de parâmetros. "Recortar capa" reabre o editor sobre o binário do bucket, nunca sobre o recorte.
- * O logo segue o caminho direto de upload (slot de círculo, não faixa).
+ *
+ * DEC-242: o logo também passa pelo editor, com a FAIXA QUADRADA (`bandAspect = 1`), e o salvar
+ * grava `logoCrop*`. O render do logo continua cover simples — a tela não aplica o corte, e as
+ * colunas guardam a área escolhida.
  */
 interface ProjectMediaHeaderProps {
   projectId: number
@@ -36,11 +41,15 @@ interface ProjectMediaHeaderProps {
   logoKey?: string | null
   bannerKey?: string | null
   bannerCrop?: BannerCropParams | null
+  /** DEC-242: recorte quadrado do logo, a mesma tupla da capa. */
+  logoCrop?: BannerCropParams | null
   canManage: boolean
 }
 
 const IMAGE_ACCEPT = "image/png,image/jpeg,image/webp,image/gif"
 const DEFAULT_CROP: BannerCropParams = { x: 0.5, y: 0.5, zoom: 1 }
+const LOGO_SQUARE_DESCRIPTION =
+  "Arraste a faixa quadrada para escolher a parte do logo; arraste o canto para redimensionar. Logo quadrado: resolução recomendada 1000×1000 px (1:1)."
 
 export function ProjectMediaHeader({
   projectId,
@@ -48,6 +57,7 @@ export function ProjectMediaHeader({
   logoKey,
   bannerKey,
   bannerCrop,
+  logoCrop,
   canManage,
 }: ProjectMediaHeaderProps) {
   const { toast } = useToast()
@@ -56,9 +66,13 @@ export function ProjectMediaHeader({
   const [currentLogoKey, setCurrentLogoKey] = useState(logoKey ?? null)
   const [currentBannerKey, setCurrentBannerKey] = useState(bannerKey ?? null)
   const [currentCrop, setCurrentCrop] = useState<BannerCropParams | null>(bannerCrop ?? null)
+  const [currentLogoCrop, setCurrentLogoCrop] = useState<BannerCropParams | null>(logoCrop ?? null)
   const [pendingFile, setPendingFile] = useState<File | null>(null)
+  const [pendingLogoFile, setPendingLogoFile] = useState<File | null>(null)
   const [editorSession, setEditorSession] = useState(0)
   const [editorOpen, setEditorOpen] = useState(false)
+  const [logoEditorSession, setLogoEditorSession] = useState(0)
+  const [logoEditorOpen, setLogoEditorOpen] = useState(false)
   const [busy, setBusy] = useState(false)
 
   // O diálogo é o mesmo componente ao abrir outro projeto: sem isto, a tela mostraria a imagem do
@@ -67,16 +81,25 @@ export function ProjectMediaHeader({
     setCurrentLogoKey(logoKey ?? null)
     setCurrentBannerKey(bannerKey ?? null)
     setCurrentCrop(bannerCrop ?? null)
-  }, [projectId, logoKey, bannerKey, bannerCrop])
+    setCurrentLogoCrop(logoCrop ?? null)
+  }, [projectId, logoKey, bannerKey, bannerCrop, logoCrop])
 
-  const applyState = useCallback((state: { logoKey: string | null; bannerKey: string | null }) => {
+  /** Toda resposta das rotas de imagem vem com as tuplas completas: o estado segue a resposta. */
+  const applyState = useCallback((state: ProjectImageState) => {
     setCurrentLogoKey(state.logoKey)
     setCurrentBannerKey(state.bannerKey)
+    setCurrentCrop(bannerCropFromColumns(state.bannerCropX, state.bannerCropY, state.bannerCropZoom))
+    setCurrentLogoCrop(bannerCropFromColumns(state.logoCropX, state.logoCropY, state.logoCropZoom))
   }, [])
 
   function openEditor() {
     setEditorSession((n) => n + 1)
     setEditorOpen(true)
+  }
+
+  function openLogoEditor() {
+    setLogoEditorSession((n) => n + 1)
+    setLogoEditorOpen(true)
   }
 
   async function handleUpload(slot: ProjectImageSlot) {
@@ -90,28 +113,16 @@ export function ProjectMediaHeader({
       return
     }
 
-    // A capa passa pelo editor 21:9 antes de escrever (DEC-241); o logo vai direto.
+    // A capa passa pelo editor 21:9 antes de escrever (DEC-241); o logo passa pelo editor
+    // quadrado (DEC-242). Os dois sobem o arquivo só depois de o recorte ser escolhido.
     if (slot === "banner") {
       setPendingFile(file)
       openEditor()
       return
     }
 
-    setBusy(true)
-    try {
-      const state = await uploadProjectImage(projectId, slot, file)
-      applyState(state)
-      if (input) input.value = ""
-      toast({ title: slot === "logo" ? "Logo atualizado" : "Capa atualizada", description: file.name })
-    } catch (error) {
-      toast({
-        title: "Erro",
-        description: error instanceof Error ? error.message : "Falha ao enviar imagem",
-        variant: "destructive",
-      })
-    } finally {
-      setBusy(false)
-    }
+    setPendingLogoFile(file)
+    openLogoEditor()
   }
 
   async function handleSaveCrop(params: BannerCropParams) {
@@ -125,12 +136,7 @@ export function ProjectMediaHeader({
         if (bannerInputRef.current) bannerInputRef.current.value = ""
       }
       const saved = await updateProjectBannerCrop(projectId, params)
-      setCurrentBannerKey(saved.bannerKey)
-      setCurrentCrop(
-        saved.bannerCropX === null || saved.bannerCropY === null || saved.bannerCropZoom === null
-          ? null
-          : { x: saved.bannerCropX, y: saved.bannerCropY, zoom: saved.bannerCropZoom },
-      )
+      applyState(saved)
       toast({
         title: uploading ? "Capa atualizada" : "Recorte salvo",
         description: uploading ? fileName ?? "Resolução recomendada: 2100×900 px (21:9)" : "A moldura 21:9 mostra a parte escolhida.",
@@ -147,6 +153,35 @@ export function ProjectMediaHeader({
     }
   }
 
+  /** DEC-242 — salvar o quadrado do logo: sobe o arquivo (se escolhido) e grava `logoCrop*`. */
+  async function handleSaveLogoCrop(params: BannerCropParams) {
+    const uploading = pendingLogoFile !== null
+    const fileName = pendingLogoFile?.name
+    setBusy(true)
+    try {
+      if (pendingLogoFile) {
+        await uploadProjectImage(projectId, "logo", pendingLogoFile)
+        setPendingLogoFile(null)
+        if (logoInputRef.current) logoInputRef.current.value = ""
+      }
+      const saved = await updateProjectLogoCrop(projectId, params)
+      applyState(saved)
+      toast({
+        title: uploading ? "Logo atualizado" : "Recorte do logo salvo",
+        description: uploading ? fileName ?? "Resolução recomendada: 1000×1000 px (1:1)" : "A faixa quadrada escolhe a parte do logo.",
+      })
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: error instanceof Error ? error.message : "Falha ao gravar o logo",
+        variant: "destructive",
+      })
+    } finally {
+      setBusy(false)
+      setLogoEditorOpen(false)
+    }
+  }
+
   async function handleRemove(slot: ProjectImageSlot) {
     if (!confirm(slot === "logo" ? "Remover o logo do projeto?" : "Remover a capa do projeto?")) return
 
@@ -154,7 +189,6 @@ export function ProjectMediaHeader({
     try {
       const state = await deleteProjectImage(projectId, slot)
       applyState(state)
-      if (slot === "banner") setCurrentCrop(null)
       toast({ title: slot === "logo" ? "Logo removido" : "Capa removida" })
     } catch (error) {
       toast({
@@ -170,6 +204,10 @@ export function ProjectMediaHeader({
   const editorSrc = pendingFile
     ? (typeof URL !== "undefined" && typeof URL.createObjectURL === "function" ? URL.createObjectURL(pendingFile) : "")
     : projectImageUrl(projectId, "banner", currentBannerKey)
+
+  const logoEditorSrc = pendingLogoFile
+    ? (typeof URL !== "undefined" && typeof URL.createObjectURL === "function" ? URL.createObjectURL(pendingLogoFile) : "")
+    : projectImageUrl(projectId, "logo", currentLogoKey)
 
   return (
     <div className="space-y-3">
@@ -261,6 +299,18 @@ export function ProjectMediaHeader({
               Recortar capa
             </Button>
           )}
+          {currentLogoKey && (
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={busy}
+              onClick={openLogoEditor}
+            >
+              <CropIcon className="h-4 w-4" />
+              {/* "Recortar logo" nao contem "Recortar capa" nem "Tirar logo" (licao da 3.C). */}
+              Recortar logo
+            </Button>
+          )}
           {currentBannerKey && (
             <Button
               size="sm"
@@ -302,6 +352,26 @@ export function ProjectMediaHeader({
             if (bannerInputRef.current) bannerInputRef.current.value = ""
           }}
           onSave={handleSaveCrop}
+        />
+      )}
+
+      {/* DEC-242: o editor do logo usa a MESMA peça com a faixa quadrada (bandAspect 1). */}
+      {logoEditorOpen && (
+        <BannerCropEditor
+          key={logoEditorSession}
+          open
+          src={logoEditorSrc}
+          alt={`Logo do projeto ${projectName}`}
+          initial={pendingLogoFile ? DEFAULT_CROP : currentLogoCrop ?? DEFAULT_CROP}
+          bandAspect={SQUARE_BAND_ASPECT}
+          title="Recorte do logo"
+          description={LOGO_SQUARE_DESCRIPTION}
+          onCancel={() => {
+            setLogoEditorOpen(false)
+            setPendingLogoFile(null)
+            if (logoInputRef.current) logoInputRef.current.value = ""
+          }}
+          onSave={handleSaveLogoCrop}
         />
       )}
     </div>

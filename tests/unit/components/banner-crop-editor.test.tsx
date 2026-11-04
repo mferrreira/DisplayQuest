@@ -5,10 +5,10 @@
  *
  * O que o jsdom prova: o texto da resolução recomendada, o `<img>` do ORIGINAL, a faixa com a alça
  * de redimensionamento, o clamp de saída (`clampCropCenterToBand` — a conta da faixa, banda-aware
- * pela razão natural), e o zoom no teto. No jsdom o contêiner mede 0 e o arrasto não move o centro
- * por guarda; a geometria do arrasto é provada no navegador pela demo. Para zoom com a razão 21:9,
- * a banda-aware coincide com a janela de centro [1/(2z), 1-1/(2z)] — os números de clamp são os
- * mesmos.
+ * pela razão da FAIXA: 21/9 para capa, 1 para logo quadrado), e o zoom no teto. No jsdom o contêiner
+ * mede 0 e o arrasto não move o centro por guarda; a geometria do arrasto é provada no navegador pela
+ * demo. Para zoom com a razão 21:9, a banda-aware coincide com a janela de centro [1/(2z), 1-1/(2z)]
+ * — os números de clamp são os mesmos.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
@@ -56,7 +56,7 @@ describe("BannerCropEditor — editor da faixa arrastável (R7, DEC-241)", () =>
     expect(screen.getByTestId("crop-resize-handle")).toBeInTheDocument();
   });
 
-  it("a faixa vem da posição do recorte: zoom 1 cobre a imagem inteira", () => {
+  it("a faixa vem da posição do recorte: zoom 1 na faixa 21:9 cobre a largura, altura 9/21", () => {
     render(
       <BannerCropEditor
         open
@@ -68,11 +68,48 @@ describe("BannerCropEditor — editor da faixa arrastável (R7, DEC-241)", () =>
       />,
     );
     const band = screen.getByTestId("crop-band") as HTMLElement;
-    // Razão 21:9 de fábrica: a faixa de zoom 1 ocupa a imagem toda.
+    // Faixa 21:9 de fábrica: zoom 1 dá largura plena, altura = largura · 9/21, centrada em Y.
     expect(band.style.width).toBe("100%");
-    expect(band.style.height).toBe("100%");
+    expect(band.style.height).toBe(`${(9 / 21) * 100}%`);
     expect(band.style.left).toBe("0%");
-    expect(band.style.top).toBe("0%");
+    expect(band.style.top).toBe(`${(0.5 - 9 / 42) * 100}%`);
+  });
+
+  it("faixa quadrada (bandAspect 1): zoom 2 dá janela 0,5x0,5 centrada — o formato do logo", () => {
+    render(
+      <BannerCropEditor
+        open
+        src="/api/users/7/images/avatar/file"
+        alt="Foto de Ana Souza"
+        initial={{ x: 0.5, y: 0.5, zoom: 2 }}
+        bandAspect={1}
+        onCancel={vi.fn()}
+        onSave={vi.fn()}
+      />,
+    );
+    const band = screen.getByTestId("crop-band") as HTMLElement;
+    expect(band.style.width).toBe("50%");
+    expect(band.style.height).toBe("50%");
+    expect(band.style.left).toBe("25%");
+    expect(band.style.top).toBe("25%");
+  });
+
+  it("a faixa quadrada clampa centro em ambos os eixos: 0,9 zoom 3 sai em 5/6", () => {
+    const onSave = vi.fn();
+    render(
+      <BannerCropEditor
+        open
+        src="/api/users/7/images/avatar/file"
+        alt="Foto de Ana Souza"
+        initial={{ x: 0.9, y: 0.05, zoom: 3 }}
+        bandAspect={1}
+        onCancel={vi.fn()}
+        onSave={onSave}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Salvar recorte" }));
+    // Faixa quadrada de zoom 3: janela [1/6, 5/6] nos dois eixos.
+    expect(onSave).toHaveBeenCalledWith({ x: 1 - 1 / 6, y: 1 / 6, zoom: 3 });
   });
 
   it("arrastar a faixa move o centro na fração da imagem, e o salvar grava o centro na faixa", () => {

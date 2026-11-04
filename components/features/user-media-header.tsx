@@ -4,10 +4,17 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { ImageOff, Loader2, Trash2, Upload } from "lucide-react"
 import { useToast } from "@/contexts/use-toast"
-import { deleteUserImage, uploadUserImage, updateUserBannerCrop, userImageUrl } from "@/lib/api/user-images"
+import {
+  deleteUserImage,
+  uploadUserImage,
+  updateUserAvatarCrop,
+  updateUserBannerCrop,
+  userImageUrl,
+  type UserImageState,
+} from "@/lib/api/user-images"
 import { BannerCropEditor } from "@/components/features/banner-crop-editor"
 import { BannerImage } from "@/components/ui/banner-image"
-import type { BannerCropParams } from "@/backend/domain"
+import { bannerCropFromColumns, SQUARE_BAND_ASPECT, type BannerCropParams } from "@/backend/domain"
 
 /**
  * V5-3 (DEC-137) — capa do perfil, no topo do cartão "Meu Perfil".
@@ -24,42 +31,65 @@ import type { BannerCropParams } from "@/backend/domain"
  * "Recortar capa" reabre o editor sobre o binário que está no bucket, nunca sobre o recorte.
  * Salvar a capa nova zera o recorte no servidor (o original mudou); salvar só o recorte grava as
  * três colunas pela rota `.../banner/crop`.
+ *
+ * DEC-242: o avatar entra no bucket (`users/<id>/images/avatar`) com a MESMA peça de editor, na
+ * forma quadrada (`bandAspect = 1`). O render do avatar continua cover simples — a tela não aplica
+ * o corte; as colunas `logoCrop*` guardam a área escolhida no quadrado.
  */
 interface UserMediaHeaderProps {
   userId: number
   userName: string
   bannerKey?: string | null
   bannerCrop?: BannerCropParams | null
+  /** DEC-242: chave do avatar no bucket + recorte quadrado. */
+  avatarKey?: string | null
+  avatarCrop?: BannerCropParams | null
   canEdit: boolean
   onBannerChange: (bannerKey: string | null) => void
   onCropChange?: (crop: BannerCropParams | null) => void
+  onAvatarKeyChange?: (avatarKey: string | null) => void
+  onAvatarCropChange?: (crop: BannerCropParams | null) => void
 }
 
 const IMAGE_ACCEPT = "image/png,image/jpeg,image/webp,image/gif"
 const DEFAULT_CROP: BannerCropParams = { x: 0.5, y: 0.5, zoom: 1 }
+const AVATAR_SQUARE_DESCRIPTION =
+  "Arraste a faixa quadrada para escolher a parte do avatar; arraste o canto para redimensionar. Avatar quadrado: resolução recomendada 1000×1000 px (1:1)."
 
 export function UserMediaHeader({
   userId,
   userName,
   bannerKey,
   bannerCrop,
+  avatarKey,
+  avatarCrop,
   canEdit,
   onBannerChange,
   onCropChange,
+  onAvatarKeyChange,
+  onAvatarCropChange,
 }: UserMediaHeaderProps) {
   const { toast } = useToast()
   const inputRef = useRef<HTMLInputElement>(null)
+  const avatarInputRef = useRef<HTMLInputElement>(null)
   const [currentKey, setCurrentKey] = useState(bannerKey ?? null)
   const [currentCrop, setCurrentCrop] = useState<BannerCropParams | null>(bannerCrop ?? null)
+  const [currentAvatarKey, setCurrentAvatarKey] = useState(avatarKey ?? null)
+  const [currentAvatarCrop, setCurrentAvatarCrop] = useState<BannerCropParams | null>(avatarCrop ?? null)
   const [pendingFile, setPendingFile] = useState<File | null>(null)
+  const [pendingAvatarFile, setPendingAvatarFile] = useState<File | null>(null)
   const [editorSession, setEditorSession] = useState(0)
   const [editorOpen, setEditorOpen] = useState(false)
+  const [avatarEditorSession, setAvatarEditorSession] = useState(0)
+  const [avatarEditorOpen, setAvatarEditorOpen] = useState(false)
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
     setCurrentKey(bannerKey ?? null)
     setCurrentCrop(bannerCrop ?? null)
-  }, [userId, bannerKey, bannerCrop])
+    setCurrentAvatarKey(avatarKey ?? null)
+    setCurrentAvatarCrop(avatarCrop ?? null)
+  }, [userId, bannerKey, bannerCrop, avatarKey, avatarCrop])
 
   const applyKey = useCallback(
     (next: string | null) => {
@@ -77,9 +107,41 @@ export function UserMediaHeader({
     [onCropChange],
   )
 
+  const applyAvatarKey = useCallback(
+    (next: string | null) => {
+      setCurrentAvatarKey(next)
+      onAvatarKeyChange?.(next)
+    },
+    [onAvatarKeyChange],
+  )
+
+  const applyAvatarCrop = useCallback(
+    (next: BannerCropParams | null) => {
+      setCurrentAvatarCrop(next)
+      onAvatarCropChange?.(next)
+    },
+    [onAvatarCropChange],
+  )
+
   function openEditor() {
     setEditorSession((n) => n + 1)
     setEditorOpen(true)
+  }
+
+  function openAvatarEditor() {
+    setAvatarEditorSession((n) => n + 1)
+    setAvatarEditorOpen(true)
+  }
+
+  /** Toda resposta das rotas de imagem vem com as tuplas: o estado segue a resposta. */
+  function applyState(state: UserImageState, slot: "banner" | "avatar") {
+    if (slot === "banner") {
+      applyKey(state.bannerKey)
+      applyCrop(bannerCropFromColumns(state.bannerCropX, state.bannerCropY, state.bannerCropZoom))
+    } else {
+      applyAvatarKey(state.avatarKey)
+      applyAvatarCrop(bannerCropFromColumns(state.logoCropX, state.logoCropY, state.logoCropZoom))
+    }
   }
 
   async function handleSave(params: BannerCropParams) {
@@ -115,6 +177,35 @@ export function UserMediaHeader({
     }
   }
 
+  /** DEC-242 — salvar o quadrado do avatar: sobe o arquivo (se escolhido) e grava `logoCrop*`. */
+  async function handleSaveAvatar(params: BannerCropParams) {
+    const uploading = pendingAvatarFile !== null
+    const fileName = pendingAvatarFile?.name
+    setBusy(true)
+    try {
+      if (pendingAvatarFile) {
+        await uploadUserImage(userId, "avatar", pendingAvatarFile)
+        setPendingAvatarFile(null)
+        if (avatarInputRef.current) avatarInputRef.current.value = ""
+      }
+      const saved = await updateUserAvatarCrop(userId, params)
+      applyState(saved, "avatar")
+      toast({
+        title: uploading ? "Avatar atualizado" : "Recorte do avatar salvo",
+        description: uploading ? fileName ?? "Resolução recomendada: 1000×1000 px (1:1)" : "A faixa quadrada escolhe a parte do avatar.",
+      })
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: error instanceof Error ? error.message : "Falha ao gravar o avatar",
+        variant: "destructive",
+      })
+    } finally {
+      setBusy(false)
+      setAvatarEditorOpen(false)
+    }
+  }
+
   async function handleRemove() {
     if (!confirm("Remover a capa do perfil?")) return
 
@@ -135,6 +226,26 @@ export function UserMediaHeader({
     }
   }
 
+  async function handleRemoveAvatar() {
+    if (!confirm("Remover o avatar do perfil?")) return
+
+    setBusy(true)
+    try {
+      const state = await deleteUserImage(userId, "avatar")
+      applyAvatarKey(state.avatarKey)
+      applyAvatarCrop(null)
+      toast({ title: "Avatar removido" })
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: error instanceof Error ? error.message : "Falha ao remover avatar",
+        variant: "destructive",
+      })
+    } finally {
+      setBusy(false)
+    }
+  }
+
   // V6-7 (reimaginacao da tela): a capa deixa de ser uma caixa solta acima do avatar e passa a ser
   // a faixa do hero — o avatar do cartao sobrepoe a borda inferior (mesmo desenho do cabecalho de
   // midia do projeto). Os controles viram um par de chips sobre a faixa, para o hero ler como um
@@ -142,6 +253,10 @@ export function UserMediaHeader({
   const editorSrc = pendingFile
     ? (typeof URL !== "undefined" && typeof URL.createObjectURL === "function" ? URL.createObjectURL(pendingFile) : "")
     : userImageUrl(userId, "banner", currentKey)
+
+  const avatarEditorSrc = pendingAvatarFile
+    ? (typeof URL !== "undefined" && typeof URL.createObjectURL === "function" ? URL.createObjectURL(pendingAvatarFile) : "")
+    : userImageUrl(userId, "avatar", currentAvatarKey)
 
   return (
     <div className="relative">
@@ -177,6 +292,20 @@ export function UserMediaHeader({
               if (!file) return
               setPendingFile(file)
               openEditor()
+            }}
+          />
+          <input
+            ref={avatarInputRef}
+            type="file"
+            accept={IMAGE_ACCEPT}
+            aria-label="Imagem do avatar do perfil"
+            className="sr-only"
+            disabled={busy}
+            onChange={(event) => {
+              const file = event.target.files?.[0]
+              if (!file) return
+              setPendingAvatarFile(file)
+              openAvatarEditor()
             }}
           />
           <Button
@@ -215,6 +344,39 @@ export function UserMediaHeader({
               </Button>
             </>
           )}
+          <Button
+            size="sm"
+            variant="secondary"
+            className="bg-background/90 backdrop-blur"
+            disabled={busy}
+            onClick={() => avatarInputRef.current?.click()}
+          >
+            Enviar avatar
+          </Button>
+          {currentAvatarKey && (
+            <>
+              <Button
+                size="sm"
+                variant="secondary"
+                className="bg-background/90 backdrop-blur"
+                disabled={busy}
+                onClick={openAvatarEditor}
+              >
+                <CropIcon className="h-4 w-4" />
+                Recortar avatar
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                className="bg-background/90 backdrop-blur"
+                disabled={busy}
+                onClick={handleRemoveAvatar}
+              >
+                <Trash2 className="h-4 w-4" />
+                Tirar avatar
+              </Button>
+            </>
+          )}
         </div>
       )}
 
@@ -231,6 +393,26 @@ export function UserMediaHeader({
             if (inputRef.current) inputRef.current.value = ""
           }}
           onSave={handleSave}
+        />
+      )}
+
+      {/* DEC-242: o editor do avatar usa a MESMA peça com a faixa quadrada (bandAspect 1). */}
+      {avatarEditorOpen && (
+        <BannerCropEditor
+          key={avatarEditorSession}
+          open
+          src={avatarEditorSrc}
+          alt={`Avatar de ${userName}`}
+          initial={pendingAvatarFile ? DEFAULT_CROP : currentAvatarCrop ?? DEFAULT_CROP}
+          bandAspect={SQUARE_BAND_ASPECT}
+          title="Recorte do avatar"
+          description={AVATAR_SQUARE_DESCRIPTION}
+          onCancel={() => {
+            setAvatarEditorOpen(false)
+            setPendingAvatarFile(null)
+            if (avatarInputRef.current) avatarInputRef.current.value = ""
+          }}
+          onSave={handleSaveAvatar}
         />
       )}
     </div>

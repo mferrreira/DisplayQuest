@@ -28,6 +28,12 @@ interface BannerCropEditorProps {
   src: string
   alt: string
   initial: BannerCropParams
+  /** Razão da FAIXA: 21/9 para a capa, 1 para o logo quadrado. Default = faixa 21:9. */
+  bandAspect?: number
+  /** Título do diálogo. Default: capa. DEC-242: o editor quadrado do logo diz "logo". */
+  title?: string
+  /** Texto de ajuda. Default: a frase 21:9 dita pelo dono. */
+  description?: string
   onCancel: () => void
   onSave: (params: BannerCropParams) => void
 }
@@ -36,7 +42,17 @@ function clampToZoom(zoom: number): number {
   return Math.min(4, Math.max(1, zoom))
 }
 
-export function BannerCropEditor({ open, src, alt, initial, onCancel, onSave }: BannerCropEditorProps) {
+export function BannerCropEditor({
+  open,
+  src,
+  alt,
+  initial,
+  bandAspect = BANNER_BAND_ASPECT,
+  title = "Recorte da capa",
+  description = "Arraste a faixa 21:9 para escolher a parte da capa; arraste o canto para redimensionar. Resolução recomendada: 2100×900 px (21:9).",
+  onCancel,
+  onSave,
+}: BannerCropEditorProps) {
   const [params, setParams] = useState<BannerCropParams>(initial)
   // Razão natural da imagem (largura/altura). Sem imagem carregada (jsdom), a moldura 21:9.
   const [aspect, setAspect] = useState<number>(BANNER_BAND_ASPECT)
@@ -56,12 +72,14 @@ export function BannerCropEditor({ open, src, alt, initial, onCancel, onSave }: 
     drag.y = event.clientY
     if (drag.mode === "move") {
       // Arrastar a faixa: o centro segue o dedo, na fração da imagem que o contêiner cobre.
-      setParams((c) => clampCropCenterToBand({ x: c.x + dx / box.clientWidth, y: c.y + dy / box.clientHeight, zoom: c.zoom }, aspect))
+      setParams((c) =>
+        clampCropCenterToBand({ x: c.x + dx / box.clientWidth, y: c.y + dy / box.clientHeight, zoom: c.zoom }, bandAspect, aspect),
+      )
     } else {
       // Redimensionar na diagonal: a largura da faixa cresce, o zoom é 1/largura.
       setParams((c) => {
         const w = 1 / c.zoom + dx / box.clientWidth
-        return clampCropCenterToBand({ x: c.x, y: c.y, zoom: clampToZoom(1 / w) }, aspect)
+        return clampCropCenterToBand({ x: c.x, y: c.y, zoom: clampToZoom(1 / w) }, bandAspect, aspect)
       })
     }
   }
@@ -70,7 +88,7 @@ export function BannerCropEditor({ open, src, alt, initial, onCancel, onSave }: 
     dragRef.current = null
   }
 
-  const band = bannerCropBandRect(params, aspect)
+  const band = bannerCropBandRect(params, bandAspect, aspect)
   // A faixa não cabe em Y quando a imagem é mais alta que a moldura pede: a faixa é fixada em cima.
   const bandFitsY = band.height <= 1
 
@@ -83,10 +101,8 @@ export function BannerCropEditor({ open, src, alt, initial, onCancel, onSave }: 
     >
       <DialogContent className="sm:max-w-[720px]">
         <DialogHeader>
-          <DialogTitle>Recorte da capa</DialogTitle>
-          <DialogDescription>
-            Arraste a faixa 21:9 para escolher a parte da capa; arraste o canto para redimensionar. Resolução recomendada: 2100×900 px (21:9).
-          </DialogDescription>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
 
         <div
@@ -148,7 +164,7 @@ export function BannerCropEditor({ open, src, alt, initial, onCancel, onSave }: 
           <Button variant="outline" onClick={onCancel}>
             Cancelar
           </Button>
-          <Button onClick={() => onSave(clampCropCenterToBand(params, aspect))}>Salvar recorte</Button>
+          <Button onClick={() => onSave(clampCropCenterToBand(params, bandAspect, aspect))}>Salvar recorte</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

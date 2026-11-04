@@ -2,18 +2,19 @@ import { NextResponse } from "next/server"
 import { routeErrorResponse } from "@/lib/api/route-error-response"
 import { requireApiActor } from "@/lib/auth/api-guard"
 import { getBackendComposition } from "@/backend/composition/root"
-import { PROJECT_IMAGE_SLOT_MESSAGE, clampBannerCrop, isProjectImageSlot } from "@/backend/domain"
+import { PROJECT_IMAGE_SLOT_MESSAGE, SQUARE_BAND_ASPECT, clampBannerCrop, clampCropCenterToBand, isProjectImageSlot } from "@/backend/domain"
 
 const { projectManagement: projectManagementModule } = getBackendComposition()
 
 /**
- * plan-v12 (DEC-239) — parâmetros do recorte da capa do projeto:
- * `PUT /api/projects/<id>/images/banner/crop`.
+ * plan-v12 (DEC-239) + DEC-242 — parâmetros do recorte do projeto:
+ * `PUT /api/projects/<id>/images/<slot>/crop`, com slot `banner` (faixa 21:9) ou `logo` (quadrado).
  *
  * Mesma forma medida no caminho do perfil (DEC-239): o gate de gestão do projeto
  * (`assertCanManageProject` — ACL do vínculo) roda ANTES de o corpo ser lido; nenhum byte é
- * movido — o recorte é parâmetro, o original fica no bucket na mesma chave. A rota clampa por
- * `clampBannerCrop` e o use case escreve o que recebeu.
+ * movido — o recorte é parâmetro, o original fica no bucket na mesma chave. A rota clampa e o
+ * use case escreve o que recebeu: para a capa, a janela de centro de `clampBannerCrop`; para o
+ * logo quadrado, o clamp band-aware com a razão 1 (banda quadrada, mesma janela medida de centro).
  */
 
 function parseSlot(context: { params: Promise<{ id: string; slot: string }> }) {
@@ -62,11 +63,17 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
       return NextResponse.json({ error: CROP_INVALID_MESSAGE }, { status: 400 })
     }
 
-    const result = await projectManagementModule.updateProjectBannerCrop({
-      projectId,
-      actorId: auth.actor.id,
-      params: clampBannerCrop(params),
-    })
+    // DEC-242: o logo tem faixa quadrada (razão 1) — o clamp band-aware com razão 1 dá a
+    // mesma janela de centro que `clampBannerCrop`; a capa segue `clampBannerCrop`.
+    const paramsForSlot =
+      slot === "logo"
+        ? clampCropCenterToBand(params, SQUARE_BAND_ASPECT, SQUARE_BAND_ASPECT)
+        : clampBannerCrop(params)
+
+    const result =
+      slot === "logo"
+        ? await projectManagementModule.updateProjectLogoCrop({ projectId, actorId: auth.actor.id, params: paramsForSlot })
+        : await projectManagementModule.updateProjectBannerCrop({ projectId, actorId: auth.actor.id, params: paramsForSlot })
     return NextResponse.json({ project: result }, { status: 200 })
   } catch (error: unknown) {
     return routeErrorResponse(error, { fallback: "Erro ao gravar o recorte da capa do projeto" })

@@ -35,10 +35,14 @@ function userRow(id: number): UserRecord {
     profileVisibility: "public",
     bio: null,
     avatar: null,
+    avatarKey: "users/7/images/avatar/x.webp",
     bannerKey: "users/7/images/banner/x.webp",
     bannerCropX: null,
     bannerCropY: null,
     bannerCropZoom: null,
+    logoCropX: null,
+    logoCropY: null,
+    logoCropZoom: null,
     ...emptyPersonData(),
     roles: ["VOLUNTARIO"],
     createdAt: new Date("2026-10-01T12:00:00.000Z"),
@@ -137,9 +141,10 @@ describe("recorte da capa — ordem de recusa", () => {
 
   it("slot fora da lista fechada: 400 com a mensagem do domínio", async () => {
     login(["VOLUNTARIO"], 7);
-    const response = await PUT(cropRequest({ x: 0.5, y: 0.5, zoom: 2 }), context({ id: "7", slot: "avatar" }));
+    // DEC-242: `avatar` entrou na lista fechada e passou a ser aceito; o que sai é o slot cru.
+    const response = await PUT(cropRequest({ x: 0.5, y: 0.5, zoom: 2 }), context({ id: "7", slot: "cover" }));
     expect(response.status).toBe(400);
-    expect(await read(response)).toEqual({ error: "Slot de imagem deve ser banner" });
+    expect(await read(response)).toEqual({ error: "Slot de imagem deve ser avatar ou banner" });
   });
 
   it("recorte de OUTRA pessoa por quem não gerencia: 403 'Não autorizado' e coluna intacta", async () => {
@@ -203,5 +208,26 @@ describe("a escrita e o clamp", () => {
     const response = await PUT(cropRequest({ x: 0.25, y: 0.25, zoom: 1.5 }), context({ id: "7", slot: "banner" }));
     expect(response.status).toBe(200);
     expect(mocks.users.get(7)?.bannerCropZoom).toBe(1.5);
+  });
+
+  it("DEC-242: o recorte quadrado do avatar entra nas colunas `logoCrop*` com o mesmo gate", async () => {
+    login(["VOLUNTARIO"], 7);
+    const response = await PUT(cropRequest({ x: 0.3, y: 0.6, zoom: 2 }), context({ id: "7", slot: "avatar" }));
+    expect(response.status).toBe(200);
+    const body = await read(response);
+    expect(body.user.logoCropX).toBe(0.3);
+    expect(body.user.logoCropY).toBe(0.6);
+    expect(body.user.logoCropZoom).toBe(2);
+    expect(mocks.users.get(7)?.logoCropZoom).toBe(2);
+    // O recorte do avatar não toca a capa: as colunas da capa seguem intactas.
+    expect(mocks.users.get(7)?.bannerCropX).toBeNull();
+  });
+
+  it("DEC-242: recorte do avatar de OUTRA pessoa por quem não gerencia: 403, coluna intacta", async () => {
+    login(["VOLUNTARIO"], 9);
+    const response = await PUT(cropRequest({ x: 0.3, y: 0.3, zoom: 2 }), context({ id: "7", slot: "avatar" }));
+    expect(response.status).toBe(403);
+    expect(await read(response)).toMatchObject({ error: "Não autorizado" });
+    expect(mocks.users.get(7)?.logoCropX).toBeNull();
   });
 });

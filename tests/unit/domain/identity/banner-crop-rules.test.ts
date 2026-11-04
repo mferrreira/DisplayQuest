@@ -56,37 +56,51 @@ describe("regras de recorte de capa", () => {
     });
   });
 
-  describe("faixa no editor (razão natural da imagem)", () => {
-    it("zoom 1 sobre imagem 21:9 cobre a imagem inteira", () => {
-      const band = bannerCropBandRect({ x: 0.5, y: 0.5, zoom: 1 }, 21 / 9);
+  describe("faixa no editor (razão da faixa + razão da imagem)", () => {
+    it("zoom 1 sobre a faixa 21:9 cobre a largura inteira, altura = largura · 9/21", () => {
+      const band = bannerCropBandRect({ x: 0.5, y: 0.5, zoom: 1 }, 21 / 9, 21 / 9);
       expect(band.width).toBeCloseTo(1, 6);
-      // altura = largura · 9/21 · (largura natural/altura natural); para 21:9 dá a altura da imagem.
-      expect(band.height).toBeCloseTo(1, 6);
+      expect(band.height).toBeCloseTo(9 / 21, 6);
       expect(band.left).toBeCloseTo(0, 6);
-      expect(band.top).toBeCloseTo(0, 6);
+      expect(band.top).toBeCloseTo(0.5 - 9 / 42, 6);
     });
 
-    it("zoom 2 sobre imagem 21:9: faixa de 1/2 de largura, 1/2 de altura, centrada", () => {
-      const band = bannerCropBandRect({ x: 0.5, y: 0.5, zoom: 2 }, 21 / 9);
+    it("zoom 2 sobre a faixa 21:9: faixa de 1/2 de largura, 1/2·9/21 de altura, centrada", () => {
+      const band = bannerCropBandRect({ x: 0.5, y: 0.5, zoom: 2 }, 21 / 9, 21 / 9);
       expect(band.width).toBeCloseTo(0.5, 6);
-      expect(band.height).toBeCloseTo(0.5, 6);
+      expect(band.height).toBeCloseTo(0.5 * 9 / 21, 6);
       expect(band.left).toBeCloseTo(0.25, 6);
-      expect(band.top).toBeCloseTo(0.25, 6);
+      expect(band.top).toBeCloseTo(0.5 - 0.5 * 9 / 42, 6);
     });
 
-    it("banda-aware: zoom 3, centro 0.9 sai em 5/6; para imagem 21:9 a janela é [1/6, 5/6]", () => {
-      expect(clampCropCenterToBand({ x: 0.9, y: 0.5, zoom: 3 }, 21 / 9)).toEqual({
+    it("faixa quadrada (bandAspect 1): zoom 1 cobre 1x1, zoom 2 dá janela 0,5x0,5", () => {
+      const full = bannerCropBandRect({ x: 0.5, y: 0.5, zoom: 1 }, 1, 1);
+      expect(full.width).toBeCloseTo(1, 6);
+      expect(full.height).toBeCloseTo(1, 6);
+      const half = bannerCropBandRect({ x: 0.5, y: 0.5, zoom: 2 }, 1, 1);
+      expect(half.width).toBeCloseTo(0.5, 6);
+      expect(half.height).toBeCloseTo(0.5, 6);
+      expect(half.left).toBeCloseTo(0.25, 6);
+      expect(half.top).toBeCloseTo(0.25, 6);
+    });
+
+    it("banda-aware 21:9: zoom 3, centro 0.9 sai em 5/6; para faixa 21:9 a janela é [1/6, 5/6]", () => {
+      expect(clampCropCenterToBand({ x: 0.9, y: 0.5, zoom: 3 }, 21 / 9, 21 / 9)).toEqual({
         x: 1 - 1 / 6,
         y: 0.5,
         zoom: 3,
       });
     });
 
-    it("para imagem mais larga que a moldura pede, a faixa não cabe em Y: o centro fica no meio de Y", () => {
-      // Imagem muito larga (aspect 3): faixa de altura 9/21·3 = 9/7 > 1. Zoom 1 não deixa
-      // centro livre em Y, e a faixa é fixada em cima.
-      const clamped = clampCropCenterToBand({ x: 0.5, y: 0.9, zoom: 1 }, 3);
-      expect(clamped.y).toBe(0.5);
+    it("banda-aware quadrada: zoom 3 aceita centro em [1/6, 5/6] em ambos os eixos", () => {
+      const clamped = clampCropCenterToBand({ x: 0.95, y: 0.05, zoom: 3 }, 1, 1);
+      expect(clamped.x).toBeCloseTo(5 / 6, 6);
+      expect(clamped.y).toBeCloseTo(1 / 6, 6);
+    });
+
+    it("para faixa quadrada, a janela nunca passa de 1: zoom 1 dá centro único em 0.5", () => {
+      const clamped = clampCropCenterToBand({ x: 0.9, y: 0.1, zoom: 1 }, 1, 1);
+      expect(clamped).toEqual({ x: 0.5, y: 0.5, zoom: 1 });
     });
   });
 });

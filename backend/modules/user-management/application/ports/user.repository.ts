@@ -31,6 +31,8 @@ export interface UserRecord {
   profileVisibility: ProfileVisibility;
   bio: string | null;
   avatar: string | null;
+  /** DEC-242: chave do avatar no bucket (`users/<id>/images/avatar`). O campo legado `avatar` segue o caminho de disco. */
+  avatarKey: string | null;
   /** V5-3 (DEC-137): chave do objeto no bucket (`users/<id>/images/banner`). Nunca um caminho de disco. */
   bannerKey: string | null;
   /**
@@ -40,6 +42,12 @@ export interface UserRecord {
   bannerCropX?: number | null;
   bannerCropY?: number | null;
   bannerCropZoom?: number | null;
+  /**
+   * DEC-242: parâmetros do recorte quadrado do avatar. Mesma forma, mesma postura de entrada.
+   */
+  logoCropX?: number | null;
+  logoCropY?: number | null;
+  logoCropZoom?: number | null;
   /**
    * V5-4a (DEC-138): dados da pessoa que os formulários oficiais pedem. `cpf` chega aqui
    * porque o record é o registro inteiro; quem decide se ele sai para o cliente é
@@ -71,11 +79,17 @@ export interface UserSummaryRow {
   completedTasks: number;
   avatar: string | null;
   bio: string | null;
+  /** DEC-242: a linha traz a chave do avatar no bucket, como traz a da capa. */
+  avatarKey: string | null;
   bannerKey: string | null;
   /** plan-v12 (DEC-239): parâmetros do recorte da capa. Opcional na ENTRADA, como `bannerKey`. */
   bannerCropX?: number | null;
   bannerCropY?: number | null;
   bannerCropZoom?: number | null;
+  /** DEC-242: parâmetros do recorte quadrado do avatar. Opcional na ENTRADA, mesmo motivo. */
+  logoCropX?: number | null;
+  logoCropY?: number | null;
+  logoCropZoom?: number | null;
   /** V5-12 (DEC-143/177): a linha traz o valor do perfil para a regra decidir linha a linha. */
   profileVisibility: ProfileVisibility;
   /** V5-4a (DEC-138): a linha traz os dados de pessoa; a política de visibilidade decide qual tier os entrega. */

@@ -85,4 +85,50 @@ describe("G4 roundtrip — recorte da capa do projeto (isolated test DB)", () =>
     expect(row?.bannerCropY).toBeNull();
     expect(row?.bannerCropZoom).toBeNull();
   });
+
+  it("DEC-242: o recorte quadrado do logo entra nas colunas `logoCrop*` e a leitura devolve", async () => {
+    const updated = await projectModule.updateProjectLogoCrop({
+      projectId,
+      actorId: 1,
+      params: { x: 0.4, y: 0.2, zoom: 2.5 },
+    });
+    expect(updated.logoCropX).toBe(0.4);
+    expect(updated.logoCropY).toBe(0.2);
+    expect(updated.logoCropZoom).toBe(2.5);
+
+    const row = await prisma.projects.findUnique({ where: { id: projectId } });
+    expect(row?.logoCropX).toBe(0.4);
+    expect(row?.logoCropZoom).toBe(2.5);
+
+    const listed = (await projectModule.listProjectsForActor({
+      actorId: 1,
+      actorRoles: ["COORDENADOR"],
+    })) as Array<Record<string, unknown>>;
+    const seen = listed.find((p) => p.id === projectId);
+    expect(seen?.logoCropX).toBe(0.4);
+    expect(seen?.logoCropZoom).toBe(2.5);
+
+    // Quem não gerencia não escreve o logo, pela mesma regra da capa.
+    await expect(
+      projectModule.updateProjectLogoCrop({
+        projectId,
+        actorId: 605,
+        params: { x: 0.5, y: 0.5, zoom: 1 },
+      }),
+    ).rejects.toThrow(/permissão/i);
+
+    // Subir logo novo zera as colunas quadradas (DEC-242), pela mesma razão da capa.
+    const upload = (await projectModule.updateProjectImage({
+      projectId,
+      actorId: 1,
+      slot: "logo",
+      blobKey: `projects/${projectId}/images/logo/novo.webp`,
+    })) as unknown as { project: Record<string, unknown> };
+    expect(upload.project.logoKey).toBe(`projects/${projectId}/images/logo/novo.webp`);
+    const afterUpload = await prisma.projects.findUnique({ where: { id: projectId } });
+    expect(afterUpload?.logoCropX).toBeNull();
+    expect(afterUpload?.logoCropZoom).toBeNull();
+    // A capa não foi tocada pela escrita do logo.
+    expect(afterUpload?.bannerCropX).toBeNull();
+  });
 });

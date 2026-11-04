@@ -94,3 +94,13 @@ export interface UpdateUserBannerCropCommand {
   userId: number
   params: BannerCropParams
 }
+
+/**
+ * DEC-242 — parâmetros do recorte quadrado do avatar. Mesma forma: a rota clampa, o use case
+ * escreve o que recebeu. Gate: o MESMO do perfil e da capa (`self OU MANAGE_USERS`).
+ */
+export interface UpdateUserAvatarCropCommand {
+  actor: ActorRef
+  userId: number
+  params: BannerCropParams
+}

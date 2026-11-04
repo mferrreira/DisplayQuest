@@ -118,6 +118,8 @@ describe("toPublicUser — password never leaves the record", () => {
         "profileVisibility",
         "bio",
         "avatar",
+        // DEC-242: a chave do avatar no bucket entra no transporte junto com a da capa.
+        "avatarKey",
         // V5-3 (DEC-137): a chave da capa do perfil entra no transporte. O record de cima NAO tem a
         // coluna — a entrada e opcional justamente para chamadores e fixtures que ainda nao a
         // conhecem, e a saida e sempre presente.
@@ -128,6 +130,10 @@ describe("toPublicUser — password never leaves the record", () => {
         "bannerCropX",
         "bannerCropY",
         "bannerCropZoom",
+        // DEC-242: os parametros do recorte quadrado do avatar seguem a mesma postura.
+        "logoCropX",
+        "logoCropY",
+        "logoCropZoom",
         // V5-4a (DEC-138): os dados de pessoa que a leitura aberta do perfil mostra. O `cpf` nao
         // esta aqui de proposito — e o unico campo com leitura restrita, e sai so por
         // `toPublicUserWithCpf`, chamada depois de `canActorReadUserCpf` responder "sim".

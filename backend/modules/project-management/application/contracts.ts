@@ -183,6 +183,13 @@ export interface UpdateProjectBannerCropCommand {
   params: { x: number; y: number; zoom: number }
 }
 
+/** DEC-242: parâmetros do recorte quadrado do logo. Mesma forma, rota clampa antes de chamar. */
+export interface UpdateProjectLogoCropCommand {
+  projectId: number
+  actorId: number
+  params: { x: number; y: number; zoom: number }
+}
+
 export interface GetProjectImageQuery {
   projectId: number
   actorId: number

@@ -49,7 +49,9 @@ export class UpdateProjectImageUseCase {
       [field]: command.blobKey,
       // plan-v12 (DEC-239): subir/trocar/tirar a capa zera o recorte — o recorte é do
       // original, e o original acabou de mudar. Mesma regra medido no caminho do perfil.
-      ...(command.slot === "banner" ? { bannerCropX: null, bannerCropY: null, bannerCropZoom: null } : {}),
+      ...(command.slot === "banner"
+        ? { bannerCropX: null, bannerCropY: null, bannerCropZoom: null }
+        : { logoCropX: null, logoCropY: null, logoCropZoom: null }),
     })
 
     return {

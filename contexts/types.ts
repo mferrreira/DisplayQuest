@@ -28,6 +28,11 @@ export interface User {
   bannerCropX?: number | null;
   bannerCropY?: number | null;
   bannerCropZoom?: number | null;
+  /** DEC-242: chave do avatar no bucket + recorte quadrado. O campo legado `avatar` segue o disco. */
+  avatarKey?: string | null;
+  logoCropX?: number | null;
+  logoCropY?: number | null;
+  logoCropZoom?: number | null;
   profileVisibility: "public" | "private" | "members_only";
   /**
    * V5-4a (DEC-138): dados de pessoa. `cpf` chega só nas leituras em que a pessoa é o próprio ou
@@ -88,6 +93,10 @@ export interface Project {
   bannerCropX?: number | null
   bannerCropY?: number | null
   bannerCropZoom?: number | null
+  /** DEC-242: recorte quadrado do logo — os mesmos tres campos. */
+  logoCropX?: number | null
+  logoCropY?: number | null
+  logoCropZoom?: number | null
   /** R11 (S11): projeção da lista para o ator — o ator é membro deste projeto. */
   isMember?: boolean
 }

@@ -51,6 +51,7 @@ function userRow(id: number): UserRecord {
     profileVisibility: "public",
     bio: null,
     avatar: null,
+    avatarKey: null,
     bannerKey: null,
     ...emptyPersonData(),
     roles: ["VOLUNTARIO"],
@@ -202,12 +203,28 @@ describe("subir a capa — ordem e gate antes do byte", () => {
 
   it("slot fora da lista fechada: 400 com a mensagem do domínio", async () => {
     login(["VOLUNTARIO"], 7);
+    // DEC-242: `avatar` entrou na lista fechada; o que sai é o slot cru.
     const response = await UPLOAD_IMAGE(
       imageRequest(new File([PNG_BYTES], "capa.png", { type: "image/png" })),
-      context({ id: "7", slot: "avatar" }),
+      context({ id: "7", slot: "cover" }),
     );
     expect(response.status).toBe(400);
-    expect(await read(response)).toEqual({ error: "Slot de imagem deve ser banner" });
+    expect(await read(response)).toEqual({ error: "Slot de imagem deve ser avatar ou banner" });
+  });
+
+  it("DEC-242: subir o próprio avatar escreve o objeto sob `users/<id>/images/avatar` e grava `avatarKey`", async () => {
+    login(["VOLUNTARIO"], 7);
+    const response = await UPLOAD_IMAGE(
+      imageRequest(new File([PNG_BYTES], "foto.png", { type: "image/png" })),
+      context({ id: "7", slot: "avatar" }),
+    );
+    expect(response.status).toBe(200);
+    const body = await read(response);
+    expect(body.user.avatarKey).toMatch(/^users\/7\/images\/avatar\/[0-9a-f-]+\.webp$/);
+    expect(mocks.puts[0].key.startsWith("users/7/images/avatar/")).toBe(true);
+    expect(mocks.users.get(7)?.avatarKey).toBe(body.user.avatarKey);
+    // A capa não é tocada pela escrita do avatar.
+    expect(mocks.users.get(7)?.bannerKey).toBeNull();
   });
 
   it("capa de OUTRA pessoa por quem não gerencia: 403 'Não autorizado' e NENHUM objeto escrito", async () => {

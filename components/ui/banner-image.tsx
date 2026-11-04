@@ -51,8 +51,11 @@ export function BannerImage({ src, alt, crop, className }: BannerImageProps) {
     // `k` é quanto a cobertura cheia estoura a largura da moldura; `m` estoura a altura.
     const k = Math.max(1, (W * Ch) / (H * Cw))
     const m = Math.max(1, (H * Cw) / (Ch * W))
-    const tx = (crop.x - 1 / (2 * crop.zoom * k)) * 100
-    const ty = (crop.y - 1 / (2 * crop.zoom * m)) * 100
+    // `object-cover` já preenche a moldura com o centro da imagem. Para levar o centro do
+    // recorte ao centro da moldura, a imagem desloca (1/2 - x)·zoom·k·100% por eixo — MESMA
+    // conta da variante sem medida (`bannerCropTransform`), com o fator k da cobertura.
+    const tx = crop.zoom * k * (0.5 - crop.x) * 100
+    const ty = crop.zoom * m * (0.5 - crop.y) * 100
     return `translate(${tx}%, ${ty}%) scale(${crop.zoom})`
   })()
 

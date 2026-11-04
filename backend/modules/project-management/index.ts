@@ -18,6 +18,7 @@ import { RemoveProjectAttachmentUseCase } from "@/backend/modules/project-manage
 import { AssertCanManageProjectUseCase } from "@/backend/modules/project-management/application/use-cases/assert-can-manage-project.use-case"
 import { UpdateProjectImageUseCase } from "@/backend/modules/project-management/application/use-cases/update-project-image.use-case"
 import { UpdateProjectBannerCropUseCase } from "@/backend/modules/project-management/application/use-cases/update-project-banner-crop.use-case"
+import { UpdateProjectLogoCropUseCase } from "@/backend/modules/project-management/application/use-cases/update-project-logo-crop.use-case"
 import { GetProjectImageUseCase } from "@/backend/modules/project-management/application/use-cases/get-project-image.use-case"
 import { ListProjectCronogramaUseCase } from "@/backend/modules/project-management/application/use-cases/list-project-cronograma.use-case"
 import { CreateProjectGoalUseCase } from "@/backend/modules/project-management/application/use-cases/create-project-goal.use-case"
@@ -107,6 +108,7 @@ export class ProjectManagementModule {
   readonly assertCanManageProject: UseCaseExecute<AssertCanManageProjectUseCase>
   readonly updateProjectImage: UseCaseExecute<UpdateProjectImageUseCase>
   readonly updateProjectBannerCrop: UseCaseExecute<UpdateProjectBannerCropUseCase>
+  readonly updateProjectLogoCrop: UseCaseExecute<UpdateProjectLogoCropUseCase>
   readonly getProjectImage: UseCaseExecute<GetProjectImageUseCase>
   readonly listProjectCronograma: UseCaseExecute<ListProjectCronogramaUseCase>
   readonly createProjectGoal: UseCaseExecute<CreateProjectGoalUseCase>
@@ -149,6 +151,7 @@ export class ProjectManagementModule {
     private readonly assertCanManageProjectUseCase: AssertCanManageProjectUseCase,
     private readonly updateProjectImageUseCase: UpdateProjectImageUseCase,
     private readonly updateProjectBannerCropUseCase: UpdateProjectBannerCropUseCase,
+    private readonly updateProjectLogoCropUseCase: UpdateProjectLogoCropUseCase,
     private readonly getProjectImageUseCase: GetProjectImageUseCase,
     private readonly listProjectCronogramaUseCase: ListProjectCronogramaUseCase,
     private readonly createProjectGoalUseCase: CreateProjectGoalUseCase,
@@ -187,6 +190,7 @@ export class ProjectManagementModule {
     this.assertCanManageProject = this.assertCanManageProjectUseCase.execute.bind(this.assertCanManageProjectUseCase)
     this.updateProjectImage = this.updateProjectImageUseCase.execute.bind(this.updateProjectImageUseCase)
     this.updateProjectBannerCrop = this.updateProjectBannerCropUseCase.execute.bind(this.updateProjectBannerCropUseCase)
+    this.updateProjectLogoCrop = this.updateProjectLogoCropUseCase.execute.bind(this.updateProjectLogoCropUseCase)
     this.getProjectImage = this.getProjectImageUseCase.execute.bind(this.getProjectImageUseCase)
     this.listProjectCronograma = this.listProjectCronogramaUseCase.execute.bind(this.listProjectCronogramaUseCase)
     this.createProjectGoal = this.createProjectGoalUseCase.execute.bind(this.createProjectGoalUseCase)
@@ -321,6 +325,11 @@ export function createProjectManagementModule(options: ProjectManagementModuleFa
       actors: ports.actors,
     }),
     new UpdateProjectBannerCropUseCase({
+      projects: ports.projects,
+      memberships: ports.memberships,
+      actors: ports.actors,
+    }),
+    new UpdateProjectLogoCropUseCase({
       projects: ports.projects,
       memberships: ports.memberships,
       actors: ports.actors,

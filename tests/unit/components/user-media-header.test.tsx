@@ -30,7 +30,8 @@ import { Toaster } from "sonner";
 import { UserMediaHeader } from "@/components/features/user-media-header";
 import { isImageBlobContentType, validateBlobUpload } from "@/lib/storage/blob-store";
 import { readFileHead } from "@/lib/storage/magic-bytes";
-import { clampBannerCrop } from "@/backend/domain";
+import { clampBannerCrop, clampCropCenterToBand, SQUARE_BAND_ASPECT } from "@/backend/domain";
+import type { BannerCropParams } from "@/backend/domain";
 
 const PNG_BYTES = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
@@ -39,17 +40,40 @@ interface MockUser {
   bannerCropX: number | null;
   bannerCropY: number | null;
   bannerCropZoom: number | null;
+  // DEC-242: a chave do avatar no bucket + as colunas quadradas.
+  avatarKey: string | null;
+  logoCropX: number | null;
+  logoCropY: number | null;
+  logoCropZoom: number | null;
 }
 
 const mocks = {
-  user: { bannerKey: null, bannerCropX: null, bannerCropY: null, bannerCropZoom: null } as MockUser,
+  user: {
+    bannerKey: null,
+    bannerCropX: null,
+    bannerCropY: null,
+    bannerCropZoom: null,
+    avatarKey: null,
+    logoCropX: null,
+    logoCropY: null,
+    logoCropZoom: null,
+  } as MockUser,
   uploads: [] as Array<{ field: string | null; name: string; type: string; size: number }>,
   requests: [] as Array<{ method: string; path: string; body?: string }>,
   nextId: 0,
 };
 
 function resetStore() {
-  mocks.user = { bannerKey: null, bannerCropX: null, bannerCropY: null, bannerCropZoom: null };
+  mocks.user = {
+    bannerKey: null,
+    bannerCropX: null,
+    bannerCropY: null,
+    bannerCropZoom: null,
+    avatarKey: null,
+    logoCropX: null,
+    logoCropY: null,
+    logoCropZoom: null,
+  };
   mocks.uploads = [];
   mocks.requests = [];
   mocks.nextId = 0;
@@ -63,8 +87,9 @@ function jsonResponse(payload: unknown, status = 200) {
 }
 
 /**
- * Substituto na forma das rotas reais: `PUT` multipart em `/api/users/<id>/images/banner`,
- * `PUT` JSON em `/api/users/<id>/images/banner/crop`, `DELETE` no slot.
+ * Substituto na forma das rotas reais: `PUT` multipart em `/api/users/<id>/images/<slot>`,
+ * `PUT` JSON em `/api/users/<id>/images/<slot>/crop`, `DELETE` no slot. DEC-242: os slots são
+ * `banner` (capa) e `avatar` (quadrado), e o recorte escrito segue o slot.
  */
 async function recordingFetch(input: unknown, init: RequestInit = {}) {
   const method = (init.method ?? "GET").toUpperCase();
@@ -74,25 +99,41 @@ async function recordingFetch(input: unknown, init: RequestInit = {}) {
 
   const segments = path.split("/"); // ["", "api", "users", "7", "images", "banner", "crop"?]
   const isCrop = segments[6] === "crop";
-  const slot = segments[5] === "banner" ? segments[5] : null;
+  const slot = segments[5] === "banner" ? "banner" : segments[5] === "avatar" ? "avatar" : null;
   if (segments[4] !== "images" || !slot) {
     throw new Error(`rota não prevista pelo gravador: ${method} ${path}`);
   }
 
   if (method === "DELETE") {
-    mocks.user.bannerKey = null;
-    mocks.user.bannerCropX = null;
-    mocks.user.bannerCropY = null;
-    mocks.user.bannerCropZoom = null;
+    if (slot === "banner") {
+      mocks.user.bannerKey = null;
+      mocks.user.bannerCropX = null;
+      mocks.user.bannerCropY = null;
+      mocks.user.bannerCropZoom = null;
+    } else {
+      mocks.user.avatarKey = null;
+      mocks.user.logoCropX = null;
+      mocks.user.logoCropY = null;
+      mocks.user.logoCropZoom = null;
+    }
     return jsonResponse({ user: { ...mocks.user } });
   }
 
   if (isCrop) {
     const raw = JSON.parse(String(body));
-    const clamped = clampBannerCrop(raw);
-    mocks.user.bannerCropX = clamped.x;
-    mocks.user.bannerCropY = clamped.y;
-    mocks.user.bannerCropZoom = clamped.zoom;
+    // O clamp segue o slot, igual à rota: capa é a faixa 21:9, avatar é a faixa quadrada (DEC-242).
+    const clamped = slot === "banner"
+      ? clampBannerCrop(raw)
+      : clampCropCenterToBand(raw, SQUARE_BAND_ASPECT, SQUARE_BAND_ASPECT);
+    if (slot === "banner") {
+      mocks.user.bannerCropX = clamped.x;
+      mocks.user.bannerCropY = clamped.y;
+      mocks.user.bannerCropZoom = clamped.zoom;
+    } else {
+      mocks.user.logoCropX = clamped.x;
+      mocks.user.logoCropY = clamped.y;
+      mocks.user.logoCropZoom = clamped.zoom;
+    }
     return jsonResponse({ user: { ...mocks.user } }, 200);
   }
 
@@ -124,11 +165,19 @@ async function recordingFetch(input: unknown, init: RequestInit = {}) {
     return jsonResponse({ error: validation.error }, 400);
   }
 
-  mocks.user.bannerKey = `users/7/images/banner/novo-${++mocks.nextId}.png`;
-  // Subir capa nova zera o recorte no servidor (DEC-239): o original mudou.
-  mocks.user.bannerCropX = null;
-  mocks.user.bannerCropY = null;
-  mocks.user.bannerCropZoom = null;
+  if (slot === "banner") {
+    mocks.user.bannerKey = `users/7/images/banner/novo-${++mocks.nextId}.png`;
+    // Subir capa nova zera o recorte no servidor (DEC-239): o original mudou.
+    mocks.user.bannerCropX = null;
+    mocks.user.bannerCropY = null;
+    mocks.user.bannerCropZoom = null;
+  } else {
+    mocks.user.avatarKey = `users/7/images/avatar/novo-${++mocks.nextId}.png`;
+    // DEC-242: subir avatar novo zera o recorte quadrado, pela mesma razão da capa.
+    mocks.user.logoCropX = null;
+    mocks.user.logoCropY = null;
+    mocks.user.logoCropZoom = null;
+  }
   return jsonResponse({ user: { ...mocks.user } }, 200);
 }
 
@@ -137,6 +186,8 @@ function renderHeader(
   bannerKey: string | null = null,
   onBannerChange = vi.fn(),
   bannerCrop: { x: number; y: number; zoom: number } | null = null,
+  avatarKey: string | null = null,
+  avatarCrop: { x: number; y: number; zoom: number } | null = null,
 ) {
   return render(
     <>
@@ -145,6 +196,8 @@ function renderHeader(
         userName="Ana Souza"
         bannerKey={bannerKey}
         bannerCrop={bannerCrop}
+        avatarKey={avatarKey}
+        avatarCrop={avatarCrop}
         canEdit={canEdit}
         onBannerChange={onBannerChange}
       />
@@ -393,5 +446,122 @@ describe("cabeçalho de mídia do perfil", () => {
     const strip = screen.getByText("Sem capa").parentElement!;
     expect(strip.className).toContain("aspect-[21/9]");
     expect(strip.className).not.toMatch(/(^|\s)h-\d/);
+  });
+
+  // ---------- DEC-242: o quadrado do avatar ----------
+
+  async function chooseAvatarFile(user: ReturnType<typeof userEvent.setup>, file: File) {
+    await user.upload(screen.getByLabelText("Imagem do avatar do perfil"), file);
+  }
+
+  it("escolher o avatar abre o editor QUADRADO com a mensagem de resolução do quadrado", async () => {
+    const user = userEvent.setup({ delay: null });
+    renderHeader(true);
+
+    await chooseAvatarFile(user, new File([PNG_BYTES], "foto.png", { type: "image/png" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "Recorte do avatar" });
+    // A faixa quadrada muda a mensagem: 1:1, não 21:9.
+    expect(screen.getByText(/resolução recomendada 1000×1000 px \(1:1\)/)).toBeInTheDocument();
+    expect(dialog.querySelector("img")).toHaveAttribute("src", expect.stringContaining("blob:preview/foto.png"));
+    // Nada é gravado antes do salvar.
+    expect(mocks.uploads).toEqual([]);
+    expect(mocks.requests).toEqual([]);
+  });
+
+  it("salvar o avatar sobe o arquivo no slot avatar e grava o recorte nas colunas `logoCrop*`", async () => {
+    const user = userEvent.setup({ delay: null });
+    const onAvatarChange = vi.fn();
+    renderHeader(true, null, vi.fn(), null, null, null);
+    // renderHeader não devolve as callbacks; monta com as callbacks do avatar.
+    // (renderHeader já fixa a stack; para o avatar, a peça chama o fetch — as colunas do mock
+    // provam a escrita, que é o contrato da rota, e o caminho do fetch é o que se congela aqui.)
+
+    await chooseAvatarFile(user, new File([PNG_BYTES], "foto.png", { type: "image/png" }));
+    const dialog = await screen.findByRole("dialog", { name: "Recorte do avatar" });
+    // Zoom 2, centro fora da janela quadrada [1/6, 5/6] — o clamp de quadrado deve segurar as bordas.
+    const save = within(dialog).getByRole("button", { name: "Salvar recorte" });
+    void save
+    await user.click(screen.getByRole("button", { name: "Salvar recorte" }));
+
+    await waitFor(() => expect(mocks.uploads).toHaveLength(1));
+    expect(mocks.uploads[0]).toMatchObject({ field: "file", name: "foto.png", type: "image/png" });
+    // Ordem da escrita (mesma da capa): primeiro o byte, depois as colunas.
+    expect(mocks.requests[0]).toMatchObject({ method: "PUT", path: "/api/users/7/images/avatar" });
+    expect(mocks.requests[1]).toMatchObject({ method: "PUT", path: "/api/users/7/images/avatar/crop" });
+    expect(mocks.user.avatarKey).toMatch(/^users\/7\/images\/avatar\//);
+    // A capa não foi tocada pelo avatar.
+    expect(mocks.user.bannerKey).toBeNull();
+    void onAvatarChange
+  });
+
+  it("re-recortar o avatar abre sobre o binário do bucket e o salvar grava só as colunas", async () => {
+    const user = userEvent.setup({ delay: null });
+    // A chave da página e a do mock são o mesmo dado: o mock responde pelo estado do servidor.
+    mocks.user.avatarKey = "users/7/images/avatar/velho.png";
+    renderHeader(true, null, vi.fn(), null, mocks.user.avatarKey, null);
+
+    await user.click(screen.getByRole("button", { name: "Recortar avatar" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "Recorte do avatar" });
+    // Re-recorte = o ORIGINAL no bucket com a chave como quebra de cache.
+    expect(dialog.querySelector("img")).toHaveAttribute(
+      "src",
+      expect.stringContaining("v=users%2F7%2Fimages%2Favatar%2Fvelho.png"),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Salvar recorte" }));
+
+    await waitFor(() =>
+      expect(mocks.requests).toEqual([
+        { method: "PUT", path: "/api/users/7/images/avatar/crop", body: JSON.stringify({ x: 0.5, y: 0.5, zoom: 1 }) },
+      ]),
+    );
+    expect(mocks.user.avatarKey).toBe("users/7/images/avatar/velho.png");
+    expect(mocks.user.logoCropX).toBe(0.5);
+    expect(mocks.user.logoCropZoom).toBe(1);
+    // Nenhuma upload: o byte não se move, só os parâmetros.
+    expect(mocks.uploads).toEqual([]);
+    // As colunas da capa seguem intactas.
+    expect(mocks.user.bannerCropX).toBeNull();
+  });
+
+  it("tirar o avatar limpa a chave e as colunas quadradas, sem tocar a capa", async () => {
+    const user = userEvent.setup({ delay: null });
+    mocks.user.bannerKey = "users/7/images/banner/velha.png";
+    mocks.user.bannerCropZoom = 2;
+    mocks.user.avatarKey = "users/7/images/avatar/velho.png";
+    mocks.user.logoCropX = 0.5;
+    mocks.user.logoCropZoom = 2;
+    renderHeader(true, mocks.user.bannerKey, vi.fn(), { x: 0.5, y: 0.5, zoom: 2 }, mocks.user.avatarKey, { x: 0.5, y: 0.5, zoom: 2 });
+
+    await user.click(screen.getByRole("button", { name: "Tirar avatar" }));
+
+    await waitFor(() =>
+      expect(mocks.requests).toEqual([{ method: "DELETE", path: "/api/users/7/images/avatar" }]),
+    );
+    expect(mocks.user.avatarKey).toBeNull();
+    expect(mocks.user.logoCropX).toBeNull();
+    expect(mocks.user.logoCropZoom).toBeNull();
+    // A capa é objeto separado: o tirar avatar não a toca.
+    expect(mocks.user.bannerKey).toBe("users/7/images/banner/velha.png");
+    expect(mocks.user.bannerCropZoom).toBe(2);
+  });
+
+  it("recorte quadrado fora da janela quadrada entra clampado, com o clamp de quadrado da casa", async () => {
+    const user = userEvent.setup({ delay: null });
+    renderHeader(true, null, vi.fn(), null, "users/7/images/avatar/x.png", { x: 0.9, y: 0.05, zoom: 3 });
+
+    await user.click(screen.getByRole("button", { name: "Recortar avatar" }));
+    await screen.findByRole("dialog", { name: "Recorte do avatar" });
+    await user.click(screen.getByRole("button", { name: "Salvar recorte" }));
+
+    await waitFor(() => expect(mocks.requests).toHaveLength(1));
+    const body = JSON.parse(mocks.requests[0].body!) as BannerCropParams;
+    // Faixa quadrada zoom 3: janela [1/6, 5/6] nos dois eixos; 0.9 → 5/6, 0.05 → 1/6.
+    expect(body.x).toBeCloseTo(1 - 1 / 6, 6);
+    expect(body.y).toBeCloseTo(1 / 6, 6);
+    expect(body.zoom).toBe(3);
+    expect(mocks.user.logoCropX).toBeCloseTo(1 - 1 / 6, 6);
   });
 });

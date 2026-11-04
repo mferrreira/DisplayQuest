@@ -39,6 +39,7 @@ export {
   MIN_BANNER_CROP_ZOOM,
   MAX_BANNER_CROP_ZOOM,
   BANNER_BAND_ASPECT,
+  SQUARE_BAND_ASPECT,
   bannerCropBandRect,
   bannerCropCenterBounds,
   bannerCropFromColumns,

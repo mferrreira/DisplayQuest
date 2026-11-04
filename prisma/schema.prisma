@@ -24,12 +24,21 @@ model users {
   currentMonthPoints   Int                    @default(0)
   roles                UserRole[]
   avatar               String?
+  // DEC-242: o avatar passa a ter chave no bucket (users/<id>/images/avatar), mesma forma da
+  // capa. O caminho legado de disco continua servindo o campo `avatar` para quem já o usa.
+  avatarKey            String?
   bannerKey            String?
   // plan-v12 (DEC-239): recorte da faixa de capa. Centro normalizado 0..1, zoom >= 1.
   // Null = o corte centrado de hoje (object-cover). Subir nova capa zera os tres.
   bannerCropX          Float?
   bannerCropY          Float?
   bannerCropZoom       Float?
+  // DEC-242: recorte quadrado (1:1) do avatar no bucket — os mesmos tres campos da capa.
+  // Null = corte centrado. Subir novo avatar zera os tres. O render do avatar continua cover
+  // simples: o editor escolhe a area, o corte e renderizado pela faixa quadrada do editor.
+  logoCropX            Float?
+  logoCropY            Float?
+  logoCropZoom         Float?
   bio                  String?
   profileVisibility    ProfileVisibility      @default(public)
   // V5-4a (DEC-138): os dados de pessoa que os dois formulários oficiais pedem. Vivem na
@@ -115,6 +124,10 @@ model projects {
   bannerCropX   Float?
   bannerCropY   Float?
   bannerCropZoom Float?
+  // DEC-242: recorte quadrado (1:1) do logo — os mesmos tres campos. Null = corte centrado.
+  logoCropX     Float?
+  logoCropY     Float?
+  logoCropZoom  Float?
   daily_logs  daily_logs[]      @relation("ProjectDailyLogs")
   members     project_members[] @relation("ProjectMemberships")
   creator     users             @relation("UserProjects", fields: [createdBy], references: [id])

@@ -61,6 +61,11 @@ export const authOptions: AuthOptions = {
         token.bannerCropX = (user as any).bannerCropX
         token.bannerCropY = (user as any).bannerCropY
         token.bannerCropZoom = (user as any).bannerCropZoom
+        // DEC-242: a chave do avatar no bucket e o recorte quadrado viajam como a capa.
+        token.avatarKey = (user as any).avatarKey
+        token.logoCropX = (user as any).logoCropX
+        token.logoCropY = (user as any).logoCropY
+        token.logoCropZoom = (user as any).logoCropZoom
         token.bio = (user as any).bio
         token.profileVisibility = (user as any).profileVisibility
         // V5-4a (DEC-138): os campos abertos. O CPF não entra no token nem na sessão.
@@ -89,6 +94,10 @@ export const authOptions: AuthOptions = {
         token.bannerCropX = session.user.bannerCropX
         token.bannerCropY = session.user.bannerCropY
         token.bannerCropZoom = session.user.bannerCropZoom
+        token.avatarKey = session.user.avatarKey
+        token.logoCropX = session.user.logoCropX
+        token.logoCropY = session.user.logoCropY
+        token.logoCropZoom = session.user.logoCropZoom
         token.bio = session.user.bio
         token.profileVisibility = session.user.profileVisibility
         token.registrationNumber = session.user.registrationNumber
@@ -133,6 +142,12 @@ export const authOptions: AuthOptions = {
             bannerCropX: true,
             bannerCropY: true,
             bannerCropZoom: true,
+            // DEC-242: a chave do avatar no bucket e o recorte quadrado — o "Meu Perfil" os lê
+            // da sessão, como lê a chave da capa.
+            avatarKey: true,
+            logoCropX: true,
+            logoCropY: true,
+            logoCropZoom: true,
             bio: true,
             profileVisibility: true,
             // V5-4a (DEC-138): os dados de pessoa que o perfil mostra. O CPF fica FORA da sessão
@@ -177,6 +192,13 @@ export const authOptions: AuthOptions = {
           email: token.email,
           avatar: token.avatar,
           bannerKey: token.bannerKey,
+          avatarKey: token.avatarKey,
+          bannerCropX: token.bannerCropX,
+          bannerCropY: token.bannerCropY,
+          bannerCropZoom: token.bannerCropZoom,
+          logoCropX: token.logoCropX,
+          logoCropY: token.logoCropY,
+          logoCropZoom: token.logoCropZoom,
           bio: token.bio,
           profileVisibility: token.profileVisibility,
           registrationNumber: token.registrationNumber,

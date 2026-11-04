@@ -8,24 +8,42 @@
  * ela que o navegador leva como quebra de cache, porque o endereço por slot é sempre o mesmo.
  */
 
-export type UserImageSlot = "banner"
+export type UserImageSlot = "avatar" | "banner"
 
 export interface UserImageState {
   bannerKey: string | null
   bannerCropX: number | null
   bannerCropY: number | null
   bannerCropZoom: number | null
+  /** DEC-242: chave do avatar no bucket + recorte quadrado. */
+  avatarKey: string | null
+  logoCropX: number | null
+  logoCropY: number | null
+  logoCropZoom: number | null
 }
 
 function readImageState(payload: unknown): UserImageState {
   const user = (payload as {
-    user?: { bannerKey?: string | null; bannerCropX?: number | null; bannerCropY?: number | null; bannerCropZoom?: number | null }
+    user?: {
+      bannerKey?: string | null
+      bannerCropX?: number | null
+      bannerCropY?: number | null
+      bannerCropZoom?: number | null
+      avatarKey?: string | null
+      logoCropX?: number | null
+      logoCropY?: number | null
+      logoCropZoom?: number | null
+    }
   })?.user
   return {
     bannerKey: user?.bannerKey ?? null,
     bannerCropX: user?.bannerCropX ?? null,
     bannerCropY: user?.bannerCropY ?? null,
     bannerCropZoom: user?.bannerCropZoom ?? null,
+    avatarKey: user?.avatarKey ?? null,
+    logoCropX: user?.logoCropX ?? null,
+    logoCropY: user?.logoCropY ?? null,
+    logoCropZoom: user?.logoCropZoom ?? null,
   }
 }
 
@@ -95,6 +113,22 @@ export async function updateUserBannerCrop(
     `/api/users/${userId}/images/banner/crop`,
     { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify(params) },
     "Erro ao gravar o recorte da capa",
+  )
+  return readImageState(payload)
+}
+
+/**
+ * DEC-242 — grava os parâmetros do recorte quadrado do avatar. Mesma forma: a rota clampa, o
+ * cliente manda o que o editor quadrado escolheu.
+ */
+export async function updateUserAvatarCrop(
+  userId: number,
+  params: { x: number; y: number; zoom: number },
+): Promise<UserImageState> {
+  const payload = await request<unknown>(
+    `/api/users/${userId}/images/avatar/crop`,
+    { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify(params) },
+    "Erro ao gravar o recorte do avatar",
   )
   return readImageState(payload)
 }

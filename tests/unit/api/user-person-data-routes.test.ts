@@ -42,6 +42,7 @@ function userRow(id: number, overrides: Partial<UserRecord> = {}): UserRecord {
     profileVisibility: "public",
     bio: null,
     avatar: null,
+    avatarKey: null,
     bannerKey: null,
     ...emptyPersonData(),
     roles: ["VOLUNTARIO"],

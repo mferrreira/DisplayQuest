@@ -2,19 +2,20 @@ import { NextResponse } from "next/server"
 import { routeErrorResponse } from "@/lib/api/route-error-response"
 import { requireApiActor } from "@/lib/auth/api-guard"
 import { getBackendComposition } from "@/backend/composition/root"
-import { USER_IMAGE_SLOT_MESSAGE, clampBannerCrop, isUserImageSlot, userActor } from "@/backend/domain"
+import { SQUARE_BAND_ASPECT, USER_IMAGE_SLOT_MESSAGE, clampBannerCrop, clampCropCenterToBand, isUserImageSlot, userActor } from "@/backend/domain"
 
 const { userManagement: userManagementModule } = getBackendComposition()
 
 /**
- * plan-v12 (DEC-239) — parâmetros do recorte da capa do perfil:
- * `PUT /api/users/<id>/images/banner/crop`.
+ * plan-v12 (DEC-239) + DEC-242 — parâmetros do recorte do perfil:
+ * `PUT /api/users/<id>/images/<slot>/crop`, com slot `banner` (faixa 21:9) ou `avatar` (quadrado).
  *
  * Mesma forma medida no upload do V5-3 (DEC-137): o gate do perfil (`self OU MANAGE_USERS`,
  * `PROFILE_DENIED_MESSAGE`) roda ANTES de o corpo ser lido, a rota autentica, valida entrada,
  * monta o ator e mapeia com `routeErrorResponse`. Nenhum byte é movido aqui — o recorte é
- * parâmetro (DEC-239), o original fica no bucket na mesma chave. A rota clampa por
- * `clampBannerCrop` e o use case escreve o que recebeu.
+ * parâmetro (DEC-239), o original fica no bucket na mesma chave. A rota clampa e o use case
+ * escreve o que recebeu: capa com `clampBannerCrop`, avatar quadrado com o clamp band-aware de
+ * razão 1 (mesma janela de centro medida).
  */
 
 /** Id e slot: os dois são entrada do usuário, e os dois são recusados antes do corpo. */
@@ -24,7 +25,7 @@ function parseParams(context: { params: Promise<{ id: string; slot: string }> })
     return {
       userId,
       validUser: Number.isInteger(userId) && userId > 0,
-      // O recorte só existe para a faixa de capa. Slot fora da lista fechada: 400 com a
+      // O recorte existe para a capa e para o avatar. Slot fora da lista fechada: 400 com a
       // mensagem do domínio, mesma forma do upload.
       slot: isUserImageSlot(params.slot) ? params.slot : null,
     }
@@ -70,11 +71,17 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
       return NextResponse.json({ error: CROP_INVALID_MESSAGE }, { status: 400 })
     }
 
-    const user = await userManagementModule.updateUserBannerCrop({
-      actor,
-      userId,
-      params: clampBannerCrop(params),
-    })
+    // DEC-242: o avatar tem faixa quadrada (razão 1) — o clamp band-aware com razão 1 dá a
+    // mesma janela de centro que `clampBannerCrop`; a capa segue `clampBannerCrop`.
+    const paramsForSlot =
+      slot === "avatar"
+        ? clampCropCenterToBand(params, SQUARE_BAND_ASPECT, SQUARE_BAND_ASPECT)
+        : clampBannerCrop(params)
+
+    const user =
+      slot === "avatar"
+        ? await userManagementModule.updateUserAvatarCrop({ actor, userId, params: paramsForSlot })
+        : await userManagementModule.updateUserBannerCrop({ actor, userId, params: paramsForSlot })
     return NextResponse.json({ user }, { status: 200 })
   } catch (error: unknown) {
     return routeErrorResponse(error, { fallback: "Erro ao gravar o recorte da capa" })
