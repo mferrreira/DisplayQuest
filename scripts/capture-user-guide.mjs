@@ -144,7 +144,7 @@ const INTERACTIONS = [
   { id: "relatorios-gerar-lote", role: "coord", route: "/dashboard/weekly-reports", abre: "Gerar em Lote" },
   // alvo: controle sem rótulo legível, localizado pela estrutura da tela
   { id: "dialogo-detalhe-tarefa", role: "coord", route: "/dashboard", alvo: "button.flex-1.text-left", dialogo: "PONTOS" },
-  { id: "detalhe-projeto", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: 'a[aria-label="Ver projeto Pesquisa em IA"]' }, projetoTab: "Tarefas", verifica: "Andamento do projeto" },
+  { id: "detalhe-projeto", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: 'a[aria-label="Ver projeto Pesquisa em IA"]' }, projetoTab: "Tarefas", verifica: "Dados do projeto" },
   // V5-5b (DEC-126/151): a grade meses × atividades do painel Cronograma. O cartão é nomeado
   // porque a lista ordena por data de criação e três projetos da instância têm a mesma data —
   // "o primeiro cartão" não seria a mesma tela em duas execuções.
@@ -181,12 +181,20 @@ const INTERACTIONS = [
   // plan-v12 (DEC-238): a aba Conclusões do Painel Administrativo — a fila global de solicitações
   // de conclusão de atividade, criada na S01. Leitura pura: nenhum clique aprova.
   { id: "admin-conclusoes", role: "coord", route: "/dashboard/admin", aba: "Conclusões", verifica: "Conclusões solicitadas" },
-  // plan-v12 (DEC-241): o editor de recorte da capa, nos dois lados. O "Recortar capa" abre o
-  // diálogo sobre o ORIGINAL no bucket; nenhuma captura salva.
-  { id: "editor-recorte-capa", role: "part", route: "/dashboard/profile", abre: "Recortar capa", dialogo: "Recorte da capa", verifica: "Resolução recomendada", rolarAte: 'text=Arraste a faixa' },
-  { id: "editor-recorte-projeto", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: 'a[aria-label="Ver projeto Pesquisa em IA"]' }, projetoTab: "Visão geral", clicar: ["Recortar capa"], dialogo: "Recorte da capa", verifica: "Resolução recomendada", rolarAte: 'text=Arraste a faixa' },
+  // plan-v12 (DEC-241) + plan-v14 S05: o editor de recorte da capa, nos dois lados. O menu
+  // aberto pelo clique da faixa tem o item "Recortar capa", que abre o diálogo sobre o ORIGINAL
+  // no bucket; nenhuma captura salva.
+  { id: "editor-recorte-capa", role: "part", route: "/dashboard/profile", abre: "Opções da capa do perfil", clicar: [{ role: "menuitem", name: "Recortar capa" }], dialogo: "Recorte da capa", verifica: "Resolução recomendada", rolarAte: 'text=Arraste a faixa' },
+  { id: "editor-recorte-projeto", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: 'a[aria-label="Ver projeto Pesquisa em IA"]' }, projetoTab: "Visão geral", clicar: [{ role: "button", name: "Opções da capa do projeto" }, { role: "menuitem", name: "Recortar capa" }], dialogo: "Recorte da capa", verifica: "Resolução recomendada", rolarAte: 'text=Arraste a faixa' },
   // plan-v12 (DEC-240): a faixa 21:9 do detalhe do projeto, com o recorte aplicado. Sem clique.
-  { id: "faixa-capa-projeto", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: 'a[aria-label="Ver projeto Pesquisa em IA"]' }, projetoTab: "Visão geral", verifica: "Recortar capa", rolarAte: "text=Recortar capa" },
+  // plan-v14 S05: o rótulo "Recortar capa" saiu do corpo (é item de menu), e a verificação passou
+  // ao card permanente da Visão geral; o rolar leva o gatilho da faixa ao campo de visão.
+  { id: "faixa-capa-projeto", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: 'a[aria-label="Ver projeto Pesquisa em IA"]' }, projetoTab: "Visão geral", verifica: "Dados do projeto", rolarAte: 'button[aria-label="Opções da capa do projeto"]' },
+  // plan-v14 S05 (regra 5): o MENU de opções aberto pelo clique na faixa, nos dois lados. A
+  // captura fotografa o menu aberto — a verificação é dos itens, que entram no texto do corpo.
+  { id: "capa-menu-projeto", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: 'a[aria-label="Ver projeto Pesquisa em IA"]' }, projetoTab: "Visão geral", clicar: [{ role: "button", name: "Opções da capa do projeto" }], verifica: "Tirar capa", rolarAte: 'button[aria-label="Opções da capa do projeto"]' },
+  { id: "logo-menu-projeto", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: 'a[aria-label="Ver projeto Pesquisa em IA"]' }, projetoTab: "Visão geral", clicar: [{ role: "button", name: "Opções do logo do projeto" }], verifica: "Tirar logo", rolarAte: 'button[aria-label="Opções do logo do projeto"]' },
+  { id: "capa-menu-perfil", role: "part", route: "/dashboard/profile", abre: "Editar Perfil", clicar: [{ role: "button", name: "Opções da capa do perfil" }], verifica: "Tirar avatar", rolarAte: 'button[aria-label="Opções da capa do perfil"]' },
 ];
 
 /** A navegação é um acordeão: os destinos só aparecem quando o grupo é aberto. */
@@ -399,7 +407,12 @@ for (const it of interactions) {
         await page.waitForTimeout(300);
       }
       for (const clique of it.clicar ?? []) {
-        await page.getByRole("button", { name: clique, exact: true }).first().click();
+        // plan-v14 S05: os controles de capa/logo viraram itens de menu aberto pelo clique da
+        // faixa. `clicar` aceita objeto {role, name} — o menuitem do Radix não é botão.
+        const alvo = typeof clique === "string"
+          ? page.getByRole("button", { name: clique, exact: true })
+          : page.getByRole(clique.role, { name: clique.name, exact: true });
+        await alvo.first().click();
         await page.waitForTimeout(500);
       }
 

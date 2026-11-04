@@ -61,16 +61,25 @@ Editar e excluir um projeto são ações do cartão, na lista. Editar é uma pá
 ## Capa e logo do projeto
 
 1. Abra o detalhe do projeto, na aba **Visão geral**.
-2. Clique em **Enviar capa** e escolha a imagem. O editor de recorte abre sobre a imagem escolhida: a moldura 21:9 aparece como uma **faixa** sobre a imagem inteira.
-3. Arraste a faixa para escolher a parte da capa; arraste o canto de baixo-direita para redimensionar. A linha *"Resolução recomendada: 2100×900 px (21:9)"* diz o tamanho que preenche a moldura sem recorte.
-4. Clique em **Salvar recorte**: a imagem sobe e a parte escolhida passa a ocupar a faixa da capa.
-5. Clique em **Enviar logo** e escolha a imagem. O logo aparece redondo, sobre a capa. O logo tem o caminho direto, sem editor de recorte.
-6. **Recortar capa** reabre o editor sobre a imagem no bucket, para mudar só a parte visível. **Tirar capa** e **Tirar logo** aparecem quando o slot tem imagem, e o sistema pede confirmação.
+2. Clique na **faixa da capa**. Ela abre a lista de opções: **Enviar capa**, **Recortar capa** e **Tirar capa**. A lista só existe para quem gerencia o projeto — a mesma regra de gestão da tela (líder, criador, COORDENADOR, GERENTE, GERENTE_PROJETO, gestão de contas); quem não gerencia vê a faixa sem nenhum acesso a ela.
+3. Escolha **Enviar capa** e escolha a imagem. O editor de recorte abre sobre a imagem escolhida: a moldura 21:9 aparece como uma **faixa** sobre a imagem inteira.
+4. Arraste a faixa para escolher a parte da capa; arraste o canto de baixo-direita para redimensionar. A linha *"Resolução recomendada: 2100×900 px (21:9)"* diz o tamanho que preenche a moldura sem recorte.
+5. Clique em **Salvar recorte**: a imagem sobe e a parte escolhida passa a ocupar a faixa da capa.
+6. **Recortar capa** reabre o editor sobre a imagem no bucket, para mudar só a parte visível. **Tirar capa** aparece quando a faixa tem imagem, e o sistema pede confirmação.
+7. Clique no **logo** (o círculo sobre a capa). A lista dele traz **Enviar logo**, **Recortar logo** e **Tirar logo**. O logo tem a mesma peça de editor, na **faixa quadrada** — a linha passa a dizer *"Logo quadrado: resolução recomendada 1000×1000 px (1:1)"*, e o corte escolhido pelo editor é o que a tela mostra, nas três superfícies onde o logo aparece.
 
 São imagens, só isso: PDF e vídeo não entram aqui. O arquivo vai para o bucket de objetos do sistema, e a tela o lê por um endereço que entrega a imagem apenas a quem tem acesso ao projeto. Quem escreve a capa é a gestão do projeto; quem a vê é a mesma regra de leitura do detalhe. O recorte é parâmetro, não corte: a mesma imagem fica no bucket, na mesma chave, e a tela mostra a parte que os números apontam.
 
-```foto faixa-capa-projeto titulo="A capa do projeto na faixa 21:9, na aba Visão geral, com os controles Enviar capa, Enviar logo, Recortar capa, Tirar capa e Tirar logo"
-A capa ocupa a largura plena da moldura 21:9; o logo redondo fica no canto de baixo-esquerda.
+A lista de opções não aparece no extrato do DOM — os gatilhos da faixa e do logo são ícones sem texto, e o nome dos itens vem da interface medida pelo teste.
+
+```foto faixa-capa-projeto titulo="A capa do projeto na faixa 21:9, na aba Visão geral"
+A capa ocupa a largura plena da moldura 21:9; o logo redondo fica no canto de baixo-esquerda. Os controles não são botões soltos: eles estão na lista que o clique da faixa e do logo abre.
+```
+
+```foto capa-menu-projeto titulo="A lista de opções aberta pelo clique na faixa da capa: Enviar capa, Recortar capa, Tirar capa"
+```
+
+```foto logo-menu-projeto titulo="A lista de opções aberta pelo clique no logo: Enviar logo, Recortar logo, Tirar logo"
 ```
 
 ```foto editor-recorte-projeto titulo="O editor de recorte da capa do projeto, sobre a imagem no bucket"

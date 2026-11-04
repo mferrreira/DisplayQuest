@@ -27,6 +27,8 @@ Esta é a lista completa das telas do sistema, com o endereço de cada uma e que
 | Menu do cartão de tarefa | três pontos no cartão | **Mover para** (só os destinos permitidos), **Ver detalhes**, **Editar** |
 | Menu de ordenação da coluna | duas setas no cabeçalho da coluna | **Ordenar por** — Urgência, Prazo, Mais recentes, Pontos, Alfabética; vale só para aquela coluna e fica guardado no navegador |
 | Selo do prêmio | em cima do contador de pontos, no cabeçalho | o quanto entrou ou saiu da sua pontuação (**+10** verde, **−10** vermelho), contando o número por cerca de um segundo; aparece só quando o crédito é seu |
+| Lista de opções da capa e do logo | detalhe do projeto, clique na **faixa da capa** e no **logo** | **Enviar capa**, **Recortar capa**, **Tirar capa**; **Enviar logo**, **Recortar logo**, **Tirar logo** — só para quem gerencia o projeto |
+| Lista de opções do perfil | cartão **Meu Perfil**, em **modo de edição**, clique na faixa da capa | **Enviar capa**, **Recortar capa**, **Tirar capa**, **Enviar avatar**, **Recortar avatar**, **Tirar avatar** — a própria pessoa, ou quem gerencia contas |
 
 ## Estados possíveis
 
