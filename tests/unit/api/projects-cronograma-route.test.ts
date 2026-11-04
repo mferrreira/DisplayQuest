@@ -161,7 +161,7 @@ describe("GET /api/projects/cronograma — a leitura agregada", () => {
     const body = await response.json();
     expect(body.activities.map((row: { projectId: number }) => row.projectId)).toEqual([10, 10, 11]);
     const first = body.activities[0];
-    expect(Object.keys(first).sort()).toEqual(["firstMonth", "id", "lastMonth", "order", "projectId", "status"]);
+    expect(Object.keys(first).sort()).toEqual(["description", "firstMonth", "id", "lastMonth", "order", "projectId", "status"]);
     expect(first.status).toBe("OPEN");
     expect(body.activities[1].status).toBe("COMPLETION_REQUESTED");
     expect(body.activities[2].status).toBe("DONE");

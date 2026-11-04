@@ -25,6 +25,8 @@ export interface ProjectActivitySummary {
   status: string
   firstMonth: string
   lastMonth: string
+  /** S05: a lista de atrasadas da tela nomeia projeto + etapa. */
+  description: string
 }
 
 export class ListAllProjectActivitiesUseCase {
@@ -39,6 +41,7 @@ export class ListAllProjectActivitiesUseCase {
       status: row.status,
       firstMonth: row.firstMonth,
       lastMonth: row.lastMonth,
+      description: row.description,
     }))
   }
 }

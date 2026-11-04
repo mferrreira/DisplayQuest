@@ -1,14 +1,16 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { useProject } from "@/contexts/project-context"
 import { useTask } from "@/contexts/task-context"
 import { useUser } from "@/contexts/user-context"
+import { ProjectsAPI } from "@/contexts/api-client"
 import { ProjectList } from "@/components/features/project-list"
 import { ProjectDialog } from "@/components/features/project-dialog"
 import { ProjectManagerDashboard } from "@/components/features/project-manager-dashboard"
+import type { ActivityChartRow } from "@/features/projects/utils/activity-chart-rules"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { PageHeader } from "@/components/ui/page-header"
@@ -31,6 +33,15 @@ export default function ProjetosPage() {
   const { projects } = useProject()
   const { tasks } = useTask()
   const { users } = useUser()
+
+  // S04/S05: as atividades de cronograma de todos os projetos, numa chamada só. A tela
+  // recorta pelo que os filtros do topo deixaram — o servidor não conhece filtros de tela.
+  const [activities, setActivities] = useState<ActivityChartRow[]>([])
+  useEffect(() => {
+    ProjectsAPI.getAllActivities()
+      .then((res) => setActivities(res.activities as ActivityChartRow[]))
+      .catch(() => setActivities([]))
+  }, [])
 
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
@@ -164,6 +175,7 @@ export default function ProjetosPage() {
               <ProjectManagerDashboard 
                 projects={filteredProjects} 
                 tasks={filteredTasks}
+                activities={activities.filter(row => filteredProjectIds.has(row.projectId))}
                 scopeDescription={scopeDescription}
                 onProjectSelect={handleProjectClick}
               />

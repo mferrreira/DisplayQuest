@@ -188,6 +188,10 @@ export const ProjectsAPI = {
   // Obter todos os projetos
   getAll: () => fetchAPI<{ projects: any[] }>("/api/projects"),
 
+  // plan-v13 (S04): as atividades de cronograma de TODOS os projetos, numa chamada só.
+  // A tela filtra pelo recorte do topo; a rota é a leitura aberta ao autenticado.
+  getAllActivities: () => fetchAPI<{ activities: any[] }>("/api/projects/cronograma"),
+
   // Obter um projeto específico
   getById: (id: number) => fetchAPI<{ project: any }>(`/api/projects/${id}`),
 
