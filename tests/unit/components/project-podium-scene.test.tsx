@@ -3,16 +3,16 @@
  * plan-v13 S07 (ADR-001) — a cena do pódio glorioso de projetos.
  *
  * Roda em `node` com `@react-three/test-renderer`: sem WebGL, sem DOM. Congela o contrato da
- * cena: os blocos por posição, o campeão central e mais alto, o ouro do token no campeão, a
- * cor neutra nos demais, `Html` por bloco, e o `reduced-motion` que derruba as animações.
+ * cena: os blocos por posição, o campeão central e mais alto, o ouro no campeão, prata no 2º e
+ * bronze no 3º, as pedras da base, e o `reduced-motion` que derruba as animações.
  */
 import { create as createTestScene } from "@react-three/test-renderer"
 import { describe, expect, it } from "vitest"
 import type { Project } from "@/contexts/types"
 
-import { PodiumScene, podiumBlockHeight, type PodiumEntry } from "@/components/features/podium-scene"
+import { PodiumScene, podiumBlockHeight, type PodiumEntry, type PodiumPalette } from "@/components/features/podium-scene"
 
-const COLORS = { gold: "#f6b322", neutral: "#4a4a52" }
+const PALETTE: PodiumPalette = { gold: "#f6b322", silver: "#b7c2cc", bronze: "#a2643c", stone: "#2b2d33" }
 
 function project(id: number, name: string, points: number): Project {
   return {
@@ -21,14 +21,14 @@ function project(id: number, name: string, points: number): Project {
   }
 }
 
-const P1 = { project: project(1, "Pesquisa em IA", 30), position: 1 as const, points: 30 }
-const P2 = { project: project(2, "Automação", 20), position: 2 as const, points: 20 }
-const P3 = { project: project(3, "Microscopia", 10), position: 3 as const, points: 10 }
+const P1 = { project: project(1, "Pesquisa em IA", 30), position: 1 as const, points: 30, distanceText: null }
+const P2 = { project: project(2, "Automação", 20), position: 2 as const, points: 20, distanceText: "10 pts para o 1º" }
+const P3 = { project: project(3, "Microscopia", 10), position: 3 as const, points: 10, distanceText: "10 pts para o 2º" }
 
 async function renderScene(entries: PodiumEntry[], reducedMotion = false) {
   // o create do test-renderer v9 é assíncrono; `scene.instance` é a root THREE da cena
   const renderer = await createTestScene(
-    <PodiumScene entries={entries} colors={COLORS} reducedMotion={reducedMotion} />
+    <PodiumScene entries={entries} palette={PALETTE} reducedMotion={reducedMotion} />
   )
   return renderer.scene.instance
 }
@@ -49,12 +49,15 @@ describe("PodiumScene", () => {
     expect(b3!.position.x).toBeGreaterThan(0)
   })
 
-  it("o campeão leva o ouro do token; 2º e 3º a cor neutra", async () => {
+  it("o campeão leva ouro, o 2º prata e o 3º bronze; a base é pedra, com filete dourado", async () => {
     const scene = await renderScene([P1, P2, P3])
-    const champion = scene.getObjectByName("podium-1") as any
-    const runner = scene.getObjectByName("podium-2") as any
-    expect(champion.material.color.getHexString()).toBe(COLORS.gold.replace("#", ""))
-    expect(runner.material.color.getHexString()).toBe(COLORS.neutral.replace("#", ""))
+    const hex = (name: string) => (scene.getObjectByName(name) as any).material.color.getHexString()
+    expect(hex("pedestal-1")).toBe(PALETTE.gold.replace("#", ""))
+    expect(hex("pedestal-2")).toBe(PALETTE.silver.replace("#", ""))
+    expect(hex("pedestal-3")).toBe(PALETTE.bronze.replace("#", ""))
+    expect(hex("base-slab")).toBe(PALETTE.stone.replace("#", ""))
+    expect(hex("base-step")).toBe(PALETTE.stone.replace("#", ""))
+    expect(hex("gold-filigree")).toBe(PALETTE.gold.replace("#", ""))
   })
 
   it("reduced-motion congela as animações: o flag da cena desliga coroa, sparkles e bloom", async () => {

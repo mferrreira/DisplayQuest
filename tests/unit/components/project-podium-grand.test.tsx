@@ -96,11 +96,20 @@ describe("ProjectLeaderboard com pódio glorioso", () => {
     expect(screen.getByText(/Nenhum projeto/)).toBeInTheDocument()
   })
 
-  it("o wrapper da cena recebe os três do pódio na ordem do ranking", () => {
+  it("o wrapper da cena recebe os três do pódio na ordem do ranking, com a distância até o próximo lugar", () => {
     mock.webgl = true
     mock.calls.length = 0
     render(<ProjectLeaderboard projects={[P3, P2, P1, P4]} onProjectSelect={() => {}} />)
-    const last = mock.calls[mock.calls.length - 1] as { entries: { project: Project }[] }
+    const last = mock.calls[mock.calls.length - 1] as { entries: { project: Project; distanceText: string | null }[] }
     expect(last.entries.map((e) => e.project.name)).toEqual(["Pesquisa em IA", "Automação", "Microscopia"])
+    expect(last.entries.map((e) => e.distanceText)).toEqual([null, "10 pts para o 1º", "10 pts para o 2º"])
+  })
+
+  it("sem WebGL: a distância aparece nos cards visíveis", () => {
+    mock.webgl = false
+    render(<ProjectLeaderboard projects={[P1, P2, P3, P4]} onProjectSelect={() => {}} />)
+    const runners = screen.getByRole("region", { name: "Segundo e terceiro lugares" })
+    expect(runners).toHaveTextContent("10 pts para o 1º")
+    expect(runners).toHaveTextContent("10 pts para o 2º")
   })
 })

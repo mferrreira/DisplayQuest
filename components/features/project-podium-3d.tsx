@@ -4,7 +4,7 @@ import * as React from "react"
 import dynamic from "next/dynamic"
 import { useTheme } from "next-themes"
 
-import type { PodiumColors, PodiumEntry } from "./podium-scene"
+import type { PodiumEntry, PodiumPalette } from "./podium-scene"
 import type { Project } from "@/contexts/types"
 
 /**
@@ -45,15 +45,18 @@ export function useReducedMotion(): boolean {
   return reduced
 }
 
-function tokenHex(token: string, minLightness = 0): string {
-  // o valor do token é uma tripla HSL. O clamp de lightness é a trava medida: em tema claro
-  // o `--warning` tem L=38% e vira marrom; o ouro do campeão tem que ser ouro nos dois temas.
+function tokenHex(token: string, clamp?: { min?: number; max?: number }): string {
+  // o valor do token é uma tripla HSL. Os clamps são as travas medidas: em tema claro o
+  // `--warning` tem L=38% e vira marrom — o ouro do campeão tem que ser ouro nos dois temas;
+  // em tema claro o `--secondary` é pedra quase branca, e o salão é escuro nos dois temas.
   const raw = getComputedStyle(document.documentElement).getPropertyValue(token).trim()
   const parts = raw.split(/[\s/]+/)
   const l = Number(parts[2]?.replace("%", ""))
-  const triple = Number.isFinite(l) && l < minLightness
-    ? `${parts[0]} ${parts[1]} ${minLightness}%`
-    : raw
+  let triple = raw
+  if (Number.isFinite(l)) {
+    if (clamp?.min !== undefined && l < clamp.min) triple = `${parts[0]} ${parts[1]} ${clamp.min}%`
+    if (clamp?.max !== undefined && l > clamp.max) triple = `${parts[0]} ${parts[1]} ${clamp.max}%`
+  }
   const ctx = document.createElement("canvas").getContext("2d")
   if (!ctx) return "#888888"
   ctx.fillStyle = `hsl(${triple})`
@@ -72,9 +75,14 @@ export function ProjectPodium3D({
   const webgl = useWebglSupport()
   const reduced = useReducedMotion()
   const { resolvedTheme } = useTheme()
-  const colors = React.useMemo<PodiumColors>(() => {
-    if (typeof document === "undefined") return { gold: "#f6b322", neutral: "#888888" }
-    return { gold: tokenHex("--warning", 55), neutral: tokenHex("--secondary", 35) }
+  const palette = React.useMemo<PodiumPalette>(() => {
+    if (typeof document === "undefined") return { gold: "#f6b322", silver: "#b7c2cc", bronze: "#a2643c", stone: "#2b2d33" }
+    return {
+      gold: tokenHex("--warning", { min: 55 }),
+      silver: "#b7c2cc",
+      bronze: "#a2643c",
+      stone: tokenHex("--secondary", { max: 22 }),
+    }
   }, [resolvedTheme])
 
   if (!webgl || entries.length === 0) return null
@@ -84,10 +92,10 @@ export function ProjectPodium3D({
       data-testid="podium-canvas"
       role="region"
       aria-label="Pódio dos projetos em três dimensões"
-      className="h-[220px] w-full sm:h-[280px]"
+      className="h-[340px] w-full sm:h-[440px]"
     >
       <React.Suspense fallback={null}>
-        <PodiumCanvasLazy entries={entries} colors={colors} reducedMotion={reduced} onSelect={onSelect} />
+        <PodiumCanvasLazy entries={entries} palette={palette} reducedMotion={reduced} onSelect={onSelect} />
       </React.Suspense>
     </div>
   )

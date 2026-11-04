@@ -32,12 +32,16 @@ interface ProjectLeaderboardProps {
 export function ProjectLeaderboard({ projects, onProjectSelect }: ProjectLeaderboardProps) {
   const ranked = rankProjects(projects)
   const champion = ranked[0]
-  const runnersUp = ranked.slice(1, 3)
   const rest = ranked.slice(3)
 
   const open = (project: Project) => onProjectSelect?.(project)
   const webgl = useWebglSupport()
-  const topThree = ranked.slice(0, 3) .map((entry) => ({ project: entry.project, position: entry.position as 1 | 2 | 3, points: entry.points }))
+  const topThree = ranked.slice(0, 3).map((entry, i) => {
+    const ahead = i > 0 ? ranked[i - 1] : null
+    const distanceText = ahead && ahead.points > entry.points ? `${ahead.points - entry.points} pts para o ${i}º` : null
+    return { project: entry.project, position: entry.position as 1 | 2 | 3, points: entry.points, distanceText }
+  })
+  const runnersUp = topThree.slice(1)
 
   return (
     <div className="space-y-6">
@@ -137,6 +141,7 @@ export function ProjectLeaderboard({ projects, onProjectSelect }: ProjectLeaderb
                     {entry.project.name}
                   </p>
                   {entry.project.subtitle && <p className="truncate text-xs text-muted-foreground">{entry.project.subtitle}</p>}
+                  {entry.distanceText && <p className="truncate text-xs font-medium text-muted-foreground">{entry.distanceText}</p>}
                 </div>
                 <p className="shrink-0 font-bold tabular-nums text-foreground">{entry.points}</p>
               </Link>
