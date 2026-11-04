@@ -127,22 +127,32 @@ export function ProjectList({ onProjectSelect, projects: providedProjects, tasks
                     />
                   </div>
                   {project.logoKey && (
-                    <img
-                      src={projectImageUrl(project.id, "logo", project.logoKey)}
-                      alt={`Logo do projeto ${project.name}`}
-                      className="absolute bottom-0 left-4 h-12 w-12 translate-y-1/2 rounded-full border-4 border-card bg-card object-cover sm:h-14 sm:w-14"
-                    />
+                    // plan-v14 S01 (regra 1): o logo do cartão também sai pela peça única com o
+                    // recorte quadrado gravado — o `<img object-cover>` cru está superado. O
+                    // wrapper continua FORA do clip da faixa (achado da revisão S01 do plan-v11),
+                    // e a `translate-y-1/2` de sobrepõe à emenda fica no wrapper.
+                    <div className="absolute bottom-0 left-4 h-12 w-12 translate-y-1/2 rounded-full border-4 border-card bg-card sm:h-14 sm:w-14">
+                      <BannerImage
+                        src={projectImageUrl(project.id, "logo", project.logoKey)}
+                        alt={`Logo do projeto ${project.name}`}
+                        crop={bannerCropFromColumns(project.logoCropX, project.logoCropY, project.logoCropZoom)}
+                        className="rounded-full"
+                      />
+                    </div>
                   )}
                 </div>
               )}
               {!project.bannerKey && project.logoKey && (
                 // Mesmo tratamento de círculo das duas situações; o reference proíbe um segundo
-                // desenho para o mesmo conceito.
-                <img
-                  src={projectImageUrl(project.id, "logo", project.logoKey)}
-                  alt={`Logo do projeto ${project.name}`}
-                  className="ml-4 mt-4 h-12 w-12 rounded-full border-4 border-card bg-card object-cover"
-                />
+                // desenho para o mesmo conceito. plan-v14 S01: as duas saem pela peça única.
+                <div className="ml-4 mt-4 h-12 w-12 rounded-full border-4 border-card bg-card">
+                  <BannerImage
+                    src={projectImageUrl(project.id, "logo", project.logoKey)}
+                    alt={`Logo do projeto ${project.name}`}
+                    crop={bannerCropFromColumns(project.logoCropX, project.logoCropY, project.logoCropZoom)}
+                    className="rounded-full"
+                  />
+                </div>
               )}
               {/* Link esticado (S01): uma única âncora cobre o cartão; os controles de gestão
                   ficam com z acima dela, e o botão olho saiu. */}

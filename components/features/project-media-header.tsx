@@ -33,7 +33,8 @@ import { bannerCropFromColumns, SQUARE_BAND_ASPECT, type BannerCropParams } from
  *
  * DEC-242: o logo também passa pelo editor, com a FAIXA QUADRADA (`bandAspect = 1`), e o salvar
  * grava `logoCrop*`. O render do logo continua cover simples — a tela não aplica o corte, e as
- * colunas guardam a área escolhida.
+ * colunas guardam a área escolhida. SUPERADO em plan-v14 S01 (regra 1): a tela passa a aplicar o
+ * corte pela peça única, nas três superfícies.
  */
 interface ProjectMediaHeaderProps {
   projectId: number
@@ -232,14 +233,17 @@ export function ProjectMediaHeader({
 
         <div className="absolute bottom-0 left-4">
           {currentLogoKey ? (
-            <>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+            // plan-v14 S01 (regra 1): o corte quadrado gravado pelo editor DEC-242 passa a ser
+            // aplicado — a peça única renderiza o logo, o círculo da moldura mostra a área
+            // escolhida, e o comentário da DEC-242 ("a tela não aplica o corte") fica superado.
+            <div className="h-16 w-16 rounded-full border-4 border-background bg-background sm:h-20 sm:w-20">
+              <BannerImage
                 src={projectImageUrl(projectId, "logo", currentLogoKey)}
                 alt={`Logo do projeto ${projectName}`}
-                className="h-16 w-16 rounded-full border-4 border-background bg-background object-cover sm:h-20 sm:w-20"
+                crop={currentLogoCrop}
+                className="rounded-full"
               />
-            </>
+            </div>
           ) : (
             <div className="flex h-16 w-16 items-center justify-center rounded-full border-4 border-background bg-muted text-muted-foreground sm:h-20 sm:w-20">
               <ImageOff className="h-6 w-6" />
