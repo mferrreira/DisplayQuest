@@ -86,7 +86,7 @@ function PodiumBlock({
       <boxGeometry args={[1.3, height, 1.3]} />
       <meshStandardMaterial color={color} metalness={metalness} roughness={0.3} emissive={emissive} emissiveIntensity={emissiveIntensity} />
       {inDom && (
-        <Html position={[0, height / 2 + 0.18, 0]} center zIndexRange={[10, 0]} className="pointer-events-none">
+        <Html position={[0, entry.position === 1 ? height + 0.75 : height / 2 + 0.18, 0]} center zIndexRange={[10, 0]} className="pointer-events-none">
           <div className="whitespace-nowrap text-center">
             <p className="text-xs font-semibold text-foreground drop-shadow">{entry.project.name}</p>
             <p className="text-lg font-bold tabular-nums text-foreground drop-shadow">{entry.points}</p>
