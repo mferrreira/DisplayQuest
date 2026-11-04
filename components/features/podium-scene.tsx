@@ -120,6 +120,8 @@ export function PodiumScene({
 
   return (
     <group name="podium-group" userData={{ animations: !reducedMotion }}>
+      <ambientLight intensity={0.9} />
+      <spotLight position={[3, 6, 4]} angle={0.35} penumbra={1} intensity={3} decay={0} />
       {/* PresentationControls, ContactShadows e Environment tocam DOM/WebGL e só existem no
           browser; em node, o test-renderer lê o núcleo estrutural da cena: blocos, coroa,
           sparkles e materiais. */}

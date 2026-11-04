@@ -45,12 +45,18 @@ export function useReducedMotion(): boolean {
   return reduced
 }
 
-function tokenHex(token: string): string {
-  // o valor do token é uma tripla HSL; o canvas 2d normaliza para hex em qualquer tema
+function tokenHex(token: string, minLightness = 0): string {
+  // o valor do token é uma tripla HSL. O clamp de lightness é a trava medida: em tema claro
+  // o `--warning` tem L=38% e vira marrom; o ouro do campeão tem que ser ouro nos dois temas.
   const raw = getComputedStyle(document.documentElement).getPropertyValue(token).trim()
+  const parts = raw.split(/[\s/]+/)
+  const l = Number(parts[2]?.replace("%", ""))
+  const triple = Number.isFinite(l) && l < minLightness
+    ? `${parts[0]} ${parts[1]} ${minLightness}%`
+    : raw
   const ctx = document.createElement("canvas").getContext("2d")
   if (!ctx) return "#888888"
-  ctx.fillStyle = `hsl(${raw})`
+  ctx.fillStyle = `hsl(${triple})`
   return String(ctx.fillStyle)
 }
 
@@ -68,7 +74,7 @@ export function ProjectPodium3D({
   const { resolvedTheme } = useTheme()
   const colors = React.useMemo<PodiumColors>(() => {
     if (typeof document === "undefined") return { gold: "#f6b322", neutral: "#888888" }
-    return { gold: tokenHex("--warning"), neutral: tokenHex("--secondary") }
+    return { gold: tokenHex("--warning", 45), neutral: tokenHex("--secondary", 35) }
   }, [resolvedTheme])
 
   if (!webgl || entries.length === 0) return null
