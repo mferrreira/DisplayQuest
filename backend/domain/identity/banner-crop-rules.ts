@@ -66,3 +66,44 @@ export function bannerCropTransform(params: BannerCropParams): {
     offsetYPct: (0.5 - params.y) * 100,
   };
 }
+
+/**
+ * Geometria da faixa no editor (modelo Facebook/LinkedIn, pedido do dono em 2026-11-04):
+ * a moldura 21:9 é a faixa que aparece sobre a imagem inteira, arrastável e redimensionável
+ * na diagonal. `aspect` é a razão natural da imagem (`naturalWidth / naturalHeight`).
+ *
+ * A largura da faixa em coordenadas normalizadas é `1/zoom`. A altura, para a faixa ter a
+ * razão 21:9 na tela, é `largura · 9/21 · aspect`. O centro (x, y) é o ponto da imagem que
+ * cai no centro da faixa. A faixa toda dentro da imagem exige
+ * `x ∈ [largura/2, 1 - largura/2]` e `y ∈ [altura/2, 1 - altura/2]`.
+ */
+export const BANNER_BAND_ASPECT = 21 / 9;
+
+export function bannerCropBandRect(
+  params: BannerCropParams,
+  aspect: number,
+): { left: number; top: number; width: number; height: number } {
+  const w = 1 / params.zoom;
+  const h = (w * 9) / 21 * aspect;
+  return { left: params.x - w / 2, top: params.y - h / 2, width: w, height: h };
+}
+
+/**
+ * Clamp band-aware: zoom entra em [1, 4]; o centro entra na faixa que o zoom permite,
+ * medida pela razão natural da imagem. Faixa mais alta que a imagem não tem centro
+ * possível em Y: ela é recortada em cima e em baixo, e o centro fica no meio do eixo.
+ */
+export function clampCropCenterToBand(params: BannerCropParams, aspect: number): BannerCropParams {
+  const zoom = Math.min(MAX_BANNER_CROP_ZOOM, Math.max(MIN_BANNER_CROP_ZOOM, params.zoom));
+  const w = 1 / zoom;
+  const h = (w * 9) / 21 * aspect;
+  const xlo = w / 2;
+  const xhi = 1 - w / 2;
+  const ylo = h / 2;
+  const yhi = 1 - h / 2;
+  return {
+    x: Math.min(xhi, Math.max(xlo, params.x)),
+    y: yhi < ylo ? 0.5 : Math.min(yhi, Math.max(ylo, params.y)),
+    zoom,
+  };
+}

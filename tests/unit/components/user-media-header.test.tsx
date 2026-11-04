@@ -287,7 +287,7 @@ describe("cabeçalho de mídia do perfil", () => {
   it("re-recortar abre sobre o binário do bucket, não sobre o recorte, e o salvar grava só as colunas", async () => {
     const user = userEvent.setup({ delay: null });
     mocks.user.bannerKey = "users/7/images/banner/velha.png";
-    renderHeader(true, mocks.user.bannerKey, vi.fn(), { x: 0.5, y: 0.5, zoom: 1 });
+    renderHeader(true, mocks.user.bannerKey, vi.fn(), { x: 0.5, y: 0.5, zoom: 2 });
 
     await user.click(screen.getByRole("button", { name: "Recortar capa" }));
 
@@ -299,7 +299,6 @@ describe("cabeçalho de mídia do perfil", () => {
       expect.stringContaining("v=users%2F7%2Fimages%2Fbanner%2Fvelha.png"),
     );
 
-    fireEvent.change(screen.getByRole("slider", { name: "Zoom da capa" }), { target: { value: "2" } });
     await user.click(screen.getByRole("button", { name: "Salvar recorte" }));
 
     await waitFor(() =>

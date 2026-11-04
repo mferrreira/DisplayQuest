@@ -38,10 +38,13 @@ export { normalizeAvatar } from "./avatar";
 export {
   MIN_BANNER_CROP_ZOOM,
   MAX_BANNER_CROP_ZOOM,
+  BANNER_BAND_ASPECT,
+  bannerCropBandRect,
   bannerCropCenterBounds,
   bannerCropFromColumns,
   bannerCropTransform,
   clampBannerCrop,
+  clampCropCenterToBand,
   type BannerCropParams,
 } from "./banner-crop-rules";
 export { resolveUserListVisibility, type UserListVisibility } from "./user-visibility";

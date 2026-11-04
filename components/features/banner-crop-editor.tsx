@@ -1,22 +1,25 @@
 "use client"
 
 import { useRef, useState } from "react"
-import { bannerCropCenterBounds, clampBannerCrop, type BannerCropParams } from "@/backend/domain"
-import { BannerImage } from "@/components/ui/banner-image"
+import { BANNER_BAND_ASPECT, bannerCropBandRect, clampCropCenterToBand, type BannerCropParams } from "@/backend/domain"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 /**
- * BannerCropEditor — editor de recorte estilo Facebook/LinkedIn (plan-v12, DEC-239, R7).
+ * BannerCropEditor — editor de recorte estilo Facebook/LinkedIn (plan-v12, DEC-239, R7; modelo
+ * da faixa arrastável escolhido pelo dono em 2026-11-04).
  *
- * O original entra inteiro (URL do binário), a moldura é fixa 21:9, e o usuário arrasta e dá zoom
- * para escolher a parte visível. Salvar devolve os parâmetros CLAMPADOS por `clampBannerCrop` — a
- * mesma conta da rota, uma cópia só. "Resolução recomendada: 2100×900 px (21:9)" é texto da tela,
- * dito pelo dono, não regra.
+ * A imagem inteira aparece no editor; a moldura 21:9 é uma FAIXA sobre ela. Arrastar a faixa move
+ * a parte escolhida; arrastar o canto de baixo-direita redimensiona a faixa na diagonal, e o zoom
+ * sai daí — não há slider. A faixa é o centro + zoom gravados nas colunas (`bannerCropX/Y/Zoom`),
+ * e o render do header, do cartão e do pódio usa a MESMA conta, sem slider nenhum.
  *
- * Arrastar: o centro anda `-dx/(Cw·zoom)` por eixo — o deslocamento em pixels convertido na fração
- * da imagem que a janela mostra. Sem contêiner medido (jsdom), o arrasto não move: os testes de
- * jsdom provam o contrato da peça, e a geometria é provada no navegador (demo).
+ * Geometria medida no navegador: o contêiner tem a razão natural da imagem; a faixa ocupa a largura
+ * plena dividida pelo zoom, e a altura segue a razão 21:9. Em jsdom não há imagem carregada nem
+ * contêiner medido — a geometria é provada no navegador (demo), e os testes de jsdom provam o
+ * contrato da peça (abrir, arrastar, redimensionar, salvar com clamp).
+ *
+ * "Resolução recomendada: 2100×900 px (21:9)" é texto da tela, dito pelo dono, não regra.
  */
 
 interface BannerCropEditorProps {
@@ -29,27 +32,47 @@ interface BannerCropEditorProps {
   onSave: (params: BannerCropParams) => void
 }
 
+function clampToZoom(zoom: number): number {
+  return Math.min(4, Math.max(1, zoom))
+}
+
 export function BannerCropEditor({ open, src, alt, initial, onCancel, onSave }: BannerCropEditorProps) {
   const [params, setParams] = useState<BannerCropParams>(initial)
-  const dragRef = useRef<{ x: number; y: number } | null>(null)
+  // Razão natural da imagem (largura/altura). Sem imagem carregada (jsdom), a moldura 21:9.
+  const [aspect, setAspect] = useState<number>(BANNER_BAND_ASPECT)
+  const dragRef = useRef<{ x: number; y: number; mode: "move" | "resize" } | null>(null)
 
-  function moveBy(dx: number, dy: number, box: { clientWidth: number; clientHeight: number }) {
-    if (box.clientWidth === 0 || box.clientHeight === 0) return
-    setParams((current) =>
-      clampBannerCrop({
-        x: current.x - dx / (box.clientWidth * current.zoom),
-        y: current.y - dy / (box.clientHeight * current.zoom),
-        zoom: current.zoom,
-      }),
-    )
+  function onPointerDown(event: React.PointerEvent, mode: "move" | "resize") {
+    event.currentTarget.setPointerCapture?.(event.pointerId)
+    dragRef.current = { x: event.clientX, y: event.clientY, mode }
   }
 
-  function setZoom(zoom: number) {
-    // Zoom novo estreita a janela; o centro entra na janela que o zoom permite.
-    setParams((current) => clampBannerCrop({ ...current, zoom }))
+  function onPointerMove(event: React.PointerEvent, box: { clientWidth: number; clientHeight: number }) {
+    const drag = dragRef.current
+    if (!drag || box.clientWidth === 0 || box.clientHeight === 0) return
+    const dx = event.clientX - drag.x
+    const dy = event.clientY - drag.y
+    drag.x = event.clientX
+    drag.y = event.clientY
+    if (drag.mode === "move") {
+      // Arrastar a faixa: o centro segue o dedo, na fração da imagem que o contêiner cobre.
+      setParams((c) => clampCropCenterToBand({ x: c.x + dx / box.clientWidth, y: c.y + dy / box.clientHeight, zoom: c.zoom }, aspect))
+    } else {
+      // Redimensionar na diagonal: a largura da faixa cresce, o zoom é 1/largura.
+      setParams((c) => {
+        const w = 1 / c.zoom + dx / box.clientWidth
+        return clampCropCenterToBand({ x: c.x, y: c.y, zoom: clampToZoom(1 / w) }, aspect)
+      })
+    }
   }
 
-  const bounds = bannerCropCenterBounds(params.zoom)
+  function onPointerUp() {
+    dragRef.current = null
+  }
+
+  const band = bannerCropBandRect(params, aspect)
+  // A faixa não cabe em Y quando a imagem é mais alta que a moldura pede: a faixa é fixada em cima.
+  const bandFitsY = band.height <= 1
 
   return (
     <Dialog
@@ -62,56 +85,71 @@ export function BannerCropEditor({ open, src, alt, initial, onCancel, onSave }: 
         <DialogHeader>
           <DialogTitle>Recorte da capa</DialogTitle>
           <DialogDescription>
-            Arraste e dê zoom para escolher a parte visível da moldura 21:9. Resolução recomendada: 2100×900 px (21:9).
+            Arraste a faixa 21:9 para escolher a parte da capa; arraste o canto para redimensionar. Resolução recomendada: 2100×900 px (21:9).
           </DialogDescription>
         </DialogHeader>
 
         <div
           data-testid="crop-preview"
-          className="aspect-[21/9] w-full touch-none overflow-hidden rounded-lg border border-border bg-muted"
-          onPointerDown={(event) => {
-            dragRef.current = { x: event.clientX, y: event.clientY }
-          }}
-          onPointerMove={(event) => {
-            if (!dragRef.current) return
-            const box = event.currentTarget
-            moveBy(event.clientX - dragRef.current.x, event.clientY - dragRef.current.y, box)
-            dragRef.current = { x: event.clientX, y: event.clientY }
-          }}
-          onPointerUp={() => {
-            dragRef.current = null
-          }}
-          onPointerLeave={() => {
-            dragRef.current = null
-          }}
+          className="relative w-full overflow-hidden rounded-lg border border-border bg-muted"
+          style={{ aspectRatio: `${aspect}` }}
         >
-          <BannerImage src={src} alt={alt} crop={params} />
-        </div>
-
-        <label className="grid gap-1">
-          <span className="text-sm text-muted-foreground">Zoom: {params.zoom.toFixed(1)}</span>
-          <input
-            type="range"
-            min={1}
-            max={4}
-            step={0.1}
-            value={params.zoom}
-            aria-label="Zoom da capa"
-            onChange={(event) => setZoom(Number(event.target.value))}
-            className="w-full"
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={src}
+            alt={alt}
+            className="absolute inset-0 h-full w-full object-cover"
+            onLoad={(event) => {
+              const img = event.currentTarget
+              if (img.naturalWidth > 0 && img.naturalHeight > 0) setAspect(img.naturalWidth / img.naturalHeight)
+            }}
           />
-        </label>
+
+          {/* Faixa 21:9: a parte da imagem que vai para a moldura do header. Arrastável, com
+              alça de redimensionamento no canto de baixo-direita. */}
+          <div
+            data-testid="crop-band"
+            role="button"
+            aria-label="Faixa de recorte"
+            className="absolute border-2 border-ring/70 bg-background/10 outline-none"
+            style={{
+              left: `${band.left * 100}%`,
+              top: `${(bandFitsY ? band.top : 0) * 100}%`,
+              width: `${band.width * 100}%`,
+              height: `${(bandFitsY ? band.height : 1) * 100}%`,
+              touchAction: "none",
+            }}
+            onPointerDown={(event) => onPointerDown(event, "move")}
+            onPointerMove={(event) => onPointerMove(event, event.currentTarget.parentElement!)}
+            onPointerUp={onPointerUp}
+            onPointerCancel={onPointerUp}
+          >
+            <div
+              data-testid="crop-resize-handle"
+              role="button"
+              aria-label="Redimensionar faixa"
+              className="absolute bottom-0 right-0 h-3 w-3 -translate-x-1/2 translate-y-1/2 rounded-sm bg-ring"
+              style={{ touchAction: "none" }}
+              onPointerDown={(event) => {
+                event.stopPropagation()
+                onPointerDown(event, "resize")
+              }}
+              onPointerMove={(event) => {
+                event.stopPropagation()
+                onPointerMove(event, event.currentTarget.parentElement!.parentElement!)
+              }}
+              onPointerUp={onPointerUp}
+              onPointerCancel={onPointerUp}
+            />
+          </div>
+        </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={onCancel}>
             Cancelar
           </Button>
-          <Button onClick={() => onSave(clampBannerCrop(params))}>Salvar recorte</Button>
+          <Button onClick={() => onSave(clampCropCenterToBand(params, aspect))}>Salvar recorte</Button>
         </DialogFooter>
-
-        <p className="text-xs text-muted-foreground">
-          Centro permitido neste zoom: {bounds.lo.toFixed(3)} a {bounds.hi.toFixed(3)} por eixo.
-        </p>
       </DialogContent>
     </Dialog>
   )

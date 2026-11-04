@@ -61,8 +61,8 @@ Editar e excluir um projeto são ações do cartão, na lista. Editar é uma pá
 ## Capa e logo do projeto
 
 1. Abra o detalhe do projeto, na aba **Visão geral**.
-2. Clique em **Enviar capa** e escolha a imagem. O editor de recorte abre sobre a imagem escolhida, dentro da moldura 21:9.
-3. No editor, o slider **Zoom da capa** amplia a imagem; arrastar a pré-visualização escolhe a parte visível. A linha *"Resolução recomendada: 2100×900 px (21:9)"* diz o tamanho que preenche a moldura sem recorte.
+2. Clique em **Enviar capa** e escolha a imagem. O editor de recorte abre sobre a imagem escolhida: a moldura 21:9 aparece como uma **faixa** sobre a imagem inteira.
+3. Arraste a faixa para escolher a parte da capa; arraste o canto de baixo-direita para redimensionar. A linha *"Resolução recomendada: 2100×900 px (21:9)"* diz o tamanho que preenche a moldura sem recorte.
 4. Clique em **Salvar recorte**: a imagem sobe e a parte escolhida passa a ocupar a faixa da capa.
 5. Clique em **Enviar logo** e escolha a imagem. O logo aparece redondo, sobre a capa. O logo tem o caminho direto, sem editor de recorte.
 6. **Recortar capa** reabre o editor sobre a imagem no bucket, para mudar só a parte visível. **Tirar capa** e **Tirar logo** aparecem quando o slot tem imagem, e o sistema pede confirmação.
@@ -74,7 +74,7 @@ A capa ocupa a largura plena da moldura 21:9; o logo redondo fica no canto de ba
 ```
 
 ```foto editor-recorte-projeto titulo="O editor de recorte da capa do projeto, sobre a imagem no bucket"
-O mesmo diálogo do perfil: slider **Zoom da capa**, pré-visualização arrastável, *"Resolução recomendada: 2100×900 px (21:9)"*.
+O mesmo diálogo do perfil: a imagem inteira, a faixa 21:9 arrastável com alça de redimensionamento, *"Resolução recomendada: 2100×900 px (21:9)"*.
 ```
 
 O **cartão da lista de projetos** usa a mesma capa com o mesmo recorte, na altura própria do cartão — o corte da lista não é a moldura 21:9 do detalhe.

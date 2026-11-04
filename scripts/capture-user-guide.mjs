@@ -183,8 +183,8 @@ const INTERACTIONS = [
   { id: "admin-conclusoes", role: "coord", route: "/dashboard/admin", aba: "Conclusões", verifica: "Conclusões solicitadas" },
   // plan-v12 (DEC-241): o editor de recorte da capa, nos dois lados. O "Recortar capa" abre o
   // diálogo sobre o ORIGINAL no bucket; nenhuma captura salva.
-  { id: "editor-recorte-capa", role: "part", route: "/dashboard/profile", abre: "Recortar capa", dialogo: "Recorte da capa", verifica: "Resolução recomendada", rolarAte: 'text=Zoom' },
-  { id: "editor-recorte-projeto", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: 'a[aria-label="Ver projeto Pesquisa em IA"]' }, projetoTab: "Visão geral", clicar: ["Recortar capa"], dialogo: "Recorte da capa", verifica: "Resolução recomendada", rolarAte: 'text=Zoom' },
+  { id: "editor-recorte-capa", role: "part", route: "/dashboard/profile", abre: "Recortar capa", dialogo: "Recorte da capa", verifica: "Resolução recomendada", rolarAte: 'text=Arraste a faixa' },
+  { id: "editor-recorte-projeto", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: 'a[aria-label="Ver projeto Pesquisa em IA"]' }, projetoTab: "Visão geral", clicar: ["Recortar capa"], dialogo: "Recorte da capa", verifica: "Resolução recomendada", rolarAte: 'text=Arraste a faixa' },
   // plan-v12 (DEC-240): a faixa 21:9 do detalhe do projeto, com o recorte aplicado. Sem clique.
   { id: "faixa-capa-projeto", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: 'a[aria-label="Ver projeto Pesquisa em IA"]' }, projetoTab: "Visão geral", verifica: "Recortar capa", rolarAte: "text=Recortar capa" },
 ];

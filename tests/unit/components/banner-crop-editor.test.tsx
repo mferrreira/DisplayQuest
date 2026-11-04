@@ -1,11 +1,14 @@
 /**
- * S05 (plan-v12, DEC-241) — teste do editor de recorte de capa.
+ * S05/S06 (plan-v12, DEC-241) — teste do editor de recorte de capa. Modelo da faixa arrastável
+ * escolhido pelo dono em 2026-11-04: a moldura 21:9 é a FAIXA sobre a imagem inteira, arrastável
+ * e redimensionável na diagonal; não há slider.
  *
- * O que o jsdom prova aqui é o CONTRATO da peça: o texto da resolução recomendada, o slider de
- * zoom, o clamp na saída (`clampBannerCrop` — a mesma conta da rota, uma cópia só), e o editor
- * abrindo sobre o ORIGINAL. A geometria do arrasto (deslocamento em px sobre a janela 1/zoom) é
- * provada no navegador pela demo da fatia: no jsdom o contêiner mede 0 e o arrasto, por guarda,
- * não move o centro — é exatamente o caminho "sem contêiner medido" da peça.
+ * O que o jsdom prova: o texto da resolução recomendada, o `<img>` do ORIGINAL, a faixa com a alça
+ * de redimensionamento, o clamp de saída (`clampCropCenterToBand` — a conta da faixa, banda-aware
+ * pela razão natural), e o zoom no teto. No jsdom o contêiner mede 0 e o arrasto não move o centro
+ * por guarda; a geometria do arrasto é provada no navegador pela demo. Para zoom com a razão 21:9,
+ * a banda-aware coincide com a janela de centro [1/(2z), 1-1/(2z)] — os números de clamp são os
+ * mesmos.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
@@ -13,7 +16,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { BannerCropEditor } from "@/components/features/banner-crop-editor";
 import { MAX_BANNER_CROP_ZOOM } from "@/backend/domain";
 
-describe("BannerCropEditor — editor de recorte estilo Facebook (R7, DEC-241)", () => {
+describe("BannerCropEditor — editor da faixa arrastável (R7, DEC-241)", () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
@@ -31,6 +34,8 @@ describe("BannerCropEditor — editor de recorte estilo Facebook (R7, DEC-241)",
     );
     expect(screen.getByText(/Resolução recomendada: 2100×900 px \(21:9\)/)).toBeInTheDocument();
     expect(screen.getByRole("dialog", { name: "Recorte da capa" })).toBeInTheDocument();
+    // O editor não tem slider: a faixa é o controle.
+    expect(screen.queryByRole("slider")).not.toBeInTheDocument();
   });
 
   it("o editor abre sobre o ORIGINAL que lhe é dado — a URL do binário cai no <img>", () => {
@@ -46,12 +51,12 @@ describe("BannerCropEditor — editor de recorte estilo Facebook (R7, DEC-241)",
     );
     const image = screen.getByRole("img", { name: "Capa de Ana Souza" });
     expect(image).toHaveAttribute("src", "/api/users/7/images/banner/file?v=original-uuid");
-    // A moldura da pré-visualização é 21:9.
-    expect(screen.getByTestId("crop-preview").className).toContain("aspect-[21/9]");
+    // A faixa arrastável e a alça de redimensionamento existem sobre a imagem.
+    expect(screen.getByTestId("crop-band")).toBeInTheDocument();
+    expect(screen.getByTestId("crop-resize-handle")).toBeInTheDocument();
   });
 
-  it("o zoom entra pelo slider e chega na saída", () => {
-    const onSave = vi.fn();
+  it("a faixa vem da posição do recorte: zoom 1 cobre a imagem inteira", () => {
     render(
       <BannerCropEditor
         open
@@ -59,17 +64,39 @@ describe("BannerCropEditor — editor de recorte estilo Facebook (R7, DEC-241)",
         alt="Capa de Ana Souza"
         initial={{ x: 0.5, y: 0.5, zoom: 1 }}
         onCancel={vi.fn()}
+        onSave={vi.fn()}
+      />,
+    );
+    const band = screen.getByTestId("crop-band") as HTMLElement;
+    // Razão 21:9 de fábrica: a faixa de zoom 1 ocupa a imagem toda.
+    expect(band.style.width).toBe("100%");
+    expect(band.style.height).toBe("100%");
+    expect(band.style.left).toBe("0%");
+    expect(band.style.top).toBe("0%");
+  });
+
+  it("arrastar a faixa move o centro na fração da imagem, e o salvar grava o centro na faixa", () => {
+    const onSave = vi.fn();
+    render(
+      <BannerCropEditor
+        open
+        src="/api/users/7/images/banner/file"
+        alt="Capa de Ana Souza"
+        initial={{ x: 0.5, y: 0.5, zoom: 2 }}
+        onCancel={vi.fn()}
         onSave={onSave}
       />,
     );
-    const slider = screen.getByRole("slider", { name: "Zoom da capa" });
-    fireEvent.change(slider, { target: { value: "3" } });
-    expect(screen.getByText(/Zoom: 3\.0/)).toBeInTheDocument();
+    const band = screen.getByTestId("crop-band");
+    // No jsdom o contêiner mede 0: o arrasto não move por guarda, e o centro de saída é o de entrada.
+    fireEvent.pointerDown(band, { pointerId: 1, clientX: 100, clientY: 100 });
+    fireEvent.pointerMove(band, { pointerId: 1, clientX: 160, clientY: 100 });
+    fireEvent.pointerUp(band, { pointerId: 1 });
     fireEvent.click(screen.getByRole("button", { name: "Salvar recorte" }));
-    expect(onSave).toHaveBeenCalledWith({ x: 0.5, y: 0.5, zoom: 3 });
+    expect(onSave).toHaveBeenCalledWith({ x: 0.5, y: 0.5, zoom: 2 });
   });
 
-  it("centro fora da janela que o zoom permite sai clampado — a mesma conta da rota", () => {
+  it("centro fora da faixa que o zoom permite sai clampado — a conta da banda-aware", () => {
     const onSave = vi.fn();
     render(
       <BannerCropEditor
@@ -82,7 +109,7 @@ describe("BannerCropEditor — editor de recorte estilo Facebook (R7, DEC-241)",
       />,
     );
     fireEvent.click(screen.getByRole("button", { name: "Salvar recorte" }));
-    // Para zoom 3 o centro permitido é [1/6, 5/6]; 0.9 sai em 5/6.
+    // Para zoom 3 com a razão 21:9, a banda-aware dá a mesma janela de centro [1/6, 5/6]; 0.9 sai em 5/6.
     expect(onSave).toHaveBeenCalledWith({ x: 1 - 1 / 6, y: 0.5, zoom: 3 });
   });
 

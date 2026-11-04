@@ -65,8 +65,8 @@ Editar o próprio perfil é sempre permitido. Editar o perfil de outra pessoa ex
 
 Acima do avatar, o cartão **Meu Perfil** tem uma faixa horizontal: é a **capa** da pessoa. A faixa é 21:9 — uma moldura larga e baixa, como a capa de uma rede social. Sem capa, a faixa diz *"Sem capa"*.
 
-1. Clique em **Enviar capa** e escolha a imagem. O editor de recorte abre sobre a imagem escolhida, dentro da moldura 21:9.
-2. No editor, o slider **Zoom da capa** amplia a imagem de 1× a 4×; arrastar a pré-visualização escolhe qual parte fica visível. A linha *"Resolução recomendada: 2100×900 px (21:9)"* diz o tamanho de imagem que preenche a moldura sem recorte.
+1. Clique em **Enviar capa** e escolha a imagem. O editor de recorte abre sobre a imagem escolhida: a moldura 21:9 aparece como uma **faixa** sobre a imagem inteira.
+2. Arraste a faixa para escolher a parte da capa. Arraste o canto de baixo-direita da faixa para redimensionar. A linha *"Resolução recomendada: 2100×900 px (21:9)"* diz o tamanho de imagem que preenche a moldura sem recorte.
 3. Clique em **Salvar recorte**: a imagem sobe e a parte escolhida passa a ocupar a faixa.
 4. **Recortar capa** reabre o editor sobre a mesma imagem, agora para mudar só a parte visível. **Tirar capa** aparece quando a faixa tem imagem, e o sistema pede confirmação.
 
@@ -77,7 +77,7 @@ A faixa tem a altura da moldura 21:9, largura plena; abaixo dela ficam as cifras
 ```
 
 ```foto editor-recorte-capa titulo="O editor de recorte da capa, sobre a imagem escolhida"
-O diálogo tem o slider **Zoom da capa**, a pré-visualização arrastável, *"Resolução recomendada: 2100×900 px (21:9)"* e a linha *"Centro permitido neste zoom: ... por eixo"*.
+O diálogo tem a imagem inteira, a faixa 21:9 arrastável sobre ela com alça de redimensionamento no canto, e *"Resolução recomendada: 2100×900 px (21:9)"*.
 ```
 
 ::: nota titulo="O recorte é parâmetro, não corte"
