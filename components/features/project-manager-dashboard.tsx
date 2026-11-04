@@ -15,6 +15,7 @@ import {
 } from "@/backend/domain"
 import { clientStorageKey, readJson, writeJson } from "@/lib/client-storage"
 import { projectProgress } from "@/features/projects/utils/project-progress"
+import { ProjectLeaderboard } from "@/components/features/project-leaderboard"
 import {
   activityMonthCounts,
   activityStatusCounts,
@@ -148,6 +149,11 @@ export function ProjectManagerDashboard({ projects, tasks, activities, scopeDesc
             </div>
           </div>}
       </section>
+
+      {/* S06 (regra 6): leaderboard de projetos por pontos, na ordem da linha do MODELO —
+          gráficos, leaderboard, seção "Projetos no recorte". Recorte: os MESMOS projetos
+          filtrados do topo + o seletor de projeto da aba. */}
+      <ProjectLeaderboard projects={scopedProjects} onProjectSelect={onProjectSelect} />
 
       <section aria-labelledby="manager-projects-title" className="space-y-3">
         <div className="flex items-baseline justify-between gap-3"><div><h2 id="manager-projects-title" className="font-semibold">Projetos no recorte</h2><p className="text-sm text-muted-foreground">Andamento temporal, com tarefas como alternativa quando não há período definido.</p></div></div>
