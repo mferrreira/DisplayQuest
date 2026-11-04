@@ -94,6 +94,23 @@ describe("ProjectList — cartão com capa e logo, clique abre o detalhe", () =>
     expect(screen.queryByRole("img", { name: "Logo do projeto Alpha" })).toBeNull();
   });
 
+  it("a faixa da capa no cartão é maior que a altura medida de h-16 sm:h-24 (plan-v13 S03)", () => {
+    render(<ProjectList projects={[makeProject()]} showCreateButton={false} />);
+
+    const banner = screen.getByRole("img", { name: "Capa do projeto Alpha" });
+    // A peça única fica dentro do divisor de clip; a FAIXA é o div externo que declara a altura
+    // (`relative h-24 sm:h-32`), e só ele tem as classes de altura.
+    const clip = banner.closest('[data-banner-crop="true"]')?.parentElement;
+    const strip = clip?.parentElement;
+    const classes = strip?.className.split(/\s+/) ?? [];
+    const h = classes.find((c) => /^h-\d+$/.test(c));
+    const sm = classes.find((c) => /^sm:h-\d+$/.test(c));
+    expect(h).toBeDefined();
+    expect(sm).toBeDefined();
+    expect(Number(h!.replace("h-", ""))).toBeGreaterThan(16);
+    expect(Number(sm!.replace("sm:h-", ""))).toBeGreaterThan(24);
+  });
+
   it("o cartão inteiro é link para o detalhe do projeto", () => {
     render(<ProjectList projects={[makeProject()]} showCreateButton={false} />);
 
