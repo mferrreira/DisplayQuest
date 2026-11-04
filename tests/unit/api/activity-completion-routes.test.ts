@@ -183,6 +183,7 @@ vi.mock("@/backend/composition/root", () => {
       return next;
     },
     deleteActivity: notUsed("cronograma.deleteActivity"),
+    listAllActivities: notUsed("cronograma.listAllActivities"),
   };
 
   const activityFiles: ProjectActivityFilesPort = {

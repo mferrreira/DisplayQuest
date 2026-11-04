@@ -35,6 +35,7 @@ import { AssertCanRequestActivityCompletionUseCase } from "@/backend/modules/pro
 import { RequestActivityCompletionUseCase } from "@/backend/modules/project-management/application/use-cases/request-activity-completion.use-case"
 import { ApproveActivityCompletionUseCase } from "@/backend/modules/project-management/application/use-cases/approve-activity-completion.use-case"
 import { NotifyOverdueActivitiesUseCase } from "@/backend/modules/project-management/application/use-cases/notify-overdue-activities.use-case"
+import { ListAllProjectActivitiesUseCase } from "@/backend/modules/project-management/application/use-cases/list-all-project-activities.use-case"
 import { ListCompletionRequestsForActorUseCase } from "@/backend/modules/project-management/application/use-cases/list-completion-requests-for-actor.use-case"
 import type { ProjectActorsPort } from "@/backend/modules/project-management/application/ports/project-actors.port"
 import type { ProjectAttachmentsPort } from "@/backend/modules/project-management/application/ports/project-attachments.repository"
@@ -127,6 +128,8 @@ export class ProjectManagementModule {
   readonly approveActivityCompletion: UseCaseExecute<ApproveActivityCompletionUseCase>
   /** V5-8 (DEC-64): varredura de atraso — chamada só pela rotina do cron, sem rota. */
   readonly notifyOverdueActivities: UseCaseExecute<NotifyOverdueActivitiesUseCase>
+  /** plan-v13 (S04, regra 7): leitura agregada das atividades para os gráficos do Dashboard. */
+  readonly listAllProjectActivities: UseCaseExecute<ListAllProjectActivitiesUseCase>
   /** S01 (plan-v12, DEC-238): fila global de solicitações de conclusão para o painel. */
   readonly listCompletionRequestsForActor: UseCaseExecute<ListCompletionRequestsForActorUseCase>
 
@@ -169,6 +172,7 @@ export class ProjectManagementModule {
     private readonly approveActivityCompletionUseCase: ApproveActivityCompletionUseCase,
     private readonly notifyOverdueActivitiesUseCase: NotifyOverdueActivitiesUseCase,
     private readonly listCompletionRequestsForActorUseCase: ListCompletionRequestsForActorUseCase,
+    private readonly listAllProjectActivitiesUseCase: ListAllProjectActivitiesUseCase,
   ) {
     this.listProjectsForActor = this.listProjectsForActorUseCase.execute.bind(this.listProjectsForActorUseCase)
     this.getProjectById = this.getProjectByIdUseCase.execute.bind(this.getProjectByIdUseCase)
@@ -209,6 +213,7 @@ export class ProjectManagementModule {
     this.requestActivityCompletion = this.requestActivityCompletionUseCase.execute.bind(this.requestActivityCompletionUseCase)
     this.approveActivityCompletion = this.approveActivityCompletionUseCase.execute.bind(this.approveActivityCompletionUseCase)
     this.notifyOverdueActivities = this.notifyOverdueActivitiesUseCase.execute.bind(this.notifyOverdueActivitiesUseCase)
+    this.listAllProjectActivities = this.listAllProjectActivitiesUseCase.execute.bind(this.listAllProjectActivitiesUseCase)
     this.listCompletionRequestsForActor = this.listCompletionRequestsForActorUseCase.execute.bind(
       this.listCompletionRequestsForActorUseCase,
     )
@@ -426,6 +431,9 @@ export function createProjectManagementModule(options: ProjectManagementModuleFa
     }),
     new ListCompletionRequestsForActorUseCase({
       completionRequests: ports.completionRequests,
+    }),
+    new ListAllProjectActivitiesUseCase({
+      cronograma: ports.cronograma,
     }),
   )
 }

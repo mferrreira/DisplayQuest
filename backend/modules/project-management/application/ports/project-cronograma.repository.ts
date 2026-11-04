@@ -94,6 +94,8 @@ export interface ProjectCronogramaPort {
   deleteGoal(id: number): Promise<void>
 
   listActivities(projectId: number): Promise<ProjectActivityRecord[]>
+  /** plan-v13 (S04, regra 7): as atividades de TODOS os projetos numa chamada só. */
+  listAllActivities(): Promise<ProjectActivityRecord[]>
   findActivityById(id: number): Promise<ProjectActivityRecord | null>
   createActivity(input: NewProjectActivityInput): Promise<ProjectActivityRecord>
   updateActivity(id: number, fields: ProjectActivityUpdateFields): Promise<ProjectActivityRecord>

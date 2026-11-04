@@ -125,6 +125,15 @@ export function createPrismaProjectCronogramaRepository(): ProjectCronogramaPort
       return rows.map(toActivityRecord)
     },
 
+    async listAllActivities() {
+      // plan-v13 (S04, regra 7): leitura aberta ao autenticado (DEC-136) — sem filtro de
+      // membership. Uma chamada só, porque a tela dos gráficos é um painel sobre o todo.
+      const rows = await prisma.project_activities.findMany({
+        orderBy: [{ projectId: "asc" }, { order: "asc" }, { id: "asc" }],
+      })
+      return rows.map(toActivityRecord)
+    },
+
     async findActivityById(id: number) {
       const row = await prisma.project_activities.findUnique({ where: { id } })
       return row ? toActivityRecord(row) : null

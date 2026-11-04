@@ -127,6 +127,7 @@ vi.mock("@/backend/composition/root", () => {
     requestActivity: notUsed("cronograma.requestActivity"),
     deleteActivity: notUsed("cronograma.deleteActivity"),
     approveActivity: notUsed("cronograma.approveActivity"),
+    listAllActivities: notUsed("cronograma.listAllActivities"),
   };
 
   const hours: ProjectHoursPort = { sumCompletedSeconds: notUsed("hours.sumCompletedSeconds") };

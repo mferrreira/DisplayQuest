@@ -235,6 +235,9 @@ class Fakes {
       async approveActivity() {
         throw new Error("approveActivity não deveria rodar neste arquivo");
       },
+      async listAllActivities() {
+        throw new Error("listAllActivities não deveria rodar neste arquivo");
+      },
     };
   }
 
