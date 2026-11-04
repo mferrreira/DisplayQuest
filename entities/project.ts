@@ -32,6 +32,16 @@ export const projectSchema = z.object({
   // contra uma instância ainda sem a migration aplicada.
   logoKey: z.string().nullable().optional(),
   bannerKey: z.string().nullable().optional(),
+  // plan-v14 S01: as tuplas de recorte quadrado/faixa (DEC-241/242). O zod STRIPPA chave
+  // desconhecida — sem estas linhas, o `project` do detalhe chega sem as colunas e o cabeçalho
+  // renderiza scale(1) mesmo com recorte gravado (achado do docker, 2026-11-04). Opcional como
+  // as chaves: o parse não pode quebrar contra instância sem a migration.
+  bannerCropX: z.number().nullable().optional(),
+  bannerCropY: z.number().nullable().optional(),
+  bannerCropZoom: z.number().nullable().optional(),
+  logoCropX: z.number().nullable().optional(),
+  logoCropY: z.number().nullable().optional(),
+  logoCropZoom: z.number().nullable().optional(),
   // R11 (S11): projeção da lista para o ator — "este projeto me tem como membro". Opcional:
   // a lista o preenche, as demais rotas não.
   isMember: z.boolean().optional(),
