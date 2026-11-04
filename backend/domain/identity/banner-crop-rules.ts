@@ -85,6 +85,12 @@ export const SQUARE_BAND_ASPECT = 1;
  * Geometria da faixa no editor. `bandAspect` é a razão da FAIXA (largura/altura): 21/9 para a
  * capa, 1 para o logo quadrado. `aspect` é a razão natural da imagem — a moldura do contêiner
  * segue esta razão, e a faixa se mede dentro dela.
+ *
+ * Medida no navegador (2026-11-04, defeito reportado pelo dono): a fração `h` é altura da FAIXA
+ * como fração da ALTURA do contêiner. Largura em px = `w·W`, altura em px = `h·H`, e a razão da
+ * faixa na tela é `(w·W)/(h·H) = (w/h)·aspect`. Para essa razão ser `bandAspect`, a altura tem de
+ * ser `h = w·aspect/bandAspect` — usar `w/bandAspect` estica a faixa (faixa quadrada sobre
+ * paisagem vira retângulo, que foi exatamente o sintoma).
  */
 export function bannerCropBandRect(
   params: BannerCropParams,
@@ -92,24 +98,26 @@ export function bannerCropBandRect(
   aspect: number,
 ): { left: number; top: number; width: number; height: number } {
   const w = 1 / params.zoom;
-  const h = w / bandAspect;
-  void aspect;
+  const h = (w * aspect) / bandAspect;
   return { left: params.x - w / 2, top: params.y - h / 2, width: w, height: h };
 }
 
 /**
- * Clamp band-aware: zoom entra em [1, 4]; o centro entra na faixa que o zoom permite. Faixa mais
- * alta que a imagem não tem centro possível em Y: ela é recortada em cima e em baixo, e o centro
- * fica no meio do eixo.
+ * Clamp band-aware: o zoom tem piso `max(1, aspect/bandAspect)` — abaixo disso a faixa da razão
+ * pedida não cabe na imagem (faixa quadrada sobre paisagem não existe com zoom 1: a janela mínima
+ * é a altura plena da imagem, que em fração de largura é `1/aspect`), e entra em [piso, 4]. O
+ * centro entra na faixa que o zoom permite. Faixa mais alta que a imagem não tem centro possível
+ * em Y: ela é recortada em cima e em baixo, e o centro fica no meio do eixo.
  */
 export function clampCropCenterToBand(
   params: BannerCropParams,
   bandAspect: number,
   aspect: number,
 ): BannerCropParams {
-  const zoom = Math.min(MAX_BANNER_CROP_ZOOM, Math.max(MIN_BANNER_CROP_ZOOM, params.zoom));
+  const minZoom = Math.max(MIN_BANNER_CROP_ZOOM, aspect / bandAspect);
+  const zoom = Math.min(MAX_BANNER_CROP_ZOOM, Math.max(minZoom, params.zoom));
   const w = 1 / zoom;
-  const h = w / bandAspect;
+  const h = (w * aspect) / bandAspect;
   const xlo = w / 2;
   const xhi = 1 - w / 2;
   const ylo = h / 2;

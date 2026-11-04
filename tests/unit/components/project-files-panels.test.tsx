@@ -516,6 +516,19 @@ describe("painel de anexos", () => {
 });
 
 describe("cabeçalho de mídia do projeto", () => {
+  /**
+   * O jsdom não decodifica imagem, então o `onLoad` nunca roda e a razão do contêiner fica a de
+   * fábrica (21:9). Para o editor quadrado do logo, a razão REAL entra aqui: a janela do quadrado
+   * depende dela (piso do zoom = `aspect/bandAspect`), e o mock grava o clamp quadrado. Sem este
+   * load simulado, o editor clamparia pela razão de fábrica e o teste provava o substituto.
+   */
+  function loadSquareLogoIntoEditor() {
+    const image = screen.getByRole("img", { name: "Logo do projeto Alpha" });
+    Object.defineProperty(image, "naturalWidth", { value: 1000 });
+    Object.defineProperty(image, "naturalHeight", { value: 1000 });
+    fireEvent.load(image);
+  }
+
   function renderHeader(
     canManage: boolean,
     keys: { logoKey?: string | null; bannerKey?: string | null } = {},
@@ -645,6 +658,7 @@ describe("cabeçalho de mídia do projeto", () => {
       new File([PNG_BYTES], "logo.png", { type: "image/png" }),
     );
     const dialog = await screen.findByRole("dialog", { name: "Recorte do logo" });
+    loadSquareLogoIntoEditor();
     await user.click(within(dialog).getByRole("button", { name: "Salvar recorte" }));
 
     await waitFor(() => expect(mocks.uploads).toHaveLength(1));
@@ -675,6 +689,7 @@ describe("cabeçalho de mídia do projeto", () => {
       "src",
       expect.stringContaining("v=projects%2F7%2Fimages%2Flogo%2Fvelho.png"),
     );
+    loadSquareLogoIntoEditor();
 
     await user.click(within(dialog).getByRole("button", { name: "Salvar recorte" }));
 

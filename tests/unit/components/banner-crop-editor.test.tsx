@@ -68,14 +68,15 @@ describe("BannerCropEditor — editor da faixa arrastável (R7, DEC-241)", () =>
       />,
     );
     const band = screen.getByTestId("crop-band") as HTMLElement;
-    // Faixa 21:9 de fábrica: zoom 1 dá largura plena, altura = largura · 9/21, centrada em Y.
+    // Sem load no jsdom, a razão do contêiner é a da faixa 21:9 de fábrica. Com a imagem na
+    // razão da faixa, a altura da faixa é a fração plena: a faixa cobre o contêiner todo.
     expect(band.style.width).toBe("100%");
-    expect(band.style.height).toBe(`${(9 / 21) * 100}%`);
+    expect(band.style.height).toBe("100%");
     expect(band.style.left).toBe("0%");
-    expect(band.style.top).toBe(`${(0.5 - 9 / 42) * 100}%`);
+    expect(band.style.top).toBe("0%");
   });
 
-  it("faixa quadrada (bandAspect 1): zoom 2 dá janela 0,5x0,5 centrada — o formato do logo", () => {
+  it("faixa quadrada sobre contêiner 21:9 sem load: zoom 2 entra no piso e dá a janela quadrada", () => {
     render(
       <BannerCropEditor
         open
@@ -88,13 +89,15 @@ describe("BannerCropEditor — editor da faixa arrastável (R7, DEC-241)", () =>
       />,
     );
     const band = screen.getByTestId("crop-band") as HTMLElement;
-    expect(band.style.width).toBe("50%");
-    expect(band.style.height).toBe("50%");
-    expect(band.style.left).toBe("25%");
-    expect(band.style.top).toBe("25%");
+    // Piso do zoom = aspect/bandAspect = 21/9: a janela quadrada mínima é a altura plena,
+    // largura 9/21. Em px, com W/H = 21/9: (9/21)·(21/9) = 1 → quadrado.
+    expect(band.style.width).toBe(`${(9 / 21) * 100}%`);
+    expect(band.style.height).toBe("100%");
+    expect(band.style.left).toBe(`${(0.5 - 9 / 42) * 100}%`);
+    expect(band.style.top).toBe("0%");
   });
 
-  it("a faixa quadrada clampa centro em ambos os eixos: 0,9 zoom 3 sai em 5/6", () => {
+  it("a faixa quadrada clampa centro em ambos os eixos: 0,9 zoom 3 sai em 5/6 no x e em 7/18 no y", () => {
     const onSave = vi.fn();
     render(
       <BannerCropEditor
@@ -108,8 +111,9 @@ describe("BannerCropEditor — editor da faixa arrastável (R7, DEC-241)", () =>
       />,
     );
     fireEvent.click(screen.getByRole("button", { name: "Salvar recorte" }));
-    // Faixa quadrada de zoom 3: janela [1/6, 5/6] nos dois eixos.
-    expect(onSave).toHaveBeenCalledWith({ x: 1 - 1 / 6, y: 1 / 6, zoom: 3 });
+    // Faixa quadrada sobre contêiner 21:9: x ∈ [1/6, 5/6]; altura da faixa = (1/3)·(21/9) = 7/9,
+    // y ∈ [7/18, 11/18] — o centro não pode cair mais alto que a meia altura da faixa.
+    expect(onSave).toHaveBeenCalledWith({ x: 1 - 1 / 6, y: 7 / 18, zoom: 3 });
   });
 
   it("arrastar a faixa move o centro na fração da imagem, e o salvar grava o centro na faixa", () => {
@@ -182,5 +186,58 @@ describe("BannerCropEditor — editor da faixa arrastável (R7, DEC-241)", () =>
     fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
     expect(onSave).not.toHaveBeenCalled();
     expect(onCancel).toHaveBeenCalled();
+  });
+
+  it("abrir sobre foto paisagem com a faixa quadrada: o load aplica o piso e a faixa fica quadrada", () => {
+    render(
+      <BannerCropEditor
+        open
+        src="/api/users/7/images/avatar/file?v=k"
+        alt="Avatar de Ana Souza"
+        initial={{ x: 0.5, y: 0.5, zoom: 1 }}
+        bandAspect={1}
+        title="Recorte do avatar"
+        onCancel={vi.fn()}
+        onSave={vi.fn()}
+      />,
+    );
+
+    const image = screen.getByRole("img", { name: "Avatar de Ana Souza" });
+    // O jsdom não decodifica imagem: a razão natural é injetada na peça, e o load roda.
+    Object.defineProperty(image, "naturalWidth", { value: 1600 });
+    Object.defineProperty(image, "naturalHeight", { value: 900 });
+    fireEvent.load(image);
+
+    const band = screen.getByTestId("crop-band") as HTMLElement;
+    // Piso do zoom = 16/9 → largura 9/16 da imagem, altura plena. Em px: 9/16·(16/9) = 1 → quadrado.
+    expect(band.style.width).toBe("56.25%");
+    expect(band.style.height).toBe("100%");
+    expect(parseFloat(band.style.width)).toBeCloseTo(56.25, 6);
+    expect(parseFloat(band.style.height)).toBeCloseTo(100, 6);
+  });
+
+  it("abrir sobre foto paisagem com a faixa 21:9: a largura vem do zoom e a altura segue 21:9 em px", () => {
+    render(
+      <BannerCropEditor
+        open
+        src="/api/users/7/images/banner/file?v=k"
+        alt="Capa de Ana Souza"
+        initial={{ x: 0.5, y: 0.5, zoom: 2 }}
+        onCancel={vi.fn()}
+        onSave={vi.fn()}
+      />,
+    );
+
+    const image = screen.getByRole("img", { name: "Capa de Ana Souza" });
+    Object.defineProperty(image, "naturalWidth", { value: 1600 });
+    Object.defineProperty(image, "naturalHeight", { value: 900 });
+    fireEvent.load(image);
+
+    const band = screen.getByTestId("crop-band") as HTMLElement;
+    // zoom 2: largura 50%; altura = 0,5·(16/9)/(21/9) = 0,381... — a conta da fração da altura.
+    expect(band.style.width).toBe("50%");
+    expect(parseFloat(band.style.height)).toBeCloseTo(100 * 0.5 * (16 / 9) / (21 / 9), 6);
+    // Em px, a razão da faixa é 21:9: (0,5·16/9)/h = 21/9.
+    expect((0.5 * (16 / 9)) / (parseFloat(band.style.height) / 100)).toBeCloseTo(21 / 9, 6);
   });
 });

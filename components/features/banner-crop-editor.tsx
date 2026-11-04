@@ -38,8 +38,8 @@ interface BannerCropEditorProps {
   onSave: (params: BannerCropParams) => void
 }
 
-function clampToZoom(zoom: number): number {
-  return Math.min(4, Math.max(1, zoom))
+function clampToZoom(zoom: number, minZoom: number): number {
+  return Math.min(4, Math.max(minZoom, zoom))
 }
 
 export function BannerCropEditor({
@@ -79,7 +79,10 @@ export function BannerCropEditor({
       // Redimensionar na diagonal: a largura da faixa cresce, o zoom é 1/largura.
       setParams((c) => {
         const w = 1 / c.zoom + dx / box.clientWidth
-        return clampCropCenterToBand({ x: c.x, y: c.y, zoom: clampToZoom(1 / w) }, bandAspect, aspect)
+        // Piso do zoom para a razão da faixa (defeito medido no navegador, 2026-11-04): faixa
+        // quadrada sobre paisagem não cabe com zoom 1 — a janela mínima é a altura plena.
+        const minZoom = Math.max(1, aspect / bandAspect)
+        return clampCropCenterToBand({ x: c.x, y: c.y, zoom: clampToZoom(1 / w, minZoom) }, bandAspect, aspect)
       })
     }
   }
@@ -88,7 +91,9 @@ export function BannerCropEditor({
     dragRef.current = null
   }
 
-  const band = bannerCropBandRect(params, bandAspect, aspect)
+  // A faixa desenhada segue o clamp da conta, não o estado cru: entrada fora da janela da razão
+  // (zoom abaixo do piso, centro fora da faixa) entra na janela também na tela, igual ao salvar.
+  const band = bannerCropBandRect(clampCropCenterToBand(params, bandAspect, aspect), bandAspect, aspect)
   // A faixa não cabe em Y quando a imagem é mais alta que a moldura pede: a faixa é fixada em cima.
   const bandFitsY = band.height <= 1
 
@@ -117,7 +122,14 @@ export function BannerCropEditor({
             className="absolute inset-0 h-full w-full object-cover"
             onLoad={(event) => {
               const img = event.currentTarget
-              if (img.naturalWidth > 0 && img.naturalHeight > 0) setAspect(img.naturalWidth / img.naturalHeight)
+              if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+                const natural = img.naturalWidth / img.naturalHeight
+                setAspect(natural)
+                // A faixa da razão pedida tem de CABER na imagem: abrir sobre uma foto paisaagem
+                // com zoom 1 estica a faixa quadrada em retângulo — o clamp do piso entra aqui,
+                // no primeiro contato com a razão real (defeito medido no navegador, 2026-11-04).
+                setParams((c) => clampCropCenterToBand(c, bandAspect, natural))
+              }
             }}
           />
 

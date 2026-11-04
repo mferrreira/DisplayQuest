@@ -57,20 +57,24 @@ describe("regras de recorte de capa", () => {
   });
 
   describe("faixa no editor (razão da faixa + razão da imagem)", () => {
-    it("zoom 1 sobre a faixa 21:9 cobre a largura inteira, altura = largura · 9/21", () => {
+    // Razão da faixa na tela = (w·W)/(h·H) = (w/h)·aspect. Quando a imagem já tem a razão da
+    // faixa (aspect = bandAspect), a fração da altura é igual à da largura — a faixa cobre a
+    // altura plena. A conta antiga (`h = w/bandAspect`) dava `w·9/21` aqui, que é o esticamento
+    // reportado pelo dono em 2026-11-04. Estas duas rodadas congelam a conta corrigida.
+    it("zoom 1 sobre a faixa 21:9: a imagem 21:9 é coberta inteira (largura 1, altura 1)", () => {
       const band = bannerCropBandRect({ x: 0.5, y: 0.5, zoom: 1 }, 21 / 9, 21 / 9);
       expect(band.width).toBeCloseTo(1, 6);
-      expect(band.height).toBeCloseTo(9 / 21, 6);
+      expect(band.height).toBeCloseTo(1, 6);
       expect(band.left).toBeCloseTo(0, 6);
-      expect(band.top).toBeCloseTo(0.5 - 9 / 42, 6);
+      expect(band.top).toBeCloseTo(0, 6);
     });
 
-    it("zoom 2 sobre a faixa 21:9: faixa de 1/2 de largura, 1/2·9/21 de altura, centrada", () => {
+    it("zoom 2 sobre a faixa 21:9: janela de meia largura, meia altura, centrada", () => {
       const band = bannerCropBandRect({ x: 0.5, y: 0.5, zoom: 2 }, 21 / 9, 21 / 9);
       expect(band.width).toBeCloseTo(0.5, 6);
-      expect(band.height).toBeCloseTo(0.5 * 9 / 21, 6);
+      expect(band.height).toBeCloseTo(0.5, 6);
       expect(band.left).toBeCloseTo(0.25, 6);
-      expect(band.top).toBeCloseTo(0.5 - 0.5 * 9 / 42, 6);
+      expect(band.top).toBeCloseTo(0.25, 6);
     });
 
     it("faixa quadrada (bandAspect 1): zoom 1 cobre 1x1, zoom 2 dá janela 0,5x0,5", () => {
@@ -101,6 +105,48 @@ describe("regras de recorte de capa", () => {
     it("para faixa quadrada, a janela nunca passa de 1: zoom 1 dá centro único em 0.5", () => {
       const clamped = clampCropCenterToBand({ x: 0.9, y: 0.1, zoom: 1 }, 1, 1);
       expect(clamped).toEqual({ x: 0.5, y: 0.5, zoom: 1 });
+    });
+
+    // Defeito medido no navegador em 2026-11-04 (pedido do dono): sobre foto paisagem, a conta
+    // antiga (`h = w/bandAspect`) esticava a faixa — quadrado virava retângulo e a faixa 21:9 ia
+    // além da moldura da capa. A altura da faixa é fração da ALTURA do contêiner, e a razão da
+    // faixa na tela é `(w/h)·aspect`; logo `h = w·aspect/bandAspect` e o piso do zoom é
+    // `aspect/bandAspect`. Os testes abaixo congelam a razão medida, não a fórmula.
+
+    it("faixa quadrada sobre paisagem 16:9: zoom 1 não cabe — o piso do zoom é a razão da imagem", () => {
+      const clamped = clampCropCenterToBand({ x: 0.5, y: 0.5, zoom: 1 }, 1, 16 / 9);
+      expect(clamped.zoom).toBeCloseTo(16 / 9, 6);
+      // Janela mínima: altura plena da imagem, largura 9/16 — em px, quadrado.
+      const band = bannerCropBandRect(clamped, 1, 16 / 9);
+      expect(band.height).toBeCloseTo(1, 6);
+      expect(band.width).toBeCloseTo(9 / 16, 6);
+      // Razão da faixa na tela: (w·W)/(h·H) com W/H = 16/9.
+      expect((band.width * (16 / 9)) / band.height).toBeCloseTo(1, 6);
+    });
+
+    it("faixa quadrada sobre paisagem: a janela quadrada nunca estica em nenhum zoom", () => {
+      for (const zoom of [16 / 9, 2, 3, 4]) {
+        const band = bannerCropBandRect({ x: 0.5, y: 0.5, zoom }, 1, 16 / 9);
+        expect((band.width * (16 / 9)) / band.height).toBeCloseTo(1, 6);
+      }
+    });
+
+    it("faixa 21:9 sobre paisagem 16:9: a razão na tela é 21:9, não 16:9 esticada", () => {
+      const band = bannerCropBandRect({ x: 0.5, y: 0.5, zoom: 1 }, 21 / 9, 16 / 9);
+      expect((band.width * (16 / 9)) / band.height).toBeCloseTo(21 / 9, 6);
+    });
+
+    it("faixa 21:9 sobre paisagem 16:9 com zoom 2: mesma razão, janela de meia largura", () => {
+      const band = bannerCropBandRect({ x: 0.5, y: 0.5, zoom: 2 }, 21 / 9, 16 / 9);
+      expect(band.width).toBeCloseTo(0.5, 6);
+      expect((band.width * (16 / 9)) / band.height).toBeCloseTo(21 / 9, 6);
+    });
+
+    it("piso do zoom em retrato 3:4: faixa quadrada entra em 0,75 (piso 1 manda, a faixa cabe)", () => {
+      const clamped = clampCropCenterToBand({ x: 0.5, y: 0.5, zoom: 1 }, 1, 3 / 4);
+      expect(clamped.zoom).toBe(1);
+      const band = bannerCropBandRect(clamped, 1, 3 / 4);
+      expect((band.width * (3 / 4)) / band.height).toBeCloseTo(1, 6);
     });
   });
 });

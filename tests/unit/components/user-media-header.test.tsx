@@ -224,6 +224,19 @@ async function saveInEditor(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByRole("button", { name: "Salvar recorte" }));
 }
 
+/**
+ * O jsdom não decodifica imagem, então o `onLoad` nunca roda e a razão do contêiner fica a de
+ * fábrica (21:9). Para o editor quadrado do avatar, a razão REAL da foto entra aqui: a janela do
+ * quadrado depende dela (piso do zoom = `aspect/bandAspect`), e o mock grava o clamp quadrado.
+ * Sem este load simulado, o editor clamparia pela razão de fábrica e o teste provava o substituto.
+ */
+function loadSquareIntoEditor(name: string) {
+  const image = screen.getByRole("img", { name });
+  Object.defineProperty(image, "naturalWidth", { value: 1000 });
+  Object.defineProperty(image, "naturalHeight", { value: 1000 });
+  fireEvent.load(image);
+}
+
 beforeEach(() => {
   resetStore();
   vi.stubGlobal("fetch", vi.fn(recordingFetch));
@@ -509,6 +522,7 @@ describe("cabeçalho de mídia do perfil", () => {
       "src",
       expect.stringContaining("v=users%2F7%2Fimages%2Favatar%2Fvelho.png"),
     );
+    loadSquareIntoEditor("Avatar de Ana Souza");
 
     await user.click(screen.getByRole("button", { name: "Salvar recorte" }));
 
@@ -554,6 +568,7 @@ describe("cabeçalho de mídia do perfil", () => {
 
     await user.click(screen.getByRole("button", { name: "Recortar avatar" }));
     await screen.findByRole("dialog", { name: "Recorte do avatar" });
+    loadSquareIntoEditor("Avatar de Ana Souza");
     await user.click(screen.getByRole("button", { name: "Salvar recorte" }));
 
     await waitFor(() => expect(mocks.requests).toHaveLength(1));
