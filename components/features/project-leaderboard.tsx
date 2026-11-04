@@ -9,7 +9,6 @@ import { BannerImage } from "@/components/ui/banner-image"
 import { bannerCropFromColumns } from "@/backend/domain"
 import { projectImageUrl } from "@/lib/api/project-files"
 import { rankProjects } from "@/features/projects/utils/project-ranking"
-import { ProjectPodium3D } from "@/components/features/project-podium-3d"
 import type { Project } from "@/contexts/types"
 
 /**
@@ -32,26 +31,16 @@ interface ProjectLeaderboardProps {
 export function ProjectLeaderboard({ projects, onProjectSelect }: ProjectLeaderboardProps) {
   const ranked = rankProjects(projects)
   const champion = ranked[0]
+  const runnersUp = ranked.slice(1, 3)
   const rest = ranked.slice(3)
 
   const open = (project: Project) => onProjectSelect?.(project)
-  const topThree = ranked.slice(0, 3).map((entry, i) => {
-    const ahead = i > 0 ? ranked[i - 1] : null
-    const distanceText = ahead && ahead.points > entry.points ? `${ahead.points - entry.points} pts para o ${i}º` : null
-    return { project: entry.project, position: entry.position as 1 | 2 | 3, points: entry.points, distanceText }
-  })
-  const runnersUp = topThree.slice(1)
 
   return (
     <div className="space-y-6">
       {champion && (
-        <section aria-label="Pódio dos projetos" className="space-y-4">
-          {/* plan-v13 S07 (ADR-001): a cena lúdica ocupa a faixa do pódio quando há WebGL; os
-              cards ficam visíveis nos dois casos — teclado e leitor de tela alcançam os links
-              da lista DOM, que repete a mesma informação e os mesmos destinos da cena. */}
-          <ProjectPodium3D entries={topThree} onSelect={open} />
-          <section aria-label="Campeão dos projetos" className="rounded-lg">
-            <Link
+        <section aria-label="Campeão dos projetos" className="rounded-lg">
+          <Link
             href={`/dashboard/projetos/${champion.project.id}`}
             aria-label={`Ver detalhes de ${champion.project.name}`}
             onClick={(event) => {
@@ -100,12 +89,11 @@ export function ProjectLeaderboard({ projects, onProjectSelect }: ProjectLeaderb
               </div>
             </div>
           </Link>
-          </section>
-          {runnersUp.length > 0 && (
-            <section
-              aria-label="Segundo e terceiro lugares"
-              className="grid gap-4 sm:grid-cols-2"
-            >
+        </section>
+      )}
+
+      {runnersUp.length > 0 && (
+        <section aria-label="Segundo e terceiro lugares" className="grid gap-4 sm:grid-cols-2">
           {runnersUp.map((entry) => {
             const Icon = entry.position === 2 ? Medal : Award
             return (
@@ -141,14 +129,11 @@ export function ProjectLeaderboard({ projects, onProjectSelect }: ProjectLeaderb
                     {entry.project.name}
                   </p>
                   {entry.project.subtitle && <p className="truncate text-xs text-muted-foreground">{entry.project.subtitle}</p>}
-                  {entry.distanceText && <p className="truncate text-xs font-medium text-muted-foreground">{entry.distanceText}</p>}
                 </div>
                 <p className="shrink-0 font-bold tabular-nums text-foreground">{entry.points}</p>
               </Link>
             )
           })}
-            </section>
-          )}
         </section>
       )}
 
