@@ -46,7 +46,7 @@ const P3 = project(3, "Microscopia", 10)
 const P4 = project(4, "Sem saldo", 0, "Iniciação junior")
 
 describe("ProjectLeaderboard com pódio glorioso", () => {
-  it("com WebGL: a cena ocupa a faixa do pódio e os cards ficam sr-only, preservando as regiões de hoje", () => {
+  it("com WebGL: a cena ocupa a faixa do pódio e a lista DOM fica visível com os mesmos links", () => {
     mock.webgl = true
     const opened: number[] = []
     render(<ProjectLeaderboard projects={[P3, P2, P1, P4]} onProjectSelect={(p) => opened.push(p.id)} />)
@@ -55,12 +55,13 @@ describe("ProjectLeaderboard com pódio glorioso", () => {
     expect(canvasRegion).toHaveTextContent("Pesquisa em IA")
 
     const champion = screen.getByRole("region", { name: "Campeão dos projetos" })
-    expect(champion.className).toContain("sr-only")
+    expect(champion.className).not.toContain("sr-only")
     expect(champion).toHaveTextContent("Campeão")
 
     fireEvent.click(champion.querySelector("a")!)
     expect(opened).toEqual([1])
     const runners = screen.getByRole("region", { name: "Segundo e terceiro lugares" })
+    expect(runners.className).not.toContain("sr-only")
     fireEvent.click(runners.querySelectorAll("a")[1])
     expect(opened).toEqual([1, 3])
   })

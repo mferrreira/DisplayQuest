@@ -2,28 +2,23 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Canvas, useFrame } from "@react-three/fiber"
-import {
-  AdaptiveDpr, ContactShadows, Environment, Float, Html, Lightformer,
-  PresentationControls, RoundedBox, Sparkles, SpotLight,
-} from "@react-three/drei"
-import { Bloom, EffectComposer, Vignette } from "@react-three/postprocessing"
+import { AdaptiveDpr, ContactShadows, Float, Sparkles } from "@react-three/drei"
 import * as THREE from "three"
-import type { Mesh, Object3D } from "three"
+import type { Object3D } from "three"
 import type { Project } from "@/contexts/types"
 
 /**
- * plan-v13 S07 (ADR-001) — a cena do pódio glorioso de projetos: salão de campeões, não
- * três caixas. Base em camadas de pedra escura com filete dourado; o campeão domina no
- * centro sobre ouro escovado com coroa de cinco pontas e cúpula de luz quente; 2º em prata
- * fria e 3º em bronze, sobre degraus, dignos. Texturas são CanvasTexture procedurais (grão
- * fino, veios, gradiente) — nada remoto, nenhum asset. Marcas de posição, nome, pontos e a
- * distância até o próximo lugar ficam na placa da face frontal; a placa tem o link real do
- * projeto, acessível por teclado. Entrada com stagger de elevação e um único brilho
- * percorrendo o ouro; idle quase imperceptível; hover levanta e acende o contorno.
+ * plan-v13 S07 (ADR-001) — primeira composição lúdica do pódio de projetos.
  *
- * O contrato da cena fica em `name`/`userData` dos meshes, que o test-renderer lê em node.
- * Texturas, placa, coroa, cupola, PresentationControls e postprocessing só existem onde há
- * DOM; sem DOM a cena degrada para os blocos, que é exatamente o que a suíte congela.
+ * O dono recusou a direção realista (monumento/pedra/metal/salão): "o sistema inteiro não é
+ * realista; eu queria algo mais divertido, lúdico, não um pódio propriamente dito". Esta cena
+ * é um mundo de jogo: plataformas octogonais flutuantes em silhuetas distintas numa trilha
+ * ascendente, o campeão com portal dourado, estrela, halo e estrelas orbitando; confete curto
+ * na entrada; pop com overshoot. Nome, posição, pontos e a distância até o próximo lugar são
+ * inscritos numa placa na face da plataforma (CanvasTexture), não cartão DOM sobre o canvas.
+ * Cores dos tokens da interface, materiais limpos e suaves, sem metal físico, sem palco
+ * escuro. Clique no alvo grande da plataforma; lista DOM visível e keyboard-accessible fica
+ * no leaderboard. reduced-motion congela tudo.
  */
 
 export interface PodiumEntry {
@@ -40,13 +35,13 @@ export interface PodiumPalette {
   stone: string
 }
 
-const BASE_TOP = 0.48
-
 const SLOTS: Record<1 | 2 | 3, [number, number]> = {
-  1: [0, 0],
-  2: [-2.45, 0.6],
-  3: [2.45, 0.6],
+  1: [1.7, -0.5],
+  2: [-0.9, 0.3],
+  3: [-2.6, 1.0],
 }
+
+const DISC_R: Record<1 | 2 | 3, number> = { 1: 1.35, 2: 1.05, 3: 0.85 }
 
 const METAL: Record<1 | 2 | 3, "gold" | "silver" | "bronze"> = { 1: "gold", 2: "silver", 3: "bronze" }
 
@@ -55,155 +50,118 @@ export function podiumBlockHeight(points: number, maxPoints: number): number {
   return 0.5 + 1.5 * ratio
 }
 
-function shade(hex: string, factor: number): string {
-  return `#${new THREE.Color(hex).multiplyScalar(factor).getHexString()}`
+function mulberry32(seed: number) {
+  let a = seed
+  return () => {
+    a = (a + 0x6d2b79f5) | 0
+    let t = Math.imul(a ^ (a >>> 15), 1 | a)
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
 }
 
-function grainCanvas(baseA: string, baseB: string, vein: string, veins: boolean): HTMLCanvasElement {
+function makeStarGeometry(): THREE.ExtrudeGeometry {
+  const shape = new THREE.Shape()
+  const outer = 0.22
+  const inner = 0.09
+  const spikes = 5
+  for (let i = 0; i < spikes * 2; i++) {
+    const r = i % 2 === 0 ? outer : inner
+    const a = (i / (spikes * 2)) * Math.PI * 2 - Math.PI / 2
+    const x = Math.cos(a) * r
+    const y = Math.sin(a) * r
+    if (i === 0) shape.moveTo(x, y)
+    else shape.lineTo(x, y)
+  }
+  shape.closePath()
+  const g = new THREE.ExtrudeGeometry(shape, {
+    depth: 0.06,
+    bevelEnabled: true,
+    bevelThickness: 0.02,
+    bevelSize: 0.02,
+    bevelSegments: 1,
+  })
+  g.center()
+  return g
+}
+
+function plaqueTexture(entry: PodiumEntry, palette: PodiumPalette): THREE.CanvasTexture {
   const c = document.createElement("canvas")
-  c.width = c.height = 256
+  c.width = 512
+  c.height = 420
   const g = c.getContext("2d")!
-  const grad = g.createLinearGradient(0, 0, 256, 256)
-  grad.addColorStop(0, baseA)
-  grad.addColorStop(1, baseB)
-  g.fillStyle = grad
-  g.fillRect(0, 0, 256, 256)
-  if (veins) {
-    for (let i = 0; i < 22; i++) {
-      g.globalAlpha = 0.06
-      g.fillStyle = vein
-      const y = Math.random() * 256
-      g.fillRect(0, y, 256, 0.8 + Math.random())
+  g.clearRect(0, 0, 512, 420)
+  // placa toy: retângulo arredondado na cor da pedra clareada, borda do metal, cantos limpos
+  const face = new THREE.Color(palette.stone).multiplyScalar(1.35)
+  g.fillStyle = `#${face.getHexString()}`
+  g.beginPath()
+  g.roundRect(14, 14, 484, 392, 28)
+  g.fill()
+  g.lineWidth = 10
+  g.strokeStyle = palette[METAL[entry.position]]
+  g.stroke()
+  const ink = face.r + face.g + face.b > 1.5 ? "rgba(18,20,26,0.94)" : "rgba(238,241,245,0.94)"
+  g.fillStyle = ink
+  g.textAlign = "center"
+  g.font = "bold 170px sans-serif"
+  g.fillText(`${entry.position}º`, 256, 196)
+  g.font = "bold 48px sans-serif"
+  g.fillText(entry.project.name, 256, 262)
+  g.font = "bold 74px sans-serif"
+  g.fillText(String(entry.points), 256, 342)
+  g.font = "600 34px sans-serif"
+  g.fillText(entry.distanceText ? entry.distanceText : "Campeão", 256, 388)
+  const t = new THREE.CanvasTexture(c)
+  t.colorSpace = THREE.SRGBColorSpace
+  return t
+}
+
+function ConfettiBurst({ anim, reducedMotion, palette }: { anim: { current: { t: number } }; reducedMotion: boolean; palette: PodiumPalette }) {
+  const ref = useRef<THREE.Group>(null)
+  const items = useMemo(() => {
+    const rng = mulberry32(0x2f)
+    const colors = [palette.gold, palette.silver, palette.bronze, "#8b5cf6", palette.stone]
+    return Array.from({ length: 24 }, () => ({
+      x: rng() * 6 - 3,
+      y: 2.2 + rng() * 1.6,
+      z: rng() * 2 - 1,
+      vy: 1.4 + rng() * 1.6,
+      rot: rng() * 6.28,
+      w: 0.06 + rng() * 0.08,
+      h: 0.05 + rng() * 0.06,
+      color: colors[Math.floor(rng() * colors.length)],
+    }))
+  }, [palette])
+
+  useFrame(() => {
+    const t = anim.current.t
+    if (!ref.current) return
+    ref.current.visible = t < 2.2
+    if (ref.current.visible) {
+      ref.current.children.forEach((child, i) => {
+        const it = items[i]
+        child.position.y = it.y - t * it.vy
+        child.rotation.z = it.rot + t * 3
+      })
     }
-  }
-  for (let i = 0; i < 1800; i++) {
-    g.globalAlpha = Math.random() * 0.05
-    g.fillStyle = i % 3 === 0 ? vein : "#000"
-    g.fillRect(Math.random() * 256, Math.random() * 256, 1.5, 0.7)
-  }
-  return c
-}
+  })
 
-function noiseCanvas(): HTMLCanvasElement {
-  const c = document.createElement("canvas")
-  c.width = c.height = 128
-  const g = c.getContext("2d")!
-  for (let x = 0; x < 128; x++) {
-    for (let y = 0; y < 128; y++) {
-      const v = 140 + Math.floor(Math.random() * 110)
-      g.fillStyle = `rgb(${v},${v},${v})`
-      g.fillRect(x, y, 1, 1)
-    }
-  }
-  return c
-}
-
-function buildTextures(palette: PodiumPalette) {
-  const mk = (canvas: HTMLCanvasElement) => {
-    const t = new THREE.CanvasTexture(canvas)
-    t.wrapS = t.wrapT = THREE.RepeatWrapping
-    t.colorSpace = THREE.SRGBColorSpace
-    return t
-  }
-  return {
-    gold: mk(grainCanvas(shade(palette.gold, 0.72), palette.gold, shade(palette.gold, 1.25), true)),
-    silver: mk(grainCanvas(shade(palette.silver, 0.78), palette.silver, shade(palette.silver, 1.22), true)),
-    bronze: mk(grainCanvas(shade(palette.bronze, 0.72), palette.bronze, shade(palette.bronze, 1.2), true)),
-    stone: mk(grainCanvas(shade(palette.stone, 0.55), palette.stone, shade(palette.stone, 1.6), true)),
-    roughness: mk(noiseCanvas()),
-  }
-}
-
-function TrophyCrown({ gold }: { gold: string }) {
   return (
-    <group name="trophy">
-      <mesh position={[0, -0.1, 0]}>
-        <cylinderGeometry args={[0.2, 0.24, 0.07, 32]} />
-        <meshStandardMaterial color={gold} metalness={0.9} roughness={0.22} />
-      </mesh>
-      <mesh position={[0, 0, 0]}>
-        <cylinderGeometry args={[0.26, 0.26, 0.14, 32, 1, true]} />
-        <meshStandardMaterial color={gold} metalness={0.9} roughness={0.22} side={THREE.DoubleSide} />
-      </mesh>
-      {[0, 1, 2, 3, 4].map((i) => {
-        const a = (i / 5) * Math.PI * 2
-        return (
-          <mesh key={i} position={[Math.cos(a) * 0.26, 0.14, Math.sin(a) * 0.26]}>
-            <coneGeometry args={[0.05, 0.17, 12]} />
-            <meshStandardMaterial color={gold} metalness={0.9} roughness={0.22} />
-          </mesh>
-        )
-      })}
-      <mesh position={[0, 0.2, 0]}>
-        <sphereGeometry args={[0.055, 24, 24]} />
-        <meshStandardMaterial color={gold} metalness={0.6} roughness={0.15} emissive={gold} emissiveIntensity={0.25} />
-      </mesh>
+    <group name="confetti" ref={ref}>
+      {items.map((it, i) => (
+        <mesh key={i} position={[it.x, it.y, it.z]}>
+          <planeGeometry args={[it.w, it.h]} />
+          <meshBasicMaterial color={it.color} transparent opacity={0.9} side={THREE.DoubleSide} />
+        </mesh>
+      ))}
     </group>
   )
 }
 
-function Medal({ color }: { color: string }) {
-  return (
-    <group name="medal">
-      <mesh rotation={[Math.PI / 2, 0, 0]}>
-        <torusGeometry args={[0.14, 0.025, 12, 40]} />
-        <meshStandardMaterial color={color} metalness={0.85} roughness={0.25} />
-      </mesh>
-      <mesh>
-        <cylinderGeometry args={[0.1, 0.1, 0.02, 24]} />
-        <meshStandardMaterial color={color} metalness={0.85} roughness={0.3} />
-      </mesh>
-    </group>
-  )
-}
-
-function Plaque({
-  entry,
-  metal,
-  z,
-  y,
-  onSelect,
-}: {
-  entry: PodiumEntry
-  metal: string
-  z: number
-  y: number
-  onSelect?: (project: Project) => void
-}) {
-  return (
-    <Html position={[0, y, z]} center zIndexRange={[20, 0]}>
-      <div
-        className="w-36 rounded-md border bg-card/95 px-3 py-2 text-center shadow-xl"
-        style={{ borderColor: metal }}
-      >
-        <p className="text-3xl font-black tabular-nums text-foreground">{entry.position}º</p>
-        <p className="mt-0.5 truncate text-sm font-semibold text-foreground">{entry.project.name}</p>
-        <p className="text-xl font-bold tabular-nums text-foreground">{entry.points}</p>
-        {entry.distanceText ? (
-          <p className="mt-1 text-xs font-medium text-muted-foreground">{entry.distanceText}</p>
-        ) : (
-          <p className="mt-1 text-xs font-medium text-muted-foreground">Campeão do recorte</p>
-        )}
-        <button
-          type="button"
-          className="mt-2 rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          onClick={(event) => {
-            event.stopPropagation()
-            onSelect?.(entry.project)
-          }}
-        >
-          Abrir projeto
-        </button>
-      </div>
-    </Html>
-  )
-}
-
-function PodiumPedestal({
+function ToyPlatform({
   entry,
   height,
   palette,
-  textures,
   inDom,
   anim,
   reducedMotion,
@@ -212,7 +170,6 @@ function PodiumPedestal({
   entry: PodiumEntry
   height: number
   palette: PodiumPalette
-  textures: ReturnType<typeof buildTextures> | null
   inDom: boolean
   anim: { current: { t: number } }
   reducedMotion: boolean
@@ -220,11 +177,20 @@ function PodiumPedestal({
 }) {
   const [hovered, setHovered] = useState(false)
   const ref = useRef<Object3D>(null)
-  const metal = METAL[entry.position]
-  const metalColor = palette[metal]
   const [x, z] = SLOTS[entry.position]
-  const baseY = BASE_TOP + height / 2
+  const r = DISC_R[entry.position]
+  const discH = 0.3 + height * 0.22
+  const baseY = 0.5 + height * 0.55
+  const color = palette[METAL[entry.position]]
   const inBrowser = typeof document !== "undefined"
+  const plaque = useMemo(() => (inDom ? plaqueTexture(entry, palette) : null), [entry, palette, inDom])
+  const star = useMemo(() => (inDom ? makeStarGeometry() : null), [inDom])
+  useEffect(() => {
+    return () => {
+      plaque?.dispose()
+      star?.dispose()
+    }
+  }, [plaque, star])
   useEffect(() => {
     if (inBrowser) document.body.style.cursor = hovered ? "pointer" : "auto"
     return () => {
@@ -234,19 +200,23 @@ function PodiumPedestal({
 
   useFrame(() => {
     const t = anim.current.t
-    const delay = entry.position === 1 ? 0 : entry.position === 2 ? 0.18 : 0.36
-    const rise = reducedMotion ? 1 : THREE.MathUtils.clamp((t - delay) / 0.9, 0, 1)
-    const ease = 1 - Math.pow(1 - rise, 3)
+    const delay = entry.position === 1 ? 0.25 : entry.position === 2 ? 0.12 : 0
+    const rise = reducedMotion ? 1 : THREE.MathUtils.clamp((t - delay) / 0.7, 0, 1)
+    const pop = 1 - Math.pow(1 - rise, 3)
+    const bounce = rise > 0 && rise < 1 ? Math.sin(rise * Math.PI) * 0.12 : 0
     if (ref.current) {
-      ref.current.position.y = baseY - (1 - ease) * 1.0 + (hovered ? 0.12 : 0)
-      const s = 0.72 + 0.28 * ease
+      ref.current.position.y = baseY - (1 - pop) * 1.6 + bounce + (hovered ? 0.08 : 0)
+      const s = 0.6 + 0.4 * pop
       ref.current.scale.set(s, s, s)
     }
   })
 
-  const sweep = reducedMotion
-    ? 0.08
-    : 0.08 + 0.45 * Math.max(0, 1 - Math.abs(anim.current.t - 1.35) / 1.4)
+  const championExtras = inDom && entry.position === 1
+  const starGroup = (
+    <mesh name="star" geometry={star ?? undefined} position={[0, 1.05, 0]} scale={1.6}>
+      <meshStandardMaterial color={color} metalness={0.1} roughness={0.35} emissive={color} emissiveIntensity={hovered ? 0.35 : 0.2} />
+    </mesh>
+  )
 
   return (
     <group
@@ -264,47 +234,69 @@ function PodiumPedestal({
       }}
       onPointerOut={() => setHovered(false)}
     >
-      <RoundedBox name={`pedestal-${entry.position}`} args={[1.45, height, 1.45]} radius={0.06} smoothness={4}>
+      {/* plataforma octogonal: silhueta de jogo, material limpo sem metal físico */}
+      <mesh name={`disc-${entry.position}`}>
+        <cylinderGeometry args={[r, r, discH, 8]} />
         <meshStandardMaterial
-          color={metalColor}
-          map={textures ? textures[metal] : undefined}
-          roughnessMap={textures ? textures.roughness : undefined}
-          metalness={entry.position === 1 ? 0.85 : 0.72}
-          roughness={0.32}
-          emissive={metalColor}
-          emissiveIntensity={entry.position === 1 ? sweep : hovered ? 0.2 : 0.04}
+          color={color}
+          metalness={0.05}
+          roughness={0.45}
+          emissive={color}
+          emissiveIntensity={hovered ? 0.15 : 0.04}
         />
-      </RoundedBox>
-      {/* tampona e filete dourado no topo do pedestal */}
-      <RoundedBox args={[1.62, 0.06, 1.62]} radius={0.03} smoothness={4} position={[0, height / 2 + 0.03, 0]}>
-        <meshStandardMaterial color={metalColor} metalness={0.9} roughness={0.2} />
-      </RoundedBox>
-      {/* placa de pedra na face frontal, sob a marca de posição */}
-      <RoundedBox args={[1.05, 0.86, 0.05]} radius={0.03} smoothness={3} position={[0, -height * 0.12, 0.735]}>
+      </mesh>
+      {/* aro de destaque no topo da plataforma */}
+      <mesh position={[0, discH / 2 + 0.03, 0]} rotation={[Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[r - 0.08, 0.045, 12, 40]} />
+        <meshStandardMaterial color={color} metalness={0.2} roughness={0.3} emissive={color} emissiveIntensity={0.12} />
+      </mesh>
+      {/* placa toy na face frontal, inscrita na plataforma */}
+      <mesh name={`plaque-${entry.position}`} position={[0, -0.18, r * 0.72]} rotation={[-0.28, 0, 0]}>
+        <planeGeometry args={[1.12, 0.9]} />
         <meshStandardMaterial
-          color={palette.stone}
-          map={textures ? textures.stone : undefined}
-          metalness={0.15}
-          roughness={0.7}
+          map={plaque ?? undefined}
+          color={plaque ? "#ffffff" : palette.stone}
+          metalness={0.05}
+          roughness={0.5}
+          transparent
         />
-      </RoundedBox>
-      {inDom && (
-        <Plaque entry={entry} metal={metalColor} z={0.78} y={-height * 0.12} onSelect={onSelect} />
-      )}
-      {inDom && entry.position === 1 && !reducedMotion && (
-        <Float speed={1.2} rotationIntensity={0.25} floatIntensity={0.35} name="crown" position={[0, height / 2 + 0.35, 0]}>
-          <TrophyCrown gold={palette.gold} />
-        </Float>
-      )}
-      {inDom && entry.position === 1 && reducedMotion && (
-        <group name="crown" position={[0, height / 2 + 0.35, 0]}>
-          <TrophyCrown gold={palette.gold} />
+      </mesh>
+
+      {championExtras && (
+        <group name="champion-props">
+          {/* halo macio e portal dourado: o emblema de conquista do 1º lugar */}
+          <mesh name="halo" position={[0, 1.15, -1.1]}>
+            <circleGeometry args={[1.9, 48]} />
+            <meshBasicMaterial color={palette.gold} transparent opacity={0.22} />
+          </mesh>
+          <mesh name="portal" position={[0, 1.05, -0.35]}>
+            <torusGeometry args={[0.85, 0.08, 16, 48]} />
+            <meshStandardMaterial color={palette.gold} metalness={0.25} roughness={0.3} emissive={palette.gold} emissiveIntensity={0.35} />
+          </mesh>
+          {reducedMotion ? starGroup : (
+            <Float speed={1.4} rotationIntensity={0.2} floatIntensity={0.4} name="crown-star">
+              {starGroup}
+            </Float>
+          )}
+          {!reducedMotion && (
+            <group name="orbit">
+              {[0, 1, 2].map((i) => {
+                const a = (i / 3) * Math.PI * 2
+                return (
+                  <mesh key={i} geometry={star ?? undefined} position={[Math.cos(a) * 1.7, 1.05, Math.sin(a) * 1.7]} scale={0.7}>
+                    <meshStandardMaterial color={palette.gold} metalness={0.1} roughness={0.35} emissive={palette.gold} emissiveIntensity={0.3} />
+                  </mesh>
+                )
+              })}
+            </group>
+          )}
         </group>
       )}
+
       {inDom && entry.position !== 1 && (
-        <group position={[0, height / 2 + 0.14, 0]}>
-          <Medal color={metalColor} />
-        </group>
+        <mesh geometry={star ?? undefined} position={[0, 0.6, 0]} scale={0.9}>
+          <meshStandardMaterial color={color} metalness={0.1} roughness={0.35} emissive={color} emissiveIntensity={0.18} />
+        </mesh>
       )}
     </group>
   )
@@ -323,71 +315,62 @@ export function PodiumScene({
 }) {
   const inDom = typeof document !== "undefined"
   const anim = useRef({ t: reducedMotion ? 99 : 0 })
-  const textures = useMemo(() => (inDom ? buildTextures(palette) : null), [inDom, palette])
   const maxPoints = Math.max(0, ...entries.map((e) => e.points))
   const championH = entries.length > 0 ? podiumBlockHeight(entries[0].points, maxPoints) : 1
 
   useFrame(({ camera }, delta) => {
     anim.current.t += delta
     if (!reducedMotion) {
-      camera.position.z += (5.4 - camera.position.z) * Math.min(1, delta * 1.5)
-      camera.position.y += (1.6 - camera.position.y) * Math.min(1, delta * 1.5)
-      camera.lookAt(0, 1.0, 0)
+      camera.position.z += (6.8 - camera.position.z) * Math.min(1, delta * 1.5)
+      camera.position.y += (1.5 - camera.position.y) * Math.min(1, delta * 1.5)
+      camera.lookAt(0.5, 1.1, 0)
     }
   })
 
+  const trailPads: Array<[number, number, number, number]> = [
+    [-3.5, 0.35, 1.5, 0.45],
+    [-1.9, 0.6, 0.7, 0.38],
+    [0.4, 0.85, -0.1, 0.32],
+  ]
+
   return (
     <group name="podium-group" userData={{ animations: !reducedMotion }}>
-      {/* base em camadas: laje de pedra larga, degrau e filete dourado */}
-      <RoundedBox name="base-slab" args={[7.4, 0.3, 3.2]} radius={0.04} smoothness={4} position={[0, 0.15, 0]}>
-        <meshStandardMaterial
-          color={palette.stone}
-          map={textures ? textures.stone : undefined}
-          roughnessMap={textures ? textures.roughness : undefined}
-          metalness={0.2}
-          roughness={0.55}
-        />
-      </RoundedBox>
-      <RoundedBox name="base-step" args={[5.6, 0.22, 2.6]} radius={0.03} smoothness={4} position={[0, 0.37, 0]}>
-        <meshStandardMaterial
-          color={palette.stone}
-          map={textures ? textures.stone : undefined}
-          metalness={0.2}
-          roughness={0.5}
-        />
-      </RoundedBox>
-      <mesh name="gold-filigree" position={[0, 0.34, 1.31]}>
-        <boxGeometry args={[6.4, 0.05, 0.04]} />
-        <meshStandardMaterial color={palette.gold} metalness={0.9} roughness={0.25} emissive={palette.gold} emissiveIntensity={0.12} />
-      </mesh>
+      <ambientLight intensity={0.85} />
+      <directionalLight position={[3, 6, 4]} intensity={1.6} />
+      <directionalLight position={[-3, 2, -2]} intensity={0.6} color="#bcd3e6" />
 
-      {/* luz principal dramática, rim lights e ambiente baixo */}
-      <ambientLight intensity={0.22} />
-      <spotLight position={[2.4, 6, 4.5]} angle={0.34} penumbra={0.9} intensity={9} decay={0} castShadow />
-      <spotLight position={[-4, 3.4, -3]} angle={0.4} penumbra={1} intensity={3.2} decay={0} color="#bcd3e6" />
-      <spotLight position={[4.2, 2.8, -2.6]} angle={0.4} penumbra={1} intensity={2.6} decay={0} color="#e8c89a" />
+      {/* trilha ascendente: padas flutuantes de pedra clara da cor do tema */}
+      {trailPads.map(([px, py, pz, pr], i) => (
+        <mesh key={i} name={`trail-pad-${i + 1}`} position={[px, py, pz]}>
+          <cylinderGeometry args={[pr, pr, 0.14, 6]} />
+          <meshStandardMaterial color={palette.stone} metalness={0.05} roughness={0.6} transparent opacity={0.85} />
+        </mesh>
+      ))}
 
       {inDom && entries.length >= 1 && !reducedMotion && (
         <Sparkles
           name="sparkles"
-          count={28}
-          scale={[1.8, 2.1, 1.4] as [number, number, number]}
-          position={[0, championH + BASE_TOP + 1.0, 0]}
-          size={2.2}
+          count={16}
+          scale={[2.2, 2.2, 1.6] as [number, number, number]}
+          position={[1.7, championH + 1.2, -0.5]}
+          size={1.6}
           speed={0.35}
-          opacity={0.65}
+          opacity={0.5}
           color={palette.gold}
         />
       )}
 
+      {inDom && entries.length >= 1 && !reducedMotion && (
+        <ConfettiBurst anim={anim} reducedMotion={reducedMotion} palette={palette} />
+      )}
+
       <group name="podium-blocks">
         {entries.map((entry) => (
-          <PodiumPedestal
+          <ToyPlatform
             key={entry.project.id}
             entry={entry}
             height={podiumBlockHeight(entry.points, maxPoints)}
             palette={palette}
-            textures={textures}
             inDom={inDom}
             anim={anim}
             reducedMotion={reducedMotion}
@@ -396,39 +379,8 @@ export function PodiumScene({
         ))}
       </group>
 
-      {inDom && entries.length >= 1 && !reducedMotion && (
-        <SpotLight
-          name="light-dome"
-          position={[0, championH + BASE_TOP + 3.2, 1.6]}
-          angle={0.22}
-          penumbra={1}
-          intensity={38}
-          distance={10}
-          attenuation={4}
-          anglePower={5}
-          color="#f7d27a"
-        />
-      )}
-
       {inDom && (
-        <PresentationControls global speed={1.2} zoom={1.1}>
-          <ContactShadows position={[0, 0.01, 0]} opacity={0.55} scale={12} blur={2.4} far={5} resolution={512} />
-        </PresentationControls>
-      )}
-
-      {inDom && (
-        <Environment resolution={256}>
-          <Lightformer intensity={1.6} position={[0, 4, -3]} scale={[6, 3, 1]} />
-          <Lightformer intensity={0.8} position={[-4, 2, 2]} scale={[3, 2, 1]} />
-          <Lightformer intensity={0.8} position={[4, 2, 2]} scale={[3, 2, 1]} />
-        </Environment>
-      )}
-
-      {inDom && !reducedMotion && entries.length >= 1 && (
-        <EffectComposer>
-          <Bloom mipmapBlur luminanceThreshold={1.0} intensity={0.45} />
-          <Vignette eskil={false} offset={0.2} darkness={0.62} />
-        </EffectComposer>
+        <ContactShadows position={[0, 0.02, 0]} opacity={0.35} scale={12} blur={2.6} far={4} resolution={512} />
       )}
     </group>
   )
@@ -448,8 +400,8 @@ export function PodiumCanvas({
   return (
     <Canvas
       dpr={[1, 1.5]}
-      camera={{ position: [0, 2.6, 8], fov: 30 }}
-      gl={{ toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.15 }}
+      camera={{ position: [0, 2.5, 8.6], fov: 40 }}
+      gl={{ toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.0 }}
     >
       <AdaptiveDpr pixelated />
       <PodiumScene entries={entries} palette={palette} reducedMotion={reducedMotion} onSelect={onSelect} />

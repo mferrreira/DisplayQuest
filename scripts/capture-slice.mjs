@@ -49,7 +49,6 @@ const page = await ctx.newPage()
 await page.goto(`${base}/login`, { waitUntil: "networkidle" })
 await page.fill("#email", env.DQ_CAPTURE_EMAIL)
 await page.fill("#password", env.DQ_CAPTURE_PASSWORD)
-await page.getByLabel("Senha", { exact: true }).press("Enter")
 await page.getByRole("button", { name: "Entrar" }).click()
 await page.waitForURL(/dashboard/, { timeout: 15_000 })
 
@@ -68,7 +67,13 @@ for (const theme of THEMES) {
       document.documentElement.classList.toggle("dark", t === "dark")
       document.documentElement.classList.toggle("light", t === "light")
     }, theme)
-    // o leaderboard entra com o recorte de projetos da aba Dashboard
+    // o pódio mora na aba Dashboard; o tab default é Lista (DEC-186: a aba é da gestão)
+    await page.getByRole("tab", { name: "Dashboard" }).click()
+    // o canvas do pódio entra via next/dynamic com ssr:false — ele chega num frame depois
+    const canvasRegion = page.locator('[aria-label="Pódio dos projetos em três dimensões"]')
+    await canvasRegion.waitFor({ state: "attached", timeout: 20_000 })
+    // a rajada de temas e viewports assenta assíncrona; espera o canvas aparecer
+    await page.waitForTimeout(1500)
     const podium = page.locator('[aria-label="Pódio dos projetos"]')
     await podium.waitFor({ state: "visible", timeout: 15_000 })
     const canvasCount = await page.locator('[aria-label="Pódio dos projetos em três dimensões"] canvas').count()
@@ -81,8 +86,8 @@ for (const theme of THEMES) {
       console.error(`AVISO: webgl medido como sim, mas nenhum canvas do pódio na tela`)
       process.exit(1)
     }
-    if (!webgl && !srOnly) {
-      console.error(`AVISO: sem WebGL, os cards deveriam estar visíveis (sr-only=${srOnly})`)
+    if (srOnly) {
+      console.error(`AVISO: a lista DOM do pódio deve ficar visível e keyboard-accessible nos dois casos (sr-only=${srOnly})`)
       process.exit(1)
     }
     await page.screenshot({ path: path.join(outDir, `projetos-dashboard-${theme}-${vp.id}.png`) })

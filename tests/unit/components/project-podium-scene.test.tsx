@@ -1,10 +1,11 @@
 // @vitest-environment node
 /**
- * plan-v13 S07 (ADR-001) — a cena do pódio glorioso de projetos.
+ * plan-v13 S07 (ADR-001) — a cena lúdica do pódio de projetos.
  *
  * Roda em `node` com `@react-three/test-renderer`: sem WebGL, sem DOM. Congela o contrato da
- * cena: os blocos por posição, o campeão central e mais alto, o ouro no campeão, prata no 2º e
- * bronze no 3º, as pedras da base, e o `reduced-motion` que derruba as animações.
+ * cena toy: as plataformas por posição na trilha ascendente (3º à esquerda, campeão à direita
+ * e mais alto), ouro no campeão, prata no 2º, bronze no 3º, as placas inscritas na face frontal
+ * de cada plataforma, e o `reduced-motion` que derruba as animações.
  */
 import { create as createTestScene } from "@react-three/test-renderer"
 import { describe, expect, it } from "vitest"
@@ -34,7 +35,7 @@ async function renderScene(entries: PodiumEntry[], reducedMotion = false) {
 }
 
 describe("PodiumScene", () => {
-  it("os três blocos existem, o campeão é central e o mais alto, na ordem dos pontos", async () => {
+  it("as três plataformas existem na trilha ascendente: 3º à esquerda, campeão à direita e mais alto", async () => {
     const scene = await renderScene([P1, P2, P3])
     const b1 = scene.getObjectByName("podium-1")
     const b2 = scene.getObjectByName("podium-2")
@@ -42,35 +43,38 @@ describe("PodiumScene", () => {
     expect(b1).toBeDefined()
     expect(b2).toBeDefined()
     expect(b3).toBeDefined()
-    expect(b1!.position.x).toBe(0)
+    expect(b3!.position.x).toBeLessThan(b2!.position.x)
+    expect(b2!.position.x).toBeLessThan(b1!.position.x)
     expect(b1!.userData.height).toBeGreaterThan(b2!.userData.height)
     expect(b2!.userData.height).toBeGreaterThan(b3!.userData.height)
-    expect(b2!.position.x).toBeLessThan(0)
-    expect(b3!.position.x).toBeGreaterThan(0)
+    expect(b1!.position.y).toBeGreaterThan(b3!.position.y)
   })
 
-  it("o campeão leva ouro, o 2º prata e o 3º bronze; a base é pedra, com filete dourado", async () => {
+  it("o campeão leva ouro, o 2º prata e o 3º bronze; as placas inscritas ficam na face frontal", async () => {
     const scene = await renderScene([P1, P2, P3])
     const hex = (name: string) => (scene.getObjectByName(name) as any).material.color.getHexString()
-    expect(hex("pedestal-1")).toBe(PALETTE.gold.replace("#", ""))
-    expect(hex("pedestal-2")).toBe(PALETTE.silver.replace("#", ""))
-    expect(hex("pedestal-3")).toBe(PALETTE.bronze.replace("#", ""))
-    expect(hex("base-slab")).toBe(PALETTE.stone.replace("#", ""))
-    expect(hex("base-step")).toBe(PALETTE.stone.replace("#", ""))
-    expect(hex("gold-filigree")).toBe(PALETTE.gold.replace("#", ""))
+    expect(hex("disc-1")).toBe(PALETTE.gold.replace("#", ""))
+    expect(hex("disc-2")).toBe(PALETTE.silver.replace("#", ""))
+    expect(hex("disc-3")).toBe(PALETTE.bronze.replace("#", ""))
+    for (const pos of [1, 2, 3]) {
+      const plaque = scene.getObjectByName(`plaque-${pos}`)
+      expect(plaque).toBeDefined()
+      // a placa está na frente da plataforma, não pairando no espaço comum
+      expect(plaque!.position.z).toBeGreaterThan(0.4)
+    }
   })
 
-  it("reduced-motion congela as animações: o flag da cena desliga coroa, sparkles e bloom", async () => {
+  it("reduced-motion congela as animações: o flag da cena desliga portal, orbita, confete e sparkles", async () => {
     const animated = await renderScene([P1, P2, P3], false)
     const staticScene = await renderScene([P1, P2, P3], true)
-    // em node não há DOM, então os componentes de DOM (Float, Sparkles, Bloom) ficam de fora;
-    // o contrato medido aqui é o flag que a cena escreve no grupo, e os blocos ficam de pé.
+    // em node não há DOM, então os componentes de DOM (Float, Sparkles, Confetti) ficam de fora;
+    // o contrato medido aqui é o flag que a cena escreve no grupo, e as plataformas ficam de pé.
     expect(animated.getObjectByName("podium-group")!.userData.animations).toBe(true)
     expect(staticScene.getObjectByName("podium-group")!.userData.animations).toBe(false)
     expect(staticScene.getObjectByName("podium-1")).toBeDefined()
   })
 
-  it("1 projeto = só o bloco do campeão; 2 = campeão + 2º, sem terceiro", async () => {
+  it("1 projeto = só a plataforma do campeão; 2 = campeão + 2º, sem terceiro", async () => {
     const solo = await renderScene([P1])
     expect(solo.getObjectByName("podium-1")).toBeDefined()
     expect(solo.getObjectByName("podium-2")).toBeUndefined()
@@ -80,11 +84,11 @@ describe("PodiumScene", () => {
     expect(duo.getObjectByName("podium-3")).toBeUndefined()
   })
 
-  it("a altura do bloco é proporcional aos pontos normalizados", async () => {
+  it("a altura da plataforma é proporcional aos pontos normalizados", async () => {
     expect(podiumBlockHeight(30, 30)).toBeCloseTo(2, 5)
     expect(podiumBlockHeight(15, 30)).toBeCloseTo(1.25, 5)
     expect(podiumBlockHeight(0, 30)).toBeCloseTo(0.5, 5)
-    // todos zero: nenhum bloco raso, o campeão mantém a altura cheia
+    // todos zero: nenhuma plataforma rasa, o campeão mantém a altura cheia
     expect(podiumBlockHeight(0, 0)).toBeCloseTo(2, 5)
   })
 })
