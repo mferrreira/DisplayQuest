@@ -9,6 +9,7 @@ import { BannerImage } from "@/components/ui/banner-image"
 import { bannerCropFromColumns } from "@/backend/domain"
 import { projectImageUrl } from "@/lib/api/project-files"
 import { rankProjects } from "@/features/projects/utils/project-ranking"
+import { ProjectPodium3D, useWebglSupport } from "@/components/features/project-podium-3d"
 import type { Project } from "@/contexts/types"
 
 /**
@@ -35,12 +36,18 @@ export function ProjectLeaderboard({ projects, onProjectSelect }: ProjectLeaderb
   const rest = ranked.slice(3)
 
   const open = (project: Project) => onProjectSelect?.(project)
+  const webgl = useWebglSupport()
+  const topThree = ranked.slice(0, 3) .map((entry) => ({ project: entry.project, position: entry.position as 1 | 2 | 3, points: entry.points }))
 
   return (
     <div className="space-y-6">
       {champion && (
-        <section aria-label="Campeão dos projetos" className="rounded-lg">
-          <Link
+        <section aria-label="Pódio dos projetos" className="space-y-4">
+          {/* plan-v13 S07 (ADR-001): a cena WebGL ocupa a faixa do pódio quando há WebGL;
+              os cards de hoje ficam sr-only — teclado e leitor de tela não entram no canvas. */}
+          <ProjectPodium3D entries={topThree} onSelect={open} />
+          <section aria-label="Campeão dos projetos" className={webgl ? "sr-only rounded-lg" : "rounded-lg"}>
+            <Link
             href={`/dashboard/projetos/${champion.project.id}`}
             aria-label={`Ver detalhes de ${champion.project.name}`}
             onClick={(event) => {
@@ -89,11 +96,12 @@ export function ProjectLeaderboard({ projects, onProjectSelect }: ProjectLeaderb
               </div>
             </div>
           </Link>
-        </section>
-      )}
-
-      {runnersUp.length > 0 && (
-        <section aria-label="Segundo e terceiro lugares" className="grid gap-4 sm:grid-cols-2">
+          </section>
+          {runnersUp.length > 0 && (
+            <section
+              aria-label="Segundo e terceiro lugares"
+              className={webgl ? "sr-only grid gap-4 sm:grid-cols-2" : "grid gap-4 sm:grid-cols-2"}
+            >
           {runnersUp.map((entry) => {
             const Icon = entry.position === 2 ? Medal : Award
             return (
@@ -134,6 +142,8 @@ export function ProjectLeaderboard({ projects, onProjectSelect }: ProjectLeaderb
               </Link>
             )
           })}
+            </section>
+          )}
         </section>
       )}
 
