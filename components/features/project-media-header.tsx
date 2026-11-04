@@ -1,8 +1,8 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import { Button } from "@/components/ui/button"
-import { ImageOff, Loader2, Trash2, Upload } from "lucide-react"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { ImageOff } from "lucide-react"
 import { useToast } from "@/contexts/use-toast"
 import {
   deleteProjectImage,
@@ -212,51 +212,147 @@ export function ProjectMediaHeader({
 
   return (
     <div className="space-y-3">
+      {/* plan-v14 S05 (regra 5, decisão do dono): o clique na FAIXA e no LOGO abre a lista de
+          opções, no lugar dos botões visíveis de hoje. Os controles não somem: viram itens do
+          menu, pelos mesmos rótulos, mesmas rotas, mesma autorização (`canManage` do cabeçalho,
+          a ACL do projeto medida). Sem `canManage`, nenhum gatilho existe (estado congelado).
+          Dono (2026-11, DEC-240): a faixa de capa do projeto é 21:9 (`aspect-[21/9]`), largura
+          plena, sem altura fixa; o cartão da lista de projetos mantém h-24 sm:h-32. */}
       <div className="relative pb-8">
-        {/* Dono (2026-11, DEC-240): a faixa de capa do projeto é 21:9 (`aspect-[21/9]`),
-            largura plena, sem altura fixa; o cartão da lista de projetos mantém h-16 sm:h-24.
-            O logo sobreposto fica no canto de baixo-esquerda da faixa. */}
-        <div className="aspect-[21/9] overflow-hidden rounded-lg border bg-muted">
-          {currentBannerKey ? (
-            <BannerImage
-              src={projectImageUrl(projectId, "banner", currentBannerKey)}
-              alt={`Capa do projeto ${projectName}`}
-              crop={currentCrop}
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center gap-2 text-sm text-muted-foreground">
-              <ImageOff className="h-5 w-5" />
-              Sem capa
-            </div>
-          )}
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild disabled={!canManage}>
+            {canManage ? (
+              <button
+                type="button"
+                aria-label="Opções da capa do projeto"
+                className="block w-full rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <div className="aspect-[21/9] overflow-hidden rounded-lg border bg-muted">
+                  {currentBannerKey ? (
+                    <BannerImage
+                      src={projectImageUrl(projectId, "banner", currentBannerKey)}
+                      alt={`Capa do projeto ${projectName}`}
+                      crop={currentCrop}
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center gap-2 text-sm text-muted-foreground">
+                      <ImageOff className="h-5 w-5" />
+                      Sem capa
+                    </div>
+                  )}
+                </div>
+              </button>
+            ) : (
+              <div className="aspect-[21/9] overflow-hidden rounded-lg border bg-muted">
+                {currentBannerKey ? (
+                  <BannerImage
+                    src={projectImageUrl(projectId, "banner", currentBannerKey)}
+                    alt={`Capa do projeto ${projectName}`}
+                    crop={currentCrop}
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center gap-2 text-sm text-muted-foreground">
+                    <ImageOff className="h-5 w-5" />
+                    Sem capa
+                  </div>
+                )}
+              </div>
+            )}
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuItem onClick={() => bannerInputRef.current?.click()} disabled={busy}>
+              Enviar capa
+            </DropdownMenuItem>
+            {currentBannerKey && (
+              <DropdownMenuItem onClick={openEditor} disabled={busy}>
+                Recortar capa
+              </DropdownMenuItem>
+            )}
+            {currentBannerKey && (
+              <DropdownMenuItem onClick={() => handleRemove("banner")} disabled={busy}>
+                {/* "Tirar" e nao "Remover": o painel de membros, montado no mesmo dialogo, ja tem um
+                    botao chamado exatamente "Remover", e `getByRole` casa por substring (licao da
+                    3.C). Um rotulo novo nao pode conter o de um controle vizinho. */}
+                Tirar capa
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         <div className="absolute bottom-0 left-4">
-          {currentLogoKey ? (
-            // plan-v14 S01 (regra 1): o corte quadrado gravado pelo editor DEC-242 passa a ser
-            // aplicado — a peça única renderiza o logo, o círculo da moldura mostra a área
-            // escolhida, e o comentário da DEC-242 ("a tela não aplica o corte") fica superado.
-            <div className="h-16 w-16 rounded-full border-4 border-background bg-background sm:h-20 sm:w-20">
-              <BannerImage
-                src={projectImageUrl(projectId, "logo", currentLogoKey)}
-                alt={`Logo do projeto ${projectName}`}
-                crop={currentLogoCrop}
-                className="rounded-full"
-              />
-            </div>
-          ) : (
-            <div className="flex h-16 w-16 items-center justify-center rounded-full border-4 border-background bg-muted text-muted-foreground sm:h-20 sm:w-20">
-              <ImageOff className="h-6 w-6" />
-            </div>
-          )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild disabled={!canManage}>
+              {canManage ? (
+                <button
+                  type="button"
+                  aria-label="Opções do logo do projeto"
+                  className="block h-16 w-16 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:h-20 sm:w-20"
+                >
+                  {currentLogoKey ? (
+                    // plan-v14 S01 (regra 1): o corte quadrado gravado pelo editor DEC-242 passa a ser
+                    // aplicado — a peça única renderiza o logo, o círculo da moldura mostra a área
+                    // escolhida, e o comentário da DEC-242 ("a tela não aplica o corte") fica superado.
+                    <div className="h-16 w-16 rounded-full border-4 border-background bg-background sm:h-20 sm:w-20">
+                      <BannerImage
+                        src={projectImageUrl(projectId, "logo", currentLogoKey)}
+                        alt={`Logo do projeto ${projectName}`}
+                        crop={currentLogoCrop}
+                        className="rounded-full"
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full border-4 border-background bg-muted text-muted-foreground sm:h-20 sm:w-20">
+                      <ImageOff className="h-6 w-6" />
+                    </div>
+                  )}
+                </button>
+              ) : (
+                <div>
+                  {currentLogoKey ? (
+                    <div className="h-16 w-16 rounded-full border-4 border-background bg-background sm:h-20 sm:w-20">
+                      <BannerImage
+                        src={projectImageUrl(projectId, "logo", currentLogoKey)}
+                        alt={`Logo do projeto ${projectName}`}
+                        crop={currentLogoCrop}
+                        className="rounded-full"
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full border-4 border-background bg-muted text-muted-foreground sm:h-20 sm:w-20">
+                      <ImageOff className="h-6 w-6" />
+                    </div>
+                  )}
+                </div>
+              )}
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuItem onClick={() => logoInputRef.current?.click()} disabled={busy}>
+                Enviar logo
+              </DropdownMenuItem>
+              {currentLogoKey && (
+                <DropdownMenuItem onClick={openLogoEditor} disabled={busy}>
+                  {/* "Recortar logo" nao contem "Recortar capa" nem "Tirar logo" (licao da 3.C). */}
+                  Recortar logo
+                </DropdownMenuItem>
+              )}
+              {currentLogoKey && (
+                <DropdownMenuItem onClick={() => handleRemove("logo")} disabled={busy}>
+                  Tirar logo
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
+      {/* Os inputs sr-only continuam: são o mecanismo de escolha do arquivo — a rota de upload,
+          o `accept` do campo e o caminho do editor são os mesmos, e o teste do V5-2d congela a
+          aceitação por eles. Input cru, não o primitivo: `sr-only` + `w-full` do primitivo
+          compõem um absoluto de largura da viewport (a ordem das utilities do Tailwind v4
+          deixava o w-full vencer o sr-only) — era o scroll horizontal medido em
+          /dashboard/projetos/[id]. */}
       {canManage && (
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Input cru, não o primitivo: `sr-only` + `w-full` do primitivo compõem um absoluto
-              de largura da viewport (a ordem das utilities do Tailwind v4 deixava o w-full
-              vencer o sr-only) — era o scroll horizontal medido em /dashboard/projetos/[id]. */}
+        <>
           <input
             ref={logoInputRef}
             type="file"
@@ -275,72 +371,7 @@ export function ProjectMediaHeader({
             disabled={busy}
             onChange={() => handleUpload("banner")}
           />
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={busy}
-            onClick={() => bannerInputRef.current?.click()}
-          >
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-            Enviar capa
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={busy}
-            onClick={() => logoInputRef.current?.click()}
-          >
-            Enviar logo
-          </Button>
-          {currentBannerKey && (
-            <Button
-              size="sm"
-              variant="ghost"
-              disabled={busy}
-              onClick={openEditor}
-            >
-              <CropIcon className="h-4 w-4" />
-              Recortar capa
-            </Button>
-          )}
-          {currentLogoKey && (
-            <Button
-              size="sm"
-              variant="ghost"
-              disabled={busy}
-              onClick={openLogoEditor}
-            >
-              <CropIcon className="h-4 w-4" />
-              {/* "Recortar logo" nao contem "Recortar capa" nem "Tirar logo" (licao da 3.C). */}
-              Recortar logo
-            </Button>
-          )}
-          {currentBannerKey && (
-            <Button
-              size="sm"
-              variant="ghost"
-              disabled={busy}
-              onClick={() => handleRemove("banner")}
-            >
-              <Trash2 className="h-4 w-4" />
-              {/* "Tirar" e nao "Remover": o painel de membros, montado no mesmo dialogo, ja tem um
-                  botao chamado exatamente "Remover", e `getByRole` casa por substring (licao da
-                  3.C). Um rotulo novo nao pode conter o de um controle vizinho. */}
-              Tirar capa
-            </Button>
-          )}
-          {currentLogoKey && (
-            <Button
-              size="sm"
-              variant="ghost"
-              disabled={busy}
-              onClick={() => handleRemove("logo")}
-            >
-              <Trash2 className="h-4 w-4" />
-              Tirar logo
-            </Button>
-          )}
-        </div>
+        </>
       )}
 
       {editorOpen && (
@@ -382,12 +413,3 @@ export function ProjectMediaHeader({
   )
 }
 
-function CropIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className={className} aria-hidden="true">
-      <path d="M6 0v6H0" strokeLinecap="round" />
-      <path d="M18 24v-6h6" strokeLinecap="round" />
-      <rect x="3" y="6" width="15" height="12" rx="1" />
-    </svg>
-  )
-}

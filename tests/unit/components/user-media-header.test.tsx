@@ -214,7 +214,15 @@ function stubObjectUrl() {
 }
 
 async function chooseFile(user: ReturnType<typeof userEvent.setup>, file: File) {
+  // plan-v14 S05: o caminho de escolha começa no clique da faixa, que abre o menu.
+  await user.click(screen.getByRole("button", { name: "Opções da capa do perfil" }));
+  await user.click(await screen.findByRole("menuitem", { name: "Enviar capa" }));
   await user.upload(screen.getByLabelText("Imagem de capa do perfil"), file);
+}
+
+/** plan-v14 S05 (regra 5): o controle virou item do menu aberto pelo clique da faixa. */
+async function openMenu(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole("button", { name: "Opções da capa do perfil" }));
 }
 
 async function saveInEditor(user: ReturnType<typeof userEvent.setup>) {
@@ -355,7 +363,8 @@ describe("cabeçalho de mídia do perfil", () => {
     mocks.user.bannerKey = "users/7/images/banner/velha.png";
     renderHeader(true, mocks.user.bannerKey, vi.fn(), { x: 0.5, y: 0.5, zoom: 2 });
 
-    await user.click(screen.getByRole("button", { name: "Recortar capa" }));
+    await openMenu(user);
+    await user.click(await screen.findByRole("menuitem", { name: "Recortar capa" }));
 
     const dialog = await screen.findByRole("dialog", { name: "Recorte da capa" });
     // Re-recorte = o ORIGINAL no bucket, com a chave como quebra de cache (a chave é URL-encoded
@@ -398,7 +407,8 @@ describe("cabeçalho de mídia do perfil", () => {
     mocks.user.bannerCropZoom = 2;
     renderHeader(true, mocks.user.bannerKey, onBannerChange, { x: 0.5, y: 0.5, zoom: 2 });
 
-    await user.click(screen.getByRole("button", { name: "Tirar capa" }));
+    await openMenu(user);
+    await user.click(await screen.findByRole("menuitem", { name: "Tirar capa" }));
 
     await waitFor(() =>
       expect(mocks.requests).toEqual([{ method: "DELETE", path: "/api/users/7/images/banner" }]),
@@ -416,7 +426,8 @@ describe("cabeçalho de mídia do perfil", () => {
     mocks.user.bannerKey = "users/7/images/banner/velha.png";
     renderHeader(true, mocks.user.bannerKey);
 
-    await user.click(screen.getByRole("button", { name: "Tirar capa" }));
+    await openMenu(user);
+    await user.click(await screen.findByRole("menuitem", { name: "Tirar capa" }));
 
     expect(mocks.requests).toEqual([]);
     expect(mocks.user.bannerKey).toBe("users/7/images/banner/velha.png");
@@ -439,7 +450,8 @@ describe("cabeçalho de mídia do perfil", () => {
       await screen.findByText("Bucket de arquivos não configurado — defina S3_ENDPOINT e S3_BUCKET"),
     ).toBeInTheDocument();
     // Rejeição não tratada em onClick quebra o gate do Vitest (medido no V4-4b).
-    expect(screen.getByRole("button", { name: "Enviar capa" })).toBeEnabled();
+    // S05: o botão visível saiu; o gatilho do menu continua habilitado.
+    expect(screen.getByRole("button", { name: "Opções da capa do perfil" })).toBeEnabled();
   });
 
   it("a faixa da capa renderiza pela peça única com o recorte, em 21:9 e sem altura fixa", () => {
@@ -514,7 +526,8 @@ describe("cabeçalho de mídia do perfil", () => {
     mocks.user.avatarKey = "users/7/images/avatar/velho.png";
     renderHeader(true, null, vi.fn(), null, mocks.user.avatarKey, null);
 
-    await user.click(screen.getByRole("button", { name: "Recortar avatar" }));
+    await openMenu(user);
+    await user.click(await screen.findByRole("menuitem", { name: "Recortar avatar" }));
 
     const dialog = await screen.findByRole("dialog", { name: "Recorte do avatar" });
     // Re-recorte = o ORIGINAL no bucket com a chave como quebra de cache.
@@ -549,7 +562,8 @@ describe("cabeçalho de mídia do perfil", () => {
     mocks.user.logoCropZoom = 2;
     renderHeader(true, mocks.user.bannerKey, vi.fn(), { x: 0.5, y: 0.5, zoom: 2 }, mocks.user.avatarKey, { x: 0.5, y: 0.5, zoom: 2 });
 
-    await user.click(screen.getByRole("button", { name: "Tirar avatar" }));
+    await openMenu(user);
+    await user.click(await screen.findByRole("menuitem", { name: "Tirar avatar" }));
 
     await waitFor(() =>
       expect(mocks.requests).toEqual([{ method: "DELETE", path: "/api/users/7/images/avatar" }]),
@@ -566,7 +580,8 @@ describe("cabeçalho de mídia do perfil", () => {
     const user = userEvent.setup({ delay: null });
     renderHeader(true, null, vi.fn(), null, "users/7/images/avatar/x.png", { x: 0.9, y: 0.05, zoom: 3 });
 
-    await user.click(screen.getByRole("button", { name: "Recortar avatar" }));
+    await openMenu(user);
+    await user.click(await screen.findByRole("menuitem", { name: "Recortar avatar" }));
     await screen.findByRole("dialog", { name: "Recorte do avatar" });
     loadSquareIntoEditor("Avatar de Ana Souza");
     await user.click(screen.getByRole("button", { name: "Salvar recorte" }));

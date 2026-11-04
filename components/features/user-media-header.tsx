@@ -1,8 +1,8 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import { Button } from "@/components/ui/button"
-import { ImageOff, Loader2, Trash2, Upload } from "lucide-react"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { ImageOff } from "lucide-react"
 import { useToast } from "@/contexts/use-toast"
 import {
   deleteUserImage,
@@ -260,26 +260,88 @@ export function UserMediaHeader({
 
   return (
     <div className="relative">
-      {/* S04 (R4, DEC-240): faixa 21:9 (`aspect-[21/9]`), sem altura fixa. */}
-      <div className={`aspect-[21/9] overflow-hidden ${currentKey ? "bg-muted" : "bg-primary/10"}`}>
-        {currentKey ? (
-          <BannerImage
-            src={userImageUrl(userId, "banner", currentKey)}
-            alt={`Capa de ${userName}`}
-            crop={currentCrop}
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center gap-2 text-sm font-medium text-primary/70">
-            <ImageOff className="h-5 w-5" />
-            Sem capa
-          </div>
-        )}
-      </div>
+      {/* plan-v14 S05 (regra 5, decisão do dono): o clique na faixa abre a lista de opções, no
+          lugar dos chips visíveis de hoje. Os controles não somem: viram itens do menu, pelos
+          mesmos rótulos, mesmas rotas, mesma autorização — o menu só existe em modo de edição
+          (`canEdit`, o botão "Editar Perfil" de hoje), e a escrita continua sendo a autoridade
+          do servidor. S04 (R4, DEC-240): faixa 21:9 (`aspect-[21/9]`), sem altura fixa. */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild disabled={!canEdit}>
+          {canEdit ? (
+            <button
+              type="button"
+              aria-label="Opções da capa do perfil"
+              className="block w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <div className={`aspect-[21/9] overflow-hidden ${currentKey ? "bg-muted" : "bg-primary/10"}`}>
+                {currentKey ? (
+                  <BannerImage
+                    src={userImageUrl(userId, "banner", currentKey)}
+                    alt={`Capa de ${userName}`}
+                    crop={currentCrop}
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center gap-2 text-sm font-medium text-primary/70">
+                    <ImageOff className="h-5 w-5" />
+                    Sem capa
+                  </div>
+                )}
+              </div>
+            </button>
+          ) : (
+            <div className={`aspect-[21/9] overflow-hidden ${currentKey ? "bg-muted" : "bg-primary/10"}`}>
+              {currentKey ? (
+                <BannerImage
+                  src={userImageUrl(userId, "banner", currentKey)}
+                  alt={`Capa de ${userName}`}
+                  crop={currentCrop}
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center gap-2 text-sm font-medium text-primary/70">
+                  <ImageOff className="h-5 w-5" />
+                  Sem capa
+                </div>
+              )}
+            </div>
+          )}
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="bg-background/95">
+          <DropdownMenuItem onClick={() => inputRef.current?.click()} disabled={busy}>
+            Enviar capa
+          </DropdownMenuItem>
+          {currentKey && (
+            <DropdownMenuItem onClick={openEditor} disabled={busy}>
+              Recortar capa
+            </DropdownMenuItem>
+          )}
+          {currentKey && (
+            <DropdownMenuItem onClick={handleRemove} disabled={busy}>
+              {/* "Tirar" e nao "Remover": o cartao de foto do mesmo perfil ja tem o botao "Remover
+                  Foto Atual", e `getByRole` casa por substring (licao da 3.C). */}
+              Tirar capa
+            </DropdownMenuItem>
+          )}
+          <DropdownMenuItem onClick={() => avatarInputRef.current?.click()} disabled={busy}>
+            Enviar avatar
+          </DropdownMenuItem>
+          {currentAvatarKey && (
+            <DropdownMenuItem onClick={openAvatarEditor} disabled={busy}>
+              Recortar avatar
+            </DropdownMenuItem>
+          )}
+          {currentAvatarKey && (
+            <DropdownMenuItem onClick={handleRemoveAvatar} disabled={busy}>
+              Tirar avatar
+            </DropdownMenuItem>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
 
+      {/* Os inputs sr-only continuam: o campo `accept` e a rota de upload são os mesmos, e o
+          teste do V5-2d congela a aceitação por eles. Input cru, não o primitivo (mesmo motivo
+          do irmão de projeto: sr-only + w-full do primitivo estouravam a viewport). */}
       {canEdit && (
-        <div className="absolute right-3 top-3 z-10 flex flex-wrap items-center gap-2">
-          {/* Input cru (mesmo motivo do project-media-header): sr-only + w-full do
-              primitivo compunham um absoluto largo e estouravam a viewport. */}
+        <>
           <input
             ref={inputRef}
             type="file"
@@ -308,76 +370,7 @@ export function UserMediaHeader({
               openAvatarEditor()
             }}
           />
-          <Button
-            size="sm"
-            variant="secondary"
-            className="bg-background/90 backdrop-blur"
-            disabled={busy}
-            onClick={() => inputRef.current?.click()}
-          >
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-            Enviar capa
-          </Button>
-          {currentKey && (
-            <>
-              <Button
-                size="sm"
-                variant="secondary"
-                className="bg-background/90 backdrop-blur"
-                disabled={busy}
-                onClick={openEditor}
-              >
-                <CropIcon className="h-4 w-4" />
-                Recortar capa
-              </Button>
-              <Button
-                size="sm"
-                variant="secondary"
-                className="bg-background/90 backdrop-blur"
-                disabled={busy}
-                onClick={handleRemove}
-              >
-                <Trash2 className="h-4 w-4" />
-                {/* "Tirar" e nao "Remover": o cartao de foto do mesmo perfil ja tem o botao "Remover
-                    Foto Atual", e `getByRole` casa por substring (licao da 3.C). */}
-                Tirar capa
-              </Button>
-            </>
-          )}
-          <Button
-            size="sm"
-            variant="secondary"
-            className="bg-background/90 backdrop-blur"
-            disabled={busy}
-            onClick={() => avatarInputRef.current?.click()}
-          >
-            Enviar avatar
-          </Button>
-          {currentAvatarKey && (
-            <>
-              <Button
-                size="sm"
-                variant="secondary"
-                className="bg-background/90 backdrop-blur"
-                disabled={busy}
-                onClick={openAvatarEditor}
-              >
-                <CropIcon className="h-4 w-4" />
-                Recortar avatar
-              </Button>
-              <Button
-                size="sm"
-                variant="secondary"
-                className="bg-background/90 backdrop-blur"
-                disabled={busy}
-                onClick={handleRemoveAvatar}
-              >
-                <Trash2 className="h-4 w-4" />
-                Tirar avatar
-              </Button>
-            </>
-          )}
-        </div>
+        </>
       )}
 
       {editorOpen && (
@@ -419,12 +412,3 @@ export function UserMediaHeader({
   )
 }
 
-function CropIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className={className} aria-hidden="true">
-      <path d="M6 0v6H0" strokeLinecap="round" />
-      <path d="M18 24v-6h6" strokeLinecap="round" />
-      <rect x="3" y="6" width="15" height="12" rx="1" />
-    </svg>
-  )
-}

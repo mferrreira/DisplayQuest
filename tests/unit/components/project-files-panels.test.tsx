@@ -607,7 +607,9 @@ describe("cabeçalho de mídia do projeto", () => {
     mocks.project.bannerKey = "projects/7/images/banner/velha.png";
     renderHeader(true, { bannerKey: mocks.project.bannerKey }, { x: 0.5, y: 0.5, zoom: 2 });
 
-    await user.click(screen.getByRole("button", { name: "Recortar capa" }));
+    // plan-v14 S05 (regra 5): o controle virou item do menu aberto pelo clique da faixa.
+    await user.click(screen.getByRole("button", { name: "Opções da capa do projeto" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Recortar capa" }));
 
     const dialog = await screen.findByRole("dialog", { name: "Recorte da capa" });
     // Re-recorte = o ORIGINAL no bucket, com a chave como quebra de cache (encoded pelo seam).
@@ -681,7 +683,9 @@ describe("cabeçalho de mídia do projeto", () => {
     mocks.project.logoKey = "projects/7/images/logo/velho.png";
     renderHeader(true, { logoKey: mocks.project.logoKey }, null, { x: 0.9, y: 0.05, zoom: 3 });
 
-    await user.click(screen.getByRole("button", { name: "Recortar logo" }));
+    // plan-v14 S05: o clique no logo abre o menu do logo.
+    await user.click(screen.getByRole("button", { name: "Opções do logo do projeto" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Recortar logo" }));
 
     const dialog = await screen.findByRole("dialog", { name: "Recorte do logo" });
     // Re-recorte = o ORIGINAL no bucket, com a chave como quebra de cache.
@@ -751,7 +755,9 @@ describe("cabeçalho de mídia do projeto", () => {
     renderHeader(true, { bannerKey: mocks.project.bannerKey }, { x: 0.3, y: 0.6, zoom: 2 });
 
     await screen.findByRole("img", { name: "Capa do projeto Alpha" });
-    await user.click(screen.getByRole("button", { name: "Tirar capa" }));
+    // plan-v14 S05: o item do menu pelo mesmo rotulo.
+    await user.click(screen.getByRole("button", { name: "Opções da capa do projeto" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Tirar capa" }));
 
     await waitFor(() => expect(mocks.project.bannerKey).toBeNull());
     expect(mocks.removes).toEqual(["projects/7/images/banner/velha.png"]);
