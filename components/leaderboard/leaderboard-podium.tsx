@@ -2,9 +2,10 @@
 
 import Link from "next/link"
 import { Crown, Medal, Award } from "lucide-react"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { AvatarCrop } from "@/components/ui/avatar-crop"
 import { getRoleDisplayName } from "@/lib/utils/access-control"
 import { userImageUrl } from "@/lib/api/user-images"
+import type { BannerCropParams } from "@/backend/domain"
 
 /**
  * S07 (plan-v11, R7) — o pódio do quadro de liderança, extraído da página para ter aceite.
@@ -20,6 +21,9 @@ export interface PodiumEntry {
   value: number
   position: number
   avatar?: string | null
+  /** plan-v14 S02 (regra 2): chave do avatar no bucket + recorte quadrado (DEC-242). */
+  avatarKey?: string | null
+  avatarCrop?: BannerCropParams | null
   bannerKey?: string | null
   roles?: string[] | null
 }
@@ -59,10 +63,17 @@ export function LeaderboardPodium({ champion, runnersUp }: LeaderboardPodiumProp
           ) : null}
           <div className="relative flex flex-wrap items-center gap-4 p-5 sm:gap-6 sm:p-8">
             <Crown className="h-8 w-8 shrink-0 text-warning sm:h-10 sm:w-10" aria-hidden="true" />
-            <Avatar className="h-14 w-14 border-2 border-warning/50 sm:h-20 sm:w-20">
-              <AvatarImage src={champion.avatar || undefined} alt={champion.name} />
-              <AvatarFallback className="text-lg font-bold sm:text-xl">{getInitials(champion.name)}</AvatarFallback>
-            </Avatar>
+            {/* plan-v14 S02 (regra 2): o quadrado escolhido na fábrica do avatar sai pela peça
+                única com o recorte gravado; sem chave, o legado em disco de hoje. */}
+            <AvatarCrop
+              userId={champion.id}
+              avatarKey={champion.avatarKey}
+              crop={champion.avatarCrop}
+              legacyAvatar={champion.avatar}
+              name={champion.name}
+              className="h-14 w-14 border-2 border-warning/50 sm:h-20 sm:w-20"
+              fallback={getInitials(champion.name)}
+            />
             {/* `hyphens-auto`/`break-words`/`shrink-0` no bloco do número: medido em 390px no
                 fechamento de V6-11m — o bloco do campeão não muda com a extração. */}
             <div className="min-w-0 flex-1">
@@ -101,10 +112,15 @@ export function LeaderboardPodium({ champion, runnersUp }: LeaderboardPodiumProp
                 <span className={`text-3xl font-bold tabular-nums ${accent}`} aria-hidden="true">
                   {runnerUp.position}º
                 </span>
-                <Avatar className="h-12 w-12">
-                  <AvatarImage src={runnerUp.avatar || undefined} alt={runnerUp.name} />
-                  <AvatarFallback>{getInitials(runnerUp.name)}</AvatarFallback>
-                </Avatar>
+                <AvatarCrop
+                  userId={runnerUp.id}
+                  avatarKey={runnerUp.avatarKey}
+                  crop={runnerUp.avatarCrop}
+                  legacyAvatar={runnerUp.avatar}
+                  name={runnerUp.name}
+                  className="h-12 w-12"
+                  fallback={getInitials(runnerUp.name)}
+                />
                 <div className="min-w-0 flex-1">
                   <p className="flex items-center gap-1.5 truncate font-semibold text-foreground">
                     <Icon className={`h-4 w-4 shrink-0 ${accent}`} aria-hidden="true" />

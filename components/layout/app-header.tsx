@@ -14,11 +14,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { AvatarCrop } from "@/components/ui/avatar-crop"
 import { PointsCounter, PointsDelta } from "@/components/ui/points-delta"
 import { FloatingSessionTimer } from "@/components/ui/floating-session-timer"
 import { Menu, Trophy } from "lucide-react"
 import { getPrimaryRoleLabel } from "@/components/layout/nav-config"
+import { bannerCropFromColumns } from "@/backend/domain"
 
 /**
  * AppHeader — plan-v6 · V6-2 (RF-V6.3, DEC-106, AC-V6-08/09).
@@ -108,19 +109,21 @@ export function AppHeader({ sidebarOpen = true, onToggleSidebar, showSessionTime
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="gap-2">
-                  <Avatar className="h-6 w-6">
-                    <AvatarImage src={user?.avatar || undefined} alt={user?.name || ""} />
-                    <AvatarFallback className="text-xs">
-                      {user?.name
-                        ? user.name
-                            .split(" ")
-                            .map((namePart) => namePart[0])
-                            .join("")
-                            .toUpperCase()
-                            .slice(0, 2)
-                        : "U"}
-                    </AvatarFallback>
-                  </Avatar>
+                  {/* plan-v14 S02 (regra 2): o quadrado escolhido na fábrica do avatar sai pela
+                      peça única com o recorte gravado; sem chave, o legado em disco de hoje. */}
+                  <AvatarCrop
+                    userId={user?.id ?? 0}
+                    avatarKey={user?.avatarKey}
+                    crop={bannerCropFromColumns(user?.logoCropX, user?.logoCropY, user?.logoCropZoom)}
+                    legacyAvatar={user?.avatar}
+                    name={user?.name || ""}
+                    className="h-6 w-6"
+                    fallback={
+                      user?.name
+                        ? user.name.split(" ").map((namePart) => namePart[0]).join("").toUpperCase().slice(0, 2)
+                        : "U"
+                    }
+                  />
                   <span className="max-w-32 truncate">{user?.name}</span>
                 </Button>
               </DropdownMenuTrigger>

@@ -19,7 +19,7 @@ import { useRouter } from "next/navigation"
 import { Award, Crown, Medal, Trophy } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { useUser } from "@/contexts/user-context"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { AvatarCrop } from "@/components/ui/avatar-crop"
 import { Button } from "@/components/ui/button"
 import { getRoleDisplayName } from "@/lib/utils/access-control"
 import { PageHeader } from "@/components/ui/page-header"
@@ -62,6 +62,11 @@ interface BoardEntry {
   bannerCropX?: number | null;
   bannerCropY?: number | null;
   bannerCropZoom?: number | null;
+  /** plan-v14 S02 (regra 2): chave do avatar no bucket + recorte quadrado (DEC-242). */
+  avatarKey?: string | null;
+  logoCropX?: number | null;
+  logoCropY?: number | null;
+  logoCropZoom?: number | null;
   roles?: string[];
   completedTasks?: number;
 }
@@ -184,6 +189,10 @@ export default function LeaderboardPage() {
           bannerCropX: account?.bannerCropX,
           bannerCropY: account?.bannerCropY,
           bannerCropZoom: account?.bannerCropZoom,
+          avatarKey: account?.avatarKey,
+          logoCropX: account?.logoCropX,
+          logoCropY: account?.logoCropY,
+          logoCropZoom: account?.logoCropZoom,
           roles: account?.roles,
           completedTasks: account?.completedTasks,
         }
@@ -198,6 +207,10 @@ export default function LeaderboardPage() {
         bannerCropX: rankedUser.bannerCropX,
         bannerCropY: rankedUser.bannerCropY,
         bannerCropZoom: rankedUser.bannerCropZoom,
+        avatarKey: rankedUser.avatarKey,
+        logoCropX: rankedUser.logoCropX,
+        logoCropY: rankedUser.logoCropY,
+        logoCropZoom: rankedUser.logoCropZoom,
         roles: rankedUser.roles,
         completedTasks: rankedUser.completedTasks,
       }))
@@ -398,10 +411,16 @@ export default function LeaderboardPage() {
                     ) : null}
                     <div className="relative flex flex-wrap items-center gap-6 p-8">
                       <Crown className="h-10 w-10 shrink-0 text-warning" aria-hidden="true" />
-                      <Avatar className="h-20 w-20 border-2 border-warning/50">
-                        <AvatarImage src={champion.avatar || undefined} alt={champion.name} />
-                        <AvatarFallback className="text-xl font-bold">{getInitials(champion.name)}</AvatarFallback>
-                      </Avatar>
+                      {/* plan-v14 S02 (regra 2): avatar pela peça única com o recorte quadrado. */}
+                      <AvatarCrop
+                        userId={champion.id}
+                        avatarKey={champion.avatarKey}
+                        crop={bannerCropFromColumns(champion.logoCropX, champion.logoCropY, champion.logoCropZoom)}
+                        legacyAvatar={champion.avatar}
+                        name={champion.name}
+                        className="h-20 w-20 border-2 border-warning/50"
+                        fallback={getInitials(champion.name)}
+                      />
                       <div className="min-w-0 flex-1">
                         <p className="text-xs font-semibold uppercase tracking-wide text-warning">1º lugar</p>
                         <p className="truncate text-2xl font-bold text-foreground">{champion.name}</p>
@@ -437,10 +456,15 @@ export default function LeaderboardPage() {
                         <span className={`text-3xl font-bold tabular-nums ${accent}`} aria-hidden="true">
                           {runnerUp.position}º
                         </span>
-                        <Avatar className="h-12 w-12">
-                          <AvatarImage src={runnerUp.avatar || undefined} alt={runnerUp.name} />
-                          <AvatarFallback>{getInitials(runnerUp.name)}</AvatarFallback>
-                        </Avatar>
+                        <AvatarCrop
+                          userId={runnerUp.id}
+                          avatarKey={runnerUp.avatarKey}
+                          crop={bannerCropFromColumns(runnerUp.logoCropX, runnerUp.logoCropY, runnerUp.logoCropZoom)}
+                          legacyAvatar={runnerUp.avatar}
+                          name={runnerUp.name}
+                          className="h-12 w-12"
+                          fallback={getInitials(runnerUp.name)}
+                        />
                         <div className="min-w-0 flex-1">
                           <p className="flex items-center gap-1.5 truncate font-semibold text-foreground">
                             <Icon className={`h-4 w-4 shrink-0 ${accent}`} aria-hidden="true" />
@@ -491,10 +515,15 @@ export default function LeaderboardPage() {
                             href={`/dashboard/profile?userId=${rankedUser.id}`}
                             className="flex items-center gap-3 rounded-lg p-1 transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                           >
-                            <Avatar className="h-9 w-9">
-                              <AvatarImage src={rankedUser.avatar || undefined} alt={rankedUser.name} />
-                              <AvatarFallback>{getInitials(rankedUser.name)}</AvatarFallback>
-                            </Avatar>
+                            <AvatarCrop
+                              userId={rankedUser.id}
+                              avatarKey={rankedUser.avatarKey}
+                              crop={bannerCropFromColumns(rankedUser.logoCropX, rankedUser.logoCropY, rankedUser.logoCropZoom)}
+                              legacyAvatar={rankedUser.avatar}
+                              name={rankedUser.name}
+                              className="h-9 w-9"
+                              fallback={getInitials(rankedUser.name)}
+                            />
                             <div>
                               <p className="font-medium">{rankedUser.name}</p>
                               <p className="text-xs text-muted-foreground">{getRoleLabel(rankedUser.roles || [])}</p>

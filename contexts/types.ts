@@ -113,6 +113,11 @@ export interface ProjectMember {
     name: string
     email: string
     avatar?: string | null
+    /** plan-v14 S02 (regra 2): chave do avatar no bucket + recorte quadrado (DEC-242). */
+    avatarKey?: string | null
+    logoCropX?: number | null
+    logoCropY?: number | null
+    logoCropZoom?: number | null
   } | null
 }
 

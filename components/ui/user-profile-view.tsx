@@ -8,7 +8,7 @@
  * O que a tela mostra nao muda: os dados de pessoa abertos (V5-4a/DEC-138) seguem em "Dados para os
  * documentos", e o CPF continua fora — este componente nao recebe o CPF pela lista.
  */
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { AvatarCrop } from "@/components/ui/avatar-crop"
 import { BannerImage } from "@/components/ui/banner-image"
 import { userImageUrl } from "@/lib/api/user-images"
 import { Button } from "@/components/ui/button"
@@ -154,10 +154,17 @@ export function UserProfileView({ user, onBack, canEdit = false, onEdit, project
               </div>
             )}
           </div>
-          <Avatar className="absolute bottom-0 left-6 h-24 w-24 translate-y-1/3 border-4 border-background bg-background sm:h-28 sm:w-28">
-            <AvatarImage src={user.avatar || undefined} alt={user.name} />
-            <AvatarFallback className="text-2xl font-bold">{getInitials(user.name)}</AvatarFallback>
-          </Avatar>
+          {/* plan-v14 S02 (regra 2): o quadrado escolhido na fábrica do avatar sai pela peça
+              única com o recorte gravado; sem chave, o legado em disco de hoje. */}
+          <AvatarCrop
+            userId={user.id}
+            avatarKey={user.avatarKey}
+            crop={bannerCropFromColumns(user.logoCropX, user.logoCropY, user.logoCropZoom)}
+            legacyAvatar={user.avatar}
+            name={user.name}
+            className="absolute bottom-0 left-6 h-24 w-24 translate-y-1/3 border-4 border-background bg-background sm:h-28 sm:w-28"
+            fallback={getInitials(user.name)}
+          />
         </div>
 
         <div className="flex flex-col gap-3 px-6 pb-6 pt-16 sm:flex-row sm:items-end sm:justify-between sm:px-8">

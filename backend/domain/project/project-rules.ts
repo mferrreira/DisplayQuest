@@ -315,6 +315,12 @@ export interface MembershipRow extends MemberProfileFields {
   userId: number;
   userName: string | null;
   userEmail: string | null;
+  /** plan-v14 S02 (regra 2): chave do avatar no bucket + recorte quadrado (DEC-242). */
+  avatar?: string | null;
+  avatarKey?: string | null;
+  logoCropX?: number | null;
+  logoCropY?: number | null;
+  logoCropZoom?: number | null;
   roles: Role[];
   joinedAt: Date;
 }
@@ -324,6 +330,11 @@ export interface ProjectMemberViewOutput extends MemberProfileFields {
   userId: number;
   userName: string | null;
   userEmail: string | null;
+  avatar?: string | null;
+  avatarKey?: string | null;
+  logoCropX?: number | null;
+  logoCropY?: number | null;
+  logoCropZoom?: number | null;
   roles: Role[];
   joinedAt: string;
   totalHours: number;
@@ -340,6 +351,11 @@ export function toMemberView(
     userId: member.userId,
     userName: member.userName,
     userEmail: member.userEmail,
+    avatar: member.avatar,
+    avatarKey: member.avatarKey,
+    logoCropX: member.logoCropX,
+    logoCropY: member.logoCropY,
+    logoCropZoom: member.logoCropZoom,
     roles: member.roles,
     joinedAt: member.joinedAt.toISOString(),
     totalHours: roundHours(totalSeconds),
@@ -362,6 +378,11 @@ export interface VolunteerMemberInput {
     name?: string | null;
     email?: string | null;
     avatar?: string | null;
+    /** plan-v14 S02 (regra 2): chave do avatar no bucket + recorte quadrado (DEC-242). */
+    avatarKey?: string | null;
+    logoCropX?: number | null;
+    logoCropY?: number | null;
+    logoCropZoom?: number | null;
     points?: number;
     completedTasks?: number;
   } | null;
@@ -372,6 +393,10 @@ export interface VolunteerEntryOutput {
   name: string;
   email: string;
   avatar: string | null | undefined;
+  avatarKey: string | null | undefined;
+  logoCropX: number | null | undefined;
+  logoCropY: number | null | undefined;
+  logoCropZoom: number | null | undefined;
   role: string;
   joinedAt: Date;
   hoursWorked: number;
@@ -394,6 +419,10 @@ export function toVolunteerEntry(
     name: member.user?.name || "Usuário",
     email: member.user?.email || "",
     avatar: member.user?.avatar,
+    avatarKey: member.user?.avatarKey,
+    logoCropX: member.user?.logoCropX,
+    logoCropY: member.user?.logoCropY,
+    logoCropZoom: member.user?.logoCropZoom,
     role: member.roles?.[0] || "VOLUNTARIO",
     joinedAt: member.joinedAt,
     hoursWorked: roundHours(totalSeconds),

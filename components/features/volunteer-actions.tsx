@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { AvatarCrop } from "@/components/ui/avatar-crop"
+import { bannerCropFromColumns } from "@/backend/domain"
 import { 
   UserPlus, 
   UserMinus, 
@@ -26,7 +27,12 @@ interface User {
   id: number
   name: string
   email: string
-  avatar?: string
+  avatar?: string | null
+  /** plan-v14 S02 (regra 2): chave do avatar no bucket + recorte quadrado (DEC-242). */
+  avatarKey?: string | null
+  logoCropX?: number | null
+  logoCropY?: number | null
+  logoCropZoom?: number | null
   roles: string[]
   isMember: boolean
   isLeader: boolean
@@ -63,6 +69,11 @@ export function VolunteerActions({ projectId, onVolunteerAdded, onVolunteerRemov
           id: member.userId,
           name: member.userName || "Usuário",
           email: member.userEmail || "",
+          avatar: member.avatar,
+          avatarKey: member.avatarKey,
+          logoCropX: member.logoCropX,
+          logoCropY: member.logoCropY,
+          logoCropZoom: member.logoCropZoom,
           roles: member.roles || [],
           isMember: true,
           isLeader: currentProject.leaderId === member.userId,
@@ -103,6 +114,10 @@ export function VolunteerActions({ projectId, onVolunteerAdded, onVolunteerRemov
         name: user.name,
         email: user.email,
         avatar: user.avatar,
+        avatarKey: user.avatarKey,
+        logoCropX: user.logoCropX,
+        logoCropY: user.logoCropY,
+        logoCropZoom: user.logoCropZoom,
         roles: user.roles || [],
         isMember: false,
         isLeader: currentProject.leaderId === user.id
@@ -249,12 +264,17 @@ export function VolunteerActions({ projectId, onVolunteerAdded, onVolunteerRemov
                       }`}
                       onClick={() => setSelectedUser(user)}
                     >
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={user.avatar} />
-                        <AvatarFallback>
-                          {user.name.split(' ').map((n: string) => n[0]).join('')}
-                        </AvatarFallback>
-                      </Avatar>
+                      {/* plan-v14 S02 (regra 2): o quadrado escolhido na fábrica do avatar sai
+                          pela peça única com o recorte gravado; sem chave, o legado em disco. */}
+                      <AvatarCrop
+                        userId={user.id}
+                        avatarKey={user.avatarKey}
+                        crop={bannerCropFromColumns(user.logoCropX, user.logoCropY, user.logoCropZoom)}
+                        legacyAvatar={user.avatar}
+                        name={user.name}
+                        className="h-8 w-8"
+                        fallback={user.name.split(' ').map((n: string) => n[0]).join('')}
+                      />
                       <div className="flex-1">
                         <p className="font-medium">{user.name}</p>
                         <p className="text-sm text-muted-foreground">{user.email}</p>
@@ -334,12 +354,15 @@ export function VolunteerActions({ projectId, onVolunteerAdded, onVolunteerRemov
                     className="flex items-center justify-between p-3 rounded-lg border"
                   >
                     <div className="flex items-center gap-3">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={member.avatar || undefined} />
-                        <AvatarFallback>
-                          {member.name.split(' ').map((n: string) => n[0]).join('')}
-                        </AvatarFallback>
-                      </Avatar>
+                      <AvatarCrop
+                        userId={member.id}
+                        avatarKey={member.avatarKey}
+                        crop={bannerCropFromColumns(member.logoCropX, member.logoCropY, member.logoCropZoom)}
+                        legacyAvatar={member.avatar}
+                        name={member.name}
+                        className="h-8 w-8"
+                        fallback={member.name.split(' ').map((n: string) => n[0]).join('')}
+                      />
                       <div>
                         <p className="font-medium">{member.name}</p>
                         <p className="text-sm text-muted-foreground">{member.email}</p>
@@ -387,12 +410,15 @@ export function VolunteerActions({ projectId, onVolunteerAdded, onVolunteerRemov
                 className="flex items-center justify-between p-3 rounded-lg border"
               >
                 <div className="flex items-center gap-3">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={member.avatar || undefined} />
-                    <AvatarFallback>
-                      {member.name.split(' ').map((n: string) => n[0]).join('')}
-                    </AvatarFallback>
-                  </Avatar>
+                  <AvatarCrop
+                    userId={member.id}
+                    avatarKey={member.avatarKey}
+                    crop={bannerCropFromColumns(member.logoCropX, member.logoCropY, member.logoCropZoom)}
+                    legacyAvatar={member.avatar}
+                    name={member.name}
+                    className="h-8 w-8"
+                    fallback={member.name.split(' ').map((n: string) => n[0]).join('')}
+                  />
                   <div>
                     <p className="font-medium">{member.name}</p>
                     <p className="text-sm text-muted-foreground">{member.email}</p>

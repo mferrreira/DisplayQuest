@@ -35,7 +35,20 @@ export function createPrismaProjectManagementMembershipRepository(): ProjectMana
         where: { projectId },
         include: {
           user: {
-            select: { id: true, name: true, email: true, avatar: true, points: true, completedTasks: true },
+            // plan-v14 S02 (regra 2): as colunas do avatar recortado viajam com a lista — é ela
+            // que o cartão de voluntário renderiza pela peça única.
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              avatar: true,
+              avatarKey: true,
+              logoCropX: true,
+              logoCropY: true,
+              logoCropZoom: true,
+              points: true,
+              completedTasks: true,
+            },
           },
         },
         orderBy: { joinedAt: "asc" },

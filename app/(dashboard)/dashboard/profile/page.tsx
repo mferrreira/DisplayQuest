@@ -29,7 +29,7 @@ import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { AvatarCrop } from "@/components/ui/avatar-crop"
 import { UserBadges } from "@/components/ui/user-badges"
 import { TimerCard } from "@/components/ui/timer-card"
 import { getRoleDisplayName } from "@/lib/utils/access-control"
@@ -252,10 +252,17 @@ function ProfilePageContent() {
                   )
                 }
               />
-              <Avatar className="absolute bottom-0 left-6 h-24 w-24 translate-y-1/3 border-4 border-background bg-background sm:h-28 sm:w-28">
-                <AvatarImage src={user.avatar || undefined} alt={user.name} />
-                <AvatarFallback className="text-2xl font-bold">{initials}</AvatarFallback>
-              </Avatar>
+              {/* plan-v14 S02 (regra 2): o quadrado escolhido na fábrica do avatar sai pela peça
+                  única com o recorte gravado; sem chave, o legado em disco de hoje. */}
+              <AvatarCrop
+                userId={user.id}
+                avatarKey={user.avatarKey}
+                crop={bannerCropFromColumns(user.logoCropX, user.logoCropY, user.logoCropZoom)}
+                legacyAvatar={user.avatar}
+                name={user.name}
+                className="absolute bottom-0 left-6 h-24 w-24 translate-y-1/3 border-4 border-background sm:h-28 sm:w-28"
+                fallback={initials}
+              />
             </div>
 
             <div className="flex flex-col gap-3 px-6 pb-6 pt-16 sm:flex-row sm:items-end sm:justify-between sm:px-8">
