@@ -7,6 +7,8 @@
  * to this folder as pure rules in OND6-B2, reading data through a port instead of a repository.
  */
 
+import type { BadgeCriteriaV2 } from "@/backend/domain/gamification/metric-registry";
+
 export type BadgeCategory = "achievement" | "milestone" | "special" | "social";
 
 export interface BadgeCriteria {
@@ -19,6 +21,9 @@ export interface BadgeCriteria {
   specialCondition?: string;
 }
 
+/** Todo `criteria` que chega do JSON da tabela: as duas gerações do formato. */
+export type BadgeCriteriaJson = BadgeCriteria | BadgeCriteriaV2 | null | undefined;
+
 export interface Badge {
   id?: number;
   name: string;
@@ -26,7 +31,7 @@ export interface Badge {
   icon?: string | null | undefined;
   color?: string | null | undefined;
   category: BadgeCategory;
-  criteria?: BadgeCriteria | null;
+  criteria?: BadgeCriteria | BadgeCriteriaV2 | null;
   isActive: boolean;
   createdAt?: Date;
   createdBy: number;

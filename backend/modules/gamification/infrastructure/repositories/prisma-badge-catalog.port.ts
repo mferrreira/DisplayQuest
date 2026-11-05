@@ -1,7 +1,7 @@
 import { Prisma } from "@prisma/client"
 import type { badges } from "@prisma/client"
 import { prisma } from "@/lib/database/prisma"
-import type { Badge, BadgeCategory, BadgeCriteria } from "@/backend/domain"
+import type { Badge, BadgeCategory, BadgeCriteria, BadgeCriteriaJson, BadgeCriteriaV2 } from "@/backend/domain"
 import type { BadgeCatalogPort } from "@/backend/modules/gamification/application/ports/badge-catalog.port"
 
 /**
@@ -19,14 +19,14 @@ function toBadge(row: badges): Badge {
     icon: row.icon,
     color: row.color,
     category: row.category as BadgeCategory,
-    criteria: (row.criteria as BadgeCriteria | null) ?? null,
+    criteria: (row.criteria as BadgeCriteriaJson) ?? null,
     isActive: row.isActive,
     createdAt: row.createdAt,
     createdBy: row.createdBy,
   }
 }
 
-function criteriaForWrite(criteria: BadgeCriteria | null | undefined): Prisma.InputJsonValue {
+function criteriaForWrite(criteria: BadgeCriteria | BadgeCriteriaV2 | null | undefined): Prisma.InputJsonValue {
   return criteria == null ? (Prisma.JsonNull as unknown as Prisma.InputJsonValue) : (criteria as Prisma.InputJsonValue)
 }
 

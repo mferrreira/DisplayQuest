@@ -60,6 +60,17 @@ export class EvaluateUserBadgesUseCase {
       maxConsecutiveDays: maxConsecutiveDaysFrom(dailyDates),
     }
 
+    // plan-v15 S01: as métricas do registro medidos pelas MESMAS portas. O motor v2 lê
+    // só ids do registro; métrica sem fonte medida fica ausente e nunca concede.
+    const metricValues = {
+      tasks_completed: user.completedTasks,
+      points: user.points,
+      projects_joined: projectsCount,
+      work_sessions: workSessionsCount,
+      weekly_hours_avg: averageWeeklyHoursFrom(weeklySamples),
+      streak_days: maxConsecutiveDaysFrom(dailyDates),
+    }
+
     const toAward = selectBadgesToAward({
       badges: activeBadges,
       earnedBadgeIds,
@@ -68,6 +79,7 @@ export class EvaluateUserBadgesUseCase {
       roles: user.roles,
       weekHours: user.weekHours,
       allUsers,
+      metricValues,
     })
 
     const awarded: Badge[] = []
