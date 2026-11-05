@@ -360,8 +360,9 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   DEC-61..64 e colidiu; os 28 comentários de código foram renumerados. **Antes de abrir decisão nova,
   `grep` os `STATE.json` em `$PLANOS/` (clean-arch e plan-v3..plan-v8). O plan-v8 foi revertido, mas
   os DEC-211..223 dele seguem reservados no arquivo. **Atualizado em 2026-11-05:** DEC-224 (donos),
-  DEC-226 plan-v9, DEC-232..236 plan-v10, DEC-240 plan-v12, DEC-242 em uso — o plan-v15 não criou
-  DEC. **Próxima livre: DEC-243.**
+  DEC-226 plan-v9, DEC-232..236 plan-v10, DEC-240 plan-v12, DEC-242 em uso, **DEC-243 plan-v16**
+  (ícone de badge no bucket pelo desenho de capa, conversão a WebP obrigatória na escrita, fonte
+  Lucide ISC). **Próxima livre: DEC-244.**
 - **Subtask (V4-4, DEC-78..83 → regra atual = DEC-97/98/189/224):** tabela `task_subtasks` (sem FK para
   `users` — subtask não tem
   responsável próprio), base gravada em `tasks.points` = `10 + 10·n` (DEC-97 baixou a 5; o dono restaurou
@@ -1210,3 +1211,38 @@ leitura do texto visível. São observações medidas na instância real, **não
   casa IDs exatos) e `loja-participante` recapturadas com catálogo instalado na instância e a
   conta gerente com passiva equipada. Guia: capítulos 7/8/9 documentam desconto, bloco Badges
   e picker.
+
+## plan-v16 — ícones de badge no bucket (2026-11-05, DEC-243)
+
+- **Estado:** `fechado` em 2026-11-05, 6 fatias (S01..S06), plano em
+  `~/Projetos/displayquest-planos/plans/plan-v16-badges-icones/`. DEC-243: o ícone do badge entra
+  no bucket pelo desenho das capas de projeto/perfil (DEC-135/133), com conversão a WebP obrigatória
+  na escrita e fonte Lucide (ISC) nos arquivos do catálogo.
+- **Modelo:** `badges.iconKey` guarda a **chave** (`badges/<id>/<uuid>.webp`); o binário sai por
+  `GET /api/badges/[id]/icon/file` (autenticada, `Cache-Control: private, max-age=86400`), e as telas
+  montam `?v=<chave>` como quebra de cache. Chave nula → 404 "Ícone não encontrado".
+- **Escrita:** `PUT /api/badges/[id]/icon` — o gate `MANAGE_REWARDS` ("Sem permissão para atualizar
+  badges") corre **antes** de ler o multipart e antes do lookup do badge (par 403-antes-do-404 medido,
+  como nas capas). Só imagem passa (allowlist + magic bytes + 5 MB); o objeto gravado é o byte
+  **convertido** (`ImageProcessor.toWebP`), nunca o `.png` do upload. Trocar apaga o objeto velho só
+  depois de o registro apontar para o novo; falha do registro remove o objeto novo. `DELETE` remove o
+  objeto e zera a coluna.
+- **UI:** botão **Enviar ícone** em cada cartão do `badge-manager`; cartões do painel e chips do
+  perfil mostram `<img>` quando há chave, com fallback ao ícone de categoria quando não. A recusa da
+  rota chega como `role="alert"` na tela. `BadgesAPI.uploadIcon/removeIcon` no api-client.
+- **Catálogo de imagens:** `assets/badge-icons/` — 31 SVGs Lucide (ISC) + 50 WebP (128×128, na cor
+  do próprio badge) + `manifest.json` com o pareamento slug→token→cor→arquivo. A guarda
+  `tests/unit/scripts/badge-icons-manifest.test.ts` congela manifest ↔ `cataloga-badges.sql`. Renomes
+  medidos na fonte Lucide v1.69.0: check-circle→circle-check, play→circle-play, bar-chart→chart-column,
+  alert-triangle→triangle-alert, check-square→square-check, plus-circle→circle-plus. Baixa-se do
+  pacote `lucide-static` (o repo `icons/` e o `lucide` npm não têm os SVGs renomeados).
+- **Script:** `scripts/apply-badge-icons.mjs` (`npm run db:badge-icons`, anexado ao `db:test:setup`):
+  `--check` valida manifest/arquivos sem tocar banco nem bucket, `--render` desenha os 50 WebP, apply
+  sobe cada WebP ao bucket com chave determinística `badges/<id>/icon.webp` e escreve `iconKey` na linha
+  do slug — pula badge que já tem chave (re-run não duplica objeto). Prisma/S3/sharp por import
+  dinâmico: `node scripts/apply-badge-icons.mjs --check` roda em node puro, e o tsx **não** resolve
+  import de `.ts` (a seam S3) a partir de `.mjs` — o apply usa `@aws-sdk/client-s3` direto com os
+  mesmos envs `S3_*` da seam.
+- **Capturas G6:** `admin-badges` (nova entrada no script, aba Badges, verificação "Gerenciar Badges")
+  e `perfil-badges` recapturadas com o catálogo de ícones aplicado (5432 e 5433). Guia: capítulo 9
+  documenta a aba Badges e o botão "Enviar ícone"; capítulo 8 descreve o ícone nos cartões.

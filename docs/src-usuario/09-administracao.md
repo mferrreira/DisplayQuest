@@ -45,7 +45,7 @@ A aba **Horas** é a leitura consolidada do tempo registrado. As colunas são **
 | **Conclusões** | a fila global de solicitações de conclusão de atividades, de todos os projetos (aba *Conclusões* abaixo) |
 | **Voluntários** | gerenciar a equipe de cada projeto — adicionar e remover pessoas (seção *A aba Voluntários* abaixo) |
 | **Notificações** | enviar aviso para uma pessoa ou para o laboratório |
-| **Badges** | criar e editar distintivos: **Nome**, **Descrição**, **Categoria** e as condições de conquista — cada cláusula é **Métrica do critério** + **Valor do critério** |
+| **Badges** | criar e editar distintivos: **Nome**, **Descrição**, **Categoria** e as condições de conquista — cada cláusula é **Métrica do critério** + **Valor do critério**; **Enviar ícone** em cada cartão (seção *A aba Badges* abaixo) |
 
 ## A aba Voluntários
 
@@ -66,6 +66,14 @@ Sem solicitação pendente, a aba diz *"Nenhuma conclusão solicitada"*.
 ```
 
 **Aprovar** conclui a atividade e distribui o prêmio entre os membros ativos do projeto. **Gerente** não aprova a solicitação que ele mesmo fez; **Coordenador** aprova. A linha sai da fila depois de aprovada. A aba é só a fila: o pedido de conclusão continua no cronograma da página do projeto, onde a linha da atividade é marcada.
+
+## A aba Badges
+
+O catálogo de distintivos vive nesta aba: criar e editar **Nome**, **Descrição**, **Categoria** e as cláusulas de conquista. Cada cartão traz o ícone do distintivo, o nome, a categoria e, abaixo da descrição, o botão **Enviar ícone** — escolha um arquivo `.png` ou `.webp`, e a imagem passa a aparecer no cartão e nos cartões do bloco Badges do perfil, na cor do distintivo. Enviar de novo troca a imagem; a anterior é apagada. Só a gestão de badges envia, e a recusa chega como aviso na tela.
+
+```foto admin-badges titulo="A aba Badges com o ícone nos cartões"
+Cada cartão mostra o ícone, o nome, a categoria e o botão **Enviar ícone** sob a descrição.
+```
 
 ## Sessões e semana
 

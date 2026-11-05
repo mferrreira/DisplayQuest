@@ -183,6 +183,7 @@ const INTERACTIONS = [
   // plan-v12 (DEC-238): a aba Conclusões do Painel Administrativo — a fila global de solicitações
   // de conclusão de atividade, criada na S01. Leitura pura: nenhum clique aprova.
   { id: "admin-conclusoes", role: "coord", route: "/dashboard/admin", aba: "Conclusões", verifica: "Conclusões solicitadas" },
+  { id: "admin-badges", role: "coord", route: "/dashboard/admin", aba: "Badges", verifica: "Gerenciar Badges" },
   // plan-v12 (DEC-240): a faixa 21:9 do detalhe do projeto. Sem clique. A verificação é do
   // card permanente da Visão geral, e o rolar leva o gatilho da faixa ao campo de visão.
   { id: "faixa-capa-projeto", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: 'a[aria-label="Ver projeto Pesquisa em IA"]' }, projetoTab: "Visão geral", verifica: "Dados do projeto", rolarAte: 'button[aria-label="Opções da capa do projeto"]' },
