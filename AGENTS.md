@@ -1164,3 +1164,47 @@ leitura do texto visível. São observações medidas na instância real, **não
   fila de oito fatias. A numeração DEC continua a partir do plan-v9 (DEC-232), sem reiniciar.
 - **Migração:** `20261028181000_add_work_session_original_start` adiciona coluna nullable sem
   backfill. Integrações G4 rodam somente contra `dq-dev-test-db` em 5433, nunca 5432.
+
+## plan-v15 — gamificação remodelada: engine v2, passivas e catálogo (2026-11-05)
+
+- **Estado:** `fechado` em 2026-11-05 (commit `2bd20cf`), 12/12 fatias, plano em
+  `$PLANOS/plans/plan-v15-badges/` (MODELO.md, queue.json, journal.ndjson, HANDOFF.md).
+  Nenhuma decisão nova — o plano usa as DEC existentes (DEC-39/54/74 citadas).
+- **Engine v2:** `criteria` versionado `{version: 2, clauses: [{metric, op: ">=", value}]}`
+  (formato exato — cláusula com `metricId`/`gte` não é reconhecida, medido em roundtrip).
+  Registro de 35 métricas em `backend/domain/gamification/metric-registry.ts`; métricas
+  extras são medidas sob demanda só quando algum criteria ativo pede. Picker de cláusulas no
+  Painel Administrativo (`badge-manager.tsx`); métrica fora do registro é recusada pela rota.
+- **Progresso X de Y:** `backend/domain/gamification/progress-rules.ts` (min-ratio por cláusula,
+  nunca média; X cap no alvo), `ListBadgeProgressUseCase` no módulo, `GET /api/user-badges`
+  devolve `progress`, chips sob o rótulo "Em progresso" no bloco Badges do perfil.
+- **Passivas:** `BadgeEffect` `{kind: bonus|penaltyReduction, pct}`; 3 slots
+  (`EQUIP_SLOT_MAX=3`), frases congeladas "Slots de passiva cheios" (409) e "Badge sem
+  passiva não é equipável" (400); só a própria pessoa equipar. Passiva vale na premiação de
+  tarefa/atividade (+bonus cap +100%, penaltyReduction no atraso), no placar do mês e no preço
+  da loja: `applyStoreDiscount(price, effects) = max(1, round(price*(1-min(bonusSum,1))))`
+  (piso 1; a elegibilidade da compra continua medindo o preço da tabela — par medido).
+  `StorePrice` mostra o efetivo em destaque com `de {tabela}` riscado.
+- **Catálogo:** `prisma/cataloga-badges.sql` com os 50 badges, `INSERT ... ON CONFLICT (slug)
+  DO NOTHING` (idempotente; `createdBy` vem do primeiro COORDENADOR, coluna `createdBy` é
+  nullable pela migration `20261105160000_badge_created_by_nullable`). `npm run
+  db:catalogo-badges` (`scripts/apply-catalog-badges.mjs`), anexado ao `db:test:setup` e ao
+  `scripts/db-safe-deploy.sh`. **Gotchas medidos:** colunas camelCase precisam de aspas no
+  INSERT (`"isActive"`, `"createdBy"` — sem aspas o Postgres dobra para minúsculas e recusa);
+  comentário de cabeçalho com `;` exige strip das linhas `--` ANTES de split por `;`.
+- **Gatilhos R4:** cada módulo consumidor recebe porta local `recompute?: {recompute(userId)}`
+  default no-op; o composition root injeta `badgeRecompute` que envolve
+  `gamification.evaluateUserBadges` em try/catch com `console.error`. Episódio→pessoa:
+  compra→comprador, atestado→membro, relatório semanal/técnico→autor/membros ativos,
+  issue resolvido→`assigneeId` (não o resolvedor; issue sem responsável não dispara), evento
+  de lab→autor, responsabilidade finalizada→`userId` da linha, subtask CONCLUÍDA→marcador
+  (desmarcar não dispara), campo de perfil→pessoa, fechamento de mês→cada pessoa da linha
+  (depois do writeClose; cron com `systemActor` como DEC-54).
+- **Gate medido no fechamento:** suíte completa **285 arquivos / 2843 testes** verdes com
+  `DATABASE_URL` na 5433; `tsc` 0, lint sem erro, `arch:check` sem violação.
+  `tests/unit/api/monthly-board-close-route.test.ts` precisa de stubs de `users`/`badges` no
+  mock do módulo de gamificação porque o fechamento roda evaluate sobre as linhas escritas.
+- **Capturas G6:** `perfil-badges` (nova entrada em `scripts/capture-user-guide.mjs`, `--only`
+  casa IDs exatos) e `loja-participante` recapturadas com catálogo instalado na instância e a
+  conta gerente com passiva equipada. Guia: capítulos 7/8/9 documentam desconto, bloco Badges
+  e picker.
