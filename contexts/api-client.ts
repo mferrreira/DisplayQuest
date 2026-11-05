@@ -613,6 +613,13 @@ export const BadgesAPI = {
       : `/api/user-badges?userId=${userId}`
     return fetchAPI<{ badges: any[]; recentBadges: any[]; count: number }>(url)
   },
+
+  // plan-v15 S04 (R9): equipar/desequipar a passiva de um badge conquistado.
+  equip: (userId: number, badgeId: number, equipped: boolean) =>
+    fetchAPI<{ userBadge: any }>(`/api/user-badges/${userId}/${badgeId}/equip`, {
+      method: "POST",
+      body: JSON.stringify({ equipped }),
+    }),
 }
 
 // API de Perfis de Usuário

@@ -128,6 +128,14 @@ function makeFakes() {
       const idx = this.store.findIndex((ub) => ub.id === id);
       if (idx !== -1) this.store.splice(idx, 1);
     },
+    async countEquippedByUserId(userId) {
+      return this.store.filter((ub) => ub.userId === userId && ub.equipped === true).length;
+    },
+    async setEquipped(id, equipped) {
+      const ub = this.store.find((u) => u.id === id)!;
+      ub.equipped = equipped;
+      return { ...ub };
+    },
   };
 
   const stats: UserStatsPort & {

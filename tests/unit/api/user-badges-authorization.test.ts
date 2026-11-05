@@ -99,6 +99,15 @@ vi.mock("@/backend/composition/root", () => {
       const index = mocks.userBadges.findIndex((ub) => ub.id === id);
       if (index !== -1) mocks.userBadges.splice(index, 1);
     },
+    async countEquippedByUserId(userId) {
+      return mocks.userBadges.filter((ub) => ub.userId === userId && ub.equipped === true).length;
+    },
+    async setEquipped(id, equipped) {
+      mocks.writes.push(`setEquipped:${id}:${equipped}`);
+      const found = mocks.userBadges.find((ub) => ub.id === id)!;
+      found.equipped = equipped;
+      return found as never;
+    },
   };
 
   const users: GamificationUsersPort = {

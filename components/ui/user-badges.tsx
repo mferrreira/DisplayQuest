@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { BadgesAPI } from "@/contexts/api-client"
+import { equipEffectLabel, EQUIP_SLOT_MAX } from "@/backend/domain"
 import { Trophy, Award, Star, Zap, Users, Calendar, Target, Crown } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
@@ -14,6 +15,7 @@ interface UserBadge {
   userId: number
   earnedAt: string
   earnedBy?: number | null
+  equipped?: boolean
   badge?: {
     id: number
     name: string
@@ -22,6 +24,8 @@ interface UserBadge {
     color?: string | null
     category: 'achievement' | 'milestone' | 'special' | 'social'
     criteria?: any
+    slug?: string | null
+    effect?: { kind: "bonus" | "penaltyReduction"; pct: number } | null
     isActive: boolean
   }
 }
@@ -31,12 +35,16 @@ interface UserBadgesProps {
   showAll?: boolean
   limit?: number
   className?: string
+  /** plan-v15 S04 (R9): só a própria pessoa equipar — o chamador do PERFIL passa true. */
+  canEquip?: boolean
 }
 
-export function UserBadges({ userId, showAll = false, limit = 6, className = "" }: UserBadgesProps) {
+export function UserBadges({ userId, showAll = false, limit = 6, className = "", canEquip = false }: UserBadgesProps) {
   const [badges, setBadges] = useState<UserBadge[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [equipAlert, setEquipAlert] = useState<string | null>(null)
+  const [busyBadgeId, setBusyBadgeId] = useState<number | null>(null)
 
   useEffect(() => {
     const fetchBadges = async () => {
@@ -58,6 +66,21 @@ export function UserBadges({ userId, showAll = false, limit = 6, className = "" 
       fetchBadges()
     }
   }, [userId, showAll, limit])
+
+  const handleEquip = async (userBadge: UserBadge, nextEquipped: boolean) => {
+    setBusyBadgeId(userBadge.badgeId)
+    setEquipAlert(null)
+    try {
+      await BadgesAPI.equip(userId, userBadge.badgeId, nextEquipped)
+      setBadges((prev) => prev.map((b) => (b.id === userBadge.id ? { ...b, equipped: nextEquipped } : b)))
+    } catch (err: any) {
+      // As frases do servidor chegam no corpo { error } — o 409 "Slots de passiva cheios"
+      // e o 400 "Badge sem passiva não é equipável" são as que a tela precisa dizer.
+      setEquipAlert(typeof err?.message === "string" && err.message ? err.message : "Não foi possível alterar o badge")
+    } finally {
+      setBusyBadgeId(null)
+    }
+  }
 
   const getCategoryIcon = (category: string) => {
     switch (category) {
@@ -160,6 +183,8 @@ export function UserBadges({ userId, showAll = false, limit = 6, className = "" 
     )
   }
 
+  const equippedCount = safeBadges.filter((b) => b.equipped).length
+
   return (
     <div className={`space-y-2 ${className}`}>
       <div className="flex items-center gap-2">
@@ -167,8 +192,18 @@ export function UserBadges({ userId, showAll = false, limit = 6, className = "" 
         <span className="text-sm font-medium text-muted-foreground">
           Badges ({safeBadges.length})
         </span>
+        {canEquip && (
+          <span className="text-xs text-muted-foreground">
+            {`Equipadas (${equippedCount}/${EQUIP_SLOT_MAX})`}
+          </span>
+        )}
       </div>
-      
+      {equipAlert && (
+        <p role="alert" className="text-xs text-destructive">
+          {equipAlert}
+        </p>
+      )}
+
       <div className="flex flex-wrap gap-2">
         <TooltipProvider>
           {safeBadges.map((userBadge) => (
@@ -176,13 +211,18 @@ export function UserBadges({ userId, showAll = false, limit = 6, className = "" 
               <TooltipTrigger asChild>
                 <Badge
                   variant="outline"
-                  className={`${getCategoryColor(userBadge.badge.category)} cursor-help transition-all hover:scale-105`}
+                  className={`${userBadge.equipped ? "ring-2 ring-primary" : ""} ${getCategoryColor(userBadge.badge.category)} cursor-help transition-all hover:scale-105`}
                 >
                   <div className="flex items-center gap-1">
                     {getCategoryIcon(userBadge.badge.category)}
                     <span className="text-xs font-medium">
                       {userBadge.badge.name}
                     </span>
+                    {userBadge.equipped && userBadge.badge.effect && (
+                      <span className="text-xs font-semibold text-primary">
+                        {equipEffectLabel(userBadge.badge.effect)}
+                      </span>
+                    )}
                   </div>
                 </Badge>
               </TooltipTrigger>
@@ -192,6 +232,12 @@ export function UserBadges({ userId, showAll = false, limit = 6, className = "" 
                   <div className="text-xs text-muted-foreground">
                     {userBadge.badge.description}
                   </div>
+                  {userBadge.badge.effect && (
+                    <div className="text-xs text-primary">
+                      {userBadge.equipped ? "Equipada: " : "Passiva: "}
+                      {equipEffectLabel(userBadge.badge.effect)}
+                    </div>
+                  )}
                   <div className="flex items-center justify-between text-xs">
                     <span className={`px-1.5 py-0.5 rounded text-xs ${getCategoryColor(userBadge.badge.category)}`}>
                       {getCategoryName(userBadge.badge.category)}
@@ -206,6 +252,25 @@ export function UserBadges({ userId, showAll = false, limit = 6, className = "" 
           ))}
         </TooltipProvider>
       </div>
+
+      {canEquip && safeBadges.some((b) => b.badge.effect) && (
+        <div className="flex flex-wrap gap-2">
+          {safeBadges
+            .filter((b) => b.badge.effect)
+            .map((userBadge) => (
+              <Button
+                key={userBadge.id}
+                size="sm"
+                variant={userBadge.equipped ? "outline" : "secondary"}
+                aria-label={`${userBadge.equipped ? "Desequipar" : "Equipar"} ${userBadge.badge.name}`}
+                disabled={busyBadgeId === userBadge.badgeId}
+                onClick={() => handleEquip(userBadge, !userBadge.equipped)}
+              >
+                {userBadge.equipped ? "Desequipar" : "Equipar"}
+              </Button>
+            ))}
+        </div>
+      )}
     </div>
   )
 }

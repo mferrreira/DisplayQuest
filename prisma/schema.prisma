@@ -634,6 +634,8 @@ model badges {
   color       String?
   category    BadgeCategory
   criteria    Json?
+  slug        String?       @unique
+  effect      Json?
   isActive    Boolean       @default(true)
   createdAt   DateTime      @default(now())
   createdBy   Int
@@ -647,6 +649,7 @@ model user_badges {
   badgeId  Int
   earnedAt DateTime @default(now())
   earnedBy Int?
+  equipped Boolean  @default(false)
   badge    badges   @relation("BadgeUserBadges", fields: [badgeId], references: [id], onDelete: Cascade)
   awarder  users?   @relation("UserAwardedBadges", fields: [earnedBy], references: [id])
   user     users    @relation("UserBadges", fields: [userId], references: [id], onDelete: Cascade)

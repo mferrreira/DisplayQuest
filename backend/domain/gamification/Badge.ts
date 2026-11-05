@@ -24,6 +24,19 @@ export interface BadgeCriteria {
 /** Todo `criteria` que chega do JSON da tabela: as duas gerações do formato. */
 export type BadgeCriteriaJson = BadgeCriteria | BadgeCriteriaV2 | null | undefined;
 
+/** Passiva do badge (plan-v15 R8): bônus de prêmio ou redução de penalidade, em fração. */
+export interface BadgeEffectBonus {
+  kind: "bonus";
+  pct: number;
+}
+
+export interface BadgeEffectPenaltyReduction {
+  kind: "penaltyReduction";
+  pct: number;
+}
+
+export type BadgeEffect = BadgeEffectBonus | BadgeEffectPenaltyReduction;
+
 export interface Badge {
   id?: number;
   name: string;
@@ -32,6 +45,8 @@ export interface Badge {
   color?: string | null | undefined;
   category: BadgeCategory;
   criteria?: BadgeCriteria | BadgeCriteriaV2 | null;
+  slug?: string | null;
+  effect?: BadgeEffect | null;
   isActive: boolean;
   createdAt?: Date;
   createdBy: number;
@@ -43,4 +58,6 @@ export interface UserBadge {
   badgeId: number;
   earnedAt?: Date;
   earnedBy?: number | null;
+  equipped?: boolean;
+  badge?: Badge;
 }
