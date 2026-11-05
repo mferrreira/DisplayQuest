@@ -72,6 +72,8 @@ export interface CreateBadgeCommand {
   icon?: string | null
   color?: string | null
   criteria?: BadgeCriteriaInput | null
+  /** plan-v16 S01 (DEC-243): chave do ícone no bucket, normalizada pela regra do domínio. */
+  iconKey?: string | null
   isActive?: boolean
   createdBy: number
 }

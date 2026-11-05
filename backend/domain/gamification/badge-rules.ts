@@ -22,6 +22,7 @@ import { ValidationError } from "@/backend/domain/errors/DomainError";
 import type { Badge, BadgeCategory, BadgeCriteria, BadgeCriteriaJson } from "@/backend/domain/gamification/Badge";
 import type { BadgeCriteriaV2 } from "@/backend/domain/gamification/metric-registry";
 import { criteriaV2Met, validateBadgeCriteriaInput, type BadgeMetricValues } from "@/backend/domain/gamification/metric-registry";
+import { normalizeBadgeIconKey } from "@/backend/domain/gamification/badge-icon-rules";
 
 export const BADGE_CATEGORIES: readonly BadgeCategory[] = ["achievement", "milestone", "special", "social"];
 
@@ -33,6 +34,8 @@ export interface BadgeCreateData {
   color: string | null;
   category: BadgeCategory;
   criteria: BadgeCriteriaV2 | null;
+  /** plan-v16 S01: chave do ícone no bucket, normalizada pela regra. */
+  iconKey: string | null;
   isActive: boolean;
   createdBy: number;
 }
@@ -44,6 +47,7 @@ export interface BadgeCreateInput {
   icon?: string | null;
   color?: string | null;
   criteria?: BadgeCriteriaJson;
+  iconKey?: string | null;
   isActive?: boolean;
   createdBy?: number;
 }
@@ -76,6 +80,7 @@ export function validateBadgeCreateInput(data: BadgeCreateInput): BadgeCreateDat
     color: data.color || null,
     category: data.category as BadgeCategory,
     criteria: validateBadgeCriteriaInput(data.criteria),
+    iconKey: normalizeBadgeIconKey(data.iconKey),
     // QUIRK-6B: o caminho legado (Badge.create) forca isActive=true; preservado.
     isActive: true,
     createdBy: data.createdBy,
@@ -108,6 +113,10 @@ export function applyBadgeUpdate(current: Badge, data: Partial<BadgeCreateInput>
   }
   if (data.criteria !== undefined) {
     merged.criteria = data.criteria;
+  }
+  if (data.iconKey !== undefined) {
+    // plan-v16 S01: merge por chave, mesma disciplina das capas; vazia/null apaga.
+    merged.iconKey = normalizeBadgeIconKey(data.iconKey);
   }
   if (data.isActive !== undefined) {
     merged.isActive = Boolean(data.isActive);

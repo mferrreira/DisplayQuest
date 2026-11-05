@@ -47,6 +47,8 @@ export interface Badge {
   criteria?: BadgeCriteria | BadgeCriteriaV2 | null;
   slug?: string | null;
   effect?: BadgeEffect | null;
+  /** plan-v16 S01 (DEC-243): CHAVE do ícone no bucket, nunca um caminho de disco. */
+  iconKey?: string | null;
   isActive: boolean;
   createdAt?: Date;
   /** plan-v15 S09 (R5): badge de catálogo instala sem autor — `null` é leitura, escrita (badge-rules) continua exigindo número. */

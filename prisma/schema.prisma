@@ -636,6 +636,9 @@ model badges {
   criteria    Json?
   slug        String?       @unique
   effect      Json?
+  // plan-v16 S01 (DEC-243): chave do objeto no bucket, nunca um caminho de disco — mesmo
+  // desenho das capas (DEC-135). O binário sai pela rota autenticada; a coluna guarda a chave.
+  iconKey     String?
   isActive    Boolean       @default(true)
   createdAt   DateTime      @default(now())
   // plan-v15 S09 (R5): o catálogo SQL instala antes de qualquer usuário existir, então a
