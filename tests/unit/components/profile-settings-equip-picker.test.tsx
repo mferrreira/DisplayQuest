@@ -14,6 +14,7 @@ import userEvent from "@testing-library/user-event";
 import { readFileSync } from "node:fs";
 
 import { ProfileBadgeEquipPicker } from "@/components/ui/profile-badge-equip-picker";
+import { subscribeEquipped } from "@/lib/badges/equipped-sync";
 
 const getUserBadges = vi.hoisted(() => vi.fn());
 const equip = vi.hoisted(() => vi.fn());
@@ -126,6 +127,22 @@ describe("ProfileBadgeEquipPicker", () => {
     render(<ProfileBadgeEquipPicker userId={2} />);
     expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível carregar os badges");
     expect(screen.queryByText("Nenhuma badge com passiva")).toBeNull();
+  });
+
+  it("a equipagem é publicada no cache compartilhado para as outras superfícies", async () => {
+    // S04 (should-fix da review S03): equipar no picker é fonte de verdade; o bloco e a
+    // vitrine assinam `lib/badges/equipped-sync` e não ficam com estado velho.
+    const listener = vi.fn();
+    const unsub = subscribeEquipped(2, listener);
+    getUserBadges.mockResolvedValue({ badges: [passive(10, "Passiva A"), passive(12, "Passiva B", { equipped: true })] });
+    const user = userEvent.setup({ delay: null });
+    render(<ProfileBadgeEquipPicker userId={2} />);
+
+    await user.click(await screen.findByRole("button", { name: "Equipar Passiva A" }));
+    expect(listener).toHaveBeenCalledWith(10, true);
+    await user.click(screen.getByRole("button", { name: "Desequipar Passiva B" }));
+    expect(listener).toHaveBeenLastCalledWith(12, false);
+    unsub();
   });
 
   it("o picker mora só na edição da aba Configurações, acima do UserProfileForm", () => {

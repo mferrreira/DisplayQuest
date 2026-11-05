@@ -419,7 +419,9 @@ function ProfilePageContent() {
           </Tabs>
 
           <div className="border-t border-border pt-6">
-            <UserBadges userId={user.id} limit={8} canEquip={authUser?.id === user.id} />
+            {/* plan-v17 S04 (R7, ADR-003): o bloco é leitura — o equipar mora no picker
+                da Configurações, e o estado shared vem do cache equipped-sync. */}
+            <UserBadges userId={user.id} limit={8} />
           </div>
         </div>
       </main>

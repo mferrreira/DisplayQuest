@@ -15,6 +15,7 @@ import { Trophy } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { BadgeMedallion } from "@/components/ui/badge-medallion"
 import { BadgesAPI } from "@/contexts/api-client"
+import { markEquipped } from "@/lib/badges/equipped-sync"
 import {
   equipEffectLabel,
   EQUIP_SLOT_MAX,
@@ -79,6 +80,8 @@ export function ProfileBadgeEquipPicker({ userId }: { userId: number }) {
     try {
       await BadgesAPI.equip(userId, row.badgeId, nextEquipped)
       setRows((prev) => prev.map((r) => (r.badgeId === row.badgeId ? { ...r, equipped: nextEquipped } : r)))
+      // S04 (R7): a equipagem é a fonte de verdade — bloco e vitrine assinam o sinal.
+      markEquipped(userId, row.badgeId, nextEquipped)
     } catch (err: any) {
       setAlert(typeof err?.message === "string" && err.message ? err.message : "Não foi possível alterar o badge")
     } finally {

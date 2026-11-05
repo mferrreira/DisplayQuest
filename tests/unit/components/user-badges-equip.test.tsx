@@ -1,25 +1,27 @@
 /**
- * plan-v15 S04 (R9, CA5) — os controles de equipar no perfil.
+ * plan-v17 S04 (R7, ADR-003 / DEC-246) — o bloco Badges é leitura, não equipar.
  *
- * O que este arquivo trava, na tela do perfil com `canEquip`:
- *  - badge com passiva, desequipado, tem botão "Equipar <nome>";
- *  - badge equipado mostra o selo do efeito ("+10% pontos") e botão "Desequipar";
- *  - badge sem passiva não ganha botão nenhum;
- *  - o cabeçalho diz "Equipadas (n/3)";
- *  - quando o servidor recusa a 4ª equipagem, a frase do 409 aparece como `role="alert"`.
+ * O que este arquivo trava, depois que o equipar saiu do bloco e mudou para o picker da
+ * Configurações (S03):
+ *  - nenhum botão no bloco, nenhum contador "Equipadas" — o bloco não decide nada;
+ *  - a equipada mantém o anel primary e o selo do efeito no chip;
+ *  - o bloco acompanha o equipar do picker pelo cache compartilhado
+ *    `lib/badges/equipped-sync` (a casa não tem QueryClientProvider montado).
+ *
+ * O contrato de equipar (alvo, frases do servidor, slots) mora em
+ * `tests/unit/components/profile-settings-equip-picker.test.tsx` e na rota.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { act, render, screen } from "@testing-library/react";
 
 const getUserBadges = vi.hoisted(() => vi.fn());
-const equip = vi.hoisted(() => vi.fn());
 
 vi.mock("@/contexts/api-client", () => ({
-  BadgesAPI: { getUserBadges, equip },
+  BadgesAPI: { getUserBadges },
 }));
 
 import { UserBadges } from "@/components/ui/user-badges";
+import { markEquipped } from "@/lib/badges/equipped-sync";
 
 function badge(id: number, name: string, over: Record<string, unknown> = {}) {
   return {
@@ -42,10 +44,9 @@ function badge(id: number, name: string, over: Record<string, unknown> = {}) {
   };
 }
 
-describe("UserBadges com controles de equipar", () => {
+describe("UserBadges — bloco de leitura (S04)", () => {
   beforeEach(() => {
     getUserBadges.mockReset();
-    equip.mockReset();
     getUserBadges.mockResolvedValue({
       badges: [
         badge(10, "Passiva A", { badge: { id: 10, name: "Passiva A", description: "d", category: "achievement", criteria: null, slug: "s-10", effect: { kind: "bonus", pct: 0.1 }, isActive: true } }),
@@ -56,64 +57,24 @@ describe("UserBadges com controles de equipar", () => {
         }),
       ],
     });
-    equip.mockResolvedValue({ userBadge: { equipped: true } });
   });
 
-  it("mostra Equipar para a passiva desequipada, o selo do efeito na equipada, e nada para o selo seco", async () => {
-    render(<UserBadges userId={1} canEquip />);
-
+  it("nenhum botão, nenhum Equipadas — o bloco não equipar", async () => {
+    render(<UserBadges userId={1} />);
     await screen.findByText("Passiva A");
-    const equipar = await screen.findByRole("button", { name: "Equipar Passiva A" });
-    expect(equipar).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Desequipar Passiva B" })).toBeInTheDocument();
-    expect(screen.getByText("-15% penalidade")).toBeInTheDocument();
-    expect(screen.getByText("Equipadas (1/3)")).toBeInTheDocument();
-
-    const buttons = screen.getAllByRole("button");
-    expect(buttons).toHaveLength(2);
-  });
-
-  it("cliques chegam à API com o alvo e o estado pedido", async () => {
-    const user = userEvent.setup({ delay: null });
-    render(<UserBadges userId={1} canEquip />);
-
-    await user.click(await screen.findByRole("button", { name: "Equipar Passiva A" }));
-    expect(equip).toHaveBeenCalledWith(1, 10, true);
-    expect(await screen.findByText("Equipadas (2/3)")).toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: "Desequipar Passiva B" }));
-    expect(equip).toHaveBeenLastCalledWith(1, 12, false);
-    expect(await screen.findByText("Equipadas (1/3)")).toBeInTheDocument();
-  });
-
-  it("a recusa do servidor vira o aviso da tela: 4ª equipagem anuncia 'Slots de passiva cheios'", async () => {
-    getUserBadges.mockResolvedValue({
-      badges: [
-        ...[12, 13, 14].map((id) =>
-          badge(id, `Passiva ${id}`, {
-            equipped: true,
-            badge: { id, name: `Passiva ${id}`, description: "d", category: "achievement", criteria: null, slug: `s-${id}`, effect: { kind: "bonus", pct: 0.05 }, isActive: true },
-          }),
-        ),
-        badge(15, "Passiva 15", {
-          badge: { id: 15, name: "Passiva 15", description: "d", category: "achievement", criteria: null, slug: "s-15", effect: { kind: "bonus", pct: 0.05 }, isActive: true },
-        }),
-      ],
-    });
-    equip.mockRejectedValue(new Error("Slots de passiva cheios"));
-
-    render(<UserBadges userId={1} canEquip />);
-    const user = userEvent.setup({ delay: null });
-
-    await user.click(await screen.findByRole("button", { name: "Equipar Passiva 15" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("Slots de passiva cheios");
-    expect(screen.getByText("Equipadas (3/3)")).toBeInTheDocument();
-  });
-
-  it("sem canEquip não há controles — ver o perfil de outro usuário não equipar", async () => {
-    render(<UserBadges userId={2} />);
-    await screen.findByText("Passiva A");
-    expect(screen.queryByRole("button", { name: "Equipar Passiva A" })).not.toBeInTheDocument();
+    expect(screen.queryAllByRole("button")).toHaveLength(0);
     expect(screen.queryByText(/Equipadas/)).not.toBeInTheDocument();
+    // a equipada continua visível como estado: selo do efeito + anel no chip
+    expect(screen.getByText("-15% penalidade")).toBeInTheDocument();
+    expect(screen.getByText("Passiva B").closest(".inline-flex")).toHaveClass("ring-2");
+  });
+
+  it("o bloco acompanha o equipar publicado no cache compartilhado", async () => {
+    render(<UserBadges userId={1} />);
+    await screen.findByText("Passiva A");
+    act(() => markEquipped(1, 10, true));
+    expect(await screen.findByText("+10% pontos")).toBeInTheDocument();
+    act(() => markEquipped(1, 12, false));
+    expect(screen.queryByText("-15% penalidade")).not.toBeInTheDocument();
   });
 });

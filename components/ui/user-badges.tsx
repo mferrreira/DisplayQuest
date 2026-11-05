@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from "react"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { BadgesAPI } from "@/contexts/api-client"
-import { badgeCategoryLabel, equipEffectLabel, EQUIP_SLOT_MAX, progressLabel } from "@/backend/domain"
+import { subscribeEquipped } from "@/lib/badges/equipped-sync"
+import { badgeCategoryLabel, equipEffectLabel, progressLabel } from "@/backend/domain"
 import { Trophy } from "lucide-react"
 import { BadgeMedallion, badgeCategoryChipClass } from "@/components/ui/badge-medallion"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -44,17 +44,13 @@ interface UserBadgesProps {
   showAll?: boolean
   limit?: number
   className?: string
-  /** plan-v15 S04 (R9): só a própria pessoa equipar — o chamador do PERFIL passa true. */
-  canEquip?: boolean
 }
 
-export function UserBadges({ userId, showAll = false, limit = 6, className = "", canEquip = false }: UserBadgesProps) {
+export function UserBadges({ userId, showAll = false, limit = 6, className = "" }: UserBadgesProps) {
   const [badges, setBadges] = useState<UserBadge[]>([])
   const [progress, setProgress] = useState<ProgressEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [equipAlert, setEquipAlert] = useState<string | null>(null)
-  const [busyBadgeId, setBusyBadgeId] = useState<number | null>(null)
 
   useEffect(() => {
     const fetchBadges = async () => {
@@ -80,20 +76,14 @@ export function UserBadges({ userId, showAll = false, limit = 6, className = "",
     }
   }, [userId, showAll, limit])
 
-  const handleEquip = async (userBadge: UserBadge, nextEquipped: boolean) => {
-    setBusyBadgeId(userBadge.badgeId)
-    setEquipAlert(null)
-    try {
-      await BadgesAPI.equip(userId, userBadge.badgeId, nextEquipped)
-      setBadges((prev) => prev.map((b) => (b.id === userBadge.id ? { ...b, equipped: nextEquipped } : b)))
-    } catch (err: any) {
-      // As frases do servidor chegam no corpo { error } — o 409 "Slots de passiva cheios"
-      // e o 400 "Badge sem passiva não é equipável" são as que a tela precisa dizer.
-      setEquipAlert(typeof err?.message === "string" && err.message ? err.message : "Não foi possível alterar o badge")
-    } finally {
-      setBusyBadgeId(null)
-    }
-  }
+  // plan-v17 S04 (R7, ADR-003): o bloco é leitura — o equipar mora no picker da
+  // Configurações. O bloco acompanha o estado pelo cache compartilhado.
+  useEffect(() => {
+    const unsubscribe = subscribeEquipped(userId, (badgeId, next) => {
+      setBadges((prev) => prev.map((b) => (b.badgeId === badgeId ? { ...b, equipped: next } : b)))
+    })
+    return unsubscribe
+  }, [userId])
 
   const formatEarnedDate = (dateString: string) => {
     const date = new Date(dateString)
@@ -167,8 +157,6 @@ export function UserBadges({ userId, showAll = false, limit = 6, className = "",
     )
   }
 
-  const equippedCount = safeBadges.filter((b) => b.equipped).length
-
   return (
     <div className={`space-y-2 ${className}`}>
       <div className="flex items-center gap-2">
@@ -176,17 +164,7 @@ export function UserBadges({ userId, showAll = false, limit = 6, className = "",
         <span className="text-sm font-medium text-muted-foreground">
           Badges ({safeBadges.length})
         </span>
-        {canEquip && (
-          <span className="text-xs text-muted-foreground">
-            {`Equipadas (${equippedCount}/${EQUIP_SLOT_MAX})`}
-          </span>
-        )}
       </div>
-      {equipAlert && (
-        <p role="alert" className="text-xs text-destructive">
-          {equipAlert}
-        </p>
-      )}
 
       <div className="flex flex-wrap gap-2">
         <TooltipProvider>
@@ -238,25 +216,6 @@ export function UserBadges({ userId, showAll = false, limit = 6, className = "",
           ))}
         </TooltipProvider>
       </div>
-
-      {canEquip && safeBadges.some((b) => b.badge.effect) && (
-        <div className="flex flex-wrap gap-2">
-          {safeBadges
-            .filter((b) => b.badge.effect)
-            .map((userBadge) => (
-              <Button
-                key={userBadge.id}
-                size="sm"
-                variant={userBadge.equipped ? "outline" : "secondary"}
-                aria-label={`${userBadge.equipped ? "Desequipar" : "Equipar"} ${userBadge.badge.name}`}
-                disabled={busyBadgeId === userBadge.badgeId}
-                onClick={() => handleEquip(userBadge, !userBadge.equipped)}
-              >
-                {userBadge.equipped ? "Desequipar" : "Equipar"}
-              </Button>
-            ))}
-        </div>
-      )}
 
       {progress.length > 0 && (
         <div className="space-y-1">

@@ -10,6 +10,7 @@
 import { useEffect, useState } from "react"
 
 import { BadgesAPI } from "@/contexts/api-client"
+import { subscribeEquipped } from "@/lib/badges/equipped-sync"
 import { equipEffectLabel, EQUIP_SLOT_MAX, type BadgeEffect } from "@/backend/domain"
 import { BadgeMedallion } from "@/components/ui/badge-medallion"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -32,22 +33,20 @@ interface ShowcaseBadge {
 }
 
 export function ProfileBadgeShowcase({ userId, className = "" }: { userId: number; className?: string }) {
-  const [equipped, setEquipped] = useState<ShowcaseBadge[]>([])
+  // plan-v17 S04 (R7): a vitrine guarda as linhas e deriva as equipadas — o sinal do
+  // picker (`equipped-sync`) atualiza as linhas, e a vitrine acompanha sem remontar.
+  const [rows, setRows] = useState<ShowcaseBadge[]>([])
 
   useEffect(() => {
     let cancelled = false
     const load = async () => {
       try {
         const response = await BadgesAPI.getUserBadges(userId)
-        const shown = (response.badges as ShowcaseBadge[])
-          .filter((b) => b.equipped && b.badge)
-          .sort((a, b) => (a.earnedAt < b.earnedAt ? 1 : a.earnedAt > b.earnedAt ? -1 : 0))
-          .slice(0, EQUIP_SLOT_MAX)
-        if (!cancelled) setEquipped(shown)
+        if (!cancelled) setRows(response.badges as ShowcaseBadge[])
       } catch {
         // O card não denuncia falha de badges: a vitrine é enfeite do card, o bloco Badges
         // tem o seu próprio estado de erro. Silêncio aqui é o desenho.
-        if (!cancelled) setEquipped([])
+        if (!cancelled) setRows([])
       }
     }
     load()
@@ -55,6 +54,18 @@ export function ProfileBadgeShowcase({ userId, className = "" }: { userId: numbe
       cancelled = true
     }
   }, [userId])
+
+  useEffect(() => {
+    const unsubscribe = subscribeEquipped(userId, (badgeId, next) => {
+      setRows((prev) => prev.map((b) => (b.badgeId === badgeId ? { ...b, equipped: next } : b)))
+    })
+    return unsubscribe
+  }, [userId])
+
+  const equipped = rows
+    .filter((b) => b.equipped && b.badge)
+    .sort((a, b) => (a.earnedAt < b.earnedAt ? 1 : a.earnedAt > b.earnedAt ? -1 : 0))
+    .slice(0, EQUIP_SLOT_MAX)
 
   if (equipped.length === 0) return null
 
