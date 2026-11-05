@@ -240,22 +240,25 @@ function ProfilePageContent() {
 
             <div className="flex flex-col gap-3 px-6 pb-6 pt-16 sm:flex-row sm:items-end sm:justify-between sm:px-8">
               <div className="min-w-0">
-                {/* plan-v17 S02 (R2, ADR-002): as equipadas entram na faixa do nome, à
-                    direita, medálhão com o ícone real; nome só em tooltip. */}
                 <div className="flex flex-wrap items-center gap-2">
                   <h2 className="truncate text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
                     {user.name}
                   </h2>
                   {showProfileForm && <Badge variant="secondary">Editando</Badge>}
-                  <ProfileBadgeShowcase userId={user.id} />
                 </div>
                 <p className="mt-1 truncate text-sm text-muted-foreground">{user.email}</p>
+                {/* plan-v18 S01 (DEC-247, ADR-004): a vitrine de equipadas mora na coluna
+                    do nome, à esquerda, acima da linha das funções. Regras de seleção de
+                    DEC-245 intactas; a peça continua a mesma. */}
+                <div className="mt-3">
+                  <ProfileBadgeShowcase userId={user.id} />
+                </div>
+                {user.roles.length > 0 && (
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {user.roles.map(getRoleDisplayName).join(" · ")}
+                  </p>
+                )}
               </div>
-              {user.roles.length > 0 && (
-                <p className="text-sm text-muted-foreground">
-                  {user.roles.map(getRoleDisplayName).join(" · ")}
-                </p>
-              )}
             </div>
           </section>
 

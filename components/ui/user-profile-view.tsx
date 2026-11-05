@@ -167,21 +167,24 @@ export function UserProfileView({ user, onBack, canEdit = false, onEdit, project
 
         <div className="flex flex-col gap-3 px-6 pb-6 pt-16 sm:flex-row sm:items-end sm:justify-between sm:px-8">
           <div className="min-w-0">
-            {/* plan-v17 S02 (R5, ADR-002): a mesma vitrine do perfil próprio — o card de
-                terceiro mostra as equipadas, leitura aberta de user-badges, nome só em tooltip. */}
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="truncate text-2xl font-bold tracking-tight text-foreground sm:text-3xl">{user.name}</h2>
-              <ProfileBadgeShowcase userId={user.id} />
-            </div>
+            <h2 className="truncate text-2xl font-bold tracking-tight text-foreground sm:text-3xl">{user.name}</h2>
             <p className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
               <Mail className="h-4 w-4" aria-hidden="true" />
               <span className="truncate">{user.email}</span>
             </p>
+            {/* plan-v18 S01 (DEC-247, ADR-004): a vitrine mora na coluna do nome, à
+                esquerda, acima da linha das funções — o mesmo contrato do card próprio.
+                Nome só em tooltip. */}
+            <div className="mt-3">
+              <ProfileBadgeShowcase userId={user.id} />
+            </div>
+            {user.roles.length > 0 && (
+              <p className="mt-2 text-sm text-muted-foreground">
+                {user.roles.map(getRoleDisplayName).join(" · ")}
+              </p>
+            )}
           </div>
           <div className="flex flex-col items-start gap-2 sm:items-end">
-            {user.roles.length > 0 && (
-              <p className="text-sm text-muted-foreground">{user.roles.map(getRoleDisplayName).join(" · ")}</p>
-            )}
             {user.createdAt ? (
               <p className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Calendar className="h-4 w-4" aria-hidden="true" />

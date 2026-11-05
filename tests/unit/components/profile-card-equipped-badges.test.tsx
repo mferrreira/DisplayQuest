@@ -113,4 +113,33 @@ describe("ProfileBadgeShowcase", () => {
     expect(own).toContain("<ProfileBadgeShowcase");
     expect(third).toContain("<ProfileBadgeShowcase");
   });
+
+  it("plan-v18 S01 (DEC-247, ADR-004): a vitrine mora à esquerda, acima das roles", () => {
+    // Guard structural: as funções têm de estar NA MESMA coluna da vitrine — o corte é
+    // a coluna `min-w-0`, obtido por contagem de profundidade de div. Vitrine antes
+    // das funções dentro da coluna. Guard frouxo (posição no arquivo inteiro) passou
+    // uma vez sem medir a coluna: as funções estavam fisicamente na coluna da direita.
+    function leftColumn(src: string): string {
+      const start = src.indexOf('<div className="min-w-0">');
+      expect(start, src.slice(0, 40)).toBeGreaterThanOrEqual(0);
+      let depth = 0;
+      const scanner = /<div\b|<\/div>/g;
+      scanner.lastIndex = start;
+      let m: RegExpExecArray | null;
+      while ((m = scanner.exec(src)) !== null) {
+        depth += m[0] === "</div>" ? -1 : 1;
+        if (depth === 0) return src.slice(start, m.index + m[0].length);
+      }
+      throw new Error("coluna min-w-0 sem fechamento");
+    }
+
+    for (const file of ["app/(dashboard)/dashboard/profile/page.tsx", "components/ui/user-profile-view.tsx"]) {
+      const column = leftColumn(readFileSync(file, "utf8"));
+      const vitrine = column.indexOf("<ProfileBadgeShowcase");
+      const roles = column.indexOf("getRoleDisplayName");
+      expect(vitrine, `${file}: vitrine na coluna da esquerda`).toBeGreaterThanOrEqual(0);
+      expect(roles, `${file}: funções na coluna da esquerda`).toBeGreaterThanOrEqual(0);
+      expect(vitrine, `${file}: vitrine acima das funções`).toBeLessThan(roles);
+    }
+  });
 });
