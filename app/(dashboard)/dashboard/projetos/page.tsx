@@ -164,6 +164,7 @@ export default function ProjetosPage() {
               <ProjectManagerDashboard 
                 projects={filteredProjects} 
                 tasks={filteredTasks}
+                users={users}
                 scopeDescription={scopeDescription}
                 onProjectSelect={handleProjectClick}
               />

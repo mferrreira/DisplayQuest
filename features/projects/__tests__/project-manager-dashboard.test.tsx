@@ -15,7 +15,7 @@ const recorteSection = () => screen.getByRole("region", { name: "Projetos no rec
 describe("ProjectManagerDashboard", () => {
   it("o seletor de projeto recorta o leaderboard e a seção do recorte", async () => {
     const user = userEvent.setup({ delay: null })
-    render(<ProjectManagerDashboard projects={[project, secondProject]} tasks={[]} onProjectSelect={() => {}} />)
+    render(<ProjectManagerDashboard projects={[project, secondProject]} tasks={[]} users={[]} onProjectSelect={() => {}} />)
 
     expect(screen.getByText((_text, element) => element?.textContent === "Recorte: Todos os projetos")).toBeVisible()
     // Microscopia (70 pts) é a campeã; Pesquisa aparece só no recorte.
@@ -31,7 +31,7 @@ describe("ProjectManagerDashboard", () => {
 
   it("voltar para 'Todos os projetos' devolve os projetos ao recorte", async () => {
     const user = userEvent.setup({ delay: null })
-    render(<ProjectManagerDashboard projects={[project, secondProject]} tasks={[]} onProjectSelect={() => {}} />)
+    render(<ProjectManagerDashboard projects={[project, secondProject]} tasks={[]} users={[]} onProjectSelect={() => {}} />)
 
     await user.selectOptions(screen.getByRole("combobox", { name: "Selecionar projeto para estatísticas" }), "1")
     expect(screen.getByText((_text, element) => element?.textContent === "Recorte: Projeto: Pesquisa")).toBeVisible()

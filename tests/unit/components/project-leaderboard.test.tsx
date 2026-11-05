@@ -1,82 +1,168 @@
-// @vitest-environment jsdom
 /**
- * plan-v13 S06 — o leaderboard de projetos da aba Dashboard (regra 6 do MODELO).
+ * Leaderboard de projetos completo (pedido do dono em 2026-11-05): as peças que a aba Dashboard
+ * ganhou — andamento por projeto, barra de distância ao campeão, destaque "Seu projeto" pela
+ * projeção `isMember`, chip de membros, pilha de avatares no campeão, período pelo rótulo do
+ * domínio (DEC-132), líder, tabela espelhada da liderança, iniciais no espaço do logo e a
+ * largura da coluna de pontos.
  *
- * Congelam:
- *   - pódio top 3: campeão com rótulo "Campeão" e pontos em corpo grande; 2º e 3º em cartões
- *     com medalha; 1 projeto = só campeão, 2 = campeão + 2º;
- *   - abaixo do pódio, o ranking completo do recorte começa no 4º com posição, nome, subtítulo,
- *     status e pontos (o mesmo padrão medido da liderança de pessoas, V6-11m);
- *   - pódio e linhas abrem o detalhe do projeto;
- *   - recorte vazio: estado vazio.
+ * Os números não são inventados aqui: `projectProgress` e `monthColumnLabel` vêm das mesmas peças
+ * da seção do recorte, e a ordenação é `rankProjects`. Este arquivo congela a TELA, não a regra.
  */
-import { describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest"
+import { render, screen, within } from "@testing-library/react"
 
-import { ProjectLeaderboard } from "@/components/features/project-leaderboard";
-import type { Project } from "@/contexts/types";
+import { ProjectLeaderboard } from "@/components/features/project-leaderboard"
 
-vi.mock("@/contexts/auth-context", () => ({ useAuth: () => ({ user: null }) }));
+const users = [
+  { id: 10, name: "Ana Prado", avatarKey: "users/10/images/avatar/a.webp" },
+  { id: 11, name: "Bruno Rocha", avatarKey: null, avatar: null },
+  { id: 12, name: "Carla Lima", avatarKey: null, avatar: null },
+  { id: 13, name: "Dora Reis", avatarKey: null, avatar: null },
+] as never[]
 
-function project(id: number, name: string, points: number, subtitle: string | null = null): Project {
-  return { id, name, subtitle, description: null, createdAt: "2026-01-01", createdBy: 1, status: "active", points, logoKey: null, bannerKey: null };
+const champion = {
+  id: 1,
+  name: "Pesquisa em IA",
+  subtitle: "Pesquisa aplicada",
+  status: "active",
+  createdAt: "2026-09-01T00:00:00.000Z",
+  createdBy: 1,
+  leaderId: 10,
+  startDate: "2026-10-01",
+  endDate: "2027-01-31",
+  points: 3900,
+  memberCount: 4,
+  members: [{ userId: 10 }, { userId: 11 }, { userId: 12 }, { userId: 13 }],
+  logoKey: "projects/1/images/logo",
+  bannerKey: "projects/1/images/banner",
+  isMember: true,
+} as never
+
+const second = {
+  id: 2,
+  name: "Sistema de Gestão",
+  status: "active",
+  createdAt: "2026-01-01T00:00:00.000Z",
+  createdBy: 1,
+  leaderId: 11,
+  points: 300,
+  memberCount: 1,
+  members: [{ userId: 10 }],
+  isMember: false,
+} as never
+
+const third = {
+  id: 3,
+  name: "Automação",
+  status: "completed",
+  createdAt: "2026-01-01T00:00:00.000Z",
+  createdBy: 1,
+  leaderId: 12,
+  startDate: "2026-01-01",
+  endDate: "2026-12-31",
+  points: 30,
+  memberCount: 2,
+  members: [{ userId: 12 }, { userId: 13 }],
+  isMember: false,
+} as never
+
+const fourth = {
+  id: 4,
+  name: "Microscopia",
+  status: "active",
+  createdAt: "2026-02-01T00:00:00.000Z",
+  createdBy: 1,
+  leaderId: 13,
+  startDate: "2026-02-01",
+  endDate: "2026-03-31",
+  points: 10,
+  memberCount: 3,
+  members: [{ userId: 10 }, { userId: 11 }, { userId: 12 }],
+  isMember: true,
+} as never
+
+const tasks = [
+  { projectId: 1, status: "done" },
+  { projectId: 1, status: "to-do" },
+  { projectId: 2, status: "done" },
+  { projectId: 2, status: "to-do" },
+  { projectId: 2, status: "to-do" },
+  { projectId: 4, status: "done" },
+  { projectId: 4, status: "done" },
+  { projectId: 4, status: "in-review" },
+  { projectId: 4, status: "to-do" },
+] as never[]
+
+function championSection() {
+  return screen.getByRole("region", { name: "Campeão dos projetos" })
 }
 
-const P1 = project(1, "Pesquisa em IA", 30, "Bolsa de pesquisa");
-const P2 = project(2, "Automação", 20);
-const P3 = project(3, "Microscopia", 10);
-const P4 = project(4, "Sem saldo", 0, "Iniciação junior");
+function tableSection() {
+  return screen.getByRole("region", { name: "Classificação completa de projetos" })
+}
+
+function renderBoard() {
+  render(<ProjectLeaderboard projects={[champion, second, third, fourth]} tasks={tasks} users={users} onProjectSelect={() => {}} />)
+}
 
 describe("ProjectLeaderboard", () => {
-  it("campeão com rótulo e pontos em corpo grande; 2º e 3º em cartões", () => {
-    const opened: number[] = [];
-    render(<ProjectLeaderboard projects={[P3, P2, P1, P4]} onProjectSelect={(p) => opened.push(p.id)} />);
+  it("o campeão mostra período, membros, pilha de avatares e líder", () => {
+    renderBoard()
+    const section = championSection()
 
-    const championSection = screen.getByRole("region", { name: /Campeão/ });
-    expect(championSection).toHaveTextContent("Campeão");
-    expect(championSection).toHaveTextContent("Pesquisa em IA");
-    expect(championSection).toHaveTextContent("30");
+    expect(within(section).getByText("Campeão")).toBeVisible()
+    expect(within(section).getByText("3900")).toBeVisible()
+    // Rótulo do domínio (DEC-132): substring de `YYYY-MM`, nenhum `new Date` na tela.
+    expect(within(section).getByText("out/2026 – jan/2027")).toBeVisible()
+    expect(within(section).getByText("4 membros")).toBeVisible()
+    expect(within(section).getByText("Liderado por Ana Prado")).toBeVisible()
 
-    const runnersUp = screen.getByRole("region", { name: /Segundo e terceiro/ });
-    expect(runnersUp).toHaveTextContent("Automação");
-    expect(runnersUp).toHaveTextContent("Microscopia");
-    expect(runnersUp).not.toHaveTextContent("Sem saldo");
+    // Pilha: os três primeiros do vínculo, e o resto vira contador.
+    expect(within(section).getByRole("img", { name: "Ana Prado" })).toBeInTheDocument()
+    expect(within(section).getByText("BR")).toBeInTheDocument()
+    expect(within(section).getByText("+1")).toBeInTheDocument()
 
-    fireEvent.click(championSection.querySelector("a")!);
-    expect(opened).toEqual([1]);
-    fireEvent.click(runnersUp.querySelectorAll("a")[1]);
-    expect(opened).toEqual([1, 3]);
-  });
+    // A barra do campeão segue o mesmo andamento da seção do recorte.
+    expect(within(section).getByRole("progressbar", { name: /Progresso do projeto Pesquisa em IA/ })).toBeInTheDocument()
 
-  it("o ranking abaixo do pódio começa no 4º, com posição, subtítulo, status e pontos", () => {
-    render(<ProjectLeaderboard projects={[P1, P2, P3, P4]} onProjectSelect={() => {}} />);
+    // "Seu projeto" vem da projeção `isMember` do servidor, não de regra nova.
+    expect(within(section).getByText("Seu projeto")).toBeVisible()
+  })
 
-    const rowsSection = screen.getByRole("region", { name: /Classificação/ });
-    expect(rowsSection.textContent).toContain("4º");
-    expect(rowsSection.textContent).toContain("Sem saldo");
-    expect(rowsSection.textContent).toContain("Iniciação junior");
-    expect(rowsSection.textContent).toContain("Ativo");
-    expect(rowsSection.textContent).toContain("0");
-    expect(rowsSection.textContent).not.toContain("Pesquisa em IA");
+  it("o 2º lugar tem chip de membros e a barra de tarefas", () => {
+    renderBoard()
+    const section = screen.getByRole("region", { name: "Segundo e terceiro lugares" })
 
-    const row = rowsSection.querySelectorAll("a")[0];
-    expect(row.getAttribute("aria-label")).toBe("Ver detalhes de Sem saldo");
-  });
+    expect(within(section).getByText("1 membro")).toBeVisible()
+    expect(within(section).getByText("1 de 3 tarefas concluídas")).toBeVisible()
+    expect(within(section).getByRole("progressbar", { name: /Progresso do projeto Sistema de Gestão/ })).toBeInTheDocument()
+    expect(within(section).getByText("300")).toBeVisible()
+  })
 
-  it("1 projeto = só campeão, sem seção de segundo e terceiro; 2 = campeão + 2º", () => {
-    render(<ProjectLeaderboard projects={[P1]} onProjectSelect={() => {}} />);
-    expect(screen.getByRole("region", { name: /Campeão/ })).toHaveTextContent("Pesquisa em IA");
-    expect(screen.queryByRole("region", { name: /Segundo e terceiro/ })).not.toBeInTheDocument();
+  it("a classificação completa é a tabela espelhada da liderança, com destaque do projeto do ator", () => {
+    renderBoard()
+    const section = tableSection()
 
-    render(<ProjectLeaderboard projects={[P1, P2]} onProjectSelect={() => {}} />);
-    const runnersUp = screen.getByRole("region", { name: /Segundo e terceiro/ });
-    expect(runnersUp).toHaveTextContent("Automação");
-    expect(runnersUp.querySelectorAll("a")).toHaveLength(1);
-  });
+    expect(within(section).getByRole("columnheader", { name: "Posição" })).toBeVisible()
+    expect(within(section).getByRole("columnheader", { name: "Progresso" })).toBeVisible()
+    expect(within(section).getByRole("columnheader", { name: "Membros" })).toBeVisible()
+    expect(within(section).getByRole("columnheader", { name: "Pontos" })).toBeVisible()
 
-  it("recorte vazio: estado vazio, nenhum pódio", () => {
-    render(<ProjectLeaderboard projects={[]} onProjectSelect={() => {}} />);
-    expect(screen.queryByRole("region", { name: /Campeão/ })).not.toBeInTheDocument();
-    expect(screen.getByText(/Nenhum projeto/)).toBeInTheDocument();
-  });
-});
+    const row = screen.getByText("Microscopia").closest("tr")!
+    expect(row).toHaveClass("bg-primary/5")
+    expect(within(row).getByText("Seu projeto")).toBeVisible()
+    // Iniciais no espaço do logo: a peça que a liderança de pessoas já usa.
+    expect(within(row).getByText("M")).toBeVisible()
+    expect(within(row).getByRole("cell", { name: "3" })).toBeInTheDocument()
+    // Microscopia tem período: a célula de progresso é a fonte temporal, o mesmo cálculo da seção do recorte.
+    expect(within(row).getByText("fev/2026 – mar/2026")).toBeVisible()
+    expect(within(row).getByRole("progressbar", { name: "Progresso do projeto Microscopia: 100%" })).toBeInTheDocument()
+    // A largura que "10.500" precisa.
+    expect(within(row).getByRole("cell", { name: "10" })).toHaveClass("w-14")
+  })
+
+  it("recorte sem projeto é vazio declarado", () => {
+    render(<ProjectLeaderboard projects={[]} tasks={[]} users={users} onProjectSelect={() => {}} />)
+    expect(screen.getByText("Nenhum projeto disponível neste recorte.")).toBeVisible()
+  })
+})

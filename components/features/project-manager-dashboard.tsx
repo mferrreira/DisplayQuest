@@ -10,16 +10,17 @@ import { projectStatusLabel } from "@/components/ui/status"
 import { civilDayOfInstant } from "@/backend/domain"
 import { projectProgress } from "@/features/projects/utils/project-progress"
 import { ProjectLeaderboard } from "@/components/features/project-leaderboard"
-import type { Project, Task } from "@/contexts/types"
+import type { Project, Task, User } from "@/contexts/types"
 
 interface ProjectManagerDashboardProps {
   projects: Project[]
   tasks: Task[]
+  users: User[]
   scopeDescription?: string
   onProjectSelect?: (project: Project) => void
 }
 
-export function ProjectManagerDashboard({ projects, tasks, scopeDescription, onProjectSelect }: ProjectManagerDashboardProps) {
+export function ProjectManagerDashboard({ projects, tasks, users, scopeDescription, onProjectSelect }: ProjectManagerDashboardProps) {
   const [selectedProjectId, setSelectedProjectId] = useState("all")
   useEffect(() => {
     if (selectedProjectId !== "all" && !projects.some(project => String(project.id) === selectedProjectId)) {
@@ -41,8 +42,9 @@ export function ProjectManagerDashboard({ projects, tasks, scopeDescription, onP
 
       {/* S06 (regra 6): leaderboard de projetos por pontos. Os cards de gráficos da linha
           S05 saíram por decisão do dono em 2026-11-05 — a aba é só leaderboard. Recorte: os
-          MESMOS projetos filtrados do topo + o seletor de projeto da aba. */}
-      <ProjectLeaderboard projects={scopedProjects} onProjectSelect={onProjectSelect} />
+          MESMOS projetos filtrados do topo + o seletor de projeto da aba. Tarefas e pessoas
+          entram para o andamento, os avatares do campeão e o líder. */}
+      <ProjectLeaderboard projects={scopedProjects} tasks={tasks} users={users} onProjectSelect={onProjectSelect} />
 
       <section aria-labelledby="manager-projects-title" className="space-y-3">
         <div className="flex items-baseline justify-between gap-3"><div><h2 id="manager-projects-title" className="font-semibold">Projetos no recorte</h2><p className="text-sm text-muted-foreground">Andamento temporal, com tarefas como alternativa quando não há período definido.</p></div></div>

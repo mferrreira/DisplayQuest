@@ -81,6 +81,8 @@ export interface Project {
   /** V5-4a (DEC-140): nº PROPPI, dado do projeto. */
   proppiNumber?: string | null
   points?: number
+  /** Contagem de membros do vínculo, medida pelo `_count` da leitura do servidor. */
+  memberCount?: number
   /** V5-2d (DEC-102): chave do objeto no bucket. A tela não recebe binário, recebe a chave. */
   logoKey?: string | null
   bannerKey?: string | null
