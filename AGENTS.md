@@ -359,7 +359,9 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   validação para o agente consumidor; DEC-205..210 na revisão de 2026-10-21). O V4-4 ia usar
   DEC-61..64 e colidiu; os 28 comentários de código foram renumerados. **Antes de abrir decisão nova,
   `grep` os `STATE.json` em `$PLANOS/` (clean-arch e plan-v3..plan-v8). O plan-v8 foi revertido, mas
-  os DEC-211..223 dele seguem reservados no arquivo. Próxima livre: DEC-225.**
+  os DEC-211..223 dele seguem reservados no arquivo. **Atualizado em 2026-11-05:** DEC-224 (donos),
+  DEC-226 plan-v9, DEC-232..236 plan-v10, DEC-240 plan-v12, DEC-242 em uso — o plan-v15 não criou
+  DEC. **Próxima livre: DEC-243.**
 - **Subtask (V4-4, DEC-78..83 → regra atual = DEC-97/98/189/224):** tabela `task_subtasks` (sem FK para
   `users` — subtask não tem
   responsável próprio), base gravada em `tasks.points` = `10 + 10·n` (DEC-97 baixou a 5; o dono restaurou
