@@ -49,7 +49,8 @@ export interface Badge {
   effect?: BadgeEffect | null;
   isActive: boolean;
   createdAt?: Date;
-  createdBy: number;
+  /** plan-v15 S09 (R5): badge de catálogo instala sem autor — `null` é leitura, escrita (badge-rules) continua exigindo número. */
+  createdBy: number | null;
 }
 
 export interface UserBadge {

@@ -8,123 +8,123 @@ datasource db {
 }
 
 model users {
-  id                   Int                    @id @default(autoincrement())
-  name                 String
-  email                String                 @unique
-  points               Int                    @default(0)
-  completedTasks       Int                    @default(0)
-  password             String?
-  status               String                 @default("pending")
-  weekHours            Float                  @default(0)
-  createdAt            DateTime               @default(now())
-  currentWeekHours     Float                  @default(0)
+  id                          Int                      @id @default(autoincrement())
+  name                        String
+  email                       String                   @unique
+  points                      Int                      @default(0)
+  completedTasks              Int                      @default(0)
+  password                    String?
+  status                      String                   @default("pending")
+  weekHours                   Float                    @default(0)
+  createdAt                   DateTime                 @default(now())
+  currentWeekHours            Float                    @default(0)
   // plan-v9 (ADR-001, DEC-224): placar do mes em curso. E o numero que o Quadro de Lideranca
   // ordena e que zera no fechamento de mes. `points` continua o saldo: loja, badges e ajuste do
   // painel nao mudam de significado neste plano.
-  currentMonthPoints   Int                    @default(0)
-  roles                UserRole[]
-  avatar               String?
+  currentMonthPoints          Int                      @default(0)
+  roles                       UserRole[]
+  avatar                      String?
   // DEC-242: o avatar passa a ter chave no bucket (users/<id>/images/avatar), mesma forma da
   // capa. O caminho legado de disco continua servindo o campo `avatar` para quem já o usa.
-  avatarKey            String?
-  bannerKey            String?
-  bio                  String?
-  profileVisibility    ProfileVisibility      @default(public)
+  avatarKey                   String?
+  bannerKey                   String?
+  bio                         String?
+  profileVisibility           ProfileVisibility        @default(public)
   // V5-4a (DEC-138): os dados de pessoa que os dois formulários oficiais pedem. Vivem na
   // PESSOA, não no vínculo — decisão do dono em 2026-10-13. Escrita: o próprio OU quem gerencia
   // contas (o gate do perfil). Leitura: `cpf` é o único restrito (próprio OU MANAGE_USERS); os
   // demais seguem a leitura aberta do perfil. Vocabulários fechados em
   // backend/domain/identity/person-data-rules.ts, derivados dos campos medidos no AcroForm
   // (nivel_*, is_pibic/is_pibiti/is_btp..., is_cnpq/is_fapemig/is_outra + agencia_outra).
-  cpf                String?
-  registrationNumber String?
-  course             String?
-  scholarshipType    String?
-  fundingAgency      String?
-  fundingAgencyOther String?
-  level              String?
-  createdBadges        badges[]               @relation("UserCreatedBadges")
-  daily_logs           daily_logs[]           @relation("UserDailyLogs")
-  history              history[]              @relation("UserHistory")
-  assignedIssues       issues[]               @relation("UserAssignedIssues")
-  reportedIssues       issues[]               @relation("UserReportedIssues")
-  lab_events           lab_events[]           @relation("UserLabEvents")
-  lab_responsibilities lab_responsibilities[] @relation("UserLabResponsibilities")
-  projectMemberships   project_members[]      @relation("UserProjectMemberships")
-  projects             projects[]             @relation("UserProjects")
-  ledProjects          projects[]             @relation("UserProjectLeadership")
-  purchases            purchases[]            @relation("UserPurchases")
-  tasks                tasks[]                @relation("UserTasks")
-  createdTasks         tasks[]                @relation("UserCreatedTasks")
-  taskAssignments      task_assignees[]       @relation("UserTaskAssignments")
-  taskProgress         task_user_progress[]   @relation("UserTaskProgress")
-  awardedBadges        user_badges[]          @relation("UserAwardedBadges")
-  badges               user_badges[]          @relation("UserBadges")
-  schedules            user_schedules[]       @relation("UserSchedules")
-  weekly_hours_history weekly_hours_history[] @relation("UserWeeklyHoursHistory")
+  cpf                         String?
+  registrationNumber          String?
+  course                      String?
+  scholarshipType             String?
+  fundingAgency               String?
+  fundingAgencyOther          String?
+  level                       String?
+  createdBadges               badges[]                 @relation("UserCreatedBadges")
+  daily_logs                  daily_logs[]             @relation("UserDailyLogs")
+  history                     history[]                @relation("UserHistory")
+  assignedIssues              issues[]                 @relation("UserAssignedIssues")
+  reportedIssues              issues[]                 @relation("UserReportedIssues")
+  lab_events                  lab_events[]             @relation("UserLabEvents")
+  lab_responsibilities        lab_responsibilities[]   @relation("UserLabResponsibilities")
+  projectMemberships          project_members[]        @relation("UserProjectMemberships")
+  projects                    projects[]               @relation("UserProjects")
+  ledProjects                 projects[]               @relation("UserProjectLeadership")
+  purchases                   purchases[]              @relation("UserPurchases")
+  tasks                       tasks[]                  @relation("UserTasks")
+  createdTasks                tasks[]                  @relation("UserCreatedTasks")
+  taskAssignments             task_assignees[]         @relation("UserTaskAssignments")
+  taskProgress                task_user_progress[]     @relation("UserTaskProgress")
+  awardedBadges               user_badges[]            @relation("UserAwardedBadges")
+  badges                      user_badges[]            @relation("UserBadges")
+  schedules                   user_schedules[]         @relation("UserSchedules")
+  weekly_hours_history        weekly_hours_history[]   @relation("UserWeeklyHoursHistory")
   // plan-v9 S02 (DEC-225): os meses fechados desta pessoa. Cascade, como o historico semanal de
   // horas — excluir a conta apaga as linhas dela (ADR-003).
-  monthHistory         month_history[]          @relation("UserMonthHistory")
-  weekly_reports       weekly_reports[]       @relation("UserWeeklyReports")
-  work_sessions        work_sessions[]        @relation("UserWorkSessions")
-  notifications        notifications[]        @relation("UserNotifications")
-  projectReports       project_reports[]      @relation("ProjectReportAuthor")
+  monthHistory                month_history[]          @relation("UserMonthHistory")
+  weekly_reports              weekly_reports[]         @relation("UserWeeklyReports")
+  work_sessions               work_sessions[]          @relation("UserWorkSessions")
+  notifications               notifications[]          @relation("UserNotifications")
+  projectReports              project_reports[]        @relation("ProjectReportAuthor")
   // V5-2c: quem subiu um anexo do projeto. RESTRICT (sem onDelete) — ver o comentário no
   // model `project_attachments`; a guarda user-delete-schema-drift.test.ts confere os dois lados.
-  projectAttachments   project_attachments[]  @relation("ProjectAttachmentUploader")
-  uploadedActivityFiles project_activity_files[] @relation("ActivityFileUploader")
+  projectAttachments          project_attachments[]    @relation("ProjectAttachmentUploader")
+  uploadedActivityFiles       project_activity_files[] @relation("ActivityFileUploader")
   // V5-5: as três relações do cronograma com pessoa são `SetNull` (ver o comentário no model
   // `project_activities`): excluir uma pessoa não apaga cronograma nem bloqueia a exclusão.
-  activityResponsibilities   project_activities[] @relation("ActivityResponsible")
-  activityCompletionRequests project_activities[] @relation("ActivityCompletionRequester")
-  activityCompletionApprovals project_activities[] @relation("ActivityCompletionApprover")
+  activityResponsibilities    project_activities[]     @relation("ActivityResponsible")
+  activityCompletionRequests  project_activities[]     @relation("ActivityCompletionRequester")
+  activityCompletionApprovals project_activities[]     @relation("ActivityCompletionApprover")
   // V5-10 (DEC-170): atestado é documento GERADO sobre o vínculo — `userId` Cascade (não
   // bloqueia excluir conta; o PDF é regenerável a partir dos dados) e `generatedBy` SetNull
   // (auditoria). Nenhum dos dois entra na guarda de FKs bloqueantes.
-  certificatesAsMember  certificates[] @relation("CertificateMember")
-  certificatesGenerated certificates[] @relation("CertificateGenerator")
+  certificatesAsMember        certificates[]           @relation("CertificateMember")
+  certificatesGenerated       certificates[]           @relation("CertificateGenerator")
 }
 
 model projects {
-  id          Int               @id @default(autoincrement())
-  name        String
-  description String?
+  id                Int                    @id @default(autoincrement())
+  name              String
+  description       String?
   // plan-v13 (S01): subtítulo — a linha que aparece abaixo do título na página do projeto.
   // Texto aparado, vazio vira null, teto 200; a descrição do corpo é outra coluna.
-  subtitle    String?
-  createdAt   String
-  createdBy   Int
-  leaderId    Int?
-  status      String
-  links       Json?
+  subtitle          String?
+  createdAt         String
+  createdBy         Int
+  leaderId          Int?
+  status            String
+  links             Json?
   // V5-2b (DEC-61/63). Datas civis `YYYY-MM-DD` — mesma decisão de `createdAt`/`dueDate`,
   // que já são String: a aritmética do plano é de dias civis (backend/domain/time/civil-day).
   // `points` é o saldo do projeto (DEC-63), escrito só por use case de economia (DEC-74, piso 0).
-  startDate     String?
-  endDate       String?
-  editalNumber  String?
-  processNumber String?
-  points        Int      @default(0)
+  startDate         String?
+  endDate           String?
+  editalNumber      String?
+  processNumber     String?
+  points            Int                    @default(0)
   // V5-4a (DEC-140): o nº PROPPI aparece nos dois formulários oficiais e é dado do projeto,
   // não da pessoa nem do vínculo.
-  proppiNumber  String?
+  proppiNumber      String?
   // V5-2d (DEC-102): chave do objeto no bucket, nunca um caminho de disco (regra 12 do plano).
   // Uma coluna por slot: "uma logo por projeto" é estrutural, não regra a validar.
-  logoKey       String?
-  bannerKey     String?
-  daily_logs  daily_logs[]      @relation("ProjectDailyLogs")
-  members     project_members[] @relation("ProjectMemberships")
-  creator     users             @relation("UserProjects", fields: [createdBy], references: [id])
-  leader      users?            @relation("UserProjectLeadership", fields: [leaderId], references: [id])
-  tasks       tasks[]           @relation("ProjectTasks")
-  work_sessions work_sessions[] @relation("WorkSessionProject")
-  project_reports project_reports[] @relation("ProjectReports")
-  technical_reports technical_reports[] @relation("ProjectTechnicalReports")
-  certificates      certificates[]      @relation("ProjectCertificates")
-  deliverables project_deliverables[] @relation("ProjectDeliverables")
-  attachments  project_attachments[]   @relation("ProjectAttachments")
-  goals        project_goals[]         @relation("ProjectGoals")
-  activities   project_activities[]    @relation("ProjectActivities")
+  logoKey           String?
+  bannerKey         String?
+  daily_logs        daily_logs[]           @relation("ProjectDailyLogs")
+  members           project_members[]      @relation("ProjectMemberships")
+  creator           users                  @relation("UserProjects", fields: [createdBy], references: [id])
+  leader            users?                 @relation("UserProjectLeadership", fields: [leaderId], references: [id])
+  tasks             tasks[]                @relation("ProjectTasks")
+  work_sessions     work_sessions[]        @relation("WorkSessionProject")
+  project_reports   project_reports[]      @relation("ProjectReports")
+  technical_reports technical_reports[]    @relation("ProjectTechnicalReports")
+  certificates      certificates[]         @relation("ProjectCertificates")
+  deliverables      project_deliverables[] @relation("ProjectDeliverables")
+  attachments       project_attachments[]  @relation("ProjectAttachments")
+  goals             project_goals[]        @relation("ProjectGoals")
+  activities        project_activities[]   @relation("ProjectActivities")
 }
 
 // V5-2c (DEC-61/63): entregável é (nome, quantidade) — a lista do que o projeto entrega.
@@ -179,7 +179,7 @@ model project_goals {
 // de meses é derivado deles, nunca guardado. O período (primeiro dia do primeiro mês ao último
 // dia do último) é derivado na regra, não armazenado.
 model project_activities {
-  id                Int       @id @default(autoincrement())
+  id                Int                      @id @default(autoincrement())
   projectId         Int
   order             Int
   description       String
@@ -190,24 +190,24 @@ model project_activities {
   firstMonth        String
   lastMonth         String
   // DEC-76: duas fases. O formulário não escreve status — só o fluxo de solicitar/aprovar (V5-7).
-  status            String    @default("OPEN")
+  status            String                   @default("OPEN")
   requestedBy       Int?
   requestedAt       DateTime?
   approvedBy        Int?
   approvedAt        DateTime?
   // DEC-64: uma notificação de atraso por atividade, não uma por dia.
   overdueNotifiedAt DateTime?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  project     projects @relation("ProjectActivities", fields: [projectId], references: [id], onDelete: Cascade)
-  responsible users?   @relation("ActivityResponsible", fields: [responsibleId], references: [id], onDelete: SetNull)
-  requestedByUser users? @relation("ActivityCompletionRequester", fields: [requestedBy], references: [id], onDelete: SetNull)
-  approvedByUser  users? @relation("ActivityCompletionApprover", fields: [approvedBy], references: [id], onDelete: SetNull)
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+  project           projects                 @relation("ProjectActivities", fields: [projectId], references: [id], onDelete: Cascade)
+  responsible       users?                   @relation("ActivityResponsible", fields: [responsibleId], references: [id], onDelete: SetNull)
+  requestedByUser   users?                   @relation("ActivityCompletionRequester", fields: [requestedBy], references: [id], onDelete: SetNull)
+  approvedByUser    users?                   @relation("ActivityCompletionApprover", fields: [approvedBy], references: [id], onDelete: SetNull)
   // V5-6 (DEC-99): as tasks da etapa. A leitura do cronograma não inclui tasks (o painel não
   // lista tarefa por linha); quem conta é o fluxo de solicitar conclusão (V5-7).
-  tasks       tasks[]  @relation("ActivityTasks")
+  tasks             tasks[]                  @relation("ActivityTasks")
   // V5-7a (DEC-157/162): as provas anexadas para solicitar a conclusão da etapa.
-  files       project_activity_files[] @relation("ActivityEvidence")
+  files             project_activity_files[] @relation("ActivityEvidence")
 
   @@index([projectId])
 }
@@ -218,14 +218,14 @@ model project_activities {
 // medida da 17ª FK (DEC-134). Apagar a linha do cronograma apaga as provas (Cascade): a prova
 // existe para aquela etapa; sem etapa, não há o que provar.
 model project_activity_files {
-  id          Int      @id @default(autoincrement())
+  id          Int                @id @default(autoincrement())
   activityId  Int
-  blobKey     String   @unique
+  blobKey     String             @unique
   name        String
   contentType String
   size        Int
   uploadedBy  Int
-  uploadedAt  DateTime @default(now())
+  uploadedAt  DateTime           @default(now())
   activity    project_activities @relation("ActivityEvidence", fields: [activityId], references: [id], onDelete: Cascade)
   uploader    users              @relation("ActivityFileUploader", fields: [uploadedBy], references: [id])
 
@@ -233,10 +233,10 @@ model project_activity_files {
 }
 
 model project_members {
-  id           Int      @id @default(autoincrement())
+  id           Int        @id @default(autoincrement())
   projectId    Int
   userId       Int
-  joinedAt     DateTime @default(now())
+  joinedAt     DateTime   @default(now())
   roles        UserRole[]
   // V5-4b (DEC-69/140/149): dados do vínculo. `cargaHoraria` é a carga contratada, que alimenta
   // o atestado (carga_8 / carga_20 / carga_adaptada) — não é `users.weekHours`, a meta semanal da
@@ -246,16 +246,16 @@ model project_members {
   lattes       String?
   cargaHoraria Float?
   categoria    String?
-  situacao     String   @default("ATIVO")
+  situacao     String     @default("ATIVO")
   dataEntrada  String?
-  project      projects @relation("ProjectMemberships", fields: [projectId], references: [id], onDelete: Cascade)
-  user         users    @relation("UserProjectMemberships", fields: [userId], references: [id], onDelete: Cascade)
+  project      projects   @relation("ProjectMemberships", fields: [projectId], references: [id], onDelete: Cascade)
+  user         users      @relation("UserProjectMemberships", fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([projectId, userId])
 }
 
 model tasks {
-  id             Int       @id @default(autoincrement())
+  id             Int                  @id @default(autoincrement())
   title          String
   description    String?
   status         String
@@ -263,22 +263,22 @@ model tasks {
   assignedTo     Int?
   projectId      Int?
   dueDate        String?
-  points         Int       @default(0)
-  completed      Boolean   @default(false)
+  points         Int                  @default(0)
+  completed      Boolean              @default(false)
   completedAt    DateTime?
-  taskVisibility String    @default("delegated")
-  isGlobal       Boolean   @default(false)
-  groupTaskId    Int?                    // Vincula cópias individuais criadas a partir do mesmo template
+  taskVisibility String               @default("delegated")
+  isGlobal       Boolean              @default(false)
+  groupTaskId    Int? // Vincula cópias individuais criadas a partir do mesmo template
   createdBy      Int?
   // V5-6 (DEC-99): a linha do cronograma a que a tarefa pertence. `SetNull`, não o default
   // `Restrict`: apagar uma etapa do cronograma não apaga tarefa nenhuma (DEC-156), e a tarefa
   // sobrevive sem vínculo. A checagem de projeto é do use case, não da FK.
   activityId     Int?
-  creator        users?    @relation("UserCreatedTasks", fields: [createdBy], references: [id])
-  assignee       users?    @relation("UserTasks", fields: [assignedTo], references: [id])
-  projectObj     projects? @relation("ProjectTasks", fields: [projectId], references: [id])
-  activityObj    project_activities? @relation("ActivityTasks", fields: [activityId], references: [id], onDelete: SetNull)
-  assignees      task_assignees[] @relation("TaskAssignees")
+  creator        users?               @relation("UserCreatedTasks", fields: [createdBy], references: [id])
+  assignee       users?               @relation("UserTasks", fields: [assignedTo], references: [id])
+  projectObj     projects?            @relation("ProjectTasks", fields: [projectId], references: [id])
+  activityObj    project_activities?  @relation("ActivityTasks", fields: [activityId], references: [id], onDelete: SetNull)
+  assignees      task_assignees[]     @relation("TaskAssignees")
   workSessions   work_session_tasks[] @relation("TaskWorkSessions")
   taskProgress   task_user_progress[] @relation("TaskUserProgress")
   subtasks       task_subtasks[]      @relation("TaskSubtasks")
@@ -288,12 +288,12 @@ model tasks {
 
 model task_assignees {
   id         Int      @id @default(autoincrement())
-  taskId      Int
-  userId      Int
-  assignedBy  Int?
-  assignedAt  DateTime @default(now())
-  task        tasks    @relation("TaskAssignees", fields: [taskId], references: [id], onDelete: Cascade)
-  user        users    @relation("UserTaskAssignments", fields: [userId], references: [id], onDelete: Cascade)
+  taskId     Int
+  userId     Int
+  assignedBy Int?
+  assignedAt DateTime @default(now())
+  task       tasks    @relation("TaskAssignees", fields: [taskId], references: [id], onDelete: Cascade)
+  user       users    @relation("UserTaskAssignments", fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([taskId, userId])
   @@index([taskId])
@@ -301,17 +301,17 @@ model task_assignees {
 }
 
 model task_user_progress {
-  id           Int      @id @default(autoincrement())
+  id            Int       @id @default(autoincrement())
   taskId        Int
   userId        Int
-  status        String   @default("to-do")
+  status        String    @default("to-do")
   pickedAt      DateTime?
   completedAt   DateTime?
-  awardedPoints Int      @default(0)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  task          tasks    @relation("TaskUserProgress", fields: [taskId], references: [id], onDelete: Cascade)
-  user          users    @relation("UserTaskProgress", fields: [userId], references: [id], onDelete: Cascade)
+  awardedPoints Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  task          tasks     @relation("TaskUserProgress", fields: [taskId], references: [id], onDelete: Cascade)
+  user          users     @relation("UserTaskProgress", fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([taskId, userId])
   @@index([taskId])
@@ -396,7 +396,7 @@ model weekly_reports {
 }
 
 model project_reports {
-  id          Int      @id @default(autoincrement())
+  id          Int                  @id @default(autoincrement())
   projectId   Int
   authorId    Int
   periodType  String
@@ -404,10 +404,10 @@ model project_reports {
   periodEnd   DateTime
   title       String?
   content     String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  project     projects @relation("ProjectReports", fields: [projectId], references: [id], onDelete: Cascade)
-  author      users    @relation("ProjectReportAuthor", fields: [authorId], references: [id])
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  project     projects             @relation("ProjectReports", fields: [projectId], references: [id], onDelete: Cascade)
+  author      users                @relation("ProjectReportAuthor", fields: [authorId], references: [id])
   attachments report_attachments[] @relation("ReportAttachments")
 
   @@unique([projectId, periodType, periodStart, authorId])
@@ -510,25 +510,25 @@ model history {
 }
 
 model work_sessions {
-  id        Int         @id @default(autoincrement())
-  userId    Int
-  userName  String
-  startTime DateTime    @default(now())
+  id                Int                  @id @default(autoincrement())
+  userId            Int
+  userName          String
+  startTime         DateTime             @default(now())
   // DEC-233: startTime is the current active stretch; this is the immutable first start.
   // Historical rows stay null because resume may already have overwritten startTime.
   originalStartTime DateTime?
-  endTime   DateTime?
-  duration  Float?
-  activity  String?
-  location  String?
-  projectId Int?
-  status    String      @default("active")
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
-  dailyLog  daily_logs? @relation("WorkSessionDailyLog")
-  user      users       @relation("UserWorkSessions", fields: [userId], references: [id], onDelete: Cascade)
-  project   projects?   @relation("WorkSessionProject", fields: [projectId], references: [id])
-  tasks     work_session_tasks[] @relation("WorkSessionTasks")
+  endTime           DateTime?
+  duration          Float?
+  activity          String?
+  location          String?
+  projectId         Int?
+  status            String               @default("active")
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  dailyLog          daily_logs?          @relation("WorkSessionDailyLog")
+  user              users                @relation("UserWorkSessions", fields: [userId], references: [id], onDelete: Cascade)
+  project           projects?            @relation("WorkSessionProject", fields: [projectId], references: [id])
+  tasks             work_session_tasks[] @relation("WorkSessionTasks")
 }
 
 model work_session_tasks {
@@ -638,8 +638,11 @@ model badges {
   effect      Json?
   isActive    Boolean       @default(true)
   createdAt   DateTime      @default(now())
-  createdBy   Int
-  creator     users         @relation("UserCreatedBadges", fields: [createdBy], references: [id])
+  // plan-v15 S09 (R5): o catálogo SQL instala antes de qualquer usuário existir, então a
+  // autoria de badge de catálogo é nula. A FK continua RESTRICT — excluir usuário segue
+  // bloqueada por badge criado por ele (DEC-55, guarda user-delete-schema-drift).
+  createdBy   Int?
+  creator     users?        @relation("UserCreatedBadges", fields: [createdBy], references: [id])
   userBadges  user_badges[] @relation("BadgeUserBadges")
 }
 
@@ -716,15 +719,15 @@ model notifications {
   type      String
   title     String
   message   String
-  data      String?   // JSON data
+  data      String? // JSON data
   read      Boolean   @default(false)
   // V5-8 (DEC-64): atraso de atividade é notificação URGENTE — o painel destaca por esta
   // coluna, não pelo `type`. Toda notificação existente nasce `false` (default).
   priority  Boolean   @default(false)
   createdAt DateTime  @default(now())
   readAt    DateTime?
-  
-  user      users     @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
-  
+
+  user users @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
+
   @@map("notifications")
 }

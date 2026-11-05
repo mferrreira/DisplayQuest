@@ -22,4 +22,7 @@ fi
 echo "==> Running prisma migrate deploy"
 npx prisma migrate deploy
 
+echo "==> Aplicando o catalogo de 50 badges (plan-v15 S09, R5: idempotente por slug)"
+node scripts/apply-catalog-badges.mjs
+
 echo "==> Done"
