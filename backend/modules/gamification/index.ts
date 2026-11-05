@@ -28,6 +28,7 @@ import {
 import { EquipUserBadgeUseCase } from "@/backend/modules/gamification/application/use-cases/equip-user-badge.use-case"
 import type { BadgeCatalogPort } from "@/backend/modules/gamification/application/ports/badge-catalog.port"
 import type { BadgeMetricsPort } from "@/backend/modules/gamification/application/ports/badge-metrics.port"
+import type { EquippedPassivesPort } from "@/backend/modules/gamification/application/ports/equipped-passives.port"
 import type { BoardMonthClosePort } from "@/backend/modules/gamification/application/ports/board-month-close.port"
 import type { GamificationAwardHistoryPort } from "@/backend/modules/gamification/application/ports/gamification-award-history.port"
 import type { GamificationUsersPort } from "@/backend/modules/gamification/application/ports/gamification-users.port"
@@ -35,6 +36,7 @@ import type { UserBadgePort } from "@/backend/modules/gamification/application/p
 import type { UserStatsPort } from "@/backend/modules/gamification/application/ports/user-stats.port"
 import { createPrismaBadgeCatalogPort } from "@/backend/modules/gamification/infrastructure/repositories/prisma-badge-catalog.port"
 import { createPrismaBadgeMetricsPort } from "@/backend/modules/gamification/infrastructure/repositories/prisma-badge-metrics.port"
+import { createPrismaEquippedPassivesPort } from "@/backend/modules/gamification/infrastructure/repositories/prisma-equipped-passives.port"
 import { createPrismaBoardMonthClosePort } from "@/backend/modules/gamification/infrastructure/repositories/prisma-board-month-close.port"
 import { createPrismaGamificationAwardHistoryPort } from "@/backend/modules/gamification/infrastructure/repositories/prisma-gamification-award-history.port"
 import { createPrismaGamificationUsersPort } from "@/backend/modules/gamification/infrastructure/repositories/prisma-gamification-users.port"
@@ -163,6 +165,8 @@ export interface GamificationModulePorts {
   stats: UserStatsPort
   /** plan-v15 S03: métricas extras do registro, medida sob demanda. */
   metrics: BadgeMetricsPort
+  /** plan-v15 S05 (R10): passivas equipadas da pessoa, aplicadas na escrita do prêmio. */
+  passives: EquippedPassivesPort
   /** plan-v9 S02: leitura do registro de mes e escrita do fechamento (ADR-002). */
   monthClose: BoardMonthClosePort
 }
@@ -179,6 +183,7 @@ export function createGamificationModule(options: GamificationModuleFactoryOptio
     userBadges: options.ports?.userBadges ?? createPrismaUserBadgePort(),
     stats: options.ports?.stats ?? createPrismaUserStatsPort(),
     metrics: options.ports?.metrics ?? createPrismaBadgeMetricsPort(),
+    passives: options.ports?.passives ?? createPrismaEquippedPassivesPort(),
     monthClose: options.ports?.monthClose ?? createPrismaBoardMonthClosePort(),
   }
 
@@ -201,6 +206,7 @@ export function createGamificationModule(options: GamificationModuleFactoryOptio
       awardHistory: ports.awardHistory,
       progression,
       evaluateUserBadges,
+      passives: ports.passives,
     }),
     new ReverseTaskAwardUseCase(ports.awardHistory),
     new AwardFromActivityCompletionUseCase({
