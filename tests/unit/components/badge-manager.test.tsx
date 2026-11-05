@@ -74,4 +74,21 @@ describe("BadgeManager com picker de métricas", () => {
     await waitFor(() => expect(api.create).toHaveBeenCalledTimes(1));
     expect(api.create.mock.calls[0][0].criteria).toBeNull();
   });
+
+  it("a lista não quebra com badge de criteria legado sem cláusulas (seed antigo)", async () => {
+    // O GET devolve o JSON cru da base: o seed antigo tem `criteria` sem `clauses`
+    // (`{minHours: 10}`), e a lista não pode chamar `map` em cláusulas que não existem.
+    api.getAll.mockResolvedValue({
+      badges: [
+        { id: 1, name: "Selo Antigo", description: "legado", category: "achievement", criteria: { minHours: 10 }, isActive: true, createdBy: 1 },
+        { id: 2, name: "Selo V2", description: "v2", category: "milestone", criteria: { version: 2, clauses: [{ metric: "tasks_completed", op: ">=", value: 5 }] }, isActive: true, createdBy: 1 },
+      ],
+    });
+    render(<BadgeManager />);
+    await screen.findByText("Selo Antigo");
+    expect(screen.getByText("Selo V2")).toBeInTheDocument();
+    expect(screen.getByText(/Tarefas concluídas ≥ 5/)).toBeInTheDocument();
+    // o legado não renderiza bloco de Critérios; só o v2 renderiza o seu
+    expect(screen.getAllByText("Critérios:")).toHaveLength(1);
+  });
 });

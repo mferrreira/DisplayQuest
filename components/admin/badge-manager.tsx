@@ -384,7 +384,7 @@ export function BadgeManager() {
             <CardContent>
               <p className="text-sm text-muted-foreground mb-4">{badge.description}</p>
               
-              {badge.criteria && (
+              {badge.criteria && Array.isArray(badge.criteria.clauses) && badge.criteria.clauses.length > 0 && (
                 <div className="space-y-2">
                   <h4 className="text-sm font-medium text-foreground">Critérios:</h4>
                   <div className="space-y-1 text-xs text-muted-foreground">
