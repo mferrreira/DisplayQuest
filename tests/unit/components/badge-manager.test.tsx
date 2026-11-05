@@ -91,4 +91,24 @@ describe("BadgeManager com picker de métricas", () => {
     // o legado não renderiza bloco de Critérios; só o v2 renderiza o seu
     expect(screen.getAllByText("Critérios:")).toHaveLength(1);
   });
+
+  it("cartões falam a fonte única: rótulo de categoria em português e o ícone compartilhado", async () => {
+    // plan-v17 S06 (INV5, C da fatia): o catálogo não tem vocabulário próprio —
+    // `badgeCategoryLabel` e o ícone da peça do medálhão; enum cru não aparece na tela.
+    api.getAll.mockResolvedValue({
+      badges: [
+        { id: 1, name: "Selo A", description: "d", category: "achievement", criteria: null, isActive: true, createdBy: 1 },
+        { id: 2, name: "Selo S", description: "d", category: "special", criteria: null, isActive: true, createdBy: 1 },
+      ],
+    });
+    const { container } = render(<BadgeManager />);
+    await screen.findByText("Selo A");
+
+    expect(screen.getByText("Conquista")).toBeInTheDocument();
+    expect(screen.getByText("Especial")).toBeInTheDocument();
+    expect(screen.queryByText("achievement")).toBeNull();
+    expect(screen.queryByText("special")).toBeNull();
+    expect(container.querySelector("svg.lucide-crown")).toBeTruthy();
+    expect(container.querySelector("svg.lucide-trophy")).toBeTruthy();
+  });
 });

@@ -15,15 +15,19 @@ import {
   Plus, 
   Edit, 
   Trash2, 
-  Star, 
-  Trophy, 
-  Target, 
-  Users,
+  Target,
   Award,
   Settings
 } from "lucide-react"
 import { BadgesAPI } from "@/contexts/api-client"
-import { METRICS, type BadgeClause, type BadgeCriteriaV2 } from "@/backend/domain"
+import {
+  badgeCategoryLabel,
+  METRICS,
+  type BadgeCategory,
+  type BadgeClause,
+  type BadgeCriteriaV2,
+} from "@/backend/domain"
+import { BadgeCategoryIcon, badgeCategoryChipClass } from "@/components/ui/badge-medallion"
 
 interface BadgeData {
   id?: number
@@ -40,20 +44,6 @@ interface BadgeData {
 }
 
 const metricLabel = (metric: string) => METRICS.find(m => m.id === metric)?.label ?? metric
-
-const categoryIcons = {
-  achievement: Trophy,
-  milestone: Target,
-  special: Star,
-  social: Users
-}
-
-const categoryColors = {
-  achievement: 'bg-warning/15 text-warning border-warning/25',
-  milestone: 'bg-info/15 text-info border-info/25',
-  special: 'bg-review/15 text-review border-review/25',
-  social: 'bg-success/15 text-success border-success/25'
-}
 
 export function BadgeManager() {
   const [badges, setBadges] = useState<BadgeData[]>([])
@@ -163,11 +153,6 @@ export function BadgeManager() {
 
   const updateClause = (index: number, patch: Partial<BadgeClause>) => {
     setClauses(prev => prev.map((clause, i) => (i === index ? { ...clause, ...patch } : clause)))
-  }
-
-  const getCategoryIcon = (category: string) => {
-    const IconComponent = categoryIcons[category as keyof typeof categoryIcons] || Trophy
-    return <IconComponent className="h-4 w-4" />
   }
 
   if (loading) {
@@ -405,15 +390,15 @@ export function BadgeManager() {
                     className="w-10 h-10 rounded-full flex items-center justify-center text-white text-lg"
                     style={{ backgroundColor: badge.color }}
                   >
-                    {badge.icon || getCategoryIcon(badge.category)}
+                    {badge.icon || <BadgeCategoryIcon category={badge.category} className="h-5 w-5" />}
                   </div>
                   <div>
                     <CardTitle className="text-lg">{badge.name}</CardTitle>
                     <Badge 
                       variant="outline" 
-                      className={`text-xs ${categoryColors[badge.category]}`}
+                      className={`text-xs ${badgeCategoryChipClass(badge.category)}`}
                     >
-                      {badge.category}
+                      {badgeCategoryLabel(badge.category)}
                     </Badge>
                   </div>
                 </div>
