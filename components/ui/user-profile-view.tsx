@@ -40,6 +40,7 @@ import {
 import { formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { UserBadges } from "@/components/ui/user-badges"
+import { ProfileBadgeShowcase } from "@/components/ui/profile-badge-showcase"
 import { ProfileMonthsList } from "@/components/ui/profile-months-list"
 
 interface UserProfileViewProps {
@@ -166,7 +167,12 @@ export function UserProfileView({ user, onBack, canEdit = false, onEdit, project
 
         <div className="flex flex-col gap-3 px-6 pb-6 pt-16 sm:flex-row sm:items-end sm:justify-between sm:px-8">
           <div className="min-w-0">
-            <h2 className="truncate text-2xl font-bold tracking-tight text-foreground sm:text-3xl">{user.name}</h2>
+            {/* plan-v17 S02 (R5, ADR-002): a mesma vitrine do perfil próprio — o card de
+                terceiro mostra as equipadas, leitura aberta de user-badges, nome só em tooltip. */}
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="truncate text-2xl font-bold tracking-tight text-foreground sm:text-3xl">{user.name}</h2>
+              <ProfileBadgeShowcase userId={user.id} />
+            </div>
             <p className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
               <Mail className="h-4 w-4" aria-hidden="true" />
               <span className="truncate">{user.email}</span>

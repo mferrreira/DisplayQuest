@@ -31,6 +31,7 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { BucketAvatar } from "@/components/ui/bucket-avatar"
 import { UserBadges } from "@/components/ui/user-badges"
+import { ProfileBadgeShowcase } from "@/components/ui/profile-badge-showcase"
 import { TimerCard } from "@/components/ui/timer-card"
 import { getRoleDisplayName } from "@/lib/utils/access-control"
 import { compareByBoardPosition } from "@/backend/domain"
@@ -238,11 +239,14 @@ function ProfilePageContent() {
 
             <div className="flex flex-col gap-3 px-6 pb-6 pt-16 sm:flex-row sm:items-end sm:justify-between sm:px-8">
               <div className="min-w-0">
+                {/* plan-v17 S02 (R2, ADR-002): as equipadas entram na faixa do nome, à
+                    direita, medálhão com o ícone real; nome só em tooltip. */}
                 <div className="flex flex-wrap items-center gap-2">
                   <h2 className="truncate text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
                     {user.name}
                   </h2>
                   {showProfileForm && <Badge variant="secondary">Editando</Badge>}
+                  <ProfileBadgeShowcase userId={user.id} />
                 </div>
                 <p className="mt-1 truncate text-sm text-muted-foreground">{user.email}</p>
               </div>
