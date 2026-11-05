@@ -184,6 +184,9 @@ const INTERACTIONS = [
   // de conclusão de atividade, criada na S01. Leitura pura: nenhum clique aprova.
   { id: "admin-conclusoes", role: "coord", route: "/dashboard/admin", aba: "Conclusões", verifica: "Conclusões solicitadas" },
   { id: "admin-badges", role: "coord", route: "/dashboard/admin", aba: "Badges", verifica: "Gerenciar Badges" },
+  // POS-1 (2026-11-05): o envio do ícone mora no diálogo de edição. "Editar Gerente" é substring de
+  // "Editar Gerente de Projeto" — o abre usa o nome completo para evitar o strict mode.
+  { id: "admin-badges-dialogo", role: "coord", route: "/dashboard/admin", aba: "Badges", abre: "Editar Gerente de Projeto", dialogo: "Ícone do badge", rolarAte: "text=Ícone do badge" },
   // plan-v12 (DEC-240): a faixa 21:9 do detalhe do projeto. Sem clique. A verificação é do
   // card permanente da Visão geral, e o rolar leva o gatilho da faixa ao campo de visão.
   { id: "faixa-capa-projeto", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: 'a[aria-label="Ver projeto Pesquisa em IA"]' }, projetoTab: "Visão geral", verifica: "Dados do projeto", rolarAte: 'button[aria-label="Opções da capa do projeto"]' },

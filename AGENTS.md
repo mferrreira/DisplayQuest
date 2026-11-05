@@ -1227,9 +1227,11 @@ leitura do texto visível. São observações medidas na instância real, **não
   **convertido** (`ImageProcessor.toWebP`), nunca o `.png` do upload. Trocar apaga o objeto velho só
   depois de o registro apontar para o novo; falha do registro remove o objeto novo. `DELETE` remove o
   objeto e zera a coluna.
-- **UI:** botão **Enviar ícone** em cada cartão do `badge-manager`; cartões do painel e chips do
-  perfil mostram `<img>` quando há chave, com fallback ao ícone de categoria quando não. A recusa da
-  rota chega como `role="alert"` na tela. `BadgesAPI.uploadIcon/removeIcon` no api-client.
+- **UI:** campo **Ícone do badge** no diálogo de criação/edição do `badge-manager` (pedido do dono em
+  2026-11-05: o envio não mora no cartão); o botão de editar cartão ganhou `aria-label` (botão-ícone,
+  regra da casa); cartões do painel e chips do perfil mostram `<img>` quando há chave, com fallback ao
+  ícone de categoria quando não. A recusa da rota chega como `role="alert"` na tela depois de salvar.
+  `BadgesAPI.uploadIcon/removeIcon` no api-client.
 - **Catálogo de imagens:** `assets/badge-icons/` — 31 SVGs Lucide (ISC) + 50 WebP (128×128, na cor
   do próprio badge) + `manifest.json` com o pareamento slug→token→cor→arquivo. A guarda
   `tests/unit/scripts/badge-icons-manifest.test.ts` congela manifest ↔ `cataloga-badges.sql`. Renomes

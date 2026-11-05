@@ -45,7 +45,7 @@ A aba **Horas** é a leitura consolidada do tempo registrado. As colunas são **
 | **Conclusões** | a fila global de solicitações de conclusão de atividades, de todos os projetos (aba *Conclusões* abaixo) |
 | **Voluntários** | gerenciar a equipe de cada projeto — adicionar e remover pessoas (seção *A aba Voluntários* abaixo) |
 | **Notificações** | enviar aviso para uma pessoa ou para o laboratório |
-| **Badges** | criar e editar distintivos: **Nome**, **Descrição**, **Categoria** e as condições de conquista — cada cláusula é **Métrica do critério** + **Valor do critério**; **Enviar ícone** em cada cartão (seção *A aba Badges* abaixo) |
+| **Badges** | criar e editar distintivos: **Nome**, **Descrição**, **Categoria** e as condições de conquista — cada cláusula é **Métrica do critério** + **Valor do critério**; o campo **Ícone do badge** fica no diálogo de criação e de edição (seção *A aba Badges* abaixo) |
 
 ## A aba Voluntários
 
@@ -69,10 +69,14 @@ Sem solicitação pendente, a aba diz *"Nenhuma conclusão solicitada"*.
 
 ## A aba Badges
 
-O catálogo de distintivos vive nesta aba: criar e editar **Nome**, **Descrição**, **Categoria** e as cláusulas de conquista. Cada cartão traz o ícone do distintivo, o nome, a categoria e, abaixo da descrição, o botão **Enviar ícone** — escolha um arquivo `.png` ou `.webp`, e a imagem passa a aparecer no cartão e nos cartões do bloco Badges do perfil, na cor do distintivo. Enviar de novo troca a imagem; a anterior é apagada. Só a gestão de badges envia, e a recusa chega como aviso na tela.
+O catálogo de distintivos vive nesta aba: criar e editar **Nome**, **Descrição**, **Categoria** e as cláusulas de conquista. Cada cartão traz o ícone do distintivo, o nome e a categoria. No diálogo de criação e de edição, o campo **Ícone do badge** recebe um arquivo `.png` ou `.webp`; a imagem passa a aparecer no cartão e nos cartões do bloco Badges do perfil, na cor do distintivo. Enviar de novo troca a imagem; a anterior é apagada. Só a gestão de badges envia, e a recusa chega como aviso na tela.
 
 ```foto admin-badges titulo="A aba Badges com o ícone nos cartões"
-Cada cartão mostra o ícone, o nome, a categoria e o botão **Enviar ícone** sob a descrição.
+Cada cartão mostra o ícone, o nome e a categoria; o campo **Ícone do badge** fica no diálogo de criação e de edição.
+```
+
+```foto admin-badges-dialogo titulo="O campo Ícone do badge no diálogo de edição"
+No fim do diálogo, o campo traz a imagem do badge, o seletor de arquivo e a nota de que o arquivo é convertido para WebP na escrita.
 ```
 
 ## Sessões e semana
