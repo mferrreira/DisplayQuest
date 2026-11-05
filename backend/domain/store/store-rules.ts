@@ -14,6 +14,7 @@
  *    inatingível ("Esta recompensa está fora de estoque" nunca dispara em produção).
  */
 import { ConflictError, NotFoundError, ValidationError } from "@/backend/domain/errors"
+import type { BadgeEffect } from "@/backend/domain/gamification/Badge"
 import type { IReward, PurchaseStatus } from "./Purchase"
 
 export interface RewardInputFields {
@@ -142,6 +143,17 @@ export function buildPurchaseSnapshot(userId: number, reward: IReward, now: Date
     purchaseDate: now,
     status: "pending",
   }
+}
+
+/**
+ * plan-v15 S08 (R14): preço efetivo da loja com a passiva bônus do comprador. O desconto é
+ * `price × (1 − min(Σ pct, 100%))` e o PISO 1 do dono não desaparece — nem o desconto de
+ * 100% chega a zero. O snapshot congela o preço efetivo, e o reembolso de reject/cancel
+ * devolve exatamente o que foi cobrado.
+ */
+export function applyStoreDiscount(price: number, effects: BadgeEffect[]): number {
+  const bonusSum = effects.filter((e) => e.kind === "bonus").reduce((s, e) => s + e.pct, 0)
+  return Math.max(1, Math.round(price * (1 - Math.min(bonusSum, 1))))
 }
 
 export function assertPendingForApprove(status: string): void {

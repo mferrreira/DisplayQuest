@@ -1,5 +1,6 @@
 import {
   assertApprovedForComplete,
+  applyStoreDiscount,
   assertNotCompletedForCancel,
   assertPendingForApprove,
   assertPendingForReject,
@@ -16,6 +17,7 @@ import {
 } from "@/backend/domain"
 import type { ActorRef, IPurchase } from "@/backend/domain"
 import type { ListPurchasesResult, ListPurchasesScopeInput } from "@/backend/modules/store/application/contracts"
+import type { PassiveDiscountPort } from "@/backend/modules/store/application/ports/passive-discount.port"
 import type { PurchaseRepository } from "@/backend/modules/store/application/ports/purchase.repository"
 import type { RewardRepository } from "@/backend/modules/store/application/ports/reward.repository"
 
@@ -111,6 +113,7 @@ export class CreatePurchaseUseCase {
   constructor(
     private readonly purchases: PurchaseRepository,
     private readonly rewards: RewardRepository,
+    private readonly passives: PassiveDiscountPort,
   ) {}
 
   /**
@@ -119,6 +122,13 @@ export class CreatePurchaseUseCase {
    * cross-actor primeiro (comprar PARA OUTRO exige MANAGE_PURCHASES; para si, qualquer
    * autenticado passa), depois o parse completo (rewardId inválido é 400 DEPOIS do 403 —
    * ordem pinnada em purchases-authorization.test.ts), depois os 404s e a elegibilidade.
+   *
+   * plan-v15 S08 (R14): o desconto da passiva do comprador entra no snapshot DEPOIS da
+   * elegibilidade — a elegibilidade mede o saldo contra o preço efetivo? Não: o par medido
+   * da rota é `user.points < reward.price` (preço da tabela), e ele fica intocado. O que o
+   * desconto muda é o preço COBRADO, gravado no snapshot com piso 1. Quem compra para
+   * terceiro (gestão) não ganha desconto de terceiro — a passiva lida é a do alvo da compra
+   * (`userId` do snapshot), que é a pessoa que paga os pontos.
    */
   async execute(command: { actor: ActorRef; data: Record<string, unknown> }) {
     const targetUserId = Number(command.data.userId)
@@ -134,7 +144,9 @@ export class CreatePurchaseUseCase {
 
     assertPurchaseEligibility(user, reward)
 
+    const effects = await this.passives.bonusEffectsFor(userId)
     const snapshot = buildPurchaseSnapshot(userId, reward, new Date())
+    snapshot.price = applyStoreDiscount(reward.price, effects)
     return await this.purchases.createWithPointDeduction(snapshot)
   }
 }

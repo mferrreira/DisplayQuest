@@ -16,6 +16,10 @@ import { Switch } from "@/components/ui/switch"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { CheckCircle, XCircle, Plus, Edit, Trash2, Store, Clock } from "lucide-react"
 import { PageHeader } from "@/components/ui/page-header"
+import { StorePrice } from "@/components/ui/store-price"
+import { applyStoreDiscount } from "@/backend/domain"
+import type { BadgeEffect } from "@/backend/domain"
+import { BadgesAPI } from "@/contexts/api-client"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import {
   AlertDialog,
@@ -52,6 +56,21 @@ export default function StorePage() {
   // V6-2 (AC-V6-34): MANAGE_REWARDS vive só na matriz de autoridade (PERMISSIONS) — o
   // cliente pede com a mesma chave que o servidor aplica, não uma cópia de visibilidade.
   const canManageStore = hasPermission(user?.roles || [], 'MANAGE_REWARDS')
+
+  // plan-v15 S08 (R14): as bônus equipadas do comprador — a tela mostra o preço efetivo.
+  const [equippedBonuses, setEquippedBonuses] = useState<BadgeEffect[]>([])
+
+  useEffect(() => {
+    if (!user?.id) return
+    BadgesAPI.getUserBadges(user.id)
+      .then((res) => {
+        const bonuses = (res.badges || [])
+          .filter((b: any) => b.equipped === true && b.badge?.effect?.kind === "bonus")
+          .map((b: any) => b.badge.effect)
+        setEquippedBonuses(bonuses)
+      })
+      .catch(() => setEquippedBonuses([]))
+  }, [user?.id])
 
   useEffect(() => {
     // Redirecionar para login se não estiver autenticado
@@ -270,7 +289,11 @@ export default function StorePage() {
               </Card>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {availableRewards.map((reward) => (
+                {availableRewards.map((reward) => {
+                  // plan-v15 S08 (R14): o preço mostrado é o efetivo com a passiva equipada
+                  // do comprador; o que a tela compara com o saldo é o que vai ser cobrado.
+                  const effectivePrice = applyStoreDiscount(reward.price, equippedBonuses)
+                  return (
                   <Card key={reward.id} className="overflow-hidden">
                     <CardHeader className="pb-2">
                       <CardTitle>{reward.name}</CardTitle>
@@ -278,22 +301,23 @@ export default function StorePage() {
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div className="flex items-center gap-1 text-warning">
-                        <span className="text-lg font-bold tabular-nums">{reward.price}</span>
+                        <StorePrice price={reward.price} effects={equippedBonuses} className="text-lg font-bold tabular-nums" />
                         <span className="text-sm text-muted-foreground">pontos</span>
                       </div>
                       <div className="flex justify-end pt-1">
                         <Button
                           onClick={() => handlePurchase(reward)}
-                          disabled={userPoints < reward.price}
-                          variant={userPoints >= reward.price ? "default" : "outline"}
+                          disabled={userPoints < effectivePrice}
+                          variant={userPoints >= effectivePrice ? "default" : "outline"}
                           className="min-w-36"
                         >
-                          {userPoints >= reward.price ? "Resgatar" : "Pontos insuficientes"}
+                          {userPoints >= effectivePrice ? "Resgatar" : "Pontos insuficientes"}
                         </Button>
                       </div>
                     </CardContent>
                   </Card>
-                ))}
+                  );
+                })}
               </div>
             )}
           </TabsContent>

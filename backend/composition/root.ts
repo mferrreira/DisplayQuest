@@ -10,6 +10,7 @@ import { createGamificationActivityCompletionAward } from "@/backend/modules/pro
 import { createNotificationsActivityOverdueNotifier } from "@/backend/modules/project-management/infrastructure/adapters/notifications-activity-overdue"
 import { createNotificationsActivityCompletionRequestNotifier } from "@/backend/modules/project-management/infrastructure/adapters/notifications-activity-completion-request"
 import { createPrismaProjectRepository } from "@/backend/modules/project-management/infrastructure/repositories/prisma-project.repository"
+import { createPrismaEquippedPassivesPort } from "@/backend/modules/gamification/infrastructure/repositories/prisma-equipped-passives.port"
 import { createReportingModule } from "@/backend/modules/reporting"
 import { createAttestationModule } from "@/backend/modules/attestation"
 import { createNotificationsCertificateReminderNotifier } from "@/backend/modules/attestation/infrastructure/adapters/notifications-certificate-reminder"
@@ -89,7 +90,12 @@ export function createBackendComposition(): BackendComposition {
     },
   })
 
-  const store = createStoreModule()
+  // plan-v15 S08 (R14, padrão DEC-21): a loja conhece só a porta local de desconto; as
+  // passivas equipadas do gamification entram AQUI, no único ponto de wiring cruzado.
+  const equippedPassives = createPrismaEquippedPassivesPort()
+  const store = createStoreModule({
+    ports: { passives: { bonusEffectsFor: (userId) => equippedPassives.listEquippedEffects(userId) } },
+  })
   const reporting = createReportingModule({
     // DEC-21: o evento de relatório sai por PORTA LOCAL; o módulo de notificações é
     // injetado AQUI (a infra de reporting não importa factory de outro módulo — RG-04).
