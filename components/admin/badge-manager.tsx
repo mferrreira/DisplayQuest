@@ -60,6 +60,8 @@ export function BadgeManager() {
   const [loading, setLoading] = useState(true)
   // plan-v16 S04: a frase recusada pela rota chega na tela (a rota decide a autoridade, R3).
   const [iconAlert, setIconAlert] = useState<string | null>(null)
+  // O arquivo escolhido no diálogo de criação/edição; a rota faz a conversão a WebP na escrita.
+  const [iconFile, setIconFile] = useState<File | null>(null)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [editingBadge, setEditingBadge] = useState<BadgeData | null>(null)
   const [formData, setFormData] = useState<BadgeData>({
@@ -97,14 +99,29 @@ export function BadgeManager() {
     try {
       const criteria: BadgeCriteriaV2 | null = clauses.length > 0 ? { version: 2, clauses } : null
       const payload = { ...formData, criteria }
+      let savedId: number
       if (editingBadge) {
-        await BadgesAPI.update(editingBadge.id!, payload)
+        const response = await BadgesAPI.update(editingBadge.id!, payload)
+        savedId = response.badge.id
       } else {
-        await BadgesAPI.create(payload)
+        const response = await BadgesAPI.create(payload)
+        savedId = response.badge.id
       }
-      
+      if (iconFile) {
+        try {
+          await BadgesAPI.uploadIcon(savedId, iconFile)
+          setIconAlert(null)
+        } catch (error) {
+          const message = typeof (error as Error)?.message === "string" && (error as Error).message
+            ? (error as Error).message
+            : "Não foi possível enviar o ícone"
+          setIconAlert(message)
+        }
+      }
+
       setShowCreateDialog(false)
       setEditingBadge(null)
+      setIconFile(null)
       resetForm()
       loadBadges()
     } catch (error) {
@@ -127,21 +144,6 @@ export function BadgeManager() {
       loadBadges()
     } catch (error) {
       console.error('Error deleting badge:', error)
-    }
-  }
-
-  /** plan-v16 S04 (R6): o input de cada cartão manda o arquivo à rota; a recusa chega como alerta. */
-  const handleUploadIcon = async (badgeId: number, file: File | undefined) => {
-    if (!file) return
-    try {
-      await BadgesAPI.uploadIcon(badgeId, file)
-      setIconAlert(null)
-      loadBadges()
-    } catch (error) {
-      const message = typeof (error as Error)?.message === "string" && (error as Error).message
-        ? (error as Error).message
-        : "Não foi possível enviar o ícone"
-      setIconAlert(message)
     }
   }
 
@@ -345,6 +347,33 @@ export function BadgeManager() {
                 </Button>
               </div>
 
+              {/* plan-v16 S04 (R6, pedido do dono 2026-11-05): o envio do ícone mora no diálogo. */}
+              <div className="space-y-2">
+                <Label>Ícone do badge</Label>
+                <div className="flex items-center gap-3">
+                  {iconFile && typeof URL.createObjectURL === "function" ? (
+                    <img src={URL.createObjectURL(iconFile)} alt="Pré-visualização do ícone" className="h-10 w-10 object-contain" />
+                  ) : (
+                    editingBadge?.iconKey && (
+                      <img
+                        src={`/api/badges/${editingBadge.id}/icon/file?v=${encodeURIComponent(editingBadge.iconKey)}`}
+                        alt={`Ícone do ${editingBadge.name}`}
+                        className="h-10 w-10 object-contain"
+                      />
+                    )
+                  )}
+                  <input
+                    type="file"
+                    accept="image/png,image/webp"
+                    aria-label="Arquivo de ícone do badge"
+                    onChange={(event) => setIconFile(event.target.files?.[0] ?? null)}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  O arquivo é convertido para WebP na escrita. PNG, JPEG, GIF e WebP passam; PDF não.
+                </p>
+              </div>
+
               <div className="flex justify-end space-x-2">
                 <Button type="button" variant="outline" onClick={() => setShowCreateDialog(false)}>
                   Cancelar
@@ -392,6 +421,7 @@ export function BadgeManager() {
                   <Button
                     variant="ghost"
                     size="sm"
+                    aria-label={`Editar ${badge.name}`}
                     onClick={() => handleEdit(badge)}
                   >
                     <Edit className="h-4 w-4" />
@@ -409,26 +439,16 @@ export function BadgeManager() {
             <CardContent>
               <p className="text-sm text-muted-foreground mb-4">{badge.description}</p>
 
-              {/* plan-v16 S04 (R6): a imagem do arquivo quando há chave; o envio vai à rota. */}
-              <div className="flex items-center gap-3 mb-2">
-                {badge.iconKey && (
+              {/* plan-v16 S04 (R6): a imagem do arquivo quando há chave; o envio mora no diálogo. */}
+              {badge.iconKey && (
+                <div className="mb-2">
                   <img
                     src={`/api/badges/${badge.id}/icon/file?v=${encodeURIComponent(badge.iconKey)}`}
                     alt={`Ícone do ${badge.name}`}
                     className="h-10 w-10 object-contain"
                   />
-                )}
-                <label className="cursor-pointer text-xs text-muted-foreground underline underline-offset-2">
-                  <input
-                    type="file"
-                    accept="image/png,image/webp"
-                    aria-label={`Enviar ícone do ${badge.name}`}
-                    className="sr-only"
-                    onChange={(event) => handleUploadIcon(badge.id!, event.target.files?.[0])}
-                  />
-                  Enviar ícone
-                </label>
-              </div>
+                </div>
+              )}
               
               {badge.criteria && Array.isArray(badge.criteria.clauses) && badge.criteria.clauses.length > 0 && (
                 <div className="space-y-2">

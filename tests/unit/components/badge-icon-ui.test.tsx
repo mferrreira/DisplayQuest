@@ -12,6 +12,8 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 const api = vi.hoisted(() => ({
   getAll: vi.fn(),
   uploadIcon: vi.fn(),
+  update: vi.fn(),
+  create: vi.fn(),
   getUserBadges: vi.fn(),
 }));
 
@@ -39,6 +41,10 @@ beforeEach(() => {
   api.getAll.mockReset();
   api.getAll.mockResolvedValue({ badges: [badgeRow(3, "badges/3/x.webp"), badgeRow(4, null)] });
   api.uploadIcon.mockReset();
+  api.update.mockReset();
+  api.update.mockResolvedValue({ badge: badgeRow(3, "badges/3/x.webp") });
+  api.create.mockReset();
+  api.create.mockResolvedValue({ badge: { ...badgeRow(3, null), id: 7 } });
   api.getUserBadges.mockReset();
 });
 
@@ -52,20 +58,24 @@ describe("cartões do Painel Administrativo", () => {
     expect(screen.queryByRole("img", { name: "Ícone do Selo 4" })).toBeNull();
   });
 
-  it("enviar arquivo pelo input do cartão chama a rota e recarrega a lista", async () => {
+  it("enviar arquivo pelo diálogo de edição sobe o ícone no salvar e recarrega a lista", async () => {
     api.uploadIcon.mockResolvedValue({ success: true, iconKey: "badges/3/novo.webp", badge: badgeRow(3, "badges/3/novo.webp") });
     render(<BadgeManager />);
-    const input = await screen.findByLabelText("Enviar ícone do Selo 3");
+    fireEvent.click(await screen.findByRole("button", { name: "Editar Selo 3" }));
+    const input = await screen.findByLabelText("Arquivo de ícone do badge");
     fireEvent.change(input, { target: { files: [new File([new Uint8Array(64)], "icon.png", { type: "image/png" })] } });
+    fireEvent.click(screen.getByRole("button", { name: "Atualizar Badge" }));
     await waitFor(() => expect(api.uploadIcon).toHaveBeenCalledWith(3, expect.any(File)));
     await waitFor(() => expect(api.getAll.mock.calls.length).toBeGreaterThanOrEqual(2));
   });
 
-  it("recusa do servidor chega como alerta na tela", async () => {
+  it("recusa do servidor chega como alerta na tela depois de salvar", async () => {
     api.uploadIcon.mockRejectedValue(new Error("Sem permissão para atualizar badges"));
     render(<BadgeManager />);
-    const input = await screen.findByLabelText("Enviar ícone do Selo 3");
+    fireEvent.click(await screen.findByRole("button", { name: "Editar Selo 3" }));
+    const input = await screen.findByLabelText("Arquivo de ícone do badge");
     fireEvent.change(input, { target: { files: [new File([new Uint8Array(64)], "icon.png", { type: "image/png" })] } });
+    fireEvent.click(screen.getByRole("button", { name: "Atualizar Badge" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Sem permissão para atualizar badges");
   });
 });
