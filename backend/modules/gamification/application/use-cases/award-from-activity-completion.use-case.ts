@@ -1,10 +1,11 @@
-import { buildAwardDescription } from "@/backend/domain"
+import { applyPassiveBonus, buildAwardDescription } from "@/backend/domain"
 import type { GamificationSourceType } from "@/backend/domain"
 import type {
   AwardFromActivityCompletionCommand,
   GamificationAwardResult,
 } from "@/backend/modules/gamification/application/contracts"
 import type { GamificationAwardHistoryPort } from "@/backend/modules/gamification/application/ports/gamification-award-history.port"
+import type { EquippedPassivesPort } from "@/backend/modules/gamification/application/ports/equipped-passives.port"
 import type { EvaluateUserBadgesUseCase } from "@/backend/modules/gamification/application/use-cases/evaluate-user-badges.use-case"
 import type { GetUserProgressionUseCase } from "@/backend/modules/gamification/application/use-cases/get-user-progression.use-case"
 
@@ -25,6 +26,8 @@ export interface AwardFromActivityCompletionDependencies {
   awardHistory: GamificationAwardHistoryPort
   progression: GetUserProgressionUseCase
   evaluateUserBadges: EvaluateUserBadgesUseCase
+  /** plan-v15 S06 (R10): as passivas do MEMBRO, aplicadas na sua parcela. */
+  passives: EquippedPassivesPort
 }
 
 export class AwardFromActivityCompletionUseCase {
@@ -52,7 +55,10 @@ export class AwardFromActivityCompletionUseCase {
       }
     }
 
-    const pointsAwarded = command.points
+    // plan-v15 S06 (R10): a parcela chega pronta da distribuição Hamilton; o bônus do
+    // membro entra na ESCRITA, depois da regra pura. A parcela é >= 0, então o bônus não
+    // cria negativo; o piso 0 do prêmio de projeto (DEC-74) é da escrita do projeto.
+    const pointsAwarded = applyPassiveBonus(command.points, await this.dependencies.passives.listEquippedEffects(command.userId))
     const xpAwarded = pointsAwarded
 
     await this.dependencies.awardHistory.awardAndRecord({

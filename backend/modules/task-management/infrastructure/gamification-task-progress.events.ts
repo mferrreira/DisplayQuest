@@ -21,7 +21,7 @@ export interface TaskAwardOutcome {
 }
 
 export interface TaskAwardPort {
-  awardFromTaskCompletion(input: { userId: number; taskId: number; taskPoints: number }): Promise<TaskAwardOutcome | null>
+  awardFromTaskCompletion(input: { userId: number; taskId: number; taskPoints: number; latePenalty?: number }): Promise<TaskAwardOutcome | null>
 }
 
 /**
@@ -64,6 +64,7 @@ class GamificationTaskProgressEvents implements TaskProgressEvents {
       userId: event.userId,
       taskId: event.taskId,
       taskPoints: event.taskPoints,
+      latePenalty: event.latePenalty,
     })
     // Adaptador sem publisher real (ou de teste) pode devolver nada: `null` é "ninguém creditado".
     const credited = typeof outcome?.pointsAwarded === "number" ? outcome.pointsAwarded : null

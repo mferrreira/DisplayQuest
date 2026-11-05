@@ -213,6 +213,7 @@ export function createGamificationModule(options: GamificationModuleFactoryOptio
       awardHistory: ports.awardHistory,
       progression,
       evaluateUserBadges,
+      passives: ports.passives,
     }),
     progression,
     evaluateUserBadges,

@@ -566,7 +566,10 @@ describe("V4-4/V4-5 · DEC-97 — o prêmio creditado na aprovação é a mãe +
     expect(result.awardedPoints).toBe(30);
     // V5-7b (DEC-63): o evento carrega o projeto da tarefa — é como a conclusão de task sobe
     // `projects.points`. A forma exata congelada aqui é o contrato do evento.
-    expect(store.awards).toEqual([{ userId: 7, taskId: 62, taskPoints: 30, projectId: 3 }]);
+    // V5-7b (DEC-63): o evento carrega o projeto da tarefa — é como a…
+    // `projects.points`. A forma exata congelada aqui é o contrato do…
+    // plan-v15 S06 (R10): `latePenalty` entra no evento — 0 para a mãe no prazo.
+    expect(store.awards).toEqual([{ userId: 7, taskId: 62, taskPoints: 30, projectId: 3, latePenalty: 0 }]);
   });
 
   it("o exemplo da DEC-78 recalculado pela DEC-97: mãe −40, base com 3 subtasks 40 → −10", async () => {

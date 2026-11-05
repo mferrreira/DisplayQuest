@@ -1,4 +1,4 @@
-import { applyPassiveBonus, buildAwardDescription, taskAwardPoints } from "@/backend/domain"
+import { applyPassiveBonus, buildAwardDescription, penaltyWithReduction, taskAwardPoints } from "@/backend/domain"
 import type { GamificationSourceType } from "@/backend/domain"
 import type {
   AwardFromTaskCompletionCommand,
@@ -54,7 +54,13 @@ export class AwardFromTaskCompletionUseCase {
       }
     }
 
-    const pointsAwarded = applyPassiveBonus(taskAwardPoints(command.taskPoints), await this.dependencies.passives.listEquippedEffects(command.userId))
+    // plan-v15 S06 (R10): a redução de penalidade atua sobre a penalidade que já está
+    // fundida em `taskPoints` — devolve-a ao base na forma reduzida, depois o bônus
+    // multiplica o resultado. Penalidade ausente (no prazo/sem prazo): só o bônus entra.
+    const effects = await this.dependencies.passives.listEquippedEffects(command.userId)
+    const latePenalty = command.latePenalty ?? 0
+    const baseAfterReduction = taskAwardPoints(command.taskPoints) + latePenalty - penaltyWithReduction(latePenalty, effects)
+    const pointsAwarded = applyPassiveBonus(baseAfterReduction, effects)
     const xpAwarded = pointsAwarded
 
     await this.dependencies.awardHistory.awardAndRecord({

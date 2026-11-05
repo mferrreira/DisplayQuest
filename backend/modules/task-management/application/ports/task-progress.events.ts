@@ -3,6 +3,11 @@ export interface TaskCompletedEvent {
   taskId: number;
   taskPoints: number;
   /**
+   * plan-v15 S06 (R10): penalidade de atraso já embutida em `taskPoints`, entregue separada
+   * para que a redução de passiva atue sobre ela na escrita do prêmio.
+   */
+  latePenalty?: number;
+  /**
    * V5-7b (DEC-63): o projeto da tarefa concluída, ou `null` para quest global. É o que
    * permite ao publicador incrementar `projects.points` na mesma conclusão — o adaptador só
    * escreve quando há projeto.

@@ -40,6 +40,7 @@ export {
   calculateLatePenalty,
   awardPointsForCompletion,
   totalAwardForCompletion,
+  latePenaltyForCompletion,
   daysLateForTask,
   POINTS_PER_TASK,
   SUBTASK_POINTS,

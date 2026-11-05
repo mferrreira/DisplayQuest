@@ -124,6 +124,7 @@ export {
   EARLY_DELIVERY_MIN_DAYS,
   awardPointsForCompletion,
   totalAwardForCompletion,
+  latePenaltyForCompletion,
   calculateLatePenalty,
   daysLateForTask,
   type AwardableTask,

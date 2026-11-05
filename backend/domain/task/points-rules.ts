@@ -140,3 +140,13 @@ export function totalAwardForCompletion(
   const completedCount = subtasks.reduce((count, subtask) => (subtask.completed ? count + 1 : count), 0);
   return awardFromBase(POINTS_PER_TASK + completedCount * SUBTASK_POINTS, task, completionDate);
 }
+
+/**
+ * plan-v15 S06 (R10): a penalidade de atraso sozinha, no MESMO calendário da premiação
+ * (dias civis após o prazo × 10). Existe separada porque a redução de passiva atua sobre
+ * ela na escrita, e `totalAwardForCompletion` devolve o valor fundido — os dois números
+ * precisam vir do mesmo lugar para não divergir na virada do dia.
+ */
+export function latePenaltyForCompletion(task: AwardableTask, completionDate: Date): number {
+  return calculateLatePenalty(task, completionDate);
+}

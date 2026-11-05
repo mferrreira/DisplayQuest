@@ -19,6 +19,12 @@ export interface AwardFromTaskCompletionCommand {
   taskId: number
   /** GAP-04 (fecha em OND6-B2): null era aceito em runtime (default 10) sem estar no tipo. */
   taskPoints?: number | null
+  /**
+   * plan-v15 S06 (R10): a penalidade de atraso que já está dentro de `taskPoints`. O
+   * multiplicador de redução atua sobre ela na ESCRITA; quando vem ausente, a redução não
+   * tem sobre o que atuar (tarefa no prazo/sem prazo) e só o bônus entra.
+   */
+  latePenalty?: number
 }
 
 /**

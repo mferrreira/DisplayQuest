@@ -15,6 +15,7 @@ import {
   requireActorSelfOrPermission,
   supportsSubtasks,
   totalAwardForCompletion,
+  latePenaltyForCompletion,
   withActorProgress,
   type Task,
 } from "@/backend/domain";
@@ -124,6 +125,7 @@ export class CompleteTaskUseCase {
         command.taskId,
         pointsToAward,
         task.projectId ?? null,
+        latePenaltyForCompletion(task, now),
       )
 
       return {
@@ -198,13 +200,15 @@ export class CompleteTaskUseCase {
     let awardedPoints: number | null = null
     if (finalStatus === "done") {
       await this.dependencies.actors.incrementCompletedTasks(userId)
-      const pointsToAward = totalAwardForCompletion(workingTask, awardableSubtasks(workingTask, subtaskRows), new Date())
+      const completionDate = new Date()
+      const pointsToAward = totalAwardForCompletion(workingTask, awardableSubtasks(workingTask, subtaskRows), completionDate)
       awardedPoints = await publishTaskCompletionAward(
         this.events,
         userId,
         command.taskId,
         pointsToAward,
         workingTask.projectId ?? null,
+        latePenaltyForCompletion(workingTask, completionDate),
       )
     }
 

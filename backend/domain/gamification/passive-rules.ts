@@ -25,3 +25,12 @@ export function penaltyReductionTotal(effects: BadgeEffect[]): number {
 export function applyPassiveBonus(points: number, effects: BadgeEffect[]): number {
   return Math.round(points * bonusMultiplier(effects));
 }
+
+/**
+ * Penalidade com a redução aplicada (S06, R10): `round(P × (1 − Σ pct))`, cortada em 0 —
+ * a redução nunca transforma penalidade em prêmio. O piso 0 da REDUÇÃO é o único piso do
+ * S06: o piso do caminho de tarefa (DEC-39, sem piso) e o do projeto (DEC-74) continuam.
+ */
+export function penaltyWithReduction(penalty: number, effects: BadgeEffect[]): number {
+  return Math.max(0, Math.round(penalty * (1 - penaltyReductionTotal(effects))))
+}
