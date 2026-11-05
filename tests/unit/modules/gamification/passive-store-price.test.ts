@@ -42,7 +42,7 @@ function makeUseCase(price: number, userPoints: number, effects: BadgeEffect[], 
   };
 
   return {
-    useCase: new CreatePurchaseUseCase(purchases as never, rewards as never, passives),
+    useCase: new CreatePurchaseUseCase(purchases as never, rewards as never, passives, { async recompute() {} }),
     snapshots,
     reads,
     targetUserId,

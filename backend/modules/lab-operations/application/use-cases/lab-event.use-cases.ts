@@ -70,6 +70,8 @@ export class CreateLabEventUseCase {
   constructor(
     private readonly labEvents: LabEventRepository,
     private readonly directory: LabDirectory,
+    /** plan-v15 S11 (R4): o evento criado é episódio do autor do evento. */
+    private readonly recompute: { recompute(userId: number): Promise<void> },
   ) {}
 
   async execute(command: { userId: number; userName: string; date: Date; note: string }) {
@@ -77,12 +79,17 @@ export class CreateLabEventUseCase {
     assertUserCanCreateLabEvent(user)
 
     validateLabEventCreate(command)
-    return await this.labEvents.create({
+    const event = await this.labEvents.create({
       userId: command.userId,
       userName: command.userName,
       date: command.date,
       note: command.note,
     })
+
+    // R4: métrica `lab_events_count` conta por userId do evento.
+    await this.recompute.recompute(command.userId)
+
+    return event
   }
 }
 

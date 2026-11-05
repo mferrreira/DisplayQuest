@@ -86,6 +86,8 @@ export interface StoreModulePorts {
   purchases?: PurchaseRepository
   /** plan-v15 S08 (R14): o composition root injeta as passivas equipadas do gamification. */
   passives?: PassiveDiscountPort
+  /** plan-v15 S11 (R4): episódio "compra" recompleta badges do comprador. Default no-op. */
+  recompute?: { recompute(userId: number): Promise<void> }
 }
 
 export interface StoreModuleFactoryOptions {
@@ -96,6 +98,7 @@ export function createStoreModule(options: StoreModuleFactoryOptions = {}) {
   const rewards = options.ports?.rewards ?? new PrismaRewardRepository()
   const purchases = options.ports?.purchases ?? new PrismaPurchaseRepository()
   const passives = options.ports?.passives ?? { async bonusEffectsFor() { return [] } }
+  const recompute = options.ports?.recompute ?? { async recompute() {} }
 
   const updatePurchase = new UpdatePurchaseUseCase(purchases)
 
@@ -109,7 +112,7 @@ export function createStoreModule(options: StoreModuleFactoryOptions = {}) {
     new ListPurchasesUseCase(purchases),
     new AssertCanManagePurchasesUseCase(),
     new GetPurchaseUseCase(purchases),
-    new CreatePurchaseUseCase(purchases, rewards, passives),
+    new CreatePurchaseUseCase(purchases, rewards, passives, recompute),
     updatePurchase,
     new PatchPurchaseUseCase(purchases, updatePurchase),
     new DeletePurchaseUseCase(purchases),

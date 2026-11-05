@@ -115,12 +115,16 @@ export interface UserManagementModuleFactoryOptions {
   passwordHasher?: PasswordHasher
   /** V5-12 (DEC-143/177): vínculo em comum para a regra de visibilidade de perfil. */
   profileVisibility?: ProfileVisibilityPort
+  /** plan-v15 S11 (R4): campo de perfil gravado é episódio de recompletação. */
+  recompute?: { recompute(userId: number): Promise<void> }
 }
 
 export function createUserManagementModule(options: UserManagementModuleFactoryOptions = {}) {
   const repository = options.repository ?? createPrismaUserRepository()
   const passwordHasher = options.passwordHasher ?? createBcryptPasswordHasher()
   const profileVisibility = options.profileVisibility ?? createPrismaProfileVisibility()
+  // plan-v15 S11 (R4): campo de perfil gravado é episódio de recompletação. Default no-op.
+  const recompute = options.recompute ?? { async recompute() {} }
 
   const deleteUserUseCase = new DeleteUserUseCase(repository)
   const service: UserManagementService = {
@@ -128,13 +132,13 @@ export function createUserManagementModule(options: UserManagementModuleFactoryO
     listUsersForActor: (query) => new ListUsersForActorUseCase(repository, profileVisibility).execute(query),
     findUserById: (actor, userId, deniedMessage) =>
       new FindUserByIdUseCase(repository, profileVisibility).execute(actor, userId, deniedMessage),
-    updateUser: (actor, userId, data) => new UpdateUserUseCase(repository).execute(actor, userId, data),
+    updateUser: (actor, userId, data) => new UpdateUserUseCase(repository, recompute).execute(actor, userId, data),
     deleteUser: (actor, userId) => deleteUserUseCase.execute(actor, userId),
     listPendingUsers: (actor) => new ListPendingUsersUseCase(repository).execute(actor),
     moderatePendingUser: (actor, userId, action) =>
       new ModeratePendingUserUseCase(repository, deleteUserUseCase).execute(actor, userId, action),
     updateUserProfile: (actor, userId, data) =>
-      new UpdateUserProfileUseCase(repository, passwordHasher).execute(actor, userId, data),
+      new UpdateUserProfileUseCase(repository, passwordHasher, recompute).execute(actor, userId, data),
     updateUserPoints: (command) => new UpdateUserPointsUseCase(repository).execute(command),
     deductUserHours: (command) => new DeductUserHoursUseCase(repository).execute(command),
     updateUserRoles: (command) => new UpdateUserRolesUseCase(repository).execute(command),

@@ -252,6 +252,8 @@ vi.mock("@/backend/composition/root", () => {
       },
     } as never,
     directoryPort as never,
+    // plan-v15 S11: o upsert ganhou o trigger de recompletação; o duplo não o exercita.
+    { async recompute() {} },
   );
   const realBulkGenerate = new BulkGenerateWeeklyReportsUseCase(realUpsertWeeklyReport, directoryPort as never);
   const realAssertBulk = new AssertCanGenerateReportsInBulkUseCase();

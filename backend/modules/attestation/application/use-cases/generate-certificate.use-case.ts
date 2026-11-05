@@ -62,6 +62,8 @@ export interface GenerateCertificatePorts {
   pdf: AttestationPdfPort;
   repository: CertificatesRepository;
   summary?: AttestationSummaryPort;
+  /** plan-v15 S11 (R4): o atestado gerado é episódio de recompletação do membro. Default no-op. */
+  recompute?: { recompute(userId: number): Promise<void> };
 }
 
 export class GenerateCertificateUseCase {
@@ -140,6 +142,11 @@ export class GenerateCertificateUseCase {
       fileName: certificateFileName(context.name, month),
       generatedBy: command.actorId,
     });
+
+    // R4 (plan-v15 S11): atestado gerado recompleta os badges ativos do membro.
+    if (this.ports.recompute) {
+      await this.ports.recompute.recompute(command.userId);
+    }
 
     return { certificate, pdfBytes, warnings };
   }

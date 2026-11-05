@@ -75,6 +75,8 @@ export class GenerateTechnicalReportUseCase {
       access: TechnicalReportAccessPort;
       generation: TechnicalReportGenerationPort;
       docx: TechnicalReportDocumentPort;
+      /** plan-v15 S11 (R4): o técnico gerado recompleta cada membro do vínculo ativo. */
+      recompute?: { recompute(userId: number): Promise<void> };
     },
   ) {}
 
@@ -156,6 +158,13 @@ export class GenerateTechnicalReportUseCase {
         bytes,
         warnings,
       });
+    }
+
+    // R4 (plan-v15 S11): cada documento técnico gerado é episódio para o membro do vínculo.
+    if (this.ports.recompute) {
+      for (const file of files) {
+        await this.ports.recompute.recompute(file.userId);
+      }
     }
 
     return { report, files };

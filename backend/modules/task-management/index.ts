@@ -93,6 +93,8 @@ export class TaskManagementModule {
     // Feed "Atividade recente": registro opcional em `history`. Sem porta, nada e gravido e a
     // leitura devolve vazio (roundtrip G4 e testes de use case seguem sem tocar em history).
     activity?: TaskActivityPort
+    // plan-v15 S11 (R4): subtask concluída é episódio do marcador. Sem porta, no-op.
+    recompute?: { recompute(userId: number): Promise<void> }
   }) {
     const getTaskByIdUseCase = new GetTaskByIdUseCase({
       tasks: ports.tasks,
@@ -183,6 +185,7 @@ export class TaskManagementModule {
       actors: ports.actors,
       projects: ports.projects,
       notifications: ports.notifications,
+      recompute: ports.recompute ?? { async recompute() {} },
     })
     const deleteTaskSubtaskUseCase = new DeleteTaskSubtaskUseCase({
       tasks: ports.tasks,
@@ -306,6 +309,8 @@ export interface TaskManagementModulePorts {
   events?: TaskProgressEvents
   /** Feed "Atividade recente": registro/leitura em `history` (entityType "task"). */
   activity?: TaskActivityPort
+  /** plan-v15 S11 (R4): subtask concluída é episódio de recompletação. */
+  recompute?: { recompute(userId: number): Promise<void> }
 }
 
 /**
@@ -336,5 +341,6 @@ export function createTaskManagementModule(options: TaskManagementModulePorts = 
     activities: options.activities ?? createPrismaTaskActivitiesRepository(),
     events: options.events,
     activity: options.activity,
+    recompute: options.recompute,
   })
 }

@@ -212,7 +212,11 @@ export class StartIssueProgressUseCase {
 }
 
 export class ResolveIssueUseCase {
-  constructor(private readonly issues: IssueRepository) {}
+  constructor(
+    private readonly issues: IssueRepository,
+    /** plan-v15 S11 (R4): a resolução é episódio do RESPONSÁVEL da issue (assigneeId). */
+    private readonly recompute: { recompute(userId: number): Promise<void> },
+  ) {}
 
   async execute(command: { actor: ActorRef; issueId: number; resolution?: string; deniedMessage?: string }) {
     const issue = await this.issues.findById(command.issueId)
@@ -223,7 +227,15 @@ export class ResolveIssueUseCase {
     requireIssueManager(command.actor, issue, command.deniedMessage ?? "Sem permissão para atualizar status do issue")
 
     const patch = computeResolvePatch(issue.status, command.resolution, new Date())
-    return await this.issues.update(command.issueId, patch)
+    const updated = await this.issues.update(command.issueId, patch)
+
+    // R4: a métrica `issues_resolved` conta por assigneeId — o trigger é de quem a issue
+    // atribui, não de quem resolve. Issue sem responsável não tem episódio.
+    if (issue.assigneeId) {
+      await this.recompute.recompute(issue.assigneeId)
+    }
+
+    return updated
   }
 }
 

@@ -250,7 +250,7 @@ describe("FindUserById / Delete / ListPending", () => {
 });
 
 describe("UpdateUserUseCase", () => {
-  const useCase = () => new UpdateUserUseCase(repository);
+  const useCase = () => new UpdateUserUseCase(repository, { async recompute() {} });
 
   it("missing -> NotFoundError; duplicate email -> ConflictError; empty email -> ValidationError", async () => {
     await expect(useCase().execute(managerActor, 99, { name: "X" })).rejects.toBeInstanceOf(NotFoundError);
@@ -287,7 +287,7 @@ describe("UpdateUserUseCase", () => {
 });
 
 describe("UpdateUserProfileUseCase", () => {
-  const useCase = () => new UpdateUserProfileUseCase(repository, fakeHasher);
+  const useCase = () => new UpdateUserProfileUseCase(repository, fakeHasher, { async recompute() {} });
 
   it("blank password keeps the old hash; valid password hashes with cost 10; short -> ValidationError", async () => {
     repository.store[0].password = "bcrypt:old";

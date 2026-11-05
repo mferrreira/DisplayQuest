@@ -114,6 +114,8 @@ export class CreatePurchaseUseCase {
     private readonly purchases: PurchaseRepository,
     private readonly rewards: RewardRepository,
     private readonly passives: PassiveDiscountPort,
+    /** plan-v15 S11 (R4): a compra é episódio de recompletação de badges do comprador. */
+    private readonly recompute: { recompute(userId: number): Promise<void> },
   ) {}
 
   /**
@@ -147,7 +149,11 @@ export class CreatePurchaseUseCase {
     const effects = await this.passives.bonusEffectsFor(userId)
     const snapshot = buildPurchaseSnapshot(userId, reward, new Date())
     snapshot.price = applyStoreDiscount(reward.price, effects)
-    return await this.purchases.createWithPointDeduction(snapshot)
+    const purchase = await this.purchases.createWithPointDeduction(snapshot)
+    // R4: episódio "compra" recompleta os badges ativos do comprador. O adapter do
+    // composition root engole falha de badge (padrão da casa) — a compra não quebrada.
+    await this.recompute.recompute(userId)
+    return purchase
   }
 }
 

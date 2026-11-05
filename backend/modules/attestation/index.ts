@@ -55,6 +55,8 @@ export interface AttestationModulePorts {
   summary?: import("./application/ports/attestation-summary.port").AttestationSummaryPort;
   reminderScan?: CertificateReminderScanPort;
   reminderNotifier?: CertificateReminderNotifierPort;
+  /** plan-v15 S11 (R4): o atestado gerado é episódio de recompletação. Default no-op. */
+  recompute?: { recompute(userId: number): Promise<void> };
 }
 
 export interface AttestationModuleFactoryOptions {
@@ -74,6 +76,7 @@ export function createAttestationModule(options: AttestationModuleFactoryOptions
       pdf,
       repository: certificates,
       summary: options.ports?.summary ?? new OpenAiAttestationSummaryAdapter(),
+      recompute: options.ports?.recompute ?? { async recompute() {} },
     }),
     new ListCertificatesUseCase({ sources, repository: certificates }),
     new GetCertificateFileUseCase({ sources, repository: certificates }),

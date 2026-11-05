@@ -241,7 +241,7 @@ export function createGamificationModule(options: GamificationModuleFactoryOptio
     new AssertCanManageUserBadgesUseCase(),
     new ReadUserProgressionUseCase(progression),
     new ReadBoardMonthUseCase(),
-    new CloseBoardMonthUseCase(ports.monthClose),
+    new CloseBoardMonthUseCase(ports.monthClose, evaluateUserBadges),
     new ReadBoardMonthHistoryUseCase(ports.monthClose),
     new ListClosedBoardMonthsUseCase(ports.monthClose),
     new ReadUserBoardMonthsUseCase(ports.monthClose),

@@ -25,6 +25,8 @@ export class UpdateUserProfileUseCase {
   constructor(
     private readonly repository: UserRepositoryPort,
     private readonly passwordHasher: PasswordHasher,
+    /** plan-v15 S11 (R4): campo de perfil gravado é episódio de recompletação. */
+    private readonly recompute: { recompute(userId: number): Promise<void> },
   ) {}
 
   async execute(actor: ActorRef, userId: number, data: Record<string, unknown>) {
@@ -59,6 +61,9 @@ export class UpdateUserProfileUseCase {
     // onde a pessoa escreve os próprios dados (DEC-138), e o gate acima já é `self OU MANAGE_USERS`.
     applyPersonDataFields(user, data)
 
-    return toPublicUserWithCpf(await this.repository.update(user))
+    const saved = await this.repository.update(user)
+    // R4 (plan-v15 S11): o caminho do perfil tem os mesmos campos de pessoa do painel.
+    await this.recompute.recompute(userId)
+    return toPublicUserWithCpf(saved)
   }
 }

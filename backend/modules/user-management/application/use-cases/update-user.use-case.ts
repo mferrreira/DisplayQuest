@@ -14,7 +14,11 @@ import type { UserRepositoryPort } from "@/backend/modules/user-management/appli
  * System actor (bypass declarado DEC-54) escreve o corpo inteiro.
  */
 export class UpdateUserUseCase {
-  constructor(private readonly repository: UserRepositoryPort) {}
+  constructor(
+    private readonly repository: UserRepositoryPort,
+    /** plan-v15 S11 (R4): campo de perfil gravado é episódio de recompletação. */
+    private readonly recompute: { recompute(userId: number): Promise<void> },
+  ) {}
 
   async execute(actor: ActorRef, userId: number, data: Record<string, unknown>) {
     requireActorSelfOrPermission(actor, userId, "MANAGE_USERS")
@@ -58,6 +62,10 @@ export class UpdateUserUseCase {
 
     // O gate acima é `self OU MANAGE_USERS`, o mesmo direito de ler o CPF (DEC-138): quem acabou
     // de escrever o próprio CPF recebe o CPF de volta.
-    return toPublicUserWithCpf(await this.repository.update(currentUser))
+    const saved = await this.repository.update(currentUser)
+    // R4: campos de perfil (bio, avatar, visibilidade, meta semanal, campos de pessoa) são
+    // matéria-prima da métrica `profile_fields_filled`.
+    await this.recompute.recompute(userId)
+    return toPublicUserWithCpf(saved)
   }
 }
