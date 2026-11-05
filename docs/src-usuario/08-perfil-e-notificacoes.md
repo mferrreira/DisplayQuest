@@ -3,7 +3,7 @@
 O **Perfil** é a sua conta vista por dentro: quem você é no laboratório, o que produziu e como os seus dados aparecem para as outras pessoas.
 
 ```foto perfil-participante titulo="O perfil de uma pessoa"
-O cartão **Meu Perfil** abre com a faixa da capa e traz avatar, nome e as cifras de trabalho; abaixo dele ficam as três abas.
+O cartão **Meu Perfil** abre com a faixa da capa e traz avatar, nome e as cifras de trabalho; ao lado do nome ficam os medálhões das passivas equipadas (descritos em *Os distintivos no perfil*), e abaixo dele ficam as três abas.
 ```
 
 ## As três abas
@@ -22,8 +22,10 @@ O cartão **Meu Perfil** abre com a faixa da capa e traz avatar, nome e as cifra
 
 Clique em **Editar Perfil**, no cartão **Meu Perfil**. O cartão entra em modo de edição: aparece a marca **Editando** e o botão passa a **Cancelar Edição**. Altere o que precisa e salve; **Cancelar Edição** descarta as mudanças.
 
-```foto perfil-edicao titulo="O perfil em modo de edição, no bloco dos dados dos documentos"
-O formulário está na aba **Configurações**: o cartão entra em edição e os campos aparecem abaixo do avatar.
+Na aba **Configurações**, o modo de edição traz primeiro o bloco **Badges equipáveis**: uma linha por distintivo conquistado que tem passiva, com o medálhão, o nome, o efeito (`+5% pontos` ou `−15% penalidade`) e o botão **Desequipar** — que vira **Equipar** quando a passiva não está ativa. O título do bloco traz o contador **Equipadas (n/3)**. Só a própria pessoa equipar; o bloco só existe em edição do próprio perfil. Equipar obedece três regras: o distintivo tem de ser conquistado, tem de ter passiva (*"Badge sem passiva não é equipável"*), e há no máximo três equipadas — a quarta recebe *"Slots de passiva cheios"*. O aviso chega escrito na tela, abaixo do título. Abaixo do bloco fica o formulário.
+
+```foto perfil-edicao titulo="O perfil em modo de edição: o bloco Badges equipáveis e o formulário"
+O bloco traz o medálhão, o nome, o efeito da passiva e o botão **Desequipar**, com o contador **Equipadas (1/3)** no título. O formulário de dados aparece logo abaixo.
 ```
 
 ### Os dados que os documentos pedem
@@ -85,12 +87,14 @@ A capa é sua, e quem a escreve é você — ou quem tem permissão de gerenciar
 
 ## Os distintivos no perfil
 
-Abaixo das três abas, o perfil tem o bloco **Badges**. Os conquistados aparecem em cartões com o ícone, o nome e a categoria; ao passar o cursor, o cartão explica a conquista e, quando o distintivo tem passiva, diz `Passiva: +5% pontos` — ou `Equipada: +5% pontos` quando ela está ativa. No perfil da própria pessoa, o título traz o contador **Equipadas (n/3)** e cada distintivo com passiva tem o botão **Equipar**, que depois vira **Desequipar**. Só a própria pessoa equipar; o perfil aberto por outra pessoa mostra os cartões sem botões. Equipar obedece três regras: o distintivo tem de ser conquistado, tem de ter passiva (*"Badge sem passiva não é equipável"*), e há no máximo três equipadas — a quarta recebe *"Slots de passiva cheios"*.
+Abaixo das três abas, o perfil tem o bloco **Badges**. O bloco é leitura: os conquistados aparecem em cartões com o **medálhão**, o nome e a categoria; ao passar o cursor, o cartão explica a conquista e, quando o distintivo tem passiva, diz `Passiva: +5% pontos` — ou `Equipada: +5% pontos` quando ela está ativa. A passiva ativa se destaca no cartão: o contorno fica em destaque e o efeito aparece escrito ao lado do nome. Equipar não acontece aqui — é na aba **Configurações**, em modo de edição, no bloco **Badges equipáveis**.
+
+O medálhão é o desenho do distintivo: quando a gestão enviou a imagem do badge, ela aparece no círculo, na cor do distintivo; sem imagem enviada, o círculo mostra o glifo do catálogo, e sem glifo, o ícone da categoria. Os medálhões das equipadas também aparecem no cartão de identidade, ao lado do nome — só as equipadas, no máximo três, a passiva mais recente por primeiro; ao passar o cursor, o medálhão explica o distintivo. A vitrine é a mesma no perfil aberto por outra pessoa.
 
 O bloco lista também os distintivos ainda não conquistados, sob o rótulo **Em progresso**, cada chip com o nome e o número `X de Y` da sua condição. Quem não tem nenhum conquistado vê só essa lista; quando não há progresso a mostrar, o bloco diz *"Nenhum badge conquistado ainda"*.
 
 ```foto perfil-badges titulo="O bloco Badges no perfil: a passiva equipada e a lista Em progresso"
-O chip de progresso mostra o nome do distintivo e `X de Y`; a passiva ativa aparece marcada no cartão, com o efeito escrito.
+O chip de progresso mostra o nome do distintivo e `X de Y`; a passiva ativa aparece marcada no cartão, com o efeito escrito. Nenhum cartão do bloco tem botão — o equipar mora na edição da aba Configurações.
 ```
 
 ## Os logs diários

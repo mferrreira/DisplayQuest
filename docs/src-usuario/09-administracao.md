@@ -69,10 +69,10 @@ Sem solicitação pendente, a aba diz *"Nenhuma conclusão solicitada"*.
 
 ## A aba Badges
 
-O catálogo de distintivos vive nesta aba: criar e editar **Nome**, **Descrição**, **Categoria** e as cláusulas de conquista. Cada cartão traz o ícone do distintivo, o nome e a categoria. No diálogo de criação e de edição, o campo **Ícone do badge** recebe um arquivo `.png` ou `.webp`; a imagem passa a aparecer no cartão e nos cartões do bloco Badges do perfil, na cor do distintivo. Enviar de novo troca a imagem; a anterior é apagada. Só a gestão de badges envia, e a recusa chega como aviso na tela.
+O catálogo de distintivos vive nesta aba: criar e editar **Nome**, **Descrição**, **Categoria** e as cláusulas de conquista. Cada cartão traz o ícone do distintivo, o nome e a categoria — o selo diz **Conquista**, **Marca**, **Momento** ou **Mundo**. No diálogo de criação e de edição, o campo **Ícone do badge** recebe um arquivo `.png` ou `.webp`; a imagem passa a aparecer no cartão e nos cartões do bloco Badges do perfil, na cor do distintivo. Enviar de novo troca a imagem; a anterior é apagada. Só a gestão de badges envia, e a recusa chega como aviso na tela.
 
 ```foto admin-badges titulo="A aba Badges com o ícone nos cartões"
-Cada cartão mostra o ícone, o nome e a categoria; o campo **Ícone do badge** fica no diálogo de criação e de edição.
+Cada cartão mostra o ícone, o nome e a categoria em português; o campo **Ícone do badge** fica no diálogo de criação e de edição.
 ```
 
 ```foto admin-badges-dialogo titulo="O campo Ícone do badge no diálogo de edição"

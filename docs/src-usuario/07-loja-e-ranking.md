@@ -81,6 +81,6 @@ Além dos pontos, o sistema concede **distintivos** — marcas de conquista, agr
 
 O catálogo traz 50 distintivos. Cada um é concedido quando a pessoa atinge as condições dele — tarefas concluídas, sessões, horas, semanas, dias seguidos, compras, atestados, issues resolvidos, eventos de laboratório, subtasks, meses no quadro. A concessão acontece no episódio: uma compra na loja, um atestado gerado, um issue resolvido, um mês fechado no quadro — a pessoa recebe o distintivo ali, sem precisar de tarefa.
 
-Alguns distintivos têm **passiva** — um efeito permanente que a pessoa escolhe ativar: **+X% pontos** nas premiações, **−X% de penalidade**, e, nas de bônus, desconto no preço da loja. Os botões **Equipar** e **Desequipar**, o contador **Equipadas (n/3)** e as regras de ativação estão descritos no capítulo 8, no bloco Badges do perfil.
+Alguns distintivos têm **passiva** — um efeito permanente que a pessoa escolhe ativar: **+X% pontos** nas premiações, **−X% de penalidade**, e, nas de bônus, desconto no preço da loja. Os botões **Equipar** e **Desequipar**, o contador **Equipadas (n/3)** e as regras de ativação estão descritos no capítulo 8, no bloco **Badges equipáveis** da aba Configurações, em modo de edição.
 
 Os distintivos ainda não conquistados aparecem no perfil sob o rótulo **Em progresso**, cada um com o número `X de Y` da sua condição — por exemplo `Vinte e Cinco Tarefas 12 de 25`. Quando o número chega ao alvo, o distintivo é concedido no episódio seguinte.
