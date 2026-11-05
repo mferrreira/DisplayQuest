@@ -32,6 +32,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { BucketAvatar } from "@/components/ui/bucket-avatar"
 import { UserBadges } from "@/components/ui/user-badges"
 import { ProfileBadgeShowcase } from "@/components/ui/profile-badge-showcase"
+import { ProfileBadgeEquipPicker } from "@/components/ui/profile-badge-equip-picker"
 import { TimerCard } from "@/components/ui/timer-card"
 import { getRoleDisplayName } from "@/lib/utils/access-control"
 import { compareByBoardPosition } from "@/backend/domain"
@@ -352,6 +353,9 @@ function ProfilePageContent() {
               {showProfileForm && user ? (
                 <div className="space-y-6">
                   <ProfilePictureUpload user={user} onUpdate={(updatedUser) => setUser(updatedUser)} />
+                  {/* plan-v17 S03 (R6, ADR-003): o equipar mora na edição da aba
+                      Configurações — medálhão, passiva, contador 3 slots. */}
+                  <ProfileBadgeEquipPicker userId={user.id} />
                   <UserProfileForm
                     user={user}
                     onUpdate={(updatedUser) => {
