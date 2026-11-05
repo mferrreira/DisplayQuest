@@ -1,4 +1,4 @@
-import type { ActorRef, GamificationSourceType } from "@/backend/domain"
+import type { ActorRef, BadgeCriteriaJson, GamificationSourceType } from "@/backend/domain"
 
 /**
  * O vocabulário é o do domínio (`Progression.ts`) — re-exportado, não copiado. A cópia local
@@ -53,15 +53,11 @@ export interface GamificationAwardResult {
   alreadyAwarded: boolean
 }
 
-export interface BadgeCriteriaInput {
-  points?: number
-  tasks?: number
-  projects?: number
-  workSessions?: number
-  weeklyHours?: number
-  consecutiveDays?: number
-  specialCondition?: string
-}
+/**
+ * plan-v15 S02 (R6): o único formato escrevível de criteria é o v2. O tipo aceita `unknown`
+ * por paridade com o wire; `validateBadgeCriteriaInput` decide o que passa.
+ */
+export type BadgeCriteriaInput = BadgeCriteriaJson
 
 export interface CreateBadgeCommand {
   name: string

@@ -425,11 +425,22 @@ describe("badge management use cases", () => {
       name: " Novo ",
       description: " desc ",
       category: "milestone",
-      criteria: { points: 10 },
+      criteria: { version: 2, clauses: [{ metric: "tasks_completed", op: ">=", value: 10 }] },
       createdBy: 2,
     });
     expect(badge.name).toBe("Novo");
-    expect(fakes.badges.created[0]).toMatchObject({ name: "Novo", icon: null, criteria: { points: 10 }, isActive: true, createdBy: 2 });
+    expect(fakes.badges.created[0]).toMatchObject({
+      name: "Novo",
+      icon: null,
+      criteria: { version: 2, clauses: [{ metric: "tasks_completed", op: ">=", value: 10 }] },
+      isActive: true,
+      createdBy: 2,
+    });
+
+    // plan-v15 S02 (R6): o formato legado de 2026 deixou de ser aceito na escrita.
+    await expect(
+      module_.createBadge({ actorRoles: MANAGER_ROLES, name: "X", description: "d", category: "social", criteria: { points: 10 }, createdBy: 2 }),
+    ).rejects.toThrow("Critério de badge inválido");
   });
 
   it("UpdateBadgeUseCase: NotFound legado + merge parcial", async () => {

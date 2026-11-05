@@ -20,7 +20,8 @@
 
 import { ValidationError } from "@/backend/domain/errors/DomainError";
 import type { Badge, BadgeCategory, BadgeCriteria, BadgeCriteriaJson } from "@/backend/domain/gamification/Badge";
-import { criteriaV2Met, type BadgeMetricValues } from "@/backend/domain/gamification/metric-registry";
+import type { BadgeCriteriaV2 } from "@/backend/domain/gamification/metric-registry";
+import { criteriaV2Met, validateBadgeCriteriaInput, type BadgeMetricValues } from "@/backend/domain/gamification/metric-registry";
 
 export const BADGE_CATEGORIES: readonly BadgeCategory[] = ["achievement", "milestone", "special", "social"];
 
@@ -31,7 +32,7 @@ export interface BadgeCreateData {
   icon: string | null;
   color: string | null;
   category: BadgeCategory;
-  criteria: BadgeCriteria | null;
+  criteria: BadgeCriteriaV2 | null;
   isActive: boolean;
   createdBy: number;
 }
@@ -42,7 +43,7 @@ export interface BadgeCreateInput {
   category?: string;
   icon?: string | null;
   color?: string | null;
-  criteria?: BadgeCriteria | null;
+  criteria?: BadgeCriteriaJson;
   isActive?: boolean;
   createdBy?: number;
 }
@@ -74,7 +75,7 @@ export function validateBadgeCreateInput(data: BadgeCreateInput): BadgeCreateDat
     icon: data.icon || null,
     color: data.color || null,
     category: data.category as BadgeCategory,
-    criteria: data.criteria || null,
+    criteria: validateBadgeCriteriaInput(data.criteria),
     // QUIRK-6B: o caminho legado (Badge.create) forca isActive=true; preservado.
     isActive: true,
     createdBy: data.createdBy,

@@ -6,6 +6,7 @@ import {
   applyBadgeUpdate,
   assertPermission,
   requireActorPermission,
+  validateBadgeCriteriaInput,
   validateBadgeCreateInput,
 } from "@/backend/domain"
 import type {
@@ -80,7 +81,13 @@ export class UpdateBadgeUseCase {
       throw new NotFoundError("Badge não encontrado")
     }
 
-    const merged = applyBadgeUpdate(current, command.data)
+    // plan-v15 S02 (R6): criteria escrevível só v2, validado depois do gate e do id — a
+    // ordem congelada de B6-2a (403 antes dos 400) não pode mudar.
+    const data = command.data.criteria !== undefined
+      ? { ...command.data, criteria: validateBadgeCriteriaInput(command.data.criteria) }
+      : command.data
+
+    const merged = applyBadgeUpdate(current, data)
     return await this.badges.update(merged)
   }
 }

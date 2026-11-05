@@ -18,22 +18,12 @@ import {
   Star, 
   Trophy, 
   Target, 
-  Clock, 
   Users,
   Award,
   Settings
 } from "lucide-react"
 import { BadgesAPI } from "@/contexts/api-client"
-
-interface BadgeCriteria {
-  points?: number
-  tasks?: number
-  projects?: number
-  workSessions?: number
-  weeklyHours?: number
-  consecutiveDays?: number
-  specialCondition?: string
-}
+import { METRICS, type BadgeClause, type BadgeCriteriaV2 } from "@/backend/domain"
 
 interface BadgeData {
   id?: number
@@ -42,10 +32,12 @@ interface BadgeData {
   icon?: string
   color?: string
   category: 'achievement' | 'milestone' | 'special' | 'social'
-  criteria?: BadgeCriteria
+  criteria?: BadgeCriteriaV2 | null
   isActive: boolean
   createdBy: number
 }
+
+const metricLabel = (metric: string) => METRICS.find(m => m.id === metric)?.label ?? metric
 
 const categoryIcons = {
   achievement: Trophy,
@@ -72,10 +64,13 @@ export function BadgeManager() {
     icon: '',
     color: '#3B82F6',
     category: 'achievement',
-    criteria: {},
+    criteria: null,
     isActive: true,
     createdBy: 0 // Will be set by server from authenticated user
   })
+  // plan-v15 S02: a lista de cláusulas v2 é o estado do picker; o criteria do payload
+  // só existe no submit.
+  const [clauses, setClauses] = useState<BadgeClause[]>([])
 
   useEffect(() => {
     loadBadges()
@@ -96,10 +91,12 @@ export function BadgeManager() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
+      const criteria: BadgeCriteriaV2 | null = clauses.length > 0 ? { version: 2, clauses } : null
+      const payload = { ...formData, criteria }
       if (editingBadge) {
-        await BadgesAPI.update(editingBadge.id!, formData)
+        await BadgesAPI.update(editingBadge.id!, payload)
       } else {
-        await BadgesAPI.create(formData)
+        await BadgesAPI.create(payload)
       }
       
       setShowCreateDialog(false)
@@ -114,6 +111,7 @@ export function BadgeManager() {
   const handleEdit = (badge: BadgeData) => {
     setEditingBadge(badge)
     setFormData(badge)
+    setClauses(badge.criteria?.clauses ?? [])
     setShowCreateDialog(true)
   }
 
@@ -135,20 +133,15 @@ export function BadgeManager() {
       icon: '',
       color: '#3B82F6',
       category: 'achievement',
-      criteria: {},
+      criteria: null,
       isActive: true,
       createdBy: 0
     })
+    setClauses([])
   }
 
-  const updateCriteria = (field: keyof BadgeCriteria, value: number | string) => {
-    setFormData(prev => ({
-      ...prev,
-      criteria: {
-        ...prev.criteria,
-        [field]: value
-      }
-    }))
+  const updateClause = (index: number, patch: Partial<BadgeClause>) => {
+    setClauses(prev => prev.map((clause, i) => (i === index ? { ...clause, ...patch } : clause)))
   }
 
   const getCategoryIcon = (category: string) => {
@@ -270,83 +263,67 @@ export function BadgeManager() {
               <div className="space-y-4">
                 <h3 className="text-lg font-medium">Critérios para Conquistar</h3>
                 <p className="text-sm text-muted-foreground">
-                  Defina os critérios que o usuário deve atingir para ganhar este badge
+                  Cada cláusula exige que a métrica do registro atinja o valor mínimo. Sem cláusula,
+                  o badge só pode ser concedido manualmente pela gestão.
                 </p>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="points">Pontos mínimos</Label>
-                    <Input
-                      id="points"
-                      type="number"
-                      value={formData.criteria?.points || ''}
-                      onChange={(e) => updateCriteria('points', parseInt(e.target.value) || 0)}
-                      placeholder="0"
-                    />
+                {clauses.map((clause, index) => (
+                  <div key={index} className="flex items-end gap-3">
+                    <div className="flex-1">
+                      <Label htmlFor={`metric-${index}`}>Métrica do critério</Label>
+                      <Select
+                        value={clause.metric}
+                        onValueChange={(value) => {
+                          // Lição V5-6: dentro de form o Radix dispara change vazio; ignorar.
+                          if (value === "") return
+                          updateClause(index, { metric: value })
+                        }}
+                      >
+                        <SelectTrigger id={`metric-${index}`} aria-label="Métrica do critério">
+                          <SelectValue placeholder="Escolher métrica" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {METRICS.map((metric) => (
+                            <SelectItem key={metric.id} value={metric.id}>
+                              {metric.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor={`value-${index}`}>Valor do critério</Label>
+                      <Input
+                        id={`value-${index}`}
+                        type="number"
+                        min="1"
+                        value={Number.isFinite(clause.value) ? clause.value : ''}
+                        onChange={(e) => {
+                          const parsed = parseFloat(e.target.value)
+                          updateClause(index, { value: Number.isFinite(parsed) ? parsed : 0 })
+                        }}
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      aria-label={`Remover cláusula ${index + 1}`}
+                      onClick={() => setClauses(prev => prev.filter((_, i) => i !== index))}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
-                  <div>
-                    <Label htmlFor="tasks">Tarefas concluídas</Label>
-                    <Input
-                      id="tasks"
-                      type="number"
-                      value={formData.criteria?.tasks || ''}
-                      onChange={(e) => updateCriteria('tasks', parseInt(e.target.value) || 0)}
-                      placeholder="0"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="projects">Projetos participados</Label>
-                    <Input
-                      id="projects"
-                      type="number"
-                      value={formData.criteria?.projects || ''}
-                      onChange={(e) => updateCriteria('projects', parseInt(e.target.value) || 0)}
-                      placeholder="0"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="workSessions">Sessões de trabalho</Label>
-                    <Input
-                      id="workSessions"
-                      type="number"
-                      value={formData.criteria?.workSessions || ''}
-                      onChange={(e) => updateCriteria('workSessions', parseInt(e.target.value) || 0)}
-                      placeholder="0"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="weeklyHours">Horas semanais</Label>
-                    <Input
-                      id="weeklyHours"
-                      type="number"
-                      step="0.5"
-                      value={formData.criteria?.weeklyHours || ''}
-                      onChange={(e) => updateCriteria('weeklyHours', parseFloat(e.target.value) || 0)}
-                      placeholder="0"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="consecutiveDays">Dias consecutivos</Label>
-                    <Input
-                      id="consecutiveDays"
-                      type="number"
-                      value={formData.criteria?.consecutiveDays || ''}
-                      onChange={(e) => updateCriteria('consecutiveDays', parseInt(e.target.value) || 0)}
-                      placeholder="0"
-                    />
-                  </div>
-                </div>
+                ))}
 
-                <div>
-                  <Label htmlFor="specialCondition">Condição especial</Label>
-                  <Textarea
-                    id="specialCondition"
-                    value={formData.criteria?.specialCondition || ''}
-                    onChange={(e) => updateCriteria('specialCondition', e.target.value)}
-                    placeholder="Ex: Primeiro usuário a completar 100 tarefas..."
-                    rows={2}
-                  />
-                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setClauses(prev => [...prev, { metric: METRICS[0].id, op: '>=', value: 1 }])}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Adicionar critério
+                </Button>
               </div>
 
               <div className="flex justify-end space-x-2">
@@ -411,36 +388,12 @@ export function BadgeManager() {
                 <div className="space-y-2">
                   <h4 className="text-sm font-medium text-foreground">Critérios:</h4>
                   <div className="space-y-1 text-xs text-muted-foreground">
-                    {badge.criteria.points && (
-                      <div className="flex items-center space-x-2">
-                        <Trophy className="h-3 w-3" />
-                        <span>{badge.criteria.points} pontos</span>
-                      </div>
-                    )}
-                    {badge.criteria.tasks && (
-                      <div className="flex items-center space-x-2">
+                    {badge.criteria.clauses.map((clause) => (
+                      <div key={clause.metric} className="flex items-center space-x-2">
                         <Target className="h-3 w-3" />
-                        <span>{badge.criteria.tasks} tarefas</span>
+                        <span>{metricLabel(clause.metric)} ≥ {clause.value}</span>
                       </div>
-                    )}
-                    {badge.criteria.projects && (
-                      <div className="flex items-center space-x-2">
-                        <Users className="h-3 w-3" />
-                        <span>{badge.criteria.projects} projetos</span>
-                      </div>
-                    )}
-                    {badge.criteria.weeklyHours && (
-                      <div className="flex items-center space-x-2">
-                        <Clock className="h-3 w-3" />
-                        <span>{badge.criteria.weeklyHours}h/semana</span>
-                      </div>
-                    )}
-                    {badge.criteria.specialCondition && (
-                      <div className="flex items-center space-x-2">
-                        <Star className="h-3 w-3" />
-                        <span className="truncate">{badge.criteria.specialCondition}</span>
-                      </div>
-                    )}
+                    ))}
                   </div>
                 </div>
               )}

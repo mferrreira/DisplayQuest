@@ -7,6 +7,8 @@
  * concede — o caminho "condição desconhecida => true" do QUIRK-6C (badge-rules) morre.
  */
 
+import { ValidationError } from "@/backend/domain/errors/DomainError";
+
 export interface MetricSpec {
   id: MetricId;
   label: string;
@@ -66,4 +68,31 @@ export function criteriaV2Met(criteria: unknown, values: BadgeMetricValues): boo
     if (measured < clause.value) return false;
   }
   return true;
+}
+
+/**
+ * plan-v15 S02 (MODELO R3/R6): validação estrita de criteria na ESCRITA de badge.
+ * Aceita null/ausente (badge de concessão manual); o único formato escrevível é v2 com
+ * clauses não vazia, métrica do registro, op `>=` e valor finito >= 1. O formato legado
+ * de 2026 é recusado. Mensagem única: "Critério de badge inválido".
+ */
+export function validateBadgeCriteriaInput(criteria: unknown): BadgeCriteriaV2 | null {
+  if (criteria === null || criteria === undefined) return null;
+  const reject = (): never => {
+    throw new ValidationError("Critério de badge inválido");
+  };
+  if (typeof criteria !== "object" || Array.isArray(criteria)) reject();
+  const v2 = criteria as Partial<BadgeCriteriaV2>;
+  if (v2.version !== 2) reject();
+  const input: unknown = v2.clauses;
+  if (Array.isArray(input) && input.length === 0) reject();
+  if (!Array.isArray(input)) reject();
+  const clauses = (input as BadgeClause[]).map((clause) => {
+    if (!clause || typeof clause !== "object") reject();
+    if (!isMetricId(clause.metric)) reject();
+    if (clause.op !== ">=") reject();
+    if (typeof clause.value !== "number" || !Number.isFinite(clause.value) || clause.value < 1) reject();
+    return { metric: clause.metric, op: ">=" as const, value: clause.value };
+  });
+  return { version: 2, clauses };
 }
