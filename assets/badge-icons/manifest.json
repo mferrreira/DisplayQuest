@@ -1,0 +1,544 @@
+{
+  "license": "ISC",
+  "source": "lucide",
+  "tokens": {
+    "check": {
+      "sourceUrl": "https://lucide.dev/icons/check",
+      "svgFile": "svg/check.svg",
+      "slugs": [
+        "primeira-tarefa"
+      ]
+    },
+    "list-checks": {
+      "sourceUrl": "https://lucide.dev/icons/list-checks",
+      "svgFile": "svg/list-checks.svg",
+      "slugs": [
+        "cinco-tarefas",
+        "vinte-e-cinco-tarefas"
+      ]
+    },
+    "trophy": {
+      "sourceUrl": "https://lucide.dev/icons/trophy",
+      "svgFile": "svg/trophy.svg",
+      "slugs": [
+        "cem-tarefas",
+        "cinquenta-sessoes"
+      ]
+    },
+    "circle-plus": {
+      "sourceUrl": "https://lucide.dev/icons/circle-plus",
+      "svgFile": "svg/circle-plus.svg",
+      "slugs": [
+        "primeira-task-criada",
+        "dez-tarefas-criadas"
+      ]
+    },
+    "circle-check": {
+      "sourceUrl": "https://lucide.dev/icons/circle-check",
+      "svgFile": "svg/circle-check.svg",
+      "slugs": [
+        "primeira-subtask",
+        "primeira-responsabilidade-finalizada"
+      ]
+    },
+    "star": {
+      "sourceUrl": "https://lucide.dev/icons/star",
+      "svgFile": "svg/star.svg",
+      "slugs": [
+        "cento-de-pontos"
+      ]
+    },
+    "users": {
+      "sourceUrl": "https://lucide.dev/icons/users",
+      "svgFile": "svg/users.svg",
+      "slugs": [
+        "primeiro-projeto",
+        "tres-projetos"
+      ]
+    },
+    "flag": {
+      "sourceUrl": "https://lucide.dev/icons/flag",
+      "svgFile": "svg/flag.svg",
+      "slugs": [
+        "primeiro-projeto-liderado",
+        "gerente-de-projeto"
+      ]
+    },
+    "file-plus": {
+      "sourceUrl": "https://lucide.dev/icons/file-plus",
+      "svgFile": "svg/file-plus.svg",
+      "slugs": [
+        "primeiro-entregavel"
+      ]
+    },
+    "target": {
+      "sourceUrl": "https://lucide.dev/icons/target",
+      "svgFile": "svg/target.svg",
+      "slugs": [
+        "primeira-meta"
+      ]
+    },
+    "paperclip": {
+      "sourceUrl": "https://lucide.dev/icons/paperclip",
+      "svgFile": "svg/paperclip.svg",
+      "slugs": [
+        "primeiro-anexo",
+        "dez-anexos"
+      ]
+    },
+    "file-check": {
+      "sourceUrl": "https://lucide.dev/icons/file-check",
+      "svgFile": "svg/file-check.svg",
+      "slugs": [
+        "primeira-prova-atividade"
+      ]
+    },
+    "briefcase": {
+      "sourceUrl": "https://lucide.dev/icons/briefcase",
+      "svgFile": "svg/briefcase.svg",
+      "slugs": [
+        "primeira-atividade-assumida"
+      ]
+    },
+    "square-check": {
+      "sourceUrl": "https://lucide.dev/icons/square-check",
+      "svgFile": "svg/square-check.svg",
+      "slugs": [
+        "primeira-atividade-aprovada"
+      ]
+    },
+    "circle-play": {
+      "sourceUrl": "https://lucide.dev/icons/circle-play",
+      "svgFile": "svg/circle-play.svg",
+      "slugs": [
+        "primeira-sessao",
+        "dez-sessoes"
+      ]
+    },
+    "timer": {
+      "sourceUrl": "https://lucide.dev/icons/timer",
+      "svgFile": "svg/timer.svg",
+      "slugs": [
+        "dez-horas-em-sessao"
+      ]
+    },
+    "gauge": {
+      "sourceUrl": "https://lucide.dev/icons/gauge",
+      "svgFile": "svg/gauge.svg",
+      "slugs": [
+        "media-oito-horas"
+      ]
+    },
+    "calendar-check": {
+      "sourceUrl": "https://lucide.dev/icons/calendar-check",
+      "svgFile": "svg/calendar-check.svg",
+      "slugs": [
+        "primeira-semana-perfeita",
+        "quatro-semanas-perfeitas"
+      ]
+    },
+    "flame": {
+      "sourceUrl": "https://lucide.dev/icons/flame",
+      "svgFile": "svg/flame.svg",
+      "slugs": [
+        "tres-dias-seguidos",
+        "sete-dias-seguidos"
+      ]
+    },
+    "shopping-bag": {
+      "sourceUrl": "https://lucide.dev/icons/shopping-bag",
+      "svgFile": "svg/shopping-bag.svg",
+      "slugs": [
+        "primeira-compra",
+        "cinco-compras"
+      ]
+    },
+    "wallet": {
+      "sourceUrl": "https://lucide.dev/icons/wallet",
+      "svgFile": "svg/wallet.svg",
+      "slugs": [
+        "cem-pontos-na-loja",
+        "quinhentos-pontos-na-loja"
+      ]
+    },
+    "file-text": {
+      "sourceUrl": "https://lucide.dev/icons/file-text",
+      "svgFile": "svg/file-text.svg",
+      "slugs": [
+        "primeiro-relatorio",
+        "primeiro-relatorio-semanal"
+      ]
+    },
+    "shield": {
+      "sourceUrl": "https://lucide.dev/icons/shield",
+      "svgFile": "svg/shield.svg",
+      "slugs": [
+        "primeiro-atestado",
+        "seis-atestados",
+        "gerente"
+      ]
+    },
+    "calendar": {
+      "sourceUrl": "https://lucide.dev/icons/calendar",
+      "svgFile": "svg/calendar.svg",
+      "slugs": [
+        "primeiro-mes-com-atestado"
+      ]
+    },
+    "triangle-alert": {
+      "sourceUrl": "https://lucide.dev/icons/triangle-alert",
+      "svgFile": "svg/triangle-alert.svg",
+      "slugs": [
+        "primeira-issue"
+      ]
+    },
+    "wrench": {
+      "sourceUrl": "https://lucide.dev/icons/wrench",
+      "svgFile": "svg/wrench.svg",
+      "slugs": [
+        "primeira-issue-resolvida",
+        "cinco-issues-resolvidas",
+        "laboratorista"
+      ]
+    },
+    "flask-conical": {
+      "sourceUrl": "https://lucide.dev/icons/flask-conical",
+      "svgFile": "svg/flask-conical.svg",
+      "slugs": [
+        "primeiro-evento-laboratorio"
+      ]
+    },
+    "chart-column": {
+      "sourceUrl": "https://lucide.dev/icons/chart-column",
+      "svgFile": "svg/chart-column.svg",
+      "slugs": [
+        "primeiro-mes-no-quadro",
+        "seis-meses-no-quadro"
+      ]
+    },
+    "medal": {
+      "sourceUrl": "https://lucide.dev/icons/medal",
+      "svgFile": "svg/medal.svg",
+      "slugs": [
+        "primeiro-top-3"
+      ]
+    },
+    "crown": {
+      "sourceUrl": "https://lucide.dev/icons/crown",
+      "svgFile": "svg/crown.svg",
+      "slugs": [
+        "primeiro-mes-vencido",
+        "coordenador"
+      ]
+    },
+    "user-check": {
+      "sourceUrl": "https://lucide.dev/icons/user-check",
+      "svgFile": "svg/user-check.svg",
+      "slugs": [
+        "perfil-completo"
+      ]
+    }
+  },
+  "badges": [
+    {
+      "slug": "primeira-tarefa",
+      "token": "check",
+      "color": "#22c55e",
+      "webpFile": "webp/primeira-tarefa.webp"
+    },
+    {
+      "slug": "cinco-tarefas",
+      "token": "list-checks",
+      "color": "#22c55e",
+      "webpFile": "webp/cinco-tarefas.webp"
+    },
+    {
+      "slug": "vinte-e-cinco-tarefas",
+      "token": "list-checks",
+      "color": "#16a34a",
+      "webpFile": "webp/vinte-e-cinco-tarefas.webp"
+    },
+    {
+      "slug": "cem-tarefas",
+      "token": "trophy",
+      "color": "#f59e0b",
+      "webpFile": "webp/cem-tarefas.webp"
+    },
+    {
+      "slug": "primeira-task-criada",
+      "token": "circle-plus",
+      "color": "#3b82f6",
+      "webpFile": "webp/primeira-task-criada.webp"
+    },
+    {
+      "slug": "dez-tarefas-criadas",
+      "token": "circle-plus",
+      "color": "#3b82f6",
+      "webpFile": "webp/dez-tarefas-criadas.webp"
+    },
+    {
+      "slug": "primeira-subtask",
+      "token": "circle-check",
+      "color": "#22c55e",
+      "webpFile": "webp/primeira-subtask.webp"
+    },
+    {
+      "slug": "cento-de-pontos",
+      "token": "star",
+      "color": "#f59e0b",
+      "webpFile": "webp/cento-de-pontos.webp"
+    },
+    {
+      "slug": "primeiro-projeto",
+      "token": "users",
+      "color": "#3b82f6",
+      "webpFile": "webp/primeiro-projeto.webp"
+    },
+    {
+      "slug": "tres-projetos",
+      "token": "users",
+      "color": "#6366f1",
+      "webpFile": "webp/tres-projetos.webp"
+    },
+    {
+      "slug": "primeiro-projeto-liderado",
+      "token": "flag",
+      "color": "#8b5cf6",
+      "webpFile": "webp/primeiro-projeto-liderado.webp"
+    },
+    {
+      "slug": "primeiro-entregavel",
+      "token": "file-plus",
+      "color": "#06b6d4",
+      "webpFile": "webp/primeiro-entregavel.webp"
+    },
+    {
+      "slug": "primeira-meta",
+      "token": "target",
+      "color": "#06b6d4",
+      "webpFile": "webp/primeira-meta.webp"
+    },
+    {
+      "slug": "primeiro-anexo",
+      "token": "paperclip",
+      "color": "#0ea5e9",
+      "webpFile": "webp/primeiro-anexo.webp"
+    },
+    {
+      "slug": "dez-anexos",
+      "token": "paperclip",
+      "color": "#0284c7",
+      "webpFile": "webp/dez-anexos.webp"
+    },
+    {
+      "slug": "primeira-prova-atividade",
+      "token": "file-check",
+      "color": "#14b8a6",
+      "webpFile": "webp/primeira-prova-atividade.webp"
+    },
+    {
+      "slug": "primeira-atividade-assumida",
+      "token": "briefcase",
+      "color": "#14b8a6",
+      "webpFile": "webp/primeira-atividade-assumida.webp"
+    },
+    {
+      "slug": "primeira-atividade-aprovada",
+      "token": "square-check",
+      "color": "#14b8a6",
+      "webpFile": "webp/primeira-atividade-aprovada.webp"
+    },
+    {
+      "slug": "primeira-sessao",
+      "token": "circle-play",
+      "color": "#22c55e",
+      "webpFile": "webp/primeira-sessao.webp"
+    },
+    {
+      "slug": "dez-sessoes",
+      "token": "circle-play",
+      "color": "#16a34a",
+      "webpFile": "webp/dez-sessoes.webp"
+    },
+    {
+      "slug": "cinquenta-sessoes",
+      "token": "trophy",
+      "color": "#f59e0b",
+      "webpFile": "webp/cinquenta-sessoes.webp"
+    },
+    {
+      "slug": "dez-horas-em-sessao",
+      "token": "timer",
+      "color": "#3b82f6",
+      "webpFile": "webp/dez-horas-em-sessao.webp"
+    },
+    {
+      "slug": "media-oito-horas",
+      "token": "gauge",
+      "color": "#8b5cf6",
+      "webpFile": "webp/media-oito-horas.webp"
+    },
+    {
+      "slug": "primeira-semana-perfeita",
+      "token": "calendar-check",
+      "color": "#22c55e",
+      "webpFile": "webp/primeira-semana-perfeita.webp"
+    },
+    {
+      "slug": "quatro-semanas-perfeitas",
+      "token": "calendar-check",
+      "color": "#16a34a",
+      "webpFile": "webp/quatro-semanas-perfeitas.webp"
+    },
+    {
+      "slug": "tres-dias-seguidos",
+      "token": "flame",
+      "color": "#f97316",
+      "webpFile": "webp/tres-dias-seguidos.webp"
+    },
+    {
+      "slug": "sete-dias-seguidos",
+      "token": "flame",
+      "color": "#ea580c",
+      "webpFile": "webp/sete-dias-seguidos.webp"
+    },
+    {
+      "slug": "primeira-compra",
+      "token": "shopping-bag",
+      "color": "#ec4899",
+      "webpFile": "webp/primeira-compra.webp"
+    },
+    {
+      "slug": "cinco-compras",
+      "token": "shopping-bag",
+      "color": "#db2777",
+      "webpFile": "webp/cinco-compras.webp"
+    },
+    {
+      "slug": "cem-pontos-na-loja",
+      "token": "wallet",
+      "color": "#ec4899",
+      "webpFile": "webp/cem-pontos-na-loja.webp"
+    },
+    {
+      "slug": "quinhentos-pontos-na-loja",
+      "token": "wallet",
+      "color": "#be185d",
+      "webpFile": "webp/quinhentos-pontos-na-loja.webp"
+    },
+    {
+      "slug": "primeiro-relatorio",
+      "token": "file-text",
+      "color": "#0ea5e9",
+      "webpFile": "webp/primeiro-relatorio.webp"
+    },
+    {
+      "slug": "primeiro-relatorio-semanal",
+      "token": "file-text",
+      "color": "#0ea5e9",
+      "webpFile": "webp/primeiro-relatorio-semanal.webp"
+    },
+    {
+      "slug": "primeiro-atestado",
+      "token": "shield",
+      "color": "#8b5cf6",
+      "webpFile": "webp/primeiro-atestado.webp"
+    },
+    {
+      "slug": "seis-atestados",
+      "token": "shield",
+      "color": "#6d28d9",
+      "webpFile": "webp/seis-atestados.webp"
+    },
+    {
+      "slug": "primeiro-mes-com-atestado",
+      "token": "calendar",
+      "color": "#8b5cf6",
+      "webpFile": "webp/primeiro-mes-com-atestado.webp"
+    },
+    {
+      "slug": "primeira-issue",
+      "token": "triangle-alert",
+      "color": "#ef4444",
+      "webpFile": "webp/primeira-issue.webp"
+    },
+    {
+      "slug": "primeira-issue-resolvida",
+      "token": "wrench",
+      "color": "#14b8a6",
+      "webpFile": "webp/primeira-issue-resolvida.webp"
+    },
+    {
+      "slug": "cinco-issues-resolvidas",
+      "token": "wrench",
+      "color": "#0d9488",
+      "webpFile": "webp/cinco-issues-resolvidas.webp"
+    },
+    {
+      "slug": "primeiro-evento-laboratorio",
+      "token": "flask-conical",
+      "color": "#06b6d4",
+      "webpFile": "webp/primeiro-evento-laboratorio.webp"
+    },
+    {
+      "slug": "primeira-responsabilidade-finalizada",
+      "token": "circle-check",
+      "color": "#14b8a6",
+      "webpFile": "webp/primeira-responsabilidade-finalizada.webp"
+    },
+    {
+      "slug": "primeiro-mes-no-quadro",
+      "token": "chart-column",
+      "color": "#3b82f6",
+      "webpFile": "webp/primeiro-mes-no-quadro.webp"
+    },
+    {
+      "slug": "seis-meses-no-quadro",
+      "token": "chart-column",
+      "color": "#2563eb",
+      "webpFile": "webp/seis-meses-no-quadro.webp"
+    },
+    {
+      "slug": "primeiro-top-3",
+      "token": "medal",
+      "color": "#f59e0b",
+      "webpFile": "webp/primeiro-top-3.webp"
+    },
+    {
+      "slug": "primeiro-mes-vencido",
+      "token": "crown",
+      "color": "#f59e0b",
+      "webpFile": "webp/primeiro-mes-vencido.webp"
+    },
+    {
+      "slug": "perfil-completo",
+      "token": "user-check",
+      "color": "#6366f1",
+      "webpFile": "webp/perfil-completo.webp"
+    },
+    {
+      "slug": "coordenador",
+      "token": "crown",
+      "color": "#8b5cf6",
+      "webpFile": "webp/coordenador.webp"
+    },
+    {
+      "slug": "gerente",
+      "token": "shield",
+      "color": "#6366f1",
+      "webpFile": "webp/gerente.webp"
+    },
+    {
+      "slug": "laboratorista",
+      "token": "wrench",
+      "color": "#06b6d4",
+      "webpFile": "webp/laboratorista.webp"
+    },
+    {
+      "slug": "gerente-de-projeto",
+      "token": "flag",
+      "color": "#8b5cf6",
+      "webpFile": "webp/gerente-de-projeto.webp"
+    }
+  ]
+}
