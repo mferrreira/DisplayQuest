@@ -19,7 +19,7 @@ import { useRouter } from "next/navigation"
 import { Award, Crown, Medal, Trophy } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { useUser } from "@/contexts/user-context"
-import { AvatarCrop } from "@/components/ui/avatar-crop"
+import { BucketAvatar } from "@/components/ui/bucket-avatar"
 import { Button } from "@/components/ui/button"
 import { getRoleDisplayName } from "@/lib/utils/access-control"
 import { PageHeader } from "@/components/ui/page-header"
@@ -30,7 +30,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { fetchAPI } from "@/contexts/api-client"
 import { userImageUrl } from "@/lib/api/user-images"
 import { BannerImage } from "@/components/ui/banner-image"
-import { compareByBoardPosition, bannerCropFromColumns } from "@/backend/domain"
+import { compareByBoardPosition } from "@/backend/domain"
 
 /** O que `GET /api/board` declara (S01: mês corrente; S03 acrescenta a lista de meses fechados). */
 interface BoardMonth {
@@ -58,15 +58,8 @@ interface BoardEntry {
   position: number;
   avatar?: string | null;
   bannerKey?: string | null;
-  /** plan-v12 (DEC-239): parâmetros do recorte da capa, lidos da mesma lista que a chave. */
-  bannerCropX?: number | null;
-  bannerCropY?: number | null;
-  bannerCropZoom?: number | null;
-  /** plan-v14 S02 (regra 2): chave do avatar no bucket + recorte quadrado (DEC-242). */
+  /** plan-v14 S02 (regra 2): chave do avatar no bucket (DEC-242). */
   avatarKey?: string | null;
-  logoCropX?: number | null;
-  logoCropY?: number | null;
-  logoCropZoom?: number | null;
   roles?: string[];
   completedTasks?: number;
 }
@@ -186,13 +179,7 @@ export default function LeaderboardPage() {
           position: entry.position,
           avatar: account?.avatar,
           bannerKey: account?.bannerKey,
-          bannerCropX: account?.bannerCropX,
-          bannerCropY: account?.bannerCropY,
-          bannerCropZoom: account?.bannerCropZoom,
           avatarKey: account?.avatarKey,
-          logoCropX: account?.logoCropX,
-          logoCropY: account?.logoCropY,
-          logoCropZoom: account?.logoCropZoom,
           roles: account?.roles,
           completedTasks: account?.completedTasks,
         }
@@ -204,13 +191,7 @@ export default function LeaderboardPage() {
         position: index + 1,
         avatar: rankedUser.avatar,
         bannerKey: rankedUser.bannerKey,
-        bannerCropX: rankedUser.bannerCropX,
-        bannerCropY: rankedUser.bannerCropY,
-        bannerCropZoom: rankedUser.bannerCropZoom,
         avatarKey: rankedUser.avatarKey,
-        logoCropX: rankedUser.logoCropX,
-        logoCropY: rankedUser.logoCropY,
-        logoCropZoom: rankedUser.logoCropZoom,
         roles: rankedUser.roles,
         completedTasks: rankedUser.completedTasks,
       }))
@@ -400,22 +381,20 @@ export default function LeaderboardPage() {
                   >
                     {champion.bannerKey ? (
                       // plan-v12 (DEC-239): a peça única `BannerImage` no bloco do campeão — a faixa
-                      // translúcida mostra a parte que a pessoa escolheu no editor.
+                      // translúcida é cover simples.
                       <div className="absolute inset-0 opacity-20" aria-hidden="true">
                         <BannerImage
                           src={userImageUrl(champion.id, "banner", champion.bannerKey)}
                           alt=""
-                          crop={bannerCropFromColumns(champion.bannerCropX, champion.bannerCropY, champion.bannerCropZoom)}
                         />
                       </div>
                     ) : null}
                     <div className="relative flex flex-wrap items-center gap-6 p-8">
                       <Crown className="h-10 w-10 shrink-0 text-warning" aria-hidden="true" />
-                      {/* plan-v14 S02 (regra 2): avatar pela peça única com o recorte quadrado. */}
-                      <AvatarCrop
+                      {/* plan-v14 S02 (regra 2): avatar pela peça única. */}
+                      <BucketAvatar
                         userId={champion.id}
                         avatarKey={champion.avatarKey}
-                        crop={bannerCropFromColumns(champion.logoCropX, champion.logoCropY, champion.logoCropZoom)}
                         legacyAvatar={champion.avatar}
                         name={champion.name}
                         className="h-20 w-20 border-2 border-warning/50"
@@ -456,10 +435,9 @@ export default function LeaderboardPage() {
                         <span className={`text-3xl font-bold tabular-nums ${accent}`} aria-hidden="true">
                           {runnerUp.position}º
                         </span>
-                        <AvatarCrop
+                        <BucketAvatar
                           userId={runnerUp.id}
                           avatarKey={runnerUp.avatarKey}
-                          crop={bannerCropFromColumns(runnerUp.logoCropX, runnerUp.logoCropY, runnerUp.logoCropZoom)}
                           legacyAvatar={runnerUp.avatar}
                           name={runnerUp.name}
                           className="h-12 w-12"
@@ -515,10 +493,9 @@ export default function LeaderboardPage() {
                             href={`/dashboard/profile?userId=${rankedUser.id}`}
                             className="flex items-center gap-3 rounded-lg p-1 transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                           >
-                            <AvatarCrop
+                            <BucketAvatar
                               userId={rankedUser.id}
                               avatarKey={rankedUser.avatarKey}
-                              crop={bannerCropFromColumns(rankedUser.logoCropX, rankedUser.logoCropY, rankedUser.logoCropZoom)}
                               legacyAvatar={rankedUser.avatar}
                               name={rankedUser.name}
                               className="h-9 w-9"

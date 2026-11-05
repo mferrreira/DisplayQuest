@@ -124,16 +124,6 @@ describe("toPublicUser — password never leaves the record", () => {
         // coluna — a entrada e opcional justamente para chamadores e fixtures que ainda nao a
         // conhecem, e a saida e sempre presente.
         "bannerKey",
-        // plan-v12 (DEC-239): os parametros do recorte da capa seguem na mesma lista da chave —
-        // o render fiel da faixa os le linha a linha, e a entrada tambem e opcional (recordes
-        // pre-migration).
-        "bannerCropX",
-        "bannerCropY",
-        "bannerCropZoom",
-        // DEC-242: os parametros do recorte quadrado do avatar seguem a mesma postura.
-        "logoCropX",
-        "logoCropY",
-        "logoCropZoom",
         // V5-4a (DEC-138): os dados de pessoa que a leitura aberta do perfil mostra. O `cpf` nao
         // esta aqui de proposito — e o unico campo com leitura restrita, e sai so por
         // `toPublicUserWithCpf`, chamada depois de `canActorReadUserCpf` responder "sim".

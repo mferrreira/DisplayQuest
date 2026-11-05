@@ -6,7 +6,6 @@ import { Crown, Medal, Award } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { projectStatusLabel } from "@/components/ui/status"
 import { BannerImage } from "@/components/ui/banner-image"
-import { bannerCropFromColumns } from "@/backend/domain"
 import { projectImageUrl } from "@/lib/api/project-files"
 import { rankProjects } from "@/features/projects/utils/project-ranking"
 import type { Project } from "@/contexts/types"
@@ -62,17 +61,12 @@ export function ProjectLeaderboard({ projects, onProjectSelect }: ProjectLeaderb
             ) : null}
             <div className="relative flex flex-wrap items-center gap-4 p-5 sm:gap-6 sm:p-8">
               {champion.project.logoKey ? (
-                // plan-v14 S01 (regra 1): logo do campeão sai pela peça única com o recorte
-                // quadrado gravado — o `object-contain` cru está superado.
+                // plan-v14 S01 (regra 1): logo do campeão sai pela peça única — o
+                // `object-contain` cru está superado.
                 <div className="h-14 w-14 shrink-0 rounded-lg border border-warning/50 bg-background sm:h-20 sm:w-20">
                   <BannerImage
                     src={projectImageUrl(champion.project.id, "logo", champion.project.logoKey)}
                     alt={champion.project.name}
-                    crop={bannerCropFromColumns(
-                      champion.project.logoCropX,
-                      champion.project.logoCropY,
-                      champion.project.logoCropZoom
-                    )}
                   />
                 </div>
               ) : (
@@ -113,11 +107,6 @@ export function ProjectLeaderboard({ projects, onProjectSelect }: ProjectLeaderb
                     <BannerImage
                       src={projectImageUrl(entry.project.id, "logo", entry.project.logoKey)}
                       alt={entry.project.name}
-                      crop={bannerCropFromColumns(
-                        entry.project.logoCropX,
-                        entry.project.logoCropY,
-                        entry.project.logoCropZoom
-                      )}
                     />
                   </div>
                 ) : (
@@ -158,11 +147,6 @@ export function ProjectLeaderboard({ projects, onProjectSelect }: ProjectLeaderb
                     <BannerImage
                       src={projectImageUrl(entry.project.id, "logo", entry.project.logoKey)}
                       alt={entry.project.name}
-                      crop={bannerCropFromColumns(
-                        entry.project.logoCropX,
-                        entry.project.logoCropY,
-                        entry.project.logoCropZoom
-                      )}
                     />
                   </div>
                 ) : (

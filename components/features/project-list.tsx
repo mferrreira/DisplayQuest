@@ -16,7 +16,7 @@ import { projectStatusBadgeClass, projectStatusLabel } from "@/components/ui/sta
 import { projectProgress } from "@/features/projects/utils/project-progress"
 import { projectImageUrl } from "@/lib/api/project-files"
 import { BannerImage } from "@/components/ui/banner-image"
-import { civilDayOfInstant, bannerCropFromColumns } from "@/backend/domain"
+import { civilDayOfInstant } from "@/backend/domain"
 
 interface ProjectListProps {
   /** S01: o cartão virou link; a página ainda passa a prop, nada a consumir. */
@@ -118,24 +118,21 @@ export function ProjectList({ onProjectSelect, projects: providedProjects, tasks
                 // medida de `h-16 sm:h-24` — a faixa da página do projeto (21:9) não muda.
                 <div className="relative h-24 sm:h-32">
                   <div className="h-full overflow-hidden rounded-t-lg">
-                    {/* plan-v12 (DEC-239): a peça única `BannerImage` também no cartão da lista —
-                        nenhum site reinventa a conta do recorte. */}
+                    {/* plan-v12 (DEC-239): a peça única `BannerImage` também no cartão da lista. */}
                     <BannerImage
                       src={projectImageUrl(project.id, "banner", project.bannerKey)}
                       alt={`Capa do projeto ${project.name}`}
-                      crop={bannerCropFromColumns(project.bannerCropX, project.bannerCropY, project.bannerCropZoom)}
                     />
                   </div>
                   {project.logoKey && (
-                    // plan-v14 S01 (regra 1): o logo do cartão também sai pela peça única com o
-                    // recorte quadrado gravado — o `<img object-cover>` cru está superado. O
-                    // wrapper continua FORA do clip da faixa (achado da revisão S01 do plan-v11),
-                    // e a `translate-y-1/2` de sobrepõe à emenda fica no wrapper.
+                    // plan-v14 S01 (regra 1): o logo do cartão também sai pela peça única — o
+                    // `<img object-cover>` cru está superado. O wrapper continua FORA do clip da
+                    // faixa (achado da revisão S01 do plan-v11), e a `translate-y-1/2` de
+                    // sobrepõe à emenda fica no wrapper.
                     <div className="absolute bottom-0 left-4 h-12 w-12 translate-y-1/2 rounded-full border-4 border-card bg-card sm:h-14 sm:w-14">
                       <BannerImage
                         src={projectImageUrl(project.id, "logo", project.logoKey)}
                         alt={`Logo do projeto ${project.name}`}
-                        crop={bannerCropFromColumns(project.logoCropX, project.logoCropY, project.logoCropZoom)}
                         className="rounded-full"
                       />
                     </div>
@@ -149,7 +146,6 @@ export function ProjectList({ onProjectSelect, projects: providedProjects, tasks
                   <BannerImage
                     src={projectImageUrl(project.id, "logo", project.logoKey)}
                     alt={`Logo do projeto ${project.name}`}
-                    crop={bannerCropFromColumns(project.logoCropX, project.logoCropY, project.logoCropZoom)}
                     className="rounded-full"
                   />
                 </div>

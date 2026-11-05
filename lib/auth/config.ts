@@ -56,16 +56,8 @@ export const authOptions: AuthOptions = {
         // V5-3 (DEC-137): a chave da capa do perfil viaja com a sessão, como o avatar — é ela que o
         // cartão "Meu Perfil" usa para mostrar a capa e quebrar o cache do navegador.
         token.bannerKey = (user as any).bannerKey
-        // plan-v12 (DEC-239): os parâmetros do recorte viajam com a chave — o cartão "Meu Perfil"
-        // renderiza a parte escolhida a partir deles.
-        token.bannerCropX = (user as any).bannerCropX
-        token.bannerCropY = (user as any).bannerCropY
-        token.bannerCropZoom = (user as any).bannerCropZoom
-        // DEC-242: a chave do avatar no bucket e o recorte quadrado viajam como a capa.
+        // DEC-242: a chave do avatar no bucket viaja como a capa.
         token.avatarKey = (user as any).avatarKey
-        token.logoCropX = (user as any).logoCropX
-        token.logoCropY = (user as any).logoCropY
-        token.logoCropZoom = (user as any).logoCropZoom
         token.bio = (user as any).bio
         token.profileVisibility = (user as any).profileVisibility
         // V5-4a (DEC-138): os campos abertos. O CPF não entra no token nem na sessão.
@@ -91,13 +83,7 @@ export const authOptions: AuthOptions = {
         token.email = session.user.email
         token.avatar = session.user.avatar
         token.bannerKey = session.user.bannerKey
-        token.bannerCropX = session.user.bannerCropX
-        token.bannerCropY = session.user.bannerCropY
-        token.bannerCropZoom = session.user.bannerCropZoom
         token.avatarKey = session.user.avatarKey
-        token.logoCropX = session.user.logoCropX
-        token.logoCropY = session.user.logoCropY
-        token.logoCropZoom = session.user.logoCropZoom
         token.bio = session.user.bio
         token.profileVisibility = session.user.profileVisibility
         token.registrationNumber = session.user.registrationNumber
@@ -137,17 +123,8 @@ export const authOptions: AuthOptions = {
             email: true,
             avatar: true,
             bannerKey: true,
-            // plan-v12 (DEC-239): os parâmetros do recorte da capa — a faixa do "Meu Perfil" os lê
-            // da sessão, como lê a chave.
-            bannerCropX: true,
-            bannerCropY: true,
-            bannerCropZoom: true,
-            // DEC-242: a chave do avatar no bucket e o recorte quadrado — o "Meu Perfil" os lê
-            // da sessão, como lê a chave da capa.
+            // DEC-242: a chave do avatar no bucket viaja na sessão como a da capa.
             avatarKey: true,
-            logoCropX: true,
-            logoCropY: true,
-            logoCropZoom: true,
             bio: true,
             profileVisibility: true,
             // V5-4a (DEC-138): os dados de pessoa que o perfil mostra. O CPF fica FORA da sessão
@@ -193,12 +170,6 @@ export const authOptions: AuthOptions = {
           avatar: token.avatar,
           bannerKey: token.bannerKey,
           avatarKey: token.avatarKey,
-          bannerCropX: token.bannerCropX,
-          bannerCropY: token.bannerCropY,
-          bannerCropZoom: token.bannerCropZoom,
-          logoCropX: token.logoCropX,
-          logoCropY: token.logoCropY,
-          logoCropZoom: token.logoCropZoom,
           bio: token.bio,
           profileVisibility: token.profileVisibility,
           registrationNumber: token.registrationNumber,

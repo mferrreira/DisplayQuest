@@ -29,11 +29,11 @@ import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { AvatarCrop } from "@/components/ui/avatar-crop"
+import { BucketAvatar } from "@/components/ui/bucket-avatar"
 import { UserBadges } from "@/components/ui/user-badges"
 import { TimerCard } from "@/components/ui/timer-card"
 import { getRoleDisplayName } from "@/lib/utils/access-control"
-import { compareByBoardPosition, bannerCropFromColumns } from "@/backend/domain"
+import { compareByBoardPosition } from "@/backend/domain"
 import { ProfileMonthsList } from "@/components/ui/profile-months-list"
 import { useWorkSessions } from "@/hooks/use-work-sessions"
 import {
@@ -221,43 +221,14 @@ function ProfilePageContent() {
                 userId={user.id}
                 userName={user.name}
                 bannerKey={user.bannerKey}
-                bannerCrop={bannerCropFromColumns(user.bannerCropX, user.bannerCropY, user.bannerCropZoom)}
                 avatarKey={user.avatarKey}
-                avatarCrop={bannerCropFromColumns(user.logoCropX, user.logoCropY, user.logoCropZoom)}
                 canEdit
                 onBannerChange={(bannerKey) => setUser((prev) => (prev ? { ...prev, bannerKey } : prev))}
-                onCropChange={(crop) =>
-                  setUser((prev) =>
-                    prev
-                      ? {
-                          ...prev,
-                          bannerCropX: crop?.x ?? null,
-                          bannerCropY: crop?.y ?? null,
-                          bannerCropZoom: crop?.zoom ?? null,
-                        }
-                      : prev
-                  )
-                }
                 onAvatarKeyChange={(avatarKey) => setUser((prev) => (prev ? { ...prev, avatarKey } : prev))}
-                onAvatarCropChange={(crop) =>
-                  setUser((prev) =>
-                    prev
-                      ? {
-                          ...prev,
-                          logoCropX: crop?.x ?? null,
-                          logoCropY: crop?.y ?? null,
-                          logoCropZoom: crop?.zoom ?? null,
-                        }
-                      : prev
-                  )
-                }
               />
-              {/* plan-v14 S02 (regra 2): o quadrado escolhido na fábrica do avatar sai pela peça
-                  única com o recorte gravado; sem chave, o legado em disco de hoje. */}
-              <AvatarCrop
+              <BucketAvatar
                 userId={user.id}
                 avatarKey={user.avatarKey}
-                crop={bannerCropFromColumns(user.logoCropX, user.logoCropY, user.logoCropZoom)}
                 legacyAvatar={user.avatar}
                 name={user.name}
                 className="absolute bottom-0 left-6 h-24 w-24 translate-y-1/3 border-4 border-background sm:h-28 sm:w-28"

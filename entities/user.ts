@@ -45,19 +45,10 @@ export const userSchema = z.object({
   currentMonthPoints: z.number().int().optional(),
   roles: z.array(userRoleSchema),
   avatar: z.string().nullable().optional(),
-  // plan-v14 S02 (regra 2): a chave do avatar no bucket e o recorte quadrado (DEC-242). O zod
-  // STRIPPA chave desconhecida — sem estas linhas, o `avatarKey` nunca chega à tela e o pódio/
-  // lista/Perfil renderizam só o legado (achado do docker, 2026-11-04). Opcionais como as chaves.
+  // V5-3: a chave do avatar no bucket. Opcional para conviver com instâncias pré-migration.
   avatarKey: z.string().nullable().optional(),
-  logoCropX: z.number().nullable().optional(),
-  logoCropY: z.number().nullable().optional(),
-  logoCropZoom: z.number().nullable().optional(),
   /** V5-3 (DEC-137): chave da capa do perfil no bucket. O binário sai por rota autenticada. */
   bannerKey: z.string().nullable().optional(),
-  /** plan-v12 (DEC-239): parâmetros do recorte da capa. Orais — instância pré-migration. */
-  bannerCropX: z.number().nullable().optional(),
-  bannerCropY: z.number().nullable().optional(),
-  bannerCropZoom: z.number().nullable().optional(),
   bio: z.string().nullable().optional(),
   profileVisibility: profileVisibilitySchema.default("public"),
   /**

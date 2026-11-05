@@ -12,8 +12,7 @@ import {
   getPrimaryRoleLabel,
   isNavItemActive,
 } from "@/components/layout/nav-config"
-import { AvatarCrop } from "@/components/ui/avatar-crop"
-import { bannerCropFromColumns } from "@/backend/domain"
+import { BucketAvatar } from "@/components/ui/bucket-avatar"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
@@ -63,12 +62,11 @@ export function MobileMenu() {
           {user ? (
             <div className="space-y-3">
               <div className="flex items-center gap-3 rounded-xl bg-muted/50 p-3">
-                {/* plan-v14 S02 (regra 2): o quadrado escolhido na fábrica do avatar sai pela
-                    peça única com o recorte gravado; sem chave, o legado em disco de hoje. */}
-                <AvatarCrop
+                {/* plan-v14 S02 (regra 2): o avatar do bucket sai pela peça única; sem chave,
+                    o legado em disco de hoje. */}
+                <BucketAvatar
                   userId={user.id}
                   avatarKey={user.avatarKey}
-                  crop={bannerCropFromColumns(user.logoCropX, user.logoCropY, user.logoCropZoom)}
                   legacyAvatar={user.avatar}
                   name={user.name || ""}
                   className="h-10 w-10"

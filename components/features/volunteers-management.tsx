@@ -5,8 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { AvatarCrop } from "@/components/ui/avatar-crop"
-import { bannerCropFromColumns } from "@/backend/domain"
+import { BucketAvatar } from "@/components/ui/bucket-avatar"
 import { 
   Users, 
   UserPlus, 
@@ -47,11 +46,8 @@ interface Volunteer {
   name: string
   email: string
   avatar?: string | null
-  /** plan-v14 S02 (regra 2): chave do avatar no bucket + recorte quadrado (DEC-242). */
+  /** plan-v14 S02 (regra 2): chave do avatar no bucket (DEC-242). */
   avatarKey?: string | null
-  logoCropX?: number | null
-  logoCropY?: number | null
-  logoCropZoom?: number | null
   role: string
   joinedAt: string
   hoursWorked: number
@@ -133,9 +129,6 @@ export function VolunteersManagement() {
             email: member.user?.email || '',
             avatar: member.user?.avatar,
             avatarKey: member.user?.avatarKey,
-            logoCropX: member.user?.logoCropX,
-            logoCropY: member.user?.logoCropY,
-            logoCropZoom: member.user?.logoCropZoom,
             role: member.roles?.[0] || 'COLABORADOR',
             joinedAt: member.joinedAt,
             hoursWorked: 0,
@@ -428,12 +421,11 @@ export function VolunteersManagement() {
                       <CardContent className="p-6">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-4">
-                            {/* plan-v14 S02 (regra 2): o quadrado escolhido na fábrica do avatar
-                                sai pela peça única com o recorte gravado; sem chave, o legado. */}
-                            <AvatarCrop
+                            {/* plan-v14 S02 (regra 2): o avatar do bucket sai pela peça única;
+                                sem chave, o legado. */}
+                            <BucketAvatar
                               userId={volunteer.id}
                               avatarKey={volunteer.avatarKey}
-                              crop={bannerCropFromColumns(volunteer.logoCropX, volunteer.logoCropY, volunteer.logoCropZoom)}
                               legacyAvatar={volunteer.avatar}
                               name={volunteer.name}
                               className="h-12 w-12"

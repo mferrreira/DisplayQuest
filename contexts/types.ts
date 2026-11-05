@@ -24,15 +24,8 @@ export interface User {
   avatar?: string | null;
   /** V5-3 (DEC-137): chave da capa do perfil no bucket (`users/<id>/images/banner`). */
   bannerKey?: string | null;
-  /** plan-v12 (DEC-239): parâmetros do recorte da capa — centro normalizado + zoom. */
-  bannerCropX?: number | null;
-  bannerCropY?: number | null;
-  bannerCropZoom?: number | null;
-  /** DEC-242: chave do avatar no bucket + recorte quadrado. O campo legado `avatar` segue o disco. */
+  /** DEC-242: chave do avatar no bucket. O campo legado `avatar` segue o disco. */
   avatarKey?: string | null;
-  logoCropX?: number | null;
-  logoCropY?: number | null;
-  logoCropZoom?: number | null;
   profileVisibility: "public" | "private" | "members_only";
   /**
    * V5-4a (DEC-138): dados de pessoa. `cpf` chega só nas leituras em que a pessoa é o próprio ou
@@ -91,14 +84,6 @@ export interface Project {
   /** V5-2d (DEC-102): chave do objeto no bucket. A tela não recebe binário, recebe a chave. */
   logoKey?: string | null
   bannerKey?: string | null
-  /** plan-v12 (DEC-239): parâmetros do recorte da capa — centro normalizado + zoom. */
-  bannerCropX?: number | null
-  bannerCropY?: number | null
-  bannerCropZoom?: number | null
-  /** DEC-242: recorte quadrado do logo — os mesmos tres campos. */
-  logoCropX?: number | null
-  logoCropY?: number | null
-  logoCropZoom?: number | null
   /** R11 (S11): projeção da lista para o ator — o ator é membro deste projeto. */
   isMember?: boolean
 }
@@ -113,11 +98,8 @@ export interface ProjectMember {
     name: string
     email: string
     avatar?: string | null
-    /** plan-v14 S02 (regra 2): chave do avatar no bucket + recorte quadrado (DEC-242). */
+    /** plan-v14 S02 (regra 2): chave do avatar no bucket (DEC-242). */
     avatarKey?: string | null
-    logoCropX?: number | null
-    logoCropY?: number | null
-    logoCropZoom?: number | null
   } | null
 }
 

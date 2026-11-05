@@ -47,9 +47,6 @@ function makeProject(overrides: Partial<Project> = {}): Project {
     links: [],
     logoKey: "projects/9/images/logo",
     bannerKey: "projects/9/images/banner",
-    bannerCropX: 0.3,
-    bannerCropY: 0.6,
-    bannerCropZoom: 2,
     ...overrides,
   };
 }
@@ -65,16 +62,15 @@ describe("ProjectList — cartão com capa e logo, clique abre o detalhe", () =>
     const banner = screen.getByRole("img", { name: "Capa do projeto Alpha" });
     expect(banner).toBeInTheDocument();
     expect(banner.getAttribute("src")).toContain("/api/projects/9/images/banner/file");
-    // A peça única (`BannerImage`) é a mesma do perfil e do pódio; o recorte do cartão entra por
-    // transform. O cartão da lista mantém o corte pela altura própria, não pela faixa 21:9.
-    expect(banner.closest('[data-banner-crop="true"]')).not.toBeNull();
-    expect(banner.getAttribute("style")).toContain("scale(2)");
+    // A peça única (`BannerImage`) é a mesma do perfil e do pódio; o recorte saiu, o `<img>` é
+    // cover simples. O cartão da lista mantém a altura própria, não a faixa 21:9.
+    expect(banner.closest('[data-banner-crop="true"]')).toBeNull();
 
     const logo = screen.getByRole("img", { name: "Logo do projeto Alpha" });
     expect(logo).toBeInTheDocument();
     expect(logo.getAttribute("src")).toContain("/api/projects/9/images/logo/file");
 
-    // A revisão da S01 exigiu: o corte do banner fica num divisor com overflow-hidden, e o
+    // A revisão da S01 exigiu: o banner fica num divisor com overflow-hidden, e o
     // logo é FORA dele — dentro, a metade que cruza a emenda é ceifada.
     const clip = banner.parentElement;
     expect(clip?.className).toContain("overflow-hidden");
@@ -100,7 +96,7 @@ describe("ProjectList — cartão com capa e logo, clique abre o detalhe", () =>
     const banner = screen.getByRole("img", { name: "Capa do projeto Alpha" });
     // A peça única fica dentro do divisor de clip; a FAIXA é o div externo que declara a altura
     // (`relative h-24 sm:h-32`), e só ele tem as classes de altura.
-    const clip = banner.closest('[data-banner-crop="true"]')?.parentElement;
+    const clip = banner.parentElement?.parentElement;
     const strip = clip?.parentElement;
     const classes = strip?.className.split(/\s+/) ?? [];
     const h = classes.find((c) => /^h-\d+$/.test(c));

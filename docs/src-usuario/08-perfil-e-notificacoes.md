@@ -23,7 +23,7 @@ O cartão **Meu Perfil** abre com a faixa da capa e traz avatar, nome e as cifra
 Clique em **Editar Perfil**, no cartão **Meu Perfil**. O cartão entra em modo de edição: aparece a marca **Editando** e o botão passa a **Cancelar Edição**. Altere o que precisa e salve; **Cancelar Edição** descarta as mudanças.
 
 ```foto perfil-edicao titulo="O perfil em modo de edição, no bloco dos dados dos documentos"
-O formulário está na aba **Configurações**: o cartão entra em edição e os campos aparecem abaixo do recorte do avatar.
+O formulário está na aba **Configurações**: o cartão entra em edição e os campos aparecem abaixo do avatar.
 ```
 
 ### Os dados que os documentos pedem
@@ -65,13 +65,10 @@ Editar o próprio perfil é sempre permitido. Editar o perfil de outra pessoa ex
 
 Acima do avatar, o cartão **Meu Perfil** tem uma faixa horizontal: é a **capa** da pessoa. A faixa é 21:9 — uma moldura larga e baixa, como a capa de uma rede social. Sem capa, a faixa diz *"Sem capa"*.
 
-O clique na faixa abre a lista de opções — **Enviar capa**, **Recortar capa**, **Tirar capa**, **Enviar avatar**, **Recortar avatar**, **Tirar avatar**. A lista só existe em **modo de edição** (o botão **Editar Perfil** de hoje); fora da edição, a faixa não abre nada. Os controles não somem: viraram itens da lista, pelos mesmos rótulos, pelas mesmas rotas; a escrita continua sendo a autoridade da pessoa (ou de quem gerencia contas).
+O clique na faixa abre a lista de opções — **Enviar capa**, **Tirar capa**, **Enviar avatar**, **Tirar avatar**. A lista só existe em **modo de edição** (o botão **Editar Perfil** de hoje); fora da edição, a faixa não abre nada. Os controles não somem: viraram itens da lista, pelos mesmos rótulos, pelas mesmas rotas; a escrita continua sendo a autoridade da pessoa (ou de quem gerencia contas).
 
-1. Entre em edição, clique na **faixa da capa** e escolha **Enviar capa**; escolha a imagem. O editor de recorte abre sobre a imagem escolhida: a moldura 21:9 aparece como uma **faixa** sobre a imagem inteira.
-2. Arraste a faixa para escolher a parte da capa. Arraste o canto de baixo-direita da faixa para redimensionar. A linha *"Resolução recomendada: 2100×900 px (21:9)"* diz o tamanho de imagem que preenche a moldura sem recorte.
-3. Clique em **Salvar recorte**: a imagem sobe e a parte escolhida passa a ocupar a faixa.
-4. **Recortar capa** reabre o editor sobre a mesma imagem, agora para mudar só a parte visível. **Tirar capa** aparece quando a faixa tem imagem, e o sistema pede confirmação.
-5. **Enviar avatar** abre o editor na **faixa quadrada** (a linha passa a dizer *"Avatar quadrado: resolução recomendada 1000×1000 px (1:1)"*), e o corte escolhido é o que o avatar mostra no perfil, no pódio do ranking, no cabeçalho, no menu do aplicativo e na lista de pessoas. Quem não tem avatar no bucket cai no avatar de arquivo de hoje.
+1. Entre em edição, clique na **faixa da capa** e escolha **Enviar capa**; escolha a imagem: o arquivo sobe para o bucket e passa a ocupar a faixa. **Tirar capa** aparece quando a faixa tem imagem, e o sistema pede confirmação.
+2. **Enviar avatar** sobe o arquivo para o bucket, e o avatar escolhido aparece no perfil, no pódio do ranking, no cabeçalho, no menu do aplicativo e na lista de pessoas. Quem não tem avatar no bucket cai no avatar de arquivo de hoje. **Tirar avatar** aparece quando há avatar, e o sistema pede confirmação.
 
 São imagens, só isso: PDF e vídeo não entram aqui. O arquivo vai para o bucket de objetos do sistema, e a tela o lê por um endereço que entrega a imagem apenas a quem está autenticado.
 
@@ -81,16 +78,8 @@ Os rótulos da lista não aparecem no extrato do DOM — o gatilho da faixa é �
 A faixa tem a altura da moldura 21:9, largura plena; abaixo dela ficam as cifras da semana. Os controles estão na lista que o clique da faixa abre, só em modo de edição.
 ```
 
-```foto capa-menu-perfil titulo="A lista de opções aberta pelo clique na faixa, em modo de edição: Enviar capa, Recortar capa, Tirar capa, Enviar avatar, Recortar avatar, Tirar avatar"
+```foto capa-menu-perfil titulo="A lista de opções aberta pelo clique na faixa, em modo de edição: Enviar capa, Tirar capa, Enviar avatar, Tirar avatar"
 ```
-
-```foto editor-recorte-capa titulo="O editor de recorte da capa, sobre a imagem escolhida"
-O diálogo tem a imagem inteira, a faixa 21:9 arrastável sobre ela com alça de redimensionamento no canto, e *"Resolução recomendada: 2100×900 px (21:9)"*.
-```
-
-::: nota titulo="O recorte é parâmetro, não corte"
-O editor não recorta o arquivo. Ele guarda três números da imagem escolhida: o centro e o zoom. A mesma imagem fica no bucket, na mesma chave; a tela mostra a parte que os números apontam. Trocar a imagem começa um recorte novo.
-:::
 
 A capa é sua, e quem a escreve é você — ou quem tem permissão de gerenciar contas. Quem a **vê** é qualquer pessoa autenticada: ela aparece no seu perfil, no perfil aberto por outra pessoa e no cartão de quem está em 1º lugar no ranking.
 

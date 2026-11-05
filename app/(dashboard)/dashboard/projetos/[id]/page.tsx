@@ -35,7 +35,7 @@ import { projectStatusBadgeClass, projectStatusLabel, taskStatusBadgeClass, task
 import { POINTS_PER_TASK } from "@/features/tasks"
 import { projectProgress } from "@/features/projects/utils/project-progress"
 import { renderProjectMarkdown } from "@/features/projects/utils/project-markdown"
-import { civilDayOfInstant, bannerCropFromColumns } from "@/backend/domain"
+import { civilDayOfInstant } from "@/backend/domain"
 import {
   ArrowLeft, Calendar, CheckCircle2, Clock, FileText, FolderKanban, Link as LinkIcon,
   Plus, Trash2, Upload, Users, Edit, AlertCircle, ExternalLink,
@@ -186,7 +186,7 @@ export default function ProjectDetailPage() {
           </TabsList>
 
           <TabsContent value="overview" className="space-y-5">
-            <ProjectMediaHeader projectId={project.id} projectName={project.name} logoKey={project.logoKey} bannerKey={project.bannerKey} bannerCrop={bannerCropFromColumns(project.bannerCropX, project.bannerCropY, project.bannerCropZoom)} logoCrop={bannerCropFromColumns(project.logoCropX, project.logoCropY, project.logoCropZoom)} canManage={canManageProjectFiles} />
+            <ProjectMediaHeader projectId={project.id} projectName={project.name} logoKey={project.logoKey} bannerKey={project.bannerKey} canManage={canManageProjectFiles} />
             {project.description && <Card><CardHeader><CardTitle className="flex items-center gap-2"><FileText className="h-5 w-5" />Descrição</CardTitle></CardHeader><CardContent>{/* plan-v13 (S02, regra 2): o corpo da descrição é markdown pela peça única;
                 html:false escapa o cru, e os links saem com rel noopener. */}<div className="text-muted-foreground space-y-2 text-sm [&_a]:text-primary [&_a]:underline [&_h1]:text-xl [&_h2]:text-lg [&_h3]:text-base [&_ul]:list-disc [&_ul]:pl-6" dangerouslySetInnerHTML={{ __html: renderProjectMarkdown(project.description) }} /></CardContent></Card>}
             {hasProjectData && <Card><CardHeader><CardTitle className="flex items-center gap-2"><Calendar className="h-5 w-5" />Dados do projeto</CardTitle></CardHeader><CardContent><dl className="grid gap-4 sm:grid-cols-2">{projectStartDate && <DetailField label="Início">{projectStartDate}</DetailField>}{projectEndDate && <DetailField label="Término">{projectEndDate}</DetailField>}{project.editalNumber && <DetailField label="Número do edital">{project.editalNumber}</DetailField>}{project.processNumber && <DetailField label="Número do processo">{project.processNumber}</DetailField>}{project.proppiNumber && <DetailField label="Número PROPPI">{project.proppiNumber}</DetailField>}{projectPoints > 0 && <DetailField label="Pontos do projeto">{projectPoints} pts</DetailField>}<ProjectTimeProgress startDate={project.startDate} endDate={project.endDate} className="sm:col-span-2" /></dl></CardContent></Card>}

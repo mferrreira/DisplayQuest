@@ -46,9 +46,6 @@ function makeProject(overrides: Partial<Project> = {}): Project {
     links: [],
     logoKey: null,
     bannerKey: "projects/5/images/banner/x.webp",
-    bannerCropX: null,
-    bannerCropY: null,
-    bannerCropZoom: null,
     ...overrides,
   };
 }
@@ -66,7 +63,8 @@ describe("plan-v14 S04 — a faixa do cartão segue a `bannerKey` do payload", (
     expect(banner).toBeInTheDocument();
     expect(banner.getAttribute("src")).toContain("/api/projects/5/images/banner/file");
     expect(banner.getAttribute("src")).toContain(encodeURIComponent("projects/5/images/banner/x.webp"));
-    expect(banner.closest('[data-banner-crop="true"]')).not.toBeNull();
+    // O recorte saiu: o `<img>` é cover simples, sem peça de recorte.
+    expect(banner.closest('[data-banner-crop="true"]')).toBeNull();
   });
 
   it("projeto sem `bannerKey`: nenhum fundo inventado, nenhuma faixa no cartão", () => {

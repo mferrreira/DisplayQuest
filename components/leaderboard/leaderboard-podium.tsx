@@ -2,10 +2,9 @@
 
 import Link from "next/link"
 import { Crown, Medal, Award } from "lucide-react"
-import { AvatarCrop } from "@/components/ui/avatar-crop"
+import { BucketAvatar } from "@/components/ui/bucket-avatar"
 import { getRoleDisplayName } from "@/lib/utils/access-control"
 import { userImageUrl } from "@/lib/api/user-images"
-import type { BannerCropParams } from "@/backend/domain"
 
 /**
  * S07 (plan-v11, R7) — o pódio do quadro de liderança, extraído da página para ter aceite.
@@ -21,9 +20,8 @@ export interface PodiumEntry {
   value: number
   position: number
   avatar?: string | null
-  /** plan-v14 S02 (regra 2): chave do avatar no bucket + recorte quadrado (DEC-242). */
+  /** plan-v14 S02 (regra 2): chave do avatar no bucket. */
   avatarKey?: string | null
-  avatarCrop?: BannerCropParams | null
   bannerKey?: string | null
   roles?: string[] | null
 }
@@ -63,12 +61,11 @@ export function LeaderboardPodium({ champion, runnersUp }: LeaderboardPodiumProp
           ) : null}
           <div className="relative flex flex-wrap items-center gap-4 p-5 sm:gap-6 sm:p-8">
             <Crown className="h-8 w-8 shrink-0 text-warning sm:h-10 sm:w-10" aria-hidden="true" />
-            {/* plan-v14 S02 (regra 2): o quadrado escolhido na fábrica do avatar sai pela peça
-                única com o recorte gravado; sem chave, o legado em disco de hoje. */}
-            <AvatarCrop
+            {/* plan-v14 S02 (regra 2): o avatar do bucket sai pela peça única; sem chave, o
+                legado em disco de hoje. */}
+            <BucketAvatar
               userId={champion.id}
               avatarKey={champion.avatarKey}
-              crop={champion.avatarCrop}
               legacyAvatar={champion.avatar}
               name={champion.name}
               className="h-14 w-14 border-2 border-warning/50 sm:h-20 sm:w-20"
@@ -112,10 +109,9 @@ export function LeaderboardPodium({ champion, runnersUp }: LeaderboardPodiumProp
                 <span className={`text-3xl font-bold tabular-nums ${accent}`} aria-hidden="true">
                   {runnerUp.position}º
                 </span>
-                <AvatarCrop
+                <BucketAvatar
                   userId={runnerUp.id}
                   avatarKey={runnerUp.avatarKey}
-                  crop={runnerUp.avatarCrop}
                   legacyAvatar={runnerUp.avatar}
                   name={runnerUp.name}
                   className="h-12 w-12"

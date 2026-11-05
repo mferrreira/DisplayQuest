@@ -18,15 +18,6 @@ const USER_IMAGE_COLUMNS: Record<UserImageSlot, "bannerKey" | "avatarKey"> = {
   avatar: "avatarKey",
 }
 
-/** DEC-239/242 — o recorte zerado por slot: o recorte é do original, e o original mudou. */
-const SLOT_CROP_FIELDS: Record<
-  UserImageSlot,
-  Array<"bannerCropX" | "bannerCropY" | "bannerCropZoom" | "logoCropX" | "logoCropY" | "logoCropZoom">
-> = {
-  banner: ["bannerCropX", "bannerCropY", "bannerCropZoom"],
-  avatar: ["logoCropX", "logoCropY", "logoCropZoom"],
-}
-
 /**
  * UpdateUserImageUseCase — V5-3 (DEC-137) + DEC-242: capa e avatar do perfil no bucket.
  *
@@ -55,12 +46,6 @@ export class UpdateUserImageUseCase {
     const column = USER_IMAGE_COLUMNS[slot]
     const previousKey = user[column] ?? null
     user[column] = blobKey
-    // plan-v12 (DEC-239): subir nova capa zera o recorte — o recorte é do original, e o
-    // original acabou de mudar. `blobKey: null` (tirar a capa) também zera. DEC-242: a mesma
-    // regra vale para o avatar, sobre as colunas quadradas.
-    for (const field of SLOT_CROP_FIELDS[slot]) {
-      user[field] = null
-    }
 
     return {
       user: toPublicUser(await this.repository.update(user)),

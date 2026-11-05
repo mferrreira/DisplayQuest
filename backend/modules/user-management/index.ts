@@ -3,8 +3,6 @@ import type { UserManagementGateway } from "@/backend/modules/user-management/ap
 import type {
   GetUserImageCommand,
   RegisterUserCommand,
-  UpdateUserAvatarCropCommand,
-  UpdateUserBannerCropCommand,
   UpdateUserImageCommand,
 } from "@/backend/modules/user-management/application/contracts"
 import type { PasswordHasher } from "@/backend/modules/user-management/application/ports/password-hasher"
@@ -27,8 +25,6 @@ import { UpdateUserPointsUseCase } from "@/backend/modules/user-management/appli
 import { UpdateUserProfileUseCase } from "@/backend/modules/user-management/application/use-cases/update-user-profile.use-case"
 import { UpdateUserImageUseCase } from "@/backend/modules/user-management/application/use-cases/update-user-image.use-case"
 import { GetUserImageUseCase } from "@/backend/modules/user-management/application/use-cases/get-user-image.use-case"
-import { UpdateUserBannerCropUseCase } from "@/backend/modules/user-management/application/use-cases/update-user-banner-crop.use-case"
-import { UpdateUserAvatarCropUseCase } from "@/backend/modules/user-management/application/use-cases/update-user-avatar-crop.use-case"
 import { AssertCanUpdateUserImageUseCase } from "@/backend/modules/user-management/application/use-cases/assert-can-update-user-image.use-case"
 import type { AssertCanUpdateUserImageCommand } from "@/backend/modules/user-management/application/use-cases/assert-can-update-user-image.use-case"
 import { UpdateUserRolesUseCase } from "@/backend/modules/user-management/application/use-cases/update-user-roles.use-case"
@@ -55,10 +51,6 @@ export interface RegisterUserCapability {
 export interface UserImageCapability {
   updateUserImage(command: UpdateUserImageCommand): Promise<{ user: PublicUser; previousKey: string | null }>
   getUserImage(command: GetUserImageCommand): Promise<{ slot: UserImageSlot; blobKey: string }>
-  /** plan-v12 (DEC-239): parâmetros do recorte da capa. */
-  updateUserBannerCrop(command: UpdateUserBannerCropCommand): Promise<PublicUser>
-  /** DEC-242: parâmetros do recorte quadrado do avatar. */
-  updateUserAvatarCrop(command: UpdateUserAvatarCropCommand): Promise<PublicUser>
 }
 
 /** The module's public surface: the same 15 methods the routes consume today + registerUser. */
@@ -83,8 +75,6 @@ export class UserManagementModule {
   readonly registerUser: GatewayCall<RegisterUserCapability["registerUser"]>
   readonly updateUserImage: GatewayCall<UserImageCapability["updateUserImage"]>
   readonly getUserImage: GatewayCall<UserImageCapability["getUserImage"]>
-  readonly updateUserBannerCrop: GatewayCall<UserImageCapability["updateUserBannerCrop"]>
-  readonly updateUserAvatarCrop: GatewayCall<UserImageCapability["updateUserAvatarCrop"]>
   /** B6-4 (D4): assert 403-antes-do-parse/validação; os use cases de destino rechecam. */
   readonly assertCanManageUsers: (command: { actor: ActorRef; deniedMessage?: string }) => void
   /** V5-3 (DEC-137): assert 403-ANTES-DO-CORPO do upload; `updateUserImage` recheca no próprio ator. */
@@ -115,8 +105,6 @@ export class UserManagementModule {
     this.registerUser = this.service.registerUser.bind(this.service)
     this.updateUserImage = this.service.updateUserImage.bind(this.service)
     this.getUserImage = this.service.getUserImage.bind(this.service)
-    this.updateUserBannerCrop = this.service.updateUserBannerCrop.bind(this.service)
-    this.updateUserAvatarCrop = this.service.updateUserAvatarCrop.bind(this.service)
   }
 }
 
@@ -157,8 +145,6 @@ export function createUserManagementModule(options: UserManagementModuleFactoryO
     registerUser: (command) => new RegisterUserUseCase(repository, passwordHasher).execute(command),
     updateUserImage: (command) => new UpdateUserImageUseCase(repository).execute(command),
     getUserImage: (command) => new GetUserImageUseCase(repository).execute(command),
-    updateUserBannerCrop: (command) => new UpdateUserBannerCropUseCase(repository).execute(command),
-    updateUserAvatarCrop: (command) => new UpdateUserAvatarCropUseCase(repository).execute(command),
   }
 
   return new UserManagementModule(

@@ -1,16 +1,14 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { useProject } from "@/contexts/project-context"
 import { useTask } from "@/contexts/task-context"
 import { useUser } from "@/contexts/user-context"
-import { ProjectsAPI } from "@/contexts/api-client"
 import { ProjectList } from "@/components/features/project-list"
 import { ProjectDialog } from "@/components/features/project-dialog"
 import { ProjectManagerDashboard } from "@/components/features/project-manager-dashboard"
-import type { ActivityChartRow } from "@/features/projects/utils/activity-chart-rules"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { PageHeader } from "@/components/ui/page-header"
@@ -34,22 +32,13 @@ export default function ProjetosPage() {
   const { tasks } = useTask()
   const { users } = useUser()
 
-  // S04/S05: as atividades de cronograma de todos os projetos, numa chamada só. A tela
-  // recorta pelo que os filtros do topo deixaram — o servidor não conhece filtros de tela.
-  const [activities, setActivities] = useState<ActivityChartRow[]>([])
-  useEffect(() => {
-    ProjectsAPI.getAllActivities()
-      .then((res) => setActivities(res.activities as ActivityChartRow[]))
-      .catch(() => setActivities([]))
-  }, [])
-
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [personFilter, setPersonFilter] = useState<string>("all")
   const [isProjectDialogOpen, setIsProjectDialogOpen] = useState(false)
   const [editingProject, setEditingProject] = useState<Project | null>(null)
 
-  // Os filtros do topo são a fonte do recorte tanto da lista quanto dos gráficos.
+  // Os filtros do topo são a fonte do recorte da lista, do leaderboard e das tarefas.
   const searchAndStatusProjects = projects.filter(project => {
     const matchesSearch = project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       project.description?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -175,7 +164,6 @@ export default function ProjetosPage() {
               <ProjectManagerDashboard 
                 projects={filteredProjects} 
                 tasks={filteredTasks}
-                activities={activities.filter(row => filteredProjectIds.has(row.projectId))}
                 scopeDescription={scopeDescription}
                 onProjectSelect={handleProjectClick}
               />

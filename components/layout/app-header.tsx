@@ -14,12 +14,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { AvatarCrop } from "@/components/ui/avatar-crop"
+import { BucketAvatar } from "@/components/ui/bucket-avatar"
 import { PointsCounter, PointsDelta } from "@/components/ui/points-delta"
 import { FloatingSessionTimer } from "@/components/ui/floating-session-timer"
 import { Menu, Trophy } from "lucide-react"
 import { getPrimaryRoleLabel } from "@/components/layout/nav-config"
-import { bannerCropFromColumns } from "@/backend/domain"
 
 /**
  * AppHeader — plan-v6 · V6-2 (RF-V6.3, DEC-106, AC-V6-08/09).
@@ -109,12 +108,11 @@ export function AppHeader({ sidebarOpen = true, onToggleSidebar, showSessionTime
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="gap-2">
-                  {/* plan-v14 S02 (regra 2): o quadrado escolhido na fábrica do avatar sai pela
-                      peça única com o recorte gravado; sem chave, o legado em disco de hoje. */}
-                  <AvatarCrop
+                  {/* plan-v14 S02 (regra 2): o avatar do bucket sai pela peça única; sem chave,
+                      o legado em disco de hoje. */}
+                  <BucketAvatar
                     userId={user?.id ?? 0}
                     avatarKey={user?.avatarKey}
-                    crop={bannerCropFromColumns(user?.logoCropX, user?.logoCropY, user?.logoCropZoom)}
                     legacyAvatar={user?.avatar}
                     name={user?.name || ""}
                     className="h-6 w-6"

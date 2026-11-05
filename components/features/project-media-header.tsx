@@ -1,107 +1,34 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { ImageOff } from "lucide-react"
 import { useToast } from "@/contexts/use-toast"
-import {
-  deleteProjectImage,
-  projectImageUrl,
-  updateProjectBannerCrop,
-  updateProjectLogoCrop,
-  uploadProjectImage,
-  type ProjectImageSlot,
-  type ProjectImageState,
-} from "@/lib/api/project-files"
-import { BannerCropEditor } from "@/components/features/banner-crop-editor"
+import { deleteProjectImage, projectImageUrl, uploadProjectImage, type ProjectImageSlot } from "@/lib/api/project-files"
 import { BannerImage } from "@/components/ui/banner-image"
-import { bannerCropFromColumns, SQUARE_BAND_ASPECT, type BannerCropParams } from "@/backend/domain"
 
-/**
- * V5-2d (DEC-102) — capa e logo do projeto, no topo do detalhe.
- *
- * O binário mora no bucket e chega por `/api/projects/<id>/images/<slot>/file`, rota que aplica a
- * regra de acesso do projeto (a sessão vai pelo cookie, então a URL serve num `<img>`).
- *
- * O estado das duas chaves é local e nasce do `project` que a tela recebeu. Local de propósito:
- * a lista de projetos não mostra imagem, e fazer a subida atravessar três níveis de estado para
- * atualizar uma tela que não mostra a imagem seria estado a mais sem uso.
- *
- * plan-v12 (DEC-241, R7): escolhido o arquivo da capa, o editor 21:9 abre sobre o ORIGINAL
- * (mesmo editor da peça do perfil, DEC-241) e o salvar sobe o arquivo + grava o recorte pela rota
- * de parâmetros. "Recortar capa" reabre o editor sobre o binário do bucket, nunca sobre o recorte.
- *
- * DEC-242: o logo também passa pelo editor, com a FAIXA QUADRADA (`bandAspect = 1`), e o salvar
- * grava `logoCrop*`. O render do logo continua cover simples — a tela não aplica o corte, e as
- * colunas guardam a área escolhida. SUPERADO em plan-v14 S01 (regra 1): a tela passa a aplicar o
- * corte pela peça única, nas três superfícies.
- */
 interface ProjectMediaHeaderProps {
   projectId: number
   projectName: string
   logoKey?: string | null
   bannerKey?: string | null
-  bannerCrop?: BannerCropParams | null
-  /** DEC-242: recorte quadrado do logo, a mesma tupla da capa. */
-  logoCrop?: BannerCropParams | null
   canManage: boolean
 }
 
 const IMAGE_ACCEPT = "image/png,image/jpeg,image/webp,image/gif"
-const DEFAULT_CROP: BannerCropParams = { x: 0.5, y: 0.5, zoom: 1 }
-const LOGO_SQUARE_DESCRIPTION =
-  "Arraste a faixa quadrada para escolher a parte do logo; arraste o canto para redimensionar. Logo quadrado: resolução recomendada 1000×1000 px (1:1)."
 
-export function ProjectMediaHeader({
-  projectId,
-  projectName,
-  logoKey,
-  bannerKey,
-  bannerCrop,
-  logoCrop,
-  canManage,
-}: ProjectMediaHeaderProps) {
+export function ProjectMediaHeader({ projectId, projectName, logoKey, bannerKey, canManage }: ProjectMediaHeaderProps) {
   const { toast } = useToast()
   const logoInputRef = useRef<HTMLInputElement>(null)
   const bannerInputRef = useRef<HTMLInputElement>(null)
   const [currentLogoKey, setCurrentLogoKey] = useState(logoKey ?? null)
   const [currentBannerKey, setCurrentBannerKey] = useState(bannerKey ?? null)
-  const [currentCrop, setCurrentCrop] = useState<BannerCropParams | null>(bannerCrop ?? null)
-  const [currentLogoCrop, setCurrentLogoCrop] = useState<BannerCropParams | null>(logoCrop ?? null)
-  const [pendingFile, setPendingFile] = useState<File | null>(null)
-  const [pendingLogoFile, setPendingLogoFile] = useState<File | null>(null)
-  const [editorSession, setEditorSession] = useState(0)
-  const [editorOpen, setEditorOpen] = useState(false)
-  const [logoEditorSession, setLogoEditorSession] = useState(0)
-  const [logoEditorOpen, setLogoEditorOpen] = useState(false)
   const [busy, setBusy] = useState(false)
 
-  // O diálogo é o mesmo componente ao abrir outro projeto: sem isto, a tela mostraria a imagem do
-  // projeto anterior até a próxima subida.
   useEffect(() => {
     setCurrentLogoKey(logoKey ?? null)
     setCurrentBannerKey(bannerKey ?? null)
-    setCurrentCrop(bannerCrop ?? null)
-    setCurrentLogoCrop(logoCrop ?? null)
-  }, [projectId, logoKey, bannerKey, bannerCrop, logoCrop])
-
-  /** Toda resposta das rotas de imagem vem com as tuplas completas: o estado segue a resposta. */
-  const applyState = useCallback((state: ProjectImageState) => {
-    setCurrentLogoKey(state.logoKey)
-    setCurrentBannerKey(state.bannerKey)
-    setCurrentCrop(bannerCropFromColumns(state.bannerCropX, state.bannerCropY, state.bannerCropZoom))
-    setCurrentLogoCrop(bannerCropFromColumns(state.logoCropX, state.logoCropY, state.logoCropZoom))
-  }, [])
-
-  function openEditor() {
-    setEditorSession((n) => n + 1)
-    setEditorOpen(true)
-  }
-
-  function openLogoEditor() {
-    setLogoEditorSession((n) => n + 1)
-    setLogoEditorOpen(true)
-  }
+  }, [projectId, logoKey, bannerKey])
 
   async function handleUpload(slot: ProjectImageSlot) {
     const input = slot === "logo" ? logoInputRef.current : bannerInputRef.current
@@ -114,82 +41,33 @@ export function ProjectMediaHeader({
       return
     }
 
-    // A capa passa pelo editor 21:9 antes de escrever (DEC-241); o logo passa pelo editor
-    // quadrado (DEC-242). Os dois sobem o arquivo só depois de o recorte ser escolhido.
-    if (slot === "banner") {
-      setPendingFile(file)
-      openEditor()
-      return
-    }
-
-    setPendingLogoFile(file)
-    openLogoEditor()
-  }
-
-  async function handleSaveCrop(params: BannerCropParams) {
-    const uploading = pendingFile !== null
-    const fileName = pendingFile?.name
     setBusy(true)
     try {
-      if (pendingFile) {
-        await uploadProjectImage(projectId, "banner", pendingFile)
-        setPendingFile(null)
-        if (bannerInputRef.current) bannerInputRef.current.value = ""
-      }
-      const saved = await updateProjectBannerCrop(projectId, params)
-      applyState(saved)
-      toast({
-        title: uploading ? "Capa atualizada" : "Recorte salvo",
-        description: uploading ? fileName ?? "Resolução recomendada: 2100×900 px (21:9)" : "A moldura 21:9 mostra a parte escolhida.",
-      })
+      const state = await uploadProjectImage(projectId, slot, file)
+      setCurrentLogoKey(state.logoKey)
+      setCurrentBannerKey(state.bannerKey)
+      input.value = ""
+      toast({ title: slot === "logo" ? "Logo atualizado" : "Capa atualizada", description: file.name })
     } catch (error) {
       toast({
         title: "Erro",
-        description: error instanceof Error ? error.message : "Falha ao gravar a capa",
+        description: error instanceof Error ? error.message : "Falha ao enviar imagem",
         variant: "destructive",
       })
     } finally {
       setBusy(false)
-      setEditorOpen(false)
-    }
-  }
-
-  /** DEC-242 — salvar o quadrado do logo: sobe o arquivo (se escolhido) e grava `logoCrop*`. */
-  async function handleSaveLogoCrop(params: BannerCropParams) {
-    const uploading = pendingLogoFile !== null
-    const fileName = pendingLogoFile?.name
-    setBusy(true)
-    try {
-      if (pendingLogoFile) {
-        await uploadProjectImage(projectId, "logo", pendingLogoFile)
-        setPendingLogoFile(null)
-        if (logoInputRef.current) logoInputRef.current.value = ""
-      }
-      const saved = await updateProjectLogoCrop(projectId, params)
-      applyState(saved)
-      toast({
-        title: uploading ? "Logo atualizado" : "Recorte do logo salvo",
-        description: uploading ? fileName ?? "Resolução recomendada: 1000×1000 px (1:1)" : "A faixa quadrada escolhe a parte do logo.",
-      })
-    } catch (error) {
-      toast({
-        title: "Erro",
-        description: error instanceof Error ? error.message : "Falha ao gravar o logo",
-        variant: "destructive",
-      })
-    } finally {
-      setBusy(false)
-      setLogoEditorOpen(false)
     }
   }
 
   async function handleRemove(slot: ProjectImageSlot) {
-    if (!confirm(slot === "logo" ? "Remover o logo do projeto?" : "Remover a capa do projeto?")) return
+    const label = slot === "logo" ? "logo" : "capa"
+    if (!confirm(`Remover o ${label} do projeto?`)) return
 
     setBusy(true)
     try {
       const state = await deleteProjectImage(projectId, slot)
-      applyState(state)
+      setCurrentLogoKey(state.logoKey)
+      setCurrentBannerKey(state.bannerKey)
       toast({ title: slot === "logo" ? "Logo removido" : "Capa removida" })
     } catch (error) {
       toast({
@@ -202,22 +80,8 @@ export function ProjectMediaHeader({
     }
   }
 
-  const editorSrc = pendingFile
-    ? (typeof URL !== "undefined" && typeof URL.createObjectURL === "function" ? URL.createObjectURL(pendingFile) : "")
-    : projectImageUrl(projectId, "banner", currentBannerKey)
-
-  const logoEditorSrc = pendingLogoFile
-    ? (typeof URL !== "undefined" && typeof URL.createObjectURL === "function" ? URL.createObjectURL(pendingLogoFile) : "")
-    : projectImageUrl(projectId, "logo", currentLogoKey)
-
   return (
     <div className="space-y-3">
-      {/* plan-v14 S05 (regra 5, decisão do dono): o clique na FAIXA e no LOGO abre a lista de
-          opções, no lugar dos botões visíveis de hoje. Os controles não somem: viram itens do
-          menu, pelos mesmos rótulos, mesmas rotas, mesma autorização (`canManage` do cabeçalho,
-          a ACL do projeto medida). Sem `canManage`, nenhum gatilho existe (estado congelado).
-          Dono (2026-11, DEC-240): a faixa de capa do projeto é 21:9 (`aspect-[21/9]`), largura
-          plena, sem altura fixa; o cartão da lista de projetos mantém h-24 sm:h-32. */}
       <div className="relative pb-8">
         <DropdownMenu>
           <DropdownMenuTrigger asChild disabled={!canManage}>
@@ -229,11 +93,7 @@ export function ProjectMediaHeader({
               >
                 <div className="aspect-[21/9] overflow-hidden rounded-lg border bg-muted">
                   {currentBannerKey ? (
-                    <BannerImage
-                      src={projectImageUrl(projectId, "banner", currentBannerKey)}
-                      alt={`Capa do projeto ${projectName}`}
-                      crop={currentCrop}
-                    />
+                    <BannerImage src={projectImageUrl(projectId, "banner", currentBannerKey)} alt={`Capa do projeto ${projectName}`} />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center gap-2 text-sm text-muted-foreground">
                       <ImageOff className="h-5 w-5" />
@@ -245,11 +105,7 @@ export function ProjectMediaHeader({
             ) : (
               <div className="aspect-[21/9] overflow-hidden rounded-lg border bg-muted">
                 {currentBannerKey ? (
-                  <BannerImage
-                    src={projectImageUrl(projectId, "banner", currentBannerKey)}
-                    alt={`Capa do projeto ${projectName}`}
-                    crop={currentCrop}
-                  />
+                  <BannerImage src={projectImageUrl(projectId, "banner", currentBannerKey)} alt={`Capa do projeto ${projectName}`} />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center gap-2 text-sm text-muted-foreground">
                     <ImageOff className="h-5 w-5" />
@@ -260,22 +116,8 @@ export function ProjectMediaHeader({
             )}
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
-            <DropdownMenuItem onClick={() => bannerInputRef.current?.click()} disabled={busy}>
-              Enviar capa
-            </DropdownMenuItem>
-            {currentBannerKey && (
-              <DropdownMenuItem onClick={openEditor} disabled={busy}>
-                Recortar capa
-              </DropdownMenuItem>
-            )}
-            {currentBannerKey && (
-              <DropdownMenuItem onClick={() => handleRemove("banner")} disabled={busy}>
-                {/* "Tirar" e nao "Remover": o painel de membros, montado no mesmo dialogo, ja tem um
-                    botao chamado exatamente "Remover", e `getByRole` casa por substring (licao da
-                    3.C). Um rotulo novo nao pode conter o de um controle vizinho. */}
-                Tirar capa
-              </DropdownMenuItem>
-            )}
+            <DropdownMenuItem onClick={() => bannerInputRef.current?.click()} disabled={busy}>Enviar capa</DropdownMenuItem>
+            {currentBannerKey && <DropdownMenuItem onClick={() => handleRemove("banner")} disabled={busy}>Tirar capa</DropdownMenuItem>}
           </DropdownMenuContent>
         </DropdownMenu>
 
@@ -289,16 +131,8 @@ export function ProjectMediaHeader({
                   className="block h-16 w-16 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:h-20 sm:w-20"
                 >
                   {currentLogoKey ? (
-                    // plan-v14 S01 (regra 1): o corte quadrado gravado pelo editor DEC-242 passa a ser
-                    // aplicado — a peça única renderiza o logo, o círculo da moldura mostra a área
-                    // escolhida, e o comentário da DEC-242 ("a tela não aplica o corte") fica superado.
                     <div className="h-16 w-16 rounded-full border-4 border-background bg-background sm:h-20 sm:w-20">
-                      <BannerImage
-                        src={projectImageUrl(projectId, "logo", currentLogoKey)}
-                        alt={`Logo do projeto ${projectName}`}
-                        crop={currentLogoCrop}
-                        className="rounded-full"
-                      />
+                      <BannerImage src={projectImageUrl(projectId, "logo", currentLogoKey)} alt={`Logo do projeto ${projectName}`} className="rounded-full" />
                     </div>
                   ) : (
                     <div className="flex h-16 w-16 items-center justify-center rounded-full border-4 border-background bg-muted text-muted-foreground sm:h-20 sm:w-20">
@@ -310,12 +144,7 @@ export function ProjectMediaHeader({
                 <div>
                   {currentLogoKey ? (
                     <div className="h-16 w-16 rounded-full border-4 border-background bg-background sm:h-20 sm:w-20">
-                      <BannerImage
-                        src={projectImageUrl(projectId, "logo", currentLogoKey)}
-                        alt={`Logo do projeto ${projectName}`}
-                        crop={currentLogoCrop}
-                        className="rounded-full"
-                      />
+                      <BannerImage src={projectImageUrl(projectId, "logo", currentLogoKey)} alt={`Logo do projeto ${projectName}`} className="rounded-full" />
                     </div>
                   ) : (
                     <div className="flex h-16 w-16 items-center justify-center rounded-full border-4 border-background bg-muted text-muted-foreground sm:h-20 sm:w-20">
@@ -326,90 +155,19 @@ export function ProjectMediaHeader({
               )}
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
-              <DropdownMenuItem onClick={() => logoInputRef.current?.click()} disabled={busy}>
-                Enviar logo
-              </DropdownMenuItem>
-              {currentLogoKey && (
-                <DropdownMenuItem onClick={openLogoEditor} disabled={busy}>
-                  {/* "Recortar logo" nao contem "Recortar capa" nem "Tirar logo" (licao da 3.C). */}
-                  Recortar logo
-                </DropdownMenuItem>
-              )}
-              {currentLogoKey && (
-                <DropdownMenuItem onClick={() => handleRemove("logo")} disabled={busy}>
-                  Tirar logo
-                </DropdownMenuItem>
-              )}
+              <DropdownMenuItem onClick={() => logoInputRef.current?.click()} disabled={busy}>Enviar logo</DropdownMenuItem>
+              {currentLogoKey && <DropdownMenuItem onClick={() => handleRemove("logo")} disabled={busy}>Tirar logo</DropdownMenuItem>}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </div>
 
-      {/* Os inputs sr-only continuam: são o mecanismo de escolha do arquivo — a rota de upload,
-          o `accept` do campo e o caminho do editor são os mesmos, e o teste do V5-2d congela a
-          aceitação por eles. Input cru, não o primitivo: `sr-only` + `w-full` do primitivo
-          compõem um absoluto de largura da viewport (a ordem das utilities do Tailwind v4
-          deixava o w-full vencer o sr-only) — era o scroll horizontal medido em
-          /dashboard/projetos/[id]. */}
       {canManage && (
         <>
-          <input
-            ref={logoInputRef}
-            type="file"
-            accept={IMAGE_ACCEPT}
-            aria-label="Imagem do logo"
-            className="sr-only"
-            disabled={busy}
-            onChange={() => handleUpload("logo")}
-          />
-          <input
-            ref={bannerInputRef}
-            type="file"
-            accept={IMAGE_ACCEPT}
-            aria-label="Imagem de capa"
-            className="sr-only"
-            disabled={busy}
-            onChange={() => handleUpload("banner")}
-          />
+          <input ref={logoInputRef} type="file" accept={IMAGE_ACCEPT} aria-label="Imagem do logo" className="sr-only" disabled={busy} onChange={() => handleUpload("logo")} />
+          <input ref={bannerInputRef} type="file" accept={IMAGE_ACCEPT} aria-label="Imagem de capa" className="sr-only" disabled={busy} onChange={() => handleUpload("banner")} />
         </>
-      )}
-
-      {editorOpen && (
-        <BannerCropEditor
-          key={editorSession}
-          open
-          src={editorSrc}
-          alt={`Capa do projeto ${projectName}`}
-          initial={pendingFile ? DEFAULT_CROP : currentCrop ?? DEFAULT_CROP}
-          onCancel={() => {
-            setEditorOpen(false)
-            setPendingFile(null)
-            if (bannerInputRef.current) bannerInputRef.current.value = ""
-          }}
-          onSave={handleSaveCrop}
-        />
-      )}
-
-      {/* DEC-242: o editor do logo usa a MESMA peça com a faixa quadrada (bandAspect 1). */}
-      {logoEditorOpen && (
-        <BannerCropEditor
-          key={logoEditorSession}
-          open
-          src={logoEditorSrc}
-          alt={`Logo do projeto ${projectName}`}
-          initial={pendingLogoFile ? DEFAULT_CROP : currentLogoCrop ?? DEFAULT_CROP}
-          bandAspect={SQUARE_BAND_ASPECT}
-          title="Recorte do logo"
-          description={LOGO_SQUARE_DESCRIPTION}
-          onCancel={() => {
-            setLogoEditorOpen(false)
-            setPendingLogoFile(null)
-            if (logoInputRef.current) logoInputRef.current.value = ""
-          }}
-          onSave={handleSaveLogoCrop}
-        />
       )}
     </div>
   )
 }
-

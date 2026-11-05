@@ -8,7 +8,7 @@
  * O que a tela mostra nao muda: os dados de pessoa abertos (V5-4a/DEC-138) seguem em "Dados para os
  * documentos", e o CPF continua fora — este componente nao recebe o CPF pela lista.
  */
-import { AvatarCrop } from "@/components/ui/avatar-crop"
+import { BucketAvatar } from "@/components/ui/bucket-avatar"
 import { BannerImage } from "@/components/ui/banner-image"
 import { userImageUrl } from "@/lib/api/user-images"
 import { Button } from "@/components/ui/button"
@@ -30,7 +30,6 @@ import {
 } from "lucide-react"
 import { User as UserType } from "@/contexts/types"
 import {
-  bannerCropFromColumns,
   FUNDING_AGENCY_LABELS,
   SCHOLARSHIP_TYPE_LABELS,
   USER_LEVEL_LABELS,
@@ -146,7 +145,6 @@ export function UserProfileView({ user, onBack, canEdit = false, onEdit, project
               <BannerImage
                 src={userImageUrl(user.id, "banner", user.bannerKey)}
                 alt={`Capa de ${user.name}`}
-                crop={bannerCropFromColumns(user.bannerCropX, user.bannerCropY, user.bannerCropZoom)}
               />
             ) : (
               <div className="flex h-full w-full items-center justify-center text-sm font-medium text-primary/70">
@@ -154,12 +152,11 @@ export function UserProfileView({ user, onBack, canEdit = false, onEdit, project
               </div>
             )}
           </div>
-          {/* plan-v14 S02 (regra 2): o quadrado escolhido na fábrica do avatar sai pela peça
-              única com o recorte gravado; sem chave, o legado em disco de hoje. */}
-          <AvatarCrop
+          {/* plan-v14 S02 (regra 2): o avatar do bucket sai pela peça única; sem chave, o legado
+              em disco de hoje. */}
+          <BucketAvatar
             userId={user.id}
             avatarKey={user.avatarKey}
-            crop={bannerCropFromColumns(user.logoCropX, user.logoCropY, user.logoCropZoom)}
             legacyAvatar={user.avatar}
             name={user.name}
             className="absolute bottom-0 left-6 h-24 w-24 translate-y-1/3 border-4 border-background bg-background sm:h-28 sm:w-28"

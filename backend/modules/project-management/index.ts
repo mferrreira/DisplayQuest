@@ -17,8 +17,6 @@ import { AddProjectAttachmentUseCase } from "@/backend/modules/project-managemen
 import { RemoveProjectAttachmentUseCase } from "@/backend/modules/project-management/application/use-cases/remove-project-attachment.use-case"
 import { AssertCanManageProjectUseCase } from "@/backend/modules/project-management/application/use-cases/assert-can-manage-project.use-case"
 import { UpdateProjectImageUseCase } from "@/backend/modules/project-management/application/use-cases/update-project-image.use-case"
-import { UpdateProjectBannerCropUseCase } from "@/backend/modules/project-management/application/use-cases/update-project-banner-crop.use-case"
-import { UpdateProjectLogoCropUseCase } from "@/backend/modules/project-management/application/use-cases/update-project-logo-crop.use-case"
 import { GetProjectImageUseCase } from "@/backend/modules/project-management/application/use-cases/get-project-image.use-case"
 import { ListProjectCronogramaUseCase } from "@/backend/modules/project-management/application/use-cases/list-project-cronograma.use-case"
 import { CreateProjectGoalUseCase } from "@/backend/modules/project-management/application/use-cases/create-project-goal.use-case"
@@ -35,7 +33,6 @@ import { AssertCanRequestActivityCompletionUseCase } from "@/backend/modules/pro
 import { RequestActivityCompletionUseCase } from "@/backend/modules/project-management/application/use-cases/request-activity-completion.use-case"
 import { ApproveActivityCompletionUseCase } from "@/backend/modules/project-management/application/use-cases/approve-activity-completion.use-case"
 import { NotifyOverdueActivitiesUseCase } from "@/backend/modules/project-management/application/use-cases/notify-overdue-activities.use-case"
-import { ListAllProjectActivitiesUseCase } from "@/backend/modules/project-management/application/use-cases/list-all-project-activities.use-case"
 import { ListCompletionRequestsForActorUseCase } from "@/backend/modules/project-management/application/use-cases/list-completion-requests-for-actor.use-case"
 import type { ProjectActorsPort } from "@/backend/modules/project-management/application/ports/project-actors.port"
 import type { ProjectAttachmentsPort } from "@/backend/modules/project-management/application/ports/project-attachments.repository"
@@ -108,8 +105,6 @@ export class ProjectManagementModule {
   readonly removeProjectAttachment: UseCaseExecute<RemoveProjectAttachmentUseCase>
   readonly assertCanManageProject: UseCaseExecute<AssertCanManageProjectUseCase>
   readonly updateProjectImage: UseCaseExecute<UpdateProjectImageUseCase>
-  readonly updateProjectBannerCrop: UseCaseExecute<UpdateProjectBannerCropUseCase>
-  readonly updateProjectLogoCrop: UseCaseExecute<UpdateProjectLogoCropUseCase>
   readonly getProjectImage: UseCaseExecute<GetProjectImageUseCase>
   readonly listProjectCronograma: UseCaseExecute<ListProjectCronogramaUseCase>
   readonly createProjectGoal: UseCaseExecute<CreateProjectGoalUseCase>
@@ -128,8 +123,6 @@ export class ProjectManagementModule {
   readonly approveActivityCompletion: UseCaseExecute<ApproveActivityCompletionUseCase>
   /** V5-8 (DEC-64): varredura de atraso — chamada só pela rotina do cron, sem rota. */
   readonly notifyOverdueActivities: UseCaseExecute<NotifyOverdueActivitiesUseCase>
-  /** plan-v13 (S04, regra 7): leitura agregada das atividades para os gráficos do Dashboard. */
-  readonly listAllProjectActivities: UseCaseExecute<ListAllProjectActivitiesUseCase>
   /** S01 (plan-v12, DEC-238): fila global de solicitações de conclusão para o painel. */
   readonly listCompletionRequestsForActor: UseCaseExecute<ListCompletionRequestsForActorUseCase>
 
@@ -153,8 +146,6 @@ export class ProjectManagementModule {
     private readonly removeProjectAttachmentUseCase: RemoveProjectAttachmentUseCase,
     private readonly assertCanManageProjectUseCase: AssertCanManageProjectUseCase,
     private readonly updateProjectImageUseCase: UpdateProjectImageUseCase,
-    private readonly updateProjectBannerCropUseCase: UpdateProjectBannerCropUseCase,
-    private readonly updateProjectLogoCropUseCase: UpdateProjectLogoCropUseCase,
     private readonly getProjectImageUseCase: GetProjectImageUseCase,
     private readonly listProjectCronogramaUseCase: ListProjectCronogramaUseCase,
     private readonly createProjectGoalUseCase: CreateProjectGoalUseCase,
@@ -172,7 +163,6 @@ export class ProjectManagementModule {
     private readonly approveActivityCompletionUseCase: ApproveActivityCompletionUseCase,
     private readonly notifyOverdueActivitiesUseCase: NotifyOverdueActivitiesUseCase,
     private readonly listCompletionRequestsForActorUseCase: ListCompletionRequestsForActorUseCase,
-    private readonly listAllProjectActivitiesUseCase: ListAllProjectActivitiesUseCase,
   ) {
     this.listProjectsForActor = this.listProjectsForActorUseCase.execute.bind(this.listProjectsForActorUseCase)
     this.getProjectById = this.getProjectByIdUseCase.execute.bind(this.getProjectByIdUseCase)
@@ -193,8 +183,6 @@ export class ProjectManagementModule {
     this.removeProjectAttachment = this.removeProjectAttachmentUseCase.execute.bind(this.removeProjectAttachmentUseCase)
     this.assertCanManageProject = this.assertCanManageProjectUseCase.execute.bind(this.assertCanManageProjectUseCase)
     this.updateProjectImage = this.updateProjectImageUseCase.execute.bind(this.updateProjectImageUseCase)
-    this.updateProjectBannerCrop = this.updateProjectBannerCropUseCase.execute.bind(this.updateProjectBannerCropUseCase)
-    this.updateProjectLogoCrop = this.updateProjectLogoCropUseCase.execute.bind(this.updateProjectLogoCropUseCase)
     this.getProjectImage = this.getProjectImageUseCase.execute.bind(this.getProjectImageUseCase)
     this.listProjectCronograma = this.listProjectCronogramaUseCase.execute.bind(this.listProjectCronogramaUseCase)
     this.createProjectGoal = this.createProjectGoalUseCase.execute.bind(this.createProjectGoalUseCase)
@@ -213,7 +201,6 @@ export class ProjectManagementModule {
     this.requestActivityCompletion = this.requestActivityCompletionUseCase.execute.bind(this.requestActivityCompletionUseCase)
     this.approveActivityCompletion = this.approveActivityCompletionUseCase.execute.bind(this.approveActivityCompletionUseCase)
     this.notifyOverdueActivities = this.notifyOverdueActivitiesUseCase.execute.bind(this.notifyOverdueActivitiesUseCase)
-    this.listAllProjectActivities = this.listAllProjectActivitiesUseCase.execute.bind(this.listAllProjectActivitiesUseCase)
     this.listCompletionRequestsForActor = this.listCompletionRequestsForActorUseCase.execute.bind(
       this.listCompletionRequestsForActorUseCase,
     )
@@ -329,16 +316,6 @@ export function createProjectManagementModule(options: ProjectManagementModuleFa
       memberships: ports.memberships,
       actors: ports.actors,
     }),
-    new UpdateProjectBannerCropUseCase({
-      projects: ports.projects,
-      memberships: ports.memberships,
-      actors: ports.actors,
-    }),
-    new UpdateProjectLogoCropUseCase({
-      projects: ports.projects,
-      memberships: ports.memberships,
-      actors: ports.actors,
-    }),
     new GetProjectImageUseCase({
       projects: ports.projects,
     }),
@@ -431,9 +408,6 @@ export function createProjectManagementModule(options: ProjectManagementModuleFa
     }),
     new ListCompletionRequestsForActorUseCase({
       completionRequests: ports.completionRequests,
-    }),
-    new ListAllProjectActivitiesUseCase({
-      cronograma: ports.cronograma,
     }),
   )
 }

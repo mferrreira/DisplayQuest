@@ -30,7 +30,7 @@
  *     change (medido no V5-2d): o campo de imagem não deixa PDF chegar à rota.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Toaster } from "sonner";
 
@@ -39,9 +39,6 @@ import { ProjectDeliverablesPanel } from "@/components/features/project-delivera
 import { ProjectMediaHeader } from "@/components/features/project-media-header";
 import {
   PROJECT_IMAGE_SLOT_MESSAGE,
-  SQUARE_BAND_ASPECT,
-  clampBannerCrop,
-  clampCropCenterToBand,
   deliverableValidationMessage,
   normalizeDeliverableInput,
   validateDeliverableInput,
@@ -73,12 +70,6 @@ const mocks = {
   project: {
     logoKey: null as string | null,
     bannerKey: null as string | null,
-    bannerCropX: null as number | null,
-    bannerCropY: null as number | null,
-    bannerCropZoom: null as number | null,
-    logoCropX: null as number | null,
-    logoCropY: null as number | null,
-    logoCropZoom: null as number | null,
   },
   requests: [] as Array<{ method: string; path: string; json?: Record<string, unknown> }>,
   uploads: [] as Array<{ field: string | null; name: string; type: string; size: number }>,
@@ -88,11 +79,6 @@ const mocks = {
 };
 
 const PNG_BYTES = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
-
-/** O editor abre sobre o arquivo escolhido; no jsdom não há blob URL real (stub LOCAL, medido no V5-2d). */
-function stubObjectUrl() {
-  URL.createObjectURL = (file: File) => `blob:preview/${file.name}`;
-}
 
 function resetStore() {
   mocks.deliverables = [
@@ -115,12 +101,6 @@ function resetStore() {
   mocks.project = {
     logoKey: null,
     bannerKey: null,
-    bannerCropX: null,
-    bannerCropY: null,
-    bannerCropZoom: null,
-    logoCropX: null,
-    logoCropY: null,
-    logoCropZoom: null,
   };
   mocks.refuseDeliverableWrite = false;
   mocks.nextId = 500;
@@ -227,47 +207,17 @@ async function recordingFetch(input: unknown, init: RequestInit = {}) {
 
   if (resource === "images") {
     // `logo`/`banner` são a lista fechada do domínio; o substituto recusa o resto com a MESMA
-    // mensagem, em vez de inventar uma própria (DEC-90).
+    // mensagem, em vez de inventar uma própria (DEC-90). Não há rota de recorte: o recorte saiu.
     const slot = segments[5] === "logo" || segments[5] === "banner" ? segments[5] : null;
     if (!slot) {
       return jsonResponse({ error: PROJECT_IMAGE_SLOT_MESSAGE }, 400);
     }
     const field = slot === "logo" ? "logoKey" : "bannerKey";
-
-    // PUT `<slot>/crop` — espelho da rota real: entrada estrita, clamp, sem byte. DEC-242: o
-    // clamp do logo quadrado dá a mesma janela de centro; a coluna escrita segue o slot.
-    if (segments[6] === "crop") {
-      const body = JSON.parse(String(init.body)) as Record<string, unknown>;
-      const { x, y, zoom } = body;
-      const strict =
-        typeof x === "number" && typeof y === "number" && typeof zoom === "number" &&
-        Number.isFinite(x) && Number.isFinite(y) && Number.isFinite(zoom) &&
-        x >= 0 && x <= 1 && y >= 0 && y <= 1 && zoom >= 1;
-      if (!strict) {
-        return jsonResponse({ error: "Recorte inválido" }, 400);
-      }
-      // O clamp segue o slot, igual à rota: capa é faixa 21:9, logo é faixa quadrada (DEC-242).
-      const clamped = slot === "logo"
-        ? clampCropCenterToBand({ x, y, zoom }, SQUARE_BAND_ASPECT, SQUARE_BAND_ASPECT)
-        : clampBannerCrop({ x, y, zoom });
-      // O gravador registra o que o servidor PERSISTE (o clampado), não o corpo cru do cliente.
-      mocks.requests.push({ method, path, json: clamped });
-      const cropFields = slot === "logo"
-        ? { logoCropX: clamped.x, logoCropY: clamped.y, logoCropZoom: clamped.zoom }
-        : { bannerCropX: clamped.x, bannerCropY: clamped.y, bannerCropZoom: clamped.zoom };
-      mocks.project = { ...mocks.project, ...cropFields };
-      return jsonResponse({ project: { ...mocks.project } });
-    }
+    mocks.requests.push({ method, path });
 
     if (method === "DELETE") {
       const previous = mocks.project[field];
       mocks.project[field] = null;
-      // A escrita no slot zera as colunas do recorte daquele slot — o upload de um original novo
-      // nasce com recorte novo, e tirar a faixa não deixa parâmetro órfão (DEC-239/242).
-      const zeroed = slot === "logo"
-        ? { logoCropX: null, logoCropY: null, logoCropZoom: null }
-        : { bannerCropX: null, bannerCropY: null, bannerCropZoom: null };
-      mocks.project = { ...mocks.project, ...zeroed };
       if (previous) mocks.removes.push(previous);
       return jsonResponse({ project: { ...mocks.project } });
     }
@@ -299,11 +249,6 @@ async function recordingFetch(input: unknown, init: RequestInit = {}) {
       return jsonResponse({ error: validation.error }, 400);
     }
     mocks.project[field] = `projects/7/images/${slot}/novo-${++mocks.nextId}.png`;
-    // Subir original novo zera o recorte do slot (DEC-239/242): o original mudou.
-    const zeroed = slot === "logo"
-      ? { logoCropX: null, logoCropY: null, logoCropZoom: null }
-      : { bannerCropX: null, bannerCropY: null, bannerCropZoom: null };
-    mocks.project = { ...mocks.project, ...zeroed };
     return jsonResponse({ project: { ...mocks.project } }, 200);
   }
 
@@ -340,7 +285,6 @@ beforeEach(() => {
     })),
   );
   vi.stubGlobal("confirm", vi.fn<(message?: string) => boolean>(() => true));
-  stubObjectUrl();
 });
 
 afterEach(() => {
@@ -516,24 +460,9 @@ describe("painel de anexos", () => {
 });
 
 describe("cabeçalho de mídia do projeto", () => {
-  /**
-   * O jsdom não decodifica imagem, então o `onLoad` nunca roda e a razão do contêiner fica a de
-   * fábrica (21:9). Para o editor quadrado do logo, a razão REAL entra aqui: a janela do quadrado
-   * depende dela (piso do zoom = `aspect/bandAspect`), e o mock grava o clamp quadrado. Sem este
-   * load simulado, o editor clamparia pela razão de fábrica e o teste provava o substituto.
-   */
-  function loadSquareLogoIntoEditor() {
-    const image = screen.getByRole("img", { name: "Logo do projeto Alpha" });
-    Object.defineProperty(image, "naturalWidth", { value: 1000 });
-    Object.defineProperty(image, "naturalHeight", { value: 1000 });
-    fireEvent.load(image);
-  }
-
   function renderHeader(
     canManage: boolean,
     keys: { logoKey?: string | null; bannerKey?: string | null } = {},
-    crop: { x: number; y: number; zoom: number } | null = null,
-    logoCrop: { x: number; y: number; zoom: number } | null = null,
   ) {
     return render(
       <>
@@ -542,8 +471,6 @@ describe("cabeçalho de mídia do projeto", () => {
           projectName="Alpha"
           logoKey={keys.logoKey ?? null}
           bannerKey={keys.bannerKey ?? null}
-          bannerCrop={crop}
-          logoCrop={logoCrop}
           canManage={canManage}
         />
         <Toaster />
@@ -565,153 +492,54 @@ describe("cabeçalho de mídia do projeto", () => {
     expect(image).toHaveAttribute("src", expect.stringContaining("/api/projects/7/images/banner/file"));
     // A chave entra no endereço: sem isto o navegador serviria a capa velha depois de trocar.
     expect(image).toHaveAttribute("src", expect.stringContaining("velha.png"));
-    expect(screen.queryByRole("button", { name: "Enviar capa" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Tirar capa" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Opções da capa do projeto" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Opções do logo do projeto" })).not.toBeInTheDocument();
   });
 
-  it("escolher a capa abre o editor sobre o arquivo, e o salvar sobe a chave e grava o recorte", async () => {
+  it("enviar a capa sobe o arquivo no slot banner, grava a chave e avisa a página", async () => {
     const user = userEvent.setup({ delay: null });
     renderHeader(true);
 
+    await user.click(screen.getByRole("button", { name: "Opções da capa do projeto" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Enviar capa" }));
     await user.upload(
       screen.getByLabelText("Imagem de capa"),
       new File([PNG_BYTES], "capa do laboratório.png", { type: "image/png" }),
     );
 
-    // O editor abre com o texto da resolução recomendada e a pré-visualização do arquivo.
-    const dialog = await screen.findByRole("dialog", { name: "Recorte da capa" });
-    expect(screen.getByText(/Resolução recomendada: 2100×900 px \(21:9\)/)).toBeInTheDocument();
-    expect(dialog.querySelector("img")).toHaveAttribute("src", expect.stringContaining("blob:preview/capa do laboratório.png"));
-    // Nada foi gravado antes do salvar (DEC-241).
-    expect(mocks.uploads).toEqual([]);
-    expect(mocks.requests).toEqual([]);
-
-    await user.click(screen.getByRole("button", { name: "Salvar recorte" }));
-
     await waitFor(() => expect(mocks.uploads).toHaveLength(1));
     expect(mocks.uploads[0]).toMatchObject({ field: "file", name: "capa do laboratório.png", type: "image/png" });
-    expect(mocks.requests[0]).toMatchObject({
-      method: "PUT",
-      path: "/api/projects/7/images/banner/crop",
-      json: { x: 0.5, y: 0.5, zoom: 1 },
-    });
+    expect(mocks.requests[0]).toMatchObject({ method: "PUT", path: "/api/projects/7/images/banner" });
     expect(mocks.project.bannerKey).toMatch(/^projects\/7\/images\/banner\//);
     expect(mocks.project.logoKey).toBeNull();
 
     const image = await screen.findByRole("img", { name: "Capa do projeto Alpha" });
     expect(image).toHaveAttribute("src", expect.stringContaining("/api/projects/7/images/banner/file"));
+    expect(await screen.findByText("Capa atualizada")).toBeInTheDocument();
   });
 
-  it("re-recortar abre sobre o binário do bucket, não sobre o recorte, e o salvar grava só as colunas", async () => {
+  it("enviar o logo sobe o arquivo no slot logo sem tocar a capa", async () => {
     const user = userEvent.setup({ delay: null });
     mocks.project.bannerKey = "projects/7/images/banner/velha.png";
-    renderHeader(true, { bannerKey: mocks.project.bannerKey }, { x: 0.5, y: 0.5, zoom: 2 });
+    renderHeader(true, { bannerKey: mocks.project.bannerKey });
 
-    // plan-v14 S05 (regra 5): o controle virou item do menu aberto pelo clique da faixa.
-    await user.click(screen.getByRole("button", { name: "Opções da capa do projeto" }));
-    await user.click(await screen.findByRole("menuitem", { name: "Recortar capa" }));
-
-    const dialog = await screen.findByRole("dialog", { name: "Recorte da capa" });
-    // Re-recorte = o ORIGINAL no bucket, com a chave como quebra de cache (encoded pelo seam).
-    expect(dialog.querySelector("img")).toHaveAttribute(
-      "src",
-      expect.stringContaining("v=projects%2F7%2Fimages%2Fbanner%2Fvelha.png"),
-    );
-
-    await user.click(screen.getByRole("button", { name: "Salvar recorte" }));
-
-    await waitFor(() =>
-      expect(mocks.requests).toEqual([
-        { method: "PUT", path: "/api/projects/7/images/banner/crop", json: { x: 0.5, y: 0.5, zoom: 2 } },
-      ]),
-    );
-    // O binário não se move: a chave segue a mesma (DEC-239), só as colunas mudam.
-    expect(mocks.project.bannerKey).toBe("projects/7/images/banner/velha.png");
-    expect(mocks.project.bannerCropZoom).toBe(2);
-    expect(mocks.uploads).toEqual([]);
-  });
-
-  // ---------- DEC-242: o quadrado do logo ----------
-
-  it("escolher o logo abre o editor QUADRADO com a mensagem de resolução do quadrado", async () => {
-    const user = userEvent.setup({ delay: null });
-    renderHeader(true);
-
+    await user.click(screen.getByRole("button", { name: "Opções do logo do projeto" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Enviar logo" }));
     await user.upload(
       screen.getByLabelText("Imagem do logo"),
       new File([PNG_BYTES], "logo do lab.png", { type: "image/png" }),
     );
 
-    const dialog = await screen.findByRole("dialog", { name: "Recorte do logo" });
-    // A faixa quadrada muda a mensagem: 1:1, não 21:9.
-    expect(screen.getByText(/Logo quadrado: resolução recomendada 1000×1000 px \(1:1\)/)).toBeInTheDocument();
-    expect(dialog.querySelector("img")).toHaveAttribute("src", expect.stringContaining("blob:preview/logo do lab.png"));
-    // Nada é gravado antes do salvar.
-    expect(mocks.uploads).toEqual([]);
-    expect(mocks.requests).toEqual([]);
-  });
-
-  it("salvar o logo sobe o arquivo no slot logo e grava o recorte nas colunas `logoCrop*`", async () => {
-    const user = userEvent.setup({ delay: null });
-    renderHeader(true);
-
-    await user.upload(
-      screen.getByLabelText("Imagem do logo"),
-      new File([PNG_BYTES], "logo.png", { type: "image/png" }),
-    );
-    const dialog = await screen.findByRole("dialog", { name: "Recorte do logo" });
-    loadSquareLogoIntoEditor();
-    await user.click(within(dialog).getByRole("button", { name: "Salvar recorte" }));
-
     await waitFor(() => expect(mocks.uploads).toHaveLength(1));
-    expect(mocks.uploads[0]).toMatchObject({ field: "file", name: "logo.png", type: "image/png" });
-    // Ordem da escrita: primeiro o byte (pelo gravador de uploads), depois as colunas.
-    expect(mocks.requests[0]).toMatchObject({
-      method: "PUT",
-      path: "/api/projects/7/images/logo/crop",
-      json: { x: 0.5, y: 0.5, zoom: 1 },
-    });
+    expect(mocks.uploads[0]).toMatchObject({ field: "file", name: "logo do lab.png", type: "image/png" });
+    expect(mocks.requests[0]).toMatchObject({ method: "PUT", path: "/api/projects/7/images/logo" });
     expect(mocks.project.logoKey).toMatch(/^projects\/7\/images\/logo\//);
-    expect(mocks.project.logoCropX).toBe(0.5);
-    expect(mocks.project.logoCropZoom).toBe(1);
-    // A capa não foi tocada pelo logo.
-    expect(mocks.project.bannerKey).toBeNull();
+    // A capa é objeto separado: o enviar logo não a toca.
+    expect(mocks.project.bannerKey).toBe("projects/7/images/banner/velha.png");
+    expect(await screen.findByText("Logo atualizado")).toBeInTheDocument();
   });
 
-  it("re-recortar o logo abre sobre o binário do bucket e o salvar grava só as colunas quadradas, clampadas pelo quadrado", async () => {
-    const user = userEvent.setup({ delay: null });
-    mocks.project.logoKey = "projects/7/images/logo/velho.png";
-    renderHeader(true, { logoKey: mocks.project.logoKey }, null, { x: 0.9, y: 0.05, zoom: 3 });
-
-    // plan-v14 S05: o clique no logo abre o menu do logo.
-    await user.click(screen.getByRole("button", { name: "Opções do logo do projeto" }));
-    await user.click(await screen.findByRole("menuitem", { name: "Recortar logo" }));
-
-    const dialog = await screen.findByRole("dialog", { name: "Recorte do logo" });
-    // Re-recorte = o ORIGINAL no bucket, com a chave como quebra de cache.
-    expect(dialog.querySelector("img")).toHaveAttribute(
-      "src",
-      expect.stringContaining("v=projects%2F7%2Fimages%2Flogo%2Fvelho.png"),
-    );
-    loadSquareLogoIntoEditor();
-
-    await user.click(within(dialog).getByRole("button", { name: "Salvar recorte" }));
-
-    await waitFor(() =>
-      expect(mocks.requests).toEqual([
-        { method: "PUT", path: "/api/projects/7/images/logo/crop", json: { x: 1 - 1 / 6, y: 1 / 6, zoom: 3 } },
-      ]),
-    );
-    // Faixa quadrada zoom 3: janela [1/6, 5/6] nos dois eixos — 0.9 sai em 5/6, 0.05 em 1/6.
-    expect(mocks.project.logoCropX).toBeCloseTo(1 - 1 / 6, 6);
-    expect(mocks.project.logoCropZoom).toBe(3);
-    expect(mocks.uploads).toEqual([]);
-    // O binário não se move, e a capa segue intacta.
-    expect(mocks.project.logoKey).toBe("projects/7/images/logo/velho.png");
-    expect(mocks.project.bannerCropX).toBeNull();
-  });
-
-  it("o campo de imagem não aceita PDF: o editor nem abre, e nenhuma requisição sai", async () => {
+  it("o campo de imagem não aceita PDF: nenhuma requisição sai", async () => {
     const user = userEvent.setup({ delay: null });
     renderHeader(true);
 
@@ -724,8 +552,8 @@ describe("cabeçalho de mídia do projeto", () => {
       new File([new TextEncoder().encode("%PDF-1.7\n")], "relatorio.pdf", { type: "application/pdf" }),
     );
 
-    expect(screen.queryByRole("dialog", { name: "Recorte da capa" })).not.toBeInTheDocument();
     expect(mocks.uploads).toEqual([]);
+    expect(mocks.requests).toEqual([]);
     expect(mocks.project.bannerKey).toBeNull();
     expect(screen.queryByRole("img", { name: "Capa do projeto Alpha" })).not.toBeInTheDocument();
   });
@@ -734,50 +562,58 @@ describe("cabeçalho de mídia do projeto", () => {
     const user = userEvent.setup({ delay: null });
     renderHeader(true);
 
-    // DEC-242: o logo passa pelo editor quadrado antes de subir — a recusa chega no salvar.
     await user.upload(
       screen.getByLabelText("Imagem do logo"),
       new File([PNG_BYTES], "disfarçado.jpg", { type: "image/jpeg" }),
     );
-    const dialog = await screen.findByRole("dialog", { name: "Recorte do logo" });
-    await user.click(within(dialog).getByRole("button", { name: "Salvar recorte" }));
 
     expect(await screen.findByText(/Conteúdo não corresponde ao tipo declarado/)).toBeInTheDocument();
     expect(mocks.project.logoKey).toBeNull();
   });
 
-  it("remover a capa limpa o slot, o objeto e as colunas do recorte", async () => {
+  it("remover a capa limpa o slot e o objeto removido sai da lista", async () => {
     const user = userEvent.setup({ delay: null });
     mocks.project.bannerKey = "projects/7/images/banner/velha.png";
-    mocks.project.bannerCropX = 0.3;
-    mocks.project.bannerCropY = 0.6;
-    mocks.project.bannerCropZoom = 2;
-    renderHeader(true, { bannerKey: mocks.project.bannerKey }, { x: 0.3, y: 0.6, zoom: 2 });
+    renderHeader(true, { bannerKey: mocks.project.bannerKey });
 
     await screen.findByRole("img", { name: "Capa do projeto Alpha" });
-    // plan-v14 S05: o item do menu pelo mesmo rotulo.
+    // plan-v14 S05: o item do menu pelo mesmo rótulo.
     await user.click(screen.getByRole("button", { name: "Opções da capa do projeto" }));
     await user.click(await screen.findByRole("menuitem", { name: "Tirar capa" }));
 
     await waitFor(() => expect(mocks.project.bannerKey).toBeNull());
     expect(mocks.removes).toEqual(["projects/7/images/banner/velha.png"]);
-    // A chave e o recorte caem juntos: sem a faixa, as colunas não têm função.
-    expect(mocks.project.bannerCropX).toBeNull();
-    expect(mocks.project.bannerCropZoom).toBeNull();
     expect(await screen.findByText("Sem capa")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Tirar capa" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Recortar capa" })).not.toBeInTheDocument();
+
+    // O item sumiu: reabrir o menu não acha "Tirar capa".
+    await user.click(screen.getByRole("button", { name: "Opções da capa do projeto" }));
+    expect(screen.queryByRole("menuitem", { name: "Tirar capa" })).not.toBeInTheDocument();
+    await user.keyboard("{Escape}");
   });
 
-  it("a faixa da capa renderiza pela peça única com o recorte, em 21:9 e sem altura fixa", () => {
-    renderHeader(false, { bannerKey: "projects/7/images/banner/alpha.png" }, { x: 0.3, y: 0.6, zoom: 2 });
+  it("remover o logo limpa o slot sem tocar a capa", async () => {
+    const user = userEvent.setup({ delay: null });
+    mocks.project.bannerKey = "projects/7/images/banner/velha.png";
+    mocks.project.logoKey = "projects/7/images/logo/velho.png";
+    renderHeader(true, { logoKey: mocks.project.logoKey, bannerKey: mocks.project.bannerKey });
+
+    await user.click(screen.getByRole("button", { name: "Opções do logo do projeto" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Tirar logo" }));
+
+    await waitFor(() => expect(mocks.project.logoKey).toBeNull());
+    expect(mocks.removes).toEqual(["projects/7/images/logo/velho.png"]);
+    // A capa é objeto separado: o tirar logo não a toca.
+    expect(mocks.project.bannerKey).toBe("projects/7/images/banner/velha.png");
+  });
+
+  it("a faixa da capa renderiza em 21:9, sem altura fixa e sem corte", () => {
+    renderHeader(false, { bannerKey: "projects/7/images/banner/alpha.png" });
     const image = screen.getByRole("img", { name: "Capa do projeto Alpha" });
-    // O `<img>` mora na peça única; a faixa 21:9 é o contêiner de fora.
-    expect(image.closest('[data-banner-crop="true"]')).not.toBeNull();
+    // O recorte saiu: o `<img>` é cover simples, sem peça de recorte.
+    expect(image.closest('[data-banner-crop="true"]')).toBeNull();
+    expect(image.getAttribute("style")).toBeNull();
     const strip = image.parentElement!.parentElement!;
     expect(strip.className).toContain("aspect-[21/9]");
     expect(strip.className).not.toMatch(/(^|\s)h-\d/);
-    // O transform transporta os parâmetros: zoom 2 com centro (0.3, 0.6).
-    expect(image.getAttribute("style")).toContain("scale(2)");
   });
 });

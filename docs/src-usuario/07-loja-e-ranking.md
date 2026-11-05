@@ -56,11 +56,11 @@ O **Ranking** ordena as pessoas pelo que produziram. A tela traz o **Quadro de L
 A classificação é visível para qualquer pessoa autenticada.
 ```
 
-No **Quadro de Liderança** os três primeiros têm destaque maior e avatar maior, e o 1º lugar leva mais destaque ainda: quando a pessoa tem **capa** no perfil, a capa aparece como fundo do cartão dela, com o recorte que ela salvou no editor. É a mesma imagem descrita no capítulo 8; o ranking não cria nada, ele mostra o que o perfil tem. Os avatares do pódio obedecem o recorte de avatar de cada pessoa.
+No **Quadro de Liderança** os três primeiros têm destaque maior e avatar maior, e o 1º lugar leva mais destaque ainda: quando a pessoa tem **capa** no perfil, a capa aparece como fundo do cartão dela. É a mesma imagem descrita no capítulo 8; o ranking não cria nada, ele mostra o que o perfil tem.
 
 O quadro mostra o **placar do mês**, separado dos pontos que você guarda para resgatar recompensas. A cada mês, os pontos creditados entram nas duas contagens. Comprar na loja altera o saldo disponível, mas não muda o placar do mês. A **Classificação completa** continua usando os pontos acumulados e as tarefas concluídas.
 
-No seletor ao lado do título, escolha um mês já fechado para consultar o resultado daquele período. O quadro informa o mês e diz que o valor e a posição foram congelados no fechamento; consultar um mês anterior não recalcula nem altera o resultado. O cartão do campeão do mês fechado usa, como fundo, a capa da conta que ficou em 1º naquele mês — com o recorte dela.
+No seletor ao lado do título, escolha um mês já fechado para consultar o resultado daquele período. O quadro informa o mês e diz que o valor e a posição foram congelados no fechamento; consultar um mês anterior não recalcula nem altera o resultado. O cartão do campeão do mês fechado usa, como fundo, a capa da conta que ficou em 1º naquele mês.
 
 ```foto quadro-lideranca-mes-fechado titulo="O Quadro de Liderança em um mês fechado"
 O seletor identifica o período e o aviso explica que valor e posição estão congelados.

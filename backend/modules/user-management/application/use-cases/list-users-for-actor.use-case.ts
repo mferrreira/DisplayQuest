@@ -68,18 +68,11 @@ export class ListUsersForActorUseCase {
         completedTasks: row.completedTasks,
         avatar: row.avatar,
         // V5-3 (DEC-137): a capa chega na mesma lista que o avatar, porque é o pódio do ranking que
-        // a renderiza — sem isto a tela teria que chamar uma rota por pessoa. Os parâmetros do
-        // recorte (DEC-239) seguem na mesma lista: o render fiél precisa deles linha a linha.
+        // a renderiza — sem isto a tela teria que chamar uma rota por pessoa.
         bannerKey: row.bannerKey,
-        bannerCropX: row.bannerCropX ?? null,
-        bannerCropY: row.bannerCropY ?? null,
-        bannerCropZoom: row.bannerCropZoom ?? null,
         // DEC-242: a chave do avatar no bucket + as colunas quadradas seguem na mesma lista —
         // o pódio renderiza o avatar, e a tela de perfil precisa dos parâmetros.
         avatarKey: row.avatarKey,
-        logoCropX: row.logoCropX ?? null,
-        logoCropY: row.logoCropY ?? null,
-        logoCropZoom: row.logoCropZoom ?? null,
         // V5-4a (DEC-138): os dados de pessoa que o perfil mostra abertamente. Estão na lista
         // porque é a lista que o painel e a tela de equipe usam; chamar uma rota por pessoa para
         // exibir curso e modalidade seria o mesmo erro que o comentário de cima evita.

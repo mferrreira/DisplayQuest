@@ -35,19 +35,6 @@ export {
   type SystemReason,
 } from "./actor-ref";
 export { normalizeAvatar } from "./avatar";
-export {
-  MIN_BANNER_CROP_ZOOM,
-  MAX_BANNER_CROP_ZOOM,
-  BANNER_BAND_ASPECT,
-  SQUARE_BAND_ASPECT,
-  bannerCropBandRect,
-  bannerCropCenterBounds,
-  bannerCropFromColumns,
-  bannerCropTransform,
-  clampBannerCrop,
-  clampCropCenterToBand,
-  type BannerCropParams,
-} from "./banner-crop-rules";
 export { resolveUserListVisibility, type UserListVisibility } from "./user-visibility";
 export { canActorViewProfile, type ProfileVisibilityTarget } from "./profile-visibility-rules";
 export { SELF_EDITABLE_USER_FIELDS, filterSelfEditableUserFields } from "./user-edit-fields";

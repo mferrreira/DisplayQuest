@@ -24,9 +24,6 @@ const userSelect = {
   email: true,
   avatar: true,
   avatarKey: true,
-  logoCropX: true,
-  logoCropY: true,
-  logoCropZoom: true,
 } as const
 
 /** As colunas do vínculo, lidas juntas: é a lista que as mostra e o perfil que as escreve. */
@@ -55,9 +52,6 @@ type MemberRow = {
     email: string
     avatar: string | null
     avatarKey: string | null
-    logoCropX: number | null
-    logoCropY: number | null
-    logoCropZoom: number | null
   } | null
 }
 
@@ -84,9 +78,6 @@ function toRecord(row: MemberRow): MembershipRecord {
     userEmail: row.user?.email ?? null,
     avatar: row.user?.avatar ?? null,
     avatarKey: row.user?.avatarKey ?? null,
-    logoCropX: row.user?.logoCropX ?? null,
-    logoCropY: row.user?.logoCropY ?? null,
-    logoCropZoom: row.user?.logoCropZoom ?? null,
     ...toProfile(row),
   }
 }

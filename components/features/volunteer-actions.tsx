@@ -7,8 +7,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
-import { AvatarCrop } from "@/components/ui/avatar-crop"
-import { bannerCropFromColumns } from "@/backend/domain"
+import { BucketAvatar } from "@/components/ui/bucket-avatar"
 import { 
   UserPlus, 
   UserMinus, 
@@ -28,11 +27,8 @@ interface User {
   name: string
   email: string
   avatar?: string | null
-  /** plan-v14 S02 (regra 2): chave do avatar no bucket + recorte quadrado (DEC-242). */
+  /** plan-v14 S02 (regra 2): chave do avatar no bucket (DEC-242). */
   avatarKey?: string | null
-  logoCropX?: number | null
-  logoCropY?: number | null
-  logoCropZoom?: number | null
   roles: string[]
   isMember: boolean
   isLeader: boolean
@@ -71,9 +67,6 @@ export function VolunteerActions({ projectId, onVolunteerAdded, onVolunteerRemov
           email: member.userEmail || "",
           avatar: member.avatar,
           avatarKey: member.avatarKey,
-          logoCropX: member.logoCropX,
-          logoCropY: member.logoCropY,
-          logoCropZoom: member.logoCropZoom,
           roles: member.roles || [],
           isMember: true,
           isLeader: currentProject.leaderId === member.userId,
@@ -115,9 +108,6 @@ export function VolunteerActions({ projectId, onVolunteerAdded, onVolunteerRemov
         email: user.email,
         avatar: user.avatar,
         avatarKey: user.avatarKey,
-        logoCropX: user.logoCropX,
-        logoCropY: user.logoCropY,
-        logoCropZoom: user.logoCropZoom,
         roles: user.roles || [],
         isMember: false,
         isLeader: currentProject.leaderId === user.id
@@ -264,12 +254,11 @@ export function VolunteerActions({ projectId, onVolunteerAdded, onVolunteerRemov
                       }`}
                       onClick={() => setSelectedUser(user)}
                     >
-                      {/* plan-v14 S02 (regra 2): o quadrado escolhido na fábrica do avatar sai
-                          pela peça única com o recorte gravado; sem chave, o legado em disco. */}
-                      <AvatarCrop
+                      {/* plan-v14 S02 (regra 2): o avatar do bucket sai pela peça única; sem
+                          chave, o legado em disco. */}
+                      <BucketAvatar
                         userId={user.id}
                         avatarKey={user.avatarKey}
-                        crop={bannerCropFromColumns(user.logoCropX, user.logoCropY, user.logoCropZoom)}
                         legacyAvatar={user.avatar}
                         name={user.name}
                         className="h-8 w-8"
@@ -354,10 +343,9 @@ export function VolunteerActions({ projectId, onVolunteerAdded, onVolunteerRemov
                     className="flex items-center justify-between p-3 rounded-lg border"
                   >
                     <div className="flex items-center gap-3">
-                      <AvatarCrop
+                      <BucketAvatar
                         userId={member.id}
                         avatarKey={member.avatarKey}
-                        crop={bannerCropFromColumns(member.logoCropX, member.logoCropY, member.logoCropZoom)}
                         legacyAvatar={member.avatar}
                         name={member.name}
                         className="h-8 w-8"
@@ -410,10 +398,9 @@ export function VolunteerActions({ projectId, onVolunteerAdded, onVolunteerRemov
                 className="flex items-center justify-between p-3 rounded-lg border"
               >
                 <div className="flex items-center gap-3">
-                  <AvatarCrop
+                  <BucketAvatar
                     userId={member.id}
                     avatarKey={member.avatarKey}
-                    crop={bannerCropFromColumns(member.logoCropX, member.logoCropY, member.logoCropZoom)}
                     legacyAvatar={member.avatar}
                     name={member.name}
                     className="h-8 w-8"

@@ -1,12 +1,13 @@
 /**
  * plan-v14 S03 (regra 3) — a capa do campeão é o fundo translúcido do bloco inteiro, no mês
- * em curso e nos meses fechados, com o recorte da conta aplicado.
+ * em curso e nos meses fechados.
  *
  * Por que existe: o dono mediu "um recorte estreito na parte de cima" e a capa ausente nos
  * meses fechados. Medido no docker em 2026-11-04: o fundo cobre a seção inteira (w=1033, h=146
  * na seção de 1024×146) no mês em curso, e no mês fechado a capa aparece quando a conta de hoje
  * tem `bannerKey` (o caminho dos fechamentos lê a conta, que cascadeia). Este arquivo congela os
- * dois ramos com o zoom das colunas, sobre o harness de `leaderboard-month-history.test.tsx`.
+ * dois ramos sobre o harness de `leaderboard-month-history.test.tsx`. O recorte saiu por decisão
+ * do dono (2026-11-05): o fundo é cover simples.
  *
  * Costura medida: o Select do Radix abre um frame depois no jsdom; a lista fecha com
  * `pointer-events:none` durante a animação, então a opção é clicada com `fireEvent`.
@@ -27,15 +28,9 @@ const fixtures = vi.hoisted(() => ({
     currentWeekHours: 0,
     currentMonthPoints: 150,
     avatarKey: null,
-    logoCropX: null,
-    logoCropY: null,
-    logoCropZoom: null,
     bannerKey: null,
-    bannerCropX: null,
-    bannerCropY: null,
-    bannerCropZoom: null,
   },
-  // Quadro vivo: Bruno lidera com a capa recortada (zoom 2), centro 0.3/0.3.
+  // Quadro vivo: Bruno lidera com a capa da conta.
   live: [
     {
       id: 21,
@@ -45,13 +40,7 @@ const fixtures = vi.hoisted(() => ({
       points: 40,
       avatar: null,
       avatarKey: null,
-      logoCropX: null,
-      logoCropY: null,
-      logoCropZoom: null,
       bannerKey: "users/21/images/banner/x.webp",
-      bannerCropX: 0.3,
-      bannerCropY: 0.3,
-      bannerCropZoom: 2,
     },
     {
       id: 22,
@@ -61,13 +50,7 @@ const fixtures = vi.hoisted(() => ({
       points: 100,
       avatar: null,
       avatarKey: null,
-      logoCropX: null,
-      logoCropY: null,
-      logoCropZoom: null,
       bannerKey: "users/22/images/banner/y.webp",
-      bannerCropX: 0.5,
-      bannerCropY: 0.5,
-      bannerCropZoom: 1.5,
     },
     {
       id: 23,
@@ -77,13 +60,7 @@ const fixtures = vi.hoisted(() => ({
       points: 500,
       avatar: null,
       avatarKey: null,
-      logoCropX: null,
-      logoCropY: null,
-      logoCropZoom: null,
       bannerKey: null,
-      bannerCropX: null,
-      bannerCropY: null,
-      bannerCropZoom: null,
     },
   ],
   metadata: {
@@ -161,33 +138,33 @@ function championSection() {
 }
 
 function backgroundPiece(section: HTMLElement) {
-  return section.querySelector('[data-banner-crop="true"]')
+  // O recorte saiu: o fundo é o `<img>` de cover simples com `alt=""` do bloco.
+  return section.querySelector('img[alt=""]')
 }
 
 beforeEach(() => {
   vi.clearAllMocks()
 })
 
-describe("plan-v14 S03 — capa do campeão como fundo cheio, com o recorte da conta", () => {
-  it("mês em curso: a capa cobre o bloco inteiro com o zoom gravado", () => {
+describe("plan-v14 S03 — capa do campeão como fundo cheio", () => {
+  it("mês em curso: a capa cobre o bloco inteiro", () => {
     render(<LeaderboardPage />)
 
     const section = championSection()
-    const piece = backgroundPiece(section)
-    expect(piece).not.toBeNull()
+    const img = backgroundPiece(section)
+    expect(img).not.toBeNull()
 
-    const img = piece!.querySelector("img")!
-    expect(img.getAttribute("src")).toContain("/api/users/21/images/banner/file")
-    expect(img.getAttribute("style")).toContain("scale(2)")
-    expect(img.className).toContain("inset-0")
-    // A peça preenche a moldura; a moldura do bloco é a faixa `absolute inset-0` do campeão.
-    expect(piece!.className).toContain("h-full w-full")
-    const frame = piece!.parentElement!
-    expect(frame.className).toContain("absolute inset-0")
+    expect(img!.getAttribute("src")).toContain("/api/users/21/images/banner/file")
+    // Cover simples: nenhum transform de recorte.
+    expect(img!.getAttribute("style")).toBeNull()
+    expect(img!.className).toContain("inset-0")
+    // A opacidade mora na moldura `absolute inset-0`; o `<img>` da peça única a preenche.
+    const frame = img!.parentElement!.parentElement!
+    expect(frame.className).toContain("absolute inset-0 opacity-20")
     expect(section.contains(frame)).toBe(true)
   })
 
-  it("mês fechado: a capa da conta de hoje entra como fundo cheio com o zoom da conta", async () => {
+  it("mês fechado: a capa da conta de hoje entra como fundo cheio", async () => {
     render(<LeaderboardPage />)
 
     // Abrir o seletor e escolher o janeiro fechado (lição do painel: `fireEvent` na opção).
@@ -196,17 +173,13 @@ describe("plan-v14 S03 — capa do campeão como fundo cheio, com o recorte da c
     fireEvent.click(option)
 
     const section = await waitFor(() => championSection())
-    const piece = backgroundPiece(section)
-    expect(piece).not.toBeNull()
+    const img = backgroundPiece(section)
+    expect(img).not.toBeNull()
 
-    const img = piece!.querySelector("img")!
-    expect(img.getAttribute("src")).toContain("/api/users/22/images/banner/file")
-    expect(img.getAttribute("style")).toContain("scale(1.5)")
-    expect(img.className).toContain("inset-0")
-    expect(piece!.className).toContain("h-full w-full")
-    const frame = piece!.parentElement!
-    expect(frame.className).toContain("absolute inset-0")
-    expect(section.contains(frame)).toBe(true)
+    expect(img!.getAttribute("src")).toContain("/api/users/22/images/banner/file")
+    expect(img!.getAttribute("style")).toBeNull()
+    expect(img!.className).toContain("inset-0")
+    expect(section.contains(img!)).toBe(true)
   })
 
   it("campeão do fechamento sem conta de hoje: bloco intacto, nenhum fundo inventado", async () => {

@@ -6,11 +6,10 @@
  * (`users/<id>/images/<slot>`), então aceita-lo cru deixaria `users/7/images/<qualquer-coisa>` e a
  * chave deixaria de dizer o que é.
  *
- * DEC-242 (2026-11-04, dono): o avatar passa a ter chave no bucket (`users/<id>/images/avatar`)
- * com recorte quadrado (`logoCrop*`). O caminho legado de disco (`public/uploads/avatars`,
- * servido por `/api/uploads/avatars/...`) continua servindo o campo `avatar` para quem já o usa.
- * O render do avatar continua cover simples: a área escolhida no editor quadrado é o que as
- * colunas guardam, e nenhuma tela aplica o corte ao círculo do avatar.
+ * DEC-242 (2026-11-04, dono): o avatar passa a ter chave no bucket (`users/<id>/images/avatar`).
+ * O caminho legado de disco (`public/uploads/avatars`, servido por `/api/uploads/avatars/...`)
+ * continua servindo o campo `avatar` para quem já o usa. O render do avatar é cover simples;
+ * nenhuma tela aplica corte ao círculo do avatar.
  */
 export const USER_IMAGE_SLOTS = ["avatar", "banner"] as const;
 export type UserImageSlot = (typeof USER_IMAGE_SLOTS)[number];

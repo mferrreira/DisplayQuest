@@ -83,9 +83,9 @@ const SCREENS = [
   // uma pessoa no Ranking produz; o id é a conta de captura do guia (docs/.capture.env).
   { id: "perfil-de-outra-pessoa", role: "coord", route: "/dashboard/profile?userId=21", expect: { url: /\/dashboard\/profile/, anyOf: ["Dados para os documentos"] } },
 
-  // plan-v12 (DEC-240/241): a capa do perfil na faixa 21:9 com o recorte aplicado. A capa semeada
-  // no usuário de captura (`guia.participante`) aponta para o ORIGINAL de `projects/2/images/
-  // banner` no bucket — mesmo binário, leitura pela rota do perfil. O recorte está nas colunas.
+  // plan-v12 (DEC-240): a capa do perfil na faixa 21:9. A capa semeada no usuário de captura
+  // (`guia.participante`) aponta para o ORIGINAL de `projects/2/images/banner` no bucket —
+  // mesmo binário, leitura pela rota do perfil.
   { id: "perfil-com-capa", role: "part", route: "/dashboard/profile", expect: { url: /\/dashboard\/profile/, anyOf: ["Sem capa", "capa"] } },
 
   // --- participante: superficie reduzida, usada para mostrar a variação de papel ---
@@ -114,7 +114,7 @@ const VIEWPORT = { width: 1440, height: 900 };
  *              de atividade só existe com o projeto selecionado)
  */
 const INTERACTIONS = [
-  { id: "dashboard-projetos", role: "coord", route: "/dashboard/projetos", aba: "Dashboard", verifica: "Histórico semanal" },
+  { id: "dashboard-projetos", role: "coord", route: "/dashboard/projetos", aba: "Dashboard", verifica: "CAMPEÃO", rolarAte: "text=Campeão" },
   { id: "dialogo-nova-tarefa", role: "coord", route: "/dashboard", abre: "Nova Tarefa", dialogo: "Tarefa" },
   { id: "dialogo-novo-projeto", role: "coord", route: "/dashboard/projetos", abre: "Novo Projeto", dialogo: "Projeto" },
   // V5-5b (DEC-100): o passo opcional de cronograma do wizard de criação. O nome é preenchido
@@ -181,14 +181,8 @@ const INTERACTIONS = [
   // plan-v12 (DEC-238): a aba Conclusões do Painel Administrativo — a fila global de solicitações
   // de conclusão de atividade, criada na S01. Leitura pura: nenhum clique aprova.
   { id: "admin-conclusoes", role: "coord", route: "/dashboard/admin", aba: "Conclusões", verifica: "Conclusões solicitadas" },
-  // plan-v12 (DEC-241) + plan-v14 S05: o editor de recorte da capa, nos dois lados. O menu
-  // aberto pelo clique da faixa tem o item "Recortar capa", que abre o diálogo sobre o ORIGINAL
-  // no bucket; nenhuma captura salva.
-  { id: "editor-recorte-capa", role: "part", route: "/dashboard/profile", abre: "Opções da capa do perfil", clicar: [{ role: "menuitem", name: "Recortar capa" }], dialogo: "Recorte da capa", verifica: "Resolução recomendada", rolarAte: 'text=Arraste a faixa' },
-  { id: "editor-recorte-projeto", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: 'a[aria-label="Ver projeto Pesquisa em IA"]' }, projetoTab: "Visão geral", clicar: [{ role: "button", name: "Opções da capa do projeto" }, { role: "menuitem", name: "Recortar capa" }], dialogo: "Recorte da capa", verifica: "Resolução recomendada", rolarAte: 'text=Arraste a faixa' },
-  // plan-v12 (DEC-240): a faixa 21:9 do detalhe do projeto, com o recorte aplicado. Sem clique.
-  // plan-v14 S05: o rótulo "Recortar capa" saiu do corpo (é item de menu), e a verificação passou
-  // ao card permanente da Visão geral; o rolar leva o gatilho da faixa ao campo de visão.
+  // plan-v12 (DEC-240): a faixa 21:9 do detalhe do projeto. Sem clique. A verificação é do
+  // card permanente da Visão geral, e o rolar leva o gatilho da faixa ao campo de visão.
   { id: "faixa-capa-projeto", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: 'a[aria-label="Ver projeto Pesquisa em IA"]' }, projetoTab: "Visão geral", verifica: "Dados do projeto", rolarAte: 'button[aria-label="Opções da capa do projeto"]' },
   // plan-v14 S05 (regra 5): o MENU de opções aberto pelo clique na faixa, nos dois lados. A
   // captura fotografa o menu aberto — a verificação é dos itens, que entram no texto do corpo.
@@ -354,6 +348,9 @@ for (const it of interactions) {
       // que o DEC-96 já tinha tirado da tela. Quando a captura também abre algo, a verificação é
       // do que existe DEPOIS do clique, e fica no ramo de baixo.
       if (it.verifica && !it.abre && !it.alvo) {
+        // Dados que chegam de rede (o recorte do Dashboard) não estão no primeiro frame após o
+        // clique. O locator com auto-wait garante o texto antes de fotografar a tela.
+        await page.getByText(it.verifica, { exact: false }).first().waitFor({ timeout: 15_000 });
         const tabText = (await page.locator("body").innerText()).replace(/\s+/g, " ");
         if (!tabText.includes(it.verifica)) {
           throw new Error(`a aba "${it.aba}" não contém "${it.verifica}": "${tabText.slice(0, 140)}"`);
@@ -432,6 +429,13 @@ for (const it of interactions) {
         }
         record.dialog = dialogText.slice(-400);
       } else {
+        // Dados que chegam de rede (o recorte do Dashboard) não estão no primeiro frame.
+        // `rolarAte` tem locator com auto-wait: a verificação lê o corpo só depois de o
+        // bloco estar na tela.
+        if (it.rolarAte) {
+          await page.locator(it.rolarAte).first().scrollIntoViewIfNeeded();
+          await page.waitForTimeout(500);
+        }
         const bodyText = (await page.locator("body").innerText()).replace(/\s+/g, " ");
         if (it.verifica && !bodyText.includes(it.verifica)) {
           throw new Error(`após o clique a tela não contém "${it.verifica}": "${bodyText.slice(0, 140)}"`);
@@ -452,7 +456,7 @@ for (const it of interactions) {
 
     record.url = page.url();
     // Algumas telas têm o bloco que importa longe do topo (o formulário do perfil começa pelo
-    // recorte de foto; o diálogo de gestão começa pelas estatísticas de hora). `rolarAte` leva o
+    // avatar; o diálogo de gestão começa pelas estatísticas de hora). `rolarAte` leva o
     // bloco ao campo de visão antes da foto — sem ele a captura fotografa a tela errada da tela certa.
     if (it.rolarAte) {
       await page.locator(it.rolarAte).first().scrollIntoViewIfNeeded();

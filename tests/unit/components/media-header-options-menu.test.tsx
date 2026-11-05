@@ -9,7 +9,7 @@
  *  - o menu só existe para quem gerencia o projeto (`canManage`) e para o dono em modo de edição
  *    (`canEdit`) — a mesma regra de hoje, só mudou o lugar do controle;
  *  - os itens têm os MESMOS rótulos dos botões de hoje e a mesma condição de existência
- *    ("Recortar"/"Tirar" só quando há chave);
+ *    ("Tirar" só quando há chave) — o recorte saiu por decisão do dono (2026-11-05);
  *  - `Escape` fecha o menu.
  *
  * Costuras medidas da casa: o Select/DropdownMenu do Radix exige os shims de `tests/setup.ts`
@@ -49,11 +49,10 @@ describe("cabeçalho de mídia do projeto — menu de opções no clique", () =>
     const items = await waitFor(() => screen.getAllByRole("menuitem"))
     const names = items.map((i) => i.textContent)
     expect(names).toContain("Enviar capa")
-    expect(names).toContain("Recortar capa")
     expect(names).toContain("Tirar capa")
+    expect(names).not.toContain("Recortar capa")
     // Os botões visíveis de hoje saíram do DOM — os controles viraram itens do menu.
     expect(screen.queryByRole("button", { name: "Enviar capa" })).not.toBeInTheDocument()
-    expect(screen.queryByRole("button", { name: "Recortar capa" })).not.toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Tirar capa" })).not.toBeInTheDocument()
   })
 
@@ -65,8 +64,8 @@ describe("cabeçalho de mídia do projeto — menu de opções no clique", () =>
 
     const names = (await screen.getAllByRole("menuitem")).map((i) => i.textContent)
     expect(names).toContain("Enviar logo")
-    expect(names).toContain("Recortar logo")
     expect(names).toContain("Tirar logo")
+    expect(names).not.toContain("Recortar logo")
   })
 
   it("sem capa, o menu da capa só tem enviar — nada a recortar nem a tirar", async () => {
@@ -122,11 +121,11 @@ describe("cabeçalho de mídia do perfil — menu só em modo de edição", () =
 
     const names = (await screen.getAllByRole("menuitem")).map((i) => i.textContent)
     expect(names).toContain("Enviar capa")
-    expect(names).toContain("Recortar capa")
     expect(names).toContain("Tirar capa")
     expect(names).toContain("Enviar avatar")
-    expect(names).toContain("Recortar avatar")
     expect(names).toContain("Tirar avatar")
+    expect(names).not.toContain("Recortar capa")
+    expect(names).not.toContain("Recortar avatar")
     expect(screen.queryByRole("button", { name: "Enviar capa" })).not.toBeInTheDocument()
   })
 

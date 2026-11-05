@@ -32,12 +32,6 @@ type UserRow = {
   avatar: string | null
   avatarKey: string | null
   bannerKey: string | null
-  bannerCropX: number | null
-  bannerCropY: number | null
-  bannerCropZoom: number | null
-  logoCropX: number | null
-  logoCropY: number | null
-  logoCropZoom: number | null
   cpf: string | null
   registrationNumber: string | null
   course: string | null
@@ -66,12 +60,6 @@ function toRecord(row: UserRow): UserRecord {
     avatar: row.avatar,
     avatarKey: row.avatarKey,
     bannerKey: row.bannerKey,
-    bannerCropX: row.bannerCropX,
-    bannerCropY: row.bannerCropY,
-    bannerCropZoom: row.bannerCropZoom,
-    logoCropX: row.logoCropX,
-    logoCropY: row.logoCropY,
-    logoCropZoom: row.logoCropZoom,
     cpf: row.cpf,
     registrationNumber: row.registrationNumber,
     course: row.course,
@@ -117,12 +105,6 @@ export class PrismaUserRepository implements UserRepositoryPort {
         avatar: record.avatar,
         avatarKey: record.avatarKey ?? null,
         bannerKey: record.bannerKey,
-        bannerCropX: record.bannerCropX ?? null,
-        bannerCropY: record.bannerCropY ?? null,
-        bannerCropZoom: record.bannerCropZoom ?? null,
-        logoCropX: record.logoCropX ?? null,
-        logoCropY: record.logoCropY ?? null,
-        logoCropZoom: record.logoCropZoom ?? null,
         cpf: record.cpf,
         registrationNumber: record.registrationNumber,
         course: record.course,
@@ -203,12 +185,6 @@ export class PrismaUserRepository implements UserRepositoryPort {
         avatar: true,
         avatarKey: true,
         bannerKey: true,
-        bannerCropX: true,
-        bannerCropY: true,
-        bannerCropZoom: true,
-        logoCropX: true,
-        logoCropY: true,
-        logoCropZoom: true,
         bio: true,
         profileVisibility: true,
         cpf: true,

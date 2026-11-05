@@ -6,10 +6,10 @@ Um projeto agrupa tarefas, define quem participa e concentra as horas registrada
 A lista mostra cada projeto em uma linha com status, descrição, andamento, datas e ações disponíveis. Com início e término definidos, o andamento representa o tempo decorrido do projeto; sem o período completo, usa a proporção de tarefas concluídas.
 ```
 
-Na parte superior da tela, combine a busca, o status e **Pessoa**. A pessoa limita a seleção aos projetos com tarefas atribuídas a ela e às próprias tarefas. O mesmo recorte alimenta a aba **Dashboard** e a lista. No Dashboard, **Projeto** restringe ainda mais os gráficos; **Todos os projetos** reúne somente os projetos que passaram pelos filtros do topo. A distribuição por status, o histórico semanal e a lista de andamento acompanham os filtros combinados. O histórico conta conclusões por semana, de segunda a domingo, nas últimas oito semanas.
+Na parte superior da tela, combine a busca, o status e **Pessoa**. A pessoa limita a seleção aos projetos com tarefas atribuídas a ela e às próprias tarefas. O mesmo recorte alimenta a aba **Dashboard** e a lista. No Dashboard, **Projeto** restringe ainda mais o recorte; **Todos os projetos** reúne somente os projetos que passaram pelos filtros do topo. A aba é o **leaderboard de projetos** por pontos: o campeão em bloco destacada, o 2º e o 3º lugares com medalha, e a classificação completa a partir do 4º. Abaixo do leaderboard, a lista de andamento acompanha o recorte.
 
-```foto dashboard-projetos titulo="Dashboard de Projetos com gráficos e histórico semanal"
-Os gráficos e o histórico acompanham o projeto selecionado; a opção **Todos os projetos** reúne o conjunto disponível.
+```foto dashboard-projetos titulo="Dashboard de Projetos com o leaderboard e a lista de andamento"
+O leaderboard ordena os projetos pela pontuação, e cada linha abre o detalhe do projeto; a lista de andamento acompanha o recorte. Com **Todos os projetos**, o recorte reúne o conjunto filtrado do topo.
 ```
 
 ## Ver um projeto
@@ -61,14 +61,11 @@ Editar e excluir um projeto são ações do cartão, na lista. Editar é uma pá
 ## Capa e logo do projeto
 
 1. Abra o detalhe do projeto, na aba **Visão geral**.
-2. Clique na **faixa da capa**. Ela abre a lista de opções: **Enviar capa**, **Recortar capa** e **Tirar capa**. A lista só existe para quem gerencia o projeto — a mesma regra de gestão da tela (líder, criador, COORDENADOR, GERENTE, GERENTE_PROJETO, gestão de contas); quem não gerencia vê a faixa sem nenhum acesso a ela.
-3. Escolha **Enviar capa** e escolha a imagem. O editor de recorte abre sobre a imagem escolhida: a moldura 21:9 aparece como uma **faixa** sobre a imagem inteira.
-4. Arraste a faixa para escolher a parte da capa; arraste o canto de baixo-direita para redimensionar. A linha *"Resolução recomendada: 2100×900 px (21:9)"* diz o tamanho que preenche a moldura sem recorte.
-5. Clique em **Salvar recorte**: a imagem sobe e a parte escolhida passa a ocupar a faixa da capa.
-6. **Recortar capa** reabre o editor sobre a imagem no bucket, para mudar só a parte visível. **Tirar capa** aparece quando a faixa tem imagem, e o sistema pede confirmação.
-7. Clique no **logo** (o círculo sobre a capa). A lista dele traz **Enviar logo**, **Recortar logo** e **Tirar logo**. O logo tem a mesma peça de editor, na **faixa quadrada** — a linha passa a dizer *"Logo quadrado: resolução recomendada 1000×1000 px (1:1)"*, e o corte escolhido pelo editor é o que a tela mostra, nas três superfícies onde o logo aparece.
+2. Clique na **faixa da capa**. Ela abre a lista de opções: **Enviar capa** e **Tirar capa**. A lista só existe para quem gerencia o projeto — a mesma regra de gestão da tela (líder, criador, COORDENADOR, GERENTE, GERENTE_PROJETO, gestão de contas); quem não gerencia vê a faixa sem nenhum acesso a ela.
+3. Escolha **Enviar capa** e escolha a imagem: o arquivo sobe para o bucket e passa a ocupar a faixa da capa. **Tirar capa** aparece quando a faixa tem imagem, e o sistema pede confirmação.
+4. Clique no **logo** (o círculo sobre a capa). A lista dele traz **Enviar logo** e **Tirar logo**. O logo enviado aparece como círculo nas três superfícies onde o logo aparece.
 
-São imagens, só isso: PDF e vídeo não entram aqui. O arquivo vai para o bucket de objetos do sistema, e a tela o lê por um endereço que entrega a imagem apenas a quem tem acesso ao projeto. Quem escreve a capa é a gestão do projeto; quem a vê é a mesma regra de leitura do detalhe. O recorte é parâmetro, não corte: a mesma imagem fica no bucket, na mesma chave, e a tela mostra a parte que os números apontam.
+São imagens, só isso: PDF e vídeo não entram aqui. O arquivo vai para o bucket de objetos do sistema, e a tela o lê por um endereço que entrega a imagem apenas a quem tem acesso ao projeto. Quem escreve a capa é a gestão do projeto; quem a vê é a mesma regra de leitura do detalhe.
 
 A lista de opções não aparece no extrato do DOM — os gatilhos da faixa e do logo são ícones sem texto, e o nome dos itens vem da interface medida pelo teste.
 
@@ -76,17 +73,13 @@ A lista de opções não aparece no extrato do DOM — os gatilhos da faixa e do
 A capa ocupa a largura plena da moldura 21:9; o logo redondo fica no canto de baixo-esquerda. Os controles não são botões soltos: eles estão na lista que o clique da faixa e do logo abre.
 ```
 
-```foto capa-menu-projeto titulo="A lista de opções aberta pelo clique na faixa da capa: Enviar capa, Recortar capa, Tirar capa"
+```foto capa-menu-projeto titulo="A lista de opções aberta pelo clique na faixa da capa: Enviar capa, Tirar capa"
 ```
 
-```foto logo-menu-projeto titulo="A lista de opções aberta pelo clique no logo: Enviar logo, Recortar logo, Tirar logo"
+```foto logo-menu-projeto titulo="A lista de opções aberta pelo clique no logo: Enviar logo, Tirar logo"
 ```
 
-```foto editor-recorte-projeto titulo="O editor de recorte da capa do projeto, sobre a imagem no bucket"
-O mesmo diálogo do perfil: a imagem inteira, a faixa 21:9 arrastável com alça de redimensionamento, *"Resolução recomendada: 2100×900 px (21:9)"*.
-```
-
-O **cartão da lista de projetos** usa a mesma capa com o mesmo recorte, na altura própria do cartão — o corte da lista não é a moldura 21:9 do detalhe.
+O **cartão da lista de projetos** usa a mesma capa, na altura própria do cartão — a faixa da lista não é a moldura 21:9 do detalhe.
 
 ## Entregáveis
 
