@@ -362,7 +362,7 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   os DEC-211..223 dele seguem reservados no arquivo. **Atualizado em 2026-11-05:** DEC-224 (donos),
   DEC-226 plan-v9, DEC-232..236 plan-v10, DEC-240 plan-v12, DEC-242 em uso, **DEC-243 plan-v16**
   (ícone de badge no bucket pelo desenho de capa, conversão a WebP obrigatória na escrita, fonte
-  Lucide ISC). **Próxima livre: DEC-244.**
+  Lucide ISC). **Próxima livre: DEC-247.**
 - **Subtask (V4-4, DEC-78..83 → regra atual = DEC-97/98/189/224):** tabela `task_subtasks` (sem FK para
   `users` — subtask não tem
   responsável próprio), base gravada em `tasks.points` = `10 + 10·n` (DEC-97 baixou a 5; o dono restaurou
@@ -1248,3 +1248,40 @@ leitura do texto visível. São observações medidas na instância real, **não
 - **Capturas G6:** `admin-badges` (nova entrada no script, aba Badges, verificação "Gerenciar Badges")
   e `perfil-badges` recapturadas com o catálogo de ícones aplicado (5432 e 5433). Guia: capítulo 9
   documenta a aba Badges e o botão "Enviar ícone"; capítulo 8 descreve o ícone nos cartões.
+
+## plan-v17 — badges visuais: medálhão, vitrine, equipar na Configurações (2026-11-05, DEC-244..246)
+
+- **Estado:** `fechado` em 2026-11-05, 6 fatias (S01..S06), plano em
+  `~/Projetos/displayquest-planos/plans/plan-v17-badges-visuais/`. Gate completo no fechamento:
+  tsc 0, lint limpo, suíte **295 arquivos / 2903 testes** na 5433, arch 1312 módulos / 5543
+  dependências sem violação, docs:build/ docs:check verdes. Sem schema novo.
+- **DEC-244 (ADR-001):** peça única `components/ui/badge-medallion.tsx` (`BadgeMedallion`) desenha
+  o ícone do badge em toda superfície: `iconKey` → `<img>` da rota autenticada com `?v=<chave>` >
+  glifo de texto `icon` na cor do badge > ícone Lucide da categoria (`BadgeCategoryIcon`).
+  Consumida pelos chips do bloco, pela vitrine do card, pelo picker, pelo painel admin e pelo diálogo
+  de ícone. `badgeCategoryLabel` em `backend/domain/gamification/badge-category-rules.ts` é a fonte
+  única dos nomes (Conquista/Marca/Momento/Mundo); `badgeCategoryChipClass` congela as cores dos chips
+  — o pill do catálogo do admin passou a consumir as duas (S06), e o teste do badge-manager congela
+  rótulos em português e os ícones (Crown/Trophy) do cartão.
+- **DEC-245 (ADR-002):** `components/ui/profile-badge-showcase.tsx` — vitrine de medálhões `md` no
+  card de identidade (perfil próprio e de terceiro): só equipadas, máximo `EQUIP_SLOT_MAX` (3),
+  earnedAt do mais recente ao mais antigo, nome/efeito só em tooltip, **sem estado vazio** — a
+  ausência é a surpresa.
+- **DEC-246 (ADR-003):** o equipar mora só na aba **Configurações** do perfil próprio, em modo de
+  edição: `components/ui/profile-badge-equip-picker.tsx` ("Badges equipáveis", contador `Equipadas
+  (n/3)`, botão por passiva). A autoridade continua na rota POST `user-badges/[userId]/[badgeId]/equip`
+  com as frases de `equip-rules` ("Slots de passiva cheios" 409, "Badge sem passiva não é equipável"
+  400) — nenhuma mudança de rota/use case. O bloco Badges do perfil **é leitura**: perdeu o prop
+  `canEquip`, os botões e o contador; a equipada continua como estado visível (anel `ring-2
+  ring-primary` + selo do efeito no chip).
+- **Cache compartilhado do equipar (should-fix da review S03):** `lib/badges/equipped-sync.ts`
+  (`subscribeEquipped`/`markEquipped` por userId) — a casa **não tem QueryClientProvider montado**
+  (react-query está instalado, `useQuery` não é padrão da casa). O picker publica depois de a rota
+  responder; bloco e vitrine assinam e atualizam as linhas sem remontar.
+- **Gotcha medido:** em mobile o rótulo do tab do painel é `hidden sm:inline` — o nome acessível fica
+  vazio e `getByRole("tab", {name})` não acha; Radix tabs 1.1.2 **não** põe `data-value`. Seletor
+  estável: `[role="tab"][id$="trigger-badges"]`.
+- **Falha de leitura em tela tem que dizer role=alert, não estado vazio** (regra da casa, padrão
+  `ModernAdminPanel`): o picker distingue "não foi possível carregar" de "nenhuma badge com passiva".
+- **Capturas G6:** `perfil-edicao` mudou de `rolarAte` para `text=Badges equipáveis` (o controle novo
+  que a prosa nomeia), `perfil-badges` recapturada com os chips do medálhão. Guia: capítulos 7/8/9.
