@@ -611,7 +611,7 @@ export const BadgesAPI = {
     const url = limit 
       ? `/api/user-badges?userId=${userId}&limit=${limit}`
       : `/api/user-badges?userId=${userId}`
-    return fetchAPI<{ badges: any[]; recentBadges: any[]; count: number }>(url)
+    return fetchAPI<{ badges: any[]; recentBadges: any[]; count: number; progress: { badgeId: number; name: string; value: number; target: number }[] }>(url)
   },
 
   // plan-v15 S04 (R9): equipar/desequipar a passiva de um badge conquistado.

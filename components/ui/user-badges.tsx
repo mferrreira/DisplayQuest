@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { BadgesAPI } from "@/contexts/api-client"
-import { equipEffectLabel, EQUIP_SLOT_MAX } from "@/backend/domain"
+import { equipEffectLabel, EQUIP_SLOT_MAX, progressLabel } from "@/backend/domain"
 import { Trophy, Award, Star, Zap, Users, Calendar, Target, Crown } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
@@ -30,6 +30,13 @@ interface UserBadge {
   }
 }
 
+interface ProgressEntry {
+  badgeId: number
+  name: string
+  value: number
+  target: number
+}
+
 interface UserBadgesProps {
   userId: number
   showAll?: boolean
@@ -41,6 +48,7 @@ interface UserBadgesProps {
 
 export function UserBadges({ userId, showAll = false, limit = 6, className = "", canEquip = false }: UserBadgesProps) {
   const [badges, setBadges] = useState<UserBadge[]>([])
+  const [progress, setProgress] = useState<ProgressEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [equipAlert, setEquipAlert] = useState<string | null>(null)
@@ -52,11 +60,14 @@ export function UserBadges({ userId, showAll = false, limit = 6, className = "",
         setLoading(true)
         const response = await BadgesAPI.getUserBadges(userId, showAll ? undefined : limit)
         setBadges(response.badges || [])
+        // plan-v15 S10 (R7, CA4): "X de Y" da cláusula mais distante, lido do servidor.
+        setProgress(response.progress || [])
         setError(null)
       } catch (err: any) {
         console.error("Erro ao buscar badges:", err)
         setError("Erro ao carregar badges")
         setBadges([])
+        setProgress([])
       } finally {
         setLoading(false)
       }
@@ -178,7 +189,23 @@ export function UserBadges({ userId, showAll = false, limit = 6, className = "",
           <Trophy className="h-4 w-4 text-muted-foreground" />
           <span className="text-sm font-medium text-muted-foreground">Badges</span>
         </div>
-        <p className="text-xs text-muted-foreground">Nenhum badge conquistado ainda</p>
+        {progress.length > 0 ? (
+          <div className="space-y-1">
+            <span data-testid="progress-label" className="text-xs text-muted-foreground">Em progresso</span>
+            <div className="flex flex-wrap gap-2">
+              {progress.map((p) => (
+                <Badge key={p.badgeId} variant="outline" className="bg-muted/40 text-muted-foreground border-border">
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs font-medium">{p.name}</span>
+                    <span className="text-xs font-semibold">{progressLabel(p)}</span>
+                  </div>
+                </Badge>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground">Nenhum badge conquistado ainda</p>
+        )}
       </div>
     )
   }
@@ -269,6 +296,22 @@ export function UserBadges({ userId, showAll = false, limit = 6, className = "",
                 {userBadge.equipped ? "Desequipar" : "Equipar"}
               </Button>
             ))}
+        </div>
+      )}
+
+      {progress.length > 0 && (
+        <div className="space-y-1">
+          <span data-testid="progress-label" className="text-xs text-muted-foreground">Em progresso</span>
+          <div className="flex flex-wrap gap-2">
+            {progress.map((p) => (
+              <Badge key={p.badgeId} variant="outline" className="bg-muted/40 text-muted-foreground border-border">
+                <div className="flex items-center gap-1">
+                  <span className="text-xs font-medium">{p.name}</span>
+                  <span className="text-xs font-semibold">{progressLabel(p)}</span>
+                </div>
+              </Badge>
+            ))}
+          </div>
         </div>
       )}
     </div>

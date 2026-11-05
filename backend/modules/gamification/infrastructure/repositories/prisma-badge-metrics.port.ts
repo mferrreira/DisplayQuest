@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/database/prisma"
+import { averageWeeklyHoursFrom, maxConsecutiveDaysFrom } from "@/backend/domain"
 import type { MetricId } from "@/backend/domain"
 import type { BadgeMetricsPort } from "@/backend/modules/gamification/application/ports/badge-metrics.port"
 
@@ -7,6 +8,11 @@ import type { BadgeMetricsPort } from "@/backend/modules/gamification/applicatio
  * registro é uma contagem/soma sobre a tabela que a produz; a fonte da contagem é a
  * autoridade REAL da pessoa naquela tabela (uploadedBy, approvedBy, authorId, roles),
  * nunca projeção de lista. Métricas de papel devolvem 0/1.
+ *
+ * plan-v15 S10 (R7): as 6 métricas-base do caminho legado (tasks_completed, points,
+ * projects_joined, work_sessions, weekly_hours_avg, streak_days) também são medidas aqui,
+ * com as MESMAS consultas congeladas do `createPrismaUserStatsPort` — o progresso "X de Y"
+ * lê os 35 ids pela mesma porta, sem segunda fonte de contagem.
  */
 
 const PROFILE_FIELDS = [
@@ -31,6 +37,8 @@ export function createPrismaBadgeMetricsPort(): BadgeMetricsPort {
         select: {
           roles: true,
           weekHours: true,
+          completedTasks: true,
+          points: true,
           cpf: true,
           registrationNumber: true,
           course: true,
@@ -49,6 +57,35 @@ export function createPrismaBadgeMetricsPort(): BadgeMetricsPort {
       const values: Partial<Record<MetricId, number>> = {}
       for (const id of ids) {
         switch (id) {
+          case "tasks_completed":
+            values[id] = user.completedTasks
+            break
+          case "points":
+            values[id] = user.points
+            break
+          case "projects_joined":
+            values[id] = await prisma.project_members.count({ where: { userId } })
+            break
+          case "work_sessions":
+            values[id] = await prisma.work_sessions.count({ where: { userId } })
+            break
+          case "weekly_hours_avg": {
+            const samples = await prisma.weekly_hours_history.findMany({
+              where: { userId },
+              orderBy: { weekStart: "desc" },
+              take: 4,
+            })
+            values[id] = averageWeeklyHoursFrom(samples.map((row) => ({ totalHours: row.totalHours })))
+            break
+          }
+          case "streak_days": {
+            const dates = await prisma.daily_logs.findMany({
+              where: { userId },
+              orderBy: { date: "asc" },
+            })
+            values[id] = maxConsecutiveDaysFrom(dates.map((row) => row.date))
+            break
+          }
           case "tasks_created":
             values[id] = await prisma.tasks.count({ where: { createdBy: userId } })
             break

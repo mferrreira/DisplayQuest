@@ -4,6 +4,7 @@ export * from "./badge-rules";
 export * from "./metric-registry";
 export * from "./equip-rules";
 export * from "./passive-rules";
+export * from "./progress-rules";
 export * from "./board-tracks";
 export * from "./month-close-rules";
 export * from "./month-adjust-rules";

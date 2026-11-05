@@ -26,6 +26,7 @@ import {
   UpdateBadgeUseCase,
 } from "@/backend/modules/gamification/application/use-cases/badge-management.use-cases"
 import { EquipUserBadgeUseCase } from "@/backend/modules/gamification/application/use-cases/equip-user-badge.use-case"
+import { ListBadgeProgressUseCase } from "@/backend/modules/gamification/application/use-cases/list-badge-progress.use-case"
 import type { BadgeCatalogPort } from "@/backend/modules/gamification/application/ports/badge-catalog.port"
 import type { BadgeMetricsPort } from "@/backend/modules/gamification/application/ports/badge-metrics.port"
 import type { EquippedPassivesPort } from "@/backend/modules/gamification/application/ports/equipped-passives.port"
@@ -72,6 +73,8 @@ export class GamificationModule {
   readonly deleteBadge: UseCaseExecute<DeleteBadgeUseCase>
   readonly listUserBadges: UseCaseExecute<ListUserBadgesUseCase>
   readonly listRecentUserBadges: UseCaseExecute<ListRecentUserBadgesUseCase>
+  /** plan-v15 S10 (R7, CA4): o progresso "X de Y" das badges ativas não conquistadas. */
+  readonly listBadgeProgress: UseCaseExecute<ListBadgeProgressUseCase>
   readonly awardBadge: UseCaseExecute<AwardBadgeUseCase>
   readonly removeUserBadge: UseCaseExecute<RemoveUserBadgeUseCase>
   /** plan-v15 S04 (R9): equipar/desequipar a passiva no slot do perfil. */
@@ -118,6 +121,7 @@ export class GamificationModule {
     private readonly deleteBadgeUseCase: DeleteBadgeUseCase,
     private readonly listUserBadgesUseCase: ListUserBadgesUseCase,
     private readonly listRecentUserBadgesUseCase: ListRecentUserBadgesUseCase,
+    private readonly listBadgeProgressUseCase: ListBadgeProgressUseCase,
     private readonly awardBadgeUseCase: AwardBadgeUseCase,
     private readonly removeUserBadgeUseCase: RemoveUserBadgeUseCase,
     private readonly equipUserBadgeUseCase: EquipUserBadgeUseCase,
@@ -143,6 +147,7 @@ export class GamificationModule {
     this.deleteBadge = this.deleteBadgeUseCase.execute.bind(this.deleteBadgeUseCase)
     this.listUserBadges = this.listUserBadgesUseCase.execute.bind(this.listUserBadgesUseCase)
     this.listRecentUserBadges = this.listRecentUserBadgesUseCase.execute.bind(this.listRecentUserBadgesUseCase)
+    this.listBadgeProgress = this.listBadgeProgressUseCase.execute.bind(this.listBadgeProgressUseCase)
     this.awardBadge = this.awardBadgeUseCase.execute.bind(this.awardBadgeUseCase)
     this.removeUserBadge = this.removeUserBadgeUseCase.execute.bind(this.removeUserBadgeUseCase)
     this.equipUserBadge = this.equipUserBadgeUseCase.execute.bind(this.equipUserBadgeUseCase)
@@ -224,6 +229,12 @@ export function createGamificationModule(options: GamificationModuleFactoryOptio
     new DeleteBadgeUseCase(ports.badges),
     new ListUserBadgesUseCase(ports.userBadges),
     new ListRecentUserBadgesUseCase(ports.userBadges),
+    new ListBadgeProgressUseCase({
+      users: ports.users,
+      badges: ports.badges,
+      userBadges: ports.userBadges,
+      metrics: ports.metrics,
+    }),
     new AwardBadgeUseCase(ports.badges, ports.userBadges),
     new RemoveUserBadgeUseCase(ports.userBadges),
     new EquipUserBadgeUseCase(ports.userBadges, ports.badges),
