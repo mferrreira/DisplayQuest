@@ -26,6 +26,7 @@ function toBadge(row: badges): Badge {
     criteria: row.criteria as Badge["criteria"],
     slug: row.slug,
     effect: row.effect as Badge["effect"],
+    iconKey: row.iconKey,
     isActive: row.isActive,
     createdAt: row.createdAt,
     createdBy: row.createdBy,

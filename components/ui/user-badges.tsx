@@ -26,6 +26,8 @@ interface UserBadge {
     criteria?: any
     slug?: string | null
     effect?: { kind: "bonus" | "penaltyReduction"; pct: number } | null
+    /** plan-v16 S04 (R6): CHAVE do arquivo no bucket; o binário sai pela rota autenticada. */
+    iconKey?: string | null
     isActive: boolean
   }
 }
@@ -241,7 +243,15 @@ export function UserBadges({ userId, showAll = false, limit = 6, className = "",
                   className={`${userBadge.equipped ? "ring-2 ring-primary" : ""} ${getCategoryColor(userBadge.badge.category)} cursor-help transition-all hover:scale-105`}
                 >
                   <div className="flex items-center gap-1">
-                    {getCategoryIcon(userBadge.badge.category)}
+                    {userBadge.badge.iconKey ? (
+                      <img
+                        src={`/api/badges/${userBadge.badge.id}/icon/file?v=${encodeURIComponent(userBadge.badge.iconKey)}`}
+                        alt={`Ícone do ${userBadge.badge.name}`}
+                        className="h-4 w-4 object-contain"
+                      />
+                    ) : (
+                      getCategoryIcon(userBadge.badge.category)
+                    )}
                     <span className="text-xs font-medium">
                       {userBadge.badge.name}
                     </span>

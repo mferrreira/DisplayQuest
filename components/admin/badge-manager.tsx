@@ -33,6 +33,8 @@ interface BadgeData {
   color?: string
   category: 'achievement' | 'milestone' | 'special' | 'social'
   criteria?: BadgeCriteriaV2 | null
+  /** plan-v16 S04 (R6): CHAVE do ícone no bucket; o binário sai pela rota autenticada. */
+  iconKey?: string | null
   isActive: boolean
   createdBy: number
 }
@@ -56,6 +58,8 @@ const categoryColors = {
 export function BadgeManager() {
   const [badges, setBadges] = useState<BadgeData[]>([])
   const [loading, setLoading] = useState(true)
+  // plan-v16 S04: a frase recusada pela rota chega na tela (a rota decide a autoridade, R3).
+  const [iconAlert, setIconAlert] = useState<string | null>(null)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [editingBadge, setEditingBadge] = useState<BadgeData | null>(null)
   const [formData, setFormData] = useState<BadgeData>({
@@ -123,6 +127,21 @@ export function BadgeManager() {
       loadBadges()
     } catch (error) {
       console.error('Error deleting badge:', error)
+    }
+  }
+
+  /** plan-v16 S04 (R6): o input de cada cartão manda o arquivo à rota; a recusa chega como alerta. */
+  const handleUploadIcon = async (badgeId: number, file: File | undefined) => {
+    if (!file) return
+    try {
+      await BadgesAPI.uploadIcon(badgeId, file)
+      setIconAlert(null)
+      loadBadges()
+    } catch (error) {
+      const message = typeof (error as Error)?.message === "string" && (error as Error).message
+        ? (error as Error).message
+        : "Não foi possível enviar o ícone"
+      setIconAlert(message)
     }
   }
 
@@ -339,6 +358,12 @@ export function BadgeManager() {
         </Dialog>
       </div>
 
+      {iconAlert && (
+        <p role="alert" className="text-sm text-destructive">
+          {iconAlert}
+        </p>
+      )}
+
       {/* Badges Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {badges.map((badge) => (
@@ -383,6 +408,27 @@ export function BadgeManager() {
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground mb-4">{badge.description}</p>
+
+              {/* plan-v16 S04 (R6): a imagem do arquivo quando há chave; o envio vai à rota. */}
+              <div className="flex items-center gap-3 mb-2">
+                {badge.iconKey && (
+                  <img
+                    src={`/api/badges/${badge.id}/icon/file?v=${encodeURIComponent(badge.iconKey)}`}
+                    alt={`Ícone do ${badge.name}`}
+                    className="h-10 w-10 object-contain"
+                  />
+                )}
+                <label className="cursor-pointer text-xs text-muted-foreground underline underline-offset-2">
+                  <input
+                    type="file"
+                    accept="image/png,image/webp"
+                    aria-label={`Enviar ícone do ${badge.name}`}
+                    className="sr-only"
+                    onChange={(event) => handleUploadIcon(badge.id!, event.target.files?.[0])}
+                  />
+                  Enviar ícone
+                </label>
+              </div>
               
               {badge.criteria && Array.isArray(badge.criteria.clauses) && badge.criteria.clauses.length > 0 && (
                 <div className="space-y-2">

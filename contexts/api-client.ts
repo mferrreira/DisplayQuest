@@ -599,6 +599,23 @@ export const BadgesAPI = {
       method: "DELETE",
     }),
 
+  // plan-v16 S04 (R6): subir o arquivo de ícone — a rota converte a WebP no servidor.
+  uploadIcon: (id: number, file: File) =>
+    fetchAPI<{ success: boolean; iconKey: string; badge: any }>(`/api/badges/${id}/icon`, {
+      method: "PUT",
+      body: (() => {
+        const form = new FormData()
+        form.set("file", file)
+        return form
+      })(),
+    }),
+
+  // Remover o arquivo de ícone
+  removeIcon: (id: number) =>
+    fetchAPI<{ success: boolean }>(`/api/badges/${id}/icon`, {
+      method: "DELETE",
+    }),
+
   // Conceder badge a um usuário
   award: (userId: number, badgeId: number) =>
     fetchAPI<{ success: boolean }>("/api/badges/award", {
