@@ -45,7 +45,7 @@ A aba **Horas** é a leitura consolidada do tempo registrado. As colunas são **
 | **Conclusões** | a fila global de solicitações de conclusão de atividades, de todos os projetos (aba *Conclusões* abaixo) |
 | **Voluntários** | gerenciar a equipe de cada projeto — adicionar e remover pessoas (seção *A aba Voluntários* abaixo) |
 | **Notificações** | enviar aviso para uma pessoa ou para o laboratório |
-| **Badges** | criar e editar distintivos: **Nome**, **Descrição**, **Categoria** e quem criou |
+| **Badges** | criar e editar distintivos: **Nome**, **Descrição**, **Categoria** e as condições de conquista — cada cláusula é **Métrica do critério** + **Valor do critério** |
 
 ## A aba Voluntários
 

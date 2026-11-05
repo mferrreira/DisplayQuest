@@ -139,6 +139,8 @@ const INTERACTIONS = [
   // (o extrato media zero `label` na tela). Agora a aba abre antes do botão.
   { id: "perfil-edicao", role: "part", route: "/dashboard/profile", aba: "Configurações", abre: "Editar Perfil", verifica: "Cancelar Edição", rolarAte: "text=Dados para os documentos oficiais" },
   { id: "perfil-configuracoes", role: "part", route: "/dashboard/profile", aba: "Configurações" },
+  // plan-v15 S12 (G6): o bloco Badges do perfil — passiva equipada e a lista Em progresso.
+  { id: "perfil-badges", role: "part", route: "/dashboard/profile", verifica: "Em progresso", rolarAte: "text=Em progresso" },
   { id: "loja-minhas-compras", role: "part", route: "/dashboard/loja", aba: "Minhas Compras" },
   { id: "controle-de-sessao", role: "part", route: "/dashboard/profile", abre: "Abrir controle de sessao" },
   { id: "relatorios-gerar-lote", role: "coord", route: "/dashboard/weekly-reports", abre: "Gerar em Lote" },

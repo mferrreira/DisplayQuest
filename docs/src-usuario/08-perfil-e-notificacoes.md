@@ -83,6 +83,16 @@ A faixa tem a altura da moldura 21:9, largura plena; abaixo dela ficam as cifras
 
 A capa é sua, e quem a escreve é você — ou quem tem permissão de gerenciar contas. Quem a **vê** é qualquer pessoa autenticada: ela aparece no seu perfil, no perfil aberto por outra pessoa e no cartão de quem está em 1º lugar no ranking.
 
+## Os distintivos no perfil
+
+Abaixo das três abas, o perfil tem o bloco **Badges**. Os conquistados aparecem em cartões com o nome e a categoria; ao passar o cursor, o cartão explica a conquista e, quando o distintivo tem passiva, diz `Passiva: +5% pontos` — ou `Equipada: +5% pontos` quando ela está ativa. No perfil da própria pessoa, o título traz o contador **Equipadas (n/3)** e cada distintivo com passiva tem o botão **Equipar**, que depois vira **Desequipar**. Só a própria pessoa equipar; o perfil aberto por outra pessoa mostra os cartões sem botões. Equipar obedece três regras: o distintivo tem de ser conquistado, tem de ter passiva (*"Badge sem passiva não é equipável"*), e há no máximo três equipadas — a quarta recebe *"Slots de passiva cheios"*.
+
+O bloco lista também os distintivos ainda não conquistados, sob o rótulo **Em progresso**, cada chip com o nome e o número `X de Y` da sua condição. Quem não tem nenhum conquistado vê só essa lista; quando não há progresso a mostrar, o bloco diz *"Nenhum badge conquistado ainda"*.
+
+```foto perfil-badges titulo="O bloco Badges no perfil: a passiva equipada e a lista Em progresso"
+O chip de progresso mostra o nome do distintivo e `X de Y`; a passiva ativa aparece marcada no cartão, com o efeito escrito.
+```
+
 ## Os logs diários
 
 Os **Logs Diários** são o rastro das sessões encerradas. Você edita os seus próprios logs. **Coordenador** é a única função que enxerga os logs de todas as pessoas.

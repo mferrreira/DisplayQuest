@@ -12,6 +12,8 @@ A **Loja de Recompensas** tem duas abas: **Recompensas**, com o que está dispon
 Cada recompensa mostra o custo em pontos. Quando os pontos não cobrem o custo, o botão aparece como **Pontos insuficientes** e não responde ao clique.
 ```
 
+Com uma passiva de bônus equipada, a recompensa mostra o preço duas vezes: o preço efetivo, em destaque, e o preço da tabela riscado, escrito `de 100`. O **Resgatar** obedece o preço efetivo — e **Pontos insuficientes** é a comparação com ele. O resgate reserva os pontos do preço efetivo.
+
 ## Resgatar uma recompensa
 
 1. Abra **Loja** e fique na aba **Recompensas**.
@@ -76,3 +78,9 @@ O que alimenta cada coluna:
 ## Distintivos
 
 Além dos pontos, o sistema concede **distintivos** — marcas de conquista, agrupadas por categoria. Quem tem a permissão de gerenciar distintivos cria e edita os modelos no Painel Administrativo; as pessoas os recebem e os veem no próprio perfil.
+
+O catálogo traz 50 distintivos. Cada um é concedido quando a pessoa atinge as condições dele — tarefas concluídas, sessões, horas, semanas, dias seguidos, compras, atestados, issues resolvidos, eventos de laboratório, subtasks, meses no quadro. A concessão acontece no episódio: uma compra na loja, um atestado gerado, um issue resolvido, um mês fechado no quadro — a pessoa recebe o distintivo ali, sem precisar de tarefa.
+
+Alguns distintivos têm **passiva** — um efeito permanente que a pessoa escolhe ativar: **+X% pontos** nas premiações, **−X% de penalidade**, e, nas de bônus, desconto no preço da loja. Os botões **Equipar** e **Desequipar**, o contador **Equipadas (n/3)** e as regras de ativação estão descritos no capítulo 8, no bloco Badges do perfil.
+
+Os distintivos ainda não conquistados aparecem no perfil sob o rótulo **Em progresso**, cada um com o número `X de Y` da sua condição — por exemplo `Vinte e Cinco Tarefas 12 de 25`. Quando o número chega ao alvo, o distintivo é concedido no episódio seguinte.
