@@ -1,6 +1,7 @@
-import { NotFoundError, averageWeeklyHoursFrom, maxConsecutiveDaysFrom, selectBadgesToAward } from "@/backend/domain"
-import type { Badge } from "@/backend/domain"
+import { BASE_METRIC_IDS, NotFoundError, averageWeeklyHoursFrom, isMetricId, maxConsecutiveDaysFrom, selectBadgesToAward } from "@/backend/domain"
+import type { Badge, BadgeCriteriaV2, MetricId } from "@/backend/domain"
 import type { BadgeCatalogPort } from "@/backend/modules/gamification/application/ports/badge-catalog.port"
+import type { BadgeMetricsPort } from "@/backend/modules/gamification/application/ports/badge-metrics.port"
 import type { GamificationUsersPort } from "@/backend/modules/gamification/application/ports/gamification-users.port"
 import type { UserBadgePort } from "@/backend/modules/gamification/application/ports/user-badge.port"
 import type { UserStatsPort } from "@/backend/modules/gamification/application/ports/user-stats.port"
@@ -24,6 +25,8 @@ export interface EvaluateUserBadgesDependencies {
   badges: BadgeCatalogPort
   userBadges: UserBadgePort
   stats: UserStatsPort
+  /** plan-v15 S03: métricas extras do registro, medida só quando algum criteria ativo pede. */
+  metrics: BadgeMetricsPort
 }
 
 export class EvaluateUserBadgesUseCase {
@@ -60,6 +63,21 @@ export class EvaluateUserBadgesUseCase {
       maxConsecutiveDays: maxConsecutiveDaysFrom(dailyDates),
     }
 
+    // plan-v15 S03 (R2, lazy): métricas extras são medidas só quando algum criteria ativo
+    // pede. Sem pedido, a porta não é tocada — os testes de unit continuam sem banco no ar.
+    const extraIds = new Set<MetricId>()
+    for (const badge of activeBadges) {
+      const criteria = badge.criteria
+      if (criteria && typeof criteria === "object" && (criteria as { version?: unknown }).version === 2) {
+        for (const clause of (criteria as BadgeCriteriaV2).clauses) {
+          if (isMetricId(clause.metric) && !BASE_METRIC_IDS.includes(clause.metric)) {
+            extraIds.add(clause.metric)
+          }
+        }
+      }
+    }
+    const extraValues = extraIds.size > 0 ? await this.dependencies.metrics.computeValues(user.id, [...extraIds]) : {}
+
     // plan-v15 S01: as métricas do registro medidos pelas MESMAS portas. O motor v2 lê
     // só ids do registro; métrica sem fonte medida fica ausente e nunca concede.
     const metricValues = {
@@ -69,6 +87,7 @@ export class EvaluateUserBadgesUseCase {
       work_sessions: workSessionsCount,
       weekly_hours_avg: averageWeeklyHoursFrom(weeklySamples),
       streak_days: maxConsecutiveDaysFrom(dailyDates),
+      ...extraValues,
     }
 
     const toAward = selectBadgesToAward({

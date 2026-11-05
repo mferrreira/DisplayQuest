@@ -10,11 +10,53 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { METRICS, METRIC_IDS, isMetricId, criteriaV2Met } from "@/backend/domain";
+import { BASE_METRIC_IDS, METRICS, METRIC_IDS, isMetricId, criteriaV2Met } from "@/backend/domain";
 
 describe("domain/gamification: metric-registry", () => {
-  it("vocabulário fechado das métricas base", () => {
+  it("vocabulário fechado das métricas do registro completo", () => {
     expect(METRIC_IDS).toEqual([
+      "tasks_completed",
+      "tasks_created",
+      "subtasks_completed",
+      "points",
+      "projects_joined",
+      "projects_led",
+      "deliverables_added",
+      "goals_defined",
+      "attachments_uploaded",
+      "activity_evidence_uploaded",
+      "activities_responsible",
+      "activities_completed",
+      "work_sessions",
+      "sessions_hours_total",
+      "weekly_hours_avg",
+      "weeks_perfect",
+      "streak_days",
+      "purchases_count",
+      "points_spent",
+      "reports_written",
+      "weekly_reports_count",
+      "certificates_generated",
+      "certificate_months",
+      "issues_reported",
+      "issues_resolved",
+      "lab_events_count",
+      "lab_responsibilities_completed",
+      "months_active",
+      "months_top3",
+      "months_won",
+      "profile_fields_filled",
+      "is_coordenador",
+      "is_gerente",
+      "is_laboratorista",
+      "is_gerente_projeto",
+    ]);
+    for (const metric of METRICS) {
+      expect(metric.label).toBeTruthy();
+      expect(["points", "count", "hours", "days"]).toContain(metric.unit);
+    }
+    expect(METRICS.map((m) => m.id)).toEqual([...METRIC_IDS]);
+    expect(BASE_METRIC_IDS).toEqual([
       "tasks_completed",
       "points",
       "projects_joined",
@@ -22,11 +64,6 @@ describe("domain/gamification: metric-registry", () => {
       "weekly_hours_avg",
       "streak_days",
     ]);
-    for (const metric of METRICS) {
-      expect(metric.label).toBeTruthy();
-      expect(["points", "count", "hours", "days"]).toContain(metric.unit);
-    }
-    expect(METRICS.map((m) => m.id)).toEqual([...METRIC_IDS]);
   });
 
   it("isMetricId aceita só métricas do registro", () => {

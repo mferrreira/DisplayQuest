@@ -82,7 +82,7 @@ vi.mock("@/backend/composition/root", () => {
   ) as never;
 
   const realGamification = createGamificationModule({
-    ports: { badges, users: unused, awardHistory: unused, userBadges: unused, stats: unused },
+    ports: { badges, users: unused, awardHistory: unused, userBadges: unused, stats: unused, metrics: unused },
   });
 
   return {

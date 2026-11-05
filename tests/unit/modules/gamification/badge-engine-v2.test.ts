@@ -17,6 +17,7 @@ import { EvaluateUserBadgesUseCase } from "@/backend/modules/gamification/applic
 import type { BadgeCatalogPort } from "@/backend/modules/gamification/application/ports/badge-catalog.port";
 import type { GamificationUsersPort } from "@/backend/modules/gamification/application/ports/gamification-users.port";
 import type { UserBadgePort } from "@/backend/modules/gamification/application/ports/user-badge.port";
+import type { BadgeMetricsPort } from "@/backend/modules/gamification/application/ports/badge-metrics.port";
 import type { UserStatsPort } from "@/backend/modules/gamification/application/ports/user-stats.port";
 
 const v2Badge = (id: number, clauses: Array<{ metric: string; op: ">="; value: number }>): Badge => ({
@@ -154,7 +155,19 @@ function makeDeps() {
       return stats.daily;
     },
   } as unknown as UserStatsPort & { projects: number; sessions: number; weekly: Array<{ totalHours: number }>; daily: Date[] };
-  return { users, badges, userBadges, stats };
+  const metrics = {
+    values: {} as Partial<Record<string, number>>,
+    calledIds: [] as string[],
+    async computeValues(_userId: number, ids: string[]) {
+      metrics.calledIds.push(...ids);
+      const out: Partial<Record<string, number>> = {};
+      for (const id of ids) {
+        if (id in metrics.values) out[id] = metrics.values[id];
+      }
+      return out;
+    },
+  } as unknown as BadgeMetricsPort & { values: Partial<Record<string, number>>; calledIds: string[] };
+  return { users, badges, userBadges, stats, metrics };
 }
 
 describe("EvaluateUserBadgesUseCase com criteria v2", () => {
@@ -204,5 +217,28 @@ describe("EvaluateUserBadgesUseCase com criteria v2", () => {
 
     expect(awarded).toHaveLength(0);
     expect(deps.userBadges.store).toHaveLength(1);
+  });
+
+  it("métrica extra do registro é medida pela porta e concede o badge", async () => {
+    const deps = makeDeps();
+    deps.metrics.values.sessions_hours_total = 10;
+    deps.badges.store.push(v2Badge(14, [{ metric: "sessions_hours_total", op: ">=", value: 10 }]));
+
+    const useCase = new EvaluateUserBadgesUseCase(deps);
+    const awarded = await useCase.execute(1);
+
+    expect(awarded.map((b) => b.id)).toEqual([14]);
+    expect(deps.metrics.calledIds).toEqual(["sessions_hours_total"]);
+  });
+
+  it("criteria só com métricas base não toca a porta de métricas", async () => {
+    const deps = makeDeps();
+    deps.users.data.completedTasks = 5;
+    deps.badges.store.push(v2Badge(15, [{ metric: "tasks_completed", op: ">=", value: 5 }]));
+
+    const useCase = new EvaluateUserBadgesUseCase(deps);
+    await useCase.execute(1);
+
+    expect(deps.metrics.calledIds).toEqual([]);
   });
 });
