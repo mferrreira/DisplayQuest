@@ -27,7 +27,7 @@ import {
   type BadgeClause,
   type BadgeCriteriaV2,
 } from "@/backend/domain"
-import { BadgeCategoryIcon, badgeCategoryChipClass } from "@/components/ui/badge-medallion"
+import { BadgeMedallion, badgeCategoryChipClass } from "@/components/ui/badge-medallion"
 
 interface BadgeData {
   id?: number
@@ -337,13 +337,23 @@ export function BadgeManager() {
                 <Label>Ícone do badge</Label>
                 <div className="flex items-center gap-3">
                   {iconFile && typeof URL.createObjectURL === "function" ? (
+                    // Pré-visualização local do arquivo recém-escolido: o byte ainda não
+                    // tem id nem chave, a peça não pode servê-lo.
                     <img src={URL.createObjectURL(iconFile)} alt="Pré-visualização do ícone" className="h-10 w-10 object-contain" />
                   ) : (
+                    // plan-v19 S01 (DEC-251): o ícone salvo entra pela peça única —
+                    // círculo com contorno na cor da badge.
                     editingBadge?.iconKey && (
-                      <img
-                        src={`/api/badges/${editingBadge.id}/icon/file?v=${encodeURIComponent(editingBadge.iconKey)}`}
-                        alt={`Ícone do ${editingBadge.name}`}
-                        className="h-10 w-10 object-contain"
+                      <BadgeMedallion
+                        badge={{
+                          id: editingBadge.id!,
+                          name: editingBadge.name,
+                          iconKey: editingBadge.iconKey,
+                          icon: editingBadge.icon ?? null,
+                          color: editingBadge.color ?? null,
+                          category: editingBadge.category,
+                        }}
+                        size="md"
                       />
                     )
                   )}
@@ -385,13 +395,20 @@ export function BadgeManager() {
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between">
                 <div className="flex items-center space-x-3">
-                  <div 
-                    // dark-mode:ok (branco sobre cor dinâmica do badge)
-                    className="w-10 h-10 rounded-full flex items-center justify-center text-white text-lg"
-                    style={{ backgroundColor: badge.color }}
-                  >
-                    {badge.icon || <BadgeCategoryIcon category={badge.category} className="h-5 w-5" />}
-                  </div>
+                  {/* plan-v19 S01 (DEC-251, INV4): o cartão consome a peça única —
+                      ícone do bucket dentro do círculo com contorno na cor da badge;
+                      sem chave, o glifo na cor do badge ou o ícone da categoria. */}
+                  <BadgeMedallion
+                    badge={{
+                      id: badge.id!,
+                      name: badge.name,
+                      iconKey: badge.iconKey ?? null,
+                      icon: badge.icon ?? null,
+                      color: badge.color ?? null,
+                      category: badge.category,
+                    }}
+                    size="md"
+                  />
                   <div>
                     <CardTitle className="text-lg">{badge.name}</CardTitle>
                     <Badge 
@@ -424,16 +441,9 @@ export function BadgeManager() {
             <CardContent>
               <p className="text-sm text-muted-foreground mb-4">{badge.description}</p>
 
-              {/* plan-v16 S04 (R6): a imagem do arquivo quando há chave; o envio mora no diálogo. */}
-              {badge.iconKey && (
-                <div className="mb-2">
-                  <img
-                    src={`/api/badges/${badge.id}/icon/file?v=${encodeURIComponent(badge.iconKey)}`}
-                    alt={`Ícone do ${badge.name}`}
-                    className="h-10 w-10 object-contain"
-                  />
-                </div>
-              )}
+              {/* plan-v19 S01 (DEC-251): a imagem do arquivo mora no círculo do cabeçalho
+                  (peça única); o envio mora no diálogo. Nada de img cru no corpo. */}
+
               
               {badge.criteria && Array.isArray(badge.criteria.clauses) && badge.criteria.clauses.length > 0 && (
                 <div className="space-y-2">

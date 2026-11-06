@@ -49,13 +49,27 @@ beforeEach(() => {
 });
 
 describe("cartões do Painel Administrativo", () => {
-  it("cartão com chave mostra o img do arquivo; cartão sem chave não mostra", async () => {
+  it("cartão com chave mostra o img do arquivo dentro do círculo da peça; cartão sem chave não mostra", async () => {
     render(<BadgeManager />);
     await screen.findByText("Gerenciar Badges");
     const img = await screen.findByRole("img", { name: "Ícone do Selo 3" });
     expect(img.getAttribute("src")).toContain("/api/badges/3/icon/file");
     expect(img.getAttribute("src")).toContain("v=badges%2F3%2Fx.webp");
+    // DEC-251: o cartão consome a peça única — o img mora dentro de um círculo
+    // arredondado com contorno, e não há img cru duplicado no cartão.
+    expect(img.parentElement!.className).toContain("rounded-full");
+    expect(img.parentElement!.className).toMatch(/\bborder/);
+    expect(screen.getAllByRole("img", { name: "Ícone do Selo 3" })).toHaveLength(1);
     expect(screen.queryByRole("img", { name: "Ícone do Selo 4" })).toBeNull();
+  });
+
+  it("diálogo de edição com chave mostra o ícone salvo dentro do círculo da peça", async () => {
+    render(<BadgeManager />);
+    fireEvent.click(await screen.findByRole("button", { name: "Editar Selo 3" }));
+    const img = await screen.findByRole("img", { name: "Ícone do Selo 3" });
+    expect(img.getAttribute("src")).toContain("/api/badges/3/icon/file");
+    expect(img.parentElement!.className).toContain("rounded-full");
+    expect(img.parentElement!.className).toMatch(/\bborder/);
   });
 
   it("enviar arquivo pelo diálogo de edição sobe o ícone no salvar e recarrega a lista", async () => {
@@ -94,6 +108,7 @@ describe("chips do perfil", () => {
     render(<UserBadges userId={5} limit={8} />);
     const img = await screen.findByRole("img", { name: "Ícone do Selo 3" });
     expect(img.getAttribute("src")).toContain("/api/badges/3/icon/file");
+    expect(img.parentElement!.className).toContain("rounded-full");
     expect(screen.queryByRole("img", { name: "Ícone do Selo 4" })).toBeNull();
     expect(screen.getByText("Selo 4")).toBeInTheDocument();
     expect(screen.getByText("Selo 3")).toBeInTheDocument();
