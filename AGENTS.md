@@ -370,7 +370,9 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   os DEC-211..223 dele seguem reservados no arquivo. **Atualizado em 2026-11-05:** DEC-224 (donos),
   DEC-226 plan-v9, DEC-232..236 plan-v10, DEC-240 plan-v12, DEC-242 em uso, **DEC-243 plan-v16**
   (ícone de badge no bucket pelo desenho de capa, conversão a WebP obrigatória na escrita, fonte
-  Lucide ISC). **Próxima livre: DEC-247.**
+  Lucide ISC). **Atualizado em 2026-11-06:** **DEC-247..250 plan-v18** (vitrine, cartões de badge,
+  leaderboard com abas; DEC-250 revoga a posição da DEC-247 a pedido do dono).
+  **Próxima livre: DEC-251.**
 - **Subtask (V4-4, DEC-78..83 → regra atual = DEC-97/98/189/224):** tabela `task_subtasks` (sem FK para
   `users` — subtask não tem
   responsável próprio), base gravada em `tasks.points` = `10 + 10·n` (DEC-97 baixou a 5; o dono restaurou
@@ -1256,6 +1258,44 @@ leitura do texto visível. São observações medidas na instância real, **não
 - **Capturas G6:** `admin-badges` (nova entrada no script, aba Badges, verificação "Gerenciar Badges")
   e `perfil-badges` recapturadas com o catálogo de ícones aplicado (5432 e 5433). Guia: capítulo 9
   documenta a aba Badges e o botão "Enviar ícone"; capítulo 8 descreve o ícone nos cartões.
+
+## plan-v18 — vitrine, cartões de badge, leaderboard com abas, projetos sem abas (2026-11-06, DEC-247..250)
+
+- **Estado:** `fechado` em 2026-11-06, 5 fatias (S01..S05), plano em
+  `~/Projetos/displayquest-planos/plans/plan-v18-vitrine-e-leaderboard/`. Gate no fechamento:
+  suíte **297 arquivos / 2914 testes** na 5433, tsc 0, lint exit 0, arch 1314 módulos / 5550
+  dependências sem violação, docs:build/ docs:check verdes. Commits: S01 `51d3bda` (+ conserto
+  DEC-250 `7f83019`), S02 `4c3a305`, S03 `ee105cd`, S04 `dd60f92`, S05 `870a21c`.
+- **DEC-247 (ADR-004, posição revogada pela DEC-250):** a vitrine `ProfileBadgeShowcase` saiu da
+  faixa do nome para a coluna do nome, acima das roles. O dono recusou a posição medida na tela
+  ("colada no canto esquerdo") em 2026-11-06.
+- **DEC-250 (conserto do dono, mesma data):** a vitrine mora no **canto direito** do cartão de
+  identidade, onde a linha das funções morava antes do S01; as funções voltam para a coluna do
+  nome, abaixo do email. Perfil próprio e perfil de terceiro. Regras de seleção de DEC-245 intactas.
+  Guarda `profile-card-equipped-badges.test.tsx` reescrita: funções dentro da coluna `min-w-0`,
+  vitrine fora dela, dentro da coluna com `sm:items-end`.
+- **DEC-248 (ADR-005):** o bloco Badges do perfil lista **só as conquistadas**, cada uma em cartão
+  discreto mais largo que alto: medálhão `sm`, nome, selo do efeito quando a badge tem passiva
+  (`Passiva: +X% pontos` / `Equipada: +X% pontos`), data relativa, e a equipada com contorno em
+  destaque (`ring-2 ring-primary`). Os chips "Em progresso" saíram do bloco; o GET
+  `/api/user-badges` continua devolvendo `progress` para outras telas.
+- **DEC-249 (ADR-006):** `/dashboard/leaderboard` tem duas abas abertas a todo autenticado:
+  **Projetos** por primeiro (padrão), com o `ProjectManagerDashboard` intacto
+  (`scopeDescription` "Todos os projetos", `onProjectSelect` abre o detalhe), e **Pessoas**, o
+  ranking de hoje intacto. `/dashboard/projetos` perde as abas e o painel: só filtros, contagem e
+  lista. TaskProvider entrou na lista de caminhos do `client-layout` para a rota do leaderboard.
+  Consequência aberta: a chave `DASHBOARD_PROJECT_MANAGER` ficou sem consumidor vivo (sobram a
+  definição em `permissions.ts` e os guardas `permission-keys.test.ts` / `rbac-ui-parity.test.ts`);
+  a decisão de removê-la (DEC-251, contador de chaves cairia para 23) ficou para o dono.
+- **Gotchas medidos do plano:** Radix Tabs 1.1.2 seleciona por `mousedown` — `fireEvent.click`
+  sozinho não ativa a aba, e em mobile o rótulo do tab é `hidden sm:inline` (`getByRole("tab", {name})`
+  não acha; seletor estável `[role="tab"][id$="trigger-<value>"]`). A suíte de página do ranking
+  usa o helper `renderPessoas` (mouseDown + waitFor `aria-selected`). A entrada `aba` do loop de
+  SCREENS do script de captura não existe — só INTERACTIONS trata `aba`; `perfil-badges` verifica
+  o nome de um badge semeado ("Vinte e Cinco Tarefas"), porque o texto "Em progresso" saiu da tela.
+- **Regra de infraestrutura (2026-11-06, dono):** nenhum agente sobe `next dev`; a tela é só o
+  container docker em 3000, reconstruído para o código chegar (`docker compose build app` em
+  background, conferir a data da imagem). Capturas apontam para 3000.
 
 ## plan-v17 — badges visuais: medálhão, vitrine, equipar na Configurações (2026-11-05, DEC-244..246)
 
