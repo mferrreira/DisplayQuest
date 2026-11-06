@@ -73,7 +73,7 @@ const SCREENS = [
   // --- coordenador: superficie completa ---
   { id: "quadro-tarefas", role: "coord", route: "/dashboard", expect: { url: /\/dashboard$/, anyOf: ["Quadro", "Tarefa"] } },
   { id: "resumo-home", role: "coord", route: "/dashboard", expect: { url: /\/dashboard$/, anyOf: ["Meta da semana", "Estatísticas do quadro"] }, capturarElemento: 'section[aria-label="Resumo do laboratório"]' },
-  { id: "projetos", role: "coord", route: "/dashboard/projetos", aba: "Lista de Projetos", expect: { url: /\/dashboard\/projetos/, anyOf: ["Projeto"] } },
+  { id: "projetos", role: "coord", route: "/dashboard/projetos", expect: { url: /\/dashboard\/projetos/, anyOf: ["Projeto"] } },
   { id: "laboratorio", role: "coord", route: "/dashboard/laboratorio", expect: { url: /\/dashboard\/laboratorio/, anyOf: ["Laboratório", "Plantão"] } },
   { id: "relatorios-semanais", role: "coord", route: "/dashboard/weekly-reports", expect: { url: /\/dashboard\/weekly-reports/, anyOf: ["Relatório"] } },
   { id: "painel-administrativo", role: "coord", route: "/dashboard/admin", expect: { url: /\/dashboard\/admin/, anyOf: ["Administrativo", "Usuário"] } },
@@ -92,7 +92,6 @@ const SCREENS = [
   { id: "quadro-tarefas-participante", role: "part", route: "/dashboard", expect: { url: /\/dashboard$/, anyOf: ["Quadro", "Tarefa"] } },
   { id: "laboratorio-participante", role: "part", route: "/dashboard/laboratorio", expect: { url: /\/dashboard\/laboratorio/, anyOf: ["Laboratório", "Plantão"] } },
   { id: "loja-participante", role: "part", route: "/dashboard/loja", expect: { url: /\/dashboard\/loja$/, anyOf: ["Loja", "Recompensa", "Ponto"] } },
-  { id: "ranking-participante", role: "part", route: "/dashboard/leaderboard", expect: { url: /\/dashboard\/leaderboard/, anyOf: ["Ranking", "Pontos"] } },
   { id: "perfil-participante", role: "part", route: "/dashboard/profile", expect: { url: /\/dashboard\/profile/, anyOf: ["Perfil"] } },
 ];
 
@@ -114,7 +113,10 @@ const VIEWPORT = { width: 1440, height: 900 };
  *              de atividade só existe com o projeto selecionado)
  */
 const INTERACTIONS = [
-  { id: "dashboard-projetos", role: "coord", route: "/dashboard/projetos", aba: "Dashboard", verifica: "CAMPEÃO", rolarAte: "text=Campeão" },
+  // plan-v18 S03/S05 (DEC-249): o painel de leaderboard de projetos saiu da tela Projetos e
+  // entrou na aba Projetos do Quadro de Liderança. As duas capturas da aba saem de lá.
+  { id: "dashboard-projetos", role: "coord", route: "/dashboard/leaderboard", aba: "Projetos", verifica: "CAMPEÃO", rolarAte: "text=Campeão" },
+  { id: "leaderboard", role: "coord", route: "/dashboard/leaderboard", aba: "Projetos", verifica: "Projetos no recorte", rolarAte: "text=Projetos no recorte" },
   { id: "dialogo-nova-tarefa", role: "coord", route: "/dashboard", abre: "Nova Tarefa", dialogo: "Tarefa" },
   { id: "dialogo-novo-projeto", role: "coord", route: "/dashboard/projetos", abre: "Novo Projeto", dialogo: "Projeto" },
   // V5-5b (DEC-100): o passo opcional de cronograma do wizard de criação. O nome é preenchido
@@ -141,8 +143,11 @@ const INTERACTIONS = [
   // prosa do capítulo nomeia; o formulário continua abaixo dele na mesma foto.
   { id: "perfil-edicao", role: "part", route: "/dashboard/profile", aba: "Configurações", abre: "Editar Perfil", verifica: "Cancelar Edição", rolarAte: "text=Badges equipáveis" },
   { id: "perfil-configuracoes", role: "part", route: "/dashboard/profile", aba: "Configurações" },
-  // plan-v15 S12 (G6): o bloco Badges do perfil — passiva equipada e a lista Em progresso.
-  { id: "perfil-badges", role: "part", route: "/dashboard/profile", verifica: "Em progresso", rolarAte: "text=Em progresso" },
+  // plan-v18 S05 (DEC-249): a classificação completa mora na aba Pessoas do Quadro de Liderança.
+  { id: "ranking-participante", role: "part", route: "/dashboard/leaderboard", aba: "Pessoas", verifica: "Classificação completa" },
+  // plan-v17 S04 (G6): o bloco Badges do perfil; plan-v18 S02 (DEC-244): só os cartões das
+  // conquistadas — o texto da verificação é o nome de um badge da conta de captura.
+  { id: "perfil-badges", role: "part", route: "/dashboard/profile", verifica: "Vinte e Cinco Tarefas", rolarAte: "text=Vinte e Cinco Tarefas" },
   { id: "loja-minhas-compras", role: "part", route: "/dashboard/loja", aba: "Minhas Compras" },
   { id: "controle-de-sessao", role: "part", route: "/dashboard/profile", abre: "Abrir controle de sessao" },
   { id: "relatorios-gerar-lote", role: "coord", route: "/dashboard/weekly-reports", abre: "Gerar em Lote" },

@@ -3,7 +3,7 @@
 O **Perfil** é a sua conta vista por dentro: quem você é no laboratório, o que produziu e como os seus dados aparecem para as outras pessoas.
 
 ```foto perfil-participante titulo="O perfil de uma pessoa"
-O cartão **Meu Perfil** abre com a faixa da capa e traz avatar, nome e as cifras de trabalho; ao lado do nome ficam os medálhões das passivas equipadas (descritos em *Os distintivos no perfil*), e abaixo dele ficam as três abas.
+O cartão **Meu Perfil** abre com a faixa da capa e traz avatar, nome e as cifras de trabalho; no canto direito do cartão ficam os medálhões das passivas equipadas (descritos em *Os distintivos no perfil*), e as funções da pessoa aparecem sob o email, na coluna do nome. Abaixo do cartão ficam as três abas.
 ```
 
 ## As três abas
@@ -87,14 +87,12 @@ A capa é sua, e quem a escreve é você — ou quem tem permissão de gerenciar
 
 ## Os distintivos no perfil
 
-Abaixo das três abas, o perfil tem o bloco **Badges**. O bloco é leitura: os conquistados aparecem em cartões com o **medálhão**, o nome e a categoria; ao passar o cursor, o cartão explica a conquista e, quando o distintivo tem passiva, diz `Passiva: +5% pontos` — ou `Equipada: +5% pontos` quando ela está ativa. A passiva ativa se destaca no cartão: o contorno fica em destaque e o efeito aparece escrito ao lado do nome. Equipar não acontece aqui — é na aba **Configurações**, em modo de edição, no bloco **Badges equipáveis**.
+Abaixo das três abas, o perfil tem o bloco **Badges**. O bloco é leitura: só os distintivos conquistados, cada um em um cartão com o **medálhão**, o nome, a data da conquista e o selo do efeito — `Passiva: +5% pontos` quando o distintivo tem passiva, `Equipada: +5% pontos` quando ela está ativa. A passiva ativa se destaca no cartão: o contorno fica em destaque. Não há progresso no bloco: o que ainda não foi conquistado não aparece, e quem não tem nenhum distintivo não vê o bloco. Equipar não acontece aqui — é na aba **Configurações**, em modo de edição, no bloco **Badges equipáveis**.
 
-O medálhão é o desenho do distintivo: quando a gestão enviou a imagem do badge, ela aparece no círculo, na cor do distintivo; sem imagem enviada, o círculo mostra o glifo do catálogo, e sem glifo, o ícone da categoria. Os medálhões das equipadas também aparecem no cartão de identidade, ao lado do nome — só as equipadas, no máximo três, a passiva mais recente por primeiro; ao passar o cursor, o medálhão explica o distintivo. A vitrine é a mesma no perfil aberto por outra pessoa.
+O medálhão é o desenho do distintivo: quando a gestão enviou a imagem do badge, ela aparece no círculo, na cor do distintivo; sem imagem enviada, o círculo mostra o glifo do catálogo, e sem glifo, o ícone da categoria. Os medálhões das equipadas também aparecem no cartão de identidade, no canto direito, onde antes ficava a linha das funções — só as equipadas, no máximo três, a passiva mais recente por primeiro; ao passar o cursor, o medálhão explica o distintivo. A vitrine é a mesma no perfil aberto por outra pessoa.
 
-O bloco lista também os distintivos ainda não conquistados, sob o rótulo **Em progresso**, cada chip com o nome e o número `X de Y` da sua condição. Quem não tem nenhum conquistado vê só essa lista; quando não há progresso a mostrar, o bloco diz *"Nenhum badge conquistado ainda"*.
-
-```foto perfil-badges titulo="O bloco Badges no perfil: a passiva equipada e a lista Em progresso"
-O chip de progresso mostra o nome do distintivo e `X de Y`; a passiva ativa aparece marcada no cartão, com o efeito escrito. Nenhum cartão do bloco tem botão — o equipar mora na edição da aba Configurações.
+```foto perfil-badges titulo="O bloco Badges no perfil: os cartões das conquistadas, a equipada em destaque"
+Cada cartão traz o medálhão, o nome, a data e o selo do efeito; a equipada aparece com o contorno em destaque e o selo `Equipada: +5% pontos`. Nenhum cartão do bloco tem botão — o equipar mora na edição da aba Configurações.
 ```
 
 ## Os logs diários

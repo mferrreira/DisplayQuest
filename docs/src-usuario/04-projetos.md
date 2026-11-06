@@ -1,16 +1,12 @@
 # Projetos
 
-Um projeto agrupa tarefas, define quem participa e concentra as horas registradas. A tela **Projetos** tem as abas **Dashboard** e **Lista de Projetos**, conforme o seu acesso. Cada linha da lista abre a página dedicada do projeto.
+Um projeto agrupa tarefas, define quem participa e concentra as horas registradas. A tela **Projetos** tem os filtros e a lista de projetos; cada linha da lista abre a página dedicada do projeto. O painel que ordena os projetos por pontos — o **leaderboard de projetos** — mora no **Quadro de Liderança** (capítulo 7), na aba **Projetos**.
 
-```foto projetos titulo="A tela Projetos, na aba Lista de Projetos"
+```foto projetos titulo="A tela Projetos, com filtros e a lista"
 A lista mostra cada projeto em uma linha com status, descrição, andamento, datas e ações disponíveis. Com início e término definidos, o andamento representa o tempo decorrido do projeto; sem o período completo, usa a proporção de tarefas concluídas.
 ```
 
-Na parte superior da tela, combine a busca, o status e **Pessoa**. A pessoa limita a seleção aos projetos com tarefas atribuídas a ela e às próprias tarefas. O mesmo recorte alimenta a aba **Dashboard** e a lista. No Dashboard, **Projeto** restringe ainda mais o recorte; **Todos os projetos** reúne somente os projetos que passaram pelos filtros do topo. A aba é o **leaderboard de projetos** por pontos: o campeão em bloco destacado, com a capa, o logo, o período, a barra de andamento, a pilha de avatares dos membros, a contagem de membros e o líder; o 2º e o 3º lugares com medalha, contagem de membros e barra; e a classificação completa a partir do 4º, em tabela com Posição, Projeto, Progresso, Membros e Pontos. Os projetos em que você participa aparecem com o rótulo **Seu projeto**. Abaixo do leaderboard, a lista de andamento acompanha o recorte.
-
-```foto dashboard-projetos titulo="Dashboard de Projetos com o leaderboard e a lista de andamento"
-O leaderboard ordena os projetos pela pontuação, e cada peça abre o detalhe do projeto. Barra de andamento é o tempo decorrido quando o projeto tem início e término; sem período, a barra segue a proporção de tarefas concluídas. Com **Todos os projetos**, o recorte reúne o conjunto filtrado do topo.
-```
+Na parte superior da tela, combine a busca, o status e **Pessoa**. A pessoa limita a seleção aos projetos com tarefas atribuídas a ela e às próprias tarefas. O mesmo recorte alimenta a lista, e os números ao lado de cada filtro dizem quantos projetos há em cada status.
 
 ## Ver um projeto
 
