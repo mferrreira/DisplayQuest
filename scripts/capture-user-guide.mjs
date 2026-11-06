@@ -114,9 +114,8 @@ const VIEWPORT = { width: 1440, height: 900 };
  */
 const INTERACTIONS = [
   // plan-v18 S03/S05 (DEC-249): o painel de leaderboard de projetos saiu da tela Projetos e
-  // entrou na aba Projetos do Quadro de Liderança. As duas capturas da aba saem de lá.
+  // entrou na aba Projetos do Quadro de Liderança. A captura da aba sai de lá.
   { id: "dashboard-projetos", role: "coord", route: "/dashboard/leaderboard", aba: "Projetos", verifica: "CAMPEÃO", rolarAte: "text=Campeão" },
-  { id: "leaderboard", role: "coord", route: "/dashboard/leaderboard", aba: "Projetos", verifica: "Projetos no recorte", rolarAte: "text=Projetos no recorte" },
   { id: "dialogo-nova-tarefa", role: "coord", route: "/dashboard", abre: "Nova Tarefa", dialogo: "Tarefa" },
   { id: "dialogo-novo-projeto", role: "coord", route: "/dashboard/projetos", abre: "Novo Projeto", dialogo: "Projeto" },
   // V5-5b (DEC-100): o passo opcional de cronograma do wizard de criação. O nome é preenchido

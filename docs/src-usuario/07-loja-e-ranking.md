@@ -89,4 +89,4 @@ O catálogo traz 50 distintivos. Cada um é concedido quando a pessoa atinge as 
 
 Alguns distintivos têm **passiva** — um efeito permanente que a pessoa escolhe ativar: **+X% pontos** nas premiações, **−X% de penalidade**, e, nas de bônus, desconto no preço da loja. Os botões **Equipar** e **Desequipar**, o contador **Equipadas (n/3)** e as regras de ativação estão descritos no capítulo 8, no bloco **Badges equipáveis** da aba Configurações, em modo de edição.
 
-Os distintivos ainda não conquistados aparecem no perfil sob o rótulo **Em progresso**, cada um com o número `X de Y` da sua condição — por exemplo `Vinte e Cinco Tarefas 12 de 25`. Quando o número chega ao alvo, o distintivo é concedido no episódio seguinte.
+Os distintivos ainda não conquistados não aparecem no perfil — o bloco Badges lista só os que a pessoa possui. A condição de cada distintivo é medida no episódio: quando o número chega ao alvo, o distintivo é concedido no episódio seguinte.
