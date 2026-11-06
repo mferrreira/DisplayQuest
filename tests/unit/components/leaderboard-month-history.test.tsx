@@ -100,6 +100,11 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/contexts/auth-context", () => ({
   useAuth: () => ({ user: fixtures.me, loading: false, logout: vi.fn() }),
 }));
+// plan-v18 S03 (DEC-249): a página agora lê os contextos de projeto e tarefa para a aba
+// Projetos. Os testes do ranking só usam a aba Pessoas; estes mocks servem a aba padrão.
+vi.mock("@/contexts/project-context", () => ({ useProject: () => ({ projects: [] as never[] }) }));
+vi.mock("@/contexts/task-context", () => ({ useTask: () => ({ tasks: [] as never[] }) }));
+
 
 vi.mock("@/contexts/user-context", () => ({
   useUser: () => ({
@@ -155,6 +160,15 @@ async function waitNotice(pattern: RegExp) {
 async function championRegion() {
   return await screen.findByRole("region", { name: "Campeão do quadro" });
 }
+// plan-v18 S03 (DEC-249, ADR-006): a página ganhou duas abas e Projetos é a padrão, que
+// desmonta o ranking. Ativar a aba Pessoas antes de assar o quadro.
+async function renderPessoas() {
+  render(<LeaderboardPage />);
+  const tab = screen.getByRole("tab", { name: "Pessoas" });
+  fireEvent.mouseDown(tab);
+  await waitFor(() => expect(tab).toHaveAttribute("aria-selected", "true"));
+}
+
 
 describe("S03 — o quadro nomeia o mês e oferece os meses fechados", () => {
   beforeEach(() => {
@@ -163,7 +177,7 @@ describe("S03 — o quadro nomeia o mês e oferece os meses fechados", () => {
   });
 
   it("existe um seletor de mês, e a opção escolhida é o mês em curso", async () => {
-    render(<LeaderboardPage />);
+    await renderPessoas();
     const trigger = await openMonthSelector();
     // O rótulo do mês em curso mora no cabeçalho da tela; o seletor nomeia a opção, não o mês.
     expect(trigger).toHaveTextContent(/mês em curso/);
@@ -172,14 +186,14 @@ describe("S03 — o quadro nomeia o mês e oferece os meses fechados", () => {
   });
 
   it("o seletor lista os meses que já fecharam", async () => {
-    render(<LeaderboardPage />);
+    await renderPessoas();
     await openMonthSelector();
     expect(await screen.findByRole("option", { name: /janeiro de 2026/ })).toBeInTheDocument();
     expect(await screen.findByRole("option", { name: /dezembro de 2025/ })).toBeInTheDocument();
   });
 
   it("o quadro vivo é o de fevereiro: Bruno lidera", async () => {
-    render(<LeaderboardPage />);
+    await renderPessoas();
     const champion = await championRegion();
     expect(within(champion).getByText("Bruno Rocha")).toBeInTheDocument();
   });
@@ -192,7 +206,7 @@ describe("S03 — CA4: mês fechado mostra valor e posição congelados", () => 
   });
 
   it("escolher janeiro troca o campeão para o do fechamento", async () => {
-    render(<LeaderboardPage />);
+    await renderPessoas();
     await championRegion();
     await openMonthSelector();
     await chooseMonth("janeiro de 2026");
@@ -206,7 +220,7 @@ describe("S03 — CA4: mês fechado mostra valor e posição congelados", () => 
   });
 
   it("a tabela do mês fechado usa a posição congelada, começando no 4º", async () => {
-    render(<LeaderboardPage />);
+    await renderPessoas();
     await openMonthSelector();
     await chooseMonth("janeiro de 2026");
     await waitNotice(/Mês fechado: janeiro de 2026/);
@@ -227,7 +241,7 @@ describe("S03 — CA4: mês fechado mostra valor e posição congelados", () => 
   });
 
   it("mês fechado diz que está fechado e some com o bloco pessoal", async () => {
-    render(<LeaderboardPage />);
+    await renderPessoas();
     await openMonthSelector();
     await chooseMonth("janeiro de 2026");
     await waitNotice(/Mês fechado: janeiro de 2026/);
@@ -236,7 +250,7 @@ describe("S03 — CA4: mês fechado mostra valor e posição congelados", () => 
   });
 
   it("voltar ao mês em curso devolve o quadro vivo", async () => {
-    render(<LeaderboardPage />);
+    await renderPessoas();
     await openMonthSelector();
     await chooseMonth("janeiro de 2026");
     await waitNotice(/Mês fechado: janeiro de 2026/);
@@ -257,7 +271,7 @@ describe("S03 — CA8: mês fechado sem linha é quadro vazio com aviso", () => 
   });
 
   it("dezembro de 2025 mostra o aviso do mês vazio, e não o quadro de fevereiro", async () => {
-    render(<LeaderboardPage />);
+    await renderPessoas();
     await openMonthSelector();
     await chooseMonth("dezembro de 2025");
 
@@ -279,7 +293,7 @@ describe("S03 — CA4/CA8: a tela nunca cai no quadro vivo quando a leitura do m
 
   it("leitura recusada do mês fechado devolve aviso de quadro indisponível, não o quadro de fevereiro", async () => {
     mode.value = "fail";
-    render(<LeaderboardPage />);
+    await renderPessoas();
     await openMonthSelector();
     await chooseMonth("janeiro de 2026");
 
@@ -292,7 +306,7 @@ describe("S03 — CA4/CA8: a tela nunca cai no quadro vivo quando a leitura do m
 
   it("a falha entrega o controle que promete: Tentar de novo re-lee o mês, sem tocar no quadro vivo", async () => {
     mode.value = "fail";
-    render(<LeaderboardPage />);
+    await renderPessoas();
     await openMonthSelector();
     await chooseMonth("janeiro de 2026");
 
@@ -312,7 +326,7 @@ describe("S03 — CA4/CA8: a tela nunca cai no quadro vivo quando a leitura do m
 
   it("os três estados da leitura têm papel vivo: quem usa leitor de tela ouve a troca de mês", async () => {
     mode.value = "pending";
-    render(<LeaderboardPage />);
+    await renderPessoas();
     await openMonthSelector();
     await chooseMonth("janeiro de 2026");
 
@@ -330,7 +344,7 @@ describe("S03 — CA4/CA8: a tela nunca cai no quadro vivo quando a leitura do m
   });
 
   it("CA8: mês fechado sem linha declara o quadro vazio numa região viva", async () => {
-    render(<LeaderboardPage />);
+    await renderPessoas();
     await openMonthSelector();
     await chooseMonth("dezembro de 2025");
 
@@ -340,7 +354,7 @@ describe("S03 — CA4/CA8: a tela nunca cai no quadro vivo quando a leitura do m
 
   it("pendente: o cabeçalho nomeia o mês que está sendo lido, não o mês em curso", async () => {
     mode.value = "pending";
-    render(<LeaderboardPage />);
+    await renderPessoas();
     await openMonthSelector();
     await chooseMonth("janeiro de 2026");
 
@@ -352,7 +366,7 @@ describe("S03 — CA4/CA8: a tela nunca cai no quadro vivo quando a leitura do m
   });
 
   it("R9: o contrato do mês corrente pedido por nome responde pelo placar vivo", async () => {
-    render(<LeaderboardPage />);
+    await renderPessoas();
     await championRegion();
 
     // O servidor devolve `live: true` para `?month=<mes corrente>`, com aviso proprio: quem pede o

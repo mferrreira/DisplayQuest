@@ -12,7 +12,7 @@
  * pessoais (posição, rival, barra) têm aceite próprio em S04.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 
 const fixtures = vi.hoisted(() => ({
   // Saldo (points) e placar do mês (currentMonthPoints) deliberadamente divergentes.
@@ -112,12 +112,26 @@ vi.mock("@/contexts/user-context", () => ({
   }),
 }));
 
+// plan-v18 S03 (DEC-249): a página agora lê os contextos de projeto e tarefa para a aba
+// Projetos. Os testes do ranking só usam a aba Pessoas; estes mocks servem a aba padrão.
+vi.mock("@/contexts/project-context", () => ({ useProject: () => ({ projects: [] as never[] }) }));
+vi.mock("@/contexts/task-context", () => ({ useTask: () => ({ tasks: [] as never[] }) }));
+
 const fetchAPI = vi.hoisted(() => vi.fn(async () => fixtures.boardMonth));
 vi.mock("@/contexts/api-client", () => ({ fetchAPI, UsersAPI: {} }));
 
 import LeaderboardPage from "@/app/(dashboard)/dashboard/leaderboard/page";
 
 const boardSeed = structuredClone(fixtures.board);
+
+// plan-v18 S03 (DEC-249, ADR-006): a página ganhou duas abas e Projetos é a padrão, que
+// desmonta o ranking. Ativar a aba Pessoas antes de assar o quadro.
+async function renderPessoas() {
+  render(<LeaderboardPage />);
+  const tab = screen.getByRole("tab", { name: "Pessoas" });
+  fireEvent.mouseDown(tab);
+  await waitFor(() => expect(tab).toHaveAttribute("aria-selected", "true"));
+}
 
 describe("S01 — Quadro de Liderança pelo placar do mês", () => {
   beforeEach(() => {
@@ -126,14 +140,14 @@ describe("S01 — Quadro de Liderança pelo placar do mês", () => {
   });
 
   it("o campeão do quadro é quem tem mais placar no mês, não quem tem mais saldo", async () => {
-    render(<LeaderboardPage />);
+    await renderPessoas();
     const champion = await screen.findByRole("region", { name: "Campeão do quadro" });
     expect(within(champion).getByText("Bruno Rocha")).toBeInTheDocument();
     expect(within(champion).queryByText("Diego Serra")).not.toBeInTheDocument();
   });
 
   it("a classificação começa no 4º lugar e mostra o placar do mês na coluna de pontos", async () => {
-    render(<LeaderboardPage />);
+    await renderPessoas();
     const heading = await screen.findByRole("heading", { name: "Classificação completa" });
     const section = heading.closest("section") as HTMLElement;
 
@@ -147,13 +161,13 @@ describe("S01 — Quadro de Liderança pelo placar do mês", () => {
   });
 
   it("a página nomeia o mês declarado pelo servidor", async () => {
-    render(<LeaderboardPage />);
+    await renderPessoas();
     expect(await screen.findByText(/outubro de 2026/)).toBeInTheDocument();
     expect(fetchAPI).toHaveBeenCalledWith("/api/board");
   });
 
   it("reverte o visual: campeão em bloco gold (rounded-2xl), 2º prata e 3º bronze", async () => {
-    render(<LeaderboardPage />);
+    await renderPessoas();
     const podium = await screen.findByRole("region", { name: "Segundo e terceiro lugares" });
     // Dono (2026-10-29): o quadro volta à forma do V6-11m — 2º prata (muted), 3º bronze (warning).
     expect(within(podium).getByText("2º").className).toContain("text-muted-foreground");
@@ -166,7 +180,7 @@ describe("S01 — Quadro de Liderança pelo placar do mês", () => {
 
   it("usa o primitivo EmptyState quando o placar do mês ainda está vazio", async () => {
     fixtures.board = boardSeed.map((person) => ({ ...person, currentMonthPoints: 0 }));
-    render(<LeaderboardPage />);
+    await renderPessoas();
     expect(await screen.findByText("Quadro vazio")).toBeInTheDocument();
     expect(screen.getByText("Placar de outubro de 2026. Abra o perfil de cada pessoa.")).toBeInTheDocument();
     expect(screen.queryByRole("region", { name: "Sua posição" })).not.toBeInTheDocument();

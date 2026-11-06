@@ -12,21 +12,42 @@
  * S03 (MODELO §7, CA4, CA8): o seletor de mes troca o quadro para as linhas congeladas do
  * fechamento. Mês fechado é só leitura, diz que está fechado, e o bloco pessoal sai dali — progresso
  * contra o líder de hoje não existe num mês que já fechou.
+ *
+ * plan-v18 S03 (DEC-249, ADR-006, R3): a rota tem duas abas. Projetos abre a tela, com o
+ * `ProjectManagerDashboard` intacto e os dados dos contextos de projeto e tarefa; Pessoas é o
+ * ranking de hoje, intacto, como descrito acima. As duas abas são abertas a todo autenticado.
  */
 import Link from "next/link"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Award, Crown, Medal, Trophy } from "lucide-react"
+import { Award, Crown, Medal, TrendingUp, Trophy } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { useUser } from "@/contexts/user-context"
+import { useProject } from "@/contexts/project-context"
+import { useTask } from "@/contexts/task-context"
+import { ProjectManagerDashboard } from "@/components/features/project-manager-dashboard"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { BucketAvatar } from "@/components/ui/bucket-avatar"
 import { Button } from "@/components/ui/button"
 import { getRoleDisplayName } from "@/lib/utils/access-control"
 import { PageHeader } from "@/components/ui/page-header"
 import { Progress } from "@/components/ui/progress"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 import { EmptyState } from "@/components/ui/empty-state"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { fetchAPI } from "@/contexts/api-client"
 import { userImageUrl } from "@/lib/api/user-images"
 import { BannerImage } from "@/components/ui/banner-image"
@@ -34,34 +55,39 @@ import { compareByBoardPosition } from "@/backend/domain"
 
 /** O que `GET /api/board` declara (S01: mês corrente; S03 acrescenta a lista de meses fechados). */
 interface BoardMonth {
-  month: string;
-  monthLabel: string;
-  closedMonths?: Array<{ month: string; monthLabel: string }>;
+  month: string
+  monthLabel: string
+  closedMonths?: Array<{ month: string; monthLabel: string }>
 }
 
 /** O que `GET /api/board?month=AAAA-MM` devolve (S03, CA4, CA8, R9). */
 interface BoardMonthRead {
-  month: string;
-  monthLabel: string;
-  closed: boolean;
+  month: string
+  monthLabel: string
+  closed: boolean
   /** true quando o mês pedido é o em curso: o quadro se resolve pelo placar vivo (R9). */
-  live: boolean;
-  notice: string;
-  entries: Array<{ userId: number; name: string; value: number; position: number }>;
+  live: boolean
+  notice: string
+  entries: Array<{
+    userId: number
+    name: string
+    value: number
+    position: number
+  }>
 }
 
 /** Linha do quadro, vinda do placar vivo ou de um fechamento. A tela renderiza as duas iguais. */
 interface BoardEntry {
-  id: number;
-  name: string;
-  value: number;
-  position: number;
-  avatar?: string | null;
-  bannerKey?: string | null;
+  id: number
+  name: string
+  value: number
+  position: number
+  avatar?: string | null
+  bannerKey?: string | null
   /** plan-v14 S02 (regra 2): chave do avatar no bucket (DEC-242). */
-  avatarKey?: string | null;
-  roles?: string[];
-  completedTasks?: number;
+  avatarKey?: string | null
+  roles?: string[]
+  completedTasks?: number
 }
 
 /** Sentinela da casa para "sem mês escolhido": o quadro vivo. Nunca `""` (Select do Radix). */
@@ -71,6 +97,8 @@ export default function LeaderboardPage() {
   const { user, loading } = useAuth()
   const router = useRouter()
   const { users } = useUser()
+  const { projects } = useProject()
+  const { tasks } = useTask()
 
   useEffect(() => {
     if (!loading && !user) {
@@ -131,19 +159,30 @@ export default function LeaderboardPage() {
   }, [selectedMonth, readAttempt])
 
   // plan-v9 (ADR-001, DEC-224): o quadro ordena pelo placar do mês. `points` é saldo e não decide ordem.
-  const monthScore = (candidate: { currentMonthPoints?: number }) => candidate.currentMonthPoints ?? 0
+  const monthScore = (candidate: { currentMonthPoints?: number }) =>
+    candidate.currentMonthPoints ?? 0
 
   // plan-v9 S04 (ADR-005, DEC-227): o vivo desempata com a MESMA régua do fechado — valor desc,
   // depois nome, depois id. Antes, empate ficava na ordem de chegada da lista e vivo e fechado
   // diziam ordens diferentes com o mesmo placar.
   const sortedUsers = [...users].sort((left, right) =>
     compareByBoardPosition(
-      { id: left.id, name: left.name, currentMonthPoints: left.currentMonthPoints ?? 0 },
-      { id: right.id, name: right.name, currentMonthPoints: right.currentMonthPoints ?? 0 },
+      {
+        id: left.id,
+        name: left.name,
+        currentMonthPoints: left.currentMonthPoints ?? 0,
+      },
+      {
+        id: right.id,
+        name: right.name,
+        currentMonthPoints: right.currentMonthPoints ?? 0,
+      },
     ),
   )
 
-  const currentUserIndex = sortedUsers.findIndex((rankedUser) => rankedUser.id === user?.id)
+  const currentUserIndex = sortedUsers.findIndex(
+    (rankedUser) => rankedUser.id === user?.id,
+  )
   const currentUserRank = currentUserIndex + 1
   // A pessoa tambem sai da lista que o quadro ordena: a sessao ainda carrega o saldo, e o bloco
   // pessoal precisa do placar do mes (o passo de levar o placar ate a sessao e a S06).
@@ -157,14 +196,19 @@ export default function LeaderboardPage() {
       .toUpperCase()
       .substring(0, 2)
 
-  const getRoleLabel = (roles: string[]) => roles.map(getRoleDisplayName).join(", ")
+  const getRoleLabel = (roles: string[]) =>
+    roles.map(getRoleDisplayName).join(", ")
 
   // Uma leitura de mês nomeado só congela o quadro quando o servidor devolve linhas de fechamento.
   // `live` (R9) e falha de leitura não congelam: o quadro é o de hoje, declarado como tal.
   const selectedClosedMonth =
-    selectedMonth !== CURRENT_MONTH && closedBoard !== null && closedBoard.closed && !closedBoard.live
+    selectedMonth !== CURRENT_MONTH &&
+    closedBoard !== null &&
+    closedBoard.closed &&
+    !closedBoard.live
   const closedBoardFailed = selectedMonth !== CURRENT_MONTH && closedBoardError
-  const closedBoardPending = selectedMonth !== CURRENT_MONTH && closedBoard === null && !closedBoardError
+  const closedBoardPending =
+    selectedMonth !== CURRENT_MONTH && closedBoard === null && !closedBoardError
   const closedBoardReady = selectedClosedMonth && closedBoard !== null
 
   // Uma lista só, duas origens. No mês fechado o valor e a posição vêm da linha gravada; o avatar,
@@ -200,8 +244,11 @@ export default function LeaderboardPage() {
   const leaderPoints = leader ? leader.value : 0
   const myPoints = myEntry ? monthScore(myEntry) : 0
   const pathPercent =
-    leaderPoints > 0 ? Math.max(0, Math.min(100, Math.round((myPoints / leaderPoints) * 100))) : 0
-  const rival = currentUserRank > 1 ? sortedUsers[currentUserRank - 2] : undefined
+    leaderPoints > 0
+      ? Math.max(0, Math.min(100, Math.round((myPoints / leaderPoints) * 100)))
+      : 0
+  const rival =
+    currentUserRank > 1 ? sortedUsers[currentUserRank - 2] : undefined
   const gapToRival = rival ? monthScore(rival) - myPoints : 0
 
   if (loading || !user) {
@@ -227,11 +274,18 @@ export default function LeaderboardPage() {
   const remainingUsers = entries.slice(3)
   const champion = podiumUsers[0]
   const runnersUp = podiumUsers.slice(1)
-  const currentBoardEmpty = !closedBoardReady && entries.every((entry) => entry.value === 0)
+  const currentBoardEmpty =
+    !closedBoardReady && entries.every((entry) => entry.value === 0)
 
   const monthSelector = (
-    <Select value={selectedMonth} onValueChange={(value) => setSelectedMonth(value)}>
-      <SelectTrigger className="w-[190px] sm:w-[220px]" aria-label="Mês do quadro">
+    <Select
+      value={selectedMonth}
+      onValueChange={(value) => setSelectedMonth(value)}
+    >
+      <SelectTrigger
+        className="w-[190px] sm:w-[220px]"
+        aria-label="Mês do quadro"
+      >
         <SelectValue placeholder="mês em curso" />
       </SelectTrigger>
       <SelectContent>
@@ -254,7 +308,9 @@ export default function LeaderboardPage() {
   // leitura o que resta e o rotulo da lista de meses fechados, nunca o `AAAA-MM` cru.
   const closedMonthLabel =
     closedBoard?.monthLabel ??
-    boardMonth?.closedMonths?.find((closedMonth) => closedMonth.month === selectedMonth)?.monthLabel ??
+    boardMonth?.closedMonths?.find(
+      (closedMonth) => closedMonth.month === selectedMonth,
+    )?.monthLabel ??
     selectedMonth
   const monthDescription = closedBoardReady
     ? closedBoard.entries.length > 0
@@ -272,252 +328,349 @@ export default function LeaderboardPage() {
     <div className="flex min-h-screen flex-col">
       <main className="container mx-auto flex-1 p-4 md:p-6">
         <div className="mx-auto max-w-5xl space-y-8">
-          <PageHeader
-            title="Quadro de Liderança"
-            description={monthDescription}
-            icon={Trophy}
-            actions={monthSelector}
-          />
+          {/* plan-v18 S03 (DEC-249, ADR-006, R3): a rota dedicada do quadro de liderança tem
+              duas abas abertas a todo autenticado. Projetos por primeiro, com o painel intacto
+              desde /dashboard/projetos; Pessoas é o ranking de hoje, intacto. */}
+          <Tabs defaultValue="projetos" className="space-y-4">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="projetos" className="flex items-center gap-2">
+                <TrendingUp className="h-4 w-4" />
+                Projetos
+              </TabsTrigger>
+              <TabsTrigger value="pessoas" className="flex items-center gap-2">
+                <Trophy className="h-4 w-4" />
+                Pessoas
+              </TabsTrigger>
+            </TabsList>
 
-          {/* Sua posição — só no mês em curso. Mês fechado não tem progresso contra o líder de hoje. */}
-          {!closedBoardReady && !closedBoardPending && !closedBoardFailed && !currentBoardEmpty && (
-            <section
-              aria-label="Sua posição"
-              className="flex flex-wrap items-end justify-between gap-6 border-b border-border pb-6"
-            >
-              <div>
-                <p className="text-sm text-muted-foreground">Sua posição</p>
-                <p className="mt-1 text-5xl font-bold tabular-nums leading-none">
-                  {currentUserRank > 0 ? `${currentUserRank}º` : "—"}
-                  <span className="ml-2 text-base font-normal text-muted-foreground">
-                    de {sortedUsers.length}
-                  </span>
-                </p>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {myPoints} pontos · {user.completedTasks} {user.completedTasks === 1 ? "tarefa" : "tarefas"} concluídas
-                </p>
-              </div>
-              <div className="w-full max-w-sm">
-                <div className="mb-2 flex items-baseline justify-between text-xs text-muted-foreground">
-                  <span>Seu progresso até o topo</span>
-                  <span className="tabular-nums">{pathPercent}%</span>
-                </div>
-                <Progress
-                  value={pathPercent}
-                  className="h-2"
-                  aria-label={`Progresso até o líder do quadro: ${pathPercent}%`}
-                />
-                <p className="mt-2 text-xs text-muted-foreground">{gapMessage}</p>
-              </div>
-            </section>
-          )}
-
-          {/* CA8: mês sem fechamento, ou fechado sem linha, é quadro vazio com aviso. Os três
-              estados da leitura têm papel vivo: trocar o mês troca o texto, e quem usa leitor de
-              tela precisa ouvir a troca, não só ver o quadro antigo sumir. */}
-          {closedBoardReady && entries.length === 0 ? (
-            <div role="status">
-              <EmptyState
-                icon={Trophy}
-                title="Quadro vazio"
-                description={closedBoard.notice}
-                className="rounded-lg border border-dashed border-border"
-              />
-            </div>
-          ) : closedBoardPending ? (
-            // O mês nomeado é registro congelado: enquanto a leitura não chega, a tela não mostra
-            // o quadro de hoje no lugar dele.
-            <section
-              aria-label="Quadro do mês fechado"
-              role="status"
-              className="rounded-lg border border-dashed border-border p-10 text-center"
-            >
-              <p className="text-muted-foreground">Lendo o quadro fechado de {closedMonthLabel}...</p>
-            </section>
-          ) : closedBoardFailed ? (
-            <div role="alert">
-              <EmptyState
-                icon={Trophy}
-                title="Quadro indisponível"
-                description={`Não foi possível ler o quadro de ${closedMonthLabel}. O mês fechado não muda.`}
-                className="rounded-lg border border-dashed border-border"
-                action={
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setReadAttempt((attempt) => attempt + 1)}
-                  >
-                    Tentar de novo
-                  </Button>
+            <TabsContent value="projetos">
+              <ProjectManagerDashboard
+                projects={projects}
+                tasks={tasks}
+                users={users}
+                scopeDescription="Todos os projetos"
+                onProjectSelect={(project) =>
+                  router.push(`/dashboard/projetos/${project.id}`)
                 }
               />
-            </div>
-          ) : currentBoardEmpty ? (
-            <EmptyState
-              icon={Trophy}
-              title="Quadro vazio"
-              description="Ainda não há pontos no placar deste mês."
-              className="rounded-lg border border-dashed border-border"
-            />
-          ) : (
-            // Quadro vivo e fechado-com-linhas dividem o mesmo corpo. No fechado o wrapper é região
-            // viva (role="status"): trocar de mês precisa ser anunciado também quando há linhas —
-            // pending, fail e vazio já o têm. O "space-y-8" sobe para o wrapper para o ritmo entre
-            // campeão, 2º/3º e tabela não mudar em nenhum dos dois caminhos.
-            <div
-              role={closedBoardReady ? "status" : undefined}
-              aria-label={closedBoardReady ? "Quadro do mês fechado" : undefined}
-              className="space-y-8"
-            >
-              {/* Dono (2026-10-29, veredito): a forma antiga é a que fica. O campeão volta a ser a
-                  única superfície com tinta (ouro) — bloco grande com a capa de fundo — e o 2º/3º
-                  voltam a colunas tipográficas com Medal/Award. A Lógica do mês (placar, seletor,
-                  posição do fechamento) fica intacta: `value` é o placar, `position` a linha gravada. */}
-              {champion && (
-                <section aria-label="Campeão do quadro">
-                  <Link
-                    href={`/dashboard/profile?userId=${champion.id}`}
-                    className="relative block overflow-hidden rounded-2xl border border-warning/30 bg-warning/5 transition-colors hover:border-warning/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            </TabsContent>
+
+            <TabsContent value="pessoas" className="space-y-8">
+              <PageHeader
+                title="Quadro de Liderança"
+                description={monthDescription}
+                icon={Trophy}
+                actions={monthSelector}
+              />
+
+              {/* Sua posição — só no mês em curso. Mês fechado não tem progresso contra o líder de hoje. */}
+              {!closedBoardReady &&
+                !closedBoardPending &&
+                !closedBoardFailed &&
+                !currentBoardEmpty && (
+                  <section
+                    aria-label="Sua posição"
+                    className="flex flex-wrap items-end justify-between gap-6 border-b border-border pb-6"
                   >
-                    {champion.bannerKey ? (
-                      // plan-v12 (DEC-239): a peça única `BannerImage` no bloco do campeão — a faixa
-                      // translúcida é cover simples.
-                      <div className="absolute inset-0 opacity-20" aria-hidden="true">
-                        <BannerImage
-                          src={userImageUrl(champion.id, "banner", champion.bannerKey)}
-                          alt=""
-                        />
-                      </div>
-                    ) : null}
-                    <div className="relative flex flex-wrap items-center gap-6 p-8">
-                      <Crown className="h-10 w-10 shrink-0 text-warning" aria-hidden="true" />
-                      {/* plan-v14 S02 (regra 2): avatar pela peça única. */}
-                      <BucketAvatar
-                        userId={champion.id}
-                        avatarKey={champion.avatarKey}
-                        legacyAvatar={champion.avatar}
-                        name={champion.name}
-                        className="h-20 w-20 border-2 border-warning/50"
-                        fallback={getInitials(champion.name)}
-                      />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-warning">1º lugar</p>
-                        <p className="truncate text-2xl font-bold text-foreground">{champion.name}</p>
-                        <p className="truncate text-sm text-muted-foreground">
-                          {getRoleLabel(champion.roles || []) || "Membro do laboratório"}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-4xl font-bold tabular-nums text-foreground">{champion.value}</p>
-                        <p className="text-xs text-muted-foreground">pontos do mês</p>
-                      </div>
-                    </div>
-                  </Link>
-                </section>
-              )}
-
-              {runnersUp.length > 0 && (
-                <section
-                  aria-label="Segundo e terceiro lugares"
-                  className="grid gap-8 sm:grid-cols-2 sm:divide-x sm:divide-border"
-                >
-                  {runnersUp.map((runnerUp) => {
-                    const Icon = runnerUp.position === 2 ? Medal : Award
-                    const accent = runnerUp.position === 2 ? "text-muted-foreground" : "text-warning"
-                    return (
-                      <Link
-                        key={runnerUp.id}
-                        href={`/dashboard/profile?userId=${runnerUp.id}`}
-                        className={`flex items-center gap-4 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-                          runnerUp.position === 2 ? "sm:pr-8" : "sm:pl-8"
-                        }`}
-                      >
-                        <span className={`text-3xl font-bold tabular-nums ${accent}`} aria-hidden="true">
-                          {runnerUp.position}º
+                    <div>
+                      <p className="text-sm text-muted-foreground">
+                        Sua posição
+                      </p>
+                      <p className="mt-1 text-5xl font-bold tabular-nums leading-none">
+                        {currentUserRank > 0 ? `${currentUserRank}º` : "—"}
+                        <span className="ml-2 text-base font-normal text-muted-foreground">
+                          de {sortedUsers.length}
                         </span>
-                        <BucketAvatar
-                          userId={runnerUp.id}
-                          avatarKey={runnerUp.avatarKey}
-                          legacyAvatar={runnerUp.avatar}
-                          name={runnerUp.name}
-                          className="h-12 w-12"
-                          fallback={getInitials(runnerUp.name)}
-                        />
-                        <div className="min-w-0 flex-1">
-                          <p className="flex items-center gap-1.5 truncate font-semibold text-foreground">
-                            <Icon className={`h-4 w-4 shrink-0 ${accent}`} aria-hidden="true" />
-                            {runnerUp.name}
-                          </p>
-                          <p className="truncate text-xs text-muted-foreground">
-                            {getRoleLabel(runnerUp.roles || []) || "Membro do laboratório"}
-                          </p>
-                        </div>
-                        <p className="shrink-0 font-bold tabular-nums text-foreground">{runnerUp.value}</p>
-                      </Link>
-                    )
-                  })}
-                </section>
-              )}
+                      </p>
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        {myPoints} pontos · {user.completedTasks}{" "}
+                        {user.completedTasks === 1 ? "tarefa" : "tarefas"}{" "}
+                        concluídas
+                      </p>
+                    </div>
+                    <div className="w-full max-w-sm">
+                      <div className="mb-2 flex items-baseline justify-between text-xs text-muted-foreground">
+                        <span>Seu progresso até o topo</span>
+                        <span className="tabular-nums">{pathPercent}%</span>
+                      </div>
+                      <Progress
+                        value={pathPercent}
+                        className="h-2"
+                        aria-label={`Progresso até o líder do quadro: ${pathPercent}%`}
+                      />
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        {gapMessage}
+                      </p>
+                    </div>
+                  </section>
+                )}
 
-              <section aria-labelledby="leaderboard-full" className="space-y-4">
-                <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <h2 id="leaderboard-full" className="text-sm font-semibold">
-                    Classificação completa
-                  </h2>
+              {/* CA8: mês sem fechamento, ou fechado sem linha, é quadro vazio com aviso. Os três
+                estados da leitura têm papel vivo: trocar o mês troca o texto, e quem usa leitor de
+                tela precisa ouvir a troca, não só ver o quadro antigo sumir. */}
+              {closedBoardReady && entries.length === 0 ? (
+                <div role="status">
+                  <EmptyState
+                    icon={Trophy}
+                    title="Quadro vazio"
+                    description={closedBoard.notice}
+                    className="rounded-lg border border-dashed border-border"
+                  />
                 </div>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[52px] p-2 sm:w-[80px] sm:p-4">Posição</TableHead>
-                      <TableHead>Usuário</TableHead>
-                      {/* A coluna de tarefas sai abaixo de `sm`: o número que esta tela promete é o
-                          placar do mês, e ele não pode ficar atrás de uma rolagem horizontal. No mês
-                          fechado a contagem é a de hoje (INV3 não toca acumulativos), e o rótulo diz
-                          isso em vez de deixar ler "tarefas daquele mês". */}
-                      <TableHead className="hidden sm:table-cell">
-                        {closedBoardReady ? "Tarefas cumulativas" : "Tarefas concluídas"}
-                      </TableHead>
-                      <TableHead className="text-right">Pontos do mês</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {/* O top 3 ja esta no podio (campeao + 2º/3º) — a tabela comeca no 4º. No mes
-                        fechado a posição é a que o fechamento gravou, não uma recontagem. */}
-                    {remainingUsers.map((rankedUser) => (
-                      <TableRow key={rankedUser.id} className={rankedUser.id === user.id ? "bg-primary/5" : ""}>
-                        <TableCell className="p-2 font-semibold tabular-nums text-muted-foreground sm:p-4">
-                          {rankedUser.position}º
-                        </TableCell>
-                        <TableCell>
-                          <Link
-                            href={`/dashboard/profile?userId=${rankedUser.id}`}
-                            className="flex items-center gap-3 rounded-lg p-1 transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              ) : closedBoardPending ? (
+                // O mês nomeado é registro congelado: enquanto a leitura não chega, a tela não mostra
+                // o quadro de hoje no lugar dele.
+                <section
+                  aria-label="Quadro do mês fechado"
+                  role="status"
+                  className="rounded-lg border border-dashed border-border p-10 text-center"
+                >
+                  <p className="text-muted-foreground">
+                    Lendo o quadro fechado de {closedMonthLabel}...
+                  </p>
+                </section>
+              ) : closedBoardFailed ? (
+                <div role="alert">
+                  <EmptyState
+                    icon={Trophy}
+                    title="Quadro indisponível"
+                    description={`Não foi possível ler o quadro de ${closedMonthLabel}. O mês fechado não muda.`}
+                    className="rounded-lg border border-dashed border-border"
+                    action={
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setReadAttempt((attempt) => attempt + 1)}
+                      >
+                        Tentar de novo
+                      </Button>
+                    }
+                  />
+                </div>
+              ) : currentBoardEmpty ? (
+                <EmptyState
+                  icon={Trophy}
+                  title="Quadro vazio"
+                  description="Ainda não há pontos no placar deste mês."
+                  className="rounded-lg border border-dashed border-border"
+                />
+              ) : (
+                // Quadro vivo e fechado-com-linhas dividem o mesmo corpo. No fechado o wrapper é região
+                // viva (role="status"): trocar de mês precisa ser anunciado também quando há linhas —
+                // pending, fail e vazio já o têm. O "space-y-8" sobe para o wrapper para o ritmo entre
+                // campeão, 2º/3º e tabela não mudar em nenhum dos dois caminhos.
+                <div
+                  role={closedBoardReady ? "status" : undefined}
+                  aria-label={
+                    closedBoardReady ? "Quadro do mês fechado" : undefined
+                  }
+                  className="space-y-8"
+                >
+                  {/* Dono (2026-10-29, veredito): a forma antiga é a que fica. O campeão volta a ser a
+                    única superfície com tinta (ouro) — bloco grande com a capa de fundo — e o 2º/3º
+                    voltam a colunas tipográficas com Medal/Award. A Lógica do mês (placar, seletor,
+                    posição do fechamento) fica intacta: `value` é o placar, `position` a linha gravada. */}
+                  {champion && (
+                    <section aria-label="Campeão do quadro">
+                      <Link
+                        href={`/dashboard/profile?userId=${champion.id}`}
+                        className="relative block overflow-hidden rounded-2xl border border-warning/30 bg-warning/5 transition-colors hover:border-warning/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        {champion.bannerKey ? (
+                          // plan-v12 (DEC-239): a peça única `BannerImage` no bloco do campeão — a faixa
+                          // translúcida é cover simples.
+                          <div
+                            className="absolute inset-0 opacity-20"
+                            aria-hidden="true"
                           >
-                            <BucketAvatar
-                              userId={rankedUser.id}
-                              avatarKey={rankedUser.avatarKey}
-                              legacyAvatar={rankedUser.avatar}
-                              name={rankedUser.name}
-                              className="h-9 w-9"
-                              fallback={getInitials(rankedUser.name)}
+                            <BannerImage
+                              src={userImageUrl(
+                                champion.id,
+                                "banner",
+                                champion.bannerKey,
+                              )}
+                              alt=""
                             />
-                            <div>
-                              <p className="font-medium">{rankedUser.name}</p>
-                              <p className="text-xs text-muted-foreground">{getRoleLabel(rankedUser.roles || [])}</p>
+                          </div>
+                        ) : null}
+                        <div className="relative flex flex-wrap items-center gap-6 p-8">
+                          <Crown
+                            className="h-10 w-10 shrink-0 text-warning"
+                            aria-hidden="true"
+                          />
+                          {/* plan-v14 S02 (regra 2): avatar pela peça única. */}
+                          <BucketAvatar
+                            userId={champion.id}
+                            avatarKey={champion.avatarKey}
+                            legacyAvatar={champion.avatar}
+                            name={champion.name}
+                            className="h-20 w-20 border-2 border-warning/50"
+                            fallback={getInitials(champion.name)}
+                          />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-warning">
+                              1º lugar
+                            </p>
+                            <p className="truncate text-2xl font-bold text-foreground">
+                              {champion.name}
+                            </p>
+                            <p className="truncate text-sm text-muted-foreground">
+                              {getRoleLabel(champion.roles || []) ||
+                                "Membro do laboratório"}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-4xl font-bold tabular-nums text-foreground">
+                              {champion.value}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              pontos do mês
+                            </p>
+                          </div>
+                        </div>
+                      </Link>
+                    </section>
+                  )}
+
+                  {runnersUp.length > 0 && (
+                    <section
+                      aria-label="Segundo e terceiro lugares"
+                      className="grid gap-8 sm:grid-cols-2 sm:divide-x sm:divide-border"
+                    >
+                      {runnersUp.map((runnerUp) => {
+                        const Icon = runnerUp.position === 2 ? Medal : Award
+                        const accent =
+                          runnerUp.position === 2
+                            ? "text-muted-foreground"
+                            : "text-warning"
+                        return (
+                          <Link
+                            key={runnerUp.id}
+                            href={`/dashboard/profile?userId=${runnerUp.id}`}
+                            className={`flex items-center gap-4 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                              runnerUp.position === 2 ? "sm:pr-8" : "sm:pl-8"
+                            }`}
+                          >
+                            <span
+                              className={`text-3xl font-bold tabular-nums ${accent}`}
+                              aria-hidden="true"
+                            >
+                              {runnerUp.position}º
+                            </span>
+                            <BucketAvatar
+                              userId={runnerUp.id}
+                              avatarKey={runnerUp.avatarKey}
+                              legacyAvatar={runnerUp.avatar}
+                              name={runnerUp.name}
+                              className="h-12 w-12"
+                              fallback={getInitials(runnerUp.name)}
+                            />
+                            <div className="min-w-0 flex-1">
+                              <p className="flex items-center gap-1.5 truncate font-semibold text-foreground">
+                                <Icon
+                                  className={`h-4 w-4 shrink-0 ${accent}`}
+                                  aria-hidden="true"
+                                />
+                                {runnerUp.name}
+                              </p>
+                              <p className="truncate text-xs text-muted-foreground">
+                                {getRoleLabel(runnerUp.roles || []) ||
+                                  "Membro do laboratório"}
+                              </p>
                             </div>
+                            <p className="shrink-0 font-bold tabular-nums text-foreground">
+                              {runnerUp.value}
+                            </p>
                           </Link>
-                        </TableCell>
-                        <TableCell className="hidden p-2 tabular-nums sm:table-cell sm:p-4">
-                          {rankedUser.completedTasks ?? "—"}
-                        </TableCell>
-                        <TableCell className="p-2 text-right font-bold tabular-nums sm:p-4">{rankedUser.value}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </section>
-            </div>
-          )}
+                        )
+                      })}
+                    </section>
+                  )}
+
+                  <section
+                    aria-labelledby="leaderboard-full"
+                    className="space-y-4"
+                  >
+                    <div className="flex flex-wrap items-baseline justify-between gap-2">
+                      <h2
+                        id="leaderboard-full"
+                        className="text-sm font-semibold"
+                      >
+                        Classificação completa
+                      </h2>
+                    </div>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[52px] p-2 sm:w-[80px] sm:p-4">
+                            Posição
+                          </TableHead>
+                          <TableHead>Usuário</TableHead>
+                          {/* A coluna de tarefas sai abaixo de `sm`: o número que esta tela promete é o
+                            placar do mês, e ele não pode ficar atrás de uma rolagem horizontal. No mês
+                            fechado a contagem é a de hoje (INV3 não toca acumulativos), e o rótulo diz
+                            isso em vez de deixar ler "tarefas daquele mês". */}
+                          <TableHead className="hidden sm:table-cell">
+                            {closedBoardReady
+                              ? "Tarefas cumulativas"
+                              : "Tarefas concluídas"}
+                          </TableHead>
+                          <TableHead className="text-right">
+                            Pontos do mês
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {/* O top 3 ja esta no podio (campeao + 2º/3º) — a tabela comeca no 4º. No mes
+                          fechado a posição é a que o fechamento gravou, não uma recontagem. */}
+                        {remainingUsers.map((rankedUser) => (
+                          <TableRow
+                            key={rankedUser.id}
+                            className={
+                              rankedUser.id === user.id ? "bg-primary/5" : ""
+                            }
+                          >
+                            <TableCell className="p-2 font-semibold tabular-nums text-muted-foreground sm:p-4">
+                              {rankedUser.position}º
+                            </TableCell>
+                            <TableCell>
+                              <Link
+                                href={`/dashboard/profile?userId=${rankedUser.id}`}
+                                className="flex items-center gap-3 rounded-lg p-1 transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                              >
+                                <BucketAvatar
+                                  userId={rankedUser.id}
+                                  avatarKey={rankedUser.avatarKey}
+                                  legacyAvatar={rankedUser.avatar}
+                                  name={rankedUser.name}
+                                  className="h-9 w-9"
+                                  fallback={getInitials(rankedUser.name)}
+                                />
+                                <div>
+                                  <p className="font-medium">
+                                    {rankedUser.name}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {getRoleLabel(rankedUser.roles || [])}
+                                  </p>
+                                </div>
+                              </Link>
+                            </TableCell>
+                            <TableCell className="hidden p-2 tabular-nums sm:table-cell sm:p-4">
+                              {rankedUser.completedTasks ?? "—"}
+                            </TableCell>
+                            <TableCell className="p-2 text-right font-bold tabular-nums sm:p-4">
+                              {rankedUser.value}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </section>
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
         </div>
       </main>
     </div>

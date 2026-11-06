@@ -13,7 +13,7 @@
  * O escopo é a tela medida: pódio, classificação e os três textos do bloco pessoal.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 
 const fixtures = vi.hoisted(() => ({
   // A ordem da lista é ARRIVAL, não régua: Carla vem antes de Elena com o mesmo placar, e a
@@ -94,6 +94,11 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/contexts/auth-context", () => ({
   useAuth: () => ({ user: fixtures.authUser, loading: false, logout: vi.fn() }),
 }));
+// plan-v18 S03 (DEC-249): a página agora lê os contextos de projeto e tarefa para a aba
+// Projetos. Os testes do ranking só usam a aba Pessoas; estes mocks servem a aba padrão.
+vi.mock("@/contexts/project-context", () => ({ useProject: () => ({ projects: [] as never[] }) }));
+vi.mock("@/contexts/task-context", () => ({ useTask: () => ({ tasks: [] as never[] }) }));
+
 
 vi.mock("@/contexts/user-context", () => ({
   useUser: () => ({
@@ -119,6 +124,15 @@ function beatingBoard(authUser: Record<string, unknown>) {
     throw new Error(`fetchAPI não esperou por ${url}`);
   });
 }
+// plan-v18 S03 (DEC-249, ADR-006): a página ganhou duas abas e Projetos é a padrão, que
+// desmonta o ranking. Ativar a aba Pessoas antes de assar o quadro.
+async function renderPessoas() {
+  render(<LeaderboardPage />);
+  const tab = screen.getByRole("tab", { name: "Pessoas" });
+  fireEvent.mouseDown(tab);
+  await waitFor(() => expect(tab).toHaveAttribute("aria-selected", "true"));
+}
+
 
 describe("S04 — bloco pessoal pelo placar do mês", () => {
   beforeEach(() => {
@@ -131,7 +145,7 @@ describe("S04 — bloco pessoal pelo placar do mês", () => {
     // ordem de chegada, nem a 4ª do saldo.
     beatingBoard(fixtures.carla);
 
-    render(<LeaderboardPage />);
+    await renderPessoas();
 
     const personal = await screen.findByRole("region", { name: "Sua posição" });
     expect(within(personal).getByText("3º")).toBeInTheDocument();
@@ -145,7 +159,7 @@ describe("S04 — bloco pessoal pelo placar do mês", () => {
   it("a barra contra o líder é a razão do placar do mês (150 de 300 do líder = 50%)", async () => {
     beatingBoard(fixtures.carla);
 
-    render(<LeaderboardPage />);
+    await renderPessoas();
 
     const bar = await screen.findByRole("progressbar", {
       name: "Progresso até o líder do quadro: 50%",
@@ -156,7 +170,7 @@ describe("S04 — bloco pessoal pelo placar do mês", () => {
   it("a líder vê o posicionamento de topo com o mesmo placar do mês (300 pontos = 100%)", async () => {
     beatingBoard(fixtures.bruno);
 
-    render(<LeaderboardPage />);
+    await renderPessoas();
 
     const personal = await screen.findByRole("region", { name: "Sua posição" });
     expect(within(personal).getByText("1º")).toBeInTheDocument();
@@ -169,7 +183,7 @@ describe("S04 — bloco pessoal pelo placar do mês", () => {
   it("a classificação completa segue a régua no empate: Elena (4º) e Diego (5º) esperam o topo", async () => {
     beatingBoard(fixtures.carla);
 
-    render(<LeaderboardPage />);
+    await renderPessoas();
 
     const heading = await screen.findByRole("heading", { name: "Classificação completa" });
     const section = heading.closest("section") as HTMLElement;

@@ -109,6 +109,11 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/contexts/auth-context", () => ({
   useAuth: () => ({ user: fixtures.me, loading: false, logout: vi.fn() }),
 }))
+// plan-v18 S03 (DEC-249): a página agora lê os contextos de projeto e tarefa para a aba
+// Projetos. Os testes do ranking só usam a aba Pessoas; estes mocks servem a aba padrão.
+vi.mock("@/contexts/project-context", () => ({ useProject: () => ({ projects: [] as never[] }) }));
+vi.mock("@/contexts/task-context", () => ({ useTask: () => ({ tasks: [] as never[] }) }));
+
 
 vi.mock("@/contexts/user-context", () => ({
   useUser: () => ({
@@ -145,10 +150,19 @@ function backgroundPiece(section: HTMLElement) {
 beforeEach(() => {
   vi.clearAllMocks()
 })
+// plan-v18 S03 (DEC-249, ADR-006): a página ganhou duas abas e Projetos é a padrão, que
+// desmonta o ranking. Ativar a aba Pessoas antes de assar o quadro.
+async function renderPessoas() {
+  render(<LeaderboardPage />)
+  const tab = screen.getByRole("tab", { name: "Pessoas" })
+  fireEvent.mouseDown(tab)
+  await waitFor(() => expect(tab).toHaveAttribute("aria-selected", "true"))
+}
+
 
 describe("plan-v14 S03 — capa do campeão como fundo cheio", () => {
-  it("mês em curso: a capa cobre o bloco inteiro", () => {
-    render(<LeaderboardPage />)
+  it("mês em curso: a capa cobre o bloco inteiro", async () => {
+    await renderPessoas()
 
     const section = championSection()
     const img = backgroundPiece(section)
@@ -165,7 +179,7 @@ describe("plan-v14 S03 — capa do campeão como fundo cheio", () => {
   })
 
   it("mês fechado: a capa da conta de hoje entra como fundo cheio", async () => {
-    render(<LeaderboardPage />)
+    await renderPessoas()
 
     // Abrir o seletor e escolher o janeiro fechado (lição do painel: `fireEvent` na opção).
     fireEvent.click(await screen.findByRole("combobox", { name: "Mês do quadro" }))
@@ -184,7 +198,7 @@ describe("plan-v14 S03 — capa do campeão como fundo cheio", () => {
 
   it("campeão do fechamento sem conta de hoje: bloco intacto, nenhum fundo inventado", async () => {
     // Lia lidera dezembro e não tem conta na lista de hoje — o bloco fica sem fundo.
-    render(<LeaderboardPage />)
+    await renderPessoas()
 
     fireEvent.click(await screen.findByRole("combobox", { name: "Mês do quadro" }))
     const option = await screen.findByRole("option", { name: /dezembro de 2025/ })
