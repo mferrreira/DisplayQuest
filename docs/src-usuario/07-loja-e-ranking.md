@@ -52,7 +52,7 @@ Aprovar confirma o resgate; rejeitar devolve os pontos à pessoa.
 
 ## O ranking
 
-O **Quadro de Liderança** tem duas abas: **Projetos** e **Pessoas**. Na aba **Projetos** está o **leaderboard de projetos** por pontos, e na aba **Pessoas** está a classificação que ordena as pessoas pelo que produziram, com as colunas **Posição**, **Usuário**, **Tarefas concluídas** e **Pontos**.
+O **Quadro de Liderança** tem três abas: **Projetos**, **Temporada** e **Pessoas**. Na aba **Projetos** está o **leaderboard de projetos** por pontos, na aba **Temporada** está a classificação anual e na aba **Pessoas** está a classificação que ordena as pessoas pelo que produziram, com as colunas **Posição**, **Usuário**, **Tarefas concluídas** e **Pontos**.
 
 Na aba **Projetos**, o painel ordena os projetos pela pontuação: o campeão em bloco destacado, com a capa, o logo, o período, a barra de andamento, a pilha de avatares dos membros, a contagem de membros e o líder; o 2º e o 3º lugares com medalha, contagem de membros e barra; e a classificação completa a partir do 4º, em tabela com Posição, Projeto, Progresso, Membros e Pontos. Os projetos em que você participa aparecem com o rótulo **Seu projeto**. O seletor do painel escolhe o recorte, e **Todos os projetos** reúne o conjunto todo; escolher um projeto no painel abre a página dedicada dele. Cada peça do leaderboard abre o detalhe do projeto.
 
@@ -74,12 +74,21 @@ No seletor ao lado do título, escolha um mês já fechado para consultar o resu
 O seletor identifica o período e o aviso explica que valor e posição estão congelados.
 ```
 
-O que alimenta cada coluna:
+## A temporada
+
+A **Temporada** é o conjunto dos 12 quadros de liderança do ano. A aba **Temporada** tem um seletor de ano, com **temporada em curso** e as temporadas já fechadas. Em curso, o pódio e a tabela ordenam as pessoas pelo **saldo de pontos** que elas têm — o número que a coluna **Pontos da temporada** mostra é o saldo acumulado da pessoa, não o placar de um mês. O 1º lugar tem o mesmo cartão destacado do quadro mensal, com a capa do perfil como fundo.
+
+Ao virada de ano, a temporada do ano que terminou fecha: o quadro do ano congela o saldo de cada pessoa em valor e posição, como o fechamento de mês congela o placar, e a contagem de pontos recomeça do zero para todos. O pódio da temporada fechada fica consultável no seletor de anos, e o aviso diz que valor e posição estão congelados.
+
+```foto ranking-temporada titulo="A aba Temporada, com o pódio pelo saldo acumulado e o seletor de ano"
+A coluna da aba Temporada é o saldo da pessoa; a coluna da aba Pessoas é o placar do mês. São duas contagens diferentes na mesma tela.
+```
 
 | Coluna | De onde vem |
 | --- | --- |
 | **Tarefas concluídas** | tarefas aprovadas, não as entregues para revisão |
 | **Pontos** | pontos do placar mensal creditados pelas aprovações, menos penalidades e correções do painel; compras da loja não alteram esse placar |
+| **Pontos da temporada** | saldo de pontos da pessoa — a contagem que a temporada ordena |
 
 ## Distintivos
 

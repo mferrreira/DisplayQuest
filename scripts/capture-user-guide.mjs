@@ -144,6 +144,10 @@ const INTERACTIONS = [
   { id: "perfil-configuracoes", role: "part", route: "/dashboard/profile", aba: "Configurações" },
   // plan-v18 S05 (DEC-249): a classificação completa mora na aba Pessoas do Quadro de Liderança.
   { id: "ranking-participante", role: "part", route: "/dashboard/leaderboard", aba: "Pessoas", verifica: "Classificação completa" },
+  // plan-v20 S03 (DEC-255): a aba Temporada, em curso. A temporada fechada não é capturável hoje:
+  // a primeira fecha na virada 31/12/2026, e a rota de gestão recusa fechar ano anterior à
+  // primeira temporada. A captura é o quadro vivo pelo saldo, com o seletor de ano.
+  { id: "ranking-temporada", role: "part", route: "/dashboard/leaderboard", aba: "Temporada", verifica: "Pontos da temporada", rolarAte: "text=Pontos da temporada" },
   // plan-v17 S04 (G6): o bloco Badges do perfil; plan-v18 S02 (DEC-244): só os cartões das
   // conquistadas — o texto da verificação é o nome de um badge da conta de captura.
   { id: "perfil-badges", role: "part", route: "/dashboard/profile", verifica: "Vinte e Cinco Tarefas", rolarAte: "text=Vinte e Cinco Tarefas" },
