@@ -12,6 +12,10 @@ import {
   ReadBoardMonthHistoryUseCase,
 } from "@/backend/modules/gamification/application/use-cases/read-board-month-history.use-case"
 import { ReadBoardMonthUseCase } from "@/backend/modules/gamification/application/use-cases/read-board-month.use-case"
+import {
+  ListClosedSeasonsUseCase,
+  ReadSeasonHistoryUseCase,
+} from "@/backend/modules/gamification/application/use-cases/read-season-history.use-case"
 import { ReadUserBoardMonthsUseCase } from "@/backend/modules/gamification/application/use-cases/read-user-board-months.use-case"
 import { AdjustMonthPointsUseCase } from "@/backend/modules/gamification/application/use-cases/adjust-month-points.use-case"
 import { ReadUserProgressionUseCase } from "@/backend/modules/gamification/application/use-cases/read-user-progression.use-case"
@@ -107,6 +111,13 @@ export class GamificationModule {
   readonly readBoardMonthHistory: UseCaseExecute<ReadBoardMonthHistoryUseCase>
   /** S03: os meses que ja fecharam, para o seletor da tela saber o que existe abrir. */
   readonly listClosedBoardMonths: UseCaseExecute<ListClosedBoardMonthsUseCase>
+  /**
+   * plan-v20 S02 (DEC-252, DEC-255): o quadro congelado de uma temporada, e o ano em curso
+   * pedido por nome. Leitura do autenticado, como o quadro de hoje — nenhum gate.
+   */
+  readonly readSeasonHistory: UseCaseExecute<ReadSeasonHistoryUseCase>
+  /** plan-v20 S02: as temporadas que ja fecharam, para o seletor da aba Temporada. */
+  readonly listClosedSeasons: UseCaseExecute<ListClosedSeasonsUseCase>
   /** S04 (DEC-232): os meses fechados de uma pessoa, para o perfil listar o historico dela. */
   readonly readUserBoardMonths: UseCaseExecute<ReadUserBoardMonthsUseCase>
   /**
@@ -140,6 +151,8 @@ export class GamificationModule {
     private readonly closeSeasonUseCase: CloseSeasonUseCase,
     private readonly readBoardMonthHistoryUseCase: ReadBoardMonthHistoryUseCase,
     private readonly listClosedBoardMonthsUseCase: ListClosedBoardMonthsUseCase,
+    private readonly readSeasonHistoryUseCase: ReadSeasonHistoryUseCase,
+    private readonly listClosedSeasonsUseCase: ListClosedSeasonsUseCase,
     private readonly readUserBoardMonthsUseCase: ReadUserBoardMonthsUseCase,
     private readonly adjustMonthPointsUseCase: AdjustMonthPointsUseCase,
   ) {
@@ -167,6 +180,8 @@ export class GamificationModule {
     this.closeSeason = this.closeSeasonUseCase.execute.bind(this.closeSeasonUseCase)
     this.readBoardMonthHistory = this.readBoardMonthHistoryUseCase.execute.bind(this.readBoardMonthHistoryUseCase)
     this.listClosedBoardMonths = this.listClosedBoardMonthsUseCase.execute.bind(this.listClosedBoardMonthsUseCase)
+    this.readSeasonHistory = this.readSeasonHistoryUseCase.execute.bind(this.readSeasonHistoryUseCase)
+    this.listClosedSeasons = this.listClosedSeasonsUseCase.execute.bind(this.listClosedSeasonsUseCase)
     this.readUserBoardMonths = this.readUserBoardMonthsUseCase.execute.bind(this.readUserBoardMonthsUseCase)
     this.adjustMonthPoints = this.adjustMonthPointsUseCase.execute.bind(this.adjustMonthPointsUseCase)
   }
@@ -255,6 +270,8 @@ export function createGamificationModule(options: GamificationModuleFactoryOptio
     new CloseSeasonUseCase(ports.monthClose, evaluateUserBadges),
     new ReadBoardMonthHistoryUseCase(ports.monthClose),
     new ListClosedBoardMonthsUseCase(ports.monthClose),
+    new ReadSeasonHistoryUseCase(ports.monthClose),
+    new ListClosedSeasonsUseCase(ports.monthClose),
     new ReadUserBoardMonthsUseCase(ports.monthClose),
     new AdjustMonthPointsUseCase(ports.users),
   )

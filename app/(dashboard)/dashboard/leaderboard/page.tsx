@@ -51,13 +51,27 @@ import {
 import { fetchAPI } from "@/contexts/api-client"
 import { userImageUrl } from "@/lib/api/user-images"
 import { BannerImage } from "@/components/ui/banner-image"
-import { compareByBoardPosition } from "@/backend/domain"
+import { compareByBoardPosition, compareBySeasonPosition } from "@/backend/domain"
 
 /** O que `GET /api/board` declara (S01: mês corrente; S03 acrescenta a lista de meses fechados). */
 interface BoardMonth {
   month: string
   monthLabel: string
   closedMonths?: Array<{ month: string; monthLabel: string }>
+  /** plan-v20 S02 (DEC-255): o ano em curso e as temporadas fechadas, declarados pelo servidor. */
+  seasonYear?: string
+  closedSeasons?: Array<{ year: string; yearLabel: string }>
+}
+
+/** O que `GET /api/board?year=AAAA` devolve (S02, espelho de CA4/CA8 do mês). */
+interface SeasonBoardRead {
+  year: string
+  yearLabel: string
+  track: string
+  closed: boolean
+  live: boolean
+  notice: string
+  entries: Array<{ userId: number; name: string; value: number; position: number }>
 }
 
 /** O que `GET /api/board?month=AAAA-MM` devolve (S03, CA4, CA8, R9). */
@@ -93,6 +107,9 @@ interface BoardEntry {
 /** Sentinela da casa para "sem mês escolhido": o quadro vivo. Nunca `""` (Select do Radix). */
 const CURRENT_MONTH = "current"
 
+/** plan-v20 S02 (DEC-255): sentinela do ano em curso, mesma forma da sentinela do mês. */
+const CURRENT_SEASON = "current"
+
 export default function LeaderboardPage() {
   const { user, loading } = useAuth()
   const router = useRouter()
@@ -115,6 +132,14 @@ export default function LeaderboardPage() {
   // A falha de leitura promete "tente de novo", então o retry tem que existir na tela: é uma
   // contagem de tentativa, não um segundo caminho de leitura.
   const [readAttempt, setReadAttempt] = useState(0)
+
+  // plan-v20 S02 (DEC-255): a aba Temporada. Em curso, o quadro é o SALDO da base (`points`),
+  // pela MESMA régua do quadro (DEC-253). Fechada, a leitura do ano congela as linhas — os mesmos
+  // três estados da leitura de mês (pendente, falha, pronto), espelhados.
+  const [selectedSeason, setSelectedSeason] = useState<string>(CURRENT_SEASON)
+  const [closedSeason, setClosedSeason] = useState<SeasonBoardRead | null>(null)
+  const [closedSeasonError, setClosedSeasonError] = useState(false)
+  const [seasonAttempt, setSeasonAttempt] = useState(0)
 
   useEffect(() => {
     let cancelled = false
@@ -158,6 +183,31 @@ export default function LeaderboardPage() {
     }
   }, [selectedMonth, readAttempt])
 
+  // plan-v20 S02: a leitura de um ano fechado só acontece quando a pessoa abre um ano fechado.
+  useEffect(() => {
+    if (selectedSeason === CURRENT_SEASON) {
+      setClosedSeason(null)
+      setClosedSeasonError(false)
+      return
+    }
+    let cancelled = false
+    setClosedSeason(null)
+    setClosedSeasonError(false)
+    fetchAPI<SeasonBoardRead>(`/api/board?year=${selectedSeason}`)
+      .then((season) => {
+        if (!cancelled) setClosedSeason(season)
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setClosedSeason(null)
+          setClosedSeasonError(true)
+        }
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [selectedSeason, seasonAttempt])
+
   // plan-v9 (ADR-001, DEC-224): o quadro ordena pelo placar do mês. `points` é saldo e não decide ordem.
   const monthScore = (candidate: { currentMonthPoints?: number }) =>
     candidate.currentMonthPoints ?? 0
@@ -177,6 +227,15 @@ export default function LeaderboardPage() {
         name: right.name,
         currentMonthPoints: right.currentMonthPoints ?? 0,
       },
+    ),
+  )
+
+  // plan-v20 S02 (DEC-253): a temporada ordena pelo SALDO, com a MESMA régua do quadro. Em curso,
+  // a tela usa a base viva; fechada, as linhas do ano congelado.
+  const seasonSortedUsers = [...users].sort((left, right) =>
+    compareBySeasonPosition(
+      { id: left.id, name: left.name, currentSeasonPoints: left.points ?? 0 },
+      { id: right.id, name: right.name, currentSeasonPoints: right.points ?? 0 },
     ),
   )
 
@@ -240,6 +299,44 @@ export default function LeaderboardPage() {
         completedTasks: rankedUser.completedTasks,
       }))
 
+  const seasonEntries: BoardEntry[] =
+    closedSeason !== null && closedSeason.closed && !closedSeason.live
+      ? closedSeason.entries.map((entry) => {
+          const account = users.find((candidate) => candidate.id === entry.userId)
+          return {
+            id: entry.userId,
+            name: entry.name,
+            value: entry.value,
+            position: entry.position,
+            avatar: account?.avatar,
+            bannerKey: account?.bannerKey,
+            avatarKey: account?.avatarKey,
+            roles: account?.roles,
+            completedTasks: account?.completedTasks,
+          }
+        })
+      : seasonSortedUsers.map((rankedUser, index) => ({
+          id: rankedUser.id,
+          name: rankedUser.name,
+          value: rankedUser.points ?? 0,
+          position: index + 1,
+          avatar: rankedUser.avatar,
+          bannerKey: rankedUser.bannerKey,
+          avatarKey: rankedUser.avatarKey,
+          roles: rankedUser.roles,
+          completedTasks: rankedUser.completedTasks,
+        }))
+
+  const seasonSelectedClosed =
+    selectedSeason !== CURRENT_SEASON &&
+    closedSeason !== null &&
+    closedSeason.closed &&
+    !closedSeason.live
+  const seasonClosedReady = seasonSelectedClosed && closedSeason !== null
+  const seasonPending =
+    selectedSeason !== CURRENT_SEASON && closedSeason === null && !closedSeasonError
+  const seasonFailed = selectedSeason !== CURRENT_SEASON && closedSeasonError
+
   const leader = entries[0]
   const leaderPoints = leader ? leader.value : 0
   const myPoints = myEntry ? monthScore(myEntry) : 0
@@ -301,6 +398,47 @@ export default function LeaderboardPage() {
     </Select>
   )
 
+  // plan-v20 S02 (DEC-255): o seletor de ano da aba Temporada. Os anos vêm do servidor
+  // (`seasonYear` + `closedSeasons`); a tela não deduz anos, porque calcular ano no navegador
+  // desloca a virada no fuso do laboratório (DEC-132).
+  const seasonSelector = (
+    <Select value={selectedSeason} onValueChange={(value) => setSelectedSeason(value)}>
+      <SelectTrigger
+        className="w-[190px] sm:w-[220px]"
+        aria-label="Ano da temporada"
+      >
+        <SelectValue placeholder="temporada em curso" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value={CURRENT_SEASON}>temporada em curso</SelectItem>
+        {(boardMonth?.closedSeasons ?? []).map((closedSeasonEntry) => (
+          <SelectItem key={closedSeasonEntry.year} value={closedSeasonEntry.year}>
+            {closedSeasonEntry.yearLabel}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  )
+
+  const seasonYearLabel =
+    closedSeason?.yearLabel ??
+    (boardMonth?.closedSeasons ?? []).find(
+      (seasonEntry) => seasonEntry.year === selectedSeason,
+    )?.yearLabel ??
+    selectedSeason
+  const seasonDescription = seasonClosedReady
+    ? closedSeason.entries.length > 0
+      ? closedSeason.notice
+      : `Fechamento da ${seasonYearLabel}.`
+    : seasonPending
+      ? `Lendo o fechamento da ${seasonYearLabel}.`
+      : seasonFailed
+        ? `Temporada pedida: ${seasonYearLabel}.`
+        : boardMonth?.seasonYear
+          ? `Placar da temporada ${boardMonth.seasonYear} em curso. Abra o perfil de cada pessoa.`
+          : "Placar da temporada em curso. Abra o perfil de cada pessoa."
+
+
   // O aviso do mês tem um ramo por estado da leitura, e nenhum deles nomeia o mês errado: pendant
   // o mês em curso, na falha e no vazio o mês pedido. Dizer "Placar de outubro de 2026" enquanto o
   // quadro embaixo lê junho de 2027 é a mesma mentira que a CA4 e a CA8 existem para pegar.
@@ -332,10 +470,14 @@ export default function LeaderboardPage() {
               duas abas abertas a todo autenticado. Projetos por primeiro, com o painel intacto
               desde /dashboard/projetos; Pessoas é o ranking de hoje, intacto. */}
           <Tabs defaultValue="projetos" className="space-y-4">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="projetos" className="flex items-center gap-2">
                 <TrendingUp className="h-4 w-4" />
                 Projetos
+              </TabsTrigger>
+              <TabsTrigger value="temporada" className="flex items-center gap-2">
+                <Trophy className="h-4 w-4" />
+                Temporada
               </TabsTrigger>
               <TabsTrigger value="pessoas" className="flex items-center gap-2">
                 <Trophy className="h-4 w-4" />
@@ -353,6 +495,239 @@ export default function LeaderboardPage() {
                   router.push(`/dashboard/projetos/${project.id}`)
                 }
               />
+            </TabsContent>
+
+            {/* plan-v20 S02 (DEC-255): a aba Temporada, entre Projetos e Pessoas. Em curso, o
+                pódio e a tabela são pelo SALDO acumulado da pessoa (`users.points`) — a
+                temporada é o conjunto dos 12 quadros do ano, e o número que aDEC-253 nomeia é o
+                saldo no instante. Fechada, a leitura do ano congela valor e posição, com os
+                mesmos estados de leitura da aba Pessoas. */}
+            <TabsContent value="temporada" className="space-y-8">
+              <PageHeader
+                title="Temporada"
+                description={seasonDescription}
+                icon={Trophy}
+                actions={seasonSelector}
+              />
+
+              {seasonClosedReady && seasonEntries.length === 0 ? (
+                <div role="status">
+                  <EmptyState
+                    icon={Trophy}
+                    title="Quadro vazio"
+                    description={closedSeason.notice}
+                    className="rounded-lg border border-dashed border-border"
+                  />
+                </div>
+              ) : seasonPending ? (
+                <section
+                  aria-label="Quadro da temporada fechada"
+                  role="status"
+                  className="rounded-lg border border-dashed border-border p-10 text-center"
+                >
+                  <p className="text-muted-foreground">
+                    Lendo o quadro fechado da {seasonYearLabel}...
+                  </p>
+                </section>
+              ) : seasonFailed ? (
+                <div role="alert">
+                  <EmptyState
+                    icon={Trophy}
+                    title="Quadro indisponível"
+                    description={`Não foi possível ler o quadro da ${seasonYearLabel}. A temporada fechada não muda.`}
+                    className="rounded-lg border border-dashed border-border"
+                    action={
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSeasonAttempt((attempt) => attempt + 1)}
+                      >
+                        Tentar de novo
+                      </Button>
+                    }
+                  />
+                </div>
+              ) : (
+                <div
+                  role={seasonClosedReady ? "status" : undefined}
+                  aria-label={seasonClosedReady ? "Quadro da temporada fechada" : undefined}
+                  className="space-y-8"
+                >
+                  {seasonEntries[0] && (
+                    <section aria-label="Campeão da temporada">
+                      <Link
+                        href={`/dashboard/profile?userId=${seasonEntries[0].id}`}
+                        className="relative block overflow-hidden rounded-2xl border border-warning/30 bg-warning/5 transition-colors hover:border-warning/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        {seasonEntries[0].bannerKey ? (
+                          <div className="absolute inset-0 opacity-20" aria-hidden="true">
+                            <BannerImage
+                              src={userImageUrl(
+                                seasonEntries[0].id,
+                                "banner",
+                                seasonEntries[0].bannerKey,
+                              )}
+                              alt=""
+                            />
+                          </div>
+                        ) : null}
+                        <div className="relative flex flex-wrap items-center gap-6 p-8">
+                          <Crown className="h-10 w-10 shrink-0 text-warning" aria-hidden="true" />
+                          <BucketAvatar
+                            userId={seasonEntries[0].id}
+                            avatarKey={seasonEntries[0].avatarKey}
+                            legacyAvatar={seasonEntries[0].avatar}
+                            name={seasonEntries[0].name}
+                            className="h-20 w-20 border-2 border-warning/50"
+                            fallback={getInitials(seasonEntries[0].name)}
+                          />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-warning">
+                              1º lugar
+                            </p>
+                            <p className="truncate text-2xl font-bold text-foreground">
+                              {seasonEntries[0].name}
+                            </p>
+                            <p className="truncate text-sm text-muted-foreground">
+                              {getRoleLabel(seasonEntries[0].roles || []) ||
+                                "Membro do laboratório"}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-4xl font-bold tabular-nums text-foreground">
+                              {seasonEntries[0].value}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              pontos da temporada
+                            </p>
+                          </div>
+                        </div>
+                      </Link>
+                    </section>
+                  )}
+
+                  {seasonEntries.slice(1, 3).length > 0 && (
+                    <section
+                      aria-label="Segundo e terceiro lugares"
+                      className="grid gap-8 sm:grid-cols-2 sm:divide-x sm:divide-border"
+                    >
+                      {seasonEntries.slice(1, 3).map((runnerUp) => {
+                        const Icon = runnerUp.position === 2 ? Medal : Award
+                        const accent =
+                          runnerUp.position === 2
+                            ? "text-muted-foreground"
+                            : "text-warning"
+                        return (
+                          <Link
+                            key={runnerUp.id}
+                            href={`/dashboard/profile?userId=${runnerUp.id}`}
+                            className={`flex items-center gap-4 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                              runnerUp.position === 2 ? "sm:pr-8" : "sm:pl-8"
+                            }`}
+                          >
+                            <span
+                              className={`text-3xl font-bold tabular-nums ${accent}`}
+                              aria-hidden="true"
+                            >
+                              {runnerUp.position}º
+                            </span>
+                            <BucketAvatar
+                              userId={runnerUp.id}
+                              avatarKey={runnerUp.avatarKey}
+                              legacyAvatar={runnerUp.avatar}
+                              name={runnerUp.name}
+                              className="h-12 w-12"
+                              fallback={getInitials(runnerUp.name)}
+                            />
+                            <div className="min-w-0 flex-1">
+                              <p className="flex items-center gap-1.5 truncate font-semibold text-foreground">
+                                <Icon
+                                  className={`h-4 w-4 shrink-0 ${accent}`}
+                                  aria-hidden="true"
+                                />
+                                {runnerUp.name}
+                              </p>
+                              <p className="truncate text-xs text-muted-foreground">
+                                {getRoleLabel(runnerUp.roles || []) ||
+                                  "Membro do laboratório"}
+                              </p>
+                            </div>
+                            <p className="shrink-0 font-bold tabular-nums text-foreground">
+                              {runnerUp.value}
+                            </p>
+                          </Link>
+                        )
+                      })}
+                    </section>
+                  )}
+
+                  <section
+                    aria-labelledby="season-full"
+                    className="space-y-4"
+                  >
+                    <h2 id="season-full" className="text-sm font-semibold">
+                      Classificação completa
+                    </h2>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[52px] p-2 sm:w-[80px] sm:p-4">
+                            Posição
+                          </TableHead>
+                          <TableHead>Usuário</TableHead>
+                          <TableHead className="hidden sm:table-cell">
+                            Tarefas cumulativas
+                          </TableHead>
+                          <TableHead className="text-right">
+                            Pontos da temporada
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {seasonEntries.slice(3).map((rankedUser) => (
+                          <TableRow
+                            key={rankedUser.id}
+                            className={
+                              rankedUser.id === user.id ? "bg-primary/5" : ""
+                            }
+                          >
+                            <TableCell className="p-2 font-semibold tabular-nums text-muted-foreground sm:p-4">
+                              {rankedUser.position}º
+                            </TableCell>
+                            <TableCell>
+                              <Link
+                                href={`/dashboard/profile?userId=${rankedUser.id}`}
+                                className="flex items-center gap-3 rounded-lg p-1 transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                              >
+                                <BucketAvatar
+                                  userId={rankedUser.id}
+                                  avatarKey={rankedUser.avatarKey}
+                                  legacyAvatar={rankedUser.avatar}
+                                  name={rankedUser.name}
+                                  className="h-9 w-9"
+                                  fallback={getInitials(rankedUser.name)}
+                                />
+                                <div>
+                                  <p className="font-medium">{rankedUser.name}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {getRoleLabel(rankedUser.roles || [])}
+                                  </p>
+                                </div>
+                              </Link>
+                            </TableCell>
+                            <TableCell className="hidden p-2 tabular-nums sm:table-cell sm:p-4">
+                              {rankedUser.completedTasks ?? "—"}
+                            </TableCell>
+                            <TableCell className="p-2 text-right font-bold tabular-nums sm:p-4">
+                              {rankedUser.value}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </section>
+                </div>
+              )}
             </TabsContent>
 
             <TabsContent value="pessoas" className="space-y-8">

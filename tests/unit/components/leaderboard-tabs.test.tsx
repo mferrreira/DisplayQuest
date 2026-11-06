@@ -8,6 +8,8 @@
  *    detalhe do projeto (`/dashboard/projetos/<id>`);
  *  - a aba Pessoas é o ranking de hoje, intacto ("Sua posição" e pódio aparecem só
  *    quando a aba está ativa);
+ *  - plan-v20 S02 (DEC-255): a aba Temporada entra no meio, entre Projetos e Pessoas. A aba
+ *    padrão continua Projetos, e as três abas continuam abertas a todo autenticado.
  *  - as duas abas são abertas a todo autenticado — um VOLUNTARIO vê as duas.
  *
  * Mocks no padrão dos testes da página (`leaderboard-personal-month.test.tsx`): contextos
@@ -50,10 +52,10 @@ describe("Leaderboard com abas (plan-v18 S03)", () => {
     mocks.push.mockReset();
   });
 
-  it("duas abas, Projetos por primeiro e aba padrão", () => {
+  it("três abas, Projetos por primeiro e aba padrão (plan-v20 S02 acrescenta Temporada no meio)", () => {
     render(<LeaderboardPage />);
     const tabs = screen.getAllByRole("tab").map((t) => t.textContent);
-    expect(tabs).toEqual(["Projetos", "Pessoas"]);
+    expect(tabs).toEqual(["Projetos", "Temporada", "Pessoas"]);
     expect(screen.getByRole("tab", { name: "Projetos" })).toHaveAttribute("aria-selected", "true");
   });
 
@@ -78,17 +80,19 @@ describe("Leaderboard com abas (plan-v18 S03)", () => {
     expect(tab).toHaveAttribute("aria-selected", "true");
   });
 
-  it("um voluntário vê as duas abas", () => {
+  it("um voluntário vê as três abas", () => {
     render(<LeaderboardPage />);
     expect(screen.getByRole("tab", { name: "Projetos" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Temporada" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Pessoas" })).toBeInTheDocument();
   });
 
-  it("um GERENTE_PROJETO vê as duas abas", () => {
-    // C4 nomeia os dois papéis. A página não tem gate: a aba aberta não depende de papel.
+  it("um GERENTE_PROJETO vê as três abas", () => {
+    // C4 nomeia os dois papéis. A página não tem gate: as abas abertas não dependem de papel.
     mocks.authUser.roles = ["GERENTE_PROJETO"];
     render(<LeaderboardPage />);
     expect(screen.getByRole("tab", { name: "Projetos" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Temporada" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Pessoas" })).toBeInTheDocument();
     mocks.authUser.roles = ["VOLUNTARIO"];
   });

@@ -75,6 +75,12 @@ export function civilDaysBetween(from: string, to: string): number {
  * Mes do quadro e fechamento de mes saem daqui, nunca de `getMonth()` do navegador:
  * `new Date("2026-10")` e meia-noite UTC e viraria setembro no rotulo (mesma medição do V5-2b).
  */
+/** Civil year of an instant, in the lab timezone (same discipline as `civilDayOfInstant`):
+ * `new Date().getFullYear()` in UTC desloca a virada do ano. */
+export function civilYearOfInstant(instant: Date): string {
+  return civilMonthOfInstant(instant).slice(0, 4);
+}
+
 export function civilMonthOfInstant(instant: Date): string {
   const day = civilDayOfInstant(instant);
   return day.slice(0, 7);
