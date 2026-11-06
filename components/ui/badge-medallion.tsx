@@ -66,12 +66,22 @@ export function BadgeMedallion({
   const box = size === "md" ? "h-10 w-10 rounded-full" : "h-4 w-4 rounded-full"
 
   if (badge.iconKey) {
+    // plan-v19 S01 (DEC-251): o ícone do bucket vive DENTRO de um círculo visível. O
+    // WebP do catálogo tem fundo transparente, e o img `rounded-full` não desenha nada
+    // (medido na vitrine: glifo solto no canto direito). O contorno segue a cor da badge.
+    const frame = size === "md" ? "h-10 w-10 border-2" : "h-4 w-4 border"
+    const inner = size === "md" ? "h-7 w-7" : "h-3 w-3"
     return (
-      <img
-        src={`/api/badges/${badge.id}/icon/file?v=${encodeURIComponent(badge.iconKey)}`}
-        alt={`Ícone do ${badge.name}`}
-        className={`${box} object-contain ${className}`}
-      />
+      <span
+        className={`flex items-center justify-center rounded-full ${frame} border-border ${className}`}
+        style={badge.color ? { borderColor: badge.color } : undefined}
+      >
+        <img
+          src={`/api/badges/${badge.id}/icon/file?v=${encodeURIComponent(badge.iconKey)}`}
+          alt={`Ícone do ${badge.name}`}
+          className={`${inner} object-contain`}
+        />
+      </span>
     )
   }
 

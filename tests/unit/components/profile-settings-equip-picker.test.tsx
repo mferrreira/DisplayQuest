@@ -80,7 +80,7 @@ describe("ProfileBadgeEquipPicker", () => {
     expect(screen.queryByText(/Em progresso X/)).toBeNull();
     expect(screen.getByText("Equipadas (1/3)")).toBeInTheDocument();
     expect(screen.getAllByText("+10% pontos")).toHaveLength(2);
-    expect(screen.getByRole("img", { name: "Ícone do Passiva A" })).toHaveClass("h-10");
+    expect(screen.getByRole("img", { name: "Ícone do Passiva A" }).parentElement).toHaveClass("h-10");
   });
 
   it("cliques chegam à rota com o alvo e o estado pedido; contador acompanha", async () => {

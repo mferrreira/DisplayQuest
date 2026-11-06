@@ -58,7 +58,10 @@ describe("ProfileBadgeShowcase", () => {
 
     const imgs = await screen.findAllByRole("img", { name: /^Ícone do / });
     expect(imgs.map((i) => i.getAttribute("alt"))).toEqual(["Ícone do Equipada A", "Ícone do Equipada B"]);
-    expect(imgs[0].className).toContain("h-10");
+    // DEC-251: o medálhão da vitrine é o círculo; o img mora dentro dele.
+    expect(imgs[0].parentElement!.className).toContain("h-10");
+    expect(imgs[0].parentElement!.className).toContain("rounded-full");
+    expect(imgs[0].className).not.toContain("h-10");
     expect(screen.queryByText("Equipada A")).toBeNull();
     expect(screen.queryByText("Selo seco")).toBeNull();
     expect(screen.queryByText(/Em progresso X/)).toBeNull();

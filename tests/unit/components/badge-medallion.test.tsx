@@ -4,6 +4,11 @@
  * Cadeia fechada do medálhão: imagem do bucket (rota autenticada com `?v=<chave>`) >
  * texto `icon` sobre `color` > Lucide da categoria. Chips, medálhões do card e picker
  * consomem a mesma peça. O rótulo de categoria vem do domínio, não de cópia na tela.
+ *
+ * plan-v19 S01 (DEC-251): o caminho da chave fecha o círculo — o ícone mora DENTRO de
+ * um slot arredondado com contorno na cor da badge. O WebP do catálogo tem fundo
+ * transparente, e o `img` `rounded-full` não desenha nada (medido na vitrine: glifo
+ * solto). Os caminhos de texto e de categoria já são círculos visíveis e não mudam.
  */
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
@@ -24,12 +29,12 @@ function b(over: Partial<MedallionBadge> = {}): MedallionBadge {
 }
 
 describe("BadgeMedallion", () => {
-  it("chave → img da rota autenticada, com a chave como quebra de cache, em círculo", () => {
+  it("chave → img da rota autenticada, com a chave como quebra de cache, dentro do círculo", () => {
     render(<BadgeMedallion badge={b({ iconKey: "badges/3/x.webp" })} size="md" />);
     const img = screen.getByRole("img", { name: "Ícone do Selo 3" });
     expect(img.getAttribute("src")).toContain("/api/badges/3/icon/file");
     expect(img.getAttribute("src")).toContain("v=badges%2F3%2Fx.webp");
-    expect(img.className).toContain("rounded-full");
+    expect(img.parentElement!.className).toContain("rounded-full");
   });
 
   it("sem chave: o texto `icon` sobre a cor do badge, sem img", () => {
@@ -59,5 +64,46 @@ describe("BadgeMedallion", () => {
     expect(badgeCategoryLabel("milestone")).toBe("Marco");
     expect(badgeCategoryLabel("special")).toBe("Especial");
     expect(badgeCategoryLabel("social")).toBe("Social");
+  });
+});
+
+describe("BadgeMedallion com iconKey (DEC-251)", () => {
+  const comChave = b({ iconKey: "badges/7/icon.webp", color: "#22c55e", category: "social" });
+
+  it("ícone dentro de círculo arredondado com contorno na cor da badge", () => {
+    render(<BadgeMedallion badge={comChave} size="md" />);
+    const img = screen.getByRole("img", { name: "Ícone do Selo 3" });
+    const circle = img.parentElement!;
+    expect(circle.className).toContain("rounded-full");
+    expect(circle.className).toMatch(/\bborder/);
+    expect(circle.getAttribute("style")).toContain("border-color: rgb(34, 197, 94);");
+    expect(circle.className).toContain("h-10");
+    expect(img.className).not.toContain("h-10");
+  });
+
+  it("size sm: círculo h-4 com o ícone dentro", () => {
+    render(<BadgeMedallion badge={comChave} size="sm" />);
+    const img = screen.getByRole("img", { name: "Ícone do Selo 3" });
+    const circle = img.parentElement!;
+    expect(circle.className).toContain("h-4");
+    expect(circle.className).toContain("rounded-full");
+    expect(circle.className).toMatch(/\bborder/);
+  });
+
+  it("sem cor: o círculo mantém contorno, sem cor de borda", () => {
+    render(<BadgeMedallion badge={{ ...comChave, color: null }} size="md" />);
+    const img = screen.getByRole("img", { name: "Ícone do Selo 3" });
+    const circle = img.parentElement!;
+    expect(circle.className).toContain("rounded-full");
+    expect(circle.className).toMatch(/\bborder/);
+    expect(circle.getAttribute("style")).toBeNull();
+  });
+
+  it("glifo de texto continua círculo na cor de fundo, como hoje", () => {
+    render(<BadgeMedallion badge={{ ...comChave, iconKey: null, icon: "🧪" }} size="md" />);
+    const glyph = screen.getByText("🧪");
+    const circle = glyph.parentElement!;
+    expect(circle.className).toContain("rounded-full");
+    expect(circle.getAttribute("style")).toContain("background-color:");
   });
 });
