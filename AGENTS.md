@@ -371,8 +371,12 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   DEC-226 plan-v9, DEC-232..236 plan-v10, DEC-240 plan-v12, DEC-242 em uso, **DEC-243 plan-v16**
   (ícone de badge no bucket pelo desenho de capa, conversão a WebP obrigatória na escrita, fonte
   Lucide ISC). **Atualizado em 2026-11-06:** **DEC-247..250 plan-v18** (vitrine, cartões de badge,
-  leaderboard com abas; DEC-250 revoga a posição da DEC-247 a pedido do dono).
-  **Próxima livre: DEC-252.**
+  leaderboard com abas; DEC-250 revoga a posição da DEC-247 a pedido do dono). **DEC-251 plan-v19**
+  (medálhão em círculo com contorno na cor da badge, vitrine sem slot vazio). **DEC-252..256 plan-v20**
+  (Temporada: linha da coleção `board_month_closes` com track `SEASON_POINTS`, pontuação = `users.points`
+  no fechamento, cron na virada 1º jan, rota de gestão `POST /api/board/season-close` com `MANAGE_USERS`,
+  aba "Temporada" no leaderboard, métricas de badge recompute do zero pós-reset).
+  **Próxima livre: DEC-257.**
 - **Subtask (V4-4, DEC-78..83 → regra atual = DEC-97/98/189/224):** tabela `task_subtasks` (sem FK para
   `users` — subtask não tem
   responsável próprio), base gravada em `tasks.points` = `10 + 10·n` (DEC-97 baixou a 5; o dono restaurou
@@ -1356,3 +1360,35 @@ leitura do texto visível. São observações medidas na instância real, **não
   `ModernAdminPanel`): o picker distingue "não foi possível carregar" de "nenhuma badge com passiva".
 - **Capturas G6:** `perfil-edicao` mudou de `rolarAte` para `text=Badges equipáveis` (o controle novo
   que a prosa nomeia), `perfil-badges` recapturada com os chips do medálhão. Guia: capítulos 7/8/9.
+
+## plan-v20 — Temporada: quadro anual, fechamento na virada, aba no leaderboard (2026-11-06, DEC-252..256)
+
+- **Estado:** `fechado` em 2026-11-06, 3 fatias (S01 fechamento, S02 aba, S03 guia+capturas). Plano em
+  `~/Projetos/displayquest-planos/plans/plan-v20-temporada/`. Commits: S01 `4f4575c`, S02 `548f64f`,
+  S03 `d6dde79`. Gate no fechamento: suíte **303 arquivos / 2967 testes** na 5433, tsc 0, lint 0,
+  arch 1324 módulos / 5602 dependências sem violação, docs:build/ docs:check verdes.
+- **DEC-252:** a temporada é **linha da MESMA coleção** de fechamento de quadro — `board_month_closes`
+  com `month=AAAA` e track `SEASON_POINTS`; as linhas de placar vão em `month_history`. Nenhuma tabela
+  nem coluna nova. Track é vocabulário fechado em `backend/domain/gamification/board-tracks.ts`.
+- **DEC-253:** a pontuação da temporada é `users.points` no instante do fechamento. O reset zera
+  `points` e `currentMonthPoints` de todos; histórico de premiação, compras, badges e `projects.points`
+  não mudam. A escrita de reset é `zeroFields` no port `MonthCloseWrite` da mesma coleção.
+- **DEC-254:** fechamento por cron na virada — `'0 0 1 * *'` America/Sao_Paulo fecha **dezembro e
+  depois a temporada** (ordem medido em teste do handler); rota de gestão `POST /api/board/season-close`
+  exige `MANAGE_USERS`; ator de sistema `SEASON_CLOSE` só no cron (guarda `systemActor(` em rotas).
+  Ano fechado recusado: `closeTargetSeasonYear(now)` — fechar ano anterior à virada é 409
+  (`seasonAlreadyClosedMessage`). Primeira temporada: 2026, fecha 31/12/2026.
+- **DEC-255:** aba **Temporada** no leaderboard, entre Projetos e Pessoas. Em curso: pódio e tabela pelo
+  saldo `users.points` com a MESMA régua de desempate do quadro (`compareBySeasonPosition`); coluna
+  "Pontos da temporada". Fechada: valor e posição congelados na linha, seletor de ano com sentinela
+  `temporada em curso`, campeão com capa como fundo, três estados de leitura (pending, `role="alert"`
+  com retry, vazio com aviso).
+- **DEC-256:** pós-reset, as métricas de **pontos** das badges recomputam do zero da temporada; badges
+  concedidas permanecem.
+- **Gotcha de leitura:** `GET /api/board?year=AAAA` devolve o quadro congelado; a resposta sem parâmetro
+  ganhou `seasonYear` (ano em curso, derivado pelo servidor via `civilYearOfInstant` — DEC-132) e
+  `closedSeasons` (lista dos anos fechados que alimenta o seletor).
+- **Captura `ranking-temporada`** (entrada nova em `scripts/capture-user-guide.mjs`): aba Temporada em
+  curso, verificada pelo texto "Pontos da temporada". A temporada fechada **não é capturável hoje** —
+  a primeira fecha em 31/12/2026 e a rota recusa fechar ano anterior; o guia descreve o fechamento em
+  prosa sem foto.
