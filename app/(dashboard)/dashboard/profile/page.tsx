@@ -247,17 +247,18 @@ function ProfilePageContent() {
                   {showProfileForm && <Badge variant="secondary">Editando</Badge>}
                 </div>
                 <p className="mt-1 truncate text-sm text-muted-foreground">{user.email}</p>
-                {/* plan-v18 S01 (DEC-247, ADR-004): a vitrine de equipadas mora na coluna
-                    do nome, à esquerda, acima da linha das funções. Regras de seleção de
-                    DEC-245 intactas; a peça continua a mesma. */}
-                <div className="mt-3">
-                  <ProfileBadgeShowcase userId={user.id} />
-                </div>
                 {user.roles.length > 0 && (
                   <p className="mt-2 text-sm text-muted-foreground">
                     {user.roles.map(getRoleDisplayName).join(" · ")}
                   </p>
                 )}
+              </div>
+              {/* plan-v18 S01-fix (DEC-250, dono 2026-11-06): a vitrine de equipadas mora no
+                  canto direito, onde a linha das funções estava; as funções voltam para a
+                  coluna do nome, abaixo do email. Regras de seleção de DEC-245 intactas;
+                  a peça continua a mesma. */}
+              <div className="flex flex-col items-start sm:items-end">
+                <ProfileBadgeShowcase userId={user.id} />
               </div>
             </div>
           </section>

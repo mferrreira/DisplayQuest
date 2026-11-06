@@ -172,12 +172,6 @@ export function UserProfileView({ user, onBack, canEdit = false, onEdit, project
               <Mail className="h-4 w-4" aria-hidden="true" />
               <span className="truncate">{user.email}</span>
             </p>
-            {/* plan-v18 S01 (DEC-247, ADR-004): a vitrine mora na coluna do nome, à
-                esquerda, acima da linha das funções — o mesmo contrato do card próprio.
-                Nome só em tooltip. */}
-            <div className="mt-3">
-              <ProfileBadgeShowcase userId={user.id} />
-            </div>
             {user.roles.length > 0 && (
               <p className="mt-2 text-sm text-muted-foreground">
                 {user.roles.map(getRoleDisplayName).join(" · ")}
@@ -185,6 +179,10 @@ export function UserProfileView({ user, onBack, canEdit = false, onEdit, project
             )}
           </div>
           <div className="flex flex-col items-start gap-2 sm:items-end">
+            {/* plan-v18 S01-fix (DEC-250, dono 2026-11-06): a vitrine de equipadas mora no
+                canto direito, onde a linha das funções estava — o mesmo contrato do card
+                próprio. Nome só em tooltip. */}
+            <ProfileBadgeShowcase userId={user.id} />
             {user.createdAt ? (
               <p className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Calendar className="h-4 w-4" aria-hidden="true" />

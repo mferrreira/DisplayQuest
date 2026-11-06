@@ -46,6 +46,14 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   aqui afirmava que não existiam — está superada. O passo do `g4-normalize.sql` continua
   indispensável: sem ele, `entities-roundtrip` falha porque o seed escreve status pré-contrato e o
   schema estrito os rejeita por design (D-18). `db:test:guard` **não** existe e não foi inventado.
+- **Nunca `next dev` (regra do dono, 2026-11-06):** nenhum agente deste plano sobe `next dev` em
+  nenhuma porta. A instância de tela é **só** o `app` do `docker compose` em `localhost:3000`;
+  `next dev` extra (3001/3002 já Quebraram: três servers comendo RAM, e o `next build` no mesmo
+  diretório corrompe a cache `.next` do dev server). Mudança de código chega à tela **só** por
+  `docker compose build app` + `up -d` (medido: build > 25 min — rodar em background com
+  `--progress=plain > log`, conferir a data da imagem antes de capturar). Capturas e e2e apontam
+  para 3000. O container tem o código da imagem, não o working tree: antes de capturar uma
+  mudança nova, rebuilda.
 - **Node local ≠ Node de deploy:** a imagem é `node:20-alpine`; o `engines` não é declarado e
   não há `.nvmrc`. Gate verde local não implica gate verde no deploy quando o Node difere —
   foi assim que o shim `path` (removido) quebrava em Node 22+ e passaria em Node 20.

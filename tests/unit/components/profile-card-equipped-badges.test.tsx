@@ -114,12 +114,13 @@ describe("ProfileBadgeShowcase", () => {
     expect(third).toContain("<ProfileBadgeShowcase");
   });
 
-  it("plan-v18 S01 (DEC-247, ADR-004): a vitrine mora à esquerda, acima das roles", () => {
-    // Guard structural: as funções têm de estar NA MESMA coluna da vitrine — o corte é
-    // a coluna `min-w-0`, obtido por contagem de profundidade de div. Vitrine antes
-    // das funções dentro da coluna. Guard frouxo (posição no arquivo inteiro) passou
-    // uma vez sem medir a coluna: as funções estavam fisicamente na coluna da direita.
-    function leftColumn(src: string): string {
+  it("plan-v18 S01-fix (DEC-250, dono 2026-11-06): a vitrine mora no canto direito, onde as roles estavam", () => {
+    // Guard structural: as funções ficam NA coluna `min-w-0` (corte por contagem de
+    // profundidade de div) e a vitrine fica FORA dela, dentro da coluna da direita
+    // (`sm:items-end`). Guard frouxo de posição no arquivo não serve: ele passou uma
+    // vez com as funções na coluna da direita (DEC-247), que é exatamente o desenho
+    // que o dono recusou, e depois com a vitrine colada à esquerda (S01).
+    function minW0Column(src: string): { slice: string; end: number } {
       const start = src.indexOf('<div className="min-w-0">');
       expect(start, src.slice(0, 40)).toBeGreaterThanOrEqual(0);
       let depth = 0;
@@ -128,18 +129,22 @@ describe("ProfileBadgeShowcase", () => {
       let m: RegExpExecArray | null;
       while ((m = scanner.exec(src)) !== null) {
         depth += m[0] === "</div>" ? -1 : 1;
-        if (depth === 0) return src.slice(start, m.index + m[0].length);
+        if (depth === 0) return { slice: src.slice(start, m.index + m[0].length), end: m.index + m[0].length };
       }
       throw new Error("coluna min-w-0 sem fechamento");
     }
 
     for (const file of ["app/(dashboard)/dashboard/profile/page.tsx", "components/ui/user-profile-view.tsx"]) {
-      const column = leftColumn(readFileSync(file, "utf8"));
-      const vitrine = column.indexOf("<ProfileBadgeShowcase");
-      const roles = column.indexOf("getRoleDisplayName");
-      expect(vitrine, `${file}: vitrine na coluna da esquerda`).toBeGreaterThanOrEqual(0);
-      expect(roles, `${file}: funções na coluna da esquerda`).toBeGreaterThanOrEqual(0);
-      expect(vitrine, `${file}: vitrine acima das funções`).toBeLessThan(roles);
+      const src = readFileSync(file, "utf8");
+      const { slice, end } = minW0Column(src);
+      expect(slice.indexOf("getRoleDisplayName"), `${file}: funções na coluna do nome`).toBeGreaterThanOrEqual(0);
+      expect(slice.indexOf("<ProfileBadgeShowcase"), `${file}: vitrine fora da coluna do nome`).toBe(-1);
+      const right = src.slice(end);
+      const vitrine = right.indexOf("<ProfileBadgeShowcase");
+      expect(vitrine, `${file}: vitrine depois da coluna do nome`).toBeGreaterThanOrEqual(0);
+      const rightColumnStart = right.lastIndexOf('<div className="flex flex-col', vitrine);
+      expect(rightColumnStart, `${file}: vitrine dentro de coluna`).toBeGreaterThanOrEqual(0);
+      expect(right.slice(rightColumnStart, vitrine).includes("sm:items-end"), `${file}: coluna da direita`).toBe(true);
     }
   });
 });
