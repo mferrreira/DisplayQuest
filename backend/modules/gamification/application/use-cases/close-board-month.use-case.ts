@@ -9,7 +9,10 @@ import {
   type MonthClosePerson,
 } from "@/backend/domain/gamification"
 import { civilMonthLabel } from "@/backend/domain/time"
-import type { BoardMonthClosePort } from "@/backend/modules/gamification/application/ports/board-month-close.port"
+import type { BoardMonthClosePort, BoardZeroField } from "@/backend/modules/gamification/application/ports/board-month-close.port"
+
+/** O zero do fechamento de mês é só o placar do mês; o saldo fica (DEC-253). */
+const BOARD_ZERO_MONTH: BoardZeroField = "monthPoints";
 import type { EvaluateUserBadgesUseCase } from "@/backend/modules/gamification/application/use-cases/evaluate-user-badges.use-case"
 
 /** Mensagem congelada do 403. A rota de gestão e o use case dizem a mesma frase. */
@@ -101,6 +104,8 @@ export class CloseBoardMonthUseCase {
       rows: plan.rows,
       // R11: o placar do mes e zerado de toda pessoa da base, inclusive de quem nao recebeu linha.
       userIdsToZero: people.map((person) => person.id),
+      // plan-v20 S01 (DEC-253): o fechamento de mês zera só o placar do mês; o saldo fica.
+      zeroFields: [BOARD_ZERO_MONTH],
     })
 
     // R4 (plan-v15 S11): fechamento de mês é episódio de quem recebeu linha. Métricas

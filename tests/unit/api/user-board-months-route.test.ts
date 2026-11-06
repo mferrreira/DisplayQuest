@@ -32,6 +32,9 @@ vi.mock("@/backend/composition/root", () => {
     async findClosedMonth() {
       throw new Error("buscar mes fechado nao deveria acontecer nos meses de pessoa");
     },
+    async listPeopleForSeasonClose() {
+      throw new Error("listar pessoas de temporada nao deveria acontecer nos meses de pessoa");
+    },
     async listPeopleForClose() {
       throw new Error("listar pessoas nao deveria acontecer nos meses de pessoa");
     },

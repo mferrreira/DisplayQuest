@@ -25,9 +25,56 @@ vi.mock("@/lib/storage/report-uploads", () => ({
 }))
 
 const scheduled: Array<{ expression: string; options: { timezone?: string } }> = []
+const handlers: Record<string, () => Promise<void>> = {}
+
+// plan-v20 S01 (DEC-254): o handler de '0 0 1 * *' roda o fechamento de dezembro e depois o
+// fechamento da temporada, no mesmo gatilho. Os dois use cases são duplos de contagem — o teste
+// pinar a ordem da rotina, não o banco (o roundtrip congela a escrita).
+const closeCalls: string[] = []
+// A resposta do fechamento de mês é controlável: dezembro dispara a temporada, novembro não.
+const monthResult = {
+  month: "2026-12",
+  monthLabel: "dezembro de 2026",
+  track: "MONTH_POINTS",
+  periodStart: "2026-12-01T03:00:00.000Z",
+  periodEnd: "2027-01-01T02:59:59.999Z",
+  closedAt: "2027-01-01T03:00:00.000Z",
+  closed: true,
+  alreadyClosed: false,
+  peopleCount: 2,
+  excluded: [],
+  triggeredBy: "SYSTEM:MONTH_CLOSE",
+} as { month: string; monthLabel: string }
+const seasonResult = {
+  year: "2026",
+  track: "SEASON_POINTS",
+  periodStart: "2026-01-01T03:00:00.000Z",
+  periodEnd: "2027-01-01T02:59:59.999Z",
+  closedAt: "2027-01-01T03:00:00.000Z",
+  closed: true,
+  alreadyClosed: false,
+  peopleCount: 2,
+  excluded: [],
+  triggeredBy: "SYSTEM:SEASON_CLOSE",
+}
+vi.mock("@/backend/composition/root", () => ({
+  getBackendComposition: () => ({
+    gamification: {
+      async closeBoardMonth() {
+        closeCalls.push("closeBoardMonth")
+        return monthResult
+      },
+      async closeSeason() {
+        closeCalls.push("closeSeason")
+        return seasonResult
+      },
+    },
+  }),
+}))
 vi.mock("node-cron", () => ({
-  schedule: (expression: string, _fn: unknown, options: { timezone?: string }) => {
+  schedule: (expression: string, fn: () => Promise<void>, options: { timezone?: string }) => {
     scheduled.push({ expression, options })
+    handlers[expression] = fn
     return { stop: () => undefined }
   },
 }))
@@ -77,5 +124,21 @@ describe("cron schedule — derivado do domínio (D2)", () => {
       }
     }
     expect([...covered].sort()).toEqual([...SCHEDULED_PAUSE_TIMES].sort())
+  })
+
+  it("o handler de '0 0 1 * *' roda o fechamento de dezembro e depois o da temporada (DEC-254)", async () => {
+    cronService.init()
+    closeCalls.length = 0
+    await handlers["0 0 1 * *"]()
+    expect(closeCalls).toEqual(["closeBoardMonth", "closeSeason"])
+  })
+
+  it("quadro de novembro não dispara temporada — a ordem só vale depois de dezembro (DEC-254)", async () => {
+    cronService.init()
+    closeCalls.length = 0
+    monthResult.month = "2026-11"
+    monthResult.monthLabel = "novembro de 2026"
+    await handlers["0 0 1 * *"]()
+    expect(closeCalls).toEqual(["closeBoardMonth"])
   })
 })

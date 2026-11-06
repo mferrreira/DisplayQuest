@@ -40,6 +40,9 @@ vi.mock("@/backend/composition/root", () => {
       mocks.reads += 1;
       return mocks.people;
     },
+    async listPeopleForSeasonClose() {
+      throw new Error("leitura da base de temporada não deveria acontecer no fechamento de mês");
+    },
     async writeClose(input) {
       mocks.writes.push(input);
     },
