@@ -18,7 +18,6 @@ vi.mock("@/contexts/task-context", () => ({ useTask: () => ({ tasks: mocks.tasks
 vi.mock("@/contexts/user-context", () => ({ useUser: () => ({ users: mocks.users }) }))
 vi.mock("@/components/features/project-list", () => ({ ProjectList: ({ projects, tasks }: any) => <div data-testid="project-list" data-projects={projects.map((p: any) => p.name).join(",")} data-tasks={tasks.map((t: any) => t.title).join(",")} /> }))
 vi.mock("@/components/features/project-dialog", () => ({ ProjectDialog: () => null }))
-vi.mock("@/components/features/volunteers-management", () => ({ VolunteersManagement: () => null }))
 vi.mock("@/components/features/project-manager-dashboard", () => ({ ProjectManagerDashboard: ({ projects, tasks, scopeDescription }: any) => <div data-testid="project-dashboard" data-projects={projects.map((p: any) => p.name).join(",")} data-tasks={tasks.map((t: any) => t.title).join(",")} data-scope={scopeDescription} /> }))
 
 beforeEach(() => {
@@ -37,18 +36,23 @@ beforeEach(() => {
   mocks.users = [{ id: 10, name: "Ana" }, { id: 11, name: "Bruno" }]
 })
 
-describe("filtros do Dashboard de Projetos", () => {
-  it("combina busca, status e pessoa no recorte de projetos e tarefas", async () => {
+describe("Projetos sem abas (plan-v18 S04, DEC-249)", () => {
+  it("a tela não tem abas e não tem painel de gerente", async () => {
+    render(<ProjetosPage />)
+    expect(screen.queryAllByRole("tab")).toHaveLength(0)
+    expect(screen.queryByTestId("project-dashboard")).not.toBeInTheDocument()
+  })
+
+  it("combina busca, status e pessoa no recorte da lista de projetos", async () => {
     const user = userEvent.setup()
     render(<ProjetosPage />)
-    await user.click(screen.getByRole("tab", { name: "Dashboard" }))
 
     await user.type(screen.getByRole("textbox", { name: "Buscar projetos" }), "Projeto")
     await user.click(screen.getByRole("button", { name: /Ativos/ }))
     await user.selectOptions(screen.getByRole("combobox", { name: "Filtrar por pessoa" }), "10")
 
-    expect(screen.getByTestId("project-dashboard")).toHaveAttribute("data-projects", "Projeto Alpha")
-    expect(screen.getByTestId("project-dashboard")).toHaveAttribute("data-tasks", "Alpha da Ana")
-    expect(screen.getByTestId("project-dashboard")).toHaveAttribute("data-scope", "busca “Projeto” · status active · pessoa Ana")
+    expect(screen.getByTestId("project-list")).toHaveAttribute("data-projects", "Projeto Alpha")
+    expect(screen.getByTestId("project-list")).toHaveAttribute("data-tasks", "Alpha da Ana")
+    expect(screen.getByText("1 projeto")).toBeInTheDocument()
   })
 })
