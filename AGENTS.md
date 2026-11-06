@@ -372,7 +372,7 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   (ícone de badge no bucket pelo desenho de capa, conversão a WebP obrigatória na escrita, fonte
   Lucide ISC). **Atualizado em 2026-11-06:** **DEC-247..250 plan-v18** (vitrine, cartões de badge,
   leaderboard com abas; DEC-250 revoga a posição da DEC-247 a pedido do dono).
-  **Próxima livre: DEC-251.**
+  **Próxima livre: DEC-252.**
 - **Subtask (V4-4, DEC-78..83 → regra atual = DEC-97/98/189/224):** tabela `task_subtasks` (sem FK para
   `users` — subtask não tem
   responsável próprio), base gravada em `tasks.points` = `10 + 10·n` (DEC-97 baixou a 5; o dono restaurou
@@ -1258,6 +1258,29 @@ leitura do texto visível. São observações medidas na instância real, **não
 - **Capturas G6:** `admin-badges` (nova entrada no script, aba Badges, verificação "Gerenciar Badges")
   e `perfil-badges` recapturadas com o catálogo de ícones aplicado (5432 e 5433). Guia: capítulo 9
   documenta a aba Badges e o botão "Enviar ícone"; capítulo 8 descreve o ícone nos cartões.
+
+## plan-v19 — ícone de badge dentro de círculo na cor da badge (2026-11-06, DEC-251)
+
+- **Estado:** `fechado` em 2026-11-06, 1 fatia. Plano em
+  `~/Projetos/displayquest-planos/plans/plan-v19-vitrine-circulo/`. Commits: S01 `042c2a8`
+  (+ guia `91e13d3`), conserto da review `50b6f1e` (+ captura `f653c01`). Gate: suíte
+  **297 arquivos / 2919 testes** na 5433, tsc 0, lint 0, arch 1314/5550, docs sem aviso.
+- **DEC-251 (pedido do dono, 2026-11-06):** o ícone do bucket (`iconKey`) de
+  `BadgeMedallion` mora **dentro de um círculo arredondado com contorno na cor da badge**
+  (`border-2` md, `border` sm; img `h-7`/`h-3` por dentro; fallback `border-border` quando a
+  badge não tem cor). A vitrine é feita desses círculos: só equipadas, máximo 3, **sem slot
+  vazio** — com uma equipada aparece um círculo. As cinco superfícies consomem a peça única
+  (vitrine md, bloco sm, picker, painel admin, diálogo de ícone).
+- **Conserto da review (must-fix):** `badge-manager` não consumia a peça — o círculo do
+  cartão desenhava só o glifo e o corpo entregava `img` cru; o diálogo de edição igual. Agora
+  o cartão usa `BadgeMedallion` md e o `img` cru do corpo saiu. A pré-visualização do arquivo
+  recém-escolido no diálogo continua img local: o byte ainda não tem id nem chave, a peça não
+  pode servê-lo. Guardas em `badge-icon-ui.test.tsx` medem o círculo do cartão, do diálogo e
+  do chip.
+- **Incidente de execução (lição):** a escrita da guarda nova de `badge-medallion.test.tsx`
+  sobrescreveu a guarda de plan-v17 que já existia em `e24252f` (5 testes da cadeia de ícone).
+  Restaurada e mesclada (5 + 4). Antes de escrever um teste em caminho novo, `git ls-files` o
+  caminho. A contagem da suíte entregou a divergência (2913 em vez de 2918).
 
 ## plan-v18 — vitrine, cartões de badge, leaderboard com abas, projetos sem abas (2026-11-06, DEC-247..250)
 
