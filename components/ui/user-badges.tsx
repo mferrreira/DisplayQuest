@@ -1,10 +1,9 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Badge } from "@/components/ui/badge"
 import { BadgesAPI } from "@/contexts/api-client"
 import { subscribeEquipped } from "@/lib/badges/equipped-sync"
-import { badgeCategoryLabel, equipEffectLabel, progressLabel } from "@/backend/domain"
+import { badgeCategoryLabel, equipEffectLabel } from "@/backend/domain"
 import { Trophy } from "lucide-react"
 import { BadgeMedallion, badgeCategoryChipClass } from "@/components/ui/badge-medallion"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -32,13 +31,6 @@ interface UserBadge {
   }
 }
 
-interface ProgressEntry {
-  badgeId: number
-  name: string
-  value: number
-  target: number
-}
-
 interface UserBadgesProps {
   userId: number
   showAll?: boolean
@@ -48,7 +40,6 @@ interface UserBadgesProps {
 
 export function UserBadges({ userId, showAll = false, limit = 6, className = "" }: UserBadgesProps) {
   const [badges, setBadges] = useState<UserBadge[]>([])
-  const [progress, setProgress] = useState<ProgressEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -58,14 +49,13 @@ export function UserBadges({ userId, showAll = false, limit = 6, className = "" 
         setLoading(true)
         const response = await BadgesAPI.getUserBadges(userId, showAll ? undefined : limit)
         setBadges(response.badges || [])
-        // plan-v15 S10 (R7, CA4): "X de Y" da cláusula mais distante, lido do servidor.
-        setProgress(response.progress || [])
+        // plan-v18 S02 (DEC-248, ADR-005): `progress` chega do servidor e o bloco não o
+        // renderiza — a lista "Em progresso" saiu da tela do perfil.
         setError(null)
       } catch (err: any) {
         console.error("Erro ao buscar badges:", err)
         setError("Erro ao carregar badges")
         setBadges([])
-        setProgress([])
       } finally {
         setLoading(false)
       }
@@ -106,9 +96,9 @@ export function UserBadges({ userId, showAll = false, limit = 6, className = "" 
           <Trophy className="h-4 w-4 text-muted-foreground" />
           <span className="text-sm font-medium text-muted-foreground">Badges</span>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-3">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="h-6 w-16 bg-muted animate-pulse rounded-full" />
+            <div key={i} className="h-14 w-44 animate-pulse rounded-lg bg-muted" />
           ))}
         </div>
       </div>
@@ -136,23 +126,7 @@ export function UserBadges({ userId, showAll = false, limit = 6, className = "" 
           <Trophy className="h-4 w-4 text-muted-foreground" />
           <span className="text-sm font-medium text-muted-foreground">Badges</span>
         </div>
-        {progress.length > 0 ? (
-          <div className="space-y-1">
-            <span data-testid="progress-label" className="text-xs text-muted-foreground">Em progresso</span>
-            <div className="flex flex-wrap gap-2">
-              {progress.map((p) => (
-                <Badge key={p.badgeId} variant="outline" className="bg-muted/40 text-muted-foreground border-border">
-                  <div className="flex items-center gap-1">
-                    <span className="text-xs font-medium">{p.name}</span>
-                    <span className="text-xs font-semibold">{progressLabel(p)}</span>
-                  </div>
-                </Badge>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <p className="text-xs text-muted-foreground">Nenhum badge conquistado ainda</p>
-        )}
+        <p className="text-xs text-muted-foreground">Nenhum badge conquistado ainda</p>
       </div>
     )
   }
@@ -166,29 +140,34 @@ export function UserBadges({ userId, showAll = false, limit = 6, className = "" 
         </span>
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      {/* plan-v18 S02 (DEC-248, ADR-005): as conquistadas entram em cartões discretos,
+          mais largos que altos, com medálhão, nome, selo do efeito e data relativa.
+          Os chips "Em progresso" saíram da tela — o bloco é só o que a pessoa possui. */}
+      <div className="flex flex-wrap gap-3">
         <TooltipProvider>
           {safeBadges.map((userBadge) => (
             <Tooltip key={userBadge.id}>
               <TooltipTrigger asChild>
-                <Badge
-                  variant="outline"
-                  className={`${userBadge.equipped ? "ring-2 ring-primary" : ""} ${badgeCategoryChipClass(userBadge.badge.category)} cursor-help transition-all hover:scale-105`}
+                <div
+                  data-testid="badge-card"
+                  className={`flex w-44 items-center gap-3 rounded-lg border bg-card p-3 cursor-help transition-all hover:scale-105 ${
+                    userBadge.equipped ? "ring-2 ring-primary" : ""
+                  }`}
                 >
-                  <div className="flex items-center gap-1">
-                    {/* plan-v17 S01 (R1, ADR-001): a peça única desenha o ícone — bucket >
-                        texto `icon` > Lucide de categoria. Nenhum glifo local aqui. */}
-                    <BadgeMedallion badge={userBadge.badge} size="sm" />
-                    <span className="text-xs font-medium">
-                      {userBadge.badge.name}
-                    </span>
-                    {userBadge.equipped && userBadge.badge.effect && (
-                      <span className="text-xs font-semibold text-primary">
+                  {/* plan-v17 S01 (R1, ADR-001): a peça única desenha o ícone — bucket >
+                      texto `icon` > Lucide de categoria. Nenhum glifo local aqui. */}
+                  <BadgeMedallion badge={userBadge.badge} size="sm" />
+                  <div className="min-w-0 space-y-0.5">
+                    <p className="truncate text-sm font-medium">{userBadge.badge.name}</p>
+                    {userBadge.badge.effect && (
+                      <p className="text-xs font-semibold text-primary">
+                        {userBadge.equipped ? "Equipada: " : "Passiva: "}
                         {equipEffectLabel(userBadge.badge.effect)}
-                      </span>
+                      </p>
                     )}
+                    <p className="text-xs text-muted-foreground">{formatEarnedDate(userBadge.earnedAt)}</p>
                   </div>
-                </Badge>
+                </div>
               </TooltipTrigger>
               <TooltipContent side="top" className="max-w-xs">
                 <div className="space-y-1">
@@ -216,24 +195,6 @@ export function UserBadges({ userId, showAll = false, limit = 6, className = "" 
           ))}
         </TooltipProvider>
       </div>
-
-      {progress.length > 0 && (
-        <div className="space-y-1">
-          <span data-testid="progress-label" className="text-xs text-muted-foreground">Em progresso</span>
-          <div className="flex flex-wrap gap-2">
-            {progress.map((p) => (
-              <Badge key={p.badgeId} variant="outline" className="bg-muted/40 text-muted-foreground border-border">
-                <div className="flex items-center gap-1">
-                  <span className="text-xs font-medium">{p.name}</span>
-                  <span className="text-xs font-semibold">{progressLabel(p)}</span>
-                </div>
-              </Badge>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   )
 }
-
-

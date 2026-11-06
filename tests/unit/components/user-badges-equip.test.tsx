@@ -4,7 +4,7 @@
  * O que este arquivo trava, depois que o equipar saiu do bloco e mudou para o picker da
  * Configurações (S03):
  *  - nenhum botão no bloco, nenhum contador "Equipadas" — o bloco não decide nada;
- *  - a equipada mantém o anel primary e o selo do efeito no chip;
+ *  - a equipada mantém o anel primary e o selo do efeito no cartão;
  *  - o bloco acompanha o equipar do picker pelo cache compartilhado
  *    `lib/badges/equipped-sync` (a casa não tem QueryClientProvider montado).
  *
@@ -64,17 +64,20 @@ describe("UserBadges — bloco de leitura (S04)", () => {
     await screen.findByText("Passiva A");
     expect(screen.queryAllByRole("button")).toHaveLength(0);
     expect(screen.queryByText(/Equipadas/)).not.toBeInTheDocument();
-    // a equipada continua visível como estado: selo do efeito + anel no chip
-    expect(screen.getByText("-15% penalidade")).toBeInTheDocument();
-    expect(screen.getByText("Passiva B").closest(".inline-flex")).toHaveClass("ring-2");
+    // a equipada continua visível como estado: selo do efeito + anel no cartão
+    expect(screen.getByText("Equipada: -15% penalidade")).toBeInTheDocument();
+    expect(screen.getByText("Passiva B").closest("[data-testid=badge-card]")).toHaveClass("ring-2");
   });
 
   it("o bloco acompanha o equipar publicado no cache compartilhado", async () => {
     render(<UserBadges userId={1} />);
     await screen.findByText("Passiva A");
     act(() => markEquipped(1, 10, true));
-    expect(await screen.findByText("+10% pontos")).toBeInTheDocument();
+    expect(await screen.findByText("Equipada: +10% pontos")).toBeInTheDocument();
     act(() => markEquipped(1, 12, false));
-    expect(screen.queryByText("-15% penalidade")).not.toBeInTheDocument();
+    // S02 (ADR-005): o selo do cartão segue o estado — desmarcada passa a "Passiva:" e o anel sai.
+    expect(screen.getByText("Passiva: -15% penalidade")).toBeInTheDocument();
+    expect(screen.queryByText("Equipada: -15% penalidade")).not.toBeInTheDocument();
+    expect(screen.getByText("Passiva B").closest("[data-testid=badge-card]")).not.toHaveClass("ring-2");
   });
 });

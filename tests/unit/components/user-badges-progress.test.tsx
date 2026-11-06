@@ -1,15 +1,11 @@
 /**
- * plan-v15 S10 (R7, CA4) — o progresso "X de Y" no perfil.
+ * plan-v15 S10 (R7, CA4) + plan-v18 S02 (DEC-248, ADR-005) — o progresso não entra no bloco.
  *
- * O que este arquivo trava:
- *  - com badge conquistada e progressos, a seção "Em progresso" aparece com o chip "7 de 10";
- *  - sem nenhuma conquistada, o chip de progresso aparece e o "Nenhum badge conquistado
- *    ainda" NÃO some da tela;
- *  - sem progressos, nenhuma seção extra aparece.
- *
- * O ratio da cláusula mais distante é conta do servidor (use case + porta de métricas);
- * a tela mostra o que veio na resposta, e a pureza da regra está em
- * tests/unit/domain/gamification/badge-progress.test.ts.
+ * O contrato hoje:
+ *  - `progress` chega do servidor (`GET /api/user-badges` mantém a chave) e o bloco Badges
+ *    do perfil não o renderiza — os chips "Em progresso" saíram da tela por decisão do dono;
+ *  - com conquistadas, só os cartões; sem nenhuma conquistada, o aviso de vazio, sem chips;
+ *  - o "X de Y" continua provado no domínio em tests/unit/domain/gamification/badge-progress.test.ts.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
@@ -37,52 +33,48 @@ function earned(id: number, name: string) {
       criteria: null,
       slug: `s-${id}`,
       effect: null,
+      iconKey: null,
       isActive: true,
     },
   };
 }
 
-describe("UserBadges com progresso X de Y", () => {
+describe("UserBadges — progresso fora do bloco (S02)", () => {
   beforeEach(() => {
     getUserBadges.mockReset();
   });
 
-  it("conquistada + progressos: seção 'Em progresso' com '7 de 10' e o nome da badge", async () => {
+  it("conquistada + progressos: só o cartão, nenhum chip de progresso", async () => {
     getUserBadges.mockResolvedValue({
       badges: [earned(10, "Cinco Tarefas")],
-      recentBadges: [],
-      count: 1,
       progress: [{ badgeId: 11, name: "Dez Tarefas", value: 7, target: 10 }],
     });
     render(<UserBadges userId={1} />);
-    await screen.findByText("Cinco Tarefas");
-    expect(screen.getByTestId("progress-label")).toHaveTextContent("Em progresso");
-    expect(screen.getByText("7 de 10")).toBeInTheDocument();
-    expect(screen.getByText("Dez Tarefas")).toBeInTheDocument();
+    expect(await screen.findByTestId("badge-card")).toBeInTheDocument();
+    expect(screen.queryByTestId("progress-label")).not.toBeInTheDocument();
+    expect(screen.queryByText("7 de 10")).not.toBeInTheDocument();
+    expect(screen.queryByText("Dez Tarefas")).not.toBeInTheDocument();
   });
 
-  it("nenhuma conquistada: o chip de progresso substitui o aviso de vazio", async () => {
+  it("nenhuma conquistada: o aviso de vazio, sem chips de progresso", async () => {
     getUserBadges.mockResolvedValue({
       badges: [],
-      recentBadges: [],
-      count: 0,
       progress: [{ badgeId: 11, name: "Dez Tarefas", value: 7, target: 10 }],
     });
     render(<UserBadges userId={1} />);
-    expect(await screen.findByText("7 de 10")).toBeInTheDocument();
-    expect(screen.getByTestId("progress-label")).toHaveTextContent("Em progresso");
-    expect(screen.queryByText("Nenhum badge conquistado ainda")).not.toBeInTheDocument();
+    expect(await screen.findByText("Nenhum badge conquistado ainda")).toBeInTheDocument();
+    expect(screen.queryByTestId("progress-label")).not.toBeInTheDocument();
+    expect(screen.queryByText("7 de 10")).not.toBeInTheDocument();
   });
 
-  it("sem progressos: nenhuma seção extra, só as conquistadas", async () => {
+  it("sem progressos: só as conquistadas em cartões", async () => {
     getUserBadges.mockResolvedValue({
       badges: [earned(10, "Cinco Tarefas")],
-      recentBadges: [],
-      count: 1,
       progress: [],
     });
     render(<UserBadges userId={1} />);
     await screen.findByText("Cinco Tarefas");
     expect(screen.queryByTestId("progress-label")).not.toBeInTheDocument();
+    expect(screen.getAllByTestId("badge-card")).toHaveLength(1);
   });
 });
