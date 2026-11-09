@@ -64,7 +64,6 @@ export async function GET(
       },
     })
   } catch (error: unknown) {
-    console.log("DBG catch", (error as { message?: string; constructor: { name: string } })?.constructor?.name, (error as { message?: string })?.message)
     return routeErrorResponse(error, { fallback: "Erro interno do servidor" })
   }
 }
