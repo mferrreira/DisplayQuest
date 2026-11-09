@@ -313,6 +313,9 @@ export class UpdateTaskUseCase {
         activity,
         projectId: next.projectId ?? null,
         isGlobal: Boolean(next.isGlobal),
+        // DEC-257: o update não checa status. O corpo do PUT reenvia o vínculo de uma etapa que
+        // virou COMPLETION_REQUESTED ou DONE; recusar aqui quebraria salvar tarefa sem mexer.
+        isCreate: false,
       })
     }
 

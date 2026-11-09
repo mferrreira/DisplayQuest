@@ -277,6 +277,18 @@ export function isActivityPast(
   return range.lastMonth < monthKeyOfCivilDay(todayCivilDay);
 }
 
+/**
+ * plan-v21 S01 (DEC-257): só OPEN é destino de tarefa nova. Linha pedida para conclusão e linha
+ * aprovada não aceitam tarefa — quem "adianta" pedindo conclusão fecha a linha para tarefa nova.
+ * Os dois filtros compõem o seletor de criação: temporal (`isActivityPast`) e de status (esta).
+ * A regra é do domínio, não da tela: seletor, servidor e mock consomem a MESMA função. O update
+ * de tarefa não checa status — o corpo do PUT reenvia o vínculo de uma etapa que virou concluída
+ * (mesma razão medida da DEC-99 para linha passada).
+ */
+export function isActivitySelectableForNewTask(status: ActivityStatus): boolean {
+  return status === "OPEN";
+}
+
 export interface CronogramaWindowInput {
   /** `projects.startDate`/`endDate`, data civil ou nulos. */
   startDate: string | null;

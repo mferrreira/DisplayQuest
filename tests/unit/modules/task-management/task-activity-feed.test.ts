@@ -77,7 +77,7 @@ function buildModule(withActivity: boolean) {
 
   const activities: TaskActivitiesPort = {
     async findActivityById(activityId) {
-      return { id: activityId, projectId: PROJECT } satisfies TaskActivityRecord;
+      return { id: activityId, projectId: PROJECT, status: "OPEN" } satisfies TaskActivityRecord;
     },
   };
 

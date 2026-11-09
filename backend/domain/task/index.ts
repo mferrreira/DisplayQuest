@@ -80,6 +80,7 @@ export {
   TASK_ACTIVITY_PROJECT_MESSAGE,
   TASK_ACTIVITY_GLOBAL_MESSAGE,
   TASK_ACTIVITY_INVALID_MESSAGE,
+  TASK_ACTIVITY_CLOSED_MESSAGE,
   resolveTaskActivityLink,
   type TaskActivityRef,
 } from "./task-activity-rules";

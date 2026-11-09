@@ -12,24 +12,30 @@
  *   id sem forma                → 400 nomeando o campo (não é 500 do Prisma por NaN)
  *   quest global com atividade  → 400
  *   corpo de nao-gestor com activityId → 403, antes de qualquer 400 de corpo
+ *   plan-v21 S01 (DEC-257): POST com linha pedida-conclusão ou concluída → 400 com a frase do
+ *   domínio; PUT trocando o vínculo para DONE → 200 (o update não checa status).
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
 import { createTaskManagementModule } from "@/backend/modules/task-management";
 import {
+  TASK_ACTIVITY_CLOSED_MESSAGE,
   TASK_ACTIVITY_GLOBAL_MESSAGE,
   TASK_ACTIVITY_INVALID_MESSAGE,
   TASK_ACTIVITY_PROJECT_MESSAGE,
   toTaskView,
   type Task,
 } from "@/backend/domain";
+import type { ActivityStatus } from "@/backend/domain";
 import type { TaskRepositoryPort } from "@/backend/modules/task-management/application/ports/task.repository";
 
 const PROJECT = 3;
 const OTHER_PROJECT = 5;
-const ACTIVITY = 40;
+const ACTIVITY = 40; // OPEN
 const FOREIGN_ACTIVITY = 41;
+const REQUESTED_ACTIVITY = 42; // COMPLETION_REQUESTED
+const CLOSED_ACTIVITY = 43; // DONE
 
 const mocks = vi.hoisted(() => ({
   session: null as null | { id: number; email: string; name: string; roles: string[]; status: string },
@@ -37,7 +43,7 @@ const mocks = vi.hoisted(() => ({
 
 type World = {
   tasks: Map<number, Task>;
-  activities: Map<number, { id: number; projectId: number }>;
+  activities: Map<number, { id: number; projectId: number; status: ActivityStatus }>;
   assignees: Map<number, number[]>;
   memberships: Map<number, number[]>;
   roles: Map<number, string[]>;
@@ -198,8 +204,10 @@ beforeEach(() => {
   world = {
     tasks: new Map(),
     activities: new Map([
-      [ACTIVITY, { id: ACTIVITY, projectId: PROJECT }],
-      [FOREIGN_ACTIVITY, { id: FOREIGN_ACTIVITY, projectId: OTHER_PROJECT }],
+      [ACTIVITY, { id: ACTIVITY, projectId: PROJECT, status: "OPEN" }],
+      [FOREIGN_ACTIVITY, { id: FOREIGN_ACTIVITY, projectId: OTHER_PROJECT, status: "OPEN" }],
+      [REQUESTED_ACTIVITY, { id: REQUESTED_ACTIVITY, projectId: PROJECT, status: "COMPLETION_REQUESTED" }],
+      [CLOSED_ACTIVITY, { id: CLOSED_ACTIVITY, projectId: PROJECT, status: "DONE" }],
     ]),
     assignees: new Map(),
     memberships: new Map([[7, [PROJECT]]]),
@@ -270,6 +278,30 @@ describe("POST /api/tasks com linha do cronograma", () => {
     expect(response.status).toBe(400);
     expect((await read(response)).error).toBe(TASK_ACTIVITY_GLOBAL_MESSAGE);
   });
+
+  it("POST com linha pedida para conclusão é 400 com a frase do domínio", async () => {
+    login(COORDENADOR);
+
+    const response = await createTaskRoute(
+      request("/api/tasks", "POST", { title: "Tarefa na etapa pedida", projectId: PROJECT, activityId: REQUESTED_ACTIVITY }),
+    );
+
+    expect(response.status).toBe(400);
+    expect((await read(response)).error).toBe(TASK_ACTIVITY_CLOSED_MESSAGE);
+    expect(world.tasks.size).toBe(0);
+  });
+
+  it("POST com linha concluída é 400 com a frase do domínio", async () => {
+    login(COORDENADOR);
+
+    const response = await createTaskRoute(
+      request("/api/tasks", "POST", { title: "Tarefa na etapa concluída", projectId: PROJECT, activityId: CLOSED_ACTIVITY }),
+    );
+
+    expect(response.status).toBe(400);
+    expect((await read(response)).error).toBe(TASK_ACTIVITY_CLOSED_MESSAGE);
+    expect(world.tasks.size).toBe(0);
+  });
 });
 
 describe("PUT /api/tasks/[id] com linha do cronograma", () => {
@@ -320,6 +352,20 @@ describe("PUT /api/tasks/[id] com linha do cronograma", () => {
     expect(response.status).toBe(400);
     expect((await read(response)).error).toBe(TASK_ACTIVITY_PROJECT_MESSAGE);
     expect(world.tasks.get(seeded.id)!.title).toBe("Etapa marcada");
+  });
+
+  it("trocar o vínculo para linha concluída é 200 — o PUT não checa status (DEC-257)", async () => {
+    login(COORDENADOR);
+    const seeded = seedTask({ activityId: ACTIVITY });
+
+    const response = await putTaskRoute(
+      request(`/api/tasks/${seeded.id}`, "PUT", { activityId: CLOSED_ACTIVITY }),
+      context({ id: String(seeded.id) }),
+    );
+    const body = await read(response);
+
+    expect(response.status).toBe(200);
+    expect(body.task.activityId).toBe(CLOSED_ACTIVITY);
   });
 
   it("quem não tem MANAGE_TASKS com activityId no corpo leva 403", async () => {

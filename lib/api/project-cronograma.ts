@@ -11,6 +11,8 @@
  * função do domínio (`toggleActivityMonthRange`) que a rota usa.
  */
 
+import type { ActivityStatus } from "@/backend/domain"
+
 export interface ProjectGoal {
   id: number
   projectId: number
@@ -28,7 +30,8 @@ export interface ProjectActivity {
   responsibleId: number | null
   firstMonth: string
   lastMonth: string
-  status: string
+  /** Vocabulário do domínio (`ACTIVITY_STATUSES`), não string solta — a tela consome as regras puras. */
+  status: ActivityStatus
   requestedBy: number | null
   requestedAt: string | null
   approvedBy: number | null

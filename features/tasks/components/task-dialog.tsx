@@ -40,7 +40,7 @@ import { useUsers } from "@/features/users"
 import { useTaskMutations } from "../hooks/use-tasks"
 import { parseBacklogLines } from "../utils/move-rules"
 import { POINTS_PER_TASK, supportsSubtasks, SUBTASK_TITLE_MAX_LENGTH } from ".."
-import { isActivityPast } from "@/backend/domain"
+import { isActivityPast, isActivitySelectableForNewTask } from "@/backend/domain"
 import type { Task } from "@/entities/task"
 import { listProjectMembers, type ProjectMember } from "@/lib/api/project-members"
 import { getCronograma, type ProjectActivity, type ProjectCronogramaView } from "@/lib/api/project-cronograma"
@@ -289,22 +289,27 @@ export function TaskDialog({ open, onOpenChange, task, defaultProjectId }: TaskD
    */
   useEffect(() => {
     if (!open || task || activityTouched) return
-    const current = projectActivities.find((a) => a.current)
+    // DEC-257: a pré-seleção cai na OPEN vigente, não na vigente pedida para conclusão — a
+    // primeira `current` da lista pode ser linha já pedida.
+    const current = projectActivities.find((a) => a.current && isActivitySelectableForNewTask(a.status))
     setActivityId(current ? String(current.id) : NO_ACTIVITY)
   }, [open, projectActivities, task, activityTouched])
 
   /**
-   * O que a lista oferece (DEC-99):
-   *   criação → só vigente + futuras; linha passada não é escolha de tarefa nova.
-   *   edição  → todas as linhas: uma tarefa ligada a uma etapa que virou passada continua
-   *             salvável — o servidor não reescreve o vínculo (DEC-99), e sumir a opção da
-   *             lista faria o save silenciosamente desligar a tarefa da etapa.
+   * O que a lista oferece (DEC-99 + DEC-257):
+   *   criação → só OPEN, vigente + futuras; linha passada e linha pedida-conclusão ou aprovada
+   *             não são escolha de tarefa nova. Os dois filtros são funções do domínio.
+   *   edição  → todas as linhas: uma tarefa ligada a uma etapa que virou passada ou concluída
+   *             continua salvável — o servidor não reescreve o vínculo (DEC-99), e sumir a opção
+   *             da lista faria o save silenciosamente desligar a tarefa da etapa.
    */
   const activityOptions = useMemo(() => {
     if (!cronogramaToday) return projectActivities
     if (task) return projectActivities
     return projectActivities.filter(
-      (a) => !isActivityPast({ firstMonth: a.firstMonth, lastMonth: a.lastMonth }, cronogramaToday),
+      (a) =>
+        isActivitySelectableForNewTask(a.status) &&
+        !isActivityPast({ firstMonth: a.firstMonth, lastMonth: a.lastMonth }, cronogramaToday),
     )
   }, [task, projectActivities, cronogramaToday])
 
@@ -524,7 +529,7 @@ export function TaskDialog({ open, onOpenChange, task, defaultProjectId }: TaskD
                         ? "A tarefa fica ligada a uma linha do cronograma do projeto."
                         : activityOptions.length === 0
                           ? "O cronograma do projeto ainda não tem linhas."
-                          : "Só a atividade vigente e as futuras aparecem; a vigente vem pré-selecionada."}
+                          : "Só a atividade aberta, vigente e as futuras aparecem; a vigente vem pré-selecionada."}
                   </p>
                 </div>
               )}
