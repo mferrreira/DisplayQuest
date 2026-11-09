@@ -108,5 +108,14 @@
     "workerDirectory": [
       "public"
     ]
+  },
+  "allowScripts": {
+    "@prisma/client@6.11.1": true,
+    "@prisma/engines@6.11.1": true,
+    "fsevents@2.3.3": true,
+    "fsevents@2.3.2": true,
+    "msw@2.15.0": true,
+    "prisma@6.11.1": true,
+    "unrs-resolver@1.12.2": true
   }
 }
