@@ -114,6 +114,7 @@ function makeFixture(rows: UserRecord[] = [userRow(1)]) {
         fundingAgency: row.fundingAgency,
         fundingAgencyOther: row.fundingAgencyOther,
         level: row.level,
+        links: row.links ?? [],
       }));
     },
   } as never;
@@ -322,6 +323,7 @@ describe("leitura da lista — tier por tier (DEC-138)", () => {
         scholarshipType: "PIBIC",
         fundingAgency: "CNPQ",
         level: "GRADUACAO",
+        links: [{ label: "LinkedIn", url: "https://linkedin.com/in/pessoa1" }],
       }),
       userRow(2, { roles: ["COORDENADOR"] }),
     ]);
@@ -358,5 +360,12 @@ describe("leitura da lista — tier por tier (DEC-138)", () => {
     expect(row).not.toHaveProperty("cpf");
     expect(row).not.toHaveProperty("bio");
     expect(row.course).toBe("Sistemas de Informação");
+  });
+
+  it("os links da pessoa chegam na lista para o autenticado", async () => {
+    const rows = await new ListUsersForActorUseCase(fx.repository).execute({ actor: owner });
+    const row = rows.find((r) => r.id === 1)!;
+
+    expect(row.links).toEqual([{ label: "LinkedIn", url: "https://linkedin.com/in/pessoa1" }]);
   });
 });

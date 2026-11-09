@@ -82,6 +82,7 @@ export class ListUsersForActorUseCase {
         fundingAgency: row.fundingAgency,
         fundingAgencyOther: row.fundingAgencyOther,
         level: row.level,
+        links: row.links ?? [],
       }
       if (visibility.canViewFullUsers || visibility.canManageProjectMembers) {
         out.email = row.email
