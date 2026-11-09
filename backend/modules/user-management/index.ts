@@ -25,6 +25,7 @@ import { UpdateUserPointsUseCase } from "@/backend/modules/user-management/appli
 import { UpdateUserProfileUseCase } from "@/backend/modules/user-management/application/use-cases/update-user-profile.use-case"
 import { UpdateUserImageUseCase } from "@/backend/modules/user-management/application/use-cases/update-user-image.use-case"
 import { GetUserImageUseCase } from "@/backend/modules/user-management/application/use-cases/get-user-image.use-case"
+import { AssertCanUpdateUserBioUseCase } from "@/backend/modules/user-management/application/use-cases/assert-can-update-user-bio.use-case"
 import { AssertCanUpdateUserImageUseCase } from "@/backend/modules/user-management/application/use-cases/assert-can-update-user-image.use-case"
 import type { AssertCanUpdateUserImageCommand } from "@/backend/modules/user-management/application/use-cases/assert-can-update-user-image.use-case"
 import { UpdateUserRolesUseCase } from "@/backend/modules/user-management/application/use-cases/update-user-roles.use-case"
@@ -79,14 +80,18 @@ export class UserManagementModule {
   readonly assertCanManageUsers: (command: { actor: ActorRef; deniedMessage?: string }) => void
   /** V5-3 (DEC-137): assert 403-ANTES-DO-CORPO do upload; `updateUserImage` recheca no próprio ator. */
   readonly assertCanUpdateUserImage: (command: AssertCanUpdateUserImageCommand) => void
+  /** S08 (DEC-263): assert 404-antes-do-403-antes-do-corpo do upload de imagem da bio. */
+  readonly assertCanUpdateUserBio: (command: { actor: ActorRef; userId: number }) => void
 
   constructor(
     private readonly service: UserManagementService,
     assertCanManageUsersUseCase: AssertCanManageUsersUseCase,
     assertCanUpdateUserImageUseCase: AssertCanUpdateUserImageUseCase,
+    assertCanUpdateUserBioUseCase: AssertCanUpdateUserBioUseCase,
   ) {
     this.assertCanManageUsers = (command) => assertCanManageUsersUseCase.execute(command)
     this.assertCanUpdateUserImage = (command) => assertCanUpdateUserImageUseCase.execute(command)
+    this.assertCanUpdateUserBio = (command) => assertCanUpdateUserBioUseCase.execute(command)
     this.createUser = this.service.createUser.bind(this.service)
     this.listUsersForActor = this.service.listUsersForActor.bind(this.service)
     this.findUserById = this.service.findUserById.bind(this.service)
@@ -155,5 +160,6 @@ export function createUserManagementModule(options: UserManagementModuleFactoryO
     service,
     new AssertCanManageUsersUseCase(),
     new AssertCanUpdateUserImageUseCase(),
+    new AssertCanUpdateUserBioUseCase(repository),
   )
 }

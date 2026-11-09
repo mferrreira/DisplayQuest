@@ -8,6 +8,7 @@
  * O que a tela mostra nao muda: os dados de pessoa abertos (V5-4a/DEC-138) seguem em "Dados para os
  * documentos", e o CPF continua fora — este componente nao recebe o CPF pela lista.
  */
+import { renderProjectMarkdown } from "@/lib/markdown-render"
 import { BucketAvatar } from "@/components/ui/bucket-avatar"
 import { BannerImage } from "@/components/ui/banner-image"
 import { userImageUrl } from "@/lib/api/user-images"
@@ -212,7 +213,12 @@ export function UserProfileView({ user, onBack, canEdit = false, onEdit, project
         <div className="space-y-6">
           {user.bio && (
             <ProfileSection id="profile-about" icon={BookOpen} title="Sobre">
-              <p className="leading-relaxed text-foreground/90">{user.bio}</p>
+              {/* S08 (R12/DEC-263): a bio é markdown pela MESMA peça da descrição do projeto. */}
+              <div
+                data-testid="bio-markdown"
+                className="leading-relaxed text-foreground/90 text-sm [&_a]:text-primary [&_a]:underline [&_h1]:text-xl [&_h2]:text-lg [&_h3]:text-base [&_ul]:list-disc [&_ul]:pl-6"
+                dangerouslySetInnerHTML={{ __html: renderProjectMarkdown(user.bio) }}
+              />
             </ProfileSection>
           )}
 

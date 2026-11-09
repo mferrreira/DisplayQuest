@@ -82,4 +82,21 @@ export async function deleteUserImage(userId: number, slot: UserImageSlot): Prom
   )
   return readImageState(payload)
 }
+export interface UserMarkdownImage {
+  key: string
+  url: string
+  name: string
+}
 
+/** R13 (S08, DEC-263): imagem da bio — a mesma régua de upload da descrição do projeto. */
+export async function uploadUserMarkdownImage(userId: number, file: File): Promise<UserMarkdownImage> {
+  const form = new FormData()
+  form.set("file", file)
+  const response = await fetch(`/api/users/${userId}/markdown-images`, { method: "POST", body: form })
+  const body = await response.json().catch(() => null)
+  if (!response.ok) {
+    const message = typeof body?.error === "string" ? body.error : "Falha ao enviar a imagem"
+    throw new Error(message)
+  }
+  return body as UserMarkdownImage
+}

@@ -95,6 +95,15 @@ export function isMarkdownImageName(name: string): boolean {
   return MARKDOWN_IMAGE_NAME_PATTERN.test(name)
 }
 
+/** R13 (S08, DEC-263): a bio tem a mesma régua de imagem da descrição, na família `users`. */
+export function userMarkdownImageKey(userId: number, uuid: string, extension: string): string {
+  return `users/${userId}/markdown-images/${uuid}.${extension}`
+}
+
+/** Teto da bio (R12, DEC-263): a mesma postura de medida da descrição do projeto. */
+export const BIO_MAX_LENGTH = 2000
+export const BIO_LENGTH_MESSAGE = "Bio não pode ter mais de 2000 caracteres"
+
 export const DELIVERABLE_GOAL_LINK_MESSAGE = "Meta não pertence a este projeto";
 
 export function deliverableGoalLinkError(params: { goalProjectId: number; projectId: number }): string | null {

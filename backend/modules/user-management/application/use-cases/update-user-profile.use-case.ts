@@ -1,5 +1,7 @@
 import {
   applyPersonDataFields,
+  BIO_MAX_LENGTH,
+  BIO_LENGTH_MESSAGE,
   NotFoundError,
   PROFILE_DENIED_MESSAGE,
   requireActorSelfOrPermission,
@@ -42,7 +44,13 @@ export class UpdateUserProfileUseCase {
       if (!name) throw new ValidationError("Nome é obrigatório")
       user.name = name
     }
-    if (data.bio !== undefined) user.bio = data.bio ? String(data.bio) : null
+    if (data.bio !== undefined) {
+      const bio = data.bio ? String(data.bio) : null
+      if (bio && bio.length > BIO_MAX_LENGTH) {
+        throw new ValidationError(BIO_LENGTH_MESSAGE)
+      }
+      user.bio = bio
+    }
     if (data.avatar !== undefined) user.avatar = normalizeAvatar(data.avatar)
     if (data.profileVisibility !== undefined) user.profileVisibility = data.profileVisibility as never
     if (data.weekHours !== undefined) user.weekHours = Number(data.weekHours)
