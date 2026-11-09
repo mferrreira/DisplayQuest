@@ -78,6 +78,23 @@ export function deliverableValidationMessage(errors: string[]): string {
  * a tela não pode distinguir "sumiu" de "é de outro dono" sem virar regra em duas cópias, e
  * `goalId` nulo é meta normal — entregável sem meta é entregável legítimo.
  */
+/** R11 (S07, DEC-262): a descrição aceita imagem, e só imagem — PDF é blob válido do bucket e não entra no texto. */
+export const MARKDOWN_IMAGE_ONLY_MESSAGE = "Apenas imagem na descrição"
+
+export const MARKDOWN_IMAGE_NAME_MESSAGE = "Nome de arquivo inválido"
+
+/** Chave da família markdown-images: `projects/<id>/markdown-images/<uuid>.<ext>` — lista de extensões fechada. */
+export function markdownImageKey(prefixProjectId: number, uuid: string, extension: string): string {
+  return `projects/${prefixProjectId}/markdown-images/${uuid}.${extension}`
+}
+
+/** O `[name]` da rota de leitura é exatamente `<uuid>.<ext>` da família; nada de traversal. */
+export const MARKDOWN_IMAGE_NAME_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(png|jpg|webp|gif)$/
+
+export function isMarkdownImageName(name: string): boolean {
+  return MARKDOWN_IMAGE_NAME_PATTERN.test(name)
+}
+
 export const DELIVERABLE_GOAL_LINK_MESSAGE = "Meta não pertence a este projeto";
 
 export function deliverableGoalLinkError(params: { goalProjectId: number; projectId: number }): string | null {

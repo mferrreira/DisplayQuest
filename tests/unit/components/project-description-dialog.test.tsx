@@ -9,7 +9,7 @@
  * Costura medida: `Toaster` montado, `matchMedia` stubado local, `setup({ delay: null })`.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { render, screen, waitFor } from "@testing-library/react"
+import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { Toaster } from "sonner"
 
@@ -27,7 +27,15 @@ function jsonResponse(payload: unknown, status = 200) {
 function recordingFetch(input: unknown, init: RequestInit = {}) {
   const method = (init.method ?? "GET").toUpperCase()
   const path = new URL(String(input), "http://localhost:3000").pathname
-  mocks.requests.push({ method, path, json: init.body ? JSON.parse(String(init.body)) : undefined })
+  mocks.requests.push({
+    method,
+    path,
+    json: init.body && typeof init.body === "string" ? JSON.parse(String(init.body)) : undefined,
+  })
+  if (method === "POST" && path.endsWith("/markdown-images")) {
+    const key = "projects/7/markdown-images/11111111-2222-3333-4444-555555555555.png"
+    return jsonResponse({ key, url: `/api/projects/7/markdown-images/11111111-2222-3333-4444-555555555555.png?v=${key}`, name: "fluxo.png" })
+  }
   if (mocks.refuse) {
     return jsonResponse({ error: "Usuário não tem permissão para gerenciar este projeto" }, 403)
   }
@@ -83,6 +91,51 @@ beforeEach(() => {
 afterEach(() => {
   vi.unstubAllGlobals()
 })
+
+describe("imagens na descrição (R11, S07)", () => {
+  it('o botão "Anexar imagem" envia o arquivo e insere ![nome](url) no cursor', async () => {
+    const user = userEvent.setup({ delay: null })
+    renderDialog()
+    const textarea = await screen.findByRole<HTMLTextAreaElement>("textbox", { name: "Descrição em markdown" })
+    textarea.setSelectionRange(4, 4)
+    const input = screen.getByTestId("input-imagem-descricao")
+    await user.upload(input, new File([new Uint8Array(8)], "fluxo.png", { type: "image/png" }))
+    await waitFor(() =>
+      expect(textarea.value).toContain("![fluxo.png](/api/projects/7/markdown-images/11111111-2222-3333-4444-555555555555.png?v=projects/7/markdown-images/11111111-2222-3333-4444-555555555555.png)"),
+    )
+    // O cursor estava em 4: a inserção entra ali, não no fim.
+    expect(textarea.value.startsWith("****![fluxo.png]")).toBe(false)
+    expect(textarea.value.indexOf("![fluxo.png]")).toBe(4)
+    const post = mocks.requests.find((entry) => entry.method === "POST" && entry.path === "/api/projects/7/markdown-images")
+    expect(post).toBeDefined()
+    expect(previewHasImg()).toBe(true)
+  })
+
+  it("o drop de PNG sobre o editor envia e insere igual", async () => {
+    renderDialog()
+    const textarea = screen.getByRole<HTMLTextAreaElement>("textbox", { name: "Descrição em markdown" })
+    const dataTransfer = { files: [new File([new Uint8Array(8)], "fluxo.png", { type: "image/png" })] }
+    fireEvent.drop(textarea, { dataTransfer })
+    await waitFor(() =>
+      expect(textarea.value).toContain("![fluxo.png](/api/projects/7/markdown-images/11111111-2222-3333-4444-555555555555.png?v=projects/7/markdown-images/11111111-2222-3333-4444-555555555555.png)"),
+    )
+  })
+
+  it("nenhum arquivo enviado: nenhum POST sai", async () => {
+    const user = userEvent.setup({ delay: null })
+    renderDialog()
+    const input = screen.getByTestId("input-imagem-descricao")
+    expect(input).toHaveAttribute("accept", expect.stringContaining("image/png"))
+    const post = mocks.requests.find((entry) => entry.method === "POST")
+    expect(post).toBeUndefined()
+    void user
+  })
+})
+
+function previewHasImg() {
+  const preview = screen.getByTestId("preview-de-descricao")
+  return preview.querySelector("img") !== null
+}
 
 describe("dialog de descrição", () => {
   it("abre com a descrição no textarea e o preview renderizado", async () => {

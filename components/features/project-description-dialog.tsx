@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
@@ -11,10 +11,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Loader2, Save } from "lucide-react"
+import { ImagePlus, Loader2, Save } from "lucide-react"
 import { useToast } from "@/contexts/use-toast"
 import { renderProjectMarkdown } from "@/lib/markdown-render"
-import { updateProjectDescription } from "@/lib/api/project-files"
+import { updateProjectDescription, uploadProjectMarkdownImage } from "@/lib/api/project-files"
 
 /**
  * ProjectDescriptionDialog — a peça única de edição de markdown (S06, R10).
@@ -38,6 +38,31 @@ export function ProjectDescriptionDialog({ open, projectId, initialDescription, 
   const { toast } = useToast()
   const [text, setText] = useState(initialDescription)
   const [busy, setBusy] = useState(false)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // R11 (S07): a inserção é no cursor, não no fim. A posição é lida ANTES do upload —
+  // depois do `await`, o cursor já pode ter mudado.
+  async function handleImages(files: FileList | File[]) {
+    const file = Array.from(files).find((item) => item.type.startsWith("image/"))
+    if (!file) return
+    const position = textareaRef.current?.selectionStart ?? text.length
+    setBusy(true)
+    try {
+      const uploaded = await uploadProjectMarkdownImage(projectId, file)
+      const markdown = `![${uploaded.name}](${uploaded.url})`
+      setText((current) => current.slice(0, position) + markdown + current.slice(position))
+      textareaRef.current?.focus()
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: error instanceof Error ? error.message : "Falha ao enviar a imagem",
+        variant: "destructive",
+      })
+    } finally {
+      setBusy(false)
+    }
+  }
 
   async function handleSave() {
     setBusy(true)
@@ -65,12 +90,44 @@ export function ProjectDescriptionDialog({ open, projectId, initialDescription, 
         </DialogHeader>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="grid gap-2">
-            <Label htmlFor="project-description">Descrição em markdown</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="project-description">Descrição em markdown</Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                aria-label="Anexar imagem"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={busy}
+              >
+                <ImagePlus className="mr-2 h-4 w-4" />
+                Anexar imagem
+              </Button>
+              <input
+                ref={fileInputRef}
+                data-testid="input-imagem-descricao"
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/gif"
+                className="hidden"
+                onChange={(event) => {
+                  const files = event.target.files
+                  if (files && files.length > 0) void handleImages(files)
+                  event.target.value = ""
+                }}
+              />
+            </div>
             <Textarea
               id="project-description"
+              ref={textareaRef}
               aria-label="Descrição em markdown"
               value={text}
               onChange={(event) => setText(event.target.value)}
+              onDragOver={(event) => event.preventDefault()}
+              onDrop={(event) => {
+                event.preventDefault()
+                const files = event.dataTransfer?.files
+                if (files && files.length > 0) void handleImages(files)
+              }}
               rows={12}
             />
           </div>

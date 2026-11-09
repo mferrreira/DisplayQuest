@@ -154,6 +154,29 @@ export async function uploadProjectDeliverableFile(
 }
 
 // S03: a gestão remove o arquivo. A rota remove o registro e o objeto; aqui só o metadado.
+export interface ProjectMarkdownImage {
+  key: string
+  url: string
+  name: string
+}
+
+/**
+ * S07 (plan-v21, R11): sobe uma imagem de descrição. A rota responde com a chave, a URL
+ * autenticada e o nome de exibição — é o que a tela insere no texto. Sem registro: o binário
+ * é o dado, e o gate (gestão OU membro ATIVO) corre na rota antes do corpo.
+ */
+export async function uploadProjectMarkdownImage(projectId: number, file: File): Promise<ProjectMarkdownImage> {
+  const form = new FormData()
+  form.set("file", file)
+  const response = await fetch(`/api/projects/${projectId}/markdown-images`, { method: "POST", body: form })
+  const body = await response.json().catch(() => null)
+  if (!response.ok) {
+    const message = typeof body?.error === "string" ? body.error : "Falha ao enviar a imagem"
+    throw new Error(message)
+  }
+  return body as ProjectMarkdownImage
+}
+
 export async function deleteProjectDeliverableFile(
   projectId: number,
   deliverableId: number,

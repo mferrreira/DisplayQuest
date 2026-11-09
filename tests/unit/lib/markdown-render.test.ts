@@ -37,6 +37,16 @@ describe("renderProjectMarkdown", () => {
     expect(html).not.toMatch(/<a[^>]*href="javascript/i);
   });
 
+  it("imagem de markdown vira <img> com a URL da rota autenticada (S07, R11)", () => {
+    const html = renderProjectMarkdown("![fluxo](/api/projects/7/markdown-images/abc.png?v=projects/7/markdown-images/abc.png)")
+    expect(html).toMatch(/<img[^>]*src="\/api\/projects\/7\/markdown-images\/abc\.png\?v=projects\/7\/markdown-images\/abc\.png"[^>]*alt="fluxo"/)
+  });
+
+  it("imagem com protocolo perigoso não vira img", () => {
+    const html = renderProjectMarkdown("![x](javascript:alert(1))")
+    expect(html).not.toContain("<img")
+  });
+
   it("URL nua é linkificada", () => {
     const html = renderProjectMarkdown("visite https://lab.com");
     expect(html).toMatch(/<a[^>]*href="https:\/\/lab\.com"/);

@@ -78,7 +78,7 @@ export const BLOB_MIME_RULES: Readonly<Record<string, BlobMimeRule>> = {
 
 export const BLOB_ALLOWED_MIME: ReadonlyArray<string> = Object.keys(BLOB_MIME_RULES)
 
-function normalizeContentType(contentType: string): string {
+export function normalizeContentType(contentType: string): string {
   return (contentType ?? "").split(";")[0].trim().toLowerCase()
 }
 
