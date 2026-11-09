@@ -43,6 +43,7 @@ import {
   deleteProjectGoal,
   getCronograma,
   updateProjectActivity,
+  setGoalCompletion,
   updateProjectGoal,
   type ProjectActivity,
   type ProjectGoal,
@@ -84,6 +85,7 @@ function goalRowFrom(goal: ProjectGoal): CronogramaGoalRow {
     order: goal.order,
     description: goal.description,
     target: goal.target === null ? "" : String(goal.target),
+    completed: goal.completedAt !== null,
   }
 }
 
@@ -409,6 +411,18 @@ export function ProjectCronogramaPanel({ projectId, canManage, leaderId, initial
     }
   }
 
+  // S05 (DEC-260): a gestão marca/desmarca o cumprimento. O servidor decide o direito; um 403
+  // que chegar mesmo assim é tratado como erro, não como botão desabilitado (DEC-92).
+  async function handleGoalCompletion(goal: CronogramaGoalRow) {
+    if (goal.id === null) return
+    try {
+      const updated = await setGoalCompletion(projectId, goal.id, !(goal.completed === true))
+      setGoals((current) => current.map((row) => (row.id === updated.id ? goalRowFrom(updated) : row)))
+    } catch (error) {
+      reportError(error, "Falha ao marcar a meta")
+    }
+  }
+
   async function handleDeleteGoal(goal: CronogramaGoalRow) {
     if (goal.id === null) {
       setGoals((current) => current.filter((row) => row !== goal))
@@ -488,6 +502,7 @@ export function ProjectCronogramaPanel({ projectId, canManage, leaderId, initial
           onAddGoal={handleAddGoal}
           onGoalChange={handleGoalChange}
           onDeleteGoal={handleDeleteGoal}
+          onToggleGoalCompletion={handleGoalCompletion}
           onAddActivity={handleAddActivity}
           onActivityChange={handleActivityChange}
           onToggleMonth={handleToggleMonth}

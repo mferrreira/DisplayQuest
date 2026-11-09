@@ -29,6 +29,8 @@ type GoalRow = {
   target: number | null
   description: string
   createdAt: Date | string
+  completedAt: Date | string | null
+  completedBy: number | null
 }
 
 type ActivityRow = {
@@ -65,6 +67,8 @@ function toGoalRecord(row: GoalRow): ProjectGoalRecord {
     target: row.target,
     description: row.description,
     createdAt: stamp(row.createdAt),
+    completedAt: optionalStamp(row.completedAt),
+    completedBy: row.completedBy,
   }
 }
 
@@ -109,7 +113,11 @@ export function createPrismaProjectCronogramaRepository(): ProjectCronogramaPort
     },
 
     async updateGoal(id: number, fields: ProjectGoalUpdateFields) {
-      const row = await prisma.project_goals.update({ where: { id }, data: fields })
+      const data: Record<string, unknown> = { ...fields }
+      if (fields.completedAt !== undefined) {
+        data.completedAt = fields.completedAt === null ? null : new Date(fields.completedAt)
+      }
+      const row = await prisma.project_goals.update({ where: { id }, data })
       return toGoalRecord(row)
     },
 

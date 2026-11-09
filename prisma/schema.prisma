@@ -81,6 +81,7 @@ model users {
   activityResponsibilities    project_activities[]     @relation("ActivityResponsible")
   activityCompletionRequests  project_activities[]     @relation("ActivityCompletionRequester")
   activityCompletionApprovals project_activities[]     @relation("ActivityCompletionApprover")
+  goalCompletions             project_goals[]          @relation("GoalCompletionMarker")
   // V5-10 (DEC-170): atestado é documento GERADO sobre o vínculo — `userId` Cascade (não
   // bloqueia excluir conta; o PDF é regenerável a partir dos dados) e `generatedBy` SetNull
   // (auditoria). Nenhum dos dois entra na guarda de FKs bloqueantes.
@@ -196,10 +197,16 @@ model project_goals {
   target      Int?
   description String
   createdAt   DateTime @default(now())
+  // S05 (plan-v21, DEC-260): cumprimento pela gestão. `completedBy` é SetNull, espelho
+  // `approvedBy` do cronograma (DEC-155) — a meta sobrevive sem marcador quando a pessoa sai.
+  completedAt DateTime?
+  completedBy Int?
+  completedByUser users? @relation("GoalCompletionMarker", fields: [completedBy], references: [id], onDelete: SetNull)
   project     projects @relation("ProjectGoals", fields: [projectId], references: [id], onDelete: Cascade)
   deliverables project_deliverables[] @relation("DeliverableGoal")
 
   @@index([projectId])
+  @@index([completedBy])
 }
 
 // V5-5: a linha do cronograma. Na brochura é "Etapa N | Descrição da Atividade | Total em

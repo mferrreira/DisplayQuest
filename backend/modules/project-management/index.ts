@@ -26,6 +26,7 @@ import { ListProjectCronogramaUseCase } from "@/backend/modules/project-manageme
 import { CreateProjectGoalUseCase } from "@/backend/modules/project-management/application/use-cases/create-project-goal.use-case"
 import { UpdateProjectGoalUseCase } from "@/backend/modules/project-management/application/use-cases/update-project-goal.use-case"
 import { DeleteProjectGoalUseCase } from "@/backend/modules/project-management/application/use-cases/delete-project-goal.use-case"
+import { MarkGoalCompletionUseCase } from "@/backend/modules/project-management/application/use-cases/mark-goal-completion.use-case"
 import { CreateProjectActivityUseCase } from "@/backend/modules/project-management/application/use-cases/create-project-activity.use-case"
 import { UpdateProjectActivityUseCase } from "@/backend/modules/project-management/application/use-cases/update-project-activity.use-case"
 import { DeleteProjectActivityUseCase } from "@/backend/modules/project-management/application/use-cases/delete-project-activity.use-case"
@@ -120,6 +121,7 @@ export class ProjectManagementModule {
   readonly createProjectGoal: UseCaseExecute<CreateProjectGoalUseCase>
   readonly updateProjectGoal: UseCaseExecute<UpdateProjectGoalUseCase>
   readonly deleteProjectGoal: UseCaseExecute<DeleteProjectGoalUseCase>
+  readonly markGoalCompletion: UseCaseExecute<MarkGoalCompletionUseCase>
   readonly createProjectActivity: UseCaseExecute<CreateProjectActivityUseCase>
   readonly updateProjectActivity: UseCaseExecute<UpdateProjectActivityUseCase>
   readonly deleteProjectActivity: UseCaseExecute<DeleteProjectActivityUseCase>
@@ -165,6 +167,7 @@ export class ProjectManagementModule {
     private readonly createProjectGoalUseCase: CreateProjectGoalUseCase,
     private readonly updateProjectGoalUseCase: UpdateProjectGoalUseCase,
     private readonly deleteProjectGoalUseCase: DeleteProjectGoalUseCase,
+    private readonly markGoalCompletionUseCase: MarkGoalCompletionUseCase,
     private readonly createProjectActivityUseCase: CreateProjectActivityUseCase,
     private readonly updateProjectActivityUseCase: UpdateProjectActivityUseCase,
     private readonly deleteProjectActivityUseCase: DeleteProjectActivityUseCase,
@@ -206,6 +209,7 @@ export class ProjectManagementModule {
     this.createProjectGoal = this.createProjectGoalUseCase.execute.bind(this.createProjectGoalUseCase)
     this.updateProjectGoal = this.updateProjectGoalUseCase.execute.bind(this.updateProjectGoalUseCase)
     this.deleteProjectGoal = this.deleteProjectGoalUseCase.execute.bind(this.deleteProjectGoalUseCase)
+    this.markGoalCompletion = this.markGoalCompletionUseCase.execute.bind(this.markGoalCompletionUseCase)
     this.createProjectActivity = this.createProjectActivityUseCase.execute.bind(this.createProjectActivityUseCase)
     this.updateProjectActivity = this.updateProjectActivityUseCase.execute.bind(this.updateProjectActivityUseCase)
     this.deleteProjectActivity = this.deleteProjectActivityUseCase.execute.bind(this.deleteProjectActivityUseCase)
@@ -386,6 +390,12 @@ export function createProjectManagementModule(options: ProjectManagementModuleFa
       cronograma: ports.cronograma,
       memberships: ports.memberships,
       actors: ports.actors,
+    }),
+    new MarkGoalCompletionUseCase({
+      projects: ports.projects,
+      memberships: ports.memberships,
+      actors: ports.actors,
+      cronograma: ports.cronograma,
     }),
     new CreateProjectActivityUseCase({
       projects: ports.projects,

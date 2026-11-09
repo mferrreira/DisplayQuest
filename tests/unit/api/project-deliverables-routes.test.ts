@@ -204,8 +204,8 @@ beforeEach(() => {
     { id: 102, projectId: 20, name: "Entregável de outro projeto", quantity: 2, createdAt: "2026-10-01T12:00:00.000Z", goalId: null },
   ]
   mocks.goals = [
-    { id: 201, projectId: 10, order: 1, target: 2, description: "Dois artigos", createdAt: "2026-10-01T12:00:00.000Z" },
-    { id: 202, projectId: 20, order: 1, target: null, description: "Meta de outro projeto", createdAt: "2026-10-01T12:00:00.000Z" },
+    { id: 201, projectId: 10, order: 1, target: 2, description: "Dois artigos", createdAt: "2026-10-01T12:00:00.000Z", completedAt: null, completedBy: null },
+    { id: 202, projectId: 20, order: 1, target: null, description: "Meta de outro projeto", createdAt: "2026-10-01T12:00:00.000Z", completedAt: null, completedBy: null },
   ]
 })
 

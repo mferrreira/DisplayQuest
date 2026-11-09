@@ -16,6 +16,9 @@ export interface ProjectGoalRecord {
   target: number | null
   description: string
   createdAt: string
+  /** S05 (plan-v21, DEC-260): cumprimento pela gestão; nulo = meta não cumprida. */
+  completedAt: string | null
+  completedBy: number | null
 }
 
 export interface ProjectActivityRecord {
@@ -59,6 +62,8 @@ export interface NewProjectActivityInput {
 export interface ProjectGoalUpdateFields {
   target?: number | null
   description?: string
+  completedAt?: string | null
+  completedBy?: number | null
 }
 
 export interface ProjectActivityUpdateFields {

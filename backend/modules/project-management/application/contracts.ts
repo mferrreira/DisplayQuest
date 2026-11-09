@@ -252,6 +252,15 @@ export interface DeleteProjectGoalCommand {
   actorId: number
 }
 
+export interface MarkGoalCompletionCommand {
+  projectId: number
+  goalId: number
+  actorId: number
+  completed: unknown
+  /** O `now` entra por parâmetro (regra da casa): a regra nunca chama `new Date()` solta. */
+  now: Date
+}
+
 export interface CreateProjectActivityCommand {
   projectId: number
   actorId: number

@@ -39,7 +39,8 @@ const REPOSITORY_PATH = path.join(
  * dado do projeto, e uma linha de cronograma não pode virar motivo de 409 na exclusão de um
  * usuário nem desaparecer junto com ele. Contar SetNull como bloqueio faria o repositório procurar
  * dependência que não bloqueia nada. No V5-10a (DEC-170) entrou a quarta: `certificates.generatedBy`
- * — quem emitiu o atestado não é dono da conta dele.
+ * — quem emitiu o atestado não é dono da conta dele. No S05 do plan-v21 (DEC-260) entrou a quinta:
+ * `project_goals.completedBy` — quem marcou o cumprimento de uma meta não é dono da meta.
  */
 function blockingRelationsInSchema(): Set<string> {
   const schema = readFileSync(SCHEMA_PATH, "utf8");
@@ -197,6 +198,7 @@ describe("guarda de deriva — as FKs que bloqueiam excluir usuário (DEC-55)", 
         "project_activities.approvedBy",
         "project_activities.requestedBy",
         "project_activities.responsibleId",
+        "project_goals.completedBy",
       ].sort(),
     );
     for (const rel of nullifying) {
