@@ -49,6 +49,12 @@ export interface ListProjectDeliverablesQuery {
 }
 
 /** `name`/`quantity` chegam crus do corpo: quem normaliza e recusa é o domínio. */
+export interface UpdateProjectDescriptionCommand {
+  projectId: number
+  actorId: number
+  description: unknown
+}
+
 export interface CreateProjectDeliverableCommand {
   projectId: number
   actorId: number

@@ -34,7 +34,7 @@ import { ProjectLeaderLogs } from "@/components/features/project-leader-logs"
 import { projectStatusBadgeClass, projectStatusLabel, taskStatusBadgeClass, taskStatusLabel } from "@/components/ui/status"
 import { POINTS_PER_TASK } from "@/features/tasks"
 import { projectProgress } from "@/features/projects/utils/project-progress"
-import { renderProjectMarkdown } from "@/features/projects/utils/project-markdown"
+import { renderProjectMarkdown } from "@/lib/markdown-render"
 import { civilDayOfInstant } from "@/backend/domain"
 import {
   ArrowLeft, Calendar, CheckCircle2, Clock, FileText, FolderKanban, Link as LinkIcon,

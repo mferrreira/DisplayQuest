@@ -102,6 +102,7 @@ vi.mock("@/backend/composition/root", () => {
       if (projectId !== PROJECT) return null;
       return userId === 4 ? { id: 99, roles: ["GERENTE_PROJETO"] as never } : null;
     },
+    async findActiveMembership() { return null },
     async createMembership() {},
     updateMembershipRoles: notUsed("memberships.updateMembershipRoles"),
     listMembersWithUser: notUsed("memberships.listMembersWithUser"),

@@ -19,6 +19,14 @@ export function createPrismaProjectManagementMembershipRepository(): ProjectMana
       })
       return row ? { id: row.id, roles: (row.roles ?? []) as Role[] } : null
     },
+    async findActiveMembership(projectId, userId) {
+      const row = await prisma.project_members.findUnique({
+        where: { projectId_userId: { projectId, userId } },
+        select: { id: true, roles: true, situacao: true },
+      })
+      if (!row || row.situacao !== "ATIVO") return null
+      return { id: row.id, roles: (row.roles ?? []) as Role[] }
+    },
     async createMembership(input) {
       await prisma.project_members.create({
         data: { projectId: input.projectId, userId: input.userId, roles: input.roles },

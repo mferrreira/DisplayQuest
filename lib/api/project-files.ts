@@ -98,6 +98,14 @@ export async function updateProjectDeliverable(
   return payload.deliverable
 }
 
+export async function updateProjectDescription(projectId: number, description: string | null): Promise<void> {
+  await request<{ project: unknown }>(
+    `/api/projects/${projectId}/description`,
+    { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ description }) },
+    "Erro ao salvar descrição",
+  )
+}
+
 export async function deleteProjectDeliverable(projectId: number, deliverableId: number): Promise<void> {
   await request<unknown>(
     `/api/projects/${projectId}/deliverables/${deliverableId}`,

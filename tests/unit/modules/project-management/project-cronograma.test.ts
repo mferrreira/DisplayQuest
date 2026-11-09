@@ -253,6 +253,7 @@ class Fakes {
         }
         return self.memberIds.has(userId) ? { id: 98, roles: ["VOLUNTARIO"] as never } : null;
       },
+      async findActiveMembership() { return null },
       async createMembership(input) {
         self.membershipCalls.push({ userId: input.userId, roles: input.roles });
         self.memberIds.add(input.userId);

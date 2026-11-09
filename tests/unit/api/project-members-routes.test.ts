@@ -80,6 +80,7 @@ vi.mock("@/backend/composition/root", () => {
       mocks.writes.push({ id: membershipId, data });
       return next;
     },
+    findActiveMembership: async () => null,
     createMembership: notUsed("memberships.createMembership"),
     updateMembershipRoles: notUsed("memberships.updateMembershipRoles"),
     deleteMembership: notUsed("memberships.deleteMembership"),

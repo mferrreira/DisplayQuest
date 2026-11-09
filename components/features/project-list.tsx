@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ProjectDialog } from "./project-dialog"
-import { Plus, Edit, Trash2, Calendar, ArrowUpRight } from "lucide-react"
+import { ProjectDescriptionDialog } from "./project-description-dialog"
+import { Plus, Edit, Pencil, Trash2, Calendar, ArrowUpRight } from "lucide-react"
 import type { Project, Task } from "@/contexts/types"
 import { hasAccess } from "@/lib/utils/utils"
 import { projectStatusBadgeClass, projectStatusLabel } from "@/components/ui/status"
@@ -34,6 +35,12 @@ export function ProjectList({ onProjectSelect, projects: providedProjects, tasks
   const today = civilDayOfInstant(new Date())
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [descriptionProject, setDescriptionProject] = useState<Project | null>(null)
+
+  // R9 (S06, DEC-261) na tela: gestão global OU membro ATIVO. A autoridade de verdade é o
+  // servidor; este controle decide só o que o ícone mostra.
+  const canEditDescription = (project: Project) =>
+    (user && hasAccess(user.roles || [], "MANAGE_PROJECTS")) === true || project.isMemberActive === true
 
   const handleEdit = (project: Project) => {
     setSelectedProject(project)
@@ -48,6 +55,10 @@ export function ProjectList({ onProjectSelect, projects: providedProjects, tasks
         console.error("Erro ao excluir projeto:", error)
       }
     }
+  }
+
+  const handleEditDescription = (project: Project) => {
+    setDescriptionProject(project)
   }
 
   const handleCreateNew = () => {
@@ -86,6 +97,17 @@ export function ProjectList({ onProjectSelect, projects: providedProjects, tasks
             <Plus className="mr-2 h-4 w-4" />
             Novo Projeto
           </Button>
+      )}
+
+      {descriptionProject && (
+        <ProjectDescriptionDialog
+          open
+          projectId={descriptionProject.id}
+          initialDescription={descriptionProject.description ?? ""}
+          onOpenChange={(next) => {
+            if (!next) setDescriptionProject(null)
+          }}
+        />
       )}
 
       {projects.length === 0 ? (
@@ -190,6 +212,18 @@ export function ProjectList({ onProjectSelect, projects: providedProjects, tasks
                   ) : null}
                 </div>
                 <div className="relative z-20 flex items-center gap-2 sm:justify-end">
+                    {canEditDescription(project) && (
+                      // `Editar descrição X` não contém `Editar projeto X` (lição da 3.C): os
+                      // dois controles coexistem para a gestão.
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        aria-label={`Editar descrição ${project.name}`}
+                        onClick={() => handleEditDescription(project)}
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </Button>
+                    )}
                     {user && hasAccess(user?.roles || [], 'MANAGE_PROJECTS') && (
                       <>
                         <Button

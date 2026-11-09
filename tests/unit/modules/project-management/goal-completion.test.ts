@@ -45,6 +45,7 @@ function build(params: {
   }
   const memberships: ProjectManagementMembershipPort = {
     findMembership: async () => null,
+    findActiveMembership: async () => null,
     createMembership: async () => null as never,
     updateMembershipRoles: async () => undefined,
     listMembersWithUser: async () => [],

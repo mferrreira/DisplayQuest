@@ -263,6 +263,7 @@ class Fakes {
         if (projectId !== PROJECT || userId !== ACTOR || self.actorMembershipRoles === null) return null;
         return { id: 50, roles: self.actorMembershipRoles as never };
       },
+      async findActiveMembership() { return null },
       async createMembership() {
         throw new Error("createMembership não deveria rodar neste arquivo");
       },

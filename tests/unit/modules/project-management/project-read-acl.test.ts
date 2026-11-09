@@ -103,6 +103,7 @@ function membershipsPort(members: typeof MEMBERS, membershipRoles: string[] | nu
     // `as never` de propósito (padrão da casa para porta parcial): só os métodos exercitados
     // existem, e o que não deveria ser chamado não é.
     port: {
+      async findActiveMembership() { return null },
       async findMembership() {
         return membershipRoles === null ? null : { id: 99, roles: membershipRoles as never };
       },

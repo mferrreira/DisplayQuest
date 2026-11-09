@@ -156,6 +156,7 @@ vi.mock("@/backend/composition/root", () => {
       }
       return mocks.memberIds.has(userId) ? { id: 98, roles: ["VOLUNTARIO"] as never } : null;
     },
+    async findActiveMembership() { return null },
     async createMembership() {},
     updateMembershipRoles: notUsed("memberships.updateMembershipRoles"),
     listMembersWithUser: notUsed("memberships.listMembersWithUser"),

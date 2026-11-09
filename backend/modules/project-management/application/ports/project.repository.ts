@@ -24,6 +24,8 @@ export interface ProjectRecord {
    * vínculo. Não é coluna: é uma projeção da lista para o ator, e só a lista a preenche.
    */
   isMember?: boolean;
+  /** S06 (DEC-261): membership do ator com situação ATIVA — projeção da lista. */
+  isMemberActive?: boolean;
   /** V5-2b (DEC-61/63): datas civis `YYYY-MM-DD`, texto de cadastro e saldo do projeto. */
   startDate?: string | null;
   endDate?: string | null;

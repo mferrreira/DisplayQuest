@@ -83,6 +83,8 @@ export interface Project {
   points?: number
   /** Contagem de membros do vínculo, medida pelo `_count` da leitura do servidor. */
   memberCount?: number
+  /** S06 (DEC-261): projeção "sou membro ATIVO" — decide o ícone de editar descrição. */
+  isMemberActive?: boolean
   /** V5-2d (DEC-102): chave do objeto no bucket. A tela não recebe binário, recebe a chave. */
   logoKey?: string | null
   bannerKey?: string | null

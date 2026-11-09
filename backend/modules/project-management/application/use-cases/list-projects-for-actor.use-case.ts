@@ -37,6 +37,9 @@ export class ListProjectsForActorUseCase {
     return projects.map((project) => ({
       ...project,
       isMember: project.members?.some((member) => member.userId === query.actorId) ?? false,
+      // S06 (DEC-261): "sou membro ATIVO deste projeto" — a projeção que decide o ícone de
+      // editar descrição na tela; o gate de escrita é do use case, a tela mostra o controle.
+      isMemberActive: project.members?.some((member) => member.userId === query.actorId && member.situacao === "ATIVO") ?? false,
       // Fix 4: flag "tem conclusão solicitada" — a tela de gestão pinta o cartão avermelhado por
       // ele. Projeção, não coluna: vem de `project_activities` na mesma leitura da lista.
       completionRequested: project.id != null && requestedIds.has(project.id),

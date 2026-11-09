@@ -82,6 +82,7 @@ vi.mock("@/backend/composition/root", () => {
     async findMembership(projectId, userId) {
       return MEMBERSHIPS[`${projectId}:${userId}`] ?? null
     },
+    findActiveMembership: async () => null,
     createMembership: notUsed("memberships.createMembership"),
     updateMembershipRoles: notUsed("memberships.updateMembershipRoles"),
     listMembersWithUser: notUsed("memberships.listMembersWithUser"),

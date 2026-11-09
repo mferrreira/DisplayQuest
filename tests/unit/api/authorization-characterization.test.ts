@@ -217,6 +217,7 @@ vi.mock("@/backend/composition/root", () => {
       async findMembership() {
         return null;
       },
+      async findActiveMembership() { return null },
       async createMembership(membership: Record<string, unknown>) {
         membershipsDb.push(membership);
       },

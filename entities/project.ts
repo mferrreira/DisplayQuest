@@ -35,6 +35,8 @@ export const projectSchema = z.object({
   // R11 (S11): projeção da lista para o ator — "este projeto me tem como membro". Opcional:
   // a lista o preenche, as demais rotas não.
   isMember: z.boolean().optional(),
+  // S06 (DEC-261): projeção "sou membro ATIVO" — a lista a preenche para o ícone da tela.
+  isMemberActive: z.boolean().optional(),
 });
 export type Project = z.infer<typeof projectSchema>;
 

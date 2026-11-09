@@ -39,7 +39,7 @@ type ProjectRow = {
   points: number
   logoKey: string | null
   bannerKey: string | null
-  members?: Array<{ userId: number; roles?: string[]; user?: { id: number; name: string; email: string; roles: string[] } | null }>
+  members?: Array<{ userId: number; roles?: string[]; situacao?: string; user?: { id: number; name: string; email: string; roles: string[] } | null }>
   _count?: { members?: number }
 }
 
@@ -68,6 +68,7 @@ function toRecord(row: ProjectRow): ProjectRecord {
           (member): ProjectMemberSummary => ({
             userId: member.userId,
             roles: member.roles ?? [],
+            situacao: member.situacao,
             user: member.user ?? null,
           }),
         )

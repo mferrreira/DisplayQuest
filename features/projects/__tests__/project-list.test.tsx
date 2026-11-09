@@ -52,8 +52,9 @@ describe("ProjectList characterization", () => {
     expect(screen.queryAllByRole("button")).toHaveLength(0);
     mocks.auth.user = { id: 7, roles: ["GERENTE"] };
     rerender(<ProjectList projects={[projects[0]]} />);
-    // 3 = "Novo Projeto" + editar + excluir. O olho não era contado aqui: sem
-    // onProjectSelect ele não renderizava, e na S01 ele saiu por completo.
-    expect(screen.getAllByRole("button")).toHaveLength(3);
+    // 4 = "Novo Projeto" + editar descrição (S06/DEC-261: gestão também tem o ícone) +
+    // editar + excluir. O olho não era contado aqui: sem onProjectSelect ele não
+    // renderizava, e na S01 ele saiu por completo.
+    expect(screen.getAllByRole("button")).toHaveLength(4);
   });
 });

@@ -10,7 +10,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { renderProjectMarkdown } from "@/features/projects/utils/project-markdown";
+import { renderProjectMarkdown } from "@/lib/markdown-render";
 
 describe("renderProjectMarkdown", () => {
   it("markdown comum vira estrutura", () => {
