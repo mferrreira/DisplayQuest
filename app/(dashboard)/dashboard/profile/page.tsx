@@ -38,6 +38,7 @@ import { TimerCard } from "@/components/ui/timer-card"
 import { getRoleDisplayName } from "@/lib/utils/access-control"
 import { compareByBoardPosition } from "@/backend/domain"
 import { ProfileMonthsList } from "@/components/ui/profile-months-list"
+import { UserLinks } from "@/components/ui/user-links"
 import { useWorkSessions } from "@/hooks/use-work-sessions"
 import {
   ArrowRight,
@@ -428,6 +429,10 @@ function ProfilePageContent() {
                       <dd className="text-sm text-foreground">{user.weekHours} horas</dd>
                     </div>
                   </dl>
+
+                  {/* S09 (R15, DEC-264): a leitura da Configurações mostra os links salvos pelo
+                      dono. O favicon é derivado no render, e a peça é a mesma do perfil de terceiro. */}
+                  <UserLinks links={user.links ?? []} />
                 </section>
               )}
             </TabsContent>
