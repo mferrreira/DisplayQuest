@@ -16,7 +16,7 @@
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import { prisma } from "@/lib/database/prisma"
-import { NotFoundError, ValidationError } from "@/backend/domain"
+import { ForbiddenError, NotFoundError, ValidationError } from "@/backend/domain"
 import { userActor } from "@/backend/domain"
 import { createProjectManagementModule } from "@/backend/modules/project-management"
 import { createPrismaUserRepository } from "@/backend/modules/user-management/infrastructure/repositories/prisma-user.repository"
@@ -32,6 +32,7 @@ let otherProjectId = 0
 let deliverableId = 0
 let otherDeliverableId = 0
 let fileId = 0
+let secondFileId = 0
 
 describe("G4 roundtrip — arquivos de entregável (isolated test DB)", () => {
   beforeAll(async () => {
@@ -164,6 +165,7 @@ describe("G4 roundtrip — arquivos de entregável (isolated test DB)", () => {
       actorRoles: ["VOLUNTARIO"],
     })
     expect(files.map((file) => file.id)).toEqual([second.id, fileId])
+    secondFileId = second.id
     expect(files[1].name).toBe("GDD.pdf")
     // A leitura aberta inclui o blobKey: o painel precisa do número, não do caminho.
     expect(files[0].blobKey).toContain(`/deliverables/${deliverableId}/files/`)
@@ -218,6 +220,51 @@ describe("G4 roundtrip — arquivos de entregável (isolated test DB)", () => {
         actorRoles: ["VOLUNTARIO"],
       }),
     ).rejects.toThrow(NotFoundError)
+
+    await projectModule.deleteProjectDeliverable({ projectId, deliverableId: sibling.id!, actorId: coordId })
+  })
+
+  it("deleteProjectDeliverableFile: a gerência remove a linha, e o record sai com a chave", async () => {
+    const removed = await projectModule.deleteProjectDeliverableFile({
+      projectId,
+      deliverableId,
+      fileId: secondFileId,
+      actorId: coordId,
+    })
+    expect(removed.id).toBe(secondFileId)
+    expect(removed.blobKey).toContain(`/deliverables/${deliverableId}/files/`)
+    expect(await prisma.project_deliverable_files.count({ where: { deliverableId } })).toBe(1)
+  })
+
+  it("delete de quem NÃO gerencia RECUSA, e o arquivo fica", async () => {
+    await expect(
+      projectModule.deleteProjectDeliverableFile({
+        projectId,
+        deliverableId,
+        fileId,
+        actorId: volunteerId,
+      }),
+    ).rejects.toThrow(ForbiddenError)
+    expect(await prisma.project_deliverable_files.count({ where: { deliverableId } })).toBe(1)
+  })
+
+  it("delete do arquivo pelo ENTREGÁVEL VIZINHO do mesmo projeto RECUSA, e o arquivo fica", async () => {
+    const sibling = await projectModule.createProjectDeliverable({
+      projectId,
+      actorId: coordId,
+      name: "Entregável vizinho 2",
+      quantity: 1,
+    })
+
+    await expect(
+      projectModule.deleteProjectDeliverableFile({
+        projectId,
+        deliverableId: sibling.id!,
+        fileId,
+        actorId: coordId,
+      }),
+    ).rejects.toThrow(NotFoundError)
+    expect(await prisma.project_deliverable_files.count({ where: { deliverableId } })).toBe(1)
 
     await projectModule.deleteProjectDeliverable({ projectId, deliverableId: sibling.id!, actorId: coordId })
   })

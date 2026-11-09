@@ -124,6 +124,16 @@ async function recordingFetch(input: unknown, init: RequestInit = {}) {
       mocks.files.push(row)
       return jsonResponse({ file: row }, 201)
     }
+    if (method === "DELETE") {
+      mocks.requests.push({ method, path })
+      const fileId = Number(segments[7])
+      const row = mocks.files.find((item) => item.id === fileId && item.deliverableId === deliverableId)
+      if (!row) {
+        return jsonResponse({ error: "Arquivo não encontrado" }, 404)
+      }
+      mocks.files = mocks.files.filter((item) => item.id !== fileId)
+      return jsonResponse({ file: row })
+    }
   }
 
   if (segments[4] === "deliverables" && segments.length === 5) {
@@ -245,5 +255,33 @@ describe("arquivos do entregável", () => {
     expect(screen.getByText("2 un.")).toBeInTheDocument()
     expect(screen.getByText("Slide da defesa")).toBeInTheDocument()
     expect(screen.getByText("1 un.")).toBeInTheDocument()
+  })
+
+  it("quem não gerencia não vê o botão de remover o arquivo", async () => {
+    renderPanel(false)
+    await screen.findByRole("link", { name: /GDD/ })
+    expect(screen.queryByRole("button", { name: /^Remover arquivo/ })).not.toBeInTheDocument()
+  })
+
+  it("a gestão remove o arquivo da linha com confirmação, e a linha do entregável fica", async () => {
+    const user = userEvent.setup({ delay: null })
+    renderPanel(true)
+    await screen.findByRole("link", { name: /GDD/ })
+
+    await user.click(screen.getByRole("button", { name: "Remover arquivo GDD.pdf" }))
+
+    await waitFor(() => expect(mocks.requests.some((r) => r.method === "DELETE")).toBe(true))
+    expect(mocks.requests.find((r) => r.method === "DELETE")).toMatchObject({
+      method: "DELETE",
+      path: "/api/projects/7/deliverables/101/files/301",
+    })
+    expect(mocks.files.find((row) => row.id === 301)).toBeUndefined()
+    await waitFor(() => expect(screen.queryByRole("link", { name: /GDD/ })).not.toBeInTheDocument())
+    expect(screen.getByText("Relatório parcial")).toBeInTheDocument()
+    expect(screen.getByText("2 un.")).toBeInTheDocument()
+    // a lista vazia diz isso em palavras, como a linha sem arquivo do S02 — escopo na LINHA do
+    // entregável: `Slide da defesa` já nasce com a sua própria frase vazia.
+    const row = screen.getByText("Relatório parcial").closest("li")!
+    expect(row.querySelector("p")).toHaveTextContent(/Nenhum arquivo enviado/)
   })
 })

@@ -11,6 +11,7 @@ import { ListProjectDeliverablesUseCase } from "@/backend/modules/project-manage
 import { ListProjectDeliverableFilesUseCase } from "@/backend/modules/project-management/application/use-cases/list-project-deliverable-files.use-case"
 import { GetProjectDeliverableFileUseCase } from "@/backend/modules/project-management/application/use-cases/get-project-deliverable-file.use-case"
 import { AddProjectDeliverableFileUseCase } from "@/backend/modules/project-management/application/use-cases/add-project-deliverable-file.use-case"
+import { DeleteProjectDeliverableFileUseCase } from "@/backend/modules/project-management/application/use-cases/delete-project-deliverable-file.use-case"
 import { CreateProjectDeliverableUseCase } from "@/backend/modules/project-management/application/use-cases/create-project-deliverable.use-case"
 import { UpdateProjectDeliverableUseCase } from "@/backend/modules/project-management/application/use-cases/update-project-deliverable.use-case"
 import { DeleteProjectDeliverableUseCase } from "@/backend/modules/project-management/application/use-cases/delete-project-deliverable.use-case"
@@ -104,6 +105,7 @@ export class ProjectManagementModule {
   readonly listProjectDeliverableFiles: UseCaseExecute<ListProjectDeliverableFilesUseCase>
   readonly getProjectDeliverableFile: UseCaseExecute<GetProjectDeliverableFileUseCase>
   readonly addProjectDeliverableFile: UseCaseExecute<AddProjectDeliverableFileUseCase>
+  readonly deleteProjectDeliverableFile: UseCaseExecute<DeleteProjectDeliverableFileUseCase>
   readonly createProjectDeliverable: UseCaseExecute<CreateProjectDeliverableUseCase>
   readonly updateProjectDeliverable: UseCaseExecute<UpdateProjectDeliverableUseCase>
   readonly deleteProjectDeliverable: UseCaseExecute<DeleteProjectDeliverableUseCase>
@@ -151,6 +153,7 @@ export class ProjectManagementModule {
     private readonly listProjectDeliverableFilesUseCase: ListProjectDeliverableFilesUseCase,
     private readonly getProjectDeliverableFileUseCase: GetProjectDeliverableFileUseCase,
     private readonly addProjectDeliverableFileUseCase: AddProjectDeliverableFileUseCase,
+    private readonly deleteProjectDeliverableFileUseCase: DeleteProjectDeliverableFileUseCase,
     private readonly listProjectAttachmentsUseCase: ListProjectAttachmentsUseCase,
     private readonly getProjectAttachmentUseCase: GetProjectAttachmentUseCase,
     private readonly addProjectAttachmentUseCase: AddProjectAttachmentUseCase,
@@ -191,6 +194,7 @@ export class ProjectManagementModule {
     this.listProjectDeliverableFiles = this.listProjectDeliverableFilesUseCase.execute.bind(this.listProjectDeliverableFilesUseCase)
     this.getProjectDeliverableFile = this.getProjectDeliverableFileUseCase.execute.bind(this.getProjectDeliverableFileUseCase)
     this.addProjectDeliverableFile = this.addProjectDeliverableFileUseCase.execute.bind(this.addProjectDeliverableFileUseCase)
+    this.deleteProjectDeliverableFile = this.deleteProjectDeliverableFileUseCase.execute.bind(this.deleteProjectDeliverableFileUseCase)
     this.listProjectAttachments = this.listProjectAttachmentsUseCase.execute.bind(this.listProjectAttachmentsUseCase)
     this.getProjectAttachment = this.getProjectAttachmentUseCase.execute.bind(this.getProjectAttachmentUseCase)
     this.addProjectAttachment = this.addProjectAttachmentUseCase.execute.bind(this.addProjectAttachmentUseCase)
@@ -313,6 +317,13 @@ export function createProjectManagementModule(options: ProjectManagementModuleFa
       files: ports.projectDeliverableFiles,
     }),
     new AddProjectDeliverableFileUseCase({
+      projects: ports.projects,
+      deliverables: ports.deliverables,
+      files: ports.projectDeliverableFiles,
+      memberships: ports.memberships,
+      actors: ports.actors,
+    }),
+    new DeleteProjectDeliverableFileUseCase({
       projects: ports.projects,
       deliverables: ports.deliverables,
       files: ports.projectDeliverableFiles,

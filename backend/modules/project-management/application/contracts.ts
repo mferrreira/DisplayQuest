@@ -96,6 +96,13 @@ export interface GetProjectDeliverableFileQuery {
   actorRoles: Role[]
 }
 
+export interface DeleteProjectDeliverableFileCommand {
+  projectId: number
+  deliverableId: number
+  fileId: number
+  actorId: number
+}
+
 export interface ListProjectAttachmentsQuery {
   projectId: number
   actorId: number

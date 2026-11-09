@@ -29,5 +29,7 @@ export interface ProjectDeliverableFilesPort {
   findById(id: number): Promise<ProjectDeliverableFileRecord | null>
   countByDeliverable(deliverableId: number): Promise<number>
   create(input: NewProjectDeliverableFileInput): Promise<ProjectDeliverableFileRecord>
-  delete(id: number): Promise<void>
+  // S03: o `delete` devolve o record removido. Quem remove o objeto do bucket é a rota, e ela
+  // precisa da chave DEPOIS de o registro sair (ordem do demo: registro antes do objeto).
+  delete(id: number): Promise<ProjectDeliverableFileRecord | null>
 }

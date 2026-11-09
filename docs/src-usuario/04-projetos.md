@@ -87,6 +87,8 @@ Entregável é o que o projeto se compromete a entregar, com quantidade.
 4. Para mudar um entregável já listado, abra o lápis: **Novo nome** e **Nova quantidade**, depois **Salvar entregável**.
 5. Para apagar, use a lixeira; o sistema pede confirmação.
 
+**Arquivos.** Cada linha de entregável mostra os arquivos do entregável, com o tamanho em **1,5 KB** ou **3,2 MB**. Clique no nome para abrir o arquivo — a leitura é aberta a qualquer pessoa autenticada. Quem gerencia o projeto envia e remove: escolha o arquivo em **Arquivo para X**, clique em **Enviar arquivo X**, e a linha entra na lista. Para tirar um arquivo, use **Remover arquivo X**; o sistema pede confirmação, e o entregável fica como estava. Uma linha sem arquivos diz **Nenhum arquivo enviado**.
+
 ## Anexos
 
 1. No detalhe do projeto, escolha o arquivo em **Arquivo do anexo**.

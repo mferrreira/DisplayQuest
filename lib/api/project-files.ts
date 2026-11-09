@@ -143,6 +143,20 @@ export async function uploadProjectDeliverableFile(
   return payload.file
 }
 
+// S03: a gestão remove o arquivo. A rota remove o registro e o objeto; aqui só o metadado.
+export async function deleteProjectDeliverableFile(
+  projectId: number,
+  deliverableId: number,
+  fileId: number,
+): Promise<ProjectDeliverableFile> {
+  const payload = await request<{ file: ProjectDeliverableFile }>(
+    `/api/projects/${projectId}/deliverables/${deliverableId}/files/${fileId}`,
+    { method: "DELETE" },
+    "Erro ao remover arquivo do entregável",
+  )
+  return payload.file
+}
+
 /** URL do binário, servida pela rota que aplica a regra de acesso do projeto. */
 export function projectDeliverableFileUrl(projectId: number, deliverableId: number, fileId: number): string {
   return `/api/projects/${projectId}/deliverables/${deliverableId}/files/${fileId}/file`

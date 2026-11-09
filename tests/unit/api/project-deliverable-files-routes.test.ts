@@ -52,6 +52,7 @@ const mocks = vi.hoisted(() => ({
   failFileCreate: false,
   bucketConfigured: true,
   gateCalls: [] as string[],
+  order: [] as string[],
   nextId: 100,
 }))
 
@@ -165,7 +166,14 @@ vi.mock("@/backend/composition/root", () => {
     async countByDeliverable(deliverableId) {
       return mocks.files.filter((row) => row.deliverableId === deliverableId).length
     },
-    delete: notUsed("projectDeliverableFiles.delete"),
+    async delete(fileId) {
+      const index = mocks.files.findIndex((row) => row.id === fileId)
+      if (index === -1) return null
+      const row = mocks.files[index]
+      mocks.files.splice(index, 1)
+      mocks.order.push("record")
+      return row
+    },
   }
 
   return {
@@ -178,6 +186,7 @@ vi.mock("@/backend/composition/root", () => {
       const assertGate = projectManagement.assertCanManageProject
       ;(projectManagement as { assertCanManageProject: (cmd: { projectId: number; actorId: number }) => Promise<unknown> }).assertCanManageProject = async (cmd) => {
         mocks.gateCalls.push("gate")
+        mocks.order.push("gate")
         return assertGate(cmd)
       }
       return {
@@ -219,6 +228,7 @@ vi.mock("@/lib/storage/blob-store", async (importOriginal) => {
     },
     async remove(key) {
       mocks.removes.push(key)
+      mocks.order.push("bucket")
       mocks.objects.delete(key)
     },
   }
@@ -227,6 +237,7 @@ vi.mock("@/lib/storage/blob-store", async (importOriginal) => {
 
 import { GET as LIST_DELIVERABLE_FILES, POST as UPLOAD_DELIVERABLE_FILE } from "@/app/api/projects/[id]/deliverables/[deliverableId]/files/route"
 import { GET as GET_DELIVERABLE_FILE } from "@/app/api/projects/[id]/deliverables/[deliverableId]/files/[fileId]/file/route"
+import { DELETE as DELETE_DELIVERABLE_FILE } from "@/app/api/projects/[id]/deliverables/[deliverableId]/files/[fileId]/route"
 
 const PNG_BYTES = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
 const PDF_BYTES = new Uint8Array([..."%PDF-1.7\n".split("").map((c) => c.charCodeAt(0))])
@@ -279,6 +290,7 @@ beforeEach(() => {
   mocks.puts = []
   mocks.removes = []
   mocks.gateCalls = []
+  mocks.order = []
   mocks.failFileCreate = false
   mocks.bucketConfigured = true
   vi.spyOn(console, "error").mockImplementation(() => {})
@@ -454,5 +466,65 @@ describe("rota que serve o arquivo do entregável — leitura aberta, cache priv
     const response = await GET_DELIVERABLE_FILE(new Request("http://localhost:3000/api/projects/10/deliverables/101/files/301/file"), context({ id: "10", deliverableId: "101", fileId: "301" }))
     expect(response.status).toBe(404)
     expect((await read(response)).error).toBe("Arquivo não encontrado")
+  })
+})
+
+describe("DELETE remove arquivo de entregável — gate, ordem registro-antes-do-objeto, vínculo", () => {
+  it("sem sessão: 401, nada sai", async () => {
+    const response = await DELETE_DELIVERABLE_FILE(new Request("http://localhost:3000/api/projects/10/deliverables/101/files/301"), context({ id: "10", deliverableId: "101", fileId: "301" }))
+    expect(response.status).toBe(401)
+    expect(mocks.files).toHaveLength(1)
+    expect(mocks.removes).toEqual([])
+  })
+
+  it("voluntário: 403, o registro fica e nada é removido do bucket", async () => {
+    login(["VOLUNTARIO"], 4)
+    const response = await DELETE_DELIVERABLE_FILE(new Request("http://localhost:3000/api/projects/10/deliverables/101/files/301"), context({ id: "10", deliverableId: "101", fileId: "301" }))
+    expect(response.status).toBe(403)
+    expect(mocks.gateCalls).toEqual(["gate"])
+    expect(mocks.files).toHaveLength(1)
+    expect(mocks.removes).toEqual([])
+    expect(mocks.objects.has("projects/10/deliverables/101/files/gdd.pdf")).toBe(true)
+  })
+
+  it("gerência remove: 200, o registro sai ANTES do objeto, e o byte sai do bucket", async () => {
+    login(["COORDENADOR"], 1)
+    const response = await DELETE_DELIVERABLE_FILE(new Request("http://localhost:3000/api/projects/10/deliverables/101/files/301"), context({ id: "10", deliverableId: "101", fileId: "301" }))
+    expect(response.status).toBe(200)
+    const body = await read(response)
+    expect(body.file.id).toBe(301)
+    expect(body.file.blobKey).toBe("projects/10/deliverables/101/files/gdd.pdf")
+    // A ordem medida é a regra do demo: registro → bucket. removendo o objeto antes do
+    // registro, fica ["gate","bucket","record"] e este teste vê vermelho.
+    expect(mocks.order).toEqual(["gate", "record", "bucket"])
+    expect(mocks.removes).toEqual(["projects/10/deliverables/101/files/gdd.pdf"])
+    expect(mocks.files).toEqual([])
+    expect(mocks.objects.size).toBe(0)
+  })
+
+  it("arquivo de entregável vizinho do MESMO projeto: 404, nada sai", async () => {
+    login(["COORDENADOR"], 1)
+    const response = await DELETE_DELIVERABLE_FILE(new Request("http://localhost:3000/api/projects/10/deliverables/103/files/301"), context({ id: "10", deliverableId: "103", fileId: "301" }))
+    expect(response.status).toBe(404)
+    expect(mocks.files).toHaveLength(1)
+    expect(mocks.removes).toEqual([])
+  })
+
+  it("entregável de outro projeto: 404, nada sai", async () => {
+    login(["COORDENADOR"], 1)
+    const response = await DELETE_DELIVERABLE_FILE(new Request("http://localhost:3000/api/projects/10/deliverables/102/files/301"), context({ id: "10", deliverableId: "102", fileId: "301" }))
+    expect(response.status).toBe(404)
+    expect(mocks.files).toHaveLength(1)
+    expect(mocks.removes).toEqual([])
+  })
+
+  it("bucket não configurado: 200 com o registro removido, nenhuma remoção de objeto tentada", async () => {
+    login(["VOLUNTARIO"], 3)
+    mocks.bucketConfigured = false
+    const response = await DELETE_DELIVERABLE_FILE(new Request("http://localhost:3000/api/projects/10/deliverables/101/files/301"), context({ id: "10", deliverableId: "101", fileId: "301" }))
+    expect(response.status).toBe(200)
+    expect(mocks.order).toEqual(["gate", "record"])
+    expect(mocks.removes).toEqual([])
+    expect(mocks.files).toEqual([])
   })
 })

@@ -58,7 +58,8 @@ export function createPrismaProjectDeliverableFilesRepository(): ProjectDelivera
     },
 
     async delete(id: number) {
-      await prisma.project_deliverable_files.delete({ where: { id } })
+      const row = await prisma.project_deliverable_files.delete({ where: { id } })
+      return toRecord(row)
     },
   }
 }

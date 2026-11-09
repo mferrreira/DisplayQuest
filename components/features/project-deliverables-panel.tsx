@@ -11,6 +11,7 @@ import { useToast } from "@/contexts/use-toast"
 import {
   createProjectDeliverable,
   deleteProjectDeliverable,
+  deleteProjectDeliverableFile,
   formatAttachmentSize,
   listProjectDeliverables,
   listProjectDeliverableFiles,
@@ -174,6 +175,29 @@ export function ProjectDeliverablesPanel({ projectId, canManage }: ProjectDelive
     }
   }
 
+  // S03: a gestão remove o arquivo da linha. A confirmação é a mesma régua da exclusão do
+  // entregável; a linha do entregável fica, só o arquivo sai.
+  async function handleDeleteFile(deliverable: ProjectDeliverable, file: ProjectDeliverableFile) {
+    if (!confirm(`Remover o arquivo "${file.name}"?`)) return
+    setBusy(true)
+    try {
+      await deleteProjectDeliverableFile(projectId, deliverable.id, file.id)
+      setFilesByDeliverable((current) => ({
+        ...current,
+        [deliverable.id]: (current[deliverable.id] ?? []).filter((item) => item.id !== file.id),
+      }))
+      toast({ title: "Arquivo removido", description: file.name })
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: error instanceof Error ? error.message : "Falha ao remover arquivo do entregável",
+        variant: "destructive",
+      })
+    } finally {
+      setBusy(false)
+    }
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -312,6 +336,17 @@ export function ProjectDeliverablesPanel({ projectId, canManage }: ProjectDelive
                               <span className="text-sm text-muted-foreground">
                                 {formatAttachmentSize(file.size)}
                               </span>
+                              {canManage && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => handleDeleteFile(deliverable, file)}
+                                  disabled={busy}
+                                  aria-label={`Remover arquivo ${file.name}`}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              )}
                             </li>
                           ))}
                         </ul>
