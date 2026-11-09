@@ -1,6 +1,6 @@
 # S07 — imagem na descrição: botão, drop, bucket e inserção no texto
 
-Slice: `S07` do plan-v21. Commit: `TBD`.
+Slice: `S07` do plan-v21. Commit: `5bca2e6`.
 
 ## Gate
 
