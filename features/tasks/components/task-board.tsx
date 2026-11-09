@@ -113,9 +113,13 @@ export function TaskBoard() {
   const canCreateTasks = ["COORDENADOR", "GERENTE", "GERENTE_PROJETO", "COLABORADOR", "PESQUISADOR"].some((r) =>
     userRoles.includes(r),
   )
-  const canSeeProjectSelector = ["COORDENADOR", "GERENTE", "GERENTE_PROJETO"].some((r) =>
-    userRoles.includes(r),
-  )
+  // Bugfix 2026-11-09: o seletor de projeto é visível a TODOS (o gate de papel que o escondia
+  // para VOLUNTARIO/COLABORADOR/PESQUISADOR foi o que quebrou a tela do colaborador). O que
+  // muda por papel é a LISTA: gestão vê todos os projetos; quem não gerencia vê só os projetos
+  // em que é membro (`isMember` vem da lista do autenticado, DEC-127/136).
+  const canSeeProjectSelector = true
+  const isProjectManager = ["COORDENADOR", "GERENTE", "GERENTE_PROJETO"].some((r) => userRoles.includes(r))
+  const projectsForSelector = isProjectManager ? projects : projects.filter((project) => project.isMember)
   const isLeader = ["COORDENADOR", "GERENTE", "GERENTE_PROJETO", "LABORATORISTA"].some((r) =>
     userRoles.includes(r),
   )
@@ -298,7 +302,7 @@ export function TaskBoard() {
         overdueCount={overdueCount}
         canCreateTasks={canCreateTasks}
         canSeeProjectSelector={canSeeProjectSelector}
-        projects={projects}
+        projects={projectsForSelector}
         users={users}
         activities={projectActivities}
         currentUserId={sessionUserId ?? null}
