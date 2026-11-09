@@ -1,6 +1,6 @@
 # S06 — descrição em markdown com preview, ícone no card, porta R9
 
-Slice: `S06` do plan-v21. Commit: `TBD`.
+Slice: `S06` do plan-v21. Commit: `eac0dc2`.
 
 ## Gate
 
