@@ -41,6 +41,7 @@ import {
 import { formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { UserBadges } from "@/components/ui/user-badges"
+import { UserLinks } from "@/components/ui/user-links"
 import { ProfileBadgeShowcase } from "@/components/ui/profile-badge-showcase"
 import { ProfileMonthsList } from "@/components/ui/profile-months-list"
 
@@ -220,6 +221,10 @@ export function UserProfileView({ user, onBack, canEdit = false, onEdit, project
                 dangerouslySetInnerHTML={{ __html: renderProjectMarkdown(user.bio) }}
               />
             </ProfileSection>
+          )}
+
+          {(user.links?.length ?? 0) > 0 && (
+            <UserLinks links={user.links ?? []} />
           )}
 
           {/* V5-4a (DEC-138): os dados de pessoa que o perfil mostra abertamente. O bloco só

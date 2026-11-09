@@ -7,6 +7,7 @@ import {
   requireActorSelfOrPermission,
   ValidationError,
   normalizeAvatar,
+  normalizeUserLinks,
   toPublicUserWithCpf,
 } from "@/backend/domain"
 import type { ActorRef } from "@/backend/domain"
@@ -54,6 +55,7 @@ export class UpdateUserProfileUseCase {
     if (data.avatar !== undefined) user.avatar = normalizeAvatar(data.avatar)
     if (data.profileVisibility !== undefined) user.profileVisibility = data.profileVisibility as never
     if (data.weekHours !== undefined) user.weekHours = Number(data.weekHours)
+    if (data.links !== undefined) user.links = normalizeUserLinks(data.links)
 
     if (data.password !== undefined) {
       const password = String(data.password || "")

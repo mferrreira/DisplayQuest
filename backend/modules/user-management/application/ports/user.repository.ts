@@ -10,7 +10,7 @@
  * quirk that `projectId` may be undefined (Prisma then ignores the filter — frozen behavior;
  * the adapter reproduces it with a conditional where).
  */
-import type { ProfileVisibility, UserRole, UserStatus } from "@/backend/domain";
+import type { UserLink, ProfileVisibility, UserRole, UserStatus } from "@/backend/domain";
 
 export interface UserRecord {
   id: number;
@@ -47,6 +47,8 @@ export interface UserRecord {
   fundingAgency: string | null;
   fundingAgencyOther: string | null;
   level: string | null;
+  /** S09 (R14, DEC-264): JSONB de links, já normalizado quando escrito pelo use case. */
+  links?: UserLink[];
   roles: UserRole[];
   createdAt?: Date;
 }
@@ -79,6 +81,8 @@ export interface UserSummaryRow {
   fundingAgency: string | null;
   fundingAgencyOther: string | null;
   level: string | null;
+  /** S09 (R14, DEC-264): links de perfil chegam na mesma lista de leitura aberta. */
+  links?: UserLink[];
 }
 
 export type NewUserRecord = Omit<UserRecord, "id" | "createdAt">;

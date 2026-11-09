@@ -6,8 +6,9 @@
  * toJSON proves it). The statistics/role-count computations mirror `backend/repositories/
  * UserRepository.ts` exactly (frozen by the golden matrix).
  */
+import { Prisma } from "@prisma/client"
 import { prisma } from "@/lib/database/prisma"
-import { toUserStatus, type ProfileVisibility, type UserRole } from "@/backend/domain"
+import { toUserStatus, type UserLink, type ProfileVisibility, type UserRole } from "@/backend/domain"
 import type {
   NewUserRecord,
   UserRecord,
@@ -39,6 +40,7 @@ type UserRow = {
   fundingAgency: string | null
   fundingAgencyOther: string | null
   level: string | null
+  links: Prisma.JsonValue | null
   roles: UserRole[]
   createdAt: Date
 }
@@ -67,6 +69,7 @@ function toRecord(row: UserRow): UserRecord {
     fundingAgency: row.fundingAgency,
     fundingAgencyOther: row.fundingAgencyOther,
     level: row.level,
+      links: Array.isArray(row.links) ? row.links as unknown as UserLink[] : [],
     roles: row.roles,
     createdAt: row.createdAt,
   }
@@ -84,7 +87,7 @@ export class PrismaUserRepository implements UserRepositoryPort {
   }
 
   async create(data: NewUserRecord): Promise<UserRecord> {
-    const row = await prisma.users.create({ data })
+    const row = await prisma.users.create({ data: data as never })
     return toRecord(row)
   }
 
@@ -112,6 +115,7 @@ export class PrismaUserRepository implements UserRepositoryPort {
         fundingAgency: record.fundingAgency,
         fundingAgencyOther: record.fundingAgencyOther,
         level: record.level,
+        links: record.links as never,
         roles: record.roles,
       },
     })
@@ -197,12 +201,17 @@ export class PrismaUserRepository implements UserRepositoryPort {
         fundingAgency: true,
         fundingAgencyOther: true,
         level: true,
+        links: true,
       },
       orderBy: { name: "asc" },
     })
     // B10 · D9 (DEC-125): a linha Prisma traz `status: string`; o resumo e consumido pela
     // politica de visibilidade da lista, que compara com o vocabulario — reconciliado aqui.
-    return rows.map((row) => ({ ...row, status: toUserStatus(row.status) }))
+    return rows.map((row) => ({
+      ...row,
+      status: toUserStatus(row.status),
+    links: Array.isArray(row.links) ? row.links as unknown as UserLink[] : [],
+    }))
   }
 
   async findTopByPoints(limit: number): Promise<UserRecord[]> {

@@ -1,4 +1,4 @@
-import { applyPersonDataFields, BIO_MAX_LENGTH, BIO_LENGTH_MESSAGE, ConflictError, filterSelfEditableUserFields, hasPermission, NotFoundError, requireActorSelfOrPermission, toUserStatus, ValidationError, normalizeAvatar, toPublicUserWithCpf } from "@/backend/domain"
+import { applyPersonDataFields, BIO_MAX_LENGTH, BIO_LENGTH_MESSAGE, ConflictError, filterSelfEditableUserFields, hasPermission, NotFoundError, requireActorSelfOrPermission, toUserStatus, ValidationError, normalizeAvatar, normalizeUserLinks, toPublicUserWithCpf } from "@/backend/domain"
 import type { ActorRef } from "@/backend/domain"
 import type { UserRepositoryPort } from "@/backend/modules/user-management/application/ports/user.repository"
 
@@ -56,6 +56,7 @@ export class UpdateUserUseCase {
     if (editableData.avatar !== undefined) currentUser.avatar = normalizeAvatar(editableData.avatar)
     if (editableData.profileVisibility !== undefined) currentUser.profileVisibility = editableData.profileVisibility as never
     if (editableData.weekHours !== undefined) currentUser.weekHours = Number(editableData.weekHours)
+    if (editableData.links !== undefined) currentUser.links = normalizeUserLinks(editableData.links)
     if (editableData.status !== undefined) currentUser.status = toUserStatus(editableData.status)
 
     if (editableData.roles !== undefined && Array.isArray(editableData.roles)) {

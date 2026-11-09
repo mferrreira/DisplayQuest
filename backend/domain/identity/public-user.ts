@@ -5,7 +5,7 @@
  * leaves the record. The HTTP adapters serialize exactly this shape today, so returning it
  * from the use cases preserves the payload form (AGENT.md §5.1, DEC-12).
  */
-import type { ProfileVisibility, UserRole, UserStatus } from "@/backend/domain";
+import type { UserLink, ProfileVisibility, UserRole, UserStatus } from "@/backend/domain";
 
 export interface PublicUser {
   id?: number;
@@ -39,6 +39,8 @@ export interface PublicUser {
   fundingAgency: string | null;
   fundingAgencyOther: string | null;
   level: string | null;
+  /** S09 (R14, DEC-264): lista normalizada dos links da pessoa; sempre presente no payload. */
+  links: UserLink[];
   roles: UserRole[];
   createdAt?: Date;
 }
@@ -72,6 +74,7 @@ interface PublicUserSource {
   fundingAgency?: string | null;
   fundingAgencyOther?: string | null;
   level?: string | null;
+  links?: UserLink[];
   roles: UserRole[];
   createdAt?: Date;
 }
@@ -98,6 +101,7 @@ export function toPublicUser(user: PublicUserSource): PublicUser {
     fundingAgency: user.fundingAgency ?? null,
     fundingAgencyOther: user.fundingAgencyOther ?? null,
     level: user.level ?? null,
+    links: user.links ?? [],
     roles: user.roles,
     createdAt: user.createdAt,
   };

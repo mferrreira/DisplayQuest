@@ -133,6 +133,9 @@ describe("toPublicUser — password never leaves the record", () => {
         "fundingAgency",
         "fundingAgencyOther",
         "level",
+        // S09 (R14, DEC-264): links da pessoa, normalizados. A entrada e opcional, a saida e sempre
+        // presente como lista vazia quando o record nao tem a coluna.
+        "links",
         "roles",
         "createdAt",
       ].sort(),

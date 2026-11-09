@@ -1,4 +1,6 @@
 // User types
+import type { UserLink } from "@/backend/domain";
+
 export type UserRole = 'COORDENADOR' | 'GERENTE' | 'LABORATORISTA' | 'PESQUISADOR' | 'GERENTE_PROJETO' | 'COLABORADOR' | 'VOLUNTARIO';
 
 export interface User {
@@ -38,6 +40,8 @@ export interface User {
   fundingAgency?: string | null;
   fundingAgencyOther?: string | null;
   level?: string | null;
+  /** S09 (R14, DEC-264): lista normalizada de links `[{label,url}]` do perfil. */
+  links?: UserLink[];
   badges?: UserBadge[];
   createdAt: Date;
 }
@@ -58,6 +62,7 @@ export interface UserFormData {
   fundingAgency?: string | null
   fundingAgencyOther?: string | null
   level?: string | null
+  links?: UserLink[]
 }
 
 // Project types

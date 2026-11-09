@@ -43,6 +43,8 @@ model users {
   fundingAgency               String?
   fundingAgencyOther          String?
   level                       String?
+  // S09 (R14, DEC-264): links `[{label,url}]` da pessoa. JSONB, sem favicon persistido.
+  links                       Json?
   createdBadges               badges[]                 @relation("UserCreatedBadges")
   daily_logs                  daily_logs[]             @relation("UserDailyLogs")
   history                     history[]                @relation("UserHistory")
