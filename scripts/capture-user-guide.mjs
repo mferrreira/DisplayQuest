@@ -205,6 +205,27 @@ const INTERACTIONS = [
   { id: "capa-menu-projeto", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: 'a[aria-label="Ver projeto Pesquisa em IA"]' }, projetoTab: "Visão geral", clicar: [{ role: "button", name: "Opções da capa do projeto" }], verifica: "Tirar capa", rolarAte: 'button[aria-label="Opções da capa do projeto"]' },
   { id: "logo-menu-projeto", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: 'a[aria-label="Ver projeto Pesquisa em IA"]' }, projetoTab: "Visão geral", clicar: [{ role: "button", name: "Opções do logo do projeto" }], verifica: "Tirar logo", rolarAte: 'button[aria-label="Opções do logo do projeto"]' },
   { id: "capa-menu-perfil", role: "part", route: "/dashboard/profile", abre: "Editar Perfil", clicar: [{ role: "button", name: "Opções da capa do perfil" }], verifica: "Tirar avatar", rolarAte: 'button[aria-label="Opções da capa do perfil"]' },
+
+  // plan-v21 S06/S07 (DEC-261/262): a descrição em markdown do projeto mora no cartão da lista,
+  // pelo ícone `Editar descrição X`; o servidor é a autoridade, a UI mostra o ícone. A captura
+  // abre o diálogo sem escrever: nada é salvo.
+  { id: "dialogo-descricao-projeto", role: "coord", route: "/dashboard/projetos", abre: "Editar descrição Pesquisa em IA", dialogo: "Descrição em markdown", rolarAte: "text=Anexar imagem" },
+  // S04 (DEC-259): o seletor do entregável. A captura não seleciona meta: fotografa o painel em
+  // leitura, no estado `Sem meta` da linha de `GDD do laboratório`.
+  { id: "entregavel-meta-seletor", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: 'a[aria-label="Ver projeto Pesquisa em IA"]' }, projetoTab: "Arquivos", verifica: "GDD do laboratório", rolarAte: "text=GDD do laboratório" },
+  // S05 (DEC-260): o checkbox de meta cumprida. `verifica` é o texto visível da lista; o checkbox
+  // é nomeado por `aria-label`, e `innerText` do corpo não lê rótulo de controle.
+  { id: "meta-cumprida-checkbox", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: 'a[aria-label="Ver projeto Pesquisa em IA"]' }, projetoTab: "Tarefas", verifica: "Metas do projeto", rolarAte: "text=Metas do projeto" },
+
+  // S08 (R12/DEC-263): o editor de bio é a mesma peça da descrição do projeto. A captura abre
+  // o dialog em modo de edição do perfil, sem salvar.
+  { id: "perfil-bio-dialog", role: "part", route: "/dashboard/profile", aba: "Configurações", abre: "Editar Perfil", clicar: ["Editar biografia"], dialogo: "Biografia em markdown", rolarAte: "text=Biografia em markdown" },
+  { id: "admin-bio-dialog", role: "coord", route: "/dashboard/admin", aba: "Usuários", abre: "/Configurar/i", clicar: ["Editar biografia"], dialogo: "Biografia em markdown", rolarAte: "text=Biografia em markdown" },
+
+  // S09 (R15/DEC-264): os links no perfil, com o favicon derivado no render. Os dois lados usam
+  // a MESMA peça: o perfil próprio e o perfil de terceiro aberto pelo ranking.
+  { id: "perfil-links", role: "part", route: "/dashboard/profile", aba: "Configurações", verifica: "Links", rolarAte: "text=Links" },
+  { id: "perfil-terceiro-links", role: "coord", route: "/dashboard/profile?userId=21", verifica: "Links", rolarAte: "text=Links" },
 ];
 
 /** A navegação é um acordeão: os destinos só aparecem quando o grupo é aberto. */

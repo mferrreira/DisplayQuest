@@ -1392,3 +1392,53 @@ leitura do texto visível. São observações medidas na instância real, **não
   curso, verificada pelo texto "Pontos da temporada". A temporada fechada **não é capturável hoje** —
   a primeira fecha em 31/12/2026 e a rota recusa fechar ano anterior; o guia descreve o fechamento em
   prosa sem foto.
+
+## plan-v21 — entregáveis, cronograma, descrição, bio, links (2026-11-09, DEC-257..264)
+
+- **Estado:** `fechado` em 2026-11-09, 10 fatias. Plano em
+  `~/Projetos/displayquest-planos/plans/plan-v21-entregaveis-markdown-links/`. Gate no fechamento:
+  suíte **330 arquivos / 3168 testes** na 5433, tsc 0, lint sem erro, arch 1374 módulos / 5902
+  dependências sem violação, docs:build/ docs:check verdes.
+- **DEC-257 (ADR-001):** em tarefa nova, o seletor de atividade lista só `OPEN`; a rota `POST`
+  **rejeita** atividade `COMPLETION_REQUESTED`/`DONE` (*"Atividade do cronograma não pode ser usada em tarefa nova"*),
+  e a rota `PUT` aceita link de atividade não-`OPEN` reenviado, porque a edição de tarefa já tinha esse
+  contrato medido.
+- **DEC-258 (ADR-002):** `project_deliverables.fileKey/fileName/fileSize` são a linha do arquivo.
+  O upload é gateado pela ACL do projeto **antes** de ler o corpo, o arquivo entra no bucket
+  `projects/<id>/deliverables/<entregável>/<uuid>` pelo `BlobStorePort`, e a remoção é pela mesma
+  autoridade, com o objeto do bucket apagado só depois do registro limpo. Quem não gerencia não vê
+  seletor nem botão de upload; o download é leitura aberta, e id forjado não acha objeto.
+- **DEC-259 (ADR-003):** `project_deliverables.goalId` é FK `ON DELETE SET NULL` em `project_goals`;
+  o seletor do entregável só existe para quem gerencia o projeto; as metas do seletor são metas do
+  mesmo projeto, a meta do projeto é `Sem meta`, e meta do outro projeto é recusada. Apagar a meta
+  não apaga o entregável.
+- **DEC-260 (ADR-004):** `project_goals.completedAt`/`completedBy` registram a meta cumprida; o
+  checkbox `Cumprir meta N` é para gestão do projeto, marcar grava `now` e o ator, desmarcar zera os
+  dois, e `completedBy` é FK `ON DELETE SET NULL` em `users`.
+- **DEC-261 (ADR-005):** o ícone de descrição em cada cartão da lista de projetos aparece para
+  gestão global **ou** membro com `situacao ATIVO` no vínculo. O servidor é a autoridade da escrita;
+  a rota devolve *"Usuário não tem permissão para gerenciar este projeto"* para quem não é.
+- **DEC-262 (ADR-006):** a peça `MarkdownEditorDialog` é a mesma para a descrição do projeto e a bio:
+  textarea, preview, botão `Anexar imagem` e drop de imagem sobre a textarea. O arquivo vai para o
+  bucket na família da entidade (`projects/<id>/markdown-images/<uuid>` ou
+  `users/<id>/markdown-images/<uuid>`), só com gate de escrita, e o markdown é inserido no cursor.
+  As rotas dedicadas (`PUT /api/projects/[id]/description`, `PUT /api/users/[id]/bio`) salvam só o
+  campo.
+- **DEC-263 (ADR-007):** `users.bio` aceita markdown e é escrita pela própria pessoa ou por gestão de
+  contas. A bio markdown usa as MESMAS peças do projeto, e a leitura é aberta no perfil próprio, no
+  perfil de terceiro e no diálogo de gestão do painel. O limite de bio é 2000 caracteres.
+- **DEC-264 (ADR-008):** `users.links` é JSONB `[{label,url}]` com no máximo 10 links, label de até
+  50, URL só `http`/`https`; URL sem protocolo passa a `https://`, `ftp:` e `javascript:` são
+  recusados. O favicon é derivado no render de
+  `https://icons.duckduckgo.com/ip3/<hostname>.ico`; quando a imagem falha, o glyph de link entra no
+  lugar, e o link continua.
+- **Gotcha do editor de markdown:** o `<textarea>` tem que usar `value` controlado no React, não o
+  `defaultValue` de um `form` não controlado; o `change` da bolha de drop é a mesma chamada da
+  textarea, e a peça de preview fica à direita. A casa de markdown em `lib/markdown-render.ts` é
+  escape-first; o parser de imagem usa regex fechada, não a biblioteca.
+- **Gotcha de captura S09:** `perfil-links` exige `aba: "Configurações"` na captura do perfil próprio,
+  porque os links só aparecem na leitura da aba de configurações; `perfil-terceiro-links` vem da rota
+  `/dashboard/profile?userId=21`, que hoje aponta para o usuário semeado pelo guia.
+- **Dados de captura do guia:** o usuário 21 do guia (`Guia · Participante`) precisa de `links` e dos
+  dados de documentos para a leitura. O usuário de coordenação da captura usa `Guia · Coordenação`
+  (`coordenador@lab.com`), e `perfil-links` captura `gerente@lab.com` na Configurações.

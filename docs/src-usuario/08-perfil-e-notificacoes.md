@@ -12,7 +12,7 @@ O cartão **Meu Perfil** abre com a faixa da capa e traz avatar, nome e as cifra
 | --- | --- |
 | **Atividade** | o resumo do que você fez: tarefas, sessões, horas |
 | **Logs Diários** | o registro dia a dia, alimentado pelas sessões encerradas |
-| **Configurações** | os dados da conta: **Nome**, **Email**, **Biografia**, **Visibilidade do Perfil**, **Horas Semanais** |
+| **Configurações** | os dados da conta: **Nome**, **Email**, **Biografia**, **Visibilidade do Perfil**, **Horas Semanais**, **Links do perfil** |
 
 ```foto perfil-configuracoes titulo="A aba Configurações"
 **Horas Semanais** é a meta semanal da pessoa, usada nos relatórios e no painel administrativo.
@@ -42,6 +42,22 @@ O formulário tem um bloco chamado **Dados para os documentos oficiais**. São o
 | **Instituição de fomento** | **CNPq**, **Fapemig** ou **Outra** — e em **Outra** aparece o campo **Nome da instituição**, até 80 caracteres |
 
 O CPF é o único desses campos que não é aberto: só você e quem gerencia contas o leem, e ele não aparece no perfil aberto por outra pessoa. Os demais são leitura aberta.
+
+### Os links da pessoa
+
+Na aba **Configurações**, o bloco **Links do perfil** tem uma linha por link. Em **Label do link N**, escreva o texto que aparece no perfil; em **URL do link N**, escreva o endereço. **Adicionar link** cria a linha, e **Remover link X** tira a linha. O servidor aceita até 10 links, com label de até 50 caracteres. A décima primeira linha não entra: o botão **Adicionar link** fica desabilitado em 10, e a rota responde *"Máximo de 10 links"*. Uma URL sem protocolo passa a `https://`; `ftp:` e `javascript:` são recusados.
+
+Cada link mostra o favicon do domínio, derivado no navegador de `icons.duckduckgo.com/ip3/<domínio>.ico`. Quando o favicon não carrega, o glyph de link entra no lugar, e o link continua. Nada de favicon no banco.
+
+```foto perfil-links titulo="Os links no perfil próprio"
+O bloco **Links** traz `LinkedIn` e `GitHub` com o favicon de `linkedin.com` e `github.com` na borda do círculo.
+```
+
+A **Biografia** é markdown. Em **Configurações**, use **Editar biografia**. O dialog tem a textarea, a preview, **Anexar imagem** e drop de imagem. Salvar manda a bio pela rota do perfil. O perfil próprio, o perfil de terceiro e o dialog de gestão no painel usam as mesmas peças.
+
+```foto perfil-bio-dialog titulo="O diálogo de biografia em markdown"
+A textarea fica à esquerda, com a preview à direita; embaixo ficam **Anexar imagem** e a nota de que a imagem vai para o bucket do usuário.
+```
 
 ::: nota titulo="A visibilidade é regra do servidor (desde outubro/2026)"
 Os três valores de **Visibilidade do Perfil** passaram a ser obedecidos pelo servidor. O que cada um esconde, e o que não esconde:
@@ -129,4 +145,8 @@ O perfil de outra pessoa também se abre pelo **Ranking**: clique na pessoa e a 
 
 ```foto perfil-de-outra-pessoa titulo="O perfil de outra pessoa, com os dados dos documentos"
 O CPF não aparece aqui, e isso não é descuido: é o único campo dos documentos cuja leitura é restrita.
+```
+
+```foto perfil-terceiro-links titulo="Os links no perfil de outra pessoa"
+A mesma peça de links serve os três lados: o perfil de terceiro, o perfil próprio e o diálogo de gestão no painel.
 ```

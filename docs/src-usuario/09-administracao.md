@@ -20,6 +20,12 @@ A aba **Usuários** é onde as contas pendentes são resolvidas e onde as contas
 - Os filtros **Todas** e **Todos** reduzem a lista por função e por situação.
 - O ícone de configuração de cada pessoa — o controle tem o nome **Configurar \<nome\>** — abre o diálogo **Configurar Usuário**. Além de função, carga semanal e pontos, ele tem o bloco dos dados dos documentos oficiais: **CPF**, **Matrícula**, **Curso**, **Modalidade de IC**, **Nível** e **Instituição de fomento**. São os mesmos campos que a pessoa edita no próprio perfil; aqui, é a gestão que escreve.
 
+O mesmo diálogo traz a bio em markdown: **Biografia**, textarea, preview, **Anexar imagem** e drop de imagem. É o MESMO dialog do perfil próprio; a gestão escreve a bio de quem gerencia contas.
+
+```foto admin-bio-dialog titulo="O bloco de biografia no diálogo Configurar Usuário"
+O bloco `Bio` do diálogo traz o botão **Editar biografia**. No diálogo, a textarea tem o rótulo **Biografia em markdown**, com preview, **Anexar imagem** e a nota de que a imagem vai para o bucket do usuário.
+```
+
 ```foto admin-usuarios titulo="A aba Usuários"
 A lista traz as contas e, abaixo, a grade de horários por função.
 ```

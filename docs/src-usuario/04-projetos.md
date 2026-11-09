@@ -54,6 +54,12 @@ Nome com até 100 caracteres e descrição com até 500. O **Avançar** da foto 
 
 Editar e excluir um projeto são ações do cartão, na lista. Editar é uma página só, sem passos: o cronograma da edição se mexe no detalhe, não no formulário. O **Pontos do projeto** não é campo do formulário: ele aparece no detalhe quando existe.
 
+O cartão da lista também tem **Editar descrição X** quando você pode escrever a descrição: a gestão do projeto ou o membro com **Situação do vínculo** **Ativo**. Quem não gerencia e não é membro ativo não vê o ícone. O servidor decide a escrita de verdade; sem direito, responde *"Usuário não tem permissão para gerenciar este projeto"*.
+
+```foto dialogo-descricao-projeto titulo="O diálogo de descrição em markdown"
+O diálogo mostra a textarea à esquerda e o preview à direita. Abaixo da textarea ficam **Anexar imagem** e a nota de que a imagem vai para o bucket do projeto. O drop de imagem sobre a textarea faz a mesma coisa.
+```
+
 ## Capa e logo do projeto
 
 1. Abra o detalhe do projeto, na aba **Visão geral**.
@@ -85,7 +91,12 @@ Entregável é o que o projeto se compromete a entregar, com quantidade.
 2. Em **Unidades**, informe a quantidade. Deixar o campo em branco conta como 1.
 3. Clique em **Adicionar entregável**.
 4. Para mudar um entregável já listado, abra o lápis: **Novo nome** e **Nova quantidade**, depois **Salvar entregável**.
-5. Para apagar, use a lixeira; o sistema pede confirmação.
+5. Em **Meta para X**, escolha a meta do mesmo projeto. Sem meta, escolha **Sem meta**. Quem não gerencia não vê o seletor: a linha mostra `Meta: <descrição>` em texto.
+6. Para apagar, use a lixeira; o sistema pede confirmação.
+
+```foto entregavel-meta-seletor titulo="O seletor de meta no entregável"
+O seletor diz `Meta para <entregável>`. As opções vêm das metas do mesmo projeto.
+```
 
 **Arquivos.** Cada linha de entregável mostra os arquivos do entregável, com o tamanho em **1,5 KB** ou **3,2 MB**. Clique no nome para abrir o arquivo — a leitura é aberta a qualquer pessoa autenticada. Quem gerencia o projeto envia e remove: escolha o arquivo em **Arquivo para X**, clique em **Enviar arquivo X**, e a linha entra na lista. Para tirar um arquivo, use **Remover arquivo X**; o sistema pede confirmação, e o entregável fica como estava. Uma linha sem arquivos diz **Nenhum arquivo enviado**.
 
@@ -103,6 +114,12 @@ Imagem aceita até 5 MB, PDF até 20 MB e vídeo até 100 MB. O sistema confere 
 O cronograma é o calendário do projeto. São duas listas no mesmo card: as **Metas do projeto** e a grade de etapas por mês.
 
 **Metas.** Cada meta é uma linha com a descrição e, se você quiser, um número. O número existe porque a brochura tem objetivo que se conta (dois artigos, um dataset), mas meta sem número é meta normal. **Adicionar meta** cria a linha, e ela só entra no projeto quando você escreve a descrição e sai do campo.
+
+A gestão marca a meta como cumprida pelo checkbox **Cumprir meta N**. Marcar grava a data e quem marcou; desmarcar zera os dois. Quem não gerencia vê a linha da meta desabilitada e nenhum checkbox na página. Apagar a meta não apaga o entregável: o entregável continua na lista, sem meta.
+
+```foto meta-cumprida-checkbox titulo="O checkbox de meta cumprida"
+Cada linha da meta tem o checkbox **Cumprir meta N**, e a linha está desabilitada para quem não gerencia.
+```
 
 **A grade.** Cada linha é uma etapa, e a duração da etapa é a contagem dos meses marcados:
 
