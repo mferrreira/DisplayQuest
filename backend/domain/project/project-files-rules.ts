@@ -105,6 +105,22 @@ export function projectActivityFilePrefix(projectId: number, activityId: number)
   return `projects/${projectId}/activities/${activityId}/files`;
 }
 
+/**
+ * Prefixo de chave do ARQUIVO de entregável no bucket (S02, plan-v21):
+ * `projects/<projeto>/deliverables/<entregável>/files`. Mesma validação dos dois anteriores: o
+ * `sanitizeBlobPrefix` do seam só barra traversal, e o arquivo pertence ao entregável, não ao
+ * projeto solto.
+ */
+export function projectDeliverableFilePrefix(projectId: number, deliverableId: number): string {
+  if (!Number.isInteger(projectId) || projectId <= 0) {
+    throw new Error(`projeto inválido para montar prefixo de arquivo de entregável: ${projectId}`);
+  }
+  if (!Number.isInteger(deliverableId) || deliverableId <= 0) {
+    throw new Error(`entregável inválido para montar prefixo de arquivo: ${deliverableId}`);
+  }
+  return `projects/${projectId}/deliverables/${deliverableId}/files`;
+}
+
 export interface ProjectAttachmentMetadata {
   name?: unknown;
   size?: unknown;

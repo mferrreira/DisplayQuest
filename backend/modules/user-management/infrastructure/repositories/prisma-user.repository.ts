@@ -154,6 +154,9 @@ export class PrismaUserRepository implements UserRepositoryPort {
       // V5-7a (DEC-134/162): prova de atividade é dado do projeto, não de quem subiu — a 18ª
       // FK bloqueante, mesma razão medida do anexo.
       prisma.project_activity_files.count({ where: { uploadedBy: userId } }),
+      // S02 (plan-v21, DEC-134): arquivo de entregável é dado do projeto, não de quem subiu —
+      // a 19ª FK bloqueante, coluna escrita por extenso de propósito (a guarda lê o texto).
+      prisma.project_deliverable_files.count({ where: { uploadedBy: userId } }),
       prisma.user_schedules.count({ where: { userId: userId } }),
       prisma.history.count({ where: { performedBy: userId } }),
       prisma.lab_events.count({ where: { userId: userId } }),

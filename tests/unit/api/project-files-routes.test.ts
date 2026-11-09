@@ -53,6 +53,7 @@ const mocks = vi.hoisted(() => ({
   failAttachmentCreate: false,
   failProjectUpdate: false,
   bucketConfigured: true,
+  gateCalls: [] as string[],
   nextId: 100,
 }));
 
@@ -197,12 +198,22 @@ vi.mock("@/backend/composition/root", () => {
   };
 
   return {
-    getBackendComposition: () => ({
-      identityAccess: createIdentityAccessModule(),
-      projectManagement: createProjectManagementModule({
+    getBackendComposition: () => {
+      const projectManagement = createProjectManagementModule({
         ports: { projects, memberships, actors, deliverables, attachments },
-      }),
-    }),
+      });
+      // INV1 (lição medida da S02, plan-v21): o gate de upload corre ANTES de `request.formData()`.
+      // O invólucro registra o gate; o teste espiona `formData` na request e exige a ordem.
+      const assertGate = projectManagement.assertCanManageProject;
+      (projectManagement as { assertCanManageProject: (cmd: { projectId: number; actorId: number }) => Promise<unknown> }).assertCanManageProject = async (cmd) => {
+        mocks.gateCalls.push("gate");
+        return assertGate(cmd);
+      };
+      return {
+        identityAccess: createIdentityAccessModule(),
+        projectManagement,
+      };
+    },
   };
 });
 
@@ -313,6 +324,7 @@ beforeEach(() => {
   mocks.objects.set("projects/10/attachments/um-pdf.pdf", { body: PDF_BYTES, contentType: "application/pdf" });
   mocks.puts = [];
   mocks.removes = [];
+  mocks.gateCalls = [];
   mocks.failAttachmentCreate = false;
   mocks.failProjectUpdate = false;
   mocks.bucketConfigured = true;
@@ -447,11 +459,14 @@ describe("entregáveis — ordem 401 → 404 → 403 → 400", () => {
 describe("anexos — o 403 vem antes de qualquer byte no bucket", () => {
   it("sem gestão: 403 e NENHUM objeto escrito", async () => {
     login(["VOLUNTARIO"], 5); // COLABORADOR: acessa, não gerencia
-    const response = await UPLOAD_ATTACHMENT(
-      uploadRequest(new File([PNG_BYTES], "foto.png", { type: "image/png" })),
-      context({ id: "10" }),
-    );
+    const request = uploadRequest(new File([PNG_BYTES], "foto.png", { type: "image/png" }));
+    const formSpy = vi.spyOn(request, "formData");
+    const response = await UPLOAD_ATTACHMENT(request, context({ id: "10" }));
     expect(response.status).toBe(403);
+    // A ordem é a asserção (lição da S02, plan-v21): o gate correu e `formData` nunca foi chamada.
+    // Movendo o gate para depois da leitura do corpo, este teste fica vermelho.
+    expect(mocks.gateCalls).toEqual(["gate"]);
+    expect(formSpy).not.toHaveBeenCalled();
     expect(mocks.puts).toEqual([]);
     expect(mocks.attachments).toHaveLength(1);
   });

@@ -70,6 +70,32 @@ export interface DeleteProjectDeliverableCommand {
   actorId: number
 }
 
+// S02 (plan-v21) — arquivos anexados a um entregável. O binário é da rota; aqui só metadado.
+export interface AddProjectDeliverableFileCommand {
+  projectId: number
+  deliverableId: number
+  actorId: number
+  blobKey: string
+  name: unknown
+  contentType: string
+  size: number
+}
+
+export interface ListProjectDeliverableFilesQuery {
+  projectId: number
+  deliverableId: number
+  actorId: number
+  actorRoles: Role[]
+}
+
+export interface GetProjectDeliverableFileQuery {
+  projectId: number
+  deliverableId: number
+  fileId: number
+  actorId: number
+  actorRoles: Role[]
+}
+
 export interface ListProjectAttachmentsQuery {
   projectId: number
   actorId: number

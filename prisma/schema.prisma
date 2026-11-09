@@ -73,6 +73,9 @@ model users {
   // model `project_attachments`; a guarda user-delete-schema-drift.test.ts confere os dois lados.
   projectAttachments          project_attachments[]    @relation("ProjectAttachmentUploader")
   uploadedActivityFiles       project_activity_files[] @relation("ActivityFileUploader")
+  // S02 (plan-v21, DEC-134): quem subiu um arquivo de entregável. RESTRICT (sem onDelete) —
+  // ver o comentário no model `project_deliverable_files`; a guarda user-delete-schema-drift confere.
+  uploadedDeliverableFiles    project_deliverable_files[] @relation("DeliverableFileUploader")
   // V5-5: as três relações do cronograma com pessoa são `SetNull` (ver o comentário no model
   // `project_activities`): excluir uma pessoa não apaga cronograma nem bloqueia a exclusão.
   activityResponsibilities    project_activities[]     @relation("ActivityResponsible")
@@ -136,8 +139,28 @@ model project_deliverables {
   quantity  Int      @default(1)
   createdAt DateTime @default(now())
   project   projects @relation("ProjectDeliverables", fields: [projectId], references: [id], onDelete: Cascade)
+  files     project_deliverable_files[] @relation("DeliverableFiles")
 
   @@index([projectId])
+}
+
+// S02 (plan-v21): arquivos anexados a um entregável. O binário mora no bucket (`blobKey` é a
+// chave), nunca em disco do backend. `uploadedBy` é RESTRICT de propósito, como em
+// `project_attachments` (DEC-134/162): o arquivo é dado do projeto, não de quem subiu — excluir
+// a pessoa não pode apagar o que o projeto entregou. O entregável cascadeia seus arquivos.
+model project_deliverable_files {
+  id           Int                @id @default(autoincrement())
+  deliverableId Int
+  blobKey      String            @unique
+  name         String
+  contentType  String
+  size         Int
+  uploadedBy   Int
+  uploadedAt   DateTime          @default(now())
+  deliverable  project_deliverables @relation("DeliverableFiles", fields: [deliverableId], references: [id], onDelete: Cascade)
+  uploader     users              @relation("DeliverableFileUploader", fields: [uploadedBy], references: [id])
+
+  @@index([deliverableId])
 }
 
 // V5-2c (DEC-101): o binário mora no bucket (`blobKey` é a chave), nunca em disco do backend.

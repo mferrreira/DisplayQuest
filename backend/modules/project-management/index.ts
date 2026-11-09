@@ -8,6 +8,9 @@ import { UpdateProjectUseCase } from "@/backend/modules/project-management/appli
 import { DeleteProjectUseCase } from "@/backend/modules/project-management/application/use-cases/delete-project.use-case"
 import { GetProjectVolunteersUseCase } from "@/backend/modules/project-management/application/use-cases/get-project-volunteers.use-case"
 import { ListProjectDeliverablesUseCase } from "@/backend/modules/project-management/application/use-cases/list-project-deliverables.use-case"
+import { ListProjectDeliverableFilesUseCase } from "@/backend/modules/project-management/application/use-cases/list-project-deliverable-files.use-case"
+import { GetProjectDeliverableFileUseCase } from "@/backend/modules/project-management/application/use-cases/get-project-deliverable-file.use-case"
+import { AddProjectDeliverableFileUseCase } from "@/backend/modules/project-management/application/use-cases/add-project-deliverable-file.use-case"
 import { CreateProjectDeliverableUseCase } from "@/backend/modules/project-management/application/use-cases/create-project-deliverable.use-case"
 import { UpdateProjectDeliverableUseCase } from "@/backend/modules/project-management/application/use-cases/update-project-deliverable.use-case"
 import { DeleteProjectDeliverableUseCase } from "@/backend/modules/project-management/application/use-cases/delete-project-deliverable.use-case"
@@ -42,12 +45,14 @@ import type { ActivityTasksPort } from "@/backend/modules/project-management/app
 import type { ActivityEconomyTasksPort } from "@/backend/modules/project-management/application/ports/activity-economy-tasks.port"
 import type { ActivityCompletionAwardPort } from "@/backend/modules/project-management/application/ports/activity-completion-award.port"
 import type { ProjectDeliverablesPort } from "@/backend/modules/project-management/application/ports/project-deliverables.repository"
+import type { ProjectDeliverableFilesPort } from "@/backend/modules/project-management/application/ports/project-deliverable-files.repository"
 import type { ProjectHoursPort } from "@/backend/modules/project-management/application/ports/project-hours.port"
 import type { ProjectManagementMembershipPort } from "@/backend/modules/project-management/application/ports/project-membership.repository"
 import type { ProjectRepositoryPort } from "@/backend/modules/project-management/application/ports/project.repository"
 import { createPrismaProjectActorsPort } from "@/backend/modules/project-management/infrastructure/repositories/prisma-project-actors.port"
 import { createPrismaProjectAttachmentsRepository } from "@/backend/modules/project-management/infrastructure/repositories/prisma-project-attachments.repository"
 import { createPrismaProjectDeliverablesRepository } from "@/backend/modules/project-management/infrastructure/repositories/prisma-project-deliverables.repository"
+import { createPrismaProjectDeliverableFilesRepository } from "@/backend/modules/project-management/infrastructure/repositories/prisma-project-deliverable-files.repository"
 import { createPrismaProjectCronogramaRepository } from "@/backend/modules/project-management/infrastructure/repositories/prisma-project-cronograma.repository"
 import { createPrismaProjectActivityFilesRepository } from "@/backend/modules/project-management/infrastructure/repositories/prisma-project-activity-files.repository"
 import { createPrismaActivityTasksPort } from "@/backend/modules/project-management/infrastructure/repositories/prisma-activity-tasks.port"
@@ -96,6 +101,9 @@ export class ProjectManagementModule {
   readonly deleteProject: UseCaseExecute<DeleteProjectUseCase>
   readonly getProjectVolunteers: UseCaseExecute<GetProjectVolunteersUseCase>
   readonly listProjectDeliverables: UseCaseExecute<ListProjectDeliverablesUseCase>
+  readonly listProjectDeliverableFiles: UseCaseExecute<ListProjectDeliverableFilesUseCase>
+  readonly getProjectDeliverableFile: UseCaseExecute<GetProjectDeliverableFileUseCase>
+  readonly addProjectDeliverableFile: UseCaseExecute<AddProjectDeliverableFileUseCase>
   readonly createProjectDeliverable: UseCaseExecute<CreateProjectDeliverableUseCase>
   readonly updateProjectDeliverable: UseCaseExecute<UpdateProjectDeliverableUseCase>
   readonly deleteProjectDeliverable: UseCaseExecute<DeleteProjectDeliverableUseCase>
@@ -140,6 +148,9 @@ export class ProjectManagementModule {
     private readonly createProjectDeliverableUseCase: CreateProjectDeliverableUseCase,
     private readonly updateProjectDeliverableUseCase: UpdateProjectDeliverableUseCase,
     private readonly deleteProjectDeliverableUseCase: DeleteProjectDeliverableUseCase,
+    private readonly listProjectDeliverableFilesUseCase: ListProjectDeliverableFilesUseCase,
+    private readonly getProjectDeliverableFileUseCase: GetProjectDeliverableFileUseCase,
+    private readonly addProjectDeliverableFileUseCase: AddProjectDeliverableFileUseCase,
     private readonly listProjectAttachmentsUseCase: ListProjectAttachmentsUseCase,
     private readonly getProjectAttachmentUseCase: GetProjectAttachmentUseCase,
     private readonly addProjectAttachmentUseCase: AddProjectAttachmentUseCase,
@@ -177,6 +188,9 @@ export class ProjectManagementModule {
     this.createProjectDeliverable = this.createProjectDeliverableUseCase.execute.bind(this.createProjectDeliverableUseCase)
     this.updateProjectDeliverable = this.updateProjectDeliverableUseCase.execute.bind(this.updateProjectDeliverableUseCase)
     this.deleteProjectDeliverable = this.deleteProjectDeliverableUseCase.execute.bind(this.deleteProjectDeliverableUseCase)
+    this.listProjectDeliverableFiles = this.listProjectDeliverableFilesUseCase.execute.bind(this.listProjectDeliverableFilesUseCase)
+    this.getProjectDeliverableFile = this.getProjectDeliverableFileUseCase.execute.bind(this.getProjectDeliverableFileUseCase)
+    this.addProjectDeliverableFile = this.addProjectDeliverableFileUseCase.execute.bind(this.addProjectDeliverableFileUseCase)
     this.listProjectAttachments = this.listProjectAttachmentsUseCase.execute.bind(this.listProjectAttachmentsUseCase)
     this.getProjectAttachment = this.getProjectAttachmentUseCase.execute.bind(this.getProjectAttachmentUseCase)
     this.addProjectAttachment = this.addProjectAttachmentUseCase.execute.bind(this.addProjectAttachmentUseCase)
@@ -214,6 +228,7 @@ export interface ProjectManagementModulePorts {
   hours: ProjectHoursPort
   deliverables: ProjectDeliverablesPort
   attachments: ProjectAttachmentsPort
+  projectDeliverableFiles: ProjectDeliverableFilesPort
   cronograma: ProjectCronogramaPort
   activityFiles: ProjectActivityFilesPort
   tasks: ActivityTasksPort
@@ -243,6 +258,7 @@ export function createProjectManagementModule(options: ProjectManagementModuleFa
     hours: options.ports?.hours ?? createPrismaProjectHoursPort(),
     deliverables: options.ports?.deliverables ?? createPrismaProjectDeliverablesRepository(),
     attachments: options.ports?.attachments ?? createPrismaProjectAttachmentsRepository(),
+    projectDeliverableFiles: options.ports?.projectDeliverableFiles ?? createPrismaProjectDeliverableFilesRepository(),
     cronograma: options.ports?.cronograma ?? createPrismaProjectCronogramaRepository(),
     activityFiles: options.ports?.activityFiles ?? createPrismaProjectActivityFilesRepository(),
     tasks: options.ports?.tasks ?? createPrismaActivityTasksPort(),
@@ -283,6 +299,23 @@ export function createProjectManagementModule(options: ProjectManagementModuleFa
     new DeleteProjectDeliverableUseCase({
       projects: ports.projects,
       deliverables: ports.deliverables,
+      memberships: ports.memberships,
+      actors: ports.actors,
+    }),
+    new ListProjectDeliverableFilesUseCase({
+      projects: ports.projects,
+      deliverables: ports.deliverables,
+      files: ports.projectDeliverableFiles,
+    }),
+    new GetProjectDeliverableFileUseCase({
+      projects: ports.projects,
+      deliverables: ports.deliverables,
+      files: ports.projectDeliverableFiles,
+    }),
+    new AddProjectDeliverableFileUseCase({
+      projects: ports.projects,
+      deliverables: ports.deliverables,
+      files: ports.projectDeliverableFiles,
       memberships: ports.memberships,
       actors: ports.actors,
     }),

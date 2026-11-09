@@ -104,6 +104,50 @@ export async function deleteProjectDeliverable(projectId: number, deliverableId:
   )
 }
 
+// ---- arquivos de entregável (S02, plan-v21) ----
+
+export interface ProjectDeliverableFile {
+  id: number
+  deliverableId: number
+  name: string
+  contentType: string
+  size: number
+  uploadedBy: number
+  uploadedAt: string
+}
+
+export async function listProjectDeliverableFiles(
+  projectId: number,
+  deliverableId: number,
+): Promise<ProjectDeliverableFile[]> {
+  const payload = await request<{ files?: ProjectDeliverableFile[] }>(
+    `/api/projects/${projectId}/deliverables/${deliverableId}/files`,
+    { method: "GET" },
+    "Erro ao buscar arquivos do entregável",
+  )
+  return Array.isArray(payload.files) ? payload.files : []
+}
+
+export async function uploadProjectDeliverableFile(
+  projectId: number,
+  deliverableId: number,
+  file: File,
+): Promise<ProjectDeliverableFile> {
+  const form = new FormData()
+  form.set("file", file)
+  const payload = await request<{ file: ProjectDeliverableFile }>(
+    `/api/projects/${projectId}/deliverables/${deliverableId}/files`,
+    { method: "POST", body: form },
+    "Erro ao enviar arquivo do entregável",
+  )
+  return payload.file
+}
+
+/** URL do binário, servida pela rota que aplica a regra de acesso do projeto. */
+export function projectDeliverableFileUrl(projectId: number, deliverableId: number, fileId: number): string {
+  return `/api/projects/${projectId}/deliverables/${deliverableId}/files/${fileId}/file`
+}
+
 // ---- anexos ----
 
 export async function listProjectAttachments(projectId: number): Promise<ProjectAttachment[]> {
