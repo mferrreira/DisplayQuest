@@ -13,7 +13,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { isActivitySelectableForNewTask } from "@/backend/domain";
+import { ACTIVITY_STATUSES, isActivitySelectableForNewTask } from "@/backend/domain";
 
 describe("atividade selecionável ao criar tarefa", () => {
   it("OPEN é selecionável", () => {
@@ -30,8 +30,7 @@ describe("atividade selecionável ao criar tarefa", () => {
 
   it("o vocabulário inteiro está coberto pela regra", () => {
     // Se o vocabulário crescer, este teste força a regra a dizer o que vale para a nova linha.
-    const statuses = ["OPEN", "COMPLETION_REQUESTED", "DONE"] as const;
-    const selectable = statuses.filter(isActivitySelectableForNewTask);
+    const selectable = ACTIVITY_STATUSES.filter(isActivitySelectableForNewTask);
     expect(selectable).toEqual(["OPEN"]);
   });
 });
