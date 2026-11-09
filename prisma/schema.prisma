@@ -139,9 +139,14 @@ model project_deliverables {
   quantity  Int      @default(1)
   createdAt DateTime @default(now())
   project   projects @relation("ProjectDeliverables", fields: [projectId], references: [id], onDelete: Cascade)
+  // S04 (plan-v21, DEC-259): meta é plano, entregável é o que se entrega — SetNull, apagar a
+  // meta deixa a linha viva sem meta. A checagem de projeto é do domínio, não da FK.
+  goalId    Int?
+  goal      project_goals? @relation("DeliverableGoal", fields: [goalId], references: [id], onDelete: SetNull)
   files     project_deliverable_files[] @relation("DeliverableFiles")
 
   @@index([projectId])
+  @@index([goalId])
 }
 
 // S02 (plan-v21): arquivos anexados a um entregável. O binário mora no bucket (`blobKey` é a
@@ -192,6 +197,7 @@ model project_goals {
   description String
   createdAt   DateTime @default(now())
   project     projects @relation("ProjectGoals", fields: [projectId], references: [id], onDelete: Cascade)
+  deliverables project_deliverables[] @relation("DeliverableGoal")
 
   @@index([projectId])
 }

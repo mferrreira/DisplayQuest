@@ -293,12 +293,14 @@ export function createProjectManagementModule(options: ProjectManagementModuleFa
       deliverables: ports.deliverables,
       memberships: ports.memberships,
       actors: ports.actors,
+      goals: ports.cronograma,
     }),
     new UpdateProjectDeliverableUseCase({
       projects: ports.projects,
       deliverables: ports.deliverables,
       memberships: ports.memberships,
       actors: ports.actors,
+      goals: ports.cronograma,
     }),
     new DeleteProjectDeliverableUseCase({
       projects: ports.projects,

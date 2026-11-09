@@ -152,6 +152,7 @@ vi.mock("@/backend/composition/root", () => {
         name: input.name,
         quantity: input.quantity,
         createdAt: "2026-10-13T12:00:00.000Z",
+        goalId: (input as { goalId?: number | null }).goalId ?? null,
       };
       mocks.deliverables.push(row);
       return row;
@@ -305,8 +306,8 @@ beforeEach(() => {
     [20, projectRow(20)],
   ]);
   mocks.deliverables = [
-    { id: 101, projectId: 10, name: "Relatório parcial", quantity: 1, createdAt: "2026-10-01T12:00:00.000Z" },
-    { id: 102, projectId: 20, name: "Entregável de outro projeto", quantity: 3, createdAt: "2026-10-01T12:00:00.000Z" },
+    { id: 101, projectId: 10, name: "Relatório parcial", quantity: 1, createdAt: "2026-10-01T12:00:00.000Z", goalId: null },
+    { id: 102, projectId: 20, name: "Entregável de outro projeto", quantity: 3, createdAt: "2026-10-01T12:00:00.000Z", goalId: null },
   ];
   mocks.attachments = [
     {

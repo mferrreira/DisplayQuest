@@ -29,6 +29,7 @@ interface DeliverableRow {
   name: string
   quantity: number
   createdAt: string
+  goalId: number | null
 }
 
 interface FileRow {
@@ -54,8 +55,8 @@ const PDF_BYTES = new Uint8Array([..."%PDF-1.7\n".split("").map((c) => c.charCod
 
 function resetStore() {
   mocks.deliverables = [
-    { id: 101, projectId: 7, name: "Relatório parcial", quantity: 2, createdAt: "2026-10-01T12:00:00.000Z" },
-    { id: 102, projectId: 7, name: "Slide da defesa", quantity: 1, createdAt: "2026-10-01T12:00:00.000Z" },
+    { id: 101, projectId: 7, name: "Relatório parcial", quantity: 2, createdAt: "2026-10-01T12:00:00.000Z", goalId: null },
+    { id: 102, projectId: 7, name: "Slide da defesa", quantity: 1, createdAt: "2026-10-01T12:00:00.000Z", goalId: null },
   ]
   mocks.files = [
     {
@@ -140,6 +141,12 @@ async function recordingFetch(input: unknown, init: RequestInit = {}) {
     if (method === "GET") {
       return jsonResponse({ deliverables: mocks.deliverables })
     }
+  }
+
+  // O painel agora lê as metas pelo cliente do cronograma; este arquivo é sobre arquivos, o
+  // cenário é sem metas.
+  if (segments[4] === "cronograma" && method === "GET") {
+    return jsonResponse({ cronograma: { projectId: 7, today: "2026-11-09", months: ["2026-11"], goals: [], activities: [] } })
   }
 
   throw new Error(`rota não prevista pelo gravador: ${method} ${path}`)

@@ -39,6 +39,7 @@ import { ProjectDeliverablesPanel } from "@/components/features/project-delivera
 import { ProjectMediaHeader } from "@/components/features/project-media-header";
 import {
   PROJECT_IMAGE_SLOT_MESSAGE,
+  deliverableGoalLinkError,
   deliverableValidationMessage,
   normalizeDeliverableInput,
   validateDeliverableInput,
@@ -51,6 +52,16 @@ interface DeliverableRow {
   projectId: number;
   name: string;
   quantity: number;
+  createdAt: string;
+  goalId: number | null;
+}
+
+interface GoalRow {
+  id: number;
+  projectId: number;
+  order: number;
+  target: number | null;
+  description: string;
   createdAt: string;
 }
 
@@ -66,6 +77,7 @@ interface AttachmentRow {
 
 const mocks = {
   deliverables: [] as DeliverableRow[],
+  goals: [] as GoalRow[],
   attachments: [] as AttachmentRow[],
   project: {
     logoKey: null as string | null,
@@ -82,7 +94,34 @@ const PNG_BYTES = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a
 
 function resetStore() {
   mocks.deliverables = [
-    { id: 101, projectId: 7, name: "Relatório parcial", quantity: 2, createdAt: "2026-10-01T12:00:00.000Z" },
+    {
+      id: 101,
+      projectId: 7,
+      name: "Relatório parcial",
+      quantity: 2,
+      createdAt: "2026-10-01T12:00:00.000Z",
+      goalId: 201,
+    },
+  ];
+  // Meta do próprio projeto (entra no Select), mais uma meta de OUTRO projeto que a tela
+  // pode listar e o servidor recusa — o vínculo é regra do domínio, não da tela.
+  mocks.goals = [
+    {
+      id: 201,
+      projectId: 7,
+      order: 1,
+      target: 2,
+      description: "Dois artigos",
+      createdAt: "2026-10-01T12:00:00.000Z",
+    },
+    {
+      id: 202,
+      projectId: 8,
+      order: 1,
+      target: null,
+      description: "Meta de outro projeto",
+      createdAt: "2026-10-01T12:00:00.000Z",
+    },
   ];
   mocks.attachments = [
     {
@@ -125,6 +164,23 @@ async function recordingFetch(input: unknown, init: RequestInit = {}) {
   const resource = segments[4];
   const resourceId = Number(segments[5]);
 
+  // O painel lê as metas pelo MESMO cliente do cronograma que a tela do projeto usa.
+  if (resource === "cronograma") {
+    if (method === "GET") {
+      return jsonResponse({
+        cronograma: { projectId: 7, today: "2026-11-09", months: ["2026-11"], goals: mocks.goals, activities: [] },
+      });
+    }
+    throw new Error(`rota não prevista pelo gravador: ${method} ${path}`);
+  }
+
+  /** A regra do vínculo é do domínio (`deliverableGoalLinkError`); meta sumida é a mesma frase. */
+  function goalLinkRefusal(goalId: unknown): string | null {
+    if (goalId === null || goalId === undefined) return null;
+    const goal = mocks.goals.find((item) => item.id === goalId);
+    return goal ? deliverableGoalLinkError({ goalProjectId: goal.projectId, projectId: 7 }) : "Meta não pertence a este projeto";
+  }
+
   if (resource === "deliverables") {
     if (method === "GET") {
       return jsonResponse({ deliverables: mocks.deliverables });
@@ -141,26 +197,45 @@ async function recordingFetch(input: unknown, init: RequestInit = {}) {
         403,
       );
     }
-    const fields = normalizeDeliverableInput({ name: body.name, quantity: body.quantity });
-    const errors = validateDeliverableInput(fields);
-    if (errors.length > 0) {
-      return jsonResponse({ error: deliverableValidationMessage(errors) }, 400);
+    const goalError = goalLinkRefusal(body.goalId);
+    if (goalError) {
+      return jsonResponse({ error: goalError }, 400);
     }
     if (method === "POST") {
+      const fields = normalizeDeliverableInput({ name: body.name, quantity: body.quantity });
+      const errors = validateDeliverableInput(fields);
+      if (errors.length > 0) {
+        return jsonResponse({ error: deliverableValidationMessage(errors) }, 400);
+      }
       const row: DeliverableRow = {
         id: ++mocks.nextId,
         projectId: 7,
         name: fields.name,
         quantity: fields.quantity,
         createdAt: "2026-10-13T12:00:00.000Z",
+        goalId: typeof body.goalId === "number" ? body.goalId : null,
       };
       mocks.deliverables.push(row);
       return jsonResponse({ deliverable: row }, 201);
     }
     const row = mocks.deliverables.find((item) => item.id === resourceId);
     if (!row) return jsonResponse({ error: "Entregável não encontrado" }, 404);
-    row.name = fields.name;
-    row.quantity = fields.quantity;
+    // Corpo parcial: chave ausente não apaga (mesma postura do use case real).
+    if ("goalId" in body) {
+      row.goalId = body.goalId === null ? null : (body.goalId as number);
+    }
+    if (body.name !== undefined || body.quantity !== undefined) {
+      const fields = normalizeDeliverableInput({
+        name: body.name !== undefined ? body.name : row.name,
+        quantity: body.quantity !== undefined ? body.quantity : row.quantity,
+      });
+      const errors = validateDeliverableInput(fields);
+      if (errors.length > 0) {
+        return jsonResponse({ error: deliverableValidationMessage(errors) }, 400);
+      }
+      row.name = fields.name;
+      row.quantity = fields.quantity;
+    }
     return jsonResponse({ deliverable: row });
   }
 
@@ -615,5 +690,57 @@ describe("cabeçalho de mídia do projeto", () => {
     const strip = image.parentElement!.parentElement!;
     expect(strip.className).toContain("aspect-[21/9]");
     expect(strip.className).not.toMatch(/(^|\s)h-\d/);
+  });
+});
+
+describe("vínculo entregável ↔ meta (S04, DEC-259)", () => {
+  // Radix Select abre com `user.click` no trigger (padrão da casa: `project-cronograma-panel`),
+  // e a lista de opções entra um frame depois — `findByRole`. `setup({ delay: null })` pela lição
+  // do flake medido no V4-6b.
+  it("gestão vê o Select Meta com as metas do projeto, pré-selecionado na meta da linha", async () => {
+    const user = userEvent.setup({ delay: null });
+    renderPanels(true);
+    await screen.findByText("Relatório parcial");
+    const trigger = screen.getByRole("combobox", { name: "Meta para Relatório parcial" });
+    expect(trigger).toHaveTextContent("Dois artigos");
+    await user.click(trigger);
+    const options = await screen.findAllByRole("option");
+    expect(options.map((option) => option.textContent)).toEqual(["Sem meta", "Dois artigos", "Meta de outro projeto"]);
+  });
+
+  it("mudar para Sem meta manda PUT só com goalId null", async () => {
+    const user = userEvent.setup({ delay: null });
+    renderPanels(true);
+    await screen.findByText("Relatório parcial");
+    const trigger = screen.getByRole("combobox", { name: "Meta para Relatório parcial" });
+    await user.click(trigger);
+    const option = await screen.findByRole("option", { name: "Sem meta" });
+    await user.click(option);
+
+    await waitFor(() => expect(mocks.deliverables[0].goalId).toBeNull());
+    const put = mocks.requests.find((entry) => entry.method === "PUT" && entry.path === "/api/projects/7/deliverables/101");
+    expect(put?.json).toEqual({ goalId: null });
+    expect(trigger).toHaveTextContent("Sem meta");
+  });
+
+  it("quem não gerencia não tem Select, e a meta aparece em texto", async () => {
+    renderPanels(false);
+    await screen.findByText("Relatório parcial");
+    expect(screen.queryByRole("combobox", { name: "Meta para Relatório parcial" })).not.toBeInTheDocument();
+    expect(screen.getByText(/Meta: Dois artigos/)).toBeInTheDocument();
+  });
+
+  it("meta de outro projeto chega como alerta, e a linha fica como estava", async () => {
+    const user = userEvent.setup({ delay: null });
+    renderPanels(true);
+    await screen.findByText("Relatório parcial");
+    const trigger = screen.getByRole("combobox", { name: "Meta para Relatório parcial" });
+    await user.click(trigger);
+    const option = await screen.findByRole("option", { name: "Meta de outro projeto" });
+    await user.click(option);
+
+    expect(await screen.findByText("Meta não pertence a este projeto")).toBeInTheDocument();
+    expect(mocks.deliverables[0].goalId).toBe(201);
+    expect(trigger).toHaveTextContent("Dois artigos");
   });
 });

@@ -38,6 +38,7 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
       actorId: auth.actor.id,
       name: body?.name,
       quantity: body?.quantity,
+      goalId: body?.goalId,
     })
     return NextResponse.json({ deliverable }, { status: 200 })
   } catch (error: unknown) {

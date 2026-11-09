@@ -6,8 +6,10 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Check, FileText, Loader2, Package, Pencil, Plus, Trash2, X } from "lucide-react"
 import { useToast } from "@/contexts/use-toast"
+import { getCronograma, type ProjectGoal } from "@/lib/api/project-cronograma"
 import {
   createProjectDeliverable,
   deleteProjectDeliverable,
@@ -40,6 +42,7 @@ export function ProjectDeliverablesPanel({ projectId, canManage }: ProjectDelive
   const [filesByDeliverable, setFilesByDeliverable] = useState<Record<number, ProjectDeliverableFile[]>>({})
   const [selectedFile, setSelectedFile] = useState<Record<number, File | null>>({})
   const fileInputRefs = useRef<Record<number, HTMLInputElement | null>>({})
+  const [goals, setGoals] = useState<ProjectGoal[]>([])
   const [loading, setLoading] = useState(true)
   const [newName, setNewName] = useState("")
   const [newQuantity, setNewQuantity] = useState("1")
@@ -53,6 +56,10 @@ export function ProjectDeliverablesPanel({ projectId, canManage }: ProjectDelive
     try {
       const rows = await listProjectDeliverables(projectId)
       setDeliverables(rows)
+      // S04: as metas vêm do MESMO cliente do cronograma que a tela do projeto usa — a tela não
+      // tem vocabulário próprio (lição da DEC-96).
+      const goalsRows = await getCronograma(projectId)
+      setGoals(goalsRows.goals)
       // S02: os arquivos são leitura aberta (DEC-136); uma leitura por entregável.
       const files = await Promise.all(rows.map((row) => listProjectDeliverableFiles(projectId, row.id)))
       const map: Record<number, ProjectDeliverableFile[]> = {}
@@ -63,6 +70,7 @@ export function ProjectDeliverablesPanel({ projectId, canManage }: ProjectDelive
     } catch (error) {
       setDeliverables([])
       setFilesByDeliverable({})
+      setGoals([])
       toast({
         title: "Erro",
         description: error instanceof Error ? error.message : "Falha ao carregar entregáveis",
@@ -119,6 +127,31 @@ export function ProjectDeliverablesPanel({ projectId, canManage }: ProjectDelive
       toast({
         title: "Erro",
         description: error instanceof Error ? error.message : "Falha ao atualizar entregável",
+        variant: "destructive",
+      })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  // S04 (DEC-259): a meta da linha. Sentinela `none` (a casa não usa `""` em Select, medido no
+  // V5-4a); `goalId` nulo é meta normal. Quem não gerencia vê a meta em texto, sem controle.
+  const NO_GOAL = "none"
+  function goalLabel(goalId: number | null): string | null {
+    const goal = goals.find((item) => item.id === goalId)
+    return goal ? goal.description : null
+  }
+
+  async function handleGoalChange(deliverable: ProjectDeliverable, value: string) {
+    const goalId = value === NO_GOAL ? null : Number(value)
+    setBusy(true)
+    try {
+      const updated = await updateProjectDeliverable(projectId, deliverable.id, { goalId })
+      setDeliverables((current) => current.map((item) => (item.id === deliverable.id ? updated : item)))
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: error instanceof Error ? error.message : "Falha ao vincular a meta",
         variant: "destructive",
       })
     } finally {
@@ -292,6 +325,29 @@ export function ProjectDeliverablesPanel({ projectId, canManage }: ProjectDelive
                   <>
                     <span className="flex-1 min-w-[180px] font-medium">{deliverable.name}</span>
                     <Badge variant="secondary">{deliverable.quantity} un.</Badge>
+                    {canManage ? (
+                      // `Meta para X` no trigger e nenhum outro rótulo contendo este texto —
+                      // lição da 3.C: controle e elemento governado não podem se sobrepor.
+                      <Select
+                        value={deliverable.goalId === null ? NO_GOAL : String(deliverable.goalId)}
+                        onValueChange={(value) => handleGoalChange(deliverable, value)}
+                        disabled={busy}
+                      >
+                        <SelectTrigger className="w-[220px]" aria-label={`Meta para ${deliverable.name}`}>
+                          <SelectValue placeholder="Sem meta" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={NO_GOAL}>Sem meta</SelectItem>
+                          {goals.map((goal) => (
+                            <SelectItem key={goal.id} value={String(goal.id)}>
+                              {goal.description}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : goalLabel(deliverable.goalId) ? (
+                      <span className="text-sm text-muted-foreground">Meta: {goalLabel(deliverable.goalId)}</span>
+                    ) : null}
                     {canManage && (
                       <>
                         <Button

@@ -54,6 +54,7 @@ export interface CreateProjectDeliverableCommand {
   actorId: number
   name: unknown
   quantity?: unknown
+  goalId?: unknown
 }
 
 export interface UpdateProjectDeliverableCommand {
@@ -62,6 +63,7 @@ export interface UpdateProjectDeliverableCommand {
   actorId: number
   name?: unknown
   quantity?: unknown
+  goalId?: unknown
 }
 
 export interface DeleteProjectDeliverableCommand {

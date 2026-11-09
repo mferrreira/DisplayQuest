@@ -18,6 +18,8 @@ export interface ProjectDeliverable {
   name: string
   quantity: number
   createdAt: string
+  /** S04 (plan-v21, DEC-259): meta do MESMO projeto; nulo quando a linha não tem meta. */
+  goalId: number | null
 }
 
 export interface ProjectAttachment {
@@ -65,7 +67,7 @@ export async function listProjectDeliverables(projectId: number): Promise<Projec
 
 export async function createProjectDeliverable(
   projectId: number,
-  input: { name: string; quantity?: number },
+  input: { name: string; quantity?: number; goalId?: number | null },
 ): Promise<ProjectDeliverable> {
   const payload = await request<{ deliverable: ProjectDeliverable }>(
     `/api/projects/${projectId}/deliverables`,
@@ -82,7 +84,7 @@ export async function createProjectDeliverable(
 export async function updateProjectDeliverable(
   projectId: number,
   deliverableId: number,
-  input: { name?: string; quantity?: number },
+  input: { name?: string; quantity?: number; goalId?: number | null },
 ): Promise<ProjectDeliverable> {
   const payload = await request<{ deliverable: ProjectDeliverable }>(
     `/api/projects/${projectId}/deliverables/${deliverableId}`,

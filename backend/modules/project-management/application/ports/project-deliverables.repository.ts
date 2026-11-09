@@ -14,17 +14,21 @@ export interface ProjectDeliverableRecord {
   name: string
   quantity: number
   createdAt: string
+  /** S04 (plan-v21, DEC-259): meta do MESMO projeto, nulo quando o entregável não tem meta. */
+  goalId: number | null
 }
 
 export interface NewProjectDeliverableInput {
   projectId: number
   name: string
   quantity: number
+  goalId?: number | null
 }
 
 export interface ProjectDeliverableUpdateFields {
   name: string
   quantity: number
+  goalId?: number | null
 }
 
 export interface ProjectDeliverablesPort {

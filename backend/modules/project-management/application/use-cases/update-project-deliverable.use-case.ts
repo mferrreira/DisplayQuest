@@ -2,12 +2,15 @@ import {
   ForbiddenError,
   NotFoundError,
   ValidationError,
+  DELIVERABLE_GOAL_LINK_MESSAGE,
+  deliverableGoalLinkError,
   deliverableValidationMessage,
   normalizeDeliverableInput,
   validateDeliverableInput,
 } from "@/backend/domain"
 import type { UpdateProjectDeliverableCommand } from "@/backend/modules/project-management/application/contracts"
 import type { ProjectActorsPort } from "@/backend/modules/project-management/application/ports/project-actors.port"
+import type { ProjectCronogramaPort } from "@/backend/modules/project-management/application/ports/project-cronograma.repository"
 import type { ProjectDeliverablesPort } from "@/backend/modules/project-management/application/ports/project-deliverables.repository"
 import type { ProjectManagementMembershipPort } from "@/backend/modules/project-management/application/ports/project-membership.repository"
 import type { ProjectRepositoryPort } from "@/backend/modules/project-management/application/ports/project.repository"
@@ -25,6 +28,7 @@ export interface UpdateProjectDeliverableDependencies {
   deliverables: ProjectDeliverablesPort
   memberships: ProjectManagementMembershipPort
   actors: ProjectActorsPort
+  goals: ProjectCronogramaPort
 }
 
 export class UpdateProjectDeliverableUseCase {
@@ -50,6 +54,17 @@ export class UpdateProjectDeliverableUseCase {
       throw new NotFoundError("Entregável não encontrado")
     }
 
+    const goalId = command.goalId
+    if (goalId !== undefined && goalId !== null) {
+      const goal = await this.dependencies.goals.findGoalById(Number(goalId))
+      const linkError = goal
+        ? deliverableGoalLinkError({ goalProjectId: goal.projectId, projectId: command.projectId })
+        : DELIVERABLE_GOAL_LINK_MESSAGE
+      if (linkError) {
+        throw new ValidationError(linkError)
+      }
+    }
+
     const fields = normalizeDeliverableInput({
       name: command.name !== undefined ? command.name : deliverable.name,
       quantity: command.quantity !== undefined ? command.quantity : deliverable.quantity,
@@ -59,6 +74,9 @@ export class UpdateProjectDeliverableUseCase {
       throw new ValidationError(deliverableValidationMessage(errors))
     }
 
-    return await this.dependencies.deliverables.update(deliverable.id, fields)
+    return await this.dependencies.deliverables.update(deliverable.id, {
+      ...fields,
+      goalId: goalId === undefined ? deliverable.goalId : goalId === null ? null : Number(goalId),
+    })
   }
 }

@@ -70,6 +70,21 @@ export function deliverableValidationMessage(errors: string[]): string {
 }
 
 // ---------------------------------------------------------------------------
+// Vínculo entregável ↔ meta (S04, plan-v21, DEC-259)
+// ---------------------------------------------------------------------------
+
+/**
+ * A meta só pode ser do MESMO projeto. A frase é uma só para meta de fora e meta inexistente:
+ * a tela não pode distinguir "sumiu" de "é de outro dono" sem virar regra em duas cópias, e
+ * `goalId` nulo é meta normal — entregável sem meta é entregável legítimo.
+ */
+export const DELIVERABLE_GOAL_LINK_MESSAGE = "Meta não pertence a este projeto";
+
+export function deliverableGoalLinkError(params: { goalProjectId: number; projectId: number }): string | null {
+  return params.goalProjectId === params.projectId ? null : DELIVERABLE_GOAL_LINK_MESSAGE;
+}
+
+// ---------------------------------------------------------------------------
 // Anexo (project_attachments): prefixo da chave + metadado
 // ---------------------------------------------------------------------------
 
