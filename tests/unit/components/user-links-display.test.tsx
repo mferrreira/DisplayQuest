@@ -116,29 +116,57 @@ describe("links de usuário na tela", () => {
     ])} />)
 
     const section = screen.getByRole("region", { name: "Links" })
+    const images = Array.from(section.querySelectorAll("img"))
+    fireEvent.load(images[0] as HTMLImageElement)
+    fireEvent.load(images[1] as HTMLImageElement)
+
     expect(screen.getByRole("link", { name: "LinkedIn" })).toHaveAttribute("href", "https://linkedin.com/in/ana")
     expect(screen.getByRole("link", { name: "GitHub" })).toHaveAttribute("href", "https://github.com/ana")
 
-    const images = section.querySelectorAll("img")
     expect(images[0]?.getAttribute("src")).toBe(faviconFor("https://linkedin.com/in/ana"))
     expect(images[1]?.getAttribute("src")).toBe(faviconFor("https://github.com/ana"))
     expect(images[0]?.getAttribute("alt")).toBe("")
   })
 
+  it("favicon pendurado mostra o glyph antes de a imagem responder", () => {
+    render(<UserLinks links={[{ label: "GitHub", url: "https://github.com/ana" }]} />)
+    const link = screen.getByRole("link", { name: "GitHub" })
+    const img = link.querySelector("img") as HTMLImageElement
+    const fallback = screen.getByTestId("link-fallback")
+
+    expect(img.getAttribute("class")).toContain("hidden")
+    expect(fallback.getAttribute("aria-hidden")).toBe("true")
+    expect(fallback.getAttribute("class")).not.toContain("hidden")
+  })
+
   it("favicon quebrado cai no glyph de link, sem esconder o link", () => {
     render(<UserLinks links={[{ label: "GitHub", url: "https://github.com/ana" }]} />)
-    const img = screen.getByRole("link", { name: "GitHub" }).querySelector("img")
-    expect(img).not.toBeNull()
-
-    fireEvent.error(img as HTMLImageElement)
-
     const link = screen.getByRole("link", { name: "GitHub" })
-    expect(link.querySelector("img")).toBeNull()
-    expect(screen.getByTestId("link-fallback").getAttribute("aria-hidden")).toBe("true")
+    const img = link.querySelector("img") as HTMLImageElement
+    const fallback = screen.getByTestId("link-fallback")
+
+    fireEvent.load(img)
+    expect(fallback.getAttribute("class")).toContain("hidden")
+
+    fireEvent.error(img)
+    expect(img.getAttribute("class")).toContain("hidden")
+    expect(fallback.getAttribute("class")).not.toContain("hidden")
+    expect(fallback.getAttribute("aria-hidden")).toBe("true")
   })
 
   it("lista vazia não aparece no perfil de terceiro", () => {
     render(<UserProfileView onBack={() => undefined} user={third([])} />)
     expect(screen.queryByRole("region", { name: "Links" })).toBeNull()
+  })
+
+  it("o link usa token proprio e o dark clareia o texto do link", async () => {
+    const fs = await import("node:fs/promises")
+    const css = await fs.readFile("app/globals.css", "utf8")
+    const source = await fs.readFile("components/ui/user-links.tsx", "utf8")
+
+    expect(css).toContain("--color-link: hsl(var(--link));")
+    expect(css).toMatch(/\.dark\s*\{[^}]*--link:\s*217\s+91%+\s+65%+/)
+    expect(source).toContain("text-link")
+    expect(source).not.toContain("text-primary")
   })
 })

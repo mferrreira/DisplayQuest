@@ -10,6 +10,7 @@
 import { useState } from "react"
 import { ExternalLink } from "lucide-react"
 import { userLinkFavicon, type UserLink } from "@/backend/domain"
+import { cn } from "@/lib/utils/utils"
 
 export function UserLinks({ links }: { links: UserLink[] }) {
   if (links.length === 0) return null
@@ -27,27 +28,29 @@ export function UserLinks({ links }: { links: UserLink[] }) {
 }
 
 function UserLinkItem({ link }: { link: UserLink }) {
-  const [faviconBroken, setFaviconBroken] = useState(false)
+  const [faviconStatus, setFaviconStatus] = useState<"idle" | "loaded" | "broken">("idle")
 
   return (
     <li className="flex items-center gap-2 text-sm text-foreground">
       <a
         href={link.url}
-        className="inline-flex items-center gap-2 text-primary hover:underline"
+        className="inline-flex items-center gap-2 text-link hover:underline"
         rel="noopener noreferrer"
         target="_blank"
         aria-label={link.label}
       >
-        {faviconBroken ? (
-          <ExternalLink data-testid="link-fallback" aria-hidden="true" className="h-3 w-3" />
-        ) : (
-          <img
-            src={userLinkFavicon(link.url)}
-            alt=""
-            className="h-3 w-3"
-            onError={() => setFaviconBroken(true)}
-          />
-        )}
+        <ExternalLink
+          data-testid="link-fallback"
+          aria-hidden="true"
+          className={cn("h-3 w-3", faviconStatus === "loaded" && "hidden")}
+        />
+        <img
+          src={userLinkFavicon(link.url)}
+          alt=""
+          className={cn("h-3 w-3", faviconStatus !== "loaded" && "hidden")}
+          onLoad={() => setFaviconStatus("loaded")}
+          onError={() => setFaviconStatus("broken")}
+        />
         <span>{link.label}</span>
       </a>
     </li>
