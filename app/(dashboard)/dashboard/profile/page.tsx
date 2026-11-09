@@ -11,6 +11,7 @@
  * O ranking e filho do perfil: a posicao sai da lista de usuarios que a pagina ja carrega e aponta
  * para `/dashboard/leaderboard`. Nenhum dado novo e buscado por causa do desenho.
  */
+import { renderProjectMarkdown } from "@/lib/markdown-render"
 import { Suspense, useState, useEffect } from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
@@ -394,7 +395,17 @@ function ProfilePageContent() {
                       <dt>
                         <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Biografia</Label>
                       </dt>
-                      <dd className="text-sm text-foreground">{user.bio || "Nenhuma biografia definida"}</dd>
+                      <dd className="text-sm text-foreground">
+                        {user.bio ? (
+                          <div
+                            data-testid="bio-markdown"
+                            className="[&_a]:text-primary [&_a]:underline [&_h1]:text-xl [&_h2]:text-lg [&_h3]:text-base [&_ul]:list-disc [&_ul]:pl-6"
+                            dangerouslySetInnerHTML={{ __html: renderProjectMarkdown(user.bio) }}
+                          />
+                        ) : (
+                          "Nenhuma biografia definida"
+                        )}
+                      </dd>
                     </div>
                     <div className="border-t border-border pt-3">
                       <dt>
