@@ -37,6 +37,7 @@ const PROJECT_CONTEXT: CertificateProjectContext = {
   editalNumber: "EDITAL 09/2026",
   proppiNumber: "PROPPI-2026-017",
   leaderId: 7,
+  leaderName: "Ana Líder",
   actorMembershipRoles: null,
 };
 
@@ -49,6 +50,7 @@ const MEMBER_CONTEXT: CertificateMemberContext = {
   scholarshipType: "PIBIC",
   fundingAgency: "CNPQ",
   fundingAgencyOther: null,
+  seBolsista: null,
   categoria: "BOLSISTA",
   cargaHoraria: 8,
 };
@@ -163,9 +165,9 @@ describe("geração do atestado (V5-10a, DEC-170/171)", () => {
     expect(fields.nome).toBe("Bento Lima");
     expect(fields.CPF).toBe("123.456.789-01");
     expect(fields.titulo).toBe("IA no campo");
-    expect(fields.data).toBe("setembro"); // mês default = anterior à geração (DEC-171)
+    expect(fields.data).toBe("Setembro/2026"); // mês default = anterior à geração (DEC-171), grafia do documento (R3, plan-v22)
     expect(fields.dia).toBe("19");
-    expect(fields.mes).toBe("outubro");
+    expect(fields.mes).toBe("Outubro"); // assinatura capitalizada (R4, plan-v22)
     expect(fields.ano).toBe("2026");
 
     expect(certificate.blobKey).toBe("projects/3/certificates/9/2026-09.pdf");
@@ -178,7 +180,7 @@ describe("geração do atestado (V5-10a, DEC-170/171)", () => {
     const pdf = pdfPort();
     await generate({ sources, pdf, month: "2026-10" });
     expect(sources.scheduleCalls).toBe(1);
-    expect(pdf.renders[0].data).toBe("outubro");
+    expect(pdf.renders[0].data).toBe("Outubro/2026");
     expect(pdf.renders[0].atividades_1).toBe("Coleta de dados"); // cruza 2026-10 ✓
   });
 

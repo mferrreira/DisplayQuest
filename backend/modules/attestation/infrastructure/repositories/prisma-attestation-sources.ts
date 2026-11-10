@@ -30,6 +30,7 @@ export class PrismaAttestationSources implements AttestationSourcesPort {
         editalNumber: true,
         proppiNumber: true,
         leaderId: true,
+        leader: { select: { name: true } },
       },
     });
     if (!project) return null;
@@ -41,6 +42,7 @@ export class PrismaAttestationSources implements AttestationSourcesPort {
         editalNumber: project.editalNumber,
         proppiNumber: project.proppiNumber,
         leaderId: project.leaderId,
+        leaderName: project.leader?.name ?? null,
         actorMembershipRoles: null,
       };
     }
@@ -55,6 +57,7 @@ export class PrismaAttestationSources implements AttestationSourcesPort {
       editalNumber: project.editalNumber,
       proppiNumber: project.proppiNumber,
       leaderId: project.leaderId,
+      leaderName: project.leader?.name ?? null,
       actorMembershipRoles: membership ? membership.roles : null,
     };
   }
@@ -85,6 +88,7 @@ export class PrismaAttestationSources implements AttestationSourcesPort {
         scholarshipType: true,
         fundingAgency: true,
         fundingAgencyOther: true,
+        seBolsista: true,
       },
     });
     if (!user) return null;
@@ -98,6 +102,7 @@ export class PrismaAttestationSources implements AttestationSourcesPort {
       scholarshipType: user.scholarshipType,
       fundingAgency: user.fundingAgency,
       fundingAgencyOther: user.fundingAgencyOther,
+      seBolsista: user.seBolsista,
       categoria: membership ? membership.categoria : null,
       cargaHoraria: membership ? membership.cargaHoraria : null,
     };

@@ -40,6 +40,8 @@ export interface User {
   fundingAgency?: string | null;
   fundingAgencyOther?: string | null;
   level?: string | null;
+  /** plan-v22 (R5, DEC-265): texto da linha "SE BOLSISTA:" do atestado. */
+  seBolsista?: string | null;
   /** S09 (R14, DEC-264): lista normalizada de links `[{label,url}]` do perfil. */
   links?: UserLink[];
   badges?: UserBadge[];
@@ -62,6 +64,7 @@ export interface UserFormData {
   fundingAgency?: string | null
   fundingAgencyOther?: string | null
   level?: string | null
+  seBolsista?: string | null
   links?: UserLink[]
 }
 

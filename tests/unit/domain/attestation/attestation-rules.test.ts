@@ -32,7 +32,12 @@ import {
   missingAttestationFieldLabels,
 } from "@/backend/domain";
 
-const project = { name: "IA no campo", editalNumber: "EDITAL 09/2026", proppiNumber: "PROPPI-2026-017" };
+const project = {
+  name: "IA no campo",
+  editalNumber: "EDITAL 09/2026",
+  proppiNumber: "PROPPI-2026-017",
+  leaderName: "Joselice Ferreira Lima",
+};
 const member = {
   name: "Bento Lima",
   cpf: "12345678901",
@@ -41,6 +46,7 @@ const member = {
   scholarshipType: "PIBIC",
   fundingAgency: "CNPQ",
   fundingAgencyOther: null,
+  seBolsista: "BAT-DI-SUP",
 };
 const membership = { categoria: "BOLSISTA", cargaHoraria: 8 };
 const activities = [
@@ -88,10 +94,12 @@ describe("preenchimento do AcroForm (V5-10a, DEC-130/140/171)", () => {
     expect(f.matricula).toBe("2026123456");
     expect(f.titulo).toBe("IA no campo");
     expect(f.edital).toBe("EDITAL 09/2026");
-    expect(f.data).toBe("outubro"); // corpo: "durante o mês de ____"
+    expect(f.data).toBe("Outubro/2026"); // corpo: "durante o mês de Novembro/2026" (R3, plan-v22)
     expect(f.dia).toBe("19");
-    expect(f.mes).toBe("outubro");
+    expect(f.mes).toBe("Outubro"); // assinatura capitalizada (R4, plan-v22)
     expect(f.ano).toBe("2026");
+    expect(f.orientador).toBe("Joselice Ferreira Lima");
+    expect(f.se_bolsista).toBe("BAT-DI-SUP");
   });
 
   it("edital cai no nº PROPPI quando o projeto não tem edital (DEC-140)", () => {
@@ -140,11 +148,20 @@ describe("preenchimento do AcroForm (V5-10a, DEC-130/140/171)", () => {
   });
 
   it("campos sem fonte no sistema ficam vazios — o sistema não inventa (DEC-168 vale para o PDF)", () => {
-    const f = fields();
+    const f = fields({
+      project: { ...project, leaderName: null },
+      member: { ...member, seBolsista: null },
+    });
+    expect(f.orientador).toBeUndefined();
     expect(f.se_bolsista).toBeUndefined();
     expect(f.coorientador).toBeUndefined();
-    expect(f.is_ifnmg).toBeUndefined();
     expect(f.justificativa).toBeUndefined();
+  });
+
+  it("IFNMG é agência financiadora com checkbox própria (R5, plan-v22)", () => {
+    const f = fields({ member: { ...member, fundingAgency: "IFNMG" } });
+    expect(f.is_ifnmg).toBe(true);
+    expect(f.is_cnpq).toBeUndefined();
   });
 
   it("pessoa sem CPF/matrícula/nível não fabrica nada", () => {
@@ -195,6 +212,56 @@ describe("síntese mensal dos logs do atestado", () => {
       { activity: "Revisão bibliográfica", note: "leitura de artigos", endTime: "2026-09-03" },
       { activity: "Coleta de dados", note: "Sessão de trabalho finalizada. Atividade: Coleta de dados", endTime: "2026-09-04" },
     ])).toBe("Revisão bibliográfica: leitura de artigos; Coleta de dados");
+  });
+
+  it("junta todas as frases do mês, não só as quatro primeiras (R5, plan-v22 — a caixa da descrição é grande)", () => {
+    const rows = Array.from({ length: 7 }, (_, i) => ({
+      activity: `Atividade ${i + 1}`,
+      note: `nota ${i + 1}`,
+      endTime: `2026-11-0${i + 1}`,
+    }));
+    const summary = summarizeAttestationSessionLogs(rows);
+    expect(summary).toContain("Atividade 7: nota 7");
+    expect(summary).toContain("Atividade 1: nota 1");
+  });
+
+  it("a caixa comporta até 900 caracteres, e o corte é com reticências", () => {
+    const long = "S".repeat(500);
+    const rows = [
+      { activity: "A", note: long, endTime: "2026-11-01" },
+      { activity: "B", note: "t".repeat(500), endTime: "2026-11-02" },
+    ];
+    const summary = summarizeAttestationSessionLogs(rows);
+    expect(summary!.length).toBeLessThanOrEqual(901);
+    expect(summary!.endsWith("…")).toBe(true);
+  });
+
+  it("avisa SE BOLSISTA faltante quando o vínculo é BOLSISTA, e não avisa para voluntário", () => {
+    const input = {
+      project,
+      member: { ...member, seBolsista: null },
+      membership: { categoria: "BOLSISTA", cargaHoraria: 20 },
+      activities,
+      sessionSummary: "x",
+      month: "2026-10",
+      now: { dia: "19", mes: "outubro", ano: "2026" },
+    };
+    expect(missingAttestationFieldLabels(input)).toContain("SE BOLSISTA");
+    const voluntario = { ...input, membership: { categoria: "VOLUNTARIO", cargaHoraria: 20 } };
+    expect(missingAttestationFieldLabels(voluntario)).not.toContain("SE BOLSISTA");
+  });
+
+  it("avisa Orientador(a) quando o projeto não tem líder", () => {
+    const input = {
+      project: { ...project, leaderName: null },
+      member,
+      membership,
+      activities,
+      sessionSummary: "x",
+      month: "2026-10",
+      now: { dia: "19", mes: "outubro", ano: "2026" },
+    };
+    expect(missingAttestationFieldLabels(input)).toContain("Orientador(a)");
   });
 
   it("avisa dados preenchíveis faltantes sem tornar a geração inválida", () => {

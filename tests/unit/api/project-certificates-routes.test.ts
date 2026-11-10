@@ -121,6 +121,7 @@ vi.mock("@/backend/composition/root", () => {
         editalNumber: "EDITAL 09/2026",
         proppiNumber: null,
         leaderId: mocks.leaderId,
+        leaderName: "Ana Líder",
         actorMembershipRoles: mocks.membershipRoles,
       };
     },
@@ -135,6 +136,7 @@ vi.mock("@/backend/composition/root", () => {
         scholarshipType: "PIBIC",
         fundingAgency: "CNPQ",
         fundingAgencyOther: null,
+        seBolsista: null,
         categoria: "BOLSISTA",
         cargaHoraria: 8,
       };

@@ -141,6 +141,8 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, onSessionsC
   const [userFundingDraft, setUserFundingDraft] = useState<string>(NO_VALUE)
   const [userFundingOtherDraft, setUserFundingOtherDraft] = useState<string>("")
   const [userLevelDraft, setUserLevelDraft] = useState<string>(NO_VALUE)
+  // plan-v22 (R5, DEC-265): a linha "SE BOLSISTA:" do atestado, editável por quem gerencia contas.
+  const [userSeBolsistaDraft, setUserSeBolsistaDraft] = useState<string>("")
   const [userPointsAction, setUserPointsAction] = useState<"set" | "add" | "remove">("set")
   const [userPointsValue, setUserPointsValue] = useState<string>("0")
   const [savingUserSettings, setSavingUserSettings] = useState(false)
@@ -200,6 +202,7 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, onSessionsC
     setUserFundingDraft(targetUser?.fundingAgency || NO_VALUE)
     setUserFundingOtherDraft(targetUser?.fundingAgencyOther || "")
     setUserLevelDraft(targetUser?.level || NO_VALUE)
+    setUserSeBolsistaDraft(targetUser?.seBolsista || "")
     setUserPointsAction("set")
     setUserPointsValue(String(targetUser?.points ?? 0))
     setUserSettingsError(null)
@@ -255,6 +258,9 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, onSessionsC
     }
     if (userLevelDraft !== (targetUser?.level || NO_VALUE)) {
       patch.level = userLevelDraft === NO_VALUE ? null : userLevelDraft
+    }
+    if (text(userSeBolsistaDraft) !== currentText(targetUser?.seBolsista)) {
+      patch.seBolsista = text(userSeBolsistaDraft) || null
     }
     return patch
   }
@@ -1140,6 +1146,17 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, onSessionsC
                         />
                       </div>
                     )}
+                    {/* plan-v22 (R5, DEC-265): linha "SE BOLSISTA:" do atestado. */}
+                    <div className="space-y-1">
+                      <Label htmlFor="userSeBolsista" className="text-xs">SE BOLSISTA</Label>
+                      <Input
+                        id="userSeBolsista"
+                        value={userSeBolsistaDraft}
+                        onChange={(e) => setUserSeBolsistaDraft(e.target.value)}
+                        maxLength={40}
+                        placeholder="Ex.: BAT-DI-SUP"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>

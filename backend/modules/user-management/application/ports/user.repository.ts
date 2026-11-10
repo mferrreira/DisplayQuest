@@ -47,6 +47,8 @@ export interface UserRecord {
   fundingAgency: string | null;
   fundingAgencyOther: string | null;
   level: string | null;
+  /** plan-v22 (R5, DEC-265): texto da linha "SE BOLSISTA:" do atestado. */
+  seBolsista: string | null;
   /** S09 (R14, DEC-264): JSONB de links, já normalizado quando escrito pelo use case. */
   links?: UserLink[];
   roles: UserRole[];
@@ -81,6 +83,8 @@ export interface UserSummaryRow {
   fundingAgency: string | null;
   fundingAgencyOther: string | null;
   level: string | null;
+  /** plan-v22 (R5, DEC-265): a linha traz o texto do atestado, como traz os demais dados abertos. */
+  seBolsista: string | null;
   /** S09 (R14, DEC-264): links de perfil chegam na mesma lista de leitura aberta. */
   links?: UserLink[];
 }

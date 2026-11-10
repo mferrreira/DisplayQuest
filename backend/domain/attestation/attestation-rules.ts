@@ -45,12 +45,20 @@ export function summarizeAttestationSessionLogs(rows: AttestationSessionLogRow[]
     return usefulNote ?? activity ?? "Sessão de trabalho registrada";
   }))];
   if (statements.length === 0) return null;
-  const summary = statements.slice(0, 4).join("; ");
-  return summary.length <= 220 ? summary : `${summary.slice(0, 217).trimEnd()}…`;
+  // plan-v22 (R5): a caixa da descrição do oficial é grande — o corte é de 900, não de 220,
+  // e nenhuma frase do mês é descartada.
+  const summary = statements.join("; ");
+  return summary.length <= 900 ? summary : `${summary.slice(0, 897).trimEnd()}…`;
 }
 
 export interface AttestationFieldInput {
-  project: { name: string; editalNumber: string | null; proppiNumber: string | null };
+  project: {
+    name: string;
+    editalNumber: string | null;
+    proppiNumber: string | null;
+    /** plan-v22 (R4, DEC-266): nome do líder do projeto para a linha "ORIENTADOR(A)". */
+    leaderName?: string | null;
+  };
   member: {
     name: string;
     cpf: string | null;
@@ -59,6 +67,8 @@ export interface AttestationFieldInput {
     scholarshipType: string | null;
     fundingAgency: string | null;
     fundingAgencyOther: string | null;
+    /** plan-v22 (R5, DEC-265): texto da linha "SE BOLSISTA:". */
+    seBolsista?: string | null;
   };
   membership: { categoria: string | null; cargaHoraria: number | null };
   /** Atividades do cronograma que cruzam o mês de referência, na ordem da grade. */
@@ -87,6 +97,9 @@ export function missingAttestationFieldLabels(input: AttestationFieldInput): str
   check(input.member.scholarshipType, "Modalidade");
   check(input.member.fundingAgency, "Agência financiadora");
   if (input.member.fundingAgency === "OUTRA") check(input.member.fundingAgencyOther, "Outra agência financiadora");
+  // plan-v22 (R4/R5): o oficial tem a linha do orientador e a linha "SE BOLSISTA:".
+  check(input.project.leaderName, "Orientador(a)");
+  if (input.membership.categoria === "BOLSISTA") check(input.member.seBolsista, "SE BOLSISTA");
   if (!input.activities.some((activity) => activity.firstMonth <= input.month && activity.lastMonth >= input.month)) {
     missing.push("Atividades do cronograma no mês");
   }
@@ -124,6 +137,7 @@ const LEVEL_CHECKBOX: Record<UserLevel, string> = {
 const FUNDING_CHECKBOX: Record<FundingAgency, string> = {
   CNPQ: "is_cnpq",
   FAPEMIG: "is_fapemig",
+  IFNMG: "is_ifnmg",
   OUTRA: "is_outra",
 };
 
@@ -136,6 +150,11 @@ export function normalizeAttestationMonth(value: unknown): AttestationMonth {
 
 export function monthNameLong(month: AttestationMonth): string {
   return MONTHS_LONG[Number(month.slice(5, 7)) - 1];
+}
+
+/** plan-v22 (R3/R4): a grafia do documento é capitalizada — "Novembro", não "novembro". */
+export function capitalizeMonthName(name: string): string {
+  return name.charAt(0).toUpperCase() + name.slice(1);
 }
 
 /** O mês anterior ao de uma data civil (`YYYY-MM-DD`) — mês em curso não pode ser atestado como integral. */
@@ -289,13 +308,23 @@ export function buildAttestationFields(input: AttestationFieldInput): Record<str
   // SITUAÇÃO ATUAL DO PROJETO
   fields[STATUS_CHECKBOX[projectScheduleStatus(input.activities, input.month)]] = true;
 
-  // Corpo: "durante o mês de ____" — o mês de referência por extenso
-  fields.data = monthNameLong(input.month);
+  // Corpo: "durante o mês de ____" — plan-v22 (R3): mês capitalizado COM o ano do mês de
+  // referência. O oficial tem a linha longa, e "de novembro" sem ano não é o resultado esperado.
+  fields.data = `${capitalizeMonthName(monthNameLong(input.month))}/${input.month.slice(0, 4)}`;
 
-  // Assinatura: "Januária, __ de ______ de ____." — a data civil da geração
+  // Assinatura: "Januária, __ de ______ de ____." — a data civil da geração, capitalizada (R4).
   fields.dia = input.now.dia;
-  fields.mes = input.now.mes;
+  fields.mes = capitalizeMonthName(input.now.mes);
   fields.ano = input.now.ano;
+
+  // plan-v22 (R4, DEC-266): ORIENTADOR(A) é o nome do líder do projeto, lido do vínculo
+  // `projects.leader` — não texto estático do asset. Sem líder, o campo fica fora (DEC-168).
+  const orientador = input.project.leaderName?.trim();
+  if (orientador) fields.orientador = orientador;
+
+  // plan-v22 (R5, DEC-265): a linha "SE BOLSISTA:" é texto livre da pessoa (users.seBolsista).
+  const seBolsista = input.member.seBolsista?.trim();
+  if (seBolsista) fields.se_bolsista = seBolsista;
 
   return fields;
 }

@@ -39,6 +39,8 @@ export interface PublicUser {
   fundingAgency: string | null;
   fundingAgencyOther: string | null;
   level: string | null;
+  /** plan-v22 (R5, DEC-265): texto da linha "SE BOLSISTA:" do atestado. Sempre presente. */
+  seBolsista: string | null;
   /** S09 (R14, DEC-264): lista normalizada dos links da pessoa; sempre presente no payload. */
   links: UserLink[];
   roles: UserRole[];
@@ -74,6 +76,7 @@ interface PublicUserSource {
   fundingAgency?: string | null;
   fundingAgencyOther?: string | null;
   level?: string | null;
+  seBolsista?: string | null;
   links?: UserLink[];
   roles: UserRole[];
   createdAt?: Date;
@@ -101,6 +104,7 @@ export function toPublicUser(user: PublicUserSource): PublicUser {
     fundingAgency: user.fundingAgency ?? null,
     fundingAgencyOther: user.fundingAgencyOther ?? null,
     level: user.level ?? null,
+    seBolsista: user.seBolsista ?? null,
     links: user.links ?? [],
     roles: user.roles,
     createdAt: user.createdAt,

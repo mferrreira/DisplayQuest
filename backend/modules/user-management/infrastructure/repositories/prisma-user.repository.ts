@@ -40,6 +40,7 @@ type UserRow = {
   fundingAgency: string | null
   fundingAgencyOther: string | null
   level: string | null
+  seBolsista: string | null
   links: Prisma.JsonValue | null
   roles: UserRole[]
   createdAt: Date
@@ -69,6 +70,7 @@ function toRecord(row: UserRow): UserRecord {
     fundingAgency: row.fundingAgency,
     fundingAgencyOther: row.fundingAgencyOther,
     level: row.level,
+    seBolsista: row.seBolsista,
       links: Array.isArray(row.links) ? row.links as unknown as UserLink[] : [],
     roles: row.roles,
     createdAt: row.createdAt,
@@ -115,6 +117,7 @@ export class PrismaUserRepository implements UserRepositoryPort {
         fundingAgency: record.fundingAgency,
         fundingAgencyOther: record.fundingAgencyOther,
         level: record.level,
+        seBolsista: record.seBolsista,
         links: record.links as never,
         roles: record.roles,
       },
@@ -201,6 +204,7 @@ export class PrismaUserRepository implements UserRepositoryPort {
         fundingAgency: true,
         fundingAgencyOther: true,
         level: true,
+        seBolsista: true,
         links: true,
       },
       orderBy: { name: "asc" },

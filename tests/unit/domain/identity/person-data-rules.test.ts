@@ -5,7 +5,9 @@ import {
   FUNDING_AGENCY_LABELS,
   SCHOLARSHIP_TYPES,
   USER_LEVELS,
+  applyPersonDataFields,
   canActorReadUserCpf,
+  emptyPersonData,
   maskCpf,
   normalizeCpf,
   normalizeFundingAgency,
@@ -45,9 +47,10 @@ describe("listas fechadas derivadas do AcroForm medido", () => {
     ]);
   });
 
-  it("fomento tem as três agências do formulário, e OUTRA abre o texto livre", () => {
-    expect(FUNDING_AGENCIES).toEqual(["CNPQ", "FAPEMIG", "OUTRA"]);
+  it("fomento tem as agências do formulário (IFNMG entrou no plan-v22/DEC-265), e OUTRA abre o texto livre", () => {
+    expect(FUNDING_AGENCIES).toEqual(["CNPQ", "FAPEMIG", "IFNMG", "OUTRA"]);
     expect(FUNDING_AGENCY_LABELS.CNPQ).toBe("CNPq");
+    expect(FUNDING_AGENCY_LABELS.IFNMG).toBe("IFNMG");
   });
 });
 
@@ -102,6 +105,22 @@ describe("regras de campo de pessoa", () => {
     expect(() => normalizePersonText("fundingAgencyOther", "F".repeat(81))).toThrow(
       "Instituição de fomento deve ter no máximo 80 caracteres",
     );
+  });
+
+  it("SE BOLSISTA é texto aparado com teto de 40 (plan-v22, R5)", () => {
+    expect(normalizePersonText("seBolsista", "  BAT-DI-SUP  ")).toBe("BAT-DI-SUP");
+    expect(normalizePersonText("seBolsista", "")).toBeNull();
+    expect(() => normalizePersonText("seBolsista", "B".repeat(41))).toThrow(
+      "SE BOLSISTA deve ter no máximo 40 caracteres",
+    );
+  });
+
+  it("applyPersonDataFields escreve seBolsista; chave ausente não apaga, vazio apaga", () => {
+    const base = { ...emptyPersonData(), seBolsista: "BAT-DI-SUP" };
+    expect(emptyPersonData().seBolsista).toBeNull();
+    expect(applyPersonDataFields({ ...base }, {}).seBolsista).toBe("BAT-DI-SUP");
+    expect(applyPersonDataFields({ ...base }, { seBolsista: "x" }).seBolsista).toBe("x");
+    expect(applyPersonDataFields({ ...base }, { seBolsista: "   " }).seBolsista).toBeNull();
   });
 });
 

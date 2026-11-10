@@ -14,6 +14,8 @@ export interface CertificateProjectContext {
   editalNumber: string | null;
   proppiNumber: string | null;
   leaderId: number | null;
+  /** plan-v22 (R4, DEC-266): nome do líder para a linha "ORIENTADOR(A)" do atestado. */
+  leaderName: string | null;
   /** Papéis da membership do ATOR naquele projeto (null = sem membership). */
   actorMembershipRoles: string[] | null;
 }
@@ -27,6 +29,8 @@ export interface CertificateMemberContext {
   scholarshipType: string | null;
   fundingAgency: string | null;
   fundingAgencyOther: string | null;
+  /** plan-v22 (R5, DEC-265): texto da linha "SE BOLSISTA:" do atestado. */
+  seBolsista: string | null;
   /** Do vínculo (DEC-149); nulo quando o membro é o líder sem membership. */
   categoria: string | null;
   cargaHoraria: number | null;

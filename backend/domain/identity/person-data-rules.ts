@@ -41,7 +41,7 @@ export const SCHOLARSHIP_TYPES = [
 ] as const;
 export type ScholarshipType = (typeof SCHOLARSHIP_TYPES)[number];
 
-export const FUNDING_AGENCIES = ["CNPQ", "FAPEMIG", "OUTRA"] as const;
+export const FUNDING_AGENCIES = ["CNPQ", "FAPEMIG", "IFNMG", "OUTRA"] as const;
 export type FundingAgency = (typeof FUNDING_AGENCIES)[number];
 
 /** Rótulos da interface. O valor enviado continua sendo o token. */
@@ -67,6 +67,7 @@ export const SCHOLARSHIP_TYPE_LABELS: Record<ScholarshipType, string> = {
 export const FUNDING_AGENCY_LABELS: Record<FundingAgency, string> = {
   CNPQ: "CNPq",
   FAPEMIG: "Fapemig",
+  IFNMG: "IFNMG",
   OUTRA: "Outra",
 };
 
@@ -78,6 +79,7 @@ export const PERSON_TEXT_LIMITS = {
   registrationNumber: { label: "Matrícula", max: 40 },
   course: { label: "Curso", max: 120 },
   fundingAgencyOther: { label: "Instituição de fomento", max: 80 },
+  seBolsista: { label: "SE BOLSISTA", max: 40 },
 } as const;
 
 export type PersonTextField = keyof typeof PERSON_TEXT_LIMITS;
@@ -195,7 +197,7 @@ export function canActorReadUserCpf(actor: ActorRef, targetUserId: number): bool
   return actor.id === targetUserId || hasPermission(actor.roles, "MANAGE_USERS");
 }
 
-/** Os sete campos, na forma que o record do módulo carrega. */
+/** Os campos de pessoa, na forma que o record do módulo carrega. */
 export interface PersonDataFields {
   cpf: string | null;
   registrationNumber: string | null;
@@ -204,6 +206,8 @@ export interface PersonDataFields {
   fundingAgency: string | null;
   fundingAgencyOther: string | null;
   level: string | null;
+  /** plan-v22 (R5, DEC-265): a linha "SE BOLSISTA:" do atestado — texto livre da pessoa. */
+  seBolsista: string | null;
 }
 
 /**
@@ -219,6 +223,7 @@ export function emptyPersonData(): PersonDataFields {
     fundingAgency: null,
     fundingAgencyOther: null,
     level: null,
+    seBolsista: null,
   };
 }
 
@@ -255,5 +260,8 @@ export function applyPersonDataFields<T extends PersonDataFields>(
     target.fundingAgencyOther = normalizePersonText("fundingAgencyOther", data.fundingAgencyOther);
   }
   if (data.level !== undefined) target.level = normalizeUserLevel(data.level);
+  if (data.seBolsista !== undefined) {
+    target.seBolsista = normalizePersonText("seBolsista", data.seBolsista);
+  }
   return target;
 }

@@ -62,5 +62,6 @@ export const userSchema = z.object({
   fundingAgency: z.string().nullable().optional(),
   fundingAgencyOther: z.string().nullable().optional(),
   level: z.string().nullable().optional(),
+  seBolsista: z.string().nullable().optional(),
 });
 export type User = z.infer<typeof userSchema>;

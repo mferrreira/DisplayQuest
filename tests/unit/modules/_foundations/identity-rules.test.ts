@@ -133,6 +133,9 @@ describe("toPublicUser — password never leaves the record", () => {
         "fundingAgency",
         "fundingAgencyOther",
         "level",
+        // plan-v22 (R5, DEC-265): o texto da linha "SE BOLSISTA:" do atestado entra no transporte
+        // como os demais dados abertos. Entrada opcional, saida sempre presente.
+        "seBolsista",
         // S09 (R14, DEC-264): links da pessoa, normalizados. A entrada e opcional, a saida e sempre
         // presente como lista vazia quando o record nao tem a coluna.
         "links",

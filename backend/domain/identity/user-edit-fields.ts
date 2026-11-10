@@ -27,6 +27,7 @@ export const SELF_EDITABLE_USER_FIELDS = [
   "fundingAgency",
   "fundingAgencyOther",
   "level",
+  "seBolsista",
   "links",
 ] as const;
 

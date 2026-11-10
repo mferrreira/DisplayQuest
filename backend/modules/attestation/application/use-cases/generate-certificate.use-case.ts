@@ -110,6 +110,8 @@ export class GenerateCertificateUseCase {
         name: context.name,
         editalNumber: context.editalNumber,
         proppiNumber: context.proppiNumber,
+        // plan-v22 (R4, DEC-266): ORIENTADOR(A) é o nome do líder.
+        leaderName: context.leaderName,
       },
       member: {
         name: member.name,
@@ -119,6 +121,8 @@ export class GenerateCertificateUseCase {
         scholarshipType: member.scholarshipType,
         fundingAgency: member.fundingAgency,
         fundingAgencyOther: member.fundingAgencyOther,
+        // plan-v22 (R5, DEC-265): linha "SE BOLSISTA:".
+        seBolsista: member.seBolsista,
       },
       membership: { categoria: member.categoria, cargaHoraria: member.cargaHoraria },
       activities,

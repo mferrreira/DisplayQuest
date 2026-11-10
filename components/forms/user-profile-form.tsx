@@ -53,6 +53,7 @@ export function UserProfileForm({ user, onUpdate, onCancel }: UserProfileFormPro
     fundingAgency: user.fundingAgency ?? null,
     fundingAgencyOther: user.fundingAgencyOther ?? null,
     level: user.level ?? null,
+    seBolsista: user.seBolsista ?? null,
     cpf: null,
     links: user.links ?? [],
   })
@@ -122,6 +123,10 @@ export function UserProfileForm({ user, onUpdate, onCancel }: UserProfileFormPro
         updateData.fundingAgencyOther = formData.fundingAgencyOther
       }
       if (formData.level !== (user.level ?? null)) updateData.level = formData.level
+      // plan-v22 (R5, DEC-265): a linha "SE BOLSISTA:" do atestado — texto livre da pessoa.
+      if (formData.seBolsista !== (user.seBolsista ?? null)) {
+        updateData.seBolsista = formData.seBolsista
+      }
 
       const links = normalizeUserLinks(formData.links ?? [])
       if (JSON.stringify(links) !== JSON.stringify(user.links ?? [])) {
@@ -326,6 +331,19 @@ export function UserProfileForm({ user, onUpdate, onCancel }: UserProfileFormPro
                 <Plus className="mr-2 h-4 w-4" />
                 Adicionar link
               </Button>
+            </div>
+
+            {/* plan-v22 (R5, DEC-265): a linha "SE BOLSISTA:" do atestado sai do que a pessoa
+                escreveu aqui; para voluntário o campo existe mas não entra no aviso de falta. */}
+            <div>
+              <Label htmlFor="seBolsista">SE BOLSISTA</Label>
+              <Input
+                id="seBolsista"
+                value={formData.seBolsista ?? ""}
+                onChange={(e) => handleInputChange("seBolsista", e.target.value)}
+                maxLength={40}
+                placeholder="Ex.: BAT-DI-SUP"
+              />
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
