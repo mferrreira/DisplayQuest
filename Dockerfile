@@ -46,6 +46,10 @@ COPY --from=builder /app/public ./public
 # então nenhum caminho de escrita novo aparece no container (evita o EACCES do A11).
 COPY --from=builder /app/templates ./templates
 
+# plan-v22 (S03): a fonte Liberation Serif (BSD) embutida pelo adaptador do atestado para
+# reproduzir grafia que o Times padrão do PDF não tem. Leitura em runtime, sem escrita.
+COPY --from=builder /app/assets/fonts ./assets/fonts
+
 # Garante que o usuário nextjs (uid 1001) consiga gravar em /app/public/uploads
 # em runtime (avatares) e em /app/data/uploads (relatórios). A permissão é
 # herdada pelos volumes nomeados `uploads_data` e `report_files_data` do

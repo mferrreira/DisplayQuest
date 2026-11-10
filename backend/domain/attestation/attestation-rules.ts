@@ -46,8 +46,9 @@ export function summarizeAttestationSessionLogs(rows: AttestationSessionLogRow[]
   }))];
   if (statements.length === 0) return null;
   // plan-v22 (R5): a caixa da descrição do oficial é grande — o corte é de 900, não de 220,
-  // e nenhuma frase do mês é descartada.
-  const summary = statements.join("; ");
+  // e nenhuma frase do mês é descartada. Frase que já termina em "." emenda com espaço
+  // (o diário é texto corrido); frase solta emenda com "; ".
+  const summary = statements.reduce((acc, s) => (acc ? `${acc}${acc.endsWith(".") ? " " : "; "}${s}` : s), "");
   return summary.length <= 900 ? summary : `${summary.slice(0, 897).trimEnd()}…`;
 }
 

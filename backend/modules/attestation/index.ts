@@ -11,7 +11,6 @@ import { PrismaCertificatesRepository } from "./infrastructure/repositories/pris
 import { PrismaAttestationSources } from "./infrastructure/repositories/prisma-attestation-sources";
 import { PrismaCertificateReminderScanPort } from "./infrastructure/repositories/prisma-certificate-reminder-scan";
 import { AcroFormAttestationAdapter } from "./infrastructure/adapters/acroform-attestation.adapter";
-import { OpenAiAttestationSummaryAdapter } from "./infrastructure/adapters/openai-attestation-summary.adapter";
 import { createNoOpCertificateReminderNotifier } from "./infrastructure/adapters/notifications-certificate-reminder";
 
 /**
@@ -52,7 +51,6 @@ export interface AttestationModulePorts {
   certificates?: CertificatesRepository;
   sources?: AttestationSourcesPort;
   pdf?: AttestationPdfPort;
-  summary?: import("./application/ports/attestation-summary.port").AttestationSummaryPort;
   reminderScan?: CertificateReminderScanPort;
   reminderNotifier?: CertificateReminderNotifierPort;
   /** plan-v15 S11 (R4): o atestado gerado é episódio de recompletação. Default no-op. */
@@ -75,7 +73,6 @@ export function createAttestationModule(options: AttestationModuleFactoryOptions
       sources,
       pdf,
       repository: certificates,
-      summary: options.ports?.summary ?? new OpenAiAttestationSummaryAdapter(),
       recompute: options.ports?.recompute ?? { async recompute() {} },
     }),
     new ListCertificatesUseCase({ sources, repository: certificates }),

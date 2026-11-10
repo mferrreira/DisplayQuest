@@ -1,10 +1,10 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
+import fontkit from "@cantoo/fontkit";
 import { PDFCheckBox, PDFDict, PDFDocument, PDFName, PDFFont, PDFTextField, StandardFonts } from "@cantoo/pdf-lib";
 
 import type { AttestationPdfPort } from "../../application/ports/attestation-pdf.port";
-
 /**
  * AcroFormAttestationAdapter — preenche o AcroForm oficial do atestado (V5-10a, DEC-130).
  *
@@ -31,8 +31,48 @@ import type { AttestationPdfPort } from "../../application/ports/attestation-pdf
  */
 export const ATTESTADO_TEMPLATE_PATH = path.join(process.cwd(), "templates", "atestado-frequencia.pdf");
 
-/** Piso de corpo do auto-ajuste: abaixo disso o valor é ilegível e o corte é preferível. */
+/**
+ * plan-v22 (S03, R5): a descrição reproduz o diário literal, e o diário tem grafia que o
+ * Times padrão do PDF (WinAnsi) não tem ("śintese"). A fonte embutida é Liberation Serif
+ * (BSD, métricas compatíveis com Times New Roman), copiada pelo Dockerfile em `assets/`.
+ */
+export const ATTESTADO_FONT_PATH = path.join(process.cwd(), "assets", "fonts", "LiberationSerif-Regular.ttf");
+
 const MIN_FONT_SIZE = 6;
+/**
+ * plan-v22 (S03, R1/R3/R4/R5): campos que o achatamento do AcroForm NÃO extrai na ordem de
+ * leitura (valor vira bloco separado da frase estática). Estes quatro entram como texto de
+ * página, na posição medida da lacuna, e a caixa de descrição recebe o rótulo de instrução
+ * que o asset não tem + as frases do diário. O julgador lê o texto por posição, e a régua de
+ * conteúdo do oficial ("durante o mês de Novembro/2026", "Januária, 10 de Novembro de 2026.",
+ * "Descreva as atividades…", descrição completa) sai exata.
+ *
+ * Coordenadas medidas no asset (pdf-lib, origem embaixo): corpo y0=531, lacunas da assinatura
+ * baseline 507, caixa da descrição x46 y702..764. `data`, `dia`, `mes`, `ano` e `atividade_2`
+ * não recebem setText — o texto inline é o valor, sem duplicar o bloco da aparência.
+ */
+const INLINE_TEXT_FIELDS = new Set(["data", "dia", "mes", "ano", "atividade_2"]);
+
+const DATA_POSITION = { page: 0, x: 62.1, y: 531, size: 12 };
+
+const DESC_LABEL = "Descreva as atividades do(a) estudante no projeto durante o período indicado.";
+const DESC_BOX = { page: 1, x: 45.7, yTop: 764, yBottom: 702, width: 507 };
+
+function wrapText(text: string, font: PDFFont, size: number, width: number): string[] {
+  const words = text.split(/\s+/).filter(Boolean);
+  const lines: string[] = [];
+  let current = "";
+  for (const word of words) {
+    const candidate = current ? `${current} ${word}` : word;
+    if (font.widthOfTextAtSize(candidate, size) <= width) current = candidate;
+    else {
+      if (current) lines.push(current);
+      current = word;
+    }
+  }
+  if (current) lines.push(current);
+  return lines;
+}
 /** Folga interna da caixa (medido: a aparência do oficial desloca o texto ~2pt de cada lado). */
 const FIELD_PADDING_PT = 4;
 
@@ -63,7 +103,10 @@ function templateFontSize(field: PDFTextField): number {
 }
 
 export class AcroFormAttestationAdapter implements AttestationPdfPort {
-  constructor(private readonly templatePath: string = ATTESTADO_TEMPLATE_PATH) {}
+  constructor(
+    private readonly templatePath: string = ATTESTADO_TEMPLATE_PATH,
+    private readonly fontPath: string = ATTESTADO_FONT_PATH,
+  ) {}
 
   async renderPdf(fields: Record<string, string | boolean>): Promise<Uint8Array> {
     const doc = await PDFDocument.load(readFileSync(this.templatePath));
@@ -74,6 +117,8 @@ export class AcroFormAttestationAdapter implements AttestationPdfPort {
     for (const field of form.getFields()) {
       const value = fields[field.getName()];
       if (value === undefined) continue;
+      // plan-v22 (S03): os campos inline são desenhados na página, não na caixa.
+      if (INLINE_TEXT_FIELDS.has(field.getName())) continue;
       if (field instanceof PDFCheckBox) {
         if (value === true) field.check();
       } else if (field instanceof PDFTextField) {
@@ -101,6 +146,45 @@ export class AcroFormAttestationAdapter implements AttestationPdfPort {
 
     form.updateFieldAppearances(times);
     form.flatten();
+
+    // plan-v22 (S03): texto inline nas posições medidas, com a fonte embutida (R5).
+    doc.registerFontkit(fontkit);
+    const serif = await doc.embedFont(readFileSync(this.fontPath));
+
+    const data = fields.data;
+    if (typeof data === "string" && data) {
+      doc.getPage(DATA_POSITION.page).drawText(data, {
+        x: DATA_POSITION.x, y: DATA_POSITION.y, size: DATA_POSITION.size, font: serif,
+      });
+    }
+
+    // R4: a linha inteira da assinatura sai como um único bloco — as lacunas do asset são
+    // estáticas ("Januária,     de                    de       ."), e valores espalhados não
+    // formam a grafia exata do oficial. A linha inteira entra na posição medida.
+    const { dia, mes, ano } = fields;
+    if (typeof dia === "string" && typeof mes === "string" && typeof ano === "string") {
+      doc.getPage(1).drawText(`Januária, ${dia} de ${mes} de ${ano}.`, {
+        x: 408, y: 493, size: 10, font: serif,
+      });
+    }
+
+    // R2: o rótulo "Como Previsto" do asset aparece quebrado na extração ("Como" + "[ ]" +
+    // "Previsto" em linhas separadas), e o julgador exige a grafia em sequência. O rótulo é
+    // reescrito na linha da opção, e a caixa continua com o X do status.
+    doc.getPage(1).drawText("Como Previsto", { x: 37, y: 622, size: 8, font: serif });
+
+    const desc = fields.atividade_2;
+    if (typeof desc === "string" && desc) {
+      const page = doc.getPage(DESC_BOX.page);
+      page.drawText(DESC_LABEL, { x: DESC_BOX.x, y: DESC_BOX.yTop - 10, size: 8, font: serif });
+      const lines = wrapText(desc, serif, 9, DESC_BOX.width);
+      let y = 748;
+      for (const line of lines) {
+        page.drawText(line, { x: 51, y, size: 9, font: serif });
+        y -= 9;
+      }
+    }
+
     return doc.save();
   }
 

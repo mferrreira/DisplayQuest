@@ -236,6 +236,14 @@ describe("síntese mensal dos logs do atestado", () => {
     expect(summary!.endsWith("…")).toBe(true);
   });
 
+  it("frases que terminam em ponto emendam com espaço, texto corrido como o diário (R5, plan-v22)", () => {
+    const rows = [
+      { activity: null, note: "Zerou o jogo. ", endTime: "2026-11-02" },
+      { activity: null, note: "Realizou a síntese do capítulo.", endTime: "2026-11-03" },
+    ];
+    expect(summarizeAttestationSessionLogs(rows)).toBe("Zerou o jogo. Realizou a síntese do capítulo.");
+  });
+
   it("avisa SE BOLSISTA faltante quando o vínculo é BOLSISTA, e não avisa para voluntário", () => {
     const input = {
       project,
