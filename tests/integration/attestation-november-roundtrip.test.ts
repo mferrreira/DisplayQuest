@@ -1,15 +1,15 @@
 // @vitest-environment node
 /**
- * plan-v22 (S03, R1-R5) — G4 roundtrip do atestado de NOVEMBRO na 5433, com todos os dados
+ * plan-v22 (S06, ADR-001) — G4 roundtrip do atestado de NOVEMBRO na 5433, com todos os dados
  * do caso real do dono (projeto Xakriabá, líder Joselice, membro Eleissa BOLSISTA carga 20,
  * IFNMG, seBolsista BAT-DI-SUP, atividades cobrindo 2026-11, sessões com as frases do diário).
  *
  * Wiring real, sem mocks: módulo `attestation` REAL sobre os adapters Prisma reais e o
- * adaptador AcroForm REAL. O que este arquivo mede:
+ * adaptador pdf-lib REAL. O que este arquivo mede:
  *   1. `generate()` devolve o registro upsert com a chave derivada do trio e o fileName slug;
  *   2. os avisos de campo faltante são só os que faltam de verdade (modalidade nula);
- *   3. o byte entregue é o oficial preenchido, 2 páginas, sem AcroForm no arquivo;
- *   4. o byte é escrito em `evidence/S03/nov.pdf` — o julgador (cmd do gate) lê a página e
+ *   3. o byte entregue tem 2 páginas e nenhuma AcroForm no arquivo;
+ *   4. o byte é escrito em `evidence/S06/prod.pdf` — o julgador (cmd do gate) lê a página e
  *     exige as grafias novas: corpo "Novembro/2026", assinatura capitalizada, SE BOLSISTA,
  *     orientador, IFNMG e a descrição completa do diário.
  */
@@ -156,8 +156,8 @@ describe("G4 roundtrip — atestado de novembro na 5433 (plan-v22, S03)", () => 
     expect(doc.getPageCount()).toBe(2);
     expect(doc.getForm().getFields()).toHaveLength(0);
 
-    mkdirSync(join(process.cwd(), "evidence", "S03"), { recursive: true });
-    writeFileSync(join(process.cwd(), "evidence", "S03", "nov.pdf"), pdfBytes);
+    mkdirSync(join(process.cwd(), "evidence", "S06"), { recursive: true });
+    writeFileSync(join(process.cwd(), "evidence", "S06", "prod.pdf"), pdfBytes);
   });
 
   it("regenerar o mesmo trio atualiza a MESMA linha (upsert, DEC-170)", async () => {

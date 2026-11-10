@@ -46,7 +46,7 @@ export const MAX_BLOB_DOCUMENT_BYTES = 20 * 1024 * 1024
 export const BLOB_DOCX_CONTENT_TYPE =
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 
-/** O mime do PDF que o adaptador AcroForm do atestado escreve (V5-10a, DEC-130) — mesma regra. */
+/** O mime do PDF que o adaptador pdf-lib do atestado escreve (V5-10a, DEC-130; plan-v22, ADR-001) — mesma regra. */
 export const BLOB_PDF_CONTENT_TYPE = "application/pdf"
 
 function mimeRule(kind: BlobKind, maxBytes: number, extension: string): BlobMimeRule {

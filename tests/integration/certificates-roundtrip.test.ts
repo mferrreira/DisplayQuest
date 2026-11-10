@@ -4,7 +4,7 @@
  * ISOLADO (127.0.0.1:5433 — nunca a 5432).
  *
  * Wiring real, sem mocks: módulo `attestation` REAL sobre os adapters Prisma reais e o
- * adaptador AcroForm REAL (o byte do oficial é gerado de verdade, achato incluído).
+ * adaptador pdf-lib REAL (o byte fechado é gerado de verdade, com as duas páginas).
  * O que este arquivo mede:
  *   1. o trio (projeto, membro, mês) é único de verdade: regenerar atualiza a MESMA
  *      linha e a chave derivada é a prometida (DEC-170);
@@ -13,7 +13,7 @@
  *      quirk da ACL — membership [VOLUNTARIO] com COORDENADOR global — NÃO gera para
  *      terceiro;
  *   3. mês inválido e membro fora do projeto recusam antes de qualquer escrita;
- *   4. o byte entregue é o oficial preenchido e ACHATADO (sem AcroForm no arquivo);
+ *   4. o byte entregue é o PDF fechado do adaptador, sem AcroForm no arquivo;
  *   5. as FKs prometidas na DEC-170: apagar o MEMBRO apaga o atestado (Cascade — o
  *      documento é regenerável e não bloqueia a conta), apagar quem GEROU mantém a
  *      linha com `generatedBy` nulo (SetNull), e apagar o projeto apaga tudo.
@@ -103,14 +103,14 @@ describe("G4 roundtrip — atestado de frequência (isolated test DB)", () => {
     await prisma.users.deleteMany({ where: { id: { in: createdUserIds } } });
   });
 
-  it("líder gera: linha com chave derivada e o byte achatado do oficial", async () => {
+  it("líder gera: linha com chave derivada e o byte fechado do adaptador", async () => {
     const { certificate, pdfBytes } = await generate(leaderId, ["PESQUISADOR"], membroId);
 
     expect(certificate.month).toBe("2026-09"); // mês anterior à geração (DEC-171)
     expect(certificate.blobKey).toBe(`projects/${projectId}/certificates/${membroId}/2026-09.pdf`);
     expect(certificate.generatedBy).toBe(leaderId);
 
-    // O oficial preenchido: 2 páginas e NENHUM campo de formulário no arquivo entregue.
+    // O byte fechado: 2 páginas e NENHUM campo de formulário no arquivo entregue.
     const doc = await PDFDocument.load(pdfBytes);
     expect(doc.getPageCount()).toBe(2);
     expect(doc.getForm().getFields()).toHaveLength(0);

@@ -1,11 +1,9 @@
 /**
- * AttestationPdfPort — o preenchimento do AcroForm oficial (V5-10a, DEC-130).
+ * AttestationPdfPort — o PDF do atestado (V5-10a, DEC-130; plan-v22 S06, ADR-001).
  *
- * O domínio monta os campos (`buildAttestationFields`); o adaptador só escreve no PDF:
- * carrega o asset `templates/atestado-frequencia.pdf`, preenche SOMENTE os nomes que
- * receberam valor, atualiza aparências com Times e achata (`flatten`) o arquivo entregue.
- * O template oficial é a autoridade da formatação (regra 14 do plano): o adaptador não
- * desenha nada, não toca texto estático, não cria campo.
+ * O domínio monta os campos (`buildAttestationFields`); o adaptador pdf-lib reconstrói as
+ * duas páginas na geometria do referencial e devolve o byte entregue. Nenhuma AcroForm no
+ * arquivo: o que sai do sistema é o documento fechado.
  */
 export interface AttestationPdfPort {
   renderPdf(fields: Record<string, string | boolean>): Promise<Uint8Array>;

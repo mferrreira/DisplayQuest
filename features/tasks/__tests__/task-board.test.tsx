@@ -4,7 +4,7 @@
  * Auth is stubbed at the next-auth boundary (session = coordenador: leader, sees all tasks).
  */
 import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -40,7 +40,7 @@ function renderBoard(initialSearchParams?: string) {
   return render(
     <SessionProvider session={null}>
       <QueryClientProvider client={queryClient}>
-        <NuqsTestingAdapter searchParams={initialSearchParams}>
+        <NuqsTestingAdapter hasMemory searchParams={initialSearchParams}>
           <TaskBoard />
         </NuqsTestingAdapter>
       </QueryClientProvider>
@@ -408,9 +408,8 @@ describe("TaskBoard", () => {
 });
 describe("bugfix 2026-11-09 — seletor de projeto visível a todos, lista do voluntário é a de membro", () => {
   async function selectOption(comboboxName: string, optionName: string) {
-    const user = userEvent.setup({ delay: null });
-    await user.click(await screen.findByRole("combobox", { name: comboboxName }));
-    await user.click(await screen.findByRole("option", { name: optionName }));
+    fireEvent.click(await screen.findByRole("combobox", { name: comboboxName }));
+    fireEvent.click(await screen.findByRole("option", { name: optionName }));
   }
 
   const PROJECTS = () => [
@@ -426,8 +425,7 @@ describe("bugfix 2026-11-09 — seletor de projeto visível a todos, lista do vo
     const combobox = await screen.findByRole("combobox", { name: "Filtrar tarefas por projeto" }, { timeout: 8000 });
     expect(combobox).toBeInTheDocument();
 
-    const user = userEvent.setup({ delay: null });
-    await user.click(combobox);
+    fireEvent.click(combobox);
     expect(await screen.findByRole("option", { name: "Todos os projetos" }, { timeout: 8000 })).toBeInTheDocument();
     expect(await screen.findByRole("option", { name: "Projeto Alfa" }, { timeout: 8000 })).toBeInTheDocument();
     // o projeto em que ele não é membro não entra na lista — a lista do voluntário é a de membro
@@ -448,8 +446,7 @@ describe("bugfix 2026-11-09 — seletor de projeto visível a todos, lista do vo
     seedProjects(PROJECTS());
     renderBoard();
 
-    const user = userEvent.setup({ delay: null });
-    await user.click(await screen.findByRole("combobox", { name: "Filtrar tarefas por projeto" }, { timeout: 8000 }));
+    fireEvent.click(await screen.findByRole("combobox", { name: "Filtrar tarefas por projeto" }, { timeout: 8000 }));
     expect(await screen.findByRole("option", { name: "Projeto Alfa" })).toBeInTheDocument();
     expect(screen.getByRole("option", { name: "Projeto Beta" })).toBeInTheDocument();
   }, 20000);
