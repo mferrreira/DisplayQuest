@@ -11,6 +11,8 @@
  * função do domínio (`toggleActivityMonthRange`) que a rota usa.
  */
 
+import type { ActivityStatus } from "@/backend/domain"
+
 export interface ProjectGoal {
   id: number
   projectId: number
@@ -18,6 +20,9 @@ export interface ProjectGoal {
   target: number | null
   description: string
   createdAt: string
+  /** S05 (plan-v21, DEC-260): cumprimento pela gestão; nulo = meta não cumprida. */
+  completedAt: string | null
+  completedBy: number | null
 }
 
 export interface ProjectActivity {
@@ -28,7 +33,8 @@ export interface ProjectActivity {
   responsibleId: number | null
   firstMonth: string
   lastMonth: string
-  status: string
+  /** Vocabulário do domínio (`ACTIVITY_STATUSES`), não string solta — a tela consome as regras puras. */
+  status: ActivityStatus
   requestedBy: number | null
   requestedAt: string | null
   approvedBy: number | null
@@ -113,6 +119,15 @@ export async function updateProjectGoal(
     `/api/projects/${projectId}/goals/${goalId}`,
     { method: "PATCH", headers: jsonHeaders, body: JSON.stringify(input) },
     "Erro ao atualizar meta",
+  )
+  return payload.goal
+}
+
+export async function setGoalCompletion(projectId: number, goalId: number, completed: boolean): Promise<ProjectGoal> {
+  const payload = await request<{ goal: ProjectGoal }>(
+    `/api/projects/${projectId}/goals/${goalId}/completion`,
+    { method: "PUT", headers: jsonHeaders, body: JSON.stringify({ completed }) },
+    "Erro ao marcar meta",
   )
   return payload.goal
 }

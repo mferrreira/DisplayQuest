@@ -9,14 +9,17 @@ import type { UpdateUserImageCommand } from "@/backend/modules/user-management/a
 import type { UserRepositoryPort } from "@/backend/modules/user-management/application/ports/user.repository"
 
 /**
- * V5-3 (DEC-137) — slot → coluna. Existe para o slot ser de verdade uma decisão e não um parâmetro
- * decorativo: com um valor só hoje, `{ banner: "bannerKey" }`; um slot novo (avatar no bucket) entra
- * por aqui e o use case não muda.
+ * DEC-137/242 — slot → coluna. Existe para o slot ser de verdade uma decisão e não um parâmetro
+ * decorativo: `{ banner: "bannerKey", avatar: "avatarKey" }`. Um slot novo entra por aqui e o use
+ * case não muda.
  */
-const USER_IMAGE_COLUMNS: Record<UserImageSlot, "bannerKey"> = { banner: "bannerKey" }
+const USER_IMAGE_COLUMNS: Record<UserImageSlot, "bannerKey" | "avatarKey"> = {
+  banner: "bannerKey",
+  avatar: "avatarKey",
+}
 
 /**
- * UpdateUserImageUseCase — V5-3 (DEC-137): capa do perfil no bucket.
+ * UpdateUserImageUseCase — V5-3 (DEC-137) + DEC-242: capa e avatar do perfil no bucket.
  *
  * O gate é o MESMO do perfil (`self OU MANAGE_USERS`, mensagem própria "Não autorizado"), a
  * autoridade medida em `UpdateUserProfileUseCase` (B6-4) — não inventei regra nova. As rotas de

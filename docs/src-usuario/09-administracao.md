@@ -20,6 +20,12 @@ A aba **Usuários** é onde as contas pendentes são resolvidas e onde as contas
 - Os filtros **Todas** e **Todos** reduzem a lista por função e por situação.
 - O ícone de configuração de cada pessoa — o controle tem o nome **Configurar \<nome\>** — abre o diálogo **Configurar Usuário**. Além de função, carga semanal e pontos, ele tem o bloco dos dados dos documentos oficiais: **CPF**, **Matrícula**, **Curso**, **Modalidade de IC**, **Nível** e **Instituição de fomento**. São os mesmos campos que a pessoa edita no próprio perfil; aqui, é a gestão que escreve.
 
+O mesmo diálogo traz a bio em markdown: **Biografia**, textarea, preview, **Anexar imagem** e drop de imagem. É o MESMO dialog do perfil próprio; a gestão escreve a bio de quem gerencia contas.
+
+```foto admin-bio-dialog titulo="O bloco de biografia no diálogo Configurar Usuário"
+O bloco `Bio` do diálogo traz o botão **Editar biografia**. No diálogo, a textarea tem o rótulo **Biografia em markdown**, com preview, **Anexar imagem** e a nota de que a imagem vai para o bucket do usuário.
+```
+
 ```foto admin-usuarios titulo="A aba Usuários"
 A lista traz as contas e, abaixo, a grade de horários por função.
 ```
@@ -42,9 +48,10 @@ A aba **Horas** é a leitura consolidada do tempo registrado. As colunas são **
 | --- | --- |
 | **Projetos** | revisar o conjunto de projetos e seu andamento |
 | **Tarefas** | ver tarefas de todos os projetos, além do que o quadro mostra — com a lista de subtasks de cada tarefa em leitura: a contagem (por exemplo *"2/5 concluídas"*) e cada etapa marcada com ✓ ou ○, sem checkbox |
+| **Conclusões** | a fila global de solicitações de conclusão de atividades, de todos os projetos (aba *Conclusões* abaixo) |
 | **Voluntários** | gerenciar a equipe de cada projeto — adicionar e remover pessoas (seção *A aba Voluntários* abaixo) |
 | **Notificações** | enviar aviso para uma pessoa ou para o laboratório |
-| **Badges** | criar e editar distintivos: **Nome**, **Descrição**, **Categoria** e quem criou |
+| **Badges** | criar e editar distintivos: **Nome**, **Descrição**, **Categoria** e as condições de conquista — cada cláusula é **Métrica do critério** + **Valor do critério**; o campo **Ícone do badge** fica no diálogo de criação e de edição (seção *A aba Badges* abaixo) |
 
 ## A aba Voluntários
 
@@ -55,6 +62,28 @@ O seletor de projeto é o primeiro controle: a equipe só aparece depois de esco
 ```
 
 Quem gerencia a equipe é a gestão do sistema e o **Gerente de Projeto**. Os dados do vínculo de cada pessoa — Lattes, carga contratada, categoria, situação e data de entrada — continuam na aba **Membros** da página do projeto (capítulo 4); aqui é o quadro de quem entra e sai.
+
+## A aba Conclusões
+
+A aba **Conclusões** reúne as solicitações de conclusão de atividades de todos os projetos, não de um só. Cada linha é uma atividade que alguém marcou como pronta, em algum projeto. No fim de cada linha fica o botão **Aprovar**.
+
+```foto admin-conclusoes titulo="A aba Conclusões, com a fila de solicitações"
+Sem solicitação pendente, a aba diz *"Nenhuma conclusão solicitada"*.
+```
+
+**Aprovar** conclui a atividade e distribui o prêmio entre os membros ativos do projeto. **Gerente** não aprova a solicitação que ele mesmo fez; **Coordenador** aprova. A linha sai da fila depois de aprovada. A aba é só a fila: o pedido de conclusão continua no cronograma da página do projeto, onde a linha da atividade é marcada.
+
+## A aba Badges
+
+O catálogo de distintivos vive nesta aba: criar e editar **Nome**, **Descrição**, **Categoria** e as cláusulas de conquista. Cada cartão traz o ícone do distintivo, o nome e a categoria — o selo diz **Conquista**, **Marca**, **Momento** ou **Mundo**. No diálogo de criação e de edição, o campo **Ícone do badge** recebe um arquivo `.png` ou `.webp`; a imagem passa a aparecer no cartão e nos cartões do bloco Badges do perfil, na cor do distintivo. Enviar de novo troca a imagem; a anterior é apagada. Só a gestão de badges envia, e a recusa chega como aviso na tela.
+
+```foto admin-badges titulo="A aba Badges com o ícone nos cartões"
+Cada cartão mostra o ícone, o nome e a categoria em português; o campo **Ícone do badge** fica no diálogo de criação e de edição.
+```
+
+```foto admin-badges-dialogo titulo="O campo Ícone do badge no diálogo de edição"
+No fim do diálogo, o campo traz a imagem do badge, o seletor de arquivo e a nota de que o arquivo é convertido para WebP na escrita.
+```
 
 ## Sessões e semana
 

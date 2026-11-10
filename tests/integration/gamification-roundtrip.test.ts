@@ -63,7 +63,7 @@ describe("G4 roundtrip — gamification (isolated test DB)", () => {
       name: "  G6 Pioneiro  ",
       description: "  badge de roundtrip  ",
       category: "milestone",
-      criteria: { points: 999999 }, // nunca atingido por acidente
+      criteria: { version: 2, clauses: [{ metric: "points", op: ">=", value: 999999 }] }, // nunca atingido por acidente
       isActive: false, // QUIRK-6B: sera gravado como TRUE
       createdBy: userId,
     });
@@ -94,7 +94,7 @@ describe("G4 roundtrip — gamification (isolated test DB)", () => {
     expect(row?.name).toBe("G6 Pioneiro");
     expect(row?.description).toBe("badge de roundtrip");
     expect(row?.isActive).toBe(true); // QUIRK-6B
-    expect(row?.criteria).toEqual({ points: 999999 });
+    expect(row?.criteria).toEqual({ version: 2, clauses: [{ metric: "points", op: ">=", value: 999999 }] });
     expect(row?.createdBy).toBe(userId);
   });
 
@@ -117,7 +117,7 @@ describe("G4 roundtrip — gamification (isolated test DB)", () => {
     });
     expect(updated.name).toBe("G6 Pioneiro v2");
     expect(updated.isActive).toBe(false);
-    expect(updated.criteria).toEqual({ points: 999999 });
+    expect(updated.criteria).toEqual({ version: 2, clauses: [{ metric: "points", op: ">=", value: 999999 }] });
 
     const row = await prisma.badges.findUnique({ where: { id: badgeId } });
     expect(row?.isActive).toBe(false);
@@ -188,13 +188,13 @@ describe("G4 roundtrip — gamification (isolated test DB)", () => {
       name: `G6 Marcante ${stamp}`,
       description: "criterio atingivel no roundtrip",
       category: "achievement",
-      criteria: { points: 40 },
+      criteria: { version: 2, clauses: [{ metric: "points", op: ">=", value: 40 }] },
       createdBy: userId,
     });
     criteriaBadgeId = criteriaBadge.id!;
 
     const awarded = await gamification.evaluateUserBadges(userId);
-    expect(awarded.map((b) => b.id)).toContain(criteriaBadgeId); // criteria { points: 40 } <= 55
+    expect(awarded.map((b) => b.id)).toContain(criteriaBadgeId); // v2 points >= 40 e o usuário tem 55
 
     const row = await prisma.user_badges.findUnique({
       where: { userId_badgeId: { userId, badgeId: criteriaBadgeId } },

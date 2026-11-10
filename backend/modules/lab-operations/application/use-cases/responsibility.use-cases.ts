@@ -117,6 +117,8 @@ export class EndResponsibilityUseCase {
   constructor(
     private readonly responsibilities: ResponsibilityRepository,
     private readonly canEndResponsibility: CanEndResponsibilityUseCase,
+    /** plan-v15 S11 (R4): a finalização é episódio do laboratorista da responsabilidade. */
+    private readonly recompute: { recompute(userId: number): Promise<void> },
   ) {}
 
   async execute(command: { actor: ActorRef; responsibilityId: number; notes?: string }) {
@@ -135,7 +137,12 @@ export class EndResponsibilityUseCase {
     if (!existing) throw new NotFoundError("Responsabilidade não encontrada")
 
     const patch = computeEndPatch(existing, command.notes, new Date())
-    return await this.responsibilities.update(command.responsibilityId, patch)
+    const updated = await this.responsibilities.update(command.responsibilityId, patch)
+
+    // R4: `lab_responsibilities_completed` conta por userId da responsabilidade com endTime.
+    await this.recompute.recompute(existing.userId)
+
+    return updated
   }
 }
 

@@ -280,6 +280,8 @@ export interface ReportingModulePorts {
   technicalReportDocument?: TechnicalReportDocumentPort
   technicalReportSources?: TechnicalReportSourcesPort
   reportDraft?: ReportDraftPort
+  /** plan-v15 S11 (R4): semanal/projeto/técnico são episódios de recompletação. Default no-op. */
+  recompute?: { recompute(userId: number): Promise<void> }
 }
 
 /** Publisher used when the composition root does not wire one (tests/default): no-op with a
@@ -309,9 +311,10 @@ export function createReportingModule(options: ReportingModuleFactoryOptions = {
   const technicalReportDocument = options.ports?.technicalReportDocument ?? new DocxTechnicalReportAdapter()
   const technicalReportSources = options.ports?.technicalReportSources ?? new PrismaTechnicalReportSources()
   const reportDraft = options.ports?.reportDraft ?? new OpenAiReportDraftAdapter()
+  const recompute = options.ports?.recompute ?? { async recompute() {} }
 
   const getProjectReport = new GetProjectReportUseCase(projectReports, directory)
-  const upsertWeeklyReport = new UpsertWeeklyReportUseCase(weeklyReports, hoursRead, directory)
+  const upsertWeeklyReport = new UpsertWeeklyReportUseCase(weeklyReports, hoursRead, directory, recompute)
 
   return new ReportingModule(
     new ListWeeklyReportsUseCase(weeklyReports, hoursRead),
@@ -333,7 +336,7 @@ export function createReportingModule(options: ReportingModuleFactoryOptions = {
     new ResetWeeklyHoursHistoryUseCase(hoursRead, weeklyHoursHistory, directory),
     new CreateWeeklyHoursHistoryUseCase(hoursRead, weeklyHoursHistory, directory),
     new GetProjectStatsUseCase(hoursRead, directory),
-    new CreateProjectReportUseCase(projectReports, directory, publisher),
+    new CreateProjectReportUseCase(projectReports, directory, publisher, recompute),
     new UpdateProjectReportUseCase(projectReports),
     new DeleteProjectReportUseCase(projectReports, reportAttachments, storage),
     getProjectReport,
@@ -349,6 +352,7 @@ export function createReportingModule(options: ReportingModuleFactoryOptions = {
       access: technicalReportAccess,
       generation: technicalReportGeneration,
       docx: technicalReportDocument,
+      recompute,
     }),
     new DraftTechnicalReportUseCase({
       access: technicalReportAccess,

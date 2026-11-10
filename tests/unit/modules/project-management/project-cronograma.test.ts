@@ -74,6 +74,8 @@ function goalRow(id: number, overrides: Partial<ProjectGoalRecord> = {}): Projec
     target: null,
     description: "Revisar a literatura",
     createdAt: "2026-03-01T00:00:00.000Z",
+    completedAt: null,
+    completedBy: null,
     ...overrides,
   };
 }
@@ -235,6 +237,9 @@ class Fakes {
       async approveActivity() {
         throw new Error("approveActivity não deveria rodar neste arquivo");
       },
+      async listAllActivities() {
+        throw new Error("listAllActivities não deveria rodar neste arquivo");
+      },
     };
   }
 
@@ -248,6 +253,7 @@ class Fakes {
         }
         return self.memberIds.has(userId) ? { id: 98, roles: ["VOLUNTARIO"] as never } : null;
       },
+      async findActiveMembership() { return null },
       async createMembership(input) {
         self.membershipCalls.push({ userId: input.userId, roles: input.roles });
         self.memberIds.add(input.userId);

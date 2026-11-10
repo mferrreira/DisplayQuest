@@ -5,7 +5,7 @@
  * leaves the record. The HTTP adapters serialize exactly this shape today, so returning it
  * from the use cases preserves the payload form (AGENT.md §5.1, DEC-12).
  */
-import type { ProfileVisibility, UserRole, UserStatus } from "@/backend/domain";
+import type { UserLink, ProfileVisibility, UserRole, UserStatus } from "@/backend/domain";
 
 export interface PublicUser {
   id?: number;
@@ -24,6 +24,8 @@ export interface PublicUser {
   profileVisibility: ProfileVisibility;
   bio: string | null;
   avatar: string | null;
+  /** DEC-242: chave do avatar no bucket. Sempre presente no payload, como `bannerKey`. */
+  avatarKey: string | null;
   /** V5-3 (DEC-137): chave da imagem de capa no bucket. Sempre presente no payload. */
   bannerKey: string | null;
   /**
@@ -37,6 +39,8 @@ export interface PublicUser {
   fundingAgency: string | null;
   fundingAgencyOther: string | null;
   level: string | null;
+  /** S09 (R14, DEC-264): lista normalizada dos links da pessoa; sempre presente no payload. */
+  links: UserLink[];
   roles: UserRole[];
   createdAt?: Date;
 }
@@ -58,7 +62,11 @@ interface PublicUserSource {
   bio: string | null;
   avatar: string | null;
   /** Opcional na ENTRADA: chamadores antigos (e fixtures) não conhecem a coluna ainda. */
+  avatarKey?: string | null;
+  /** Opcional na ENTRADA: chamadores antigos (e fixtures) não conhecem a coluna ainda. */
   bannerKey?: string | null;
+  /** Opcional na ENTRADA, pelo mesmo motivo do `bannerKey` (plan-v12, DEC-239). */
+  /** Opcional na ENTRADA, pelo mesmo motivo do `bannerKey` (DEC-242). */
   /** Opcional na ENTRADA, pelo mesmo motivo do `bannerKey`. */
   registrationNumber?: string | null;
   course?: string | null;
@@ -66,6 +74,7 @@ interface PublicUserSource {
   fundingAgency?: string | null;
   fundingAgencyOther?: string | null;
   level?: string | null;
+  links?: UserLink[];
   roles: UserRole[];
   createdAt?: Date;
 }
@@ -84,6 +93,7 @@ export function toPublicUser(user: PublicUserSource): PublicUser {
     profileVisibility: user.profileVisibility,
     bio: user.bio,
     avatar: user.avatar,
+    avatarKey: user.avatarKey ?? null,
     bannerKey: user.bannerKey ?? null,
     registrationNumber: user.registrationNumber ?? null,
     course: user.course ?? null,
@@ -91,6 +101,7 @@ export function toPublicUser(user: PublicUserSource): PublicUser {
     fundingAgency: user.fundingAgency ?? null,
     fundingAgencyOther: user.fundingAgencyOther ?? null,
     level: user.level ?? null,
+    links: user.links ?? [],
     roles: user.roles,
     createdAt: user.createdAt,
   };

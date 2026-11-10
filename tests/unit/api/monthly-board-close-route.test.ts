@@ -40,6 +40,9 @@ vi.mock("@/backend/composition/root", () => {
       mocks.reads += 1;
       return mocks.people;
     },
+    async listPeopleForSeasonClose() {
+      throw new Error("leitura da base de temporada não deveria acontecer no fechamento de mês");
+    },
     async writeClose(input) {
       mocks.writes.push(input);
     },
@@ -66,8 +69,22 @@ vi.mock("@/backend/composition/root", () => {
     },
   ) as never;
 
+  // plan-v15 S11 (R4): depois da escrita, o fechamento roda evaluate sobre cada linha. Os
+  // duplos abaixo fazem o evaluate devolver [] sem tocar nas portas de premiação — este teste
+  // prova o fechamento do quadro, não a concessão de badges.
+  const evaluateUsers = {
+    async findUserById(id: number) {
+      const person = mocks.people.find((p) => p.id === id);
+      return person ? { id: person.id, name: person.name, points: 0, completedTasks: 0 } : null;
+    },
+    async findAllUsers() {
+      return mocks.people.map((p) => ({ id: p.id, points: p.currentMonthPoints, completedTasks: 0, status: p.status }));
+    },
+  } as never;
+  const evaluateBadges = { async findActive() { return []; } } as never;
+
   const realGamification = createGamificationModule({
-    ports: { monthClose, users: unused, awardHistory: unused, badges: unused, userBadges: unused, stats: unused },
+    ports: { monthClose, users: evaluateUsers, badges: evaluateBadges, awardHistory: unused, userBadges: unused, stats: unused },
   });
 
   return {

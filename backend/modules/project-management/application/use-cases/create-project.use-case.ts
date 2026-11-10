@@ -31,6 +31,8 @@ export class CreateProjectUseCase {
     const record = {
       name: command.data.name,
       description: command.data.description ?? null,
+      // plan-v13 (S01, regra 1): aparado, vazia vira null, teto na validação abaixo.
+      subtitle: normalizeProjectTextField(command.data.subtitle),
       createdAt: new Date().toISOString(),
       createdBy: command.actorId,
       leaderId: command.data.leaderId ?? null,

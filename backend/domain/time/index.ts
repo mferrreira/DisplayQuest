@@ -1,6 +1,7 @@
 export {
   civilDayOfDate,
   civilDayOfInstant,
+  civilYearOfInstant,
   civilDaysBetween,
   civilMonthLabel,
   civilMonthOfInstant,

@@ -10,7 +10,7 @@
  * quirk that `projectId` may be undefined (Prisma then ignores the filter — frozen behavior;
  * the adapter reproduces it with a conditional where).
  */
-import type { ProfileVisibility, UserRole, UserStatus } from "@/backend/domain";
+import type { UserLink, ProfileVisibility, UserRole, UserStatus } from "@/backend/domain";
 
 export interface UserRecord {
   id: number;
@@ -31,6 +31,8 @@ export interface UserRecord {
   profileVisibility: ProfileVisibility;
   bio: string | null;
   avatar: string | null;
+  /** DEC-242: chave do avatar no bucket (`users/<id>/images/avatar`). O campo legado `avatar` segue o caminho de disco. */
+  avatarKey: string | null;
   /** V5-3 (DEC-137): chave do objeto no bucket (`users/<id>/images/banner`). Nunca um caminho de disco. */
   bannerKey: string | null;
   /**
@@ -45,6 +47,8 @@ export interface UserRecord {
   fundingAgency: string | null;
   fundingAgencyOther: string | null;
   level: string | null;
+  /** S09 (R14, DEC-264): JSONB de links, já normalizado quando escrito pelo use case. */
+  links?: UserLink[];
   roles: UserRole[];
   createdAt?: Date;
 }
@@ -64,6 +68,8 @@ export interface UserSummaryRow {
   completedTasks: number;
   avatar: string | null;
   bio: string | null;
+  /** DEC-242: a linha traz a chave do avatar no bucket, como traz a da capa. */
+  avatarKey: string | null;
   bannerKey: string | null;
   /** V5-12 (DEC-143/177): a linha traz o valor do perfil para a regra decidir linha a linha. */
   profileVisibility: ProfileVisibility;
@@ -75,6 +81,8 @@ export interface UserSummaryRow {
   fundingAgency: string | null;
   fundingAgencyOther: string | null;
   level: string | null;
+  /** S09 (R14, DEC-264): links de perfil chegam na mesma lista de leitura aberta. */
+  links?: UserLink[];
 }
 
 export type NewUserRecord = Omit<UserRecord, "id" | "createdAt">;

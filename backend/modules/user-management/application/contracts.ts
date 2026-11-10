@@ -84,3 +84,4 @@ export interface GetUserImageCommand {
   userId: number
   slot: UserImageSlot
 }
+

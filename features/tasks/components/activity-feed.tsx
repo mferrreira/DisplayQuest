@@ -61,11 +61,11 @@ export function ActivityFeed({ projectId }: { projectId?: number | null }) {
       ) : (
         <ul className="max-h-80 overflow-y-auto divide-y divide-border pr-1">
           {items.map((item) => (
-            <li key={item.id} className="flex items-center gap-3 py-2">
+            <li key={item.id} className="flex items-start gap-3 py-2">
               <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-info/15 text-[11px] font-medium text-info">
                 {initials(item.actorName)}
               </span>
-              <p className="min-w-0 flex-1 truncate text-sm">
+              <p className="min-w-0 flex-1 break-words text-sm">
                 <span className="font-medium">{item.actorName}</span>{" "}
                 <span className="text-muted-foreground">{actionPhrase(item.action, item.toStatus)}</span>{" "}
                 <span className="font-medium">{item.taskTitle}</span>

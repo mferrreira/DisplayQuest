@@ -81,7 +81,7 @@ Título, projeto, pessoas responsáveis, prazo e prioridade. Além disso:
 - **🌍** marca **Quest Global**: tarefa do laboratório inteiro, sem projeto. Só Coordenador e Gerente criam uma.
 - **ATRASADA** aparece em vermelho quando o prazo já passou.
 - O selo azul mostra a **base** da pontuação: **10 pts** de começo, mais **5 pts por subtask concluída** — com 3 etapas e 1 concluída, o selo diz **15 pts**. A conta completa (bônus de 50% com pelo menos 2 dias de antecedência, penalidade de 10 por dia de atraso) fica no título, ao passar o mouse.
-- Com **subtask aberta**, o cartão ganha um aviso âmbar: o número de etapas pendentes (*"2 subtasks abertas"*), o progresso (*"1/3 concluídas"*) e uma **checkbox** ao lado de cada etapa para concluí-la ali mesmo, sem abrir o cartão — desde que a tarefa esteja em **Em Andamento** (veja *Ver, editar e excluir*). Enquanto houver etapa aberta, o cartão não vai para **Em Revisão** nem para **Concluído** (veja *Enviar para revisão e aprovar*).
+- Com **subtask aberta**, o cartão ganha um bloco âmbar: o ícone de checklist e a contagem de progresso (*"1/3 concluídas"*), e uma **checkbox** ao lado de cada etapa pendente para concluí-la ali mesmo, sem abrir o cartão — desde que a tarefa esteja em **Em Andamento** (veja *Ver, editar e excluir*). Não há texto de aviso: o bloco é só o ícone e a contagem. Enquanto houver etapa aberta, o cartão não vai para **Em Revisão** nem para **Concluído** (veja *Enviar para revisão e aprovar*).
 
 ## Criar uma tarefa
 
@@ -161,4 +161,12 @@ A barra de filtros e as colunas são as mesmas; o que muda é o conjunto de tare
 
 ::: nota titulo="Importar backlog"
 Quem cria tarefas também encontra **Inserir backlog** no diálogo de nova tarefa, para trazer um conjunto de tarefas de uma vez. Cada linha vira uma tarefa; os prefixes **!alta**, **!baixa**, **!urgente** e **#25/12** definem prioridade e vencimento. O prefixo antigo **@30** continua aceito, mas é ignorado: o valor vem da regra (10 por tarefa), não do texto. O sistema confirma com *"Backlog importado"* ou denuncia o motivo da recusa.
+:::
+
+## O feed de atividade
+
+Ao lado do quadro, o cartão **Atividade recente** lista os últimos movimentos de tarefas. Cada linha diz quem fez o quê: *"concluiu"*, *"moveu para Em Revisão"*, *"criou"*. A lista tem altura fixa e rola para dentro do cartão.
+
+::: nota titulo="O texto inteiro, sem corte"
+Cada linha mostra o texto completo de quem praticou o movimento, com quebra de linha quando a frase é longa. Nada é cortado no meio. Uma tarefa de projeto delegado que foi enviada para aprovação aparece como *"moveu para Em Revisão"* — o *"concluiu"* só aparece quando a tarefa chegou de fato a **Concluído** (aprovação).
 :::

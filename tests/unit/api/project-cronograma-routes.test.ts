@@ -83,6 +83,8 @@ function goalRow(id: number, overrides: Partial<ProjectGoalRecord> = {}): Projec
     target: null,
     description: "Revisar a literatura",
     createdAt: "2026-03-01T00:00:00.000Z",
+    completedAt: null,
+    completedBy: null,
     ...overrides,
   };
 }
@@ -154,6 +156,7 @@ vi.mock("@/backend/composition/root", () => {
       }
       return mocks.memberIds.has(userId) ? { id: 98, roles: ["VOLUNTARIO"] as never } : null;
     },
+    async findActiveMembership() { return null },
     async createMembership() {},
     updateMembershipRoles: notUsed("memberships.updateMembershipRoles"),
     listMembersWithUser: notUsed("memberships.listMembersWithUser"),
@@ -223,6 +226,7 @@ vi.mock("@/backend/composition/root", () => {
       mocks.activities.delete(id);
     },
     approveActivity: notUsed("cronograma.approveActivity"),
+    listAllActivities: notUsed("cronograma.listAllActivities"),
   };
 
   const hours: ProjectHoursPort = { sumCompletedSeconds: notUsed("hours.sumCompletedSeconds") };

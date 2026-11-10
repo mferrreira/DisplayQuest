@@ -8,17 +8,13 @@ import { useTask } from "@/contexts/task-context"
 import { useUser } from "@/contexts/user-context"
 import { ProjectList } from "@/components/features/project-list"
 import { ProjectDialog } from "@/components/features/project-dialog"
-import { ProjectManagerDashboard } from "@/components/features/project-manager-dashboard"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { PageHeader } from "@/components/ui/page-header"
 import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Plus,
   Search,
-  BarChart3,
-  TrendingUp,
   FolderKanban
 } from "lucide-react"
 import type { Project } from "@/contexts/types"
@@ -38,7 +34,7 @@ export default function ProjetosPage() {
   const [isProjectDialogOpen, setIsProjectDialogOpen] = useState(false)
   const [editingProject, setEditingProject] = useState<Project | null>(null)
 
-  // Os filtros do topo são a fonte do recorte tanto da lista quanto dos gráficos.
+  // Os filtros do topo são a fonte do recorte da lista e das tarefas.
   const searchAndStatusProjects = projects.filter(project => {
     const matchesSearch = project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       project.description?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -54,12 +50,6 @@ export default function ProjetosPage() {
   )
   const filteredProjectIds = new Set(filteredProjects.map(project => project.id))
   const filteredTasks = personTasks.filter(task => task.projectId != null && filteredProjectIds.has(task.projectId))
-  const selectedPerson = personId === null ? null : users.find(person => person.id === personId)
-  const scopeDescription = [
-    searchTerm.trim() ? `busca “${searchTerm.trim()}”` : null,
-    statusFilter !== "all" ? `status ${statusFilter}` : null,
-    selectedPerson ? `pessoa ${selectedPerson.name}` : null,
-  ].filter(Boolean).join(" · ") || "Todos os projetos"
 
   const overallStats = {
     total: projects.length,
@@ -77,12 +67,10 @@ export default function ProjetosPage() {
     setIsProjectDialogOpen(true)
   }
 
-  const showDashboard = hasAccess(user?.roles || [], "DASHBOARD_PROJECT_MANAGER")
-  // Preserva a aba inicial histórica: gerente de projeto começa no Dashboard; demais
-  // papéis começam na lista, mesmo agora que coordenador/gerente também podem abrir o Dashboard.
-  const defaultTab = user?.roles?.includes('GERENTE_PROJETO') ? "dashboard" : "list"
-  // V6-9 (RF-V6.12/DEC-182): a aba Voluntários saiu daqui — vive no Painel Administrativo.
-  const tabGridClass = showDashboard ? 'grid-cols-2' : 'grid-cols-1'
+  // plan-v18 S04 (DEC-249, ADR-006): a aba Dashboard saiu desta tela — o
+  // `ProjectManagerDashboard` mora na aba Projetos do Quadro de Liderança. Aqui
+  // ficam só os filtros, a contagem e a lista. V6-9 (RF-V6.12/DEC-182): a aba
+  // Voluntários vive no Painel Administrativo.
 
   if (!user) {
     return (
@@ -143,42 +131,16 @@ export default function ProjetosPage() {
             </div>
           </div>
 
-          {/* Projects Content */}
-          <Tabs defaultValue={defaultTab} className="space-y-4">
-            <TabsList className={`grid w-full ${tabGridClass}`}>
-              {showDashboard &&
-                <TabsTrigger value="dashboard" className="flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4" />
-                  Dashboard
-                </TabsTrigger>
-              }
-              <TabsTrigger value="list" className="flex items-center gap-2">
-                <BarChart3 className="h-4 w-4" />
-                Lista de Projetos
-              </TabsTrigger>
-            </TabsList>
-
-            {/* Tab Dashboard - Apenas para Gerentes de Projeto */}
-            {showDashboard &&
-            <TabsContent value="dashboard" className="space-y-4">
-              <ProjectManagerDashboard 
-                projects={filteredProjects} 
-                tasks={filteredTasks}
-                scopeDescription={scopeDescription}
-                onProjectSelect={handleProjectClick}
-              />
-            </TabsContent>
-            }
-
-            <TabsContent value="list" className="space-y-4">
-              <ProjectList
-                onProjectSelect={handleProjectClick}
-                projects={filteredProjects}
-                tasks={filteredTasks}
-                showCreateButton={false}
-              />
-            </TabsContent>
-          </Tabs>
+          {/* plan-v18 S04 (DEC-249, ADR-006): a lista, sem abas. O painel de gerente
+              mora na aba Projetos do Quadro de Liderança. */}
+          <div className="space-y-4">
+            <ProjectList
+              onProjectSelect={handleProjectClick}
+              projects={filteredProjects}
+              tasks={filteredTasks}
+              showCreateButton={false}
+            />
+          </div>
         </div>
 
         <ProjectDialog

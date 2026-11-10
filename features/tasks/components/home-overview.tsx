@@ -9,18 +9,17 @@ import { projectStatusBadgeClass, projectStatusLabel, taskStatusChartColor, task
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Button } from "@/components/ui/button"
-import { StackedBarChart, WeeklyBarChart } from "@/components/ui/data-charts"
+import { StackedBarChart } from "@/components/ui/data-charts"
 import { clientStorageKey, readJson, writeJson } from "@/lib/client-storage"
 import { isTaskOverdue } from "../utils/move-rules"
 import { civilDayOfInstant } from "@/backend/domain"
 import { projectProgress } from "@/features/projects/utils/project-progress"
 import { filterBoardTasks } from "../utils/filter-board-tasks"
+import { ActivityFeed } from "./activity-feed"
 
 interface HomeOverviewProps {
   projects: Array<{ id: number; name: string; createdAt: string; status: string; startDate?: string | null; endDate?: string | null }>
   tasks: Task[]
-  weekHours: number
-  currentWeekHours: number
 }
 
 const TASK_STATUSES: Task["status"][] = ["to-do", "in-progress", "in-review", "adjust", "done"]
@@ -29,10 +28,6 @@ const TASK_STATUSES: Task["status"][] = ["to-do", "in-progress", "in-review", "a
 // pessoa fecha a faixa e ela reabre sozinha a cada visita. Chave no namespace `dq:` da casa.
 const OVERVIEW_OPEN_KEY = clientStorageKey("home", "resumo-aberto")
 
-function formatHours(value: number) {
-  return new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 }).format(value)
-}
-
 function projectStatus(status: string) {
   if (status === "active" || status === "completed" || status === "archived") {
     return { className: projectStatusBadgeClass[status], label: projectStatusLabel[status] }
@@ -40,7 +35,7 @@ function projectStatus(status: string) {
   return { className: "bg-muted text-muted-foreground", label: status }
 }
 
-export function HomeOverview({ projects, tasks, weekHours, currentWeekHours }: HomeOverviewProps) {
+export function HomeOverview({ projects, tasks }: HomeOverviewProps) {
   const [open, setOpen] = useState(true)
   // O SSR sempre renderiza aberta (o storage nao existe la); a preferencia entra no primeiro
   // efeito no cliente — sem isso, o HTML do servidor e o primeiro render divergiriam (hydration).
@@ -76,41 +71,12 @@ export function HomeOverview({ projects, tasks, weekHours, currentWeekHours }: H
     ]),
   ) as Record<Task["status"], number>
   const completion = filteredTasks.length ? Math.round((taskCounts.done / filteredTasks.length) * 100) : 0
-  const hoursProgress = weekHours > 0 ? Math.min(100, Math.round((currentWeekHours / weekHours) * 100)) : 0
   const today = civilDayOfInstant(new Date())
   const statusSegments = TASK_STATUSES.map((status) => ({ label: taskStatusSentenceLabel[status], value: taskCounts[status], color: taskStatusChartColor[status] }))
   const taskTotal = filteredTasks.length
   // Atrasadas é a MESMA regra do filtro do quadro (`isTaskOverdue`), para o número da home
   // conferir com a contagem do filtro "Somente atrasadas" em qualquer estado da tarefa.
   const overdueCount = filteredTasks.filter((task) => isTaskOverdue(task)).length
-
-  // Ritmo de conclusões nos últimos 7 dias civis. A chave de hoje vem de `civilDayOfInstant`
-  // (fuso do laboratório) e os dias anteriores saem por subtração de calendário em UTC — a
-  // mesma noção de dia civil, sem `new Date()` solto na aritmética (DEC-132).
-  // Conclusão de SUBTASK conta tanto quanto a da tarefa (pedido do dono, 2026-10-22): uma mãe
-  // pode ter 50 subtasks e o ritmo da semana não pode dizer "1" para elas. Quem não vê a lista
-  // (DEC-189: a mãe chega com `subtasks: []`) conta só o que pode ver — o gráfico é do que a
-  // pessoa enxerga no quadro.
-  const lastSevenDays = useMemo(() => {
-    const todayInstant = Date.parse(`${today}T12:00:00Z`)
-    const buckets: Array<{ weekStart: string; weekEnd: string; label: string; count: number }> = []
-    for (let i = 6; i >= 0; i--) {
-      const day = new Date(todayInstant - i * 86_400_000)
-      const key = civilDayOfInstant(day)
-      const dayNumber = Number(key.slice(8, 10))
-      const dayMonth = Number(key.slice(5, 7))
-      const label = `${String(dayNumber).padStart(2, "0")}/${String(dayMonth).padStart(2, "0")}`
-      const count = filteredTasks.reduce((total, task) => {
-        let n = task.completedAt && civilDayOfInstant(new Date(task.completedAt)) === key ? 1 : 0
-        for (const subtask of task.subtasks ?? []) {
-          if (subtask.completedAt && civilDayOfInstant(new Date(subtask.completedAt)) === key) n += 1
-        }
-        return total + n
-      }, 0)
-      buckets.push({ weekStart: key, weekEnd: key, label, count })
-    }
-    return buckets
-  }, [today, filteredTasks])
 
   return (
     <section aria-label="Resumo do laboratório" className="mb-5 rounded-lg border bg-card">
@@ -191,21 +157,12 @@ export function HomeOverview({ projects, tasks, weekHours, currentWeekHours }: H
             </p>
           </section>
 
-          <section aria-labelledby="home-task-chart" className="min-w-0 md:col-span-2 md:border-l md:pl-5 lg:col-span-1 lg:border-l lg:pl-5">
-            <h3 id="home-task-chart" className="mb-3 text-sm font-semibold">Atividade da semana</h3>
-            <p className="mb-1.5 text-xs font-medium">Tarefas e subtasks concluídas nos últimos 7 dias</p>
-            <WeeklyBarChart weeks={lastSevenDays} label="Tarefas e subtasks concluídas nos últimos 7 dias" valueNoun="conclusões" />
-            <div className="mt-3 border-t pt-3">
-              <div className="mb-2 flex items-baseline justify-between gap-3"><p className="text-xs font-medium">Meta da semana</p><p className="text-sm font-semibold tabular-nums">{formatHours(currentWeekHours)}{weekHours > 0 ? ` / ${formatHours(weekHours)} h` : " h"}</p></div>
-              {weekHours > 0 ? (
-                <>
-                  <Progress aria-label={`Meta semanal de horas: ${hoursProgress}%`} value={hoursProgress} className="h-2" />
-                  <p className="mt-1.5 text-xs text-muted-foreground">{hoursProgress}% da meta semanal</p>
-                </>
-              ) : (
-                <p className="text-xs text-muted-foreground">Defina sua meta no perfil</p>
-              )}
-            </div>
+          <section className="min-w-0 md:col-span-2 md:border-l md:pl-5 lg:col-span-1 lg:border-l lg:pl-5">
+            {/* O feed "Atividade recente" saiu de baixo do quadro para este bloco (dono, 2026-10-29):
+                o gráfico "Atividade da semana" foi para baixo do quadro. O recorte do feed obedece ao
+                MESMO `?projeto=` que o quadro usa — `projectId` aqui é a mesma fonte de verdade da URL.
+                A `region` "Atividade recente" é a `<section>` do próprio ActivityFeed, não este wrapper. */}
+            <ActivityFeed projectId={projectId} />
           </section>
         </div>
       )}

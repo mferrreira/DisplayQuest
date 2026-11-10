@@ -1,10 +1,11 @@
-import { buildAwardDescription, taskAwardPoints } from "@/backend/domain"
+import { applyPassiveBonus, buildAwardDescription, penaltyWithReduction, taskAwardPoints } from "@/backend/domain"
 import type { GamificationSourceType } from "@/backend/domain"
 import type {
   AwardFromTaskCompletionCommand,
   GamificationAwardResult,
 } from "@/backend/modules/gamification/application/contracts"
 import type { GamificationAwardHistoryPort } from "@/backend/modules/gamification/application/ports/gamification-award-history.port"
+import type { EquippedPassivesPort } from "@/backend/modules/gamification/application/ports/equipped-passives.port"
 import type { EvaluateUserBadgesUseCase } from "@/backend/modules/gamification/application/use-cases/evaluate-user-badges.use-case"
 import type { GetUserProgressionUseCase } from "@/backend/modules/gamification/application/use-cases/get-user-progression.use-case"
 
@@ -14,12 +15,18 @@ import type { GetUserProgressionUseCase } from "@/backend/modules/gamification/a
  * undefined/null, Math.floor (0 => 0 SEM clamp minimo — QUIRK proprio do caminho
  * de task), idempotencia por DESCRICAO `GAMIFICATION:TASK_COMPLETED:<id>`,
  * avaliacao de badges depois do credit.
+ *
+ * plan-v15 S05 (R10/R11): a passiva equipada multiplica o premio NA ESCRITA, depois da
+ * regra pura `taskAwardPoints` — a regra pura esta intocada. Cap +100% (soma de pct
+ * limitada a 1). Idempotencia continua por descricao; premio ja creditado nao e
+ * recalculado (R11, `alreadyAwarded` devolve 0 antes do bonus).
  */
 
 export interface AwardFromTaskCompletionDependencies {
   awardHistory: GamificationAwardHistoryPort
   progression: GetUserProgressionUseCase
   evaluateUserBadges: EvaluateUserBadgesUseCase
+  passives: EquippedPassivesPort
 }
 
 export class AwardFromTaskCompletionUseCase {
@@ -47,7 +54,13 @@ export class AwardFromTaskCompletionUseCase {
       }
     }
 
-    const pointsAwarded = taskAwardPoints(command.taskPoints)
+    // plan-v15 S06 (R10): a redução de penalidade atua sobre a penalidade que já está
+    // fundida em `taskPoints` — devolve-a ao base na forma reduzida, depois o bônus
+    // multiplica o resultado. Penalidade ausente (no prazo/sem prazo): só o bônus entra.
+    const effects = await this.dependencies.passives.listEquippedEffects(command.userId)
+    const latePenalty = command.latePenalty ?? 0
+    const baseAfterReduction = taskAwardPoints(command.taskPoints) + latePenalty - penaltyWithReduction(latePenalty, effects)
+    const pointsAwarded = applyPassiveBonus(baseAfterReduction, effects)
     const xpAwarded = pointsAwarded
 
     await this.dependencies.awardHistory.awardAndRecord({

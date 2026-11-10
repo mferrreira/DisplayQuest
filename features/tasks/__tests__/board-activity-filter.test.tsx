@@ -24,7 +24,10 @@ import type { TaskFilters } from "@/lib/api/endpoints/tasks";
 import { resetTaskStore, resetUserStore, seedProjects, seedTasks } from "@/tests/mocks/handlers";
 
 const mockUser = {
-  id: 2,
+  // R11 (S11): o quadro abre no projeto do líder na primeira carga. Estes testes partem da visão
+  // global e selecionam o projeto pela barra, então o ator não lidera nem é membro do projeto do
+  // fixture (líder 2).
+  id: 4,
   name: "Coordenador",
   email: "coordenador@lab.com",
   roles: ["COORDENADOR"],

@@ -24,6 +24,7 @@ function DashboardProviders({ children }: { children: React.ReactNode }) {
   const shouldProvideTasks =
     pathname === "/dashboard" ||
     pathname.startsWith("/dashboard/projetos") ||
+    pathname.startsWith("/dashboard/leaderboard") ||
     pathname.startsWith("/dashboard/admin")
 
   return (

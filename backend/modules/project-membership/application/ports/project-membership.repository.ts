@@ -32,6 +32,9 @@ export interface MembershipRecord extends MembershipProfileFields {
   joinedAt: Date
   userName: string | null
   userEmail: string | null
+  /** plan-v14 S02 (regra 2): chave do avatar no bucket (DEC-242). */
+  avatar?: string | null
+  avatarKey?: string | null
 }
 
 export interface MembershipDetailRecord extends MembershipProfileFields {

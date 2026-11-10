@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
+import { MarkdownEditorDialog } from "@/components/features/markdown-editor-dialog"
+import { uploadUserMarkdownImage } from "@/lib/api/user-images"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Textarea } from "@/components/ui/textarea"
@@ -37,7 +39,9 @@ import {
   XCircle,
   User,
   Zap,
-  AlertTriangle
+  AlertTriangle,
+  ClipboardCheck,
+  PenLine,
 } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { useTask } from "@/contexts/task-context"
@@ -51,6 +55,7 @@ import { AdminProjectManagement } from "@/components/admin/AdminProjectManagemen
 import { AdminHoursManagement } from "@/components/admin/AdminHoursManagement"
 import { WeeklyHoursTable } from "@/components/admin/weekly-hours-table"
 import { AdminNotificationsCenter } from "@/components/admin/AdminNotificationsCenter"
+import { AdminCompletionRequests } from "@/components/admin/admin-completion-requests"
 import { ScheduleGrid } from "@/components/admin/ScheduleGrid"
 import { NotificationsPanel } from "@/components/ui/notifications-panel"
 import { CreateUserDialog } from "@/components/admin/create-user-dialog"
@@ -126,6 +131,7 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, onSessionsC
   const [userNameDraft, setUserNameDraft] = useState<string>("")
   const [userEmailDraft, setUserEmailDraft] = useState<string>("")
   const [userBioDraft, setUserBioDraft] = useState<string>("")
+  const [adminBioDialogOpen, setAdminBioDialogOpen] = useState(false)
   // V5-4a (DEC-138): os dados de pessoa, editáveis pela gestão. O CPF chega na lista só para quem
   // tem MANAGE_USERS, que é exatamente quem abre este diálogo.
   const [userCpfDraft, setUserCpfDraft] = useState<string>("")
@@ -422,6 +428,12 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, onSessionsC
           <TabsTrigger value="tasks" className="flex items-center gap-2">
             <Activity className="h-4 w-4" />
             <span className="hidden sm:inline">Tarefas</span>
+          </TabsTrigger>
+          {/* S01 (plan-v12, DEC-238): fila global de solicitações de conclusão — o gate
+              `DASHBOARD_ADMIN` é o MESMO conjunto dos aprovadores globais. */}
+          <TabsTrigger value="conclusoes" className="flex items-center gap-2">
+            <ClipboardCheck className="h-4 w-4" />
+            <span className="hidden sm:inline">Conclusões</span>
           </TabsTrigger>
           <TabsTrigger value="notifications" className="flex items-center gap-2">
             <Bell className="h-4 w-4" />
@@ -918,6 +930,16 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, onSessionsC
           )}
         </TabsContent>
 
+        {/* Tab Conclusões (S01, plan-v12, DEC-238): fila global de solicitações de
+            conclusão; gate `DASHBOARD_ADMIN` = aprovadores globais. */}
+        <TabsContent value="conclusoes" className="space-y-6">
+          {!canAccessAdmin ? (
+            <TabPermissionNotice feature="DASHBOARD_ADMIN" />
+          ) : (
+            <AdminCompletionRequests />
+          )}
+        </TabsContent>
+
         {/* Tab Notificações */}
         <TabsContent value="notifications" className="space-y-6">
           {!canAccessAdmin ? (
@@ -989,13 +1011,33 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, onSessionsC
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor="userBio" className="text-xs">Bio</Label>
-                    <Textarea
-                      id="userBio"
-                      value={userBioDraft}
-                      onChange={(e) => setUserBioDraft(e.target.value)}
-                      placeholder="Biografia do usuário..."
-                      rows={2}
+                    {/* S08 (R12/DEC-263): a bio da gestão é o MESMO editor de markdown com preview
+                        do perfil e da descrição do projeto. Salvar manda a rota de imagem do usuário. */}
+                    <Label className="text-xs">Bio</Label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setAdminBioDialogOpen(true)}
+                    >
+                      <PenLine className="mr-2 h-4 w-4" />
+                      Editar biografia
+                    </Button>
+                    <MarkdownEditorDialog
+                      open={adminBioDialogOpen}
+                      title="Editar biografia"
+                      description="Markdown simples; a preview mostra o que a tela do perfil vai renderizar."
+                      label="Biografia em markdown"
+                      textareaId="user-bio-markdown"
+                      previewTestId="preview-de-bio-admin"
+                      inputTestId="input-imagem-bio-admin"
+                      saveLabel="Salvar biografia"
+                      initialText={userBioDraft}
+                      onOpenChange={setAdminBioDialogOpen}
+                      upload={(file) => uploadUserMarkdownImage(selectedUserForSettings.id, file)}
+                      onSave={async (text) => {
+                        setUserBioDraft(text)
+                      }}
                     />
                   </div>
                 </div>

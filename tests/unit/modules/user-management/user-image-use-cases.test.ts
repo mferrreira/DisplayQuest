@@ -38,6 +38,7 @@ function userRow(id: number, bannerKey: string | null = null): UserRecord {
     profileVisibility: "public",
     bio: null,
     avatar: null,
+    avatarKey: null,
     bannerKey,
     ...emptyPersonData(),
     roles: ["VOLUNTARIO"],

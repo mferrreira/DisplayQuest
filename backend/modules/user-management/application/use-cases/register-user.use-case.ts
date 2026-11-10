@@ -50,6 +50,7 @@ export class RegisterUserUseCase {
       profileVisibility: "public",
       bio: null,
       avatar: null,
+      avatarKey: null,
       bannerKey: null,
       // V5-4a (DEC-138): quem se cadastra preenche os dados de pessoa depois, no perfil.
       ...emptyPersonData(),

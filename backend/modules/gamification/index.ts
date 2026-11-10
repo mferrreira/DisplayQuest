@@ -1,8 +1,10 @@
 import { AwardFromTaskCompletionUseCase } from "@/backend/modules/gamification/application/use-cases/award-from-task-completion.use-case"
 import { AwardFromActivityCompletionUseCase } from "@/backend/modules/gamification/application/use-cases/award-from-activity-completion.use-case"
 import { AwardFromWorkSessionUseCase } from "@/backend/modules/gamification/application/use-cases/award-from-work-session.use-case"
+import { ReverseTaskAwardUseCase } from "@/backend/modules/gamification/application/use-cases/reverse-task-award.use-case"
 import { AssertCanManageUserBadgesUseCase } from "@/backend/modules/gamification/application/use-cases/assert-can-manage-user-badges.use-case"
 import { CloseBoardMonthUseCase } from "@/backend/modules/gamification/application/use-cases/close-board-month.use-case"
+import { CloseSeasonUseCase } from "@/backend/modules/gamification/application/use-cases/close-season.use-case"
 import { EvaluateUserBadgesUseCase } from "@/backend/modules/gamification/application/use-cases/evaluate-user-badges.use-case"
 import { GetUserProgressionUseCase } from "@/backend/modules/gamification/application/use-cases/get-user-progression.use-case"
 import {
@@ -10,6 +12,10 @@ import {
   ReadBoardMonthHistoryUseCase,
 } from "@/backend/modules/gamification/application/use-cases/read-board-month-history.use-case"
 import { ReadBoardMonthUseCase } from "@/backend/modules/gamification/application/use-cases/read-board-month.use-case"
+import {
+  ListClosedSeasonsUseCase,
+  ReadSeasonHistoryUseCase,
+} from "@/backend/modules/gamification/application/use-cases/read-season-history.use-case"
 import { ReadUserBoardMonthsUseCase } from "@/backend/modules/gamification/application/use-cases/read-user-board-months.use-case"
 import { AdjustMonthPointsUseCase } from "@/backend/modules/gamification/application/use-cases/adjust-month-points.use-case"
 import { ReadUserProgressionUseCase } from "@/backend/modules/gamification/application/use-cases/read-user-progression.use-case"
@@ -24,13 +30,19 @@ import {
   RemoveUserBadgeUseCase,
   UpdateBadgeUseCase,
 } from "@/backend/modules/gamification/application/use-cases/badge-management.use-cases"
+import { EquipUserBadgeUseCase } from "@/backend/modules/gamification/application/use-cases/equip-user-badge.use-case"
+import { ListBadgeProgressUseCase } from "@/backend/modules/gamification/application/use-cases/list-badge-progress.use-case"
 import type { BadgeCatalogPort } from "@/backend/modules/gamification/application/ports/badge-catalog.port"
+import type { BadgeMetricsPort } from "@/backend/modules/gamification/application/ports/badge-metrics.port"
+import type { EquippedPassivesPort } from "@/backend/modules/gamification/application/ports/equipped-passives.port"
 import type { BoardMonthClosePort } from "@/backend/modules/gamification/application/ports/board-month-close.port"
 import type { GamificationAwardHistoryPort } from "@/backend/modules/gamification/application/ports/gamification-award-history.port"
 import type { GamificationUsersPort } from "@/backend/modules/gamification/application/ports/gamification-users.port"
 import type { UserBadgePort } from "@/backend/modules/gamification/application/ports/user-badge.port"
 import type { UserStatsPort } from "@/backend/modules/gamification/application/ports/user-stats.port"
 import { createPrismaBadgeCatalogPort } from "@/backend/modules/gamification/infrastructure/repositories/prisma-badge-catalog.port"
+import { createPrismaBadgeMetricsPort } from "@/backend/modules/gamification/infrastructure/repositories/prisma-badge-metrics.port"
+import { createPrismaEquippedPassivesPort } from "@/backend/modules/gamification/infrastructure/repositories/prisma-equipped-passives.port"
 import { createPrismaBoardMonthClosePort } from "@/backend/modules/gamification/infrastructure/repositories/prisma-board-month-close.port"
 import { createPrismaGamificationAwardHistoryPort } from "@/backend/modules/gamification/infrastructure/repositories/prisma-gamification-award-history.port"
 import { createPrismaGamificationUsersPort } from "@/backend/modules/gamification/infrastructure/repositories/prisma-gamification-users.port"
@@ -53,6 +65,8 @@ type UseCaseExecute<T> = T extends { execute: (...args: infer A) => infer R } ? 
 export class GamificationModule {
   readonly awardFromWorkSession: UseCaseExecute<AwardFromWorkSessionUseCase>
   readonly awardFromTaskCompletion: UseCaseExecute<AwardFromTaskCompletionUseCase>
+  /** R13 (S13, ADR-004): a reversão do prêmio de uma tarefa que saiu de `done`. */
+  readonly reverseTaskAward: UseCaseExecute<ReverseTaskAwardUseCase>
   /** V5-7b (DEC-63/104): o crédito da parcela de prêmio de atividade aprovada. */
   readonly awardFromActivityCompletion: UseCaseExecute<AwardFromActivityCompletionUseCase>
   readonly getUserProgression: UseCaseExecute<GetUserProgressionUseCase>
@@ -64,8 +78,12 @@ export class GamificationModule {
   readonly deleteBadge: UseCaseExecute<DeleteBadgeUseCase>
   readonly listUserBadges: UseCaseExecute<ListUserBadgesUseCase>
   readonly listRecentUserBadges: UseCaseExecute<ListRecentUserBadgesUseCase>
+  /** plan-v15 S10 (R7, CA4): o progresso "X de Y" das badges ativas não conquistadas. */
+  readonly listBadgeProgress: UseCaseExecute<ListBadgeProgressUseCase>
   readonly awardBadge: UseCaseExecute<AwardBadgeUseCase>
   readonly removeUserBadge: UseCaseExecute<RemoveUserBadgeUseCase>
+  /** plan-v15 S04 (R9): equipar/desequipar a passiva no slot do perfil. */
+  readonly equipUserBadge: UseCaseExecute<EquipUserBadgeUseCase>
   /** D4/B6-2c: o gate que a rota chama ANTES de ler corpo/params (ordem congelada em teste). */
   readonly assertCanManageUserBadges: UseCaseExecute<AssertCanManageUserBadgesUseCase>
   /** D4/B6-2c: self-or-manage sobre a progressão; o lookup sem ator continua em `getUserProgression`. */
@@ -79,6 +97,13 @@ export class GamificationModule {
    */
   readonly closeBoardMonth: UseCaseExecute<CloseBoardMonthUseCase>
   /**
+   * plan-v20 S01 (DEC-252..DEC-254): fecha a temporada do ano civil TERMINADO. Dois donos, a
+   * família do DEC-54: `POST /api/board/season-close` (gestão, `MANAGE_USERS`) e o cron
+   * `0 0 1 * *`, que roda a temporada depois do fechamento de dezembro com
+   * `systemActor("SEASON_CLOSE")`. O reset de pontos da season é este use case.
+   */
+  readonly closeSeason: UseCaseExecute<CloseSeasonUseCase>
+  /**
    * plan-v9 S03 (R12, CA4, CA8): o quadro congelado de um mes fechado, e o aviso de mes vazio.
    * Sem gate de proposito: o quadro e leitura de quem esta autenticado, como o quadro vivo de hoje
    * (DEC-136), e reordenar na leitura mudaria a historia do mes.
@@ -86,6 +111,13 @@ export class GamificationModule {
   readonly readBoardMonthHistory: UseCaseExecute<ReadBoardMonthHistoryUseCase>
   /** S03: os meses que ja fecharam, para o seletor da tela saber o que existe abrir. */
   readonly listClosedBoardMonths: UseCaseExecute<ListClosedBoardMonthsUseCase>
+  /**
+   * plan-v20 S02 (DEC-252, DEC-255): o quadro congelado de uma temporada, e o ano em curso
+   * pedido por nome. Leitura do autenticado, como o quadro de hoje — nenhum gate.
+   */
+  readonly readSeasonHistory: UseCaseExecute<ReadSeasonHistoryUseCase>
+  /** plan-v20 S02: as temporadas que ja fecharam, para o seletor da aba Temporada. */
+  readonly listClosedSeasons: UseCaseExecute<ListClosedSeasonsUseCase>
   /** S04 (DEC-232): os meses fechados de uma pessoa, para o perfil listar o historico dela. */
   readonly readUserBoardMonths: UseCaseExecute<ReadUserBoardMonthsUseCase>
   /**
@@ -97,6 +129,7 @@ export class GamificationModule {
   constructor(
     private readonly awardFromWorkSessionUseCase: AwardFromWorkSessionUseCase,
     private readonly awardFromTaskCompletionUseCase: AwardFromTaskCompletionUseCase,
+    private readonly reverseTaskAwardUseCase: ReverseTaskAwardUseCase,
     private readonly awardFromActivityCompletionUseCase: AwardFromActivityCompletionUseCase,
     private readonly getUserProgressionUseCase: GetUserProgressionUseCase,
     private readonly evaluateUserBadgesUseCase: EvaluateUserBadgesUseCase,
@@ -107,19 +140,25 @@ export class GamificationModule {
     private readonly deleteBadgeUseCase: DeleteBadgeUseCase,
     private readonly listUserBadgesUseCase: ListUserBadgesUseCase,
     private readonly listRecentUserBadgesUseCase: ListRecentUserBadgesUseCase,
+    private readonly listBadgeProgressUseCase: ListBadgeProgressUseCase,
     private readonly awardBadgeUseCase: AwardBadgeUseCase,
     private readonly removeUserBadgeUseCase: RemoveUserBadgeUseCase,
+    private readonly equipUserBadgeUseCase: EquipUserBadgeUseCase,
     private readonly assertCanManageUserBadgesUseCase: AssertCanManageUserBadgesUseCase,
     private readonly readUserProgressionUseCase: ReadUserProgressionUseCase,
     private readonly readBoardMonthUseCase: ReadBoardMonthUseCase,
     private readonly closeBoardMonthUseCase: CloseBoardMonthUseCase,
+    private readonly closeSeasonUseCase: CloseSeasonUseCase,
     private readonly readBoardMonthHistoryUseCase: ReadBoardMonthHistoryUseCase,
     private readonly listClosedBoardMonthsUseCase: ListClosedBoardMonthsUseCase,
+    private readonly readSeasonHistoryUseCase: ReadSeasonHistoryUseCase,
+    private readonly listClosedSeasonsUseCase: ListClosedSeasonsUseCase,
     private readonly readUserBoardMonthsUseCase: ReadUserBoardMonthsUseCase,
     private readonly adjustMonthPointsUseCase: AdjustMonthPointsUseCase,
   ) {
     this.awardFromWorkSession = this.awardFromWorkSessionUseCase.execute.bind(this.awardFromWorkSessionUseCase)
     this.awardFromTaskCompletion = this.awardFromTaskCompletionUseCase.execute.bind(this.awardFromTaskCompletionUseCase)
+    this.reverseTaskAward = this.reverseTaskAwardUseCase.execute.bind(this.reverseTaskAwardUseCase)
     this.awardFromActivityCompletion = this.awardFromActivityCompletionUseCase.execute.bind(this.awardFromActivityCompletionUseCase)
     this.getUserProgression = this.getUserProgressionUseCase.execute.bind(this.getUserProgressionUseCase)
     this.evaluateUserBadges = this.evaluateUserBadgesUseCase.execute.bind(this.evaluateUserBadgesUseCase)
@@ -130,14 +169,19 @@ export class GamificationModule {
     this.deleteBadge = this.deleteBadgeUseCase.execute.bind(this.deleteBadgeUseCase)
     this.listUserBadges = this.listUserBadgesUseCase.execute.bind(this.listUserBadgesUseCase)
     this.listRecentUserBadges = this.listRecentUserBadgesUseCase.execute.bind(this.listRecentUserBadgesUseCase)
+    this.listBadgeProgress = this.listBadgeProgressUseCase.execute.bind(this.listBadgeProgressUseCase)
     this.awardBadge = this.awardBadgeUseCase.execute.bind(this.awardBadgeUseCase)
     this.removeUserBadge = this.removeUserBadgeUseCase.execute.bind(this.removeUserBadgeUseCase)
+    this.equipUserBadge = this.equipUserBadgeUseCase.execute.bind(this.equipUserBadgeUseCase)
     this.assertCanManageUserBadges = this.assertCanManageUserBadgesUseCase.execute.bind(this.assertCanManageUserBadgesUseCase)
     this.readUserProgression = this.readUserProgressionUseCase.execute.bind(this.readUserProgressionUseCase)
     this.readBoardMonth = this.readBoardMonthUseCase.execute.bind(this.readBoardMonthUseCase)
     this.closeBoardMonth = this.closeBoardMonthUseCase.execute.bind(this.closeBoardMonthUseCase)
+    this.closeSeason = this.closeSeasonUseCase.execute.bind(this.closeSeasonUseCase)
     this.readBoardMonthHistory = this.readBoardMonthHistoryUseCase.execute.bind(this.readBoardMonthHistoryUseCase)
     this.listClosedBoardMonths = this.listClosedBoardMonthsUseCase.execute.bind(this.listClosedBoardMonthsUseCase)
+    this.readSeasonHistory = this.readSeasonHistoryUseCase.execute.bind(this.readSeasonHistoryUseCase)
+    this.listClosedSeasons = this.listClosedSeasonsUseCase.execute.bind(this.listClosedSeasonsUseCase)
     this.readUserBoardMonths = this.readUserBoardMonthsUseCase.execute.bind(this.readUserBoardMonthsUseCase)
     this.adjustMonthPoints = this.adjustMonthPointsUseCase.execute.bind(this.adjustMonthPointsUseCase)
   }
@@ -149,6 +193,10 @@ export interface GamificationModulePorts {
   badges: BadgeCatalogPort
   userBadges: UserBadgePort
   stats: UserStatsPort
+  /** plan-v15 S03: métricas extras do registro, medida sob demanda. */
+  metrics: BadgeMetricsPort
+  /** plan-v15 S05 (R10): passivas equipadas da pessoa, aplicadas na escrita do prêmio. */
+  passives: EquippedPassivesPort
   /** plan-v9 S02: leitura do registro de mes e escrita do fechamento (ADR-002). */
   monthClose: BoardMonthClosePort
 }
@@ -164,6 +212,8 @@ export function createGamificationModule(options: GamificationModuleFactoryOptio
     badges: options.ports?.badges ?? createPrismaBadgeCatalogPort(),
     userBadges: options.ports?.userBadges ?? createPrismaUserBadgePort(),
     stats: options.ports?.stats ?? createPrismaUserStatsPort(),
+    metrics: options.ports?.metrics ?? createPrismaBadgeMetricsPort(),
+    passives: options.ports?.passives ?? createPrismaEquippedPassivesPort(),
     monthClose: options.ports?.monthClose ?? createPrismaBoardMonthClosePort(),
   }
 
@@ -173,6 +223,7 @@ export function createGamificationModule(options: GamificationModuleFactoryOptio
     badges: ports.badges,
     userBadges: ports.userBadges,
     stats: ports.stats,
+    metrics: ports.metrics,
   })
 
   return new GamificationModule(
@@ -185,11 +236,14 @@ export function createGamificationModule(options: GamificationModuleFactoryOptio
       awardHistory: ports.awardHistory,
       progression,
       evaluateUserBadges,
+      passives: ports.passives,
     }),
+    new ReverseTaskAwardUseCase(ports.awardHistory),
     new AwardFromActivityCompletionUseCase({
       awardHistory: ports.awardHistory,
       progression,
       evaluateUserBadges,
+      passives: ports.passives,
     }),
     progression,
     evaluateUserBadges,
@@ -200,14 +254,24 @@ export function createGamificationModule(options: GamificationModuleFactoryOptio
     new DeleteBadgeUseCase(ports.badges),
     new ListUserBadgesUseCase(ports.userBadges),
     new ListRecentUserBadgesUseCase(ports.userBadges),
+    new ListBadgeProgressUseCase({
+      users: ports.users,
+      badges: ports.badges,
+      userBadges: ports.userBadges,
+      metrics: ports.metrics,
+    }),
     new AwardBadgeUseCase(ports.badges, ports.userBadges),
     new RemoveUserBadgeUseCase(ports.userBadges),
+    new EquipUserBadgeUseCase(ports.userBadges, ports.badges),
     new AssertCanManageUserBadgesUseCase(),
     new ReadUserProgressionUseCase(progression),
     new ReadBoardMonthUseCase(),
-    new CloseBoardMonthUseCase(ports.monthClose),
+    new CloseBoardMonthUseCase(ports.monthClose, evaluateUserBadges),
+    new CloseSeasonUseCase(ports.monthClose, evaluateUserBadges),
     new ReadBoardMonthHistoryUseCase(ports.monthClose),
     new ListClosedBoardMonthsUseCase(ports.monthClose),
+    new ReadSeasonHistoryUseCase(ports.monthClose),
+    new ListClosedSeasonsUseCase(ports.monthClose),
     new ReadUserBoardMonthsUseCase(ports.monthClose),
     new AdjustMonthPointsUseCase(ports.users),
   )

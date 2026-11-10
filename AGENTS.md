@@ -46,6 +46,14 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   aqui afirmava que não existiam — está superada. O passo do `g4-normalize.sql` continua
   indispensável: sem ele, `entities-roundtrip` falha porque o seed escreve status pré-contrato e o
   schema estrito os rejeita por design (D-18). `db:test:guard` **não** existe e não foi inventado.
+- **Nunca `next dev` (regra do dono, 2026-11-06):** nenhum agente deste plano sobe `next dev` em
+  nenhuma porta. A instância de tela é **só** o `app` do `docker compose` em `localhost:3000`;
+  `next dev` extra (3001/3002 já Quebraram: três servers comendo RAM, e o `next build` no mesmo
+  diretório corrompe a cache `.next` do dev server). Mudança de código chega à tela **só** por
+  `docker compose build app` + `up -d` (medido: build > 25 min — rodar em background com
+  `--progress=plain > log`, conferir a data da imagem antes de capturar). Capturas e e2e apontam
+  para 3000. O container tem o código da imagem, não o working tree: antes de capturar uma
+  mudança nova, rebuilda.
 - **Node local ≠ Node de deploy:** a imagem é `node:20-alpine`; o `engines` não é declarado e
   não há `.nvmrc`. Gate verde local não implica gate verde no deploy quando o Node difere —
   foi assim que o shim `path` (removido) quebrava em Node 22+ e passaria em Node 20.
@@ -359,16 +367,26 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   validação para o agente consumidor; DEC-205..210 na revisão de 2026-10-21). O V4-4 ia usar
   DEC-61..64 e colidiu; os 28 comentários de código foram renumerados. **Antes de abrir decisão nova,
   `grep` os `STATE.json` em `$PLANOS/` (clean-arch e plan-v3..plan-v8). O plan-v8 foi revertido, mas
-  os DEC-211..223 dele seguem reservados no arquivo. Próxima livre: DEC-224.**
-- **Subtask (V4-4, DEC-78..83 → regra atual = DEC-97/98/189):** tabela `task_subtasks` (sem FK para
+  os DEC-211..223 dele seguem reservados no arquivo. **Atualizado em 2026-11-05:** DEC-224 (donos),
+  DEC-226 plan-v9, DEC-232..236 plan-v10, DEC-240 plan-v12, DEC-242 em uso, **DEC-243 plan-v16**
+  (ícone de badge no bucket pelo desenho de capa, conversão a WebP obrigatória na escrita, fonte
+  Lucide ISC). **Atualizado em 2026-11-06:** **DEC-247..250 plan-v18** (vitrine, cartões de badge,
+  leaderboard com abas; DEC-250 revoga a posição da DEC-247 a pedido do dono). **DEC-251 plan-v19**
+  (medálhão em círculo com contorno na cor da badge, vitrine sem slot vazio). **DEC-252..256 plan-v20**
+  (Temporada: linha da coleção `board_month_closes` com track `SEASON_POINTS`, pontuação = `users.points`
+  no fechamento, cron na virada 1º jan, rota de gestão `POST /api/board/season-close` com `MANAGE_USERS`,
+  aba "Temporada" no leaderboard, métricas de badge recompute do zero pós-reset).
+  **Próxima livre: DEC-257.**
+- **Subtask (V4-4, DEC-78..83 → regra atual = DEC-97/98/189/224):** tabela `task_subtasks` (sem FK para
   `users` — subtask não tem
-  responsável próprio), base gravada em `tasks.points` = `10 + 5·n` (DEC-97) e **cada subtask CONCLUÍDA
-  vale +5 fixos dentro dessa base** — a leitura antiga da DEC-78 (subtask pontuada pela regra da mãe no
+  responsável próprio), base gravada em `tasks.points` = `10 + 10·n` (DEC-97 baixou a 5; o dono restaurou
+  **10 por subtask** em 2026-10-29, DEC-224) e **cada subtask CONCLUÍDA
+  vale +10 fixos dentro dessa base** — a leitura antiga da DEC-78 (subtask pontuada pela regra da mãe no
   instante da própria conclusão; exemplo mãe −40 + (+15, 0, −30) = −55) **morreu na DEC-97**. O prêmio da
-  mãe é `(10 + 5·n_concluídas)` atravessando o calendário: **×1,5 se a entrega for ≥2 dias civis
+  mãe é `(10 + 10·n_concluídas)` atravessando o calendário: **×1,5 se a entrega for ≥2 dias civis
   antecipada** (régua nova, vale para toda tarefa, com ou sem subtask — substitui o "1 dia adiantado" da
   DEC-32), no prazo/sem prazo o base cheio, atraso −10/dia sem piso (DEC-39); fracionário arredondado com
-  `Math.round` (25 × 1,5 → 38, congelado em teste). A **trava** (não entrar em `in-review`/`done` com
+  `Math.round` (40 × 1,5 → 60, congelado em teste). A **trava** (não entrar em `in-review`/`done` com
   subtask aberta, vindo de QUALQUER coluna, nos três caminhos `PUT status` / `PATCH complete` / `POST
   approve`) é 400; a **janela** (criar/renomear/apagar a lista de uma mãe em `in-review`/`done`) é 409.
   A **trava de marcação (DEC-98)**: `completed: true` exige mãe em `in-progress` — 409 com a MESMA frase
@@ -786,7 +804,7 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
   elements". Caminho: regex no nó do parágrafo (`getByText(/Atual: 120/)`).
 - **`userEvent` sem `userEvent.setup()` é lento sob carga — flake medido (2026-10-06, V4-6b):**
   chamar `userEvent.type/click` direto usa `delay: 0`, e **cada tecla vira um `setTimeout(0)`**. O
-  caso "a mãe nasce com a lista e com a base 10 + 5·n" (`task-dialog-subtasks.test.tsx`) estourou
+  caso "a mãe nasce com a lista e com a base 10 + 10·n" (`task-dialog-subtasks.test.tsx`) estourou
   **5041 ms** numa corrida completa da suíte, verde isolado e no rerun. Correção: `userEvent.setup({
   delay: null })` criado no `beforeEach` e usado como `user.type/user.click` — padrão já usado em
   `task-board.test.tsx`. Suspeitar disso quando um teste de digitação falha **só** sob carga paralela.
@@ -857,7 +875,7 @@ serial os outros 5 **nem rodam** (ver "Gotchas reais"). O e2e do shell está em 
 - **Mock que ignora uma chave do corpo esconde defeito do cliente (medido 2026-10-06, V4-5c):** o POST
   `/api/tasks` do mock não tratava `subtasks`, então o teste do formulário passaria verde provando que o
   input existia. Agora ele espelha a rota real: `normalizeNewSubtasks` (400 se inválido), linhas com id
-  e base `10 + 5·n`.
+  e base `10 + 10·n`.
 - **"Quest Global" do formulário é um `Switch` do Radix (`role="switch"`), não uma checkbox** (medido ao
   escrever o teste do V4-5c). O teste que buscava `getByRole("checkbox", { name: "Quest Global" })` falhava
   por isso, não pela regra.
@@ -1163,3 +1181,264 @@ leitura do texto visível. São observações medidas na instância real, **não
   fila de oito fatias. A numeração DEC continua a partir do plan-v9 (DEC-232), sem reiniciar.
 - **Migração:** `20261028181000_add_work_session_original_start` adiciona coluna nullable sem
   backfill. Integrações G4 rodam somente contra `dq-dev-test-db` em 5433, nunca 5432.
+
+## plan-v15 — gamificação remodelada: engine v2, passivas e catálogo (2026-11-05)
+
+- **Estado:** `fechado` em 2026-11-05 (commit `2bd20cf`), 12/12 fatias, plano em
+  `$PLANOS/plans/plan-v15-badges/` (MODELO.md, queue.json, journal.ndjson, HANDOFF.md).
+  Nenhuma decisão nova — o plano usa as DEC existentes (DEC-39/54/74 citadas).
+- **Engine v2:** `criteria` versionado `{version: 2, clauses: [{metric, op: ">=", value}]}`
+  (formato exato — cláusula com `metricId`/`gte` não é reconhecida, medido em roundtrip).
+  Registro de 35 métricas em `backend/domain/gamification/metric-registry.ts`; métricas
+  extras são medidas sob demanda só quando algum criteria ativo pede. Picker de cláusulas no
+  Painel Administrativo (`badge-manager.tsx`); métrica fora do registro é recusada pela rota.
+- **Progresso X de Y:** `backend/domain/gamification/progress-rules.ts` (min-ratio por cláusula,
+  nunca média; X cap no alvo), `ListBadgeProgressUseCase` no módulo, `GET /api/user-badges`
+  devolve `progress`, chips sob o rótulo "Em progresso" no bloco Badges do perfil.
+- **Passivas:** `BadgeEffect` `{kind: bonus|penaltyReduction, pct}`; 3 slots
+  (`EQUIP_SLOT_MAX=3`), frases congeladas "Slots de passiva cheios" (409) e "Badge sem
+  passiva não é equipável" (400); só a própria pessoa equipar. Passiva vale na premiação de
+  tarefa/atividade (+bonus cap +100%, penaltyReduction no atraso), no placar do mês e no preço
+  da loja: `applyStoreDiscount(price, effects) = max(1, round(price*(1-min(bonusSum,1))))`
+  (piso 1; a elegibilidade da compra continua medindo o preço da tabela — par medido).
+  `StorePrice` mostra o efetivo em destaque com `de {tabela}` riscado.
+- **Catálogo:** `prisma/cataloga-badges.sql` com os 50 badges, `INSERT ... ON CONFLICT (slug)
+  DO NOTHING` (idempotente; `createdBy` vem do primeiro COORDENADOR, coluna `createdBy` é
+  nullable pela migration `20261105160000_badge_created_by_nullable`). `npm run
+  db:catalogo-badges` (`scripts/apply-catalog-badges.mjs`), anexado ao `db:test:setup` e ao
+  `scripts/db-safe-deploy.sh`. **Gotchas medidos:** colunas camelCase precisam de aspas no
+  INSERT (`"isActive"`, `"createdBy"` — sem aspas o Postgres dobra para minúsculas e recusa);
+  comentário de cabeçalho com `;` exige strip das linhas `--` ANTES de split por `;`.
+- **Gatilhos R4:** cada módulo consumidor recebe porta local `recompute?: {recompute(userId)}`
+  default no-op; o composition root injeta `badgeRecompute` que envolve
+  `gamification.evaluateUserBadges` em try/catch com `console.error`. Episódio→pessoa:
+  compra→comprador, atestado→membro, relatório semanal/técnico→autor/membros ativos,
+  issue resolvido→`assigneeId` (não o resolvedor; issue sem responsável não dispara), evento
+  de lab→autor, responsabilidade finalizada→`userId` da linha, subtask CONCLUÍDA→marcador
+  (desmarcar não dispara), campo de perfil→pessoa, fechamento de mês→cada pessoa da linha
+  (depois do writeClose; cron com `systemActor` como DEC-54).
+- **Gate medido no fechamento:** suíte completa **285 arquivos / 2843 testes** verdes com
+  `DATABASE_URL` na 5433; `tsc` 0, lint sem erro, `arch:check` sem violação.
+  `tests/unit/api/monthly-board-close-route.test.ts` precisa de stubs de `users`/`badges` no
+  mock do módulo de gamificação porque o fechamento roda evaluate sobre as linhas escritas.
+- **Capturas G6:** `perfil-badges` (nova entrada em `scripts/capture-user-guide.mjs`, `--only`
+  casa IDs exatos) e `loja-participante` recapturadas com catálogo instalado na instância e a
+  conta gerente com passiva equipada. Guia: capítulos 7/8/9 documentam desconto, bloco Badges
+  e picker.
+
+## plan-v16 — ícones de badge no bucket (2026-11-05, DEC-243)
+
+- **Estado:** `fechado` em 2026-11-05, 6 fatias (S01..S06), plano em
+  `~/Projetos/displayquest-planos/plans/plan-v16-badges-icones/`. DEC-243: o ícone do badge entra
+  no bucket pelo desenho das capas de projeto/perfil (DEC-135/133), com conversão a WebP obrigatória
+  na escrita e fonte Lucide (ISC) nos arquivos do catálogo.
+- **Modelo:** `badges.iconKey` guarda a **chave** (`badges/<id>/<uuid>.webp`); o binário sai por
+  `GET /api/badges/[id]/icon/file` (autenticada, `Cache-Control: private, max-age=86400`), e as telas
+  montam `?v=<chave>` como quebra de cache. Chave nula → 404 "Ícone não encontrado".
+- **Escrita:** `PUT /api/badges/[id]/icon` — o gate `MANAGE_REWARDS` ("Sem permissão para atualizar
+  badges") corre **antes** de ler o multipart e antes do lookup do badge (par 403-antes-do-404 medido,
+  como nas capas). Só imagem passa (allowlist + magic bytes + 5 MB); o objeto gravado é o byte
+  **convertido** (`ImageProcessor.toWebP`), nunca o `.png` do upload. Trocar apaga o objeto velho só
+  depois de o registro apontar para o novo; falha do registro remove o objeto novo. `DELETE` remove o
+  objeto e zera a coluna.
+- **UI:** campo **Ícone do badge** no diálogo de criação/edição do `badge-manager` (pedido do dono em
+  2026-11-05: o envio não mora no cartão); o botão de editar cartão ganhou `aria-label` (botão-ícone,
+  regra da casa); cartões do painel e chips do perfil mostram `<img>` quando há chave, com fallback ao
+  ícone de categoria quando não. A recusa da rota chega como `role="alert"` na tela depois de salvar.
+  `BadgesAPI.uploadIcon/removeIcon` no api-client.
+- **Catálogo de imagens:** `assets/badge-icons/` — 31 SVGs Lucide (ISC) + 50 WebP (128×128, na cor
+  do próprio badge) + `manifest.json` com o pareamento slug→token→cor→arquivo. A guarda
+  `tests/unit/scripts/badge-icons-manifest.test.ts` congela manifest ↔ `cataloga-badges.sql`. Renomes
+  medidos na fonte Lucide v1.69.0: check-circle→circle-check, play→circle-play, bar-chart→chart-column,
+  alert-triangle→triangle-alert, check-square→square-check, plus-circle→circle-plus. Baixa-se do
+  pacote `lucide-static` (o repo `icons/` e o `lucide` npm não têm os SVGs renomeados).
+- **Script:** `scripts/apply-badge-icons.mjs` (`npm run db:badge-icons`, anexado ao `db:test:setup`):
+  `--check` valida manifest/arquivos sem tocar banco nem bucket, `--render` desenha os 50 WebP, apply
+  sobe cada WebP ao bucket com chave determinística `badges/<id>/icon.webp` e escreve `iconKey` na linha
+  do slug — pula badge que já tem chave (re-run não duplica objeto). Prisma/S3/sharp por import
+  dinâmico: `node scripts/apply-badge-icons.mjs --check` roda em node puro, e o tsx **não** resolve
+  import de `.ts` (a seam S3) a partir de `.mjs` — o apply usa `@aws-sdk/client-s3` direto com os
+  mesmos envs `S3_*` da seam.
+- **Capturas G6:** `admin-badges` (nova entrada no script, aba Badges, verificação "Gerenciar Badges")
+  e `perfil-badges` recapturadas com o catálogo de ícones aplicado (5432 e 5433). Guia: capítulo 9
+  documenta a aba Badges e o botão "Enviar ícone"; capítulo 8 descreve o ícone nos cartões.
+
+## plan-v19 — ícone de badge dentro de círculo na cor da badge (2026-11-06, DEC-251)
+
+- **Estado:** `fechado` em 2026-11-06, 1 fatia. Plano em
+  `~/Projetos/displayquest-planos/plans/plan-v19-vitrine-circulo/`. Commits: S01 `042c2a8`
+  (+ guia `91e13d3`), conserto da review `50b6f1e` (+ captura `f653c01`). Gate: suíte
+  **297 arquivos / 2919 testes** na 5433, tsc 0, lint 0, arch 1314/5550, docs sem aviso.
+- **DEC-251 (pedido do dono, 2026-11-06):** o ícone do bucket (`iconKey`) de
+  `BadgeMedallion` mora **dentro de um círculo arredondado com contorno na cor da badge**
+  (`border-2` md, `border` sm; img `h-7`/`h-3` por dentro; fallback `border-border` quando a
+  badge não tem cor). A vitrine é feita desses círculos: só equipadas, máximo 3, **sem slot
+  vazio** — com uma equipada aparece um círculo. As cinco superfícies consomem a peça única
+  (vitrine md, bloco sm, picker, painel admin, diálogo de ícone).
+- **Conserto da review (must-fix):** `badge-manager` não consumia a peça — o círculo do
+  cartão desenhava só o glifo e o corpo entregava `img` cru; o diálogo de edição igual. Agora
+  o cartão usa `BadgeMedallion` md e o `img` cru do corpo saiu. A pré-visualização do arquivo
+  recém-escolido no diálogo continua img local: o byte ainda não tem id nem chave, a peça não
+  pode servê-lo. Guardas em `badge-icon-ui.test.tsx` medem o círculo do cartão, do diálogo e
+  do chip.
+- **Incidente de execução (lição):** a escrita da guarda nova de `badge-medallion.test.tsx`
+  sobrescreveu a guarda de plan-v17 que já existia em `e24252f` (5 testes da cadeia de ícone).
+  Restaurada e mesclada (5 + 4). Antes de escrever um teste em caminho novo, `git ls-files` o
+  caminho. A contagem da suíte entregou a divergência (2913 em vez de 2918).
+
+## plan-v18 — vitrine, cartões de badge, leaderboard com abas, projetos sem abas (2026-11-06, DEC-247..250)
+
+- **Estado:** `fechado` em 2026-11-06, 5 fatias (S01..S05), plano em
+  `~/Projetos/displayquest-planos/plans/plan-v18-vitrine-e-leaderboard/`. Gate no fechamento:
+  suíte **297 arquivos / 2914 testes** na 5433, tsc 0, lint exit 0, arch 1314 módulos / 5550
+  dependências sem violação, docs:build/ docs:check verdes. Commits: S01 `51d3bda` (+ conserto
+  DEC-250 `7f83019`), S02 `4c3a305`, S03 `ee105cd`, S04 `dd60f92`, S05 `870a21c`.
+- **DEC-247 (ADR-004, posição revogada pela DEC-250):** a vitrine `ProfileBadgeShowcase` saiu da
+  faixa do nome para a coluna do nome, acima das roles. O dono recusou a posição medida na tela
+  ("colada no canto esquerdo") em 2026-11-06.
+- **DEC-250 (conserto do dono, mesma data):** a vitrine mora no **canto direito** do cartão de
+  identidade, onde a linha das funções morava antes do S01; as funções voltam para a coluna do
+  nome, abaixo do email. Perfil próprio e perfil de terceiro. Regras de seleção de DEC-245 intactas.
+  Guarda `profile-card-equipped-badges.test.tsx` reescrita: funções dentro da coluna `min-w-0`,
+  vitrine fora dela, dentro da coluna com `sm:items-end`.
+- **DEC-248 (ADR-005):** o bloco Badges do perfil lista **só as conquistadas**, cada uma em cartão
+  discreto mais largo que alto: medálhão `sm`, nome, selo do efeito quando a badge tem passiva
+  (`Passiva: +X% pontos` / `Equipada: +X% pontos`), data relativa, e a equipada com contorno em
+  destaque (`ring-2 ring-primary`). Os chips "Em progresso" saíram do bloco; o GET
+  `/api/user-badges` continua devolvendo `progress` para outras telas.
+- **DEC-249 (ADR-006):** `/dashboard/leaderboard` tem duas abas abertas a todo autenticado:
+  **Projetos** por primeiro (padrão), com o `ProjectManagerDashboard` intacto
+  (`scopeDescription` "Todos os projetos", `onProjectSelect` abre o detalhe), e **Pessoas**, o
+  ranking de hoje intacto. `/dashboard/projetos` perde as abas e o painel: só filtros, contagem e
+  lista. TaskProvider entrou na lista de caminhos do `client-layout` para a rota do leaderboard.
+  Consequência aberta: a chave `DASHBOARD_PROJECT_MANAGER` ficou sem consumidor vivo (sobram a
+  definição em `permissions.ts` e os guardas `permission-keys.test.ts` / `rbac-ui-parity.test.ts`);
+  a decisão de removê-la (DEC-251, contador de chaves cairia para 23) ficou para o dono.
+- **Gotchas medidos do plano:** Radix Tabs 1.1.2 seleciona por `mousedown` — `fireEvent.click`
+  sozinho não ativa a aba, e em mobile o rótulo do tab é `hidden sm:inline` (`getByRole("tab", {name})`
+  não acha; seletor estável `[role="tab"][id$="trigger-<value>"]`). A suíte de página do ranking
+  usa o helper `renderPessoas` (mouseDown + waitFor `aria-selected`). A entrada `aba` do loop de
+  SCREENS do script de captura não existe — só INTERACTIONS trata `aba`; `perfil-badges` verifica
+  o nome de um badge semeado ("Vinte e Cinco Tarefas"), porque o texto "Em progresso" saiu da tela.
+- **Regra de infraestrutura (2026-11-06, dono):** nenhum agente sobe `next dev`; a tela é só o
+  container docker em 3000, reconstruído para o código chegar (`docker compose build app` em
+  background, conferir a data da imagem). Capturas apontam para 3000.
+
+## plan-v17 — badges visuais: medálhão, vitrine, equipar na Configurações (2026-11-05, DEC-244..246)
+
+- **Estado:** `fechado` em 2026-11-05, 6 fatias (S01..S06), plano em
+  `~/Projetos/displayquest-planos/plans/plan-v17-badges-visuais/`. Gate completo no fechamento:
+  tsc 0, lint limpo, suíte **295 arquivos / 2903 testes** na 5433, arch 1312 módulos / 5543
+  dependências sem violação, docs:build/ docs:check verdes. Sem schema novo.
+- **DEC-244 (ADR-001):** peça única `components/ui/badge-medallion.tsx` (`BadgeMedallion`) desenha
+  o ícone do badge em toda superfície: `iconKey` → `<img>` da rota autenticada com `?v=<chave>` >
+  glifo de texto `icon` na cor do badge > ícone Lucide da categoria (`BadgeCategoryIcon`).
+  Consumida pelos chips do bloco, pela vitrine do card, pelo picker, pelo painel admin e pelo diálogo
+  de ícone. `badgeCategoryLabel` em `backend/domain/gamification/badge-category-rules.ts` é a fonte
+  única dos nomes (Conquista/Marca/Momento/Mundo); `badgeCategoryChipClass` congela as cores dos chips
+  — o pill do catálogo do admin passou a consumir as duas (S06), e o teste do badge-manager congela
+  rótulos em português e os ícones (Crown/Trophy) do cartão.
+- **DEC-245 (ADR-002):** `components/ui/profile-badge-showcase.tsx` — vitrine de medálhões `md` no
+  card de identidade (perfil próprio e de terceiro): só equipadas, máximo `EQUIP_SLOT_MAX` (3),
+  earnedAt do mais recente ao mais antigo, nome/efeito só em tooltip, **sem estado vazio** — a
+  ausência é a surpresa.
+- **DEC-246 (ADR-003):** o equipar mora só na aba **Configurações** do perfil próprio, em modo de
+  edição: `components/ui/profile-badge-equip-picker.tsx` ("Badges equipáveis", contador `Equipadas
+  (n/3)`, botão por passiva). A autoridade continua na rota POST `user-badges/[userId]/[badgeId]/equip`
+  com as frases de `equip-rules` ("Slots de passiva cheios" 409, "Badge sem passiva não é equipável"
+  400) — nenhuma mudança de rota/use case. O bloco Badges do perfil **é leitura**: perdeu o prop
+  `canEquip`, os botões e o contador; a equipada continua como estado visível (anel `ring-2
+  ring-primary` + selo do efeito no chip).
+- **Cache compartilhado do equipar (should-fix da review S03):** `lib/badges/equipped-sync.ts`
+  (`subscribeEquipped`/`markEquipped` por userId) — a casa **não tem QueryClientProvider montado**
+  (react-query está instalado, `useQuery` não é padrão da casa). O picker publica depois de a rota
+  responder; bloco e vitrine assinam e atualizam as linhas sem remontar.
+- **Gotcha medido:** em mobile o rótulo do tab do painel é `hidden sm:inline` — o nome acessível fica
+  vazio e `getByRole("tab", {name})` não acha; Radix tabs 1.1.2 **não** põe `data-value`. Seletor
+  estável: `[role="tab"][id$="trigger-badges"]`.
+- **Falha de leitura em tela tem que dizer role=alert, não estado vazio** (regra da casa, padrão
+  `ModernAdminPanel`): o picker distingue "não foi possível carregar" de "nenhuma badge com passiva".
+- **Capturas G6:** `perfil-edicao` mudou de `rolarAte` para `text=Badges equipáveis` (o controle novo
+  que a prosa nomeia), `perfil-badges` recapturada com os chips do medálhão. Guia: capítulos 7/8/9.
+
+## plan-v20 — Temporada: quadro anual, fechamento na virada, aba no leaderboard (2026-11-06, DEC-252..256)
+
+- **Estado:** `fechado` em 2026-11-06, 3 fatias (S01 fechamento, S02 aba, S03 guia+capturas). Plano em
+  `~/Projetos/displayquest-planos/plans/plan-v20-temporada/`. Commits: S01 `4f4575c`, S02 `548f64f`,
+  S03 `d6dde79`. Gate no fechamento: suíte **303 arquivos / 2967 testes** na 5433, tsc 0, lint 0,
+  arch 1324 módulos / 5602 dependências sem violação, docs:build/ docs:check verdes.
+- **DEC-252:** a temporada é **linha da MESMA coleção** de fechamento de quadro — `board_month_closes`
+  com `month=AAAA` e track `SEASON_POINTS`; as linhas de placar vão em `month_history`. Nenhuma tabela
+  nem coluna nova. Track é vocabulário fechado em `backend/domain/gamification/board-tracks.ts`.
+- **DEC-253:** a pontuação da temporada é `users.points` no instante do fechamento. O reset zera
+  `points` e `currentMonthPoints` de todos; histórico de premiação, compras, badges e `projects.points`
+  não mudam. A escrita de reset é `zeroFields` no port `MonthCloseWrite` da mesma coleção.
+- **DEC-254:** fechamento por cron na virada — `'0 0 1 * *'` America/Sao_Paulo fecha **dezembro e
+  depois a temporada** (ordem medido em teste do handler); rota de gestão `POST /api/board/season-close`
+  exige `MANAGE_USERS`; ator de sistema `SEASON_CLOSE` só no cron (guarda `systemActor(` em rotas).
+  Ano fechado recusado: `closeTargetSeasonYear(now)` — fechar ano anterior à virada é 409
+  (`seasonAlreadyClosedMessage`). Primeira temporada: 2026, fecha 31/12/2026.
+- **DEC-255:** aba **Temporada** no leaderboard, entre Projetos e Pessoas. Em curso: pódio e tabela pelo
+  saldo `users.points` com a MESMA régua de desempate do quadro (`compareBySeasonPosition`); coluna
+  "Pontos da temporada". Fechada: valor e posição congelados na linha, seletor de ano com sentinela
+  `temporada em curso`, campeão com capa como fundo, três estados de leitura (pending, `role="alert"`
+  com retry, vazio com aviso).
+- **DEC-256:** pós-reset, as métricas de **pontos** das badges recomputam do zero da temporada; badges
+  concedidas permanecem.
+- **Gotcha de leitura:** `GET /api/board?year=AAAA` devolve o quadro congelado; a resposta sem parâmetro
+  ganhou `seasonYear` (ano em curso, derivado pelo servidor via `civilYearOfInstant` — DEC-132) e
+  `closedSeasons` (lista dos anos fechados que alimenta o seletor).
+- **Captura `ranking-temporada`** (entrada nova em `scripts/capture-user-guide.mjs`): aba Temporada em
+  curso, verificada pelo texto "Pontos da temporada". A temporada fechada **não é capturável hoje** —
+  a primeira fecha em 31/12/2026 e a rota recusa fechar ano anterior; o guia descreve o fechamento em
+  prosa sem foto.
+
+## plan-v21 — entregáveis, cronograma, descrição, bio, links (2026-11-09, DEC-257..264)
+
+- **Estado:** `fechado` em 2026-11-09, 10 fatias. Plano em
+  `~/Projetos/displayquest-planos/plans/plan-v21-entregaveis-markdown-links/`. Gate no fechamento:
+  suíte **330 arquivos / 3168 testes** na 5433, tsc 0, lint sem erro, arch 1374 módulos / 5902
+  dependências sem violação, docs:build/ docs:check verdes.
+- **DEC-257 (ADR-001):** em tarefa nova, o seletor de atividade lista só `OPEN`; a rota `POST`
+  **rejeita** atividade `COMPLETION_REQUESTED`/`DONE` (*"Atividade do cronograma não pode ser usada em tarefa nova"*),
+  e a rota `PUT` aceita link de atividade não-`OPEN` reenviado, porque a edição de tarefa já tinha esse
+  contrato medido.
+- **DEC-258 (ADR-002):** `project_deliverables.fileKey/fileName/fileSize` são a linha do arquivo.
+  O upload é gateado pela ACL do projeto **antes** de ler o corpo, o arquivo entra no bucket
+  `projects/<id>/deliverables/<entregável>/<uuid>` pelo `BlobStorePort`, e a remoção é pela mesma
+  autoridade, com o objeto do bucket apagado só depois do registro limpo. Quem não gerencia não vê
+  seletor nem botão de upload; o download é leitura aberta, e id forjado não acha objeto.
+- **DEC-259 (ADR-003):** `project_deliverables.goalId` é FK `ON DELETE SET NULL` em `project_goals`;
+  o seletor do entregável só existe para quem gerencia o projeto; as metas do seletor são metas do
+  mesmo projeto, a meta do projeto é `Sem meta`, e meta do outro projeto é recusada. Apagar a meta
+  não apaga o entregável.
+- **DEC-260 (ADR-004):** `project_goals.completedAt`/`completedBy` registram a meta cumprida; o
+  checkbox `Cumprir meta N` é para gestão do projeto, marcar grava `now` e o ator, desmarcar zera os
+  dois, e `completedBy` é FK `ON DELETE SET NULL` em `users`.
+- **DEC-261 (ADR-005):** o ícone de descrição em cada cartão da lista de projetos aparece para
+  gestão global **ou** membro com `situacao ATIVO` no vínculo. O servidor é a autoridade da escrita;
+  a rota devolve *"Usuário não tem permissão para gerenciar este projeto"* para quem não é.
+- **DEC-262 (ADR-006):** a peça `MarkdownEditorDialog` é a mesma para a descrição do projeto e a bio:
+  textarea, preview, botão `Anexar imagem` e drop de imagem sobre a textarea. O arquivo vai para o
+  bucket na família da entidade (`projects/<id>/markdown-images/<uuid>` ou
+  `users/<id>/markdown-images/<uuid>`), só com gate de escrita, e o markdown é inserido no cursor.
+  As rotas dedicadas (`PUT /api/projects/[id]/description`, `PUT /api/users/[id]/bio`) salvam só o
+  campo.
+- **DEC-263 (ADR-007):** `users.bio` aceita markdown e é escrita pela própria pessoa ou por gestão de
+  contas. A bio markdown usa as MESMAS peças do projeto, e a leitura é aberta no perfil próprio, no
+  perfil de terceiro e no diálogo de gestão do painel. O limite de bio é 2000 caracteres.
+- **DEC-264 (ADR-008):** `users.links` é JSONB `[{label,url}]` com no máximo 10 links, label de até
+  50, URL só `http`/`https`; URL sem protocolo passa a `https://`, `ftp:` e `javascript:` são
+  recusados. O favicon é derivado no render de
+  `https://icons.duckduckgo.com/ip3/<hostname>.ico`; quando a imagem falha, o glyph de link entra no
+  lugar, e o link continua.
+- **Gotcha do editor de markdown:** o `<textarea>` tem que usar `value` controlado no React, não o
+  `defaultValue` de um `form` não controlado; o `change` da bolha de drop é a mesma chamada da
+  textarea, e a peça de preview fica à direita. A casa de markdown em `lib/markdown-render.ts` é
+  escape-first; o parser de imagem usa regex fechada, não a biblioteca.
+- **Gotcha de captura S09:** `perfil-links` exige `aba: "Configurações"` na captura do perfil próprio,
+  porque os links só aparecem na leitura da aba de configurações; `perfil-terceiro-links` vem da rota
+  `/dashboard/profile?userId=21`, que hoje aponta para o usuário semeado pelo guia.
+- **Dados de captura do guia:** o usuário 21 do guia (`Guia · Participante`) precisa de `links` e dos
+  dados de documentos para a leitura. O usuário de coordenação da captura usa `Guia · Coordenação`
+  (`coordenador@lab.com`), e `perfil-links` captura `gerente@lab.com` na Configurações.

@@ -1,4 +1,4 @@
-import type { ActorRef, GamificationSourceType } from "@/backend/domain"
+import type { ActorRef, BadgeCriteriaJson, GamificationSourceType } from "@/backend/domain"
 
 /**
  * O vocabulário é o do domínio (`Progression.ts`) — re-exportado, não copiado. A cópia local
@@ -19,6 +19,12 @@ export interface AwardFromTaskCompletionCommand {
   taskId: number
   /** GAP-04 (fecha em OND6-B2): null era aceito em runtime (default 10) sem estar no tipo. */
   taskPoints?: number | null
+  /**
+   * plan-v15 S06 (R10): a penalidade de atraso que já está dentro de `taskPoints`. O
+   * multiplicador de redução atua sobre ela na ESCRITA; quando vem ausente, a redução não
+   * tem sobre o que atuar (tarefa no prazo/sem prazo) e só o bônus entra.
+   */
+  latePenalty?: number
 }
 
 /**
@@ -53,15 +59,11 @@ export interface GamificationAwardResult {
   alreadyAwarded: boolean
 }
 
-export interface BadgeCriteriaInput {
-  points?: number
-  tasks?: number
-  projects?: number
-  workSessions?: number
-  weeklyHours?: number
-  consecutiveDays?: number
-  specialCondition?: string
-}
+/**
+ * plan-v15 S02 (R6): o único formato escrevível de criteria é o v2. O tipo aceita `unknown`
+ * por paridade com o wire; `validateBadgeCriteriaInput` decide o que passa.
+ */
+export type BadgeCriteriaInput = BadgeCriteriaJson
 
 export interface CreateBadgeCommand {
   name: string
@@ -70,6 +72,8 @@ export interface CreateBadgeCommand {
   icon?: string | null
   color?: string | null
   criteria?: BadgeCriteriaInput | null
+  /** plan-v16 S01 (DEC-243): chave do ícone no bucket, normalizada pela regra do domínio. */
+  iconKey?: string | null
   isActive?: boolean
   createdBy: number
 }

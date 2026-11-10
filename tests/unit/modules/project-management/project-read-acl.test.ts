@@ -23,6 +23,7 @@ import { GetProjectForActorUseCase } from "@/backend/modules/project-management/
 import { GetProjectVolunteersUseCase } from "@/backend/modules/project-management/application/use-cases/get-project-volunteers.use-case";
 import { ListProjectDeliverablesUseCase } from "@/backend/modules/project-management/application/use-cases/list-project-deliverables.use-case";
 import { ListProjectsForActorUseCase } from "@/backend/modules/project-management/application/use-cases/list-projects-for-actor.use-case";
+import type { ProjectCompletionRequestsPort } from "@/backend/modules/project-management/application/ports/project-completion-requests.port";
 import { AssertCanManageProjectUseCase } from "@/backend/modules/project-management/application/use-cases/assert-can-manage-project.use-case";
 import { ListProjectMembersUseCase } from "@/backend/modules/project-membership/application/use-cases/list-project-members.use-case";
 
@@ -102,6 +103,7 @@ function membershipsPort(members: typeof MEMBERS, membershipRoles: string[] | nu
     // `as never` de propósito (padrão da casa para porta parcial): só os métodos exercitados
     // existem, e o que não deveria ser chamado não é.
     port: {
+      async findActiveMembership() { return null },
       async findMembership() {
         return membershipRoles === null ? null : { id: 99, roles: membershipRoles as never };
       },
@@ -133,10 +135,19 @@ describe("canActorAccessProjectDecision — a política de leitura (V5-2a, DEC-1
   });
 });
 
+const completionPort: ProjectCompletionRequestsPort = {
+  async listProjectIdsWithRequests() {
+    return [];
+  },
+  async listCompletionRequests() {
+    return [];
+  },
+};
+
 describe("ListProjectsForActorUseCase — a lista não depende do ator", () => {
   it("VOLUNTARIO sem membership recebe TODOS os projetos", async () => {
     const { port, calls } = projectsPort();
-    const useCase = new ListProjectsForActorUseCase({ projects: port });
+    const useCase = new ListProjectsForActorUseCase({ projects: port, completionRequests: completionPort });
 
     const list = await useCase.execute({ actorId: 4, actorRoles: ["VOLUNTARIO"] });
     expect(list.map((p) => p.id)).toEqual([10, 11]);
@@ -146,7 +157,7 @@ describe("ListProjectsForActorUseCase — a lista não depende do ator", () => {
 
   it("COORDENADOR e VOLUNTARIO recebem a MESMA lista", async () => {
     const { port } = projectsPort();
-    const useCase = new ListProjectsForActorUseCase({ projects: port });
+    const useCase = new ListProjectsForActorUseCase({ projects: port, completionRequests: completionPort });
 
     const asCoord = await useCase.execute({ actorId: 1, actorRoles: ["COORDENADOR"] });
     const asVoluntario = await useCase.execute({ actorId: 4, actorRoles: ["VOLUNTARIO"] });
@@ -155,10 +166,28 @@ describe("ListProjectsForActorUseCase — a lista não depende do ator", () => {
 
   it("sem ator a lista recusa com a mensagem congelada, não devolve lista vazia", async () => {
     const { port, calls } = projectsPort();
-    const useCase = new ListProjectsForActorUseCase({ projects: port });
+    const useCase = new ListProjectsForActorUseCase({ projects: port, completionRequests: completionPort });
 
     await expect(useCase.execute({ actorId: 0, actorRoles: [] })).rejects.toThrow(DENIED);
     expect(calls).toEqual([]);
+  });
+
+  it("a lista marca por projeto se ele tem conclusão solicitada (fix 4, projeção)", async () => {
+    const { port } = projectsPort();
+    const flagged: ProjectCompletionRequestsPort = {
+      async listProjectIdsWithRequests() {
+        return [10];
+      },
+      async listCompletionRequests() {
+        return [];
+      },
+    };
+    const useCase = new ListProjectsForActorUseCase({ projects: port, completionRequests: flagged });
+
+    const list = await useCase.execute({ actorId: 4, actorRoles: ["VOLUNTARIO"] });
+    const byId = new Map(list.map((p) => [p.id, p]));
+    expect(byId.get(10)?.completionRequested).toBe(true);
+    expect(byId.get(11)?.completionRequested).toBe(false);
   });
 });
 

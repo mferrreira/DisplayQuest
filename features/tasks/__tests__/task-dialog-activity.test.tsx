@@ -7,6 +7,8 @@
  *      a tela não calcula fuso).
  *   3. A lista da criação não oferece linha passada; a da edição oferece (DEC-99: a recusa é
  *      do seletor, não do servidor — tarefa ligada a etapa que virou passada continua salvável).
+ *   3b. plan-v21 S01 (DEC-257): a criação também não oferece linha COMPLETION_REQUESTED nem
+ *      DONE — só OPEN. Na pré-seleção, a vigente pedida para conclusão não é escolha.
  *   4. O submit manda `activityId`; "Sem atividade" manda `null`; corpo SEM a lista carregada
  *      não leva a chave (corpo parcial não apaga vínculo) — carregando ou sem linha, o campo
  *      existe e diz o que está havendo ("Carregando..." / "Sem atividade").
@@ -125,9 +127,14 @@ function seedCronograma() {
     months: ["2026-05", "2026-10", "2026-12"],
     goals: [],
     activities: [
-      activity({ id: 40, order: 1, description: "Etapa vigente", firstMonth: "2026-09", lastMonth: "2026-11", current: true, months: ["2026-09", "2026-10", "2026-11"], periodoInicio: "2026-09-01", periodoFim: "2026-11-30" }),
+      // A pedida vem primeiro na lista: com o filtro do status ausente, a pré-seleção ingênua
+      // ("a primeira current") cai nela — é assim que este arquivo prova que a regra da
+      // pré-seleção é "OPEN vigente", não "a vigente".
+      activity({ id: 43, order: 4, description: "Etapa pedida", status: "COMPLETION_REQUESTED", firstMonth: "2026-09", lastMonth: "2026-11", months: ["2026-09", "2026-10", "2026-11"], periodoInicio: "2026-09-01", periodoFim: "2026-11-30", current: true, requestedBy: 1, requestedAt: null }),
+      activity({ id: 40, order: 1, description: "Etapa vigente", firstMonth: "2026-09", lastMonth: "2026-11", months: ["2026-09", "2026-10", "2026-11"], periodoInicio: "2026-09-01", periodoFim: "2026-11-30", current: true }),
       activity({ id: 41, order: 2, description: "Etapa futura", firstMonth: "2026-12", lastMonth: "2027-01", months: ["2026-12", "2027-01"], periodoInicio: "2026-12-01", periodoFim: "2027-01-31" }),
       activity({ id: 42, order: 3, description: "Etapa passada", firstMonth: "2026-05", lastMonth: "2026-08", months: ["2026-05", "2026-08"], periodoInicio: "2026-05-01", periodoFim: "2026-08-31" }),
+      activity({ id: 44, order: 5, description: "Etapa concluída", status: "DONE", firstMonth: "2026-12", lastMonth: "2027-01", months: ["2026-12", "2027-01"], periodoInicio: "2026-12-01", periodoFim: "2027-01-31", approvedBy: 1, approvedAt: null }),
     ],
   };
 }
@@ -168,6 +175,16 @@ describe("seletor de atividade — criação", () => {
     expect(await screen.findByRole("option", { name: "1. Etapa vigente" })).toBeInTheDocument();
     expect(screen.getByRole("option", { name: "2. Etapa futura" })).toBeInTheDocument();
     expect(screen.queryByRole("option", { name: "3. Etapa passada" })).not.toBeInTheDocument();
+  });
+
+  it("a criação não oferece a linha pedida para conclusão nem a concluída (DEC-257)", async () => {
+    renderDialog(null);
+    await openActivitySelect();
+
+    expect(await screen.findByRole("option", { name: "1. Etapa vigente" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "2. Etapa futura" })).toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: "4. Etapa pedida" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: "5. Etapa concluída" })).not.toBeInTheDocument();
   });
 
   it("o submit manda o activityId da atividade vigente pré-selecionada", async () => {
@@ -274,6 +291,20 @@ describe("seletor de atividade — edição", () => {
 
     await openActivitySelect();
     expect(await screen.findByRole("option", { name: "3. Etapa passada" })).toBeInTheDocument();
+  });
+
+  it("a tarefa ligada a uma etapa concluída mantém a opção na lista e o vínculo no salvar (DEC-257)", async () => {
+    const linked = makeTask({ id: 51, title: "Tarefa da etapa concluída", projectId: 3, activityId: 44 });
+    renderDialog(linked);
+
+    const trigger = await screen.findByRole("combobox", { name: "Atividade da tarefa" });
+    await waitFor(() => expect(trigger).toHaveTextContent("5. Etapa concluída"));
+
+    const user = userEvent.setup({ delay: null });
+    await user.click(screen.getByRole("button", { name: "Salvar" }));
+
+    expect(mocks.updated).toHaveLength(1);
+    expect(mocks.updated[0].data.activityId).toBe(44);
   });
 
   it("salvar sem mexer no seletor reenvia o mesmo vínculo (o servidor não reescreve)", async () => {

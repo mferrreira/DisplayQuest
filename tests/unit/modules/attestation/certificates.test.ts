@@ -182,7 +182,7 @@ describe("geração do atestado (V5-10a, DEC-170/171)", () => {
     expect(pdf.renders[0].atividades_1).toBe("Coleta de dados"); // cruza 2026-10 ✓
   });
 
-  it("acrescenta logs do mês mesmo sem task na fonte", async () => {
+  it("resume logs do mês mesmo sem task na fonte", async () => {
     const sources = sourcesPort({
       activities: [],
       sessionLogs: [{ activity: "Coleta de dados", note: "Amostras catalogadas", endTime: "2026-09-08T12:00:00.000Z" }],

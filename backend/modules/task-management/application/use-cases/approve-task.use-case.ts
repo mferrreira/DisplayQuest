@@ -10,6 +10,7 @@ import {
   supportsSubtasks,
   systemActor,
   totalAwardForCompletion,
+  latePenaltyForCompletion,
   type Task,
 } from "@/backend/domain";
 import type { ApproveTaskCommand, TaskCompletionResult } from "@/backend/modules/task-management/application/contracts";
@@ -126,7 +127,8 @@ export class ApproveTaskUseCase {
         if (task.taskVisibility !== "public" && !task.isGlobal) {
           await this.dependencies.actors.incrementCompletedTasks(taskWithAssignees.assignedTo)
         }
-        const pointsToAward = totalAwardForCompletion(task, awardableSubtasks(task, subtaskRows), new Date())
+        const completionDate = new Date()
+        const pointsToAward = totalAwardForCompletion(task, awardableSubtasks(task, subtaskRows), completionDate)
         // plan-v3 OND4-A: o creditado, não o pedido. `awardedTo` é quem recebeu.
         awardedPoints = await publishTaskCompletionAward(
           this.events,
@@ -134,6 +136,7 @@ export class ApproveTaskUseCase {
           command.taskId,
           pointsToAward,
           task.projectId ?? null,
+          latePenaltyForCompletion(task, completionDate),
         )
         awardedTo = taskWithAssignees.assignedTo
       }

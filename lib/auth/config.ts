@@ -43,6 +43,7 @@ export const authOptions: AuthOptions = {
   },
   pages: {
     signIn: "/login",
+
   },
   callbacks: {
     async jwt({ token, user, trigger, session }: { token: any; user?: any, trigger?: any, session?: any }) {
@@ -55,6 +56,8 @@ export const authOptions: AuthOptions = {
         // V5-3 (DEC-137): a chave da capa do perfil viaja com a sessão, como o avatar — é ela que o
         // cartão "Meu Perfil" usa para mostrar a capa e quebrar o cache do navegador.
         token.bannerKey = (user as any).bannerKey
+        // DEC-242: a chave do avatar no bucket viaja como a capa.
+        token.avatarKey = (user as any).avatarKey
         token.bio = (user as any).bio
         token.profileVisibility = (user as any).profileVisibility
         // V5-4a (DEC-138): os campos abertos. O CPF não entra no token nem na sessão.
@@ -64,6 +67,7 @@ export const authOptions: AuthOptions = {
         token.fundingAgency = (user as any).fundingAgency
         token.fundingAgencyOther = (user as any).fundingAgencyOther
         token.level = (user as any).level
+        token.links = (user as any).links
         token.points = (user as any).points
         // plan-v9 S01 (ADR-001): o placar do mes viaja com a sessao como o saldo — o cabecalho
         // (S06, ADR-007) mostra este numero, e nao o de todos os usuarios.
@@ -80,6 +84,7 @@ export const authOptions: AuthOptions = {
         token.email = session.user.email
         token.avatar = session.user.avatar
         token.bannerKey = session.user.bannerKey
+        token.avatarKey = session.user.avatarKey
         token.bio = session.user.bio
         token.profileVisibility = session.user.profileVisibility
         token.registrationNumber = session.user.registrationNumber
@@ -88,6 +93,7 @@ export const authOptions: AuthOptions = {
         token.fundingAgency = session.user.fundingAgency
         token.fundingAgencyOther = session.user.fundingAgencyOther
         token.level = session.user.level
+        token.links = session.user.links
         token.points = session.user.points
         token.currentMonthPoints = session.user.currentMonthPoints
         token.completedTasks = session.user.completedTasks
@@ -119,6 +125,8 @@ export const authOptions: AuthOptions = {
             email: true,
             avatar: true,
             bannerKey: true,
+            // DEC-242: a chave do avatar no bucket viaja na sessão como a da capa.
+            avatarKey: true,
             bio: true,
             profileVisibility: true,
             // V5-4a (DEC-138): os dados de pessoa que o perfil mostra. O CPF fica FORA da sessão
@@ -130,6 +138,7 @@ export const authOptions: AuthOptions = {
             fundingAgency: true,
             fundingAgencyOther: true,
             level: true,
+            links: true,
             points: true,
             // plan-v9 S06 (ADR-007): o placar do mes em curso — o numero que a pila do cabecalho
             // conta e que o Quadro de Lideranca ordena. Sem ele aqui, o header leria `undefined`
@@ -163,6 +172,7 @@ export const authOptions: AuthOptions = {
           email: token.email,
           avatar: token.avatar,
           bannerKey: token.bannerKey,
+          avatarKey: token.avatarKey,
           bio: token.bio,
           profileVisibility: token.profileVisibility,
           registrationNumber: token.registrationNumber,
@@ -171,6 +181,7 @@ export const authOptions: AuthOptions = {
           fundingAgency: token.fundingAgency,
           fundingAgencyOther: token.fundingAgencyOther,
           level: token.level,
+          links: token.links,
           points: token.points,
           currentMonthPoints: token.currentMonthPoints,
           completedTasks: token.completedTasks,

@@ -9,7 +9,8 @@ const { projectManagement: projectManagementModule } = getBackendComposition()
  * V5-2c (DEC-61/63) — entregáveis do projeto: `GET` lista, `POST` cria.
  *
  * A rota é fina (padrão D4): autentica, valida o id, monta o ator e mapeia. Nome, quantidade
- * e os 400 são do domínio; 404/403 são dos use cases.
+ * e os 400 são do domínio; 404/403 são dos use cases. S04 (DEC-259): `goalId` do corpo também
+ * é validado pelo domínio — meta de outro projeto é 400, a rota só repassa o valor.
  */
 
 function invalidProject() {
@@ -49,6 +50,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       actorId: auth.actor.id,
       name: body?.name,
       quantity: body?.quantity,
+      goalId: body?.goalId,
     })
     return NextResponse.json({ deliverable }, { status: 201 })
   } catch (error: unknown) {

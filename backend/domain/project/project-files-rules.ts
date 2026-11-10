@@ -70,6 +70,47 @@ export function deliverableValidationMessage(errors: string[]): string {
 }
 
 // ---------------------------------------------------------------------------
+// Vínculo entregável ↔ meta (S04, plan-v21, DEC-259)
+// ---------------------------------------------------------------------------
+
+/**
+ * A meta só pode ser do MESMO projeto. A frase é uma só para meta de fora e meta inexistente:
+ * a tela não pode distinguir "sumiu" de "é de outro dono" sem virar regra em duas cópias, e
+ * `goalId` nulo é meta normal — entregável sem meta é entregável legítimo.
+ */
+/** R11 (S07, DEC-262): a descrição aceita imagem, e só imagem — PDF é blob válido do bucket e não entra no texto. */
+export const MARKDOWN_IMAGE_ONLY_MESSAGE = "Apenas imagem na descrição"
+
+export const MARKDOWN_IMAGE_NAME_MESSAGE = "Nome de arquivo inválido"
+
+/** Chave da família markdown-images: `projects/<id>/markdown-images/<uuid>.<ext>` — lista de extensões fechada. */
+export function markdownImageKey(prefixProjectId: number, uuid: string, extension: string): string {
+  return `projects/${prefixProjectId}/markdown-images/${uuid}.${extension}`
+}
+
+/** O `[name]` da rota de leitura é exatamente `<uuid>.<ext>` da família; nada de traversal. */
+export const MARKDOWN_IMAGE_NAME_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(png|jpg|webp|gif)$/
+
+export function isMarkdownImageName(name: string): boolean {
+  return MARKDOWN_IMAGE_NAME_PATTERN.test(name)
+}
+
+/** R13 (S08, DEC-263): a bio tem a mesma régua de imagem da descrição, na família `users`. */
+export function userMarkdownImageKey(userId: number, uuid: string, extension: string): string {
+  return `users/${userId}/markdown-images/${uuid}.${extension}`
+}
+
+/** Teto da bio (R12, DEC-263): a mesma postura de medida da descrição do projeto. */
+export const BIO_MAX_LENGTH = 2000
+export const BIO_LENGTH_MESSAGE = "Bio não pode ter mais de 2000 caracteres"
+
+export const DELIVERABLE_GOAL_LINK_MESSAGE = "Meta não pertence a este projeto";
+
+export function deliverableGoalLinkError(params: { goalProjectId: number; projectId: number }): string | null {
+  return params.goalProjectId === params.projectId ? null : DELIVERABLE_GOAL_LINK_MESSAGE;
+}
+
+// ---------------------------------------------------------------------------
 // Anexo (project_attachments): prefixo da chave + metadado
 // ---------------------------------------------------------------------------
 
@@ -103,6 +144,22 @@ export function projectActivityFilePrefix(projectId: number, activityId: number)
     throw new Error(`atividade inválida para montar prefixo de prova: ${activityId}`);
   }
   return `projects/${projectId}/activities/${activityId}/files`;
+}
+
+/**
+ * Prefixo de chave do ARQUIVO de entregável no bucket (S02, plan-v21):
+ * `projects/<projeto>/deliverables/<entregável>/files`. Mesma validação dos dois anteriores: o
+ * `sanitizeBlobPrefix` do seam só barra traversal, e o arquivo pertence ao entregável, não ao
+ * projeto solto.
+ */
+export function projectDeliverableFilePrefix(projectId: number, deliverableId: number): string {
+  if (!Number.isInteger(projectId) || projectId <= 0) {
+    throw new Error(`projeto inválido para montar prefixo de arquivo de entregável: ${projectId}`);
+  }
+  if (!Number.isInteger(deliverableId) || deliverableId <= 0) {
+    throw new Error(`entregável inválido para montar prefixo de arquivo: ${deliverableId}`);
+  }
+  return `projects/${projectId}/deliverables/${deliverableId}/files`;
 }
 
 export interface ProjectAttachmentMetadata {

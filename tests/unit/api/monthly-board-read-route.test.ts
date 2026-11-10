@@ -44,7 +44,10 @@ vi.mock("@/backend/composition/root", () => {
         ? { month, closedAt: new Date("2028-02-01T03:00:00.000Z") }
         : null;
     },
-    async listPeopleForClose() {
+    async listPeopleForSeasonClose(): Promise<never> {
+    throw new Error("leitura de temporada não deveria acontecer aqui");
+  },
+  async listPeopleForClose() {
       mocks.liveReads += 1;
       return mocks.people;
     },

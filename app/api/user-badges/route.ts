@@ -43,9 +43,14 @@ export async function GET(request: Request) {
       Number.isInteger(limit) && (limit as number) > 0 ? (limit as number) : undefined,
     )
 
+    // plan-v15 S10 (R7, CA4): o progresso "X de Y" das badges ativas não conquistadas,
+    // pela cláusula de menor razão. Leitura aberta, como o resto do GET.
+    const progress = await gamificationModule.listBadgeProgress(userId)
+
     return NextResponse.json({
       badges,
       recentBadges,
+      progress,
       count: badges.length,
     })
   } catch (error: unknown) {

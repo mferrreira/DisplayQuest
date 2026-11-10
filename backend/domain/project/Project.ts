@@ -27,6 +27,8 @@ export interface ProjectLink {
 export interface ProjectMemberSummary {
   userId: number;
   roles: string[];
+  /** V5-4b (DEC-149): `ATIVO`/`INATIVO` do vínculo; S06 (DEC-261) decide quem edita descrição. */
+  situacao?: string;
   user?: { id: number; name: string; email: string } | null;
 }
 
@@ -34,6 +36,8 @@ export interface IProject {
   id?: number;
   name: string;
   description?: string | null;
+  /** plan-v13 (S01): subtítulo — linha aparada abaixo do título, vazia é null, teto 200. */
+  subtitle?: string | null;
   createdAt: string;
   createdBy: number;
   leaderId?: number | null;

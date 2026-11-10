@@ -53,6 +53,7 @@ const mocks = vi.hoisted(() => ({
   failAttachmentCreate: false,
   failProjectUpdate: false,
   bucketConfigured: true,
+  gateCalls: [] as string[],
   nextId: 100,
 }));
 
@@ -124,6 +125,7 @@ vi.mock("@/backend/composition/root", () => {
     async findMembership(projectId, userId) {
       return MEMBERSHIPS[`${projectId}:${userId}`] ?? null;
     },
+    findActiveMembership: async () => null,
     createMembership: notUsed("memberships.createMembership"),
     updateMembershipRoles: notUsed("memberships.updateMembershipRoles"),
     listMembersWithUser: notUsed("memberships.listMembersWithUser"),
@@ -151,6 +153,7 @@ vi.mock("@/backend/composition/root", () => {
         name: input.name,
         quantity: input.quantity,
         createdAt: "2026-10-13T12:00:00.000Z",
+        goalId: (input as { goalId?: number | null }).goalId ?? null,
       };
       mocks.deliverables.push(row);
       return row;
@@ -197,12 +200,22 @@ vi.mock("@/backend/composition/root", () => {
   };
 
   return {
-    getBackendComposition: () => ({
-      identityAccess: createIdentityAccessModule(),
-      projectManagement: createProjectManagementModule({
+    getBackendComposition: () => {
+      const projectManagement = createProjectManagementModule({
         ports: { projects, memberships, actors, deliverables, attachments },
-      }),
-    }),
+      });
+      // INV1 (lição medida da S02, plan-v21): o gate de upload corre ANTES de `request.formData()`.
+      // O invólucro registra o gate; o teste espiona `formData` na request e exige a ordem.
+      const assertGate = projectManagement.assertCanManageProject;
+      (projectManagement as { assertCanManageProject: (cmd: { projectId: number; actorId: number }) => Promise<unknown> }).assertCanManageProject = async (cmd) => {
+        mocks.gateCalls.push("gate");
+        return assertGate(cmd);
+      };
+      return {
+        identityAccess: createIdentityAccessModule(),
+        projectManagement,
+      };
+    },
   };
 });
 
@@ -250,8 +263,12 @@ import { DELETE as DELETE_DELIVERABLE, PUT as PUT_DELIVERABLE } from "@/app/api/
 import { GET as LIST_DELIVERABLES, POST as CREATE_DELIVERABLE } from "@/app/api/projects/[id]/deliverables/route";
 import { DELETE as DELETE_IMAGE, PUT as UPLOAD_IMAGE } from "@/app/api/projects/[id]/images/[slot]/route";
 import { GET as GET_IMAGE_FILE } from "@/app/api/projects/[id]/images/[slot]/file/route";
+import { REAL_PNG_BYTES } from "@/tests/mocks/fixtures/image-bytes";
 
 const PNG_BYTES = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+// R12 (S12): a imagem de capa sai do bucket como WebP, então a rota converte o byte com `sharp` —
+// que exige uma imagem inteira, não só a assinatura de 8 bytes. Um PNG real 2×2 é o que entra.
+
 const PDF_BYTES = new Uint8Array([..."%PDF-1.7\n".split("").map((c) => c.charCodeAt(0))]);
 
 function login(roles: string[], id: number) {
@@ -290,8 +307,8 @@ beforeEach(() => {
     [20, projectRow(20)],
   ]);
   mocks.deliverables = [
-    { id: 101, projectId: 10, name: "Relatório parcial", quantity: 1, createdAt: "2026-10-01T12:00:00.000Z" },
-    { id: 102, projectId: 20, name: "Entregável de outro projeto", quantity: 3, createdAt: "2026-10-01T12:00:00.000Z" },
+    { id: 101, projectId: 10, name: "Relatório parcial", quantity: 1, createdAt: "2026-10-01T12:00:00.000Z", goalId: null },
+    { id: 102, projectId: 20, name: "Entregável de outro projeto", quantity: 3, createdAt: "2026-10-01T12:00:00.000Z", goalId: null },
   ];
   mocks.attachments = [
     {
@@ -309,6 +326,7 @@ beforeEach(() => {
   mocks.objects.set("projects/10/attachments/um-pdf.pdf", { body: PDF_BYTES, contentType: "application/pdf" });
   mocks.puts = [];
   mocks.removes = [];
+  mocks.gateCalls = [];
   mocks.failAttachmentCreate = false;
   mocks.failProjectUpdate = false;
   mocks.bucketConfigured = true;
@@ -443,11 +461,14 @@ describe("entregáveis — ordem 401 → 404 → 403 → 400", () => {
 describe("anexos — o 403 vem antes de qualquer byte no bucket", () => {
   it("sem gestão: 403 e NENHUM objeto escrito", async () => {
     login(["VOLUNTARIO"], 5); // COLABORADOR: acessa, não gerencia
-    const response = await UPLOAD_ATTACHMENT(
-      uploadRequest(new File([PNG_BYTES], "foto.png", { type: "image/png" })),
-      context({ id: "10" }),
-    );
+    const request = uploadRequest(new File([PNG_BYTES], "foto.png", { type: "image/png" }));
+    const formSpy = vi.spyOn(request, "formData");
+    const response = await UPLOAD_ATTACHMENT(request, context({ id: "10" }));
     expect(response.status).toBe(403);
+    // A ordem é a asserção (lição da S02, plan-v21): o gate correu e `formData` nunca foi chamada.
+    // Movendo o gate para depois da leitura do corpo, este teste fica vermelho.
+    expect(mocks.gateCalls).toEqual(["gate"]);
+    expect(formSpy).not.toHaveBeenCalled();
     expect(mocks.puts).toEqual([]);
     expect(mocks.attachments).toHaveLength(1);
   });
@@ -611,7 +632,7 @@ function imageContext(slot: string) {
 
 describe("imagem do projeto — logo e banner no bucket", () => {
   it("sem sessão: 401 antes de tudo", async () => {
-    const response = await UPLOAD_IMAGE(imageRequest(new File([PNG_BYTES], "logo.png", { type: "image/png" }), "logo"), imageContext("logo"));
+    const response = await UPLOAD_IMAGE(imageRequest(new File([REAL_PNG_BYTES], "logo.png", { type: "image/png" }), "logo"), imageContext("logo"));
     expect(response.status).toBe(401);
     expect(mocks.puts).toEqual([]);
   });
@@ -619,7 +640,7 @@ describe("imagem do projeto — logo e banner no bucket", () => {
   it("slot que não é logo nem banner: 400 com a mensagem do domínio, e nenhum byte no bucket", async () => {
     login(["COORDENADOR"], 1);
     const response = await UPLOAD_IMAGE(
-      imageRequest(new File([PNG_BYTES], "logo.png", { type: "image/png" }), "capa"),
+      imageRequest(new File([REAL_PNG_BYTES], "logo.png", { type: "image/png" }), "capa"),
       imageContext("capa"),
     );
     expect(response.status).toBe(400);
@@ -630,7 +651,7 @@ describe("imagem do projeto — logo e banner no bucket", () => {
   it("quem não gerencia: 403 antes do corpo ser lido, e nenhum byte no bucket", async () => {
     login(["VOLUNTARIO"], 5); // COLABORADOR: acessa, não gerencia
     const response = await UPLOAD_IMAGE(
-      imageRequest(new File([PNG_BYTES], "logo.png", { type: "image/png" }), "logo"),
+      imageRequest(new File([REAL_PNG_BYTES], "logo.png", { type: "image/png" }), "logo"),
       imageContext("logo"),
     );
     expect(response.status).toBe(403);
@@ -641,25 +662,27 @@ describe("imagem do projeto — logo e banner no bucket", () => {
   it("subir logo escreve o objeto sob o prefixo do slot e grava a chave no projeto", async () => {
     login(["COORDENADOR"], 1);
     const response = await UPLOAD_IMAGE(
-      imageRequest(new File([PNG_BYTES], "logo.png", { type: "image/png" }), "logo"),
+      imageRequest(new File([REAL_PNG_BYTES], "logo.png", { type: "image/png" }), "logo"),
       imageContext("logo"),
     );
     expect(response.status).toBe(200);
     const body = await read(response);
-    expect(body.project.logoKey).toMatch(/^projects\/10\/images\/logo\/[0-9a-f-]+\.png$/);
+    expect(body.project.logoKey).toMatch(/^projects\/10\/images\/logo\/[0-9a-f-]+\.webp$/);
     expect(mocks.puts).toHaveLength(1);
     expect(mocks.puts[0].key.startsWith("projects/10/images/logo/")).toBe(true);
+    // R12 (S12): o objeto gravado é WebP.
+    expect(mocks.puts[0].contentType).toBe("image/webp");
     expect(mocks.projects.get(10)?.logoKey).toBe(body.project.logoKey);
   });
 
   it("trocar a imagem remove o objeto velho depois de o registro apontar para o novo", async () => {
     login(["COORDENADOR"], 1);
     const first = await read(
-      await UPLOAD_IMAGE(imageRequest(new File([PNG_BYTES], "a.png", { type: "image/png" }), "banner"), imageContext("banner")),
+      await UPLOAD_IMAGE(imageRequest(new File([REAL_PNG_BYTES], "a.png", { type: "image/png" }), "banner"), imageContext("banner")),
     );
     const second = await read(
       await UPLOAD_IMAGE(
-        imageRequest(new File([PNG_BYTES], "b.png", { type: "image/png" }), "banner"),
+        imageRequest(new File([REAL_PNG_BYTES], "b.png", { type: "image/png" }), "banner"),
         imageContext("banner"),
       ),
     );
@@ -672,7 +695,7 @@ describe("imagem do projeto — logo e banner no bucket", () => {
     login(["COORDENADOR"], 1);
     mocks.failProjectUpdate = true;
     const response = await UPLOAD_IMAGE(
-      imageRequest(new File([PNG_BYTES], "logo.png", { type: "image/png" }), "logo"),
+      imageRequest(new File([REAL_PNG_BYTES], "logo.png", { type: "image/png" }), "logo"),
       imageContext("logo"),
     );
     expect(response.status).toBe(500);
@@ -712,7 +735,7 @@ describe("imagem do projeto — logo e banner no bucket", () => {
     login(["COORDENADOR"], 1);
     mocks.bucketConfigured = false;
     const response = await UPLOAD_IMAGE(
-      imageRequest(new File([PNG_BYTES], "logo.png", { type: "image/png" }), "logo"),
+      imageRequest(new File([REAL_PNG_BYTES], "logo.png", { type: "image/png" }), "logo"),
       imageContext("logo"),
     );
     expect(response.status).toBe(503);
@@ -725,25 +748,26 @@ describe("imagem do projeto — logo e banner no bucket", () => {
   it("ler o arquivo devolve o byte com o tipo do objeto", async () => {
     login(["COORDENADOR"], 1);
     const uploaded = await read(
-      await UPLOAD_IMAGE(imageRequest(new File([PNG_BYTES], "logo.png", { type: "image/png" }), "logo"), imageContext("logo")),
+      await UPLOAD_IMAGE(imageRequest(new File([REAL_PNG_BYTES], "logo.png", { type: "image/png" }), "logo"), imageContext("logo")),
     );
     const response = await GET_IMAGE_FILE(jsonRequest("GET", "/api/projects/10/images/logo/file"), imageContext("logo"));
     expect(response.status).toBe(200);
-    expect(response.headers.get("content-type")).toBe("image/png");
+    expect(response.headers.get("content-type")).toBe("image/webp");
     const bytes = new Uint8Array(await response.arrayBuffer());
-    expect(Array.from(bytes)).toEqual(Array.from(PNG_BYTES));
+    // R12 (S12): o byte servido é o WebP convertido, não o PNG de origem.
+    expect(Array.from(bytes)).toEqual(Array.from(mocks.objects.get(mocks.puts[0].key)!.body));
     expect(uploaded.project.logoKey).toBeTruthy();
   });
 
   it("ler a imagem do projeto é leitura: quem não participa lê o byte (V5-2a, DEC-127)", async () => {
     login(["COORDENADOR"], 1);
-    await UPLOAD_IMAGE(imageRequest(new File([PNG_BYTES], "logo.png", { type: "image/png" }), "logo"), imageContext("logo"));
+    await UPLOAD_IMAGE(imageRequest(new File([REAL_PNG_BYTES], "logo.png", { type: "image/png" }), "logo"), imageContext("logo"));
 
     login(["VOLUNTARIO"], 4);
     const response = await GET_IMAGE_FILE(jsonRequest("GET", "/api/projects/10/images/logo/file"), imageContext("logo"));
     expect(response.status).toBe(200);
     const bytes = new Uint8Array(await response.arrayBuffer());
-    expect(Array.from(bytes)).toEqual(Array.from(PNG_BYTES));
+    expect(Array.from(bytes)).toEqual(Array.from(mocks.objects.get(mocks.puts[0].key)!.body));
   });
 
   it("slot sem imagem: 404, não um objeto vazio", async () => {
@@ -756,7 +780,7 @@ describe("imagem do projeto — logo e banner no bucket", () => {
   it("remover limpa a coluna e apaga o objeto", async () => {
     login(["COORDENADOR"], 1);
     const uploaded = await read(
-      await UPLOAD_IMAGE(imageRequest(new File([PNG_BYTES], "logo.png", { type: "image/png" }), "logo"), imageContext("logo")),
+      await UPLOAD_IMAGE(imageRequest(new File([REAL_PNG_BYTES], "logo.png", { type: "image/png" }), "logo"), imageContext("logo")),
     );
     const response = await DELETE_IMAGE(jsonRequest("DELETE", "/api/projects/10/images/logo"), imageContext("logo"));
     expect(response.status).toBe(200);
@@ -769,7 +793,7 @@ describe("imagem do projeto — logo e banner no bucket", () => {
   it("remover sem gestão: 403, coluna e objeto intactos", async () => {
     login(["COORDENADOR"], 1);
     const uploaded = await read(
-      await UPLOAD_IMAGE(imageRequest(new File([PNG_BYTES], "logo.png", { type: "image/png" }), "logo"), imageContext("logo")),
+      await UPLOAD_IMAGE(imageRequest(new File([REAL_PNG_BYTES], "logo.png", { type: "image/png" }), "logo"), imageContext("logo")),
     );
     login(["VOLUNTARIO"], 5);
     const response = await DELETE_IMAGE(jsonRequest("DELETE", "/api/projects/10/images/logo"), imageContext("logo"));

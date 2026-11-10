@@ -19,7 +19,10 @@
  */
 
 import { ValidationError } from "@/backend/domain/errors/DomainError";
-import type { Badge, BadgeCategory, BadgeCriteria } from "@/backend/domain/gamification/Badge";
+import type { Badge, BadgeCategory, BadgeCriteria, BadgeCriteriaJson } from "@/backend/domain/gamification/Badge";
+import type { BadgeCriteriaV2 } from "@/backend/domain/gamification/metric-registry";
+import { criteriaV2Met, validateBadgeCriteriaInput, type BadgeMetricValues } from "@/backend/domain/gamification/metric-registry";
+import { normalizeBadgeIconKey } from "@/backend/domain/gamification/badge-icon-rules";
 
 export const BADGE_CATEGORIES: readonly BadgeCategory[] = ["achievement", "milestone", "special", "social"];
 
@@ -30,7 +33,9 @@ export interface BadgeCreateData {
   icon: string | null;
   color: string | null;
   category: BadgeCategory;
-  criteria: BadgeCriteria | null;
+  criteria: BadgeCriteriaV2 | null;
+  /** plan-v16 S01: chave do ícone no bucket, normalizada pela regra. */
+  iconKey: string | null;
   isActive: boolean;
   createdBy: number;
 }
@@ -41,7 +46,8 @@ export interface BadgeCreateInput {
   category?: string;
   icon?: string | null;
   color?: string | null;
-  criteria?: BadgeCriteria | null;
+  criteria?: BadgeCriteriaJson;
+  iconKey?: string | null;
   isActive?: boolean;
   createdBy?: number;
 }
@@ -73,7 +79,8 @@ export function validateBadgeCreateInput(data: BadgeCreateInput): BadgeCreateDat
     icon: data.icon || null,
     color: data.color || null,
     category: data.category as BadgeCategory,
-    criteria: data.criteria || null,
+    criteria: validateBadgeCriteriaInput(data.criteria),
+    iconKey: normalizeBadgeIconKey(data.iconKey),
     // QUIRK-6B: o caminho legado (Badge.create) forca isActive=true; preservado.
     isActive: true,
     createdBy: data.createdBy,
@@ -107,6 +114,10 @@ export function applyBadgeUpdate(current: Badge, data: Partial<BadgeCreateInput>
   if (data.criteria !== undefined) {
     merged.criteria = data.criteria;
   }
+  if (data.iconKey !== undefined) {
+    // plan-v16 S01: merge por chave, mesma disciplina das capas; vazia/null apaga.
+    merged.iconKey = normalizeBadgeIconKey(data.iconKey);
+  }
   if (data.isActive !== undefined) {
     merged.isActive = Boolean(data.isActive);
   }
@@ -133,7 +144,7 @@ export interface UserRankEntry {
 
 export interface BadgeCriteriaContext {
   userId: number;
-  criteria: BadgeCriteria | null | undefined;
+  criteria: BadgeCriteriaJson;
   stats: BadgeUserStats;
   roles: string[];
   weekHours: number;
@@ -145,6 +156,8 @@ export interface BadgeCriteriaContext {
 export function badgeCriteriaMet(context: BadgeCriteriaContext): boolean {
   const { criteria, stats } = context;
   if (!criteria) return false;
+  // plan-v15 S01: o caminho golden só decide criteria legado; v2 pertence ao motor de métricas.
+  if ("version" in criteria) return false;
 
   // QUIRK: thresholds falsy (0) sao ignorados — { points: 0 } vale para qualquer um.
   if (criteria.points && stats.points < criteria.points) return false;
@@ -201,6 +214,10 @@ function specialConditionMet(context: BadgeCriteriaContext, condition: string): 
  * evaluateUserForBadges como DECISAO pura: quais badges o usuario ainda nao tem e
  * cujos criterios estao atingidos. A persistencia (e o try/catch com console.error
  * do caminho legado) fica no EvaluateUserBadgesUseCase.
+ *
+ * plan-v15 S01: despacho pelo formato do criteria. Criteria `{version: 2, clauses}` cai no
+ * motor de metricas (`criteriaV2Met` sobre o registro fechado); criteria legado cai no
+ * caminho golden abaixo, intacto.
  */
 export function selectBadgesToAward(input: {
   badges: Badge[];
@@ -210,6 +227,7 @@ export function selectBadgesToAward(input: {
   roles: string[];
   weekHours: number;
   allUsers: UserRankEntry[];
+  metricValues?: BadgeMetricValues;
 }): Badge[] {
   const newlyEarned: Badge[] = [];
 
@@ -218,16 +236,20 @@ export function selectBadgesToAward(input: {
       continue;
     }
 
-    if (
-      badgeCriteriaMet({
-        userId: input.userId,
-        criteria: badge.criteria,
-        stats: input.stats,
-        roles: input.roles,
-        weekHours: input.weekHours,
-        allUsers: input.allUsers,
-      })
-    ) {
+    const criteria = badge.criteria;
+    const isV2 = criteria != null && typeof criteria === "object" && (criteria as { version?: unknown }).version === 2;
+    const met = isV2
+      ? criteriaV2Met(criteria, input.metricValues ?? {})
+      : badgeCriteriaMet({
+          userId: input.userId,
+          criteria,
+          stats: input.stats,
+          roles: input.roles,
+          weekHours: input.weekHours,
+          allUsers: input.allUsers,
+        });
+
+    if (met) {
       newlyEarned.push(badge);
     }
   }

@@ -127,6 +127,8 @@ export interface ProjectRecordLike {
   id?: number | null;
   name: string;
   description?: string | null;
+  /** plan-v13 (S01): subtítulo aparado, teto `PROJECT_SUBTITLE_MAX_LENGTH`; vazia não entra. */
+  subtitle?: string | null;
   createdAt: string;
   createdBy: number;
   leaderId?: number | null;
@@ -145,6 +147,9 @@ export interface ProjectRecordLike {
 
 /** Teto dos campos de texto novos, o mesmo do nome do projeto. */
 export const PROJECT_TEXT_FIELD_MAX_LENGTH = 100;
+
+/** Teto do subtítulo (plan-v13 S01, regra 1): linha única, maior que os campos de cadastro. */
+export const PROJECT_SUBTITLE_MAX_LENGTH = 200;
 
 /**
  * Normaliza o valor de uma data de projeto para **data civil** `YYYY-MM-DD`.
@@ -183,6 +188,7 @@ export function applyProjectUpdate<T extends ProjectRecordLike>(project: T, data
   const next = { ...project };
   if (data.name !== undefined) next.name = String(data.name);
   if (data.description !== undefined) next.description = data.description ? String(data.description) : null;
+  if (data.subtitle !== undefined) next.subtitle = normalizeProjectTextField(data.subtitle);
   if (data.status !== undefined) next.status = data.status as string;
   if (data.links !== undefined) next.links = data.links;
   if (data.leaderId !== undefined) next.leaderId = data.leaderId as number | null;
@@ -206,6 +212,13 @@ export function validateProjectInput(project: Partial<ProjectRecordLike>): strin
 
   if (project.description && project.description.length > 500) {
     errors.push("Descrição do projeto não pode ter mais de 500 caracteres");
+  }
+
+  // plan-v13 S01 (regra 1): o subtítulo tem teto próprio, maior que os campos de cadastro.
+  if (project.subtitle && project.subtitle.length > PROJECT_SUBTITLE_MAX_LENGTH) {
+    errors.push(
+      `Subtítulo do projeto não pode ter mais de ${PROJECT_SUBTITLE_MAX_LENGTH} caracteres`,
+    );
   }
 
   if (!project.createdBy || project.createdBy <= 0) {
@@ -302,6 +315,9 @@ export interface MembershipRow extends MemberProfileFields {
   userId: number;
   userName: string | null;
   userEmail: string | null;
+  /** plan-v14 S02 (regra 2): chave do avatar no bucket (DEC-242). */
+  avatar?: string | null;
+  avatarKey?: string | null;
   roles: Role[];
   joinedAt: Date;
 }
@@ -311,6 +327,8 @@ export interface ProjectMemberViewOutput extends MemberProfileFields {
   userId: number;
   userName: string | null;
   userEmail: string | null;
+  avatar?: string | null;
+  avatarKey?: string | null;
   roles: Role[];
   joinedAt: string;
   totalHours: number;
@@ -327,6 +345,8 @@ export function toMemberView(
     userId: member.userId,
     userName: member.userName,
     userEmail: member.userEmail,
+    avatar: member.avatar,
+    avatarKey: member.avatarKey,
     roles: member.roles,
     joinedAt: member.joinedAt.toISOString(),
     totalHours: roundHours(totalSeconds),
@@ -349,6 +369,8 @@ export interface VolunteerMemberInput {
     name?: string | null;
     email?: string | null;
     avatar?: string | null;
+    /** plan-v14 S02 (regra 2): chave do avatar no bucket (DEC-242). */
+    avatarKey?: string | null;
     points?: number;
     completedTasks?: number;
   } | null;
@@ -359,6 +381,7 @@ export interface VolunteerEntryOutput {
   name: string;
   email: string;
   avatar: string | null | undefined;
+  avatarKey: string | null | undefined;
   role: string;
   joinedAt: Date;
   hoursWorked: number;
@@ -381,6 +404,7 @@ export function toVolunteerEntry(
     name: member.user?.name || "Usuário",
     email: member.user?.email || "",
     avatar: member.user?.avatar,
+    avatarKey: member.user?.avatarKey,
     role: member.roles?.[0] || "VOLUNTARIO",
     joinedAt: member.joinedAt,
     hoursWorked: roundHours(totalSeconds),

@@ -1,4 +1,6 @@
 // User types
+import type { UserLink } from "@/backend/domain";
+
 export type UserRole = 'COORDENADOR' | 'GERENTE' | 'LABORATORISTA' | 'PESQUISADOR' | 'GERENTE_PROJETO' | 'COLABORADOR' | 'VOLUNTARIO';
 
 export interface User {
@@ -24,6 +26,8 @@ export interface User {
   avatar?: string | null;
   /** V5-3 (DEC-137): chave da capa do perfil no bucket (`users/<id>/images/banner`). */
   bannerKey?: string | null;
+  /** DEC-242: chave do avatar no bucket. O campo legado `avatar` segue o disco. */
+  avatarKey?: string | null;
   profileVisibility: "public" | "private" | "members_only";
   /**
    * V5-4a (DEC-138): dados de pessoa. `cpf` chega só nas leituras em que a pessoa é o próprio ou
@@ -36,6 +40,8 @@ export interface User {
   fundingAgency?: string | null;
   fundingAgencyOther?: string | null;
   level?: string | null;
+  /** S09 (R14, DEC-264): lista normalizada de links `[{label,url}]` do perfil. */
+  links?: UserLink[];
   badges?: UserBadge[];
   createdAt: Date;
 }
@@ -56,6 +62,7 @@ export interface UserFormData {
   fundingAgency?: string | null
   fundingAgencyOther?: string | null
   level?: string | null
+  links?: UserLink[]
 }
 
 // Project types
@@ -63,6 +70,8 @@ export interface Project {
   id: number
   name: string
   description?: string | null
+  /** plan-v13 (S01): subtítulo aparado abaixo do título; null = sem subtítulo. */
+  subtitle?: string | null
   createdAt: string
   createdBy: number
   leaderId?: number | null
@@ -77,9 +86,15 @@ export interface Project {
   /** V5-4a (DEC-140): nº PROPPI, dado do projeto. */
   proppiNumber?: string | null
   points?: number
+  /** Contagem de membros do vínculo, medida pelo `_count` da leitura do servidor. */
+  memberCount?: number
+  /** S06 (DEC-261): projeção "sou membro ATIVO" — decide o ícone de editar descrição. */
+  isMemberActive?: boolean
   /** V5-2d (DEC-102): chave do objeto no bucket. A tela não recebe binário, recebe a chave. */
   logoKey?: string | null
   bannerKey?: string | null
+  /** R11 (S11): projeção da lista para o ator — o ator é membro deste projeto. */
+  isMember?: boolean
 }
 
 export interface ProjectMember {
@@ -92,12 +107,16 @@ export interface ProjectMember {
     name: string
     email: string
     avatar?: string | null
+    /** plan-v14 S02 (regra 2): chave do avatar no bucket (DEC-242). */
+    avatarKey?: string | null
   } | null
 }
 
 export interface ProjectFormData {
   name: string
   description: string
+  /** plan-v13 (S01): linha única; vazia no submit = sem subtítulo. */
+  subtitle?: string
   status: "active" | "completed" | "archived"
   leaderId?: number | null
   volunteerIds?: number[]

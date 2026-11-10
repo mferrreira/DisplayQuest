@@ -11,12 +11,19 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SessionProvider } from "next-auth/react";
 import { NuqsTestingAdapter } from "nuqs/adapters/testing";
 import { TaskBoard } from "../components/task-board";
-import { resetTaskStore, getTaskStore, seedTasks } from "@/tests/mocks/handlers";
+import { resetProjectStore, resetTaskStore, getTaskStore, seedProjects, seedTasks } from "@/tests/mocks/handlers";
 import { server } from "@/tests/mocks/server";
 import { currentPointsDelta, resetPointsDeltaStore } from "@/lib/points-delta";
 
 // next-auth/react useSession is mocked (SessionProvider alone would need a real session flow)
-const mockUser = { id: 2, name: "Coordenador", email: "coordenador@lab.com", roles: ["COORDENADOR"] };
+// `useAuth` também é mockado, e com o MESMO objeto: o `user` do task-board vem de `useAuth`,
+// não da sessão — sem este mock, `user` é `undefined` e os gates de papel (seletor de projeto,
+// criar tarefa, líder) ficam todos falsos, que é exatamente o bug que a suíte nova mede.
+const mockUser = vi.hoisted(() => ({ id: 2, name: "Coordenador", email: "coordenador@lab.com", roles: ["COORDENADOR"] }));
+
+vi.mock("@/contexts/auth-context", () => ({
+  useAuth: () => ({ user: mockUser, loading: false }),
+}));
 
 vi.mock("next-auth/react", async (importOriginal) => {
   const actual = await importOriginal<typeof import("next-auth/react")>();
@@ -80,6 +87,10 @@ function titlesInColumn(columnTitle: string): string[] {
 describe("TaskBoard", () => {
   beforeEach(() => {
     resetTaskStore();
+    // R11 (S11): o quadro abre no projeto do líder na primeira carga. Estes testes operam sobre
+    // tarefas sem projeto, então não há projetos — o coordenador fica na visão global.
+    resetProjectStore();
+    seedProjects([]);
     installMemoryStorage();
   });
 
@@ -394,4 +405,52 @@ describe("TaskBoard", () => {
       expect(currentPointsDelta()).toBeNull();
     });
   });
+});
+describe("bugfix 2026-11-09 — seletor de projeto visível a todos, lista do voluntário é a de membro", () => {
+  async function selectOption(comboboxName: string, optionName: string) {
+    const user = userEvent.setup({ delay: null });
+    await user.click(await screen.findByRole("combobox", { name: comboboxName }));
+    await user.click(await screen.findByRole("option", { name: optionName }));
+  }
+
+  const PROJECTS = () => [
+    { id: 3, name: "Projeto Alfa", leaderId: 9, isMember: true },
+    { id: 4, name: "Projeto Beta", leaderId: 9, isMember: false },
+  ];
+
+  it("voluntário vê o seletor de projeto, e a lista dele traz só o projeto em que é membro", async () => {
+    mockUser.roles = ["VOLUNTARIO"];
+    seedProjects(PROJECTS());
+    renderBoard();
+
+    const combobox = await screen.findByRole("combobox", { name: "Filtrar tarefas por projeto" }, { timeout: 8000 });
+    expect(combobox).toBeInTheDocument();
+
+    const user = userEvent.setup({ delay: null });
+    await user.click(combobox);
+    expect(await screen.findByRole("option", { name: "Todos os projetos" }, { timeout: 8000 })).toBeInTheDocument();
+    expect(await screen.findByRole("option", { name: "Projeto Alfa" }, { timeout: 8000 })).toBeInTheDocument();
+    // o projeto em que ele não é membro não entra na lista — a lista do voluntário é a de membro
+    expect(screen.queryByRole("option", { name: "Projeto Beta" })).not.toBeInTheDocument();
+    mockUser.roles = ["COORDENADOR"];
+  }, 20000);
+
+  it("colaborador que também é voluntário e pesquisador vê o seletor (era o caso que quebrava)", async () => {
+    mockUser.roles = ["COLABORADOR", "VOLUNTARIO", "PESQUISADOR"];
+    seedProjects(PROJECTS());
+    renderBoard();
+
+    expect(await screen.findByRole("combobox", { name: "Filtrar tarefas por projeto" }, { timeout: 8000 })).toBeInTheDocument();
+    mockUser.roles = ["COORDENADOR"];
+  }, 20000);
+
+  it("coordenador continua vendo todos os projetos na lista do seletor", async () => {
+    seedProjects(PROJECTS());
+    renderBoard();
+
+    const user = userEvent.setup({ delay: null });
+    await user.click(await screen.findByRole("combobox", { name: "Filtrar tarefas por projeto" }, { timeout: 8000 }));
+    expect(await screen.findByRole("option", { name: "Projeto Alfa" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Projeto Beta" })).toBeInTheDocument();
+  }, 20000);
 });

@@ -216,7 +216,7 @@ describe("read-model clone", () => {
     // plan-v4 · V4-4 (DEC-79): a lista de chaves ganhou `subtasks`. É mudança deliberada do read
     // model, aprovada pelo dono: sem as subtasks no JSON, o cartão e o diálogo de detalhe — que
     // calculam o prêmio no cliente (`features/tasks/utils/move-rules.ts:174`) — continuariam
-    // anunciando 10 pontos numa tarefa que vale 10 + 5·n (DEC-97).
+    // anunciando 10 pontos numa tarefa que vale 10 + 10·n (DEC-97).
     // V5-6 (DEC-99): ganhou `activityId`, a chave da linha do cronograma. É o que o filtro de
     // atividade do quadro e o seletor do formulário consomem; a linha inteira não sai aqui.
     expect(Object.keys(json)).toEqual([

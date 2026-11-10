@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { LogOut, Menu, Trophy } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
@@ -11,7 +12,7 @@ import {
   getPrimaryRoleLabel,
   isNavItemActive,
 } from "@/components/layout/nav-config"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { BucketAvatar } from "@/components/ui/bucket-avatar"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
@@ -49,7 +50,7 @@ export function MobileMenu() {
           <span className="sr-only">Abrir menu</span>
         </Button>
       </SheetTrigger>
-      <SheetContent side="left" className="w-[300px] sm:w-[340px]">
+      <SheetContent side="left" className="w-[300px] overflow-y-auto sm:w-[340px]">
         <SheetHeader className="text-left">
           <SheetTitle className="flex items-center gap-3">
             <img src="/LOGO.png" alt="Display Quest" className="h-10 w-10" />
@@ -61,19 +62,20 @@ export function MobileMenu() {
           {user ? (
             <div className="space-y-3">
               <div className="flex items-center gap-3 rounded-xl bg-muted/50 p-3">
-                <Avatar className="h-10 w-10">
-                  <AvatarImage src={user.avatar || undefined} alt={user.name || ""} />
-                  <AvatarFallback className="text-sm">
-                    {user.name
-                      ? user.name
-                          .split(" ")
-                          .map((namePart) => namePart[0])
-                          .join("")
-                          .toUpperCase()
-                          .slice(0, 2)
-                      : "U"}
-                  </AvatarFallback>
-                </Avatar>
+                {/* plan-v14 S02 (regra 2): o avatar do bucket sai pela peça única; sem chave,
+                    o legado em disco de hoje. */}
+                <BucketAvatar
+                  userId={user.id}
+                  avatarKey={user.avatarKey}
+                  legacyAvatar={user.avatar}
+                  name={user.name || ""}
+                  className="h-10 w-10"
+                  fallback={
+                    user.name
+                      ? user.name.split(" ").map((namePart) => namePart[0]).join("").toUpperCase().slice(0, 2)
+                      : "U"
+                  }
+                />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{user.name}</p>
                   <p className="truncate text-xs text-muted-foreground">{user.email}</p>
@@ -84,10 +86,15 @@ export function MobileMenu() {
               </div>
 
               {points !== null ? (
-                <div className="flex items-center justify-center gap-2 rounded-xl border bg-card p-3">
+                // S02 (R2): o placar do menu abre o mesmo destino do placar do cabeçalho.
+                <Link
+                  href="/dashboard/leaderboard"
+                  aria-label="Pontos — abrir quadro de liderança"
+                  className="flex items-center justify-center gap-2 rounded-xl border bg-card p-3 transition-colors hover:border-primary/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring"
+                >
                   <Trophy className="h-5 w-5 text-warning" aria-hidden="true" />
                   <span className="text-lg font-semibold">{points}</span>
-                </div>
+                </Link>
               ) : null}
             </div>
           ) : null}

@@ -11,8 +11,10 @@ import type { ISubtask } from "@/backend/domain";
  * a tabela existe não precisa fingir que pode não saber.
  */
 export interface TaskSubtasksPort {
-  /** Ordem de criação (`id ASC`) — é a ordem que a pessoa escreveu no formulário. */
+  /** Ordem persistida (`sortOrder ASC`, empate por `id ASC`). Ordem inicial = ordem de criação. */
   listByTaskId(taskId: number): Promise<ISubtask[]>;
+  /** S09 (R9): grava a ordem por posição do índice. O chamador validou a permutação. */
+  reorder(taskId: number, orderedIds: number[]): Promise<ISubtask[]>;
   /** Variante em lote, para a lista do quadro não virar N+1. */
   listByTaskIds(taskIds: number[]): Promise<Map<number, ISubtask[]>>;
   findById(subtaskId: number): Promise<ISubtask | null>;

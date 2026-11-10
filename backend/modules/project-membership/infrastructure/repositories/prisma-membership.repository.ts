@@ -17,7 +17,14 @@ import type {
  * V5-4b: os cinco campos do vínculo entram no select. A regra de normalização não mora aqui —
  * o adapter escreve o que o use case já normalizou (RG-02).
  */
-const userSelect = { id: true, name: true, email: true } as const
+// plan-v14 S02 (regra 2): as colunas do avatar recortado viajam com a lista de membros.
+const userSelect = {
+  id: true,
+  name: true,
+  email: true,
+  avatar: true,
+  avatarKey: true,
+} as const
 
 /** As colunas do vínculo, lidas juntas: é a lista que as mostra e o perfil que as escreve. */
 const memberProfileSelect = {
@@ -39,7 +46,13 @@ type MemberRow = {
   categoria: string | null
   situacao: string
   dataEntrada: string | null
-  user?: { id: number; name: string; email: string } | null
+  user?: {
+    id: number
+    name: string
+    email: string
+    avatar: string | null
+    avatarKey: string | null
+  } | null
 }
 
 function toProfile(row: MemberRow): MembershipProfileFields {
@@ -63,6 +76,8 @@ function toRecord(row: MemberRow): MembershipRecord {
     joinedAt: row.joinedAt,
     userName: row.user?.name ?? null,
     userEmail: row.user?.email ?? null,
+    avatar: row.user?.avatar ?? null,
+    avatarKey: row.user?.avatarKey ?? null,
     ...toProfile(row),
   }
 }

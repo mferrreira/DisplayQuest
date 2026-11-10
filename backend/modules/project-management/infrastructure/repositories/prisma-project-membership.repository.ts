@@ -19,6 +19,14 @@ export function createPrismaProjectManagementMembershipRepository(): ProjectMana
       })
       return row ? { id: row.id, roles: (row.roles ?? []) as Role[] } : null
     },
+    async findActiveMembership(projectId, userId) {
+      const row = await prisma.project_members.findUnique({
+        where: { projectId_userId: { projectId, userId } },
+        select: { id: true, roles: true, situacao: true },
+      })
+      if (!row || row.situacao !== "ATIVO") return null
+      return { id: row.id, roles: (row.roles ?? []) as Role[] }
+    },
     async createMembership(input) {
       await prisma.project_members.create({
         data: { projectId: input.projectId, userId: input.userId, roles: input.roles },
@@ -35,7 +43,17 @@ export function createPrismaProjectManagementMembershipRepository(): ProjectMana
         where: { projectId },
         include: {
           user: {
-            select: { id: true, name: true, email: true, avatar: true, points: true, completedTasks: true },
+            // plan-v14 S02 (regra 2): as colunas do avatar recortado viajam com a lista — é ela
+            // que o cartão de voluntário renderiza pela peça única.
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              avatar: true,
+              avatarKey: true,
+              points: true,
+              completedTasks: true,
+            },
           },
         },
         orderBy: { joinedAt: "asc" },

@@ -15,25 +15,19 @@ import {
   Plus, 
   Edit, 
   Trash2, 
-  Star, 
-  Trophy, 
-  Target, 
-  Clock, 
-  Users,
+  Target,
   Award,
   Settings
 } from "lucide-react"
 import { BadgesAPI } from "@/contexts/api-client"
-
-interface BadgeCriteria {
-  points?: number
-  tasks?: number
-  projects?: number
-  workSessions?: number
-  weeklyHours?: number
-  consecutiveDays?: number
-  specialCondition?: string
-}
+import {
+  badgeCategoryLabel,
+  METRICS,
+  type BadgeCategory,
+  type BadgeClause,
+  type BadgeCriteriaV2,
+} from "@/backend/domain"
+import { BadgeMedallion, badgeCategoryChipClass } from "@/components/ui/badge-medallion"
 
 interface BadgeData {
   id?: number
@@ -42,28 +36,22 @@ interface BadgeData {
   icon?: string
   color?: string
   category: 'achievement' | 'milestone' | 'special' | 'social'
-  criteria?: BadgeCriteria
+  criteria?: BadgeCriteriaV2 | null
+  /** plan-v16 S04 (R6): CHAVE do ícone no bucket; o binário sai pela rota autenticada. */
+  iconKey?: string | null
   isActive: boolean
   createdBy: number
 }
 
-const categoryIcons = {
-  achievement: Trophy,
-  milestone: Target,
-  special: Star,
-  social: Users
-}
-
-const categoryColors = {
-  achievement: 'bg-warning/15 text-warning border-warning/25',
-  milestone: 'bg-info/15 text-info border-info/25',
-  special: 'bg-review/15 text-review border-review/25',
-  social: 'bg-success/15 text-success border-success/25'
-}
+const metricLabel = (metric: string) => METRICS.find(m => m.id === metric)?.label ?? metric
 
 export function BadgeManager() {
   const [badges, setBadges] = useState<BadgeData[]>([])
   const [loading, setLoading] = useState(true)
+  // plan-v16 S04: a frase recusada pela rota chega na tela (a rota decide a autoridade, R3).
+  const [iconAlert, setIconAlert] = useState<string | null>(null)
+  // O arquivo escolhido no diálogo de criação/edição; a rota faz a conversão a WebP na escrita.
+  const [iconFile, setIconFile] = useState<File | null>(null)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [editingBadge, setEditingBadge] = useState<BadgeData | null>(null)
   const [formData, setFormData] = useState<BadgeData>({
@@ -72,10 +60,13 @@ export function BadgeManager() {
     icon: '',
     color: '#3B82F6',
     category: 'achievement',
-    criteria: {},
+    criteria: null,
     isActive: true,
     createdBy: 0 // Will be set by server from authenticated user
   })
+  // plan-v15 S02: a lista de cláusulas v2 é o estado do picker; o criteria do payload
+  // só existe no submit.
+  const [clauses, setClauses] = useState<BadgeClause[]>([])
 
   useEffect(() => {
     loadBadges()
@@ -96,14 +87,31 @@ export function BadgeManager() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
+      const criteria: BadgeCriteriaV2 | null = clauses.length > 0 ? { version: 2, clauses } : null
+      const payload = { ...formData, criteria }
+      let savedId: number
       if (editingBadge) {
-        await BadgesAPI.update(editingBadge.id!, formData)
+        const response = await BadgesAPI.update(editingBadge.id!, payload)
+        savedId = response.badge.id
       } else {
-        await BadgesAPI.create(formData)
+        const response = await BadgesAPI.create(payload)
+        savedId = response.badge.id
       }
-      
+      if (iconFile) {
+        try {
+          await BadgesAPI.uploadIcon(savedId, iconFile)
+          setIconAlert(null)
+        } catch (error) {
+          const message = typeof (error as Error)?.message === "string" && (error as Error).message
+            ? (error as Error).message
+            : "Não foi possível enviar o ícone"
+          setIconAlert(message)
+        }
+      }
+
       setShowCreateDialog(false)
       setEditingBadge(null)
+      setIconFile(null)
       resetForm()
       loadBadges()
     } catch (error) {
@@ -114,6 +122,7 @@ export function BadgeManager() {
   const handleEdit = (badge: BadgeData) => {
     setEditingBadge(badge)
     setFormData(badge)
+    setClauses(badge.criteria?.clauses ?? [])
     setShowCreateDialog(true)
   }
 
@@ -135,25 +144,15 @@ export function BadgeManager() {
       icon: '',
       color: '#3B82F6',
       category: 'achievement',
-      criteria: {},
+      criteria: null,
       isActive: true,
       createdBy: 0
     })
+    setClauses([])
   }
 
-  const updateCriteria = (field: keyof BadgeCriteria, value: number | string) => {
-    setFormData(prev => ({
-      ...prev,
-      criteria: {
-        ...prev.criteria,
-        [field]: value
-      }
-    }))
-  }
-
-  const getCategoryIcon = (category: string) => {
-    const IconComponent = categoryIcons[category as keyof typeof categoryIcons] || Trophy
-    return <IconComponent className="h-4 w-4" />
+  const updateClause = (index: number, patch: Partial<BadgeClause>) => {
+    setClauses(prev => prev.map((clause, i) => (i === index ? { ...clause, ...patch } : clause)))
   }
 
   if (loading) {
@@ -270,83 +269,104 @@ export function BadgeManager() {
               <div className="space-y-4">
                 <h3 className="text-lg font-medium">Critérios para Conquistar</h3>
                 <p className="text-sm text-muted-foreground">
-                  Defina os critérios que o usuário deve atingir para ganhar este badge
+                  Cada cláusula exige que a métrica do registro atinja o valor mínimo. Sem cláusula,
+                  o badge só pode ser concedido manualmente pela gestão.
                 </p>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="points">Pontos mínimos</Label>
-                    <Input
-                      id="points"
-                      type="number"
-                      value={formData.criteria?.points || ''}
-                      onChange={(e) => updateCriteria('points', parseInt(e.target.value) || 0)}
-                      placeholder="0"
-                    />
+                {clauses.map((clause, index) => (
+                  <div key={index} className="flex items-end gap-3">
+                    <div className="flex-1">
+                      <Label htmlFor={`metric-${index}`}>Métrica do critério</Label>
+                      <Select
+                        value={clause.metric}
+                        onValueChange={(value) => {
+                          // Lição V5-6: dentro de form o Radix dispara change vazio; ignorar.
+                          if (value === "") return
+                          updateClause(index, { metric: value })
+                        }}
+                      >
+                        <SelectTrigger id={`metric-${index}`} aria-label="Métrica do critério">
+                          <SelectValue placeholder="Escolher métrica" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {METRICS.map((metric) => (
+                            <SelectItem key={metric.id} value={metric.id}>
+                              {metric.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor={`value-${index}`}>Valor do critério</Label>
+                      <Input
+                        id={`value-${index}`}
+                        type="number"
+                        min="1"
+                        value={Number.isFinite(clause.value) ? clause.value : ''}
+                        onChange={(e) => {
+                          const parsed = parseFloat(e.target.value)
+                          updateClause(index, { value: Number.isFinite(parsed) ? parsed : 0 })
+                        }}
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      aria-label={`Remover cláusula ${index + 1}`}
+                      onClick={() => setClauses(prev => prev.filter((_, i) => i !== index))}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
-                  <div>
-                    <Label htmlFor="tasks">Tarefas concluídas</Label>
-                    <Input
-                      id="tasks"
-                      type="number"
-                      value={formData.criteria?.tasks || ''}
-                      onChange={(e) => updateCriteria('tasks', parseInt(e.target.value) || 0)}
-                      placeholder="0"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="projects">Projetos participados</Label>
-                    <Input
-                      id="projects"
-                      type="number"
-                      value={formData.criteria?.projects || ''}
-                      onChange={(e) => updateCriteria('projects', parseInt(e.target.value) || 0)}
-                      placeholder="0"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="workSessions">Sessões de trabalho</Label>
-                    <Input
-                      id="workSessions"
-                      type="number"
-                      value={formData.criteria?.workSessions || ''}
-                      onChange={(e) => updateCriteria('workSessions', parseInt(e.target.value) || 0)}
-                      placeholder="0"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="weeklyHours">Horas semanais</Label>
-                    <Input
-                      id="weeklyHours"
-                      type="number"
-                      step="0.5"
-                      value={formData.criteria?.weeklyHours || ''}
-                      onChange={(e) => updateCriteria('weeklyHours', parseFloat(e.target.value) || 0)}
-                      placeholder="0"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="consecutiveDays">Dias consecutivos</Label>
-                    <Input
-                      id="consecutiveDays"
-                      type="number"
-                      value={formData.criteria?.consecutiveDays || ''}
-                      onChange={(e) => updateCriteria('consecutiveDays', parseInt(e.target.value) || 0)}
-                      placeholder="0"
-                    />
-                  </div>
-                </div>
+                ))}
 
-                <div>
-                  <Label htmlFor="specialCondition">Condição especial</Label>
-                  <Textarea
-                    id="specialCondition"
-                    value={formData.criteria?.specialCondition || ''}
-                    onChange={(e) => updateCriteria('specialCondition', e.target.value)}
-                    placeholder="Ex: Primeiro usuário a completar 100 tarefas..."
-                    rows={2}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setClauses(prev => [...prev, { metric: METRICS[0].id, op: '>=', value: 1 }])}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Adicionar critério
+                </Button>
+              </div>
+
+              {/* plan-v16 S04 (R6, pedido do dono 2026-11-05): o envio do ícone mora no diálogo. */}
+              <div className="space-y-2">
+                <Label>Ícone do badge</Label>
+                <div className="flex items-center gap-3">
+                  {iconFile && typeof URL.createObjectURL === "function" ? (
+                    // Pré-visualização local do arquivo recém-escolido: o byte ainda não
+                    // tem id nem chave, a peça não pode servê-lo.
+                    <img src={URL.createObjectURL(iconFile)} alt="Pré-visualização do ícone" className="h-10 w-10 object-contain" />
+                  ) : (
+                    // plan-v19 S01 (DEC-251): o ícone salvo entra pela peça única —
+                    // círculo com contorno na cor da badge.
+                    editingBadge?.iconKey && (
+                      <BadgeMedallion
+                        badge={{
+                          id: editingBadge.id!,
+                          name: editingBadge.name,
+                          iconKey: editingBadge.iconKey,
+                          icon: editingBadge.icon ?? null,
+                          color: editingBadge.color ?? null,
+                          category: editingBadge.category,
+                        }}
+                        size="md"
+                      />
+                    )
+                  )}
+                  <input
+                    type="file"
+                    accept="image/png,image/webp"
+                    aria-label="Arquivo de ícone do badge"
+                    onChange={(event) => setIconFile(event.target.files?.[0] ?? null)}
                   />
                 </div>
+                <p className="text-xs text-muted-foreground">
+                  O arquivo é convertido para WebP na escrita. PNG, JPEG, GIF e WebP passam; PDF não.
+                </p>
               </div>
 
               <div className="flex justify-end space-x-2">
@@ -362,6 +382,12 @@ export function BadgeManager() {
         </Dialog>
       </div>
 
+      {iconAlert && (
+        <p role="alert" className="text-sm text-destructive">
+          {iconAlert}
+        </p>
+      )}
+
       {/* Badges Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {badges.map((badge) => (
@@ -369,20 +395,27 @@ export function BadgeManager() {
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between">
                 <div className="flex items-center space-x-3">
-                  <div 
-                    // dark-mode:ok (branco sobre cor dinâmica do badge)
-                    className="w-10 h-10 rounded-full flex items-center justify-center text-white text-lg"
-                    style={{ backgroundColor: badge.color }}
-                  >
-                    {badge.icon || getCategoryIcon(badge.category)}
-                  </div>
+                  {/* plan-v19 S01 (DEC-251, INV4): o cartão consome a peça única —
+                      ícone do bucket dentro do círculo com contorno na cor da badge;
+                      sem chave, o glifo na cor do badge ou o ícone da categoria. */}
+                  <BadgeMedallion
+                    badge={{
+                      id: badge.id!,
+                      name: badge.name,
+                      iconKey: badge.iconKey ?? null,
+                      icon: badge.icon ?? null,
+                      color: badge.color ?? null,
+                      category: badge.category,
+                    }}
+                    size="md"
+                  />
                   <div>
                     <CardTitle className="text-lg">{badge.name}</CardTitle>
                     <Badge 
                       variant="outline" 
-                      className={`text-xs ${categoryColors[badge.category]}`}
+                      className={`text-xs ${badgeCategoryChipClass(badge.category)}`}
                     >
-                      {badge.category}
+                      {badgeCategoryLabel(badge.category)}
                     </Badge>
                   </div>
                 </div>
@@ -390,6 +423,7 @@ export function BadgeManager() {
                   <Button
                     variant="ghost"
                     size="sm"
+                    aria-label={`Editar ${badge.name}`}
                     onClick={() => handleEdit(badge)}
                   >
                     <Edit className="h-4 w-4" />
@@ -406,41 +440,21 @@ export function BadgeManager() {
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground mb-4">{badge.description}</p>
+
+              {/* plan-v19 S01 (DEC-251): a imagem do arquivo mora no círculo do cabeçalho
+                  (peça única); o envio mora no diálogo. Nada de img cru no corpo. */}
+
               
-              {badge.criteria && (
+              {badge.criteria && Array.isArray(badge.criteria.clauses) && badge.criteria.clauses.length > 0 && (
                 <div className="space-y-2">
                   <h4 className="text-sm font-medium text-foreground">Critérios:</h4>
                   <div className="space-y-1 text-xs text-muted-foreground">
-                    {badge.criteria.points && (
-                      <div className="flex items-center space-x-2">
-                        <Trophy className="h-3 w-3" />
-                        <span>{badge.criteria.points} pontos</span>
-                      </div>
-                    )}
-                    {badge.criteria.tasks && (
-                      <div className="flex items-center space-x-2">
+                    {badge.criteria.clauses.map((clause) => (
+                      <div key={clause.metric} className="flex items-center space-x-2">
                         <Target className="h-3 w-3" />
-                        <span>{badge.criteria.tasks} tarefas</span>
+                        <span>{metricLabel(clause.metric)} ≥ {clause.value}</span>
                       </div>
-                    )}
-                    {badge.criteria.projects && (
-                      <div className="flex items-center space-x-2">
-                        <Users className="h-3 w-3" />
-                        <span>{badge.criteria.projects} projetos</span>
-                      </div>
-                    )}
-                    {badge.criteria.weeklyHours && (
-                      <div className="flex items-center space-x-2">
-                        <Clock className="h-3 w-3" />
-                        <span>{badge.criteria.weeklyHours}h/semana</span>
-                      </div>
-                    )}
-                    {badge.criteria.specialCondition && (
-                      <div className="flex items-center space-x-2">
-                        <Star className="h-3 w-3" />
-                        <span className="truncate">{badge.criteria.specialCondition}</span>
-                      </div>
-                    )}
+                    ))}
                   </div>
                 </div>
               )}

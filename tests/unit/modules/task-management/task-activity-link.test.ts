@@ -15,11 +15,15 @@
  *      (sem isso, `Number("abc")` viraria NaN e o erro viria do Prisma, não da regra).
  *   5. O gate de campo continua decidindo sobre o corpo CRU: `activityId` de quem não tem
  *      MANAGE_TASKS barra com 403, como `{points: 5}` barra hoje.
+ *   6. plan-v21 S01 (DEC-257): criação recusa atividade que não é OPEN. Linha pedida-conclusão
+ *      e linha aprovada não recebem tarefa nova, e a recusa é antes da escrita. O update não
+ *      checa status — a tarefa ligada a uma etapa que virou concluída continua salvável.
  */
 import { beforeEach, describe, expect, it } from "vitest";
 
 import {
   NotFoundError,
+  TASK_ACTIVITY_CLOSED_MESSAGE,
   TASK_ACTIVITY_GLOBAL_MESSAGE,
   TASK_ACTIVITY_INVALID_MESSAGE,
   TASK_ACTIVITY_NOT_FOUND_MESSAGE,
@@ -45,8 +49,10 @@ import type { TaskRepositoryPort } from "@/backend/modules/task-management/appli
 
 const PROJECT = 3;
 const OTHER_PROJECT = 5;
-const ACTIVITY = 40; // do PROJECT
+const ACTIVITY = 40; // do PROJECT, OPEN
 const FOREIGN_ACTIVITY = 41; // do OTHER_PROJECT
+const REQUESTED_ACTIVITY = 42; // do PROJECT, COMPLETION_REQUESTED
+const CLOSED_ACTIVITY = 43; // do PROJECT, DONE
 
 const coordinatorActor = () => userActor(1, ["COORDENADOR"]);
 const voluntarioActor = () => userActor(7, ["VOLUNTARIO"]);
@@ -121,7 +127,10 @@ function buildModule() {
     async update() {
       throw new Error("subtask não é assunto deste arquivo");
     },
-    async delete() {
+async reorder(taskId: number, orderedIds: number[]) {
+      return await this.listByTaskId(taskId)
+    },
+        async delete() {
       throw new Error("subtask não é assunto deste arquivo");
     },
   };
@@ -210,8 +219,10 @@ beforeEach(() => {
   store = {
     tasks: new Map(),
     activities: new Map([
-      [ACTIVITY, { id: ACTIVITY, projectId: PROJECT }],
-      [FOREIGN_ACTIVITY, { id: FOREIGN_ACTIVITY, projectId: OTHER_PROJECT }],
+      [ACTIVITY, { id: ACTIVITY, projectId: PROJECT, status: "OPEN" }],
+      [FOREIGN_ACTIVITY, { id: FOREIGN_ACTIVITY, projectId: OTHER_PROJECT, status: "OPEN" }],
+      [REQUESTED_ACTIVITY, { id: REQUESTED_ACTIVITY, projectId: PROJECT, status: "COMPLETION_REQUESTED" }],
+      [CLOSED_ACTIVITY, { id: CLOSED_ACTIVITY, projectId: PROJECT, status: "DONE" }],
     ]),
     assignees: new Map(),
     roles: new Map([
@@ -305,6 +316,22 @@ describe("criação de tarefa com linha do cronograma", () => {
 
     expect(store.tasks.size).toBe(0);
   });
+
+  it("linha pedida para conclusão não recebe tarefa nova, e nenhuma tarefa nasce", async () => {
+    await expect(
+      createTask({ title: "Tarefa na etapa pedida", projectId: PROJECT, activityId: REQUESTED_ACTIVITY }),
+    ).rejects.toThrow(TASK_ACTIVITY_CLOSED_MESSAGE);
+
+    expect(store.tasks.size).toBe(0);
+  });
+
+  it("linha concluída não recebe tarefa nova, e nenhuma tarefa nasce", async () => {
+    await expect(
+      createTask({ title: "Tarefa na etapa concluída", projectId: PROJECT, activityId: CLOSED_ACTIVITY }),
+    ).rejects.toThrow(TASK_ACTIVITY_CLOSED_MESSAGE);
+
+    expect(store.tasks.size).toBe(0);
+  });
 });
 
 describe("edição do vínculo", () => {
@@ -358,6 +385,18 @@ describe("edição do vínculo", () => {
     expect(untouched.activityId).toBe(ACTIVITY);
   });
 
+  it("trocar o vínculo para uma etapa concluída é aceito — o update não checa status (DEC-257)", async () => {
+    const taskId = [...store.tasks.keys()][0];
+
+    const updated = await taskModule.updateTask({
+      actor: coordinatorActor(),
+      taskId,
+      data: { activityId: CLOSED_ACTIVITY },
+    });
+
+    expect(updated.activityId).toBe(CLOSED_ACTIVITY);
+  });
+
   it("quem não tem MANAGE_TASKS com activityId no corpo leva 403 (gate sobre o corpo cru)", async () => {
     const taskId = [...store.tasks.keys()][0];
 
@@ -372,22 +411,33 @@ describe("edição do vínculo", () => {
 });
 
 describe("a regra pura da ligação", () => {
-  const activity = { id: ACTIVITY, projectId: PROJECT };
+  const activity = { id: ACTIVITY, projectId: PROJECT, status: "OPEN" as const };
+  const closed = { id: CLOSED_ACTIVITY, projectId: PROJECT, status: "DONE" as const };
 
   it("ausente, nulo e vazio são a mesma coisa: sem vínculo", () => {
     for (const value of [undefined, null, ""]) {
-      expect(resolveTaskActivityLink({ activityId: value, activity: null, projectId: PROJECT, isGlobal: false })).toBeNull();
+      expect(resolveTaskActivityLink({ activityId: value, activity: null, projectId: PROJECT, isGlobal: false, isCreate: true })).toBeNull();
     }
   });
 
   it("a atividade do mesmo projeto devolve o id dela, não o id recebido", () => {
     // É o que impede `activityId: "40"` (string do corpo) de virar string na coluna.
-    expect(resolveTaskActivityLink({ activityId: "40", activity, projectId: PROJECT, isGlobal: false })).toBe(ACTIVITY);
+    expect(resolveTaskActivityLink({ activityId: "40", activity, projectId: PROJECT, isGlobal: false, isCreate: true })).toBe(ACTIVITY);
   });
 
   it("tarefa sem projeto não pode apontar para etapa de projeto", () => {
     expect(() =>
-      resolveTaskActivityLink({ activityId: ACTIVITY, activity, projectId: null, isGlobal: false }),
+      resolveTaskActivityLink({ activityId: ACTIVITY, activity, projectId: null, isGlobal: false, isCreate: true }),
     ).toThrow(ValidationError);
+  });
+
+  it("criação recusa etapa concluída nomeando o motivo", () => {
+    expect(() =>
+      resolveTaskActivityLink({ activityId: CLOSED_ACTIVITY, activity: closed, projectId: PROJECT, isGlobal: false, isCreate: true }),
+    ).toThrow(TASK_ACTIVITY_CLOSED_MESSAGE);
+  });
+
+  it("update aceita a etapa concluída — o corpo do PUT reenvia o vínculo de uma etapa que virou DONE", () => {
+    expect(resolveTaskActivityLink({ activityId: CLOSED_ACTIVITY, activity: closed, projectId: PROJECT, isGlobal: false, isCreate: false })).toBe(CLOSED_ACTIVITY);
   });
 });

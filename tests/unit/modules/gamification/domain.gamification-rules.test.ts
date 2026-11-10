@@ -19,7 +19,7 @@ import {
   validateBadgeCreateInput,
   workSessionAwardPoints,
 } from "@/backend/domain";
-import type { Badge, BadgeCriteria } from "@/backend/domain";
+import type { Badge, BadgeCriteria, BadgeCriteriaV2 } from "@/backend/domain";
 
 describe("domain/gamification: workSessionAwardPoints (frozen golden)", () => {
   it.each([
@@ -111,12 +111,15 @@ describe("domain/gamification: validateBadgeCreateInput (frozen golden BadgeEngi
   });
 
   it("normaliza trim/icon/color/criteria e FORCA isActive=true (QUIRK-6B)", () => {
+    // plan-v15 S02 (R6): o golden da escrita migra para o formato v2 — o formato antigo
+    // é recusado, e a recusa tem casos próprios em `badge-criteria-validation.test.ts`.
+    const criteriaV2: BadgeCriteriaV2 = { version: 2, clauses: [{ metric: "points", op: ">=", value: 50 }] };
     const data = validateBadgeCreateInput({
       name: "  Herói  ",
       description: "  salva o dia  ",
       category: "special",
       icon: "",
-      criteria: { points: 50 },
+      criteria: criteriaV2,
       isActive: false,
       createdBy: 5,
     });
@@ -124,7 +127,7 @@ describe("domain/gamification: validateBadgeCreateInput (frozen golden BadgeEngi
     expect(data.description).toBe("salva o dia");
     expect(data.icon).toBeNull();
     expect(data.color).toBeNull();
-    expect(data.criteria).toEqual({ points: 50 });
+    expect(data.criteria).toEqual(criteriaV2);
     expect(data.isActive).toBe(true); // QUIRK-6B preservado
     expect(data.createdBy).toBe(5);
   });

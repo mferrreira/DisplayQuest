@@ -3,7 +3,7 @@ import { Prisma } from "@prisma/client"
 import { prisma } from "@/lib/database/prisma"
 import { ConflictError } from "@/backend/domain/errors"
 import { toUserStatus } from "@/backend/domain/identity"
-import { monthAlreadyClosedMessage, toBoardTrack } from "@/backend/domain/gamification"
+import { BOARD_TRACKS, monthAlreadyClosedMessage, seasonAlreadyClosedMessage, toBoardTrack } from "@/backend/domain/gamification"
 import type { BoardMonthClosePort, MonthCloseWrite } from "@/backend/modules/gamification/application/ports/board-month-close.port"
 
 /**
@@ -114,6 +114,21 @@ export function createPrismaBoardMonthClosePort(): BoardMonthClosePort {
       }))
     },
 
+    async listPeopleForSeasonClose() {
+      // plan-v20 S01 (DEC-253): o numero da linha da temporada e o SALDO da pessoa no instante
+      // da run, nao o placar do mes. A leitura e a mesma da audiencia do fechamento de mes.
+      const rows = await prisma.users.findMany({
+        select: { id: true, name: true, status: true, points: true },
+        orderBy: { id: "asc" },
+      })
+      return rows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        status: toUserStatus(row.status),
+        currentSeasonPoints: row.points,
+      }))
+    },
+
     async writeClose(input: MonthCloseWrite) {
       try {
         await prisma.$transaction(async (tx) => {
@@ -148,15 +163,30 @@ export function createPrismaBoardMonthClosePort(): BoardMonthClosePort {
           }
 
           if (input.userIdsToZero.length > 0) {
-            await tx.users.updateMany({
-              where: { id: { in: input.userIdsToZero } },
-              data: { currentMonthPoints: 0 },
-            })
+            // plan-v20 S01 (DEC-253): quais colunas vao a zero e decidido pelo use case, por
+            // nome. O fechamento de mes zera o placar do mes; o da temporada zera saldo E placar.
+            const data: Record<string, number> = {}
+            for (const field of input.zeroFields) {
+              if (field === "monthPoints") data.currentMonthPoints = 0
+              if (field === "balance") data.points = 0
+            }
+            if (Object.keys(data).length > 0) {
+              await tx.users.updateMany({
+                where: { id: { in: input.userIdsToZero } },
+                data,
+              })
+            }
           }
         })
       } catch (error) {
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-          throw new ConflictError(monthAlreadyClosedMessage(input.month))
+          // Mês e temporada compartilham a mesma constraint (month, track): a frase do fechamento
+          // é escolhida pela trilha, não por if-else de tabela.
+          throw new ConflictError(
+            input.track === BOARD_TRACKS.SEASON_POINTS
+              ? seasonAlreadyClosedMessage(input.month)
+              : monthAlreadyClosedMessage(input.month),
+          )
         }
         throw error
       }

@@ -39,7 +39,7 @@ const harness = vi.hoisted(() => {
 vi.mock("@/lib/database/prisma", () => ({ prisma: harness.prisma }));
 
 import { createPrismaGamificationAwardHistoryPort } from "@/backend/modules/gamification/infrastructure/repositories/prisma-gamification-award-history.port";
-import { BOARD_TRACKS } from "@/backend/domain/gamification/board-tracks";
+import { BOARD_TRACK_LIST, BOARD_TRACKS } from "@/backend/domain/gamification/board-tracks";
 
 const port = createPrismaGamificationAwardHistoryPort();
 
@@ -81,7 +81,11 @@ describe("S01 — prêmio escreve saldo e placar do mês", () => {
     });
   });
 
-  it("a trilha do placar tem um nome só, e ele vem do domínio (INV6)", () => {
-    expect(Object.values(BOARD_TRACKS)).toEqual(["MONTH_POINTS"]);
+  it("as trilhas são exatamente o vocabulário do domínio, e ele vem do domínio (INV6)", () => {
+    // plan-v20 S01 (DEC-252) acrescenta SEASON_POINTS à coleção. O teste pinar a lista inteira
+    // e a lista do domínio, não o valor de uma trilha só: quem declara lista própria fora do
+    // domínio (lição DEC-95/96) é exatamente o que esta guarda existe para pegar.
+    expect(Object.values(BOARD_TRACKS)).toEqual(["MONTH_POINTS", "SEASON_POINTS"]);
+    expect(BOARD_TRACK_LIST).toEqual(Object.values(BOARD_TRACKS));
   });
 });

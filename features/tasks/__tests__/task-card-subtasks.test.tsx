@@ -26,7 +26,9 @@ import { TaskBoard } from "../components/task-board";
 import { getTaskStore, resetTaskStore, seedTasks } from "@/tests/mocks/handlers";
 import { makeTask } from "@/tests/mocks/fixtures/tasks";
 
-const mockUser = { id: 2, name: "Coordenador", email: "coordenador@lab.com", roles: ["COORDENADOR"] };
+// R11 (S11): o quadro abre no projeto do líder na primeira carga. Os cartões operam sobre tarefas
+// sem projeto, então o ator não lidera nem é membro de nenhum projeto do fixture (líderes 2 e 3).
+const mockUser = { id: 4, name: "Coordenador", email: "coordenador@lab.com", roles: ["COORDENADOR"] };
 
 vi.mock("next-auth/react", async (importOriginal) => {
   const actual = await importOriginal<typeof import("next-auth/react")>();
@@ -147,11 +149,14 @@ describe("V4-5a · o cartão avisa da trava e deixa concluir a subtask", () => {
     delete (window as unknown as Record<string, unknown>).matchMedia;
   });
 
-  it("mostra o aviso de trava com a contagem das abertas", async () => {
+  it("mostra o bloco neutro com a contagem, sem o texto das abertas (S03)", async () => {
     seedMotherWithOpenSubtasks();
     renderBoard();
 
-    expect(await screen.findByText(/2 subtasks abertas/)).toBeInTheDocument();
+    const counter = await screen.findByText("1/3 concluídas");
+    const block = counter.closest("div.rounded-md")!;
+    expect(block.querySelector("svg.lucide-square-check-big")).not.toBeNull();
+    expect(screen.queryByText(/subtask aberta/)).not.toBeInTheDocument();
   });
 
   it("cada subtask ABERTA tem uma checkbox nomeada; a concluída não aparece no cartão", async () => {
@@ -211,10 +216,10 @@ describe("V4-5a · o cartão avisa da trava e deixa concluir a subtask", () => {
   });
 
   it("o badge de pontos mostra a BASE gravada: 10 + 5·concluídas (DEC-97)", async () => {
-    seedMotherWithOpenSubtasks(); // 3 subtasks, 1 concluída → 10 + 5 = 15
+    seedMotherWithOpenSubtasks(); // 3 subtasks, 1 concluída → 10 + 10 = 20
     renderBoard();
 
-    expect(await screen.findAllByText("15 pts")).not.toHaveLength(0);
+    expect(await screen.findAllByText("20 pts")).not.toHaveLength(0);
   });
 
   it("marcar fora de Em Andamento avisa e não grava — a frase é a do servidor (DEC-98)", async () => {
@@ -226,7 +231,7 @@ describe("V4-5a · o cartão avisa da trava e deixa concluir a subtask", () => {
         title: "Revisar o alinhamento",
         status: "in-review",
         assignedTo: 3,
-        points: 15,
+        points: 20,
         subtasks: [openSubtask(911, "Conferir o ruído")],
       }),
     ]);
@@ -254,7 +259,7 @@ describe("V4-5a · o cartão avisa da trava e deixa concluir a subtask", () => {
         title: "Medir o alinhamento",
         status: "in-progress",
         assignedTo: 3,
-        points: 25,
+        points: 40,
         subtasks: [
           closedSubtask(920, "Ligar a fonte"),
           closedSubtask(921, "Ajustar o zero"),
@@ -264,8 +269,8 @@ describe("V4-5a · o cartão avisa da trava e deixa concluir a subtask", () => {
     ]);
     renderBoard();
 
-    // Selo da mãe: 10 + 5·2 concluídas = 20 (DEC-97).
-    expect(await screen.findAllByText("20 pts")).not.toHaveLength(0);
+    // Selo da mãe: 10 + 10·2 concluídas = 30 (DEC-97 restaurada).
+    expect(await screen.findAllByText("30 pts")).not.toHaveLength(0);
 
     await userEvent.click(await screen.findByRole("button", { name: "Ações para Medir o alinhamento" }));
     await userEvent.click(await screen.findByRole("menuitem", { name: /ver detalhes/i }));
@@ -282,10 +287,10 @@ describe("V4-5a · o cartão avisa da trava e deixa concluir a subtask", () => {
       const mother = getTaskStore().find((t) => t.id === 404)!;
       expect(mother.subtasks.find((s) => s.id === 920)?.completed).toBe(false);
     });
-    // ...e a MÃE rederivou do cache: o diálogo diz 1/3 e o selo do cartão cai para 15 pts,
+    // ...e a MÃE rederivou do cache: o diálogo diz 1/3 e o selo do cartão cai para 20 pts,
     // tudo na mesma montagem — sem recarregar a página nem reabrir o diálogo.
     expect(await within(screen.getByRole("dialog")).findByText(/1\/3 concluídas/)).toBeInTheDocument();
-    expect(await screen.findAllByText("15 pts")).not.toHaveLength(0);
+    expect(await screen.findAllByText("20 pts")).not.toHaveLength(0);
   });
 
   it("o menu de ações deixa de oferecer Em Revisão e Concluído enquanto há subtask aberta", async () => {
@@ -319,6 +324,6 @@ describe("V4-5a · o cartão avisa da trava e deixa concluir a subtask", () => {
     expect(approve).toBeDisabled();
     // A trava é sobre o destino, não sobre quem aprova: o Coordenador tem MANAGE_TASKS e mesmo
     // assim não aprova com subtask aberta.
-    expect(await screen.findByText(/1 subtask aberta/)).toBeInTheDocument();
+    expect(await screen.findByText("0/1 concluídas")).toBeInTheDocument();
   });
 });

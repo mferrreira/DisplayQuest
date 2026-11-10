@@ -45,6 +45,8 @@ export const userSchema = z.object({
   currentMonthPoints: z.number().int().optional(),
   roles: z.array(userRoleSchema),
   avatar: z.string().nullable().optional(),
+  // V5-3: a chave do avatar no bucket. Opcional para conviver com instâncias pré-migration.
+  avatarKey: z.string().nullable().optional(),
   /** V5-3 (DEC-137): chave da capa do perfil no bucket. O binário sai por rota autenticada. */
   bannerKey: z.string().nullable().optional(),
   bio: z.string().nullable().optional(),

@@ -70,6 +70,9 @@ export class ListUsersForActorUseCase {
         // V5-3 (DEC-137): a capa chega na mesma lista que o avatar, porque é o pódio do ranking que
         // a renderiza — sem isto a tela teria que chamar uma rota por pessoa.
         bannerKey: row.bannerKey,
+        // DEC-242: a chave do avatar no bucket + as colunas quadradas seguem na mesma lista —
+        // o pódio renderiza o avatar, e a tela de perfil precisa dos parâmetros.
+        avatarKey: row.avatarKey,
         // V5-4a (DEC-138): os dados de pessoa que o perfil mostra abertamente. Estão na lista
         // porque é a lista que o painel e a tela de equipe usam; chamar uma rota por pessoa para
         // exibir curso e modalidade seria o mesmo erro que o comentário de cima evita.
@@ -79,6 +82,7 @@ export class ListUsersForActorUseCase {
         fundingAgency: row.fundingAgency,
         fundingAgencyOther: row.fundingAgencyOther,
         level: row.level,
+        links: row.links ?? [],
       }
       if (visibility.canViewFullUsers || visibility.canManageProjectMembers) {
         out.email = row.email

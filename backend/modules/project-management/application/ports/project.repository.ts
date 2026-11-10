@@ -10,6 +10,8 @@ export interface ProjectRecord {
   id?: number | null;
   name: string;
   description?: string | null;
+  /** plan-v13 (S01): subtítulo aparado, vazio vira null, teto 200. */
+  subtitle?: string | null;
   createdAt: string;
   createdBy: number;
   leaderId?: number | null;
@@ -17,6 +19,13 @@ export interface ProjectRecord {
   links?: unknown;
   memberCount?: number;
   members?: ProjectMemberSummary[];
+  /**
+   * R11 (S11): o ator é membro deste projeto? Marcado pelo use case de lista a partir do
+   * vínculo. Não é coluna: é uma projeção da lista para o ator, e só a lista a preenche.
+   */
+  isMember?: boolean;
+  /** S06 (DEC-261): membership do ator com situação ATIVA — projeção da lista. */
+  isMemberActive?: boolean;
   /** V5-2b (DEC-61/63): datas civis `YYYY-MM-DD`, texto de cadastro e saldo do projeto. */
   startDate?: string | null;
   endDate?: string | null;
@@ -37,6 +46,8 @@ export interface ProjectRecord {
 export interface NewProjectInput {
   name: string;
   description: string | null;
+  /** plan-v13 (S01): subtítulo aparado, vazio vira null. */
+  subtitle: string | null;
   createdAt: string;
   createdBy: number;
   leaderId: number | null;

@@ -1,26 +1,12 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
-import { Button } from "@/components/ui/button"
-import { ImageOff, Loader2, Trash2, Upload } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { ImageOff } from "lucide-react"
 import { useToast } from "@/contexts/use-toast"
-import {
-  deleteProjectImage,
-  projectImageUrl,
-  uploadProjectImage,
-  type ProjectImageSlot,
-} from "@/lib/api/project-files"
+import { deleteProjectImage, projectImageUrl, uploadProjectImage, type ProjectImageSlot } from "@/lib/api/project-files"
+import { BannerImage } from "@/components/ui/banner-image"
 
-/**
- * V5-2d (DEC-102) — capa e logo do projeto, no topo do diálogo de detalhe.
- *
- * O binário mora no bucket e chega por `/api/projects/<id>/images/<slot>/file`, rota que aplica a
- * regra de acesso do projeto (a sessão vai pelo cookie, então a URL serve num `<img>`).
- *
- * O estado das duas chaves é local e nasce do `project` que o diálogo recebeu. Local de propósito:
- * a lista de projetos não mostra imagem, e fazer a subida atravessar três níveis de estado para
- * atualizar uma tela que não mostra a imagem seria estado a mais sem uso.
- */
 interface ProjectMediaHeaderProps {
   projectId: number
   projectName: string
@@ -31,13 +17,7 @@ interface ProjectMediaHeaderProps {
 
 const IMAGE_ACCEPT = "image/png,image/jpeg,image/webp,image/gif"
 
-export function ProjectMediaHeader({
-  projectId,
-  projectName,
-  logoKey,
-  bannerKey,
-  canManage,
-}: ProjectMediaHeaderProps) {
+export function ProjectMediaHeader({ projectId, projectName, logoKey, bannerKey, canManage }: ProjectMediaHeaderProps) {
   const { toast } = useToast()
   const logoInputRef = useRef<HTMLInputElement>(null)
   const bannerInputRef = useRef<HTMLInputElement>(null)
@@ -45,17 +25,10 @@ export function ProjectMediaHeader({
   const [currentBannerKey, setCurrentBannerKey] = useState(bannerKey ?? null)
   const [busy, setBusy] = useState(false)
 
-  // O diálogo é o mesmo componente ao abrir outro projeto: sem isto, a tela mostraria a imagem do
-  // projeto anterior até a próxima subida.
   useEffect(() => {
     setCurrentLogoKey(logoKey ?? null)
     setCurrentBannerKey(bannerKey ?? null)
   }, [projectId, logoKey, bannerKey])
-
-  const applyState = useCallback((state: { logoKey: string | null; bannerKey: string | null }) => {
-    setCurrentLogoKey(state.logoKey)
-    setCurrentBannerKey(state.bannerKey)
-  }, [])
 
   async function handleUpload(slot: ProjectImageSlot) {
     const input = slot === "logo" ? logoInputRef.current : bannerInputRef.current
@@ -71,8 +44,9 @@ export function ProjectMediaHeader({
     setBusy(true)
     try {
       const state = await uploadProjectImage(projectId, slot, file)
-      applyState(state)
-      if (input) input.value = ""
+      setCurrentLogoKey(state.logoKey)
+      setCurrentBannerKey(state.bannerKey)
+      input.value = ""
       toast({ title: slot === "logo" ? "Logo atualizado" : "Capa atualizada", description: file.name })
     } catch (error) {
       toast({
@@ -86,12 +60,14 @@ export function ProjectMediaHeader({
   }
 
   async function handleRemove(slot: ProjectImageSlot) {
-    if (!confirm(slot === "logo" ? "Remover o logo do projeto?" : "Remover a capa do projeto?")) return
+    const label = slot === "logo" ? "logo" : "capa"
+    if (!confirm(`Remover o ${label} do projeto?`)) return
 
     setBusy(true)
     try {
       const state = await deleteProjectImage(projectId, slot)
-      applyState(state)
+      setCurrentLogoKey(state.logoKey)
+      setCurrentBannerKey(state.bannerKey)
       toast({ title: slot === "logo" ? "Logo removido" : "Capa removida" })
     } catch (error) {
       toast({
@@ -107,108 +83,90 @@ export function ProjectMediaHeader({
   return (
     <div className="space-y-3">
       <div className="relative pb-8">
-        <div className="h-28 overflow-hidden rounded-lg border bg-muted sm:h-36">
-          {currentBannerKey ? (
-            <>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={projectImageUrl(projectId, "banner", currentBannerKey)}
-                alt={`Capa do projeto ${projectName}`}
-                className="h-full w-full object-cover"
-              />
-            </>
-          ) : (
-            <div className="flex h-full w-full items-center justify-center gap-2 text-sm text-muted-foreground">
-              <ImageOff className="h-5 w-5" />
-              Sem capa
-            </div>
-          )}
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild disabled={!canManage}>
+            {canManage ? (
+              <button
+                type="button"
+                aria-label="Opções da capa do projeto"
+                className="block w-full rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <div className="aspect-[21/9] overflow-hidden rounded-lg border bg-muted">
+                  {currentBannerKey ? (
+                    <BannerImage src={projectImageUrl(projectId, "banner", currentBannerKey)} alt={`Capa do projeto ${projectName}`} />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center gap-2 text-sm text-muted-foreground">
+                      <ImageOff className="h-5 w-5" />
+                      Sem capa
+                    </div>
+                  )}
+                </div>
+              </button>
+            ) : (
+              <div className="aspect-[21/9] overflow-hidden rounded-lg border bg-muted">
+                {currentBannerKey ? (
+                  <BannerImage src={projectImageUrl(projectId, "banner", currentBannerKey)} alt={`Capa do projeto ${projectName}`} />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center gap-2 text-sm text-muted-foreground">
+                    <ImageOff className="h-5 w-5" />
+                    Sem capa
+                  </div>
+                )}
+              </div>
+            )}
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuItem onClick={() => bannerInputRef.current?.click()} disabled={busy}>Enviar capa</DropdownMenuItem>
+            {currentBannerKey && <DropdownMenuItem onClick={() => handleRemove("banner")} disabled={busy}>Tirar capa</DropdownMenuItem>}
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         <div className="absolute bottom-0 left-4">
-          {currentLogoKey ? (
-            <>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={projectImageUrl(projectId, "logo", currentLogoKey)}
-                alt={`Logo do projeto ${projectName}`}
-                className="h-16 w-16 rounded-full border-4 border-background bg-background object-cover sm:h-20 sm:w-20"
-              />
-            </>
-          ) : (
-            <div className="flex h-16 w-16 items-center justify-center rounded-full border-4 border-background bg-muted text-muted-foreground sm:h-20 sm:w-20">
-              <ImageOff className="h-6 w-6" />
-            </div>
-          )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild disabled={!canManage}>
+              {canManage ? (
+                <button
+                  type="button"
+                  aria-label="Opções do logo do projeto"
+                  className="block h-16 w-16 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:h-20 sm:w-20"
+                >
+                  {currentLogoKey ? (
+                    <div className="h-16 w-16 rounded-full border-4 border-background bg-background sm:h-20 sm:w-20">
+                      <BannerImage src={projectImageUrl(projectId, "logo", currentLogoKey)} alt={`Logo do projeto ${projectName}`} className="rounded-full" />
+                    </div>
+                  ) : (
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full border-4 border-background bg-muted text-muted-foreground sm:h-20 sm:w-20">
+                      <ImageOff className="h-6 w-6" />
+                    </div>
+                  )}
+                </button>
+              ) : (
+                <div>
+                  {currentLogoKey ? (
+                    <div className="h-16 w-16 rounded-full border-4 border-background bg-background sm:h-20 sm:w-20">
+                      <BannerImage src={projectImageUrl(projectId, "logo", currentLogoKey)} alt={`Logo do projeto ${projectName}`} className="rounded-full" />
+                    </div>
+                  ) : (
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full border-4 border-background bg-muted text-muted-foreground sm:h-20 sm:w-20">
+                      <ImageOff className="h-6 w-6" />
+                    </div>
+                  )}
+                </div>
+              )}
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuItem onClick={() => logoInputRef.current?.click()} disabled={busy}>Enviar logo</DropdownMenuItem>
+              {currentLogoKey && <DropdownMenuItem onClick={() => handleRemove("logo")} disabled={busy}>Tirar logo</DropdownMenuItem>}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
       {canManage && (
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Input cru, não o primitivo: `sr-only` + `w-full` do primitivo compõem um absoluto
-              de largura da viewport (a ordem das utilities do Tailwind v4 deixava o w-full
-              vencer o sr-only) — era o scroll horizontal medido em /dashboard/projetos/[id]. */}
-          <input
-            ref={logoInputRef}
-            type="file"
-            accept={IMAGE_ACCEPT}
-            aria-label="Imagem do logo"
-            className="sr-only"
-            disabled={busy}
-            onChange={() => handleUpload("logo")}
-          />
-          <input
-            ref={bannerInputRef}
-            type="file"
-            accept={IMAGE_ACCEPT}
-            aria-label="Imagem de capa"
-            className="sr-only"
-            disabled={busy}
-            onChange={() => handleUpload("banner")}
-          />
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={busy}
-            onClick={() => bannerInputRef.current?.click()}
-          >
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-            Enviar capa
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={busy}
-            onClick={() => logoInputRef.current?.click()}
-          >
-            Enviar logo
-          </Button>
-          {currentBannerKey && (
-            <Button
-              size="sm"
-              variant="ghost"
-              disabled={busy}
-              onClick={() => handleRemove("banner")}
-            >
-              <Trash2 className="h-4 w-4" />
-              {/* "Tirar" e nao "Remover": o painel de membros, montado no mesmo dialogo, ja tem um
-                  botao chamado exatamente "Remover", e `getByRole` casa por substring (licao da
-                  3.C). Um rotulo novo nao pode conter o de um controle vizinho. */}
-              Tirar capa
-            </Button>
-          )}
-          {currentLogoKey && (
-            <Button
-              size="sm"
-              variant="ghost"
-              disabled={busy}
-              onClick={() => handleRemove("logo")}
-            >
-              <Trash2 className="h-4 w-4" />
-              Tirar logo
-            </Button>
-          )}
-        </div>
+        <>
+          <input ref={logoInputRef} type="file" accept={IMAGE_ACCEPT} aria-label="Imagem do logo" className="sr-only" disabled={busy} onChange={() => handleUpload("logo")} />
+          <input ref={bannerInputRef} type="file" accept={IMAGE_ACCEPT} aria-label="Imagem de capa" className="sr-only" disabled={busy} onChange={() => handleUpload("banner")} />
+        </>
       )}
     </div>
   )

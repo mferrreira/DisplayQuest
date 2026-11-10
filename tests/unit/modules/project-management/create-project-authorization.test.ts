@@ -29,6 +29,7 @@ function makeModule() {
       async findMembership() {
         return null;
       },
+      async findActiveMembership() { return null },
       async createMembership() {},
       async updateMembershipRoles() {},
     } as never,

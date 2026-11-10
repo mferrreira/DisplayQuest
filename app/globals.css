@@ -20,6 +20,8 @@
     --popover-foreground: 222.2 84% 4.9%;
     --primary: 221.2 83.2% 53.3%;
     --primary-foreground: 210 40% 98%;
+    --link: 221.2 83.2% 53.3%;
+    --link-foreground: 210 40% 98%;
     --secondary: 210 40% 96%;
     --secondary-foreground: 222.2 84% 4.9%;
     --muted: 210 40% 96%;
@@ -70,6 +72,8 @@
     /* Azul da família do light (light usa 221 83% 53%) */
     --primary: 217 91% 50%;
     --primary-foreground: 210 40% 98%;
+    --link: 217 91% 65%;
+    --link-foreground: 210 40% 98%;
     --secondary: 220 10% 17%;
     --secondary-foreground: 210 15% 90%;
     --muted: 220 10% 17%;
@@ -128,6 +132,8 @@
   --color-popover-foreground: hsl(var(--popover-foreground));
   --color-primary: hsl(var(--primary));
   --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-link: hsl(var(--link));
+  --color-link-foreground: hsl(var(--link-foreground));
   --color-secondary: hsl(var(--secondary));
   --color-secondary-foreground: hsl(var(--secondary-foreground));
   --color-muted: hsl(var(--muted));

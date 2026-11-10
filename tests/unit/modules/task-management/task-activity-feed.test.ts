@@ -77,7 +77,7 @@ function buildModule(withActivity: boolean) {
 
   const activities: TaskActivitiesPort = {
     async findActivityById(activityId) {
-      return { id: activityId, projectId: PROJECT } satisfies TaskActivityRecord;
+      return { id: activityId, projectId: PROJECT, status: "OPEN" } satisfies TaskActivityRecord;
     },
   };
 
@@ -103,7 +103,10 @@ function buildModule(withActivity: boolean) {
     async update() {
       throw new Error("subtask nao e assunto deste arquivo");
     },
-    async delete() {
+async reorder(taskId: number, orderedIds: number[]) {
+      return await this.listByTaskId(taskId)
+    },
+        async delete() {
       throw new Error("subtask nao e assunto deste arquivo");
     },
   };

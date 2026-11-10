@@ -8,7 +8,9 @@
  * O que a tela mostra nao muda: os dados de pessoa abertos (V5-4a/DEC-138) seguem em "Dados para os
  * documentos", e o CPF continua fora — este componente nao recebe o CPF pela lista.
  */
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { renderProjectMarkdown } from "@/lib/markdown-render"
+import { BucketAvatar } from "@/components/ui/bucket-avatar"
+import { BannerImage } from "@/components/ui/banner-image"
 import { userImageUrl } from "@/lib/api/user-images"
 import { Button } from "@/components/ui/button"
 import { PageHeader } from "@/components/ui/page-header"
@@ -39,6 +41,8 @@ import {
 import { formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { UserBadges } from "@/components/ui/user-badges"
+import { UserLinks } from "@/components/ui/user-links"
+import { ProfileBadgeShowcase } from "@/components/ui/profile-badge-showcase"
 import { ProfileMonthsList } from "@/components/ui/profile-months-list"
 
 interface UserProfileViewProps {
@@ -137,26 +141,30 @@ export function UserProfileView({ user, onBack, canEdit = false, onEdit, project
       {/* Identidade — um plano so: capa, avatar sobreposto, nome e funcoes. */}
       <section className="overflow-hidden rounded-2xl border border-border">
         <div className="relative">
-          <div className="h-36 overflow-hidden bg-primary/10 sm:h-44">
+          {/* S04 (R4, DEC-240): faixa 21:9 (`aspect-[21/9]`), sem altura fixa.
+              plan-v12 (DEC-239): a peça única `BannerImage` renderiza a parte escolhida. */}
+          <div className="aspect-[21/9] overflow-hidden bg-primary/10">
             {user.bannerKey ? (
-              <>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={userImageUrl(user.id, "banner", user.bannerKey)}
-                  alt={`Capa de ${user.name}`}
-                  className="h-full w-full object-cover"
-                />
-              </>
+              <BannerImage
+                src={userImageUrl(user.id, "banner", user.bannerKey)}
+                alt={`Capa de ${user.name}`}
+              />
             ) : (
               <div className="flex h-full w-full items-center justify-center text-sm font-medium text-primary/70">
                 Sem capa
               </div>
             )}
           </div>
-          <Avatar className="absolute bottom-0 left-6 h-24 w-24 translate-y-1/3 border-4 border-background bg-background sm:h-28 sm:w-28">
-            <AvatarImage src={user.avatar || undefined} alt={user.name} />
-            <AvatarFallback className="text-2xl font-bold">{getInitials(user.name)}</AvatarFallback>
-          </Avatar>
+          {/* plan-v14 S02 (regra 2): o avatar do bucket sai pela peça única; sem chave, o legado
+              em disco de hoje. */}
+          <BucketAvatar
+            userId={user.id}
+            avatarKey={user.avatarKey}
+            legacyAvatar={user.avatar}
+            name={user.name}
+            className="absolute bottom-0 left-6 h-24 w-24 translate-y-1/3 border-4 border-background bg-background sm:h-28 sm:w-28"
+            fallback={getInitials(user.name)}
+          />
         </div>
 
         <div className="flex flex-col gap-3 px-6 pb-6 pt-16 sm:flex-row sm:items-end sm:justify-between sm:px-8">
@@ -166,11 +174,17 @@ export function UserProfileView({ user, onBack, canEdit = false, onEdit, project
               <Mail className="h-4 w-4" aria-hidden="true" />
               <span className="truncate">{user.email}</span>
             </p>
+            {user.roles.length > 0 && (
+              <p className="mt-2 text-sm text-muted-foreground">
+                {user.roles.map(getRoleDisplayName).join(" · ")}
+              </p>
+            )}
           </div>
           <div className="flex flex-col items-start gap-2 sm:items-end">
-            {user.roles.length > 0 && (
-              <p className="text-sm text-muted-foreground">{user.roles.map(getRoleDisplayName).join(" · ")}</p>
-            )}
+            {/* plan-v18 S01-fix (DEC-250, dono 2026-11-06): a vitrine de equipadas mora no
+                canto direito, onde a linha das funções estava — o mesmo contrato do card
+                próprio. Nome só em tooltip. */}
+            <ProfileBadgeShowcase userId={user.id} />
             {user.createdAt ? (
               <p className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Calendar className="h-4 w-4" aria-hidden="true" />
@@ -200,8 +214,17 @@ export function UserProfileView({ user, onBack, canEdit = false, onEdit, project
         <div className="space-y-6">
           {user.bio && (
             <ProfileSection id="profile-about" icon={BookOpen} title="Sobre">
-              <p className="leading-relaxed text-foreground/90">{user.bio}</p>
+              {/* S08 (R12/DEC-263): a bio é markdown pela MESMA peça da descrição do projeto. */}
+              <div
+                data-testid="bio-markdown"
+                className="leading-relaxed text-foreground/90 text-sm [&_a]:text-primary [&_a]:underline [&_h1]:text-xl [&_h2]:text-lg [&_h3]:text-base [&_ul]:list-disc [&_ul]:pl-6"
+                dangerouslySetInnerHTML={{ __html: renderProjectMarkdown(user.bio) }}
+              />
             </ProfileSection>
+          )}
+
+          {(user.links?.length ?? 0) > 0 && (
+            <UserLinks links={user.links ?? []} />
           )}
 
           {/* V5-4a (DEC-138): os dados de pessoa que o perfil mostra abertamente. O bloco só

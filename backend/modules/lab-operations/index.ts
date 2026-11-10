@@ -160,6 +160,8 @@ export interface LabOperationsModulePorts {
   userSchedules?: UserScheduleRepository
   directory?: LabDirectory
   publisher?: LabIssuePublisherPort
+  /** plan-v15 S11 (R4): resolução de issue, evento criado e responsabilidade finalizada. */
+  recompute?: { recompute(userId: number): Promise<void> }
 }
 
 export interface LabOperationsModuleFactoryOptions {
@@ -186,6 +188,7 @@ export function createLabOperationsModule(options: LabOperationsModuleFactoryOpt
   const userSchedules = options.ports?.userSchedules ?? new PrismaUserScheduleRepository()
   const directory = options.ports?.directory ?? new PrismaLabDirectory()
   const publisher = options.ports?.publisher ?? new UnwiredLabPublisher()
+  const recompute = options.ports?.recompute ?? { async recompute() {} }
 
   const canEndResponsibility = new CanEndResponsibilityUseCase(responsibilities, directory)
 
@@ -199,12 +202,12 @@ export function createLabOperationsModule(options: LabOperationsModuleFactoryOpt
       assignIssue: new AssignIssueUseCase(issues, directory, publisher),
       unassignIssue: new UnassignIssueUseCase(issues),
       startIssueProgress: new StartIssueProgressUseCase(issues),
-      resolveIssue: new ResolveIssueUseCase(issues),
+      resolveIssue: new ResolveIssueUseCase(issues, recompute),
       closeIssue: new CloseIssueUseCase(issues),
       reopenIssue: new ReopenIssueUseCase(issues),
 
       listLabEventsByDate: new ListLabEventsByDateUseCase(labEvents),
-      createLabEvent: new CreateLabEventUseCase(labEvents, directory),
+      createLabEvent: new CreateLabEventUseCase(labEvents, directory, recompute),
       updateLabEvent: new UpdateLabEventUseCase(labEvents, directory),
       deleteLabEvent: new DeleteLabEventUseCase(labEvents, directory),
       listLabEventsByRange: new ListLabEventsByRangeUseCase(labEvents),
@@ -223,7 +226,7 @@ export function createLabOperationsModule(options: LabOperationsModuleFactoryOpt
       canEndResponsibility,
       // B6-6 (D4): end/updateNotes agora decidem o canEnd por dentro (com a mensagem congelada
       // da rota), entao recebem o use case irmao — o mesmo que a rota chamava por fora.
-      endResponsibility: new EndResponsibilityUseCase(responsibilities, canEndResponsibility),
+      endResponsibility: new EndResponsibilityUseCase(responsibilities, canEndResponsibility, recompute),
       updateResponsibilityNotes: new UpdateResponsibilityNotesUseCase(responsibilities, canEndResponsibility),
       deleteResponsibility: new DeleteResponsibilityUseCase(responsibilities),
       pauseResponsibilityForUser: new PauseResponsibilityUseCase(responsibilities),

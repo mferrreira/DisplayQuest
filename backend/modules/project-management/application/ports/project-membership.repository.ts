@@ -25,6 +25,11 @@ export interface ProjectMemberWithUser {
 export interface ProjectManagementMembershipPort {
   /** null when there is NO membership (the canActorManageProject branch distinction matters). */
   findMembership(projectId: number, userId: number): Promise<{ id: number; roles: Role[] } | null>
+  /**
+   * S06 (plan-v21, R9/DEC-261): a membership só vale para a escrita de descrição quando a
+   * situação do vínculo é `ATIVO` (DEC-149). INATIVO existe para o histórico e não edita.
+   */
+  findActiveMembership(projectId: number, userId: number): Promise<{ id: number; roles: Role[] } | null>
   createMembership(input: { projectId: number; userId: number; roles: Role[] }): Promise<void>
   updateMembershipRoles(membershipId: number, roles: Role[]): Promise<void>
   /** joinedAt ASC (frozen from ProjectMembershipRepository.getProjectMembersWithDetails). */

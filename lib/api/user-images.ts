@@ -8,15 +8,25 @@
  * ela que o navegador leva como quebra de cache, porque o endereço por slot é sempre o mesmo.
  */
 
-export type UserImageSlot = "banner"
+export type UserImageSlot = "avatar" | "banner"
 
 export interface UserImageState {
   bannerKey: string | null
+  /** Chave do avatar no bucket. */
+  avatarKey: string | null
 }
 
 function readImageState(payload: unknown): UserImageState {
-  const user = (payload as { user?: { bannerKey?: string | null } })?.user
-  return { bannerKey: user?.bannerKey ?? null }
+  const user = (payload as {
+    user?: {
+      bannerKey?: string | null
+      avatarKey?: string | null
+    }
+  })?.user
+  return {
+    bannerKey: user?.bannerKey ?? null,
+    avatarKey: user?.avatarKey ?? null,
+  }
 }
 
 async function request<T>(path: string, init: RequestInit, fallback: string): Promise<T> {
@@ -71,4 +81,22 @@ export async function deleteUserImage(userId: number, slot: UserImageSlot): Prom
     "Erro ao remover capa",
   )
   return readImageState(payload)
+}
+export interface UserMarkdownImage {
+  key: string
+  url: string
+  name: string
+}
+
+/** R13 (S08, DEC-263): imagem da bio — a mesma régua de upload da descrição do projeto. */
+export async function uploadUserMarkdownImage(userId: number, file: File): Promise<UserMarkdownImage> {
+  const form = new FormData()
+  form.set("file", file)
+  const response = await fetch(`/api/users/${userId}/markdown-images`, { method: "POST", body: form })
+  const body = await response.json().catch(() => null)
+  if (!response.ok) {
+    const message = typeof body?.error === "string" ? body.error : "Falha ao enviar a imagem"
+    throw new Error(message)
+  }
+  return body as UserMarkdownImage
 }

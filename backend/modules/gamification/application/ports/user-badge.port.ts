@@ -19,4 +19,7 @@ export interface UserBadgePort {
   findByUserAndBadge(userId: number, badgeId: number): Promise<UserBadge | null>;
   create(data: UserBadgeCreateData): Promise<UserBadge>;
   delete(id: number): Promise<void>;
+  /** plan-v15 S04 (R9): leitura e escrita do slot equipável. */
+  countEquippedByUserId(userId: number): Promise<number>;
+  setEquipped(id: number, equipped: boolean): Promise<UserBadge>;
 }

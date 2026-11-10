@@ -27,6 +27,7 @@ export const SELF_EDITABLE_USER_FIELDS = [
   "fundingAgency",
   "fundingAgencyOther",
   "level",
+  "links",
 ] as const;
 
 export function filterSelfEditableUserFields(

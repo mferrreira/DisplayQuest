@@ -25,6 +25,7 @@ import { UpdateUserPointsUseCase } from "@/backend/modules/user-management/appli
 import { UpdateUserProfileUseCase } from "@/backend/modules/user-management/application/use-cases/update-user-profile.use-case"
 import { UpdateUserImageUseCase } from "@/backend/modules/user-management/application/use-cases/update-user-image.use-case"
 import { GetUserImageUseCase } from "@/backend/modules/user-management/application/use-cases/get-user-image.use-case"
+import { AssertCanUpdateUserBioUseCase } from "@/backend/modules/user-management/application/use-cases/assert-can-update-user-bio.use-case"
 import { AssertCanUpdateUserImageUseCase } from "@/backend/modules/user-management/application/use-cases/assert-can-update-user-image.use-case"
 import type { AssertCanUpdateUserImageCommand } from "@/backend/modules/user-management/application/use-cases/assert-can-update-user-image.use-case"
 import { UpdateUserRolesUseCase } from "@/backend/modules/user-management/application/use-cases/update-user-roles.use-case"
@@ -79,14 +80,18 @@ export class UserManagementModule {
   readonly assertCanManageUsers: (command: { actor: ActorRef; deniedMessage?: string }) => void
   /** V5-3 (DEC-137): assert 403-ANTES-DO-CORPO do upload; `updateUserImage` recheca no próprio ator. */
   readonly assertCanUpdateUserImage: (command: AssertCanUpdateUserImageCommand) => void
+  /** S08 (DEC-263): assert 404-antes-do-403-antes-do-corpo do upload de imagem da bio. */
+  readonly assertCanUpdateUserBio: (command: { actor: ActorRef; userId: number }) => void
 
   constructor(
     private readonly service: UserManagementService,
     assertCanManageUsersUseCase: AssertCanManageUsersUseCase,
     assertCanUpdateUserImageUseCase: AssertCanUpdateUserImageUseCase,
+    assertCanUpdateUserBioUseCase: AssertCanUpdateUserBioUseCase,
   ) {
     this.assertCanManageUsers = (command) => assertCanManageUsersUseCase.execute(command)
     this.assertCanUpdateUserImage = (command) => assertCanUpdateUserImageUseCase.execute(command)
+    this.assertCanUpdateUserBio = (command) => assertCanUpdateUserBioUseCase.execute(command)
     this.createUser = this.service.createUser.bind(this.service)
     this.listUsersForActor = this.service.listUsersForActor.bind(this.service)
     this.findUserById = this.service.findUserById.bind(this.service)
@@ -115,12 +120,16 @@ export interface UserManagementModuleFactoryOptions {
   passwordHasher?: PasswordHasher
   /** V5-12 (DEC-143/177): vínculo em comum para a regra de visibilidade de perfil. */
   profileVisibility?: ProfileVisibilityPort
+  /** plan-v15 S11 (R4): campo de perfil gravado é episódio de recompletação. */
+  recompute?: { recompute(userId: number): Promise<void> }
 }
 
 export function createUserManagementModule(options: UserManagementModuleFactoryOptions = {}) {
   const repository = options.repository ?? createPrismaUserRepository()
   const passwordHasher = options.passwordHasher ?? createBcryptPasswordHasher()
   const profileVisibility = options.profileVisibility ?? createPrismaProfileVisibility()
+  // plan-v15 S11 (R4): campo de perfil gravado é episódio de recompletação. Default no-op.
+  const recompute = options.recompute ?? { async recompute() {} }
 
   const deleteUserUseCase = new DeleteUserUseCase(repository)
   const service: UserManagementService = {
@@ -128,13 +137,13 @@ export function createUserManagementModule(options: UserManagementModuleFactoryO
     listUsersForActor: (query) => new ListUsersForActorUseCase(repository, profileVisibility).execute(query),
     findUserById: (actor, userId, deniedMessage) =>
       new FindUserByIdUseCase(repository, profileVisibility).execute(actor, userId, deniedMessage),
-    updateUser: (actor, userId, data) => new UpdateUserUseCase(repository).execute(actor, userId, data),
+    updateUser: (actor, userId, data) => new UpdateUserUseCase(repository, recompute).execute(actor, userId, data),
     deleteUser: (actor, userId) => deleteUserUseCase.execute(actor, userId),
     listPendingUsers: (actor) => new ListPendingUsersUseCase(repository).execute(actor),
     moderatePendingUser: (actor, userId, action) =>
       new ModeratePendingUserUseCase(repository, deleteUserUseCase).execute(actor, userId, action),
     updateUserProfile: (actor, userId, data) =>
-      new UpdateUserProfileUseCase(repository, passwordHasher).execute(actor, userId, data),
+      new UpdateUserProfileUseCase(repository, passwordHasher, recompute).execute(actor, userId, data),
     updateUserPoints: (command) => new UpdateUserPointsUseCase(repository).execute(command),
     deductUserHours: (command) => new DeductUserHoursUseCase(repository).execute(command),
     updateUserRoles: (command) => new UpdateUserRolesUseCase(repository).execute(command),
@@ -151,5 +160,6 @@ export function createUserManagementModule(options: UserManagementModuleFactoryO
     service,
     new AssertCanManageUsersUseCase(),
     new AssertCanUpdateUserImageUseCase(),
+    new AssertCanUpdateUserBioUseCase(repository),
   )
 }

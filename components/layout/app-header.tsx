@@ -14,7 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { BucketAvatar } from "@/components/ui/bucket-avatar"
 import { PointsCounter, PointsDelta } from "@/components/ui/points-delta"
 import { FloatingSessionTimer } from "@/components/ui/floating-session-timer"
 import { Menu, Trophy } from "lucide-react"
@@ -79,7 +79,13 @@ export function AppHeader({ sidebarOpen = true, onToggleSidebar, showSessionTime
 
           <div className="hidden items-center gap-2 md:flex">
             {monthPoints !== null ? (
-              <div className="relative flex items-center gap-2 rounded-lg border bg-card px-3 py-1.5">
+              // S02 (R2): a pílula é link para o quadro de liderança; o número que ela mostra é
+              // o mesmo que ordena o quadro, e o nome do link diz isso.
+              <Link
+                href="/dashboard/leaderboard"
+                aria-label="Placar do mês — abrir quadro de liderança"
+                className="relative flex items-center gap-2 rounded-lg border bg-card px-3 py-1.5 transition-colors hover:border-primary/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring"
+              >
                 <Trophy className="h-4 w-4 text-warning" aria-hidden="true" />
                 {/* ADR-007: o rótulo diz o que o número É. Sem "pontos" solto, que leria como saldo. */}
                 <span className="sr-only">Placar do mês</span>
@@ -93,7 +99,7 @@ export function AppHeader({ sidebarOpen = true, onToggleSidebar, showSessionTime
                 </span>
                 {/* plan-v3 OND4-B: o prêmio desta entrega, ancorado no contador que ele explica. */}
                 <PointsDelta />
-              </div>
+              </Link>
             ) : null}
 
             <NotificationsPanel />
@@ -102,19 +108,20 @@ export function AppHeader({ sidebarOpen = true, onToggleSidebar, showSessionTime
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="gap-2">
-                  <Avatar className="h-6 w-6">
-                    <AvatarImage src={user?.avatar || undefined} alt={user?.name || ""} />
-                    <AvatarFallback className="text-xs">
-                      {user?.name
-                        ? user.name
-                            .split(" ")
-                            .map((namePart) => namePart[0])
-                            .join("")
-                            .toUpperCase()
-                            .slice(0, 2)
-                        : "U"}
-                    </AvatarFallback>
-                  </Avatar>
+                  {/* plan-v14 S02 (regra 2): o avatar do bucket sai pela peça única; sem chave,
+                      o legado em disco de hoje. */}
+                  <BucketAvatar
+                    userId={user?.id ?? 0}
+                    avatarKey={user?.avatarKey}
+                    legacyAvatar={user?.avatar}
+                    name={user?.name || ""}
+                    className="h-6 w-6"
+                    fallback={
+                      user?.name
+                        ? user.name.split(" ").map((namePart) => namePart[0]).join("").toUpperCase().slice(0, 2)
+                        : "U"
+                    }
+                  />
                   <span className="max-w-32 truncate">{user?.name}</span>
                 </Button>
               </DropdownMenuTrigger>

@@ -23,6 +23,8 @@ export class UpsertWeeklyReportUseCase {
     private readonly weeklyReports: WeeklyReportsRepository,
     private readonly hoursRead: HoursReadRepository,
     private readonly directory: ReportingDirectory,
+    /** plan-v15 S11 (R4): relatório semanal gerado é episódio de recompletação. */
+    private readonly recompute: { recompute(userId: number): Promise<void> },
   ) {}
 
   async execute(command: UpsertWeeklyReportCommand): Promise<WeeklyReportReadModel> {
@@ -67,6 +69,10 @@ export class UpsertWeeklyReportUseCase {
           totalLogs,
           summary,
         })
+
+    // R4 (plan-v15 S11): o relatório semanal gravado é episódio de recompletação do autor.
+    // Quem gera em lote atravessa este mesmo upsert — o trigger pega o bulk de uma peça só.
+    await this.recompute.recompute(user.id)
 
     const logs: WeeklyReportSessionLog[] = sessions.map((session) => mapSessionToWeeklyLog(session))
 

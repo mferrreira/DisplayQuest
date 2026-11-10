@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { BucketAvatar } from "@/components/ui/bucket-avatar"
 import { 
   Users, 
   UserPlus, 
@@ -46,6 +46,8 @@ interface Volunteer {
   name: string
   email: string
   avatar?: string | null
+  /** plan-v14 S02 (regra 2): chave do avatar no bucket (DEC-242). */
+  avatarKey?: string | null
   role: string
   joinedAt: string
   hoursWorked: number
@@ -126,6 +128,7 @@ export function VolunteersManagement() {
             name: member.user?.name || 'Usuário',
             email: member.user?.email || '',
             avatar: member.user?.avatar,
+            avatarKey: member.user?.avatarKey,
             role: member.roles?.[0] || 'COLABORADOR',
             joinedAt: member.joinedAt,
             hoursWorked: 0,
@@ -418,12 +421,16 @@ export function VolunteersManagement() {
                       <CardContent className="p-6">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-4">
-                            <Avatar className="h-12 w-12">
-                              <AvatarImage src={volunteer.avatar || undefined} />
-                              <AvatarFallback>
-                                {volunteer.name.split(' ').map(n => n[0]).join('')}
-                              </AvatarFallback>
-                            </Avatar>
+                            {/* plan-v14 S02 (regra 2): o avatar do bucket sai pela peça única;
+                                sem chave, o legado. */}
+                            <BucketAvatar
+                              userId={volunteer.id}
+                              avatarKey={volunteer.avatarKey}
+                              legacyAvatar={volunteer.avatar}
+                              name={volunteer.name}
+                              className="h-12 w-12"
+                              fallback={volunteer.name.split(' ').map(n => n[0]).join('')}
+                            />
                             <div>
                               <h3 className="font-semibold">{volunteer.name}</h3>
                               <p className="text-sm text-muted-foreground">{volunteer.email}</p>

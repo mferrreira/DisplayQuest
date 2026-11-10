@@ -13,19 +13,23 @@
  * reenvia o mesmo `activityId`.
  */
 import { NotFoundError, ValidationError } from "../errors";
+import { isActivitySelectableForNewTask, type ActivityStatus } from "../project/cronograma-rules";
 
 export const TASK_ACTIVITY_NOT_FOUND_MESSAGE = "Atividade do cronograma não encontrada";
 export const TASK_ACTIVITY_PROJECT_MESSAGE = "Atividade do cronograma pertence a outro projeto";
 export const TASK_ACTIVITY_GLOBAL_MESSAGE = "Quest global não tem atividade do cronograma";
 export const TASK_ACTIVITY_INVALID_MESSAGE = "Atividade do cronograma é inválida";
+export const TASK_ACTIVITY_CLOSED_MESSAGE = "Atividade concluída não aceita nova tarefa";
 
 /**
- * O que o use case precisa saber da atividade para decidir: existe e a que projeto pertence.
- * É a leitura mínima da porta `TaskActivitiesPort` — nem mês, nem status, nem recompensa.
+ * O que o use case precisa saber da atividade para decidir: existe, a que projeto pertence e o
+ * status. plan-v21 S01 (DEC-257) acrescentou o status: só OPEN é destino de tarefa nova. Ainda
+ * é a leitura mínima — nem mês, nem recompensa.
  */
 export interface TaskActivityRef {
   id: number;
   projectId: number;
+  status: ActivityStatus;
 }
 
 /**
@@ -35,6 +39,12 @@ export interface TaskActivityRef {
  *   quest global            → recusa: quest não tem projeto, e atividade é do projeto
  *   atividade inexistente   → NotFound
  *   atividade de outro projeto → Validation
+ *   criação com linha não-OPEN → Validation nomeando o motivo (DEC-257)
+ *
+ * `isCreate` é o que separa os dois caminhos: na criação a linha precisa ser OPEN; no update a
+ * regra de status NÃO vale — o corpo do PUT reenvia o vínculo de uma etapa que virou
+ * COMPLETION_REQUESTED ou DONE, e recusar ali quebraria salvar tarefa sem mexer no vínculo
+ * (mesma razão medida da DEC-99 para linha passada).
  *
  * `activityId` chega cru do corpo da rota, por isso é normalizado aqui: número inteiro positivo
  * ou nada. `projectId` é o projeto EFETIVO da tarefa (o merge do update já decidiu ele antes).
@@ -44,8 +54,9 @@ export function resolveTaskActivityLink(input: {
   activity: TaskActivityRef | null;
   projectId: number | null;
   isGlobal: boolean;
+  isCreate: boolean;
 }): number | null {
-  const { activityId, activity, projectId, isGlobal } = input;
+  const { activityId, activity, projectId, isGlobal, isCreate } = input;
 
   if (activityId === undefined || activityId === null || activityId === "") {
     return null;
@@ -66,6 +77,10 @@ export function resolveTaskActivityLink(input: {
 
   if (activity.projectId !== projectId) {
     throw new ValidationError(TASK_ACTIVITY_PROJECT_MESSAGE);
+  }
+
+  if (isCreate && !isActivitySelectableForNewTask(activity.status)) {
+    throw new ValidationError(TASK_ACTIVITY_CLOSED_MESSAGE);
   }
 
   return activity.id;

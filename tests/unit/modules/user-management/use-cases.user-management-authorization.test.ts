@@ -56,12 +56,12 @@ function makeFixture() {
     {
       id: 1, name: "Ana", email: "ana@x.com", points: 0, completedTasks: 0,
       password: "hashed", status: "active", weekHours: 10, currentWeekHours: 0,
-      profileVisibility: "public", bio: null, avatar: null, bannerKey: null, ...emptyPersonData(), roles: ["VOLUNTARIO"],
+      profileVisibility: "public", bio: null, avatar: null, avatarKey: null, bannerKey: null, ...emptyPersonData(), roles: ["VOLUNTARIO"],
     },
     {
       id: 4, name: "Bruno", email: "bruno@x.com", points: 0, completedTasks: 0,
       password: "hashed", status: "pending", weekHours: 0, currentWeekHours: 0,
-      profileVisibility: "public", bio: null, avatar: null, bannerKey: null, ...emptyPersonData(), roles: [],
+      profileVisibility: "public", bio: null, avatar: null, avatarKey: null, bannerKey: null, ...emptyPersonData(), roles: [],
     },
   ];
   const writes: string[] = [];
@@ -190,7 +190,7 @@ describe("FindUserByIdUseCase — visibilidade de perfil + mensagem por rota (V5
 
 describe("UpdateUserUseCase — gate + trava de campos (B6-4)", () => {
   it("VOLUNTARIO editando a SI MESMO escreve só os campos self-editáveis: roles/status/weekHours NÃO passam", async () => {
-    const updated = await new UpdateUserUseCase(fakes.repository).execute(voluntario, 1, {
+    const updated = await new UpdateUserUseCase(fakes.repository, { async recompute() {} }).execute(voluntario, 1, {
       name: "Novo Nome",
       roles: ["ADMIN"],
       status: "active",
@@ -201,13 +201,13 @@ describe("UpdateUserUseCase — gate + trava de campos (B6-4)", () => {
 
   it("VOLUNTARIO editando OUTRO é barrado antes de qualquer escrita", async () => {
     await expect(
-      new UpdateUserUseCase(fakes.repository).execute(stranger, 1, { name: "X" }),
+      new UpdateUserUseCase(fakes.repository, { async recompute() {} }).execute(stranger, 1, { name: "X" }),
     ).rejects.toThrow("Acesso negado");
     expect(fakes.writes).toEqual([]);
   });
 
   it("COORDENADOR escreve os campos de gestão (roles passam)", async () => {
-    const updated = await new UpdateUserUseCase(fakes.repository).execute(manager, 1, {
+    const updated = await new UpdateUserUseCase(fakes.repository, { async recompute() {} }).execute(manager, 1, {
       roles: ["PESQUISADOR"],
     });
     expect(updated).toMatchObject({ roles: ["PESQUISADOR"] });
@@ -251,12 +251,12 @@ describe("ListPendingUsersUseCase / ModeratePendingUserUseCase — 'Acesso negad
 describe("UpdateUserProfileUseCase — self || MANAGE_USERS com 'Não autorizado' (B6-4)", () => {
   it("VOLUNTARIO editando OUTRO leva a mensagem própria", async () => {
     await expect(
-      new UpdateUserProfileUseCase(fakes.repository, fakes.hasher).execute(stranger, 1, { name: "X" }),
+      new UpdateUserProfileUseCase(fakes.repository, fakes.hasher, { async recompute() {} }).execute(stranger, 1, { name: "X" }),
     ).rejects.toThrow(PROFILE_DENIED_MESSAGE);
   });
 
   it("o dono edita o próprio perfil", async () => {
-    const updated = await new UpdateUserProfileUseCase(fakes.repository, fakes.hasher).execute(voluntario, 1, {
+    const updated = await new UpdateUserProfileUseCase(fakes.repository, fakes.hasher, { async recompute() {} }).execute(voluntario, 1, {
       name: "Ana Nova",
     });
     expect(updated).toMatchObject({ name: "Ana Nova" });

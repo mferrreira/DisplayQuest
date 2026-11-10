@@ -3,7 +3,7 @@
 O **Perfil** é a sua conta vista por dentro: quem você é no laboratório, o que produziu e como os seus dados aparecem para as outras pessoas.
 
 ```foto perfil-participante titulo="O perfil de uma pessoa"
-O cartão **Meu Perfil** abre com a faixa da capa e traz avatar, nome e as cifras de trabalho; abaixo dele ficam as três abas.
+O cartão **Meu Perfil** abre com a faixa da capa e traz avatar, nome e as cifras de trabalho; no canto direito do cartão ficam os medálhões das passivas equipadas (descritos em *Os distintivos no perfil*), e as funções da pessoa aparecem sob o email, na coluna do nome. Abaixo do cartão ficam as três abas.
 ```
 
 ## As três abas
@@ -12,7 +12,7 @@ O cartão **Meu Perfil** abre com a faixa da capa e traz avatar, nome e as cifra
 | --- | --- |
 | **Atividade** | o resumo do que você fez: tarefas, sessões, horas |
 | **Logs Diários** | o registro dia a dia, alimentado pelas sessões encerradas |
-| **Configurações** | os dados da conta: **Nome**, **Email**, **Biografia**, **Visibilidade do Perfil**, **Horas Semanais** |
+| **Configurações** | os dados da conta: **Nome**, **Email**, **Biografia**, **Visibilidade do Perfil**, **Horas Semanais**, **Links do perfil** |
 
 ```foto perfil-configuracoes titulo="A aba Configurações"
 **Horas Semanais** é a meta semanal da pessoa, usada nos relatórios e no painel administrativo.
@@ -22,8 +22,10 @@ O cartão **Meu Perfil** abre com a faixa da capa e traz avatar, nome e as cifra
 
 Clique em **Editar Perfil**, no cartão **Meu Perfil**. O cartão entra em modo de edição: aparece a marca **Editando** e o botão passa a **Cancelar Edição**. Altere o que precisa e salve; **Cancelar Edição** descarta as mudanças.
 
-```foto perfil-edicao titulo="O perfil em modo de edição, no bloco dos dados dos documentos"
-O formulário está na aba **Configurações**: o cartão entra em edição e os campos aparecem abaixo do recorte do avatar.
+Na aba **Configurações**, o modo de edição traz primeiro o bloco **Badges equipáveis**: uma linha por distintivo conquistado que tem passiva, com o medálhão, o nome, o efeito (`+5% pontos` ou `−15% penalidade`) e o botão **Desequipar** — que vira **Equipar** quando a passiva não está ativa. O título do bloco traz o contador **Equipadas (n/3)**. Só a própria pessoa equipar; o bloco só existe em edição do próprio perfil. Equipar obedece três regras: o distintivo tem de ser conquistado, tem de ter passiva (*"Badge sem passiva não é equipável"*), e há no máximo três equipadas — a quarta recebe *"Slots de passiva cheios"*. O aviso chega escrito na tela, abaixo do título. Abaixo do bloco fica o formulário.
+
+```foto perfil-edicao titulo="O perfil em modo de edição: o bloco Badges equipáveis e o formulário"
+O bloco traz o medálhão, o nome, o efeito da passiva e o botão **Desequipar**, com o contador **Equipadas (1/3)** no título. O formulário de dados aparece logo abaixo.
 ```
 
 ### Os dados que os documentos pedem
@@ -40,6 +42,22 @@ O formulário tem um bloco chamado **Dados para os documentos oficiais**. São o
 | **Instituição de fomento** | **CNPq**, **Fapemig** ou **Outra** — e em **Outra** aparece o campo **Nome da instituição**, até 80 caracteres |
 
 O CPF é o único desses campos que não é aberto: só você e quem gerencia contas o leem, e ele não aparece no perfil aberto por outra pessoa. Os demais são leitura aberta.
+
+### Os links da pessoa
+
+Na aba **Configurações**, o bloco **Links do perfil** tem uma linha por link. Em **Label do link N**, escreva o texto que aparece no perfil; em **URL do link N**, escreva o endereço. **Adicionar link** cria a linha, e **Remover link X** tira a linha. O servidor aceita até 10 links, com label de até 50 caracteres. A décima primeira linha não entra: o botão **Adicionar link** fica desabilitado em 10, e a rota responde *"Máximo de 10 links"*. Uma URL sem protocolo passa a `https://`; `ftp:` e `javascript:` são recusados.
+
+Cada link mostra o favicon do domínio, derivado no navegador de `icons.duckduckgo.com/ip3/<domínio>.ico`. Quando o favicon não carrega, o glyph de link entra no lugar, e o link continua. Nada de favicon no banco.
+
+```foto perfil-links titulo="Os links no perfil próprio"
+O bloco **Links** traz `LinkedIn` e `GitHub` com o favicon de `linkedin.com` e `github.com` na borda do círculo.
+```
+
+A **Biografia** é markdown. Em **Configurações**, use **Editar biografia**. O dialog tem a textarea, a preview, **Anexar imagem** e drop de imagem. Salvar manda a bio pela rota do perfil. O perfil próprio, o perfil de terceiro e o dialog de gestão no painel usam as mesmas peças.
+
+```foto perfil-bio-dialog titulo="O diálogo de biografia em markdown"
+A textarea fica à esquerda, com a preview à direita; embaixo ficam **Anexar imagem** e a nota de que a imagem vai para o bucket do usuário.
+```
 
 ::: nota titulo="A visibilidade é regra do servidor (desde outubro/2026)"
 Os três valores de **Visibilidade do Perfil** passaram a ser obedecidos pelo servidor. O que cada um esconde, e o que não esconde:
@@ -63,15 +81,35 @@ Editar o próprio perfil é sempre permitido. Editar o perfil de outra pessoa ex
 
 ## A capa do perfil
 
-Acima do avatar, o cartão **Meu Perfil** tem uma faixa horizontal: é a **capa** da pessoa. Sem capa, a faixa diz *"Sem capa"*.
+Acima do avatar, o cartão **Meu Perfil** tem uma faixa horizontal: é a **capa** da pessoa. A faixa é 21:9 — uma moldura larga e baixa, como a capa de uma rede social. Sem capa, a faixa diz *"Sem capa"*.
 
-1. Clique em **Enviar capa** e escolha a imagem. Ela ocupa a faixa do topo do cartão.
-2. Para trocar, envie outra imagem: a nova ocupa o lugar da antiga.
-3. **Tirar capa** aparece quando a faixa tem imagem, e o sistema pede confirmação.
+O clique na faixa abre a lista de opções — **Enviar capa**, **Tirar capa**, **Enviar avatar**, **Tirar avatar**. A lista só existe em **modo de edição** (o botão **Editar Perfil** de hoje); fora da edição, a faixa não abre nada. Os controles não somem: viraram itens da lista, pelos mesmos rótulos, pelas mesmas rotas; a escrita continua sendo a autoridade da pessoa (ou de quem gerencia contas).
+
+1. Entre em edição, clique na **faixa da capa** e escolha **Enviar capa**; escolha a imagem: o arquivo sobe para o bucket e passa a ocupar a faixa. **Tirar capa** aparece quando a faixa tem imagem, e o sistema pede confirmação.
+2. **Enviar avatar** sobe o arquivo para o bucket, e o avatar escolhido aparece no perfil, no pódio do ranking, no cabeçalho, no menu do aplicativo e na lista de pessoas. Quem não tem avatar no bucket cai no avatar de arquivo de hoje. **Tirar avatar** aparece quando há avatar, e o sistema pede confirmação.
 
 São imagens, só isso: PDF e vídeo não entram aqui. O arquivo vai para o bucket de objetos do sistema, e a tela o lê por um endereço que entrega a imagem apenas a quem está autenticado.
 
+Os rótulos da lista não aparecem no extrato do DOM — o gatilho da faixa é ícone sem texto; o nome dos itens vem da interface medida pelo teste.
+
+```foto perfil-com-capa titulo="A capa do perfil na faixa 21:9"
+A faixa tem a altura da moldura 21:9, largura plena; abaixo dela ficam as cifras da semana. Os controles estão na lista que o clique da faixa abre, só em modo de edição.
+```
+
+```foto capa-menu-perfil titulo="A lista de opções aberta pelo clique na faixa, em modo de edição: Enviar capa, Tirar capa, Enviar avatar, Tirar avatar"
+```
+
 A capa é sua, e quem a escreve é você — ou quem tem permissão de gerenciar contas. Quem a **vê** é qualquer pessoa autenticada: ela aparece no seu perfil, no perfil aberto por outra pessoa e no cartão de quem está em 1º lugar no ranking.
+
+## Os distintivos no perfil
+
+Abaixo das três abas, o perfil tem o bloco **Badges**. O bloco é leitura: só os distintivos conquistados, cada um em um cartão com o **medálhão**, o nome, a data da conquista e o selo do efeito — `Passiva: +5% pontos` quando o distintivo tem passiva, `Equipada: +5% pontos` quando ela está ativa. A passiva ativa se destaca no cartão: o contorno fica em destaque. Não há progresso no bloco: o que ainda não foi conquistado não aparece, e quem não tem nenhum distintivo não vê o bloco. Equipar não acontece aqui — é na aba **Configurações**, em modo de edição, no bloco **Badges equipáveis**.
+
+O medálhão é o desenho do distintivo: quando a gestão enviou a imagem do badge, ela aparece no círculo, na cor do distintivo; sem imagem enviada, o círculo mostra o glifo do catálogo, e sem glifo, o ícone da categoria. Os medálhões das equipadas também aparecem no cartão de identidade, no canto direito, onde antes ficava a linha das funções — só as equipadas, no máximo três, a passiva mais recente por primeiro; ao passar o cursor, o medálhão explica o distintivo. A vitrine é a mesma no perfil aberto por outra pessoa.
+
+```foto perfil-badges titulo="O bloco Badges no perfil: os cartões das conquistadas, a equipada em destaque"
+Cada cartão traz o medálhão, o nome, a data e o selo do efeito; a equipada aparece com o contorno em destaque e o selo `Equipada: +5% pontos`. Nenhum cartão do bloco tem botão — o equipar mora na edição da aba Configurações.
+```
 
 ## Os logs diários
 
@@ -107,4 +145,8 @@ O perfil de outra pessoa também se abre pelo **Ranking**: clique na pessoa e a 
 
 ```foto perfil-de-outra-pessoa titulo="O perfil de outra pessoa, com os dados dos documentos"
 O CPF não aparece aqui, e isso não é descuido: é o único campo dos documentos cuja leitura é restrita.
+```
+
+```foto perfil-terceiro-links titulo="Os links no perfil de outra pessoa"
+A mesma peça de links serve os três lados: o perfil de terceiro, o perfil próprio e o diálogo de gestão no painel.
 ```

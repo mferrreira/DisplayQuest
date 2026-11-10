@@ -49,7 +49,8 @@ function makeFixture(
   const writes: Array<Partial<MembershipRecord> & { id: number }> = [];
 
   const memberships = {
-    async findMembership(projectId: number, userId: number) {
+    async findActiveMembership() { return null },
+      async findMembership(projectId: number, userId: number) {
       if (projectId !== PROJECT || !actorMembership || actorMembership.userId !== userId) return null;
       return { id: 99, roles: actorMembership.roles as never };
     },

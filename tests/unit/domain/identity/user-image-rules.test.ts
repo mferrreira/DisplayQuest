@@ -15,13 +15,13 @@ import {
 } from "@/backend/domain";
 
 describe("imagem de perfil — slot e prefixo (V5-3)", () => {
-  it("slot é lista fechada: banner, nada além", () => {
-    expect(USER_IMAGE_SLOTS).toEqual(["banner"]);
+  it("slot é lista fechada: avatar e banner, nada além", () => {
+    // DEC-242: o avatar entrou na lista fechada — `users/<id>/images/avatar` é o prefixo do quadrado.
+    expect(USER_IMAGE_SLOTS).toEqual(["avatar", "banner"]);
     expect(isUserImageSlot("banner")).toBe(true);
-    // "logo" é o slot do PROJETO (DEC-135). Trazer o avatar do usuário para o bucket é outra
-    // decisão, e uma lista que o aceitasse hoje abriria `users/7/images/logo` sem decisão.
+    expect(isUserImageSlot("avatar")).toBe(true);
+    // "logo" é o slot do PROJETO (DEC-135): nenhuma lista de usuário o aceita.
     expect(isUserImageSlot("logo")).toBe(false);
-    expect(isUserImageSlot("avatar")).toBe(false);
     expect(isUserImageSlot("capa")).toBe(false);
     expect(isUserImageSlot("BANNER")).toBe(false);
     expect(isUserImageSlot(undefined)).toBe(false);
@@ -29,7 +29,7 @@ describe("imagem de perfil — slot e prefixo (V5-3)", () => {
   });
 
   it("a mensagem do slot nomeia a lista", () => {
-    expect(USER_IMAGE_SLOT_MESSAGE).toBe("Slot de imagem deve ser banner");
+    expect(USER_IMAGE_SLOT_MESSAGE).toBe("Slot de imagem deve ser avatar ou banner");
   });
 
   it("prefixo carrega o usuário e o slot", () => {

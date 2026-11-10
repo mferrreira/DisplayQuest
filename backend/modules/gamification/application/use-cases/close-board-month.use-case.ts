@@ -9,7 +9,11 @@ import {
   type MonthClosePerson,
 } from "@/backend/domain/gamification"
 import { civilMonthLabel } from "@/backend/domain/time"
-import type { BoardMonthClosePort } from "@/backend/modules/gamification/application/ports/board-month-close.port"
+import type { BoardMonthClosePort, BoardZeroField } from "@/backend/modules/gamification/application/ports/board-month-close.port"
+
+/** O zero do fechamento de mês é só o placar do mês; o saldo fica (DEC-253). */
+const BOARD_ZERO_MONTH: BoardZeroField = "monthPoints";
+import type { EvaluateUserBadgesUseCase } from "@/backend/modules/gamification/application/use-cases/evaluate-user-badges.use-case"
 
 /** Mensagem congelada do 403. A rota de gestão e o use case dizem a mesma frase. */
 export const MONTH_CLOSE_DENIED_MESSAGE = "Apenas coordenadores e gerentes podem fechar o mês do quadro";
@@ -52,7 +56,11 @@ export interface BoardMonthCloseResult {
  * (DEC-226) e a escrita numa única transação do adaptador (INV5).
  */
 export class CloseBoardMonthUseCase {
-  constructor(private readonly monthClose: BoardMonthClosePort) {}
+  constructor(
+    private readonly monthClose: BoardMonthClosePort,
+    /** plan-v15 S11 (R4): o fechamento é episódio de cada pessoa que recebeu linha no quadro. */
+    private readonly evaluate: EvaluateUserBadgesUseCase,
+  ) {}
 
   async execute(command: CloseBoardMonthCommand): Promise<BoardMonthCloseResult> {
     requireActorPermission(command.actor, "MANAGE_USERS", MONTH_CLOSE_DENIED_MESSAGE)
@@ -96,7 +104,16 @@ export class CloseBoardMonthUseCase {
       rows: plan.rows,
       // R11: o placar do mes e zerado de toda pessoa da base, inclusive de quem nao recebeu linha.
       userIdsToZero: people.map((person) => person.id),
+      // plan-v20 S01 (DEC-253): o fechamento de mês zera só o placar do mês; o saldo fica.
+      zeroFields: [BOARD_ZERO_MONTH],
     })
+
+    // R4 (plan-v15 S11): fechamento de mês é episódio de quem recebeu linha. Métricas
+    // `months_active`/`months_top3`/`months_won` só existem depois da escrita — por isso o
+    // trigger corre DEPOIS do writeClose, sobre as linhas gravadas.
+    for (const row of plan.rows) {
+      await this.evaluate.execute(row.userId)
+    }
 
     return {
       month,

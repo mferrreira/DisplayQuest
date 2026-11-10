@@ -24,6 +24,8 @@ export class CreateProjectReportUseCase {
     private readonly projectReports: ProjectReportsRepository,
     private readonly directory: ReportingDirectory,
     private readonly publisher: ReportSubmittedPublisherPort,
+    /** plan-v15 S11 (R4): relatório de projeto escrito é episódio de recompletação. */
+    private readonly recompute: { recompute(userId: number): Promise<void> },
   ) {}
 
   async execute(command: CreateProjectReportCommand): Promise<{ report: ProjectReportReadModel; created: boolean }> {
@@ -94,6 +96,9 @@ export class CreateProjectReportUseCase {
         console.error("Erro ao notificar gerência sobre relatório:", error)
       }
     }
+
+    // R4 (plan-v15 S11): o relatório de projeto gravado recompleta os badges do autor.
+    await this.recompute.recompute(command.actorUserId)
 
     const report = await this.projectReports.findWithRelations(saved.id)
     return { report: toProjectReportReadModel(report!), created: !existing }

@@ -35,7 +35,7 @@ export interface AttestationSessionLogRow {
   endTime: string;
 }
 
-/** Compacta fatos dos logs sem inferir resultados; sessões sem anotação mantêm a atividade. */
+/** Fallback determinístico: deduplica e limita o tamanho, sem concatenar todo o diário. */
 export function summarizeAttestationSessionLogs(rows: AttestationSessionLogRow[]): string | null {
   const statements = [...new Set(rows.map((row) => {
     const note = row.note?.trim();
@@ -44,7 +44,9 @@ export function summarizeAttestationSessionLogs(rows: AttestationSessionLogRow[]
     if (activity && usefulNote && !usefulNote.includes(activity)) return `${activity}: ${usefulNote}`;
     return usefulNote ?? activity ?? "Sessão de trabalho registrada";
   }))];
-  return statements.length > 0 ? statements.join("; ") : null;
+  if (statements.length === 0) return null;
+  const summary = statements.slice(0, 4).join("; ");
+  return summary.length <= 220 ? summary : `${summary.slice(0, 217).trimEnd()}…`;
 }
 
 export interface AttestationFieldInput {
@@ -279,9 +281,9 @@ export function buildAttestationFields(input: AttestationFieldInput): Record<str
     (activity) => activity.firstMonth <= input.month && activity.lastMonth >= input.month,
   );
   if (overlapping[0]) fields.atividades_1 = overlapping[0].description;
-  const secondActivity = [overlapping[1]?.description, input.sessionSummary?.trim()]
-    .filter((value): value is string => Boolean(value))
-    .join("; ");
+  // O segundo campo é a síntese dos logs. Não concatenar atividades do cronograma aqui:
+  // isso duplica conteúdo e estoura a área do formulário.
+  const secondActivity = input.sessionSummary?.trim();
   if (secondActivity) fields.atividade_2 = secondActivity;
 
   // SITUAÇÃO ATUAL DO PROJETO

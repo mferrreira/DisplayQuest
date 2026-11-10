@@ -10,6 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { User, UserFormData } from "@/contexts/types"
 import { UserProfilesAPI } from "@/contexts/api-client"
+import { MarkdownEditorDialog } from "@/components/features/markdown-editor-dialog"
+import { uploadUserMarkdownImage } from "@/lib/api/user-images"
 import {
   FUNDING_AGENCIES,
   FUNDING_AGENCY_LABELS,
@@ -18,8 +20,10 @@ import {
   USER_LEVELS,
   USER_LEVEL_LABELS,
   maskCpf,
+  normalizeUserLinks,
+  type UserLink,
 } from "@/backend/domain"
-import { AlertCircle, CheckCircle, User as UserIcon } from "lucide-react"
+import { AlertCircle, CheckCircle, PenLine, Plus, Trash2, User as UserIcon } from "lucide-react"
 import { useSession } from "next-auth/react"
 
 interface UserProfileFormProps {
@@ -50,9 +54,11 @@ export function UserProfileForm({ user, onUpdate, onCancel }: UserProfileFormPro
     fundingAgencyOther: user.fundingAgencyOther ?? null,
     level: user.level ?? null,
     cpf: null,
+    links: user.links ?? [],
   })
 
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [bioDialogOpen, setBioDialogOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
 
@@ -92,7 +98,8 @@ export function UserProfileForm({ user, onUpdate, onCancel }: UserProfileFormPro
       const updateData: Partial<UserFormData> = {}
 
       if (formData.name !== user.name) updateData.name = formData.name
-      if (formData.bio !== user.bio) updateData.bio = formData.bio
+      const bio = formData.bio ? formData.bio : null
+      if (bio !== (user.bio ?? null)) updateData.bio = bio
       if (formData.profileVisibility !== user.profileVisibility) updateData.profileVisibility = formData.profileVisibility
       if (formData.weekHours !== user.weekHours) updateData.weekHours = formData.weekHours
 
@@ -116,20 +123,12 @@ export function UserProfileForm({ user, onUpdate, onCancel }: UserProfileFormPro
       }
       if (formData.level !== (user.level ?? null)) updateData.level = formData.level
 
-      const result = await UserProfilesAPI.updateProfile(user.id, updateData)
-      const updatedData = result.user
+      const links = normalizeUserLinks(formData.links ?? [])
+      if (JSON.stringify(links) !== JSON.stringify(user.links ?? [])) {
+        updateData.links = links
+      }
 
-      onUpdate(updatedData)
-      await updateSession({
-        user: {
-          ...updatedData,
-        },
-      })
-
-      setSuccess("Perfil atualizado com sucesso!")
-
-      // Clear password field
-      setFormData(prev => ({ ...prev, password: "" }))
+      await applyUpdate(updateData)
     } catch (err: any) {
       console.error("Error updating profile:", err)
       setError(err.message || "Erro ao atualizar perfil")
@@ -138,12 +137,49 @@ export function UserProfileForm({ user, onUpdate, onCancel }: UserProfileFormPro
     }
   }
 
+  async function applyUpdate(updateData: Partial<UserFormData>) {
+    const result = await UserProfilesAPI.updateProfile(user.id, updateData)
+    const updatedData = result.user
+
+    onUpdate(updatedData)
+    await updateSession({
+      user: {
+        ...updatedData,
+      },
+    })
+
+    setSuccess("Perfil atualizado com sucesso!")
+
+    // Clear password field
+    setFormData(prev => ({ ...prev, password: "" }))
+  }
+
   const handleInputChange = (field: keyof UserFormData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }))
   }
 
   const handleNullableSelect = (field: keyof UserFormData, value: string) => {
     handleInputChange(field, value === NO_VALUE ? null : value)
+  }
+
+  function addLink() {
+    setFormData((prev) => ({ ...prev, links: [...(prev.links ?? []), { label: "", url: "" }] }))
+  }
+
+  function updateLink(index: number, field: keyof UserLink, value: string) {
+    setFormData((prev) => {
+      const links = [...(prev.links ?? [])]
+      links[index] = { ...links[index], [field]: value }
+      return { ...prev, links }
+    })
+  }
+
+  function removeLink(index: number) {
+    setFormData((prev) => {
+      const links = [...(prev.links ?? [])]
+      links.splice(index, 1)
+      return { ...prev, links }
+    })
   }
 
   const fundingAgencyIsOther = formData.fundingAgency === "OUTRA"
@@ -185,14 +221,19 @@ export function UserProfileForm({ user, onUpdate, onCancel }: UserProfileFormPro
             </div>
 
             <div>
-              <Label htmlFor="bio">Biografia</Label>
-              <Textarea
-                id="bio"
-                value={formData.bio || ""}
-                onChange={(e) => handleInputChange("bio", e.target.value)}
-                placeholder="Conte um pouco sobre você..."
-                rows={3}
-              />
+              <Label className="mb-2 block">Biografia</Label>
+              <p className="text-xs text-gray-500 dark:text-muted-foreground mb-2">
+                {user.bio ? "Tem texto gravado." : "Nada gravado ainda."}
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setBioDialogOpen(true)}
+                disabled={isSubmitting}
+              >
+                <PenLine className="mr-2 h-4 w-4" />
+                Editar biografia
+              </Button>
             </div>
 
 
@@ -245,6 +286,46 @@ export function UserProfileForm({ user, onUpdate, onCancel }: UserProfileFormPro
               <p className="text-xs text-gray-500 dark:text-muted-foreground mt-1">
                 Só você e quem gerencia contas leem o CPF.
               </p>
+            </div>
+
+            {/* S09 (R14/R15, DEC-264): a pessoa adiciona e remove os próprios links; a lista é
+                normalizada pelo servidor, com url sem protocolo virando https. */}
+            <div className="space-y-3">
+              <Label className="mb-2 block">Links do perfil</Label>
+              {(formData.links ?? []).map((link, index) => (
+                <div key={index} className="flex flex-wrap items-center gap-2">
+                  <Label htmlFor={`link-label-${index}`}>Label do link {index + 1}</Label>
+                  <Input
+                    id={`link-label-${index}`}
+                    value={link.label}
+                    onChange={(e) => updateLink(index, "label", e.target.value)}
+                  />
+                  <Label htmlFor={`link-url-${index}`}>URL do link {index + 1}</Label>
+                  <Input
+                    id={`link-url-${index}`}
+                    value={link.url}
+                    onChange={(e) => updateLink(index, "url", e.target.value)}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    aria-label={`Remover link ${link.label}`}
+                    onClick={() => removeLink(index)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+              <Button
+                type="button"
+                variant="outline"
+                onClick={addLink}
+                disabled={(formData.links ?? []).length >= 10}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Adicionar link
+              </Button>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
@@ -385,6 +466,25 @@ export function UserProfileForm({ user, onUpdate, onCancel }: UserProfileFormPro
             </Button>
           </div>
         </form>
+        {/* S08 (R12/DEC-263): o mesmo editor de markdown da descrição do projeto, com preview.
+            Salvar manda só { bio } — a rota decide self OU MANAGE_USERS (R13, gate no servidor). */}
+        <MarkdownEditorDialog
+          open={bioDialogOpen}
+          title="Editar biografia"
+          description="Markdown simples; a preview mostra o que a tela do perfil vai renderizar."
+          label="Biografia em markdown"
+          textareaId="bio-markdown"
+          previewTestId="preview-de-bio"
+          inputTestId="input-imagem-bio"
+          saveLabel="Salvar biografia"
+          initialText={formData.bio || ""}
+          onOpenChange={setBioDialogOpen}
+          upload={(file) => uploadUserMarkdownImage(user.id, file)}
+          onSave={async (text) => {
+            setFormData((prev) => ({ ...prev, bio: text }))
+            await applyUpdate({ bio: text })
+          }}
+        />
       </CardContent>
     </Card>
   )

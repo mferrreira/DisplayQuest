@@ -55,6 +55,8 @@ export class CreateUserUseCase {
       profileVisibility: "public",
       bio: null,
       avatar: null,
+      // DEC-242: a chave do avatar no bucket nasce nula, como a da capa.
+      avatarKey: null,
       bannerKey: null,
       // V5-4a (DEC-138): cadastro novo não tem dado de pessoa.
       ...emptyPersonData(),

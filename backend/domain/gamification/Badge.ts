@@ -7,6 +7,8 @@
  * to this folder as pure rules in OND6-B2, reading data through a port instead of a repository.
  */
 
+import type { BadgeCriteriaV2 } from "@/backend/domain/gamification/metric-registry";
+
 export type BadgeCategory = "achievement" | "milestone" | "special" | "social";
 
 export interface BadgeCriteria {
@@ -19,6 +21,22 @@ export interface BadgeCriteria {
   specialCondition?: string;
 }
 
+/** Todo `criteria` que chega do JSON da tabela: as duas gerações do formato. */
+export type BadgeCriteriaJson = BadgeCriteria | BadgeCriteriaV2 | null | undefined;
+
+/** Passiva do badge (plan-v15 R8): bônus de prêmio ou redução de penalidade, em fração. */
+export interface BadgeEffectBonus {
+  kind: "bonus";
+  pct: number;
+}
+
+export interface BadgeEffectPenaltyReduction {
+  kind: "penaltyReduction";
+  pct: number;
+}
+
+export type BadgeEffect = BadgeEffectBonus | BadgeEffectPenaltyReduction;
+
 export interface Badge {
   id?: number;
   name: string;
@@ -26,10 +44,15 @@ export interface Badge {
   icon?: string | null | undefined;
   color?: string | null | undefined;
   category: BadgeCategory;
-  criteria?: BadgeCriteria | null;
+  criteria?: BadgeCriteria | BadgeCriteriaV2 | null;
+  slug?: string | null;
+  effect?: BadgeEffect | null;
+  /** plan-v16 S01 (DEC-243): CHAVE do ícone no bucket, nunca um caminho de disco. */
+  iconKey?: string | null;
   isActive: boolean;
   createdAt?: Date;
-  createdBy: number;
+  /** plan-v15 S09 (R5): badge de catálogo instala sem autor — `null` é leitura, escrita (badge-rules) continua exigindo número. */
+  createdBy: number | null;
 }
 
 export interface UserBadge {
@@ -38,4 +61,6 @@ export interface UserBadge {
   badgeId: number;
   earnedAt?: Date;
   earnedBy?: number | null;
+  equipped?: boolean;
+  badge?: Badge;
 }

@@ -6,8 +6,10 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TaskBoard } from "../components/task-board";
 import {
+  resetProjectStore,
   resetTaskStore,
   resetUserStore,
+  seedProjects,
   seedTasks,
   seedUsers,
 } from "@/tests/mocks/handlers";
@@ -88,6 +90,10 @@ describe("TaskBoard — filtro por pessoa (select de pessoas)", () => {
   beforeEach(() => {
     resetTaskStore();
     resetUserStore();
+    // R11 (S11): o quadro abre no projeto do líder na primeira carga. Este teste é do filtro de
+    // pessoa sobre tarefas sem projeto, então não há projetos — o coordenador fica na visão global.
+    resetProjectStore();
+    seedProjects([]);
     seedUsers([
       {
         id: 2,
@@ -160,7 +166,9 @@ describe("TaskBoard — filtro por pessoa (select de pessoas)", () => {
     expect(screen.getByText("Minha tarefa delegada")).toBeVisible();
     expect(screen.getByText("Minha tarefa atrasada")).toBeVisible();
     expect(screen.queryByText("Tarefa de outro usuário")).not.toBeInTheDocument();
-    expect(screen.queryByText("Tarefa global")).not.toBeInTheDocument();
+    // R10 (S10): quest global pública sem responsável é atribuída a todo usuário, então
+    // ela **entra** no filtro "você". O dado da coluna não muda — só a regra de leitura.
+    expect(screen.getByText("Tarefa global")).toBeVisible();
   });
 
   it("selecting another user filters to that user's tasks", async () => {
@@ -169,7 +177,8 @@ describe("TaskBoard — filtro por pessoa (select de pessoas)", () => {
     await selectPerson("Outro Usuário");
     expect(screen.getByText("Tarefa de outro usuário")).toBeVisible();
     expect(screen.queryByText("Minha tarefa delegada")).not.toBeInTheDocument();
-    expect(screen.queryByText("Tarefa global")).not.toBeInTheDocument();
+    // R10 (S10): a quest global pública sem responsável vale para qualquer pessoa.
+    expect(screen.getByText("Tarefa global")).toBeVisible();
   });
 
   it("combines the person filter with the overdue filter", async () => {
@@ -199,6 +208,8 @@ describe("TaskBoard — busca no mobile (toggle da lupa continua)", () => {
   beforeEach(() => {
     resetTaskStore();
     resetUserStore();
+    resetProjectStore();
+    seedProjects([]);
     stubDesktopViewport(false);
     seedTasks([
       { title: "Minha tarefa delegada", status: "to-do", assigneeIds: [2], taskVisibility: "delegated" },
@@ -251,6 +262,8 @@ describe("TaskBoard — busca no desktop (campo já aberto, sem toggle)", () => 
   beforeEach(() => {
     resetTaskStore();
     resetUserStore();
+    resetProjectStore();
+    seedProjects([]);
     stubDesktopViewport(true);
     seedTasks([
       { title: "Minha tarefa delegada", status: "to-do", assigneeIds: [2], taskVisibility: "delegated" },

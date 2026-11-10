@@ -10,6 +10,9 @@ export const projectSchema = z.object({
   id: z.number().int(),
   name: z.string(),
   description: z.string().nullable().optional(),
+  // plan-v13 (S01): subtítulo. Opcional: o parse não pode quebrar contra instância sem a
+  // migration aplicada.
+  subtitle: z.string().nullable().optional(),
   createdAt: z.string(), // DB stores String — defensive parsing at UI layer only
   createdBy: z.number().int(),
   leaderId: z.number().int().nullable().optional(),
@@ -29,6 +32,11 @@ export const projectSchema = z.object({
   // contra uma instância ainda sem a migration aplicada.
   logoKey: z.string().nullable().optional(),
   bannerKey: z.string().nullable().optional(),
+  // R11 (S11): projeção da lista para o ator — "este projeto me tem como membro". Opcional:
+  // a lista o preenche, as demais rotas não.
+  isMember: z.boolean().optional(),
+  // S06 (DEC-261): projeção "sou membro ATIVO" — a lista a preenche para o ícone da tela.
+  isMemberActive: z.boolean().optional(),
 });
 export type Project = z.infer<typeof projectSchema>;
 

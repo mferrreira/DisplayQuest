@@ -11,6 +11,7 @@
  * O ranking e filho do perfil: a posicao sai da lista de usuarios que a pagina ja carrega e aponta
  * para `/dashboard/leaderboard`. Nenhum dado novo e buscado por causa do desenho.
  */
+import { renderProjectMarkdown } from "@/lib/markdown-render"
 import { Suspense, useState, useEffect } from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
@@ -29,12 +30,15 @@ import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { BucketAvatar } from "@/components/ui/bucket-avatar"
 import { UserBadges } from "@/components/ui/user-badges"
+import { ProfileBadgeShowcase } from "@/components/ui/profile-badge-showcase"
+import { ProfileBadgeEquipPicker } from "@/components/ui/profile-badge-equip-picker"
 import { TimerCard } from "@/components/ui/timer-card"
 import { getRoleDisplayName } from "@/lib/utils/access-control"
 import { compareByBoardPosition } from "@/backend/domain"
 import { ProfileMonthsList } from "@/components/ui/profile-months-list"
+import { UserLinks } from "@/components/ui/user-links"
 import { useWorkSessions } from "@/hooks/use-work-sessions"
 import {
   ArrowRight,
@@ -221,13 +225,19 @@ function ProfilePageContent() {
                 userId={user.id}
                 userName={user.name}
                 bannerKey={user.bannerKey}
+                avatarKey={user.avatarKey}
                 canEdit
-                onBannerChange={(bannerKey) => setUser({ ...user, bannerKey })}
+                onBannerChange={(bannerKey) => setUser((prev) => (prev ? { ...prev, bannerKey } : prev))}
+                onAvatarKeyChange={(avatarKey) => setUser((prev) => (prev ? { ...prev, avatarKey } : prev))}
               />
-              <Avatar className="absolute bottom-0 left-6 h-24 w-24 translate-y-1/3 border-4 border-background bg-background sm:h-28 sm:w-28">
-                <AvatarImage src={user.avatar || undefined} alt={user.name} />
-                <AvatarFallback className="text-2xl font-bold">{initials}</AvatarFallback>
-              </Avatar>
+              <BucketAvatar
+                userId={user.id}
+                avatarKey={user.avatarKey}
+                legacyAvatar={user.avatar}
+                name={user.name}
+                className="absolute bottom-0 left-6 h-24 w-24 translate-y-1/3 border-4 border-background sm:h-28 sm:w-28"
+                fallback={initials}
+              />
             </div>
 
             <div className="flex flex-col gap-3 px-6 pb-6 pt-16 sm:flex-row sm:items-end sm:justify-between sm:px-8">
@@ -239,12 +249,19 @@ function ProfilePageContent() {
                   {showProfileForm && <Badge variant="secondary">Editando</Badge>}
                 </div>
                 <p className="mt-1 truncate text-sm text-muted-foreground">{user.email}</p>
+                {user.roles.length > 0 && (
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {user.roles.map(getRoleDisplayName).join(" · ")}
+                  </p>
+                )}
               </div>
-              {user.roles.length > 0 && (
-                <p className="text-sm text-muted-foreground">
-                  {user.roles.map(getRoleDisplayName).join(" · ")}
-                </p>
-              )}
+              {/* plan-v18 S01-fix (DEC-250, dono 2026-11-06): a vitrine de equipadas mora no
+                  canto direito, onde a linha das funções estava; as funções voltam para a
+                  coluna do nome, abaixo do email. Regras de seleção de DEC-245 intactas;
+                  a peça continua a mesma. */}
+              <div className="flex flex-col items-start sm:items-end">
+                <ProfileBadgeShowcase userId={user.id} />
+              </div>
             </div>
           </section>
 
@@ -342,6 +359,9 @@ function ProfilePageContent() {
               {showProfileForm && user ? (
                 <div className="space-y-6">
                   <ProfilePictureUpload user={user} onUpdate={(updatedUser) => setUser(updatedUser)} />
+                  {/* plan-v17 S03 (R6, ADR-003): o equipar mora na edição da aba
+                      Configurações — medálhão, passiva, contador 3 slots. */}
+                  <ProfileBadgeEquipPicker userId={user.id} />
                   <UserProfileForm
                     user={user}
                     onUpdate={(updatedUser) => {
@@ -376,7 +396,17 @@ function ProfilePageContent() {
                       <dt>
                         <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Biografia</Label>
                       </dt>
-                      <dd className="text-sm text-foreground">{user.bio || "Nenhuma biografia definida"}</dd>
+                      <dd className="text-sm text-foreground">
+                        {user.bio ? (
+                          <div
+                            data-testid="bio-markdown"
+                            className="[&_a]:text-primary [&_a]:underline [&_h1]:text-xl [&_h2]:text-lg [&_h3]:text-base [&_ul]:list-disc [&_ul]:pl-6"
+                            dangerouslySetInnerHTML={{ __html: renderProjectMarkdown(user.bio) }}
+                          />
+                        ) : (
+                          "Nenhuma biografia definida"
+                        )}
+                      </dd>
                     </div>
                     <div className="border-t border-border pt-3">
                       <dt>
@@ -399,12 +429,18 @@ function ProfilePageContent() {
                       <dd className="text-sm text-foreground">{user.weekHours} horas</dd>
                     </div>
                   </dl>
+
+                  {/* S09 (R15, DEC-264): a leitura da Configurações mostra os links salvos pelo
+                      dono. O favicon é derivado no render, e a peça é a mesma do perfil de terceiro. */}
+                  <UserLinks links={user.links ?? []} />
                 </section>
               )}
             </TabsContent>
           </Tabs>
 
           <div className="border-t border-border pt-6">
+            {/* plan-v17 S04 (R7, ADR-003): o bloco é leitura — o equipar mora no picker
+                da Configurações, e o estado shared vem do cache equipped-sync. */}
             <UserBadges userId={user.id} limit={8} />
           </div>
         </div>

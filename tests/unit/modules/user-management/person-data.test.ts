@@ -49,6 +49,7 @@ function userRow(id: number, overrides: Partial<UserRecord> = {}): UserRecord {
     profileVisibility: "public",
     bio: null,
     avatar: null,
+    avatarKey: null,
     bannerKey: null,
     ...emptyPersonData(),
     roles: ["VOLUNTARIO"],
@@ -68,6 +69,7 @@ function summaryRow(id: number, overrides: Partial<UserSummaryRow> = {}): UserSu
     points: 0,
     completedTasks: 0,
     avatar: null,
+    avatarKey: null,
     bio: null,
     bannerKey: null,
     profileVisibility: "public",
@@ -112,6 +114,7 @@ function makeFixture(rows: UserRecord[] = [userRow(1)]) {
         fundingAgency: row.fundingAgency,
         fundingAgencyOther: row.fundingAgencyOther,
         level: row.level,
+        links: row.links ?? [],
       }));
     },
   } as never;
@@ -138,7 +141,7 @@ describe("UpdateUserUseCase (PUT do painel) — escrita dos dados de pessoa", ()
   });
 
   it("normaliza a grafia de tela para o token e o CPF para dígitos", async () => {
-    const result = await new UpdateUserUseCase(fx.repository).execute(manager, 1, {
+    const result = await new UpdateUserUseCase(fx.repository, { async recompute() {} }).execute(manager, 1, {
       cpf: "529.982.247-25",
       registrationNumber: "  2026110001  ",
       course: "Sistemas de Informação",
@@ -159,15 +162,15 @@ describe("UpdateUserUseCase (PUT do painel) — escrita dos dados de pessoa", ()
 
   it("recusa CPF inválido e modalidade fora da lista, com a mensagem da regra", async () => {
     await expect(
-      new UpdateUserUseCase(fx.repository).execute(manager, 1, { cpf: "529.982.247-26" })
+      new UpdateUserUseCase(fx.repository, { async recompute() {} }).execute(manager, 1, { cpf: "529.982.247-26" })
     ).rejects.toThrow("CPF inválido");
 
     await expect(
-      new UpdateUserUseCase(fx.repository).execute(manager, 1, { scholarshipType: "ICV" })
+      new UpdateUserUseCase(fx.repository, { async recompute() {} }).execute(manager, 1, { scholarshipType: "ICV" })
     ).rejects.toThrow("Modalidade de IC inválida");
 
     await expect(
-      new UpdateUserUseCase(fx.repository).execute(manager, 1, { level: "EJA" })
+      new UpdateUserUseCase(fx.repository, { async recompute() {} }).execute(manager, 1, { level: "EJA" })
     ).rejects.toThrow("Nível inválido");
 
     // Nada foi gravado: a recusa acontece antes de qualquer escrita.
@@ -175,7 +178,7 @@ describe("UpdateUserUseCase (PUT do painel) — escrita dos dados de pessoa", ()
   });
 
   it("a própria pessoa escreve os próprios dados (a trava self-editável os inclui)", async () => {
-    const result = await new UpdateUserUseCase(fx.repository).execute(owner, 1, {
+    const result = await new UpdateUserUseCase(fx.repository, { async recompute() {} }).execute(owner, 1, {
       course: "Engenharia de Software",
     });
 
@@ -185,7 +188,7 @@ describe("UpdateUserUseCase (PUT do painel) — escrita dos dados de pessoa", ()
 
   it("terceiro sem gestão é negado antes da trava de campos", async () => {
     await expect(
-      new UpdateUserUseCase(fx.repository).execute(stranger, 1, {
+      new UpdateUserUseCase(fx.repository, { async recompute() {} }).execute(stranger, 1, {
         course: "Hackeado",
         cpf: "52998224725",
       })
@@ -196,32 +199,32 @@ describe("UpdateUserUseCase (PUT do painel) — escrita dos dados de pessoa", ()
   });
 
   it("chave ausente no corpo não apaga dado escrito", async () => {
-    await new UpdateUserUseCase(fx.repository).execute(manager, 1, {
+    await new UpdateUserUseCase(fx.repository, { async recompute() {} }).execute(manager, 1, {
       course: "Ciência da Computação",
       scholarshipType: "PIBITI",
     });
 
-    await new UpdateUserUseCase(fx.repository).execute(manager, 1, { name: "Outro nome" });
+    await new UpdateUserUseCase(fx.repository, { async recompute() {} }).execute(manager, 1, { name: "Outro nome" });
 
     expect(fx.rowOf(1)?.course).toBe("Ciência da Computação");
     expect(fx.rowOf(1)?.scholarshipType).toBe("PIBITI");
   });
 
   it("escolher CNPq apaga o texto livre da agência (o formulário só tem agencia_outra com is_outra)", async () => {
-    await new UpdateUserUseCase(fx.repository).execute(manager, 1, {
+    await new UpdateUserUseCase(fx.repository, { async recompute() {} }).execute(manager, 1, {
       fundingAgency: "OUTRA",
       fundingAgencyOther: "FAPEMIG",
     });
     expect(fx.rowOf(1)?.fundingAgencyOther).toBe("FAPEMIG");
 
-    await new UpdateUserUseCase(fx.repository).execute(manager, 1, { fundingAgency: "CNPQ" });
+    await new UpdateUserUseCase(fx.repository, { async recompute() {} }).execute(manager, 1, { fundingAgency: "CNPQ" });
     expect(fx.rowOf(1)?.fundingAgency).toBe("CNPQ");
     expect(fx.rowOf(1)?.fundingAgencyOther).toBeNull();
   });
 
   it("texto acima do teto é recusado nomeando o campo", async () => {
     await expect(
-      new UpdateUserUseCase(fx.repository).execute(manager, 1, { course: "C".repeat(121) })
+      new UpdateUserUseCase(fx.repository, { async recompute() {} }).execute(manager, 1, { course: "C".repeat(121) })
     ).rejects.toThrow(ValidationError);
     expect(fx.writes).toEqual([]);
   });
@@ -235,7 +238,7 @@ describe("UpdateUserProfileUseCase (PATCH do perfil) — a mesma regra", () => {
   });
 
   it("a pessoa escreve os próprios dados e recebe o CPF de volta", async () => {
-    const result = await new UpdateUserProfileUseCase(fx.repository, fx.hasher).execute(owner, 1, {
+    const result = await new UpdateUserProfileUseCase(fx.repository, fx.hasher, { async recompute() {} }).execute(owner, 1, {
       cpf: "111.444.777-35",
       level: "Graduação",
     });
@@ -247,7 +250,7 @@ describe("UpdateUserProfileUseCase (PATCH do perfil) — a mesma regra", () => {
 
   it("terceiro sem gestão leva a negação própria do perfil, e nada é escrito", async () => {
     await expect(
-      new UpdateUserProfileUseCase(fx.repository, fx.hasher).execute(stranger, 1, {
+      new UpdateUserProfileUseCase(fx.repository, fx.hasher, { async recompute() {} }).execute(stranger, 1, {
         course: "Hackeado",
       })
     ).rejects.toThrow(PROFILE_DENIED_MESSAGE);
@@ -257,7 +260,7 @@ describe("UpdateUserProfileUseCase (PATCH do perfil) — a mesma regra", () => {
 
   it("CPF inválido no perfil é 400 com a mensagem da regra", async () => {
     await expect(
-      new UpdateUserProfileUseCase(fx.repository, fx.hasher).execute(owner, 1, { cpf: "123" })
+      new UpdateUserProfileUseCase(fx.repository, fx.hasher, { async recompute() {} }).execute(owner, 1, { cpf: "123" })
     ).rejects.toThrow("CPF inválido");
     expect(fx.writes).toEqual([]);
   });
@@ -320,6 +323,7 @@ describe("leitura da lista — tier por tier (DEC-138)", () => {
         scholarshipType: "PIBIC",
         fundingAgency: "CNPQ",
         level: "GRADUACAO",
+        links: [{ label: "LinkedIn", url: "https://linkedin.com/in/pessoa1" }],
       }),
       userRow(2, { roles: ["COORDENADOR"] }),
     ]);
@@ -356,5 +360,12 @@ describe("leitura da lista — tier por tier (DEC-138)", () => {
     expect(row).not.toHaveProperty("cpf");
     expect(row).not.toHaveProperty("bio");
     expect(row.course).toBe("Sistemas de Informação");
+  });
+
+  it("os links da pessoa chegam na lista para o autenticado", async () => {
+    const rows = await new ListUsersForActorUseCase(fx.repository).execute({ actor: owner });
+    const row = rows.find((r) => r.id === 1)!;
+
+    expect(row.links).toEqual([{ label: "LinkedIn", url: "https://linkedin.com/in/pessoa1" }]);
   });
 });

@@ -35,6 +35,16 @@ export {
   type SystemReason,
 } from "./actor-ref";
 export { normalizeAvatar } from "./avatar";
+export {
+  USER_LINK_LIMIT,
+  USER_LINK_LABEL_MAX,
+  USER_LINK_LIMIT_MESSAGE,
+  USER_LINK_LABEL_MESSAGE,
+  USER_LINK_URL_MESSAGE,
+  normalizeUserLinks,
+  userLinkFavicon,
+  type UserLink,
+} from "./user-links-rules";
 export { resolveUserListVisibility, type UserListVisibility } from "./user-visibility";
 export { canActorViewProfile, type ProfileVisibilityTarget } from "./profile-visibility-rules";
 export { SELF_EDITABLE_USER_FIELDS, filterSelfEditableUserFields } from "./user-edit-fields";

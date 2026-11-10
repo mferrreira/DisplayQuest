@@ -1,19 +1,27 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Label } from "@/components/ui/label"
-import { Check, Loader2, Package, Pencil, Plus, Trash2, X } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Check, FileText, Loader2, Package, Pencil, Plus, Trash2, X } from "lucide-react"
 import { useToast } from "@/contexts/use-toast"
+import { getCronograma, type ProjectGoal } from "@/lib/api/project-cronograma"
 import {
   createProjectDeliverable,
   deleteProjectDeliverable,
+  deleteProjectDeliverableFile,
+  formatAttachmentSize,
   listProjectDeliverables,
+  listProjectDeliverableFiles,
+  projectDeliverableFileUrl,
   updateProjectDeliverable,
+  uploadProjectDeliverableFile,
   type ProjectDeliverable,
+  type ProjectDeliverableFile,
 } from "@/lib/api/project-files"
 
 /**
@@ -31,6 +39,10 @@ interface ProjectDeliverablesPanelProps {
 export function ProjectDeliverablesPanel({ projectId, canManage }: ProjectDeliverablesPanelProps) {
   const { toast } = useToast()
   const [deliverables, setDeliverables] = useState<ProjectDeliverable[]>([])
+  const [filesByDeliverable, setFilesByDeliverable] = useState<Record<number, ProjectDeliverableFile[]>>({})
+  const [selectedFile, setSelectedFile] = useState<Record<number, File | null>>({})
+  const fileInputRefs = useRef<Record<number, HTMLInputElement | null>>({})
+  const [goals, setGoals] = useState<ProjectGoal[]>([])
   const [loading, setLoading] = useState(true)
   const [newName, setNewName] = useState("")
   const [newQuantity, setNewQuantity] = useState("1")
@@ -42,9 +54,23 @@ export function ProjectDeliverablesPanel({ projectId, canManage }: ProjectDelive
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      setDeliverables(await listProjectDeliverables(projectId))
+      const rows = await listProjectDeliverables(projectId)
+      setDeliverables(rows)
+      // S04: as metas vêm do MESMO cliente do cronograma que a tela do projeto usa — a tela não
+      // tem vocabulário próprio (lição da DEC-96).
+      const goalsRows = await getCronograma(projectId)
+      setGoals(goalsRows.goals)
+      // S02: os arquivos são leitura aberta (DEC-136); uma leitura por entregável.
+      const files = await Promise.all(rows.map((row) => listProjectDeliverableFiles(projectId, row.id)))
+      const map: Record<number, ProjectDeliverableFile[]> = {}
+      rows.forEach((row, index) => {
+        map[row.id] = files[index]
+      })
+      setFilesByDeliverable(map)
     } catch (error) {
       setDeliverables([])
+      setFilesByDeliverable({})
+      setGoals([])
       toast({
         title: "Erro",
         description: error instanceof Error ? error.message : "Falha ao carregar entregáveis",
@@ -108,6 +134,31 @@ export function ProjectDeliverablesPanel({ projectId, canManage }: ProjectDelive
     }
   }
 
+  // S04 (DEC-259): a meta da linha. Sentinela `none` (a casa não usa `""` em Select, medido no
+  // V5-4a); `goalId` nulo é meta normal. Quem não gerencia vê a meta em texto, sem controle.
+  const NO_GOAL = "none"
+  function goalLabel(goalId: number | null): string | null {
+    const goal = goals.find((item) => item.id === goalId)
+    return goal ? goal.description : null
+  }
+
+  async function handleGoalChange(deliverable: ProjectDeliverable, value: string) {
+    const goalId = value === NO_GOAL ? null : Number(value)
+    setBusy(true)
+    try {
+      const updated = await updateProjectDeliverable(projectId, deliverable.id, { goalId })
+      setDeliverables((current) => current.map((item) => (item.id === deliverable.id ? updated : item)))
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: error instanceof Error ? error.message : "Falha ao vincular a meta",
+        variant: "destructive",
+      })
+    } finally {
+      setBusy(false)
+    }
+  }
+
   async function handleDelete(deliverable: ProjectDeliverable) {
     if (!confirm(`Excluir o entregável "${deliverable.name}"?`)) return
     setBusy(true)
@@ -118,6 +169,61 @@ export function ProjectDeliverablesPanel({ projectId, canManage }: ProjectDelive
       toast({
         title: "Erro",
         description: error instanceof Error ? error.message : "Falha ao excluir entregável",
+        variant: "destructive",
+      })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  // S02: o botão envia o arquivo escolhido NA LINHA dele. O `accept` é o do seam — a recusa de
+  // tipo/magic bytes é da rota, e o 400 que voltar é o dela (mesma divisão da tela de anexos).
+  async function handleUploadFile(deliverable: ProjectDeliverable) {
+    const file = fileInputRefs.current[deliverable.id]?.files?.[0]
+    if (!file) {
+      toast({ title: "Nada para enviar", description: "Escolha um arquivo primeiro." })
+      return
+    }
+
+    setBusy(true)
+    try {
+      const created = await uploadProjectDeliverableFile(projectId, deliverable.id, file)
+      setFilesByDeliverable((current) => ({
+        ...current,
+        [deliverable.id]: [created, ...(current[deliverable.id] ?? [])],
+      }))
+      setSelectedFile((current) => ({ ...current, [deliverable.id]: null }))
+      if (fileInputRefs.current[deliverable.id]) {
+        fileInputRefs.current[deliverable.id]!.value = ""
+      }
+      toast({ title: "Arquivo enviado", description: created.name })
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: error instanceof Error ? error.message : "Falha ao enviar arquivo do entregável",
+        variant: "destructive",
+      })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  // S03: a gestão remove o arquivo da linha. A confirmação é a mesma régua da exclusão do
+  // entregável; a linha do entregável fica, só o arquivo sai.
+  async function handleDeleteFile(deliverable: ProjectDeliverable, file: ProjectDeliverableFile) {
+    if (!confirm(`Remover o arquivo "${file.name}"?`)) return
+    setBusy(true)
+    try {
+      await deleteProjectDeliverableFile(projectId, deliverable.id, file.id)
+      setFilesByDeliverable((current) => ({
+        ...current,
+        [deliverable.id]: (current[deliverable.id] ?? []).filter((item) => item.id !== file.id),
+      }))
+      toast({ title: "Arquivo removido", description: file.name })
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: error instanceof Error ? error.message : "Falha ao remover arquivo do entregável",
         variant: "destructive",
       })
     } finally {
@@ -219,6 +325,29 @@ export function ProjectDeliverablesPanel({ projectId, canManage }: ProjectDelive
                   <>
                     <span className="flex-1 min-w-[180px] font-medium">{deliverable.name}</span>
                     <Badge variant="secondary">{deliverable.quantity} un.</Badge>
+                    {canManage ? (
+                      // `Meta para X` no trigger e nenhum outro rótulo contendo este texto —
+                      // lição da 3.C: controle e elemento governado não podem se sobrepor.
+                      <Select
+                        value={deliverable.goalId === null ? NO_GOAL : String(deliverable.goalId)}
+                        onValueChange={(value) => handleGoalChange(deliverable, value)}
+                        disabled={busy}
+                      >
+                        <SelectTrigger className="w-[220px]" aria-label={`Meta para ${deliverable.name}`}>
+                          <SelectValue placeholder="Sem meta" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={NO_GOAL}>Sem meta</SelectItem>
+                          {goals.map((goal) => (
+                            <SelectItem key={goal.id} value={String(goal.id)}>
+                              {goal.description}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : goalLabel(deliverable.goalId) ? (
+                      <span className="text-sm text-muted-foreground">Meta: {goalLabel(deliverable.goalId)}</span>
+                    ) : null}
                     {canManage && (
                       <>
                         <Button
@@ -241,6 +370,77 @@ export function ProjectDeliverablesPanel({ projectId, canManage }: ProjectDelive
                         </Button>
                       </>
                     )}
+                    {/* S02: os arquivos do entregável. A leitura é aberta (DEC-136); o envio é da
+                        gestão. Rótulos da casa: `getByLabel` casa por substring, então o campo é
+                        "Arquivo para X" e o botão "Enviar arquivo X" — os dois não se sobrepõem. */}
+                    <div className="w-full mt-2 space-y-2 border-t pt-2">
+                      {(filesByDeliverable[deliverable.id] ?? []).length === 0 ? (
+                        <p className="text-sm text-muted-foreground">Nenhum arquivo enviado.</p>
+                      ) : (
+                        <ul className="space-y-1">
+                          {(filesByDeliverable[deliverable.id] ?? []).map((file) => (
+                            <li key={file.id} className="flex flex-wrap items-center gap-2">
+                              <a
+                                href={projectDeliverableFileUrl(projectId, deliverable.id, file.id)}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="flex flex-1 min-w-[180px] items-center gap-2 font-medium underline-offset-4 hover:underline"
+                              >
+                                <FileText className="h-4 w-4 text-muted-foreground" />
+                                {file.name}
+                              </a>
+                              <span className="text-sm text-muted-foreground">
+                                {formatAttachmentSize(file.size)}
+                              </span>
+                              {canManage && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => handleDeleteFile(deliverable, file)}
+                                  disabled={busy}
+                                  aria-label={`Remover arquivo ${file.name}`}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                      {canManage && (
+                        <div className="flex flex-wrap items-end gap-2">
+                          <div className="grid gap-1 flex-1 min-w-[220px]">
+                            <Label htmlFor={`deliverable-file-${deliverable.id}`} className="text-sm font-medium">
+                              Arquivo para {deliverable.name}
+                            </Label>
+                            <Input
+                              id={`deliverable-file-${deliverable.id}`}
+                              ref={(node) => {
+                                fileInputRefs.current[deliverable.id] = node
+                              }}
+                              type="file"
+                              accept="image/png,image/jpeg,image/webp,image/gif,application/pdf,video/mp4,video/webm,video/quicktime"
+                              disabled={busy}
+                              onChange={(event) =>
+                                setSelectedFile((current) => ({
+                                  ...current,
+                                  [deliverable.id]: event.target.files?.[0] ?? null,
+                                }))
+                              }
+                            />
+                          </div>
+                          <Button
+                            size="sm"
+                            onClick={() => handleUploadFile(deliverable)}
+                            disabled={busy || !selectedFile[deliverable.id]}
+                            aria-label={`Enviar arquivo ${deliverable.name}`}
+                          >
+                            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
+                            Enviar arquivo {deliverable.name}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
                   </>
                 )}
               </li>

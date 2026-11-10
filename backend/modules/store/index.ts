@@ -17,6 +17,7 @@ import {
   AssertCanManagePurchasesUseCase,
 } from "@/backend/modules/store/application/use-cases/purchase.use-cases"
 import type { ActorRef } from "@/backend/domain"
+import type { PassiveDiscountPort } from "@/backend/modules/store/application/ports/passive-discount.port"
 import type { PurchaseRepository } from "@/backend/modules/store/application/ports/purchase.repository"
 import type { RewardRepository } from "@/backend/modules/store/application/ports/reward.repository"
 import { PrismaPurchaseRepository } from "@/backend/modules/store/infrastructure/repositories/prisma-purchase.repository"
@@ -83,6 +84,10 @@ export class StoreModule {
 export interface StoreModulePorts {
   rewards?: RewardRepository
   purchases?: PurchaseRepository
+  /** plan-v15 S08 (R14): o composition root injeta as passivas equipadas do gamification. */
+  passives?: PassiveDiscountPort
+  /** plan-v15 S11 (R4): episódio "compra" recompleta badges do comprador. Default no-op. */
+  recompute?: { recompute(userId: number): Promise<void> }
 }
 
 export interface StoreModuleFactoryOptions {
@@ -92,6 +97,8 @@ export interface StoreModuleFactoryOptions {
 export function createStoreModule(options: StoreModuleFactoryOptions = {}) {
   const rewards = options.ports?.rewards ?? new PrismaRewardRepository()
   const purchases = options.ports?.purchases ?? new PrismaPurchaseRepository()
+  const passives = options.ports?.passives ?? { async bonusEffectsFor() { return [] } }
+  const recompute = options.ports?.recompute ?? { async recompute() {} }
 
   const updatePurchase = new UpdatePurchaseUseCase(purchases)
 
@@ -105,7 +112,7 @@ export function createStoreModule(options: StoreModuleFactoryOptions = {}) {
     new ListPurchasesUseCase(purchases),
     new AssertCanManagePurchasesUseCase(),
     new GetPurchaseUseCase(purchases),
-    new CreatePurchaseUseCase(purchases, rewards),
+    new CreatePurchaseUseCase(purchases, rewards, passives, recompute),
     updatePurchase,
     new PatchPurchaseUseCase(purchases, updatePurchase),
     new DeletePurchaseUseCase(purchases),

@@ -60,6 +60,7 @@ export function ProjectDialog({ open, onOpenChange, project = null }: ProjectDia
   const [formData, setFormData] = useState<ProjectFormData>({
     name: "",
     description: "",
+    subtitle: "",
     status: "active",
     leaderId: null,
     volunteerIds: [],
@@ -77,6 +78,7 @@ export function ProjectDialog({ open, onOpenChange, project = null }: ProjectDia
       setFormData({
         name: project.name,
         description: project.description || "",
+        subtitle: project.subtitle || "",
         status: project.status,
         leaderId: project.leaderId ?? null,
         volunteerIds: [],
@@ -102,6 +104,7 @@ export function ProjectDialog({ open, onOpenChange, project = null }: ProjectDia
       setFormData({
         name: "",
         description: "",
+        subtitle: "",
         status: "active",
         leaderId: null,
         volunteerIds: [],
@@ -435,6 +438,20 @@ export function ProjectDialog({ open, onOpenChange, project = null }: ProjectDia
                     onChange={handleChange}
                     required
                     placeholder="Digite o nome do projeto"
+                  />
+                </div>
+
+                {/* plan-v13 (S01, regra 1): subtítulo é a linha de uma frase abaixo do título;
+                    a descrição do corpo fica na Textarea de baixo. */}
+                <div className="grid gap-2">
+                  <Label htmlFor="subtitle">Subtítulo do projeto</Label>
+                  <Input
+                    id="subtitle"
+                    name="subtitle"
+                    value={formData.subtitle ?? ""}
+                    onChange={handleChange}
+                    maxLength={200}
+                    placeholder="Linha curta abaixo do título (opcional)"
                   />
                 </div>
 

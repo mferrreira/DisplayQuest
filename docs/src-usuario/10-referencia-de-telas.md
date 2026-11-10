@@ -12,7 +12,7 @@ Esta é a lista completa das telas do sistema, com o endereço de cada uma e que
 | Relatórios | `/dashboard/weekly-reports` | relatórios por usuário, relatórios de projeto e atestados | Coordenador, Gerente, Laboratorista |
 | Painel Administrativo | `/dashboard/admin` | oito abas de gestão, incluindo a aba **Voluntários** | Coordenador e Gerente; o Gerente de Projeto só a aba **Voluntários** |
 | Loja | `/dashboard/loja` | recompensas disponíveis e minhas compras; abas **Aprovações** e **Gerenciar** para quem gerencia | todas as funções; as abas de gestão para Coordenador, Gerente e Laboratorista |
-| Ranking | `/dashboard/leaderboard` | quadro de liderança e classificação por tarefas e pontos | todas as funções |
+| Ranking | `/dashboard/leaderboard` | abas **Projetos** (painel de gestão com leaderboard de projetos) e **Pessoas** (placar do mês e classificação por tarefas e pontos) | todas as funções |
 | Perfil | `/dashboard/profile` | capa e avatar do **Meu Perfil**, Atividade, Logs Diários, Configurações | todas as funções |
 
 ## Controles que não são telas
@@ -27,6 +27,8 @@ Esta é a lista completa das telas do sistema, com o endereço de cada uma e que
 | Menu do cartão de tarefa | três pontos no cartão | **Mover para** (só os destinos permitidos), **Ver detalhes**, **Editar** |
 | Menu de ordenação da coluna | duas setas no cabeçalho da coluna | **Ordenar por** — Urgência, Prazo, Mais recentes, Pontos, Alfabética; vale só para aquela coluna e fica guardado no navegador |
 | Selo do prêmio | em cima do contador de pontos, no cabeçalho | o quanto entrou ou saiu da sua pontuação (**+10** verde, **−10** vermelho), contando o número por cerca de um segundo; aparece só quando o crédito é seu |
+| Lista de opções da capa e do logo | detalhe do projeto, clique na **faixa da capa** e no **logo** | **Enviar capa**, **Tirar capa**; **Enviar logo**, **Tirar logo** — só para quem gerencia o projeto |
+| Lista de opções do perfil | cartão **Meu Perfil**, em **modo de edição**, clique na faixa da capa | **Enviar capa**, **Tirar capa**, **Enviar avatar**, **Tirar avatar** — a própria pessoa, ou quem gerencia contas |
 
 ## Estados possíveis
 

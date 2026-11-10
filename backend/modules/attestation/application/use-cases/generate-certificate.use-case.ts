@@ -35,6 +35,7 @@ import {
 import type { CertificateRecord, CertificatesRepository } from "../ports/certificates.repository";
 import type { AttestationSourcesPort } from "../ports/attestation-sources.port";
 import type { AttestationPdfPort } from "../ports/attestation-pdf.port";
+import type { AttestationSummaryPort } from "../ports/attestation-summary.port";
 
 export const CERTIFICATE_DENIED_MESSAGE =
   "Usuário não tem permissão para gerar atestado de frequência neste projeto";
@@ -60,6 +61,9 @@ export interface GenerateCertificatePorts {
   sources: AttestationSourcesPort;
   pdf: AttestationPdfPort;
   repository: CertificatesRepository;
+  summary?: AttestationSummaryPort;
+  /** plan-v15 S11 (R4): o atestado gerado é episódio de recompletação do membro. Default no-op. */
+  recompute?: { recompute(userId: number): Promise<void> };
 }
 
 export class GenerateCertificateUseCase {
@@ -118,7 +122,9 @@ export class GenerateCertificateUseCase {
       },
       membership: { categoria: member.categoria, cargaHoraria: member.cargaHoraria },
       activities,
-      sessionSummary: summarizeAttestationSessionLogs(sessionLogs),
+      sessionSummary: this.ports.summary
+        ? await this.ports.summary.summarize(sessionLogs)
+        : summarizeAttestationSessionLogs(sessionLogs),
       month,
       // Assinatura = data civil da GERAÇÃO (DEC-171); o mês de referência entra só no corpo (`data`).
       now: { dia: civilDay.slice(8, 10), mes: monthNameLong(civilDay.slice(0, 7)), ano: civilDay.slice(0, 4) },
@@ -136,6 +142,11 @@ export class GenerateCertificateUseCase {
       fileName: certificateFileName(context.name, month),
       generatedBy: command.actorId,
     });
+
+    // R4 (plan-v15 S11): atestado gerado recompleta os badges ativos do membro.
+    if (this.ports.recompute) {
+      await this.ports.recompute.recompute(command.userId);
+    }
 
     return { certificate, pdfBytes, warnings };
   }

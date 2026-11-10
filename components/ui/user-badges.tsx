@@ -1,11 +1,11 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
 import { BadgesAPI } from "@/contexts/api-client"
-import { Trophy, Award, Star, Zap, Users, Calendar, Target, Crown } from "lucide-react"
+import { subscribeEquipped } from "@/lib/badges/equipped-sync"
+import { badgeCategoryLabel, equipEffectLabel } from "@/backend/domain"
+import { Trophy } from "lucide-react"
+import { BadgeMedallion, badgeCategoryChipClass } from "@/components/ui/badge-medallion"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 interface UserBadge {
@@ -14,6 +14,7 @@ interface UserBadge {
   userId: number
   earnedAt: string
   earnedBy?: number | null
+  equipped?: boolean
   badge?: {
     id: number
     name: string
@@ -22,6 +23,10 @@ interface UserBadge {
     color?: string | null
     category: 'achievement' | 'milestone' | 'special' | 'social'
     criteria?: any
+    slug?: string | null
+    effect?: { kind: "bonus" | "penaltyReduction"; pct: number } | null
+    /** plan-v16 S04 (R6): CHAVE do arquivo no bucket; o binário sai pela rota autenticada. */
+    iconKey?: string | null
     isActive: boolean
   }
 }
@@ -44,6 +49,8 @@ export function UserBadges({ userId, showAll = false, limit = 6, className = "" 
         setLoading(true)
         const response = await BadgesAPI.getUserBadges(userId, showAll ? undefined : limit)
         setBadges(response.badges || [])
+        // plan-v18 S02 (DEC-248, ADR-005): `progress` chega do servidor e o bloco não o
+        // renderiza — a lista "Em progresso" saiu da tela do perfil.
         setError(null)
       } catch (err: any) {
         console.error("Erro ao buscar badges:", err)
@@ -59,50 +66,14 @@ export function UserBadges({ userId, showAll = false, limit = 6, className = "" 
     }
   }, [userId, showAll, limit])
 
-  const getCategoryIcon = (category: string) => {
-    switch (category) {
-      case 'achievement':
-        return <Trophy className="h-4 w-4" />
-      case 'milestone':
-        return <Target className="h-4 w-4" />
-      case 'special':
-        return <Crown className="h-4 w-4" />
-      case 'social':
-        return <Users className="h-4 w-4" />
-      default:
-        return <Award className="h-4 w-4" />
-    }
-  }
-
-  const getCategoryColor = (category: string) => {
-    switch (category) {
-      case 'achievement':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-warning/15 dark:text-yellow-300 dark:border-warning/25'
-      case 'milestone':
-        return 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-info/15 dark:text-blue-300 dark:border-info/25'
-      case 'special':
-        return 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-500/15 dark:text-purple-300 dark:border-purple-500/25'
-      case 'social':
-        return 'bg-green-100 text-green-800 border-green-200 dark:bg-success/15 dark:text-green-300 dark:border-success/25'
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-muted/50 dark:text-gray-200 dark:border-border'
-    }
-  }
-
-  const getCategoryName = (category: string) => {
-    switch (category) {
-      case 'achievement':
-        return 'Conquista'
-      case 'milestone':
-        return 'Marco'
-      case 'special':
-        return 'Especial'
-      case 'social':
-        return 'Social'
-      default:
-        return 'Badge'
-    }
-  }
+  // plan-v17 S04 (R7, ADR-003): o bloco é leitura — o equipar mora no picker da
+  // Configurações. O bloco acompanha o estado pelo cache compartilhado.
+  useEffect(() => {
+    const unsubscribe = subscribeEquipped(userId, (badgeId, next) => {
+      setBadges((prev) => prev.map((b) => (b.badgeId === badgeId ? { ...b, equipped: next } : b)))
+    })
+    return unsubscribe
+  }, [userId])
 
   const formatEarnedDate = (dateString: string) => {
     const date = new Date(dateString)
@@ -125,9 +96,9 @@ export function UserBadges({ userId, showAll = false, limit = 6, className = "" 
           <Trophy className="h-4 w-4 text-muted-foreground" />
           <span className="text-sm font-medium text-muted-foreground">Badges</span>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-3">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="h-6 w-16 bg-muted animate-pulse rounded-full" />
+            <div key={i} className="h-14 w-44 animate-pulse rounded-lg bg-muted" />
           ))}
         </div>
       </div>
@@ -168,23 +139,35 @@ export function UserBadges({ userId, showAll = false, limit = 6, className = "" 
           Badges ({safeBadges.length})
         </span>
       </div>
-      
-      <div className="flex flex-wrap gap-2">
+
+      {/* plan-v18 S02 (DEC-248, ADR-005): as conquistadas entram em cartões discretos,
+          mais largos que altos, com medálhão, nome, selo do efeito e data relativa.
+          Os chips "Em progresso" saíram da tela — o bloco é só o que a pessoa possui. */}
+      <div className="flex flex-wrap gap-3">
         <TooltipProvider>
           {safeBadges.map((userBadge) => (
             <Tooltip key={userBadge.id}>
               <TooltipTrigger asChild>
-                <Badge
-                  variant="outline"
-                  className={`${getCategoryColor(userBadge.badge.category)} cursor-help transition-all hover:scale-105`}
+                <div
+                  data-testid="badge-card"
+                  className={`flex w-44 items-center gap-3 rounded-lg border bg-card p-3 cursor-help transition-all hover:scale-105 ${
+                    userBadge.equipped ? "ring-2 ring-primary" : ""
+                  }`}
                 >
-                  <div className="flex items-center gap-1">
-                    {getCategoryIcon(userBadge.badge.category)}
-                    <span className="text-xs font-medium">
-                      {userBadge.badge.name}
-                    </span>
+                  {/* plan-v17 S01 (R1, ADR-001): a peça única desenha o ícone — bucket >
+                      texto `icon` > Lucide de categoria. Nenhum glifo local aqui. */}
+                  <BadgeMedallion badge={userBadge.badge} size="sm" />
+                  <div className="min-w-0 space-y-0.5">
+                    <p className="truncate text-sm font-medium">{userBadge.badge.name}</p>
+                    {userBadge.badge.effect && (
+                      <p className="text-xs font-semibold text-primary">
+                        {userBadge.equipped ? "Equipada: " : "Passiva: "}
+                        {equipEffectLabel(userBadge.badge.effect)}
+                      </p>
+                    )}
+                    <p className="text-xs text-muted-foreground">{formatEarnedDate(userBadge.earnedAt)}</p>
                   </div>
-                </Badge>
+                </div>
               </TooltipTrigger>
               <TooltipContent side="top" className="max-w-xs">
                 <div className="space-y-1">
@@ -192,9 +175,15 @@ export function UserBadges({ userId, showAll = false, limit = 6, className = "" 
                   <div className="text-xs text-muted-foreground">
                     {userBadge.badge.description}
                   </div>
+                  {userBadge.badge.effect && (
+                    <div className="text-xs text-primary">
+                      {userBadge.equipped ? "Equipada: " : "Passiva: "}
+                      {equipEffectLabel(userBadge.badge.effect)}
+                    </div>
+                  )}
                   <div className="flex items-center justify-between text-xs">
-                    <span className={`px-1.5 py-0.5 rounded text-xs ${getCategoryColor(userBadge.badge.category)}`}>
-                      {getCategoryName(userBadge.badge.category)}
+                    <span className={`px-1.5 py-0.5 rounded text-xs ${badgeCategoryChipClass(userBadge.badge.category)}`}>
+                      {badgeCategoryLabel(userBadge.badge.category)}
                     </span>
                     <span className="text-muted-foreground">
                       {formatEarnedDate(userBadge.earnedAt)}
@@ -207,192 +196,5 @@ export function UserBadges({ userId, showAll = false, limit = 6, className = "" 
         </TooltipProvider>
       </div>
     </div>
-  )
-}
-
-// Componente para mostrar badges em formato de card (para perfis completos)
-export function UserBadgesCard({ userId, className = "" }: { userId: number; className?: string }) {
-  const [badges, setBadges] = useState<UserBadge[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    const fetchBadges = async () => {
-      try {
-        setLoading(true)
-        const response = await BadgesAPI.getUserBadges(userId)
-        setBadges(response.badges || [])
-        setError(null)
-      } catch (err: any) {
-        console.error("Erro ao buscar badges:", err)
-        setError("Erro ao carregar badges")
-        setBadges([])
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    if (userId) {
-      fetchBadges()
-    }
-  }, [userId])
-
-  const getCategoryIcon = (category: string) => {
-    switch (category) {
-      case 'achievement':
-        return <Trophy className="h-5 w-5" />
-      case 'milestone':
-        return <Target className="h-5 w-5" />
-      case 'special':
-        return <Crown className="h-5 w-5" />
-      case 'social':
-        return <Users className="h-5 w-5" />
-      default:
-        return <Award className="h-5 w-5" />
-    }
-  }
-
-  const getCategoryColor = (category: string) => {
-    switch (category) {
-      case 'achievement':
-        return 'bg-yellow-50 border-yellow-200 dark:bg-warning/10 dark:border-warning/25 hover:bg-yellow-100'
-      case 'milestone':
-        return 'bg-blue-50 border-blue-200 dark:bg-info/10 dark:border-info/25 hover:bg-blue-100'
-      case 'special':
-        return 'bg-purple-50 border-purple-200 dark:bg-purple-500/10 dark:border-purple-500/25 hover:bg-purple-100'
-      case 'social':
-        return 'bg-green-50 border-green-200 dark:bg-success/10 dark:border-success/25 hover:bg-green-100'
-      default:
-        return 'bg-gray-50 border-gray-200 dark:bg-muted/40 dark:border-border hover:bg-gray-100'
-    }
-  }
-
-  const getCategoryName = (category: string) => {
-    switch (category) {
-      case 'achievement':
-        return 'Conquista'
-      case 'milestone':
-        return 'Marco'
-      case 'special':
-        return 'Especial'
-      case 'social':
-        return 'Social'
-      default:
-        return 'Badge'
-    }
-  }
-
-  const formatEarnedDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    })
-  }
-
-  if (loading) {
-    return (
-      <Card className={className}>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Trophy className="h-5 w-5" />
-            Badges
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="h-16 bg-muted animate-pulse rounded-lg" />
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-    )
-  }
-
-  if (error) {
-    return (
-      <Card className={className}>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Trophy className="h-5 w-5" />
-            Badges
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">Erro ao carregar badges</p>
-        </CardContent>
-      </Card>
-    )
-  }
-
-  const safeBadges = badges.filter((userBadge): userBadge is typeof userBadge & { badge: NonNullable<typeof userBadge.badge> } => Boolean(userBadge.badge))
-
-  if (safeBadges.length === 0) {
-    return (
-      <Card className={className}>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Trophy className="h-5 w-5" />
-            Badges
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8">
-            <Trophy className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-            <p className="text-sm text-muted-foreground">
-              Nenhum badge conquistado ainda
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Continue trabalhando para conquistar seus primeiros badges!
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-    )
-  }
-
-  return (
-    <Card className={className}>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Trophy className="h-5 w-5" />
-          Badges ({safeBadges.length})
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {safeBadges.map((userBadge) => (
-            <div
-              key={userBadge.id}
-              className={`p-3 rounded-lg border transition-colors ${getCategoryColor(userBadge.badge.category)}`}
-            >
-              <div className="flex items-start gap-3">
-                <div className="flex-shrink-0">
-                  {getCategoryIcon(userBadge.badge.category)}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h4 className="font-medium text-sm truncate">
-                    {userBadge.badge.name}
-                  </h4>
-                  <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                    {userBadge.badge.description}
-                  </p>
-                  <div className="flex items-center justify-between mt-2">
-                    <span className="text-xs font-medium">
-                      {getCategoryName(userBadge.badge.category)}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {formatEarnedDate(userBadge.earnedAt)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
   )
 }

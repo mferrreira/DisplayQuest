@@ -52,43 +52,43 @@ const done = (completedAt: Date | null = null, dueDate: string | null = DUE) => 
   completedAt,
 });
 
-describe("V4-4 · DEC-97 — subtask é +5 fixo à base da mãe, calendário uma vez só", () => {
-  it("o exemplo da DEC-78 recalculado: mãe −40, com 3 subtasks concluídas a base vira 25 → −25", () => {
+describe("V4-4 · DEC-97 — subtask é +10 fixo à base da mãe, calendário uma vez só", () => {
+  it("o exemplo da DEC-78 recalculado: mãe −40, com 3 subtasks concluídas a base vira 40 → −10", () => {
     const subtasks = [done(EARLY), done(ONE_DAY_LATE), done(FOUR_DAYS_LATE)];
 
     // A mãe sozinha continua valendo a regra de sempre (10 − dias·10).
     expect(awardPointsForCompletion({ dueDate: DUE }, APPROVAL)).toBe(-40);
-    // Base 10 + 3·5 = 25, menos 5 dias de atraso × 10. O instante de conclusão de CADA subtask
+    // Base 10 + 3·10 = 40, menos 5 dias de atraso × 10. O instante de conclusão de CADA subtask
     // não entra mais na conta (a leitura da DEC-78 morreu na DEC-97).
-    expect(totalAwardForCompletion({ dueDate: DUE }, subtasks, APPROVAL)).toBe(-25);
+    expect(totalAwardForCompletion({ dueDate: DUE }, subtasks, APPROVAL)).toBe(-10);
   });
 
-  it("cada subtask concluída soma exatamente SUBTASK_POINTS (5) à base", () => {
-    expect(SUBTASK_POINTS).toBe(5);
-    // No prazo: base 15 → 15 (sem bônus, sem penalidade).
-    expect(totalAwardForCompletion({ dueDate: DUE }, [done()], new Date("2026-10-20T12:00:00.000Z"))).toBe(15);
+  it("cada subtask concluída soma exatamente SUBTASK_POINTS (10) à base", () => {
+    expect(SUBTASK_POINTS).toBe(10);
+    // No prazo: base 20 → 20 (sem bônus, sem penalidade).
+    expect(totalAwardForCompletion({ dueDate: DUE }, [done()], new Date("2026-10-20T12:00:00.000Z"))).toBe(20);
     expect(
       totalAwardForCompletion(
         { dueDate: DUE },
         [done(), done(), done()],
         new Date("2026-10-20T12:00:00.000Z"),
       ),
-    ).toBe(25);
+    ).toBe(40);
   });
 
   it("o atraso da MÃE desconta uma vez só, com a base já somada (DEC-39 sem piso)", () => {
-    // Base 10 + 1·5 = 15, 1 dia de atraso → 15 − 10 = 5.
-    expect(totalAwardForCompletion({ dueDate: DUE }, [done(ONE_DAY_LATE)], ONE_DAY_LATE)).toBe(5);
-    // 5 dias de atraso: 25 − 50 = −25 (já coberto acima) e sem subtask: 10 − 50 = −40.
+    // Base 10 + 1·10 = 20, 1 dia de atraso → 20 − 10 = 10.
+    expect(totalAwardForCompletion({ dueDate: DUE }, [done(ONE_DAY_LATE)], ONE_DAY_LATE)).toBe(10);
+    // 5 dias de atraso: 40 − 50 = −10 (já coberto acima) e sem subtask: 10 − 50 = −40.
     expect(totalAwardForCompletion({ dueDate: DUE }, [], APPROVAL)).toBe(-40);
   });
 
   it("subtask ABERTA não entra na conta: só o que foi concluído soma", () => {
     const open = { completed: false };
-    // 1 dia adiantada: régua de 2 dias não dispara, a base fica inteira (10 + 5).
+    // 1 dia adiantada: régua de 2 dias não dispara, a base fica inteira (10 + 10).
     expect(
       totalAwardForCompletion({ dueDate: DUE }, [done(EARLY), open], new Date("2026-10-19T12:00:00.000Z")),
-    ).toBe(15);
+    ).toBe(20);
     // Zero concluída vale zero — é a mãe sem subtask.
     expect(totalAwardForCompletion({ dueDate: DUE }, [open], APPROVAL)).toBe(-40);
   });
@@ -96,7 +96,7 @@ describe("V4-4 · DEC-97 — subtask é +5 fixo à base da mãe, calendário uma
   it("mãe sem prazo: nenhuma subtask pode estar atrasada — o inteiro é a base", () => {
     const subtasks = [done(EARLY, null), done(FOUR_DAYS_LATE, null)];
     expect(totalAwardForCompletion({ dueDate: null }, subtasks, APPROVAL)).toBe(POINTS_PER_TASK + 2 * SUBTASK_POINTS);
-    expect(totalAwardForCompletion({ dueDate: null }, subtasks, APPROVAL)).toBe(20);
+    expect(totalAwardForCompletion({ dueDate: null }, subtasks, APPROVAL)).toBe(30);
   });
 
   it("sem subtask o total é exatamente o que a mãe valia antes — nada mudou para tarefa simples", () => {
@@ -105,24 +105,24 @@ describe("V4-4 · DEC-97 — subtask é +5 fixo à base da mãe, calendário uma
   });
 
   it("bônus de 50% com pelo menos 2 dias adiantada vale para a base COM subtask (DEC-97)", () => {
-    // 18/10 é 2 dias civis antes do prazo: (10 + 3·5) × 1,5 = 37,5 arredondado para 38.
+    // 18/10 é 2 dias civis antes do prazo: (10 + 3·10) × 1,5 = 40 × 1,5 = 60.
     const threeDone = [done(EARLY), done(EARLY), done(EARLY)];
     expect(
       totalAwardForCompletion({ dueDate: DUE }, threeDone, new Date("2026-10-18T12:00:00.000Z")),
-    ).toBe(Math.round(25 * EARLY_DELIVERY_MULTIPLIER));
+    ).toBe(Math.round(40 * EARLY_DELIVERY_MULTIPLIER));
     expect(
       totalAwardForCompletion({ dueDate: DUE }, threeDone, new Date("2026-10-18T12:00:00.000Z")),
-    ).toBe(38);
+    ).toBe(60);
     // 1 dia adiantada não basta mais (a régua da DEC-32 era 1 dia; a dono endureceu para 2).
     expect(
       totalAwardForCompletion({ dueDate: DUE }, threeDone, new Date("2026-10-19T12:00:00.000Z")),
-    ).toBe(25);
+    ).toBe(40);
   });
 
-  it("a base gravada em tasks.points é 10 + 5·n (número de subtasks, sem prazo no caminho)", () => {
+  it("a base gravada em tasks.points é 10 + 10·n (número de subtasks, sem prazo no caminho)", () => {
     expect(subtaskBasePoints(0)).toBe(10);
-    expect(subtaskBasePoints(1)).toBe(15);
-    expect(subtaskBasePoints(3)).toBe(25);
+    expect(subtaskBasePoints(1)).toBe(20);
+    expect(subtaskBasePoints(3)).toBe(40);
   });
 });
 
@@ -231,16 +231,16 @@ describe("V4-4 · o que a regra NÃO é", () => {
   it("subtask não tem prazo próprio: o prazo usado é sempre o da mãe (D-D)", () => {
     // A assinatura de pontuação recebe dueDate por parâmetro justamente porque a subtask não o tem.
     const subtasks = [done(ONE_DAY_LATE)];
-    expect(totalAwardForCompletion({ dueDate: DUE }, subtasks, ONE_DAY_LATE)).toBe(5);
+    expect(totalAwardForCompletion({ dueDate: DUE }, subtasks, ONE_DAY_LATE)).toBe(10);
     // Com a mãe sem prazo, a mesma subtask não sofre atraso algum.
-    expect(totalAwardForCompletion({ dueDate: null }, subtasks, ONE_DAY_LATE)).toBe(15);
+    expect(totalAwardForCompletion({ dueDate: null }, subtasks, ONE_DAY_LATE)).toBe(20);
     expect(EARLY_DELIVERY_MULTIPLIER).toBe(1.5);
   });
 
   it("concluir subtask não credita nada na hora: o prêmio só sai na conclusão/aprovação da mãe", () => {
     // A assinatura devolve a base da mãe para a data pedida — não existe "premio da subtask"
     // em lugar nenhum do domínio desde a DEC-97 (`awardPointsForSubtask` foi removido).
-    expect(totalAwardForCompletion({ dueDate: DUE }, [done()], new Date("2026-10-20T12:00:00.000Z"))).toBe(15);
+    expect(totalAwardForCompletion({ dueDate: DUE }, [done()], new Date("2026-10-20T12:00:00.000Z"))).toBe(20);
   });
 });
 

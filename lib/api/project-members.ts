@@ -15,6 +15,9 @@ export interface ProjectMember extends MemberProfileData {
   userId: number
   userName: string | null
   userEmail: string | null
+  /** plan-v14 S02 (regra 2): chave do avatar no bucket (DEC-242). */
+  avatar?: string | null
+  avatarKey?: string | null
   roles: string[]
   joinedAt: string
   totalHours?: number

@@ -8,8 +8,14 @@ import { UpdateProjectUseCase } from "@/backend/modules/project-management/appli
 import { DeleteProjectUseCase } from "@/backend/modules/project-management/application/use-cases/delete-project.use-case"
 import { GetProjectVolunteersUseCase } from "@/backend/modules/project-management/application/use-cases/get-project-volunteers.use-case"
 import { ListProjectDeliverablesUseCase } from "@/backend/modules/project-management/application/use-cases/list-project-deliverables.use-case"
+import { ListProjectDeliverableFilesUseCase } from "@/backend/modules/project-management/application/use-cases/list-project-deliverable-files.use-case"
+import { GetProjectDeliverableFileUseCase } from "@/backend/modules/project-management/application/use-cases/get-project-deliverable-file.use-case"
+import { AddProjectDeliverableFileUseCase } from "@/backend/modules/project-management/application/use-cases/add-project-deliverable-file.use-case"
+import { DeleteProjectDeliverableFileUseCase } from "@/backend/modules/project-management/application/use-cases/delete-project-deliverable-file.use-case"
 import { CreateProjectDeliverableUseCase } from "@/backend/modules/project-management/application/use-cases/create-project-deliverable.use-case"
 import { UpdateProjectDeliverableUseCase } from "@/backend/modules/project-management/application/use-cases/update-project-deliverable.use-case"
+import { UpdateProjectDescriptionUseCase } from "@/backend/modules/project-management/application/use-cases/update-project-description.use-case"
+import { AssertCanUpdateProjectDescriptionUseCase } from "@/backend/modules/project-management/application/use-cases/assert-can-update-project-description.use-case"
 import { DeleteProjectDeliverableUseCase } from "@/backend/modules/project-management/application/use-cases/delete-project-deliverable.use-case"
 import { ListProjectAttachmentsUseCase } from "@/backend/modules/project-management/application/use-cases/list-project-attachments.use-case"
 import { GetProjectAttachmentUseCase } from "@/backend/modules/project-management/application/use-cases/get-project-attachment.use-case"
@@ -22,6 +28,7 @@ import { ListProjectCronogramaUseCase } from "@/backend/modules/project-manageme
 import { CreateProjectGoalUseCase } from "@/backend/modules/project-management/application/use-cases/create-project-goal.use-case"
 import { UpdateProjectGoalUseCase } from "@/backend/modules/project-management/application/use-cases/update-project-goal.use-case"
 import { DeleteProjectGoalUseCase } from "@/backend/modules/project-management/application/use-cases/delete-project-goal.use-case"
+import { MarkGoalCompletionUseCase } from "@/backend/modules/project-management/application/use-cases/mark-goal-completion.use-case"
 import { CreateProjectActivityUseCase } from "@/backend/modules/project-management/application/use-cases/create-project-activity.use-case"
 import { UpdateProjectActivityUseCase } from "@/backend/modules/project-management/application/use-cases/update-project-activity.use-case"
 import { DeleteProjectActivityUseCase } from "@/backend/modules/project-management/application/use-cases/delete-project-activity.use-case"
@@ -33,6 +40,7 @@ import { AssertCanRequestActivityCompletionUseCase } from "@/backend/modules/pro
 import { RequestActivityCompletionUseCase } from "@/backend/modules/project-management/application/use-cases/request-activity-completion.use-case"
 import { ApproveActivityCompletionUseCase } from "@/backend/modules/project-management/application/use-cases/approve-activity-completion.use-case"
 import { NotifyOverdueActivitiesUseCase } from "@/backend/modules/project-management/application/use-cases/notify-overdue-activities.use-case"
+import { ListCompletionRequestsForActorUseCase } from "@/backend/modules/project-management/application/use-cases/list-completion-requests-for-actor.use-case"
 import type { ProjectActorsPort } from "@/backend/modules/project-management/application/ports/project-actors.port"
 import type { ProjectAttachmentsPort } from "@/backend/modules/project-management/application/ports/project-attachments.repository"
 import type { ProjectCronogramaPort } from "@/backend/modules/project-management/application/ports/project-cronograma.repository"
@@ -41,12 +49,14 @@ import type { ActivityTasksPort } from "@/backend/modules/project-management/app
 import type { ActivityEconomyTasksPort } from "@/backend/modules/project-management/application/ports/activity-economy-tasks.port"
 import type { ActivityCompletionAwardPort } from "@/backend/modules/project-management/application/ports/activity-completion-award.port"
 import type { ProjectDeliverablesPort } from "@/backend/modules/project-management/application/ports/project-deliverables.repository"
+import type { ProjectDeliverableFilesPort } from "@/backend/modules/project-management/application/ports/project-deliverable-files.repository"
 import type { ProjectHoursPort } from "@/backend/modules/project-management/application/ports/project-hours.port"
 import type { ProjectManagementMembershipPort } from "@/backend/modules/project-management/application/ports/project-membership.repository"
 import type { ProjectRepositoryPort } from "@/backend/modules/project-management/application/ports/project.repository"
 import { createPrismaProjectActorsPort } from "@/backend/modules/project-management/infrastructure/repositories/prisma-project-actors.port"
 import { createPrismaProjectAttachmentsRepository } from "@/backend/modules/project-management/infrastructure/repositories/prisma-project-attachments.repository"
 import { createPrismaProjectDeliverablesRepository } from "@/backend/modules/project-management/infrastructure/repositories/prisma-project-deliverables.repository"
+import { createPrismaProjectDeliverableFilesRepository } from "@/backend/modules/project-management/infrastructure/repositories/prisma-project-deliverable-files.repository"
 import { createPrismaProjectCronogramaRepository } from "@/backend/modules/project-management/infrastructure/repositories/prisma-project-cronograma.repository"
 import { createPrismaProjectActivityFilesRepository } from "@/backend/modules/project-management/infrastructure/repositories/prisma-project-activity-files.repository"
 import { createPrismaActivityTasksPort } from "@/backend/modules/project-management/infrastructure/repositories/prisma-activity-tasks.port"
@@ -54,8 +64,12 @@ import { createPrismaActivityEconomyTasksPort } from "@/backend/modules/project-
 import { createNoOpActivityCompletionAward } from "@/backend/modules/project-management/infrastructure/adapters/gamification-activity-completion-award"
 import { createPrismaActivityOverdueScanPort } from "@/backend/modules/project-management/infrastructure/repositories/prisma-activity-overdue-scan.port"
 import { createNoOpActivityOverdueNotifier } from "@/backend/modules/project-management/infrastructure/adapters/notifications-activity-overdue"
+import { createNoOpActivityCompletionRequestNotifier } from "@/backend/modules/project-management/infrastructure/adapters/notifications-activity-completion-request"
+import { createPrismaProjectCompletionRequestsPort } from "@/backend/modules/project-management/infrastructure/repositories/prisma-project-completion-requests.port"
 import type { ActivityOverdueScanPort } from "@/backend/modules/project-management/application/ports/activity-overdue-scan.port"
 import type { ActivityOverdueNotifierPort } from "@/backend/modules/project-management/application/ports/activity-overdue-notifier.port"
+import type { ActivityCompletionRequestNotifierPort } from "@/backend/modules/project-management/application/ports/activity-completion-request-notifier.port"
+import type { ProjectCompletionRequestsPort } from "@/backend/modules/project-management/application/ports/project-completion-requests.port"
 import { createPrismaProjectHoursPort } from "@/backend/modules/project-management/infrastructure/repositories/prisma-project-hours.port"
 import { createPrismaProjectManagementMembershipRepository } from "@/backend/modules/project-management/infrastructure/repositories/prisma-project-membership.repository"
 import { createPrismaProjectRepository } from "@/backend/modules/project-management/infrastructure/repositories/prisma-project.repository"
@@ -91,8 +105,14 @@ export class ProjectManagementModule {
   readonly deleteProject: UseCaseExecute<DeleteProjectUseCase>
   readonly getProjectVolunteers: UseCaseExecute<GetProjectVolunteersUseCase>
   readonly listProjectDeliverables: UseCaseExecute<ListProjectDeliverablesUseCase>
+  readonly listProjectDeliverableFiles: UseCaseExecute<ListProjectDeliverableFilesUseCase>
+  readonly getProjectDeliverableFile: UseCaseExecute<GetProjectDeliverableFileUseCase>
+  readonly addProjectDeliverableFile: UseCaseExecute<AddProjectDeliverableFileUseCase>
+  readonly deleteProjectDeliverableFile: UseCaseExecute<DeleteProjectDeliverableFileUseCase>
   readonly createProjectDeliverable: UseCaseExecute<CreateProjectDeliverableUseCase>
   readonly updateProjectDeliverable: UseCaseExecute<UpdateProjectDeliverableUseCase>
+  readonly updateProjectDescription: UseCaseExecute<UpdateProjectDescriptionUseCase>
+  readonly assertCanUpdateProjectDescription: UseCaseExecute<AssertCanUpdateProjectDescriptionUseCase>
   readonly deleteProjectDeliverable: UseCaseExecute<DeleteProjectDeliverableUseCase>
   readonly listProjectAttachments: UseCaseExecute<ListProjectAttachmentsUseCase>
   readonly getProjectAttachment: UseCaseExecute<GetProjectAttachmentUseCase>
@@ -105,6 +125,7 @@ export class ProjectManagementModule {
   readonly createProjectGoal: UseCaseExecute<CreateProjectGoalUseCase>
   readonly updateProjectGoal: UseCaseExecute<UpdateProjectGoalUseCase>
   readonly deleteProjectGoal: UseCaseExecute<DeleteProjectGoalUseCase>
+  readonly markGoalCompletion: UseCaseExecute<MarkGoalCompletionUseCase>
   readonly createProjectActivity: UseCaseExecute<CreateProjectActivityUseCase>
   readonly updateProjectActivity: UseCaseExecute<UpdateProjectActivityUseCase>
   readonly deleteProjectActivity: UseCaseExecute<DeleteProjectActivityUseCase>
@@ -118,6 +139,8 @@ export class ProjectManagementModule {
   readonly approveActivityCompletion: UseCaseExecute<ApproveActivityCompletionUseCase>
   /** V5-8 (DEC-64): varredura de atraso — chamada só pela rotina do cron, sem rota. */
   readonly notifyOverdueActivities: UseCaseExecute<NotifyOverdueActivitiesUseCase>
+  /** S01 (plan-v12, DEC-238): fila global de solicitações de conclusão para o painel. */
+  readonly listCompletionRequestsForActor: UseCaseExecute<ListCompletionRequestsForActorUseCase>
 
   constructor(
     private readonly listProjectsForActorUseCase: ListProjectsForActorUseCase,
@@ -132,7 +155,13 @@ export class ProjectManagementModule {
     private readonly listProjectDeliverablesUseCase: ListProjectDeliverablesUseCase,
     private readonly createProjectDeliverableUseCase: CreateProjectDeliverableUseCase,
     private readonly updateProjectDeliverableUseCase: UpdateProjectDeliverableUseCase,
+    private readonly updateProjectDescriptionUseCase: UpdateProjectDescriptionUseCase,
+    private readonly assertCanUpdateProjectDescriptionUseCase: AssertCanUpdateProjectDescriptionUseCase,
     private readonly deleteProjectDeliverableUseCase: DeleteProjectDeliverableUseCase,
+    private readonly listProjectDeliverableFilesUseCase: ListProjectDeliverableFilesUseCase,
+    private readonly getProjectDeliverableFileUseCase: GetProjectDeliverableFileUseCase,
+    private readonly addProjectDeliverableFileUseCase: AddProjectDeliverableFileUseCase,
+    private readonly deleteProjectDeliverableFileUseCase: DeleteProjectDeliverableFileUseCase,
     private readonly listProjectAttachmentsUseCase: ListProjectAttachmentsUseCase,
     private readonly getProjectAttachmentUseCase: GetProjectAttachmentUseCase,
     private readonly addProjectAttachmentUseCase: AddProjectAttachmentUseCase,
@@ -144,6 +173,7 @@ export class ProjectManagementModule {
     private readonly createProjectGoalUseCase: CreateProjectGoalUseCase,
     private readonly updateProjectGoalUseCase: UpdateProjectGoalUseCase,
     private readonly deleteProjectGoalUseCase: DeleteProjectGoalUseCase,
+    private readonly markGoalCompletionUseCase: MarkGoalCompletionUseCase,
     private readonly createProjectActivityUseCase: CreateProjectActivityUseCase,
     private readonly updateProjectActivityUseCase: UpdateProjectActivityUseCase,
     private readonly deleteProjectActivityUseCase: DeleteProjectActivityUseCase,
@@ -155,6 +185,7 @@ export class ProjectManagementModule {
     private readonly requestActivityCompletionUseCase: RequestActivityCompletionUseCase,
     private readonly approveActivityCompletionUseCase: ApproveActivityCompletionUseCase,
     private readonly notifyOverdueActivitiesUseCase: NotifyOverdueActivitiesUseCase,
+    private readonly listCompletionRequestsForActorUseCase: ListCompletionRequestsForActorUseCase,
   ) {
     this.listProjectsForActor = this.listProjectsForActorUseCase.execute.bind(this.listProjectsForActorUseCase)
     this.getProjectById = this.getProjectByIdUseCase.execute.bind(this.getProjectByIdUseCase)
@@ -168,7 +199,13 @@ export class ProjectManagementModule {
     this.listProjectDeliverables = this.listProjectDeliverablesUseCase.execute.bind(this.listProjectDeliverablesUseCase)
     this.createProjectDeliverable = this.createProjectDeliverableUseCase.execute.bind(this.createProjectDeliverableUseCase)
     this.updateProjectDeliverable = this.updateProjectDeliverableUseCase.execute.bind(this.updateProjectDeliverableUseCase)
+    this.updateProjectDescription = this.updateProjectDescriptionUseCase.execute.bind(this.updateProjectDescriptionUseCase)
+    this.assertCanUpdateProjectDescription = this.assertCanUpdateProjectDescriptionUseCase.execute.bind(this.assertCanUpdateProjectDescriptionUseCase)
     this.deleteProjectDeliverable = this.deleteProjectDeliverableUseCase.execute.bind(this.deleteProjectDeliverableUseCase)
+    this.listProjectDeliverableFiles = this.listProjectDeliverableFilesUseCase.execute.bind(this.listProjectDeliverableFilesUseCase)
+    this.getProjectDeliverableFile = this.getProjectDeliverableFileUseCase.execute.bind(this.getProjectDeliverableFileUseCase)
+    this.addProjectDeliverableFile = this.addProjectDeliverableFileUseCase.execute.bind(this.addProjectDeliverableFileUseCase)
+    this.deleteProjectDeliverableFile = this.deleteProjectDeliverableFileUseCase.execute.bind(this.deleteProjectDeliverableFileUseCase)
     this.listProjectAttachments = this.listProjectAttachmentsUseCase.execute.bind(this.listProjectAttachmentsUseCase)
     this.getProjectAttachment = this.getProjectAttachmentUseCase.execute.bind(this.getProjectAttachmentUseCase)
     this.addProjectAttachment = this.addProjectAttachmentUseCase.execute.bind(this.addProjectAttachmentUseCase)
@@ -180,6 +217,7 @@ export class ProjectManagementModule {
     this.createProjectGoal = this.createProjectGoalUseCase.execute.bind(this.createProjectGoalUseCase)
     this.updateProjectGoal = this.updateProjectGoalUseCase.execute.bind(this.updateProjectGoalUseCase)
     this.deleteProjectGoal = this.deleteProjectGoalUseCase.execute.bind(this.deleteProjectGoalUseCase)
+    this.markGoalCompletion = this.markGoalCompletionUseCase.execute.bind(this.markGoalCompletionUseCase)
     this.createProjectActivity = this.createProjectActivityUseCase.execute.bind(this.createProjectActivityUseCase)
     this.updateProjectActivity = this.updateProjectActivityUseCase.execute.bind(this.updateProjectActivityUseCase)
     this.deleteProjectActivity = this.deleteProjectActivityUseCase.execute.bind(this.deleteProjectActivityUseCase)
@@ -193,6 +231,9 @@ export class ProjectManagementModule {
     this.requestActivityCompletion = this.requestActivityCompletionUseCase.execute.bind(this.requestActivityCompletionUseCase)
     this.approveActivityCompletion = this.approveActivityCompletionUseCase.execute.bind(this.approveActivityCompletionUseCase)
     this.notifyOverdueActivities = this.notifyOverdueActivitiesUseCase.execute.bind(this.notifyOverdueActivitiesUseCase)
+    this.listCompletionRequestsForActor = this.listCompletionRequestsForActorUseCase.execute.bind(
+      this.listCompletionRequestsForActorUseCase,
+    )
   }
 }
 
@@ -203,6 +244,7 @@ export interface ProjectManagementModulePorts {
   hours: ProjectHoursPort
   deliverables: ProjectDeliverablesPort
   attachments: ProjectAttachmentsPort
+  projectDeliverableFiles: ProjectDeliverableFilesPort
   cronograma: ProjectCronogramaPort
   activityFiles: ProjectActivityFilesPort
   tasks: ActivityTasksPort
@@ -214,6 +256,10 @@ export interface ProjectManagementModulePorts {
   overdueScan: ActivityOverdueScanPort
   /** V5-8 (DEC-21): quem publica a notificação prioritária. O composition root injeta notifications. */
   overdueNotifier: ActivityOverdueNotifierPort
+  /** Fix 4: flag "conclusão solicitada" por projeto (projeção para a tela de gestão). */
+  completionRequests: ProjectCompletionRequestsPort
+  /** Fix 4 (DEC-21): quem publica a notificação da solicitação de conclusão. */
+  completionRequestNotifier: ActivityCompletionRequestNotifierPort
 }
 
 export interface ProjectManagementModuleFactoryOptions {
@@ -228,6 +274,7 @@ export function createProjectManagementModule(options: ProjectManagementModuleFa
     hours: options.ports?.hours ?? createPrismaProjectHoursPort(),
     deliverables: options.ports?.deliverables ?? createPrismaProjectDeliverablesRepository(),
     attachments: options.ports?.attachments ?? createPrismaProjectAttachmentsRepository(),
+    projectDeliverableFiles: options.ports?.projectDeliverableFiles ?? createPrismaProjectDeliverableFilesRepository(),
     cronograma: options.ports?.cronograma ?? createPrismaProjectCronogramaRepository(),
     activityFiles: options.ports?.activityFiles ?? createPrismaProjectActivityFilesRepository(),
     tasks: options.ports?.tasks ?? createPrismaActivityTasksPort(),
@@ -235,10 +282,12 @@ export function createProjectManagementModule(options: ProjectManagementModuleFa
     activityAwards: options.ports?.activityAwards ?? createNoOpActivityCompletionAward(),
     overdueScan: options.ports?.overdueScan ?? createPrismaActivityOverdueScanPort(),
     overdueNotifier: options.ports?.overdueNotifier ?? createNoOpActivityOverdueNotifier(),
+    completionRequests: options.ports?.completionRequests ?? createPrismaProjectCompletionRequestsPort(),
+    completionRequestNotifier: options.ports?.completionRequestNotifier ?? createNoOpActivityCompletionRequestNotifier(),
   }
 
   return new ProjectManagementModule(
-    new ListProjectsForActorUseCase({ projects: ports.projects }),
+    new ListProjectsForActorUseCase({ projects: ports.projects, completionRequests: ports.completionRequests }),
     new GetProjectByIdUseCase({ projects: ports.projects }),
     new GetProjectForActorUseCase({ projects: ports.projects }),
     new CanActorManageProjectUseCase({ memberships: ports.memberships, actors: ports.actors }),
@@ -256,16 +305,52 @@ export function createProjectManagementModule(options: ProjectManagementModuleFa
       deliverables: ports.deliverables,
       memberships: ports.memberships,
       actors: ports.actors,
+      goals: ports.cronograma,
     }),
     new UpdateProjectDeliverableUseCase({
       projects: ports.projects,
       deliverables: ports.deliverables,
       memberships: ports.memberships,
       actors: ports.actors,
+      goals: ports.cronograma,
+    }),
+    new UpdateProjectDescriptionUseCase({
+      projects: ports.projects,
+      memberships: ports.memberships,
+      actors: ports.actors,
+    }),
+    new AssertCanUpdateProjectDescriptionUseCase({
+      projects: ports.projects,
+      memberships: ports.memberships,
+      actors: ports.actors,
     }),
     new DeleteProjectDeliverableUseCase({
       projects: ports.projects,
       deliverables: ports.deliverables,
+      memberships: ports.memberships,
+      actors: ports.actors,
+    }),
+    new ListProjectDeliverableFilesUseCase({
+      projects: ports.projects,
+      deliverables: ports.deliverables,
+      files: ports.projectDeliverableFiles,
+    }),
+    new GetProjectDeliverableFileUseCase({
+      projects: ports.projects,
+      deliverables: ports.deliverables,
+      files: ports.projectDeliverableFiles,
+    }),
+    new AddProjectDeliverableFileUseCase({
+      projects: ports.projects,
+      deliverables: ports.deliverables,
+      files: ports.projectDeliverableFiles,
+      memberships: ports.memberships,
+      actors: ports.actors,
+    }),
+    new DeleteProjectDeliverableFileUseCase({
+      projects: ports.projects,
+      deliverables: ports.deliverables,
+      files: ports.projectDeliverableFiles,
       memberships: ports.memberships,
       actors: ports.actors,
     }),
@@ -324,6 +409,12 @@ export function createProjectManagementModule(options: ProjectManagementModuleFa
       memberships: ports.memberships,
       actors: ports.actors,
     }),
+    new MarkGoalCompletionUseCase({
+      projects: ports.projects,
+      memberships: ports.memberships,
+      actors: ports.actors,
+      cronograma: ports.cronograma,
+    }),
     new CreateProjectActivityUseCase({
       projects: ports.projects,
       cronograma: ports.cronograma,
@@ -375,6 +466,8 @@ export function createProjectManagementModule(options: ProjectManagementModuleFa
       files: ports.activityFiles,
       tasks: ports.tasks,
       memberships: ports.memberships,
+      scan: ports.overdueScan,
+      notifier: ports.completionRequestNotifier,
     }),
     new ApproveActivityCompletionUseCase({
       projects: ports.projects,
@@ -386,6 +479,9 @@ export function createProjectManagementModule(options: ProjectManagementModuleFa
     new NotifyOverdueActivitiesUseCase({
       scan: ports.overdueScan,
       notifier: ports.overdueNotifier,
+    }),
+    new ListCompletionRequestsForActorUseCase({
+      completionRequests: ports.completionRequests,
     }),
   )
 }

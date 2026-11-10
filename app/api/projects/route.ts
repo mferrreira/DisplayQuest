@@ -70,6 +70,8 @@ export async function POST(request: Request) {
       data: {
         name: body.name,
         description: body.description || "",
+        // plan-v13 (S01, regra 1): aparado pelo use case; vazio vira null.
+        subtitle: body.subtitle,
         status: body.status || "active",
         leaderId,
         links: body.links || [],

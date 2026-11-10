@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
 import { useProject } from "@/contexts/project-context"
 import { useAuth } from "@/contexts/auth-context"
 import { useUser } from "@/contexts/user-context"
@@ -8,14 +9,18 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ProjectDialog } from "./project-dialog"
-import { Plus, Edit, Trash2, Calendar, Eye, ArrowUpRight } from "lucide-react"
+import { ProjectDescriptionDialog } from "./project-description-dialog"
+import { Plus, Edit, Pencil, Trash2, Calendar, ArrowUpRight } from "lucide-react"
 import type { Project, Task } from "@/contexts/types"
 import { hasAccess } from "@/lib/utils/utils"
 import { projectStatusBadgeClass, projectStatusLabel } from "@/components/ui/status"
 import { projectProgress } from "@/features/projects/utils/project-progress"
+import { projectImageUrl } from "@/lib/api/project-files"
+import { BannerImage } from "@/components/ui/banner-image"
 import { civilDayOfInstant } from "@/backend/domain"
 
 interface ProjectListProps {
+  /** S01: o cartão virou link; a página ainda passa a prop, nada a consumir. */
   onProjectSelect?: (project: Project) => void
   projects?: Project[]
   tasks?: Task[]
@@ -30,6 +35,12 @@ export function ProjectList({ onProjectSelect, projects: providedProjects, tasks
   const today = civilDayOfInstant(new Date())
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [descriptionProject, setDescriptionProject] = useState<Project | null>(null)
+
+  // R9 (S06, DEC-261) na tela: gestão global OU membro ATIVO. A autoridade de verdade é o
+  // servidor; este controle decide só o que o ícone mostra.
+  const canEditDescription = (project: Project) =>
+    (user && hasAccess(user.roles || [], "MANAGE_PROJECTS")) === true || project.isMemberActive === true
 
   const handleEdit = (project: Project) => {
     setSelectedProject(project)
@@ -44,6 +55,10 @@ export function ProjectList({ onProjectSelect, projects: providedProjects, tasks
         console.error("Erro ao excluir projeto:", error)
       }
     }
+  }
+
+  const handleEditDescription = (project: Project) => {
+    setDescriptionProject(project)
   }
 
   const handleCreateNew = () => {
@@ -62,12 +77,12 @@ export function ProjectList({ onProjectSelect, projects: providedProjects, tasks
         {[...Array(3)].map((_, i) => (
           <Card key={i} className="animate-pulse">
             <CardHeader>
-              <div className="h-4 bg-gray-200 dark:bg-muted/60 rounded w-3/4"></div>
-              <div className="h-3 bg-gray-200 dark:bg-muted/60 rounded w-1/2"></div>
+              <div className="h-4 bg-muted rounded w-3/4"></div>
+              <div className="h-3 bg-muted rounded w-1/2"></div>
             </CardHeader>
             <CardContent>
-              <div className="h-3 bg-gray-200 dark:bg-muted/60 rounded w-full mb-2"></div>
-              <div className="h-3 bg-gray-200 dark:bg-muted/60 rounded w-2/3"></div>
+              <div className="h-3 bg-muted rounded w-full mb-2"></div>
+              <div className="h-3 bg-muted rounded w-2/3"></div>
             </CardContent>
           </Card>
         ))}
@@ -82,6 +97,17 @@ export function ProjectList({ onProjectSelect, projects: providedProjects, tasks
             <Plus className="mr-2 h-4 w-4" />
             Novo Projeto
           </Button>
+      )}
+
+      {descriptionProject && (
+        <ProjectDescriptionDialog
+          open
+          projectId={descriptionProject.id}
+          initialDescription={descriptionProject.description ?? ""}
+          onOpenChange={(next) => {
+            if (!next) setDescriptionProject(null)
+          }}
+        />
       )}
 
       {projects.length === 0 ? (
@@ -106,8 +132,54 @@ export function ProjectList({ onProjectSelect, projects: providedProjects, tasks
       ) : (
         <div className="space-y-3">
           {projects.map((project) => (
-            <Card key={project.id} className="transition-colors hover:border-primary/40">
-              <CardContent className="grid gap-4 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:p-5">
+            <Card key={project.id} className="relative transition-colors hover:border-primary/40">
+              {project.bannerKey && (
+                // O corte do banner mora num divisor interno; o logo fica FORA dele, senão o
+                // overflow-hidden ceifa a metade que cruza a emenda (achado da revisão S01).
+                // plan-v13 (S03, decisão do dono): a faixa do cartão é MAIOR que a altura
+                // medida de `h-16 sm:h-24` — a faixa da página do projeto (21:9) não muda.
+                <div className="relative h-24 sm:h-32">
+                  <div className="h-full overflow-hidden rounded-t-lg">
+                    {/* plan-v12 (DEC-239): a peça única `BannerImage` também no cartão da lista. */}
+                    <BannerImage
+                      src={projectImageUrl(project.id, "banner", project.bannerKey)}
+                      alt={`Capa do projeto ${project.name}`}
+                    />
+                  </div>
+                  {project.logoKey && (
+                    // plan-v14 S01 (regra 1): o logo do cartão também sai pela peça única — o
+                    // `<img object-cover>` cru está superado. O wrapper continua FORA do clip da
+                    // faixa (achado da revisão S01 do plan-v11), e a `translate-y-1/2` de
+                    // sobrepõe à emenda fica no wrapper.
+                    <div className="absolute bottom-0 left-4 h-12 w-12 translate-y-1/2 rounded-full border-4 border-card bg-card sm:h-14 sm:w-14">
+                      <BannerImage
+                        src={projectImageUrl(project.id, "logo", project.logoKey)}
+                        alt={`Logo do projeto ${project.name}`}
+                        className="rounded-full"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+              {!project.bannerKey && project.logoKey && (
+                // Mesmo tratamento de círculo das duas situações; o reference proíbe um segundo
+                // desenho para o mesmo conceito. plan-v14 S01: as duas saem pela peça única.
+                <div className="ml-4 mt-4 h-12 w-12 rounded-full border-4 border-card bg-card">
+                  <BannerImage
+                    src={projectImageUrl(project.id, "logo", project.logoKey)}
+                    alt={`Logo do projeto ${project.name}`}
+                    className="rounded-full"
+                  />
+                </div>
+              )}
+              {/* Link esticado (S01): uma única âncora cobre o cartão; os controles de gestão
+                  ficam com z acima dela, e o botão olho saiu. */}
+              <Link
+                href={`/dashboard/projetos/${project.id}`}
+                aria-label={`Ver projeto ${project.name}`}
+                className="absolute inset-0 z-10 rounded-lg outline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring"
+              />
+              <CardContent className={`grid gap-4 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:p-5 ${project.bannerKey ? "pt-10" : ""}`}>
                 <div className="min-w-0 space-y-3">
                   <div className="flex flex-wrap items-center gap-2">
                     <CardTitle className="text-base">{project.name}</CardTitle>
@@ -117,7 +189,7 @@ export function ProjectList({ onProjectSelect, projects: providedProjects, tasks
                   {(() => {
                     const progress = projectProgress(project, tasks, today)
                     return (
-                      <div className="space-y-1.5" aria-label={`Progresso de ${project.name}`}>
+                      <div className="space-y-1.5">
                         <div className="flex justify-between text-xs text-muted-foreground">
                           <span>{progress.source === "time" ? "Andamento temporal" : progress.detail}</span><span>{progress.percent}%</span>
                         </div>
@@ -135,20 +207,21 @@ export function ProjectList({ onProjectSelect, projects: providedProjects, tasks
                   </div>
                   {project.links?.filter(link => link?.url && link?.label).length ? (
                     <div className="flex flex-wrap gap-3 text-sm">
-                      {project.links.filter(link => link?.url && link?.label).map((link, index) => <a className="inline-flex items-center gap-1 text-primary hover:underline" key={index} href={link.url} target="_blank" rel="noopener noreferrer">{link.label}<ArrowUpRight className="h-3 w-3" /></a>)}
+                      {project.links.filter(link => link?.url && link?.label).map((link, index) => <a className="relative z-20 inline-flex items-center gap-1 text-primary hover:underline" key={index} href={link.url} target="_blank" rel="noopener noreferrer">{link.label}<ArrowUpRight className="h-3 w-3" /></a>)}
                     </div>
                   ) : null}
                 </div>
-                <div className="flex items-center gap-2 sm:justify-end">
-                    {onProjectSelect && (
+                <div className="relative z-20 flex items-center gap-2 sm:justify-end">
+                    {canEditDescription(project) && (
+                      // `Editar descrição X` não contém `Editar projeto X` (lição da 3.C): os
+                      // dois controles coexistem para a gestão.
                       <Button
-                        type="button"
                         variant="outline"
                         size="sm"
-                        aria-label={`Ver projeto ${project.name}`}
-                        onClick={() => onProjectSelect(project)}
+                        aria-label={`Editar descrição ${project.name}`}
+                        onClick={() => handleEditDescription(project)}
                       >
-                        <Eye className="h-3 w-3" />
+                        <Pencil className="h-3 w-3" />
                       </Button>
                     )}
                     {user && hasAccess(user?.roles || [], 'MANAGE_PROJECTS') && (

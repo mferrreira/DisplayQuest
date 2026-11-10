@@ -59,6 +59,8 @@ export interface UpdateTaskSubtaskDependencies {
   actors: TaskActorsPort
   projects: TaskProjectsPort
   notifications: TaskNotificationsPort
+  /** plan-v15 S11 (R4): a subtask marcada é episódio de quem a marca (dono/gestão). */
+  recompute: { recompute(userId: number): Promise<void> }
 }
 
 export class UpdateTaskSubtaskUseCase {
@@ -129,6 +131,12 @@ export class UpdateTaskSubtaskUseCase {
           });
         }
       }
+    }
+
+    // R4 (plan-v15 S11): subtask CONCLUÍDA é episódio do marcador. Desmarcar não é
+    // episódio — a métrica conta só as concluídas.
+    if (command.completed === true) {
+      await this.dependencies.recompute.recompute(command.actorId)
     }
 
     return { subtask: updated, task: await attachSubtasks(mother, this.dependencies.subtasks) };

@@ -73,7 +73,7 @@ const SCREENS = [
   // --- coordenador: superficie completa ---
   { id: "quadro-tarefas", role: "coord", route: "/dashboard", expect: { url: /\/dashboard$/, anyOf: ["Quadro", "Tarefa"] } },
   { id: "resumo-home", role: "coord", route: "/dashboard", expect: { url: /\/dashboard$/, anyOf: ["Meta da semana", "Estatísticas do quadro"] }, capturarElemento: 'section[aria-label="Resumo do laboratório"]' },
-  { id: "projetos", role: "coord", route: "/dashboard/projetos", aba: "Lista de Projetos", expect: { url: /\/dashboard\/projetos/, anyOf: ["Projeto"] } },
+  { id: "projetos", role: "coord", route: "/dashboard/projetos", expect: { url: /\/dashboard\/projetos/, anyOf: ["Projeto"] } },
   { id: "laboratorio", role: "coord", route: "/dashboard/laboratorio", expect: { url: /\/dashboard\/laboratorio/, anyOf: ["Laboratório", "Plantão"] } },
   { id: "relatorios-semanais", role: "coord", route: "/dashboard/weekly-reports", expect: { url: /\/dashboard\/weekly-reports/, anyOf: ["Relatório"] } },
   { id: "painel-administrativo", role: "coord", route: "/dashboard/admin", expect: { url: /\/dashboard\/admin/, anyOf: ["Administrativo", "Usuário"] } },
@@ -83,11 +83,15 @@ const SCREENS = [
   // uma pessoa no Ranking produz; o id é a conta de captura do guia (docs/.capture.env).
   { id: "perfil-de-outra-pessoa", role: "coord", route: "/dashboard/profile?userId=21", expect: { url: /\/dashboard\/profile/, anyOf: ["Dados para os documentos"] } },
 
+  // plan-v12 (DEC-240): a capa do perfil na faixa 21:9. A capa semeada no usuário de captura
+  // (`guia.participante`) aponta para o ORIGINAL de `projects/2/images/banner` no bucket —
+  // mesmo binário, leitura pela rota do perfil.
+  { id: "perfil-com-capa", role: "part", route: "/dashboard/profile", expect: { url: /\/dashboard\/profile/, anyOf: ["Sem capa", "capa"] } },
+
   // --- participante: superficie reduzida, usada para mostrar a variação de papel ---
   { id: "quadro-tarefas-participante", role: "part", route: "/dashboard", expect: { url: /\/dashboard$/, anyOf: ["Quadro", "Tarefa"] } },
   { id: "laboratorio-participante", role: "part", route: "/dashboard/laboratorio", expect: { url: /\/dashboard\/laboratorio/, anyOf: ["Laboratório", "Plantão"] } },
   { id: "loja-participante", role: "part", route: "/dashboard/loja", expect: { url: /\/dashboard\/loja$/, anyOf: ["Loja", "Recompensa", "Ponto"] } },
-  { id: "ranking-participante", role: "part", route: "/dashboard/leaderboard", expect: { url: /\/dashboard\/leaderboard/, anyOf: ["Ranking", "Pontos"] } },
   { id: "perfil-participante", role: "part", route: "/dashboard/profile", expect: { url: /\/dashboard\/profile/, anyOf: ["Perfil"] } },
 ];
 
@@ -109,7 +113,9 @@ const VIEWPORT = { width: 1440, height: 900 };
  *              de atividade só existe com o projeto selecionado)
  */
 const INTERACTIONS = [
-  { id: "dashboard-projetos", role: "coord", route: "/dashboard/projetos", aba: "Dashboard", verifica: "Histórico semanal" },
+  // plan-v18 S03/S05 (DEC-249): o painel de leaderboard de projetos saiu da tela Projetos e
+  // entrou na aba Projetos do Quadro de Liderança. A captura da aba sai de lá.
+  { id: "dashboard-projetos", role: "coord", route: "/dashboard/leaderboard", aba: "Projetos", verifica: "CAMPEÃO", rolarAte: "text=Campeão" },
   { id: "dialogo-nova-tarefa", role: "coord", route: "/dashboard", abre: "Nova Tarefa", dialogo: "Tarefa" },
   { id: "dialogo-novo-projeto", role: "coord", route: "/dashboard/projetos", abre: "Novo Projeto", dialogo: "Projeto" },
   // V5-5b (DEC-100): o passo opcional de cronograma do wizard de criação. O nome é preenchido
@@ -132,34 +138,45 @@ const INTERACTIONS = [
   // O formulário de edição mora na aba Configurações. Abrir "Editar Perfil" sem abrir a aba deixa
   // o cartão em modo de edição com o formulário FORA da foto — é o que esta captura fazia até aqui
   // (o extrato media zero `label` na tela). Agora a aba abre antes do botão.
-  { id: "perfil-edicao", role: "part", route: "/dashboard/profile", aba: "Configurações", abre: "Editar Perfil", verifica: "Cancelar Edição", rolarAte: "text=Dados para os documentos oficiais" },
+  // plan-v17 S05: o rolarAte é o picker de equipar — o controle novo da edição (S03), que a
+  // prosa do capítulo nomeia; o formulário continua abaixo dele na mesma foto.
+  { id: "perfil-edicao", role: "part", route: "/dashboard/profile", aba: "Configurações", abre: "Editar Perfil", verifica: "Cancelar Edição", rolarAte: "text=Badges equipáveis" },
   { id: "perfil-configuracoes", role: "part", route: "/dashboard/profile", aba: "Configurações" },
+  // plan-v18 S05 (DEC-249): a classificação completa mora na aba Pessoas do Quadro de Liderança.
+  { id: "ranking-participante", role: "part", route: "/dashboard/leaderboard", aba: "Pessoas", verifica: "Classificação completa" },
+  // plan-v20 S03 (DEC-255): a aba Temporada, em curso. A temporada fechada não é capturável hoje:
+  // a primeira fecha na virada 31/12/2026, e a rota de gestão recusa fechar ano anterior à
+  // primeira temporada. A captura é o quadro vivo pelo saldo, com o seletor de ano.
+  { id: "ranking-temporada", role: "part", route: "/dashboard/leaderboard", aba: "Temporada", verifica: "Pontos da temporada", rolarAte: "text=Pontos da temporada" },
+  // plan-v17 S04 (G6): o bloco Badges do perfil; plan-v18 S02 (DEC-244): só os cartões das
+  // conquistadas — o texto da verificação é o nome de um badge da conta de captura.
+  { id: "perfil-badges", role: "part", route: "/dashboard/profile", verifica: "Vinte e Cinco Tarefas", rolarAte: "text=Vinte e Cinco Tarefas" },
   { id: "loja-minhas-compras", role: "part", route: "/dashboard/loja", aba: "Minhas Compras" },
   { id: "controle-de-sessao", role: "part", route: "/dashboard/profile", abre: "Abrir controle de sessao" },
   { id: "relatorios-gerar-lote", role: "coord", route: "/dashboard/weekly-reports", abre: "Gerar em Lote" },
   // alvo: controle sem rótulo legível, localizado pela estrutura da tela
   { id: "dialogo-detalhe-tarefa", role: "coord", route: "/dashboard", alvo: "button.flex-1.text-left", dialogo: "PONTOS" },
-  { id: "detalhe-projeto", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: "button:has(svg.lucide-eye)" }, projetoTab: "Tarefas", verifica: "Andamento do projeto" },
+  { id: "detalhe-projeto", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: 'a[aria-label="Ver projeto Pesquisa em IA"]' }, projetoTab: "Tarefas", verifica: "Dados do projeto" },
   // V5-5b (DEC-126/151): a grade meses × atividades do painel Cronograma. O cartão é nomeado
   // porque a lista ordena por data de criação e três projetos da instância têm a mesma data —
   // "o primeiro cartão" não seria a mesma tela em duas execuções.
-  { id: "projeto-cronograma", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: "button:has(svg.lucide-eye)" }, projetoTab: "Tarefas", verifica: "Cronograma", rolarAte: "text=Adicionar atividade" },
+  { id: "projeto-cronograma", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: 'a[aria-label="Ver projeto Pesquisa em IA"]' }, projetoTab: "Tarefas", verifica: "Cronograma", rolarAte: "text=Adicionar atividade" },
   // V5-7 (DEC-76/162/165): o diálogo de conclusão da linha, os dois lados. Os dados semeados por
   // SQL (membership de gestor + linhas + prova) são apagados depois da captura — mesmo dado de
   // vida curta do V5-5b/V5-6. Abrir o diálogo só lê; nenhuma captura solicita nem aprova.
-  { id: "dialogo-conclusao-atividade-pedido", role: "part", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: "button:has(svg.lucide-eye)" }, projetoTab: "Tarefas", clicar: ["Conclusão da atividade 1"], dialogo: "Solicitar conclusão", rolarAte: "text=Solicitar conclusão" },
-  { id: "dialogo-conclusao-atividade-aprovacao", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: "button:has(svg.lucide-eye)" }, projetoTab: "Tarefas", clicar: ["Conclusão da atividade 2"], dialogo: "Aprovar conclusão", rolarAte: "text=Aprovar conclusão" },
+  { id: "dialogo-conclusao-atividade-pedido", role: "part", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: 'a[aria-label="Ver projeto Pesquisa em IA"]' }, projetoTab: "Tarefas", clicar: ["Conclusão da atividade 1"], dialogo: "Solicitar conclusão", rolarAte: "text=Solicitar conclusão" },
+  { id: "dialogo-conclusao-atividade-aprovacao", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: 'a[aria-label="Ver projeto Pesquisa em IA"]' }, projetoTab: "Tarefas", clicar: ["Conclusão da atividade 2"], dialogo: "Aprovar conclusão", rolarAte: "text=Aprovar conclusão" },
   // V5-4b (DEC-149): o painel de Membros faz parte da rota dedicada do projeto.
-  { id: "painel-membros", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: "button:has(svg.lucide-eye)" }, projetoTab: "Membros", verifica: "Dados do vínculo", rolarAte: "text=Dados do vínculo" },
+  { id: "painel-membros", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: 'a[aria-label="Ver projeto Pesquisa em IA"]' }, projetoTab: "Membros", verifica: "Dados do vínculo", rolarAte: "text=Dados do vínculo" },
   // V5-9 (DEC-70/139/167/169): o painel de relatórios técnicos mora no diálogo de detalhe do
   // projeto, abaixo do cronograma. O texto semeado via SQL (os três "Pesquisa em IA") mostra o
   // editor preenchido com as três linhas de seção do oficial (DEC-168) e é apagado depois da
   // captura. Nenhuma captura salva, rascunha ou gera — o painel é fotografado em leitura.
-  { id: "painel-relatorios-tecnicos", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: "button:has(svg.lucide-eye)" }, projetoTab: "Arquivos", verifica: "Relatórios técnicos", rolarAte: "text=Relatórios técnicos" },
+  { id: "painel-relatorios-tecnicos", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: 'a[aria-label="Ver projeto Pesquisa em IA"]' }, projetoTab: "Arquivos", verifica: "Relatórios técnicos", rolarAte: "text=Relatórios técnicos" },
   // V5-10b (DEC-175): o painel de atestados mora no diálogo de detalhe, ao lado do de
   // relatórios técnicos. A captura é leitura pura: o painel lista os membros ativos do mês de
   // referência, e nenhum clique daqui gera PDF.
-  { id: "painel-atestados", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: "button:has(svg.lucide-eye)" }, projetoTab: "Arquivos", verifica: "Atestados de frequência", rolarAte: "text=Atestados de frequência" },
+  { id: "painel-atestados", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: 'a[aria-label="Ver projeto Pesquisa em IA"]' }, projetoTab: "Arquivos", verifica: "Atestados de frequência", rolarAte: "text=Atestados de frequência" },
   { id: "painel-notificacoes", role: "coord", route: "/dashboard", abre: "/^notifica/i", dialogo: "Notifica" },
   // plan-v3 OND3-C: o menu de ordenação da coluna é o rótulo que o guia usa — sem a captura, a
   // seção "A ordem dos cartões" descreveria cinco opções que nenhuma foto do guia mostra.
@@ -172,6 +189,43 @@ const INTERACTIONS = [
   // V5-6 (DEC-159): o filtro de atividade da barra do quadro. `depois` é o select que só existe
   // com o projeto selecionado — a lista de atividades é a do projeto, não uma lista global.
   { id: "quadro-filtro-atividade", role: "coord", route: "/dashboard", selecionar: { gatilho: "Todos os projetos", valor: "Pesquisa em IA" }, depois: [{ gatilho: "Todas as atividades", valor: "1. Coleta de dados" }], verifica: "Coleta de dados" },
+
+  // plan-v12 (DEC-238): a aba Conclusões do Painel Administrativo — a fila global de solicitações
+  // de conclusão de atividade, criada na S01. Leitura pura: nenhum clique aprova.
+  { id: "admin-conclusoes", role: "coord", route: "/dashboard/admin", aba: "Conclusões", verifica: "Conclusões solicitadas" },
+  { id: "admin-badges", role: "coord", route: "/dashboard/admin", aba: "Badges", verifica: "Gerenciar Badges" },
+  // POS-1 (2026-11-05): o envio do ícone mora no diálogo de edição. "Editar Gerente" é substring de
+  // "Editar Gerente de Projeto" — o abre usa o nome completo para evitar o strict mode.
+  { id: "admin-badges-dialogo", role: "coord", route: "/dashboard/admin", aba: "Badges", abre: "Editar Gerente de Projeto", dialogo: "Ícone do badge", rolarAte: "text=Ícone do badge" },
+  // plan-v12 (DEC-240): a faixa 21:9 do detalhe do projeto. Sem clique. A verificação é do
+  // card permanente da Visão geral, e o rolar leva o gatilho da faixa ao campo de visão.
+  { id: "faixa-capa-projeto", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: 'a[aria-label="Ver projeto Pesquisa em IA"]' }, projetoTab: "Visão geral", verifica: "Dados do projeto", rolarAte: 'button[aria-label="Opções da capa do projeto"]' },
+  // plan-v14 S05 (regra 5): o MENU de opções aberto pelo clique na faixa, nos dois lados. A
+  // captura fotografa o menu aberto — a verificação é dos itens, que entram no texto do corpo.
+  { id: "capa-menu-projeto", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: 'a[aria-label="Ver projeto Pesquisa em IA"]' }, projetoTab: "Visão geral", clicar: [{ role: "button", name: "Opções da capa do projeto" }], verifica: "Tirar capa", rolarAte: 'button[aria-label="Opções da capa do projeto"]' },
+  { id: "logo-menu-projeto", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: 'a[aria-label="Ver projeto Pesquisa em IA"]' }, projetoTab: "Visão geral", clicar: [{ role: "button", name: "Opções do logo do projeto" }], verifica: "Tirar logo", rolarAte: 'button[aria-label="Opções do logo do projeto"]' },
+  { id: "capa-menu-perfil", role: "part", route: "/dashboard/profile", abre: "Editar Perfil", clicar: [{ role: "button", name: "Opções da capa do perfil" }], verifica: "Tirar avatar", rolarAte: 'button[aria-label="Opções da capa do perfil"]' },
+
+  // plan-v21 S06/S07 (DEC-261/262): a descrição em markdown do projeto mora no cartão da lista,
+  // pelo ícone `Editar descrição X`; o servidor é a autoridade, a UI mostra o ícone. A captura
+  // abre o diálogo sem escrever: nada é salvo.
+  { id: "dialogo-descricao-projeto", role: "coord", route: "/dashboard/projetos", abre: "Editar descrição Pesquisa em IA", dialogo: "Descrição em markdown", rolarAte: "text=Anexar imagem" },
+  // S04 (DEC-259): o seletor do entregável. A captura não seleciona meta: fotografa o painel em
+  // leitura, no estado `Sem meta` da linha de `GDD do laboratório`.
+  { id: "entregavel-meta-seletor", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: 'a[aria-label="Ver projeto Pesquisa em IA"]' }, projetoTab: "Arquivos", verifica: "GDD do laboratório", rolarAte: "text=GDD do laboratório" },
+  // S05 (DEC-260): o checkbox de meta cumprida. `verifica` é o texto visível da lista; o checkbox
+  // é nomeado por `aria-label`, e `innerText` do corpo não lê rótulo de controle.
+  { id: "meta-cumprida-checkbox", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: 'a[aria-label="Ver projeto Pesquisa em IA"]' }, projetoTab: "Tarefas", verifica: "Metas do projeto", rolarAte: "text=Metas do projeto" },
+
+  // S08 (R12/DEC-263): o editor de bio é a mesma peça da descrição do projeto. A captura abre
+  // o dialog em modo de edição do perfil, sem salvar.
+  { id: "perfil-bio-dialog", role: "part", route: "/dashboard/profile", aba: "Configurações", abre: "Editar Perfil", clicar: ["Editar biografia"], dialogo: "Biografia em markdown", rolarAte: "text=Biografia em markdown" },
+  { id: "admin-bio-dialog", role: "coord", route: "/dashboard/admin", aba: "Usuários", abre: "/Configurar/i", clicar: ["Editar biografia"], dialogo: "Biografia em markdown", rolarAte: "text=Biografia em markdown" },
+
+  // S09 (R15/DEC-264): os links no perfil, com o favicon derivado no render. Os dois lados usam
+  // a MESMA peça: o perfil próprio e o perfil de terceiro aberto pelo ranking.
+  { id: "perfil-links", role: "part", route: "/dashboard/profile", aba: "Configurações", verifica: "Links", rolarAte: "text=Links" },
+  { id: "perfil-terceiro-links", role: "coord", route: "/dashboard/profile?userId=21", verifica: "Links", rolarAte: "text=Links" },
 ];
 
 /** A navegação é um acordeão: os destinos só aparecem quando o grupo é aberto. */
@@ -331,6 +385,9 @@ for (const it of interactions) {
       // que o DEC-96 já tinha tirado da tela. Quando a captura também abre algo, a verificação é
       // do que existe DEPOIS do clique, e fica no ramo de baixo.
       if (it.verifica && !it.abre && !it.alvo) {
+        // Dados que chegam de rede (o recorte do Dashboard) não estão no primeiro frame após o
+        // clique. O locator com auto-wait garante o texto antes de fotografar a tela.
+        await page.getByText(it.verifica, { exact: false }).first().waitFor({ timeout: 15_000 });
         const tabText = (await page.locator("body").innerText()).replace(/\s+/g, " ");
         if (!tabText.includes(it.verifica)) {
           throw new Error(`a aba "${it.aba}" não contém "${it.verifica}": "${tabText.slice(0, 140)}"`);
@@ -384,7 +441,12 @@ for (const it of interactions) {
         await page.waitForTimeout(300);
       }
       for (const clique of it.clicar ?? []) {
-        await page.getByRole("button", { name: clique, exact: true }).first().click();
+        // plan-v14 S05: os controles de capa/logo viraram itens de menu aberto pelo clique da
+        // faixa. `clicar` aceita objeto {role, name} — o menuitem do Radix não é botão.
+        const alvo = typeof clique === "string"
+          ? page.getByRole("button", { name: clique, exact: true })
+          : page.getByRole(clique.role, { name: clique.name, exact: true });
+        await alvo.first().click();
         await page.waitForTimeout(500);
       }
 
@@ -404,6 +466,13 @@ for (const it of interactions) {
         }
         record.dialog = dialogText.slice(-400);
       } else {
+        // Dados que chegam de rede (o recorte do Dashboard) não estão no primeiro frame.
+        // `rolarAte` tem locator com auto-wait: a verificação lê o corpo só depois de o
+        // bloco estar na tela.
+        if (it.rolarAte) {
+          await page.locator(it.rolarAte).first().scrollIntoViewIfNeeded();
+          await page.waitForTimeout(500);
+        }
         const bodyText = (await page.locator("body").innerText()).replace(/\s+/g, " ");
         if (it.verifica && !bodyText.includes(it.verifica)) {
           throw new Error(`após o clique a tela não contém "${it.verifica}": "${bodyText.slice(0, 140)}"`);
@@ -424,7 +493,7 @@ for (const it of interactions) {
 
     record.url = page.url();
     // Algumas telas têm o bloco que importa longe do topo (o formulário do perfil começa pelo
-    // recorte de foto; o diálogo de gestão começa pelas estatísticas de hora). `rolarAte` leva o
+    // avatar; o diálogo de gestão começa pelas estatísticas de hora). `rolarAte` leva o
     // bloco ao campo de visão antes da foto — sem ele a captura fotografa a tela errada da tela certa.
     if (it.rolarAte) {
       await page.locator(it.rolarAte).first().scrollIntoViewIfNeeded();

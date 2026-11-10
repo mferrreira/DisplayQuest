@@ -99,6 +99,11 @@ export interface RejectTaskCommand {
  * prêmio muda, e a última subtask concluída move a mãe para "Em Revisão". Sem a mãe na resposta,
  * o cliente teria que recarregar o quadro para ver o que acabou de acontecer.
  */
+export interface ReorderSubtasksResult {
+  task: Task
+  subtasks: ISubtask[]
+}
+
 export interface SubtaskMutationResult {
   subtask: ISubtask
   task: Task

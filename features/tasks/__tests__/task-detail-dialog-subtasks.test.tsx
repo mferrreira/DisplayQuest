@@ -89,8 +89,8 @@ function mother(overrides: Partial<ReturnType<typeof makeTask>> = {}) {
     title: "Calibrar o espectrômetro",
     status: "in-progress",
     assignedTo: 3,
-    // Base gravada da mãe (DEC-97): 10 + 5·3 subtasks = 25.
-    points: 25,
+    // Base gravada da mãe (DEC-97 restaurada): 10 + 10·3 subtasks = 40.
+    points: 40,
     subtasks: [
       closedSubtask(901, "Ligar a fonte"),
       openSubtask(902, "Ajustar o zero"),
@@ -122,7 +122,7 @@ describe("V4-5b · a lista de subtasks no diálogo", () => {
     expect(screen.getByText(/1\/3 concluídas/)).toBeInTheDocument();
   });
 
-  it("criar subtask chega à API e a base da mãe acompanha (10 + 5·n, DEC-97)", async () => {
+  it("criar subtask chega à API e a base da mãe acompanha (10 + 10·n, DEC-97 restaurada)", async () => {
     const task = mother();
     seedTasks([task]);
     renderDialog(task);
@@ -134,7 +134,7 @@ describe("V4-5b · a lista de subtasks no diálogo", () => {
       const stored = getTaskStore().find((t) => t.id === 501)!;
       expect(stored.subtasks.map((s) => s.title)).toContain("Trocar a lâmpada");
       expect(stored.subtasks).toHaveLength(4);
-      expect(stored.points).toBe(30);
+      expect(stored.points).toBe(50);
     });
   });
 
@@ -167,13 +167,13 @@ describe("V4-5b · a lista de subtasks no diálogo", () => {
       const stored = getTaskStore().find((t) => t.id === 501)!;
       expect(stored.subtasks.map((s) => s.id)).not.toContain(903);
       expect(stored.subtasks).toHaveLength(2);
-      expect(stored.points).toBe(20);
+      expect(stored.points).toBe(30);
     });
   });
 
   it("concluir a ÚLTIMA aberta move a mãe para Em Revisão e o diálogo explica (DEC-81)", async () => {
     const task = mother({
-      points: 20,
+      points: 30,
       subtasks: [closedSubtask(901, "Ligar a fonte"), openSubtask(902, "Ajustar o zero")],
     });
     seedTasks([task]);

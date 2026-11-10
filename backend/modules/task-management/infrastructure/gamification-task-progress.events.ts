@@ -1,6 +1,7 @@
 import type {
   TaskCompletedEvent,
   TaskProgressEvents,
+  TaskUncompletedEvent,
 } from "@/backend/modules/task-management/application/ports/task-progress.events";
 
 /**
@@ -20,7 +21,21 @@ export interface TaskAwardOutcome {
 }
 
 export interface TaskAwardPort {
-  awardFromTaskCompletion(input: { userId: number; taskId: number; taskPoints: number }): Promise<TaskAwardOutcome | null>
+  awardFromTaskCompletion(input: { userId: number; taskId: number; taskPoints: number; latePenalty?: number }): Promise<TaskAwardOutcome | null>
+}
+
+/**
+ * TaskReversalPort — R13 (S13, padrão DEC-21): a reversão do prêmio de uma tarefa que saiu de
+ * `done`. O módulo de tarefa não conhece a chave de premiação nem `users.points`; quem faz o
+ * trabalho é o gamification, injetado no composition root. Devolve o valor efetivamente
+ * revertido (`reversedPoints`) para o adaptador baixar `projects.points` pelo mesmo total.
+ */
+export interface TaskReversalOutcome {
+  reversedPoints: number;
+}
+
+export interface TaskReversalPort {
+  reverseTaskAward(input: { userId: number; taskId: number }): Promise<TaskReversalOutcome | null>
 }
 
 /**
@@ -37,6 +52,7 @@ class GamificationTaskProgressEvents implements TaskProgressEvents {
   constructor(
     private readonly awards: TaskAwardPort,
     private readonly projectPoints?: TaskProjectPointsPort,
+    private readonly reversals?: TaskReversalPort,
   ) {}
 
   async onTaskCompleted(event: TaskCompletedEvent): Promise<number | null> {
@@ -48,6 +64,7 @@ class GamificationTaskProgressEvents implements TaskProgressEvents {
       userId: event.userId,
       taskId: event.taskId,
       taskPoints: event.taskPoints,
+      latePenalty: event.latePenalty,
     })
     // Adaptador sem publisher real (ou de teste) pode devolver nada: `null` é "ninguém creditado".
     const credited = typeof outcome?.pointsAwarded === "number" ? outcome.pointsAwarded : null
@@ -66,11 +83,46 @@ class GamificationTaskProgressEvents implements TaskProgressEvents {
 
     return credited
   }
+
+  /**
+   * R13 (S13): a tarefa saiu de `done` por gestão. Reverte o crédito de quem o recebeu
+   * (`users.points` + `currentMonthPoints` caem pelo mesmo total, sem piso — DEC-39) e baixa
+   * `projects.points` pelo mesmo valor, com piso 0. Sem reversal injetada (publisher de teste),
+   * devolve `null`: nada é tocado.
+   */
+  async onTaskUncompleted(event: TaskUncompletedEvent): Promise<number | null> {
+    if (!event.userId || !event.taskId || !this.reversals) {
+      return null
+    }
+
+    const outcome = await this.reversals.reverseTaskAward({
+      userId: event.userId,
+      taskId: event.taskId,
+    })
+    const reversed = typeof outcome?.reversedPoints === "number" ? outcome.reversedPoints : null
+
+    // Mesmo par do `onTaskCompleted`: o projeto desce pelo valor efetivamente revertido. Zero não
+    // escreve. Piso 0 é da escrita do adaptador de projects (DEC-74), não daqui.
+    if (reversed !== null && reversed !== 0 && event.projectId && this.projectPoints) {
+      try {
+        await this.projectPoints.incrementProjectPoints(event.projectId, -reversed)
+      } catch (error) {
+        console.error("Erro ao reverter pontos do projeto na saída de task concluída:", error)
+      }
+    }
+
+    return reversed
+  }
 }
 
 export function createTaskProgressEvents(dependencies: {
   awards: TaskAwardPort
   projectPoints?: TaskProjectPointsPort
+  reversals?: TaskReversalPort
 }): TaskProgressEvents {
-  return new GamificationTaskProgressEvents(dependencies.awards, dependencies.projectPoints)
+  return new GamificationTaskProgressEvents(
+    dependencies.awards,
+    dependencies.projectPoints,
+    dependencies.reversals,
+  )
 }

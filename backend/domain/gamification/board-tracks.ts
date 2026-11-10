@@ -2,9 +2,9 @@
  * backend/domain/gamification/board-tracks.ts — plan-v9 (ADR-002, DEC-224).
  *
  * Trilha e o nome de um contador de gamificacao que o quadro de lideranca sabe ordenar. Hoje
- * existe uma so: o placar do mes. O nome existe para a expansao nao precisar renomear nada:
- * uma trilha futura (XP de temporada, moeda) entra por aqui e o fechamento de mes ja guarda
- * `track` por linha (ADR-002).
+ * existem duas: o placar do mes e o saldo da temporada (plan-v20, DEC-252). O nome existe para
+ * a expansao nao precisar renomear nada: uma trilha futura (XP, moeda) entra por aqui e o
+ * fechamento ja guarda `track` por linha (ADR-002).
  *
  * INV6 do MODELO: o vocabulario mora aqui. Rota, tela e MCP repetem o que o dominio nomeia;
  * nenhum deles declara lista propria (lição medida na DEC-95/96).
@@ -15,11 +15,17 @@ import { ValidationError } from "../errors";
 export const BOARD_TRACKS = {
   /** Placar do mes em curso: o numero que o Quadro de Lideranca ordena e que zera no fechamento. */
   MONTH_POINTS: "MONTH_POINTS",
+  /**
+   * plan-v20 (DEC-252, ADR-002): o saldo da pessoa no fechamento da temporada. A trilha entra
+   * na MESMA colecao (`board_month_closes` + `month_history`) com o `month` da linha sendo o
+   * ano civil ("2026") — o vocabulario foi desenhado para isso, e nenhuma tabela nova aparece.
+   */
+  SEASON_POINTS: "SEASON_POINTS",
 } as const;
 
 export type BoardTrack = (typeof BOARD_TRACKS)[keyof typeof BOARD_TRACKS];
 
-export const BOARD_TRACK_LIST: BoardTrack[] = [BOARD_TRACKS.MONTH_POINTS];
+export const BOARD_TRACK_LIST: BoardTrack[] = [BOARD_TRACKS.MONTH_POINTS, BOARD_TRACKS.SEASON_POINTS];
 
 export function isBoardTrack(value: unknown): value is BoardTrack {
   return typeof value === "string" && (BOARD_TRACK_LIST as string[]).includes(value);

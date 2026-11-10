@@ -53,6 +53,9 @@ const mocks = vi.hoisted(() => {
       if (state.throwKind === "notfound-badge") throw new NotFoundError("Badge não encontrado");
     },
     listUserBadges: async () => [{ id: 1, userId: 7, badgeId: 10 }],
+    // plan-v15 S10: o GET devolve o progresso vazio neste duplo — a progressão de "X de Y"
+    // é provada pelo módulo real em user-badges-authorization + pelo use case.
+    listBadgeProgress: async () => [],
     listRecentUserBadges: async (_userId: number, limit?: number) =>
       limit === 2 ? [{ id: 1, userId: 7, badgeId: 12 }, { id: 2, userId: 7, badgeId: 11 }] : [{ id: 1, userId: 7, badgeId: 12 }],
     awardBadge: async (command: Record<string, unknown>) => {

@@ -49,11 +49,18 @@ export interface ListProjectDeliverablesQuery {
 }
 
 /** `name`/`quantity` chegam crus do corpo: quem normaliza e recusa é o domínio. */
+export interface UpdateProjectDescriptionCommand {
+  projectId: number
+  actorId: number
+  description: unknown
+}
+
 export interface CreateProjectDeliverableCommand {
   projectId: number
   actorId: number
   name: unknown
   quantity?: unknown
+  goalId?: unknown
 }
 
 export interface UpdateProjectDeliverableCommand {
@@ -62,11 +69,45 @@ export interface UpdateProjectDeliverableCommand {
   actorId: number
   name?: unknown
   quantity?: unknown
+  goalId?: unknown
 }
 
 export interface DeleteProjectDeliverableCommand {
   projectId: number
   deliverableId: number
+  actorId: number
+}
+
+// S02 (plan-v21) — arquivos anexados a um entregável. O binário é da rota; aqui só metadado.
+export interface AddProjectDeliverableFileCommand {
+  projectId: number
+  deliverableId: number
+  actorId: number
+  blobKey: string
+  name: unknown
+  contentType: string
+  size: number
+}
+
+export interface ListProjectDeliverableFilesQuery {
+  projectId: number
+  deliverableId: number
+  actorId: number
+  actorRoles: Role[]
+}
+
+export interface GetProjectDeliverableFileQuery {
+  projectId: number
+  deliverableId: number
+  fileId: number
+  actorId: number
+  actorRoles: Role[]
+}
+
+export interface DeleteProjectDeliverableFileCommand {
+  projectId: number
+  deliverableId: number
+  fileId: number
   actorId: number
 }
 
@@ -215,6 +256,15 @@ export interface DeleteProjectGoalCommand {
   projectId: number
   goalId: number
   actorId: number
+}
+
+export interface MarkGoalCompletionCommand {
+  projectId: number
+  goalId: number
+  actorId: number
+  completed: unknown
+  /** O `now` entra por parâmetro (regra da casa): a regra nunca chama `new Date()` solta. */
+  now: Date
 }
 
 export interface CreateProjectActivityCommand {

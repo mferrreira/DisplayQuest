@@ -9,6 +9,9 @@ import { RejectTaskUseCase } from "@/backend/modules/task-management/application
 import { CreateTaskSubtaskUseCase } from "@/backend/modules/task-management/application/use-cases/create-task-subtask.use-case"
 import { UpdateTaskSubtaskUseCase } from "@/backend/modules/task-management/application/use-cases/update-task-subtask.use-case"
 import { DeleteTaskSubtaskUseCase } from "@/backend/modules/task-management/application/use-cases/delete-task-subtask.use-case"
+import { ReorderTaskSubtasksUseCase } from "@/backend/modules/task-management/application/use-cases/reorder-task-subtasks.use-case"
+import type { ReorderTaskSubtasksCommand } from "@/backend/modules/task-management/application/use-cases/reorder-task-subtasks.use-case"
+import type { ReorderSubtasksResult } from "@/backend/modules/task-management/application/contracts"
 import { AssertCanManageTasksUseCase } from "@/backend/modules/task-management/application/use-cases/assert-can-manage-tasks.use-case"
 import { ListGlobalProgressUseCase, type GlobalProgressEntry } from "@/backend/modules/task-management/application/use-cases/list-global-progress.use-case"
 import type { ActorRef } from "@/backend/domain"
@@ -72,6 +75,9 @@ export class TaskManagementModule {
   readonly createTaskSubtask: (command: CreateTaskSubtaskCommand) => Promise<SubtaskMutationResult>
   readonly updateTaskSubtask: (command: UpdateTaskSubtaskCommand) => Promise<SubtaskMutationResult>
   readonly deleteTaskSubtask: (command: DeleteTaskSubtaskCommand) => Promise<SubtaskMutationResult>
+  // S09 (plan-v11, R9): arrastar reordena e grava `sortOrder`. Não escreve prêmio,
+  // não move a mãe, não notifica — é só ordem.
+  readonly reorderTaskSubtasks: (command: ReorderTaskSubtasksCommand) => Promise<ReorderSubtasksResult>
 
   constructor(ports: {
     tasks: TaskRepositoryPort
@@ -87,6 +93,8 @@ export class TaskManagementModule {
     // Feed "Atividade recente": registro opcional em `history`. Sem porta, nada e gravido e a
     // leitura devolve vazio (roundtrip G4 e testes de use case seguem sem tocar em history).
     activity?: TaskActivityPort
+    // plan-v15 S11 (R4): subtask concluída é episódio do marcador. Sem porta, no-op.
+    recompute?: { recompute(userId: number): Promise<void> }
   }) {
     const getTaskByIdUseCase = new GetTaskByIdUseCase({
       tasks: ports.tasks,
@@ -125,6 +133,8 @@ export class TaskManagementModule {
       notifications: ports.notifications,
       subtasks: ports.subtasks,
       activities: ports.activities,
+      // R13 (S13): a saida de `done` reverte o credito pela mesma porta de conclusao.
+      events: ports.events,
     })
     const deleteTaskUseCase = new DeleteTaskUseCase(ports.tasks)
     const completeTaskUseCase = new CompleteTaskUseCase(
@@ -175,8 +185,16 @@ export class TaskManagementModule {
       actors: ports.actors,
       projects: ports.projects,
       notifications: ports.notifications,
+      recompute: ports.recompute ?? { async recompute() {} },
     })
     const deleteTaskSubtaskUseCase = new DeleteTaskSubtaskUseCase({
+      tasks: ports.tasks,
+      subtasks: ports.subtasks,
+      assignees: ports.assignees,
+      actors: ports.actors,
+      projects: ports.projects,
+    })
+    const reorderTaskSubtasksUseCase = new ReorderTaskSubtasksUseCase({
       tasks: ports.tasks,
       subtasks: ports.subtasks,
       assignees: ports.assignees,
@@ -271,6 +289,7 @@ export class TaskManagementModule {
     this.createTaskSubtask = (command) => createTaskSubtaskUseCase.execute(command)
     this.updateTaskSubtask = (command) => updateTaskSubtaskUseCase.execute(command)
     this.deleteTaskSubtask = (command) => deleteTaskSubtaskUseCase.execute(command)
+    this.reorderTaskSubtasks = (command) => reorderTaskSubtasksUseCase.execute(command)
   }
 }
 
@@ -290,6 +309,8 @@ export interface TaskManagementModulePorts {
   events?: TaskProgressEvents
   /** Feed "Atividade recente": registro/leitura em `history` (entityType "task"). */
   activity?: TaskActivityPort
+  /** plan-v15 S11 (R4): subtask concluída é episódio de recompletação. */
+  recompute?: { recompute(userId: number): Promise<void> }
 }
 
 /**
@@ -320,5 +341,6 @@ export function createTaskManagementModule(options: TaskManagementModulePorts = 
     activities: options.activities ?? createPrismaTaskActivitiesRepository(),
     events: options.events,
     activity: options.activity,
+    recompute: options.recompute,
   })
 }

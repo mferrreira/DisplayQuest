@@ -1,6 +1,9 @@
 import { Prisma } from "@prisma/client"
 import { prisma } from "@/lib/database/prisma"
-import type { GamificationAwardHistoryPort } from "@/backend/modules/gamification/application/ports/gamification-award-history.port"
+import type {
+  GamificationAwardHistoryPort,
+  TaskAwardReversal,
+} from "@/backend/modules/gamification/application/ports/gamification-award-history.port"
 
 /**
  * OND6-B2 (R1) — idempotencia + award atomico, queries congeladas do gateway legado
@@ -21,6 +24,78 @@ export function createPrismaGamificationAwardHistoryPort(): GamificationAwardHis
         select: { id: true },
       })
       return Boolean(existing)
+    },
+    async reverseTaskAward(reversal: TaskAwardReversal) {
+      const { userId, taskId, originalAwardDescription, reversalDescription } = reversal
+
+      const original = await prisma.history.findFirst({
+        where: {
+          entityType: "USER",
+          entityId: userId,
+          action: "GAMIFICATION_AWARD",
+          description: originalAwardDescription,
+        },
+        select: { id: true, newValues: true },
+      })
+      // Nada creditado para este par (nunca premiado, ou já liberado por uma reversão) — a
+      // transição `done→out` não tem o que deduzir. Devolve null; o evento não toca projects.
+      if (!original) return null
+
+      // I3: uma transição deducta uma vez. Se a linha de reversão já está lá, não deducta de novo.
+      const alreadyReversed = await prisma.history.findFirst({
+        where: {
+          entityType: "USER",
+          entityId: userId,
+          action: "GAMIFICATION_AWARD",
+          description: reversalDescription,
+        },
+        select: { id: true },
+      })
+      if (alreadyReversed) return null
+
+      const newValues = (original.newValues ?? {}) as { pointsAwarded?: unknown; xpAwarded?: unknown }
+      const points = typeof newValues.pointsAwarded === "number" ? newValues.pointsAwarded : 0
+      const xp = typeof newValues.xpAwarded === "number" ? newValues.xpAwarded : 0
+
+      await prisma.$transaction(async (tx) => {
+        // Dedução sem piso (DEC-39): o saldo pode ficar negativo. `currentMonthPoints` cai junto.
+        await tx.users.update({
+          where: { id: userId },
+          data: {
+            points: { decrement: points },
+            currentMonthPoints: { decrement: points },
+          },
+        })
+
+        // A linha original é consumida pela reversão: re-aprovar reencontra o prêmio livre.
+        await tx.history.delete({ where: { id: original.id } })
+
+        await tx.history.create({
+          data: {
+            entityType: "USER",
+            entityId: userId,
+            action: "GAMIFICATION_AWARD",
+            performedBy: userId,
+            description: reversalDescription,
+            oldValues: Prisma.JsonNull,
+            newValues: {
+              sourceType: "TASK_REVERSED",
+              sourceId: taskId,
+              pointsReversed: points,
+              xpReversed: xp,
+            },
+            metadata: {
+              domain: "gamification",
+              sourceType: "TASK_REVERSED",
+              sourceId: taskId,
+              pointsReversed: points,
+              xpReversed: xp,
+            },
+          },
+        })
+      })
+
+      return { reversedPoints: points }
     },
     async awardAndRecord({ userId, sourceType, sourceId, description, pointsAwarded, xpAwarded }) {
       await prisma.$transaction(async (tx) => {

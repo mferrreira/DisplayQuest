@@ -218,7 +218,7 @@ export class CreateTaskUseCase {
       hasShape && !isGlobal
         ? await this.dependencies.activities.findActivityById(id)
         : null
-    return resolveTaskActivityLink({ activityId, activity, projectId, isGlobal })
+    return resolveTaskActivityLink({ activityId, activity, projectId, isGlobal, isCreate: true })
   }
 }
 

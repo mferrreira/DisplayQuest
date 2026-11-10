@@ -12,6 +12,7 @@
  */
 import type { Project } from "@/contexts/types";
 import type { Task } from "@/entities/task";
+import type { ActivityStatus } from "@/backend/domain";
 
 export const projectStatusBadgeClass: Record<Project["status"], string> = {
   // `border-transparent` nao e necessario: a variante default do Badge ja o traz, e o `cn`
@@ -84,6 +85,18 @@ export const taskStatusChartColor: Record<Task["status"], string> = {
   "in-review": "hsl(var(--review))",
   adjust: "hsl(var(--warning))",
   done: "hsl(var(--success))",
+};
+
+/**
+ * plan-v13 S05 (regra 4): cores dos status de atividade do cronograma. Os rótulos vêm do
+ * domínio (`ACTIVITY_STATUS_LABELS`, DEC-96 — a tela não tem vocabulário próprio); aqui só a
+ * paleta, nos MESMOS tokens da base. Solicitada é o roxo de revisão (`--review`), a mesma
+ * semântica de "esperando a gestão" que a tarefa usa em `in-review`.
+ */
+export const activityStatusChartColor: Record<ActivityStatus, string> = {
+  OPEN: "hsl(var(--info))",
+  COMPLETION_REQUESTED: "hsl(var(--review))",
+  DONE: "hsl(var(--success))",
 };
 
 export const taskPriorityBadgeClass: Record<Task["priority"], string> = {

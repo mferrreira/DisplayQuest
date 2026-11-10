@@ -266,6 +266,18 @@ export function useTaskMutations() {
     onSettled: (_d, _e, _v, context) => context?.ctx.invalidate("notifications"),
   })
 
+  const reorderSubtasks = useMutation({
+    mutationFn: ({ id, orderedIds }: { id: number; orderedIds: number[] }) =>
+      tasksApi.reorderSubtasks(id, orderedIds),
+    onSuccess: (result) => {
+      // A lista nova vem na resposta; a mãe patcheada carrega a ordem gravada.
+      queryClient.setQueriesData<Task[]>({ queryKey: queryKeys.tasks.lists() }, (prev) =>
+        prev ? prev.map((t) => (t.id === result.task.id ? { ...t, subtasks: result.subtasks } : t)) : prev,
+      )
+    },
+    onSettled: () => makeRollback().invalidate(),
+  })
+
   const removeSubtask = useMutation({
     mutationFn: ({ id, subtaskId }: { id: number; subtaskId: number }) =>
       tasksApi.removeSubtask(id, subtaskId),
@@ -297,5 +309,6 @@ export function useTaskMutations() {
     createSubtask,
     updateSubtask,
     removeSubtask,
+    reorderSubtasks,
   }
 }

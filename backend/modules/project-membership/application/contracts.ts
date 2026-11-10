@@ -54,6 +54,9 @@ export interface ProjectMemberView extends MemberProfileFields {
   userId: number
   userName: string | null
   userEmail: string | null
+  /** plan-v14 S02 (regra 2): chave do avatar no bucket (DEC-242). */
+  avatar?: string | null
+  avatarKey?: string | null
   roles: UserRole[]
   joinedAt: string
   totalHours: number

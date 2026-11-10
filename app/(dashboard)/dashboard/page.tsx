@@ -35,12 +35,7 @@ export default function DashboardPage() {
             description="Acompanhe os projetos, suas metas e as tarefas do laboratório."
           />
         </div>
-        <HomeOverview
-          projects={projects}
-          tasks={tasks}
-          weekHours={user?.weekHours ?? 0}
-          currentWeekHours={user?.currentWeekHours ?? 0}
-        />
+        <HomeOverview projects={projects} tasks={tasks} />
         <TaskBoard />
       </main>
     </div>

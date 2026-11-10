@@ -599,6 +599,23 @@ export const BadgesAPI = {
       method: "DELETE",
     }),
 
+  // plan-v16 S04 (R6): subir o arquivo de ícone — a rota converte a WebP no servidor.
+  uploadIcon: (id: number, file: File) =>
+    fetchAPI<{ success: boolean; iconKey: string; badge: any }>(`/api/badges/${id}/icon`, {
+      method: "PUT",
+      body: (() => {
+        const form = new FormData()
+        form.set("file", file)
+        return form
+      })(),
+    }),
+
+  // Remover o arquivo de ícone
+  removeIcon: (id: number) =>
+    fetchAPI<{ success: boolean }>(`/api/badges/${id}/icon`, {
+      method: "DELETE",
+    }),
+
   // Conceder badge a um usuário
   award: (userId: number, badgeId: number) =>
     fetchAPI<{ success: boolean }>("/api/badges/award", {
@@ -611,8 +628,15 @@ export const BadgesAPI = {
     const url = limit 
       ? `/api/user-badges?userId=${userId}&limit=${limit}`
       : `/api/user-badges?userId=${userId}`
-    return fetchAPI<{ badges: any[]; recentBadges: any[]; count: number }>(url)
+    return fetchAPI<{ badges: any[]; recentBadges: any[]; count: number; progress: { badgeId: number; name: string; value: number; target: number }[] }>(url)
   },
+
+  // plan-v15 S04 (R9): equipar/desequipar a passiva de um badge conquistado.
+  equip: (userId: number, badgeId: number, equipped: boolean) =>
+    fetchAPI<{ userBadge: any }>(`/api/user-badges/${userId}/${badgeId}/equip`, {
+      method: "POST",
+      body: JSON.stringify({ equipped }),
+    }),
 }
 
 // API de Perfis de Usuário

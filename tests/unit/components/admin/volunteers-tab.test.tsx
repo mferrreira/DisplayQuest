@@ -3,7 +3,7 @@
  *
  * A aba **Voluntários** mudou de casa: saiu da página de Projetos e passou a ser aba do Painel
  * Administrativo. Este teste trava as duas pontas — existe no Admin, não existe em Projetos — e
- * confirma que a aba **Dashboard** de Projetos continua no lugar (DEC-186).
+ * A aba Dashboard também saiu de Projetos em plan-v18 S04 (DEC-249) — o painel mora na aba Projetos do Quadro de Liderança.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
@@ -74,11 +74,12 @@ describe("a aba Voluntários tem uma casa só", () => {
     expect(screen.getByRole("tab", { name: /voluntários/i })).toBeInTheDocument();
   });
 
-  it("não existe na página de Projetos, que mantém a aba Dashboard (DEC-186)", () => {
+  it("não existe na página de Projetos, que hoje não tem abas (DEC-182, DEC-249)", () => {
     render(<ProjetosPage />);
 
     expect(screen.queryByRole("tab", { name: /voluntários/i })).not.toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: /dashboard/i })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: /lista de projetos/i })).toBeInTheDocument();
+    // plan-v18 S04 (DEC-249): a página de Projetos perdeu as abas Dashboard e Lista —
+    // o painel de gerente mora na aba Projetos do Quadro de Liderança.
+    expect(screen.queryAllByRole("tab")).toHaveLength(0);
   });
 });

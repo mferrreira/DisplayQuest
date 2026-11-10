@@ -39,7 +39,8 @@ const REPOSITORY_PATH = path.join(
  * dado do projeto, e uma linha de cronograma não pode virar motivo de 409 na exclusão de um
  * usuário nem desaparecer junto com ele. Contar SetNull como bloqueio faria o repositório procurar
  * dependência que não bloqueia nada. No V5-10a (DEC-170) entrou a quarta: `certificates.generatedBy`
- * — quem emitiu o atestado não é dono da conta dele.
+ * — quem emitiu o atestado não é dono da conta dele. No S05 do plan-v21 (DEC-260) entrou a quinta:
+ * `project_goals.completedBy` — quem marcou o cumprimento de uma meta não é dono da meta.
  */
 function blockingRelationsInSchema(): Set<string> {
   const schema = readFileSync(SCHEMA_PATH, "utf8");
@@ -98,13 +99,14 @@ describe("guarda de deriva — as FKs que bloqueiam excluir usuário (DEC-55)", 
   const inSchema = blockingRelationsInSchema();
   const counted = countedRelationsInRepository();
 
-  it("o schema tem as 18 FKs RESTRICT para users que a medição contou", () => {
+  it("o schema tem as 19 FKs RESTRICT para users que a medição contou", () => {
     // Fixa o tamanho da lista: se o número mudar, alguém mexeu no schema e o repositório precisa
     // acompanhar — é exatamente o aviso que este teste existe para dar.
     // 16 desde 2026-10-05; a 17ª entrou no V5-2c (`project_attachments.uploadedBy`, DEC-61/101):
     // o anexo é dado do projeto, então apagar quem o subiu continua bloqueado, como o autor de
     // relatório. A 18ª entrou no V5-7a (`project_activity_files.uploadedBy`, DEC-134/162): a
-    // prova da atividade é dado do projeto, não de quem a subiu.
+    // prova da atividade é dado do projeto, não de quem a subiu. A 19ª entrou na S02 do plan-v21
+    // (`project_deliverable_files.uploadedBy`): o arquivo do entregável é dado do projeto.
     expect([...inSchema].sort()).toEqual(
       [
         "badges.createdBy",
@@ -116,6 +118,7 @@ describe("guarda de deriva — as FKs que bloqueiam excluir usuário (DEC-55)", 
         "lab_responsibilities.userId",
         "project_activity_files.uploadedBy",
         "project_attachments.uploadedBy",
+        "project_deliverable_files.uploadedBy",
         "project_reports.authorId",
         "projects.createdBy",
         "projects.leaderId",
@@ -195,6 +198,7 @@ describe("guarda de deriva — as FKs que bloqueiam excluir usuário (DEC-55)", 
         "project_activities.approvedBy",
         "project_activities.requestedBy",
         "project_activities.responsibleId",
+        "project_goals.completedBy",
       ].sort(),
     );
     for (const rel of nullifying) {

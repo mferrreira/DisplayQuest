@@ -8,7 +8,9 @@ import { createProjectMembershipModule } from "@/backend/modules/project-members
 import { createProjectManagementModule } from "@/backend/modules/project-management"
 import { createGamificationActivityCompletionAward } from "@/backend/modules/project-management/infrastructure/adapters/gamification-activity-completion-award"
 import { createNotificationsActivityOverdueNotifier } from "@/backend/modules/project-management/infrastructure/adapters/notifications-activity-overdue"
+import { createNotificationsActivityCompletionRequestNotifier } from "@/backend/modules/project-management/infrastructure/adapters/notifications-activity-completion-request"
 import { createPrismaProjectRepository } from "@/backend/modules/project-management/infrastructure/repositories/prisma-project.repository"
+import { createPrismaEquippedPassivesPort } from "@/backend/modules/gamification/infrastructure/repositories/prisma-equipped-passives.port"
 import { createReportingModule } from "@/backend/modules/reporting"
 import { createAttestationModule } from "@/backend/modules/attestation"
 import { createNotificationsCertificateReminderNotifier } from "@/backend/modules/attestation/infrastructure/adapters/notifications-certificate-reminder"
@@ -40,7 +42,23 @@ export function createBackendComposition(): BackendComposition {
   const identityAccess = createIdentityAccessModule()
   const notifications = createNotificationsModule()
   const gamification = createGamificationModule()
-  const userManagement = createUserManagementModule()
+
+  // plan-v15 S11 (R4, padrão DEC-21): os episódios novos — subtask, compra, relatório
+  // semanal/projeto/técnico, atestado, issue resolvida, evento de lab, responsabilidade
+  // finalizada, campo de perfil — recompletam os badges ativos da pessoa pela MESMA
+  // `evaluateUserBadges` do módulo. A porta local de cada módulo é satisfeita aqui; a
+  // falha de badge é engolida com trace alto (padrão da casa) — o episódio não quebra.
+  const badgeRecompute = {
+    recompute: async (userId: number) => {
+      try {
+        await gamification.evaluateUserBadges(userId)
+      } catch (error) {
+        console.error(`[plan-v15 S11] recompletação de badges falhou (userId=${userId}):`, error)
+      }
+    },
+  }
+
+  const userManagement = createUserManagementModule({ recompute: badgeRecompute })
 
   // V5-7b (DEC-21/63/74): o adaptador de `projects` é compartilhado — o módulo de projeto o
   // usa, e o publicador de conclusão de tarefa o usa para incrementar `projects.points`. O
@@ -52,6 +70,7 @@ export function createBackendComposition(): BackendComposition {
     notifications,
     events: createTaskProgressEvents({
       awards: gamification,
+      reversals: gamification,
       projectPoints: {
         incrementProjectPoints: (projectId, delta) => projectsRepository.incrementPoints(projectId, delta),
       },
@@ -59,6 +78,8 @@ export function createBackendComposition(): BackendComposition {
     // Feed "Atividade recente": grava/le `history` (entityType "task"). Sem migration — a
     // tabela ja existe como auditoria da casa.
     activity: createPrismaTaskActivityPort(),
+    // plan-v15 S11 (R4): subtask concluída é episódio do marcador.
+    recompute: badgeRecompute,
   })
 
   // V5-7b (DEC-21): o prêmio da atividade aprovada sai do módulo de projeto por PORTA LOCAL
@@ -70,6 +91,9 @@ export function createBackendComposition(): BackendComposition {
       // V5-8 (DEC-21/64): a notificação de atraso sai por PORTA LOCAL
       // (`ActivityOverdueNotifierPort`); quem publica é o módulo de notificações.
       overdueNotifier: createNotificationsActivityOverdueNotifier(notifications),
+      // Fix 4 (2026-10-28): a notificação da solicitação de conclusão sai pela MESMA porta local;
+      // quem publica é o módulo de notificações. O flag por projeto é projeção, não wiring cruzado.
+      completionRequestNotifier: createNotificationsActivityCompletionRequestNotifier(notifications),
     },
   })
 
@@ -81,15 +105,24 @@ export function createBackendComposition(): BackendComposition {
     // outro modulo — RG-04). Wiring nova: use cases sobre portas finas.
     ports: {
       publisher: new NotificationsLabPublisher(notifications),
+      // plan-v15 S11 (R4): resolução de issue, evento de lab, responsabilidade finalizada.
+      recompute: badgeRecompute,
     },
   })
 
-  const store = createStoreModule()
+  // plan-v15 S08 (R14, padrão DEC-21): a loja conhece só a porta local de desconto; as
+  // passivas equipadas do gamification entram AQUI, no único ponto de wiring cruzado.
+  const equippedPassives = createPrismaEquippedPassivesPort()
+  const store = createStoreModule({
+    ports: { passives: { bonusEffectsFor: (userId) => equippedPassives.listEquippedEffects(userId) }, recompute: badgeRecompute },
+  })
   const reporting = createReportingModule({
     // DEC-21: o evento de relatório sai por PORTA LOCAL; o módulo de notificações é
     // injetado AQUI (a infra de reporting não importa factory de outro módulo — RG-04).
     ports: {
       publisher: new NotificationsReportPublisher(notifications),
+      // plan-v15 S11 (R4): semanal, projeto e técnico são episódios de recompletação.
+      recompute: badgeRecompute,
     },
   })
 
@@ -103,6 +136,8 @@ export function createBackendComposition(): BackendComposition {
   const attestation = createAttestationModule({
     ports: {
       reminderNotifier: createNotificationsCertificateReminderNotifier(notifications),
+      // plan-v15 S11 (R4): atestado gerado é episódio de recompletação do membro.
+      recompute: badgeRecompute,
     },
   })
 

@@ -5,6 +5,7 @@ import type { Badge } from "@/backend/domain"
 import type { BadgeCatalogPort } from "@/backend/modules/gamification/application/ports/badge-catalog.port"
 import type { GamificationUsersPort } from "@/backend/modules/gamification/application/ports/gamification-users.port"
 import type { UserBadgePort } from "@/backend/modules/gamification/application/ports/user-badge.port"
+import type { BadgeMetricsPort } from "@/backend/modules/gamification/application/ports/badge-metrics.port"
 import type { UserStatsPort } from "@/backend/modules/gamification/application/ports/user-stats.port"
 import { EvaluateUserBadgesUseCase } from "@/backend/modules/gamification/application/use-cases/evaluate-user-badges.use-case"
 
@@ -46,6 +47,11 @@ describe("S11 — critérios de badge continuam medindo o saldo", () => {
         weeklyHoursSamples: async () => [],
         dailyLogDates: async () => [],
       } as UserStatsPort,
+      metrics: {
+        computeValues: async () => {
+          throw new Error("metrics não deveria ser usada: critério legado usa só as portas base")
+        },
+      } as unknown as BadgeMetricsPort,
     })
 
     expect(await useCase.execute(42)).toEqual([badge])

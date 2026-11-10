@@ -39,6 +39,7 @@ import { ProjectDeliverablesPanel } from "@/components/features/project-delivera
 import { ProjectMediaHeader } from "@/components/features/project-media-header";
 import {
   PROJECT_IMAGE_SLOT_MESSAGE,
+  deliverableGoalLinkError,
   deliverableValidationMessage,
   normalizeDeliverableInput,
   validateDeliverableInput,
@@ -51,6 +52,16 @@ interface DeliverableRow {
   projectId: number;
   name: string;
   quantity: number;
+  createdAt: string;
+  goalId: number | null;
+}
+
+interface GoalRow {
+  id: number;
+  projectId: number;
+  order: number;
+  target: number | null;
+  description: string;
   createdAt: string;
 }
 
@@ -66,8 +77,12 @@ interface AttachmentRow {
 
 const mocks = {
   deliverables: [] as DeliverableRow[],
+  goals: [] as GoalRow[],
   attachments: [] as AttachmentRow[],
-  project: { logoKey: null as string | null, bannerKey: null as string | null },
+  project: {
+    logoKey: null as string | null,
+    bannerKey: null as string | null,
+  },
   requests: [] as Array<{ method: string; path: string; json?: Record<string, unknown> }>,
   uploads: [] as Array<{ field: string | null; name: string; type: string; size: number }>,
   removes: [] as string[],
@@ -79,7 +94,34 @@ const PNG_BYTES = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a
 
 function resetStore() {
   mocks.deliverables = [
-    { id: 101, projectId: 7, name: "Relatório parcial", quantity: 2, createdAt: "2026-10-01T12:00:00.000Z" },
+    {
+      id: 101,
+      projectId: 7,
+      name: "Relatório parcial",
+      quantity: 2,
+      createdAt: "2026-10-01T12:00:00.000Z",
+      goalId: 201,
+    },
+  ];
+  // Meta do próprio projeto (entra no Select), mais uma meta de OUTRO projeto que a tela
+  // pode listar e o servidor recusa — o vínculo é regra do domínio, não da tela.
+  mocks.goals = [
+    {
+      id: 201,
+      projectId: 7,
+      order: 1,
+      target: 2,
+      description: "Dois artigos",
+      createdAt: "2026-10-01T12:00:00.000Z",
+    },
+    {
+      id: 202,
+      projectId: 8,
+      order: 1,
+      target: null,
+      description: "Meta de outro projeto",
+      createdAt: "2026-10-01T12:00:00.000Z",
+    },
   ];
   mocks.attachments = [
     {
@@ -95,7 +137,10 @@ function resetStore() {
   mocks.requests = [];
   mocks.uploads = [];
   mocks.removes = [];
-  mocks.project = { logoKey: null, bannerKey: null };
+  mocks.project = {
+    logoKey: null,
+    bannerKey: null,
+  };
   mocks.refuseDeliverableWrite = false;
   mocks.nextId = 500;
 }
@@ -119,6 +164,23 @@ async function recordingFetch(input: unknown, init: RequestInit = {}) {
   const resource = segments[4];
   const resourceId = Number(segments[5]);
 
+  // O painel lê as metas pelo MESMO cliente do cronograma que a tela do projeto usa.
+  if (resource === "cronograma") {
+    if (method === "GET") {
+      return jsonResponse({
+        cronograma: { projectId: 7, today: "2026-11-09", months: ["2026-11"], goals: mocks.goals, activities: [] },
+      });
+    }
+    throw new Error(`rota não prevista pelo gravador: ${method} ${path}`);
+  }
+
+  /** A regra do vínculo é do domínio (`deliverableGoalLinkError`); meta sumida é a mesma frase. */
+  function goalLinkRefusal(goalId: unknown): string | null {
+    if (goalId === null || goalId === undefined) return null;
+    const goal = mocks.goals.find((item) => item.id === goalId);
+    return goal ? deliverableGoalLinkError({ goalProjectId: goal.projectId, projectId: 7 }) : "Meta não pertence a este projeto";
+  }
+
   if (resource === "deliverables") {
     if (method === "GET") {
       return jsonResponse({ deliverables: mocks.deliverables });
@@ -135,26 +197,45 @@ async function recordingFetch(input: unknown, init: RequestInit = {}) {
         403,
       );
     }
-    const fields = normalizeDeliverableInput({ name: body.name, quantity: body.quantity });
-    const errors = validateDeliverableInput(fields);
-    if (errors.length > 0) {
-      return jsonResponse({ error: deliverableValidationMessage(errors) }, 400);
+    const goalError = goalLinkRefusal(body.goalId);
+    if (goalError) {
+      return jsonResponse({ error: goalError }, 400);
     }
     if (method === "POST") {
+      const fields = normalizeDeliverableInput({ name: body.name, quantity: body.quantity });
+      const errors = validateDeliverableInput(fields);
+      if (errors.length > 0) {
+        return jsonResponse({ error: deliverableValidationMessage(errors) }, 400);
+      }
       const row: DeliverableRow = {
         id: ++mocks.nextId,
         projectId: 7,
         name: fields.name,
         quantity: fields.quantity,
         createdAt: "2026-10-13T12:00:00.000Z",
+        goalId: typeof body.goalId === "number" ? body.goalId : null,
       };
       mocks.deliverables.push(row);
       return jsonResponse({ deliverable: row }, 201);
     }
     const row = mocks.deliverables.find((item) => item.id === resourceId);
     if (!row) return jsonResponse({ error: "Entregável não encontrado" }, 404);
-    row.name = fields.name;
-    row.quantity = fields.quantity;
+    // Corpo parcial: chave ausente não apaga (mesma postura do use case real).
+    if ("goalId" in body) {
+      row.goalId = body.goalId === null ? null : (body.goalId as number);
+    }
+    if (body.name !== undefined || body.quantity !== undefined) {
+      const fields = normalizeDeliverableInput({
+        name: body.name !== undefined ? body.name : row.name,
+        quantity: body.quantity !== undefined ? body.quantity : row.quantity,
+      });
+      const errors = validateDeliverableInput(fields);
+      if (errors.length > 0) {
+        return jsonResponse({ error: deliverableValidationMessage(errors) }, 400);
+      }
+      row.name = fields.name;
+      row.quantity = fields.quantity;
+    }
     return jsonResponse({ deliverable: row });
   }
 
@@ -201,12 +282,13 @@ async function recordingFetch(input: unknown, init: RequestInit = {}) {
 
   if (resource === "images") {
     // `logo`/`banner` são a lista fechada do domínio; o substituto recusa o resto com a MESMA
-    // mensagem, em vez de inventar uma própria (DEC-90).
+    // mensagem, em vez de inventar uma própria (DEC-90). Não há rota de recorte: o recorte saiu.
     const slot = segments[5] === "logo" || segments[5] === "banner" ? segments[5] : null;
     if (!slot) {
       return jsonResponse({ error: PROJECT_IMAGE_SLOT_MESSAGE }, 400);
     }
     const field = slot === "logo" ? "logoKey" : "bannerKey";
+    mocks.requests.push({ method, path });
 
     if (method === "DELETE") {
       const previous = mocks.project[field];
@@ -485,14 +567,16 @@ describe("cabeçalho de mídia do projeto", () => {
     expect(image).toHaveAttribute("src", expect.stringContaining("/api/projects/7/images/banner/file"));
     // A chave entra no endereço: sem isto o navegador serviria a capa velha depois de trocar.
     expect(image).toHaveAttribute("src", expect.stringContaining("velha.png"));
-    expect(screen.queryByRole("button", { name: "Enviar capa" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Tirar capa" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Opções da capa do projeto" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Opções do logo do projeto" })).not.toBeInTheDocument();
   });
 
-  it("subir a capa escreve no slot banner e o binário passa a ser mostrado", async () => {
+  it("enviar a capa sobe o arquivo no slot banner, grava a chave e avisa a página", async () => {
     const user = userEvent.setup({ delay: null });
     renderHeader(true);
 
+    await user.click(screen.getByRole("button", { name: "Opções da capa do projeto" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Enviar capa" }));
     await user.upload(
       screen.getByLabelText("Imagem de capa"),
       new File([PNG_BYTES], "capa do laboratório.png", { type: "image/png" }),
@@ -500,18 +584,41 @@ describe("cabeçalho de mídia do projeto", () => {
 
     await waitFor(() => expect(mocks.uploads).toHaveLength(1));
     expect(mocks.uploads[0]).toMatchObject({ field: "file", name: "capa do laboratório.png", type: "image/png" });
+    expect(mocks.requests[0]).toMatchObject({ method: "PUT", path: "/api/projects/7/images/banner" });
     expect(mocks.project.bannerKey).toMatch(/^projects\/7\/images\/banner\//);
     expect(mocks.project.logoKey).toBeNull();
 
     const image = await screen.findByRole("img", { name: "Capa do projeto Alpha" });
     expect(image).toHaveAttribute("src", expect.stringContaining("/api/projects/7/images/banner/file"));
+    expect(await screen.findByText("Capa atualizada")).toBeInTheDocument();
   });
 
-  it("o campo de imagem não aceita PDF: nenhuma requisição sai, e o slot não muda", async () => {
+  it("enviar o logo sobe o arquivo no slot logo sem tocar a capa", async () => {
+    const user = userEvent.setup({ delay: null });
+    mocks.project.bannerKey = "projects/7/images/banner/velha.png";
+    renderHeader(true, { bannerKey: mocks.project.bannerKey });
+
+    await user.click(screen.getByRole("button", { name: "Opções do logo do projeto" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Enviar logo" }));
+    await user.upload(
+      screen.getByLabelText("Imagem do logo"),
+      new File([PNG_BYTES], "logo do lab.png", { type: "image/png" }),
+    );
+
+    await waitFor(() => expect(mocks.uploads).toHaveLength(1));
+    expect(mocks.uploads[0]).toMatchObject({ field: "file", name: "logo do lab.png", type: "image/png" });
+    expect(mocks.requests[0]).toMatchObject({ method: "PUT", path: "/api/projects/7/images/logo" });
+    expect(mocks.project.logoKey).toMatch(/^projects\/7\/images\/logo\//);
+    // A capa é objeto separado: o enviar logo não a toca.
+    expect(mocks.project.bannerKey).toBe("projects/7/images/banner/velha.png");
+    expect(await screen.findByText("Logo atualizado")).toBeInTheDocument();
+  });
+
+  it("o campo de imagem não aceita PDF: nenhuma requisição sai", async () => {
     const user = userEvent.setup({ delay: null });
     renderHeader(true);
 
-    // Medido ao escrever: `user.upload` respeita o `accept` do input e descarta o arquivo sem
+    // Medido no V5-2d: `user.upload` respeita o `accept` do input e descarta o arquivo sem
     // disparar change. Então este caso prova a lista de aceitação do CAMPO. A recusa do servidor
     // para um cliente que ignora o `accept` está congelada no teste de rota
     // (`project-files-routes.test.ts`: "PDF não é imagem de projeto").
@@ -521,6 +628,7 @@ describe("cabeçalho de mídia do projeto", () => {
     );
 
     expect(mocks.uploads).toEqual([]);
+    expect(mocks.requests).toEqual([]);
     expect(mocks.project.bannerKey).toBeNull();
     expect(screen.queryByRole("img", { name: "Capa do projeto Alpha" })).not.toBeInTheDocument();
   });
@@ -538,17 +646,101 @@ describe("cabeçalho de mídia do projeto", () => {
     expect(mocks.project.logoKey).toBeNull();
   });
 
-  it("remover a capa limpa o slot, apaga o objeto e o botão de remover some", async () => {
+  it("remover a capa limpa o slot e o objeto removido sai da lista", async () => {
     const user = userEvent.setup({ delay: null });
     mocks.project.bannerKey = "projects/7/images/banner/velha.png";
     renderHeader(true, { bannerKey: mocks.project.bannerKey });
 
     await screen.findByRole("img", { name: "Capa do projeto Alpha" });
-    await user.click(screen.getByRole("button", { name: "Tirar capa" }));
+    // plan-v14 S05: o item do menu pelo mesmo rótulo.
+    await user.click(screen.getByRole("button", { name: "Opções da capa do projeto" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Tirar capa" }));
 
     await waitFor(() => expect(mocks.project.bannerKey).toBeNull());
     expect(mocks.removes).toEqual(["projects/7/images/banner/velha.png"]);
     expect(await screen.findByText("Sem capa")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Tirar capa" })).not.toBeInTheDocument();
+
+    // O item sumiu: reabrir o menu não acha "Tirar capa".
+    await user.click(screen.getByRole("button", { name: "Opções da capa do projeto" }));
+    expect(screen.queryByRole("menuitem", { name: "Tirar capa" })).not.toBeInTheDocument();
+    await user.keyboard("{Escape}");
+  });
+
+  it("remover o logo limpa o slot sem tocar a capa", async () => {
+    const user = userEvent.setup({ delay: null });
+    mocks.project.bannerKey = "projects/7/images/banner/velha.png";
+    mocks.project.logoKey = "projects/7/images/logo/velho.png";
+    renderHeader(true, { logoKey: mocks.project.logoKey, bannerKey: mocks.project.bannerKey });
+
+    await user.click(screen.getByRole("button", { name: "Opções do logo do projeto" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Tirar logo" }));
+
+    await waitFor(() => expect(mocks.project.logoKey).toBeNull());
+    expect(mocks.removes).toEqual(["projects/7/images/logo/velho.png"]);
+    // A capa é objeto separado: o tirar logo não a toca.
+    expect(mocks.project.bannerKey).toBe("projects/7/images/banner/velha.png");
+  });
+
+  it("a faixa da capa renderiza em 21:9, sem altura fixa e sem corte", () => {
+    renderHeader(false, { bannerKey: "projects/7/images/banner/alpha.png" });
+    const image = screen.getByRole("img", { name: "Capa do projeto Alpha" });
+    // O recorte saiu: o `<img>` é cover simples, sem peça de recorte.
+    expect(image.closest('[data-banner-crop="true"]')).toBeNull();
+    expect(image.getAttribute("style")).toBeNull();
+    const strip = image.parentElement!.parentElement!;
+    expect(strip.className).toContain("aspect-[21/9]");
+    expect(strip.className).not.toMatch(/(^|\s)h-\d/);
+  });
+});
+
+describe("vínculo entregável ↔ meta (S04, DEC-259)", () => {
+  // Radix Select abre com `user.click` no trigger (padrão da casa: `project-cronograma-panel`),
+  // e a lista de opções entra um frame depois — `findByRole`. `setup({ delay: null })` pela lição
+  // do flake medido no V4-6b.
+  it("gestão vê o Select Meta com as metas do projeto, pré-selecionado na meta da linha", async () => {
+    const user = userEvent.setup({ delay: null });
+    renderPanels(true);
+    await screen.findByText("Relatório parcial");
+    const trigger = screen.getByRole("combobox", { name: "Meta para Relatório parcial" });
+    expect(trigger).toHaveTextContent("Dois artigos");
+    await user.click(trigger);
+    const options = await screen.findAllByRole("option");
+    expect(options.map((option) => option.textContent)).toEqual(["Sem meta", "Dois artigos", "Meta de outro projeto"]);
+  });
+
+  it("mudar para Sem meta manda PUT só com goalId null", async () => {
+    const user = userEvent.setup({ delay: null });
+    renderPanels(true);
+    await screen.findByText("Relatório parcial");
+    const trigger = screen.getByRole("combobox", { name: "Meta para Relatório parcial" });
+    await user.click(trigger);
+    const option = await screen.findByRole("option", { name: "Sem meta" });
+    await user.click(option);
+
+    await waitFor(() => expect(mocks.deliverables[0].goalId).toBeNull());
+    const put = mocks.requests.find((entry) => entry.method === "PUT" && entry.path === "/api/projects/7/deliverables/101");
+    expect(put?.json).toEqual({ goalId: null });
+    expect(trigger).toHaveTextContent("Sem meta");
+  });
+
+  it("quem não gerencia não tem Select, e a meta aparece em texto", async () => {
+    renderPanels(false);
+    await screen.findByText("Relatório parcial");
+    expect(screen.queryByRole("combobox", { name: "Meta para Relatório parcial" })).not.toBeInTheDocument();
+    expect(screen.getByText(/Meta: Dois artigos/)).toBeInTheDocument();
+  });
+
+  it("meta de outro projeto chega como alerta, e a linha fica como estava", async () => {
+    const user = userEvent.setup({ delay: null });
+    renderPanels(true);
+    await screen.findByText("Relatório parcial");
+    const trigger = screen.getByRole("combobox", { name: "Meta para Relatório parcial" });
+    await user.click(trigger);
+    const option = await screen.findByRole("option", { name: "Meta de outro projeto" });
+    await user.click(option);
+
+    expect(await screen.findByText("Meta não pertence a este projeto")).toBeInTheDocument();
+    expect(mocks.deliverables[0].goalId).toBe(201);
+    expect(trigger).toHaveTextContent("Dois artigos");
   });
 });

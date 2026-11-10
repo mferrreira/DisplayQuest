@@ -82,7 +82,7 @@ vi.mock("@/backend/composition/root", () => {
   ) as never;
 
   const realGamification = createGamificationModule({
-    ports: { badges, users: unused, awardHistory: unused, userBadges: unused, stats: unused },
+    ports: { badges, users: unused, awardHistory: unused, userBadges: unused, stats: unused, metrics: unused },
   });
 
   return {
@@ -186,6 +186,32 @@ describe("badges — /api/badges", () => {
     // o 403 não gravou nada
     expect(mocks.created).toHaveLength(MANAGER_ROLES.length);
   });
+
+  it("POST com criteria v2 válido grava e o criteria chega ao port como v2", async () => {
+    login(MANAGER_ROLES[0]);
+    const criteria = { version: 2, clauses: [{ metric: "tasks_completed", op: ">=", value: 10 }] };
+    const response = await badgesCreate(request("/api/badges", { method: "POST", body: { ...VALID_BADGE, criteria } }));
+    expect(response.status).toBe(201);
+    expect(mocks.created[0]).toMatchObject({ criteria: { version: 2, clauses: [{ metric: "tasks_completed", op: ">=", value: 10 }] } });
+  });
+
+  it("POST com métrica fora do registro é 400 'Critério de badge inválido' e não grava", async () => {
+    login(MANAGER_ROLES[0]);
+    const response = await badgesCreate(
+      request("/api/badges", { method: "POST", body: { ...VALID_BADGE, criteria: { version: 2, clauses: [{ metric: "coordenador", op: ">=", value: 1 }] } } }),
+    );
+    expect(response.status).toBe(400);
+    expect(await body(response)).toMatchObject({ error: "Critério de badge inválido", code: "VALIDATION_ERROR" });
+    expect(mocks.created).toHaveLength(0);
+  });
+
+  it("POST com criteria no formato legado é recusado na escrita (R6)", async () => {
+    login(MANAGER_ROLES[0]);
+    const response = await badgesCreate(request("/api/badges", { method: "POST", body: { ...VALID_BADGE, criteria: { points: 10 } } }));
+    expect(response.status).toBe(400);
+    expect(await body(response)).toMatchObject({ error: "Critério de badge inválido" });
+    expect(mocks.created).toHaveLength(0);
+  });
 });
 
 describe("badges — /api/badges/[id]", () => {
@@ -257,6 +283,30 @@ describe("badges — /api/badges/[id]", () => {
 
     expect((await badgeDelete(request("/api/badges/1", { method: "DELETE" }), params({ id: "1" }))).status).toBe(200);
     expect(mocks.deleted).toEqual([1]);
+  });
+
+  it("PUT criteria v2 válido passa; legado é 400 depois do gate e do id", async () => {
+    // O teste do caminho feliz DELETE apaga a linha 1; recriar aqui não dependência de ordem.
+    mocks.badges.push({ id: 1, name: "Base", description: "d", category: "social", isActive: true, createdBy: 1 });
+    login(MANAGER_ROLES[0]);
+
+    const putLegacy = await badgeUpdate(request("/api/badges/1", { method: "PUT", body: { criteria: { points: 10 } } }), params({ id: "1" }));
+    expect(putLegacy.status).toBe(400);
+    expect(await body(putLegacy)).toMatchObject({ error: "Critério de badge inválido", code: "VALIDATION_ERROR" });
+    expect(mocks.updated).toHaveLength(0);
+
+    login(NO_MANAGEMENT_ROLES);
+    const denied = await badgeUpdate(request("/api/badges/1", { method: "PUT", body: { criteria: { points: 10 } } }), params({ id: "1" }));
+    expect(denied.status).toBe(403);
+    expect(mocks.updated).toHaveLength(0);
+
+    login(MANAGER_ROLES[0]);
+    const putV2 = await badgeUpdate(
+      request("/api/badges/1", { method: "PUT", body: { criteria: { version: 2, clauses: [{ metric: "tasks_completed", op: ">=", value: 10 }] } } }),
+      params({ id: "1" }),
+    );
+    expect(putV2.status).toBe(200);
+    expect(mocks.updated[0]).toMatchObject({ criteria: { version: 2, clauses: [{ metric: "tasks_completed", op: ">=", value: 10 }] } });
   });
 
   it("PUT/DELETE em badge inexistente devolvem 404 (o gate passa antes do NotFound)", async () => {

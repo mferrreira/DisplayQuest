@@ -5,6 +5,7 @@ import { getBackendComposition } from "@/backend/composition/root"
 import { USER_IMAGE_SLOT_MESSAGE, isUserImageSlot, userActor, userImagePrefix } from "@/backend/domain"
 import { blobStoreFromEnv, isImageBlobContentType, newBlobKey, validateBlobUpload } from "@/lib/storage/blob-store"
 import { readFileHead } from "@/lib/storage/magic-bytes"
+import { ImageProcessor } from "@/lib/utils/image-processor"
 
 const { userManagement: userManagementModule } = getBackendComposition()
 
@@ -80,8 +81,11 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
       )
     }
 
-    const key = newBlobKey(userImagePrefix(userId, slot), file.type)
-    await store.put(key, new Uint8Array(await file.arrayBuffer()), file.type)
+    // R12 (S12): a capa entra no bucket como WebP. O byte de origem é validado como imagem; o
+    // objeto gravado é o WebP convertido, com ContentType `image/webp` e chave `.webp`.
+    const webp = await ImageProcessor.toWebP(Buffer.from(await file.arrayBuffer()))
+    const key = newBlobKey(userImagePrefix(userId, slot), "image/webp")
+    await store.put(key, webp, "image/webp")
 
     try {
       const result = await userManagementModule.updateUserImage({ actor, userId, slot, blobKey: key })

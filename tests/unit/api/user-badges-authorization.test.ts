@@ -29,6 +29,7 @@ import { NextRequest } from "next/server";
 import { createIdentityAccessModule } from "@/backend/modules/identity-access";
 import { createGamificationModule } from "@/backend/modules/gamification";
 import type { BadgeCatalogPort } from "@/backend/modules/gamification/application/ports/badge-catalog.port";
+import type { BadgeMetricsPort } from "@/backend/modules/gamification/application/ports/badge-metrics.port";
 import type { GamificationUsersPort } from "@/backend/modules/gamification/application/ports/gamification-users.port";
 import type { UserBadgePort } from "@/backend/modules/gamification/application/ports/user-badge.port";
 
@@ -61,7 +62,8 @@ vi.mock("@/backend/composition/root", () => {
       return notUsed("badges.findAll")();
     },
     async findActive() {
-      return notUsed("badges.findActive")();
+      // plan-v15 S10: listBadgeProgress (GET /api/user-badges) lê as badges ativas.
+      return mocks.badges.filter((badge) => badge.isActive === true) as never;
     },
     async findByCategory() {
       return notUsed("badges.findByCategory")();
@@ -99,6 +101,15 @@ vi.mock("@/backend/composition/root", () => {
       const index = mocks.userBadges.findIndex((ub) => ub.id === id);
       if (index !== -1) mocks.userBadges.splice(index, 1);
     },
+    async countEquippedByUserId(userId) {
+      return mocks.userBadges.filter((ub) => ub.userId === userId && ub.equipped === true).length;
+    },
+    async setEquipped(id, equipped) {
+      mocks.writes.push(`setEquipped:${id}:${equipped}`);
+      const found = mocks.userBadges.find((ub) => ub.id === id)!;
+      found.equipped = equipped;
+      return found as never;
+    },
   };
 
   const users: GamificationUsersPort = {
@@ -106,8 +117,10 @@ vi.mock("@/backend/composition/root", () => {
       const points = mocks.progression.get(userId);
       return points === undefined ? null : { id: userId, points };
     },
-    async findUserById() {
-      return notUsed("users.findUserById")();
+    async findUserById(userId) {
+      // plan-v15 S10: o GET /api/user-badges chama listBadgeProgress, que lê a pessoa pela
+      // mesma porta. A fake devolve o record mínimo que o use case usa (id).
+      return { id: userId, points: 0, completedTasks: 0 } as never;
     },
     async findAllUsers() {
       return notUsed("users.findAllUsers")();
@@ -120,8 +133,16 @@ vi.mock("@/backend/composition/root", () => {
     },
   };
 
+  // plan-v15 S10: as métricas da porta não são medidas neste lote — criteria sem cláusula
+  // mensurável nas linhas do teste, e a fake devolve valores vazios para não tocar o Prisma.
+  const metrics: BadgeMetricsPort = {
+    async computeValues() {
+      return {} as never;
+    },
+  };
+
   const realGamification = createGamificationModule({
-    ports: { badges, userBadges, users, awardHistory: unused, stats: unused },
+    ports: { badges, userBadges, users, metrics, awardHistory: unused, stats: unused },
   });
 
   return {

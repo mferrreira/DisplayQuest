@@ -18,6 +18,8 @@ export interface ProjectDeliverable {
   name: string
   quantity: number
   createdAt: string
+  /** S04 (plan-v21, DEC-259): meta do MESMO projeto; nulo quando a linha não tem meta. */
+  goalId: number | null
 }
 
 export interface ProjectAttachment {
@@ -65,7 +67,7 @@ export async function listProjectDeliverables(projectId: number): Promise<Projec
 
 export async function createProjectDeliverable(
   projectId: number,
-  input: { name: string; quantity?: number },
+  input: { name: string; quantity?: number; goalId?: number | null },
 ): Promise<ProjectDeliverable> {
   const payload = await request<{ deliverable: ProjectDeliverable }>(
     `/api/projects/${projectId}/deliverables`,
@@ -82,7 +84,7 @@ export async function createProjectDeliverable(
 export async function updateProjectDeliverable(
   projectId: number,
   deliverableId: number,
-  input: { name?: string; quantity?: number },
+  input: { name?: string; quantity?: number; goalId?: number | null },
 ): Promise<ProjectDeliverable> {
   const payload = await request<{ deliverable: ProjectDeliverable }>(
     `/api/projects/${projectId}/deliverables/${deliverableId}`,
@@ -96,12 +98,101 @@ export async function updateProjectDeliverable(
   return payload.deliverable
 }
 
+export async function updateProjectDescription(projectId: number, description: string | null): Promise<void> {
+  await request<{ project: unknown }>(
+    `/api/projects/${projectId}/description`,
+    { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ description }) },
+    "Erro ao salvar descrição",
+  )
+}
+
 export async function deleteProjectDeliverable(projectId: number, deliverableId: number): Promise<void> {
   await request<unknown>(
     `/api/projects/${projectId}/deliverables/${deliverableId}`,
     { method: "DELETE" },
     "Erro ao excluir entregável",
   )
+}
+
+// ---- arquivos de entregável (S02, plan-v21) ----
+
+export interface ProjectDeliverableFile {
+  id: number
+  deliverableId: number
+  name: string
+  contentType: string
+  size: number
+  uploadedBy: number
+  uploadedAt: string
+}
+
+export async function listProjectDeliverableFiles(
+  projectId: number,
+  deliverableId: number,
+): Promise<ProjectDeliverableFile[]> {
+  const payload = await request<{ files?: ProjectDeliverableFile[] }>(
+    `/api/projects/${projectId}/deliverables/${deliverableId}/files`,
+    { method: "GET" },
+    "Erro ao buscar arquivos do entregável",
+  )
+  return Array.isArray(payload.files) ? payload.files : []
+}
+
+export async function uploadProjectDeliverableFile(
+  projectId: number,
+  deliverableId: number,
+  file: File,
+): Promise<ProjectDeliverableFile> {
+  const form = new FormData()
+  form.set("file", file)
+  const payload = await request<{ file: ProjectDeliverableFile }>(
+    `/api/projects/${projectId}/deliverables/${deliverableId}/files`,
+    { method: "POST", body: form },
+    "Erro ao enviar arquivo do entregável",
+  )
+  return payload.file
+}
+
+// S03: a gestão remove o arquivo. A rota remove o registro e o objeto; aqui só o metadado.
+export interface ProjectMarkdownImage {
+  key: string
+  url: string
+  name: string
+}
+
+/**
+ * S07 (plan-v21, R11): sobe uma imagem de descrição. A rota responde com a chave, a URL
+ * autenticada e o nome de exibição — é o que a tela insere no texto. Sem registro: o binário
+ * é o dado, e o gate (gestão OU membro ATIVO) corre na rota antes do corpo.
+ */
+export async function uploadProjectMarkdownImage(projectId: number, file: File): Promise<ProjectMarkdownImage> {
+  const form = new FormData()
+  form.set("file", file)
+  const response = await fetch(`/api/projects/${projectId}/markdown-images`, { method: "POST", body: form })
+  const body = await response.json().catch(() => null)
+  if (!response.ok) {
+    const message = typeof body?.error === "string" ? body.error : "Falha ao enviar a imagem"
+    throw new Error(message)
+  }
+  return body as ProjectMarkdownImage
+}
+
+export async function deleteProjectDeliverableFile(
+  projectId: number,
+  deliverableId: number,
+  fileId: number,
+): Promise<ProjectDeliverableFile> {
+  const payload = await request<{ file: ProjectDeliverableFile }>(
+    `/api/projects/${projectId}/deliverables/${deliverableId}/files/${fileId}`,
+    { method: "DELETE" },
+    "Erro ao remover arquivo do entregável",
+  )
+  return payload.file
+}
+
+/** URL do binário, servida pela rota que aplica a regra de acesso do projeto. */
+export function projectDeliverableFileUrl(projectId: number, deliverableId: number, fileId: number): string {
+  return `/api/projects/${projectId}/deliverables/${deliverableId}/files/${fileId}/file`
 }
 
 // ---- anexos ----
@@ -154,8 +245,16 @@ export interface ProjectImageState {
 }
 
 function readImageState(payload: unknown): ProjectImageState {
-  const project = (payload as { project?: { logoKey?: string | null; bannerKey?: string | null } })?.project
-  return { logoKey: project?.logoKey ?? null, bannerKey: project?.bannerKey ?? null }
+  const project = (payload as {
+    project?: {
+      logoKey?: string | null
+      bannerKey?: string | null
+    }
+  })?.project
+  return {
+    logoKey: project?.logoKey ?? null,
+    bannerKey: project?.bannerKey ?? null,
+  }
 }
 
 /**

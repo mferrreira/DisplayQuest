@@ -17,6 +17,7 @@ type DeliverableRow = {
   name: string
   quantity: number
   createdAt: Date | string
+  goalId: number | null
 }
 
 function toRecord(row: DeliverableRow): ProjectDeliverableRecord {
@@ -26,6 +27,7 @@ function toRecord(row: DeliverableRow): ProjectDeliverableRecord {
     name: row.name,
     quantity: row.quantity,
     createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : String(row.createdAt),
+    goalId: row.goalId,
   }
 }
 

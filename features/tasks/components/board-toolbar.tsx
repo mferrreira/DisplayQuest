@@ -161,6 +161,9 @@ export function BoardToolbar({
           </Select>
         )}
 
+        {/* R11 (S11): a volta ao global é só a opção "Todos os projetos" do seletor. Não se põe
+            um botão extra no cabeçalho: o chip de S11 era redundante com o seletor. */}
+
         {/* Controle segmentado de exibição (referência: dois ícones num só, o ativo
             destacado). Mora na linha dos filtros, não ao lado do "Nova Tarefa". */}
         <div

@@ -1,20 +1,16 @@
 # Projetos
 
-Um projeto agrupa tarefas, define quem participa e concentra as horas registradas. A tela **Projetos** tem as abas **Dashboard** e **Lista de Projetos**, conforme o seu acesso. Cada linha da lista abre a página dedicada do projeto.
+Um projeto agrupa tarefas, define quem participa e concentra as horas registradas. A tela **Projetos** tem os filtros e a lista de projetos; cada linha da lista abre a página dedicada do projeto. O painel que ordena os projetos por pontos — o **leaderboard de projetos** — mora no **Quadro de Liderança** (capítulo 7), na aba **Projetos**.
 
-```foto projetos titulo="A tela Projetos, na aba Lista de Projetos"
+```foto projetos titulo="A tela Projetos, com filtros e a lista"
 A lista mostra cada projeto em uma linha com status, descrição, andamento, datas e ações disponíveis. Com início e término definidos, o andamento representa o tempo decorrido do projeto; sem o período completo, usa a proporção de tarefas concluídas.
 ```
 
-Na parte superior da tela, combine a busca, o status e **Pessoa**. A pessoa limita a seleção aos projetos com tarefas atribuídas a ela e às próprias tarefas. O mesmo recorte alimenta a aba **Dashboard** e a lista. No Dashboard, **Projeto** restringe ainda mais os gráficos; **Todos os projetos** reúne somente os projetos que passaram pelos filtros do topo. A distribuição por status, o histórico semanal e a lista de andamento acompanham os filtros combinados. O histórico conta conclusões por semana, de segunda a domingo, nas últimas oito semanas.
-
-```foto dashboard-projetos titulo="Dashboard de Projetos com gráficos e histórico semanal"
-Os gráficos e o histórico acompanham o projeto selecionado; a opção **Todos os projetos** reúne o conjunto disponível.
-```
+Na parte superior da tela, combine a busca, o status e **Pessoa**. A pessoa limita a seleção aos projetos com tarefas atribuídas a ela e às próprias tarefas. O mesmo recorte alimenta a lista, e os números ao lado de cada filtro dizem quantos projetos há em cada status.
 
 ## Ver um projeto
 
-A **Lista de Projetos** mostra todos os projetos do sistema, inclusive os que você não participa. Use os filtros **Todos**, **Ativos**, **Concluídos** e **Arquivados** para limitar a lista; os números ao lado indicam quantos projetos há em cada status. A busca filtra pelo nome e pela descrição. Cada linha mostra o status, a descrição e o andamento: quando início e término estão definidos, a barra representa a proporção do período civil já decorrido; se uma dessas datas faltar, mostra a proporção de tarefas concluídas. As datas informadas também aparecem na linha. Para abrir um projeto, use o botão de visualização. A página do projeto abre com o cabeçalho, o status e as ações **Editar** e **Excluir**. O conteúdo é dividido nas abas **Visão geral**, **Tarefas**, **Membros**, **Arquivos** e **Configurações**:
+A **Lista de Projetos** mostra todos os projetos do sistema, inclusive os que você não participa. Use os filtros **Todos**, **Ativos**, **Concluídos** e **Arquivados** para limitar a lista; os números ao lado indicam quantos projetos há em cada status. A busca filtra pelo nome e pela descrição. Cada linha mostra o status, a descrição e o andamento: quando início e término estão definidos, a barra representa a proporção do período civil já decorrido; se uma dessas datas faltar, mostra a proporção de tarefas concluídas. As datas informadas também aparecem na linha. Cada cartão da lista é um único link: clique em qualquer ponto dele para abrir o projeto. A página do projeto abre com o cabeçalho, o status e as ações **Editar** e **Excluir**. O conteúdo é dividido nas abas **Visão geral**, **Tarefas**, **Membros**, **Arquivos** e **Configurações**:
 
 - **Visão geral**: a **capa** e o **logo**, quando houver; a **Descrição**; **Dados do projeto**: **Início**, **Término**, **Número do edital**, **Número do processo**, **Número PROPPI**, **Pontos do projeto** e a barra de **Andamento** do período. Esse card só aparece quando algum desses campos foi preenchido;
 - **Tarefas**: o **Cronograma**, quatro contagens de tarefas, o **Andamento do projeto** (período quando as duas datas existem; tarefas como alternativa) e a lista de tarefas com **Importar Backlog** e **Nova Tarefa**;
@@ -58,15 +54,34 @@ Nome com até 100 caracteres e descrição com até 500. O **Avançar** da foto 
 
 Editar e excluir um projeto são ações do cartão, na lista. Editar é uma página só, sem passos: o cronograma da edição se mexe no detalhe, não no formulário. O **Pontos do projeto** não é campo do formulário: ele aparece no detalhe quando existe.
 
+O cartão da lista também tem **Editar descrição X** quando você pode escrever a descrição: a gestão do projeto ou o membro com **Situação do vínculo** **Ativo**. Quem não gerencia e não é membro ativo não vê o ícone. O servidor decide a escrita de verdade; sem direito, responde *"Usuário não tem permissão para gerenciar este projeto"*.
+
+```foto dialogo-descricao-projeto titulo="O diálogo de descrição em markdown"
+O diálogo mostra a textarea à esquerda e o preview à direita. Abaixo da textarea ficam **Anexar imagem** e a nota de que a imagem vai para o bucket do projeto. O drop de imagem sobre a textarea faz a mesma coisa.
+```
+
 ## Capa e logo do projeto
 
-1. Abra o detalhe do projeto.
-2. Clique em **Enviar capa** e escolha a imagem. Ela ocupa a faixa do topo do diálogo.
-3. Clique em **Enviar logo** e escolha a imagem. O logo aparece redondo, sobre a capa.
-4. Para trocar, envie outra imagem: a nova ocupa o lugar da antiga.
-5. **Tirar capa** e **Tirar logo** aparecem quando o slot tem imagem, e o sistema pede confirmação.
+1. Abra o detalhe do projeto, na aba **Visão geral**.
+2. Clique na **faixa da capa**. Ela abre a lista de opções: **Enviar capa** e **Tirar capa**. A lista só existe para quem gerencia o projeto — a mesma regra de gestão da tela (líder, criador, COORDENADOR, GERENTE, GERENTE_PROJETO, gestão de contas); quem não gerencia vê a faixa sem nenhum acesso a ela.
+3. Escolha **Enviar capa** e escolha a imagem: o arquivo sobe para o bucket e passa a ocupar a faixa da capa. **Tirar capa** aparece quando a faixa tem imagem, e o sistema pede confirmação.
+4. Clique no **logo** (o círculo sobre a capa). A lista dele traz **Enviar logo** e **Tirar logo**. O logo enviado aparece como círculo nas três superfícies onde o logo aparece.
 
-São imagens, só isso: PDF e vídeo não entram aqui. O arquivo vai para o bucket de objetos do sistema, e a tela o lê por um endereço que entrega a imagem apenas a quem tem acesso ao projeto.
+São imagens, só isso: PDF e vídeo não entram aqui. O arquivo vai para o bucket de objetos do sistema, e a tela o lê por um endereço que entrega a imagem apenas a quem tem acesso ao projeto. Quem escreve a capa é a gestão do projeto; quem a vê é a mesma regra de leitura do detalhe.
+
+A lista de opções não aparece no extrato do DOM — os gatilhos da faixa e do logo são ícones sem texto, e o nome dos itens vem da interface medida pelo teste.
+
+```foto faixa-capa-projeto titulo="A capa do projeto na faixa 21:9, na aba Visão geral"
+A capa ocupa a largura plena da moldura 21:9; o logo redondo fica no canto de baixo-esquerda. Os controles não são botões soltos: eles estão na lista que o clique da faixa e do logo abre.
+```
+
+```foto capa-menu-projeto titulo="A lista de opções aberta pelo clique na faixa da capa: Enviar capa, Tirar capa"
+```
+
+```foto logo-menu-projeto titulo="A lista de opções aberta pelo clique no logo: Enviar logo, Tirar logo"
+```
+
+O **cartão da lista de projetos** usa a mesma capa, na altura própria do cartão — a faixa da lista não é a moldura 21:9 do detalhe.
 
 ## Entregáveis
 
@@ -76,7 +91,14 @@ Entregável é o que o projeto se compromete a entregar, com quantidade.
 2. Em **Unidades**, informe a quantidade. Deixar o campo em branco conta como 1.
 3. Clique em **Adicionar entregável**.
 4. Para mudar um entregável já listado, abra o lápis: **Novo nome** e **Nova quantidade**, depois **Salvar entregável**.
-5. Para apagar, use a lixeira; o sistema pede confirmação.
+5. Em **Meta para X**, escolha a meta do mesmo projeto. Sem meta, escolha **Sem meta**. Quem não gerencia não vê o seletor: a linha mostra `Meta: <descrição>` em texto.
+6. Para apagar, use a lixeira; o sistema pede confirmação.
+
+```foto entregavel-meta-seletor titulo="O seletor de meta no entregável"
+O seletor diz `Meta para <entregável>`. As opções vêm das metas do mesmo projeto.
+```
+
+**Arquivos.** Cada linha de entregável mostra os arquivos do entregável, com o tamanho em **1,5 KB** ou **3,2 MB**. Clique no nome para abrir o arquivo — a leitura é aberta a qualquer pessoa autenticada. Quem gerencia o projeto envia e remove: escolha o arquivo em **Arquivo para X**, clique em **Enviar arquivo X**, e a linha entra na lista. Para tirar um arquivo, use **Remover arquivo X**; o sistema pede confirmação, e o entregável fica como estava. Uma linha sem arquivos diz **Nenhum arquivo enviado**.
 
 ## Anexos
 
@@ -92,6 +114,12 @@ Imagem aceita até 5 MB, PDF até 20 MB e vídeo até 100 MB. O sistema confere 
 O cronograma é o calendário do projeto. São duas listas no mesmo card: as **Metas do projeto** e a grade de etapas por mês.
 
 **Metas.** Cada meta é uma linha com a descrição e, se você quiser, um número. O número existe porque a brochura tem objetivo que se conta (dois artigos, um dataset), mas meta sem número é meta normal. **Adicionar meta** cria a linha, e ela só entra no projeto quando você escreve a descrição e sai do campo.
+
+A gestão marca a meta como cumprida pelo checkbox **Cumprir meta N**. Marcar grava a data e quem marcou; desmarcar zera os dois. Quem não gerencia vê a linha da meta desabilitada e nenhum checkbox na página. Apagar a meta não apaga o entregável: o entregável continua na lista, sem meta.
+
+```foto meta-cumprida-checkbox titulo="O checkbox de meta cumprida"
+Cada linha da meta tem o checkbox **Cumprir meta N**, e a linha está desabilitada para quem não gerencia.
+```
 
 **A grade.** Cada linha é uma etapa, e a duração da etapa é a contagem dos meses marcados:
 

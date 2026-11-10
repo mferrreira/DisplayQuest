@@ -17,6 +17,7 @@ export type GamificationSourceType =
   | "WORK_SESSION_COMPLETED"
   | "TASK_COMPLETED"
   | "ACTIVITY_COMPLETED"
+  | "TASK_REVERSED"
   | "MANUAL_ADJUSTMENT";
 
 export interface UserProgression {

@@ -118,6 +118,8 @@ describe("toPublicUser — password never leaves the record", () => {
         "profileVisibility",
         "bio",
         "avatar",
+        // DEC-242: a chave do avatar no bucket entra no transporte junto com a da capa.
+        "avatarKey",
         // V5-3 (DEC-137): a chave da capa do perfil entra no transporte. O record de cima NAO tem a
         // coluna — a entrada e opcional justamente para chamadores e fixtures que ainda nao a
         // conhecem, e a saida e sempre presente.
@@ -131,6 +133,9 @@ describe("toPublicUser — password never leaves the record", () => {
         "fundingAgency",
         "fundingAgencyOther",
         "level",
+        // S09 (R14, DEC-264): links da pessoa, normalizados. A entrada e opcional, a saida e sempre
+        // presente como lista vazia quando o record nao tem a coluna.
+        "links",
         "roles",
         "createdAt",
       ].sort(),

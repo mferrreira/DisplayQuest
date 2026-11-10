@@ -42,6 +42,9 @@ function portWith(rows: MonthCloseRow[]) {
     async findClosedMonth() {
       throw new Error("não chamado");
     },
+    async listPeopleForSeasonClose() {
+      throw new Error("não chamado");
+    },
     async listPeopleForClose() {
       throw new Error("não chamado");
     },

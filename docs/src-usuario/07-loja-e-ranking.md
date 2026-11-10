@@ -12,6 +12,8 @@ A **Loja de Recompensas** tem duas abas: **Recompensas**, com o que está dispon
 Cada recompensa mostra o custo em pontos. Quando os pontos não cobrem o custo, o botão aparece como **Pontos insuficientes** e não responde ao clique.
 ```
 
+Com uma passiva de bônus equipada, a recompensa mostra o preço duas vezes: o preço efetivo, em destaque, e o preço da tabela riscado, escrito `de 100`. O **Resgatar** obedece o preço efetivo — e **Pontos insuficientes** é a comparação com ele. O resgate reserva os pontos do preço efetivo.
+
 ## Resgatar uma recompensa
 
 1. Abra **Loja** e fique na aba **Recompensas**.
@@ -50,29 +52,50 @@ Aprovar confirma o resgate; rejeitar devolve os pontos à pessoa.
 
 ## O ranking
 
-O **Ranking** ordena as pessoas pelo que produziram. A tela traz o **Quadro de Liderança** e a **Classificação completa**, com as colunas **Posição**, **Usuário**, **Tarefas concluídas** e **Pontos**.
+O **Quadro de Liderança** tem três abas: **Projetos**, **Temporada** e **Pessoas**. Na aba **Projetos** está o **leaderboard de projetos** por pontos, na aba **Temporada** está a classificação anual e na aba **Pessoas** está a classificação que ordena as pessoas pelo que produziram, com as colunas **Posição**, **Usuário**, **Tarefas concluídas** e **Pontos**.
 
-```foto ranking-participante titulo="O ranking, na classificação completa"
+Na aba **Projetos**, o painel ordena os projetos pela pontuação: o campeão em bloco destacado, com a capa, o logo, o período, a barra de andamento, a pilha de avatares dos membros, a contagem de membros e o líder; o 2º e o 3º lugares com medalha, contagem de membros e barra; e a classificação completa a partir do 4º, em tabela com Posição, Projeto, Progresso, Membros e Pontos. Os projetos em que você participa aparecem com o rótulo **Seu projeto**. O seletor do painel escolhe o recorte, e **Todos os projetos** reúne o conjunto todo; escolher um projeto no painel abre a página dedicada dele. Cada peça do leaderboard abre o detalhe do projeto.
+
+```foto dashboard-projetos titulo="A aba Projetos do Quadro de Liderança, com o leaderboard e o seletor"
+Barra de andamento é o tempo decorrido quando o projeto tem início e término; sem período, a barra segue a proporção de tarefas concluídas. O recorte do painel independe dos filtros da tela Projetos.
+```
+
+```foto ranking-participante titulo="A aba Pessoas: a classificação completa"
 A classificação é visível para qualquer pessoa autenticada.
 ```
 
-No **Quadro de Liderança** os três primeiros têm destaque maior e avatar maior, e o 1º lugar leva mais destaque ainda: quando a pessoa tem **capa** no perfil, a capa aparece como fundo do cartão dela. É a mesma imagem descrita no capítulo 8; o ranking não cria nada, ele mostra o que o perfil tem.
+Na aba **Pessoas**, os três primeiros têm destaque maior e avatar maior, e o 1º lugar leva mais destaque ainda: quando a pessoa tem **capa** no perfil, a capa aparece como fundo do cartão dela. É a mesma imagem descrita no capítulo 8; o ranking não cria nada, ele mostra o que o perfil tem.
 
-O quadro mostra o **placar do mês**, separado dos pontos que você guarda para resgatar recompensas. A cada mês, os pontos creditados entram nas duas contagens. Comprar na loja altera o saldo disponível, mas não muda o placar do mês. A **Classificação completa** continua usando os pontos acumulados e as tarefas concluídas.
+Na aba **Pessoas**, o quadro mostra o **placar do mês**, separado dos pontos que você guarda para resgatar recompensas. A cada mês, os pontos creditados entram nas duas contagens. Comprar na loja altera o saldo disponível, mas não muda o placar do mês. A **Classificação completa** continua usando os pontos acumulados e as tarefas concluídas.
 
-No seletor ao lado do título, escolha um mês já fechado para consultar o resultado daquele período. O quadro informa o mês e diz que o valor e a posição foram congelados no fechamento; consultar um mês anterior não recalcula nem altera o resultado.
+No seletor ao lado do título, escolha um mês já fechado para consultar o resultado daquele período. O quadro informa o mês e diz que o valor e a posição foram congelados no fechamento; consultar um mês anterior não recalcula nem altera o resultado. O cartão do campeão do mês fechado usa, como fundo, a capa da conta que ficou em 1º naquele mês.
 
 ```foto quadro-lideranca-mes-fechado titulo="O Quadro de Liderança em um mês fechado"
 O seletor identifica o período e o aviso explica que valor e posição estão congelados.
 ```
 
-O que alimenta cada coluna:
+## A temporada
+
+A **Temporada** é o conjunto dos 12 quadros de liderança do ano. A aba **Temporada** tem um seletor de ano, com **temporada em curso** e as temporadas já fechadas. Em curso, o pódio e a tabela ordenam as pessoas pelo **saldo de pontos** que elas têm — o número que a coluna **Pontos da temporada** mostra é o saldo acumulado da pessoa, não o placar de um mês. O 1º lugar tem o mesmo cartão destacado do quadro mensal, com a capa do perfil como fundo.
+
+Ao virada de ano, a temporada do ano que terminou fecha: o quadro do ano congela o saldo de cada pessoa em valor e posição, como o fechamento de mês congela o placar, e a contagem de pontos recomeça do zero para todos. O pódio da temporada fechada fica consultável no seletor de anos, e o aviso diz que valor e posição estão congelados.
+
+```foto ranking-temporada titulo="A aba Temporada, com o pódio pelo saldo acumulado e o seletor de ano"
+A coluna da aba Temporada é o saldo da pessoa; a coluna da aba Pessoas é o placar do mês. São duas contagens diferentes na mesma tela.
+```
 
 | Coluna | De onde vem |
 | --- | --- |
 | **Tarefas concluídas** | tarefas aprovadas, não as entregues para revisão |
 | **Pontos** | pontos do placar mensal creditados pelas aprovações, menos penalidades e correções do painel; compras da loja não alteram esse placar |
+| **Pontos da temporada** | saldo de pontos da pessoa — a contagem que a temporada ordena |
 
 ## Distintivos
 
 Além dos pontos, o sistema concede **distintivos** — marcas de conquista, agrupadas por categoria. Quem tem a permissão de gerenciar distintivos cria e edita os modelos no Painel Administrativo; as pessoas os recebem e os veem no próprio perfil.
+
+O catálogo traz 50 distintivos. Cada um é concedido quando a pessoa atinge as condições dele — tarefas concluídas, sessões, horas, semanas, dias seguidos, compras, atestados, issues resolvidos, eventos de laboratório, subtasks, meses no quadro. A concessão acontece no episódio: uma compra na loja, um atestado gerado, um issue resolvido, um mês fechado no quadro — a pessoa recebe o distintivo ali, sem precisar de tarefa.
+
+Alguns distintivos têm **passiva** — um efeito permanente que a pessoa escolhe ativar: **+X% pontos** nas premiações, **−X% de penalidade**, e, nas de bônus, desconto no preço da loja. Os botões **Equipar** e **Desequipar**, o contador **Equipadas (n/3)** e as regras de ativação estão descritos no capítulo 8, no bloco **Badges equipáveis** da aba Configurações, em modo de edição.
+
+Os distintivos ainda não conquistados não aparecem no perfil — o bloco Badges lista só os que a pessoa possui. A condição de cada distintivo é medida no episódio: quando o número chega ao alvo, o distintivo é concedido no episódio seguinte.

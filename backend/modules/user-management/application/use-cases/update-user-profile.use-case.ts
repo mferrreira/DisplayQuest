@@ -1,10 +1,13 @@
 import {
   applyPersonDataFields,
+  BIO_MAX_LENGTH,
+  BIO_LENGTH_MESSAGE,
   NotFoundError,
   PROFILE_DENIED_MESSAGE,
   requireActorSelfOrPermission,
   ValidationError,
   normalizeAvatar,
+  normalizeUserLinks,
   toPublicUserWithCpf,
 } from "@/backend/domain"
 import type { ActorRef } from "@/backend/domain"
@@ -25,6 +28,8 @@ export class UpdateUserProfileUseCase {
   constructor(
     private readonly repository: UserRepositoryPort,
     private readonly passwordHasher: PasswordHasher,
+    /** plan-v15 S11 (R4): campo de perfil gravado é episódio de recompletação. */
+    private readonly recompute: { recompute(userId: number): Promise<void> },
   ) {}
 
   async execute(actor: ActorRef, userId: number, data: Record<string, unknown>) {
@@ -40,10 +45,17 @@ export class UpdateUserProfileUseCase {
       if (!name) throw new ValidationError("Nome é obrigatório")
       user.name = name
     }
-    if (data.bio !== undefined) user.bio = data.bio ? String(data.bio) : null
+    if (data.bio !== undefined) {
+      const bio = data.bio ? String(data.bio) : null
+      if (bio && bio.length > BIO_MAX_LENGTH) {
+        throw new ValidationError(BIO_LENGTH_MESSAGE)
+      }
+      user.bio = bio
+    }
     if (data.avatar !== undefined) user.avatar = normalizeAvatar(data.avatar)
     if (data.profileVisibility !== undefined) user.profileVisibility = data.profileVisibility as never
     if (data.weekHours !== undefined) user.weekHours = Number(data.weekHours)
+    if (data.links !== undefined) user.links = normalizeUserLinks(data.links)
 
     if (data.password !== undefined) {
       const password = String(data.password || "")
@@ -59,6 +71,9 @@ export class UpdateUserProfileUseCase {
     // onde a pessoa escreve os próprios dados (DEC-138), e o gate acima já é `self OU MANAGE_USERS`.
     applyPersonDataFields(user, data)
 
-    return toPublicUserWithCpf(await this.repository.update(user))
+    const saved = await this.repository.update(user)
+    // R4 (plan-v15 S11): o caminho do perfil tem os mesmos campos de pessoa do painel.
+    await this.recompute.recompute(userId)
+    return toPublicUserWithCpf(saved)
   }
 }

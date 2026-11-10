@@ -178,8 +178,37 @@ export class CronService {
       } else {
         console.log(`📅 O quadro de ${result.monthLabel} já estava fechado; nada mudou.`)
       }
+      // plan-v20 S01 (DEC-254): a temporada do ano que terminou fecha logo depois do quadro de
+      // dezembro, no MESMO gatilho das 00:00 do dia 1. O fechamento de dezembro tem que vir
+      // antes: a linha da temporada é o saldo no instante, e o zerado do placar de dezembro já
+      // aconteceu. Se o mês de dezembro não fechou, nada de temporada — a ordem é o contrato.
+      if (result.month.endsWith('-12')) {
+        await this.executeSeasonClose()
+      }
     } catch (error) {
       console.error('❌ Erro ao fechar o mês do quadro:', error)
+    }
+  }
+
+  /**
+   * Fechamento da temporada do ano civil que terminou (plan-v20 S01, DEC-254). Chamado pelo
+   * mesmo gatilho do fechamento de dezembro, com `systemActor(SEASON_CLOSE)` — o bypass
+   * declarado de DEC-54. A rota de gestão (`POST /api/board/season-close`) é o outro dono.
+   */
+  private async executeSeasonClose() {
+    try {
+      const { gamification } = getBackendComposition()
+      const result = await gamification.closeSeason({
+        actor: systemActor(SYSTEM_REASONS.SEASON_CLOSE),
+        now: new Date(),
+      })
+      if (result.closed) {
+        console.log(`🏆 Temporada ${result.year} fechada: ${result.peopleCount} linha(s).`)
+      } else {
+        console.log(`🏆 A temporada ${result.year} já estava fechada; nada mudou.`)
+      }
+    } catch (error) {
+      console.error('❌ Erro ao fechar a temporada:', error)
     }
   }
 

@@ -8,7 +8,10 @@ import { TaskBoard } from "../components/task-board";
 import { resetTaskStore, resetUserStore, seedTasks } from "@/tests/mocks/handlers";
 
 const mockUser = {
-  id: 2,
+  // R11 (S11): o quadro abre no projeto do líder na primeira carga. Este teste é do diálogo e da
+  // lista de tarefas sem projeto, então o ator não lidera nem é membro de nenhum projeto do
+  // fixture (líderes 2 e 3) — o quadro fica na visão global e as tarefas ficam visíveis.
+  id: 4,
   name: "Coordenador",
   email: "coordenador@lab.com",
   roles: ["COORDENADOR"],
