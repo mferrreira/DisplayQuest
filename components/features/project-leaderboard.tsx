@@ -43,6 +43,16 @@ function getInitials(name: string) {
   return name.split(" ").map((part) => part[0]).join("").toUpperCase().substring(0, 2)
 }
 
+/**
+ * plan-v23 S03 (DEC-266): o pódio de projetos tem ouro, prata e bronze. O campeão usa o
+ * token `warning` (dourado) como antes; o 2º leva `silver` e o 3º leva `bronze` — tokens
+ * de `globals.css`, nunca valor cru (RF-V6.2 R4). Uma fonte só para as três classes.
+ */
+const podiumTone: Record<2 | 3, { card: string; accent: string }> = {
+  2: { card: "border-silver/40 bg-silver/5", accent: "text-silver" },
+  3: { card: "border-bronze/40 bg-bronze/5", accent: "text-bronze" },
+}
+
 function periodLabel(project: Project): string | null {
   if (!project.startDate || !project.endDate) return null
   return `${monthColumnLabel(project.startDate.slice(0, 7))} – ${monthColumnLabel(project.endDate.slice(0, 7))}`
@@ -124,15 +134,18 @@ export function ProjectLeaderboard({ projects, tasks, users, onProjectSelect }: 
                 <div className="relative flex min-h-[14rem] flex-wrap items-center gap-4 p-6 sm:min-h-[18rem] sm:gap-6 sm:p-10">
                   {champion.project.logoKey ? (
                     // plan-v14 S01 (regra 1): logo do campeão sai pela peça única — o
-                    // `object-contain` cru está superado.
-                    <div className="h-16 w-16 shrink-0 rounded-lg border border-warning/50 bg-background sm:h-24 sm:w-24">
+                    // `object-contain` cru está superado. plan-v23 S03 (DEC-266): o
+                    // contêiner do #1 é circular (`rounded-full` com clipping do
+                    // `BannerImage`), não mais o quadrado arredondado.
+                    <div className="h-16 w-16 shrink-0 rounded-full border border-warning/50 bg-background sm:h-24 sm:w-24">
                       <BannerImage
                         src={projectImageUrl(champion.project.id, "logo", champion.project.logoKey)}
                         alt={champion.project.name}
+                        className="rounded-full"
                       />
                     </div>
                   ) : (
-                    <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg border border-warning/50 bg-background sm:h-24 sm:w-24">
+                    <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full border border-warning/50 bg-background sm:h-24 sm:w-24">
                       <Crown className="h-8 w-8 text-warning sm:h-10 sm:w-10" aria-hidden="true" />
                     </div>
                   )}
@@ -189,6 +202,7 @@ export function ProjectLeaderboard({ projects, tasks, users, onProjectSelect }: 
         <section aria-label="Segundo e terceiro lugares" className="grid gap-4 sm:grid-cols-2">
           {runnersUp.map((entry) => {
             const Icon = entry.position === 2 ? Medal : Award
+            const tone = podiumTone[entry.position as 2 | 3]
             const meta = metaOf(entry.project)
             return (
               <Link
@@ -199,9 +213,9 @@ export function ProjectLeaderboard({ projects, tasks, users, onProjectSelect }: 
                   event.preventDefault()
                   open(entry.project)
                 }}
-                className="flex items-center gap-4 rounded-lg border border-border bg-card p-4 transition-colors hover:border-warning/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className={`flex items-center gap-4 rounded-lg border ${tone.card} p-4 transition-colors hover:border-warning/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring`}
               >
-                <span className="text-3xl font-bold tabular-nums text-warning" aria-hidden="true">{entry.position}º</span>
+                <span className={`text-3xl font-bold tabular-nums ${tone.accent}`} aria-hidden="true">{entry.position}º</span>
                 {entry.project.logoKey ? (
                   <div className="h-10 w-10 shrink-0 rounded-md border bg-background">
                     <BannerImage
@@ -210,11 +224,11 @@ export function ProjectLeaderboard({ projects, tasks, users, onProjectSelect }: 
                     />
                   </div>
                 ) : (
-                  <Icon className="h-6 w-6 shrink-0 text-warning" aria-hidden="true" />
+                  <Icon className={`h-6 w-6 shrink-0 ${tone.accent}`} aria-hidden="true" />
                 )}
                 <div className="min-w-0 flex-1">
                   <p className="flex items-center gap-1.5 truncate font-semibold text-foreground">
-                    <Icon className="h-4 w-4 shrink-0 text-warning" aria-hidden="true" />
+                    <Icon className={`h-4 w-4 shrink-0 ${tone.accent}`} aria-hidden="true" />
                     {entry.project.name}
                   </p>
                   {entry.project.subtitle && <p className="truncate text-xs text-muted-foreground">{entry.project.subtitle}</p>}
