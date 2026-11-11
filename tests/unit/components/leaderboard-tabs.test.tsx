@@ -1,23 +1,23 @@
 /**
- * plan-v18 S03 (DEC-249, ADR-006, R3, C4) — /dashboard/leaderboard com duas abas.
+ * plan-v18 S03 (DEC-249, ADR-006) + plan-v23 S02 (DEC-265) — /dashboard/leaderboard com
+ * três abas, ordem Pessoas > Projetos > Temporada, Pessoas por padrão.
  *
  * O que este arquivo trava:
- *  - a página tem as abas **Projetos** e **Pessoas**, e **Projetos** é a aba padrão;
+ *  - plan-v23 S02 (DEC-265): as abas são **Pessoas**, **Projetos**, **Temporada**, nesta
+ *    ordem, e **Pessoas** é a aba padrão;
  *  - a aba Projetos monta o `ProjectManagerDashboard` intacto com todos os projetos,
  *    todos os papéis, `scopeDescription` "Todos os projetos" e o seletor abrindo o
  *    detalhe do projeto (`/dashboard/projetos/<id>`);
- *  - a aba Pessoas é o ranking de hoje, intacto ("Sua posição" e pódio aparecem só
- *    quando a aba está ativa);
- *  - plan-v20 S02 (DEC-255): a aba Temporada entra no meio, entre Projetos e Pessoas. A aba
- *    padrão continua Projetos, e as três abas continuam abertas a todo autenticado.
- *  - as duas abas são abertas a todo autenticado — um VOLUNTARIO vê as duas.
+ *  - a aba Pessoas é o ranking de hoje, intacto, e é a aba que abre — "Sua posição" e
+ *    pódio aparecem no primeiro render;
+ *  - as três abas continuam abertas a todo autenticado.
  *
  * Mocks no padrão dos testes da página (`leaderboard-personal-month.test.tsx`): contextos
  * por `vi.mock`, `fetchAPI` para os meses do board. `ProjectManagerDashboard` é stub para
  * o guard de wiring — o quadro em si tem testes próprios.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 const mocks = vi.hoisted(() => ({
   push: vi.fn(),
@@ -52,15 +52,20 @@ describe("Leaderboard com abas (plan-v18 S03)", () => {
     mocks.push.mockReset();
   });
 
-  it("três abas, Projetos por primeiro e aba padrão (plan-v20 S02 acrescenta Temporada no meio)", () => {
+  it("três abas na ordem Pessoas > Projetos > Temporada, com Pessoas por padrão (plan-v23 S02, DEC-265)", () => {
     render(<LeaderboardPage />);
     const tabs = screen.getAllByRole("tab").map((t) => t.textContent);
-    expect(tabs).toEqual(["Projetos", "Temporada", "Pessoas"]);
-    expect(screen.getByRole("tab", { name: "Projetos" })).toHaveAttribute("aria-selected", "true");
+    expect(tabs).toEqual(["Pessoas", "Projetos", "Temporada"]);
+    expect(screen.getByRole("tab", { name: "Pessoas" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: "Projetos" })).toHaveAttribute("aria-selected", "false");
   });
 
-  it("a aba Projetos monta o painel com todos os projetos, escrito neutro e rota de detalhe", () => {
+  it("a aba Projetos monta o painel com todos os projetos, escrito neutro e rota de detalhe", async () => {
     render(<LeaderboardPage />);
+    // Radix Tabs seleciona no `mousedown` (medido em 1.1.2). A aba Projetos deixa de ser a
+    // default na DEC-265, então o guard ativa a aba antes de ler o painel.
+    fireEvent.mouseDown(screen.getByRole("tab", { name: "Projetos" }));
+    await waitFor(() => expect(screen.getByTestId("project-dashboard")).toBeInTheDocument());
     expect(screen.getByTestId("project-dashboard")).toHaveAttribute("data-scope", "Todos os projetos");
     const props = stub.mock.calls[0][0];
     expect(props.projects).toEqual(mocks.projects);
@@ -70,14 +75,10 @@ describe("Leaderboard com abas (plan-v18 S03)", () => {
     expect(mocks.push).toHaveBeenCalledWith("/dashboard/projetos/7");
   });
 
-  it("a aba Pessoas é o ranking de hoje: o conteúdo aparece só com a aba ativa", async () => {
+  it("a aba default é Pessoas: 'Sua posição' aparece no primeiro render (DEC-265)", () => {
     render(<LeaderboardPage />);
-    expect(screen.queryByText("Sua posição")).toBeNull();
-    const tab = screen.getByRole("tab", { name: "Pessoas" });
-    // Radix Tabs seleciona no `mousedown` (medido em 1.1.2: `click` sozinho não ativa).
-    fireEvent.mouseDown(tab);
-    expect(await screen.findByText("Sua posição")).toBeInTheDocument();
-    expect(tab).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: "Pessoas" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByText("Sua posição")).toBeInTheDocument();
   });
 
   it("um voluntário vê as três abas", () => {

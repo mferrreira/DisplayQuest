@@ -2,8 +2,8 @@
  * plan-v20 S02 (DEC-255) — a aba Temporada no leaderboard.
  *
  * O que este arquivo trava, na tela medida:
- *  - a aba existe e se chama **Temporada**; as três abas são Projetos, Temporada, Pessoas, e
- *    Projetos continua por primeiro e aba padrão (DEC-249 intacta);
+ *  - a aba existe e se chama **Temporada**; as três abas são Pessoas, Projetos, Temporada,
+ *    com Pessoas por primeiro e padrão (DEC-265, plan-v23 S02);
  *  - em curso, o pódio e a tabela são pelo SALDO (`users.points`), não pelo placar do mês: a
  *    pessoa com saldo maior lidera mesmo com placar de mês menor;
  *  - o seletor de ano declara o ano em curso e as temporadas fechadas vindas do servidor, e o
@@ -128,11 +128,11 @@ describe("aba Temporada (plan-v20 S02, DEC-255)", () => {
     mode.value = "ok";
   });
 
-  it("as três abas, Projetos por primeiro, Temporada no meio, Pessoas por último", () => {
+  it("as três abas, Pessoas por primeiro e padrão, Projetos, Temporada por último (DEC-265)", () => {
     render(<LeaderboardPage />);
     const tabs = screen.getAllByRole("tab").map((t) => t.textContent);
-    expect(tabs).toEqual(["Projetos", "Temporada", "Pessoas"]);
-    expect(screen.getByRole("tab", { name: "Projetos" })).toHaveAttribute("aria-selected", "true");
+    expect(tabs).toEqual(["Pessoas", "Projetos", "Temporada"]);
+    expect(screen.getByRole("tab", { name: "Pessoas" })).toHaveAttribute("aria-selected", "true");
   });
 
   it("em curso, o pódio é pelo saldo: Carla lidera mesmo com placar de mês menor que Bruno", async () => {
