@@ -52,6 +52,12 @@
        valer sem copiar purple-500 pelo canto. */
     --review: 263 60% 42%;
     --review-foreground: 0 0% 100%;
+    /* plan-v23 S03 (DEC-266): prata e bronze do pódio de projetos. O dourado já é o
+       token `warning`. Nasce para a tela, não de valor cru (RF-V6.2 R4). */
+    --silver: 210 11% 55%;
+    --silver-foreground: 0 0% 100%;
+    --bronze: 24 62% 42%;
+    --bronze-foreground: 0 0% 100%;
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
     --sidebar-primary: 240 5.9% 10%;
@@ -96,6 +102,12 @@
        como os outros status sobem no .dark) */
     --review: 262 83% 70%;
     --review-foreground: 265 40% 10%;
+    /* plan-v23 S03 (DEC-266): prata e bronze no tema escuro — clareados como os
+       outros status sobem no `.dark`. */
+    --silver: 210 12% 70%;
+    --silver-foreground: 220 10% 12%;
+    --bronze: 25 70% 62%;
+    --bronze-foreground: 25 45% 12%;
     /* Charts: hues do dark anterior, clareados p/ fundo escuro */
     --chart-1: 217 91% 62%;
     --chart-2: 160 70% 55%;
@@ -150,6 +162,8 @@
   --color-info-foreground: hsl(var(--info-foreground));
   --color-review: hsl(var(--review));
   --color-review-foreground: hsl(var(--review-foreground));
+  --color-silver: hsl(var(--silver));
+  --color-bronze: hsl(var(--bronze));
   --color-border: hsl(var(--border));
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));

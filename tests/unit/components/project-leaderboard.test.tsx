@@ -161,6 +161,29 @@ describe("ProjectLeaderboard", () => {
     expect(within(row).getByRole("cell", { name: "10" })).toHaveClass("w-14")
   })
 
+  it("pódio em ouro, prata e bronze com a logo do campeão circular (plan-v23 S03, DEC-266)", () => {
+    renderBoard()
+    const section = championSection()
+    // A logo do #1 mora em contêiner circular com clipping: o `<img>` do `BannerImage`
+    // sai dentro de um wrapper `rounded-full overflow-hidden`.
+    const logo = within(section).getByRole("img", { name: "Pesquisa em IA" })
+    expect(logo.parentElement).toHaveClass("rounded-full")
+    expect(logo.parentElement).toHaveClass("overflow-hidden")
+    // O campeão continua dourado: a moldura do bloco usa o token `warning`.
+    expect(section.querySelector("a")).toHaveClass("border-warning/40")
+
+    const runners = screen.getByRole("region", { name: "Segundo e terceiro lugares" })
+    const secondCard = within(runners).getByText("2º").closest("a")!
+    expect(secondCard).toHaveClass("border-silver/40")
+    expect(within(secondCard).getByText("2º")).toHaveClass("text-silver")
+    const thirdCard = within(runners).getByText("3º").closest("a")!
+    expect(thirdCard).toHaveClass("border-bronze/40")
+    expect(within(thirdCard).getByText("3º")).toHaveClass("text-bronze")
+    // Prata e bronze são tokens: nenhum valor cru de paleta entra na tela (RF-V6.2 R4).
+    expect(secondCard.getAttribute("style")).toBeNull()
+    expect(thirdCard.getAttribute("style")).toBeNull()
+  })
+
   it("recorte sem projeto é vazio declarado", () => {
     render(<ProjectLeaderboard projects={[]} tasks={[]} users={users} onProjectSelect={() => {}} />)
     expect(screen.getByText("Nenhum projeto disponível neste recorte.")).toBeVisible()
