@@ -52,11 +52,11 @@ Aprovar confirma o resgate; rejeitar devolve os pontos à pessoa.
 
 ## O ranking
 
-O **Quadro de Liderança** tem três abas: **Projetos**, **Temporada** e **Pessoas**. Na aba **Projetos** está o **leaderboard de projetos** por pontos, na aba **Temporada** está a classificação anual e na aba **Pessoas** está a classificação que ordena as pessoas pelo que produziram, com as colunas **Posição**, **Usuário**, **Tarefas concluídas** e **Pontos**.
+O **Quadro de Liderança** tem três abas: **Pessoas**, **Projetos** e **Temporada** — a de **Pessoas** abre por primeira. Na aba **Pessoas** está a classificação que ordena as pessoas pelo que produziram, com as colunas **Posição**, **Usuário**, **Tarefas concluídas** e **Pontos**; na aba **Projetos** está o **leaderboard de projetos** por pontos; na aba **Temporada** está a classificação anual.
 
-Na aba **Projetos**, o painel ordena os projetos pela pontuação: o campeão em bloco destacado, com a capa, o logo, o período, a barra de andamento, a pilha de avatares dos membros, a contagem de membros e o líder; o 2º e o 3º lugares com medalha, contagem de membros e barra; e a classificação completa a partir do 4º, em tabela com Posição, Projeto, Progresso, Membros e Pontos. Os projetos em que você participa aparecem com o rótulo **Seu projeto**. O seletor do painel escolhe o recorte, e **Todos os projetos** reúne o conjunto todo; escolher um projeto no painel abre a página dedicada dele. Cada peça do leaderboard abre o detalhe do projeto.
+Na aba **Projetos**, o painel ordena os projetos pela pontuação: o campeão em bloco destacado, com a capa, o **logo em círculo**, o período, a barra de andamento, a pilha de avatares dos membros, a contagem de membros e o líder; o 2º lugar com a medalha **prata** e o 3º com a medalha **bronze**, cada um com contagem de membros e barra; e a classificação completa a partir do 4º, em tabela com Posição, Projeto, Progresso, Membros e Pontos. Os projetos em que você participa aparecem com o rótulo **Seu projeto**. O seletor do painel escolhe o recorte, e **Todos os projetos** reúne o conjunto todo; escolher um projeto no painel abre a página dedicada dele. Cada peça do leaderboard abre o detalhe do projeto.
 
-```foto dashboard-projetos titulo="A aba Projetos do Quadro de Liderança, com o leaderboard e o seletor"
+```foto dashboard-projetos titulo="A aba Projetos do Quadro de Liderança, só com o leaderboard e o seletor"
 Barra de andamento é o tempo decorrido quando o projeto tem início e término; sem período, a barra segue a proporção de tarefas concluídas. O recorte do painel independe dos filtros da tela Projetos.
 ```
 

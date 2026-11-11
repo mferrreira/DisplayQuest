@@ -8,6 +8,8 @@ A lista mostra cada projeto em uma linha com status, descrição, andamento, dat
 
 Na parte superior da tela, combine a busca, o status e **Pessoa**. A pessoa limita a seleção aos projetos com tarefas atribuídas a ela e às próprias tarefas. O mesmo recorte alimenta a lista, e os números ao lado de cada filtro dizem quantos projetos há em cada status.
 
+À direita da lista, a coluna **Gráficos do cronograma** traz três cards: **Atividades por status** (aberta, conclusão solicitada e concluída, com o total de atividades no centro), **Atividades por mês** (concluída e pendente por mês do recorte) e **Atividades atrasadas** (cada linha nomeia o projeto e a etapa, com a data do prazo). O recorte da coluna é o MESMO dos filtros da tela; se a leitura dos gráficos falha, a coluna diz *"Não foi possível carregar os gráficos do cronograma"* com o botão **Tentar de novo**.
+
 ## Ver um projeto
 
 A **Lista de Projetos** mostra todos os projetos do sistema, inclusive os que você não participa. Use os filtros **Todos**, **Ativos**, **Concluídos** e **Arquivados** para limitar a lista; os números ao lado indicam quantos projetos há em cada status. A busca filtra pelo nome e pela descrição. Cada linha mostra o status, a descrição e o andamento: quando início e término estão definidos, a barra representa a proporção do período civil já decorrido; se uma dessas datas faltar, mostra a proporção de tarefas concluídas. As datas informadas também aparecem na linha. Cada cartão da lista é um único link: clique em qualquer ponto dele para abrir o projeto. A página do projeto abre com o cabeçalho, o status e as ações **Editar** e **Excluir**. O conteúdo é dividido nas abas **Visão geral**, **Tarefas**, **Membros**, **Arquivos** e **Configurações**:

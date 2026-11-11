@@ -3,8 +3,10 @@
 O Quadro de Tarefas é a tela inicial do sistema. É onde o trabalho do laboratório aparece como cartões, organizados pelo estágio em que estão.
 
 ```foto quadro-tarefas titulo="O quadro de tarefas, com as cinco colunas de estado"
-Vista de coordenador: o quadro mostra todas as tarefas visíveis, de todos os projetos.
+Vista de coordenador: na primeira carga o quadro abre com a pessoa selecionada — só as tarefas atribuídas a ela ficam visíveis — e o seletor de projeto nasce em **Todos os projetos**.
 ```
+
+A barra do quadro tem os filtros **Projeto**, **Pessoa** e **Atividade** (a atividade aparece quando um projeto está selecionado), além de **Vencimento**, **Busca** e o modo compacto. Escolher **Todas as pessoas** na barra devolve as tarefas dos projetos; a volta ao conjunto todo de projetos é a opção **Todos os projetos** do seletor.
 
 No alto, a saudação ocupa pouco espaço para manter o quadro em destaque. Abaixo das cinco colunas há três áreas de resumo. **Projetos recentes** mostra o andamento temporal de cada projeto (ou a proporção de tarefas concluídas quando faltam datas). **Meta da semana** representa as horas registradas e a meta com uma barra horizontal. **Estatísticas do quadro** reúne a taxa de conclusão e a distribuição das tarefas por status em gráficos compactos. Os projetos recentes abrem o detalhe do projeto ao serem selecionados.
 
