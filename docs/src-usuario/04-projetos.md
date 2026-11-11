@@ -231,7 +231,7 @@ O **Mês de referência** vem com o mês anterior ao atual, e cada membro ativo 
 ```
 
 ::: nota titulo="O que sai na folha oficial"
-O PDF é a folha oficial preenchida em 1 página: título do projeto, número do edital (ou o número PROPPI, quando o edital não existe), nome, CPF, matrícula, nível, modalidade e agência de fomento da pessoa, **SE BOLSISTA** (texto da própria pessoa, preenchido em Configurações), e os dados do vínculo — **carga horária** (**8h**, **20h** ou **adaptada**, com o número escrito) e categoria (**Bolsista** ou **Voluntário**). A carga que sai no atestado é a **carga contratada do vínculo**, não as horas registradas em sessões (capítulo 8). A primeira descrição preserva a atividade do cronograma; a segunda acrescenta a síntese das sessões concluídas no mês, mesmo sem tarefa vinculada. Se faltarem dados dinâmicos, a tela avisa após gerar e você pode completar o cadastro e regenerar.
+O PDF tem 2 páginas. A primeira traz as tabelas do projeto e da pessoa, com edital/PROPPI, título, orientador, nome, CPF, matrícula, nível, carga contratada do vínculo, categoria, SE BOLSISTA, modalidade e agência. A segunda traz a descrição das atividades, a situação do projeto, a data e as assinaturas. A carga no atestado é a carga contratada do vínculo, não as horas registradas em sessões. A descrição é a síntese dos logs de sessão concluídos no mês de referência. Se faltarem dados dinâmicos, a tela avisa após gerar, e você pode completar o cadastro e regenerar.
 :::
 
 ::: nota titulo="O sino lembra"
