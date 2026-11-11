@@ -1442,3 +1442,20 @@ leitura do texto visível. São observações medidas na instância real, **não
 - **Dados de captura do guia:** o usuário 21 do guia (`Guia · Participante`) precisa de `links` e dos
   dados de documentos para a leitura. O usuário de coordenação da captura usa `Guia · Coordenação`
   (`coordenador@lab.com`), e `perfil-links` captura `gerente@lab.com` na Configurações.
+
+## plan-v22 removido do dev (2026-11-11, DEC-271)
+
+- **Estado:** encerrado por decisão do dono — "o plan-v22 não entra em NADA". Os 10 commits dele
+  (S01..S06, docs S02/S07, ponteiro, S04 Método B) saíram do `dev` por rebase sobre `ed5d344`;
+  o `origin/dev` foi reescrito com `--force-with-lease`.
+- **O que era o plano:** atestado por template HTML do Google Docs + print do Chromium, pdf-lib com
+  geometria medida, remoção do AcroForm, campo `SE BOLSISTA` no perfil/painel, capturas e prosa do
+  guia. Nada disso está no `dev` de hoje: zero ocorrências de `SE BOLSISTA`, nenhuma peça
+  `html-attestation`, nenhum `templates/atestado-html/`.
+- **Backups:** tag `backup/plan-v22-no-dev-20261111` (`fdf7bc9`, pushada na origin) e o worktree
+  `.worktrees/plan-v22/metodo-html-b505c9c`. O plano está fechado em
+  `$PLANOS/plans/plan-v22-atestado-render/` com a nota de encerramento no journal.
+- **O acerto do quadro** consertado no `dev` pelo lote `5d5b30f` (flake de `hasMemory` do
+  `NuqsTestingAdapter`) foi removido junto com o plan-v22; se o flake voltar, o conserto está no
+  tag de backup.
+- **Numeração:** DEC-267 era a decisão desse plano; DEC-271 é a remoção. Próxima livre: DEC-272.
