@@ -15,7 +15,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SessionProvider } from "next-auth/react";
 import { NuqsTestingAdapter } from "nuqs/adapters/testing";
 import { TaskBoard } from "@/features/tasks/components/task-board";
-import { resetTaskStore, seedTasks } from "@/tests/mocks/handlers";
+import { getTaskStore, resetTaskStore, seedTasks } from "@/tests/mocks/handlers";
 import { makeTask } from "@/tests/mocks/fixtures/tasks";
 
 // R11 (S11): o quadro abre no projeto do líder na primeira carga. Estes testes de cartão e diálogo
@@ -32,6 +32,8 @@ vi.mock("next-auth/react", async (importOriginal) => {
 });
 
 function renderBoard() {
+  // DEC-270: a primeira carga abre com a pessoa selecionada; o ator é assignee das tarefas semeadas.
+  getTaskStore().forEach((t) => { t.assigneeIds = [...(t.assigneeIds ?? []), mockUser.id] });
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });

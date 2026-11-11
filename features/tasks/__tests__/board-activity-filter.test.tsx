@@ -21,7 +21,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TaskBoard } from "../components/task-board";
 import { BoardToolbar } from "../components/board-toolbar";
 import type { TaskFilters } from "@/lib/api/endpoints/tasks";
-import { resetTaskStore, resetUserStore, seedProjects, seedTasks } from "@/tests/mocks/handlers";
+import { getTaskStore, resetTaskStore, resetUserStore, seedProjects, seedTasks } from "@/tests/mocks/handlers";
 
 const mockUser = {
   // R11 (S11): o quadro abre no projeto do líder na primeira carga. Estes testes partem da visão
@@ -66,6 +66,8 @@ vi.mock("@/lib/api/project-cronograma", () => ({
 }));
 
 function renderBoard() {
+  // DEC-270: a primeira carga abre com a pessoa selecionada; o ator é assignee das tarefas semeadas.
+  getTaskStore().forEach((t) => { t.assigneeIds = [...(t.assigneeIds ?? []), mockUser.id] });
   // QueryClient NOVO por teste: o cache de `useProjects` é por chave, e um cliente compartilhado
   // entre testes faria o segundo teste ver a lista de projetos do primeiro (medido: "Projeto Beta"
   // não aparecia porque a query já estava em cache com staleTime de 5 min).

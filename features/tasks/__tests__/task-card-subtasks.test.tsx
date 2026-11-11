@@ -39,6 +39,8 @@ vi.mock("next-auth/react", async (importOriginal) => {
 });
 
 function renderBoard() {
+  // DEC-270: a primeira carga abre com a pessoa selecionada; o ator é assignee das tarefas semeadas.
+  getTaskStore().forEach((t) => { t.assigneeIds = [...(t.assigneeIds ?? []), mockUser.id] });
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
