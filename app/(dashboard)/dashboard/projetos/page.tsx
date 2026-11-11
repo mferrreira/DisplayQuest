@@ -104,7 +104,7 @@ export default function ProjetosPage() {
       <main className="flex-1 container mx-auto p-4 md:p-6">
         <div className="space-y-6">
           <PageHeader
-            title={user.roles.includes('GERENTE_PROJETO') ? 'Meus Projetos' : 'Gerenciamento de Projetos'}
+            title="Projetos"
             description={user.roles.includes('GERENTE_PROJETO') ? 'Gerencie seus projetos e equipe de voluntários' : 'Organize e acompanhe todos os projetos do laboratório'}
             icon={FolderKanban}
             actions={hasAccess(user.roles, 'MANAGE_PROJECTS') ? <Button onClick={handleCreateProject}><Plus className="mr-2 h-4 w-4" />Novo Projeto</Button> : undefined}

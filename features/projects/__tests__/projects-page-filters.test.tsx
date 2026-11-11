@@ -43,6 +43,19 @@ describe("Projetos sem abas (plan-v18 S04, DEC-249)", () => {
     expect(screen.queryByTestId("project-dashboard")).not.toBeInTheDocument()
   })
 
+  it("GERENTE_PROJETO vê o título 'Projetos', não 'Meus Projetos' (plan-v23 S01)", () => {
+    mocks.auth.user = { id: 31, name: "Gerente", roles: ["GERENTE_PROJETO"] }
+    render(<ProjetosPage />)
+    expect(screen.getByRole("heading", { level: 1, name: "Projetos" })).toBeVisible()
+    expect(screen.queryByRole("heading", { level: 1, name: "Meus Projetos" })).not.toBeInTheDocument()
+  })
+
+  it("COORDENADOR vê o MESMO título 'Projetos' (plan-v23 S01)", () => {
+    render(<ProjetosPage />)
+    expect(screen.getByRole("heading", { level: 1, name: "Projetos" })).toBeVisible()
+    expect(screen.queryByRole("heading", { level: 1, name: "Gerenciamento de Projetos" })).not.toBeInTheDocument()
+  })
+
   it("combina busca, status e pessoa no recorte da lista de projetos", async () => {
     const user = userEvent.setup()
     render(<ProjetosPage />)
