@@ -1,13 +1,15 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { useProject } from "@/contexts/project-context"
 import { useTask } from "@/contexts/task-context"
 import { useUser } from "@/contexts/user-context"
+import { fetchAPI } from "@/contexts/api-client"
 import { ProjectList } from "@/components/features/project-list"
 import { ProjectDialog } from "@/components/features/project-dialog"
+import { ProjectActivityCharts } from "@/components/features/project-activity-charts"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { PageHeader } from "@/components/ui/page-header"
@@ -19,6 +21,7 @@ import {
 } from "lucide-react"
 import type { Project } from "@/contexts/types"
 import { hasAccess } from "@/lib/utils/access-control"
+import type { ActivityChartRow } from "@/features/projects/utils/activity-chart-rules"
 
 
 export default function ProjetosPage() {
@@ -33,6 +36,8 @@ export default function ProjetosPage() {
   const [personFilter, setPersonFilter] = useState<string>("all")
   const [isProjectDialogOpen, setIsProjectDialogOpen] = useState(false)
   const [editingProject, setEditingProject] = useState<Project | null>(null)
+  const [activities, setActivities] = useState<ActivityChartRow[]>([])
+  const [chartsStatus, setChartsStatus] = useState<"loading" | "ready" | "error">("loading")
 
   // Os filtros do topo são a fonte do recorte da lista e das tarefas.
   const searchAndStatusProjects = projects.filter(project => {
@@ -66,6 +71,20 @@ export default function ProjetosPage() {
     setEditingProject(null)
     setIsProjectDialogOpen(true)
   }
+
+  // plan-v23 S05 (DEC-269): a leitura agregada do cronograma (GET /api/projects/cronograma)
+  // é a fonte da coluna de gráficos. O recorte da coluna são os projetos filtrados da página.
+  const loadActivities = () => {
+    setChartsStatus("loading")
+    fetchAPI<{ activities: ActivityChartRow[] }>("/api/projects/cronograma")
+      .then(response => {
+        setActivities(response.activities)
+        setChartsStatus("ready")
+      })
+      .catch(() => setChartsStatus("error"))
+  }
+
+  useEffect(() => { loadActivities() }, [])
 
   // plan-v18 S04 (DEC-249, ADR-006): a aba Dashboard saiu desta tela — o
   // `ProjectManagerDashboard` mora na aba Projetos do Quadro de Liderança. Aqui
@@ -110,36 +129,43 @@ export default function ProjetosPage() {
             actions={hasAccess(user.roles, 'MANAGE_PROJECTS') ? <Button onClick={handleCreateProject}><Plus className="mr-2 h-4 w-4" />Novo Projeto</Button> : undefined}
           />
 
-          <div className="space-y-4">
-            <div className="flex flex-wrap gap-2" role="group" aria-label="Filtrar projetos por status">
-              {[
-                { id: 'all', label: 'Todos', count: projects.length },
-                { id: 'active', label: 'Ativos', count: overallStats.active },
-                { id: 'completed', label: 'Concluídos', count: overallStats.completed },
-                { id: 'archived', label: 'Arquivados', count: overallStats.archived },
-              ].map(option => <Button key={option.id} type="button" size="sm" variant={statusFilter === option.id ? 'default' : 'outline'} aria-pressed={statusFilter === option.id} onClick={() => setStatusFilter(option.id)}>{option.label}<span className="ml-2 rounded-full bg-background/20 px-1.5 text-xs">{option.count}</span></Button>)}
-            </div>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="relative w-full sm:max-w-sm">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
-                <Input aria-label="Buscar projetos" placeholder="Buscar projetos..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
-              </div>
-              <div className="flex flex-wrap items-center gap-3">
-                <label className="flex items-center gap-2 text-sm"><span className="text-muted-foreground">Pessoa</span><select aria-label="Filtrar por pessoa" value={personFilter} onChange={event => setPersonFilter(event.target.value)} className="h-9 max-w-[min(18rem,60vw)] rounded-md border bg-background px-3 text-sm"><option value="all">Todas as pessoas</option>{users.map(person => <option key={person.id} value={person.id}>{person.name}</option>)}</select></label>
-                <Badge variant="outline" className="w-fit text-sm">{filteredProjects.length} projeto{filteredProjects.length !== 1 ? 's' : ''}</Badge>
-              </div>
-            </div>
-          </div>
-
           {/* plan-v18 S04 (DEC-249, ADR-006): a lista, sem abas. O painel de gerente
-              mora na aba Projetos do Quadro de Liderança. */}
-          <div className="space-y-4">
-            <ProjectList
-              onProjectSelect={handleProjectClick}
-              projects={filteredProjects}
-              tasks={filteredTasks}
-              showCreateButton={false}
-            />
+              mora na aba Projetos do Quadro de Liderança. plan-v23 S05 (DEC-269): os
+              gráficos do cronograma voltam como coluna fixa à direita, com o MESMO
+              recorte dos filtros da página. */}
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
+            <div className="min-w-0 space-y-4">
+              <div className="space-y-4">
+                <div className="flex flex-wrap gap-2" role="group" aria-label="Filtrar projetos por status">
+                  {[
+                    { id: 'all', label: 'Todos', count: projects.length },
+                    { id: 'active', label: 'Ativos', count: overallStats.active },
+                    { id: 'completed', label: 'Concluídos', count: overallStats.completed },
+                    { id: 'archived', label: 'Arquivados', count: overallStats.archived },
+                  ].map(option => <Button key={option.id} type="button" size="sm" variant={statusFilter === option.id ? 'default' : 'outline'} aria-pressed={statusFilter === option.id} onClick={() => setStatusFilter(option.id)}>{option.label}<span className="ml-2 rounded-full bg-background/20 px-1.5 text-xs">{option.count}</span></Button>)}
+                </div>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="relative w-full sm:max-w-sm">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                    <Input aria-label="Buscar projetos" placeholder="Buscar projetos..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <label className="flex items-center gap-2 text-sm"><span className="text-muted-foreground">Pessoa</span><select aria-label="Filtrar por pessoa" value={personFilter} onChange={event => setPersonFilter(event.target.value)} className="h-9 max-w-[min(18rem,60vw)] rounded-md border bg-background px-3 text-sm"><option value="all">Todas as pessoas</option>{users.map(person => <option key={person.id} value={person.id}>{person.name}</option>)}</select></label>
+                    <Badge variant="outline" className="w-fit text-sm">{filteredProjects.length} projeto{filteredProjects.length !== 1 ? 's' : ''}</Badge>
+                  </div>
+                </div>
+              </div>
+              <ProjectList
+                onProjectSelect={handleProjectClick}
+                projects={filteredProjects}
+                tasks={filteredTasks}
+                showCreateButton={false}
+              />
+            </div>
+
+            <div className="min-w-0 lg:sticky lg:top-4">
+              <ProjectActivityCharts projects={filteredProjects} activities={activities} status={chartsStatus} onRetry={loadActivities} />
+            </div>
           </div>
         </div>
 
