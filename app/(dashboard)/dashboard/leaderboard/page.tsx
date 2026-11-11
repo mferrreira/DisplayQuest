@@ -13,9 +13,10 @@
  * fechamento. Mês fechado é só leitura, diz que está fechado, e o bloco pessoal sai dali — progresso
  * contra o líder de hoje não existe num mês que já fechou.
  *
- * plan-v18 S03 (DEC-249, ADR-006, R3): a rota tem duas abas. Projetos abre a tela, com o
- * `ProjectManagerDashboard` intacto e os dados dos contextos de projeto e tarefa; Pessoas é o
- * ranking de hoje, intacto, como descrito acima. As duas abas são abertas a todo autenticado.
+ * plan-v18 S03 (DEC-249, ADR-006) + plan-v23 S02 (DEC-265): a rota tem três abas, na ordem
+ * Pessoas > Projetos > Temporada, com Pessoas abrindo por padrão. Conteúdos intactos: o
+ * `ProjectManagerDashboard` na aba Projetos, o ranking de hoje na aba Pessoas e o quadro do
+ * ano na aba Temporada. As três abas são abertas a todo autenticado.
  */
 import Link from "next/link"
 import { useEffect, useState } from "react"
@@ -466,11 +467,15 @@ export default function LeaderboardPage() {
     <div className="flex min-h-screen flex-col">
       <main className="container mx-auto flex-1 p-4 md:p-6">
         <div className="mx-auto max-w-5xl space-y-8">
-          {/* plan-v18 S03 (DEC-249, ADR-006, R3): a rota dedicada do quadro de liderança tem
-              duas abas abertas a todo autenticado. Projetos por primeiro, com o painel intacto
-              desde /dashboard/projetos; Pessoas é o ranking de hoje, intacto. */}
-          <Tabs defaultValue="projetos" className="space-y-4">
+          {/* plan-v23 S02 (DEC-265): a ordem das abas é Pessoas > Projetos > Temporada e
+              Pessoas é a default — o pedido do dono de 2026-11-11. Os conteúdos das três
+              abas ficam intactos (DEC-249/255): só a ordem e a aba de abertura mudam. */}
+          <Tabs defaultValue="pessoas" className="space-y-4">
             <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="pessoas" className="flex items-center gap-2">
+                <Trophy className="h-4 w-4" />
+                Pessoas
+              </TabsTrigger>
               <TabsTrigger value="projetos" className="flex items-center gap-2">
                 <TrendingUp className="h-4 w-4" />
                 Projetos
@@ -478,10 +483,6 @@ export default function LeaderboardPage() {
               <TabsTrigger value="temporada" className="flex items-center gap-2">
                 <Trophy className="h-4 w-4" />
                 Temporada
-              </TabsTrigger>
-              <TabsTrigger value="pessoas" className="flex items-center gap-2">
-                <Trophy className="h-4 w-4" />
-                Pessoas
               </TabsTrigger>
             </TabsList>
 

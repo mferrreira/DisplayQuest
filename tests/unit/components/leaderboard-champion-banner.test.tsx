@@ -110,7 +110,7 @@ vi.mock("@/contexts/auth-context", () => ({
   useAuth: () => ({ user: fixtures.me, loading: false, logout: vi.fn() }),
 }))
 // plan-v18 S03 (DEC-249): a página agora lê os contextos de projeto e tarefa para a aba
-// Projetos. Os testes do ranking só usam a aba Pessoas; estes mocks servem a aba padrão.
+// Projetos. Os testes do ranking só usam a aba Pessoas; estes mocks servem a aba Projetos.
 vi.mock("@/contexts/project-context", () => ({ useProject: () => ({ projects: [] as never[] }) }));
 vi.mock("@/contexts/task-context", () => ({ useTask: () => ({ tasks: [] as never[] }) }));
 
@@ -150,8 +150,9 @@ function backgroundPiece(section: HTMLElement) {
 beforeEach(() => {
   vi.clearAllMocks()
 })
-// plan-v18 S03 (DEC-249, ADR-006): a página ganhou duas abas e Projetos é a padrão, que
-// desmonta o ranking. Ativar a aba Pessoas antes de assar o quadro.
+// plan-v18 S03 (DEC-249, ADR-006) + plan-v23 S02 (DEC-265): a página tem três abas e Pessoas
+// é a default. `renderPessoas` ativa a aba antes de assar o quadro — com a aba já ativa, o
+// mouseDown é inofensivo e o `aria-selected` é lido na hora.
 async function renderPessoas() {
   render(<LeaderboardPage />)
   const tab = screen.getByRole("tab", { name: "Pessoas" })
