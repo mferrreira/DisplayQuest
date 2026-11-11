@@ -12,7 +12,7 @@ O cartão **Meu Perfil** abre com a faixa da capa e traz avatar, nome e as cifra
 | --- | --- |
 | **Atividade** | o resumo do que você fez: tarefas, sessões, horas |
 | **Logs Diários** | o registro dia a dia, alimentado pelas sessões encerradas |
-| **Configurações** | os dados da conta: **Nome**, **Email**, **Biografia**, **Visibilidade do Perfil**, **Horas Semanais**, **Links do perfil** |
+| **Configurações** | os dados da conta: **Nome**, **Email**, **Biografia**, **Visibilidade do Perfil**, **Horas Semanais**, **Links do perfil**, **SE BOLSISTA** |
 
 ```foto perfil-configuracoes titulo="A aba Configurações"
 **Horas Semanais** é a meta semanal da pessoa, usada nos relatórios e no painel administrativo.
@@ -40,6 +40,7 @@ O formulário tem um bloco chamado **Dados para os documentos oficiais**. São o
 | **Modalidade de IC** | **PIBIC**, **PIBIC Jr**, **PIBIC Af**, **PIBITI**, **PIBITI Jr**, **BTP**, **Mestrado**, **Doutorado**, **Pós-doc** ou **Voluntário** |
 | **Nível** | **Médio**, **Graduação** ou **Pós-graduação** |
 | **Instituição de fomento** | **CNPq**, **Fapemig** ou **Outra** — e em **Outra** aparece o campo **Nome da instituição**, até 80 caracteres |
+| **SE BOLSISTA** | texto livre com até 40 caracteres. Sai na linha "SE BOLSISTA:" do atestado. A gestão de contas também escreve este campo |
 
 O CPF é o único desses campos que não é aberto: só você e quem gerencia contas o leem, e ele não aparece no perfil aberto por outra pessoa. Os demais são leitura aberta.
 

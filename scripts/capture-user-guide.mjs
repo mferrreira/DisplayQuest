@@ -140,7 +140,7 @@ const INTERACTIONS = [
   // (o extrato media zero `label` na tela). Agora a aba abre antes do botão.
   // plan-v17 S05: o rolarAte é o picker de equipar — o controle novo da edição (S03), que a
   // prosa do capítulo nomeia; o formulário continua abaixo dele na mesma foto.
-  { id: "perfil-edicao", role: "part", route: "/dashboard/profile", aba: "Configurações", abre: "Editar Perfil", verifica: "Cancelar Edição", rolarAte: "text=Badges equipáveis" },
+  { id: "perfil-edicao", role: "part", route: "/dashboard/profile", aba: "Configurações", abre: "Editar Perfil", verifica: "Cancelar Edição", rolarAte: "text=SE BOLSISTA" },
   { id: "perfil-configuracoes", role: "part", route: "/dashboard/profile", aba: "Configurações" },
   // plan-v18 S05 (DEC-249): a classificação completa mora na aba Pessoas do Quadro de Liderança.
   { id: "ranking-participante", role: "part", route: "/dashboard/leaderboard", aba: "Pessoas", verifica: "Classificação completa" },

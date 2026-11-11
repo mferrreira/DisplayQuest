@@ -9,7 +9,7 @@
  * O ator sem `DASHBOARD_ADMIN` mas com `DASHBOARD_VOLUNTEERS` (GERENTE_PROJETO) é o caso que
  * prova o gate por aba: ele entra pela porta e vê a aba de Voluntários, e as demais explicam.
  */
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
@@ -60,6 +60,9 @@ function renderPanel() {
 beforeEach(() => {
   mocks.roles = ["COORDENADOR"];
   mocks.refresh.mockClear();
+  vi.spyOn(console, "log").mockImplementation(() => {});
+  vi.spyOn(console, "warn").mockImplementation(() => {});
+  vi.spyOn(console, "error").mockImplementation(() => {});
   server.use(
     http.get("*/api/users/approve", () => HttpResponse.json({ pendingUsers: [] })),
     http.get("*/api/schedules", () => HttpResponse.json([])),
@@ -69,6 +72,10 @@ beforeEach(() => {
       HttpResponse.json({ volunteers: [], stats: { totalVolunteers: 0, totalHours: 0, completedTasks: 0, totalPoints: 0 } }),
     ),
   );
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
 });
 
 describe("as abas do painel", () => {

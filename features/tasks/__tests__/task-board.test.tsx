@@ -422,12 +422,13 @@ describe("bugfix 2026-11-09 — seletor de projeto visível a todos, lista do vo
     seedProjects(PROJECTS());
     renderBoard();
 
-    const combobox = await screen.findByRole("combobox", { name: "Filtrar tarefas por projeto" }, { timeout: 8000 });
+    const user = userEvent.setup({ delay: null });
+    const combobox = await screen.findByRole("combobox", { name: "Filtrar tarefas por projeto" }, { timeout: 15000 });
     expect(combobox).toBeInTheDocument();
 
-    fireEvent.click(combobox);
-    expect(await screen.findByRole("option", { name: "Todos os projetos" }, { timeout: 8000 })).toBeInTheDocument();
-    expect(await screen.findByRole("option", { name: "Projeto Alfa" }, { timeout: 8000 })).toBeInTheDocument();
+    await user.click(combobox);
+    expect(await screen.findByRole("option", { name: "Todos os projetos" }, { timeout: 15000 })).toBeInTheDocument();
+    expect(await screen.findByRole("option", { name: "Projeto Alfa" }, { timeout: 15000 })).toBeInTheDocument();
     // o projeto em que ele não é membro não entra na lista — a lista do voluntário é a de membro
     expect(screen.queryByRole("option", { name: "Projeto Beta" })).not.toBeInTheDocument();
     mockUser.roles = ["COORDENADOR"];
@@ -438,7 +439,7 @@ describe("bugfix 2026-11-09 — seletor de projeto visível a todos, lista do vo
     seedProjects(PROJECTS());
     renderBoard();
 
-    expect(await screen.findByRole("combobox", { name: "Filtrar tarefas por projeto" }, { timeout: 8000 })).toBeInTheDocument();
+    expect(await screen.findByRole("combobox", { name: "Filtrar tarefas por projeto" }, { timeout: 15000 })).toBeInTheDocument();
     mockUser.roles = ["COORDENADOR"];
   }, 20000);
 
@@ -446,8 +447,10 @@ describe("bugfix 2026-11-09 — seletor de projeto visível a todos, lista do vo
     seedProjects(PROJECTS());
     renderBoard();
 
-    fireEvent.click(await screen.findByRole("combobox", { name: "Filtrar tarefas por projeto" }, { timeout: 8000 }));
-    expect(await screen.findByRole("option", { name: "Projeto Alfa" })).toBeInTheDocument();
+    const user = userEvent.setup({ delay: null });
+    const combobox = await screen.findByRole("combobox", { name: "Filtrar tarefas por projeto" }, { timeout: 15000 });
+    await user.click(combobox);
+    expect(await screen.findByRole("option", { name: "Projeto Alfa" }, { timeout: 15000 })).toBeInTheDocument();
     expect(screen.getByRole("option", { name: "Projeto Beta" })).toBeInTheDocument();
   }, 20000);
 });

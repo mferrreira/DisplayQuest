@@ -18,7 +18,7 @@ A aba **Usuários** é onde as contas pendentes são resolvidas e onde as contas
 - **Novo Usuário** cria uma conta diretamente, sem passar pelo cadastro público.
 - **Definir Horários** monta a grade de horários da função, a mesma grade da tela Laboratório.
 - Os filtros **Todas** e **Todos** reduzem a lista por função e por situação.
-- O ícone de configuração de cada pessoa — o controle tem o nome **Configurar \<nome\>** — abre o diálogo **Configurar Usuário**. Além de função, carga semanal e pontos, ele tem o bloco dos dados dos documentos oficiais: **CPF**, **Matrícula**, **Curso**, **Modalidade de IC**, **Nível** e **Instituição de fomento**. São os mesmos campos que a pessoa edita no próprio perfil; aqui, é a gestão que escreve.
+- O ícone de configuração de cada pessoa — o controle tem o nome **Configurar \<nome\>** — abre o diálogo **Configurar Usuário**. Além de função, carga semanal e pontos, ele tem o bloco dos dados dos documentos oficiais: **CPF**, **Matrícula**, **Curso**, **Modalidade de IC**, **Nível**, **Instituição de fomento** e **SE BOLSISTA**. São os mesmos campos que a pessoa edita no próprio perfil; aqui, é a gestão que escreve.
 
 O mesmo diálogo traz a bio em markdown: **Biografia**, textarea, preview, **Anexar imagem** e drop de imagem. É o MESMO dialog do perfil próprio; a gestão escreve a bio de quem gerencia contas.
 
