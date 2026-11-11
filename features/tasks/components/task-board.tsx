@@ -31,7 +31,6 @@ import {
 import { useColumnOrders } from "../hooks/use-column-orders"
 import { sortTasksByColumnOrder, type ColumnOrder } from "../utils/column-order"
 import { filterBoardTasks } from "../utils/filter-board-tasks"
-import { pickDefaultProject } from "../utils/pick-default-project"
 import { weeklyConclusionBuckets } from "../utils/weekly-conclusion-buckets"
 import { getCronograma, type ProjectActivity } from "@/lib/api/project-cronograma"
 import type { Task, TaskStatus } from "@/entities/task"
@@ -65,16 +64,15 @@ export function TaskBoard() {
   // V5-6 (DEC-99): filtro pela linha do cronograma. URL como fonte de verdade, igual ao resto.
   const [atividadeParam, setAtividadeParam] = useQueryState("atividade", parseAsInteger)
 
-  // R11 (S11): abertura do quadro na primeira carga sem `?projeto=`. Líder abre no seu projeto;
-  // senão, no primeiro vínculo de membro; senão, "Todos os projetos". A abertura é derivada, não
-  // escrita na URL: quando a pessoa escolhe (seletor ou chip), o quadro obedece só a URL, e o
-  // global volta sem ser re-atropelado pela regra de abertura.
-  const defaultProjectId = useMemo(
-    () => pickDefaultProject(projects, user?.id),
-    [projects, user],
-  )
-  const [projectChosen, setProjectChosen] = useState(false)
-  const activeProjectId = projectChosen ? (projetoParam ?? null) : (projetoParam ?? defaultProjectId ?? null)
+  // plan-v23 S06 (DEC-270): o quadro abre com a pessoa selecionada — primeira carga sem
+  // `?pessoa=` filtra só as tarefas atribuídas à pessoa, e o seletor de projeto nasce em
+  // "Todos os projetos". A abertura é derivada, não escrita na URL: quando a pessoa escolhe
+  // (seletor ou chip), o quadro obedece só a URL. A regra R11 de abertura por projeto morreu
+  // com a DEC-270; a volta ao global por projeto continua sendo a opção do seletor.
+  const defaultPersonId = user?.id ?? null
+  const [chosen, setChosen] = useState(false)
+  const activeProjectId = projetoParam ?? null
+  const activePersonId = chosen ? (pessoaParam ?? null) : (pessoaParam ?? defaultPersonId ?? null)
 
   const { data: tasks, isPending, error, refetch } = useTasks(
     activeProjectId ? { projectId: activeProjectId } : {},
@@ -134,13 +132,13 @@ export function TaskBoard() {
   const filteredTasks = useMemo(() => {
     return filterBoardTasks(tasks ?? [], {
       projectId: activeProjectId,
-      assigneeId: pessoaParam,
+      assigneeId: activePersonId,
       activityId: atividadeParam,
       overdue: atrasadasParam,
       dueToday: hojeParam,
       search: buscaParam,
     })
-  }, [tasks, activeProjectId, pessoaParam, atrasadasParam, hojeParam, buscaParam, atividadeParam])
+  }, [tasks, activeProjectId, activePersonId, atrasadasParam, hojeParam, buscaParam, atividadeParam])
 
   const archivedTasks = useMemo(() => filteredTasks.filter((t) => isArchivedTask(t)), [filteredTasks])
   // O gráfico "Atividade da semana" saiu do bloco de insights da Home para baixo do quadro
@@ -285,13 +283,13 @@ export function TaskBoard() {
           overdue: atrasadasParam || undefined,
           dueToday: hojeParam || undefined,
           search: buscaParam || undefined,
-          assigneeId: pessoaParam ?? undefined,
+          assigneeId: activePersonId ?? undefined,
           activityId: atividadeParam ?? undefined,
         }}
         onFiltersChange={(next) => {
           // Qualquer escolha vinda da barra — seletor, chip, troca de pessoa — fixa a abertura:
           // a partir daqui o quadro obedece só a URL, e a regra de abertura não volta a mandar.
-          setProjectChosen(true)
+          setChosen(true)
           void setProjetoParam(next.projectId ?? null)
           void setAtrasadasParam(Boolean(next.overdue))
           void setHojeParam(Boolean(next.dueToday))

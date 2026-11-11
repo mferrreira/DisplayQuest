@@ -5,7 +5,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TaskBoard } from "../components/task-board";
-import { resetTaskStore, resetUserStore, seedTasks } from "@/tests/mocks/handlers";
+import { getTaskStore, resetTaskStore, resetUserStore, seedTasks } from "@/tests/mocks/handlers";
 
 const mockUser = {
   // R11 (S11): o quadro abre no projeto do líder na primeira carga. Este teste é do diálogo e da
@@ -34,6 +34,8 @@ const queryClient = new QueryClient({
 });
 
 function renderBoard() {
+  // DEC-270: a primeira carga abre com a pessoa selecionada; o ator é assignee das tarefas semeadas.
+  getTaskStore().forEach((t) => { t.assigneeIds = [...(t.assigneeIds ?? []), mockUser.id] });
   return render(
     <SessionProvider session={null}>
       <QueryClientProvider client={queryClient}>
