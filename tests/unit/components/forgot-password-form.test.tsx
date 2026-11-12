@@ -13,6 +13,7 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { PASSWORD_RESET_DUPLICATE_MESSAGE } from "@/backend/domain";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
@@ -102,6 +103,49 @@ describe("formulário Esqueci minha senha", () => {
     expect(screen.queryByText(/conta criada/i)).toBeNull();
     expect(screen.queryByText(/sua conta será analisada/i)).toBeNull();
     await waitFor(() => expect(fetchCalls).toHaveLength(1));
+  });
+
+  it("enviando: o botão vira Enviando... e fica disabled até a resposta chegar", async () => {
+    let release: (value: ReturnType<typeof jsonResponse>) => void = () => {};
+    vi.stubGlobal("fetch", vi.fn(() => new Promise((resolve) => {
+      release = resolve;
+    })));
+    const user = userEvent.setup({ delay: null });
+    render(<ForgotPasswordPage />);
+    await user.type(screen.getByLabelText("Email"), "x@lab.com");
+    await user.type(screen.getByLabelText("Nova senha"), "novasenha123");
+    await user.click(screen.getByRole("button", { name: "Enviar solicitação" }));
+    const busy = await screen.findByRole("button", { name: "Enviando..." });
+    expect(busy).toBeDisabled();
+    release(jsonResponse(201, { message: NEUTRAL }));
+    expect(await screen.findByText(NEUTRAL)).toBeTruthy();
+  });
+
+  it("erro de rede: o aviso entra com role=alert e o formulário continua editável", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => {
+      throw new Error("Falha na conexão");
+    }));
+    const user = userEvent.setup({ delay: null });
+    render(<ForgotPasswordPage />);
+    await user.type(screen.getByLabelText("Email"), "x@lab.com");
+    await user.type(screen.getByLabelText("Nova senha"), "novasenha123");
+    await user.click(screen.getByRole("button", { name: "Enviar solicitação" }));
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("Falha na conexão");
+    expect(screen.queryByText(NEUTRAL)).toBeNull();
+    expect(screen.getByLabelText("Nova senha")).toBeTruthy();
+  });
+
+  it("recusa da rota (409): o alert mostra a frase congelada da rota, não uma cópia", async () => {
+    // O aceite da rota fixa o 409; aqui se prova que a tela lê a resposta.
+    vi.stubGlobal("fetch", vi.fn(async () => jsonResponse(409, { error: PASSWORD_RESET_DUPLICATE_MESSAGE })));
+    const user = userEvent.setup({ delay: null });
+    render(<ForgotPasswordPage />);
+    await user.type(screen.getByLabelText("Email"), "x@lab.com");
+    await user.type(screen.getByLabelText("Nova senha"), "novasenha123");
+    await user.click(screen.getByRole("button", { name: "Enviar solicitação" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(PASSWORD_RESET_DUPLICATE_MESSAGE);
+    expect(screen.queryByText(NEUTRAL)).toBeNull();
   });
 
   it("há link para o formulário na tela de login", async () => {
