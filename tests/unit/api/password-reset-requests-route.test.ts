@@ -21,6 +21,7 @@ import { NextRequest } from "next/server";
 import {
   ConflictError,
   ForbiddenError,
+  NotFoundError,
   PENDING_MODERATION_DENIED_MESSAGE,
   PASSWORD_RESET_DUPLICATE_MESSAGE,
   requireActorPermission,
@@ -32,6 +33,7 @@ const mocks = vi.hoisted(() => {
   const calls = {
     requestPasswordReset: [] as any[],
     listPasswordResetRequests: [] as any[],
+    resolvePasswordResetRequest: [] as any[],
   };
   return { rows, calls, actorId: 42, actorRoles: ["COORDENADOR"] as string[] };
 });
@@ -57,6 +59,29 @@ vi.mock("@/backend/composition/root", () => ({
         requireActorPermission(actor, "MANAGE_USERS", PENDING_MODERATION_DENIED_MESSAGE);
         return mocks.rows.map(({ password, ...row }) => row);
       },
+      // S02: o assert antes do parse e o gate no próprio use case são o par medido na
+      // rota `users/approve` (B6-4). O duplo aplica as MESMAS funções.
+      assertCanManageUsers: ({ actor }: any) =>
+        requireActorPermission(actor, "MANAGE_USERS", PENDING_MODERATION_DENIED_MESSAGE),
+      resolvePasswordResetRequest: async (actor: any, id: number, action: string) => {
+        mocks.calls.resolvePasswordResetRequest.push({ actor, id, action });
+        requireActorPermission(actor, "MANAGE_USERS", PENDING_MODERATION_DENIED_MESSAGE);
+        const row = mocks.rows.find((r) => r.id === id);
+        if (!row) throw new NotFoundError("Solicitação não encontrada");
+        if (row.status !== "pending") throw new ConflictError("Solicitação já resolvida");
+        if (action === "approve") {
+          // O usuário existe neste duplo quando o email é o da conta conhecida.
+          if (row.email !== "x@lab.com") throw new NotFoundError("Usuário não encontrado");
+          row.status = "approved";
+          row.resolvedBy = actor.id;
+          row.resolvedAt = "2026-11-12T12:00:00.000Z";
+          return { id: row.id, email: row.email, status: "approved" };
+        }
+        row.status = "rejected";
+        row.resolvedBy = actor.id;
+        row.resolvedAt = "2026-11-12T12:00:00.000Z";
+        return { id: row.id, email: row.email, status: "rejected" };
+      },
     },
   }),
 }));
@@ -81,6 +106,7 @@ beforeEach(() => {
   mocks.rows.length = 0;
   mocks.calls.requestPasswordReset.length = 0;
   mocks.calls.listPasswordResetRequests.length = 0;
+  mocks.calls.resolvePasswordResetRequest.length = 0;
   mocks.actorId = 42;
   mocks.actorRoles = ["COORDENADOR"];
 });
@@ -141,6 +167,75 @@ describe("GET /api/password-reset-requests — leitura da gestão", () => {
     const response = await GET();
     expect(response.status).toBe(403);
     expect((await response.json()).error).toBe(PENDING_MODERATION_DENIED_MESSAGE);
+  });
+});
+
+describe("POST /api/password-reset-requests — aprovação e rejeição (S02)", () => {
+  beforeEach(async () => {
+    // Prepara uma linha pending pelo caminho público.
+    await POST(post({ email: "x@lab.com", password: "novasenha123" }) as never);
+    mocks.calls.resolvePasswordResetRequest.length = 0;
+    mocks.actorRoles = ["COORDENADOR"];
+  });
+
+  it("gate antes do parse: voluntário com corpo válido recebe 403, o use case não roda", async () => {
+    mocks.actorRoles = ["VOLUNTARIO"];
+    const response = await POST(post({ id: 7, action: "approve" }) as never);
+    expect(response.status).toBe(403);
+    expect((await response.json()).error).toBe(PENDING_MODERATION_DENIED_MESSAGE);
+    expect(mocks.calls.resolvePasswordResetRequest).toHaveLength(0);
+  });
+
+  it("id ausente ou ação inválida: 400 com a frase da rota users/approve", async () => {
+    const bad = await POST(post({ id: 7, action: "maybe" }) as never);
+    expect(bad.status).toBe(400);
+    expect((await bad.json()).error).toBe("ID da solicitação e ação são obrigatórios");
+
+    const noId = await POST(post({ action: "approve" }) as never);
+    expect(noId.status).toBe(400);
+    expect((await noId.json()).error).toBe("ID da solicitação e ação são obrigatórios");
+  });
+
+  it("aprovar: 200, hash aplicada no use case, resolvedBy do ator, conta não muda", async () => {
+    const response = await POST(post({ id: 7, action: "approve" }) as never);
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.request.status).toBe("approved");
+    expect(body.message).toBe("Solicitação aprovada. A nova senha está ativa.");
+    expect(mocks.calls.resolvePasswordResetRequest[0]).toMatchObject({
+      actor: { id: 42 },
+      id: 7,
+      action: "approve",
+    });
+    expect(mocks.rows[0].resolvedBy).toBe(42);
+    expect(mocks.rows[0].resolvedAt).not.toBeNull();
+    expect(JSON.stringify(body)).not.toContain("bcrypt");
+  });
+
+  it("rejeitar: 200 com a frase da casa e a hash da solicitação não vira senha de conta", async () => {
+    const response = await POST(post({ id: 7, action: "reject" }) as never);
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.request.status).toBe("rejected");
+    expect(body.message).toBe("Solicitação rejeitada. A senha da conta não mudou.");
+    expect(mocks.rows[0].status).toBe("rejected");
+  });
+
+  it("aprovar com usuário apagado: 404 e a solicitação continua pending", async () => {
+    mocks.rows[0].email = "fantasma@lab.com";
+    const response = await POST(post({ id: 7, action: "approve" }) as never);
+    expect(response.status).toBe(404);
+    expect((await response.json()).error).toBe("Usuário não encontrado");
+    expect(mocks.rows[0].status).toBe("pending");
+  });
+
+  it("aprovar uma solicitação já resolvida: 409, nenhuma segunda escrita", async () => {
+    mocks.rows[0].status = "approved";
+    const response = await POST(post({ id: 7, action: "approve" }) as never);
+    expect(response.status).toBe(409);
+    expect((await response.json()).error).toBe("Solicitação já resolvida");
+    // A rota chama o use case uma vez; o use case recusa antes de escrever.
+    expect(mocks.calls.resolvePasswordResetRequest).toHaveLength(1);
   });
 });
 

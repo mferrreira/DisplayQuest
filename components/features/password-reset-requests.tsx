@@ -14,9 +14,11 @@
 import { useState, useEffect } from "react"
 import { useAuth } from "@/contexts/auth-context"
 import { PasswordResetAPI } from "@/contexts/api-client"
+import { useToast } from "@/contexts/use-toast"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { AlertCircle, Clock, KeyRound } from "lucide-react"
+import { AlertCircle, CheckCircle2, Clock, KeyRound, XCircle } from "lucide-react"
 import { hasAccess } from "@/lib/utils/utils"
 
 interface PasswordResetRequest {
@@ -28,9 +30,11 @@ interface PasswordResetRequest {
 
 export function PasswordResetRequests() {
   const { user } = useAuth()
+  const { toast } = useToast()
   const [requests, setRequests] = useState<PasswordResetRequest[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState("")
+  const [processing, setProcessing] = useState<number | null>(null)
 
   const canManage = hasAccess(user?.roles || [], "MANAGE_USERS")
 
@@ -51,6 +55,35 @@ export function PasswordResetRequests() {
       setLoadError("Não foi possível carregar as solicitações")
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleResolve = async (id: number, action: "approve" | "reject") => {
+    try {
+      setProcessing(id)
+      const result = action === "approve"
+        ? await PasswordResetAPI.approve(id)
+        : await PasswordResetAPI.reject(id)
+
+      toast({
+        title: action === "approve" ? "Solicitação aprovada" : "Solicitação rejeitada",
+        description: action === "approve"
+          ? "A nova senha está ativa na conta."
+          : "A senha da conta não mudou.",
+        variant: "default",
+      })
+      // A linha sai da lista pending só depois da resposta — o card não recalcula nada.
+      setRequests((prev) => prev.filter((row) => row.id !== id))
+      return result
+    } catch (error) {
+      console.error(`Erro ao resolver solicitação ${id}:`, error)
+      toast({
+        title: "Erro",
+        description: "Não foi possível resolver a solicitação",
+        variant: "destructive",
+      })
+    } finally {
+      setProcessing(null)
     }
   }
 
@@ -146,6 +179,7 @@ export function PasswordResetRequests() {
               <TableRow>
                 <TableHead>Email</TableHead>
                 <TableHead>Solicitado em</TableHead>
+                <TableHead>Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -153,6 +187,31 @@ export function PasswordResetRequests() {
                 <TableRow key={request.id}>
                   <TableCell className="font-medium">{request.email}</TableCell>
                   <TableCell>{formatDate(request.createdAt)}</TableCell>
+                  <TableCell>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        aria-label={`Aprovar troca de senha de ${request.email}`}
+                        disabled={processing === request.id}
+                        onClick={() => handleResolve(request.id, "approve")}
+                        className="gap-1"
+                      >
+                        <CheckCircle2 className="h-3 w-3" aria-hidden="true" />
+                        Aprovar
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        aria-label={`Rejeitar troca de senha de ${request.email}`}
+                        disabled={processing === request.id}
+                        onClick={() => handleResolve(request.id, "reject")}
+                        className="gap-1"
+                      >
+                        <XCircle className="h-3 w-3" aria-hidden="true" />
+                        Rejeitar
+                      </Button>
+                    </div>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

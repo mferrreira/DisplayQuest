@@ -25,6 +25,7 @@ import {
   ListPasswordResetRequestsUseCase,
   RequestPasswordResetUseCase,
 } from "@/backend/modules/user-management/application/use-cases/request-password-reset.use-case"
+import { ResolvePasswordResetUseCase } from "@/backend/modules/user-management/application/use-cases/resolve-password-reset.use-case"
 import { createPrismaPasswordResetRepository } from "@/backend/modules/user-management/infrastructure/repositories/prisma-password-reset.repository"
 import { UpdateUserUseCase } from "@/backend/modules/user-management/application/use-cases/update-user.use-case"
 import { UpdateUserPointsUseCase } from "@/backend/modules/user-management/application/use-cases/update-user-points.use-case"
@@ -68,6 +69,12 @@ export interface UserImageCapability {
 export interface PasswordResetCapability {
   requestPasswordReset(command: { email?: string | null; password?: string | null }): Promise<unknown>
   listPasswordResetRequests(actor: ActorRef): Promise<unknown>
+  resolvePasswordResetRequest(
+    actor: ActorRef,
+    id: number,
+    action: "approve" | "reject",
+    now: Date,
+  ): Promise<unknown>
 }
 
 /** The module's public surface: the same 15 methods the routes consume today + registerUser. */
@@ -97,6 +104,7 @@ export class UserManagementModule {
   readonly getUserImage: GatewayCall<UserImageCapability["getUserImage"]>
   readonly requestPasswordReset: GatewayCall<PasswordResetCapability["requestPasswordReset"]>
   readonly listPasswordResetRequests: GatewayCall<PasswordResetCapability["listPasswordResetRequests"]>
+  readonly resolvePasswordResetRequest: GatewayCall<PasswordResetCapability["resolvePasswordResetRequest"]>
   /** B6-4 (D4): assert 403-antes-do-parse/validação; os use cases de destino rechecam. */
   readonly assertCanManageUsers: (command: { actor: ActorRef; deniedMessage?: string }) => void
   /** V5-3 (DEC-137): assert 403-ANTES-DO-CORPO do upload; `updateUserImage` recheca no próprio ator. */
@@ -133,6 +141,7 @@ export class UserManagementModule {
     this.getUserImage = this.service.getUserImage.bind(this.service)
     this.requestPasswordReset = this.service.requestPasswordReset.bind(this.service)
     this.listPasswordResetRequests = this.service.listPasswordResetRequests.bind(this.service)
+    this.resolvePasswordResetRequest = this.service.resolvePasswordResetRequest.bind(this.service)
   }
 }
 
@@ -182,6 +191,8 @@ export function createUserManagementModule(options: UserManagementModuleFactoryO
       new RequestPasswordResetUseCase(repository, passwordReset, passwordHasher).execute(command),
     listPasswordResetRequests: (actor) =>
       new ListPasswordResetRequestsUseCase(passwordReset).execute(actor),
+    resolvePasswordResetRequest: (actor, id, action, now) =>
+      new ResolvePasswordResetUseCase(passwordReset, repository).execute(actor, id, action, now),
     updateUserImage: (command) => new UpdateUserImageUseCase(repository).execute(command),
     getUserImage: (command) => new GetUserImageUseCase(repository).execute(command),
   }

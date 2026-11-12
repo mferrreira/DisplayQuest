@@ -194,6 +194,20 @@ export const PasswordResetAPI = {
 
   // Listar as solicitações pendentes (gestão de contas)
   getRequests: () => fetchAPI<{ requests: any[] }>("/api/password-reset-requests"),
+
+  // Aprovar: a hash da solicitação entra na conta (S02)
+  approve: (id: number) =>
+    fetchAPI<{ request: any; message: string }>("/api/password-reset-requests", {
+      method: "POST",
+      body: JSON.stringify({ id, action: "approve" }),
+    }),
+
+  // Rejeitar: a solicitação é marcada, a senha da conta não muda (S02)
+  reject: (id: number) =>
+    fetchAPI<{ request: any; message: string }>("/api/password-reset-requests", {
+      method: "POST",
+      body: JSON.stringify({ id, action: "reject" }),
+    }),
 }
 
 // API de Projetos

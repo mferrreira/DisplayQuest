@@ -2,7 +2,14 @@ import { NextResponse } from "next/server"
 import { routeErrorResponse } from "@/lib/api/route-error-response"
 import { domainErrorResponse } from "@/lib/api/domain-error-response"
 import { requireApiActor } from "@/lib/auth/api-guard"
-import { PASSWORD_RESET_NEUTRAL_MESSAGE, userActor } from "@/backend/domain"
+import {
+  PASSWORD_RESET_NEUTRAL_MESSAGE,
+  PASSWORD_RESET_RESOLVE_REQUIRED_MESSAGE,
+  PASSWORD_RESET_APPROVE_MESSAGE,
+  PASSWORD_RESET_REJECT_MESSAGE,
+  PENDING_MODERATION_DENIED_MESSAGE,
+  userActor,
+} from "@/backend/domain"
 import { getBackendComposition } from "@/backend/composition/root"
 
 const { userManagement: userManagementModule } = getBackendComposition()
@@ -21,6 +28,43 @@ const { userManagement: userManagementModule } = getBackendComposition()
 export async function POST(request: Request) {
   try {
     const body = await request.json()
+
+    // S02: corpo com `action` é a resolução. O gate `MANAGE_USERS` corre ANTES da
+    // validação do par {id, action} — o par 403-antes-do-400 medido na rota
+    // `users/approve` (B6-4, ADR-003). O uso case recheca no próprio ator.
+    if (body?.action !== undefined) {
+      const auth = await requireApiActor()
+      if (auth.error) return auth.error
+      const actor = userActor(auth.actor.id, auth.actor.roles)
+      userManagementModule.assertCanManageUsers({
+        actor,
+        deniedMessage: PENDING_MODERATION_DENIED_MESSAGE,
+      })
+
+      const id = Number(body?.id)
+      const action = body?.action
+      if (!Number.isInteger(id) || id <= 0 || !["approve", "reject"].includes(action)) {
+        return NextResponse.json(
+          { error: PASSWORD_RESET_RESOLVE_REQUIRED_MESSAGE },
+          { status: 400 },
+        )
+      }
+
+      const resolved = (await userManagementModule.resolvePasswordResetRequest(
+        actor,
+        id,
+        action,
+        new Date(),
+      )) as Record<string, unknown>
+
+      return NextResponse.json(
+        {
+          request: resolved,
+          message: action === "approve" ? PASSWORD_RESET_APPROVE_MESSAGE : PASSWORD_RESET_REJECT_MESSAGE,
+        },
+        { status: 200 },
+      )
+    }
 
     await userManagementModule.requestPasswordReset({
       email: body?.email ?? null,

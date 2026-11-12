@@ -19,6 +19,15 @@ export const PASSWORD_RESET_NEUTRAL_MESSAGE =
   "Se o email estiver cadastrado, a solicitação será analisada pela gestão. Você poderá entrar com a nova senha depois da aprovação.";
 export const PASSWORD_RESET_DUPLICATE_MESSAGE = "Já existe solicitação pendente para este e-mail";
 
+// Frases da resolução (S02, ADR-004). Só `pending` resolve; aprovar o usuário apagado é o
+// 404 da conta, que deixa a linha `pending` intacta.
+export const PASSWORD_RESET_RESOLVE_REQUIRED_MESSAGE = "ID da solicitação e ação são obrigatórios";
+export const PASSWORD_RESET_RESOLVED_MESSAGE = "Solicitação já resolvida";
+export const PASSWORD_RESET_NOT_FOUND_MESSAGE = "Solicitação não encontrada";
+export const PASSWORD_RESET_USER_NOT_FOUND_MESSAGE = "Usuário não encontrado";
+export const PASSWORD_RESET_APPROVE_MESSAGE = "Solicitação aprovada. A nova senha está ativa.";
+export const PASSWORD_RESET_REJECT_MESSAGE = "Solicitação rejeitada. A senha da conta não mudou.";
+
 /** Vocabulário fechado de status da solicitação (estados do MODELO §5). */
 export const PASSWORD_RESET_STATUSES = ["pending", "approved", "rejected"] as const;
 export type PasswordResetStatus = (typeof PASSWORD_RESET_STATUSES)[number];
