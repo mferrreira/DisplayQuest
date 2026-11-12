@@ -67,9 +67,8 @@ export function PasswordResetRequests() {
 
       toast({
         title: action === "approve" ? "Solicitação aprovada" : "Solicitação rejeitada",
-        description: action === "approve"
-          ? "A nova senha está ativa na conta."
-          : "A senha da conta não mudou.",
+        // DEC-93: a tela lê a frase da resposta, não recopia a frase da produção.
+        description: result.message,
         variant: "default",
       })
       // A linha sai da lista pending só depois da resposta — o card não recalcula nada.

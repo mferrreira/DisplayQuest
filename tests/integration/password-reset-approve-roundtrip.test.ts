@@ -100,7 +100,6 @@ describe("G4 roundtrip — aprovação e rejeição da solicitação de senha (i
       email: `g4-reject-${Date.now()}@test.local`,
       password: "g4-old-pass123",
     })) as { id: number };
-    const rejectEmail = `g4-reject-${Date.now()}@test.local`;
     // A conta acima já foi criada com o email gerado uma vez; cria a solicitação para o
     // mesmo usuário usando o email exato gravado.
     const createdRow = (await userModule.requestPasswordReset({

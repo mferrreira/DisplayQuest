@@ -23,7 +23,16 @@ import {
   ForbiddenError,
   NotFoundError,
   PENDING_MODERATION_DENIED_MESSAGE,
+  PASSWORD_RESET_APPROVE_MESSAGE,
   PASSWORD_RESET_DUPLICATE_MESSAGE,
+  PASSWORD_RESET_NEUTRAL_MESSAGE,
+  PASSWORD_RESET_NOT_FOUND_MESSAGE,
+  PASSWORD_RESET_REQUIRED_MESSAGE,
+  PASSWORD_RESET_RESOLVE_REQUIRED_MESSAGE,
+  PASSWORD_RESET_RESOLVED_MESSAGE,
+  PASSWORD_RESET_SHORT_PASSWORD_MESSAGE,
+  PASSWORD_RESET_REJECT_MESSAGE,
+  PASSWORD_RESET_USER_NOT_FOUND_MESSAGE,
   requireActorPermission,
   validatePasswordResetInput,
 } from "@/backend/domain";
@@ -67,11 +76,11 @@ vi.mock("@/backend/composition/root", () => ({
         mocks.calls.resolvePasswordResetRequest.push({ actor, id, action });
         requireActorPermission(actor, "MANAGE_USERS", PENDING_MODERATION_DENIED_MESSAGE);
         const row = mocks.rows.find((r) => r.id === id);
-        if (!row) throw new NotFoundError("Solicitação não encontrada");
-        if (row.status !== "pending") throw new ConflictError("Solicitação já resolvida");
+        if (!row) throw new NotFoundError(PASSWORD_RESET_NOT_FOUND_MESSAGE);
+        if (row.status !== "pending") throw new ConflictError(PASSWORD_RESET_RESOLVED_MESSAGE);
         if (action === "approve") {
           // O usuário existe neste duplo quando o email é o da conta conhecida.
-          if (row.email !== "x@lab.com") throw new NotFoundError("Usuário não encontrado");
+          if (row.email !== "x@lab.com") throw new NotFoundError(PASSWORD_RESET_USER_NOT_FOUND_MESSAGE);
           row.status = "approved";
           row.resolvedBy = actor.id;
           row.resolvedAt = "2026-11-12T12:00:00.000Z";
@@ -116,9 +125,7 @@ describe("POST /api/password-reset-requests — envio público", () => {
     const response = await POST(post({ email: "x@lab.com", password: "novasenha123" } as never));
     expect(response.status).toBe(201);
     const body = await response.json();
-    expect(body.message).toBe(
-      "Se o email estiver cadastrado, a solicitação será analisada pela gestão. Você poderá entrar com a nova senha depois da aprovação.",
-    );
+    expect(body.message).toBe(PASSWORD_RESET_NEUTRAL_MESSAGE);
     expect(JSON.stringify(body)).not.toContain("bcrypt");
     expect(mocks.calls.requestPasswordReset[0].email).toBe("x@lab.com");
   });
@@ -135,11 +142,11 @@ describe("POST /api/password-reset-requests — envio público", () => {
   it("campos obrigatórios e senha mínima: 400 com as mensagens da casa", async () => {
     const missing = await POST(post({ email: "", password: "" }) as never);
     expect(missing.status).toBe(400);
-    expect((await missing.json()).error).toBe("Email e senha são obrigatórios");
+    expect((await missing.json()).error).toBe(PASSWORD_RESET_REQUIRED_MESSAGE);
 
     const short = await POST(post({ email: "x@lab.com", password: "123" }) as never);
     expect(short.status).toBe(400);
-    expect((await short.json()).error).toBe("A senha deve ter pelo menos 6 caracteres");
+    expect((await short.json()).error).toBe(PASSWORD_RESET_SHORT_PASSWORD_MESSAGE);
   });
 
   it("segunda solicitação pendente: 409 com a frase congelada", async () => {
@@ -186,14 +193,20 @@ describe("POST /api/password-reset-requests — aprovação e rejeição (S02)",
     expect(mocks.calls.resolvePasswordResetRequest).toHaveLength(0);
   });
 
-  it("id ausente ou ação inválida: 400 com a frase da rota users/approve", async () => {
+  it("ação inválida, id ausente, ação ausente: 400 com a frase da resolução", async () => {
     const bad = await POST(post({ id: 7, action: "maybe" }) as never);
     expect(bad.status).toBe(400);
-    expect((await bad.json()).error).toBe("ID da solicitação e ação são obrigatórios");
+    expect((await bad.json()).error).toBe(PASSWORD_RESET_RESOLVE_REQUIRED_MESSAGE);
 
     const noId = await POST(post({ action: "approve" }) as never);
     expect(noId.status).toBe(400);
-    expect((await noId.json()).error).toBe("ID da solicitação e ação são obrigatórios");
+    expect((await noId.json()).error).toBe(PASSWORD_RESET_RESOLVE_REQUIRED_MESSAGE);
+
+    // Corpo `{id}` sem `action` cai no caminho público, e o 400 é a frase do
+    // formulário — ramo medido, congelado aqui (não é a frase da resolução).
+    const noAction = await POST(post({ id: 7 }) as never);
+    expect(noAction.status).toBe(400);
+    expect((await noAction.json()).error).toBe(PASSWORD_RESET_REQUIRED_MESSAGE);
   });
 
   it("aprovar: 200, hash aplicada no use case, resolvedBy do ator, conta não muda", async () => {
@@ -201,7 +214,7 @@ describe("POST /api/password-reset-requests — aprovação e rejeição (S02)",
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.request.status).toBe("approved");
-    expect(body.message).toBe("Solicitação aprovada. A nova senha está ativa.");
+    expect(body.message).toBe(PASSWORD_RESET_APPROVE_MESSAGE);
     expect(mocks.calls.resolvePasswordResetRequest[0]).toMatchObject({
       actor: { id: 42 },
       id: 7,
@@ -217,7 +230,7 @@ describe("POST /api/password-reset-requests — aprovação e rejeição (S02)",
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.request.status).toBe("rejected");
-    expect(body.message).toBe("Solicitação rejeitada. A senha da conta não mudou.");
+    expect(body.message).toBe(PASSWORD_RESET_REJECT_MESSAGE);
     expect(mocks.rows[0].status).toBe("rejected");
   });
 
@@ -225,7 +238,7 @@ describe("POST /api/password-reset-requests — aprovação e rejeição (S02)",
     mocks.rows[0].email = "fantasma@lab.com";
     const response = await POST(post({ id: 7, action: "approve" }) as never);
     expect(response.status).toBe(404);
-    expect((await response.json()).error).toBe("Usuário não encontrado");
+    expect((await response.json()).error).toBe(PASSWORD_RESET_USER_NOT_FOUND_MESSAGE);
     expect(mocks.rows[0].status).toBe("pending");
   });
 
@@ -233,7 +246,7 @@ describe("POST /api/password-reset-requests — aprovação e rejeição (S02)",
     mocks.rows[0].status = "approved";
     const response = await POST(post({ id: 7, action: "approve" }) as never);
     expect(response.status).toBe(409);
-    expect((await response.json()).error).toBe("Solicitação já resolvida");
+    expect((await response.json()).error).toBe(PASSWORD_RESET_RESOLVED_MESSAGE);
     // A rota chama o use case uma vez; o use case recusa antes de escrever.
     expect(mocks.calls.resolvePasswordResetRequest).toHaveLength(1);
   });

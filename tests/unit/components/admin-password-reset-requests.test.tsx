@@ -13,6 +13,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { PASSWORD_RESET_APPROVE_MESSAGE, PASSWORD_RESET_REJECT_MESSAGE } from "@/backend/domain";
 
 const mocks = vi.hoisted(() => ({
   roles: ["COORDENADOR"] as string[],
@@ -53,8 +54,8 @@ beforeEach(() => {
   mocks.roles = ["COORDENADOR"];
   mocks.getRequests.mockClear();
   mocks.getRequests.mockResolvedValue({ requests: PENDING });
-  mocks.approve.mockResolvedValue({ request: { id: 7, status: "approved" }, message: "ok" });
-  mocks.reject.mockResolvedValue({ request: { id: 7, status: "rejected" }, message: "ok" });
+  mocks.approve.mockResolvedValue({ request: { id: 7, status: "approved" }, message: PASSWORD_RESET_APPROVE_MESSAGE });
+  mocks.reject.mockResolvedValue({ request: { id: 7, status: "rejected" }, message: PASSWORD_RESET_REJECT_MESSAGE });
   mocks.toast.mockReset();
 });
 
@@ -70,7 +71,7 @@ describe("card de solicitações de troca de senha", () => {
     ).toBeTruthy();
   });
 
-  it("aprovar chama a rota, avisa e remove a linha da lista pending", async () => {
+  it("aprovar chama a rota, avisa com a frase da resposta e remove a linha da lista pending", async () => {
     const user = userEvent.setup({ delay: null });
     render(<PasswordResetRequests />);
     await user.click(
@@ -78,7 +79,12 @@ describe("card de solicitações de troca de senha", () => {
     );
     await waitFor(() => expect(mocks.approve).toHaveBeenCalledWith(7));
     await screen.findByText("Nenhuma solicitação pendente");
-    expect(mocks.toast).toHaveBeenCalled();
+    // DEC-93: o aviso sai da resposta da rota, não de cópia na tela.
+    expect(mocks.toast).toHaveBeenCalledWith({
+      title: "Solicitação aprovada",
+      description: PASSWORD_RESET_APPROVE_MESSAGE,
+      variant: "default",
+    });
   });
 
   it("rejeitar chama a rota e remove a linha — a solicitação não some por engano", async () => {
@@ -89,7 +95,45 @@ describe("card de solicitações de troca de senha", () => {
     );
     await waitFor(() => expect(mocks.reject).toHaveBeenCalledWith(7));
     await screen.findByText("Nenhuma solicitação pendente");
-    expect(mocks.toast).toHaveBeenCalled();
+    expect(mocks.toast).toHaveBeenCalledWith({
+      title: "Solicitação rejeitada",
+      description: PASSWORD_RESET_REJECT_MESSAGE,
+      variant: "default",
+    });
+  });
+
+  it("aprovação recusada pela rota avisa em destructive e a linha permanece", async () => {
+    // O aceite da rota cobre o 409/404; aqui se prova que a tela NÃO remove a linha
+    // quando a resposta é recusa — só depois da resposta 200.
+    mocks.approve.mockRejectedValueOnce(new Error("Solicitação já resolvida"));
+    const user = userEvent.setup({ delay: null });
+    render(<PasswordResetRequests />);
+    await user.click(
+      await screen.findByRole("button", { name: "Aprovar troca de senha de maria@lab.com" }),
+    );
+    await waitFor(() => expect(mocks.toast).toHaveBeenCalledWith(
+      expect.objectContaining({ variant: "destructive" }),
+    ));
+    expect(screen.getByText("maria@lab.com")).toBeTruthy();
+  });
+
+  it("falha de leitura diz o aviso com role=alert, não estado vazio", async () => {
+    mocks.getRequests.mockRejectedValueOnce(new Error("500"));
+    render(<PasswordResetRequests />);
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("Não foi possível carregar as solicitações");
+    expect(screen.queryByText("Nenhuma solicitação pendente")).toBeNull();
+  });
+
+  it("o contador do card casa em número e plural", async () => {
+    mocks.getRequests.mockResolvedValue({
+      requests: [
+        { ...PENDING[0], id: 7 },
+        { id: 8, email: "joao@lab.com", status: "pending", createdAt: "2026-11-12T13:00:00.000Z" },
+      ],
+    });
+    render(<PasswordResetRequests />);
+    expect(await screen.findByText("2 solicitações pendentes")).toBeTruthy();
   });
 
   it("quem não gerencia contas não vê a lista nem os botões", () => {
