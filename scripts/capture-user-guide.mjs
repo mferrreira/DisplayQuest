@@ -69,6 +69,9 @@ const SCREENS = [
   // --- sem sessão ---
   { id: "tela-entrada", role: null, route: "/login", expect: { url: /\/login/, anyOf: ["Entrar", "Senha"] } },
   { id: "tela-cadastro", role: null, route: "/register", expect: { url: /\/register/, anyOf: ["Cadastro", "criar"] } },
+  // plan-v24 (ADR-002): o formulário público de troca de senha — a tela de entrada tem o link,
+  // e esta é a tela que a prosa do guia descreve. Sem sessão, sem clique, sem escrita.
+  { id: "forgot-password", role: null, route: "/forgot-password", expect: { url: /\/forgot-password/, anyOf: ["Esqueci minha senha", "Nova senha"] } },
 
   // --- coordenador: superficie completa ---
   { id: "quadro-tarefas", role: "coord", route: "/dashboard", expect: { url: /\/dashboard$/, anyOf: ["Quadro", "Tarefa"] } },
@@ -197,6 +200,9 @@ const INTERACTIONS = [
   // POS-1 (2026-11-05): o envio do ícone mora no diálogo de edição. "Editar Gerente" é substring de
   // "Editar Gerente de Projeto" — o abre usa o nome completo para evitar o strict mode.
   { id: "admin-badges-dialogo", role: "coord", route: "/dashboard/admin", aba: "Badges", abre: "Editar Gerente de Projeto", dialogo: "Ícone do badge", rolarAte: "text=Ícone do badge" },
+  // plan-v24 (S02/S05): o card de solicitações de troca de senha na aba Usuários. A captura
+  // fotografa a leitura da lista pending (linhas semeadas pelo guia); nenhum botão é clicado.
+  { id: "admin-senhas", role: "coord", route: "/dashboard/admin", aba: "Usuários", verifica: "Solicitações de troca de senha", rolarAte: "text=Solicitações de troca de senha" },
   // plan-v12 (DEC-240): a faixa 21:9 do detalhe do projeto. Sem clique. A verificação é do
   // card permanente da Visão geral, e o rolar leva o gatilho da faixa ao campo de visão.
   { id: "faixa-capa-projeto", role: "coord", route: "/dashboard/projetos", cartao: { container: ".bg-card", texto: "Pesquisa em IA", alvo: 'a[aria-label="Ver projeto Pesquisa em IA"]' }, projetoTab: "Visão geral", verifica: "Dados do projeto", rolarAte: 'button[aria-label="Opções da capa do projeto"]' },
