@@ -8,6 +8,10 @@ Pelo cronômetro, não pelo relatório. O relatório é uma fotografia do que es
 
 Não existe registro manual de horas. O tempo só existe se houve sessão. O que dá para fazer é encerrar corretamente a sessão que você abriu tarde e registrar no log o que ficou de fora — o log é a memória do período, e é nele que a discrepância fica explicada.
 
+## Esqueci a senha. Dá para recuperar?
+
+Dá, pela gestão. Na tela de entrada clique em **Esqueci minha senha**, informe o seu e-mail e a nova senha, e envie. A solicitação fica pendente; quando a gestão de contas aprova na aba **Usuários** do Painel Administrativo, a nova senha passa a valer e você entra com ela. A tela não diz se o e-mail está cadastrado — a resposta é a mesma nos dois casos. Se você enviar de novo com o mesmo e-mail antes da decisão, recebe *"Já existe solicitação pendente para este e-mail"*.
+
 ## Posso ter duas sessões abertas ao mesmo tempo?
 
 Não. Uma pessoa tem uma sessão por vez. Enquanto existir uma ativa ou pausada, o cronômetro mostra essa sessão em vez do formulário de início. Para trocar de projeto, encerre a sessão atual e inicie outra.

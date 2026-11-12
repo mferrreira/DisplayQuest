@@ -20,6 +20,20 @@ Se a sua conta ainda não foi aprovada, a entrada é recusada e a tela mostra:
 
 > Sua conta ainda não foi aprovada. Entre em contato com um administrador ou laboratorista.
 
+## Esqueci minha senha
+
+1. Na tela de entrada, clique em **Esqueci minha senha** (a linha abaixo do botão **Entrar**). O sistema abre o formulário.
+2. Digite o seu e-mail no campo **Email** e a nova senha no campo **Nova senha**. O olho à direita mostra e esconde a senha digitada.
+3. Clique em **Enviar solicitação**.
+
+```foto forgot-password titulo="O formulário Esqueci minha senha: e-mail, nova senha e o botão Enviar solicitação"
+A confirmação diz: "Se o email estiver cadastrado, a solicitação será analisada pela gestão. Você poderá entrar com a nova senha depois da aprovação."
+```
+
+A tela não diz se o e-mail está cadastrado: a resposta é a mesma nos dois casos, e nenhuma linha se cria para um e-mail que não existe. A solicitação fica pendente até a gestão de contas decidir. Quando a solicitação é aprovada, a nova senha passa a valer e você entra por **Entrar** com ela; a senha antiga deixa de funcionar. Se a solicitação for rejeitada, a senha da conta não muda.
+
+Depois de enviar, enviar de novo com o mesmo e-mail recebe: *"Já existe solicitação pendente para este e-mail"*. A tela mostra o aviso, e o formulário continua preenchido.
+
 ## Criar uma conta
 
 1. Na tela de entrada, abaixo dos campos, clique em **Registrar** (a linha "Não tem uma conta?"). O sistema abre a tela **Criar uma conta**.

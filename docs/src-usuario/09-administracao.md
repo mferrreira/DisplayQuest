@@ -30,6 +30,16 @@ O bloco `Bio` do diálogo traz o botão **Editar biografia**. No diálogo, a tex
 A lista traz as contas e, abaixo, a grade de horários por função.
 ```
 
+Abaixo da aprovação de contas está o card **Solicitações de troca de senha**. Cada linha tem o e-mail, o momento do pedido e os botões **Aprovar** e **Rejeitar**.
+
+- **Aprovar** escreve a nova senha na conta. O botão tem o nome **Aprovar troca de senha de \<e-mail\>**. A solicitação fica aprovada, a linha sai da lista, e a pessoa entra com a nova senha. A senha da solicitação nunca aparece na tela: ela é guardada em formato de verificação, não em texto.
+- **Rejeitar** não muda a senha da conta. A linha sai da lista e a conta mantém a senha atual.
+- Quem não gerencia contas não vê o card. O estado vazio diz *"Nenhuma solicitação pendente"*.
+
+```foto admin-senhas titulo="O card Solicitações de troca de senha na aba Usuários"
+O card fica abaixo do card de aprovação de usuários, na mesma aba.
+```
+
 ::: atencao titulo="A conta criada aqui já entra"
 Uma conta criada por **Novo Usuário** ou aprovada em **Aprovar** passa a permitir entrada imediata. A senha definida nesse momento é a única credencial da pessoa: entregue por um canal que não seja o chat do laboratório.
 :::
