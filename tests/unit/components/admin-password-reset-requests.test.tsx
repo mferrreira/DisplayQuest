@@ -136,6 +136,27 @@ describe("card de solicitações de troca de senha", () => {
     expect(await screen.findByText("2 solicitações pendentes")).toBeTruthy();
   });
 
+  it("carregando: o card diz Carregando... antes da resposta chegar", async () => {
+    let release: (value: { requests: typeof PENDING }) => void = () => {};
+    mocks.getRequests.mockImplementationOnce(() => new Promise((resolve) => {
+      release = resolve;
+    }));
+    render(<PasswordResetRequests />);
+    expect(await screen.findByText("Carregando solicitações...")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /troca de senha/ })).toBeNull();
+    release({ requests: PENDING });
+    expect(await screen.findByText("maria@lab.com")).toBeTruthy();
+  });
+
+  it("vazio: a lista sem linhas diz Nenhuma solicitação pendente, sem botões", async () => {
+    mocks.getRequests.mockResolvedValueOnce({ requests: [] });
+    render(<PasswordResetRequests />);
+    expect(await screen.findByText("Nenhuma solicitação pendente")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /troca de senha/ })).toBeNull();
+    // O vazio não repete a frase: a descrição do header só existe com linhas.
+    expect(screen.queryByText(/^1 solicitação pendente$/)).toBeNull();
+  });
+
   it("quem não gerencia contas não vê a lista nem os botões", () => {
     mocks.roles = ["VOLUNTARIO"];
     render(<PasswordResetRequests />);
