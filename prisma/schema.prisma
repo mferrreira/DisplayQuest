@@ -89,6 +89,10 @@ model users {
   // (auditoria). Nenhum dos dois entra na guarda de FKs bloqueantes.
   certificatesAsMember        certificates[]           @relation("CertificateMember")
   certificatesGenerated       certificates[]           @relation("CertificateGenerator")
+  // plan-v24 (ADR-001, DEC-272): solicitações de troca de senha resolvidas por esta pessoa.
+  // `resolvedBy` é `SetNull` (auditoria, padrão DEC-155/170) — a solicitação sobrevive sem
+  // resolvedor; a guarda user-delete-schema-drift confere a lista de SetNull.
+  passwordResets              password_reset_requests[] @relation("PasswordResetResolver")
 }
 
 model projects {
@@ -771,4 +775,25 @@ model notifications {
   user users @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("notifications")
+}
+
+model password_reset_requests {
+  id         Int      @id @default(autoincrement())
+  email      String
+  // plan-v24 (ADR-001): a hash bcrypt (custo 12, o custo do cadastro) da senha nova. Texto
+  // puro nunca entra nesta coluna (INV1). A senha da conta fica em `users.password`.
+  password   String
+  // Vocabulário fechado em PASSWORD_RESET_STATUSES (backend/domain/identity/
+  // password-reset-rules.ts): pending -> approved | rejected. Só pending resolve.
+  status     String   @default("pending")
+  createdAt  DateTime @default(now())
+  resolvedAt DateTime?
+  // plan-v24 (ADR-001): quem aprovou/rejeitou, por auditoria. `SetNull` (padrão DEC-155/170)
+  // — a solicitação não bloqueia a exclusão da conta. A guarda user-delete-schema-drift
+  // confere a lista de SetNull.
+  resolvedBy Int?
+  resolvedByUser users? @relation("PasswordResetResolver", fields: [resolvedBy], references: [id], onDelete: SetNull)
+
+  @@index([email, status])
+  @@map("password_reset_requests")
 }

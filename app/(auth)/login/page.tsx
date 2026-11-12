@@ -126,11 +126,16 @@ export default function LoginPage() {
             </Button>
           </form>
         </CardContent>
-        <CardFooter className="flex justify-center">
+        <CardFooter className="flex flex-col gap-2 text-center">
           <p className="text-sm text-muted-foreground">
             Não tem uma conta?{" "}
             <Link href="/register" className="text-primary underline">
               Registrar
+            </Link>
+          </p>
+          <p className="text-sm text-muted-foreground">
+            <Link href="/forgot-password" className="text-primary underline">
+              Esqueci minha senha
             </Link>
           </p>
         </CardFooter>

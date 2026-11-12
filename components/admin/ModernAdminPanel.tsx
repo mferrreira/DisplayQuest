@@ -46,6 +46,7 @@ import {
 import { useAuth } from "@/contexts/auth-context"
 import { useTask } from "@/contexts/task-context"
 import { UserApproval } from "@/components/features/user-approval"
+import { PasswordResetRequests } from "@/components/features/password-reset-requests"
 import { PageHeader } from "@/components/ui/page-header"
 import { ProjectMembersManagement } from "@/components/features/project-members-management"
 import { ProjectHoursStats } from "@/components/features/project-hours-stats"
@@ -536,6 +537,10 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, onSessionsC
 
               {/* Aprovação de usuários */}
               <UserApproval />
+
+              {/* plan-v24 S01: solicitações de troca de senha, na mesma aba. Mesma
+                  autoridade (MANAGE_USERS); o card é a superfície que a lista mostra. */}
+              <PasswordResetRequests />
 
               {/* Lista de usuários */}
               <Card>

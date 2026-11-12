@@ -183,6 +183,19 @@ export const UsersAPI = {
     }),
 }
 
+// API de Solicitações de Troca de Senha (plan-v24)
+export const PasswordResetAPI = {
+  // Enviar a solicitação pública (rota sem sessão)
+  submit: (email: string, password: string) =>
+    fetchAPI<{ message: string }>("/api/password-reset-requests", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    }),
+
+  // Listar as solicitações pendentes (gestão de contas)
+  getRequests: () => fetchAPI<{ requests: any[] }>("/api/password-reset-requests"),
+}
+
 // API de Projetos
 export const ProjectsAPI = {
   // Obter todos os projetos

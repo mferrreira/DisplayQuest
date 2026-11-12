@@ -46,6 +46,16 @@ export {
   type UserLink,
 } from "./user-links-rules";
 export { resolveUserListVisibility, type UserListVisibility } from "./user-visibility";
+export {
+  PASSWORD_RESET_NEUTRAL_MESSAGE,
+  PASSWORD_RESET_DUPLICATE_MESSAGE,
+  PASSWORD_RESET_REQUIRED_MESSAGE,
+  PASSWORD_RESET_SHORT_PASSWORD_MESSAGE,
+  PASSWORD_RESET_STATUSES,
+  normalizeResetEmail,
+  validatePasswordResetInput,
+  type PasswordResetStatus,
+} from "./password-reset-rules";
 export { canActorViewProfile, type ProfileVisibilityTarget } from "./profile-visibility-rules";
 export { SELF_EDITABLE_USER_FIELDS, filterSelfEditableUserFields } from "./user-edit-fields";
 export { CREATE_USER_DENIED_MESSAGE, PENDING_MODERATION_DENIED_MESSAGE, PROFILE_DENIED_MESSAGE } from "./user-denied-messages";

@@ -199,6 +199,10 @@ describe("guarda de deriva — as FKs que bloqueiam excluir usuário (DEC-55)", 
         "project_activities.requestedBy",
         "project_activities.responsibleId",
         "project_goals.completedBy",
+        // plan-v24 S01 (ADR-001, DEC-272): quem aprovou/rejeitou uma solicitação de troca de
+        // senha é auditoria — a solicitação sobrevive sem resolvedor, e a conta não fica
+        // bloqueada por ela. Quinta FK SetNull da casa, mesmo padrão DEC-155/170.
+        "password_reset_requests.resolvedBy",
       ].sort(),
     );
     for (const rel of nullifying) {

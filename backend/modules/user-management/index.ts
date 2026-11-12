@@ -7,6 +7,7 @@ import type {
 } from "@/backend/modules/user-management/application/contracts"
 import type { PasswordHasher } from "@/backend/modules/user-management/application/ports/password-hasher"
 import type { UserRepositoryPort } from "@/backend/modules/user-management/application/ports/user.repository"
+import type { PasswordResetPort } from "@/backend/modules/user-management/application/ports/password-reset.port"
 import type { ProfileVisibilityPort } from "@/backend/modules/user-management/application/ports/profile-visibility.port"
 import { CreateUserUseCase } from "@/backend/modules/user-management/application/use-cases/create-user.use-case"
 import { AssertCanManageUsersUseCase } from "@/backend/modules/user-management/application/use-cases/assert-can-manage-users.use-case"
@@ -20,6 +21,11 @@ import { ListUserStatisticsUseCase } from "@/backend/modules/user-management/app
 import { ListUsersForActorUseCase } from "@/backend/modules/user-management/application/use-cases/list-users-for-actor.use-case"
 import { ModeratePendingUserUseCase } from "@/backend/modules/user-management/application/use-cases/moderate-pending-user.use-case"
 import { RegisterUserUseCase } from "@/backend/modules/user-management/application/use-cases/register-user.use-case"
+import {
+  ListPasswordResetRequestsUseCase,
+  RequestPasswordResetUseCase,
+} from "@/backend/modules/user-management/application/use-cases/request-password-reset.use-case"
+import { createPrismaPasswordResetRepository } from "@/backend/modules/user-management/infrastructure/repositories/prisma-password-reset.repository"
 import { UpdateUserUseCase } from "@/backend/modules/user-management/application/use-cases/update-user.use-case"
 import { UpdateUserPointsUseCase } from "@/backend/modules/user-management/application/use-cases/update-user-points.use-case"
 import { UpdateUserProfileUseCase } from "@/backend/modules/user-management/application/use-cases/update-user-profile.use-case"
@@ -54,8 +60,21 @@ export interface UserImageCapability {
   getUserImage(command: GetUserImageCommand): Promise<{ slot: UserImageSlot; blobKey: string }>
 }
 
+/**
+ * Capacidades de solicitação de troca de senha (plan-v24, S01/S02). Também NÃO fazem parte
+ * de `UserManagementGateway`: solicitação de reset é família própria, o fluxo de moderação
+ * de contas não muda (INV6).
+ */
+export interface PasswordResetCapability {
+  requestPasswordReset(command: { email?: string | null; password?: string | null }): Promise<unknown>
+  listPasswordResetRequests(actor: ActorRef): Promise<unknown>
+}
+
 /** The module's public surface: the same 15 methods the routes consume today + registerUser. */
-export type UserManagementService = UserManagementGateway & RegisterUserCapability & UserImageCapability
+export type UserManagementService = UserManagementGateway &
+  RegisterUserCapability &
+  UserImageCapability &
+  PasswordResetCapability
 
 export class UserManagementModule {
   readonly createUser: GatewayCall<UserManagementGateway["createUser"]>
@@ -76,6 +95,8 @@ export class UserManagementModule {
   readonly registerUser: GatewayCall<RegisterUserCapability["registerUser"]>
   readonly updateUserImage: GatewayCall<UserImageCapability["updateUserImage"]>
   readonly getUserImage: GatewayCall<UserImageCapability["getUserImage"]>
+  readonly requestPasswordReset: GatewayCall<PasswordResetCapability["requestPasswordReset"]>
+  readonly listPasswordResetRequests: GatewayCall<PasswordResetCapability["listPasswordResetRequests"]>
   /** B6-4 (D4): assert 403-antes-do-parse/validação; os use cases de destino rechecam. */
   readonly assertCanManageUsers: (command: { actor: ActorRef; deniedMessage?: string }) => void
   /** V5-3 (DEC-137): assert 403-ANTES-DO-CORPO do upload; `updateUserImage` recheca no próprio ator. */
@@ -110,6 +131,8 @@ export class UserManagementModule {
     this.registerUser = this.service.registerUser.bind(this.service)
     this.updateUserImage = this.service.updateUserImage.bind(this.service)
     this.getUserImage = this.service.getUserImage.bind(this.service)
+    this.requestPasswordReset = this.service.requestPasswordReset.bind(this.service)
+    this.listPasswordResetRequests = this.service.listPasswordResetRequests.bind(this.service)
   }
 }
 
@@ -120,6 +143,8 @@ export interface UserManagementModuleFactoryOptions {
   passwordHasher?: PasswordHasher
   /** V5-12 (DEC-143/177): vínculo em comum para a regra de visibilidade de perfil. */
   profileVisibility?: ProfileVisibilityPort
+  /** plan-v24 S01: seam da solicitação de troca de senha (fake de teste sem Prisma). */
+  passwordReset?: PasswordResetPort
   /** plan-v15 S11 (R4): campo de perfil gravado é episódio de recompletação. */
   recompute?: { recompute(userId: number): Promise<void> }
 }
@@ -128,6 +153,7 @@ export function createUserManagementModule(options: UserManagementModuleFactoryO
   const repository = options.repository ?? createPrismaUserRepository()
   const passwordHasher = options.passwordHasher ?? createBcryptPasswordHasher()
   const profileVisibility = options.profileVisibility ?? createPrismaProfileVisibility()
+  const passwordReset = options.passwordReset ?? createPrismaPasswordResetRepository()
   // plan-v15 S11 (R4): campo de perfil gravado é episódio de recompletação. Default no-op.
   const recompute = options.recompute ?? { async recompute() {} }
 
@@ -152,6 +178,10 @@ export function createUserManagementModule(options: UserManagementModuleFactoryO
     listLeaderboard: (query) => new ListLeaderboardUseCase(repository).execute(query),
     listProfiles: (query) => new ListProfilesUseCase(repository, profileVisibility).execute(query),
     registerUser: (command) => new RegisterUserUseCase(repository, passwordHasher).execute(command),
+    requestPasswordReset: (command) =>
+      new RequestPasswordResetUseCase(repository, passwordReset, passwordHasher).execute(command),
+    listPasswordResetRequests: (actor) =>
+      new ListPasswordResetRequestsUseCase(passwordReset).execute(actor),
     updateUserImage: (command) => new UpdateUserImageUseCase(repository).execute(command),
     getUserImage: (command) => new GetUserImageUseCase(repository).execute(command),
   }
